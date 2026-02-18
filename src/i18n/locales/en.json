@@ -10,7 +10,9 @@
     "delete": "Delete",
     "save": "Save",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "close": "Close",
+    "required": "Required"
   },
   "timer": {
     "start": "Start",

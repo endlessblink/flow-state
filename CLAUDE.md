@@ -66,26 +66,12 @@ npm run tauri:update-manifest  # Generate latest.json for auto-updater
 # Manual deploy: npm run build && rsync -avz dist/ root@84.46.253.137:/var/www/flowstate/
 ```
 
-## Development Server with Doppler (IMPORTANT)
+## Development Server
 
-**Always start the dev server with Doppler:**
-```bash
-doppler run -- npm run dev
-```
+**With Doppler (production Supabase):** `doppler run -- npm run dev`
+**Without Doppler (local Supabase):** `npm run dev` (requires manual `.env.local`)
 
-**What happens:**
-1. Doppler injects secrets as environment variables
-2. `scripts/sync-doppler.sh` writes secrets to `.env.local`
-3. Vite reads from `.env.local` (not `.env`)
-4. Auth user verified, Supabase keys validated
-5. Dev server + backup daemon start concurrently
-
-**Never do:**
-- `npm run dev` alone (secrets won't be injected from Doppler)
-- Edit `.env` for Supabase URLs (use Doppler dashboard)
-- Edit `.env.local` manually (gets overwritten by Doppler sync)
-
-**Note:** If you're using local Supabase with manual `.env.local` setup (see "Local Development Setup" below), `npm run dev` works without Doppler. Doppler is required when connecting to production/staging Supabase.
+**Rules:** Never edit `.env.local` manually (Doppler overwrites it). Never edit `.env` for Supabase URLs (use Doppler dashboard). Never run `npm run dev` alone when connecting to production.
 
 ## Tech Stack
 
@@ -99,97 +85,21 @@ doppler run -- npm run dev
 - **Cloudflare** DNS + CDN + Origin Certificates
 - **Doppler** for secrets management (CI/CD + production)
 
-## Tauri Desktop Distribution
+## Tauri Desktop Distribution & Auto-Updater
 
-FlowState is distributed as a native desktop app via Tauri. The app auto-orchestrates Docker + Supabase on launch.
+**Full SOPs:** [SOP-011](docs/sop/SOP-011-tauri-distribution.md) (builds/signing), [SOP-037](docs/sop/SOP-037-tauri-updater-signing.md) (updater/deployment)
 
-**Full SOP:** [`docs/sop/SOP-011-tauri-distribution.md`](docs/sop/SOP-011-tauri-distribution.md)
-
-| Command | Purpose |
-|---------|---------|
-| `npm run tauri build` | Build desktop app locally (requires signing env vars) |
-| `npm run tauri dev` | Run in Tauri dev mode |
-
-**Release workflow:** Push a git tag (`v1.2.5`) to trigger GitHub Actions multi-platform builds.
-
-**Signing Keys:**
-- **Private key**: `~/.tauri/flow-state.key` (NEVER commit)
-- **Public key**: Embedded in `tauri.conf.json` under `plugins.updater.pubkey`
-- **CLI**: Use `@tauri-apps/cli@2.10.0`
-
-**Build with signing:**
+**Deploy command (MANDATORY after code changes):**
 ```bash
-export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/flow-state.key)"
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="<your-signing-password>"
-npm run build && npx tauri build
+./scripts/deploy-tauri-update.sh --notes "TASK-XXX: description"
 ```
+Options: `--skip-deploy` (build only), `--dry-run` (preview). Fallback: `sudo dpkg -i src-tauri/target/release/bundle/deb/FlowState_*.deb` (local only, no auto-updater — only if user explicitly asks).
 
-**Auto-updater endpoint:** `https://in-theflow.com/updates/latest.json`
+**Release workflow:** Bump version in 3 files (package.json, tauri.conf.json, Cargo.toml) → git tag → CI/CD auto-builds.
+**Auto-updater endpoint:** `https://in-theflow.com/updates/latest.json` — checks on app launch (3s delay), shows toast with "Download" button. Auto-update toggle in Settings > About.
+**Signing key:** `~/.tauri/flow-state.key` (NEVER commit). Password in KWallet via `secret-tool`.
 
-**Key Files:**
-```
-~/.tauri/flow-state.key                # Signing private key (NEVER commit)
-src-tauri/tauri.conf.json              # App config, version, updater endpoint, pubkey
-src-tauri/src/lib.rs                   # Rust commands (Docker/Supabase orchestration)
-src/composables/useTauriStartup.ts     # Frontend startup sequence
-src/composables/useTauriUpdater.ts     # Updater composable
-.github/workflows/release.yml          # CI/CD release workflow with signing
-scripts/generate-update-manifest.cjs   # Generates latest.json from build artifacts
-```
-
-### Tauri Build & Auto-Updater Delivery (MANDATORY)
-
-**After implementing features, the user MUST be able to receive the update via the Tauri in-app auto-updater.** Do NOT just run `npm run dev` or provide a local `dpkg -i` command. The auto-updater is the primary delivery mechanism.
-
-**Automated deploy script (preferred — can be called from Claude Code):**
-```bash
-./scripts/deploy-tauri-update.sh --notes "Brief description of changes"
-```
-
-This script handles everything non-interactively:
-1. Retrieves signing password from system keyring (KWallet via `secret-tool`)
-2. Builds Vue frontend + signed Tauri app
-3. Generates update manifest (`latest.json`)
-4. Uploads artifacts + manifest to VPS via SCP
-5. Verifies deployment
-
-**One-time setup (user must do this once):**
-```bash
-sudo apt-get install -y libsecret-tools
-secret-tool store --label="FlowState Tauri Signing Key" service flowstate type signing-key
-# ↑ Enter signing password when prompted — stored securely in KWallet
-```
-
-**Script options:**
-- `--notes "text"` — Release notes for the manifest
-- `--skip-deploy` — Build + sign only, don't upload to VPS
-- `--dry-run` — Preview what would happen
-
-**Fallback (local install only, no auto-updater):**
-```bash
-sudo dpkg -i src-tauri/target/release/bundle/deb/FlowState_*.deb
-```
-Use fallback only if user explicitly asks for local-only testing without auto-updater.
-
-## Tauri In-App Auto-Updater (FEATURE-1194)
-
-FlowState desktop app checks for updates from the VPS and can download + install them in-app.
-
-**Architecture:**
-- Update manifest hosted at `https://in-theflow.com/updates/latest.json`
-- Tauri updater plugin checks on app launch (3s delay)
-- Users see a toast notification with "Download" button when an update is available
-- Optional auto-update toggle in Settings > About
-
-**Additional updater-specific files:** `TauriUpdateNotification.vue`, `AboutSettingsTab.vue`
-
-**Release Workflow:** Bump version in 3 files (package.json, tauri.conf.json, Cargo.toml) → `git tag vX.X.X && git push --tags` → CI/CD auto-builds, signs, and deploys to VPS.
-
-## VPS Production Deployment (Contabo)
-
-FlowState runs as a **PWA on a Contabo VPS** at `in-theflow.com` with self-hosted Supabase. This is separate from the Tauri desktop distribution.
-
-### Architecture
+## VPS Production Deployment
 
 ```
 User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Supabase
@@ -197,160 +107,26 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
                                       PWA Static Files (/var/www/flowstate)
 ```
 
-### Production URLs
+**URLs:** `in-theflow.com` (PWA), `api.in-theflow.com` (Supabase API) | **VPS IP:** 84.46.253.137
+**SSH:** `ssh -i ~/.ssh/id_ed25519 root@84.46.253.137`
 
-| Domain | Purpose |
-|--------|---------|
-| `in-theflow.com` | PWA frontend |
-| `api.in-theflow.com` | Supabase API (self-hosted) |
-| `www.in-theflow.com` | Redirect to main |
+**Deployment:** CI/CD auto-deploys on push to master. Manual: `doppler run -- npm run build && rsync -avz --delete --exclude='updates/' dist/ root@84.46.253.137:/var/www/flowstate/`
 
-### VPS Specifications (Contabo Cloud VPS 2)
+**Secrets:** NEVER store in `.env` on VPS — use Doppler. `.env` and `.env.production` are gitignored. Full SOP: [SOP-030](docs/sop/SOP-030-doppler-secrets-management.md).
 
-| Spec | Value |
-|------|-------|
-| Provider | Contabo |
-| OS | Ubuntu 22.04 LTS |
-| vCPU | 6 cores |
-| RAM | 16 GB |
-| Storage | NVMe SSD |
-| IP | 84.46.253.137 |
+**Local dev setup:** Copy `.env.example` to `.env.local`, run `supabase status` for keys.
 
-**Why Contabo**: Cost-effective for self-hosted Supabase (~€5.60/mo). Supabase full stack requires 8-16GB RAM minimum.
+**Caching facts** (affects deploy troubleshooting):
+- `rsync --delete` removes old chunks immediately
+- Cloudflare caches `/assets/*` for 1 year (immutable). `index.html` and `sw.js` are `no-cache`
+- Workbox SW precaches chunk list at install time
 
-### Deployment Methods
+**Chunk Load Failure Runbook (BUG-1184):** When user reports blank page/chunk errors:
+1. Check CI/CD: `gh run list --limit 5` — common cause: uncommitted imported file
+2. Three-layer hash comparison: Cloudflare vs VPS filesystem vs SW precache (details in MEMORY.md BUG-1184 section)
+3. Fix: redeploy if stale assets, purge CF cache if CDN mismatch. Router auto-recovery unregisters stale SW.
 
-| Method | Trigger | What Deploys |
-|--------|---------|--------------|
-| **CI/CD** (Primary) | Push to master | PWA static files via rsync |
-| **Manual** | `npm run build` + rsync | PWA static files |
-
-**CI/CD Workflow** (`.github/workflows/deploy.yml`):
-1. Builds Vue app with production env
-2. Fetches secrets from Doppler
-3. Rsyncs `dist/` to VPS `/var/www/flowstate/`
-4. Reloads Caddy (graceful, no downtime)
-5. Validates CORS + health checks
-
-### Secrets Management (Doppler)
-
-**NEVER store secrets in `.env` files on VPS.** Use Doppler for production secrets.
-
-**Full SOP:** [`docs/sop/SOP-030-doppler-secrets-management.md`](docs/sop/SOP-030-doppler-secrets-management.md)
-
-| Secret Location | Secrets |
-|-----------------|---------|
-| **Doppler** (`flowstate-prod`) | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
-| **GitHub Secrets** | `DOPPLER_TOKEN`, `SSH_PRIVATE_KEY`, `VPS_HOST`, `VPS_USER` |
-
-**Local Development Setup:**
-1. Copy `.env.example` to `.env` (or `.env.local`)
-2. Run `supabase status` to get your local Supabase keys
-3. Fill in the values from `supabase status` output
-
-**Note:** `.env` and `.env.production` are gitignored - Doppler is the single source of truth for all environments.
-
-### Infrastructure Stack
-
-| Component | Technology | Location |
-|-----------|------------|----------|
-| Reverse Proxy | Caddy | System service (`/etc/caddy/Caddyfile`) |
-| SSL/TLS | Cloudflare Origin Certificate | `/etc/caddy/certs/` (15-year validity) |
-| DNS/CDN | Cloudflare (proxied) | Orange cloud enabled |
-| Database | PostgreSQL (Supabase) | Docker at `/opt/supabase/docker/` |
-| Static Files | PWA build | `/var/www/flowstate/` |
-| Secrets | Doppler | Fetched at build time |
-
-### Key VPS Paths
-
-```
-/var/www/flowstate/           # PWA static files (deployment target)
-/opt/supabase/docker/         # Self-hosted Supabase installation
-/etc/caddy/Caddyfile          # Caddy configuration
-/etc/caddy/certs/             # Cloudflare origin certificates
-```
-
-### VPS Maintenance Commands
-```bash
-# SSH into VPS
-ssh -i ~/.ssh/id_ed25519 root@84.46.253.137
-
-# Check Caddy status
-systemctl status caddy
-
-# View Caddy logs
-journalctl -u caddy -f
-
-# Restart Supabase
-cd /opt/supabase/docker && docker compose restart
-
-# Check disk space
-df -h
-
-# Docker resource usage
-docker stats
-```
-
-### Backup Strategy
-
-DB backups via `pg_dumpall` + cron (see `docs/sop/deployment/VPS-DEPLOYMENT.md`). App backups via built-in Shadow Mirror (Settings > Storage).
-
-### Deployment SOPs
-
-| SOP | Purpose |
-|-----|---------|
-| [`SOP-026-custom-domain-deployment.md`](docs/sop/SOP-026-custom-domain-deployment.md) | Domain, Cloudflare, Caddy setup |
-| [`SOP-030-doppler-secrets-management.md`](docs/sop/SOP-030-doppler-secrets-management.md) | Secrets management |
-| [`SOP-031-cors-configuration.md`](docs/sop/SOP-031-cors-configuration.md) | CORS troubleshooting |
-| [`deployment/VPS-DEPLOYMENT.md`](docs/sop/deployment/VPS-DEPLOYMENT.md) | Full VPS setup guide |
-| [`deployment/PWA-DEPLOYMENT-CHECKLIST.md`](docs/sop/deployment/PWA-DEPLOYMENT-CHECKLIST.md) | Pre/post deploy verification |
-
-### Production Chunk Load Failure — Diagnostic Runbook (BUG-1184)
-
-**When user reports "chunk load failure", "site down", or "blank page" on production:**
-
-This is almost always a **stale asset hash mismatch** — the browser/SW/Cloudflare is requesting chunk files that no longer exist on VPS after a deploy.
-
-**Step 1: Check if CI/CD is broken**
-```bash
-gh run list --limit 5   # Look for recent failures
-gh run view <id> --log-failed  # See why it failed
-```
-Common cause: a file imported in code but never committed (like AISetupWizard.vue incident).
-
-**Step 2: Three-layer hash comparison**
-Compare chunk hashes across all three layers. They MUST match:
-```bash
-# Layer 1: What Cloudflare serves (via index.html → main bundle)
-MAIN=$(curl -s https://in-theflow.com/ | grep -oP 'src="/assets/index-[^"]+' | sed 's|src="||')
-curl -s "https://in-theflow.com${MAIN}" | grep -oP 'AllTasksView[^"]*' | sort -u
-
-# Layer 2: What VPS filesystem has
-ssh root@84.46.253.137 "ls /var/www/flowstate/assets/AllTasksView*"
-
-# Layer 3: What service worker precaches
-ssh root@84.46.253.137 "grep -oP 'AllTasksView[^\"]*' /var/www/flowstate/sw.js" | sort -u
-```
-If ANY layer has different hashes → that's the broken layer.
-
-**Step 3: Identify the cause**
-| Mismatch | Cause | Fix |
-|----------|-------|-----|
-| Cloudflare ≠ VPS | Cloudflare CDN caching old assets | Purge CF cache or wait |
-| VPS index.html ≠ VPS assets | Partial deploy (rsync interrupted) | Redeploy |
-| SW ≠ VPS assets | SW from different build than assets | Redeploy (SW has no-cache headers, will update) |
-| All match but user still broken | User's browser has stale SW | User must hard-refresh (Ctrl+Shift+R) |
-
-**Step 4: Fix**
-- If CI/CD is broken: fix the build error, push, let CI redeploy
-- If assets are stale: `doppler run -- npm run build && rsync -avz --delete --exclude='updates/' dist/ root@84.46.253.137:/var/www/flowstate/`
-- The router auto-recovery (BUG-1184 fix) will unregister stale SW and reload for users automatically
-
-**Key facts:**
-- `rsync --delete` in deploy removes old chunks immediately
-- Cloudflare caches `/assets/*` with `max-age=31536000, immutable` (1 year)
-- `index.html` and `sw.js` are `no-cache` (always fresh from origin)
-- Workbox service worker precaches chunk list at install time
+**Full SOPs:** [VPS-DEPLOYMENT](docs/sop/deployment/VPS-DEPLOYMENT.md), [SOP-026](docs/sop/SOP-026-custom-domain-deployment.md), [SOP-031-CORS](docs/sop/SOP-031-cors-configuration.md), [PWA-CHECKLIST](docs/sop/deployment/PWA-DEPLOYMENT-CHECKLIST.md)
 
 Both **VPS (web PWA)** and **Tauri (desktop)** distributions are active and production-ready.
 
@@ -370,87 +146,27 @@ Both **VPS (web PWA)** and **Tauri (desktop)** distributions are active and prod
 12. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS run `./scripts/deploy-tauri-update.sh --notes "TASK-XXX: description"` to build, sign, and deploy to VPS so the user receives the update via Tauri's in-app auto-updater. Never just offer `npm run dev` or local `dpkg -i` as the final delivery. See SOP-037 for details.
 13. **No Client-Side API Keys (BUG-1131)** - NEVER use `VITE_` prefix for API keys/secrets. Cloud API keys go through Supabase Edge Function proxies. A build-time guard (`scripts/check-vite-secrets.cjs`) blocks builds with non-allowlisted VITE_ vars. To add a new safe VITE_ var, add it to the allowlist in that script.
 
-## Completion Protocol (MANDATORY - TASK-334)
+## Completion Protocol (MANDATORY)
 
-**Problem**: Self-verification is fundamentally flawed. Claude can write tests that pass but don't verify the right things.
+**Before starting:** Define SUCCESS and FAILURE criteria upfront (what observable outcome proves it works vs doesn't).
 
-**Solution**: 5-Layer Defense System. EVERY completed task must follow this protocol.
-
-### Before Starting Any Task (Layer 3: Falsifiability)
-
-**MANDATORY**: Define success/failure criteria BEFORE implementation.
-
-```
-TEMPLATE:
-┌─────────────────────────────────────────────────────────┐
-│ Task: [What you're implementing]                        │
-│ SUCCESS: [Observable outcome that proves it works]      │
-│ FAILURE: [What would prove it DOESN'T work]             │
-└─────────────────────────────────────────────────────────┘
-
-EXAMPLE:
-┌─────────────────────────────────────────────────────────┐
-│ Task: Implement backup restore                          │
-│ SUCCESS: User clicks restore → sees previous data →     │
-│          can create/edit tasks normally                 │
-│ FAILURE: Button errors, data doesn't appear, data is    │
-│          corrupted, or can't interact with restored data│
-└─────────────────────────────────────────────────────────┘
-```
-
-### After Implementation (Layer 1: Artifacts)
-
-**MANDATORY**: Provide context-aware proof before ANY "done" claim.
+**After implementation — required artifacts:**
 
 | Context | Required Artifacts |
 |---------|-------------------|
 | **Web UI changes** | Playwright screenshot, test output, git diff |
-| **Tauri/Desktop app** | Console logs, test output, git diff, step-by-step verification instructions |
+| **Tauri/Desktop app** | Console logs, test output, git diff, verification instructions |
 | **Backend/API changes** | curl/API response, test output, database query results |
-| **Database changes** | Before/after query results, migration logs |
 | **Build/Config changes** | Build output, npm run dev logs |
 | **Pure logic changes** | Unit test output, git diff |
 
-**Minimum for ANY change:**
-```
-├── Git diff (what changed)
-├── Test output (existing tests pass)
-├── Auto-updater deploy (run ./scripts/deploy-tauri-update.sh)
-└── Verification instructions (how USER can test it)
-```
+**Minimum for ANY change:** Git diff + test output + deploy via `./scripts/deploy-tauri-update.sh` + verification instructions for user.
 
-**Auto-Updater Deploy (MANDATORY for all code changes):**
-After tests pass, run the deploy script so the user can receive the update in-app:
-```bash
-./scripts/deploy-tauri-update.sh --notes "TASK-XXX: Brief description"
-```
-This builds, signs, and deploys to VPS in one step. If the script fails (e.g., keyring not set up), provide the manual commands from the "Tauri Build & Auto-Updater Delivery" section above.
+**Completion phrase — NEVER say** "Done"/"Complete"/"Fixed". **ALWAYS say**: "I've implemented X. Here are the artifacts: [artifacts]. Can you test it and confirm it works?"
 
-### Completion Phrase (Layer 4: User Confirmation)
+**Task Status:** Only mark ✅ DONE after USER explicitly confirms. Until then: 🔄 IN PROGRESS or 👀 REVIEW.
 
-**NEVER say**: "Done", "Complete", "Working", "Ready", "Fixed", "Implemented"
-
-**ALWAYS say**: "I've implemented X. Here are the artifacts: [artifacts]. Can you test it and confirm it works?"
-
-**Task Status**:
-- Only mark MASTER_PLAN tasks as ✅ DONE after USER explicitly confirms
-- Until user confirms: keep status as 🔄 IN PROGRESS or 👀 REVIEW
-
-### What Gets Blocked
-
-The enforcement hooks will BLOCK:
-- "Done" claims without recent test run (`npm run test`)
-- Completion without git diff provided
-- Stopping without asking user to verify
-
-### Judge Agent (Layer 5)
-
-For complex features, a separate judge agent (integrated with Dev-Maestro) evaluates:
-- Did artifacts match the claimed work?
-- Were success criteria from Layer 3 met?
-- Are there obvious gaps?
-
-**To invoke**: Available via Dev-Maestro at http://localhost:6010 or `/api/judge/evaluate`
+**Judge Agent:** For complex features, invoke via Dev-Maestro at `localhost:6010/api/judge/evaluate`.
 
 ## Design Token Usage (MANDATORY)
 
@@ -488,35 +204,9 @@ Solid `var(--brand-primary)` background is ONLY acceptable for small indicators 
 
 ## Atomic Task Breakdown (CRITICAL)
 
-**Problem:** Broad tasks like "test all features" or "fix everything" cause extended thinking loops (3+ minutes stuck).
+ALWAYS break broad requests into atomic steps (<2 min each, single success condition). NEVER "test all" or "fix everything" — causes extended thinking loops (3+ min stuck). If thinking >30 seconds: STOP and break down further.
 
-**Solution:** ALWAYS break down broad requests automatically:
-
-```
-❌ BAD: "Test parent-child features"
-✅ GOOD: Break into atomic steps:
-   1. Check if groups show task count badges
-   2. Verify dragging task into group works
-   3. Confirm group drag moves children
-```
-
-**When user asks for multiple things at once:**
-1. Use TodoWrite to create atomic task list
-2. Work on ONE task at a time
-3. Complete and mark done before starting next
-4. NEVER try to solve "all three issues" simultaneously
-
-**Atomic task criteria:**
-- Can be completed in <2 minutes
-- Has single, clear success condition
-- Doesn't require analyzing multiple systems at once
-
-**If you catch yourself thinking for >30 seconds:** STOP. Break the task down further.
-
-**CRITICAL: When spawning Task agents:**
-- NEVER use prompts like "test all", "verify everything", "fix all issues"
-- ALWAYS spawn MULTIPLE agents in PARALLEL with ONE specific task each
-- Each agent prompt must be completable in <2 minutes with Yes/No answer
+**When spawning Task agents:** ONE specific task each, in PARALLEL. Each prompt completable with Yes/No answer. NEVER "test all" or "verify everything" prompts.
 
 ## Database Safety (CRITICAL)
 
@@ -536,101 +226,21 @@ Solid `var(--brand-primary)` background is ONLY acceptable for small indicators 
 
 **Backup location:** `supabase/backups/` (not committed to git)
 
-**Dual-Engine Backup System:** See [`docs/claude-md-extension/backup-system.md`](docs/claude-md-extension/backup-system.md) for full details.
-- Auto-backup every 5 minutes via `npm run dev`
-- Recovery UI: Settings > Storage tab
-
-**If you need to reset the database:**
-- Tell the user to run the command MANUALLY in their terminal
-- Claude Code cannot and will not run destructive commands
+**Backup system:** Auto-backup every 5 min via `npm run dev`, recovery in Settings > Storage. Details: [`backup-system.md`](docs/claude-md-extension/backup-system.md). To reset DB: tell the user to run manually — Claude Code will NOT run destructive commands.
 
 ## Supabase Architecture
 
-**Database Layer:** `useSupabaseDatabase.ts` (single source of truth)
-- All CRUD operations go through this composable
-- Type mappers in `src/utils/supabaseMappers.ts` convert between app/DB types
-- Auth via `src/services/auth/supabase.ts` + `src/stores/auth.ts`
+**Database Layer:** `useSupabaseDatabase.ts` (single source of truth for core CRUD). Type mappers: `supabaseMappers.ts`. Auth: `src/services/auth/supabase.ts` + `src/stores/auth.ts`.
 
-**Tables (with RLS enabled):**
+**19 tables** (all RLS-enabled): 8 core (tasks, groups, projects, timer_sessions, pomodoro_history, notifications, user_settings, quick_sort_sessions), 2 data integrity (tombstones, task_dedup_audit), 7 gamification, 2 challenges. Full schema: see [`architecture.md`](docs/claude-md-extension/architecture.md).
 
-*Core Application:*
-- `tasks` - Task data with user isolation
-- `groups` - Canvas groups/sections
-- `projects` - Project organization
-- `timer_sessions` - Active Pomodoro sessions
-- `pomodoro_history` - Completed Pomodoro session history
-- `notifications` - Scheduled notifications
-- `user_settings` - User preferences
-- `quick_sort_sessions` - QuickSort session data
-
-*Data Integrity:*
-- `tombstones` - Permanent deletion tracking (prevents zombie data on restore)
-- `task_dedup_audit` - Task ID deduplication audit log
-
-*Gamification (FEATURE-1118 "Cyberflow"):*
-- `user_gamification` - XP, levels, streaks, equipped cosmetics, RPG fields (corruption, multiplier, class)
-- `xp_logs` - XP transaction audit trail
-- `achievements` - Achievement definitions
-- `user_achievements` - User progress toward achievements
-- `shop_items` - Cosmetic items (themes, animations)
-- `user_purchases` - User's purchased items
-- `user_stats` - Aggregate counters for achievement tracking
-
-*Challenges (FEATURE-1132 "Cyberflow RPG"):*
-- `user_challenges` - Active daily/weekly/boss challenges with objectives and rewards
-- `challenge_history` - Completed/failed challenge archive for adaptive difficulty
-
-**Database Access Patterns:**
-- **Core app tables** → `useSupabaseDatabase.ts` (centralized composable)
-- **Gamification tables** → `src/stores/gamification.ts` (domain-specific, intentional bypass)
-- **Offline sync** → `src/composables/sync/useSyncOrchestrator.ts` (infrastructure layer)
-
-**Key Files:**
-```
-src/composables/useSupabaseDatabase.ts   # Main database composable
-src/utils/supabaseMappers.ts              # Type conversion
-src/services/auth/supabase.ts             # Supabase client init
-src/stores/auth.ts                        # Auth state management
-src/stores/gamification.ts                # Gamification data access (bypasses useSupabaseDatabase)
-src/composables/sync/useSyncOrchestrator.ts  # Offline-first sync queue
-```
+**Access patterns:** Core → `useSupabaseDatabase.ts` | Gamification → `stores/gamification.ts` (intentional bypass) | Sync → `useSyncOrchestrator.ts`
 
 ## Timer Cross-Device Sync
 
-**Architecture:** Device leadership model where one device "leads" the countdown and others follow.
+Device leadership model: one device leads countdown, others follow. Vue App (WebSocket) = leader-capable, KDE Widget (REST polling 2s) = follower. Leader heartbeat every 10s, 30s timeout for leadership claim. User actions take precedence.
 
-| Device | Role | Sync Method |
-|--------|------|-------------|
-| Vue App | Leader-capable | Supabase Realtime (WebSocket) |
-| KDE Widget (pomoflow-kde) | Follower | REST API polling (2s interval) |
-
-**Key Rules:**
-- Leader sends heartbeat every 10 seconds (`device_leader_last_seen`)
-- Followers apply drift correction based on time since last heartbeat
-- 30-second timeout before another device can claim leadership
-- User's explicit action (start/pause) takes precedence over stale leadership
-
-**Critical Pattern - Auth-Aware Initialization:**
-```typescript
-// Timer store MUST wait for auth before loading session
-watch(
-  () => authStore.isAuthenticated,
-  (isAuthenticated) => {
-    if (isAuthenticated && !hasLoadedSession.value) {
-      initializeStore()  // Now userId is available
-    }
-  },
-  { immediate: true }
-)
-```
-
-**Full SOP:** [`docs/sop/active/TIMER-sync-architecture.md`](docs/sop/active/TIMER-sync-architecture.md)
-
-**Key Files:**
-```
-src/stores/timer.ts                      # Timer state + leadership logic
-# KDE Widget is in separate repo: pomoflow-kde (not in this repo)
-```
+**CRITICAL:** Timer store MUST wait for auth before loading session (auth-aware init pattern, see [SOP-032](docs/sop/SOP-032-store-auth-initialization.md)). Key file: `src/stores/timer.ts`. Full SOP: [TIMER-sync-architecture](docs/sop/active/TIMER-sync-architecture.md).
 
 ## Timer Active Task Highlighting
 
@@ -642,56 +252,26 @@ Local and production use DIFFERENT JWT secrets — never mix them. `npm run dev`
 
 ## Canvas Position Persistence (CRITICAL)
 
-**DO NOT** add code that can cause canvas positions to reset. Known causes:
-
-| Issue | Root Cause | Fix |
-|-------|------------|-----|
-| **TASK-131**: Positions reset during session | Competing `deep: true` watcher in `canvas.ts` | REMOVED - `useCanvasSync.ts` is single source of truth |
-| **TASK-142**: Positions reset on refresh | Canvas store loaded before auth ready | Auth watcher reloads groups from Supabase |
+**DO NOT** add code that causes canvas positions to reset.
 
 **Architecture Rules:**
-- `useCanvasSync.ts` is the SINGLE source of sync for canvas nodes
+- `useCanvasSync.ts` is the SINGLE source of sync for canvas nodes (READ-ONLY)
 - NEVER add watchers in `canvas.ts` that call `syncTasksToCanvas()`
 - Vue Flow positions are authoritative for existing nodes
 - Position locks (7s timeout) must be respected during sync
 
-**Before modifying canvas sync:**
-1. Run `npm run test -- --grep "Position Persistence"`
-2. Manual test: drag item, refresh, verify position persists
+**Before modifying canvas sync:** Run `npm run test -- --grep "Position Persistence"` + manual drag/refresh test.
+**~29 composables** in `src/composables/canvas/` — see `ls src/composables/canvas/` or [`architecture.md`](docs/claude-md-extension/architecture.md).
 
-**Canvas Composables** (`src/composables/canvas/`):
-| Composable | Purpose |
-|------------|---------|
-| `useCanvasSync.ts` | **CRITICAL** - Single source of truth for node sync (READ-ONLY) |
-| `useCanvasInteractions.ts` | Drag-drop, selection, node interactions, parent-child logic |
-| `useCanvasEvents.ts` | Vue Flow event handlers |
-| `useCanvasActions.ts` | Task/group CRUD operations |
-| `useCanvasOrchestrator.ts` | Canvas initialization and lifecycle orchestration |
-| `useCanvasCore.ts` | Core canvas state and utilities |
-| `useCanvasGroups.ts` | Group management and membership |
-| `useCanvasSelection.ts` | Selection handling and multi-select |
-| `useCanvasHotkeys.ts` | Keyboard shortcuts |
-| `useCanvasConnections.ts` | Task dependency connections |
-| `useCanvasZoom.ts` | Zoom and viewport controls |
+## Canvas Geometry Invariants (CRITICAL)
 
-*32 total composables in `src/composables/canvas/` - see full list via `ls src/composables/canvas/`*
+Full SOP: [CANVAS-POSITION-SYSTEM](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md)
 
-## Canvas Geometry Invariants (CRITICAL - TASK-255)
+1. **Single Writer** — Only drag handlers may change `parentId`, `canvasPosition`, `position`
+2. **Sync is Read-Only** — `useCanvasSync.ts` MUST NEVER call `updateTask()` or `updateGroup()`
+3. **Metadata Only** — Smart-Groups update `dueDate`/`status`/`priority`, NEVER geometry
 
-**Position drift and "jumping" tasks occur when multiple code paths mutate geometry.**
-
-**Full SOP:** [`docs/sop/canvas/CANVAS-POSITION-SYSTEM.md`](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md)
-
-### Quick Rules
-1. **Single Writer** - Only drag handlers may change `parentId`, `canvasPosition`, `position`
-2. **Sync is Read-Only** - `useCanvasSync.ts` MUST NEVER call `updateTask()` or `updateGroup()`
-3. **Metadata Only** - Smart-Groups update `dueDate`/`status`/`priority`, NEVER geometry
-
-### Quarantined Features (DO NOT RE-ENABLE)
-- `useMidnightTaskMover.ts` - Auto-moved tasks at midnight
-- `useCanvasOverdueCollector.ts` - Auto-collected overdue tasks
-
-These violated geometry invariants and caused position drift. See ADR comments in each file.
+**Quarantined:** `useCanvasOverdueCollector.ts` — DO NOT RE-ENABLE (violates geometry invariants, causes position drift).
 
 ## MASTER_PLAN.md Task ID Format
 
@@ -731,71 +311,21 @@ This project has automatic task locking via `task-lock-enforcer.sh` hook to prev
 
 ## Beads Agent Coordination
 
-MASTER_PLAN.md auto-syncs to beads for multi-agent coordination.
+MASTER_PLAN.md auto-syncs to beads. **Never create beads manually** — the sync script manages them.
 
-**Sync Commands:**
-```bash
-npm run mp:sync           # Full sync MASTER_PLAN → beads
-npm run mp:sync:dry       # Preview changes without applying
-npm run mp:sync:force     # Force sync (ignore change detection)
-```
-
-**For Agents:**
 | Command | Purpose |
 |---------|---------|
-| `bd ready` | Find unblocked tasks to work on |
+| `npm run mp:sync` | Full sync (also: `:dry`, `:force`) |
+| `bd ready` | Find unblocked tasks |
 | `bd update <id> --status=in_progress` | Claim a task |
-| `bd blocked` | See what's waiting on dependencies |
-| `bd show <id>` | View task details |
-| `bd close <id>` | Mark task complete |
-
-**Architecture:**
-- MASTER_PLAN.md is the **source of truth**
-- Beads are created with `--external-ref TASK-XXX` for cross-referencing
-- Dependencies (`**Blocked By**:`) sync to beads dependency graph
-- Status mapping: PLANNED→open, IN PROGRESS→in_progress, DONE→closed
-- Auto-sync hook triggers on MASTER_PLAN.md edits
-
-**Never create beads manually** - the sync script manages them from MASTER_PLAN.md.
+| `bd blocked` | See dependency blockers |
+| `bd close <id>` | Mark complete |
 
 ## Extended Documentation
 
-Detailed docs available in `docs/claude-md-extension/`:
+**`docs/claude-md-extension/`:** architecture.md, code-patterns.md, testing.md, backup-system.md, design-system.md, troubleshooting.md
 
-| File | Contents |
-|------|----------|
-| `architecture.md` | Project structure, stores, composables, data models |
-| `code-patterns.md` | Component/store patterns, naming conventions |
-| `testing.md` | Playwright/Vitest examples, dev workflow |
-| `backup-system.md` | Dual-engine backup system (Postgres + Shadow Mirror) |
-| `design-system.md` | Design tokens, Tailwind config, glass morphism |
-| `troubleshooting.md` | Common issues, gotchas, SOPs |
-
-**SOPs (Standard Operating Procedures)** in `docs/sop/`:
-
-| File | Contents |
-|------|----------|
-| [`SOP-011-tauri-distribution.md`](docs/sop/SOP-011-tauri-distribution.md) | Tauri builds, signing, GitHub Actions releases |
-| [`SOP-013-immutable-task-ids.md`](docs/sop/SOP-013-immutable-task-ids.md) | Task ID system architecture, deduplication |
-| [`SOP-026-custom-domain-deployment.md`](docs/sop/SOP-026-custom-domain-deployment.md) | VPS domain, Cloudflare, Caddy setup |
-| [`SOP-030-doppler-secrets-management.md`](docs/sop/SOP-030-doppler-secrets-management.md) | Doppler secrets for CI/CD and VPS |
-| [`SOP-031-cors-configuration.md`](docs/sop/SOP-031-cors-configuration.md) | CORS headers for self-hosted Supabase |
-| [`SOP-032-store-auth-initialization.md`](docs/sop/SOP-032-store-auth-initialization.md) | Store auth-wait pattern, initialization order |
-| [`SOP-035-auth-initialization-race-fix.md`](docs/sop/SOP-035-auth-initialization-race-fix.md) | Triple initialization bug fix |
-| [`SOP-037-tauri-updater-signing.md`](docs/sop/SOP-037-tauri-updater-signing.md) | Tauri updater signing, VPS deployment, key management, version bump protocol |
-| [`SOP-040-cross-device-position-sync.md`](docs/sop/SOP-040-cross-device-position-sync.md) | Cross-device canvas position sync (Tauri+PWA) |
-| [`deployment/VPS-DEPLOYMENT.md`](docs/sop/deployment/VPS-DEPLOYMENT.md) | Full VPS setup and deployment guide |
-| [`deployment/PWA-DEPLOYMENT-CHECKLIST.md`](docs/sop/deployment/PWA-DEPLOYMENT-CHECKLIST.md) | Pre/post deploy verification checklist |
-| [`active/UNDO-system-architecture.md`](docs/sop/active/UNDO-system-architecture.md) | Undo/redo system with operation-scoped selective restoration (BUG-309-B) |
-| [`active/TIMER-sync-architecture.md`](docs/sop/active/TIMER-sync-architecture.md) | Cross-device timer sync (Vue app + KDE widget) |
-| [`active/SOP-016-guest-mode-auth-flow.md`](docs/sop/active/SOP-016-guest-mode-auth-flow.md) | Guest vs authenticated mode flows |
-| [`active/SOP-022-skills-config-sync.md`](docs/sop/active/SOP-022-skills-config-sync.md) | Skills config auto-sync and maintenance |
-| [`active/SYNC-system-consolidation.md`](docs/sop/active/SYNC-system-consolidation.md) | Primary sync systems reference guide |
-| [`canvas/README.md`](docs/sop/canvas/README.md) | Canvas system documentation index |
-| [`canvas/CANVAS-POSITION-SYSTEM.md`](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md) | Canvas position/coordinate system, geometry invariants |
-| [`canvas/CANVAS-DRAG-DROP.md`](docs/sop/canvas/CANVAS-DRAG-DROP.md) | Canvas drag-drop interaction patterns |
-| [`canvas/CANVAS-DEBUGGING.md`](docs/sop/canvas/CANVAS-DEBUGGING.md) | Canvas debugging guide |
-| [`canvas/CANVAS-DUPLICATE-DETECTION.md`](docs/sop/canvas/CANVAS-DUPLICATE-DETECTION.md) | Canvas duplicate node detection |
+**SOPs (20+ procedures):** `docs/sop/` — see `docs/sop/README.md` for full index. Key SOPs referenced inline throughout this file.
 
 ## Skills Maintenance
 
@@ -809,6 +339,6 @@ Detailed docs available in `docs/claude-md-extension/`:
 
 ---
 
-**Last Updated**: February 5, 2026
+**Last Updated**: February 18, 2026
 **Stack**: Vue 3.5.26, Vite 7.3.1, TypeScript 5.9.3, Supabase (self-hosted), Tauri 2.10, tauri-cli 2.10.0
 **Production**: in-theflow.com (Contabo VPS, Ubuntu 22.04)

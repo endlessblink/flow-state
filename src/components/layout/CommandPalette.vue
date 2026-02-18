@@ -189,8 +189,8 @@ defineExpose({ open, close })
   position: fixed;
   inset: 0;
   background: var(--overlay-darker);
-  backdrop-filter: blur(12px) saturate(100%);
-  -webkit-backdrop-filter: blur(12px) saturate(100%);
+  backdrop-filter: var(--blur-md);
+  -webkit-backdrop-filter: var(--blur-md);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -202,15 +202,15 @@ defineExpose({ open, close })
 /* Modal */
 .command-palette-modal {
   background: var(--glass-panel-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: var(--blur-xl);
+  -webkit-backdrop-filter: var(--blur-xl);
   border: 1px solid var(--glass-border-medium);
   border-radius: var(--radius-2xl);
   width: 600px;
   max-width: 90vw;
   box-shadow:
-    0 32px 64px rgba(0, 0, 0, 0.4),
-    0 16px 32px rgba(0, 0, 0, 0.2),
+    var(--shadow-2xl),
+    var(--shadow-strong),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   overflow: visible;
   animation: slideUp var(--duration-normal) var(--spring-bounce);

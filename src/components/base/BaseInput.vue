@@ -174,13 +174,13 @@ defineExpose({
 .base-input:focus {
   border-color: var(--brand-primary);
   background: var(--glass-bg-soft);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1), 0 0 12px rgba(78, 205, 196, 0.05);
+  box-shadow: var(--focus-ring);
 }
 
 .base-input:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--overlay-bg);
 }
 
 /* Adjust padding when slots are used */

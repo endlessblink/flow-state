@@ -162,8 +162,8 @@ const filterOptions = [
 .hide-done-toggle.icon-only {
   padding: var(--space-2);
   /* Match height of other controls roughly */
-  height: 38px;
-  width: 38px;
+  height: var(--space-9_5);
+  width: var(--space-9_5);
   justify-content: center;
 }
 
@@ -198,8 +198,8 @@ const filterOptions = [
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   border-radius: var(--radius-md);
   background: transparent;
   border: none;

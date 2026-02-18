@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Bot, DollarSign, MessageSquare, Zap, Trash2, Tag, RefreshCw, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Wand2 } from 'lucide-vue-next'
+import { Bot, DollarSign, MessageSquare, Zap, Trash2, Tag, RefreshCw, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Wand2, HeartPulse } from 'lucide-vue-next'
 import { useAIUsageTracking, type UsagePeriod, type UsageSummary } from '@/composables/useAIUsageTracking'
 import { useAIChat } from '@/composables/useAIChat'
 import { useWorkProfile } from '@/composables/useWorkProfile'
+import { useMemoryAssessment } from '@/composables/useMemoryAssessment'
 import { useSettingsStore } from '@/stores/settings'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
@@ -14,6 +15,34 @@ import { resetSharedRouter } from '@/services/ai/routerFactory'
 const { usageSummary, weekUsage, monthUsage, hasUsageData, pricingCatalog, clearUsageData } = useAIUsageTracking()
 const settingsStore = useSettingsStore()
 const { profile, loadProfile, savePreferences, computeCapacityMetrics, resetLearnedData } = useWorkProfile()
+
+// ── TASK-1356: Memory Health Assessment ──
+const {
+  isRunning: memoryHealthRunning,
+  progress: memoryHealthProgress,
+  currentCheck: memoryHealthCheck,
+  report: memoryHealthReport,
+  error: memoryHealthError,
+  runFastAssessment,
+  getHistory: getMemoryHistory,
+} = useMemoryAssessment()
+
+const lastMemoryReport = computed(() => {
+  if (memoryHealthReport.value) return memoryHealthReport.value
+  const history = getMemoryHistory()
+  return history.length > 0 ? history[0] : null
+})
+
+function gradeColor(grade: string): string {
+  switch (grade) {
+    case 'A': return 'var(--brand-primary)'
+    case 'B': return 'var(--color-info)'
+    case 'C': return 'var(--color-warning)'
+    case 'D': return 'var(--color-danger)'
+    case 'F': return 'var(--color-danger)'
+    default: return 'var(--text-muted)'
+  }
+}
 
 // ── Default Provider/Model ──
 const {
@@ -759,6 +788,64 @@ async function onClearMemories() {
           <Trash2 :size="14" />
           {{ isResetting ? 'Resetting...' : 'Reset Profile' }}
         </button>
+      </div>
+    </SettingsSection>
+
+    <!-- TASK-1356: Memory Health Quick Check -->
+    <SettingsSection title="Memory Health">
+      <div class="memory-health-summary">
+        <!-- Last report or empty state -->
+        <div v-if="lastMemoryReport" class="mh-result-row">
+          <div class="mh-grade-badge" :style="{ borderColor: gradeColor(lastMemoryReport.grade), color: gradeColor(lastMemoryReport.grade) }">
+            {{ lastMemoryReport.grade }}
+          </div>
+          <div class="mh-details">
+            <span class="mh-score">{{ lastMemoryReport.overallScore }}/100</span>
+            <span class="mh-meta">
+              {{ lastMemoryReport.mode === 'fast' ? 'Quick' : 'Full' }}
+              &middot;
+              {{ new Date(lastMemoryReport.timestamp).toLocaleDateString() }}
+            </span>
+          </div>
+          <div class="mh-sections-mini">
+            <div
+              v-for="section in lastMemoryReport.sections"
+              :key="section.id"
+              class="mh-section-dot"
+              :title="`${section.name}: ${section.score}/100`"
+              :style="{ backgroundColor: section.score >= 70 ? 'var(--brand-primary)' : section.score >= 45 ? 'var(--color-warning)' : 'var(--color-danger)' }"
+            />
+          </div>
+        </div>
+        <div v-else class="mh-empty">
+          <HeartPulse :size="18" />
+          <span>No assessment yet</span>
+        </div>
+
+        <!-- Progress indicator -->
+        <div v-if="memoryHealthRunning" class="mh-progress">
+          <div class="mh-progress-bar">
+            <div class="mh-progress-fill" :style="{ width: memoryHealthProgress + '%' }" />
+          </div>
+          <span class="mh-progress-label">{{ memoryHealthCheck || 'Running...' }}</span>
+        </div>
+
+        <!-- Error -->
+        <div v-if="memoryHealthError" class="mh-error">
+          <AlertCircle :size="12" />
+          {{ memoryHealthError }}
+        </div>
+
+        <!-- Action -->
+        <button
+          class="mh-run-btn"
+          :disabled="memoryHealthRunning"
+          @click="runFastAssessment()"
+        >
+          <HeartPulse :size="14" :class="{ spinning: memoryHealthRunning }" />
+          {{ memoryHealthRunning ? 'Checking...' : 'Run Quick Check' }}
+        </button>
+        <p class="mh-hint">Full assessment available in AI Hub &gt; Memory tab.</p>
       </div>
     </SettingsSection>
 
@@ -1681,5 +1768,142 @@ async function onClearMemories() {
 .wizard-rerun-btn:hover {
   border-color: var(--brand-primary);
   color: var(--brand-primary);
+}
+
+/* ── TASK-1356: Memory Health ── */
+.memory-health-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mh-result-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(8px);
+}
+
+.mh-grade-badge {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  border: 2px solid;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-soft);
+  flex-shrink: 0;
+}
+
+.mh-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0_5);
+  flex: 1;
+  min-width: 0;
+}
+
+.mh-score {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.mh-meta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.mh-sections-mini {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.mh-section-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.mh-empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.mh-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.mh-progress-bar {
+  height: 4px;
+  background: var(--glass-bg);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mh-progress-fill {
+  height: 100%;
+  background: var(--brand-primary);
+  border-radius: 2px;
+  transition: width var(--duration-normal);
+}
+
+.mh-progress-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.mh-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+}
+
+.mh-run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  padding: var(--space-1_5) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-sm);
+  color: var(--brand-primary);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all var(--duration-fast);
+  align-self: flex-start;
+}
+
+.mh-run-btn:hover:not(:disabled) {
+  background: rgba(78, 205, 196, 0.08);
+}
+
+.mh-run-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mh-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0;
 }
 </style>

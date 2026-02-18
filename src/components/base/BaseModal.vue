@@ -18,12 +18,12 @@
       @click.stop
     >
       <!-- Modal Header -->
-      <header v-if="showHeader" class="modal-header" :class="{ 'rtl-header': isRTL }">
+      <header v-if="showHeader" class="modal-header">
         <div class="header-content--modal">
           <h2
             :id="titleId"
             class="modal-title"
-            :class="[titleClass, { 'text-end': isRTL }]"
+            :class="titleClass"
           >
             <slot name="title">
               {{ title }}
@@ -34,7 +34,7 @@
             v-if="description || $slots.description"
             :id="descriptionId"
             class="modal-description"
-            :class="[descriptionClass, { 'text-end': isRTL }]"
+            :class="descriptionClass"
           >
             <slot name="description">
               {{ description }}
@@ -47,8 +47,7 @@
           v-if="showCloseButton"
           ref="closeBtnRef"
           class="modal-close-btn"
-          :class="{ 'rtl-close-btn': isRTL }"
-          :aria-label="closeAriaLabel"
+          :aria-label="finalCloseAriaLabel"
           type="button"
           @click="handleClose"
         >
@@ -62,17 +61,17 @@
       </main>
 
       <!-- Modal Footer -->
-      <footer v-if="showFooter || $slots.footer" class="modal-footer" :class="[footerClass, { 'rtl-footer': isRTL }]">
+      <footer v-if="showFooter || $slots.footer" class="modal-footer" :class="footerClass">
         <slot name="footer">
           <!-- Default footer actions -->
-          <div class="default-actions" :class="{ 'rtl-actions': isRTL }">
+          <div class="default-actions">
             <BaseButton
               v-if="showCancelButton"
               variant="secondary"
               :disabled="loading"
               @click="handleCancel"
             >
-              {{ cancelText }}
+              {{ finalCancelText }}
             </BaseButton>
 
             <BaseButton
@@ -82,7 +81,7 @@
               :disabled="confirmDisabled"
               @click="handleConfirm"
             >
-              {{ confirmText }}
+              {{ finalConfirmText }}
             </BaseButton>
           </div>
         </slot>
@@ -102,7 +101,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
-import { useDirection } from '@/i18n/useDirection'
+import { useI18n } from 'vue-i18n'
 import BaseButton from './BaseButton.vue'
 import { isTextAreaOrContentEditable } from '@/utils/dom'
 
@@ -145,9 +144,9 @@ const props = withDefaults(defineProps<Props>(), {
   showCloseButton: true,
   showCancelButton: true,
   showConfirmButton: true,
-  cancelText: 'Cancel',
-  confirmText: 'Confirm',
-  closeAriaLabel: 'Close modal',
+  cancelText: undefined,
+  confirmText: undefined,
+  closeAriaLabel: undefined,
   loading: false,
   confirmDisabled: false,
   titleClass: undefined,
@@ -156,6 +155,13 @@ const props = withDefaults(defineProps<Props>(), {
   footerClass: undefined,
   trapFocus: true
 })
+
+const { t } = useI18n()
+
+// I18n defaults (if props not provided)
+const finalCancelText = computed(() => props.cancelText || t('common.cancel'))
+const finalConfirmText = computed(() => props.confirmText || t('common.confirm'))
+const finalCloseAriaLabel = computed(() => props.closeAriaLabel || t('common.close'))
 
 const emit = defineEmits<{
   close: []
@@ -167,7 +173,8 @@ const emit = defineEmits<{
 }>()
 
 // RTL support
-const { isRTL } = useDirection()
+// Logical properties handle direction automatically, so manual isRTL check removed
+// const { isRTL } = useDirection()
 
 // Template refs
 const overlayRef = ref<HTMLElement>()
@@ -365,8 +372,8 @@ defineExpose({
   align-items: center;
   justify-content: center;
   z-index: var(--z-modal);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  backdrop-filter: var(--blur-xl);
+  -webkit-backdrop-filter: var(--blur-xl);
   animation: fadeIn var(--duration-normal) var(--spring-smooth);
   padding: var(--space-4);
 }
@@ -428,28 +435,28 @@ defineExpose({
 .modal-container.variant-danger {
   border-color: var(--color-danger);
   box-shadow:
-    0 32px 64px var(--shadow-xl),
-    0 16px 32px var(--shadow-strong),
+    var(--shadow-2xl),
+    var(--shadow-strong),
     inset 0 2px 0 var(--color-danger),
-    0 0 20px rgba(239, 68, 68, 0.2);
+    0 0 20px var(--danger-bg-subtle);
 }
 
 .modal-container.variant-warning {
   border-color: var(--color-warning);
   box-shadow:
-    0 32px 64px var(--shadow-xl),
-    0 16px 32px var(--shadow-strong),
+    var(--shadow-2xl),
+    var(--shadow-strong),
     inset 0 2px 0 var(--color-warning),
-    0 0 20px rgba(245, 158, 11, 0.2);
+    0 0 20px var(--warning-bg-subtle);
 }
 
 .modal-container.variant-success {
   border-color: var(--color-work);
   box-shadow:
-    0 32px 64px var(--shadow-xl),
-    0 16px 32px var(--shadow-strong),
+    var(--shadow-2xl),
+    var(--shadow-strong),
     inset 0 2px 0 var(--color-work),
-    0 0 20px rgba(34, 197, 94, 0.2);
+    0 0 20px var(--success-bg-subtle);
 }
 
 /* Modal Header */
@@ -509,7 +516,7 @@ defineExpose({
 .modal-close-btn:focus-visible {
   outline: none;
   border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
+  box-shadow: 0 0 0 3px var(--brand-primary-bg-subtle), 0 0 8px var(--brand-primary-bg-tint);
 }
 
 /* Modal Body - uses .scroll-container utility for flex:1, overflow-y:auto, min-height:0 */
@@ -630,32 +637,8 @@ defineExpose({
   }
 }
 
-/* RTL Styles */
-.modal-header.rtl-header {
-  flex-direction: row-reverse;
-}
-
-.modal-header.rtl-header .modal-close-btn {
-  margin-inline-start: var(--space-2);
-  margin-inline-end: 0;
-}
-
-.modal-close-btn.rtl-close-btn {
-  transform: scaleX(-1);
-}
-
-.modal-footer.rtl-footer {
-  flex-direction: row-reverse;
-}
-
-.default-actions.rtl-actions {
-  flex-direction: row-reverse;
-}
-
-/* RTL text alignment */
-.text-end {
-  text-align: end;
-}
+/* RTL Styles - REMOVED manual RTL classes in favor of Logical Properties (browser handles flip automatically) */
+/* The "dir=rtl" on HTML tag makes flex containers flip automatically */
 
 /* Screen Reader Only */
 .sr-only {

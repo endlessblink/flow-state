@@ -307,16 +307,19 @@ export function useAIChat() {
     const personalityPrompt = getPersonalitySystemPrompt()
 
     const parts: string[] = [
-      personalityPrompt || 'You are FlowState AI, a friendly assistant for a productivity app.',
+      personalityPrompt || 'You are FlowState AI, a smart productivity assistant that THINKS and ANALYZES.',
+      '',
+      '## YOUR ROLE:',
+      'You are a thoughtful assistant who understands the user\'s work, weighs priorities, and gives actionable advice. You have full access to the user\'s task data below — USE IT to reason and provide insights. Don\'t just search and dump results. THINK about what matters most, what\'s urgent, what\'s been neglected, and give personalized recommendations.',
       '',
       '## CRITICAL RULES:',
-      '1. LANGUAGE RULE (ABSOLUTE): Respond ENTIRELY in the SAME LANGUAGE the user writes. If they write Hebrew, ALL your text must be Hebrew — including status updates, acknowledgments, and summaries. NEVER mix languages. Examples: Hebrew user → "אני מכין את התוכנית השבועית שלך..." (NOT "...generating weekly plan"). English user → "Generating your weekly plan..." (NOT Hebrew text).',
-      '2. Be conversational and natural. Have a normal chat.',
+      '1. LANGUAGE RULE (ABSOLUTE): Respond ENTIRELY in the SAME LANGUAGE the user writes. If they write Hebrew, ALL your text must be Hebrew. NEVER mix languages.',
+      '2. Be conversational, thoughtful, and analytical. When the user asks about priorities or what to focus on, REASON about their tasks — weigh due dates, priority levels, how long tasks have been open, and project context.',
       '3. Use WRITE tools (create, update, delete) ONLY when the user explicitly asks to create, add, modify, or delete something.',
-      '4. Use READ tools (get_overdue_tasks, list_tasks, search_tasks, get_task_details, get_daily_summary, get_timer_status, list_projects, list_groups) ALWAYS when the user asks about their tasks, schedule, what is overdue, timer status, or any data query. These tools return rich interactive results the user can click on. NEVER answer task data questions from memory — ALWAYS call the tool.',
-      '5. If the user just says "hi" or has a general question unrelated to their tasks, just respond normally - NO tools needed.',
+      '4. You have the user\'s task data in context below. Use it to THINK and give smart recommendations. Use READ tools only when you need specific details not in the context, or when the user wants to see interactive task cards.',
+      '5. If the user just says "hi" or has a general question, respond normally - NO tools needed.',
       '6. Never show JSON to the user or explain tool syntax. Just do the action silently.',
-      '7. When using read tools, keep your text response SHORT (1 sentence summary) — the tool results will show the detailed data with clickable links.',
+      '7. After using tools, provide a THOUGHTFUL analysis — explain your reasoning, highlight what matters most, and suggest concrete next steps. Never give one-line answers to analytical questions.',
       '',
       buildNativeToolsBehaviorPrompt(),
       ''
@@ -352,7 +355,7 @@ export function useAIChat() {
       // Timer store not available
     }
 
-    // Enhanced context: Task statistics
+    // Enhanced context: Task statistics + actual task data for reasoning
     try {
       const allTasks = taskStore.tasks
       const today = new Date().toISOString().split('T')[0]
@@ -375,6 +378,39 @@ export function useAIChat() {
       parts.push(
         `Tasks: ${allTasks.length} total, ${byStatus.planned} planned, ${byStatus.in_progress} in progress, ${byStatus.done} done, ${overdueCount} overdue`
       )
+
+      // Include actual task data so AI can THINK about it (up to 60 open tasks)
+      const openTasks = allTasks
+        .filter(t => t.status !== 'done' && !t._soft_deleted)
+        .sort((a, b) => {
+          // Sort: overdue first, then by priority, then by due date
+          const aOverdue = a.dueDate && a.dueDate < today ? 1 : 0
+          const bOverdue = b.dueDate && b.dueDate < today ? 1 : 0
+          if (bOverdue !== aOverdue) return bOverdue - aOverdue
+          const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+          const aPri = priorityOrder[a.priority || ''] ?? 4
+          const bPri = priorityOrder[b.priority || ''] ?? 4
+          if (aPri !== bPri) return aPri - bPri
+          if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
+          if (a.dueDate) return -1
+          if (b.dueDate) return 1
+          return 0
+        })
+        .slice(0, 60)
+
+      if (openTasks.length > 0) {
+        parts.push('')
+        parts.push('## YOUR TASK DATA (use this to think and reason):')
+        for (const t of openTasks) {
+          const pri = t.priority ? `[${t.priority}]` : ''
+          const due = t.dueDate ? `due:${t.dueDate.slice(0, 10)}` : ''
+          const status = t.status || 'planned'
+          const overdue = t.dueDate && t.dueDate < today ? ' ⚠OVERDUE' : ''
+          const project = t.projectId ? taskStore.projects.find(p => p.id === t.projectId)?.name : null
+          const proj = project ? `(${project})` : ''
+          parts.push(`- "${t.title}" ${pri} ${status} ${due}${overdue} ${proj}`.trim())
+        }
+      }
     } catch {
       // Task store not available
     }
@@ -790,7 +826,7 @@ export function useAIChat() {
 
           conversationMessages.push({
             role: 'user',
-            content: `Tool results:\n${toolResultsSummary}\n\nPresent the results to the user in a friendly, encouraging way. Highlight key priorities, suggest what to focus on first, and mention any overdue items that need immediate attention. Respond in the user's language.`,
+            content: `Tool results:\n${toolResultsSummary}\n\nNow THINK about these results. Don't just list them — analyze them:\n1. What patterns do you see? What's most urgent/important and WHY?\n2. What should the user prioritize and what's your reasoning?\n3. Are there risks (overdue items, bottlenecks, too much on one day)?\n4. Give concrete, opinionated recommendations — not just a summary.\nBe a smart advisor who weighs trade-offs, not a search engine that dumps results. Respond in the user's language.`,
           })
 
           // Add step indicator to streaming content
@@ -870,7 +906,7 @@ export function useAIChat() {
               .join('\n\n')
             conversationMessages.push({
               role: 'user',
-              content: `Tool results:\n${toolResultsSummary}\n\nPresent the results to the user in a friendly, encouraging way. Highlight key priorities, suggest what to focus on first, and mention any overdue items that need immediate attention. Respond in the user's language.`,
+              content: `Tool results:\n${toolResultsSummary}\n\nNow THINK about these results. Don't just list them — analyze them:\n1. What patterns do you see? What's most urgent/important and WHY?\n2. What should the user prioritize and what's your reasoning?\n3. Are there risks (overdue items, bottlenecks, too much on one day)?\n4. Give concrete, opinionated recommendations — not just a summary.\nBe a smart advisor who weighs trade-offs, not a search engine that dumps results. Respond in the user's language.`,
             })
 
             // Strip the raw tool call text from the displayed message

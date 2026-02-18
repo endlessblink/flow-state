@@ -410,9 +410,9 @@ export const useTimerStore = defineStore('timer', () => {
         startTime: new Date(newDoc.start_time),
         duration: newDoc.duration,
         remainingTime: newDoc.remaining_time,
-        isActive: newDoc.is_active,
-        isPaused: newDoc.is_paused,
-        isBreak: newDoc.is_break,
+        isActive: !!newDoc.is_active,
+        isPaused: !!newDoc.is_paused,
+        isBreak: !!newDoc.is_break,
         completedAt: newDoc.completed_at ? new Date(newDoc.completed_at) : undefined,
         deviceLeaderId: newDoc.device_leader_id,
         deviceLeaderLastSeen: lastSeen
@@ -480,10 +480,12 @@ export const useTimerStore = defineStore('timer', () => {
         // Mark the existing session as inactive - user's explicit action takes precedence
         try {
           const { supabase } = await import('@/services/auth/supabase')
-          await supabase
-            .from('timer_sessions')
-            .update({ is_active: false, completed_at: new Date().toISOString() })
-            .eq('id', existing.id)
+          if (supabase) {
+            await supabase
+              .from('timer_sessions')
+              .update({ is_active: false, completed_at: new Date().toISOString() })
+              .eq('id', existing.id)
+          }
         } catch (clearError) {
           console.warn('🍅 [TIMER] Failed to clear existing session:', clearError)
         }
@@ -984,10 +986,12 @@ export const useTimerStore = defineStore('timer', () => {
         // Clear abandoned session from DB
         try {
           const { supabase } = await import('@/services/auth/supabase')
-          await supabase
-            .from('timer_sessions')
-            .update({ is_active: false })
-            .eq('id', saved.id)
+          if (supabase) {
+            await supabase
+              .from('timer_sessions')
+              .update({ is_active: false })
+              .eq('id', saved.id)
+          }
         } catch (e) {
           console.warn('🍅 [TIMER] Failed to clear stale session:', e)
         }
@@ -1015,10 +1019,12 @@ export const useTimerStore = defineStore('timer', () => {
         // Mark as complete in DB without playing sounds
         try {
           const { supabase } = await import('@/services/auth/supabase')
-          await supabase
-            .from('timer_sessions')
-            .update({ is_active: false, completed_at: new Date().toISOString() })
-            .eq('id', saved.id)
+          if (supabase) {
+            await supabase
+              .from('timer_sessions')
+              .update({ is_active: false, completed_at: new Date().toISOString() })
+              .eq('id', saved.id)
+          }
         } catch (e) {
           console.warn('🍅 [TIMER] Failed to mark expired session complete:', e)
         }
@@ -1127,6 +1133,113 @@ export const useTimerStore = defineStore('timer', () => {
     // TASK-1009: Realtime subscription is now handled by useAppInitialization
     // to avoid multiple calls to initRealtimeSubscription killing each other's channels.
     // The timer handler is exposed via getTimerRealtimeHandler() for app initialization to use.
+
+    // BUG-1357: Register visibility change handler for mobile PWA background recovery
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }
+
+  // BUG-1357: Re-sync timer state from database after mobile PWA returns from background
+  // Mobile browsers freeze setInterval and kill WebSocket when backgrounded.
+  // This method re-fetches the session and recalibrates local state.
+  let lastResyncAt = 0
+  const resyncFromDatabase = async () => {
+    // Debounce: skip if called within 1 second
+    const now = Date.now()
+    if (now - lastResyncAt < 1000) return
+    lastResyncAt = now
+
+    if (!authStore.isAuthenticated) return
+
+    try {
+      const session = await fetchActiveTimerSession()
+
+      if (!session) {
+        // Timer was stopped by another device while we were in background
+        if (currentSession.value) {
+          if (import.meta.env.DEV) {
+            console.log('🍅 [TIMER] Visibility recovery: No active session found, clearing stale local state')
+          }
+          pauseTimerInterval()
+          pauseHeartbeat()
+          pauseFollowerPoll()
+          isDeviceLeader.value = false
+          currentSession.value = null
+          releaseWakeLock()
+        }
+        return
+      }
+
+      // Check leadership status
+      const lastSeen = session.deviceLeaderLastSeen || 0
+      const timeSinceLeaderSeen = Date.now() - lastSeen
+      const leaderIsStale = timeSinceLeaderSeen > DEVICE_LEADER_TIMEOUT_MS
+
+      if (leaderIsStale && session.isActive) {
+        // Leader went away while we were backgrounded — claim leadership
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Visibility recovery: Leader stale by', Math.floor(timeSinceLeaderSeen / 1000), 's — claiming leadership')
+        }
+        isDeviceLeader.value = true
+        crossTabSync.claimTimerLeadership()
+        isLeader.value = true
+
+        const drift = Math.floor(timeSinceLeaderSeen / 1000)
+        const adjustedTime = session.isPaused ? session.remainingTime : Math.max(0, session.remainingTime - Math.min(drift, 120))
+
+        currentSession.value = { ...session, remainingTime: adjustedTime }
+        resumeHeartbeat()
+        await saveTimerSessionWithLeadership()
+        pauseFollowerPoll()
+
+        if (session.isActive && !session.isPaused) {
+          resumeTimerInterval()
+          requestWakeLock()
+        }
+      } else {
+        // Leader is fresh — run as follower with drift correction
+        let adjustedTime = session.remainingTime
+        if (session.deviceLeaderLastSeen && session.isActive && !session.isPaused) {
+          const drift = Math.floor((Date.now() - session.deviceLeaderLastSeen) / 1000)
+          if (drift > 0 && drift < 30) {
+            adjustedTime = Math.max(0, session.remainingTime - drift)
+          }
+        }
+
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Visibility recovery: Synced as follower', {
+            sessionId: session.id,
+            adjustedTime,
+            originalTime: session.remainingTime,
+            isActive: session.isActive,
+            isPaused: session.isPaused
+          })
+        }
+
+        currentSession.value = { ...session, remainingTime: adjustedTime }
+        isDeviceLeader.value = false
+
+        if (session.isActive && !session.isPaused) {
+          resumeTimerInterval()
+          resumeFollowerPoll()
+        } else {
+          pauseTimerInterval()
+        }
+      }
+    } catch (err) {
+      console.warn('🍅 [TIMER] Visibility recovery error:', err)
+    }
+  }
+
+  // BUG-1357: Handle document visibility change (mobile PWA background/foreground)
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && hasLoadedSession.value) {
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] Document became visible — triggering resync')
+      }
+      resyncFromDatabase()
+    }
   }
 
   // Cleanup
@@ -1137,6 +1250,10 @@ export const useTimerStore = defineStore('timer', () => {
     // TASK-1009: Remove SW message listener
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage)
+    }
+    // BUG-1357: Remove visibility change listener
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   })
 
@@ -1161,6 +1278,8 @@ export const useTimerStore = defineStore('timer', () => {
     startTimer, switchTimerTask, pauseTimer, resumeTimer, stopTimer, completeSession,
     requestNotificationPermission, playStartSound, playEndSound,
     // TASK-1009: Expose handler for app initialization to use in consolidated Realtime subscription
-    handleRemoteTimerUpdate
+    handleRemoteTimerUpdate,
+    // BUG-1357: Expose for useAppInitialization recovery callback
+    resyncFromDatabase
   }
 })

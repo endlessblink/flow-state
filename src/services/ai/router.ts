@@ -130,6 +130,12 @@ export interface RouterOptions extends Partial<GenerateOptions> {
 
   /** Disable fallback for this request */
   disableFallback?: boolean
+
+  /** AI user context feature type — determines context framing */
+  contextFeature?: 'quicksort' | 'taskassist' | 'chat' | 'weeklyplan'
+
+  /** Skip automatic user context injection (e.g., for health checks) */
+  skipUserContext?: boolean
 }
 
 // ============================================================================

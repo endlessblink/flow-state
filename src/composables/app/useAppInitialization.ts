@@ -454,6 +454,9 @@ export function useAppInitialization() {
                 projectStore.loadProjectsFromDatabase(),
                 canvasStore.loadFromDatabase()
             ])
+            // BUG-1357: Re-sync timer state after WebSocket recovery
+            // Mobile PWA may have missed timer events while backgrounded
+            timerStore.resyncFromDatabase()
         }
 
         const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery)

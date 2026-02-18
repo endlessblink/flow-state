@@ -34,7 +34,6 @@ import {
 } from '@/services/ai/tools'
 import type { NativeToolCall } from '@/services/ai/types'
 import { useAgentChains } from './useAgentChains'
-import { getAIUserContext } from '@/services/ai/userContext'
 
 // ============================================================================
 // Types
@@ -278,7 +277,7 @@ export function useAIChat() {
     const aiMessages: RouterChatMessage[] = []
 
     // System prompt with context
-    const systemPrompt = await buildSystemPrompt(ctx)
+    const systemPrompt = buildSystemPrompt(ctx)
     aiMessages.push({ role: 'system', content: systemPrompt })
 
     // Add recent message history (last 10 messages)
@@ -302,7 +301,7 @@ export function useAIChat() {
    * Build the system prompt with context awareness.
    * Includes timer state, task statistics, and additional context.
    */
-  async function buildSystemPrompt(ctx: ChatContext): Promise<string> {
+  function buildSystemPrompt(ctx: ChatContext): string {
     // Prepend personality prompt if active
     const personalityPrompt = getPersonalitySystemPrompt()
 
@@ -437,9 +436,7 @@ export function useAIChat() {
     parts.push('- Be encouraging and practical in your summary')
     parts.push('- IMPORTANT: Your acknowledgment text before/during tool execution must match the user\'s language (e.g., Hebrew user → "בדיוק, אני מתכנן את השבוע שלך..." NOT "generating weekly plan...")')
 
-    // Add centralized AI user context
-    const userContext = await getAIUserContext('chat')
-    return parts.join('\n') + userContext
+    return parts.join('\n')
   }
 
   // ============================================================================

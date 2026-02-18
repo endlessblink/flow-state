@@ -19,6 +19,8 @@
       <AIChatView v-if="activeTab === 'chat'" />
       <WeeklyPlanView v-else-if="activeTab === 'plan'" />
       <AIInsightsPanel v-else-if="activeTab === 'insights'" />
+      <AIQualityDashboard v-else-if="activeTab === 'quality'" />
+      <AIMemoryHealthDashboard v-else-if="activeTab === 'memory'" />
     </div>
   </div>
 </template>
@@ -33,27 +35,42 @@
 
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { MessageSquare, CalendarDays, Brain } from 'lucide-vue-next'
+import { MessageSquare, CalendarDays, Brain, FlaskConical, HeartPulse } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores/auth'
 import AIChatView from '@/views/AIChatView.vue'
 import WeeklyPlanView from '@/views/WeeklyPlanView.vue'
 import AIInsightsPanel from '@/components/ai/AIInsightsPanel.vue'
+import AIQualityDashboard from '@/components/ai/AIQualityDashboard.vue'
+import AIMemoryHealthDashboard from '@/components/ai/AIMemoryHealthDashboard.vue'
 
-type TabKey = 'chat' | 'plan' | 'insights'
+type TabKey = 'chat' | 'plan' | 'insights' | 'quality' | 'memory'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
-const tabs = [
-  { key: 'chat' as TabKey, label: 'Chat', icon: MessageSquare },
-  { key: 'plan' as TabKey, label: 'Weekly Plan', icon: CalendarDays },
-  { key: 'insights' as TabKey, label: 'Insights', icon: Brain },
-]
+const tabs = computed(() => {
+  const baseTabs = [
+    { key: 'chat' as TabKey, label: 'Chat', icon: MessageSquare },
+    { key: 'plan' as TabKey, label: 'Weekly Plan', icon: CalendarDays },
+    { key: 'insights' as TabKey, label: 'Insights', icon: Brain },
+  ]
+  if (authStore.isAdmin) {
+    baseTabs.push({ key: 'quality' as TabKey, label: 'Quality', icon: FlaskConical })
+    baseTabs.push({ key: 'memory' as TabKey, label: 'Memory', icon: HeartPulse })
+  }
+  return baseTabs
+})
 
-const validTabs: TabKey[] = ['chat', 'plan', 'insights']
+const validTabs = computed<TabKey[]>(() => {
+  const base: TabKey[] = ['chat', 'plan', 'insights']
+  if (authStore.isAdmin) { base.push('quality'); base.push('memory') }
+  return base
+})
 
 const activeTab = computed<TabKey>(() => {
   const queryTab = route.query.tab as string
-  if (validTabs.includes(queryTab as TabKey)) return queryTab as TabKey
+  if (validTabs.value.includes(queryTab as TabKey)) return queryTab as TabKey
   return 'chat'
 })
 

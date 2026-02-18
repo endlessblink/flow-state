@@ -60,7 +60,7 @@ button svg {
     width: 280px !important;
     flex-shrink: 0 !important;
     /* Subtle left border as column separator */
-    border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-left: 1px solid var(--glass-border-subtle) !important;
 }
 
 .kanban-column:first-child {
@@ -87,7 +87,7 @@ button svg {
 }
 
 .kanban-column .column-title {
-    color: rgba(255, 255, 255, 0.6) !important;
+    color: var(--text-secondary) !important;
     font-weight: 500 !important;
     font-size: 13px !important;
     text-transform: none !important;
@@ -148,7 +148,7 @@ button svg {
 .task-card-badges .meta-badge {
     background: transparent !important;
     border: none !important;
-    color: rgba(255, 255, 255, 0.45) !important;
+    color: var(--text-tertiary) !important;
     font-size: 12px !important;
     padding: 0 !important;
 }
@@ -236,7 +236,7 @@ button svg {
 .filter-bar {
     padding: var(--space-2) var(--space-4) !important;
     border-bottom: 1px solid var(--border-subtle) !important;
-    background: rgba(0, 0, 0, 0.2) !important;
+    background: var(--glass-bg-heavy) !important;
 }
 
 /* Slide-down transition */
@@ -560,11 +560,11 @@ button svg {
 /* Dates outside current month - CLEARLY dimmed with multiple approaches */
 .n-date-panel .n-date-panel-date.n-date-panel-date--excluded .n-date-panel-date__trigger,
 .n-date-panel-date--excluded .n-date-panel-date__trigger,
-.n-date-panel-date.n-date-panel-date--excluded > .n-date-panel-date__trigger,
+.n-date-panel-date.n-date-panel-date--excluded>.n-date-panel-date__trigger,
 div.n-date-panel-date--excluded .n-date-panel-date__trigger {
-    color: rgba(255, 255, 255, 0.15) !important;
+    color: var(--text-disabled) !important;
     opacity: 0.35 !important;
-    --n-item-text-color: rgba(255, 255, 255, 0.15) !important;
+    --n-item-text-color: var(--text-disabled) !important;
 }
 
 /* Fallback: target all excluded date elements */
@@ -650,4 +650,3 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
 .n-popover-arrow-wrapper .n-popover-arrow {
     background: rgb(22, 19, 38) !important;
 }
-

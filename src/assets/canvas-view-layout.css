@@ -11,8 +11,8 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
     margin: var(--space-4);
-    background: rgba(255, 255, 255, 0.01);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    background: var(--glass-bg-subtle);
+    box-shadow: var(--shadow-xl);
     overflow: hidden;
 }
 
@@ -27,7 +27,7 @@
     color: white;
     padding: var(--space-3) var(--space-4);
     border-bottom: 2px solid var(--border-hover);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-md);
     animation: slideDown 0.3s ease-out;
 }
 
@@ -52,7 +52,7 @@
 
 .health-retry-btn {
     background: var(--border-hover);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--glass-border);
     color: white;
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-sm);
@@ -62,7 +62,7 @@
 }
 
 .health-retry-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--glass-bg-light);
     transform: translateY(-1px);
 }
 
@@ -127,7 +127,7 @@
 .dismiss-btn,
 .refresh-btn {
     background: var(--border-hover);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--glass-border);
     color: white;
     padding: var(--space-1_5) var(--space-3);
     border-radius: var(--radius-sm);
@@ -140,7 +140,7 @@
 .retry-btn:hover,
 .dismiss-btn:hover,
 .refresh-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--glass-bg-light);
     transform: translateY(-1px);
 }
 
@@ -161,7 +161,7 @@
     right: 0;
     bottom: 0;
     background: var(--overlay-darker);
-    backdrop-filter: blur(4px);
+    backdrop-filter: var(--blur-sm);
     z-index: 10002;
     display: flex;
     align-items: center;
@@ -173,7 +173,7 @@
     background: var(--surface-secondary);
     padding: var(--space-6) var(--space-8);
     border-radius: var(--radius-lg);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--shadow-2xl);
     display: flex;
     flex-direction: column;
     align-items: center;

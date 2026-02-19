@@ -259,11 +259,11 @@ const projectDropdownRef = ref<HTMLElement>()
 const durationDropdownRef = ref<HTMLElement>()
 
 // Priority options
-const priorities = [
-  { value: 'high' as const, label: 'High' },
-  { value: 'medium' as const, label: 'Medium' },
-  { value: 'low' as const, label: 'Low' }
-]
+const priorities = computed(() => [
+  { value: 'high' as const, label: t('task.priority_high') },
+  { value: 'medium' as const, label: t('task.priority_medium') },
+  { value: 'low' as const, label: t('task.priority_low') }
+])
 
 // TASK-144: Duration options from centralized source
 const durations = DURATION_FILTER_OPTIONS
@@ -283,7 +283,7 @@ const unscheduledCount = computed(() => {
 const priorityLabel = computed(() => {
   const count = props.selectedPriorities.size
   if (count === 0) return t('filters.sort_priority')
-  if (count === 1) return priorities.find(p => p.value === [...props.selectedPriorities][0])?.label || t('filters.sort_priority')
+  if (count === 1) return priorities.value.find(p => p.value === [...props.selectedPriorities][0])?.label || t('filters.sort_priority')
   return `${t('filters.sort_priority')} (${count})`
 })
 

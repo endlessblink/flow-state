@@ -50,11 +50,11 @@
       </div>
 
       <div class="card glass stat-card">
-        <h3>Average Score</h3>
+        <h3>Tests Passed</h3>
         <div class="stat-value" :class="scoreColorClass(report.averageScore)">
-          {{ report.averageScore.toFixed(2) }}
+          {{ passedTestsCount }} of {{ report.results.length }}
         </div>
-        <p>out of 5</p>
+        <p>{{ passRateLabel }}</p>
       </div>
 
       <div class="card glass stat-card">
@@ -66,12 +66,6 @@
       </div>
 
       <div class="card glass stat-card">
-        <h3>Tests / Runs</h3>
-        <div class="stat-value">{{ report.results.length }}</div>
-        <p>{{ report.runsPerTest }}x each &middot; {{ formatDuration(report.durationMs) }}</p>
-      </div>
-
-      <div class="card glass stat-card">
         <h3>Provider</h3>
         <div class="stat-value stat-value--small">{{ report.provider }}</div>
         <p>{{ formatTime(report.timestamp) }}</p>
@@ -80,80 +74,112 @@
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <p>No test results yet. Click "Run All Tests" to evaluate AI response quality.</p>
-      <p class="empty-hint">
-        Runs {{ testPrompts.length }} prompts (3x each by default) and judges each response
-        against {{ rubrics.length }} quality rubrics + deterministic rule checks.
+      <h3 class="empty-title">AI Quality Assessment</h3>
+      <p class="empty-desc">
+        Tests your AI assistant by sending {{ testPrompts.length }} prompts across {{ new Set(testPrompts.map(t => t.category)).size }} categories,
+        then judges each response against {{ rubrics.length }} quality rubrics using a second LLM call.
       </p>
+      <div class="empty-details">
+        <div class="empty-detail-item">
+          <strong>Categories:</strong> Analytical, Priority, Assessment, Greeting, Action, Language (Hebrew), Edge Cases
+        </div>
+        <div class="empty-detail-item">
+          <strong>Rubrics:</strong> {{ rubrics.map(r => r.name).join(', ') }}
+        </div>
+        <div class="empty-detail-item">
+          <strong>Rule Checks:</strong> 9 deterministic checks (no JSON, no tool syntax, no field dumps, language compliance, etc.)
+        </div>
+        <div class="empty-detail-item">
+          <strong>Multi-run:</strong> Each prompt is tested 3x (configurable) with statistical confidence intervals
+        </div>
+      </div>
     </div>
 
     <!-- Results Grid -->
     <div v-if="results.length > 0" class="results-section">
       <h2>Test Results</h2>
+
+      <!-- Category Filter -->
+      <div class="category-filter">
+        <button
+          v-for="cat in availableCategories"
+          :key="cat"
+          class="category-pill"
+          :class="{ active: selectedCategory === cat }"
+          @click.stop="selectedCategory = cat"
+        >
+          {{ cat === 'all' ? 'All' : cat.replace('_', ' ') }}
+        </button>
+      </div>
+
       <div class="results-grid">
         <div
-          v-for="result in results"
+          v-for="result in filteredResults"
           :key="result.promptId"
           class="result-card glass"
           :class="{ expanded: expandedCards.has(result.promptId) }"
           @click="toggleCard(result.promptId)"
         >
+          <!-- Header: Category badge + Grade + Quick status dot -->
           <div class="result-header">
             <span class="category-badge" :class="'cat-' + result.category">
               {{ result.category }}
             </span>
-            <span class="result-grade" :class="scoreColorClass(result.overallScore)">
-              {{ result.grade }}
-            </span>
-          </div>
-
-          <div class="result-prompt">{{ result.prompt || '(empty prompt)' }}</div>
-
-          <div class="result-score">
-            <span :class="scoreColorClass(result.overallScore)">
-              {{ result.overallScore.toFixed(2) }}/5
-              <template v-if="result.runCount > 1">
-                <span class="result-ci">
-                  &plusmn;{{ result.scoreStdDev.toFixed(2) }}
-                  [{{ result.confidenceInterval[0].toFixed(1) }}-{{ result.confidenceInterval[1].toFixed(1) }}]
-                </span>
-              </template>
-            </span>
-            <span class="result-meta">
-              <span v-if="result.runCount > 1" class="result-runs">{{ result.runCount }} runs</span>
-              <span class="result-latency">{{ result.latencyMs }}ms</span>
-            </span>
-          </div>
-
-          <!-- Rule Check Summary -->
-          <div class="rule-check-summary">
-            <template v-if="getFailedRuleChecks(result).length === 0">
-              <span class="rule-pass">Rules: All passed</span>
-            </template>
-            <template v-else>
-              <span class="rule-fail">
-                Rules: {{ getFailedRuleChecks(result).map(rc => rc.name).join(', ') }}
+            <div class="result-grade-area">
+              <span class="result-grade" :class="scoreColorClass(result.overallScore)">
+                {{ result.grade }}
               </span>
-            </template>
+              <span class="result-grade-dot" :class="gradeDotClass(result.grade)"></span>
+            </div>
           </div>
 
-          <!-- Rubric bars -->
-          <div class="rubric-bars">
-            <div v-for="rs in result.rubricScores" :key="rs.rubricId" class="rubric-row">
-              <span class="rubric-name">{{ getRubricName(rs.rubricId) }}</span>
-              <div class="rubric-bar-track">
-                <div
-                  class="rubric-bar-fill"
-                  :class="scoreColorClass(rs.score)"
-                  :style="{ width: (rs.score * 20) + '%' }"
-                />
-              </div>
-              <span class="rubric-score" :class="scoreColorClass(rs.score)">{{ rs.score }}/5</span>
-            </div>
+          <!-- Question -->
+          <div class="result-question">
+            <span class="question-label">Asked:</span>
+            {{ result.prompt || '(empty prompt)' }}
+          </div>
+
+          <!-- AI Response Preview (first 3 lines) -->
+          <div class="result-response-preview">
+            <span class="preview-label">AI Response:</span>
+            <div class="preview-text">{{ result.response }}</div>
+          </div>
+
+          <!-- Simple Verdict (derived from judge reasoning) -->
+          <div class="result-verdict" :class="verdictClass(result)">
+            {{ getSimpleVerdict(result) }}
           </div>
 
           <!-- Expanded content -->
           <div v-if="expandedCards.has(result.promptId)" class="expanded-content">
+            <div class="expanded-section">
+              <h4>Full AI Response</h4>
+              <div class="response-text">{{ result.response }}</div>
+            </div>
+
+            <div v-if="result.judgeReasoning" class="expanded-section">
+              <h4>Judge's Detailed Assessment</h4>
+              <div class="judge-text">{{ result.judgeReasoning }}</div>
+            </div>
+
+            <!-- Expected Behavior -->
+            <div v-if="getTestPromptDetails(result.promptId)" class="expanded-section">
+              <h4>Test Criteria</h4>
+              <div class="test-criteria">
+                <div class="criteria-item">
+                  <strong>Tests for:</strong>
+                  {{ getTestPromptDetails(result.promptId)?.expectedBehavior }}
+                </div>
+                <div
+                  v-if="getTestPromptDetails(result.promptId)?.antiPatterns?.length"
+                  class="criteria-item anti-patterns-item"
+                >
+                  <strong>Anti-patterns:</strong>
+                  {{ getTestPromptDetails(result.promptId)?.antiPatterns?.join(' · ') }}
+                </div>
+              </div>
+            </div>
+
             <!-- Rule Check Details -->
             <div v-if="result.ruleChecks.length > 0" class="expanded-section">
               <h4>Rule Checks (Deterministic)</h4>
@@ -172,15 +198,7 @@
             </div>
 
             <div class="expanded-section">
-              <h4>AI Response</h4>
-              <div class="response-text">{{ result.response }}</div>
-            </div>
-            <div v-if="result.judgeReasoning" class="expanded-section">
-              <h4>Judge Assessment</h4>
-              <div class="judge-text">{{ result.judgeReasoning }}</div>
-            </div>
-            <div class="expanded-section">
-              <h4>Rubric Details</h4>
+              <h4>Rubric Scores & Reasoning</h4>
               <div v-for="rs in result.rubricScores" :key="rs.rubricId" class="rubric-detail">
                 <strong>{{ getRubricName(rs.rubricId) }} ({{ rs.score }}/5):</strong>
                 {{ rs.reasoning }}
@@ -189,7 +207,27 @@
 
             <!-- Multi-run details -->
             <div v-if="result.runs && result.runs.length > 1" class="expanded-section">
-              <h4>Run Breakdown ({{ result.runs.length }} runs)</h4>
+              <h4>Multi-Run Breakdown</h4>
+              <div class="run-breakdown-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Runs:</span>
+                  <span class="stat-value-inline">{{ result.runs.length }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Average:</span>
+                  <span class="stat-value-inline">{{ result.overallScore.toFixed(2) }}/5</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Std Dev:</span>
+                  <span class="stat-value-inline">±{{ result.scoreStdDev.toFixed(2) }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">95% CI:</span>
+                  <span class="stat-value-inline">
+                    [{{ result.confidenceInterval[0].toFixed(1) }}-{{ result.confidenceInterval[1].toFixed(1) }}]
+                  </span>
+                </div>
+              </div>
               <div v-for="(run, idx) in result.runs" :key="idx" class="run-detail">
                 <span class="run-label">Run {{ idx + 1 }}:</span>
                 <span :class="scoreColorClass(run.overallScore)">{{ run.overallScore.toFixed(2) }}/5</span>
@@ -230,7 +268,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useAIQualityAssessment } from '@/composables/useAIQualityAssessment'
-import { getScoreColor, QUALITY_RUBRICS, type TestResult } from '@/services/ai/qualityAssessment'
+import { getScoreColor, QUALITY_RUBRICS, TEST_PROMPTS, type TestResult } from '@/services/ai/qualityAssessment'
 
 const {
   isRunning,
@@ -248,6 +286,7 @@ const {
 
 const expandedCards = ref(new Set<string>())
 const history = ref(getHistory())
+const selectedCategory = ref<string>('all')
 
 const gradeClass = computed(() => {
   if (!report.value) return ''
@@ -275,6 +314,29 @@ const rulePassRateColor = computed(() => {
   return 'score-red'
 })
 
+const passedTestsCount = computed(() => {
+  if (!report.value) return 0
+  return report.value.results.filter(r => r.grade === 'A' || r.grade === 'B').length
+})
+
+const passRateLabel = computed(() => {
+  if (!report.value) return ''
+  const rate = (passedTestsCount.value / report.value.results.length) * 100
+  return `${rate.toFixed(0)}% passed`
+})
+
+const availableCategories = computed(() => {
+  const cats = new Set(results.value.map(r => r.category))
+  return ['all', ...Array.from(cats).sort()]
+})
+
+const filteredResults = computed(() => {
+  if (selectedCategory.value === 'all') {
+    return results.value
+  }
+  return results.value.filter(r => r.category === selectedCategory.value)
+})
+
 function scoreColorClass(score: number): string {
   const color = getScoreColor(score)
   return `score-${color}`
@@ -287,6 +349,10 @@ function getRubricName(rubricId: string): string {
 
 function getFailedRuleChecks(result: TestResult) {
   return result.ruleChecks?.filter(rc => !rc.passed) || []
+}
+
+function getTestPromptDetails(promptId: string) {
+  return TEST_PROMPTS.find(tp => tp.id === promptId)
 }
 
 function toggleCard(promptId: string) {
@@ -332,6 +398,86 @@ async function handleRunTests(runsPerTest: number) {
 function handleClearHistory() {
   clearHistory()
   history.value = []
+}
+
+function gradeDotClass(grade: string): string {
+  if (grade === 'A' || grade === 'B') return 'dot-green'
+  if (grade === 'C' || grade === 'D') return 'dot-yellow'
+  return 'dot-red'
+}
+
+function verdictClass(result: TestResult): string {
+  if (result.grade === 'A' || result.grade === 'B') return 'verdict-good'
+  if (result.grade === 'C' || result.grade === 'D') return 'verdict-warn'
+  return 'verdict-bad'
+}
+
+function getSimpleVerdict(result: TestResult): string {
+  // Extract a human-readable verdict from judge reasoning
+  const reasoning = result.judgeReasoning || ''
+  const failedRules = getFailedRuleChecks(result)
+
+  // If failed basic rules, say so
+  if (failedRules.length > 0) {
+    const ruleNames = failedRules.map(rc => rc.name).join(', ')
+    return `Failed rule checks: ${ruleNames}`
+  }
+
+  // For language tests
+  if (result.category === 'language') {
+    if (result.grade === 'A' || result.grade === 'B') {
+      return 'AI responded in the correct language as expected'
+    } else {
+      return 'AI did not respond in the expected language'
+    }
+  }
+
+  // For analytical/priority tests
+  if (result.category === 'analytical' || result.category === 'priority') {
+    if (result.grade === 'A' || result.grade === 'B') {
+      return 'AI analyzed your tasks and gave specific, actionable advice'
+    } else if (reasoning.toLowerCase().includes('generic')) {
+      return 'Response was generic — didn\'t reference your actual tasks'
+    } else if (reasoning.toLowerCase().includes('data dump') || reasoning.toLowerCase().includes('field')) {
+      return 'Response contained raw data dumps instead of analysis'
+    } else {
+      return 'Response lacked specificity or actionable insights'
+    }
+  }
+
+  // For action/greeting
+  if (result.category === 'greeting' || result.category === 'action') {
+    if (result.grade === 'A' || result.grade === 'B') {
+      return 'AI responded appropriately and concisely'
+    } else {
+      return 'Response was off-topic or too verbose'
+    }
+  }
+
+  // For assessment
+  if (result.category === 'assessment') {
+    if (result.grade === 'A' || result.grade === 'B') {
+      return 'AI gave a balanced self-assessment with awareness of limitations'
+    } else {
+      return 'AI response lacked self-awareness or was overconfident'
+    }
+  }
+
+  // Edge cases
+  if (result.category === 'edge_case') {
+    if (result.grade === 'A' || result.grade === 'B') {
+      return 'AI handled edge case gracefully'
+    } else {
+      return 'AI struggled with this edge case'
+    }
+  }
+
+  // Fallback
+  if (result.grade === 'A' || result.grade === 'B') {
+    return 'AI response met quality expectations'
+  } else {
+    return 'AI response had quality issues'
+  }
 }
 
 onMounted(() => {
@@ -537,10 +683,34 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
-.empty-hint {
+.empty-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.empty-desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-4);
+}
+
+.empty-details {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.empty-detail-item {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
-  margin-top: var(--space-2);
+  line-height: 1.5;
+}
+
+.empty-detail-item strong {
+  color: var(--text-secondary);
 }
 
 /* Results Section */
@@ -556,6 +726,40 @@ onMounted(() => {
   font-weight: var(--font-semibold);
   color: var(--text-primary);
   margin: 0;
+}
+
+/* Category Filter */
+.category-filter {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2) 0;
+}
+
+.category-pill {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  text-transform: capitalize;
+  cursor: pointer;
+  background: var(--glass-bg-soft);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.category-pill:hover {
+  background: var(--state-hover-bg);
+  color: var(--text-primary);
+  border-color: var(--brand-primary-hover);
+}
+
+.category-pill.active {
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
 }
 
 .results-grid {
@@ -585,7 +789,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .category-badge {
@@ -593,8 +797,8 @@ onMounted(() => {
   font-weight: var(--font-medium);
   padding: var(--space-0-5) var(--space-2);
   border-radius: var(--radius-full);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
 }
 
 .cat-analytical { background: rgba(78, 205, 196, 0.15); color: var(--brand-primary); }
@@ -605,109 +809,97 @@ onMounted(() => {
 .cat-language { background: rgba(230, 126, 34, 0.15); color: #e67e22; }
 .cat-edge_case { background: rgba(149, 165, 166, 0.15); color: #95a5a6; }
 
+.result-grade-area {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .result-grade {
   font-size: var(--text-xl);
   font-weight: var(--font-bold);
 }
 
-.result-prompt {
+.result-grade-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.dot-green { background: var(--color-success); }
+.dot-yellow { background: var(--color-warning); }
+.dot-red { background: var(--color-error); }
+
+.result-question {
   font-size: var(--text-sm);
   color: var(--text-secondary);
   margin-bottom: var(--space-3);
+  line-height: 1.5;
 }
 
-.result-score {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--text-sm);
+.question-label {
   font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-right: var(--space-1);
+}
+
+.result-response-preview {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+}
+
+.preview-label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.preview-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-verdict {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
   margin-bottom: var(--space-2);
 }
 
-.result-ci {
-  font-size: var(--text-xs);
-  font-weight: var(--font-normal);
-  opacity: 0.7;
-  margin-left: var(--space-1);
-}
-
-.result-meta {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-.result-runs {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  font-weight: var(--font-normal);
-}
-
-.result-latency {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  font-weight: var(--font-normal);
-}
-
-/* Rule Check Summary */
-.rule-check-summary {
-  margin-bottom: var(--space-3);
-  font-size: var(--text-xs);
-}
-
-.rule-pass {
+.verdict-good {
   color: var(--color-success);
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.3);
 }
 
-.rule-fail {
+.verdict-warn {
+  color: var(--color-warning);
+  background: rgba(241, 196, 15, 0.1);
+  border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+.verdict-bad {
   color: var(--color-error);
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
 }
 
-/* Rubric Bars */
-.rubric-bars {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.rubric-row {
-  display: grid;
-  grid-template-columns: 140px 1fr 40px;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.rubric-name {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rubric-bar-track {
-  height: 6px;
-  background: var(--surface-tertiary);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.rubric-bar-fill {
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition: width 0.5s ease;
-}
-
-.rubric-bar-fill.score-green { background: var(--color-success); }
-.rubric-bar-fill.score-yellow { background: var(--color-warning); }
-.rubric-bar-fill.score-red { background: var(--color-error); }
-
-.rubric-score {
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  text-align: right;
-}
 
 /* Expanded Content */
 .expanded-content {
@@ -740,15 +932,73 @@ onMounted(() => {
   border-radius: var(--radius-md);
 }
 
-.rubric-detail {
-  font-size: var(--text-xs);
+.test-criteria {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.criteria-item {
+  font-size: var(--text-sm);
   color: var(--text-secondary);
-  padding: var(--space-1) 0;
+  line-height: 1.6;
+}
+
+.criteria-item strong {
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.anti-patterns-item {
+  color: var(--color-error);
+  opacity: 0.9;
+}
+
+.rubric-detail {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: var(--space-2) 0;
   border-bottom: 1px solid var(--glass-border);
+  line-height: 1.6;
 }
 
 .rubric-detail:last-child {
   border-bottom: none;
+}
+
+.rubric-detail strong {
+  color: var(--text-primary);
+}
+
+.run-breakdown-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-medium);
+}
+
+.stat-value-inline {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: var(--font-semibold);
 }
 
 /* Rule Checks Grid */

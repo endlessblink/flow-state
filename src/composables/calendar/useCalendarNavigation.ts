@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 
@@ -11,6 +12,7 @@ import { useCalendarCore } from '@/composables/useCalendarCore'
  * View mode (day/week/month) IS persisted as a user preference.
  */
 export function useCalendarNavigation() {
+    const { locale } = useI18n()
     const { getWeekStart } = useCalendarCore()
 
     // TASK-1102: Date is NOT persisted - always start on today when entering calendar view
@@ -38,8 +40,8 @@ export function useCalendarNavigation() {
             const weekEnd = new Date(weekStart)
             weekEnd.setDate(weekEnd.getDate() + 6)
 
-            const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' })
-            const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' })
+            const startMonth = weekStart.toLocaleDateString(locale.value, { month: 'short' })
+            const endMonth = weekEnd.toLocaleDateString(locale.value, { month: 'short' })
             const year = weekStart.getFullYear()
 
             if (startMonth === endMonth) {
@@ -50,13 +52,13 @@ export function useCalendarNavigation() {
         }
 
         if (viewMode.value === 'month') {
-            return currentDate.value.toLocaleDateString('en-US', {
+            return currentDate.value.toLocaleDateString(locale.value, {
                 year: 'numeric',
                 month: 'long'
             })
         }
 
-        return currentDate.value.toLocaleDateString('en-US', {
+        return currentDate.value.toLocaleDateString(locale.value, {
             weekday: 'long',
             year: 'numeric',
             month: 'long',

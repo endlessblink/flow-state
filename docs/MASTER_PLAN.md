@@ -3386,6 +3386,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1358** | **P2** | **🔄 Rewrite 28 canvas todo tests — replace over-designed Vue Flow mocking with direct store/handler unit tests using real data shapes** |
 | ~~**BUG-1347**~~ | **P0** | ✅ **KDE Plasma widget freeze — gated 40+ console.log behind debug flag, staggered concurrent XHR with Qt.callLater(), reactive transition timer, throttled canvas repaints** (✅ DONE 2026-02-19) |
 | **BUG-1360** | **P0** | **🔄 Canvas long task cards cut off when zooming — overflow:hidden chain clips content, title 3-line clamp, missing description collapse CSS** |
+| ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **BUG-1346** | **P1** | **📋 Mobile Inbox tab broken in PWA on mobile — layout/design broken** |
 | **TASK-1345** | **P2** | **🔄 Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering** |
 | **TASK-1344** | **P2** | **🔄 AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync — code done, pending migration deploy + user test** |

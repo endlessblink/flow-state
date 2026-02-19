@@ -3566,13 +3566,13 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### BUG-1139: Restrict Tauri Filesystem Write Scope (📋 PLANNED)
+### ~~BUG-1139~~: Restrict Tauri Filesystem Write Scope (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-19)
 
 **Problem**: Tauri filesystem capability allows writes to `$HOME/**` which is overly broad.
 
-**Solution**: Restrict to specific directories: `$APPDATA/**`, `$DOCUMENT/FlowState/**`
+**Fix**: Restricted write/mkdir/exists from `$HOME/**` to `$HOME/.config/flowstate/**`. Only auth session file (KDE widget) needs this path. Backup exports use `$DOWNLOAD/**` (unchanged). Dialog-selected paths are auto-scoped by Tauri.
 
 **Files**: `src-tauri/capabilities/default.json`
 

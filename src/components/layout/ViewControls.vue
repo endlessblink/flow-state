@@ -2,26 +2,26 @@
   <!-- TASK-157: Simplified Todoist-style Catalog header -->
   <div class="view-controls view-controls--minimal">
     <!-- Filter Toggle (collapsed by default) -->
-    <button
-      class="filter-toggle"
-      :class="{ active: showFilters }"
+    <BaseIconButton
+      variant="ghost"
+      :active="showFilters"
       title="Toggle filters"
       @click="showFilters = !showFilters"
     >
       <SlidersHorizontal :size="20" :stroke-width="1.5" />
-    </button>
+    </BaseIconButton>
 
     <!-- Hide Done Tasks Toggle (always visible as icon) -->
-    <button
+    <BaseIconButton
       v-if="hideDoneTasks !== undefined"
-      class="done-toggle"
-      :class="{ active: hideDoneTasks }"
+      variant="ghost"
+      :active="hideDoneTasks"
       :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
       @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
     >
       <EyeOff v-if="hideDoneTasks" :size="20" :stroke-width="1.5" />
       <Eye v-else :size="20" :stroke-width="1.5" />
-    </button>
+    </BaseIconButton>
   </div>
 
   <!-- Collapsible Filter Bar -->
@@ -73,6 +73,7 @@
 import { ref } from 'vue'
 import { ChevronsDown, ChevronsUp, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
 import BaseButton from '@/components/base/BaseButton.vue'
+import BaseIconButton from '@/components/base/BaseIconButton.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
 defineProps<Props>()
@@ -191,33 +192,6 @@ const filterOptions = [
 .view-controls--minimal {
   padding: var(--space-2) 0;
   gap: var(--space-2);
-}
-
-.filter-toggle,
-.done-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--space-8);
-  height: var(--space-8);
-  border-radius: var(--radius-md);
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.filter-toggle:hover,
-.done-toggle:hover {
-  background: var(--glass-bg-heavy);
-  color: var(--text-primary);
-}
-
-.filter-toggle.active,
-.done-toggle.active {
-  background: var(--color-indigo-bg-medium);
-  color: var(--color-indigo);
 }
 
 .filter-bar {

@@ -66,16 +66,4 @@ defineEmits<{
   direction: ltr;
 }
 
-/* Collapsed state - limit description height */
-.task-description :deep(.markdown-content) {
-  max-height: 4.8em; /* ~3 lines at line-height 1.6 */
-  overflow: hidden;
-  transition: max-height var(--duration-normal) ease;
-}
-
-/* Expanded state - show full description */
-.task-description :deep(.markdown-content.expanded) {
-  max-height: none;
-  overflow: visible;
-}
 </style>

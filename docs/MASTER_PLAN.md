@@ -3478,9 +3478,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### BUG-1132: Allowlist CORS Origins - Replace Dynamic Reflection (📋 PLANNED)
+### ~~BUG-1132~~: Allowlist CORS Origins - Replace Dynamic Reflection (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-19)
 
 **Problem**: Current CORS configuration reflects any origin back, which is insecure. Should use explicit allowlist.
 

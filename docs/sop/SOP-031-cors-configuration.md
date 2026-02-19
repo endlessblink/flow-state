@@ -40,7 +40,7 @@ FlowState uses a self-hosted Supabase stack behind Caddy reverse proxy. CORS mus
 
 | Header | Value | Why |
 |--------|-------|-----|
-| `Access-Control-Allow-Origin` | `{http.request.header.Origin}` | Dynamic origin (not `*` - breaks credentials) |
+| `Access-Control-Allow-Origin` | Allowlisted origin (via `map`) | Only allowed origins echoed back (BUG-1132) |
 | `Access-Control-Allow-Credentials` | `true` | Required for cookies/auth tokens |
 | `Access-Control-Allow-Methods` | `GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD` | All HTTP methods |
 | `Access-Control-Allow-Headers` | See full list below | MUST include ALL headers the client sends |
@@ -78,14 +78,28 @@ authorization, Authorization, content-type, Content-Type, accept-profile, Accept
 api.in-theflow.com {
     tls /etc/caddy/certs/cloudflare-origin.pem /etc/caddy/certs/cloudflare-origin.key
 
-    # Handle ALL CORS - Kong CORS is disabled
-    header {
-        Access-Control-Allow-Origin {http.request.header.Origin}
+    # CORS origin allowlist (BUG-1132: replaces insecure dynamic reflection)
+    # Only these origins will receive CORS headers
+    map {http.request.header.Origin} {cors_origin} {
+        https://in-theflow.com   https://in-theflow.com
+        http://localhost:5546     http://localhost:5546
+        https://tauri.localhost   https://tauri.localhost
+        tauri://localhost         tauri://localhost
+        https://localhost         https://localhost
+        default                   ""
+    }
+
+    # Only set CORS headers for allowed origins
+    @cors_allowed expression `{cors_origin} != ""`
+
+    header @cors_allowed {
+        Access-Control-Allow-Origin {cors_origin}
         Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD"
         Access-Control-Allow-Headers "authorization, content-type, apikey, x-client-info, x-supabase-api-version, accept, x-custom-header, prefer, accept-profile, content-profile, range, x-upsert, Authorization, Content-Type, Accept-Profile, Content-Profile, Range, X-Upsert"
         Access-Control-Expose-Headers "content-range, range, x-total-count, Content-Range, Range, X-Total-Count"
         Access-Control-Allow-Credentials "true"
         Access-Control-Max-Age "3600"
+        Vary Origin
         defer
     }
 
@@ -146,7 +160,34 @@ Kong's `kong.yml` should NOT have explicit CORS plugin config. The CORS plugins 
 ### Error: "Credentials flag is true but Access-Control-Allow-Origin is *"
 
 **Cause**: Cannot use `*` origin with credentials
-**Fix**: Use dynamic origin: `{http.request.header.Origin}`
+**Fix**: Use origin allowlist via `map` directive (see Caddy Configuration section)
+
+## Allowed Origins (BUG-1132)
+
+The CORS allowlist uses Caddy's `map` directive to validate origins. Only requests from these origins receive CORS headers:
+
+| Origin | Use Case |
+|--------|----------|
+| `https://in-theflow.com` | Production PWA |
+| `http://localhost:5546` | Local development |
+| `https://tauri.localhost` | Tauri desktop (Linux/Windows) |
+| `tauri://localhost` | Tauri desktop (macOS) |
+| `https://localhost` | Capacitor Android |
+
+### Adding a New Origin
+
+1. SSH into VPS: `ssh -i ~/.ssh/id_ed25519 root@84.46.253.137`
+2. Edit Caddyfile: `sudo nano /etc/caddy/Caddyfile`
+3. Add the origin to the `map` block (both key and value must match)
+4. Reload Caddy: `sudo systemctl reload caddy`
+5. Test with curl (see Validation section)
+6. Update this SOP
+
+### Why Not Dynamic Reflection?
+
+The previous config used `{http.request.header.Origin}` which echoed back ANY origin. Combined with `Access-Control-Allow-Credentials: true`, this allowed any website to make authenticated API requests on behalf of logged-in FlowState users — a critical CORS misconfiguration.
+
+The `Vary: Origin` header is now set to ensure Cloudflare's CDN caches responses per-origin correctly.
 
 ## Validation
 
@@ -162,6 +203,18 @@ curl -v -X OPTIONS https://api.in-theflow.com/rest/v1/ \
 # Check for single CORS header (not duplicates)
 curl -sI -X OPTIONS https://api.in-theflow.com/rest/v1/ \
   -H "Origin: https://in-theflow.com" | grep -i "access-control"
+
+# Test that disallowed origins are rejected (should have NO CORS headers)
+curl -sI -X OPTIONS https://api.in-theflow.com/rest/v1/ \
+  -H "Origin: https://evil-site.com" \
+  -H "Access-Control-Request-Method: GET" | grep -i "access-control"
+# Expected: no output (no CORS headers)
+
+# Test Tauri origin
+curl -sI -X OPTIONS https://api.in-theflow.com/rest/v1/ \
+  -H "Origin: https://tauri.localhost" \
+  -H "Access-Control-Request-Method: GET" | grep -i "access-control"
+# Expected: Access-Control-Allow-Origin: https://tauri.localhost
 ```
 
 ### Automated Validation
@@ -189,7 +242,7 @@ Add to `.github/workflows/deploy.yml`:
 2. [ ] Verify Kong is running: `docker ps | grep kong`
 3. [ ] Test preflight with curl (not browser)
 4. [ ] Check for duplicate headers in response
-5. [ ] Verify dynamic origin is being set
+5. [ ] Verify origin is in the allowlist (see Allowed Origins section)
 6. [ ] Clear Cloudflare cache if using CDN
 7. [ ] Hard refresh browser (Ctrl+Shift+R)
 8. [ ] Try incognito/private window (no extensions)

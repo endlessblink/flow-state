@@ -119,7 +119,7 @@ export function useQuickSortAI() {
   async function streamAI(messages: RouterChatMessage[]): Promise<string> {
     const router = await getRouter()
     let fullContent = ''
-    for await (const chunk of router.chatStream(messages, { taskType: 'suggestion' })) {
+    for await (const chunk of router.chatStream(messages, { taskType: 'suggestion', contextFeature: 'quicksort' })) {
       if (aborted) throw new Error('Aborted')
       fullContent += chunk.content
     }

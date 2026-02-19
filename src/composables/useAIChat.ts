@@ -1337,6 +1337,7 @@ export function useAIChat() {
         let fullResponse = ''
         for await (const chunk of router.chatStream(aiMessages, {
           taskType: 'chat',
+          contextFeature: 'chat',
           forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
           model: selectedModel.value || undefined,
         })) {

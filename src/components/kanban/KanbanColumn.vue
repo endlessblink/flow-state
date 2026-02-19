@@ -57,10 +57,10 @@
 
         <template #footer>
           <div v-if="tasks.length === 0" class="empty-column">
-            <span class="empty-message">No {{ title.toLowerCase() }} tasks</span>
+            <span class="empty-message">{{ $t('kanban.no_tasks_in', { status: title.toLowerCase() }) }}</span>
             <button class="add-first-task" @click="$emit('addTask', status)">
               <Plus :size="16" />
-              Add {{ title.toLowerCase() }} task
+              {{ $t('kanban.add_task_in', { status: title.toLowerCase() }) }}
             </button>
           </div>
         </template>

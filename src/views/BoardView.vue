@@ -4,7 +4,7 @@
     <div class="kanban-header kanban-header--minimal">
       <div class="header-left">
         <h2 class="board-title">
-          Board
+          {{ $t('views.board') }}
         </h2>
         <span class="task-count--subtle">{{ totalDisplayedTasks }}</span>
       </div>
@@ -129,9 +129,9 @@
     <!-- CONFIRMATION MODAL -->
     <ConfirmationModal
       :is-open="showConfirmModal"
-      title="Delete Task"
-      message="Are you sure you want to delete this task? You can press Ctrl+Z to undo."
-      confirm-text="Delete"
+      :title="$t('task.delete_confirm_title')"
+      :message="$t('task.delete_confirm_message')"
+      :confirm-text="$t('common.delete')"
       @confirm="confirmDeleteTask"
       @cancel="cancelDeleteTask"
     />
@@ -140,6 +140,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
@@ -164,6 +165,8 @@ import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, ListTodo, FolderOpen } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
+
+const { t } = useI18n()
 
 // Stores
 const taskStore = useTaskStore()
@@ -230,12 +233,12 @@ const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', fa
 
 // View Type Switcher (priority, date, status, category) (TASK-1215: Tauri-aware persistence)
 const currentViewType = usePersistentRef<'priority' | 'date' | 'status' | 'category'>('flowstate:board-view-type', 'priority', 'board-view-type')
-const viewTypeOptions = [
-  { value: 'priority' as const, label: 'Priority', icon: Flag },
-  { value: 'date' as const, label: 'Due Date', icon: Calendar },
-  { value: 'status' as const, label: 'Status', icon: ListTodo },
-  { value: 'category' as const, label: 'Category', icon: FolderOpen }
-]
+const viewTypeOptions = computed(() => [
+  { value: 'priority' as const, label: t('filters.group_priority'), icon: Flag },
+  { value: 'date' as const, label: t('filters.group_due_date'), icon: Calendar },
+  { value: 'status' as const, label: t('filters.group_status'), icon: ListTodo },
+  { value: 'category' as const, label: t('filters.group_category'), icon: FolderOpen }
+])
 
 // FEATURE-1336: All tasks combined (not split by project) for category view
 const allFilteredTasks = computed(() => {

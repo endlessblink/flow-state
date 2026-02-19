@@ -167,23 +167,23 @@
     <div class="content-header">
       <div class="view-tabs">
         <router-link to="/" class="view-tab" active-class="active">
-          Canvas
+          {{ $t('views.canvas') }}
         </router-link>
         <router-link to="/calendar" class="view-tab" active-class="active">
-          Calendar
+          {{ $t('views.calendar') }}
         </router-link>
         <router-link to="/board" class="view-tab" active-class="active">
-          Board
+          {{ $t('views.board') }}
         </router-link>
         <router-link to="/catalog" class="view-tab" active-class="active">
-          Catalog
+          {{ $t('views.catalog') }}
         </router-link>
         <router-link to="/quick-sort" class="view-tab" active-class="active">
-          Quick Sort
+          {{ $t('views.quick_sort') }}
           <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
         </router-link>
         <router-link to="/ai" class="view-tab" active-class="active">
-          AI
+          {{ $t('views.ai') }}
         </router-link>
       </div>
     </div>
@@ -193,6 +193,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
@@ -207,6 +208,7 @@ import QuickTaskDropdown from '@/components/timer/QuickTaskDropdown.vue'
 import AppLogo from '@/components/base/AppLogo.vue'
 
 const router = useRouter()
+const { t } = useI18n()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const aiChatStore = useAIChatStore()
@@ -215,21 +217,21 @@ const authStore = useAuthStore()
 const uiStore = useUIStore()
 
 // Route name to display title mapping
-const routeNameToTitle = {
-  'canvas': 'Canvas',
-  'calendar': 'Calendar',
-  'board': 'Board',
-  'catalog': 'Task Catalog',
-  'all-tasks': 'All Tasks',
-  'quick-sort': 'Quick Sort',
-  'focus': 'Focus',
-  'today': 'Today',
+const routeNameToTitle = computed(() => ({
+  'canvas': t('views.canvas'),
+  'calendar': t('views.calendar'),
+  'board': t('views.board'),
+  'catalog': t('views.catalog'),
+  'all-tasks': t('views.all_tasks'),
+  'quick-sort': t('views.quick_sort'),
+  'focus': t('views.focus'),
+  'today': t('smart_views.today'),
   'calendar-test': 'Calendar Test',
   'keyboard-test': 'Keyboard Test',
   'yjs-test': 'YJS Test',
   'design-system': 'Design System',
-  'ai': 'AI Hub',
-}
+  'ai': t('views.ai'),
+}))
 
 // Define proper types for page title info
 interface FilterContext {
@@ -249,7 +251,7 @@ interface PageTitleInfo {
 const pageTitleInfo = computed<PageTitleInfo>(() => {
   // Get current route name for main title
   const currentRouteName = router.currentRoute.value.name as string
-  const mainTitle = routeNameToTitle[currentRouteName as keyof typeof routeNameToTitle] || 'Canvas'
+  const mainTitle = routeNameToTitle.value[currentRouteName as keyof typeof routeNameToTitle.value] || t('views.canvas')
 
   // Determine filter context with priority order:
   // 1. Explicit smart views (highest priority)
@@ -261,28 +263,28 @@ const pageTitleInfo = computed<PageTitleInfo>(() => {
   if (taskStore.activeSmartView === 'today') {
     filterContext = {
       type: 'smart-view',
-      name: 'Today',
+      name: t('smart_views.today'),
       emoji: '📅',
       smartView: 'today'
     }
   } else if (taskStore.activeSmartView === 'week') {
     filterContext = {
       type: 'smart-view',
-      name: 'This Week',
+      name: t('smart_views.week'),
       emoji: '📆',
       smartView: 'week'
     }
   } else if (taskStore.activeSmartView === 'uncategorized') {
     filterContext = {
       type: 'smart-view',
-      name: 'Uncategorized Tasks',
+      name: t('smart_views.uncategorized_tasks'),
       emoji: '🪣',
       smartView: 'uncategorized'
     }
   } else if (taskStore.activeSmartView === 'all_active') {
     filterContext = {
       type: 'smart-view',
-      name: 'All Active Tasks',
+      name: t('smart_views.all_active_tasks'),
       emoji: '📋',
       smartView: 'all_active'
     }
@@ -303,22 +305,22 @@ const pageTitleInfo = computed<PageTitleInfo>(() => {
     // Apply smart defaults based on current route
     switch (currentRouteName) {
       case 'canvas':
-        filterContext = 'Workflow'
+        filterContext = t('views.workflow')
         break
       case 'calendar':
-        filterContext = 'Schedule'
+        filterContext = t('views.schedule')
         break
       case 'board':
-        filterContext = 'Overview'
+        filterContext = t('views.overview')
         break
       case 'catalog':
-        filterContext = 'Knowledge Base'
+        filterContext = t('views.knowledge_base')
         break
       case 'quick-sort':
-        filterContext = 'Triage'
+        filterContext = t('views.triage')
         break
       case 'ai':
-        filterContext = 'Assistant'
+        filterContext = t('views.assistant')
         break
       default:
         filterContext = ''

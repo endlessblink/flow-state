@@ -16,14 +16,14 @@
         </div>
         <BaseButton variant="secondary" size="md" @click="sidebar.openCreateProject">
           <Plus :size="14" />
-          Create project
+          {{ $t('sidebar.create_project') }}
         </BaseButton>
 
         <div class="icon-button-group">
           <button
             class="icon-btn"
-            title="Hide Sidebar"
-            aria-label="Hide sidebar"
+            :title="$t('sidebar.hide_sidebar')"
+            :aria-label="$t('sidebar.hide_sidebar')"
             @click="uiStore.toggleMainSidebar"
           >
             <PanelLeftClose :size="18" />
@@ -31,8 +31,8 @@
 
           <button
             class="icon-btn"
-            title="Settings"
-            aria-label="Open settings"
+            :title="$t('common.settings')"
+            :aria-label="$t('sidebar.open_settings')"
             @click="uiStore.openSettingsModal()"
           >
             <Settings :size="18" />
@@ -52,8 +52,8 @@
             type="text"
             class="quick-task-input"
             :class="{ 'voice-active': isListening, 'success-flash': showSuccessFlash }"
-            :placeholder="isListening ? 'Listening...' : (showSuccessFlash ? 'Task added!' : 'Quick add task (Enter)...')"
-            aria-label="Quick add task"
+            :placeholder="isListening ? $t('sidebar.quick_task_listening') : (showSuccessFlash ? $t('sidebar.quick_task_added') : $t('sidebar.quick_task_placeholder'))"
+            :aria-label="$t('sidebar.quick_task_label')"
             @keydown.enter.prevent="createQuickTask"
             @keydown.escape="collapseQuickAdd"
             @focus="quickTaskFocused = true"
@@ -67,8 +67,8 @@
             :dir="quickTaskDirection"
             class="quick-task-textarea"
             :class="{ 'voice-active': isListening }"
-            :placeholder="isListening ? 'Listening...' : 'Quick add task (Enter)...'"
-            aria-label="Quick add task"
+            :placeholder="isListening ? $t('sidebar.quick_task_listening') : $t('sidebar.quick_task_placeholder')"
+            :aria-label="$t('sidebar.quick_task_label')"
             rows="3"
             @keydown.enter.exact.prevent="createQuickTask"
             @keydown.escape="collapseQuickAdd"
@@ -79,7 +79,7 @@
           <button
             class="mic-btn"
             :class="[{ recording: isListening }]"
-            :title="isListening ? 'Stop recording' : 'Voice input'"
+            :title="isListening ? $t('sidebar.stop_recording') : $t('sidebar.voice_input')"
             @click="toggleVoiceInput"
           >
             <Mic v-if="!isListening" :size="16" />
@@ -101,23 +101,23 @@
               >
                 <CalendarDays :size="14" />
                 <span v-if="quickTaskDueDate" class="metadata-label">{{ formatDateLabel(quickTaskDueDate) }}</span>
-                <span v-else class="metadata-label">No date</span>
+                <span v-else class="metadata-label">{{ $t('sidebar.no_date') }}</span>
               </button>
 
               <!-- Date dropdown -->
               <Transition name="fade">
                 <div v-if="showDatePicker" class="metadata-dropdown date-dropdown" @mousedown.prevent>
                   <button class="dropdown-option" @click="selectDate('today')">
-                    Today
+                    {{ $t('smart_views.today') }}
                   </button>
                   <button class="dropdown-option" @click="selectDate('tomorrow')">
-                    Tomorrow
+                    {{ $t('sidebar.tomorrow') }}
                   </button>
                   <button class="dropdown-option" @click="selectDate('weekend')">
-                    This Weekend
+                    {{ $t('sidebar.this_weekend') }}
                   </button>
                   <button class="dropdown-option" @click="selectDate(null)">
-                    No Date
+                    {{ $t('sidebar.no_date') }}
                   </button>
                 </div>
               </Transition>
@@ -143,19 +143,19 @@
                 <div v-if="showPriorityPicker" class="metadata-dropdown priority-dropdown" @mousedown.prevent>
                   <button class="dropdown-option" @click="selectPriority(null)">
                     <Flag :size="12" />
-                    <span>None</span>
+                    <span>{{ $t('common.none') }}</span>
                   </button>
                   <button class="dropdown-option priority-low" @click="selectPriority('low')">
                     <Flag :size="12" />
-                    <span>Low</span>
+                    <span>{{ $t('task.priority_low') }}</span>
                   </button>
                   <button class="dropdown-option priority-medium" @click="selectPriority('medium')">
                     <Flag :size="12" />
-                    <span>Medium</span>
+                    <span>{{ $t('task.priority_medium') }}</span>
                   </button>
                   <button class="dropdown-option priority-high" @click="selectPriority('high')">
                     <Flag :size="12" />
-                    <span>High</span>
+                    <span>{{ $t('task.priority_high') }}</span>
                   </button>
                 </div>
               </Transition>
@@ -170,7 +170,7 @@
             <span class="wave-bar" />
             <span class="wave-bar" />
           </div>
-          <span class="voice-status">{{ displayTranscript || 'Speak now...' }}</span>
+          <span class="voice-status">{{ displayTranscript || $t('sidebar.speak_now') }}</span>
           <button class="voice-cancel" @click="cancelVoice">
             <X :size="12" />
           </button>
@@ -198,7 +198,7 @@
             <template #icon>
               <Calendar :size="14" />
             </template>
-            Today
+            {{ $t('smart_views.today') }}
           </SidebarSmartItem>
 
           <!-- This Week -->
@@ -214,7 +214,7 @@
             <template #icon>
               <Calendar :size="14" />
             </template>
-            This Week
+            {{ $t('smart_views.week') }}
           </SidebarSmartItem>
         </div>
 
@@ -234,7 +234,7 @@
             <template #icon>
               <List :size="14" />
             </template>
-            All Active
+            {{ $t('smart_views.all_active') }}
           </SidebarSmartItem>
 
           <!-- Uncategorized (Inbox) -->
@@ -250,7 +250,7 @@
             <template #icon>
               <Inbox :size="14" />
             </template>
-            Inbox
+            {{ $t('smart_views.inbox') }}
           </SidebarSmartItem>
         </div>
 
@@ -263,7 +263,7 @@
             @click="handleStartQuickSort"
           >
             <Zap :size="16" />
-            <span>Categorize Inbox ({{ uncategorizedCount }})</span>
+            <span>{{ $t('sidebar.categorize_inbox') }} ({{ uncategorizedCount }})</span>
           </button>
         </Transition>
 
@@ -275,7 +275,7 @@
             @click="sidebar.toggleDurationSection"
           >
             <Clock :size="14" />
-            <span>By Duration</span>
+            <span>{{ $t('sidebar.duration_group') }}</span>
             <ChevronRight 
               :size="14" 
               class="toggle-chevron" 
@@ -297,7 +297,7 @@
               <template #icon>
                 <Zap :size="14" />
               </template>
-              Quick
+              {{ $t('sidebar.quick') }}
             </SidebarSmartItem>
 
             <!-- Short (15-30m) -->
@@ -313,7 +313,7 @@
               <template #icon>
                 <Coffee :size="14" />
               </template>
-              Short
+              {{ $t('sidebar.short') }}
             </SidebarSmartItem>
 
             <!-- Medium (30-60m) -->
@@ -329,7 +329,7 @@
               <template #icon>
                 <Hourglass :size="14" />
               </template>
-              Medium
+              {{ $t('sidebar.medium') }}
             </SidebarSmartItem>
 
             <!-- Long (>60m) -->
@@ -345,7 +345,7 @@
               <template #icon>
                 <Mountain :size="14" />
               </template>
-              Long
+              {{ $t('sidebar.long') }}
             </SidebarSmartItem>
 
             <!-- Unestimated -->
@@ -361,7 +361,7 @@
               <template #icon>
                 <HelpCircle :size="14" />
               </template>
-              No Estimate
+              {{ $t('sidebar.no_estimate') }}
             </SidebarSmartItem>
           </div>
         </div>
@@ -371,9 +371,9 @@
         <div class="section-header">
           <h3 class="section-title">
             <FolderOpen :size="16" class="section-icon" />
-            Projects
+            {{ $t('common.projects') }}
           </h3>
-          <button class="add-project-btn" title="Add Project" @click="sidebar.openCreateProject">
+          <button class="add-project-btn" :title="$t('sidebar.add_project')" @click="sidebar.openCreateProject">
             <Plus :size="14" />
           </button>
         </div>
@@ -388,7 +388,7 @@
               @click="confirmDeleteSelectedProjects"
             >
               <Trash2 :size="14" />
-              Delete
+              {{ $t('common.delete') }}
             </button>
             <button
               class="selection-action clear-action"
@@ -408,10 +408,10 @@
               <p>Tasks in {{ projectsToDeleteCount > 1 ? 'these projects' : 'this project' }} will be moved to Inbox. This cannot be undone.</p>
               <div class="confirm-actions">
                 <button class="cancel-btn" @click="cancelDeleteProjects">
-                  Cancel
+                  {{ $t('common.cancel') }}
                 </button>
                 <button class="delete-btn" @click="executeDeleteProjects">
-                  Delete
+                  {{ $t('common.delete') }}
                 </button>
               </div>
             </div>
@@ -435,7 +435,7 @@
               <template #icon>
                 <Layers :size="16" />
               </template>
-              All Projects
+              {{ $t('sidebar.all_projects') }}
             </BaseNavItem>
           </div>
 
@@ -458,7 +458,7 @@
       <!-- User Profile Footer -->
       <div class="sidebar-footer">
         <button v-if="!authStore.user" class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
-          <span style="font-weight: 600;">Sign In</span>
+          <span style="font-weight: 600;">{{ $t('sidebar.sign_in') }}</span>
         </button>
         <div v-else class="user-profile-row">
           <div class="user-avatar-circle">
@@ -466,9 +466,9 @@
           </div>
           <div class="user-info-col">
             <span class="user-email" :title="authStore.user?.email || ''">{{ authStore.user?.email || 'Authenticated' }}</span>
-            <span class="user-status">Online</span>
+            <span class="user-status">{{ $t('common.online') }}</span>
           </div>
-          <button class="settings-mini-btn" title="Settings" @click="uiStore.openSettingsModal()">
+          <button class="settings-mini-btn" :title="$t('common.settings')" @click="uiStore.openSettingsModal()">
             <Settings :size="16" />
           </button>
         </div>
@@ -479,6 +479,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Project } from '@/stores/tasks'
@@ -498,6 +499,7 @@ import SidebarSmartItem from '@/components/layout/SidebarSmartItem.vue'
 import ProjectTreeItem from '@/components/projects/ProjectTreeItem.vue'
 import AppLogo from '@/components/base/AppLogo.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const uiStore = useUIStore()
 const taskStore = useTaskStore()
@@ -736,7 +738,7 @@ const selectDate = (option: 'today' | 'tomorrow' | 'weekend' | null) => {
 }
 
 const formatDateLabel = (date: string | null): string => {
-  if (!date) return 'No date'
+  if (!date) return t('sidebar.no_date')
   const d = new Date(date + 'T00:00:00')
   const today = new Date()
   const tomorrow = new Date()
@@ -746,8 +748,8 @@ const formatDateLabel = (date: string | null): string => {
   const todayStr = today.toISOString().split('T')[0]
   const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
-  if (dateStr === todayStr) return 'Today'
-  if (dateStr === tomorrowStr) return 'Tomorrow'
+  if (dateStr === todayStr) return t('smart_views.today')
+  if (dateStr === tomorrowStr) return t('sidebar.tomorrow')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
@@ -763,7 +765,7 @@ const selectPriority = (priority: 'low' | 'medium' | 'high' | null) => {
 }
 
 const formatPriorityLabel = (priority: 'low' | 'medium' | 'high' | null): string => {
-  if (!priority) return 'None'
+  if (!priority) return t('common.none')
   return priority.charAt(0).toUpperCase() + priority.slice(1)
 }
 

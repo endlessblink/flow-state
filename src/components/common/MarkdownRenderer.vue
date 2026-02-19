@@ -61,7 +61,7 @@ const handleClick = (event: MouseEvent) => {
   color: var(--text-primary);
   overflow-wrap: break-word;
   word-break: break-word;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .markdown-content.rtl-aware {

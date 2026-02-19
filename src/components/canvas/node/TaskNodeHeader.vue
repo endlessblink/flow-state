@@ -35,10 +35,6 @@ const displayTitle = computed(() => truncateUrlsInText(props.title) || 'Untitled
   line-height: 1.4;
   word-break: break-word;
   overflow-wrap: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 /* RTL Support */

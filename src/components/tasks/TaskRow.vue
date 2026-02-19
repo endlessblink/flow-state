@@ -17,8 +17,8 @@
         :completed="task.status === 'done'"
         size="sm"
         variant="simple"
-        :title="`Mark ${task.title} as ${task.status === 'done' ? 'incomplete' : 'complete'}`"
-        :aria-label="`Toggle completion for ${task.title}`"
+        :title="task.status === 'done' ? $t('task.mark_incomplete', { title: task.title }) : $t('task.mark_complete', { title: task.title })"
+        :aria-label="$t('task.toggle_completion', { title: task.title })"
         @toggle="$emit('toggleComplete', task.id)"
       />
     </div>
@@ -47,7 +47,7 @@
       <CustomSelect
         :model-value="task.status || 'planned'"
         :options="statusOptions"
-        placeholder="Select status..."
+        :placeholder="$t('task.select_status')"
         @update:model-value="(val) => $emit('updateStatus', task.id, String(val))"
       />
     </div>
@@ -70,21 +70,21 @@
     <div class="task-row__actions">
       <button
         class="task-row__action-btn task-row__action-btn--focus"
-        title="Focus Mode (F)"
+        :title="$t('task.focus_mode')"
         @click.stop="enterFocusMode"
       >
         <Eye :size="14" />
       </button>
       <button
         class="task-row__action-btn"
-        title="Start Timer"
+        :title="$t('task.start_timer')"
         @click.stop="$emit('startTimer', task.id)"
       >
         <Play :size="14" />
       </button>
       <button
         class="task-row__action-btn"
-        title="Edit Task"
+        :title="$t('task.edit_task')"
         @click.stop="$emit('edit', task.id)"
       >
         <Edit :size="14" />
@@ -95,6 +95,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -114,6 +115,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n()
 defineEmits<{
   select: [taskId: string]
   toggleComplete: [taskId: string]
@@ -125,13 +127,13 @@ defineEmits<{
   updateDueDate: [taskId: string, dueDate: string | null]
 }>()
 
-const statusOptions = [
-  { label: 'To Do', value: 'planned' },
-  { label: 'In Progress', value: 'in_progress' },
-  { label: 'Done', value: 'done' },
-  { label: 'Backlog', value: 'backlog' },
-  { label: 'On Hold', value: 'on_hold' }
-]
+const statusOptions = computed(() => [
+  { label: t('task.status_todo'), value: 'planned' },
+  { label: t('task.status_in_progress'), value: 'in_progress' },
+  { label: t('task.status_done'), value: 'done' },
+  { label: t('task.status_backlog'), value: 'backlog' },
+  { label: t('task.status_on_hold'), value: 'on_hold' }
+])
 
 const router = useRouter()
 const taskStore = useTaskStore()

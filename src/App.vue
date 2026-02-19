@@ -27,8 +27,6 @@
         <FaviconManager />
         <!-- PWA Reload Prompt (Browser/PWA Only — not native apps) -->
         <ReloadPrompt v-if="!isTauriApp && !isCapacitorApp" />
-        <!-- iOS Install Prompt (Mobile Browser Only) -->
-        <IOSInstallPrompt v-if="!isTauriApp && !isCapacitorApp" />
         <!-- Tauri Update Notification (Desktop Only) -->
         <TauriUpdateNotification v-if="isTauriApp" />
         <!-- FEATURE-1201: Onboarding Wizard (first-time visitors, desktop + mobile) -->
@@ -73,7 +71,6 @@ import MobileLayout from '@/mobile/layouts/MobileLayout.vue'
 import ModalManager from '@/layouts/ModalManager.vue'
 import FaviconManager from '@/components/common/FaviconManager.vue'
 import ReloadPrompt from '@/components/common/ReloadPrompt.vue'
-import IOSInstallPrompt from '@/components/common/IOSInstallPrompt.vue'
 import TauriUpdateNotification from '@/components/common/TauriUpdateNotification.vue'
 import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
 import BraveBanner from '@/components/ui/BraveBanner.vue'

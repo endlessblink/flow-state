@@ -37,21 +37,21 @@
             :class="{ active: task.priority === 'low' }"
             @click="updatePriority('low')"
           >
-            Low
+            {{ $t('task.priority_low') }}
           </button>
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'medium' }"
             @click="updatePriority('medium')"
           >
-            Med
+            {{ $t('task.priority_med_abbr') }}
           </button>
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'high' }"
             @click="updatePriority('high')"
           >
-            High
+            {{ $t('task.priority_high') }}
           </button>
         </div>
 
@@ -61,7 +61,7 @@
             :class="{ active: isToday }"
             @click.stop="setToday"
           >
-            ☀️ Today
+            ☀️ {{ $t('quick_sort.today') }}
           </button>
           <button
             class="quick-date-btn"
@@ -82,7 +82,7 @@
             :class="{ active: hasNoDate }"
             @click.stop="clearDate"
           >
-            Clear
+            {{ $t('quick_sort.clear') }}
           </button>
           <NPopover
             trigger="click"
@@ -119,11 +119,11 @@
       <div v-if="isSwiping && swipeDirection" class="swipe-indicator" :class="swipeDirection">
         <template v-if="swipeDirection === 'right'">
           <Save :size="28" />
-          <span class="swipe-label">Save</span>
+          <span class="swipe-label">{{ $t('quick_sort.save') }}</span>
         </template>
         <template v-if="swipeDirection === 'left'">
           <Trash2 :size="28" />
-          <span class="swipe-label">Delete</span>
+          <span class="swipe-label">{{ $t('quick_sort.del') }}</span>
         </template>
       </div>
     </div>
@@ -132,6 +132,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { type Task } from '@/stores/tasks'
 import { CalendarDays, Save, Trash2 } from 'lucide-vue-next'
 import { NPopover, NDatePicker } from 'naive-ui'
@@ -141,6 +142,7 @@ interface Props {
   task: Task
 }
 
+const { t } = useI18n()
 const props = defineProps<Props>()
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]

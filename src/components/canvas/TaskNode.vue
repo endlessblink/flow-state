@@ -252,7 +252,7 @@ onUnmounted(() => {
   position: relative;
   padding: var(--space-6);
   border-radius: var(--radius-xl);
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Priority glow overlay - no background, just for colored border effects */

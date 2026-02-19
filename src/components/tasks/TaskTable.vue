@@ -21,7 +21,7 @@
             @click="handleDeleteSelected"
           >
             <Trash2 :size="14" />
-            Delete Selected
+            {{ $t('task.delete_selected') }}
           </button>
           <button
             class="bulk-action-btn clear-btn"
@@ -29,29 +29,29 @@
             @click="clearSelection"
           >
             <X :size="14" />
-            Clear
+            {{ $t('common.clear') }}
           </button>
         </div>
       </div>
 
       <template v-else>
         <div class="header-cell title-cell">
-          Task
+          {{ $t('task.header_task') }}
         </div>
         <div class="header-cell project-cell">
-          Project
+          {{ $t('task.header_project') }}
         </div>
         <div class="header-cell status-cell">
-          Status
+          {{ $t('task.header_status') }}
         </div>
         <div class="header-cell due-date-cell">
-          Due Date
+          {{ $t('task.header_due_date') }}
         </div>
         <div class="header-cell progress-cell">
-          Progress
+          {{ $t('task.header_progress') }}
         </div>
         <div class="header-cell actions-cell">
-          Actions
+          {{ $t('task.header_actions') }}
         </div>
       </template>
     </div>
@@ -318,7 +318,7 @@
     <div v-if="tasks.length === 0" class="empty-state">
       <Inbox :size="48" class="empty-icon" />
       <p class="empty-title">
-        No tasks found
+        {{ $t('task.no_tasks') }}
       </p>
     </div>
   </div>
@@ -326,6 +326,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useVirtualList } from '@vueuse/core'
 import type { Task, TaskGroup } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
@@ -336,6 +337,8 @@ import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
+
+const { t } = useI18n()
 
 const props = defineProps<Props>() ;const emit = defineEmits<{
   select: [taskId: string]
@@ -362,13 +365,13 @@ interface Props {
 }
 
 // Status options for CustomSelect
-const statusOptions = [
-  { label: 'To Do', value: 'planned' },
-  { label: 'In Progress', value: 'in_progress' },
-  { label: 'Done', value: 'done' },
-  { label: 'Backlog', value: 'backlog' },
-  { label: 'On Hold', value: 'on_hold' }
-]
+const statusOptions = computed(() => [
+  { label: t('task.status_todo'), value: 'planned' },
+  { label: t('task.status_in_progress'), value: 'in_progress' },
+  { label: t('task.status_done'), value: 'done' },
+  { label: t('task.status_backlog'), value: 'backlog' },
+  { label: t('task.status_on_hold'), value: 'on_hold' }
+])
 
 const taskStore = useTaskStore()
 
@@ -476,8 +479,8 @@ const formatDueDate = (dueDate: string | undefined) => {
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
-  if (date.toDateString() === today.toDateString()) return 'Today'
-  if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow'
+  if (date.toDateString() === today.toDateString()) return t('task.date_today')
+  if (date.toDateString() === tomorrow.toDateString()) return t('task.date_tomorrow')
 
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }

@@ -1,10 +1,10 @@
 <template>
   <div v-if="isOpen" class="settings-overlay" @click="$emit('close')">
-    <div class="settings-modal" @click.stop>
+    <div class="settings-modal" :dir="direction" @click.stop>
       <header class="settings-header">
         <h2 class="settings-title">
-          Settings
-        </h2>
+          {{ $t('settings.title') }}
+</h2>
         <button class="close-btn" @click="$emit('close')">
           <X :size="16" />
         </button>
@@ -40,7 +40,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { X, Timer, Palette, Layout, User, Database, Bot, Bell } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import { X, Timer, Palette, Layout, User, Database, Bot, Bell, FlaskConical } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores/auth'
+import { useDirection } from '@/i18n/useDirection'
 
 // Tab components
 import AppearanceSettingsTab from '../settings/tabs/AppearanceSettingsTab.vue'
@@ -50,6 +53,7 @@ import NotificationsSettingsTab from '../settings/tabs/NotificationsSettingsTab.
 import AISettingsTab from '../settings/tabs/AISettingsTab.vue'
 import StorageSettingsTab from '../settings/tabs/StorageSettingsTab.vue'
 import AccountSettingsTab from '../settings/tabs/AccountSettingsTab.vue'
+import AIQualityDashboard from '../ai/AIQualityDashboard.vue'
 
 defineProps<{
   isOpen: boolean
@@ -59,20 +63,29 @@ defineEmits<{
   close: []
 }>()
 
+const { t } = useI18n()
+const { direction } = useDirection()
 const activeTab = ref('general')
+const authStore = useAuthStore()
 
-const tabs = [
-  { id: 'general', label: 'General', icon: Palette, component: AppearanceSettingsTab },
-  { id: 'timer', label: 'Timer', icon: Timer, component: TimerSettingsTab },
-  { id: 'workflow', label: 'Workflow', icon: Layout, component: WorkflowSettingsTab },
-  { id: 'notifications', label: 'Notifications', icon: Bell, component: NotificationsSettingsTab },
-  { id: 'ai', label: 'AI & Weekly Plan', icon: Bot, component: AISettingsTab },
-  { id: 'data', label: 'Data & Backup', icon: Database, component: StorageSettingsTab },
-  { id: 'account', label: 'Account', icon: User, component: AccountSettingsTab }
-]
+const tabs = computed(() => {
+  const base = [
+    { id: 'general', label: t('settings.tab_general'), icon: Palette, component: AppearanceSettingsTab },
+    { id: 'timer', label: t('settings.tab_timer'), icon: Timer, component: TimerSettingsTab },
+    { id: 'workflow', label: t('settings.tab_workflow'), icon: Layout, component: WorkflowSettingsTab },
+    { id: 'notifications', label: t('settings.tab_notifications'), icon: Bell, component: NotificationsSettingsTab },
+    { id: 'ai', label: t('settings.tab_ai'), icon: Bot, component: AISettingsTab },
+    { id: 'data', label: t('settings.tab_data'), icon: Database, component: StorageSettingsTab },
+    { id: 'account', label: t('settings.tab_account'), icon: User, component: AccountSettingsTab },
+  ]
+  if (authStore.isAdmin) {
+    base.push({ id: 'ai-quality', label: t('settings.tab_ai_quality'), icon: FlaskConical, component: AIQualityDashboard })
+  }
+  return base
+})
 
 const currentTab = computed(() => {
-  return tabs.find(t => t.id === activeTab.value)?.component
+  return tabs.value.find(t => t.id === activeTab.value)?.component
 })
 </script>
 
@@ -155,7 +168,7 @@ const currentTab = computed(() => {
 .settings-sidebar {
   width: 200px;
   background: var(--glass-bg-soft);
-  border-right: 1px solid var(--glass-border-strong);
+  border-inline-end: 1px solid var(--glass-border-strong);
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
@@ -175,7 +188,7 @@ const currentTab = computed(() => {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   transition: all var(--duration-normal) var(--spring-smooth);
-  text-align: left;
+  text-align: start;
 }
 
 .tab-btn:hover {
@@ -224,7 +237,7 @@ const currentTab = computed(() => {
     flex-direction: row;
     overflow-x: auto;
     padding: var(--space-2);
-    border-right: none;
+    border-inline-end: none;
     border-bottom: 1px solid var(--glass-border-strong);
   }
   

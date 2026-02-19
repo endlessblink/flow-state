@@ -19,6 +19,7 @@
 
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { onClickOutside } from '@vueuse/core'
 import { X, Send, Sparkles, Loader2, Trash2, Settings, RotateCcw, AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2, Zap, History, Plus, PanelRight } from 'lucide-vue-next'
 import { useAIChat } from '@/composables/useAIChat'
@@ -64,6 +65,8 @@ const {
   chatDirection,
   setChatDirection,
 } = useAIChat()
+
+const { t } = useI18n()
 
 // Router for full-screen navigation
 const vueRouter = useRouter()
@@ -236,8 +239,8 @@ const quickActions = computed(() => {
   const actions: { label: string; message: string; directTool?: { tool: string; parameters: Record<string, unknown> } | null }[] = []
 
   // Always available — these have direct tool mappings for Ollama compatibility
-  actions.push({ label: 'Plan my day', message: 'Plan my day', directTool: { tool: 'get_daily_summary', parameters: {} } })
-  actions.push({ label: "What's overdue?", message: "What tasks are overdue?", directTool: { tool: 'get_overdue_tasks', parameters: {} } })
+  actions.push({ label: t('ai_chat.suggestion_plan'), message: 'Plan my day', directTool: { tool: 'get_daily_summary', parameters: {} } })
+  actions.push({ label: t('ai_chat.suggestion_overdue'), message: "What tasks are overdue?", directTool: { tool: 'get_overdue_tasks', parameters: {} } })
 
   // When a task is selected
   if (store.context.selectedTask) {
@@ -248,7 +251,7 @@ const quickActions = computed(() => {
 
   // When timer is running
   if (timerStore.isTimerActive) {
-    actions.push({ label: 'How much time left?', message: 'How much time is left on my current timer?', directTool: { tool: 'get_timer_status', parameters: {} } })
+    actions.push({ label: t('ai_chat.suggestion_time'), message: 'How much time is left on my current timer?', directTool: { tool: 'get_timer_status', parameters: {} } })
     actions.push({ label: 'What am I working on?', message: 'What task am I currently working on?', directTool: { tool: 'get_timer_status', parameters: {} } })
   }
 
@@ -795,7 +798,7 @@ onUnmounted(() => {
               <div v-if="showChatHistory" class="chat-history-dropdown">
                 <button class="new-chat-btn" @click="handleNewChat">
                   <Plus :size="14" />
-                  <span>New Chat</span>
+                  <span>{{ $t('ai_chat.new_chat') }}</span>
                 </button>
                 <div class="chat-history-list">
                   <div
@@ -917,7 +920,7 @@ onUnmounted(() => {
           v-model="inputText"
           class="ai-chat-input"
           :dir="chatDirection"
-          placeholder="Ask AI..."
+          :placeholder="$t('ai_chat.ask_placeholder')"
           rows="1"
           :disabled="isGenerating"
           @keydown="handleKeydown"

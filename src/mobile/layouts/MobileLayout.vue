@@ -8,7 +8,7 @@
       :style="{ transform: `translateY(${Math.min(pullDistance * 0.5, 60)}px)` }"
     >
       <ChevronDown :size="18" />
-      <span>{{ pullTriggered ? 'Release to open' : 'Pull down for quick actions' }}</span>
+      <span>{{ pullTriggered ? $t('mobile.release_to_open') : $t('mobile.pull_down') }}</span>
     </div>
 
     <!-- Command Center Panel (slides down from top) -->
@@ -28,7 +28,7 @@
                 v-model="newTaskTitle"
                 type="text"
                 class="task-input"
-                placeholder="Add a task..."
+                :placeholder="$t('task.add_task')"
                 enterkeyhint="done"
                 @keydown.enter="handleAddTask"
               >
@@ -48,10 +48,10 @@
               </button>
             </div>
             <p v-if="isRecording" class="recording-label">
-              Listening...
+              {{ $t('mobile.listening') }}
             </p>
             <p v-if="taskAdded" class="task-added-label">
-              Task added!
+              {{ $t('mobile.task_added') }}
             </p>
           </div>
 
@@ -63,7 +63,7 @@
                 v-model="searchQuery"
                 type="text"
                 class="search-input"
-                placeholder="Search tasks..."
+                :placeholder="$t('mobile.search_tasks')"
                 @input="handleSearch"
               >
               <button v-if="searchQuery" class="clear-search" @click="clearSearch">
@@ -85,7 +85,7 @@
               </div>
             </div>
             <p v-if="searchQuery && searchResults.length === 0" class="no-results">
-              No tasks found
+              {{ $t('mobile.no_tasks_found') }}
             </p>
           </div>
 
@@ -93,20 +93,20 @@
           <div class="panel-section actions-grid">
             <button class="action-tile" @click="goToQuickSort">
               <Zap :size="22" />
-              <span>Quick Sort</span>
+              <span>{{ $t('views.quick_sort') }}</span>
               <span v-if="uncategorizedCount > 0" class="action-badge">{{ uncategorizedCount }}</span>
             </button>
             <button class="action-tile" @click="goToTimer">
               <Timer :size="22" />
-              <span>Timer</span>
+              <span>{{ $t('mobile.timer') }}</span>
             </button>
             <button class="action-tile" @click="goToToday">
               <CalendarCheck :size="22" />
-              <span>Today</span>
+              <span>{{ $t('smart_views.today') }}</span>
             </button>
             <button class="action-tile" @click="openSettings">
               <Settings :size="22" />
-              <span>Settings</span>
+              <span>{{ $t('common.settings') }}</span>
             </button>
           </div>
         </div>
@@ -138,6 +138,7 @@
 
 <script setup lang="ts">
 import { onMounted, computed, ref, nextTick, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import {
   ChevronDown, Mic, Send, Search, X, Zap, Timer,
@@ -149,6 +150,7 @@ import { useProjectStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 
+useI18n()
 const router = useRouter()
 const route = useRoute()
 const taskStore = useTaskStore()

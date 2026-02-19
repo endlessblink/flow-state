@@ -1,17 +1,19 @@
 <template>
   <img
+    v-if="!loadError"
     :src="logoUrl"
     :width="sizeValue"
     :height="sizeValue"
-    alt="FlowState"
+    alt=""
     class="app-logo"
     :class="{ 'app-logo--round': round }"
     draggable="false"
+    @error="loadError = true"
   >
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import logoUrl from '@/assets/logo-glitch-tomato.png'
 
 interface Props {
@@ -31,6 +33,8 @@ const sizeMap: Record<string, number> = {
   lg: 48,
   xl: 64
 }
+
+const loadError = ref(false)
 
 const sizeValue = computed(() =>
   typeof props.size === 'number' ? props.size : sizeMap[props.size]

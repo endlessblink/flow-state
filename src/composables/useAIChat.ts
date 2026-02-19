@@ -446,6 +446,80 @@ export function useAIChat() {
   // ============================================================================
 
   /**
+   * Execute local slash commands without calling the model.
+   */
+  async function handleSlashCommand(rawInput: string): Promise<boolean> {
+    const input = rawInput.trim()
+    if (!input.startsWith('/')) return false
+
+    const [command, ...args] = input.split(/\s+/)
+    const cmd = command.toLowerCase()
+    const query = args.join(' ').trim().toLowerCase()
+
+    if (cmd === '/help') {
+      store.addUserMessage(rawInput)
+      store.addAssistantMessage(
+        [
+          'Available slash commands:',
+          '- `/help` Show slash command help',
+          '- `/skills` List available AI skills/tools',
+          '- `/skills <keyword>` Filter skills by name/description/category',
+          '- `/plan` Run the weekly planning chain',
+        ].join('\n')
+      )
+      return true
+    }
+
+    if (cmd === '/plan') {
+      await executeAgentChain('plan_my_week')
+      return true
+    }
+
+    if (cmd === '/skills') {
+      store.addUserMessage(rawInput)
+      const filteredTools = !query
+        ? AI_TOOLS
+        : AI_TOOLS.filter((tool) =>
+            tool.name.toLowerCase().includes(query) ||
+            tool.description.toLowerCase().includes(query) ||
+            tool.category.toLowerCase().includes(query)
+          )
+
+      const readCount = filteredTools.filter(t => t.category === 'read').length
+      const writeCount = filteredTools.filter(t => t.category === 'write').length
+      const destructiveCount = filteredTools.filter(t => t.category === 'destructive').length
+
+      const chainRows = agentChains.chains
+        .filter((chain) => !query || chain.id.toLowerCase().includes(query) || chain.name.toLowerCase().includes(query))
+        .map((chain) => `- \`${chain.id}\` - ${chain.name}`)
+
+      const toolRows = filteredTools.map((tool) => {
+        const requiresConfirm = tool.requiresConfirmation ? ' (confirm)' : ''
+        return `- \`${tool.name}\` [${tool.category}]${requiresConfirm} - ${tool.description}`
+      })
+
+      store.addAssistantMessage(
+        [
+          query ? `Skills matching "${query}"` : 'Available AI skills',
+          `Tools: ${filteredTools.length} (read: ${readCount}, write: ${writeCount}, destructive: ${destructiveCount})`,
+          '',
+          ...(toolRows.length > 0 ? toolRows : ['- No tools matched this filter']),
+          '',
+          `Agent chains: ${chainRows.length}`,
+          ...(chainRows.length > 0 ? chainRows : ['- No agent chains matched this filter']),
+          '',
+          'Tip: use `/skills overdue` or `/skills timer` to filter.',
+        ].join('\n')
+      )
+      return true
+    }
+
+    store.addUserMessage(rawInput)
+    store.addAssistantMessage(`Unknown slash command: ${command}\nTry \`/help\` for available commands.`)
+    return true
+  }
+
+  /**
    * Send a message and get a streaming response.
    * All providers use native tool calling — the AI model decides which tools to invoke.
    */
@@ -453,12 +527,15 @@ export function useAIChat() {
     content: string,
     options: SendMessageOptions = {}
   ): Promise<void> {
-    if (!content.trim()) return
+    const trimmedContent = content.trim()
+    if (!trimmedContent) return
     if (store.isGenerating) return
+
+    if (await handleSlashCommand(trimmedContent)) return
 
     // Always use ReAct — the model decides if/when to call tools via native function calling.
     // No hardcoded keyword routing. If the model doesn't call tools, the loop exits on iteration 1.
-    return sendMessageWithReAct(content, options)
+    return sendMessageWithReAct(trimmedContent, options)
   }
 
   // Dead code below kept for reference — sendMessage always routes to ReAct now.

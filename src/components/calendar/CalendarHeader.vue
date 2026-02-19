@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, SlidersHorizontal, RefreshCw } from 'lucide-vue-next'
 import ProjectFilterDropdown from '@/components/projects/ProjectFilterDropdown.vue'
 
@@ -20,6 +21,8 @@ defineEmits<{
   (e: 'syncExternalCalendar'): void
 }>()
 
+useI18n()
+
 // TASK-157: Filters hidden by default for cleaner look
 const showFilters = ref(false)
 </script>
@@ -28,27 +31,27 @@ const showFilters = ref(false)
   <!-- TASK-157: Simplified Todoist-style calendar header -->
   <div class="calendar-header calendar-header--minimal">
     <div class="date-navigation">
-      <button class="nav-btn" title="Previous Day" @click="$emit('previousDay')">
+      <button class="nav-btn" :title="$t('calendar.previous_day')" @click="$emit('previousDay')">
         <ChevronLeft :size="16" :stroke-width="1.5" />
       </button>
       <h2 class="current-date">
         {{ formatCurrentDate }}
       </h2>
-      <button class="nav-btn" title="Next Day" @click="$emit('nextDay')">
+      <button class="nav-btn" :title="$t('calendar.next_day')" @click="$emit('nextDay')">
         <ChevronRight :size="16" :stroke-width="1.5" />
       </button>
     </div>
     <div class="header-actions header-actions--minimal">
       <button class="today-btn today-btn--minimal" @click="$emit('goToToday')">
         <Calendar :size="18" :stroke-width="1.5" />
-        Today
+        {{ $t('calendar.today') }}
       </button>
 
       <!-- Filter Toggle (collapsed by default) -->
       <button
         class="filter-toggle"
         :class="{ active: showFilters }"
-        title="Toggle filters"
+        :title="$t('calendar.toggle_filters')"
         @click="showFilters = !showFilters"
       >
         <SlidersHorizontal :size="20" :stroke-width="1.5" />
@@ -58,7 +61,7 @@ const showFilters = ref(false)
       <button
         class="hide-done-toggle"
         :class="{ active: hideCalendarDoneTasks }"
-        :title="hideCalendarDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+        :title="hideCalendarDoneTasks ? $t('calendar.show_completed') : $t('calendar.hide_completed')"
         @click="$emit('toggleDoneTasks')"
       >
         <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" />
@@ -70,7 +73,7 @@ const showFilters = ref(false)
         v-if="externalCalendarEnabled"
         class="sync-btn"
         :class="{ syncing: externalCalendarLoading }"
-        title="Sync external calendars"
+        :title="$t('calendar.sync_external')"
         @click="$emit('syncExternalCalendar')"
       >
         <RefreshCw :size="16" :stroke-width="1.5" />
@@ -82,21 +85,21 @@ const showFilters = ref(false)
           :class="{ active: viewMode === 'day' }"
           @click="$emit('update:viewMode', 'day')"
         >
-          Day
+          {{ $t('calendar.day') }}
         </button>
         <button
           class="view-btn"
           :class="{ active: viewMode === 'week' }"
           @click="$emit('update:viewMode', 'week')"
         >
-          Week
+          {{ $t('calendar.week') }}
         </button>
         <button
           class="view-btn"
           :class="{ active: viewMode === 'month' }"
           @click="$emit('update:viewMode', 'month')"
         >
-          Month
+          {{ $t('calendar.month') }}
         </button>
       </div>
     </div>

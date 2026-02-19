@@ -83,7 +83,7 @@ import { ChevronLeft, ChevronRight, Check } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
 
-const { t } = useI18n({ useScope: 'global' })
+const { t, locale } = useI18n({ useScope: 'global' })
 
 interface Language {
   code: 'en' | 'he'
@@ -99,7 +99,7 @@ interface DirectionOption {
 }
 
 const uiStore = useUIStore()
-const { direction: _direction, isRTL: _isRTL, directionPreference } = useDirection()
+const { direction: _direction, isRTL: _isRTL, directionPreference, setDirection } = useDirection()
 
 // Available languages
 const availableLanguages = computed(() => uiStore.availableLanguages as Language[])
@@ -140,6 +140,7 @@ const isAutoDetected = computed(() => directionPreference.value === 'auto')
 
 // Handle language change
 const handleLanguageChange = (languageCode: 'en' | 'he') => {
+  locale.value = languageCode
   uiStore.setLanguage(languageCode)
 
   // If direction is auto, the change will be automatic
@@ -148,6 +149,7 @@ const handleLanguageChange = (languageCode: 'en' | 'he') => {
 
 // Handle direction change
 const handleDirectionChange = (direction: 'ltr' | 'rtl' | 'auto') => {
+  setDirection(direction)
   uiStore.setDirectionPreference(direction)
 }
 </script>

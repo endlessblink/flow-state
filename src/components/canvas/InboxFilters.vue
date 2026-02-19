@@ -2,7 +2,7 @@
   <div class="inbox-filters">
     <!-- TASK-1073: Sort Controls -->
     <div class="sort-row">
-      <span class="sort-label">Sort:</span>
+      <span class="sort-label">{{ $t('filters.sort_label') }}</span>
       <div class="sort-buttons">
         <button
           class="sort-btn"
@@ -11,7 +11,7 @@
           @click="$emit('update:sortBy', 'newest')"
         >
           <Clock :size="12" />
-          Newest
+          {{ $t('filters.sort_newest') }}
         </button>
         <button
           class="sort-btn"
@@ -20,7 +20,7 @@
           @click="$emit('update:sortBy', 'priority')"
         >
           <Flag :size="12" />
-          Priority
+          {{ $t('filters.sort_priority') }}
         </button>
         <button
           class="sort-btn"
@@ -29,7 +29,7 @@
           @click="$emit('update:sortBy', 'dueDate')"
         >
           <CalendarDays :size="12" />
-          Due
+          {{ $t('filters.sort_due') }}
         </button>
         <button
           v-if="context !== 'canvas'"
@@ -39,7 +39,7 @@
           @click="$emit('update:sortBy', 'canvasOrder')"
         >
           <LayoutGrid :size="12" />
-          Canvas
+          {{ $t('filters.sort_canvas') }}
         </button>
       </div>
     </div>
@@ -56,7 +56,7 @@
         @click="clearAllFilters"
       >
         <List :size="14" />
-        <span class="chip-label">All</span>
+        <span class="chip-label">{{ $t('filters.all') }}</span>
       </button>
 
       <!-- TASK-076: Hide Done Toggle -->
@@ -68,7 +68,7 @@
         @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
       >
         <CheckCircle2 :size="14" />
-        <span class="chip-label">{{ hideDoneTasks ? 'Hiding Done' : 'Show Done' }}</span>
+        <span class="chip-label">{{ hideDoneTasks ? $t('filters.hiding_done') : $t('filters.show_done') }}</span>
       </button>
 
       <!-- Unscheduled Toggle -->
@@ -79,7 +79,7 @@
         @click="$emit('update:unscheduledOnly', !unscheduledOnly)"
       >
         <CalendarOff :size="14" />
-        <span class="chip-label">Unscheduled</span>
+        <span class="chip-label">{{ $t('filters.unscheduled') }}</span>
         <span v-if="unscheduledCount > 0" class="chip-count">{{ unscheduledCount }}</span>
       </button>
 
@@ -99,7 +99,7 @@
             class="dropdown-item"
             @click="clearPriorities"
           >
-            All Priorities
+            {{ $t('filters.all_priorities') }}
           </button>
           <button
             v-for="priority in priorities"
@@ -134,7 +134,7 @@
             class="dropdown-item"
             @click="clearDurations"
           >
-            All Durations
+            {{ $t('filters.all_durations') }}
           </button>
           <button
             v-for="duration in durations"
@@ -169,7 +169,7 @@
             class="dropdown-item"
             @click="clearProjects"
           >
-            All Projects
+            {{ $t('filters.all_projects') }}
           </button>
           <button
             class="dropdown-item"
@@ -180,7 +180,7 @@
               <Check v-if="selectedProjects.has('none')" :size="10" />
             </span>
             <span class="project-icon">&#128229;</span>
-            No Project
+            {{ $t('filters.no_project') }}
             <span class="item-count">{{ getProjectCount(null) }}</span>
           </button>
           <button
@@ -215,6 +215,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays, Check, LayoutGrid } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'
 import type { SortByType } from '@/composables/inbox/useUnifiedInboxState'
@@ -234,6 +235,8 @@ interface Props {
   sortBy?: SortByType // TASK-1073: Sort option
   context?: string // Hide canvas sort when inside canvas view
 }
+
+const { t } = useI18n()
 
 const props = defineProps<Props>()
 
@@ -279,28 +282,28 @@ const unscheduledCount = computed(() => {
 // TASK-1246: Computed labels with count badges
 const priorityLabel = computed(() => {
   const count = props.selectedPriorities.size
-  if (count === 0) return 'Priority'
-  if (count === 1) return priorities.find(p => p.value === [...props.selectedPriorities][0])?.label || 'Priority'
-  return `Priority (${count})`
+  if (count === 0) return t('filters.sort_priority')
+  if (count === 1) return priorities.find(p => p.value === [...props.selectedPriorities][0])?.label || t('filters.sort_priority')
+  return `${t('filters.sort_priority')} (${count})`
 })
 
 const durationLabel = computed(() => {
   const count = props.selectedDurations.size
-  if (count === 0) return 'Duration'
-  if (count === 1) return durations.find(d => d.value === [...props.selectedDurations][0])?.label.split(' ')[0] || 'Duration'
-  return `Duration (${count})`
+  if (count === 0) return t('filters.duration')
+  if (count === 1) return durations.find(d => d.value === [...props.selectedDurations][0])?.label.split(' ')[0] || t('filters.duration')
+  return `${t('filters.duration')} (${count})`
 })
 
 const projectLabel = computed(() => {
   const count = props.selectedProjects.size
-  if (count === 0) return 'Project'
+  if (count === 0) return t('filters.project')
   if (count === 1) {
     const first = [...props.selectedProjects][0]
-    if (first === 'none') return 'No Project'
+    if (first === 'none') return t('filters.no_project')
     const project = props.projects.find(p => p.id === first)
-    return project?.name || 'Project'
+    return project?.name || t('filters.project')
   }
-  return `Project (${count})`
+  return `${t('filters.project')} (${count})`
 })
 
 // Computed: Check if any filters are active

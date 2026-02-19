@@ -16,7 +16,7 @@
       </template>
     </button>
     <h3 v-if="!isCollapsed" class="inbox-title">
-      Inbox
+      {{ $t('smart_views.inbox') }}
     </h3>
 
     <!-- Count Badge -->
@@ -130,7 +130,7 @@
       @click="$emit('toggleAdvancedFilters')"
     >
       <Filter :size="14" />
-      <span>{{ showAdvancedFilters ? 'Hide filters & sort' : 'Filters & Sort' }}</span>
+      <span>{{ showAdvancedFilters ? $t('filters.hide_filters') : $t('filters.show_filters') }}</span>
       <ChevronDown :size="14" class="toggle-icon" :class="{ rotated: showAdvancedFilters }" />
     </button>
 
@@ -160,12 +160,15 @@
 
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, CheckCircle2, Search, X, Layers } from 'lucide-vue-next'
 import { NBadge, NDropdown, NPopover } from 'naive-ui'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
 import type { TimeFilterType, SortByType } from '@/composables/inbox/useUnifiedInboxState'
+
+const { t } = useI18n()
 
 interface GroupOption {
   label: string
@@ -296,20 +299,20 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
 
 // Time Filter Dropdown Options
 const timeFilterOptions = computed(() => [
-  { label: 'All', key: 'all' },
-  { label: `Today (${props.todayCount})`, key: 'today' },
-  { label: `Next 3 Days (${props.next3DaysCount})`, key: 'next3days' },
-  { label: `This Week (${props.weekCount})`, key: 'week' },
-  { label: `This Month (${props.monthCount})`, key: 'month' }
+  { label: t('filters.all'), key: 'all' },
+  { label: `${t('smart_views.today')} (${props.todayCount})`, key: 'today' },
+  { label: `${t('filters.next_3_days')} (${props.next3DaysCount})`, key: 'next3days' },
+  { label: `${t('filters.this_week')} (${props.weekCount})`, key: 'week' },
+  { label: `${t('filters.this_month')} (${props.monthCount})`, key: 'month' }
 ])
 
 const timeFilterLabel = computed(() => {
   const labels: Record<TimeFilterType, string> = {
-    all: 'All',
-    today: 'Today',
-    next3days: '3 Days',
-    week: 'Week',
-    month: 'Month'
+    all: t('filters.all'),
+    today: t('smart_views.today'),
+    next3days: t('filters.next_3_days_short'),
+    week: t('filters.week_short'),
+    month: t('filters.month_short')
   }
   return labels[props.activeTimeFilter]
 })

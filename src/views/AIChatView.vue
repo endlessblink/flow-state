@@ -13,6 +13,7 @@
 
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   ArrowLeft,
   Plus,
@@ -44,6 +45,7 @@ import { GROQ_MODELS, OPENROUTER_MODELS, asValueLabel, getDisplayName } from '@/
 // Router
 // ============================================================================
 
+const { t } = useI18n()
 const router = useRouter()
 
 function goBack() {
@@ -155,15 +157,15 @@ function handleQuickAction(action: { label: string; message: string; directTool?
 const quickActions = computed(() => {
   const actions: { label: string; message: string; directTool?: { tool: string; parameters: Record<string, unknown> } | null }[] = []
 
-  actions.push({ label: 'Plan my day', message: 'Plan my day', directTool: { tool: 'get_daily_summary', parameters: {} } })
-  actions.push({ label: "What's overdue?", message: 'What tasks are overdue?', directTool: { tool: 'get_overdue_tasks', parameters: {} } })
+  actions.push({ label: t('ai_chat.suggestion_plan'), message: 'Plan my day', directTool: { tool: 'get_daily_summary', parameters: {} } })
+  actions.push({ label: t('ai_chat.suggestion_overdue'), message: 'What tasks are overdue?', directTool: { tool: 'get_overdue_tasks', parameters: {} } })
 
   if (store.context.selectedTask) {
     actions.push({ label: 'Break down this task', message: `Break down the task "${store.context.selectedTask.title}" into actionable subtasks.`, directTool: null })
   }
 
   if (timerStore.isTimerActive) {
-    actions.push({ label: 'How much time left?', message: 'How much time is left on my current timer?', directTool: { tool: 'get_timer_status', parameters: {} } })
+    actions.push({ label: t('ai_chat.suggestion_time'), message: 'How much time is left on my current timer?', directTool: { tool: 'get_timer_status', parameters: {} } })
   }
 
   return actions.slice(0, 4)
@@ -386,6 +388,18 @@ function getChainIcon(iconName: string) {
   return chainIconMap[iconName] || Zap
 }
 
+const chainNameI18nMap: Record<string, string> = {
+  'plan_my_day': 'ai_chat.plan_my_day',
+  'end_of_day_review': 'ai_chat.end_of_day_review',
+  'focus_mode_setup': 'ai_chat.focus_mode_setup',
+  'plan_my_week': 'ai_chat.plan_my_week',
+}
+
+function getChainName(chain: { id: string; name: string }): string {
+  const key = chainNameI18nMap[chain.id]
+  return key ? t(key) : chain.name
+}
+
 // ============================================================================
 // Active Conversation Title
 // ============================================================================
@@ -432,7 +446,7 @@ onUnmounted(() => {
       <div class="sidebar-header">
         <button class="new-chat-btn" @click="handleNewChat">
           <Plus :size="16" />
-          <span>New Chat</span>
+          <span>{{ $t('ai_chat.new_chat') }}</span>
         </button>
       </div>
 
@@ -480,7 +494,7 @@ onUnmounted(() => {
       <!-- Agent Chains Section -->
       <div class="chains-section">
         <div class="chains-label">
-          Agent Chains
+          {{ $t('ai_chat.agent_chains') }}
         </div>
         <button
           v-for="chain in agentChains.chains"
@@ -490,7 +504,7 @@ onUnmounted(() => {
           @click="executeAgentChain(chain.id)"
         >
           <component :is="getChainIcon(chain.icon)" :size="14" class="chain-icon" />
-          <span>{{ chain.name }}</span>
+          <span>{{ getChainName(chain) }}</span>
         </button>
       </div>
     </aside>
@@ -500,9 +514,9 @@ onUnmounted(() => {
       <!-- Header -->
       <header class="chat-header">
         <div class="chat-header-left">
-          <button class="back-btn" title="Go back" @click="goBack">
+          <button class="back-btn" :title="$t('common.back')" @click="goBack">
             <ArrowLeft :size="16" />
-            <span>Back</span>
+            <span>{{ $t('common.back') }}</span>
           </button>
           <div class="header-title-area">
             <Zap v-if="isGridHandler" class="header-icon grid-handler-icon" :size="18" />
@@ -728,7 +742,7 @@ onUnmounted(() => {
             v-model="inputText"
             class="chat-input"
             :dir="chatDirection"
-            placeholder="Ask AI..."
+            :placeholder="$t('ai_chat.ask_placeholder')"
             rows="1"
             :disabled="isGenerating"
             @keydown="handleKeydown"

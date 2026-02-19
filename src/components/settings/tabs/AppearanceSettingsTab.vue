@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/settings'
 import { useTimerStore } from '@/stores/timer'
 import SettingsSection from '../SettingsSection.vue'
@@ -6,6 +8,7 @@ import SettingsToggle from '../SettingsToggle.vue'
 import SettingsOptionPicker from '../SettingsOptionPicker.vue'
 import LanguageSettings from '../LanguageSettings.vue'
 
+const { t } = useI18n({ useScope: 'global' })
 const settingsStore = useSettingsStore()
 const timerStore = useTimerStore()
 
@@ -14,49 +17,49 @@ const updateSoundEffects = (value: boolean) => {
   timerStore.settings.playNotificationSounds = value
 }
 
-const weekStartOptions = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-]
+const weekStartOptions = computed(() => [
+  { value: 0, label: t('settings.sunday') },
+  { value: 1, label: t('settings.monday') },
+])
 </script>
 
 <template>
   <div class="appearance-settings-tab">
-    <SettingsSection title="🎨 Interface Settings">
+    <SettingsSection :title="`🎨 ${t('settings.interface_settings')}`">
       <SettingsToggle
-        label="Sound effects"
+        :label="t('settings.sound_effects')"
         :value="settingsStore.playNotificationSounds"
         @update="updateSoundEffects"
       />
 
       <div class="setting-action">
         <button class="test-sound-btn" @click="timerStore.playStartSound">
-          🔊 Test start sound
+          🔊 {{ t('settings.test_start_sound') }}
         </button>
         <button class="test-sound-btn" @click="timerStore.playEndSound">
-          🔔 Test end sound
+          🔔 {{ t('settings.test_end_sound') }}
         </button>
       </div>
     </SettingsSection>
 
-    <SettingsSection title="🌍 Language & Region">
+    <SettingsSection :title="`🌍 ${t('settings.language_region')}`">
       <LanguageSettings />
     </SettingsSection>
 
-    <SettingsSection title="Calendar">
+    <SettingsSection :title="t('settings.calendar')">
       <SettingsOptionPicker
-        label="Start of Week"
-        description="Choose which day your week starts on. Affects calendar, weekly plan, and all day-of-week ordering."
+        :label="t('settings.start_of_week')"
+        :description="t('settings.start_of_week_description')"
         :options="weekStartOptions"
         :value="settingsStore.weekStartsOn"
         @update="val => settingsStore.updateSetting('weekStartsOn', val)"
       />
     </SettingsSection>
 
-    <SettingsSection title="Feedback">
+    <SettingsSection :title="t('settings.feedback')">
       <SettingsToggle
-        label="Show undo/redo notifications"
-        description="Display a brief toast when you undo (Ctrl+Z) or redo (Ctrl+Y) an action."
+        :label="t('settings.show_undo_redo')"
+        :description="t('settings.show_undo_redo_description')"
         :value="settingsStore.showUndoRedoToasts"
         @update="val => settingsStore.updateSetting('showUndoRedoToasts', val)"
       />

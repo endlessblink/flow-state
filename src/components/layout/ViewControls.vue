@@ -31,11 +31,11 @@
       <div class="tree-controls">
         <BaseButton variant="secondary" size="sm" @click="$emit('expandAll')">
           <ChevronsDown :size="16" />
-          Expand
+          {{ $t('common.expand') }}
         </BaseButton>
         <BaseButton variant="secondary" size="sm" @click="$emit('collapseAll')">
           <ChevronsUp :size="16" />
-          Collapse
+          {{ $t('common.collapse') }}
         </BaseButton>
       </div>
 
@@ -70,7 +70,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronsDown, ChevronsUp, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
 import BaseButton from '@/components/base/BaseButton.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -87,6 +88,8 @@ const _emit = defineEmits<{
   (e: 'collapseAll'): void
 }>()
 
+const { t } = useI18n()
+
 // TASK-157: Filters hidden by default for cleaner look
 const showFilters = ref(false)
 
@@ -97,27 +100,27 @@ interface Props {
   hideDoneTasks?: boolean
 }
 
-const sortOptions = [
-  { label: 'Due Date', value: 'dueDate' },
-  { label: 'Priority', value: 'priority' },
-  { label: 'Title', value: 'title' },
-  { label: 'Created', value: 'created' }
-]
+const sortOptions = computed(() => [
+  { label: t('filters.sort_due_date'), value: 'dueDate' },
+  { label: t('filters.sort_priority'), value: 'priority' },
+  { label: t('filters.sort_title'), value: 'title' },
+  { label: t('filters.sort_created'), value: 'created' }
+])
 
-const groupByOptions = [
-  { label: 'No Grouping', value: 'none' },
-  { label: 'Project', value: 'project' },
-  { label: 'Status', value: 'status' },
-  { label: 'Priority', value: 'priority' },
-  { label: 'Due Date', value: 'dueDate' }
-]
+const groupByOptions = computed(() => [
+  { label: t('filters.no_grouping'), value: 'none' },
+  { label: t('filters.group_project'), value: 'project' },
+  { label: t('filters.group_status'), value: 'status' },
+  { label: t('filters.group_priority'), value: 'priority' },
+  { label: t('filters.group_due_date'), value: 'dueDate' }
+])
 
-const filterOptions = [
-  { label: 'All Status', value: 'all' },
-  { label: 'To Do', value: 'planned' },
-  { label: 'In Progress', value: 'in_progress' },
-  { label: 'Done', value: 'done' }
-]
+const filterOptions = computed(() => [
+  { label: t('filters.all_status'), value: 'all' },
+  { label: t('task.status_todo'), value: 'planned' },
+  { label: t('task.status_in_progress'), value: 'in_progress' },
+  { label: t('task.status_done'), value: 'done' }
+])
 </script>
 
 <style scoped>

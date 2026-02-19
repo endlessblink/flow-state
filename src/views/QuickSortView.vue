@@ -5,7 +5,7 @@
       <div class="header-content--quicksort">
         <h1 class="view-title">
           <Zap :size="24" />
-          Quick Sort
+          {{ $t('views.quick_sort') }}
         </h1>
         <p class="view-subtitle">
           {{ activeTab === 'capture' ? 'Capture tasks quickly, then sort them all at once' : 'Rapidly categorize your uncategorized tasks' }}
@@ -25,7 +25,7 @@
         @click="activeTab = 'sort'"
       >
         <Zap :size="18" />
-        <span>Sort</span>
+        <span>{{ $t('quick_sort.sort_tab') }}</span>
         <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
       </button>
       <button
@@ -34,7 +34,7 @@
         @click="activeTab = 'capture'"
       >
         <Plus :size="18" />
-        <span>Capture</span>
+        <span>{{ $t('quick_sort.capture_tab') }}</span>
         <span v-if="pendingCount > 0" class="tab-badge pending">{{ pendingCount }}</span>
       </button>
     </div>
@@ -70,12 +70,12 @@
               <div class="action-row">
                 <button class="action-btn done" aria-label="Mark task as done" @click="handleMarkDone">
                   <CheckCircle :size="18" />
-                  <span class="action-label">Done</span>
+                  <span class="action-label">{{ $t('quick_sort.done') }}</span>
                   <kbd>D</kbd>
                 </button>
                 <button class="action-btn save" aria-label="Save and advance" @click="handleSave">
                   <Save :size="18" />
-                  <span class="action-label">Save</span>
+                  <span class="action-label">{{ $t('quick_sort.save') }}</span>
                   <span v-if="isTaskDirty" class="dirty-dot" />
                   <kbd>→</kbd>
                 </button>
@@ -85,17 +85,17 @@
               <div class="action-row">
                 <button class="action-btn skip" aria-label="Skip this task" @click="handleSkip">
                   <SkipForward :size="16" />
-                  <span class="action-label">Skip</span>
+                  <span class="action-label">{{ $t('quick_sort.skip') }}</span>
                   <kbd>↓</kbd>
                 </button>
                 <button class="action-btn edit" aria-label="Edit task" @click="handleEditTask">
                   <Edit2 :size="16" />
-                  <span class="action-label">Edit</span>
+                  <span class="action-label">{{ $t('quick_sort.edit') }}</span>
                   <kbd>↑</kbd>
                 </button>
                 <button class="action-btn delete" aria-label="Delete task" @click="handleMarkDoneAndDelete">
                   <Trash2 :size="16" />
-                  <span class="action-label">Del</span>
+                  <span class="action-label">{{ $t('quick_sort.del') }}</span>
                   <kbd>←</kbd>
                 </button>
               </div>
@@ -116,7 +116,7 @@
                 >
                   <Loader2 v-if="aiAction === 'suggest'" :size="16" class="spin" />
                   <Sparkles v-else :size="16" />
-                  <span class="action-label">Suggest</span>
+                  <span class="action-label">{{ $t('quick_sort.suggest') }}</span>
                   <kbd>A</kbd>
                 </button>
               </div>
@@ -177,7 +177,7 @@
                   <Calendar :size="18" />
                 </div>
                 <div class="context-info">
-                  <span class="context-label">Due Date</span>
+                  <span class="context-label">{{ $t('task.due_date') }}</span>
                   <span v-if="taskDueDate" class="context-value" :class="{ 'due-overdue': isTaskOverdue }">
                     {{ taskDueDate }}
                   </span>
@@ -198,7 +198,7 @@
                   :aria-label="`Priority: ${currentTask.priority || 'none'}`"
                 />
                 <div class="context-info">
-                  <span class="context-label">Priority</span>
+                  <span class="context-label">{{ $t('task.priority') }}</span>
                   <span
                     class="context-value capitalize"
                     :class="`priority-text-${currentTask.priority || 'none'}`"
@@ -214,12 +214,12 @@
                   <Briefcase :size="18" />
                 </div>
                 <div class="context-info">
-                  <span class="context-label">Project</span>
+                  <span class="context-label">{{ $t('task.header_project') }}</span>
                   <span v-if="currentTaskProject" class="context-value project-name">
                     <span v-if="currentTaskProject.emoji" class="project-emoji">{{ currentTaskProject.emoji }}</span>
                     {{ currentTaskProject.name }}
                   </span>
-                  <span v-else class="context-value context-empty">No project</span>
+                  <span v-else class="context-value context-empty">{{ $t('quick_sort.no_project') }}</span>
                 </div>
               </div>
 
@@ -328,7 +328,7 @@
 
             <button class="primary-button" @click="handleExit">
               <CheckCircle :size="20" />
-              Done
+              {{ $t('quick_sort.done') }}
             </button>
           </div>
         </div>
@@ -361,6 +361,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit2, Calendar, Briefcase, Save, Trash2, Sparkles, Loader2 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickSortAI } from '@/composables/useQuickSortAI'
@@ -376,6 +377,7 @@ import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import type { SessionSummary } from '@/stores/quickSort'
 import type { Task } from '@/types/tasks'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const taskStore = useTaskStore()
@@ -689,8 +691,8 @@ const taskDueDate = computed(() => {
 
   const diffDays = Math.round((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays === 0) return t('quick_sort.today')
+  if (diffDays === 1) return t('task.date_tomorrow')
   if (diffDays === -1) return 'Yesterday'
   if (diffDays > 1 && diffDays <= 7) return `In ${diffDays} days`
   if (diffDays < -1) return `${Math.abs(diffDays)} days ago`
@@ -835,18 +837,21 @@ const currentTaskProject = computed(() => {
 }
 
 .tab-btn.active .tab-badge {
-  background: var(--brand-primary);
-  color: var(--bg-primary);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
 }
 
 .tab-badge.pending {
-  background: var(--warning);
-  color: var(--bg-primary);
+  background: var(--glass-bg-soft);
+  color: var(--warning);
+  border: 1px solid var(--warning);
 }
 
 .tab-btn.active .tab-badge.pending {
-  background: var(--warning);
-  color: var(--bg-primary);
+  background: var(--glass-bg-soft);
+  color: var(--warning);
+  border: 1px solid var(--warning);
 }
 
 /* Sort Tab Content */

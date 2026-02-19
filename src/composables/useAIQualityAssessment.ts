@@ -1,10 +1,15 @@
 /**
- * AI Quality Assessment Composable
+ * AI Quality Assessment Composable v2
  *
  * Runs a suite of test prompts against the configured AI provider,
  * then uses an LLM-as-judge approach to score each response against
  * weighted quality rubrics. Produces a QualityReport with per-prompt
  * scores, an overall grade, and historical tracking via localStorage.
+ *
+ * v2 improvements:
+ * - Multi-run support (configurable, default 3) with mean/stddev/CI
+ * - Rule-based pre-checks (deterministic, no LLM)
+ * - 1-5 categorical scale
  *
  * Uses the shared AI router (getSharedRouter) which auto-injects user
  * context, so the AI gets real task data during the assessment — the
@@ -22,12 +27,17 @@ import {
   parseJudgeResponse,
   computeWeightedScore,
   computeGrade,
+  computeStdDev,
+  computeConfidenceInterval,
+  runRuleChecks,
+  type TestRun,
   type TestResult,
   type QualityReport,
   type TestPrompt,
 } from '@/services/ai/qualityAssessment'
 
 const STORAGE_KEY = 'flowstate-ai-quality-reports'
+const DEFAULT_RUNS_PER_TEST = 3
 
 export function useAIQualityAssessment() {
   const isRunning = ref(false)
@@ -118,9 +128,10 @@ export function useAIQualityAssessment() {
   }
 
   /**
-   * Run a single test prompt and get scored results.
+   * Run a single pass of a test prompt (one AI call + one judge call).
+   * Returns a TestRun (lightweight result without aggregation).
    */
-  async function runSingleTest(testPrompt: TestPrompt): Promise<TestResult> {
+  async function runOnePass(testPrompt: TestPrompt): Promise<TestRun> {
     const router = await getSharedRouter()
     const systemPrompt = buildTestSystemPrompt()
 
@@ -131,7 +142,7 @@ export function useAIQualityAssessment() {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: testPrompt.prompt },
       ],
-      { taskType: 'chat', skipUserContext: true } // We built our own system prompt
+      { taskType: 'chat', skipUserContext: true }
     )
     const latencyMs = Date.now() - startTime
     const responseText = aiResponse.content || ''
@@ -146,7 +157,7 @@ export function useAIQualityAssessment() {
 
     let rubricScores = QUALITY_RUBRICS.map(r => ({
       rubricId: r.id,
-      score: 5,
+      score: 3,
       reasoning: 'Judge evaluation failed — using default score',
     }))
     let judgeReasoning = ''
@@ -173,23 +184,85 @@ export function useAIQualityAssessment() {
     const overallScore = computeWeightedScore(rubricScores, QUALITY_RUBRICS)
 
     return {
-      promptId: testPrompt.id,
-      prompt: testPrompt.prompt,
-      category: testPrompt.category,
       response: responseText,
       rubricScores,
       overallScore,
-      grade: computeGrade(overallScore),
       latencyMs,
       judgeReasoning,
-      timestamp: new Date().toISOString(),
     }
   }
 
   /**
-   * Run all test prompts sequentially.
+   * Run a test prompt multiple times and aggregate results.
    */
-  async function runAllTests(): Promise<QualityReport> {
+  async function runTestWithRuns(testPrompt: TestPrompt, runCount: number): Promise<TestResult> {
+    const runs: TestRun[] = []
+
+    for (let r = 0; r < runCount; r++) {
+      try {
+        const run = await runOnePass(testPrompt)
+        runs.push(run)
+      } catch (e) {
+        console.warn(`[AIQuality] Run ${r + 1}/${runCount} failed for "${testPrompt.id}":`, e)
+        // Add a failed run
+        const failedScores = QUALITY_RUBRICS.map(rb => ({
+          rubricId: rb.id,
+          score: 1,
+          reasoning: 'Run failed to execute',
+        }))
+        runs.push({
+          response: `Error: ${e instanceof Error ? e.message : String(e)}`,
+          rubricScores: failedScores,
+          overallScore: 0,
+          latencyMs: 0,
+          judgeReasoning: 'Run execution failed',
+        })
+      }
+
+      // Short delay between runs to avoid rate limiting
+      if (r < runCount - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    }
+
+    // Compute stats across runs
+    const scores = runs.map(r => r.overallScore)
+    const meanScore = scores.reduce((a, b) => a + b, 0) / scores.length
+    const stdDev = computeStdDev(scores)
+    const ci = computeConfidenceInterval(scores)
+
+    // Pick median run as representative
+    const sortedRuns = [...runs].sort((a, b) => a.overallScore - b.overallScore)
+    const median = sortedRuns[Math.floor(sortedRuns.length / 2)]
+
+    // Rule checks on representative response
+    const ruleChecks = runRuleChecks(median.response, testPrompt.prompt, testPrompt.category)
+
+    return {
+      promptId: testPrompt.id,
+      prompt: testPrompt.prompt,
+      category: testPrompt.category,
+      response: median.response,
+      rubricScores: median.rubricScores,
+      overallScore: meanScore,
+      grade: computeGrade(meanScore),
+      latencyMs: median.latencyMs,
+      judgeReasoning: median.judgeReasoning,
+      timestamp: new Date().toISOString(),
+      ruleChecks,
+      runCount,
+      scoreStdDev: stdDev,
+      confidenceInterval: ci,
+      runs,
+    }
+  }
+
+  /**
+   * Run all test prompts sequentially with configurable runs per test.
+   */
+  async function runAllTests(options?: { runsPerTest?: number }): Promise<QualityReport> {
+    const runsPerTest = options?.runsPerTest ?? DEFAULT_RUNS_PER_TEST
+
     isRunning.value = true
     progress.value = 0
     results.value = []
@@ -204,29 +277,41 @@ export function useAIQualityAssessment() {
       for (let i = 0; i < TEST_PROMPTS.length; i++) {
         const testPrompt = TEST_PROMPTS[i]
         currentTest.value = testPrompt.id
-        progress.value = Math.round(((i) / TEST_PROMPTS.length) * 100)
+        progress.value = Math.round((i / TEST_PROMPTS.length) * 100)
 
         try {
-          const result = await runSingleTest(testPrompt)
+          const result = await runTestWithRuns(testPrompt, runsPerTest)
           results.value.push(result)
         } catch (e) {
           console.error(`[AIQuality] Test "${testPrompt.id}" failed:`, e)
-          // Add a failed result
+          const errorResponse = `Error: ${e instanceof Error ? e.message : String(e)}`
+          const failedRubricScores = QUALITY_RUBRICS.map(r => ({
+            rubricId: r.id,
+            score: 0,
+            reasoning: 'Test failed to execute',
+          }))
           results.value.push({
             promptId: testPrompt.id,
             prompt: testPrompt.prompt,
             category: testPrompt.category,
-            response: `Error: ${e instanceof Error ? e.message : String(e)}`,
-            rubricScores: QUALITY_RUBRICS.map(r => ({
-              rubricId: r.id,
-              score: 0,
-              reasoning: 'Test failed to execute',
-            })),
+            response: errorResponse,
+            rubricScores: failedRubricScores,
             overallScore: 0,
             grade: 'F',
             latencyMs: 0,
             judgeReasoning: 'Test execution failed',
             timestamp: new Date().toISOString(),
+            ruleChecks: runRuleChecks(errorResponse, testPrompt.prompt, testPrompt.category),
+            runCount: runsPerTest,
+            scoreStdDev: 0,
+            confidenceInterval: [0, 0] as [number, number],
+            runs: [{
+              response: errorResponse,
+              rubricScores: failedRubricScores,
+              overallScore: 0,
+              latencyMs: 0,
+              judgeReasoning: 'Test execution failed',
+            }],
           })
         }
 
@@ -244,6 +329,12 @@ export function useAIQualityAssessment() {
         ? results.value.reduce((sum, r) => sum + r.overallScore, 0) / results.value.length
         : 0
 
+      // Compute overall rule check pass rate
+      const allRuleChecks = results.value.flatMap(r => r.ruleChecks)
+      const ruleCheckPassRate = allRuleChecks.length > 0
+        ? allRuleChecks.filter(rc => rc.passed).length / allRuleChecks.length
+        : 1
+
       const newReport: QualityReport = {
         id: `qr-${Date.now()}`,
         results: [...results.value],
@@ -253,6 +344,8 @@ export function useAIQualityAssessment() {
         model: 'auto',
         timestamp: new Date().toISOString(),
         durationMs: Date.now() - startTime,
+        runsPerTest,
+        ruleCheckPassRate,
       }
 
       report.value = newReport
@@ -268,6 +361,15 @@ export function useAIQualityAssessment() {
       isRunning.value = false
       currentTest.value = null
     }
+  }
+
+  /**
+   * Run a single test prompt (exposed for individual re-runs).
+   */
+  async function runSingleTest(promptId: string, runsPerTest?: number): Promise<TestResult> {
+    const testPrompt = TEST_PROMPTS.find(p => p.id === promptId)
+    if (!testPrompt) throw new Error(`Unknown prompt: ${promptId}`)
+    return runTestWithRuns(testPrompt, runsPerTest ?? DEFAULT_RUNS_PER_TEST)
   }
 
   /**
@@ -314,11 +416,7 @@ export function useAIQualityAssessment() {
 
     // Actions
     runAllTests,
-    runSingleTest: (promptId: string) => {
-      const testPrompt = TEST_PROMPTS.find(p => p.id === promptId)
-      if (!testPrompt) throw new Error(`Unknown prompt: ${promptId}`)
-      return runSingleTest(testPrompt)
-    },
+    runSingleTest,
     getHistory,
     clearHistory,
 

@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.2.82",
+  "version": "1.2.83",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://in-theflow.com",
   "repository": {
@@ -277,12 +277,12 @@
     "uuid": "^9.0.1",
     "vue": "^3.5.26",
     "vue-cal": "^4.10.2",
-    "vue-i18n": "^9.14.5",
+    "vue-i18n": "^11.2.8",
     "vue-router": "^4.6.4",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
-    "@intlify/unplugin-vue-i18n": "^11.0.1",
+    "@intlify/unplugin-vue-i18n": "^11.0.7",
     "@playwright/test": "^1.57.0",
     "@storybook/addon-a11y": "^10.1.4",
     "@storybook/addon-docs": "^10.1.4",

@@ -11,6 +11,9 @@ import { useWakeLock } from '@/composables/useWakeLock'
 import { isTauri } from '@/composables/useTauriStartup'
 // FEATURE-1118: Gamification hooks for pomodoro completion
 import { useGamificationHooks } from '@/composables/useGamificationHooks'
+import i18n from '@/i18n'
+
+const getT = () => (i18n as any).global.t as (key: string) => string
 
 /**
  * Timer Session Interface
@@ -242,12 +245,13 @@ export const useTimerStore = defineStore('timer', () => {
   })
 
   const currentTaskName = computed(() => {
+    const t = getT()
     const session = currentSession.value
     if (!session?.taskId) return null
-    if (session.isBreak) return session.taskId === 'break' ? 'Break Time' : 'Short Break'
-    if (session.taskId === 'general') return 'Focus Session'
-    const task = taskStore.tasks.find(t => t.id === session.taskId)
-    return task?.title || 'Unknown Task'
+    if (session.isBreak) return session.taskId === 'break' ? t('timer.break_time') : t('timer.short_break')
+    if (session.taskId === 'general') return t('timer.focus_session')
+    const task = taskStore.tasks.find(tk => tk.id === session.taskId)
+    return task?.title || t('timer.unknown_task')
   })
 
   const sessionTypeIcon = computed(() => currentSession.value?.isBreak ? '🧎' : '🍅')
@@ -258,12 +262,13 @@ export const useTimerStore = defineStore('timer', () => {
   })
 
   const sessionStatusText = computed(() => {
+    const t = getT()
     const session = currentSession.value
     if (!session) return ''
-    if (session.isBreak) return session.taskId === 'break' ? 'Short Break' : 'Long Break'
-    if (session.taskId === 'general') return 'Focus Session'
-    const task = taskStore.tasks.find(t => t.id === session.taskId)
-    return task?.title || 'Work Session'
+    if (session.isBreak) return session.taskId === 'break' ? t('timer.short_break') : t('timer.long_break')
+    if (session.taskId === 'general') return t('timer.focus_session')
+    const task = taskStore.tasks.find(tk => tk.id === session.taskId)
+    return task?.title || t('timer.work_session')
   })
 
   const timerPercentage = computed(() => {

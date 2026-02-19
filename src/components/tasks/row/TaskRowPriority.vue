@@ -45,6 +45,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Check } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -54,6 +55,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:priority': [priority: string]
 }>()
+
+const { t } = useI18n()
 
 const isOpen = ref(false)
 const triggerWrapperRef = ref<HTMLElement>()
@@ -83,20 +86,20 @@ const calculateDropdownPosition = () => {
   }
 }
 
-const priorityOptions: Array<{ label: string; value: string | null }> = [
-  { label: 'High', value: 'high' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'Low', value: 'low' },
-  { label: 'None', value: null }
-]
+const priorityOptions = computed<Array<{ label: string; value: string | null }>>(() => [
+  { label: t('task.priority_high'), value: 'high' },
+  { label: t('task.priority_medium'), value: 'medium' },
+  { label: t('task.priority_low'), value: 'low' },
+  { label: t('task.priority_none'), value: null }
+])
 
 const formattedPriority = computed(() => {
-  if (!props.priority) return 'None'
+  if (!props.priority) return t('task.priority_none')
   const map: Record<string, string> = {
-    'low': 'Low',
-    'medium': 'Med',
-    'high': 'High',
-    'urgent': 'Urgent'
+    'low': t('task.priority_low'),
+    'medium': t('task.priority_med_abbr'),
+    'high': t('task.priority_high'),
+    'urgent': t('task.priority_urgent')
   }
   return map[props.priority] || props.priority
 })

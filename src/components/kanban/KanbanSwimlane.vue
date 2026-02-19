@@ -136,6 +136,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import KanbanColumn from './KanbanColumn.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { Task, Project } from '@/stores/tasks'
@@ -179,6 +180,7 @@ const emit = defineEmits<{
   groupContextMenu: [event: MouseEvent, project: Project]
 }>()
 
+const { t } = useI18n()
 const taskStore = useTaskStore()
 const isCollapsed = ref(false)
 
@@ -196,31 +198,31 @@ const currentViewType = computed(() => props.viewType || 'priority')
 // Column definitions
 const statusColumns = computed(() => {
   const columns = [
-    { key: 'planned', label: 'Planned' },
-    { key: 'in_progress', label: 'In Progress' },
-    { key: 'backlog', label: 'Backlog' },
-    { key: 'on_hold', label: 'On Hold' }
+    { key: 'planned', label: t('kanban.planned') },
+    { key: 'in_progress', label: t('kanban.in_progress') },
+    { key: 'backlog', label: t('kanban.backlog') },
+    { key: 'on_hold', label: t('kanban.on_hold') }
   ]
-  if (props.showDoneColumn) columns.push({ key: 'done', label: 'Done' })
+  if (props.showDoneColumn) columns.push({ key: 'done', label: t('kanban.done') })
   return columns
 })
 
 // TASK-1348: No Date first (most visible), removed dead Inbox column
-const dateColumns = [
-  { key: 'noDate', label: 'No Date' },
-  { key: 'overdue', label: 'Overdue' },
-  { key: 'today', label: 'Today' },
-  { key: 'tomorrow', label: 'Tomorrow' },
-  { key: 'thisWeek', label: 'This Week' },
-  { key: 'later', label: 'Later' }
-]
+const dateColumns = computed(() => [
+  { key: 'noDate', label: t('kanban.no_date') },
+  { key: 'overdue', label: t('kanban.overdue') },
+  { key: 'today', label: t('kanban.today') },
+  { key: 'tomorrow', label: t('kanban.tomorrow') },
+  { key: 'thisWeek', label: t('kanban.this_week') },
+  { key: 'later', label: t('kanban.later') }
+])
 
-const priorityColumns = [
-  { key: 'high', label: 'High' },
-  { key: 'medium', label: 'Medium' },
-  { key: 'low', label: 'Low' },
-  { key: 'no_priority', label: 'No Priority' }
-]
+const priorityColumns = computed(() => [
+  { key: 'high', label: t('kanban.priority_high') },
+  { key: 'medium', label: t('kanban.priority_medium') },
+  { key: 'low', label: t('kanban.priority_low') },
+  { key: 'no_priority', label: t('kanban.no_priority') }
+])
 
 // Computed groupings using external helpers
 const tasksByStatus = computed(() => groupTasksByStatus(props.tasks))
@@ -249,7 +251,7 @@ const categoryColumns = computed(() => {
   }
 
   // Always add Uncategorized at the end
-  columns.push({ key: UNCATEGORIZED_PROJECT_ID, label: 'Uncategorized' })
+  columns.push({ key: UNCATEGORIZED_PROJECT_ID, label: t('kanban.uncategorized') })
   return columns
 })
 
@@ -314,9 +316,9 @@ const handleMoveTask = (taskId: string, targetKey: string) => {
 }
 
 const getEmptyStateMessage = () => {
-  if (props.currentFilter === 'today') return 'No tasks scheduled for today'
-  if (props.currentFilter === 'week') return 'No tasks scheduled for this week'
-  return 'No tasks in this project'
+  if (props.currentFilter === 'today') return t('kanban.no_tasks_today')
+  if (props.currentFilter === 'week') return t('kanban.no_tasks_week')
+  return t('kanban.no_tasks_project')
 }
 </script>
 

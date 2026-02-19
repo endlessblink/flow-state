@@ -9,7 +9,7 @@
       <ChevronRight v-else :size="16" />
     </button>
     <h3 v-if="!isCollapsed" class="inbox-title">
-      Inbox
+      {{ $t('smart_views.inbox') }}
     </h3>
 
     <!-- Expanded state count -->
@@ -24,7 +24,7 @@
       @click="$emit('update:showTodayOnly', !showTodayOnly)"
     >
       <CalendarDays :size="14" />
-      <span>Today</span>
+      <span>{{ $t('calendar.today') }}</span>
       <span v-if="todayCount > 0" class="count-badge">{{ todayCount }}</span>
     </button>
 
@@ -114,7 +114,7 @@
       @click="$emit('update:showAdvancedFilters', !showAdvancedFilters)"
     >
       <Filter :size="14" />
-      <span>{{ showAdvancedFilters ? 'Hide filters' : 'More filters' }}</span>
+      <span>{{ showAdvancedFilters ? $t('filters.hide_filters_simple') : $t('filters.more_filters') }}</span>
       <ChevronDown :size="14" class="toggle-icon" :class="{ rotated: showAdvancedFilters }" />
     </button>
 
@@ -143,6 +143,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, Search, X } from 'lucide-vue-next'
 import { NBadge } from 'naive-ui'
 import BaseBadge from '@/components/base/BaseBadge.vue'
@@ -151,6 +152,8 @@ import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import { type Task } from '@/stores/tasks'
 import { type DurationCategory } from '@/utils/durationCategories'
 import type { SortByType } from '@/composables/inbox/useUnifiedInboxState'
+
+const { t } = useI18n()
 
 defineProps<{
   isCollapsed: boolean

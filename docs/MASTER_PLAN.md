@@ -3578,13 +3578,13 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### BUG-1140: Remove Supabase URL Console Logs in Production (📋 PLANNED)
+### ~~BUG-1140~~: Remove Supabase URL Console Logs in Production (✅ DONE)
 
-**Priority**: P3-LOW | **Status**: 📋 PLANNED
+**Priority**: P3-LOW | **Status**: ✅ DONE (2026-02-19)
 
 **Problem**: Supabase configuration URLs logged to console in production builds.
 
-**Solution**: Wrap console.log statements with `if (import.meta.env.DEV)` check.
+**Fix**: Wrapped 3 console.log calls in `resolveSupabaseUrl()` with `import.meta.env.DEV` guard. URL info now only visible in dev builds.
 
 **Files**: `src/services/auth/supabase.ts`
 

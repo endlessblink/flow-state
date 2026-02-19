@@ -23,19 +23,19 @@ function resolveSupabaseUrl(): string {
 
     // Tauri: Use env var directly (must be a full URL)
     if (isTauri) {
-        console.log('[Supabase] Tauri →', envUrl)
+        if (import.meta.env.DEV) console.log('[Supabase] Tauri →', envUrl)
         return envUrl
     }
 
     // Web/PWA: Resolve relative path (e.g. '/supabase' → 'https://host/supabase')
     if (envUrl.startsWith('/') && typeof window !== 'undefined') {
         const resolved = `${window.location.origin}${envUrl}`
-        console.log('[Supabase] Web/PWA:', resolved)
+        if (import.meta.env.DEV) console.log('[Supabase] Web/PWA:', resolved)
         return resolved
     }
 
     // Default: use env URL as-is
-    console.log('[Supabase] Using:', envUrl)
+    if (import.meta.env.DEV) console.log('[Supabase] Using:', envUrl)
     return envUrl
 }
 

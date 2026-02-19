@@ -336,7 +336,11 @@ export function useTaskContextMenuActions(
             title: currentTask.value.title,
             description: currentTask.value.description,
             status: currentTask.value.status,
-            priority: currentTask.value.priority
+            priority: currentTask.value.priority,
+            estimatedDuration: currentTask.value.estimatedDuration,
+            instanceId: (currentTask.value as Task & { instanceId?: string }).instanceId,
+            isCalendarEvent: Boolean((currentTask.value as Task & { isCalendarEvent?: boolean }).isCalendarEvent),
+            instances: currentTask.value.instances ? [...currentTask.value.instances] : []
         } : null
         const isBatch = isBatchOperation.value
 
@@ -345,11 +349,31 @@ export function useTaskContextMenuActions(
 
         if (taskData && !isBatch) {
             try {
+                let duplicatedInstances: Task['instances']
+
+                // BUG-1369: In calendar context, duplicate the active calendar instance
+                // so the new copy appears immediately in the same day/week view.
+                if (taskData.isCalendarEvent && taskData.instanceId) {
+                    const sourceInstance = taskData.instances.find(inst => inst.id === taskData.instanceId)
+                    if (sourceInstance?.scheduledDate) {
+                        duplicatedInstances = [{
+                            id: `instance-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                            scheduledDate: sourceInstance.scheduledDate,
+                            scheduledTime: sourceInstance.scheduledTime,
+                            duration: sourceInstance.duration ?? taskData.estimatedDuration,
+                            status: 'scheduled',
+                            isRecurring: false
+                        }]
+                    }
+                }
+
                 await taskStore.createTaskWithUndo({
                     title: taskData.title + ' (Copy)',
                     description: taskData.description,
                     status: taskData.status,
-                    priority: taskData.priority
+                    priority: taskData.priority,
+                    estimatedDuration: taskData.estimatedDuration,
+                    instances: duplicatedInstances
                 })
             } catch (error) {
                 console.error('Error duplicating task:', error)

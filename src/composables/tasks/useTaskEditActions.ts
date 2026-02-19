@@ -179,7 +179,11 @@ export function useTaskEditActions(
                 (originalTask?.scheduledDate && originalTask?.scheduledTime) ||
                 (originalTask?.instances && originalTask.instances.length > 0)
             const hasNewSchedule = editedTask.value.scheduledDate && editedTask.value.scheduledTime
-            const scheduleExplicitlyRemoved = hadOriginalSchedule && !hasNewSchedule
+            // BUG-1365 FIX: Only consider schedule "removed" if the edited task also has no instances.
+            // Without this check, instance-based tasks (no legacy scheduledDate/scheduledTime) would
+            // have their instances deleted on every save because hasNewSchedule is always false for them.
+            const editedHasInstances = editedTask.value.instances && editedTask.value.instances.length > 0
+            const scheduleExplicitlyRemoved = hadOriginalSchedule && !hasNewSchedule && !editedHasInstances
 
             const originalCanvasPosition = editedTask.value.canvasPosition ?? props.task?.canvasPosition
             const originalIsInInbox = editedTask.value.isInInbox ?? props.task?.isInInbox

@@ -5,9 +5,76 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "shell:allow-spawn",
-    "shell:allow-execute",
-    "shell:allow-kill",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "docker",
+          "cmd": "docker",
+          "args": ["info", "--format", { "validator": "\\{\\{.*\\}\\}" }]
+        },
+        {
+          "name": "docker",
+          "cmd": "docker",
+          "args": ["desktop", "start"]
+        },
+        {
+          "name": "docker",
+          "cmd": "docker",
+          "args": ["--version"]
+        },
+        {
+          "name": "open-macos",
+          "cmd": "open",
+          "args": ["-a", "Docker", "--background"]
+        },
+        {
+          "name": "cmd-windows",
+          "cmd": "cmd",
+          "args": ["/c", "start", "", { "validator": "C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop\\.exe" }]
+        },
+        {
+          "name": "systemctl-linux",
+          "cmd": "systemctl",
+          "args": ["--user", "start", "docker-desktop"]
+        },
+        {
+          "name": "curl",
+          "cmd": "curl",
+          "args": ["-s", "-o", "/dev/null", "-w", "%{http_code}", { "validator": "http://127\\.0\\.0\\.1:\\d+/.*" }, "--max-time", { "validator": "\\d+" }]
+        },
+        {
+          "name": "curl",
+          "cmd": "curl",
+          "args": ["-s", "-o", "/dev/null", "-w", "%{http_code}", { "validator": "http://127\\.0\\.0\\.1:\\d+/.*" }, "-H", { "validator": "apikey:.*" }, "--max-time", { "validator": "\\d+" }]
+        },
+        {
+          "name": "supabase",
+          "cmd": "supabase",
+          "args": ["status", "-o", "json"]
+        },
+        {
+          "name": "supabase",
+          "cmd": "supabase",
+          "args": ["start"]
+        },
+        {
+          "name": "supabase",
+          "cmd": "supabase",
+          "args": ["stop"]
+        },
+        {
+          "name": "supabase",
+          "cmd": "supabase",
+          "args": ["--version"]
+        },
+        {
+          "name": "notify-send",
+          "cmd": "notify-send",
+          "args": true
+        }
+      ]
+    },
     {
       "identifier": "http:allow-fetch",
       "allow": [
@@ -46,66 +113,6 @@
         { "url": "http://127.0.0.1:**" },
         { "url": "http://localhost:**" },
         { "url": "https://**" }
-      ]
-    },
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "docker",
-          "cmd": "docker",
-          "args": true
-        },
-        {
-          "name": "supabase",
-          "cmd": "supabase",
-          "args": true
-        },
-        {
-          "name": "npx-supabase",
-          "cmd": "npx",
-          "args": ["supabase", { "validator": ".*" }]
-        },
-        {
-          "name": "open-macos",
-          "cmd": "open",
-          "args": true
-        },
-        {
-          "name": "cmd-windows",
-          "cmd": "cmd",
-          "args": true
-        },
-        {
-          "name": "systemctl-linux",
-          "cmd": "systemctl",
-          "args": true
-        },
-        {
-          "name": "curl",
-          "cmd": "curl",
-          "args": true
-        },
-        {
-          "name": "notify-send",
-          "cmd": "notify-send",
-          "args": true
-        }
-      ]
-    },
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "docker-spawn",
-          "cmd": "docker",
-          "args": true
-        },
-        {
-          "name": "supabase-spawn",
-          "cmd": "supabase",
-          "args": true
-        }
       ]
     },
     "shell:allow-open",

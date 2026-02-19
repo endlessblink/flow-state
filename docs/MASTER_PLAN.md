@@ -8,6 +8,14 @@
 
 ## Active Bugs (P0-P1)
 
+### TASK-1365: Focus button doesn't do anything (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-19)
+
+**Problem**: The focus button in the UI has no effect when clicked — nothing happens visually or functionally.
+
+---
+
 ### BUG-1354: Timer start time doesn't reset when reactivating pomodoro on same task (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-17)
@@ -3386,6 +3394,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1356**~~ | **P2** | ✅ **AI Memory Assessment System — test/evaluate memory effectiveness for user context + AI usage across app, CLI + admin settings UI** (✅ DONE 2026-02-18) |
 | **TASK-1358** | **P2** | **🔄 Rewrite 28 canvas todo tests — replace over-designed Vue Flow mocking with direct store/handler unit tests using real data shapes** |
 | ~~**BUG-1347**~~ | **P0** | ✅ **KDE Plasma widget freeze — gated 40+ console.log behind debug flag, staggered concurrent XHR with Qt.callLater(), reactive transition timer, throttled canvas repaints** (✅ DONE 2026-02-19) |
+| ~~**BUG-1365**~~ | **P0** | ✅ **Calendar day view — task disappears after editing and saving (false positive scheduleExplicitlyRemoved for instance-based tasks)** (✅ DONE 2026-02-19) |
 | **BUG-1360** | **P0** | **🔄 Canvas long task cards cut off when zooming — overflow:hidden chain clips content, title 3-line clamp, missing description collapse CSS** |
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |

@@ -10,6 +10,7 @@
     :disabled="disabled"
     :title="title"
     :aria-label="ariaLabel || title"
+    :aria-pressed="active"
     @click="$emit('click', $event)"
   >
     <slot />
@@ -18,7 +19,7 @@
 
 <script setup lang="ts">
 interface Props {
-  variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger'
+  variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   active?: boolean
   disabled?: boolean
@@ -30,7 +31,6 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   variant: 'default',
   size: 'md',
-  active: false,
   disabled: false,
   type: 'button',
   title: undefined,
@@ -66,6 +66,13 @@ defineEmits<{
   -webkit-appearance: none;
   -moz-appearance: none;
   padding: 0;
+}
+
+/* Focus state with visible indicator - Green to match BaseButton */
+.base-icon-button:focus-visible {
+  outline: var(--space-0_5) solid var(--color-work);
+  outline-offset: var(--space-0_5);
+  box-shadow: 0 0 0 var(--space-1) rgba(var(--color-success), 0.1);
 }
 
 .base-icon-button:hover:not(:disabled) {
@@ -158,5 +165,23 @@ defineEmits<{
 .base-icon-button.variant-danger:hover:not(:disabled) {
   border-color: var(--color-danger-alpha-50);
   background: var(--color-danger-bg-light);
+}
+
+/* Variant: Ghost (transparent) - No border, clear background */
+.base-icon-button.variant-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.base-icon-button.variant-ghost:hover:not(:disabled) {
+  background: var(--glass-bg-heavy);
+  color: var(--text-primary);
+}
+
+.base-icon-button.variant-ghost.is-active {
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 </style>

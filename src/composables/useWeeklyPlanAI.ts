@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
-import { createAIRouter } from '@/services/ai/router'
+import { getSharedRouter } from '@/services/ai/routerFactory'
 import type { AIRouter } from '@/services/ai/router'
 import type { ChatMessage } from '@/services/ai/types'
 import type { WorkProfile } from '@/utils/supabaseMappers'
@@ -156,14 +156,18 @@ function formatDuration(mins: number): string {
 }
 
 function formatHebrewDate(dateStr: string): string {
-  const months = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳']
+  if (!dateStr || dateStr.length < 8) return dateStr || ''
   const d = new Date(dateStr + 'T00:00:00')
+  if (isNaN(d.getTime())) return dateStr
+  const months = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳']
   return `${d.getDate()} ב${months[d.getMonth()]}`
 }
 
 function formatEnglishDate(dateStr: string): string {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  if (!dateStr || dateStr.length < 8) return dateStr || ''
   const d = new Date(dateStr + 'T00:00:00')
+  if (isNaN(d.getTime())) return dateStr
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   return `${months[d.getMonth()]} ${d.getDate()}`
 }
 
@@ -585,6 +589,7 @@ function getRouterOptions(): Record<string, unknown> {
     taskType: 'planning',
     temperature: 0.3,
     timeout: 30000,
+    contextFeature: 'weeklyplan', // TASK-1350: Enable user context injection
   }
 
   // TASK-1327: Use weekly plan specific provider/model if configured
@@ -640,8 +645,7 @@ export function useWeeklyPlanAI() {
       const enriched = enrichTasksForPlanning(tasks, weekEnd)
       console.log(`[WeeklyPlanAI] Step 0: Enriched ${enriched.length} tasks (${enriched.filter(t => t.language === 'he').length} Hebrew, ${enriched.filter(t => t.urgencyCategory === 'OVERDUE').length} overdue)`)
 
-      const router = createAIRouter()
-      await router.initialize()
+      const router = getSharedRouter()
       const routerOpts = getRouterOptions()
 
       const validTaskIds = new Set(tasks.map(t => t.id))
@@ -704,8 +708,7 @@ export function useWeeklyPlanAI() {
     isGenerating.value = true
 
     try {
-      const router = createAIRouter()
-      await router.initialize()
+      const router = getSharedRouter()
       const routerOpts = getRouterOptions()
 
       const messages: ChatMessage[] = [

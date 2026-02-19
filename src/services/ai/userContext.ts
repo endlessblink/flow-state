@@ -14,6 +14,8 @@
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
+import { useSettingsStore } from '@/stores/settings'
+import type { MemoryObservation } from '@/utils/supabaseMappers'
 
 /**
  * Get the full AI user context string.
@@ -26,17 +28,29 @@ export async function getAIUserContext(
   feature: 'quicksort' | 'taskassist' | 'chat' | 'weeklyplan' = 'chat'
 ): Promise<string> {
   const sections: string[] = []
+  const settingsStore = useSettingsStore()
+  const aiLearningEnabled = settingsStore.aiLearningEnabled
+
+  // ── Feature-specific framing (FIRST — instruction before data) ──
+  const framing = getFeatureFraming(feature)
+  if (framing) {
+    sections.push(framing)
+  }
 
   // ── Work Profile (habits, capacity, memory) ──
-  try {
-    const { loadProfile, getProfileContext } = useWorkProfile()
-    await loadProfile()
-    const profileCtx = getProfileContext()
-    if (profileCtx) {
-      sections.push(profileCtx)
+  let profile = null
+  if (aiLearningEnabled) {
+    try {
+      const { loadProfile, getProfileContext, profile: profileRef } = useWorkProfile()
+      await loadProfile()
+      profile = profileRef.value
+      const profileCtx = getProfileContext()
+      if (profileCtx) {
+        sections.push(profileCtx)
+      }
+    } catch {
+      // Work profile unavailable — continue without it
     }
-  } catch {
-    // Work profile unavailable — continue without it
   }
 
   // ── Current Workload Snapshot ──
@@ -49,6 +63,42 @@ export async function getAIUserContext(
     // Task store unavailable — continue
   }
 
+  // ── Recently Completed Tasks (only if AI learning enabled) ──
+  if (aiLearningEnabled) {
+    try {
+      const recentCompleted = getRecentlyCompletedTasks()
+      if (recentCompleted) {
+        sections.push(recentCompleted)
+      }
+    } catch {
+      // Continue without recently completed
+    }
+  }
+
+  // ── Work Insights from Memory Graph (only if AI learning enabled) ──
+  if (aiLearningEnabled && profile) {
+    try {
+      const insights = getWorkInsights(profile)
+      if (insights) {
+        sections.push(insights)
+      }
+    } catch {
+      // Continue without insights
+    }
+  }
+
+  // ── Frequently Missed Projects (only if AI learning enabled) ──
+  if (aiLearningEnabled && profile) {
+    try {
+      const missed = getFrequentlyMissedProjects(profile)
+      if (missed) {
+        sections.push(missed)
+      }
+    } catch {
+      // Continue without frequently missed
+    }
+  }
+
   // ── Active Projects ──
   try {
     const projects = getActiveProjectsSummary()
@@ -59,14 +109,11 @@ export async function getAIUserContext(
     // Project store unavailable — continue
   }
 
-  // ── Feature-specific framing ──
-  const framing = getFeatureFraming(feature)
-  if (framing) {
-    sections.push(framing)
-  }
-
   if (sections.length === 0) return ''
-  return '\n\n--- USER CONTEXT ---\n' + sections.join('\n\n')
+
+  const result = '\n\n--- USER CONTEXT ---\n' + sections.join('\n\n')
+  console.debug('[AIUserContext]', { sections: sections.length, feature, chars: result.length })
+  return result
 }
 
 /**
@@ -155,4 +202,97 @@ function getFeatureFraming(feature: string): string | null {
     default:
       return null
   }
+}
+
+/**
+ * Recently completed tasks (last 2 weeks, top 10 titles)
+ * Gives the AI awareness of the user's recent momentum — what they've been working on.
+ */
+function getRecentlyCompletedTasks(): string | null {
+  const taskStore = useTaskStore()
+  const twoWeeksAgo = new Date()
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+
+  const recentlyCompleted = taskStore.tasks.filter(t => {
+    if (t.status !== 'done') return false
+    const completedDate = t.completedAt ? new Date(t.completedAt as string) : null
+    return completedDate && completedDate >= twoWeeksAgo
+  })
+
+  const titles = recentlyCompleted
+    .sort((a, b) => {
+      const da = a.completedAt ? new Date(a.completedAt as string).getTime() : 0
+      const db = b.completedAt ? new Date(b.completedAt as string).getTime() : 0
+      return db - da
+    })
+    .slice(0, 10)
+    .map(t => t.title)
+
+  if (titles.length === 0) return null
+
+  const lines = ['Recently completed (momentum):']
+  for (const title of titles) {
+    lines.push(`- ${title}`)
+  }
+  return lines.join('\n')
+}
+
+/**
+ * Work insights from memory graph
+ * Translates raw memory observations into actionable advice the LLM can use.
+ */
+function getWorkInsights(profile: NonNullable<ReturnType<typeof useWorkProfile>['profile']['value']>): string | null {
+  if (!profile.memoryGraph || profile.memoryGraph.length === 0) return null
+
+  const insightMap: Record<string, (obs: MemoryObservation) => string | null> = {
+    'overdue_pattern': (obs) => `${obs.value} — prioritize clearing overdue items`,
+    'backlog_heavy': (obs) => `${obs.value} — avoid adding new tasks, focus on clearing existing`,
+    'high_wip': (obs) => `${obs.value} — limit new starts, prioritize finishing in-progress`,
+    'underestimates': (obs) => `User ${obs.value} — suggest longer durations`,
+    'overestimates': (obs) => `User ${obs.value} — can suggest shorter durations`,
+    'capacity_gap': (obs) => `Capacity gap: ${obs.value} — suggest conservative workload`,
+    'stale': (obs) => `${obs.entity.replace('project:', '')} is stale (${obs.value}) — consider nudging`,
+    'most_active': (obs) => `${obs.entity.replace('project:', '')} is most active (${obs.value})`,
+    'completion_rate': (obs) => `High-priority ${obs.value}`,
+  }
+
+  const workInsights: string[] = []
+  for (const obs of profile.memoryGraph) {
+    const mapper = insightMap[obs.relation]
+    if (mapper && obs.confidence >= 0.6) {
+      const insight = mapper(obs)
+      if (insight) workInsights.push(insight)
+    }
+  }
+
+  if (workInsights.length === 0) return null
+
+  const lines = ['Work insights:']
+  for (const insight of workInsights) {
+    lines.push(`- ${insight}`)
+  }
+  return lines.join('\n')
+}
+
+/**
+ * Frequently missed projects
+ * Projects where tasks consistently don't get completed.
+ */
+function getFrequentlyMissedProjects(profile: NonNullable<ReturnType<typeof useWorkProfile>['profile']['value']>): string | null {
+  if (!profile.memoryGraph || profile.memoryGraph.length === 0) return null
+
+  const projectStore = useProjectStore()
+  const frequentlyMissedProjects: string[] = []
+
+  for (const obs of profile.memoryGraph) {
+    if (obs.relation === 'frequently_missed' && obs.entity.startsWith('project:')) {
+      const projId = obs.entity.replace('project:', '')
+      const name = projectStore.getProjectDisplayName(projId)
+      if (name) frequentlyMissedProjects.push(name)
+    }
+  }
+
+  if (frequentlyMissedProjects.length === 0) return null
+
+  return `Frequently missed projects (user tends to not complete tasks here):\n- ${frequentlyMissedProjects.join(', ')}`
 }

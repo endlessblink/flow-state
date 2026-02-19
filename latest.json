@@ -1,11 +1,11 @@
 {
-  "version": "1.2.74",
-  "notes": "v1.2.74: Task list UX — estimates, hierarchy, group drag-drop, date picker",
-  "pub_date": "2026-02-16T22:24:39.532Z",
+  "version": "1.2.85",
+  "notes": "BUG-1360: Fix canvas task cards changing size when zooming — removed LOD-based content hiding and dimension overrides so cards maintain consistent size at all zoom levels",
+  "pub_date": "2026-02-19T15:28:44.730Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXhtV2ZSUVNyQXVzWG0rcTcxR0ZqQityVzRoVU03S1hsSmpnbmFLTWdkbkhNUFZ4MXBRZlArVjArb2YwMWlhWGhpZGhFR1dFcEovTWhObDY2bW9aS2djPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMjgwNjc5CWZpbGU6Rmxvd1N0YXRlXzEuMi43NF9hbWQ2NC5BcHBJbWFnZQpVWTB1NDF3cEdsMFp0a01mRnhQVWdEMHY1UlFUT3pNUldjaXRvTHBkSEpSVVFBQjhlOEtPYThRSFB4Y0RSSnp3UGlGdW5wRStveVowZHpyYnowTVpEdz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.74_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRS9BZTN4N0ZUQUpPcXFoNVVEck5FWGNnWURNOUNIY1hKZEY3Q2pvLzdYZ1FONVZCNEZ0Q1R0cFBHUWRHUFhsM3l5MU05M1VsaWFEYWdXOXlnbWd6dlFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxNTE0OTI0CWZpbGU6Rmxvd1N0YXRlXzEuMi44NV9hbWQ2NC5BcHBJbWFnZQpBUDNGMTQ5R0hYd0N4VlBwMU9XWUxDZkltd3lIZ2RUcFhBWkdXMnFqaXNhaytWemFBdDBJcWxFN2FqZkUyVENYUUdrUlkveWhXWko2S3hSOUhETTlBUT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.85_amd64.AppImage"
     }
   }
 }

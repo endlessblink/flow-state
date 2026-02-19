@@ -31,7 +31,6 @@
 
       <!-- Header (Title + Timer) -->
       <TaskNodeHeader
-        v-if="!isLOD3"
         :title="task?.title"
         :is-timer-active="isTimerActive"
         :alignment-classes="titleAlignmentClasses"
@@ -39,7 +38,7 @@
 
       <!-- Description -->
       <TaskNodeDescription
-        v-if="task?.description && !isLOD1"
+        v-if="task?.description"
         :description="task?.description"
         :is-expanded="isDescriptionExpanded"
         :is-long="!!isDescriptionLong(task?.description)"
@@ -50,7 +49,6 @@
 
       <!-- Metadata -->
       <TaskNodeMeta
-        v-if="!isLOD2"
         :show-status="showStatus"
         :status-label="statusLabel"
         :due-date="task?.dueDate"
@@ -275,18 +273,7 @@ onUnmounted(() => {
   background: var(--overlay-component-bg) !important; /* Solid fallback when blur is disabled */
 }
 
-.task-node.lod-3 {
-  width: 120px;
-  min-width: 120px;
-  height: var(--space-15);
-  box-shadow: none;
-  border: var(--space-1) solid var(--border-medium);
-}
-
-.task-node.lod-3 .task-node-content {
-  padding: 0;
-  height: 100%;
-}
+/* BUG-1360: LOD-3 fixed dimensions removed — cards must stay same size at all zoom levels */
 
 .task-node:hover {
   border: none;

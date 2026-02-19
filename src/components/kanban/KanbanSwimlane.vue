@@ -58,7 +58,7 @@
         </template>
 
         <!-- Date View Columns - Todoist Style -->
-        <template v-if="currentViewType === 'date'">
+        <template v-else-if="currentViewType === 'date'">
           <KanbanColumn
             v-for="column in dateColumns"
             :key="column.key"
@@ -78,16 +78,16 @@
           />
         </template>
 
-        <!-- Priority View Columns -->
-        <template v-if="currentViewType === 'priority'">
+        <!-- FEATURE-1336: Category View Columns (projects as columns) -->
+        <template v-else-if="currentViewType === 'category'">
           <KanbanColumn
-            v-for="column in priorityColumns"
+            v-for="column in categoryColumns"
             :key="column.key"
             :title="column.label"
             :status="column.key as any"
-            :tasks="tasksByPriority[column.key]"
-            column-type="priority"
-            :swimlane-id="project.id"
+            :tasks="tasksByCategory[column.key] || []"
+            column-type="category"
+            swimlane-id="category"
             class="swimlane-column"
             @add-task="handleAddTask"
             @move-task="handleMoveTask"
@@ -99,16 +99,16 @@
           />
         </template>
 
-        <!-- FEATURE-1336: Category View Columns (projects as columns) -->
-        <template v-if="currentViewType === 'category'">
+        <!-- Priority View Columns (default fallback) -->
+        <template v-else>
           <KanbanColumn
-            v-for="column in categoryColumns"
+            v-for="column in priorityColumns"
             :key="column.key"
             :title="column.label"
             :status="column.key as any"
-            :tasks="tasksByCategory[column.key] || []"
-            column-type="category"
-            swimlane-id="category"
+            :tasks="tasksByPriority[column.key]"
+            column-type="priority"
+            :swimlane-id="project.id"
             class="swimlane-column"
             @add-task="handleAddTask"
             @move-task="handleMoveTask"

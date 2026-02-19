@@ -510,10 +510,15 @@ export function useTaskOperations(
                 // BUG-1184: Only set parent_id for valid UUIDs (sub-tasks)
                 // Group IDs like "group-xxx" are NOT valid UUIDs and cause Postgres errors
                 // Canvas group association is stored in position.parentId (JSONB), not parent_id (UUID)
-                if (updatedTask.parentId !== undefined) {
+                // BUG-1365: Also check 'parentId' in updates for auto-archive clearing
+                if (updatedTask.parentId !== undefined || 'parentId' in updates) {
                     payload.parent_id = isValidUUID(updatedTask.parentId) ? updatedTask.parentId : null
                 }
-                if (updatedTask.canvasPosition !== undefined) {
+                // BUG-1365: Also check if canvasPosition was explicitly set in the updates object.
+                // During auto-archive (line ~458), canvasPosition is set to undefined to clear it.
+                // Without 'canvasPosition' in updates check, the sync queue never sends position: null
+                // to the DB, so after refresh the task reappears on canvas with its old position.
+                if (updatedTask.canvasPosition !== undefined || 'canvasPosition' in updates) {
                     // Use 'position' column (not 'canvas_position') - format as DB expects
                     payload.position = updatedTask.canvasPosition
                         ? {

@@ -153,8 +153,10 @@ export function useTaskHistory(
                 undoSystem.saveState('After delete subtask')
             },
             unscheduleTaskWithUndo: async (taskId: string) => {
-                // Remove all scheduling properties
+                // Remove all scheduling properties + clear instances (calendar uses instances exclusively since BUG-1325)
                 return undoHistory.updateTaskWithUndo(taskId, {
+                    instances: [],
+                    isInInbox: true,
                     dueDate: undefined,
                     scheduledDate: undefined,
                     scheduledTime: undefined

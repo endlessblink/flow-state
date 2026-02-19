@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useSettingsStore } from '@/stores/settings'
 import type { CalendarEvent } from '@/types/tasks'
 
@@ -20,6 +21,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
   const taskStore = useTaskStore()
   const settings = useSettingsStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
+  const { endDrag: endGlobalDrag } = useDragAndDrop()
 
   // Month days computation
   const monthDays = computed<MonthDay[]>(() => {
@@ -97,6 +99,9 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
 
   const handleMonthDrop = async (event: DragEvent, targetDate: string) => {
     event.preventDefault()
+
+    // BUG-1361: Clean up global drag ghost pill on drop (same fix as day view).
+    endGlobalDrag()
 
     const data = event.dataTransfer?.getData('application/json')
     if (!data) return

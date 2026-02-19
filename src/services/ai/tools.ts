@@ -92,12 +92,12 @@ export const AI_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'list_tasks',
-    description: 'List tasks, optionally filtered by status',
+    description: 'List active tasks (excludes done by default). Pass status="done" to see completed tasks, or status="all" for everything.',
     category: 'read',
     parameters: {
       type: 'object',
       properties: {
-        status: { type: 'string', description: 'Filter by status', enum: ['planned', 'in_progress', 'done', 'backlog', 'all'] },
+        status: { type: 'string', description: 'Filter by status. Default excludes done tasks. Use "all" to include done.', enum: ['planned', 'in_progress', 'done', 'backlog', 'all'] },
         limit: { type: 'number', description: 'Maximum number of tasks to return (default 50)' },
       },
       required: [],
@@ -138,14 +138,14 @@ export const AI_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'search_tasks',
-    description: 'Search tasks by text query across titles and descriptions',
+    description: 'Search active tasks by text query (excludes done by default). Pass status="done" to search completed tasks.',
     category: 'read',
     parameters: {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Text to search for in task titles and descriptions' },
         priority: { type: 'string', description: 'Filter by priority', enum: ['low', 'medium', 'high'] },
-        status: { type: 'string', description: 'Filter by status', enum: ['planned', 'in_progress', 'done', 'backlog'] },
+        status: { type: 'string', description: 'Filter by status. Only set this if user explicitly asks for done/completed tasks.', enum: ['planned', 'in_progress', 'done', 'backlog'] },
         limit: { type: 'number', description: 'Maximum results (default 20)' },
       },
       required: ['query'],
@@ -514,8 +514,15 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         let tasks = taskStore.tasks
 
-        if (status && status !== 'all') {
+        if (status === 'all') {
+          // Explicit 'all' — include everything
+        } else if (status === 'done') {
+          tasks = tasks.filter((t: Task) => t.status === 'done')
+        } else if (status) {
           tasks = tasks.filter((t: Task) => t.status === status)
+        } else {
+          // Default: exclude done tasks (most useful for user-facing queries)
+          tasks = tasks.filter((t: Task) => t.status !== 'done')
         }
 
         tasks = tasks.slice(0, limit)
@@ -627,6 +634,8 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const limit = (call.parameters.limit as number) || 20
 
         let results = taskStore.tasks.filter((t: Task) => {
+          // Exclude done tasks by default unless explicitly searching for them
+          if (!filterStatus && t.status === 'done') return false
           const titleMatch = t.title?.toLowerCase().includes(query)
           const descMatch = t.description?.toLowerCase().includes(query)
           return titleMatch || descMatch
@@ -1764,14 +1773,30 @@ export function buildNativeToolsBehaviorPrompt(): string {
     'You have access to tools via function calling. Use them as follows:',
     '',
     'IMPORTANT RULES:',
-    '- ALWAYS use read tools when user asks about their tasks, overdue items, schedule, timer, projects, or any data. Read tools show rich interactive results the user can click. Never guess — use the tool.',
+    '- ALWAYS use read tools when user asks about their tasks, overdue items, schedule, timer, projects, or any data. Read tools show rich interactive results the user can click.',
     '- Use write tools when user says "create", "add", "make", "change", "start timer", "stop timer".',
     '- Use destructive tools only when explicitly asked. Pass confirmed=true for destructive operations.',
     '- For normal chat, greetings, or general questions — respond naturally without tools.',
     `- Maximum ${MAX_TOOLS_PER_RESPONSE} tool calls per response.`,
-    '- After using a read tool, keep your text response to 1 SHORT sentence — tool results render as interactive cards below.',
+    '- list_tasks and search_tasks EXCLUDE done/completed tasks by default. Only pass status="done" if user explicitly asks about completed tasks.',
     '',
-    'When you use a WRITE tool, say something natural like "Done!" or "Created!" in the user\'s language.',
-    'When you use a READ tool, write ONE short sentence — the tool data renders as clickable cards automatically.',
+    '## Response Format Rules (CRITICAL):',
+    '',
+    'After READ tools:',
+    '- Write a SHORT analytical summary (2-4 sentences max)',
+    '- Tool results render as interactive cards — the user sees them. Do NOT repeat task names from the results.',
+    '- NEVER include task IDs (UUIDs) in your text response. The IDs are for internal use only.',
+    '- Structure your response with bullet points or numbered lists, not paragraphs',
+    '- Focus on INSIGHTS (what to prioritize, what\'s overdue, what pattern you see) — not descriptions of what the data contains',
+    '',
+    'After WRITE tools:',
+    '- Say something natural like "Done!" or "Created!" in the user\'s language',
+    '- Keep it to 1 sentence',
+    '',
+    'General formatting:',
+    '- Use bullet points (•) or numbered lists for any list of recommendations',
+    '- Bold (**text**) for emphasis on key points',
+    '- Keep responses concise — never more than 5-6 short sentences for analytical responses',
+    '- NEVER show raw IDs, JSON, or technical details to the user',
   ].join('\n')
 }

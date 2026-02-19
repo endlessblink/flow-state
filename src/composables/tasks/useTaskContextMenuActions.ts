@@ -36,6 +36,9 @@ export function useTaskContextMenuActions(
         // When emit('close') is called, parent sets props to null, making currentTask.value null
         const taskId = currentTask.value?.id
         const isBatch = isBatchOperation.value
+        // TASK-1362: Capture calendar instance info before menu closes
+        const calendarInstanceId = (currentTask.value as any)?.instanceId as string | undefined
+        const isCalendarEvent = (currentTask.value as any)?.isCalendarEvent as boolean | undefined
 
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
@@ -51,6 +54,10 @@ export function useTaskContextMenuActions(
         if (dateType === 'custom' && customDate) {
             try {
                 await taskStore.updateTaskWithUndo(taskId, { dueDate: customDate })
+                // TASK-1362: Also move calendar instance to new date
+                if (isCalendarEvent && calendarInstanceId) {
+                    await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: customDate })
+                }
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
             } catch (error) {
@@ -116,6 +123,10 @@ export function useTaskContextMenuActions(
                 // Use ISO date format (YYYY-MM-DD) for Supabase compatibility
                 const formattedDate = dueDate.toISOString().split('T')[0]
                 await taskStore.updateTaskWithUndo(taskId, { dueDate: formattedDate })
+                // TASK-1362: Also move calendar instance to the new date
+                if (isCalendarEvent && calendarInstanceId) {
+                    await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })
+                }
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
             } catch (error) {

@@ -15,6 +15,7 @@ const props = defineProps<{
   dragGhost: DragGhost
   isDragging: boolean
   draggedEventId: string | null
+  selectedEventIds?: Set<string>
   resizePreview?: {
     isResizing: boolean
     taskId: string | null
@@ -235,6 +236,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                 :class="{
                   'timer-active-event': currentTaskId === event.taskId,
                   'dragging': isDragging && draggedEventId === event.id,
+                  'selected': selectedEventIds?.has(event.id),
                   'status-done': getTaskStatus(event) === 'done'
                 }"
                 :style="{ ...getWeekEventCellStyle(event), backgroundColor: event.color }"
@@ -426,6 +428,13 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 
 .week-event:hover {
   filter: brightness(1.1);
+}
+
+/* TASK-1362: Selected state */
+.week-event.selected {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: -1px;
+  box-shadow: 0 0 8px var(--brand-primary-dim);
 }
 
 .week-event.dragging {

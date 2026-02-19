@@ -48,6 +48,7 @@
           trigger="click"
           placement="right-start"
           :show="showDatePicker"
+          :z-index="10001"
           @update:show="showDatePicker = $event"
         >
           <template #trigger>
@@ -444,12 +445,21 @@ const handleDatePickerSelect = async (timestamp: number | null) => {
   const day = String(date.getDate()).padStart(2, '0')
   const formattedDate = `${year}-${month}-${day}`
 
+  // TASK-1362: Capture calendar instance info before menu closes
+  const taskId = currentTask.value.id
+  const calendarInstanceId = (currentTask.value as any)?.instanceId as string | undefined
+  const isCalendarEvent = (currentTask.value as any)?.isCalendarEvent as boolean | undefined
+
   // Close the popover first
   showDatePicker.value = false
 
   // Update the task directly via task store
   try {
-    await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
+    await taskStore.updateTaskWithUndo(taskId, { dueDate: formattedDate })
+    // TASK-1362: Also move calendar instance to selected date
+    if (isCalendarEvent && calendarInstanceId) {
+      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })
+    }
     canvasStore.requestSync('user:context-menu')
   } catch (error) {
     console.error('Error updating task due date:', error)
@@ -460,10 +470,15 @@ const handleDatePickerSelect = async (timestamp: number | null) => {
 
 // Handle "Done for now" - reschedule task to tomorrow with tracking badge
 const handleDoneForNow = async () => {
+  // BUG-1184: Capture task data BEFORE closing menu
+  const taskId = currentTask.value?.id
+  const calendarInstanceId = (currentTask.value as any)?.instanceId as string | undefined
+  const isCalendarEvent = (currentTask.value as any)?.isCalendarEvent as boolean | undefined
+
   // BUG-1095: Close menu FIRST to prevent "stuck" menu
   emit('close')
 
-  if (!currentTask.value) return
+  if (!taskId) return
 
   const { showToast } = useToast()
 
@@ -477,10 +492,14 @@ const handleDoneForNow = async () => {
 
   try {
     // Set both dueDate and doneForNowUntil to track the badge
-    await taskStore.updateTaskWithUndo(currentTask.value.id, {
+    await taskStore.updateTaskWithUndo(taskId, {
       dueDate: tomorrowStr,
       doneForNowUntil: tomorrowStr
     })
+    // TASK-1362: Also move calendar instance to tomorrow
+    if (isCalendarEvent && calendarInstanceId) {
+      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: tomorrowStr })
+    }
     canvasStore.requestSync('user:context-menu')
     showToast('Moved to tomorrow', 'success', { duration: 2000 })
   } catch (error) {
@@ -1033,7 +1052,7 @@ onUnmounted(() => {
 .action-btn--timer:hover { background: var(--brand-bg-subtle); border-color: var(--brand-primary); }
 
 .action-btn--focus { color: var(--color-focus); }
-.action-btn--focus:hover { background: var(--status-on-hold-bg); border-color: var(--color-focus); }
+.action-btn--focus:hover { background: rgba(139, 92, 246, 0.15); border-color: var(--color-focus); }
 
 .action-label { font-size: var(--text-xs); font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
 

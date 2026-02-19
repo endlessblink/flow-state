@@ -7,6 +7,11 @@ export interface DragData {
   title: string
   source: 'kanban' | 'calendar' | 'canvas' | 'sidebar'
   payload?: unknown
+  /** BUG-1361: Controls when the ghost pill is visible.
+   *  'always' — pill follows cursor at all times (canvas, board)
+   *  'sidebar-only' — pill only appears when hovering over sidebar project drop targets (calendar)
+   */
+  ghostMode?: 'always' | 'sidebar-only'
 }
 
 export interface DragState {
@@ -55,8 +60,28 @@ export function useDragAndDrop() {
    * - SortableJS: positioned via mousemove
    * - HTML5 native: positioned via document dragover
    * This avoids setDragImage rendering issues (gray bg) in Tauri/Chromium.
+   *
+   * BUG-1361: ghostMode controls pill visibility:
+   * - 'always' (default): pill follows cursor everywhere
+   * - 'sidebar-only': pill only visible when hovering over sidebar project drop targets
    */
   const startDrag = (data: DragData, event?: DragEvent) => {
+    // BUG-1361: Clean up any stale ghost from a previous drag that wasn't properly ended.
+    // This prevents ghost pill accumulation when dragend doesn't fire (e.g., source element
+    // removed from DOM by reactive filtering before dragend event).
+    if (ghostEl) {
+      ghostEl.remove()
+      ghostEl = null
+    }
+    if (mouseMoveHandler) {
+      document.removeEventListener('mousemove', mouseMoveHandler)
+      mouseMoveHandler = null
+    }
+    if (dragOverHandler) {
+      document.removeEventListener('dragover', dragOverHandler)
+      dragOverHandler = null
+    }
+
     dragState.value = {
       isDragging: true,
       dragData: data,
@@ -67,6 +92,7 @@ export function useDragAndDrop() {
     document.body.classList.add('dragging-active')
 
     const title = data.title || 'Task'
+    const ghostMode = data.ghostMode || 'always'
 
     // ALWAYS create persistent ghost — positioned via mousemove or dragover
     ghostEl = createGhostPill(title)
@@ -83,11 +109,6 @@ export function useDragAndDrop() {
 
     // Shared logic: position ghost + detect drop targets
     const positionGhostAndDetectTarget = (x: number, y: number) => {
-      if (ghostEl) {
-        ghostEl.style.left = `${x + 12}px`
-        ghostEl.style.top = `${y - 14}px`
-      }
-
       const elements = document.elementsFromPoint(x, y)
       let found: string | null = null
       for (const el of elements) {
@@ -99,6 +120,19 @@ export function useDragAndDrop() {
       }
       if (dragState.value.dropTarget !== found) {
         dragState.value.dropTarget = found
+      }
+
+      // BUG-1361: Ghost pill visibility based on ghostMode
+      if (ghostEl) {
+        if (ghostMode === 'sidebar-only' && !found) {
+          // Hide ghost when not over a sidebar project drop target
+          ghostEl.style.left = '-9999px'
+          ghostEl.style.top = '-9999px'
+        } else {
+          // Show ghost at cursor position
+          ghostEl.style.left = `${x + 12}px`
+          ghostEl.style.top = `${y - 14}px`
+        }
       }
     }
 

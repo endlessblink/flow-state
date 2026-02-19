@@ -447,6 +447,11 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     dragGhost.value = { visible: false, title: '', duration: 30, slotIndex: 0 }
     activeDropSlot.value = null
 
+    // BUG-1361: Clean up global drag ghost pill immediately on drop.
+    // When inbox tasks are dropped, creating an instance triggers reactive filtering
+    // that removes the source DOM element before dragend fires, leaving ghost pills stuck.
+    endGlobalDrag()
+
     const data = event.dataTransfer?.getData('application/json')
     if (!data) {
       // Try fallback for browser compatibility
@@ -626,8 +631,9 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       event.dataTransfer.effectAllowed = 'move'
 
       // Unified ghost pill — startGlobalDrag creates it and calls setDragImage
+      // BUG-1361: sidebar-only — calendar has its own inline ghost preview
       startGlobalDrag(
-        { type: 'task', taskId: calendarEvent.taskId, title: calendarEvent.title, source: 'calendar' },
+        { type: 'task', taskId: calendarEvent.taskId, title: calendarEvent.title, source: 'calendar', ghostMode: 'sidebar-only' },
         event
       )
     } else {

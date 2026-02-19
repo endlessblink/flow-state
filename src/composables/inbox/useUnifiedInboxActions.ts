@@ -199,7 +199,15 @@ export function useUnifiedInboxActions(
         document.documentElement.setAttribute('data-dragging-task-id', task.id)
 
         // Unified ghost pill — pass event for setDragImage
-        startGlobalDrag({ type: 'task', taskId: task.id, title: task.title, source: 'kanban' }, e)
+        // BUG-1361: In calendar context, ghost pill only shows when hovering over sidebar
+        // (calendar has its own inline ghost preview for time slot drops)
+        startGlobalDrag({
+            type: 'task',
+            taskId: task.id,
+            title: task.title,
+            source: context === 'calendar' ? 'calendar' : 'kanban',
+            ghostMode: context === 'calendar' ? 'sidebar-only' : 'always'
+        }, e)
     }
 
     const onDragEnd = () => {

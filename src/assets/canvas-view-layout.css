@@ -204,11 +204,11 @@
     /* InboxPanel has its own sizing: 320px expanded, 3rem collapsed */
 }
 
-/* InboxPanel in Canvas view - positioned on LEFT side */
+/* InboxPanel in Canvas view - positioned on RIGHT side */
 :deep(.unified-inbox-panel.is-right-side) {
     position: absolute;
-    left: 0.5rem;
-    right: auto;
+    right: 0.5rem;
+    left: auto;
     top: 0.5rem;
     bottom: 0.5rem;
     z-index: 50;

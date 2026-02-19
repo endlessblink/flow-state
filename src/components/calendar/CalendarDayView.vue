@@ -17,6 +17,7 @@ const props = defineProps<{
   isDragging: boolean
   draggedEventId: string | null
   hoveredEventId: string | null
+  selectedEventIds?: Set<string>
   resizePreview?: {
     isResizing: boolean
     taskId: string | null
@@ -153,6 +154,7 @@ const {
               'timer-active-event': currentTaskId === calEvent.taskId,
               'dragging': isDragging && draggedEventId === calEvent.id,
               'is-hovered': hoveredEventId === calEvent.id,
+              'selected': selectedEventIds?.has(calEvent.id),
               'has-overlap': calEvent.totalColumns > 1,
               'is-compact': calEvent.duration <= 30,
               'status-done': getTaskStatus(calEvent) === 'done'
@@ -388,6 +390,17 @@ const {
   backdrop-filter: var(--state-active-glass);
   transform: translateY(-1px);
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+/* TASK-1362: Selected state — teal highlight ring */
+.slot-task.selected {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px var(--brand-primary), 0 0 8px var(--brand-primary-dim);
+  background: var(--brand-primary-subtle);
+}
+
+.slot-task.selected:hover {
+  box-shadow: 0 0 0 2px var(--brand-primary), 0 0 12px var(--brand-primary-dim);
 }
 
 .slot-task.is-primary {

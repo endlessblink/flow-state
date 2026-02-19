@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 
 import type { CalendarEvent } from '@/types/tasks'
@@ -6,6 +6,9 @@ import type { CalendarEvent } from '@/types/tasks'
 /**
  * Calendar interaction handlers composable
  * Manages context menus, clicks, double clicks, hover, and selection logic
+ *
+ * TASK-1362: Selection is fully reactive — selectedEventIds computed set drives
+ * :class bindings in Day/Week/Month views. No DOM classList manipulation.
  */
 export function useCalendarInteractionHandlers(
     isDragging: Ref<boolean>,
@@ -19,6 +22,11 @@ export function useCalendarInteractionHandlers(
     // State
     const selectedCalendarEvents = ref<CalendarEvent[]>([])
     const hoveredEventId = ref<string | null>(null)
+
+    // TASK-1362: Reactive set of selected event IDs for :class bindings
+    const selectedEventIds = computed(() =>
+        new Set(selectedCalendarEvents.value.map(e => e.id))
+    )
 
     /**
      * Tracker for hover events on slot tasks
@@ -85,61 +93,82 @@ export function useCalendarInteractionHandlers(
     }
 
     /**
+     * TASK-1362: Clear all selected calendar events
+     */
+    const clearSelection = () => {
+        selectedCalendarEvents.value = []
+    }
+
+    /**
      * Handle single click on calendar event (Selection)
+     * TASK-1362: Fully reactive — no DOM classList manipulation
      */
     const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: CalendarEvent) => {
-        const eventElement = mouseEvent.currentTarget as HTMLElement
         const isCtrlOrCmd = mouseEvent.ctrlKey || mouseEvent.metaKey
 
         // Don't handle clicks if dragging
         if (isDragging.value) return
 
         if (isCtrlOrCmd) {
-            // Toggle selection
+            // Toggle selection (multi-select)
             const index = selectedCalendarEvents.value.findIndex(e => e.id === calendarEvent.id)
             if (index > -1) {
                 selectedCalendarEvents.value.splice(index, 1)
-                eventElement.classList.remove('selected')
             } else {
                 selectedCalendarEvents.value.push(calendarEvent)
-                eventElement.classList.add('selected')
             }
         } else {
-            // Reset or toggle single selection
+            // Single-click: toggle single selection or replace
             if (selectedCalendarEvents.value.length === 1 && selectedCalendarEvents.value[0].id === calendarEvent.id) {
                 selectedCalendarEvents.value = []
-                eventElement.classList.remove('selected')
             } else {
-                // Clear all previous selections
-                document.querySelectorAll('.calendar-event.selected, .week-event.selected').forEach(el => {
-                    el.classList.remove('selected')
-                })
                 selectedCalendarEvents.value = [calendarEvent]
-                eventElement.classList.add('selected')
             }
         }
     }
 
     /**
-     * Handle keyboard delete for selected events
+     * Handle keyboard shortcuts for selected events
+     * TASK-1362:
+     * - Delete/Backspace → unschedule (return to calendar inbox)
+     * - Shift+Delete → permanently delete tasks
      */
     const handleKeyDown = (event: KeyboardEvent) => {
         const isDeleteKey = event.key === 'Delete' || event.key === 'Backspace'
         if (!isDeleteKey) return
         if (selectedCalendarEvents.value.length === 0) return
 
+        // Don't capture if user is typing in an input/textarea
+        const target = event.target as HTMLElement
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+
         event.preventDefault()
         event.stopPropagation()
 
-        selectedCalendarEvents.value.forEach(calendarEvent => {
-            taskStore.unscheduleTaskWithUndo(calendarEvent.taskId)
-        })
+        if (event.shiftKey) {
+            // Shift+Delete: permanently delete tasks
+            selectedCalendarEvents.value.forEach(calendarEvent => {
+                handleConfirmDelete(calendarEvent.taskId)
+            })
+        } else {
+            // Delete: unschedule (return to calendar inbox)
+            selectedCalendarEvents.value.forEach(calendarEvent => {
+                taskStore.unscheduleTaskWithUndo(calendarEvent.taskId)
+            })
+        }
 
-        // Clear selection state and DOM classes
+        // Clear selection
         selectedCalendarEvents.value = []
-        document.querySelectorAll('.calendar-event.selected, .week-event.selected').forEach(el => {
-            el.classList.remove('selected')
-        })
+    }
+
+    /**
+     * Handle Escape key to clear selection
+     */
+    const handleEscapeKey = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && selectedCalendarEvents.value.length > 0) {
+            event.preventDefault()
+            selectedCalendarEvents.value = []
+        }
     }
 
     /**
@@ -151,6 +180,7 @@ export function useCalendarInteractionHandlers(
 
     return {
         selectedCalendarEvents,
+        selectedEventIds,
         hoveredEventId,
         handleSlotTaskMouseEnter,
         handleSlotTaskMouseLeave,
@@ -159,6 +189,8 @@ export function useCalendarInteractionHandlers(
         handleRemoveFromCalendar,
         handleEventClick,
         handleKeyDown,
-        handleMonthDayClick
+        handleEscapeKey,
+        handleMonthDayClick,
+        clearSelection
     }
 }

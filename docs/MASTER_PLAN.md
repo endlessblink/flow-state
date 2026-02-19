@@ -2560,6 +2560,7 @@ npm run tasks:bugs     # Filter by BUG type
 - [ ] **TASK-1330**: Improve prompt quality — system prompt is generic, tools are not well-described, context is noisy. Audit and tighten all prompts for smarter responses.
 - [ ] **TASK-1331**: Weekly plan AI quality — plan responses feel shallow, don't leverage behavioral context well. Improve planning prompt chain.
 - [ ] **TASK-1332**: Add Kimi K2 to Groq model dropdown — ✅ DONE (added `moonshotai/kimi-k2-instruct-0905`)
+- [ ] **TASK-1363**: AI chat shows done tasks + raw UUIDs + unstructured verbose responses — filter done from list/search by default, hide IDs from AI output, tighten response formatting rules
 
 **Key Files**:
 - `src/components/ai/ChatMessage.vue` — message rendering, task list items, inline actions, RTL CSS
@@ -3815,7 +3816,7 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1158: Resolve tasks.ts ↔ canvas.ts Circular Dependency (📋 PLANNED)
+### TASK-1158: Resolve tasks.ts ↔ canvas.ts Circular Dependency (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH | **Status**: 📋 PLANNED
 

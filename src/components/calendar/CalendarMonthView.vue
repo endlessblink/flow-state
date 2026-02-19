@@ -11,6 +11,7 @@ import { truncateUrlsInText } from '@/utils/urlTruncate'
 const props = defineProps<{
   monthDays: MonthDay[]
   currentTaskId?: string | null
+  selectedEventIds?: Set<string>
   externalEvents?: ExternalCalendarEvent[]
 }>()
 const emit = defineEmits<{
@@ -18,6 +19,7 @@ const emit = defineEmits<{
   (e: 'monthDayClick', dateString: string): void
   (e: 'eventDragStart', event: DragEvent, calEvent: CalendarEvent): void
   (e: 'eventDragEnd', event: DragEvent): void
+  (e: 'eventClick', event: MouseEvent, calEvent: CalendarEvent): void
   (e: 'eventDblClick', calEvent: CalendarEvent): void
   (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent): void
   (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent): void
@@ -144,15 +146,15 @@ const getEventTooltip = (event: any) => {
             v-for="event in day.events"
             :key="event.id"
             class="month-event"
-            :class="{ 'timer-active-event': currentTaskId === event.taskId, 'status-done': getTaskStatus(event) === 'done', 'dragging': draggedEventId === event.taskId }"
+            :class="{ 'timer-active-event': currentTaskId === event.taskId, 'selected': selectedEventIds?.has(event.id), 'status-done': getTaskStatus(event) === 'done', 'dragging': draggedEventId === event.taskId }"
             :style="{ backgroundColor: event.color }"
             :title="getEventTooltip(event)"
             draggable="true"
             @dragstart="handleEventDragStart($event, event)"
             @dragend="handleEventDragEnd($event)"
+            @click.stop="$emit('eventClick', $event, event)"
             @dblclick.stop="$emit('eventDblClick', event)"
             @contextmenu.prevent.stop="$emit('eventContextMenu', $event, event)"
-            @click.stop
           >
             <!-- Project Stripe -->
             <div
@@ -317,6 +319,13 @@ const getEventTooltip = (event: any) => {
 
 .month-event.timer-active-event {
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* TASK-1362: Selected state */
+.month-event.selected {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: -1px;
+  box-shadow: 0 0 6px var(--brand-primary-dim);
 }
 
 .event-time {

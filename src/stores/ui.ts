@@ -23,12 +23,21 @@ function ensureSet(value: unknown): Set<string> {
 export type AuthModalView = 'login' | 'signup' | 'reset-password'
 
 export const useUIStore = defineStore('ui', () => {
-  // Default locale and direction (i18n integration pending)
-  const locale = ref('en')
-  const direction = ref('ltr')
+  // Locale and direction — read persisted values so they match vue-i18n on startup
+  const locale = ref(localStorage.getItem('flowstate-app-locale') || 'en')
+  const savedDir = localStorage.getItem('flowstate-app-direction')
+  const directionPreference = ref<'ltr' | 'rtl' | 'auto'>(
+    savedDir && ['ltr', 'rtl', 'auto'].includes(savedDir) ? savedDir as 'ltr' | 'rtl' | 'auto' : 'auto'
+  )
+  const direction = computed(() => {
+    if (directionPreference.value === 'auto') {
+      const rtlLangs = ['ar', 'he', 'fa', 'ur']
+      return rtlLangs.includes(locale.value) ? 'rtl' : 'ltr'
+    }
+    return directionPreference.value
+  })
   const isRTL = computed(() => direction.value === 'rtl')
   const isLTR = computed(() => direction.value === 'ltr')
-  const directionPreference = ref('ltr')
 
   // Sidebar visibility state
   const mainSidebarVisible = ref(true)

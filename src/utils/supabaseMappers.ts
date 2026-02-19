@@ -128,6 +128,7 @@ export interface SupabaseTask {
     recurrence?: TaskRecurrence | null
     recurring_instances?: RecurringTaskInstance[] | null
     notification_prefs?: NotificationPreferences | null
+    reminders?: unknown[] | null // FEATURE-1363: Custom date/time reminders
 
     // Hierarchy
     parent_task_id?: string | null
@@ -507,6 +508,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         recurrence: task.recurrence || null,
         recurring_instances: task.recurringInstances || [],
         notification_prefs: task.notificationPreferences || null,
+        reminders: task.reminders || [], // FEATURE-1363: Custom date/time reminders
 
         parent_task_id: sanitizedParentTaskId,
 
@@ -568,6 +570,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         recurrence: record.recurrence || undefined,
         recurringInstances: record.recurring_instances || [],
         notificationPreferences: record.notification_prefs || undefined,
+        reminders: (record.reminders as import('../types/notifications').TaskReminder[]) || [],
 
         isInInbox: record.is_in_inbox || false,
         order: record.order || 0,

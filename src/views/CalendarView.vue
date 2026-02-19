@@ -15,7 +15,12 @@
     <!-- Unified Inbox Panel -->
     <!-- key forces Vue to recreate component when switching views -->
     <Transition name="sidebar-slide">
-      <UnifiedInboxPanel v-show="uiStore.secondarySidebarVisible" key="calendar-inbox" context="calendar" />
+      <UnifiedInboxPanel
+        v-show="uiStore.secondarySidebarVisible"
+        key="calendar-inbox"
+        context="calendar"
+        @calendar-drop-to-inbox="handleCalendarDropToInbox"
+      />
     </Transition>
 
     <!-- Task Edit Modal -->
@@ -77,6 +82,7 @@
         :is-dragging="isDragging"
         :dragged-event-id="draggedEventId"
         :hovered-event-id="hoveredEventId"
+        :selected-event-ids="selectedEventIds"
         :resize-preview="resizePreview"
         :external-events="externalCalendar.getEventsForDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`)"
         @dragover="onDragOver"
@@ -108,6 +114,7 @@
         :drag-ghost="dragGhost"
         :is-dragging="isDragging"
         :dragged-event-id="draggedEventId"
+        :selected-event-ids="selectedEventIds"
         :resize-preview="weekResizePreview"
         :external-events="externalCalendar.allEvents.value"
         @dragover="onDragOver"
@@ -131,11 +138,13 @@
         v-else-if="viewMode === 'month'"
         :month-days="monthDays"
         :current-task-id="timerStore.currentTaskId"
+        :selected-event-ids="selectedEventIds"
         :external-events="externalCalendar.allEvents.value"
         @month-drop="handleMonthDrop"
         @month-day-click="handleMonthDayClick"
         @event-drag-start="handleMonthDragStart"
         @event-drag-end="handleMonthDragEnd"
+        @event-click="handleEventClick"
         @event-dbl-click="handleEventDblClick"
         @event-context-menu="handleEventContextMenu"
         @cycle-status="cycleTaskStatus"
@@ -329,11 +338,13 @@ const handleMonthDragStart = (event: DragEvent, calendarEvent: any) => {
   _rawMonthDragStart(event, calendarEvent)
   if (calendarEvent.taskId) {
     // Unified ghost pill — pass event for setDragImage
+    // BUG-1361: sidebar-only — calendar has its own ghost preview
     startGlobalDrag({
       type: 'task',
       taskId: calendarEvent.taskId,
       title: calendarEvent.title || '',
-      source: 'calendar'
+      source: 'calendar',
+      ghostMode: 'sidebar-only'
     }, event)
   }
 }
@@ -357,6 +368,7 @@ const isCurrentTimeSlot = (slot: TimeSlot) => checkCurrentTimeSlot(slot, current
 // Interaction Handlers (Extracted)
 const {
   hoveredEventId,
+  selectedEventIds,
   handleSlotTaskMouseEnter,
   handleSlotTaskMouseLeave,
   handleEventDblClick,
@@ -364,7 +376,9 @@ const {
   handleRemoveFromCalendar,
   handleEventClick,
   handleKeyDown,
-  handleMonthDayClick
+  handleEscapeKey,
+  handleMonthDayClick,
+  clearSelection
 } = useCalendarInteractionHandlers(
   isDragging,
   viewMode,
@@ -555,12 +569,25 @@ const handleDropCapture = (e: Event) => {
 // BUG-1340: Document-level dragend safety net — resets ALL calendar drag state
 // regardless of drag source (inbox, calendar, kanban) or drop target.
 // The dragend event fires on the source element and bubbles to document on EVERY drag end.
+// BUG-1361: Also clean up global drag state (ghost pill, body class) because
+// when inbox tasks are dropped on calendar, the source card may be removed from DOM
+// by reactive filtering before @dragend fires, leaving ghost pills stuck on screen.
 const handleGlobalDragEnd = () => {
   // BUG-1351: Replace entire object for guaranteed prop reactivity
   dragGhost.value = { visible: false, title: '', duration: 30, slotIndex: 0 }
   activeDropSlot.value = null
   isDragging.value = false
   draggedEventId.value = null
+
+  // BUG-1361: Clean up global drag ghost pill + body class.
+  // Safe to call even if already cleaned up (endGlobalDrag is idempotent).
+  endGlobalDrag()
+}
+
+// TASK-1362: Handle calendar event dropped back onto inbox panel
+const handleCalendarDropToInbox = (taskId: string) => {
+  taskStore.unscheduleTaskWithUndo(taskId)
+  clearSelection()
 }
 
 // Listen for start-task-now events
@@ -606,6 +633,7 @@ onMounted(() => {
   // Add event listeners
   window.addEventListener('start-task-now', handleStartTaskNow)
   window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keydown', handleEscapeKey)
 
   // ✅ ADD CAPTURE PHASE DRAG EVENT LISTENERS
   const calendarEl = document.querySelector('.calendar-main')
@@ -637,6 +665,7 @@ onUnmounted(() => {
   // Remove event listeners
   window.removeEventListener('start-task-now', handleStartTaskNow)
   window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('keydown', handleEscapeKey)
 
   // ✅ CLEANUP CAPTURE PHASE DRAG EVENT LISTENERS
   dragAbortController?.abort()

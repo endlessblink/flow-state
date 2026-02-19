@@ -1,10 +1,15 @@
 <template>
-  <div 
-    class="unified-inbox-panel" 
-    :class="{ 
+  <div
+    class="unified-inbox-panel"
+    :class="{
       collapsed: isCollapsed,
-      'is-right-side': context === 'canvas'
+      'is-right-side': context === 'canvas',
+      'inbox-drop-active': isCalendarDropTarget
     }"
+    @dragover.prevent="handleInboxDragOver"
+    @dragenter.prevent="handleInboxDragEnter"
+    @dragleave="handleInboxDragLeave"
+    @drop.prevent="handleInboxDrop"
   >
     <!-- 1. Header -->
     <UnifiedInboxHeader
@@ -106,6 +111,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import BaseBadge from '@/components/base/BaseBadge.vue'
@@ -136,6 +142,10 @@ const props = withDefaults(defineProps<Props>(), {
   maxCollapsedWidth: '40px', /* BUG-1079: Slimmer collapsed state */
   expandedWidth: '320px'
 })
+
+const emit = defineEmits<{
+  (e: 'calendarDropToInbox', taskId: string): void
+}>()
 
 // Stores
 const taskStore = useTaskStore()
@@ -181,6 +191,67 @@ const {
   sendTaskToCanvas,
   sendSelectedToCanvas
 } = useUnifiedInboxActions(inboxTasks, props.context)
+
+// TASK-1362: Drop target for dragging calendar events back to inbox
+const isCalendarDropTarget = ref(false)
+
+const handleInboxDragOver = (e: DragEvent) => {
+  // Accept calendar-event drops
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+}
+
+const handleInboxDragEnter = (e: DragEvent) => {
+  // Check if this is a calendar event being dragged
+  try {
+    // dataTransfer types are available during dragenter/dragover but data isn't readable
+    // Use window.__draggingTaskId as fallback signal (set by startGlobalDrag)
+    if ((window as any).__draggingTaskId || e.dataTransfer?.types.includes('application/json')) {
+      isCalendarDropTarget.value = true
+    }
+  } catch {
+    // Ignore errors reading dataTransfer
+  }
+}
+
+const handleInboxDragLeave = (e: DragEvent) => {
+  // Only deactivate if truly leaving the panel (not entering a child)
+  const related = e.relatedTarget as HTMLElement | null
+  const panel = e.currentTarget as HTMLElement
+  if (!related || !panel.contains(related)) {
+    isCalendarDropTarget.value = false
+  }
+}
+
+const handleInboxDrop = (e: DragEvent) => {
+  isCalendarDropTarget.value = false
+
+  // Try to read drag data
+  let taskId: string | null = null
+  let source: string | null = null
+
+  try {
+    const jsonStr = e.dataTransfer?.getData('application/json')
+    if (jsonStr) {
+      const data = JSON.parse(jsonStr)
+      taskId = data.taskId
+      source = data.source
+    }
+  } catch {
+    // Fallback to window global
+  }
+
+  // Fallback: check window.__draggingTaskId
+  if (!taskId) {
+    taskId = (window as any).__draggingTaskId || null
+    source = 'calendar-event' // assume calendar if using fallback
+  }
+
+  if (taskId && (source === 'calendar-event' || source === 'calendar')) {
+    emit('calendarDropToInbox', taskId)
+  }
+}
 
 // Handlers that require window/store access directly
 const handleTaskDoubleClick = (task: Task) => {
@@ -242,6 +313,12 @@ const handleStartTimer = async (task: Task) => {
   height: auto;
 }
 
+/* RTL: flip inbox panel to right side (near sidebar) */
+[dir="rtl"] .unified-inbox-panel.is-right-side {
+  right: auto;
+  left: 0.5rem;
+}
+
 .unified-inbox-panel.collapsed {
   /* BUG-1079: Override auto-size for collapsed state - make it slim */
   width: v-bind(maxCollapsedWidth);
@@ -265,5 +342,12 @@ const handleStartTimer = async (task: Task) => {
   flex-direction: column;
   align-items: center;
   gap: var(--space-0_5);
+}
+
+/* TASK-1362: Visual feedback when dragging calendar events back to inbox */
+.unified-inbox-panel.inbox-drop-active {
+  border-color: var(--brand-primary);
+  box-shadow: inset 0 0 0 2px var(--brand-primary), 0 0 16px var(--brand-primary-dim);
+  background: var(--brand-primary-subtle);
 }
 </style>

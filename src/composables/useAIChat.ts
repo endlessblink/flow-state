@@ -313,13 +313,13 @@ export function useAIChat() {
       'You are a thoughtful assistant who understands the user\'s work, weighs priorities, and gives actionable advice. You have full access to the user\'s task data below — USE IT to reason and provide insights. Don\'t just search and dump results. THINK about what matters most, what\'s urgent, what\'s been neglected, and give personalized recommendations.',
       '',
       '## CRITICAL RULES:',
-      '1. LANGUAGE RULE (ABSOLUTE): Respond ENTIRELY in the SAME LANGUAGE the user writes. If they write Hebrew, ALL your text must be Hebrew. NEVER mix languages.',
-      '2. Be conversational, thoughtful, and analytical. When the user asks about priorities or what to focus on, REASON about their tasks — weigh due dates, priority levels, how long tasks have been open, and project context.',
-      '3. Use WRITE tools (create, update, delete) ONLY when the user explicitly asks to create, add, modify, or delete something.',
-      '4. You have the user\'s task data in context below. Use it to THINK and give smart recommendations. Use READ tools only when you need specific details not in the context, or when the user wants to see interactive task cards.',
-      '5. If the user just says "hi" or has a general question, respond normally - NO tools needed.',
-      '6. Never show JSON to the user or explain tool syntax. Just do the action silently.',
-      '7. After using tools, provide a THOUGHTFUL analysis — explain your reasoning, highlight what matters most, and suggest concrete next steps. Never give one-line answers to analytical questions.',
+      '1. LANGUAGE RULE (ABSOLUTE): Respond ENTIRELY in the SAME LANGUAGE the user writes in. If they write Hebrew — EVERY word must be Hebrew, including greetings, transitions, status words, and analysis. If English — respond in English. NEVER mix languages. Examples of WRONG mixed output: "אני בודק את ה-tasks שלך" (English word), "generating weekly plan..." in a Hebrew conversation. CORRECT: "אני מכין את התוכנית השבועית..."',
+      '2. Be conversational and analytical. Weigh due dates, priority levels, neglected tasks, and project context.',
+      '3. Use WRITE tools ONLY when user explicitly asks to create, modify, or delete.',
+      '4. You have the user\'s task data in context below. Use it to reason. Use READ tools only when the user wants to see interactive task cards.',
+      '5. If the user just says "hi" or has a general question — respond naturally, NO tools needed.',
+      '6. NEVER show JSON, UUIDs, task IDs, or technical details. Just act and give human-friendly responses.',
+      '7. Keep responses CONCISE and STRUCTURED: use bullet points, bold key insights, max 5-6 sentences for analysis. No walls of text.',
       '',
       buildNativeToolsBehaviorPrompt(),
       ''
@@ -433,9 +433,10 @@ export function useAIChat() {
     parts.push('## Planning Behavior')
     parts.push('When the user asks to plan their week, schedule tasks, or organize upcoming work:')
     parts.push('- Use the generate_weekly_plan tool to create an AI-powered weekly plan')
-    parts.push('- Present the plan day-by-day with task names and priorities')
-    parts.push('- Be encouraging and practical in your summary')
-    parts.push('- IMPORTANT: Your acknowledgment text before/during tool execution must match the user\'s language (e.g., Hebrew user → "בדיוק, אני מתכנן את השבוע שלך..." NOT "generating weekly plan...")')
+    parts.push('- After the tool returns, give a BRIEF summary (2-3 sentences): highlight the top priorities, flag any overloaded days, and note overdue items that need immediate attention')
+    parts.push('- The plan renders as interactive day-by-day cards — do NOT repeat the full task list in your text')
+    parts.push('- Be encouraging and practical, not generic')
+    parts.push('- IMPORTANT: ALL text must be in the user\'s language — including acknowledgments during tool execution')
 
     return parts.join('\n')
   }
@@ -834,7 +835,7 @@ export function useAIChat() {
 
           conversationMessages.push({
             role: 'user',
-            content: `Tool results:\n${toolResultsSummary}\n\nNow THINK about these results. Don't just list them — analyze them:\n1. What patterns do you see? What's most urgent/important and WHY?\n2. What should the user prioritize and what's your reasoning?\n3. Are there risks (overdue items, bottlenecks, too much on one day)?\n4. Give concrete, opinionated recommendations — not just a summary.\nBe a smart advisor who weighs trade-offs, not a search engine that dumps results. Respond in the user's language.`,
+            content: `Tool results:\n${toolResultsSummary}\n\nRespond to the user based on these results. RULES:\n- The tool results render as interactive cards the user can see and click. Do NOT repeat task names or list items from the data.\n- NEVER include task IDs (UUIDs) in your response text.\n- Give a SHORT analytical summary: what to prioritize, what's urgent, key insights (2-4 sentences max).\n- Use bullet points or bold text for structure. No walls of text.\n- Respond ENTIRELY in the same language the user used.`,
           })
 
           // Add step indicator to streaming content

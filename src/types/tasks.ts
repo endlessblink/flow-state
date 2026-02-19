@@ -36,12 +36,9 @@ export interface TaskInstance {
   timeBlockNotifications?: import('./timeBlockNotifications').TimeBlockNotificationOverride
 }
 
-export interface NotificationPreferences {
-  enabled: boolean
-  timing: number // minutes before due date
-  sound: boolean
-  vibration: boolean
-}
+// FEATURE-1363: Re-export consolidated NotificationPreferences from notifications.ts
+export type { NotificationPreferences, TaskReminder } from './notifications'
+import type { NotificationPreferences, TaskReminder } from './notifications'
 
 import { type TaskRecurrence, type RecurringTaskInstance } from './recurrence'
 
@@ -81,6 +78,7 @@ export interface Task {
   // Recurrence and notification fields
   recurrence?: TaskRecurrence // Recurrence pattern and generated instances
   notificationPreferences?: NotificationPreferences // Notification settings for this task
+  reminders?: TaskReminder[] // FEATURE-1363: Custom date/time reminders
   recurringInstances?: RecurringTaskInstance[] // Generated recurring task instances (for backwards compatibility)
   instances?: TaskInstance[] // Calendar instances for scheduled tasks
 

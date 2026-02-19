@@ -1,6 +1,6 @@
 <template>
   <div v-if="isOpen" class="settings-overlay" @click="$emit('close')">
-    <div class="settings-modal" :dir="direction" @click.stop>
+    <div class="settings-modal" :class="{ 'wide-mode': activeTab === 'ai-quality' }" :dir="direction" @click.stop>
       <header class="settings-header">
         <h2 class="settings-title">
           {{ $t('settings.title') }}
@@ -122,6 +122,13 @@ const currentTab = computed(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: max-width 0.3s ease, height 0.3s ease;
+}
+
+.settings-modal.wide-mode {
+  max-width: 960px;
+  height: 700px;
+  max-height: 90vh;
 }
 
 .settings-header {

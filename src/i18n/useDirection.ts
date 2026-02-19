@@ -2,8 +2,24 @@ import { ref, computed, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getLocaleDirection } from './index'
 
+// Module-level shared state (singleton pattern)
+// All useDirection() consumers share this ref so direction changes propagate everywhere
+function getSavedDirection(): 'ltr' | 'rtl' | 'auto' {
+  if (typeof localStorage === 'undefined') return 'auto'
+  const saved = localStorage.getItem('flowstate-app-direction')
+  if (saved && ['ltr', 'rtl', 'auto'].includes(saved)) {
+    return saved as 'ltr' | 'rtl' | 'auto'
+  }
+  return 'auto'
+}
+
+const _sharedDirectionPreference = ref<'ltr' | 'rtl' | 'auto'>(getSavedDirection())
+
 /**
  * Composable for managing text direction (LTR/RTL)
+ *
+ * All instances share the same directionPreference state so changes
+ * in LanguageSettings propagate to MainLayout and everywhere else.
  *
  * Usage:
  * ```ts
@@ -13,17 +29,8 @@ import { getLocaleDirection } from './index'
 export function useDirection() {
   const { locale } = useI18n({ useScope: 'global' })
 
-  // Get saved direction preference or auto-detect from locale
-  const getSavedDirection = (): 'ltr' | 'rtl' | 'auto' => {
-    const saved = localStorage.getItem('flowstate-app-direction')
-    if (saved && ['ltr', 'rtl', 'auto'].includes(saved)) {
-      return saved as 'ltr' | 'rtl' | 'auto'
-    }
-    return 'auto'
-  }
-
-  // FIX: Use ref instead of computed to make it reactive to manual changes
-  const directionPreference = ref<'ltr' | 'rtl' | 'auto'>(getSavedDirection())
+  // Shared across all instances
+  const directionPreference = _sharedDirectionPreference
 
   // Compute actual direction based on preference and locale
   const direction = computed<'ltr' | 'rtl'>(() => {
@@ -41,7 +48,7 @@ export function useDirection() {
 
   // Set direction preference and save to localStorage
   const setDirection = (dir: 'ltr' | 'rtl' | 'auto') => {
-    directionPreference.value = dir  // FIX: Update ref to trigger reactivity
+    directionPreference.value = dir
     localStorage.setItem('flowstate-app-direction', dir)
 
     // Update document direction

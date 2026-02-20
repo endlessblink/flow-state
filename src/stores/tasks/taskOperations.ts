@@ -1,6 +1,8 @@
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 import { type Ref } from 'vue'
 import type { Task, Subtask, TaskInstance } from '@/types/tasks'
+// TASK-1158: Canvas sync via shared bridge (breaks circular dependency)
+import { canvasUiSyncRequest } from '../canvasTaskBridge'
 // TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool)
 import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey } from '@/utils/dateUtils'
@@ -65,14 +67,9 @@ export function useTaskOperations(
     // Helper to trigger canvas sync after task operations
     // This bypasses Vue's watch system which has timing issues in Tauri/WebKitGTK
     // DRIFT FIX: Now requires explicit source to prevent automated sync loops
-    const triggerCanvasSync = (source: 'user:create' | 'user:delete' | 'user:context-menu' = 'user:create') => {
-        // Dynamic import to avoid circular dependency and context issues
-        import('../canvas/canvasUi').then(({ useCanvasUiStore }) => {
-            const canvasUiStore = useCanvasUiStore()
-            canvasUiStore.requestSync(source)
-        }).catch(_e => {
-            // Ignore if canvas store not available (e.g., in non-canvas views)
-        })
+    // TASK-1158: Uses shared bridge ref instead of dynamic import (breaks circular dependency)
+    const triggerCanvasSync = (_source: 'user:create' | 'user:delete' | 'user:context-menu' = 'user:create') => {
+        canvasUiSyncRequest.value++
     }
 
     const createTask = async (taskData: Partial<Task>) => {

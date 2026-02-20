@@ -465,7 +465,8 @@ export function useAIChat() {
           '- `/skills` List available AI skills/tools',
           '- `/skills <keyword>` Filter skills by name/description/category',
           '- `/plan` Run the weekly planning chain',
-        ].join('\n')
+        ].join('\n'),
+        { metadata: { forceDirection: 'ltr' } }
       )
       return true
     }
@@ -485,37 +486,57 @@ export function useAIChat() {
             tool.category.toLowerCase().includes(query)
           )
 
-      const readCount = filteredTools.filter(t => t.category === 'read').length
-      const writeCount = filteredTools.filter(t => t.category === 'write').length
-      const destructiveCount = filteredTools.filter(t => t.category === 'destructive').length
+      const summarize = (description: string): string => {
+        const clean = description.replace(/\s+/g, ' ').trim()
+        return clean.length > 88 ? `${clean.slice(0, 85)}...` : clean
+      }
+
+      const byCategory = {
+        read: filteredTools.filter(t => t.category === 'read').sort((a, b) => a.name.localeCompare(b.name)),
+        write: filteredTools.filter(t => t.category === 'write').sort((a, b) => a.name.localeCompare(b.name)),
+        destructive: filteredTools.filter(t => t.category === 'destructive').sort((a, b) => a.name.localeCompare(b.name)),
+      }
 
       const chainRows = agentChains.chains
         .filter((chain) => !query || chain.id.toLowerCase().includes(query) || chain.name.toLowerCase().includes(query))
-        .map((chain) => `- \`${chain.id}\` - ${chain.name}`)
+        .map((chain, idx) => `${idx + 1}. \`${chain.id}\` - ${chain.name}`)
 
-      const toolRows = filteredTools.map((tool) => {
-        const requiresConfirm = tool.requiresConfirmation ? ' (confirm)' : ''
-        return `- \`${tool.name}\` [${tool.category}]${requiresConfirm} - ${tool.description}`
-      })
+      const formatSection = (title: string, tools: typeof filteredTools): string[] => {
+        if (tools.length === 0) return [`### ${title} (0)`, '- None']
+        return [
+          `### ${title} (${tools.length})`,
+          ...tools.map((tool, idx) => {
+            const confirmFlag = tool.requiresConfirmation ? ' [confirm]' : ''
+            return `${idx + 1}. \`${tool.name}\`${confirmFlag} - ${summarize(tool.description)}`
+          })
+        ]
+      }
 
       store.addAssistantMessage(
         [
-          query ? `Skills matching "${query}"` : 'Available AI skills',
-          `Tools: ${filteredTools.length} (read: ${readCount}, write: ${writeCount}, destructive: ${destructiveCount})`,
+          query ? `## Skills matching "${query}"` : '## Available AI skills',
+          `Total tools: ${filteredTools.length}`,
           '',
-          ...(toolRows.length > 0 ? toolRows : ['- No tools matched this filter']),
+          ...formatSection('Read tools', byCategory.read),
           '',
-          `Agent chains: ${chainRows.length}`,
+          ...formatSection('Write tools', byCategory.write),
+          '',
+          ...formatSection('Destructive tools', byCategory.destructive),
+          '',
+          `### Agent chains (${chainRows.length})`,
           ...(chainRows.length > 0 ? chainRows : ['- No agent chains matched this filter']),
           '',
-          'Tip: use `/skills overdue` or `/skills timer` to filter.',
-        ].join('\n')
+          'Tips:',
+          '- Use `/skills timer`, `/skills overdue`, or `/skills project` to filter.',
+          '- Use `/plan` to run weekly planning now.',
+        ].join('\n'),
+        { metadata: { forceDirection: 'ltr' } }
       )
       return true
     }
 
     store.addUserMessage(rawInput)
-    store.addAssistantMessage(`Unknown slash command: ${command}\nTry \`/help\` for available commands.`)
+    store.addAssistantMessage(`Unknown slash command: ${command}\nTry \`/help\` for available commands.`, { metadata: { forceDirection: 'ltr' } })
     return true
   }
 

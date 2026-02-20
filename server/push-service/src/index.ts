@@ -18,6 +18,7 @@ import { runTaskReminders } from './jobs/taskReminders.js'
 import { runDailyDigest } from './jobs/dailyDigest.js'
 import { runOverdueAlerts } from './jobs/overdueAlerts.js'
 import { runCleanupStale } from './jobs/cleanupStale.js'
+import { runCustomReminders } from './jobs/customReminders.js'
 
 console.log('[PUSH-SERVICE] Starting FlowState push notification service...')
 
@@ -28,6 +29,12 @@ initWebPush()
 cron.schedule('*/5 * * * *', () => {
   console.log('[CRON] Running task reminders check...')
   runTaskReminders().catch(err => console.error('[CRON] Task reminders failed:', err))
+})
+
+// FEATURE-1363: Custom date/time reminders: every 5 minutes
+cron.schedule('*/5 * * * *', () => {
+  console.log('[CRON] Running custom reminders check...')
+  runCustomReminders().catch(err => console.error('[CRON] Custom reminders failed:', err))
 })
 
 // Overdue alerts: every 30 minutes

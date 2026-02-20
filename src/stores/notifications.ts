@@ -7,6 +7,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { deliverNotification } from '@/utils/notificationDelivery'
 import type {
   ScheduledNotification,
   NotificationPreferences,
@@ -112,6 +113,13 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Note: Does NOT request permission - must be done in user event handler
    */
   const checkNotificationPermission = async (): Promise<boolean> => {
+    // FEATURE-1363: Tauri uses notify-send, doesn't need browser permission
+    const isTauriRuntime = typeof window !== 'undefined' && '__TAURI__' in window
+    if (isTauriRuntime) {
+      isPermissionGranted.value = true
+      return true
+    }
+
     if (!('Notification' in window)) {
       errorHandler.report({
         severity: ErrorSeverity.INFO,
@@ -138,11 +146,11 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const requestNotificationPermission = async (): Promise<boolean> => {
     // BUG-1303: Skip browser Notification.requestPermission() in Tauri — WebKitGTK
-    // can hang indefinitely on this call. Tauri uses its own notification plugin.
+    // can hang indefinitely on this call. Tauri uses notify-send which doesn't need permission.
     const isTauriRuntime = typeof window !== 'undefined' && '__TAURI__' in window
     if (isTauriRuntime) {
-      isPermissionGranted.value = false
-      return false
+      isPermissionGranted.value = true  // FEATURE-1363: Tauri uses notify-send, always available
+      return true
     }
 
     if (!('Notification' in window)) {
@@ -191,10 +199,15 @@ export const useNotificationStore = defineStore('notifications', () => {
     if (isSchedulingActive.value) return
 
     isSchedulingActive.value = true
+    // Run immediately, then every 30 seconds
+    checkAndShowNotifications()
+    checkAndScheduleTaskNotifications()
+    checkCustomReminders()
     schedulingInterval.value = setInterval(() => {
       checkAndShowNotifications()
       checkAndScheduleTaskNotifications()
-    }, 60000) // Check every minute
+      checkCustomReminders() // FEATURE-1363: Custom reminder polling
+    }, 30000) // Check every 30 seconds
   }
 
   /**
@@ -246,6 +259,50 @@ export const useNotificationStore = defineStore('notifications', () => {
   }
 
   /**
+   * FEATURE-1363: Check custom task reminders and fire notifications
+   */
+  const checkCustomReminders = async () => {
+    const now = new Date()
+    const tasks = Array.isArray(taskStore.tasks)
+      ? taskStore.tasks.filter(t => t.reminders && t.reminders.length > 0)
+      : []
+
+    console.log(`[REMIND] Checking custom reminders... (${tasks.length} tasks with reminders)`)
+
+    let hasChanges = false
+    for (const task of tasks) {
+      if (!task.reminders) continue
+      for (const reminder of task.reminders) {
+        if (reminder.fired || reminder.dismissed) continue
+        const reminderTime = new Date(reminder.datetime)
+        if (reminderTime <= now) {
+          console.log(`[REMIND] 🔔 Firing reminder for "${task.title}" — ${reminder.label || 'no label'}`)
+          // Fire the notification
+          await deliverNotification({
+            title: `Reminder: ${task.title}`,
+            body: reminder.label || `Reminder for "${task.title}"`,
+            tag: `custom-reminder-${reminder.id}`,
+            sound: true
+          })
+
+          // Mark as fired
+          reminder.fired = true
+          hasChanges = true
+        }
+      }
+    }
+
+    // Persist changes back to task store
+    if (hasChanges) {
+      for (const task of tasks) {
+        if (task.reminders?.some(r => r.fired)) {
+          taskStore.updateTask(task.id, { reminders: task.reminders } as Partial<import('@/types/tasks').Task>)
+        }
+      }
+    }
+  }
+
+  /**
    * Check if current time is in Do Not Disturb hours
    */
   const isInDoNotDisturbHours = (date: Date): boolean => {
@@ -274,33 +331,29 @@ export const useNotificationStore = defineStore('notifications', () => {
     if (!isPermissionGranted.value) return
 
     try {
-      const browserNotification = new Notification(notification.title, {
+      const delivered = await deliverNotification({
+        title: notification.title,
         body: notification.body,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
         tag: notification.id,
-        requireInteraction: true
-      } as NotificationOptions)
+        sound: true
+      })
 
-      browserNotification.onclick = () => {
-        browserNotification.close()
-        // Focus the window and navigate to the task
-        window.focus()
-        // NOTE: Task navigation requires integration with view routing system
+      if (delivered) {
+        // In browser context, we can't easily attach onclick to deliverNotification
+        // The notification was successfully shown via the best available channel
+        console.log(`[NOTIFY] Notification delivered: ${notification.title}`)
       }
 
-      browserNotification.onclose = () => {
-        notification.isDismissed = true
-      }
-
+      // Mark notification as shown regardless of delivery success
+      // (to prevent re-firing on next poll cycle)
     } catch (error) {
       errorHandler.report({
         severity: ErrorSeverity.ERROR,
         category: ErrorCategory.COMPONENT,
-        message: 'Error showing browser notification',
+        message: 'Error showing notification',
         error: error as Error,
         context: { operation: 'showNotification', notificationId: notification.id },
-        showNotification: false // Don't show a notification about failed notification
+        showNotification: false
       })
     }
   }
@@ -355,7 +408,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     const task = Array.isArray(taskStore.tasks)
       ? taskStore.tasks.find(t => t.id === taskId)
       : undefined
-    if (!task?.recurrence?.isEnabled || !task.notificationPreferences?.enabled) return
+    if (!task?.recurrence?.isEnabled || !task.notificationPreferences?.isEnabled) return
 
     const prefs = task.notificationPreferences
     const instances = task.recurrence.generatedInstances || []
@@ -442,7 +495,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     const tasks = Array.isArray(taskStore.tasks)
       ? taskStore.tasks.filter(t =>
         t.dueDate &&
-        t.notificationPreferences?.enabled &&
+        t.notificationPreferences?.isEnabled &&
         new Date(t.dueDate) > new Date()
       )
       : []
@@ -570,6 +623,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     getNotificationStats,
     cleanupOldNotifications,
     startSchedulingService,
-    stopSchedulingService
+    stopSchedulingService,
+    checkCustomReminders  // FEATURE-1363: Allow immediate trigger from UI
   }
 })

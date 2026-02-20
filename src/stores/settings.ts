@@ -86,6 +86,39 @@ export interface AppSettings {
 
 const STORAGE_KEY = 'flowstate-settings-v2'
 
+// FEATURE-1363: Debounced sync of notification settings to Supabase
+// The push service reads user_settings.settings to determine delivery preferences
+let settingsSyncTimer: ReturnType<typeof setTimeout> | null = null
+const SETTINGS_SYNC_DEBOUNCE = 2000 // 2 seconds
+
+async function syncSettingsToSupabase(state: AppSettings) {
+    try {
+        const { createClient } = await import('@supabase/supabase-js')
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+        if (!supabaseUrl || !supabaseKey) return
+
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user?.id) return
+
+        await supabase
+            .from('user_settings')
+            .upsert({
+                user_id: user.id,
+                settings: {
+                    pushNotifications: state.pushNotifications,
+                    timeBlockNotifications: state.timeBlockNotifications
+                },
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id' })
+
+        console.log('[SETTINGS] Notification preferences synced to Supabase')
+    } catch (error) {
+        console.warn('[SETTINGS] Failed to sync notification preferences:', error)
+    }
+}
+
 export const useSettingsStore = defineStore('settings', {
     state: (): AppSettings => ({
         // Timer defaults
@@ -292,6 +325,9 @@ export const useSettingsStore = defineStore('settings', {
                     store.set(STORAGE_KEY, this.$state).then(() => scheduleTauriSave(STORAGE_KEY))
                 })
             }
+            // FEATURE-1363: Debounced sync to Supabase for push service
+            if (settingsSyncTimer) clearTimeout(settingsSyncTimer)
+            settingsSyncTimer = setTimeout(() => syncSettingsToSupabase(this.$state), SETTINGS_SYNC_DEBOUNCE)
         },
 
         updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {

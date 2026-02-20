@@ -25,6 +25,8 @@ import { useCanvasSelection } from './useCanvasSelection'
 
 import { useCanvasGroups } from './useCanvasGroups'
 import { positionManager } from '@/services/canvas/PositionManager'
+// TASK-1158: Bridge refs for cross-store communication (breaks circular dependency)
+import { canvasSyncTrigger, canvasUiSyncRequest } from '@/stores/canvasTaskBridge'
 
 
 // Legacy/Auxiliary Composables (Still used)
@@ -580,6 +582,19 @@ export function useCanvasOrchestrator() {
     })
 
     watch(() => canvasUiStore.syncTrigger, () => {
+        if (!isInitialized.value) return
+        batchedSyncNodes()
+    })
+
+    // TASK-1158: Watch bridge refs for cross-store sync (breaks circular dependency)
+    // canvasSyncTrigger is incremented by tasks.ts when relevant task changes come from sync
+    watch(canvasSyncTrigger, () => {
+        if (!isInitialized.value) return
+        batchedSyncNodes()
+        batchedSyncEdges()
+    })
+    // canvasUiSyncRequest is incremented by taskOperations.ts after task create/delete
+    watch(canvasUiSyncRequest, () => {
         if (!isInitialized.value) return
         batchedSyncNodes()
     })

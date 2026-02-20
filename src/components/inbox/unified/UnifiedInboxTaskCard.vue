@@ -352,8 +352,8 @@ const dueStatus = computed(() => {
 /* Done Task Styling */
 .task-card.is-done {
   opacity: 0.7;
-  background: rgba(34, 197, 94, 0.08);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: var(--success-bg-light);
+  border-color: var(--success-border);
 }
 
 .task-card.is-done .task-title {

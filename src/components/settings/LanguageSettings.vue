@@ -203,7 +203,7 @@ const handleDirectionChange = (direction: 'ltr' | 'rtl' | 'auto') => {
 
 .language-option.active {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-bg-dim);
   box-shadow: 0 0 0 1px var(--brand-primary) inset;
 }
 
@@ -247,7 +247,7 @@ const handleDirectionChange = (direction: 'ltr' | 'rtl' | 'auto') => {
 
 .direction-option.active {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-bg-dim);
   box-shadow: 0 0 0 1px var(--brand-primary) inset;
 }
 

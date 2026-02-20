@@ -522,7 +522,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 }
 
 .resize-preview-overlay .preview-duration {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   color: var(--brand-primary);
   background: var(--surface-0);
@@ -606,7 +606,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 }
 
 .week-event--external .external-event-title {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;

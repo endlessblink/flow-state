@@ -933,7 +933,7 @@ async function onClearMemories() {
 }
 
 .provider-chip.active {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-subtle);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }

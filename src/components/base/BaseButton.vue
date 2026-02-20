@@ -328,7 +328,7 @@ defineExpose({
   background: var(--brand-primary-bg-subtle);
   border-color: var(--brand-hover);
   color: var(--brand-hover);
-  box-shadow: var(--state-hover-shadow), 0 4px 12px rgba(78, 205, 196, 0.15);
+  box-shadow: var(--state-hover-shadow), 0 4px 12px var(--state-active-bg);
   transform: translateY(-2px);
 }
 
@@ -385,7 +385,7 @@ defineExpose({
   background: var(--color-danger-bg-subtle);
   border-color: var(--color-danger);
   color: var(--color-danger);
-  box-shadow: var(--shadow-md), 0 4px 12px rgba(239, 68, 68, 0.15);
+  box-shadow: var(--shadow-md), 0 4px 12px var(--danger-bg-light);
   transform: translateY(-2px);
 }
 

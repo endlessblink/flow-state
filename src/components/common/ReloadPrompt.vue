@@ -126,8 +126,7 @@ const handleReload = async () => {
 .prompt-card {
   background: var(--bg-secondary) !important;
   border: 1px solid var(--border-default) !important;
-  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2), 
-              0 4px 6px -2px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: var(--shadow-lg) !important;
   backdrop-filter: blur(8px);
 }
 
@@ -139,7 +138,7 @@ const handleReload = async () => {
 .state-update, .state-offline {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .icon-wrapper {
@@ -153,13 +152,13 @@ const handleReload = async () => {
 }
 
 .icon-wrapper.update {
-  background: rgba(99, 102, 241, 0.15); /* Indigo 500 alpha */
-  color: #818cf8; /* Indigo 400 */
+  background: var(--calendar-creating-bg-alt);
+  color: var(--indigo-text);
 }
 
 .icon-wrapper.offline {
-  background: rgba(34, 197, 94, 0.15); /* Green 500 alpha */
-  color: #4ade80; /* Green 400 */
+  background: var(--success-bg-subtle);
+  color: var(--status-done-text);
 }
 
 .text-content {
@@ -186,7 +185,7 @@ const handleReload = async () => {
 .actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .icon-spin {

@@ -143,8 +143,10 @@ const {
         @drop.prevent="$emit('drop', $event, slot)"
         @mousedown="$emit('slotMouseDown', $event, slot)"
       >
-        <!-- Tasks rendered INSIDE the slot with entrance animation -->
-        <TransitionGroup name="task-appear">
+        <!-- BUG-1354: Removed TransitionGroup — it caused visual "duplicate" artifacts.
+             When calendarEvents recomputed (e.g., timer start), TransitionGroup played
+             simultaneous enter+leave animations (200ms overlap = brief double-block). -->
+        <div class="slot-tasks-container">
           <div
             v-for="calEvent in getTasksForSlot(slot)"
             v-show="isTaskPrimarySlot(slot, calEvent)"
@@ -257,7 +259,7 @@ const {
               <span class="preview-duration">{{ resizePreview.previewDuration }}min</span>
             </div>
           </div>
-        </TransitionGroup>
+        </div>
       </div>
 
       <!-- TASK-1317: External calendar events (read-only overlays) -->
@@ -563,7 +565,7 @@ const {
 .slot-task.is-primary.is-hovered .resize-handle {
   opacity: 1 !important;
   pointer-events: auto !important;
-  background: rgba(99, 102, 241, 0.4) !important;
+  background: var(--calendar-creating-border) !important;
   transition: none !important;
 }
 
@@ -572,7 +574,7 @@ const {
   left: 0;
   right: 0;
   background: var(--color-indigo-bg-medium);
-  border: 2px dashed rgba(99, 102, 241, 0.6);
+  border: 2px dashed var(--purple-border-active);
   border-radius: var(--radius-md);
   pointer-events: none;
   z-index: 50;
@@ -585,8 +587,8 @@ const {
 .resize-preview-overlay .preview-duration {
   font-size: var(--text-xs);
   font-weight: 600;
-  color: rgba(99, 102, 241, 0.9);
-  background: rgba(255, 255, 255, 0.9);
+  color: var(--calendar-today-badge-start);
+  background: var(--text-primary);
   padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-sm);
 }
@@ -830,7 +832,7 @@ const {
 
 .external-event-time {
   font-weight: var(--font-semibold);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   opacity: 0.8;
 }
 

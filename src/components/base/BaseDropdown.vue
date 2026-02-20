@@ -269,18 +269,18 @@ watch(isOpen, (newVal) => {
 
 .dropdown-trigger:hover:not(:disabled) {
   border-color: var(--border-hover);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.1);
+  box-shadow: var(--brand-glow-sm);
 }
 
 .dropdown-trigger:focus {
   outline: none;
   border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
+  box-shadow: var(--brand-focus-ring);
 }
 
 .dropdown-trigger.is-open {
   border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.15);
+  box-shadow: var(--brand-glow-sm);
 }
 
 .dropdown-trigger.is-disabled {
@@ -290,7 +290,7 @@ watch(isOpen, (newVal) => {
 
 .trigger-value {
   flex: 1;
-  text-align: left;
+  text-align: start;
   color: var(--text-primary);
 }
 

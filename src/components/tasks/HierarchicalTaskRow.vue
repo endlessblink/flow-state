@@ -44,6 +44,7 @@
       @update-due-date="(val) => $emit('updateTask', task.id, { dueDate: val ?? undefined })"
       @update-estimate="(val) => $emit('updateTask', task.id, { estimatedDuration: val ?? undefined })"
       @ai-suggest="(event: MouseEvent) => $emit('aiSuggest', event, task)"
+      @focus-mode="enterFocusMode"
       @start-timer="$emit('startTimer', task.id)"
       @edit="$emit('edit', task.id)"
       @duplicate="$emit('duplicate', task.id)"
@@ -78,6 +79,7 @@
 
 <script setup lang="ts">
 import type { Task } from '@/stores/tasks'
+import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useTaskRowState } from '@/composables/tasks/row/useTaskRowState'
 import { useTaskRowActions } from '@/composables/tasks/row/useTaskRowActions'
@@ -118,6 +120,7 @@ const emit = defineEmits<{
 }>()
 
 const taskStore = useTaskStore()
+const router = useRouter()
 
 const statusOptions = [
   { label: 'To Do', value: 'planned' },
@@ -146,4 +149,8 @@ const actions = useTaskRowActions(
   emit, 
   state
 )
+
+const enterFocusMode = () => {
+  router.push(`/focus/${props.task.id}`)
+}
 </script>

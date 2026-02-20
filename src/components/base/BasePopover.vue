@@ -195,7 +195,7 @@ onUnmounted(() => {
   position: fixed;
 
   /* Glassmorphism overlay styling */
-  background: rgba(20, 18, 35, 0.55);
+  background: var(--glass-panel-bg);
   backdrop-filter: blur(32px) saturate(1.3);
   -webkit-backdrop-filter: blur(32px) saturate(1.3);
   border: var(--overlay-component-border);

@@ -263,7 +263,7 @@ watch(isOpen, (newVal) => {
   cursor: pointer;
   outline: none;
   transition: all var(--duration-fast) var(--spring-smooth);
-  text-align: left;
+  text-align: start;
 }
 
 .select-trigger:hover {

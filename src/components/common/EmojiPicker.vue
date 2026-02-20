@@ -625,9 +625,7 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(20px) saturate(100%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-2xl);
-  box-shadow:
-    0 32px 64px rgba(0, 0, 0, 0.5),
-    0 16px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
   width: 90%;
   max-width: 420px;
   max-height: 560px;
@@ -708,7 +706,7 @@ onMounted(() => {
 
 .tab-btn.active {
   border-bottom-color: rgba(78, 205, 196, 0.8);
-  color: rgba(78, 205, 196, 1);
+  color: var(--dropdown-selected-color);
   background: transparent;
 }
 
@@ -738,7 +736,7 @@ onMounted(() => {
   outline: none;
   border-color: var(--brand-primary-alpha-50);
   background: var(--glass-bg-tint);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
+  box-shadow: var(--brand-focus-ring), var(--brand-glow-sm);
 }
 
 .search-input::placeholder {
@@ -780,7 +778,7 @@ onMounted(() => {
 .emoji-btn.selected {
   background: var(--brand-primary-bg-heavy);
   border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 16px rgba(78, 205, 196, 0.2);
+  box-shadow: var(--state-hover-glow);
   transform: scale(1.08);
 }
 
@@ -801,12 +799,12 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-bounce);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-dark-md);
 }
 
 .color-btn:hover {
   transform: scale(1.1) translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-dark-lg);
 }
 
 .color-btn.selected {
@@ -866,10 +864,10 @@ onMounted(() => {
 }
 
 .apply-btn:hover {
-  background: rgba(78, 205, 196, 0.25);
+  background: var(--state-active-bg);
   border-color: rgba(78, 205, 196, 0.7);
   transform: translateY(-2px);
-  box-shadow: 0 0 20px rgba(78, 205, 196, 0.2);
+  box-shadow: var(--state-hover-glow);
 }
 
 .apply-btn:disabled {

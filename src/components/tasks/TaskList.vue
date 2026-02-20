@@ -491,7 +491,7 @@ defineExpose({
 }
 
 .task-group--indented {
-  margin-left: var(--space-6);
+  margin-inline-start: var(--space-6);
   margin-bottom: var(--space-2);
 }
 
@@ -697,7 +697,7 @@ defineExpose({
   background: var(--glass-bg-soft);
   padding: 0 var(--space-1);
   border-radius: var(--radius-full);
-  margin-left: var(--space-1);
+  margin-inline-start: var(--space-1);
   font-weight: 600;
   text-transform: none;
   letter-spacing: normal;

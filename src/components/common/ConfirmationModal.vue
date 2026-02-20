@@ -133,7 +133,7 @@ const handleAfterOpen = () => {
   border-radius: var(--radius-lg);
   padding: var(--space-4);
   margin-bottom: var(--space-6);
-  text-align: left;
+  text-align: start;
   max-height: 40vh;
   overflow-y: auto;
 }
@@ -143,9 +143,9 @@ const handleAfterOpen = () => {
   text-align: center !important;
 }
 
-/* Keep details list left-aligned for readability */
+/* Keep details list start-aligned for readability */
 .modal-details .details-list {
-  text-align: left;
+  text-align: start;
 }
 
 .details-title {
@@ -167,13 +167,13 @@ const handleAfterOpen = () => {
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--glass-border);
   position: relative;
-  padding-left: var(--space-4);
+  padding-inline-start: var(--space-4);
 }
 
 .detail-item:before {
   content: '•';
   position: absolute;
-  left: 0;
+  inset-inline-start: 0;
   color: var(--color-danger);
   font-weight: var(--font-bold);
 }

@@ -433,7 +433,7 @@ const startLongBreak = async () => {
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-3) var(--space-4);
-  margin-left: auto;
+  margin-inline-start: auto;
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
@@ -447,8 +447,7 @@ const startLongBreak = async () => {
 .control-panel:hover {
   background: var(--glass-bg-soft);
   border-color: var(--state-hover-border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15),
-              0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .time-display-container {
@@ -634,10 +633,10 @@ const startLongBreak = async () => {
   margin-bottom: var(--nav-tabs-spacing-below);
   /* border-bottom removed — shared layout-header-border in MainLayout handles this */
   padding-bottom: var(--nav-tabs-padding-bottom);
-  margin-left: calc(var(--space-12) * -1);
-  margin-right: calc(var(--space-12) * -1);
-  padding-left: var(--space-12);
-  padding-right: var(--space-12);
+  margin-inline-start: calc(var(--space-12) * -1);
+  margin-inline-end: calc(var(--space-12) * -1);
+  padding-inline-start: var(--space-12);
+  padding-inline-end: var(--space-12);
   pointer-events: none;
   position: relative;
   z-index: 5;
@@ -686,12 +685,12 @@ const startLongBreak = async () => {
   min-width: 20px;
   height: 20px;
   padding: 0 var(--space-1_5);
-  margin-left: var(--space-1_5);
+  margin-inline-start: var(--space-1_5);
   background: linear-gradient(135deg, var(--color-blue), #8b5cf6);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
   line-height: 1;
 }
 
@@ -729,7 +728,7 @@ const startLongBreak = async () => {
 .ai-badge {
   position: absolute;
   top: 2px;
-  right: 2px;
+  inset-inline-end: 2px;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
@@ -787,7 +786,7 @@ const startLongBreak = async () => {
 .gamification-dropdown {
   position: absolute;
   top: calc(100% + var(--space-2));
-  right: 0;
+  inset-inline-end: 0;
   z-index: 100;
   min-width: 320px;
   max-height: calc(100vh - 120px);

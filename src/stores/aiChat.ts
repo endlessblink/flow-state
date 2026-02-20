@@ -64,6 +64,7 @@ export interface ChatMessage {
     provider?: string
     tokens?: number
     latencyMs?: number
+    forceDirection?: 'auto' | 'ltr' | 'rtl'
   }
 }
 

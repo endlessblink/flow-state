@@ -33,6 +33,7 @@
             class="result-item"
             :class="{ active: selectedIndex === tasksStartIndex + index }"
             @click="selectTask(task)"
+            @contextmenu.prevent="handleTaskRightClick($event, task)"
             @mouseenter="selectedIndex = tasksStartIndex + index"
           >
             <div class="result-content">
@@ -195,6 +196,15 @@ const selectProject = (project: Project) => {
   emit('close')
 }
 
+const handleTaskRightClick = (event: MouseEvent, task: Task) => {
+  window.dispatchEvent(new CustomEvent('task-context-menu', {
+    detail: {
+      event,
+      task
+    }
+  }))
+}
+
 // Utility functions
 const highlightMatch = (text: string) => {
   return highlightMatchSafe(text, searchQuery.value)
@@ -231,7 +241,7 @@ onMounted(() => {
 
 .search-modal-content {
   /* Glass morphism - purple-tinted with blur */
-  background: rgba(28, 25, 45, 0.92);
+  background: var(--overlay-component-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 
@@ -240,9 +250,7 @@ onMounted(() => {
   border-radius: var(--radius-xl);
 
   /* Layered shadow */
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
 
   width: 90%;
   max-width: 600px;
@@ -298,7 +306,7 @@ onMounted(() => {
 
 .search-input-wrapper:focus-within {
   border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
+  box-shadow: var(--brand-focus-ring);
 }
 
 .search-icon {

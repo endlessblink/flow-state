@@ -1,0 +1,144 @@
+   88:10  error    'useTaskStore' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  263:11  error    'nearMin' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  264:11  error    'nearMax' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   95:9   error  'today' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  168:15  error  'todayStr' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  14:32  error  'UpdateStatus' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  24:3   error  'hasUpdate' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  25:3   error  'isChecking' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  26:3   error  'isDownloading' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  12:7   error    'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  16:7   error    'emit' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  15:7   error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  21:35  error  'lastWeeklyGeneration' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  12:7  error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  17:7  error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  31:3  error  'lastDailyGeneration' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  30:7  error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  11:7   error    'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  15:7   error    'emit' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  17:41  error    'Lock' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  267:7  error  'ariaVariant' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  98:9  error  'current' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  12:7  error  'dailies' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  99:25  error  'watch' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  238:17  error  'isProcessingVoice' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  257:7   error  'isVoiceSupported' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+   12:7   error    'aiChatStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  93:7   error    'confirmGoldenRestore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    2:15  error    'computed' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   10:90  error    'addMemoryObservation' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   73:12  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u                   @typescript-eslint/no-unused-vars
+  470:23  error    'event' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  34:7  error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  92:7   error    'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  2:24  error  'expect' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  6:10  error  'useDateTransition' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  53:9  error  'errorMessage' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+   83:18  error    'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  228:18  error  'taskError' is defined but never used. Allowed unused caught errors must match /^_/u      @typescript-eslint/no-unused-vars
+  237:16  error  'positionError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  241:14  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  374:16  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  473:14  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  614:18  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  55:22  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  152:18  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  106:15  error    'previousState' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   46:55  error    'removeNodes' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1:20  error  'ref' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  166:19  error    'sectionNodeId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  131:19  error    'oldDirect' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  132:19  error    'oldAggregated' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+     1:15   error    'reactive' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+     1:45   error    'onMounted' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+     1:56   error    'onUnmounted' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+    23:10   error    'getPlatformDiagnostics' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+    23:34   error    'isLinuxTauri' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+   345:14   error    'e' is defined but never used. Allowed unused caught errors must match /^_/u                 @typescript-eslint/no-unused-vars
+   351:13   error    'getNodes' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   354:11   error    'applyNodeChanges' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    2:21  error    'useVueFlow' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+    4:10  error    'useTaskStore' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  378:15  error    'gridWidth' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   21:8   error    'SmartGroupType' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+   23:3   error    'DAY_OF_WEEK_KEYWORDS' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  103:11  error    'nextOccurrence' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  550:10  error    'stopProcessing' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  680:49  error    'operation' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+   16:27  error    'Ref' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  10:15  error  'onMounted' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  10:26  error  'onUnmounted' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  10:39  error  'watch' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+   53:9    error    'authStore' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+   56:9    error    'canvasStore' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  114:21   error    'canvasPosition' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  114:37   error    'parentId' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  114:47   error    'positionFormat' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  14:39  error  'watch' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  319:9  error  'stats' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   970:21  error    'error' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+   970:28  error    'count' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1116:21  error    'error' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1116:28  error    'count' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1237:27  error    'error' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1237:34  error    'count' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1545:15  error    'heartbeatInterval' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1:10  error  'ref' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    5:30  error  'DAY_OF_WEEK_KEYWORDS' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+    6:71  error  'WeeklyPlanStatus' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+   16:6   error  'DayKey' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  526:9   error  'appliedStats' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  194:20  error  'ref' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  212:7   error  'settingsStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  213:7   error  'authStore' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  778:16  error  'isWhisperSupported' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  779:14  error  'hasWhisperApiKey' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  106:10  error    'useTimerStore' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  169:19  error  'CalendarPlus' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  169:33  error  'CalendarDays' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  310:3   error  'Circle' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+  310:11  error  'Clock' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+  327:3   error  'selectedProject' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  328:3   error  'selectedPriority' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  331:3   error  'hasActiveFilters' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  333:3   error  'clearFilters' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  335:3   error  'toggleHideDoneTasks' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  505:7   error  'dateOptions' is assigned a value but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  513:7   error  'priorityOptions' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  839:7   error  'expandQuickAdd' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  844:7   error  'collapseQuickAdd' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  853:7   error  'selectDueDate' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  857:7   error  'selectQuickAddPriority' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  886:7   error  'submitTask' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  587:43  error  'onUnmounted' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+  593:22  error  'Edit3' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+  609:3   error  'currentTaskId' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  621:3   error  'undoLastCategorization' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  705:13  error  'swipeProgress' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  15:3  error  'AIGenerateChallengesResponse' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  407:20  error  'parseError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  370:22  error  'parseError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  519:16  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u       @typescript-eslint/no-unused-vars
+  432:18  error  'parseError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  450:40  error  'provider' is defined but never used. Allowed unused args must match /^_/u             @typescript-eslint/no-unused-vars
+  2:15  error  'watch' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  196:9  error  'syncUpdateInProgress' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  481:11  error  'userId' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  650:18  error  'archiveToHistory' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  656:11  error  'completionRate' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  721:11  error  'profile' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+    34:3   error  'DbXpLog' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+    38:3   error  'DbUserPurchase' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1084:56  error  'multipliers' is defined but never used. Allowed unused args must match /^_/u     @typescript-eslint/no-unused-vars
+    8:37  error    'scheduleTauriSave' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  13:22  error  'NetworkOnly' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  26:3  error  'ChevronDown' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  27:3  error  'ChevronUp' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  309:45  error  'handleWeekDragOver' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  309:65  error  'handleWeekDrop' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  309:81  error  'startWeekResize' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  377:9  error    'menuX' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  378:9  error    'menuY' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  257:9   error    'profile' is assigned a value but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  257:18  error    'hasCompletedInterview' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars

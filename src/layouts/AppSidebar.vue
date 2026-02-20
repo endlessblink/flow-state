@@ -1040,7 +1040,7 @@ defineExpose({
   );
   backdrop-filter: blur(40px) saturate(200%);
   -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border-right: 1px solid var(--glass-border);
+  border-inline-end: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -1255,7 +1255,7 @@ defineExpose({
 
 .quick-task-input.success-flash {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.25);
+  box-shadow: var(--brand-focus-ring);
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -1474,16 +1474,7 @@ defineExpose({
   gap: var(--space-1);
   overflow-y: auto;
   max-height: calc(100vh - 500px); /* Leave space for header and controls */
-  padding-right: var(--space-2); /* Prevent scroll from interfering with content */
-}
-
-/* RTL Support */
-[dir="rtl"] .sidebar {
-  border-right: none;
-  border-left: 1px solid var(--glass-border-hover);
-  box-shadow:
-    var(--shadow-2xl),
-    inset 1px 0 0 var(--glass-bg-heavy);
+  padding-inline-end: var(--space-2); /* Prevent scroll from interfering with content */
 }
 
 [dir="rtl"] .sidebar-slide-enter-from,
@@ -1517,7 +1508,7 @@ defineExpose({
 }
 
 .toggle-chevron {
-  margin-left: auto;
+  margin-inline-start: auto;
   transition: transform var(--duration-fast);
   opacity: 0.5;
 }
@@ -1626,7 +1617,7 @@ defineExpose({
 }
 
 .selection-action.delete-action:hover {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--danger-bg-light);
   border-color: var(--danger-border-strong);
   color: var(--color-danger);
 }
@@ -1639,7 +1630,7 @@ defineExpose({
 .delete-confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  background: var(--overlay-heavy);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   display: flex;
@@ -1655,7 +1646,7 @@ defineExpose({
   padding: var(--space-6);
   max-width: 400px;
   width: 90%;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-dark-xl);
 }
 
 .delete-confirm-modal h4 {
@@ -1705,7 +1696,7 @@ defineExpose({
 }
 
 .delete-btn:hover {
-  background: #dc2626;
+  background: var(--color-danger);
 }
 
 /* TASK-1324: Textarea for expanded quick add (Feature 1) */
@@ -1790,10 +1781,10 @@ defineExpose({
 .metadata-dropdown {
   position: absolute;
   top: calc(100% + var(--space-1));
-  left: 0;
+  inset-inline-start: 0;
   z-index: var(--z-tooltip);
   min-width: 140px;
-  background: rgb(22, 19, 38);
+  background: var(--surface-secondary);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: var(--space-1);
@@ -1811,7 +1802,7 @@ defineExpose({
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-fast);
 }

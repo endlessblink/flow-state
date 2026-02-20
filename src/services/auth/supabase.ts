@@ -6,6 +6,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 // BUG-339: Detect if running in Tauri context
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
 
+// FEATURE-1345: Detect Capacitor runtime (Android/iOS native app)
+const isCapacitorRuntime = typeof window !== 'undefined' &&
+  !!(window as any).Capacitor?.isNativePlatform?.()
+
 // FIX-MOBILE-PWA & TAURI COMPATIBILITY:
 // - Browser/PWA: Use relative path '/supabase' (from .env) to work via Tunnel/Caddy
 // - Tauri: Must use full URL 'http://127.0.0.1:54321' because relative paths fail in WebView
@@ -24,6 +28,12 @@ function resolveSupabaseUrl(): string {
     // Tauri: Use env var directly (must be a full URL)
     if (isTauri) {
         if (import.meta.env.DEV) console.log('[Supabase] Tauri →', envUrl)
+        return envUrl
+    }
+
+    // FEATURE-1345: Capacitor: Use env var directly (WebView can't resolve relative paths)
+    if (isCapacitorRuntime) {
+        if (import.meta.env.DEV) console.log('[Supabase] Capacitor →', envUrl)
         return envUrl
     }
 
@@ -70,7 +80,7 @@ const supabaseUrl = resolveSupabaseUrl()
 // See: https://github.com/supabase/auth-js/issues/455
 let _pendingOAuthTokens: { access_token: string; refresh_token: string } | null = null
 
-if (typeof window !== 'undefined' && !isTauri) {
+if (typeof window !== 'undefined' && !isTauri && !isCapacitorRuntime) {
     const hash = window.location.hash
     if (hash && (hash.includes('access_token=') || hash.includes('error='))) {
         // Handle both #/access_token=... (Vue Router prefix) and #access_token=... (normal)
@@ -101,13 +111,13 @@ try {
             persistSession: true,
             // FEATURE-1202: PKCE flow for Tauri OAuth code exchange
             // PWA uses implicit flow (default) — PKCE not needed for redirect-based OAuth
-            flowType: isTauri ? 'pkce' : 'implicit',
+            flowType: (isTauri || isCapacitorRuntime) ? 'pkce' : 'implicit',
             // Use custom storage key to avoid conflicts with other apps
             storageKey: 'flowstate-supabase-auth',
             // For desktop apps (Tauri), don't try to detect session from URL.
             // When we have pending OAuth tokens, also disable — we handle session manually via setSession().
             // This prevents Supabase's _initialize() from racing with Vue Router for URL hash access.
-            detectSessionInUrl: !isTauri && !_pendingOAuthTokens,
+            detectSessionInUrl: !isTauri && !isCapacitorRuntime && !_pendingOAuthTokens,
             // BUG-339: Use localStorage (reliable in Tauri 2.x)
             // Combined with proactive token refresh in auth.ts for session persistence
             storage: typeof window !== 'undefined' ? localStorage : undefined,

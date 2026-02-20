@@ -17,6 +17,8 @@ const REDIRECT_URL = 'com.flowstate.app://auth-callback'
  * Opens system browser, waits for deep link callback, exchanges code for session.
  */
 export async function signInWithGoogleCapacitor(): Promise<void> {
+  if (!supabase) throw new Error('Supabase client not initialized')
+
   const { Browser } = await import('@capacitor/browser')
   const { App } = await import('@capacitor/app')
 
@@ -35,16 +37,18 @@ export async function signInWithGoogleCapacitor(): Promise<void> {
 
   // Set up deep link listener BEFORE opening browser
   const listenerPromise = new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      listener.remove()
+    let listenerHandle: Awaited<ReturnType<typeof App.addListener>> | null = null
+
+    const timeout = setTimeout(async () => {
+      if (listenerHandle) await listenerHandle.remove()
       reject(new Error('OAuth timeout — no response within 5 minutes'))
     }, 5 * 60 * 1000)
 
-    const listener = App.addListener('appUrlOpen', async ({ url }) => {
+    App.addListener('appUrlOpen', async ({ url }) => {
       if (!url.startsWith(REDIRECT_URL)) return
 
       clearTimeout(timeout)
-      listener.remove()
+      if (listenerHandle) await listenerHandle.remove()
 
       try {
         await Browser.close()
@@ -59,7 +63,7 @@ export async function signInWithGoogleCapacitor(): Promise<void> {
         const code = urlObj.searchParams.get('code')
 
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          const { error: exchangeError } = await supabase!.auth.exchangeCodeForSession(code)
           if (exchangeError) {
             reject(exchangeError)
             return
@@ -74,7 +78,7 @@ export async function signInWithGoogleCapacitor(): Promise<void> {
       } catch (e) {
         reject(e)
       }
-    })
+    }).then(handle => { listenerHandle = handle })
   })
 
   // Open system browser with OAuth URL

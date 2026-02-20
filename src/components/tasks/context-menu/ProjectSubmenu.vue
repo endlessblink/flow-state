@@ -115,7 +115,7 @@ const projects = computed(() => projectStore.projects)
   color: var(--text-primary);
   padding: var(--space-1_5) var(--space-2_5);
   font-size: var(--text-xs);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   display: flex;
   align-items: center;

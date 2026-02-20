@@ -129,6 +129,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { X, Sparkles } from 'lucide-vue-next'
 import { type Task, useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { useNotificationStore } from '@/stores/notifications'
 
 // Composables
 import { useTaskEditState } from '@/composables/tasks/useTaskEditState'
@@ -156,6 +157,7 @@ const emit = defineEmits<{
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
+const notificationStore = useNotificationStore()
 
 // Template Refs
 const headerRef = ref<InstanceType<typeof TaskEditHeader> | null>(null)
@@ -293,6 +295,8 @@ function handleAddReminder(reminder: TaskReminder) {
     editedTask.value.reminders = []
   }
   editedTask.value.reminders.push(reminder)
+  // FEATURE-1363: Trigger immediate reminder check (don't wait for 60s polling)
+  notificationStore.checkCustomReminders()
 }
 
 function handleRemoveReminder(reminderId: string) {

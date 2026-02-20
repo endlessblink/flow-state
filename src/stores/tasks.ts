@@ -384,7 +384,10 @@ export const useTaskStore = defineStore('tasks', () => {
           }
         } else {
           // Add new task - ONLY if not deleted
-          if (!normalizedTask._soft_deleted) {
+          // BUG-1354: Also check isPendingWrite — if we just wrote this task locally,
+          // the Realtime echo should NOT push a "new" copy (the findIndex above returned -1
+          // because the task was briefly removed/re-added during a reactive update cycle).
+          if (!normalizedTask._soft_deleted && !isPendingWrite(taskId)) {
             // BUG-1329: Atomic find-or-push to close race window.
             // Previous code did filter() then push() with a gap between them.
             const existingIdx = _rawTasks.value.findIndex(t => t.id === normalizedTask.id)

@@ -79,6 +79,9 @@ const isUser = computed(() => props.message.role === 'user')
 const isAssistant = computed(() => props.message.role === 'assistant')
 const isStreaming = computed(() => props.message.isStreaming)
 const hasError = computed(() => !!props.message.error)
+const effectiveDirection = computed<'auto' | 'ltr' | 'rtl'>(() =>
+  props.message.metadata?.forceDirection || props.direction || 'auto'
+)
 const hasActions = computed(() =>
   props.message.actions && props.message.actions.length > 0
 )
@@ -393,7 +396,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
       <div
         v-else-if="renderedContent"
         class="message-text markdown-body"
-        :dir="direction || 'auto'"
+        :dir="effectiveDirection"
         v-html="renderedContent"
       />
 

@@ -1,0 +1,1322 @@
+- generic [ref=e4]:
+  - complementary "Main navigation" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img "FlowState" [ref=e8]
+        - generic [ref=e9]: FlowState
+      - button "Create project" [ref=e10] [cursor=pointer]:
+        - generic [ref=e11]:
+          - img [ref=e12]
+          - text: Create project
+      - generic [ref=e13]:
+        - button "Hide sidebar" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+        - button "Open settings" [ref=e18] [cursor=pointer]:
+          - img [ref=e19]
+    - generic [ref=e23]:
+      - textbox "Quick add task" [ref=e24]:
+        - /placeholder: Quick add task (Enter)...
+      - button "Voice input" [ref=e25] [cursor=pointer]:
+        - img [ref=e26]
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - generic [ref=e31] [cursor=pointer]:
+          - img [ref=e33]
+          - generic [ref=e35]: Today
+          - generic [ref=e36]: "9"
+        - generic [ref=e37] [cursor=pointer]:
+          - img [ref=e39]
+          - generic [ref=e41]: This Week
+          - generic [ref=e42]: "24"
+      - generic [ref=e44]:
+        - generic [ref=e45] [cursor=pointer]:
+          - img [ref=e47]
+          - generic [ref=e48]: All Active
+          - generic [ref=e49]: "55"
+        - generic [ref=e50] [cursor=pointer]:
+          - img [ref=e52]
+          - generic [ref=e55]: Inbox
+          - generic [ref=e56]: "4"
+      - generic [ref=e57]:
+        - button "By Duration" [expanded] [ref=e58] [cursor=pointer]:
+          - img [ref=e59]
+          - generic [ref=e62]: By Duration
+          - img [ref=e63]
+        - generic [ref=e65]:
+          - generic [ref=e66] [cursor=pointer]:
+            - img [ref=e68]
+            - generic [ref=e70]: Quick
+            - generic [ref=e71]: "0"
+          - generic [ref=e72] [cursor=pointer]:
+            - img [ref=e74]
+            - generic [ref=e76]: Short
+            - generic [ref=e77]: "3"
+          - generic [ref=e78] [cursor=pointer]:
+            - img [ref=e80]
+            - generic [ref=e83]: Medium
+            - generic [ref=e84]: "1"
+          - generic [ref=e85] [cursor=pointer]:
+            - img [ref=e87]
+            - generic [ref=e89]: Long
+            - generic [ref=e90]: "3"
+          - generic [ref=e91] [cursor=pointer]:
+            - img [ref=e93]
+            - generic [ref=e96]: No Estimate
+            - generic [ref=e97]: "48"
+      - generic [ref=e99]:
+        - heading "Projects" [level=3] [ref=e100]:
+          - img [ref=e101]
+          - text: Projects
+        - button "Add Project" [ref=e103] [cursor=pointer]:
+          - img [ref=e104]
+      - tree "Projects" [ref=e105]:
+        - generic [ref=e107] [cursor=pointer]:
+          - img [ref=e109]
+          - generic [ref=e115]: All Projects
+        - treeitem "Work" [level=1] [ref=e116]:
+          - generic [ref=e117] [cursor=pointer]:
+            - generic [ref=e118]: 💼
+            - generic [ref=e121]: Work
+            - generic [ref=e122]: "10"
+        - treeitem "My Projects" [level=1] [ref=e123]:
+          - generic [ref=e124] [cursor=pointer]:
+            - button [ref=e125]:
+              - img [ref=e126]
+            - generic [ref=e128]: 🕹️
+            - generic [ref=e131]: My Projects
+            - generic [ref=e132]: "27"
+        - treeitem "Home" [level=1] [ref=e133]:
+          - generic [ref=e134] [cursor=pointer]:
+            - generic [ref=e135]: 🏠
+            - generic [ref=e138]: Home
+            - generic [ref=e139]: "14"
+    - generic [ref=e141]:
+      - generic [ref=e142]: E
+      - generic [ref=e143]:
+        - generic "endlessblink@gmail.com" [ref=e144]
+        - generic [ref=e145]: Online
+      - button "Settings" [ref=e146] [cursor=pointer]:
+        - img [ref=e147]
+  - main [ref=e150]:
+    - generic [ref=e151]:
+      - generic:
+        - generic [ref=e152]:
+          - heading "Board" [level=1] [ref=e153]
+          - generic [ref=e154]: Overview
+        - generic [ref=e155]:
+          - generic "All changes saved" [ref=e156] [cursor=pointer]:
+            - img [ref=e157]
+          - button "Keyboard Shortcuts (?)" [ref=e161] [cursor=pointer]:
+            - img [ref=e162]
+          - button "AI Assistant (Ctrl+/)" [ref=e165] [cursor=pointer]:
+            - img [ref=e166]
+          - generic [ref=e172]:
+            - generic [ref=e173]: 18:46
+            - generic [ref=e174]: Tue, 02/17
+          - button "Quick Tasks" [ref=e176] [cursor=pointer]:
+            - img [ref=e177]
+          - generic [ref=e180]:
+            - img "FlowState" [ref=e182]
+            - generic [ref=e183]:
+              - generic [ref=e184]: 16:09
+              - generic [ref=e185]: לשטוף כלים + להוריד זבל + נקיון
+            - generic [ref=e186]:
+              - button "Pause timer" [ref=e187] [cursor=pointer]:
+                - img [ref=e188]
+              - button "Stop timer" [ref=e191] [cursor=pointer]:
+                - img [ref=e192]
+      - generic [ref=e194]:
+        - link "Canvas" [ref=e195] [cursor=pointer]:
+          - /url: "#/"
+        - link "Calendar" [ref=e196] [cursor=pointer]:
+          - /url: "#/calendar"
+        - link "Board" [ref=e197] [cursor=pointer]:
+          - /url: "#/board"
+        - link "Catalog" [ref=e198] [cursor=pointer]:
+          - /url: "#/catalog"
+        - link "Quick Sort 4" [ref=e199] [cursor=pointer]:
+          - /url: "#/quick-sort"
+          - text: Quick Sort
+          - generic [ref=e200]: "4"
+        - link "AI" [ref=e201] [cursor=pointer]:
+          - /url: "#/ai"
+    - generic [ref=e1803]:
+      - generic [ref=e1804]:
+        - generic [ref=e1805]:
+          - heading "Board" [level=2] [ref=e1806]
+          - generic [ref=e1807]: "55"
+        - generic [ref=e1808]:
+          - generic [ref=e1809]:
+            - button "Priority" [ref=e1810] [cursor=pointer]:
+              - img [ref=e1811]
+              - generic [ref=e1813]: Priority
+            - button "Due Date" [ref=e1814] [cursor=pointer]:
+              - img [ref=e1815]
+              - generic [ref=e1817]: Due Date
+            - button "Status" [ref=e1818] [cursor=pointer]:
+              - img [ref=e1819]
+              - generic [ref=e1822]: Status
+            - button "Category" [ref=e1823] [cursor=pointer]:
+              - img [ref=e1824]
+              - generic [ref=e1826]: Category
+          - button "Toggle filters" [ref=e1827] [cursor=pointer]:
+            - img [ref=e1828]
+          - button "Show done tasks" [ref=e1829] [cursor=pointer]:
+            - img [ref=e1830]
+      - generic [ref=e1834]:
+        - generic [ref=e1835]:
+          - generic [ref=e1837] [cursor=pointer]:
+            - button [ref=e1838]:
+              - img [ref=e1839]
+            - heading "Work" [level=3] [ref=e1841]
+            - generic [ref=e1842]: "10"
+          - generic [ref=e1844]:
+            - generic [ref=e1845]:
+              - generic [ref=e1846]:
+                - generic [ref=e1847]:
+                  - generic [ref=e1848]: No Date
+                  - generic [ref=e1849]: "0"
+                - button [ref=e1850] [cursor=pointer]:
+                  - img [ref=e1851]
+              - generic [ref=e1854]:
+                - generic [ref=e1855]: No no date tasks
+                - button "Add no date task" [ref=e1856] [cursor=pointer]:
+                  - img [ref=e1857]
+                  - text: Add no date task
+            - generic [ref=e1858]:
+              - generic [ref=e1859]:
+                - generic [ref=e1860]:
+                  - generic [ref=e1861]: Overdue
+                  - generic [ref=e1862]: "0"
+                - button [ref=e1863] [cursor=pointer]:
+                  - img [ref=e1864]
+              - generic [ref=e1867]:
+                - generic [ref=e1868]: No overdue tasks
+                - button "Add overdue task" [ref=e1869] [cursor=pointer]:
+                  - img [ref=e1870]
+                  - text: Add overdue task
+            - generic [ref=e1871]:
+              - generic [ref=e1872]:
+                - generic [ref=e1873]:
+                  - generic [ref=e1874]: Today
+                  - generic [ref=e1875]: "0"
+                - button [ref=e1876] [cursor=pointer]:
+                  - img [ref=e1877]
+              - generic [ref=e1880]:
+                - generic [ref=e1881]: No today tasks
+                - button "Add today task" [ref=e1882] [cursor=pointer]:
+                  - img [ref=e1883]
+                  - text: Add today task
+            - generic [ref=e1884]:
+              - generic [ref=e1885]:
+                - generic [ref=e1886]:
+                  - generic [ref=e1887]: Tomorrow
+                  - generic [ref=e1888]: "1"
+                - button [ref=e1889] [cursor=pointer]:
+                  - img [ref=e1890]
+              - 'button "Task: להחזיר את ההארדיסק של התיכון, pending, priority low" [ref=e1893] [cursor=pointer]':
+                - generic [ref=e1894]:
+                  - button "Low priority" [ref=e1895]
+                  - generic [ref=e1896]:
+                    - heading "להחזיר את ההארדיסק של התיכון" [level=3] [ref=e1897]
+                    - group "Task metadata" [ref=e1898]:
+                      - 'generic "Due: Feb 18" [ref=e1899]': Feb 18
+                  - group "Task actions" [ref=e1900]:
+                    - button "Enter focus mode for this task" [ref=e1901]:
+                      - img [ref=e1902]
+                    - button "Start Pomodoro timer for this task" [ref=e1905]:
+                      - img [ref=e1906]
+                    - button "Edit this task" [ref=e1908]:
+                      - img [ref=e1909]
+            - generic [ref=e1913]:
+              - generic [ref=e1914]:
+                - generic [ref=e1915]:
+                  - generic [ref=e1916]: This Week
+                  - generic [ref=e1917]: "6"
+                - button [ref=e1918] [cursor=pointer]:
+                  - img [ref=e1919]
+              - generic [ref=e1921]:
+                - 'button "Task: לשלוח למורן נוסח פרסום שני הסרטונים שעשיתי דרכו, pending, priority low" [ref=e1922] [cursor=pointer]':
+                  - generic [ref=e1923]:
+                    - button "Low priority" [ref=e1924]
+                    - generic [ref=e1925]:
+                      - heading "לשלוח למורן נוסח פרסום שני הסרטונים שעשיתי דרכו" [level=3] [ref=e1926]
+                      - group "Task metadata" [ref=e1927]:
+                        - 'generic "Due: Feb 22" [ref=e1928]': Feb 22
+                    - group "Task actions" [ref=e1929]:
+                      - button "Enter focus mode for this task" [ref=e1930]:
+                        - img [ref=e1931]
+                      - button "Start Pomodoro timer for this task" [ref=e1934]:
+                        - img [ref=e1935]
+                      - button "Edit this task" [ref=e1937]:
+                        - img [ref=e1938]
+                - 'button "Task: להזמין שלט ניאון, pending, priority medium" [ref=e1942] [cursor=pointer]':
+                  - generic [ref=e1943]:
+                    - button "No priority" [ref=e1944]
+                    - generic [ref=e1945]:
+                      - heading "להזמין שלט ניאון" [level=3] [ref=e1946]
+                      - group "Task metadata" [ref=e1947]:
+                        - 'generic "Due: Feb 25" [ref=e1948]': Feb 25
+                    - group "Task actions" [ref=e1949]:
+                      - button "Enter focus mode for this task" [ref=e1950]:
+                        - img [ref=e1951]
+                      - button "Start Pomodoro timer for this task" [ref=e1954]:
+                        - img [ref=e1955]
+                      - button "Edit this task" [ref=e1957]:
+                        - img [ref=e1958]
+                - 'button "Task: לעבור בסוף 2025 - על כל הפרויקטים של שנים קודמות ולעשות מעבר על הפרויקטים כדי לצמצם אותם ולהפוך את הישנים ביותר לזיפ כדי לחסוך מקום, pending, priority medium" [ref=e1962] [cursor=pointer]':
+                  - generic [ref=e1963]:
+                    - button "Medium priority" [ref=e1964]
+                    - generic [ref=e1965]:
+                      - heading "לעבור בסוף 2025 - על כל הפרויקטים של שנים קודמות ולעשות מעבר על הפרויקטים כדי לצמצם אותם ולהפוך את הישנים ביותר לזיפ כדי לחסוך מקום" [level=3] [ref=e1966]
+                      - group "Task metadata" [ref=e1967]:
+                        - 'generic "Due: Mar 1" [ref=e1968]': Mar 1
+                    - group "Task actions" [ref=e1969]:
+                      - button "Enter focus mode for this task" [ref=e1970]:
+                        - img [ref=e1971]
+                      - button "Start Pomodoro timer for this task" [ref=e1974]:
+                        - img [ref=e1975]
+                      - button "Edit this task" [ref=e1977]:
+                        - img [ref=e1978]
+                - 'button "Task: לפרסם את הסרטון של מורן, pending, priority low" [ref=e1982] [cursor=pointer]':
+                  - generic [ref=e1983]:
+                    - button "Low priority" [ref=e1984]
+                    - generic [ref=e1985]:
+                      - heading "לפרסם את הסרטון של מורן" [level=3] [ref=e1986]
+                      - group "Task metadata" [ref=e1987]:
+                        - 'generic "Due: Feb 22" [ref=e1988]': Feb 22
+                    - group "Task actions" [ref=e1989]:
+                      - button "Enter focus mode for this task" [ref=e1990]:
+                        - img [ref=e1991]
+                      - button "Start Pomodoro timer for this task" [ref=e1994]:
+                        - img [ref=e1995]
+                      - button "Edit this task" [ref=e1997]:
+                        - img [ref=e1998]
+                - 'button "Task: לעבור על המצגת לעריכת דיאלוג ולתקן את מה שצריך שם (אפשר בתיכון) / לנסות אופיס בVM, pending, priority low" [ref=e2002] [cursor=pointer]':
+                  - generic [ref=e2003]:
+                    - button "Low priority" [ref=e2004]
+                    - generic [ref=e2005]:
+                      - heading "לעבור על המצגת לעריכת דיאלוג ולתקן את מה שצריך שם (אפשר בתיכון) / לנסות אופיס בVM" [level=3] [ref=e2006]
+                      - group "Task metadata" [ref=e2007]:
+                        - 'generic "Due: Mar 1" [ref=e2008]': Mar 1
+                    - group "Task actions" [ref=e2009]:
+                      - button "Enter focus mode for this task" [ref=e2010]:
+                        - img [ref=e2011]
+                      - button "Start Pomodoro timer for this task" [ref=e2014]:
+                        - img [ref=e2015]
+                      - button "Edit this task" [ref=e2017]:
+                        - img [ref=e2018]
+                - 'button "Task: להתקין guest, pending, priority low" [ref=e2022] [cursor=pointer]':
+                  - generic [ref=e2023]:
+                    - button "Low priority" [ref=e2024]
+                    - generic [ref=e2025]:
+                      - heading "להתקין guest" [level=3] [ref=e2026]
+                      - group "Task metadata" [ref=e2027]:
+                        - 'generic "Due: Feb 21" [ref=e2028]': Feb 21
+                    - group "Task actions" [ref=e2029]:
+                      - button "Enter focus mode for this task" [ref=e2030]:
+                        - img [ref=e2031]
+                      - button "Start Pomodoro timer for this task" [ref=e2034]:
+                        - img [ref=e2035]
+                      - button "Edit this task" [ref=e2037]:
+                        - img [ref=e2038]
+            - generic [ref=e2042]:
+              - generic [ref=e2043]:
+                - generic [ref=e2044]:
+                  - generic [ref=e2045]: Later
+                  - generic [ref=e2046]: "3"
+                - button [ref=e2047] [cursor=pointer]:
+                  - img [ref=e2048]
+              - generic [ref=e2050]:
+                - 'button "Task: להחליף מנעול, pending, priority low" [ref=e2051] [cursor=pointer]':
+                  - generic [ref=e2052]:
+                    - button "Low priority" [ref=e2053]
+                    - generic [ref=e2054]:
+                      - heading "להחליף מנעול" [level=3] [ref=e2055]
+                      - group "Task metadata" [ref=e2056]:
+                        - 'generic "Due: Mar 15" [ref=e2057]': Mar 15
+                    - group "Task actions" [ref=e2058]:
+                      - button "Enter focus mode for this task" [ref=e2059]:
+                        - img [ref=e2060]
+                      - button "Start Pomodoro timer for this task" [ref=e2063]:
+                        - img [ref=e2064]
+                      - button "Edit this task" [ref=e2066]:
+                        - img [ref=e2067]
+                - 'button "Task: דרישת תשלום קורס קומפי - לוודא עם רן שהגיע / קיבל את דרישת התשלום , pending, priority low" [ref=e2071] [cursor=pointer]':
+                  - generic [ref=e2072]:
+                    - button "Low priority" [ref=e2073]
+                    - generic [ref=e2074]:
+                      - heading "דרישת תשלום קורס קומפי - לוודא עם רן שהגיע / קיבל את דרישת התשלום" [level=3] [ref=e2075]
+                      - group "Task metadata" [ref=e2076]:
+                        - 'generic "Due: Mar 14" [ref=e2077]': Mar 14
+                    - group "Task actions" [ref=e2078]:
+                      - button "Enter focus mode for this task" [ref=e2079]:
+                        - img [ref=e2080]
+                      - button "Start Pomodoro timer for this task" [ref=e2083]:
+                        - img [ref=e2084]
+                      - button "Edit this task" [ref=e2086]:
+                        - img [ref=e2087]
+                - 'button "Task: להזמין עוד צ''קים, pending, priority low" [ref=e2091] [cursor=pointer]':
+                  - generic [ref=e2092]:
+                    - button "Low priority" [ref=e2093]
+                    - generic [ref=e2094]:
+                      - heading "להזמין עוד צ'קים" [level=3] [ref=e2095]
+                      - group "Task metadata" [ref=e2096]:
+                        - 'generic "Due: Mar 15" [ref=e2097]': Mar 15
+                    - group "Task actions" [ref=e2098]:
+                      - button "Enter focus mode for this task" [ref=e2099]:
+                        - img [ref=e2100]
+                      - button "Start Pomodoro timer for this task" [ref=e2103]:
+                        - img [ref=e2104]
+                      - button "Edit this task" [ref=e2106]:
+                        - img [ref=e2107]
+        - generic [ref=e2111]:
+          - generic [ref=e2113] [cursor=pointer]:
+            - button [ref=e2114]:
+              - img [ref=e2115]
+            - heading "My Projects" [level=3] [ref=e2117]
+            - generic [ref=e2118]: "21"
+          - generic [ref=e2120]:
+            - generic [ref=e2121]:
+              - generic [ref=e2122]:
+                - generic [ref=e2123]:
+                  - generic [ref=e2124]: No Date
+                  - generic [ref=e2125]: "1"
+                - button [ref=e2126] [cursor=pointer]:
+                  - img [ref=e2127]
+              - 'button "Task: לארגן משימות, pending, priority medium" [ref=e2130] [cursor=pointer]':
+                - generic [ref=e2131]:
+                  - button "No priority" [ref=e2132]
+                  - generic [ref=e2133]:
+                    - heading "לארגן משימות" [level=3] [ref=e2134]
+                    - group "Task metadata" [ref=e2135]
+                  - group "Task actions" [ref=e2136]:
+                    - button "Enter focus mode for this task" [ref=e2137]:
+                      - img [ref=e2138]
+                    - button "Start Pomodoro timer for this task" [ref=e2141]:
+                      - img [ref=e2142]
+                    - button "Edit this task" [ref=e2144]:
+                      - img [ref=e2145]
+            - generic [ref=e2149]:
+              - generic [ref=e2150]:
+                - generic [ref=e2151]:
+                  - generic [ref=e2152]: Overdue
+                  - generic [ref=e2153]: "2"
+                - button [ref=e2154] [cursor=pointer]:
+                  - img [ref=e2155]
+              - generic [ref=e2157]:
+                - 'button "Task: ספר ילדים על למה אני לא רוצה להיות אל הורי, pending, priority medium" [ref=e2158] [cursor=pointer]':
+                  - generic [ref=e2159]:
+                    - button "Medium priority" [ref=e2160]
+                    - generic [ref=e2161]:
+                      - heading "ספר ילדים על למה אני לא רוצה להיות אל הורי" [level=3] [ref=e2162]
+                      - group "Task metadata" [ref=e2163]:
+                        - 'generic "Due: Feb 17" [ref=e2164]': Feb 17
+                    - group "Task actions" [ref=e2165]:
+                      - button "Enter focus mode for this task" [ref=e2166]:
+                        - img [ref=e2167]
+                      - button "Start Pomodoro timer for this task" [ref=e2170]:
+                        - img [ref=e2171]
+                      - button "Edit this task" [ref=e2173]:
+                        - img [ref=e2174]
+                - 'button "Task: לעבוד על המצגת לכנס של נטלי, pending, priority high" [ref=e2178] [cursor=pointer]':
+                  - generic [ref=e2179]:
+                    - button "High priority" [ref=e2180]
+                    - generic [ref=e2181]:
+                      - heading "לעבוד על המצגת לכנס של נטלי" [level=3] [ref=e2182]
+                      - group "Task metadata" [ref=e2183]:
+                        - 'generic "Due: Feb 16" [ref=e2184]': Feb 16
+                        - generic [ref=e2185]: ·
+                        - 'generic "Pomodoro sessions: 9" [ref=e2186]': "9"
+                    - group "Task actions" [ref=e2187]:
+                      - button "Enter focus mode for this task" [ref=e2188]:
+                        - img [ref=e2189]
+                      - button "Start Pomodoro timer for this task" [ref=e2192]:
+                        - img [ref=e2193]
+                      - button "Edit this task" [ref=e2195]:
+                        - img [ref=e2196]
+            - generic [ref=e2200]:
+              - generic [ref=e2201]:
+                - generic [ref=e2202]:
+                  - generic [ref=e2203]: Today
+                  - generic [ref=e2204]: "2"
+                - button [ref=e2205] [cursor=pointer]:
+                  - img [ref=e2206]
+              - generic [ref=e2208]:
+                - 'button "Task: להכין פוסט על המשחק אנריל, pending, priority medium" [ref=e2209] [cursor=pointer]':
+                  - generic [ref=e2210]:
+                    - button "Medium priority" [ref=e2211]
+                    - generic [ref=e2212]:
+                      - heading "להכין פוסט על המשחק אנריל" [level=3] [ref=e2213]
+                      - group "Task metadata" [ref=e2214]:
+                        - 'generic "Due: Feb 17" [ref=e2215]': Feb 17
+                    - group "Task actions" [ref=e2216]:
+                      - button "Enter focus mode for this task" [ref=e2217]:
+                        - img [ref=e2218]
+                      - button "Start Pomodoro timer for this task" [ref=e2221]:
+                        - img [ref=e2222]
+                      - button "Edit this task" [ref=e2224]:
+                        - img [ref=e2225]
+                - 'button "Task: להתאמן, pending, priority medium" [ref=e2229] [cursor=pointer]':
+                  - generic [ref=e2230]:
+                    - button "Medium priority" [ref=e2231]
+                    - generic [ref=e2232]:
+                      - heading "להתאמן" [level=3] [ref=e2233]
+                      - group "Task metadata" [ref=e2234]:
+                        - 'generic "Due: Feb 17" [ref=e2235]': Feb 17
+                    - group "Task actions" [ref=e2236]:
+                      - button "Enter focus mode for this task" [ref=e2237]:
+                        - img [ref=e2238]
+                      - button "Start Pomodoro timer for this task" [ref=e2241]:
+                        - img [ref=e2242]
+                      - button "Edit this task" [ref=e2244]:
+                        - img [ref=e2245]
+            - generic [ref=e2249]:
+              - generic [ref=e2250]:
+                - generic [ref=e2251]:
+                  - generic [ref=e2252]: Tomorrow
+                  - generic [ref=e2253]: "0"
+                - button [ref=e2254] [cursor=pointer]:
+                  - img [ref=e2255]
+              - generic [ref=e2258]:
+                - generic [ref=e2259]: No tomorrow tasks
+                - button "Add tomorrow task" [ref=e2260] [cursor=pointer]:
+                  - img [ref=e2261]
+                  - text: Add tomorrow task
+            - generic [ref=e2262]:
+              - generic [ref=e2263]:
+                - generic [ref=e2264]:
+                  - generic [ref=e2265]: This Week
+                  - generic [ref=e2266]: "15"
+                - button [ref=e2267] [cursor=pointer]:
+                  - img [ref=e2268]
+              - generic [ref=e2270]:
+                - 'button "Task: לקבוע עם המאמן עוד שיעור, pending, priority medium" [ref=e2271] [cursor=pointer]':
+                  - generic [ref=e2272]:
+                    - button "Medium priority" [ref=e2273]
+                    - generic [ref=e2274]:
+                      - heading "לקבוע עם המאמן עוד שיעור" [level=3] [ref=e2275]
+                      - group "Task metadata" [ref=e2276]:
+                        - 'generic "Due: Feb 22" [ref=e2277]': Feb 22
+                    - group "Task actions" [ref=e2278]:
+                      - button "Enter focus mode for this task" [ref=e2279]:
+                        - img [ref=e2280]
+                      - button "Start Pomodoro timer for this task" [ref=e2283]:
+                        - img [ref=e2284]
+                      - button "Edit this task" [ref=e2286]:
+                        - img [ref=e2287]
+                - 'button "Task: שאלון זוגיות https://docs.google.com/forms/d/e/1FAIpQLScY8O-4dz-5rJv4f-vH6iqauKu_kxuXLFLkJvGPxmG_jNOtnw/viewform?fbclid=IwdGRjcAP660xjbGNrA_rrP2V4dG4DYWVtAjExAHNydGMGYXBwX2lkDDM1MDY4NTUzMTcyOAABHoEDXiId26S9AMCZxyLIZvf2W4COpv25PGc-w1xuTkkJk5IMqTxjHvLEH-52_aem_8mKVTXG8W_DQpj6EZqHJvA, pending, priority high" [ref=e2291] [cursor=pointer]':
+                  - generic [ref=e2292]:
+                    - button "High priority" [ref=e2293]
+                    - generic [ref=e2294]:
+                      - heading "שאלון זוגיות docs.google.com/forms/d/e/1FAIpQLScY8O-4dz-5…" [level=3] [ref=e2295]
+                      - group "Task metadata" [ref=e2296]:
+                        - 'generic "Due: Feb 19" [ref=e2297]': Feb 19
+                    - group "Task actions" [ref=e2298]:
+                      - button "Enter focus mode for this task" [ref=e2299]:
+                        - img [ref=e2300]
+                      - button "Start Pomodoro timer for this task" [ref=e2303]:
+                        - img [ref=e2304]
+                      - button "Edit this task" [ref=e2306]:
+                        - img [ref=e2307]
+                - 'button "Task: לצלם סרטון על detailed-description באובסידיאן, pending, priority medium" [ref=e2311] [cursor=pointer]':
+                  - generic [ref=e2312]:
+                    - button "Medium priority" [ref=e2313]
+                    - generic [ref=e2314]:
+                      - heading "לצלם סרטון על detailed-description באובסידיאן" [level=3] [ref=e2315]
+                      - group "Task metadata" [ref=e2316]:
+                        - 'generic "Due: Feb 23" [ref=e2317]': Feb 23
+                    - group "Task actions" [ref=e2318]:
+                      - button "Enter focus mode for this task" [ref=e2319]:
+                        - img [ref=e2320]
+                      - button "Start Pomodoro timer for this task" [ref=e2323]:
+                        - img [ref=e2324]
+                      - button "Edit this task" [ref=e2326]:
+                        - img [ref=e2327]
+                - 'button "Task: לחזור להקליט פודקסט, pending, priority medium" [ref=e2331] [cursor=pointer]':
+                  - generic [ref=e2332]:
+                    - button "Medium priority" [ref=e2333]
+                    - generic [ref=e2334]:
+                      - heading "לחזור להקליט פודקסט" [level=3] [ref=e2335]
+                      - group "Task metadata" [ref=e2336]:
+                        - 'generic "Due: Feb 25" [ref=e2337]': Feb 25
+                    - group "Task actions" [ref=e2338]:
+                      - button "Enter focus mode for this task" [ref=e2339]:
+                        - img [ref=e2340]
+                      - button "Start Pomodoro timer for this task" [ref=e2343]:
+                        - img [ref=e2344]
+                      - button "Edit this task" [ref=e2346]:
+                        - img [ref=e2347]
+                - 'button "Task: לצלם סרטון תוך כדי - להשתמש בpalywright mcp + playwriter n8n mcp, pending, priority medium" [ref=e2351] [cursor=pointer]':
+                  - generic [ref=e2352]:
+                    - button "Medium priority" [ref=e2353]
+                    - generic [ref=e2354]:
+                      - heading "לצלם סרטון תוך כדי - להשתמש בpalywright mcp + playwriter n8n mcp" [level=3] [ref=e2355]
+                      - group "Task metadata" [ref=e2356]:
+                        - 'generic "Due: Feb 27" [ref=e2357]': Feb 27
+                    - group "Task actions" [ref=e2358]:
+                      - button "Enter focus mode for this task" [ref=e2359]:
+                        - img [ref=e2360]
+                      - button "Start Pomodoro timer for this task" [ref=e2363]:
+                        - img [ref=e2364]
+                      - button "Edit this task" [ref=e2366]:
+                        - img [ref=e2367]
+                - 'button "Task: להתקין קריטה בלינוקס, pending, priority low" [ref=e2371] [cursor=pointer]':
+                  - generic [ref=e2372]:
+                    - button "Low priority" [ref=e2373]
+                    - generic [ref=e2374]:
+                      - heading "להתקין קריטה בלינוקס" [level=3] [ref=e2375]
+                      - group "Task metadata" [ref=e2376]:
+                        - 'generic "Due: Mar 1" [ref=e2377]': Mar 1
+                    - group "Task actions" [ref=e2378]:
+                      - button "Enter focus mode for this task" [ref=e2379]:
+                        - img [ref=e2380]
+                      - button "Start Pomodoro timer for this task" [ref=e2383]:
+                        - img [ref=e2384]
+                      - button "Edit this task" [ref=e2386]:
+                        - img [ref=e2387]
+                - 'button "Task: לעשות סקיל למדריכים רימושן - כלומר סקיל שיוצר סרטוני הדרכה נניח על איך להשתמש באפליקציה דרך רימושן, pending, priority medium" [ref=e2391] [cursor=pointer]':
+                  - generic [ref=e2392]:
+                    - button "Medium priority" [ref=e2393]
+                    - generic [ref=e2394]:
+                      - heading "לעשות סקיל למדריכים רימושן - כלומר סקיל שיוצר סרטוני הדרכה נניח על איך להשתמש באפליקציה דרך רימושן" [level=3] [ref=e2395]
+                      - group "Task metadata" [ref=e2396]:
+                        - 'generic "Due: Feb 21" [ref=e2397]': Feb 21
+                    - group "Task actions" [ref=e2398]:
+                      - button "Enter focus mode for this task" [ref=e2399]:
+                        - img [ref=e2400]
+                      - button "Start Pomodoro timer for this task" [ref=e2403]:
+                        - img [ref=e2404]
+                      - button "Edit this task" [ref=e2406]:
+                        - img [ref=e2407]
+                - 'button "Task: לעבוד על סרטון קצרין, pending, priority medium" [ref=e2411] [cursor=pointer]':
+                  - generic [ref=e2412]:
+                    - button "Medium priority" [ref=e2413]
+                    - generic [ref=e2414]:
+                      - heading "לעבוד על סרטון קצרין" [level=3] [ref=e2415]
+                      - group "Task metadata" [ref=e2416]:
+                        - 'generic "Due: Feb 19" [ref=e2417]': Feb 19
+                    - group "Task actions" [ref=e2418]:
+                      - button "Enter focus mode for this task" [ref=e2419]:
+                        - img [ref=e2420]
+                      - button "Start Pomodoro timer for this task" [ref=e2423]:
+                        - img [ref=e2424]
+                      - button "Edit this task" [ref=e2426]:
+                        - img [ref=e2427]
+                - 'button "Task: להגיש לתחרות הזו, pending, priority medium" [ref=e2431] [cursor=pointer]':
+                  - generic [ref=e2432]:
+                    - button "Medium priority" [ref=e2433]
+                    - generic [ref=e2434]:
+                      - heading "להגיש לתחרות הזו" [level=3] [ref=e2435]
+                      - group "Task metadata" [ref=e2436]:
+                        - 'generic "Due: Feb 22" [ref=e2437]': Feb 22
+                    - group "Task actions" [ref=e2438]:
+                      - button "Enter focus mode for this task" [ref=e2439]:
+                        - img [ref=e2440]
+                      - button "Start Pomodoro timer for this task" [ref=e2443]:
+                        - img [ref=e2444]
+                      - button "Edit this task" [ref=e2446]:
+                        - img [ref=e2447]
+                - 'button "Task: לפרסם פוסטים עם רעיונות בקבוצה של מרתה , pending, priority medium" [ref=e2451] [cursor=pointer]':
+                  - generic [ref=e2452]:
+                    - button "Medium priority" [ref=e2453]
+                    - generic [ref=e2454]:
+                      - heading "לפרסם פוסטים עם רעיונות בקבוצה של מרתה" [level=3] [ref=e2455]
+                      - group "Task metadata" [ref=e2456]:
+                        - 'generic "Due: Feb 22" [ref=e2457]': Feb 22
+                    - group "Task actions" [ref=e2458]:
+                      - button "Enter focus mode for this task" [ref=e2459]:
+                        - img [ref=e2460]
+                      - button "Start Pomodoro timer for this task" [ref=e2463]:
+                        - img [ref=e2464]
+                      - button "Edit this task" [ref=e2466]:
+                        - img [ref=e2467]
+                - 'button "Task: רעיון - אמן מצליח שמתחיל לקבל הודעות שהיא כישלון ונכנס לסחרור, מאשים אמן מצליח אחר שתמיד פירגן לו ומרגיש שאף אחד לא רואה את מה שהוא רואה וזה לאט לאט מוציא אותו מדעתו, pending, priority low" [ref=e2471] [cursor=pointer]':
+                  - generic [ref=e2472]:
+                    - button "Low priority" [ref=e2473]
+                    - generic [ref=e2474]:
+                      - heading "רעיון - אמן מצליח שמתחיל לקבל הודעות שהיא כישלון ונכנס לסחרור, מאשים אמן מצליח אחר שתמיד פירגן לו ומרגיש שאף אחד לא רואה את מה שהוא רואה וזה לאט לאט מוציא אותו מדעתו" [level=3] [ref=e2475]
+                      - group "Task metadata" [ref=e2476]:
+                        - 'generic "Due: Mar 1" [ref=e2477]': Mar 1
+                    - group "Task actions" [ref=e2478]:
+                      - button "Enter focus mode for this task" [ref=e2479]:
+                        - img [ref=e2480]
+                      - button "Start Pomodoro timer for this task" [ref=e2483]:
+                        - img [ref=e2484]
+                      - button "Edit this task" [ref=e2486]:
+                        - img [ref=e2487]
+                - 'button "Task: לבנות לי עוזר אישי כאן - https://gemini.google.com/app/9c72378ca0a73dd5, pending, priority low" [ref=e2491] [cursor=pointer]':
+                  - generic [ref=e2492]:
+                    - button "Low priority" [ref=e2493]
+                    - generic [ref=e2494]:
+                      - heading "לבנות לי עוזר אישי כאן - gemini.google.com/app/9c72378ca0a73dd5" [level=3] [ref=e2495]
+                      - group "Task metadata" [ref=e2496]:
+                        - 'generic "Due: Feb 21" [ref=e2497]': Feb 21
+                    - group "Task actions" [ref=e2498]:
+                      - button "Enter focus mode for this task" [ref=e2499]:
+                        - img [ref=e2500]
+                      - button "Start Pomodoro timer for this task" [ref=e2503]:
+                        - img [ref=e2504]
+                      - button "Edit this task" [ref=e2506]:
+                        - img [ref=e2507]
+                - 'button "Task: לכתוב פוסט על מה אפשר ללמוד לפרידות בקבוצת אל הוריים, pending, priority medium" [ref=e2511] [cursor=pointer]':
+                  - generic [ref=e2512]:
+                    - button "Medium priority" [ref=e2513]
+                    - generic [ref=e2514]:
+                      - heading "לכתוב פוסט על מה אפשר ללמוד לפרידות בקבוצת אל הוריים" [level=3] [ref=e2515]
+                      - group "Task metadata" [ref=e2516]:
+                        - 'generic "Due: Feb 21" [ref=e2517]': Feb 21
+                    - group "Task actions" [ref=e2518]:
+                      - button "Enter focus mode for this task" [ref=e2519]:
+                        - img [ref=e2520]
+                      - button "Start Pomodoro timer for this task" [ref=e2523]:
+                        - img [ref=e2524]
+                      - button "Edit this task" [ref=e2526]:
+                        - img [ref=e2527]
+                - 'button "Task: ליצור עוד פוסט בקבוצה של מרתה, pending, priority low" [ref=e2531] [cursor=pointer]':
+                  - generic [ref=e2532]:
+                    - button "Low priority" [ref=e2533]
+                    - generic [ref=e2534]:
+                      - heading "ליצור עוד פוסט בקבוצה של מרתה" [level=3] [ref=e2535]
+                      - group "Task metadata" [ref=e2536]:
+                        - 'generic "Due: Feb 19" [ref=e2537]': Feb 19
+                    - group "Task actions" [ref=e2538]:
+                      - button "Enter focus mode for this task" [ref=e2539]:
+                        - img [ref=e2540]
+                      - button "Start Pomodoro timer for this task" [ref=e2543]:
+                        - img [ref=e2544]
+                      - button "Edit this task" [ref=e2546]:
+                        - img [ref=e2547]
+                - 'button "Task: לבטל מנוי לsupabase, pending, priority low" [ref=e2551] [cursor=pointer]':
+                  - generic [ref=e2552]:
+                    - button "Low priority" [ref=e2553]
+                    - generic [ref=e2554]:
+                      - heading "לבטל מנוי לsupabase" [level=3] [ref=e2555]
+                      - group "Task metadata" [ref=e2556]:
+                        - 'generic "Due: Feb 28" [ref=e2557]': Feb 28
+                    - group "Task actions" [ref=e2558]:
+                      - button "Enter focus mode for this task" [ref=e2559]:
+                        - img [ref=e2560]
+                      - button "Start Pomodoro timer for this task" [ref=e2563]:
+                        - img [ref=e2564]
+                      - button "Edit this task" [ref=e2566]:
+                        - img [ref=e2567]
+            - generic [ref=e2571]:
+              - generic [ref=e2572]:
+                - generic [ref=e2573]:
+                  - generic [ref=e2574]: Later
+                  - generic [ref=e2575]: "1"
+                - button [ref=e2576] [cursor=pointer]:
+                  - img [ref=e2577]
+              - 'button "Task: מערכת ליצירת הצעות מחיר אוטומטית על בסיס פרמטרים, pending, priority medium" [ref=e2580] [cursor=pointer]':
+                - generic [ref=e2581]:
+                  - button "Medium priority" [ref=e2582]
+                  - generic [ref=e2583]:
+                    - heading "מערכת ליצירת הצעות מחיר אוטומטית על בסיס פרמטרים" [level=3] [ref=e2584]
+                    - group "Task metadata" [ref=e2585]:
+                      - 'generic "Due: Mar 9" [ref=e2586]': Mar 9
+                  - group "Task actions" [ref=e2587]:
+                    - button "Enter focus mode for this task" [ref=e2588]:
+                      - img [ref=e2589]
+                    - button "Start Pomodoro timer for this task" [ref=e2592]:
+                      - img [ref=e2593]
+                    - button "Edit this task" [ref=e2595]:
+                      - img [ref=e2596]
+        - generic [ref=e2600]:
+          - generic [ref=e2602] [cursor=pointer]:
+            - button [ref=e2603]:
+              - img [ref=e2604]
+            - heading "Home" [level=3] [ref=e2606]
+            - generic [ref=e2607]: "14"
+          - generic [ref=e2609]:
+            - generic [ref=e2610]:
+              - generic [ref=e2611]:
+                - generic [ref=e2612]:
+                  - generic [ref=e2613]: No Date
+                  - generic [ref=e2614]: "0"
+                - button [ref=e2615] [cursor=pointer]:
+                  - img [ref=e2616]
+              - generic [ref=e2619]:
+                - generic [ref=e2620]: No no date tasks
+                - button "Add no date task" [ref=e2621] [cursor=pointer]:
+                  - img [ref=e2622]
+                  - text: Add no date task
+            - generic [ref=e2623]:
+              - generic [ref=e2624]:
+                - generic [ref=e2625]:
+                  - generic [ref=e2626]: Overdue
+                  - generic [ref=e2627]: "0"
+                - button [ref=e2628] [cursor=pointer]:
+                  - img [ref=e2629]
+              - generic [ref=e2632]:
+                - generic [ref=e2633]: No overdue tasks
+                - button "Add overdue task" [ref=e2634] [cursor=pointer]:
+                  - img [ref=e2635]
+                  - text: Add overdue task
+            - generic [ref=e2636]:
+              - generic [ref=e2637]:
+                - generic [ref=e2638]:
+                  - generic [ref=e2639]: Today
+                  - generic [ref=e2640]: "1"
+                - button [ref=e2641] [cursor=pointer]:
+                  - img [ref=e2642]
+              - 'button "Task: מרק עדשים טחון, pending, priority medium" [ref=e2645] [cursor=pointer]':
+                - generic [ref=e2646]:
+                  - button "Medium priority" [ref=e2647]
+                  - generic [ref=e2648]:
+                    - heading "מרק עדשים טחון" [level=3] [ref=e2649]
+                    - group "Task metadata" [ref=e2650]:
+                      - 'generic "Due: Feb 17" [ref=e2651]': Feb 17
+                  - group "Task actions" [ref=e2652]:
+                    - button "Enter focus mode for this task" [ref=e2653]:
+                      - img [ref=e2654]
+                    - button "Start Pomodoro timer for this task" [ref=e2657]:
+                      - img [ref=e2658]
+                    - button "Edit this task" [ref=e2660]:
+                      - img [ref=e2661]
+            - generic [ref=e2665]:
+              - generic [ref=e2666]:
+                - generic [ref=e2667]:
+                  - generic [ref=e2668]: Tomorrow
+                  - generic [ref=e2669]: "0"
+                - button [ref=e2670] [cursor=pointer]:
+                  - img [ref=e2671]
+              - generic [ref=e2674]:
+                - generic [ref=e2675]: No tomorrow tasks
+                - button "Add tomorrow task" [ref=e2676] [cursor=pointer]:
+                  - img [ref=e2677]
+                  - text: Add tomorrow task
+            - generic [ref=e2678]:
+              - generic [ref=e2679]:
+                - generic [ref=e2680]:
+                  - generic [ref=e2681]: This Week
+                  - generic [ref=e2682]: "9"
+                - button [ref=e2683] [cursor=pointer]:
+                  - img [ref=e2684]
+              - generic [ref=e2686]:
+                - 'button "Task: למצוא חנות סלולר לשאול לגבי החלפת מסך +רכישת מסך מעלי אקספרס, pending, priority low" [ref=e2687] [cursor=pointer]':
+                  - generic [ref=e2688]:
+                    - button "Low priority" [ref=e2689]
+                    - generic [ref=e2690]:
+                      - heading "למצוא חנות סלולר לשאול לגבי החלפת מסך +רכישת מסך מעלי אקספרס" [level=3] [ref=e2691]
+                      - group "Task metadata" [ref=e2692]:
+                        - 'generic "Due: Feb 22" [ref=e2693]': Feb 22
+                    - group "Task actions" [ref=e2694]:
+                      - button "Enter focus mode for this task" [ref=e2695]:
+                        - img [ref=e2696]
+                      - button "Start Pomodoro timer for this task" [ref=e2699]:
+                        - img [ref=e2700]
+                      - button "Edit this task" [ref=e2702]:
+                        - img [ref=e2703]
+                - 'button "Task: לאסוף את הספריי לאוראו, pending, priority high" [ref=e2707] [cursor=pointer]':
+                  - generic [ref=e2708]:
+                    - button "High priority" [ref=e2709]
+                    - generic [ref=e2710]:
+                      - heading "לאסוף את הספריי לאוראו" [level=3] [ref=e2711]
+                      - group "Task metadata" [ref=e2712]:
+                        - 'generic "Due: Mar 1" [ref=e2713]': Mar 1
+                    - group "Task actions" [ref=e2714]:
+                      - button "Enter focus mode for this task" [ref=e2715]:
+                        - img [ref=e2716]
+                      - button "Start Pomodoro timer for this task" [ref=e2719]:
+                        - img [ref=e2720]
+                      - button "Edit this task" [ref=e2722]:
+                        - img [ref=e2723]
+                - 'button "Task: לפנות למטפלת של אורית לקבוע פגישה, pending, priority medium" [ref=e2727] [cursor=pointer]':
+                  - generic [ref=e2728]:
+                    - button "Medium priority" [ref=e2729]
+                    - generic [ref=e2730]:
+                      - heading "לפנות למטפלת של אורית לקבוע פגישה" [level=3] [ref=e2731]
+                      - group "Task metadata" [ref=e2732]:
+                        - 'generic "Due: Feb 22" [ref=e2733]': Feb 22
+                    - group "Task actions" [ref=e2734]:
+                      - button "Enter focus mode for this task" [ref=e2735]:
+                        - img [ref=e2736]
+                      - button "Start Pomodoro timer for this task" [ref=e2739]:
+                        - img [ref=e2740]
+                      - button "Edit this task" [ref=e2742]:
+                        - img [ref=e2743]
+                - 'button "Task: להתקדם עם עניין משטח שולחן העבודה, pending, priority medium" [ref=e2747] [cursor=pointer]':
+                  - generic [ref=e2748]:
+                    - button "No priority" [ref=e2749]
+                    - generic [ref=e2750]:
+                      - heading "להתקדם עם עניין משטח שולחן העבודה" [level=3] [ref=e2751]
+                      - group "Task metadata" [ref=e2752]:
+                        - 'generic "Due: Mar 1" [ref=e2753]': Mar 1
+                    - group "Task actions" [ref=e2754]:
+                      - button "Enter focus mode for this task" [ref=e2755]:
+                        - img [ref=e2756]
+                      - button "Start Pomodoro timer for this task" [ref=e2759]:
+                        - img [ref=e2760]
+                      - button "Edit this task" [ref=e2762]:
+                        - img [ref=e2763]
+                - 'button "Task: לשלם אגרה לרישיון, pending, priority low" [ref=e2767] [cursor=pointer]':
+                  - generic [ref=e2768]:
+                    - button "Low priority" [ref=e2769]
+                    - generic [ref=e2770]:
+                      - heading "לשלם אגרה לרישיון" [level=3] [ref=e2771]
+                      - group "Task metadata" [ref=e2772]:
+                        - 'generic "Due: Mar 1" [ref=e2773]': Mar 1
+                    - group "Task actions" [ref=e2774]:
+                      - button "Enter focus mode for this task" [ref=e2775]:
+                        - img [ref=e2776]
+                      - button "Start Pomodoro timer for this task" [ref=e2779]:
+                        - img [ref=e2780]
+                      - button "Edit this task" [ref=e2782]:
+                        - img [ref=e2783]
+                - 'button "Task: למדוד לחץ דם ערב, pending, priority medium" [ref=e2787] [cursor=pointer]':
+                  - generic [ref=e2788]:
+                    - button "Medium priority" [ref=e2789]
+                    - generic [ref=e2790]:
+                      - heading "למדוד לחץ דם ערב" [level=3] [ref=e2791]
+                      - group "Task metadata" [ref=e2792]:
+                        - 'generic "Due: Feb 22" [ref=e2793]': Feb 22
+                    - group "Task actions" [ref=e2794]:
+                      - button "Enter focus mode for this task" [ref=e2795]:
+                        - img [ref=e2796]
+                      - button "Start Pomodoro timer for this task" [ref=e2799]:
+                        - img [ref=e2800]
+                      - button "Edit this task" [ref=e2802]:
+                        - img [ref=e2803]
+                - 'button "Task: לשים לאורא שוב משחה פעמיים ביום שבןע, pending, priority medium" [ref=e2807] [cursor=pointer]':
+                  - generic [ref=e2808]:
+                    - button "Medium priority" [ref=e2809]
+                    - generic [ref=e2810]:
+                      - heading "לשים לאורא שוב משחה פעמיים ביום שבןע" [level=3] [ref=e2811]
+                      - group "Task metadata" [ref=e2812]:
+                        - 'generic "Due: Feb 19" [ref=e2813]': Feb 19
+                    - group "Task actions" [ref=e2814]:
+                      - button "Enter focus mode for this task" [ref=e2815]:
+                        - img [ref=e2816]
+                      - button "Start Pomodoro timer for this task" [ref=e2819]:
+                        - img [ref=e2820]
+                      - button "Edit this task" [ref=e2822]:
+                        - img [ref=e2823]
+                - 'button "Task: לנקות את השואב הרובוטי, pending, priority high" [ref=e2827] [cursor=pointer]':
+                  - generic [ref=e2828]:
+                    - button "High priority" [ref=e2829]
+                    - generic [ref=e2830]:
+                      - heading "לנקות את השואב הרובוטי" [level=3] [ref=e2831]
+                      - group "Task metadata" [ref=e2832]:
+                        - 'generic "Due: Feb 21" [ref=e2833]': Feb 21
+                    - group "Task actions" [ref=e2834]:
+                      - button "Enter focus mode for this task" [ref=e2835]:
+                        - img [ref=e2836]
+                      - button "Start Pomodoro timer for this task" [ref=e2839]:
+                        - img [ref=e2840]
+                      - button "Edit this task" [ref=e2842]:
+                        - img [ref=e2843]
+                - 'button "Task: להכין לחם חלבון מקוטג, pending, priority low" [ref=e2847] [cursor=pointer]':
+                  - generic [ref=e2848]:
+                    - button "Low priority" [ref=e2849]
+                    - generic [ref=e2850]:
+                      - heading "להכין לחם חלבון מקוטג" [level=3] [ref=e2851]
+                      - group "Task metadata" [ref=e2852]:
+                        - 'generic "Due: Feb 22" [ref=e2853]': Feb 22
+                    - group "Task actions" [ref=e2854]:
+                      - button "Enter focus mode for this task" [ref=e2855]:
+                        - img [ref=e2856]
+                      - button "Start Pomodoro timer for this task" [ref=e2859]:
+                        - img [ref=e2860]
+                      - button "Edit this task" [ref=e2862]:
+                        - img [ref=e2863]
+            - generic [ref=e2867]:
+              - generic [ref=e2868]:
+                - generic [ref=e2869]:
+                  - generic [ref=e2870]: Later
+                  - generic [ref=e2871]: "3"
+                - button [ref=e2872] [cursor=pointer]:
+                  - img [ref=e2873]
+              - generic [ref=e2875]:
+                - 'button "Task: להזמין בלנדר חדש, pending, priority medium" [ref=e2876] [cursor=pointer]':
+                  - generic [ref=e2877]:
+                    - button "Medium priority" [ref=e2878]
+                    - generic [ref=e2879]:
+                      - heading "להזמין בלנדר חדש" [level=3] [ref=e2880]
+                      - group "Task metadata" [ref=e2881]:
+                        - 'generic "Due: Mar 15" [ref=e2882]': Mar 15
+                    - group "Task actions" [ref=e2883]:
+                      - button "Enter focus mode for this task" [ref=e2884]:
+                        - img [ref=e2885]
+                      - button "Start Pomodoro timer for this task" [ref=e2888]:
+                        - img [ref=e2889]
+                      - button "Edit this task" [ref=e2891]:
+                        - img [ref=e2892]
+                - 'button "Task: לבדוק את המצב פרווה של אוראו עם פרפלקסיטי - לשלוח לו צילומים של הפרווה +תוצאות בדיקות הדם והביופסיה, pending, priority medium" [ref=e2896] [cursor=pointer]':
+                  - generic [ref=e2897]:
+                    - button "Medium priority" [ref=e2898]
+                    - generic [ref=e2899]:
+                      - heading "לבדוק את המצב פרווה של אוראו עם פרפלקסיטי - לשלוח לו צילומים של הפרווה +תוצאות בדיקות הדם והביופסיה" [level=3] [ref=e2900]
+                      - group "Task metadata" [ref=e2901]:
+                        - 'generic "Due: Mar 8" [ref=e2902]': Mar 8
+                    - group "Task actions" [ref=e2903]:
+                      - button "Enter focus mode for this task" [ref=e2904]:
+                        - img [ref=e2905]
+                      - button "Start Pomodoro timer for this task" [ref=e2908]:
+                        - img [ref=e2909]
+                      - button "Edit this task" [ref=e2911]:
+                        - img [ref=e2912]
+                - 'button "Task: להכין ציר ירקות, pending, priority low" [ref=e2916] [cursor=pointer]':
+                  - generic [ref=e2917]:
+                    - button "Low priority" [ref=e2918]
+                    - generic [ref=e2919]:
+                      - heading "להכין ציר ירקות" [level=3] [ref=e2920]
+                      - group "Task metadata" [ref=e2921]:
+                        - 'generic "Due: Mar 15" [ref=e2922]': Mar 15
+                    - group "Task actions" [ref=e2923]:
+                      - button "Enter focus mode for this task" [ref=e2924]:
+                        - img [ref=e2925]
+                      - button "Start Pomodoro timer for this task" [ref=e2928]:
+                        - img [ref=e2929]
+                      - button "Edit this task" [ref=e2931]:
+                        - img [ref=e2932]
+        - generic [ref=e2936]:
+          - generic [ref=e2938] [cursor=pointer]:
+            - button [ref=e2939]:
+              - img [ref=e2940]
+            - heading "Development" [level=3] [ref=e2942]
+            - generic [ref=e2943]: "3"
+          - generic [ref=e2945]:
+            - generic [ref=e2946]:
+              - generic [ref=e2947]:
+                - generic [ref=e2948]:
+                  - generic [ref=e2949]: No Date
+                  - generic [ref=e2950]: "0"
+                - button [ref=e2951] [cursor=pointer]:
+                  - img [ref=e2952]
+              - generic [ref=e2955]:
+                - generic [ref=e2956]: No no date tasks
+                - button "Add no date task" [ref=e2957] [cursor=pointer]:
+                  - img [ref=e2958]
+                  - text: Add no date task
+            - generic [ref=e2959]:
+              - generic [ref=e2960]:
+                - generic [ref=e2961]:
+                  - generic [ref=e2962]: Overdue
+                  - generic [ref=e2963]: "0"
+                - button [ref=e2964] [cursor=pointer]:
+                  - img [ref=e2965]
+              - generic [ref=e2968]:
+                - generic [ref=e2969]: No overdue tasks
+                - button "Add overdue task" [ref=e2970] [cursor=pointer]:
+                  - img [ref=e2971]
+                  - text: Add overdue task
+            - generic [ref=e2972]:
+              - generic [ref=e2973]:
+                - generic [ref=e2974]:
+                  - generic [ref=e2975]: Today
+                  - generic [ref=e2976]: "0"
+                - button [ref=e2977] [cursor=pointer]:
+                  - img [ref=e2978]
+              - generic [ref=e2981]:
+                - generic [ref=e2982]: No today tasks
+                - button "Add today task" [ref=e2983] [cursor=pointer]:
+                  - img [ref=e2984]
+                  - text: Add today task
+            - generic [ref=e2985]:
+              - generic [ref=e2986]:
+                - generic [ref=e2987]:
+                  - generic [ref=e2988]: Tomorrow
+                  - generic [ref=e2989]: "0"
+                - button [ref=e2990] [cursor=pointer]:
+                  - img [ref=e2991]
+              - generic [ref=e2994]:
+                - generic [ref=e2995]: No tomorrow tasks
+                - button "Add tomorrow task" [ref=e2996] [cursor=pointer]:
+                  - img [ref=e2997]
+                  - text: Add tomorrow task
+            - generic [ref=e2998]:
+              - generic [ref=e2999]:
+                - generic [ref=e3000]:
+                  - generic [ref=e3001]: This Week
+                  - generic [ref=e3002]: "3"
+                - button [ref=e3003] [cursor=pointer]:
+                  - img [ref=e3004]
+              - generic [ref=e3006]:
+                - 'button "Task: להעלות קלוד קוד לvps ולתת גישה דרך טלגרם, pending, priority medium" [ref=e3007] [cursor=pointer]':
+                  - generic [ref=e3008]:
+                    - button "Medium priority" [ref=e3009]
+                    - generic [ref=e3010]:
+                      - heading "להעלות קלוד קוד לvps ולתת גישה דרך טלגרם" [level=3] [ref=e3011]
+                      - group "Task metadata" [ref=e3012]:
+                        - 'generic "Due: Feb 19" [ref=e3013]': Feb 19
+                    - group "Task actions" [ref=e3014]:
+                      - button "Enter focus mode for this task" [ref=e3015]:
+                        - img [ref=e3016]
+                      - button "Start Pomodoro timer for this task" [ref=e3019]:
+                        - img [ref=e3020]
+                      - button "Edit this task" [ref=e3022]:
+                        - img [ref=e3023]
+                - 'button "Task: ליצור מערכת נוטיפיקציות כשקלוד מסיים לעבוד (מופיע לי בפרפלקסיטי), pending, priority medium" [ref=e3027] [cursor=pointer]':
+                  - generic [ref=e3028]:
+                    - button "Medium priority" [ref=e3029]
+                    - generic [ref=e3030]:
+                      - heading "ליצור מערכת נוטיפיקציות כשקלוד מסיים לעבוד (מופיע לי בפרפלקסיטי)" [level=3] [ref=e3031]
+                      - group "Task metadata" [ref=e3032]:
+                        - 'generic "Due: Feb 26" [ref=e3033]': Feb 26
+                    - group "Task actions" [ref=e3034]:
+                      - button "Enter focus mode for this task" [ref=e3035]:
+                        - img [ref=e3036]
+                      - button "Start Pomodoro timer for this task" [ref=e3039]:
+                        - img [ref=e3040]
+                      - button "Edit this task" [ref=e3042]:
+                        - img [ref=e3043]
+                - 'button "Task: שתופיע נוטיפיקציה קטנה עם מס ליד הquicksort בפלאפון + שקוויק סורט בפלאפון ייראה כמו האחרים בלי האיקס, pending, priority medium" [ref=e3047] [cursor=pointer]':
+                  - generic [ref=e3048]:
+                    - button "Medium priority" [ref=e3049]
+                    - generic [ref=e3050]:
+                      - heading "שתופיע נוטיפיקציה קטנה עם מס ליד הquicksort בפלאפון + שקוויק סורט בפלאפון ייראה כמו האחרים בלי האיקס" [level=3] [ref=e3051]
+                      - group "Task metadata" [ref=e3052]:
+                        - 'generic "Due: Feb 26" [ref=e3053]': Feb 26
+                    - group "Task actions" [ref=e3054]:
+                      - button "Enter focus mode for this task" [ref=e3055]:
+                        - img [ref=e3056]
+                      - button "Start Pomodoro timer for this task" [ref=e3059]:
+                        - img [ref=e3060]
+                      - button "Edit this task" [ref=e3062]:
+                        - img [ref=e3063]
+            - generic [ref=e3067]:
+              - generic [ref=e3068]:
+                - generic [ref=e3069]:
+                  - generic [ref=e3070]: Later
+                  - generic [ref=e3071]: "0"
+                - button [ref=e3072] [cursor=pointer]:
+                  - img [ref=e3073]
+              - generic [ref=e3076]:
+                - generic [ref=e3077]: No later tasks
+                - button "Add later task" [ref=e3078] [cursor=pointer]:
+                  - img [ref=e3079]
+                  - text: Add later task
+        - generic [ref=e3080]:
+          - generic [ref=e3082] [cursor=pointer]:
+            - button [ref=e3083]:
+              - img [ref=e3084]
+            - heading "flow-state" [level=3] [ref=e3086]
+            - generic [ref=e3087]: "3"
+          - generic [ref=e3089]:
+            - generic [ref=e3090]:
+              - generic [ref=e3091]:
+                - generic [ref=e3092]:
+                  - generic [ref=e3093]: No Date
+                  - generic [ref=e3094]: "0"
+                - button [ref=e3095] [cursor=pointer]:
+                  - img [ref=e3096]
+              - generic [ref=e3099]:
+                - generic [ref=e3100]: No no date tasks
+                - button "Add no date task" [ref=e3101] [cursor=pointer]:
+                  - img [ref=e3102]
+                  - text: Add no date task
+            - generic [ref=e3103]:
+              - generic [ref=e3104]:
+                - generic [ref=e3105]:
+                  - generic [ref=e3106]: Overdue
+                  - generic [ref=e3107]: "0"
+                - button [ref=e3108] [cursor=pointer]:
+                  - img [ref=e3109]
+              - generic [ref=e3112]:
+                - generic [ref=e3113]: No overdue tasks
+                - button "Add overdue task" [ref=e3114] [cursor=pointer]:
+                  - img [ref=e3115]
+                  - text: Add overdue task
+            - generic [ref=e3116]:
+              - generic [ref=e3117]:
+                - generic [ref=e3118]:
+                  - generic [ref=e3119]: Today
+                  - generic [ref=e3120]: "2"
+                - button [ref=e3121] [cursor=pointer]:
+                  - img [ref=e3122]
+              - generic [ref=e3124]:
+                - 'button "Task: להוסיף ליצירת משימה חדשה דרך הפלאפון אפשרות לבחור פרויקט + להקטין קצת שטח מת בין תוכן ההודעה להגדרות למטה, pending, priority medium" [ref=e3125] [cursor=pointer]':
+                  - generic [ref=e3126]:
+                    - button "Medium priority" [ref=e3127]
+                    - generic [ref=e3128]:
+                      - heading "להוסיף ליצירת משימה חדשה דרך הפלאפון אפשרות לבחור פרויקט + להקטין קצת שטח מת בין תוכן ההודעה להגדרות למטה" [level=3] [ref=e3129]
+                      - group "Task metadata" [ref=e3130]
+                    - group "Task actions" [ref=e3131]:
+                      - button "Enter focus mode for this task" [ref=e3132]:
+                        - img [ref=e3133]
+                      - button "Start Pomodoro timer for this task" [ref=e3136]:
+                        - img [ref=e3137]
+                      - button "Edit this task" [ref=e3139]:
+                        - img [ref=e3140]
+                - 'button "Task: שמשימה לא תימחק בback בpwa בפלאפון, pending, priority medium" [ref=e3144] [cursor=pointer]':
+                  - generic [ref=e3145]:
+                    - button "Medium priority" [ref=e3146]
+                    - generic [ref=e3147]:
+                      - heading "שמשימה לא תימחק בback בpwa בפלאפון" [level=3] [ref=e3148]
+                      - group "Task metadata" [ref=e3149]
+                    - group "Task actions" [ref=e3150]:
+                      - button "Enter focus mode for this task" [ref=e3151]:
+                        - img [ref=e3152]
+                      - button "Start Pomodoro timer for this task" [ref=e3155]:
+                        - img [ref=e3156]
+                      - button "Edit this task" [ref=e3158]:
+                        - img [ref=e3159]
+            - generic [ref=e3163]:
+              - generic [ref=e3164]:
+                - generic [ref=e3165]:
+                  - generic [ref=e3166]: Tomorrow
+                  - generic [ref=e3167]: "0"
+                - button [ref=e3168] [cursor=pointer]:
+                  - img [ref=e3169]
+              - generic [ref=e3172]:
+                - generic [ref=e3173]: No tomorrow tasks
+                - button "Add tomorrow task" [ref=e3174] [cursor=pointer]:
+                  - img [ref=e3175]
+                  - text: Add tomorrow task
+            - generic [ref=e3176]:
+              - generic [ref=e3177]:
+                - generic [ref=e3178]:
+                  - generic [ref=e3179]: This Week
+                  - generic [ref=e3180]: "1"
+                - button [ref=e3181] [cursor=pointer]:
+                  - img [ref=e3182]
+              - 'button "Task: להוסיף תיזכורות, pending, priority medium" [ref=e3185] [cursor=pointer]':
+                - generic [ref=e3186]:
+                  - button "Medium priority" [ref=e3187]
+                  - generic [ref=e3188]:
+                    - heading "להוסיף תיזכורות" [level=3] [ref=e3189]
+                    - group "Task metadata" [ref=e3190]:
+                      - 'generic "Due: Feb 20" [ref=e3191]': Feb 20
+                  - group "Task actions" [ref=e3192]:
+                    - button "Enter focus mode for this task" [ref=e3193]:
+                      - img [ref=e3194]
+                    - button "Start Pomodoro timer for this task" [ref=e3197]:
+                      - img [ref=e3198]
+                    - button "Edit this task" [ref=e3200]:
+                      - img [ref=e3201]
+            - generic [ref=e3205]:
+              - generic [ref=e3206]:
+                - generic [ref=e3207]:
+                  - generic [ref=e3208]: Later
+                  - generic [ref=e3209]: "0"
+                - button [ref=e3210] [cursor=pointer]:
+                  - img [ref=e3211]
+              - generic [ref=e3214]:
+                - generic [ref=e3215]: No later tasks
+                - button "Add later task" [ref=e3216] [cursor=pointer]:
+                  - img [ref=e3217]
+                  - text: Add later task
+        - generic [ref=e3218]:
+          - generic [ref=e3220] [cursor=pointer]:
+            - button [ref=e3221]:
+              - img [ref=e3222]
+            - heading "Uncategorized" [level=3] [ref=e3224]
+            - generic [ref=e3225]: "4"
+          - generic [ref=e3227]:
+            - generic [ref=e3228]:
+              - generic [ref=e3229]:
+                - generic [ref=e3230]:
+                  - generic [ref=e3231]: No Date
+                  - generic [ref=e3232]: "0"
+                - button [ref=e3233] [cursor=pointer]:
+                  - img [ref=e3234]
+              - generic [ref=e3237]:
+                - generic [ref=e3238]: No no date tasks
+                - button "Add no date task" [ref=e3239] [cursor=pointer]:
+                  - img [ref=e3240]
+                  - text: Add no date task
+            - generic [ref=e3241]:
+              - generic [ref=e3242]:
+                - generic [ref=e3243]:
+                  - generic [ref=e3244]: Overdue
+                  - generic [ref=e3245]: "0"
+                - button [ref=e3246] [cursor=pointer]:
+                  - img [ref=e3247]
+              - generic [ref=e3250]:
+                - generic [ref=e3251]: No overdue tasks
+                - button "Add overdue task" [ref=e3252] [cursor=pointer]:
+                  - img [ref=e3253]
+                  - text: Add overdue task
+            - generic [ref=e3254]:
+              - generic [ref=e3255]:
+                - generic [ref=e3256]:
+                  - generic [ref=e3257]: Today
+                  - generic [ref=e3258]: "3"
+                - button [ref=e3259] [cursor=pointer]:
+                  - img [ref=e3260]
+              - generic [ref=e3262]:
+                - 'button "Task: לשלוח לנטלי את המצגת הגמורה, pending, priority medium" [ref=e3263] [cursor=pointer]':
+                  - generic [ref=e3264]:
+                    - button "Medium priority" [ref=e3265]
+                    - generic [ref=e3266]:
+                      - heading "לשלוח לנטלי את המצגת הגמורה" [level=3] [ref=e3267]
+                      - group "Task metadata" [ref=e3268]
+                    - group "Task actions" [ref=e3269]:
+                      - button "Enter focus mode for this task" [ref=e3270]:
+                        - img [ref=e3271]
+                      - button "Start Pomodoro timer for this task" [ref=e3274]:
+                        - img [ref=e3275]
+                      - button "Edit this task" [ref=e3277]:
+                        - img [ref=e3278]
+                - 'button "Task: להוסיף סרטון בלנדר נפרד לשקף הנוסף במצגת על בלנדר + סרטון סופי של משחק באנריל, pending, priority medium" [ref=e3282] [cursor=pointer]':
+                  - generic [ref=e3283]:
+                    - button "Medium priority" [ref=e3284]
+                    - generic [ref=e3285]:
+                      - heading "להוסיף סרטון בלנדר נפרד לשקף הנוסף במצגת על בלנדר + סרטון סופי של משחק באנריל" [level=3] [ref=e3286]
+                      - group "Task metadata" [ref=e3287]
+                    - group "Task actions" [ref=e3288]:
+                      - button "Enter focus mode for this task" [ref=e3289]:
+                        - img [ref=e3290]
+                      - button "Start Pomodoro timer for this task" [ref=e3293]:
+                        - img [ref=e3294]
+                      - button "Edit this task" [ref=e3296]:
+                        - img [ref=e3297]
+                - 'button "Task: לשטוף כלים + להוריד זבל + נקיון, pending, priority medium" [ref=e3301] [cursor=pointer]':
+                  - generic [ref=e3302]:
+                    - button "Medium priority" [ref=e3303]
+                    - generic [ref=e3304]:
+                      - heading "לשטוף כלים + להוריד זבל + נקיון" [level=3] [ref=e3305]
+                      - group "Task metadata" [ref=e3306]
+                    - group "Task actions" [ref=e3307]:
+                      - button "Enter focus mode for this task" [ref=e3308]:
+                        - img [ref=e3309]
+                      - button "Start Pomodoro timer for this task" [ref=e3312]:
+                        - img [ref=e3313]
+                      - button "Edit this task" [ref=e3315]:
+                        - img [ref=e3316]
+            - generic [ref=e3320]:
+              - generic [ref=e3321]:
+                - generic [ref=e3322]:
+                  - generic [ref=e3323]: Tomorrow
+                  - generic [ref=e3324]: "0"
+                - button [ref=e3325] [cursor=pointer]:
+                  - img [ref=e3326]
+              - generic [ref=e3329]:
+                - generic [ref=e3330]: No tomorrow tasks
+                - button "Add tomorrow task" [ref=e3331] [cursor=pointer]:
+                  - img [ref=e3332]
+                  - text: Add tomorrow task
+            - generic [ref=e3333]:
+              - generic [ref=e3334]:
+                - generic [ref=e3335]:
+                  - generic [ref=e3336]: This Week
+                  - generic [ref=e3337]: "1"
+                - button [ref=e3338] [cursor=pointer]:
+                  - img [ref=e3339]
+              - 'button "Task: לנסות MCP של פיגמה, pending, priority medium" [ref=e3342] [cursor=pointer]':
+                - generic [ref=e3343]:
+                  - button "Medium priority" [ref=e3344]
+                  - generic [ref=e3345]:
+                    - heading "לנסות MCP של פיגמה" [level=3] [ref=e3346]
+                    - group "Task metadata" [ref=e3347]:
+                      - 'generic "Due: Feb 20" [ref=e3348]': Feb 20
+                  - group "Task actions" [ref=e3349]:
+                    - button "Enter focus mode for this task" [ref=e3350]:
+                      - img [ref=e3351]
+                    - button "Start Pomodoro timer for this task" [ref=e3354]:
+                      - img [ref=e3355]
+                    - button "Edit this task" [ref=e3357]:
+                      - img [ref=e3358]
+            - generic [ref=e3362]:
+              - generic [ref=e3363]:
+                - generic [ref=e3364]:
+                  - generic [ref=e3365]: Later
+                  - generic [ref=e3366]: "0"
+                - button [ref=e3367] [cursor=pointer]:
+                  - img [ref=e3368]
+              - generic [ref=e3371]:
+                - generic [ref=e3372]: No later tasks
+                - button "Add later task" [ref=e3373] [cursor=pointer]:
+                  - img [ref=e3374]
+                  - text: Add later task

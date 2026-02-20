@@ -184,7 +184,7 @@ const formatDueDateLabel = (dueDate: string) => {
   padding: var(--space-3);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
-  border-left: 4px solid transparent;
+  border-inline-start: 4px solid transparent;
   border-radius: var(--radius-lg);
   cursor: grab;
   transition: all var(--duration-fast) ease;
@@ -192,26 +192,26 @@ const formatDueDateLabel = (dueDate: string) => {
 
 .task-card:hover {
   background: var(--state-hover-bg);
-  border-left-color: inherit; /* Preserve priority color on hover */
+  border-inline-start-color: inherit; /* Preserve priority color on hover */
   transform: translateY(-1px);
 }
 
-/* Priority shown via border-left on .task-card, not stripe */
+/* Priority shown via border-inline-start on .task-card, not stripe */
 .priority-stripe {
   display: none;
 }
 
-/* Priority colors via left border */
+/* Priority colors via inline-start border */
 .task-card[data-priority="high"] {
-  border-left-color: var(--color-priority-high);
+  border-inline-start-color: var(--color-priority-high);
 }
 
 .task-card[data-priority="medium"] {
-  border-left-color: var(--color-priority-medium);
+  border-inline-start-color: var(--color-priority-medium);
 }
 
 .task-card[data-priority="low"] {
-  border-left-color: var(--color-priority-low);
+  border-inline-start-color: var(--color-priority-low);
 }
 
 .task-title {

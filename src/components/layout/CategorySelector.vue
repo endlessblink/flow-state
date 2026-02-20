@@ -215,7 +215,7 @@ onUnmounted(() => {
   margin-bottom: var(--space-5);
   max-height: 280px;
   overflow-y: auto;
-  padding: 15px;
+  padding: var(--space-4);
 }
 
 .category-button {
@@ -310,7 +310,7 @@ onUnmounted(() => {
   height: 16px;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .project-name {

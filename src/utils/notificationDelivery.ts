@@ -21,6 +21,11 @@ function isTauri(): boolean {
   return !!(window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__
 }
 
+/** Detect if running inside Capacitor native app */
+function isCapacitorNative(): boolean {
+  return !!(window as any).Capacitor?.isNativePlatform?.()
+}
+
 /**
  * Send native Linux desktop notification via notify-send (freedesktop DBus).
  * Works with KDE Plasma, GNOME, XFCE, and other freedesktop-compliant DEs.
@@ -102,11 +107,38 @@ async function deliverViaBrowserAPI(options: DeliveryOptions): Promise<boolean> 
 }
 
 /**
+ * FEATURE-1345: Deliver notification via Capacitor Local Notifications.
+ * Uses the already-configured capacitorNotifications service.
+ */
+async function deliverViaCapacitor(options: DeliveryOptions): Promise<boolean> {
+  try {
+    const { showCapacitorNotification } = await import('@/services/notifications/capacitorNotifications')
+    return await showCapacitorNotification({
+      title: options.title,
+      body: options.body,
+      sound: options.sound,
+    })
+  } catch (error) {
+    console.warn('[NOTIFY] Capacitor delivery failed:', error)
+    return false
+  }
+}
+
+/**
  * Deliver a notification using the best available method:
+ * - Capacitor native → Local Notifications plugin
  * - Tauri + Linux → notify-send (KDE Plasma / freedesktop compatible)
  * - Browser / PWA → Browser Notification API
  */
 export async function deliverNotification(options: DeliveryOptions): Promise<boolean> {
+  // FEATURE-1345: Capacitor native — use Local Notifications plugin
+  if (isCapacitorNative()) {
+    const capSuccess = await deliverViaCapacitor(options)
+    if (capSuccess) return true
+    // Fall through to Browser API if Capacitor fails
+    console.log('[NOTIFY] Falling back to Browser Notification API')
+  }
+
   // In Tauri on Linux, use notify-send for native KDE Plasma integration
   if (isTauri() && navigator.platform?.toLowerCase().includes('linux')) {
     const nativeSuccess = await deliverViaNativeLinux(options)

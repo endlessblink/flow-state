@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
+// TASK-1158: Shared bridge ref populated by tasks.ts (breaks circular dependency)
+import { sharedTasksRef } from './canvasTaskBridge'
 import { breakGroupCycles, resetAllGroupsToRoot } from '@/utils/canvas/storeHelpers'
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
@@ -16,11 +18,11 @@ import { useCanvasPersistence } from './canvas/canvasPersistence'
 export * from './canvas/types'
 
 export const useCanvasStore = defineStore('canvas', () => {
-  // 1. Task Store Reference (Async Bridge)
-  const taskStoreRef = ref<{ tasks: Task[] } | null>(null)
-  if (typeof window !== 'undefined') {
-    import('@/stores/tasks').then(m => { taskStoreRef.value = m.useTaskStore() as unknown as { tasks: Task[] } })
-  }
+  // 1. Task Store Reference via Bridge (TASK-1158: breaks circular dependency)
+  // sharedTasksRef is populated by tasks.ts via a watcher — no dynamic import needed
+  const taskStoreRef = computed(() => ({
+    tasks: sharedTasksRef.value
+  }))
 
   // BUG-1084 v5: Flag to indicate that loadFromDatabase has completed at least once
   // Used by useCanvasOrchestrator to wait for store initialization before syncing

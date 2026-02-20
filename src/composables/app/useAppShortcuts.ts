@@ -94,7 +94,8 @@ export function useAppShortcuts() {
         }
 
         // ? to toggle keyboard shortcuts panel (TASK-1319)
-        if (event.key === '?' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        // Use event.code for layout-independent detection (Hebrew layout Shift+/ doesn't produce '?')
+        if ((event.key === '?' || (event.shiftKey && event.code === 'Slash')) && !event.ctrlKey && !event.metaKey && !event.altKey) {
             event.preventDefault()
             window.dispatchEvent(new CustomEvent('open-shortcuts-panel'))
         }

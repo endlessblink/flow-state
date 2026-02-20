@@ -182,6 +182,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useNotificationStore } from '@/stores/notifications'
 import type { NotificationPreferences } from '@/types/recurrence'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { deliverNotification } from '@/utils/notificationDelivery'
 
 const props = defineProps<Props>()
 
@@ -290,17 +291,12 @@ const sendTestNotification = async () => {
   if (!isPermissionGranted.value) return
 
   try {
-    const notification = new Notification('Test Notification', {
+    await deliverNotification({
+      title: 'Test Notification',
       body: 'This is a test notification from FlowState',
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
       tag: 'test-notification',
-      requireInteraction: false
+      sound: true
     })
-
-    setTimeout(() => {
-      notification.close()
-    }, 3000)
   } catch (error) {
     console.error('Error sending test notification:', error)
   }

@@ -1,12 +1,12 @@
 import { defineStore, acceptHMRUpdate } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useTaskStates } from './tasks/taskStates'
 import { useTaskPersistence } from './tasks/taskPersistence'
 import { useTaskOperations } from './tasks/taskOperations'
 import { useTaskHistory } from './tasks/taskHistory'
 import { useProjectStore } from './projects'
-// BUG-1099: Removed synchronous import of canvas store to break circular dependency
-// Canvas store access is now done via dynamic import in updateTaskFromSync
+// TASK-1158: Canvas sync via shared bridge (breaks circular dependency)
+import { canvasSyncTrigger, sharedTasksRef } from './canvasTaskBridge'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
@@ -153,6 +153,12 @@ export const useTaskStore = defineStore('tasks', () => {
   // SAFETY: Pass _rawTasks for undo/redo state restoration
   const history = useTaskHistory(_rawTasks, manualOperationInProgress, saveTasksToStorage)
   const { restoreState, undoRedoEnabledActions } = history
+
+  // TASK-1158: Sync tasks to shared bridge ref so canvas can read them
+  // without importing this store (breaks circular dependency)
+  watch(() => _rawTasks.value, (tasks) => {
+    sharedTasksRef.value = tasks
+  }, { immediate: true })
 
   // 5. Initialization Logic
   const initializeFromDatabase = async () => {
@@ -371,14 +377,9 @@ export const useTaskStore = defineStore('tasks', () => {
             _rawTasks.value[idx] = normalizedTask
 
             // Only trigger canvas sync if there was an actual visual change
-            // BUG-1099: Use dynamic import to avoid circular dependency TDZ error
+            // TASK-1158: Use shared bridge ref (no circular dependency)
             if (hasRelevantChange) {
-              import('./canvas').then(({ useCanvasStore }) => {
-                try {
-                  const canvasStore = useCanvasStore()
-                  canvasStore.syncTrigger++
-                } catch { /* Canvas store may not be initialized in all contexts */ }
-              }).catch(() => { /* Canvas module not available */ })
+              canvasSyncTrigger.value++
             }
           }
         } else {

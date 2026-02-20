@@ -41,6 +41,21 @@
               />
             </section>
 
+            <!-- FEATURE-1363: Task Reminders -->
+            <section class="form-section">
+              <h3 class="section-title">
+                Reminders
+              </h3>
+              <ReminderPicker
+                :reminders="editedTask.reminders || []"
+                :due-date="editedTask.dueDate"
+                :due-time="editedTask.dueTime"
+                @add-reminder="handleAddReminder"
+                @remove-reminder="handleRemoveReminder"
+                @dismiss-reminder="handleDismissReminder"
+              />
+            </section>
+
             <!-- Subtasks -->
             <TaskEditSubtasks
               :subtasks="editedTask.subtasks"
@@ -126,6 +141,8 @@ import TaskEditSubtasks from './edit/TaskEditSubtasks.vue'
 import TaskEditChildTasks from './edit/TaskEditChildTasks.vue'
 import RecurrenceSelector from './edit/RecurrenceSelector.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
+import ReminderPicker from '@/components/notifications/ReminderPicker.vue'
+import type { TaskReminder } from '@/types/notifications'
 
 // Props & Emitters
 const props = defineProps<{
@@ -267,6 +284,28 @@ function handleAIAcceptDate(date: string) {
 function handleAIAcceptTitle(title: string) {
   editedTask.value.title = title
   showAIAssist.value = false
+}
+
+// --- Reminder Handlers (FEATURE-1363) ---
+
+function handleAddReminder(reminder: TaskReminder) {
+  if (!editedTask.value.reminders) {
+    editedTask.value.reminders = []
+  }
+  editedTask.value.reminders.push(reminder)
+}
+
+function handleRemoveReminder(reminderId: string) {
+  if (!editedTask.value.reminders) return
+  editedTask.value.reminders = editedTask.value.reminders.filter(r => r.id !== reminderId)
+}
+
+function handleDismissReminder(reminderId: string) {
+  if (!editedTask.value.reminders) return
+  const reminder = editedTask.value.reminders.find(r => r.id === reminderId)
+  if (reminder) {
+    reminder.dismissed = true
+  }
 }
 
 onMounted(() => document.addEventListener('keydown', handleKeyDown))

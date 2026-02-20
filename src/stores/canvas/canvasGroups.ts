@@ -15,7 +15,8 @@ export const useCanvasGroups = (
         saveGroupsToLocalStorage: (groups: CanvasGroup[]) => void
         deleteGroupRemote: (id: string) => Promise<void>
     },
-    taskStoreRef: { value: { tasks: Task[] } | null }
+    // TASK-1158: Changed from mutable ref to computed ref (via bridge)
+    taskStoreRef: { readonly value: { tasks: Task[] } | null }
 ) => {
     const _rawGroups = ref<CanvasGroup[]>([])
     const activeGroupId = ref<string | null>(null)

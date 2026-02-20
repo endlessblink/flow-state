@@ -1,11 +1,11 @@
 {
-  "version": "1.2.85",
-  "notes": "BUG-1360: Fix canvas task cards changing size when zooming — removed LOD-based content hiding and dimension overrides so cards maintain consistent size at all zoom levels",
-  "pub_date": "2026-02-19T15:28:44.730Z",
+  "version": "1.2.86",
+  "notes": "BUG-1365: fix canvas done tasks reappear after refresh + board empty columns",
+  "pub_date": "2026-02-19T17:19:14.007Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRS9BZTN4N0ZUQUpPcXFoNVVEck5FWGNnWURNOUNIY1hKZEY3Q2pvLzdYZ1FONVZCNEZ0Q1R0cFBHUWRHUFhsM3l5MU05M1VsaWFEYWdXOXlnbWd6dlFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxNTE0OTI0CWZpbGU6Rmxvd1N0YXRlXzEuMi44NV9hbWQ2NC5BcHBJbWFnZQpBUDNGMTQ5R0hYd0N4VlBwMU9XWUxDZkltd3lIZ2RUcFhBWkdXMnFqaXNhaytWemFBdDBJcWxFN2FqZkUyVENYUUdrUlkveWhXWko2S3hSOUhETTlBUT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.85_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTR2TmJ4QURpWW9FTW1wWEE1S0pXU0FGQkE2V1V4TXc2S0d2Mmt4QXh1bmlDQzBhY0pPa21hcWpzSENWQjVvS25ia0NKQ1dJZ2ZMY0dwblRpaEx0REEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxNTIxNTUzCWZpbGU6Rmxvd1N0YXRlXzEuMi44Nl9hbWQ2NC5BcHBJbWFnZQpxOHZuZ3VBSzJMdmpuc09aQnpLeHprTU5WeHRMQkpXMkl4REhqQ2h2di9DRHQxQ3B0UWozQXIxS0ROd0Y4eGw3UUM0bndKYUFYYzZSUVZacHhFVzJCQT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.86_amd64.AppImage"
     }
   }
 }

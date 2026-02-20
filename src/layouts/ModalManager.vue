@@ -101,6 +101,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Task, type Project } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -127,6 +128,8 @@ const CommandPalette = createLazyModal(() => import('@/components/layout/Command
 import { useSettingsStore } from '@/stores/settings'
 
 // Stores
+const router = useRouter()
+const route = useRoute()
 const uiStore = useUIStore()
 const settingsStore = useSettingsStore()
 const taskStore = useTaskStore()
@@ -226,8 +229,21 @@ const handleSearchSelectTask = (task: Task) => {
   openEditTask(task)
 }
 
-const handleSearchSelectProject = (_project: Project) => {
-  // TODO: Navigate to project view or filter by project
+const handleSearchSelectProject = (project: Project) => {
+  // Set active project and clear other filters
+  taskStore.setActiveProject(project.id)
+  taskStore.setSmartView(null)
+  taskStore.setActiveDurationFilter(null)
+  taskStore.setActiveStatusFilter(null)
+
+  // Close search modal
+  showSearchModal.value = false
+
+  // Navigate to a view that supports project filtering if not already on one
+  const projectSupportingViews = ['board', 'canvas', 'all-tasks']
+  if (!projectSupportingViews.includes(route.name as string)) {
+    router.push({ name: 'board' })
+  }
 }
 
 const closeQuickTaskCreate = () => {

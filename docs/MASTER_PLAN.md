@@ -171,15 +171,15 @@
 
 ---
 
-### BUG-1328: Canvas sync 406 error — "Could not fetch latest version for retry" (🔄 IN PROGRESS)
+### ~~BUG-1328~~: Canvas sync 406 error — "Could not fetch latest version for retry" (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-20)
 
 **Problem**: Canvas view shows red toast "Sync Failed: Could not fetch latest version for retry" with 406 (Not Acceptable) HTTP error on the `tasks` endpoint. `[NODE-SYNC] Failed` appears in console.
 
 **Root Cause**: `useNodeSync.ts:207-208` — when optimistic lock update returns 0 rows (entity not in DB), code assumes version mismatch and retries with `.single()`. PostgREST returns 406 (PGRST116) when `.single()` finds 0 rows. Code throws instead of handling gracefully. Other parts of codebase (sync orchestrator, gamification store) already handle PGRST116 — this is the one spot that doesn't.
 
-**Fix**: Handle PGRST116 and missing entity gracefully in retry path — return false instead of throwing, suppress error toast for non-recoverable "entity not found" scenarios.
+**Fix**: Handle PGRST116 and missing entity gracefully in retry path — return false instead of throwing, suppress error toast for non-recoverable "entity not found" scenarios. Defense-in-depth: catch block also suppresses toast for any PGRST116 that reaches it.
 
 **File**: `src/composables/canvas/useNodeSync.ts:197-209`
 
@@ -3400,6 +3400,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
 | **BUG-1346** | **P1** | **📋 Mobile Inbox tab broken in PWA on mobile — layout/design broken** |
 | ~~**TASK-1362**~~ | **P0** | ✅ **Calendar task selection, multi-select & keyboard actions — click to select, Ctrl+click multi-select, Delete→inbox, Shift+Delete→remove, drag-back to inbox** (✅ DONE 2026-02-20) |
+| ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
+| ~~**BUG-1367**~~ | **P2** | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20) |
+| ~~**BUG-1368**~~ | **P2** | ✅ **? keyboard shortcut broken on Hebrew layout — event.key check fails on non-Latin layouts, added event.code fallback** (✅ DONE 2026-02-20) |
 | **TASK-1345** | **P2** | **🔄 Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering** |
 | **TASK-1344** | **P2** | **🔄 AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync — code done, pending migration deploy + user test** |
 | **FEATURE-1345** | **P2** | **🔄 Capacitor Android App — wrap Vue PWA for Play Store distribution (config + build scaffold done)** |

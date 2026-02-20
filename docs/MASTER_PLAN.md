@@ -3399,7 +3399,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
 | **BUG-1346** | **P1** | **📋 Mobile Inbox tab broken in PWA on mobile — layout/design broken** |
-| **TASK-1362** | **P0** | **📋 Calendar task selection, multi-select & keyboard actions — click to select, Ctrl+click multi-select, Delete→inbox, Shift+Delete→remove, drag-back to inbox** |
+| ~~**TASK-1362**~~ | **P0** | ✅ **Calendar task selection, multi-select & keyboard actions — click to select, Ctrl+click multi-select, Delete→inbox, Shift+Delete→remove, drag-back to inbox** (✅ DONE 2026-02-20) |
 | **TASK-1345** | **P2** | **🔄 Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering** |
 | **TASK-1344** | **P2** | **🔄 AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync — code done, pending migration deploy + user test** |
 | **FEATURE-1345** | **P2** | **🔄 Capacitor Android App — wrap Vue PWA for Play Store distribution (config + build scaffold done)** |

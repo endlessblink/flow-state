@@ -365,6 +365,24 @@ export const useTimerStore = defineStore('timer', () => {
     }
 
     if (isSessionStopped) {
+      // BUG-1354: Only process stop events for our CURRENT session.
+      // Stale echoes from cleared sessions (via clearExistingSession) arrive with
+      // the old device_leader_id, bypassing the own-echo guard above.
+      // Previously, this block unconditionally killed currentSession, destroying
+      // a newly-started session when the echo for the OLD session arrived.
+      if (currentSession.value && currentSession.value.id !== newDoc.id) {
+        if (import.meta.env.DEV) {
+          console.log('🍅 [BUG-1354] Ignoring stop echo for different session:', {
+            stoppedSessionId: newDoc.id,
+            currentSessionId: currentSession.value.id
+          })
+        }
+        // Track as completed to prevent resurrection via stale heartbeat
+        completedSessionIds.add(newDoc.id)
+        setTimeout(() => completedSessionIds.delete(newDoc.id), 120_000)
+        return
+      }
+
       if (import.meta.env.DEV) {
         console.log('🍅 [TIMER] Remote stop received - clearing session', {
           sessionId: newDoc.id,
@@ -490,6 +508,13 @@ export const useTimerStore = defineStore('timer', () => {
               .from('timer_sessions')
               .update({ is_active: false, completed_at: new Date().toISOString() })
               .eq('id', existing.id)
+
+            // BUG-1354: Pre-track cleared session so its Realtime echo is ignored.
+            // The echo arrives with the OLD device_leader_id (especially after page
+            // reload where deviceId changes), bypassing the own-echo guard at line 345.
+            // Without this, the echo unconditionally kills the newly-started session.
+            completedSessionIds.add(existing.id)
+            setTimeout(() => completedSessionIds.delete(existing.id), 120_000)
           }
         } catch (clearError) {
           console.warn('🍅 [TIMER] Failed to clear existing session:', clearError)
@@ -689,7 +714,10 @@ export const useTimerStore = defineStore('timer', () => {
       const lastTaskId = session.taskId
 
       if (session.taskId && session.taskId !== 'general' && !session.isBreak) {
-        const task = taskStore.tasks.find(t => t.id === session.taskId)
+        // BUG-1354: Use _rawTasks to find task regardless of smart view filters.
+        // taskStore.tasks is filtered — if a smart view is active, the task won't be
+        // found and completedPomodoros won't increment.
+        const task = taskStore._rawTasks.find(t => t.id === session.taskId)
         if (task) {
           const newCount = (task.completedPomodoros || 0) + 1
           taskStore.updateTask(session.taskId, {

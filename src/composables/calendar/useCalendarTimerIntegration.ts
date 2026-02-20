@@ -57,7 +57,11 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
    * (e.g., timer started from kanban board, then user opens calendar).
    */
   const initGrowthTrackingForTask = (taskId: string) => {
-    const task = taskStore.tasks.find(t => t.id === taskId)
+    // BUG-1354: Use _rawTasks instead of filtered 'tasks'.
+    // Calendar shows tasks from calendarFilteredTasks (bypasses smart view),
+    // but taskStore.tasks applies smart view filters. If a smart view is active,
+    // the task is visible on calendar but NOT in taskStore.tasks → lookup fails silently.
+    const task = taskStore._rawTasks.find(t => t.id === taskId)
     if (!task?.instances) return
 
     const dateStr = getDateString(_currentDate.value)
@@ -109,10 +113,15 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
       taskStatus: calEvent.taskStatus
     })
 
-    const task = taskStore.tasks.find(t => t.id === calEvent.taskId)
+    // BUG-1354: Use _rawTasks instead of filtered 'tasks'.
+    // Calendar shows tasks from calendarFilteredTasks (bypasses smart view filters),
+    // but taskStore.tasks applies smart view + status + duration filters.
+    // If any smart view is active, the task is visible on the calendar but NOT found
+    // by taskStore.tasks.find() → timer silently fails to start → "doesn't lengthen".
+    const task = taskStore._rawTasks.find(t => t.id === calEvent.taskId)
     if (!task) {
-      console.error('🎯 [CALENDAR-TIMER] Task not found in store:', calEvent.taskId,
-        'Available tasks:', taskStore.tasks.length)
+      console.error('🎯 [CALENDAR-TIMER] Task not found in _rawTasks:', calEvent.taskId,
+        'Total raw tasks:', taskStore._rawTasks.length)
       return
     }
 

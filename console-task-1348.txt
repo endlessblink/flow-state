@@ -1,0 +1,332 @@
+Total messages: 330 (Errors: 1, Warnings: 8)
+
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1282} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[DEBUG] [vite] hot updated: /src/components/settings/tabs/AISettingsTab.vue @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[DEBUG] [vite] hot updated: /src/components/settings/tabs/AISettingsTab.vue @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1272} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1262} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Recording cancelled @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Recording cancelled @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Recording cancelled @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] Unsubscribing explicitly. @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[WARNING] 📡 [REALTIME] Connection dropped (CLOSED): unknown reason @ http://localhost:5546/src/utils/consoleFilter.ts:117
+[LOG] [MobileDetection] Checked: {isMobile: false, isMobileDevice: false, isSmallScreen: false, isTouch: false, width: 913} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [App] Platform detected: {tauri: false, capacitor: false} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[DEBUG] [vite] hot updated: /src/App.vue @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[LOG] [GROUPS] breakGroupCycles called with 9 groups @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[DEBUG] [SUPABASE-HISTOGRAM] loadFromDatabase {totalCount: 166, uniqueCount: 166} @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[LOG] [Gamification] Already initialized @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] Initial tab visibility: visible @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] Added tab visibility listeners for: visibilitychange @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [MobileDetection] Checked: {isMobile: false, isMobileDevice: false, isSmallScreen: false, isTouch: false, width: 913} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Gamification] Already recorded activity for today: 2026-02-17 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🎮 [GAMIFICATION] Initialized successfully @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Challenges] Already initialized @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [SafariITP] User interaction recorded - ITP counter reset @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Already initialized, skipping @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Initialized successfully @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[WARNING] [Vue warn]: onMounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement. @ http://localhost:5546/src/utils/consoleFilter.ts:117
+[WARNING] [Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement. @ http://localhost:5546/src/utils/consoleFilter.ts:117
+[LOG] 📡 [APP-INIT] Realtime subscription created with project, task, and timer handlers @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] Connecting to channel: db-changes-717f5209-1771346147191-8dpcfx (Attempt 1) @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] Connected! 🟢 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📊 [FEATURE-1317] Work profile insights auto-refreshed @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[ERROR] [naive/global-style]: More than one n-global-style exist in the document.body. Only the first mounted one will work. @ http://localhost:5546/src/utils/consoleFilter.ts:143
+[LOG] [VOICE] Recording cancelled @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Recording cancelled @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Recording cancelled @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] Unsubscribing explicitly. @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[WARNING] 📡 [REALTIME] Connection dropped (CLOSED): unknown reason @ http://localhost:5546/src/utils/consoleFilter.ts:117
+[LOG] [MobileDetection] Checked: {isMobile: false, isMobileDevice: false, isSmallScreen: false, isTouch: false, width: 913} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [App] Platform detected: {tauri: false, capacitor: false} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[DEBUG] [vite] hot updated: /src/App.vue @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[LOG] [GROUPS] breakGroupCycles called with 9 groups @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[DEBUG] [SUPABASE-HISTOGRAM] loadFromDatabase {totalCount: 166, uniqueCount: 166} @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[LOG] [Gamification] Already initialized @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] Initial tab visibility: visible @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] Added tab visibility listeners for: visibilitychange @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [MobileDetection] Checked: {isMobile: false, isMobileDevice: false, isSmallScreen: false, isTouch: false, width: 913} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Gamification] Already recorded activity for today: 2026-02-17 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🎮 [GAMIFICATION] Initialized successfully @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Challenges] Already initialized @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [SafariITP] User interaction recorded - ITP counter reset @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Already initialized, skipping @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Initialized successfully @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[WARNING] [Vue warn]: onMounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement. @ http://localhost:5546/src/utils/consoleFilter.ts:117
+[WARNING] [Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement. @ http://localhost:5546/src/utils/consoleFilter.ts:117
+[LOG] 📡 [APP-INIT] Realtime subscription created with project, task, and timer handlers @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] Connecting to channel: db-changes-717f5209-1771346147191-8dpcfx (Attempt 1) @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] Connected! 🟢 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 85accc3c, name: Work} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: a737226b, name: My Projects} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: f25496b3, name: כנס / תערוכה נטלי} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 3c1f66b2, name: משחק Blood And Rust} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 650a1e2d, name: Home} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: c8ff9d0f, name: Development} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 463cd84c, name: flow-state} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1252} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📊 [FEATURE-1317] Work profile insights auto-refreshed @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 85accc3c, name: Work} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: a737226b, name: My Projects} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: f25496b3, name: כנס / תערוכה נטלי} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 3c1f66b2, name: משחק Blood And Rust} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 650a1e2d, name: Home} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: c8ff9d0f, name: Development} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 463cd84c, name: flow-state} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 85accc3c, name: Work} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: a737226b, name: My Projects} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: f25496b3, name: כנס / תערוכה נטלי} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 3c1f66b2, name: משחק Blood And Rust} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 650a1e2d, name: Home} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: c8ff9d0f, name: Development} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] PROJECT event received: {eventType: UPDATE, table: projects, id: 463cd84c, name: flow-state} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1242} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] Tab visibility changed: visible → hidden @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[DEBUG] [vite] connecting... @ http://localhost:5546/@vite/client:732
+[DEBUG] [vite] connected. @ http://localhost:5546/@vite/client:826
+[LOG] [Supabase] Using: https://api.in-theflow.com @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [FlowState] Build: v24-bug1090-fix2-20260127 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📥 [STATIC_CACHE] Loading: /src/assets/styles.css @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🚀 [MAIN] Starting app initialization... @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🌐 [MAIN] Browser environment detected @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📊 [MAIN] Monitoring systems active @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [PERSISTENT-REF] Not in Tauri, skipping preload @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [MobileDetection] Checked: {isMobile: false, isMobileDevice: false, isSmallScreen: false, isTouch: false, width: 913} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [AUTH:1771346550268-0s6wh1] Initializing auth... @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [AUTH:1771346550268-0s6wh1] Fetching session from localStorage... @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [App] Platform detected: {tauri: false, capacitor: false} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [AUTH:1771346550268-0s6wh1] Session found: true endlessblink@gmail.com @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [AUTH] Scheduling token refresh in 49 minutes @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [AUTH] Guest data already migrated for this user, skipping @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Auth became ready, initializing timer store... @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] initializeStore starting (auth ready)... @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Gamification] Initializing for user: 717f5209 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Challenges] Initializing for user: 717f5209 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 👤 [AUTH:1771346550268-0s6wh1] Auth state changed: INITIAL_SESSION current: 717f5209 → new: 717f5209 hasSession: true → true @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] fetchActiveTimerSession result: {id: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, isActive: true, isPaused: false, remainingTime: 1242, deviceLeaderId: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Applied drift correction: 4 seconds, new remaining: 1238 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Running as follower, leader is still active {leaderId: kde-widget, lastSeen: 2026-02-17T16:42:26.199Z, timeUntilTimeout: 26s} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [GROUPS] breakGroupCycles called with 9 groups @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[DEBUG] [SUPABASE-HISTOGRAM] loadFromDatabase {totalCount: 166, uniqueCount: 166} @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[LOG] [Gamification] Initializing for user: 717f5209 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Ollama] Initializing provider... @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] Initial tab visibility: visible @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] Added tab visibility listeners for: visibilitychange @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [MobileDetection] Checked: {isMobile: false, isMobileDevice: false, isSmallScreen: false, isTouch: false, width: 913} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Gamification] Already recorded activity for today: 2026-02-17 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Gamification] Initialized successfully @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Challenges] Need to generate daily challenges @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Challenges] Midnight refresh scheduled in 317 minutes @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Challenges] Initialized successfully @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Ollama] Auto-detected Ollama instance @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Gamification] Already recorded activity for today: 2026-02-17 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Gamification] Initialized successfully @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Gamification] Already recorded activity for today: 2026-02-17 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🎮 [GAMIFICATION] Initialized successfully @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [Challenges] Already initialized @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [SafariITP] User interaction recorded - ITP counter reset @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Starting with settings: {enabled: true, milestones: Array(3), channels: Proxy(Object), totalTasks: 166, notificationPermission: denied} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Tick #1: 0 blocks found | 166 total tasks | 28 with instances | 0 with scheduledDate=today(2026-02-17) | Notification.permission=denied @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "להכין תוכן לשיעור של ענבר1": 1 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "לשלוח הצעת מחיר על היום הרצאה": 1 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "לעבור על הדברים באובסידיאן דיילי קולקט ולהעביר לפלו-סטייט + לתזמן משימות מהצד + לעבור ולמיין את כל הטאבים בזן דפדפן1": 2 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Notification polling started (15s interval) @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Initialized successfully @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[WARNING] [Vue warn]: onMounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement. @ http://localhost:5546/src/utils/consoleFilter.ts:117
+[WARNING] [Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement. @ http://localhost:5546/src/utils/consoleFilter.ts:117
+[LOG] 📡 [APP-INIT] Realtime subscription created with project, task, and timer handlers @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] Connecting to channel: db-changes-717f5209-1771346550268-0s6wh1 (Attempt 1) @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] Connected! 🟢 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📊 [FEATURE-1317] Work profile insights auto-refreshed @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1232} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 💡 [WakeLock] Screen wake lock is active @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1222} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Tick #2: 0 blocks found | 166 total tasks | 28 with instances | 0 with scheduledDate=today(2026-02-17) | Notification.permission=denied @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "להכין תוכן לשיעור של ענבר1": 1 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "לשלוח הצעת מחיר על היום הרצאה": 1 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "לעבור על הדברים באובסידיאן דיילי קולקט ולהעביר לפלו-סטייט + לתזמן משימות מהצד + לעבור ולמיין את כל הטאבים בזן דפדפן1": 2 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1212} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Tick #3: 0 blocks found | 166 total tasks | 28 with instances | 0 with scheduledDate=today(2026-02-17) | Notification.permission=denied @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "להכין תוכן לשיעור של ענבר1": 1 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "לשלוח הצעת מחיר על היום הרצאה": 1 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "לעבור על הדברים באובסידיאן דיילי קולקט ולהעביר לפלו-סטייט + לתזמן משימות מהצד + לעבור ולמיין את כל הטאבים בזן דפדפן1": 2 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1202} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[DEBUG] [vite] hot updated: /src/assets/styles.css @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[DEBUG] [vite] hot updated: /src/views/BoardView.vue @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[DEBUG] [vite] hot updated: /src/components/kanban/KanbanSwimlane.vue @ http://localhost:5546/src/utils/consoleFilter.ts:128
+[LOG] [VOICE] Browser support check: {hasNavigator: true, hasMediaDevices: true, hasGetUserMedia: true, hasMediaRecorder: true, isSupported: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [VOICE] Recording cancelled @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1192} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Tick #4: 0 blocks found | 166 total tasks | 28 with instances | 0 with scheduledDate=today(2026-02-17) | Notification.permission=denied @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "להכין תוכן לשיעור של ענבר1": 1 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "לשלוח הצעת מחיר על היום הרצאה": 1 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] [TIME-BLOCK] Task "לעבור על הדברים באובסידיאן דיילי קולקט ולהעביר לפלו-סטייט + לתזמן משימות מהצד + לעבור ולמיין את כל הטאבים בזן דפדפן1": 2 instances, 0 for today [] @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1182} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1172} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1162} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1152} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1142} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1132} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1122} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1112} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 📡 [REALTIME] TIMER event received: {eventType: UPDATE, sessionId: fbbcd14e, isActive: true, remainingTime: 1102} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload: {hasPayload: true, eventType: UPDATE, table: timer_sessions, hasNew: true, hasOld: true} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] handleRemoteTimerUpdate received: {sessionId: fbbcd14e-84c4-42c7-9f67-0da363bb15bf, is_active: true, is_active_type: boolean, isSessionStopped: false, device_leader_id: kde-widget} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [TIMER] Yielding leadership to: kde-widget @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession userId: 717f5209-42d8-4bb9-8781-740107a384e5 @ http://localhost:5546/src/utils/consoleFilter.ts:113
+[LOG] 🍅 [DB] fetchActiveTimerSession result: {hasData: true, error: undefined} @ http://localhost:5546/src/utils/consoleFilter.ts:113

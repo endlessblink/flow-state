@@ -85,7 +85,7 @@ const dismiss = () => {
 .tooltip-card {
   background: var(--bg-secondary) !important;
   border: 1px solid var(--border-default) !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: var(--shadow-dark-xl) !important;
   border-radius: 16px !important;
 }
 
@@ -93,7 +93,7 @@ const dismiss = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .tooltip-body {

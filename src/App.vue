@@ -83,6 +83,11 @@ import { useMobileDetection } from '@/composables/useMobileDetection'
 import { initializeBraveProtection } from '@/utils/braveProtection'
 import { useTauriDebug } from '@/composables/useTauriDebug'
 import { isTauri as isTauriFn, isCapacitor as isCapacitorFn } from '@/utils/platform'
+import { useRouter } from 'vue-router'
+// FEATURE-1345: Capacitor Android services
+import { initCapacitorStatusBar } from '@/composables/useCapacitorStatusBar'
+import { initCapacitorLifecycle } from '@/composables/useCapacitorLifecycle'
+import { initCapacitorNotifications } from '@/services/notifications/capacitorNotifications'
 
 // Refs for child components
 const mainLayout = ref<InstanceType<typeof MainLayout> | null>(null)
@@ -92,6 +97,7 @@ const aiSetupWizard = ref<InstanceType<typeof AISetupWizard> | null>(null)
 // Core Composables
 const { isMobile } = useMobileDetection()
 const { handleKeydown } = useAppShortcuts()
+const appRouter = useRouter()
 
 // Startup state - check Tauri/Capacitor AFTER mount to ensure globals are injected
 const startupComplete = ref(false)
@@ -145,6 +151,16 @@ onMounted(async () => {
     const tauriDebug = useTauriDebug()
     tauriDebug.startMonitoring()
     console.log('[App] Tauri memory monitoring started')
+  }
+
+  // FEATURE-1345: Initialize Capacitor Android services
+  if (isCapacitorApp.value) {
+    await Promise.all([
+      initCapacitorStatusBar(),
+      initCapacitorNotifications(),
+      initCapacitorLifecycle(appRouter),
+    ])
+    console.log('[App] Capacitor services initialized')
   }
 
   // BUG-1056: Initialize Brave browser detection

@@ -255,9 +255,11 @@ export function useNodeSync(
 
             const { showToast } = useToast()
 
-            // TASK-1177: Show toast for ALL errors including timeouts
-            // Previously timeouts were silenced, leading to silent data loss
-            if (err.message?.includes('timed out')) {
+            // BUG-1328: Suppress toast for PGRST116 (entity not found) —
+            // not actionable by user, happens when node was deleted on another device
+            if (err.code === 'PGRST116') {
+                console.warn(`⚠️ [NODE-SYNC] Entity not found (PGRST116) — suppressing toast`)
+            } else if (err.message?.includes('timed out')) {
                 // Show warning toast for timeouts - changes will be retried
                 showToast('Sync timed out - changes will retry automatically', 'warning')
             } else {

@@ -259,6 +259,11 @@
       <span class="menu-text">{{ deleteText }}</span>
     </button>
 
+    <button v-if="!isBatchOperation" class="menu-item danger" @click="permanentlyDeleteTask">
+      <Trash2 :size="16" class="menu-icon" />
+      <span class="menu-text">Permanently Delete</span>
+    </button>
+
     <!-- AI Assist Popover -->
     <AITaskAssistPopover
       :is-visible="showAIAssist"
@@ -328,6 +333,7 @@ const emit = defineEmits<{
   close: []
   edit: [taskId: string]
   confirmDelete: [taskId: string, instanceId?: string, isCalendarEvent?: boolean]
+  confirmPermanentDelete: [taskId: string]
   clearSelection: []
   setPriority: [priority: 'low' | 'medium' | 'high']
   setStatus: [status: 'planned' | 'in_progress' | 'done']
@@ -710,6 +716,13 @@ const enterFocus = () => {
   }
 }
 
+const permanentlyDeleteTask = () => {
+  if (!isBatchOperation.value && currentTask.value) {
+    emit('confirmPermanentDelete', currentTask.value.id)
+  }
+  emit('close')
+}
+
 // Click outside handler
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
@@ -780,7 +793,7 @@ onUnmounted(() => {
   color: var(--text-primary);
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -796,7 +809,7 @@ onUnmounted(() => {
 /* Highlighted menu item - stands out */
 .menu-item--highlight {
   background: var(--amber-bg-light);
-  border-left: 3px solid var(--amber-text);
+  border-inline-start: 3px solid var(--amber-text);
   margin: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
   width: calc(100% - var(--space-4));
@@ -1072,5 +1085,5 @@ onUnmounted(() => {
 
 /* Submenu */
 .has-submenu { position: relative; }
-.submenu-arrow { color: var(--text-muted); margin-left: auto; }
+.submenu-arrow { color: var(--text-muted); margin-inline-start: auto; }
 </style>

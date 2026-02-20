@@ -221,7 +221,7 @@ onUnmounted(() => {
 
 .task-row--selected {
   background: var(--brand-primary-subtle) !important; /* Brand tint */
-  border-left: var(--space-0_5) solid var(--brand-primary);
+  border-inline-start: var(--space-0_5) solid var(--brand-primary);
   border-bottom-color: var(--brand-primary-bg-heavy);
 }
 
@@ -338,13 +338,11 @@ onUnmounted(() => {
   gap: var(--space-1);
   justify-content: flex-end;
   opacity: 0;
-  transform: translateX(var(--space-2_5));
   transition: all var(--duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .task-row:hover .task-row__actions {
   opacity: 1;
-  transform: translateX(0);
 }
 
 .task-row__action-btn {
@@ -379,7 +377,7 @@ onUnmounted(() => {
   position: absolute;
   top: var(--space-1);
   bottom: var(--space-1);
-  left: var(--space-0_5);
+  inset-inline-start: var(--space-0_5);
   width: var(--space-0_5);
   border-radius: var(--radius-sm);
   opacity: 0.8;

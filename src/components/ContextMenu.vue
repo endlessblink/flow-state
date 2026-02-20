@@ -181,7 +181,7 @@ onUnmounted(() => {
   color: var(--text-primary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-fast) var(--spring-smooth);
 }

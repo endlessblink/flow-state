@@ -752,6 +752,15 @@ export const useAuthStore = defineStore('auth', () => {
         return
       }
 
+      // FEATURE-1345: Capacitor — use system browser + deep link callback (PKCE)
+      const isCapacitorRuntime = typeof window !== 'undefined' &&
+        !!(window as any).Capacitor?.isNativePlatform?.()
+      if (isCapacitorRuntime) {
+        const { signInWithGoogleCapacitor } = await import('@/composables/useCapacitorOAuth')
+        await signInWithGoogleCapacitor()
+        return
+      }
+
       // PWA: standard OAuth redirect flow
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',

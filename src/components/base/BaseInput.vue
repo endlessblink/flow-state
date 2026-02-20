@@ -121,7 +121,7 @@ defineExpose({
 }
 
 .required-indicator {
-  color: rgba(239, 68, 68, 1);
+  color: var(--color-danger);
 }
 
 .input-container {

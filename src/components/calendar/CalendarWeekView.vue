@@ -445,7 +445,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 
 /* Event content — column layout, time at top, title below */
 .event-content {
-  padding: 2px 4px 2px 6px;
+  padding: var(--space-0_5) var(--space-1) var(--space-0_5) var(--space-1_5);
   display: flex;
   flex-direction: column;
   gap: 0;

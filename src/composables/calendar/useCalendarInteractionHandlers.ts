@@ -151,9 +151,15 @@ export function useCalendarInteractionHandlers(
                 handleConfirmDelete(calendarEvent.taskId)
             })
         } else {
-            // Delete: unschedule (return to calendar inbox)
+            // Delete: remove calendar instance(s), return task to inbox
             selectedCalendarEvents.value.forEach(calendarEvent => {
-                taskStore.unscheduleTaskWithUndo(calendarEvent.taskId)
+                if (calendarEvent.instanceId) {
+                    // Remove specific calendar instance — task keeps its dueDate
+                    taskStore.deleteTaskInstanceWithUndo(calendarEvent.taskId, calendarEvent.instanceId)
+                } else {
+                    // Fallback: fully unschedule if no specific instance
+                    taskStore.unscheduleTaskWithUndo(calendarEvent.taskId)
+                }
             })
         }
 

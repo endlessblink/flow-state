@@ -648,7 +648,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-primary);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
   animation: checkmarkAppear 0.4s var(--ease-out-back);
 }
@@ -666,7 +666,7 @@ defineExpose({
   width: 12px;
   height: 12px;
   border: 2px solid rgba(255, 255, 255, 0.6);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   transition: all var(--transition-normal) var(--spring-smooth);
   background: var(--glass-bg-soft);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);

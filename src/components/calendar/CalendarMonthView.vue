@@ -263,8 +263,8 @@ const getEventTooltip = (event: any) => {
 }
 
 .month-day-cell.drag-over {
-  background: rgba(99, 102, 241, 0.2) !important;
-  box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.5) !important;
+  background: var(--calendar-creating-bg) !important;
+  box-shadow: inset 0 0 0 2px var(--purple-border-strong) !important;
   opacity: 1 !important;
 }
 
@@ -274,7 +274,7 @@ const getEventTooltip = (event: any) => {
 }
 
 .month-day-cell.today {
-  background: rgba(239, 68, 68, 0.05);
+  background: var(--danger-bg-subtle);
 }
 
 .day-number {

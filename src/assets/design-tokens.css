@@ -714,6 +714,21 @@
 
   /* Overlay backgrounds */
   --overlay-dark: rgba(30, 41, 59, 0.9);
+  --overlay-heavy: rgba(0, 0, 0, 0.7);
+  --overlay-light: rgba(0, 0, 0, 0.2);
+
+  /* Brand additional scale (TASK-1248 Phase 7) */
+  --brand-bg-dim: rgba(78, 205, 196, 0.08);
+  --brand-bg-light: rgba(78, 205, 196, 0.12);
+  --brand-glow-sm: 0 0 8px rgba(78, 205, 196, 0.2);
+  --brand-focus-ring: 0 0 0 3px rgba(78, 205, 196, 0.15);
+
+  /* Semantic glow tokens (TASK-1248 Phase 7) */
+  --danger-glow-sm: 0 0 6px rgba(239, 68, 68, 0.4);
+  --danger-focus-ring: 0 0 0 2px rgba(239, 68, 68, 0.2);
+  --warning-glow-sm: 0 0 6px rgba(245, 158, 11, 0.3);
+  --blue-glow-sm: 0 0 6px rgba(59, 130, 246, 0.3);
+  --indigo-text: #818cf8;
 
   /* Status Indicators */
   --color-success: hsl(var(--green-500));
@@ -829,6 +844,8 @@
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
 
   /* Type Scale (1.25 ratio - Major Third) */
+  --text-2xs: 0.625rem;
+  /* 10px - Extra small labels, badges */
   --text-xs: 0.75rem;
   /* 12px - Metadata, labels */
   --text-sm: 0.875rem;

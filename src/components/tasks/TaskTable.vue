@@ -702,7 +702,7 @@ onUnmounted(() => {
 
 .table-row.row-selected {
   background-color: rgba(78, 205, 196, 0.05);
-  border-left: 2px solid var(--brand-primary);
+  border-inline-start: 2px solid var(--brand-primary);
 }
 
 /* ADHD-friendly Density Variants - Research-backed row heights */

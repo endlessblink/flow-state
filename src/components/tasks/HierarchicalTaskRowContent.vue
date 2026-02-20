@@ -113,6 +113,7 @@
     <!-- Action Buttons -->
     <TaskRowActions
       @ai-suggest="(event: MouseEvent) => $emit('aiSuggest', event)"
+      @focus-mode="$emit('focusMode')"
       @start-timer="$emit('startTimer')"
       @edit="$emit('edit')"
       @duplicate="$emit('duplicate')"
@@ -183,6 +184,7 @@ defineEmits<{
   updatePriority: [val: string]
   updateDueDate: [val: string | null]
   aiSuggest: [event: MouseEvent]
+  focusMode: []
   startTimer: []
   edit: []
   duplicate: []

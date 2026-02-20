@@ -174,7 +174,7 @@ defineExpose({
 
 .main-content.sidebar-hidden {
   padding: var(--space-10) var(--space-6) 0;
-  padding-left: 64px; /* Space for floating sidebar toggle button */
+  padding-inline-start: 64px; /* Space for floating sidebar toggle button */
 }
 
 .view-wrapper {
@@ -188,8 +188,8 @@ defineExpose({
 /* Full-width header border that spans both sidebar and content columns */
 .layout-header-border {
   position: absolute;
-  left: 0;
-  right: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   height: 1px;
   background: var(--glass-border);
   z-index: 2;

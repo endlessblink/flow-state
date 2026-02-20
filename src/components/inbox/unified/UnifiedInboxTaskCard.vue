@@ -198,8 +198,8 @@ const dueStatus = computed(() => {
   background: var(--glass-bg-soft, rgba(255, 255, 255, 0.05));
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-md);
-  /* ADHD-friendly: Priority shown via left border only */
-  border-left: 4px solid transparent;
+  /* ADHD-friendly: Priority shown via inline-start border only */
+  border-inline-start: 4px solid transparent;
   padding: var(--space-3);
   cursor: grab;
   user-select: none;
@@ -213,7 +213,7 @@ const dueStatus = computed(() => {
 
 .task-card:hover {
   border-color: var(--border-hover);
-  border-left-color: inherit; /* Preserve priority color on hover */
+  border-inline-start-color: inherit; /* Preserve priority color on hover */
   box-shadow: var(--shadow-sm);
 }
 
@@ -229,20 +229,20 @@ const dueStatus = computed(() => {
 
 /* ADHD-friendly: Priority as subtle left border only */
 .priority-stripe {
-  display: none; /* Hide the old stripe - we use border-left on .task-card now */
+  display: none; /* Hide the old stripe - we use border-inline-start on .task-card now */
 }
 
 /* ADHD-friendly: Priority colors via left border - calm, not overwhelming */
 .task-card[data-priority="high"] {
-  border-left-color: var(--color-priority-high);
+  border-inline-start-color: var(--color-priority-high);
 }
 
 .task-card[data-priority="medium"] {
-  border-left-color: var(--color-priority-medium);
+  border-inline-start-color: var(--color-priority-medium);
 }
 
 .task-card[data-priority="low"] {
-  border-left-color: var(--color-priority-low);
+  border-inline-start-color: var(--color-priority-low);
 }
 
 .timer-indicator {

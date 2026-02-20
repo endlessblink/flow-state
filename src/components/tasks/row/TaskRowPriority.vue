@@ -257,7 +257,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
   border-radius: var(--radius-md);

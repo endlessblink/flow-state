@@ -125,7 +125,7 @@ const copyErrorDetails = () => {
   z-index: auto;
   border-radius: var(--radius-xl);
   min-height: 280px;
-  background: rgba(28, 25, 45, 0.6);
+  background: var(--glass-panel-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);

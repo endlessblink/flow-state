@@ -41,6 +41,7 @@
         if (task) openEditTask(task)
       }"
       @confirm-delete="handleContextMenuDelete"
+      @confirm-permanent-delete="handleContextMenuPermanentDelete"
       @move-to-section="handleMoveToSection"
     />
 
@@ -103,7 +104,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Task, type Project } from '@/stores/tasks'
-import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { createLazyModal } from '@/composables/useLazyComponent'
@@ -197,6 +197,25 @@ const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendar
   } else {
     confirmDeleteTask(task)
   }
+}
+
+const handleContextMenuPermanentDelete = (taskId: string) => {
+  const task = taskStore.tasks.find(t => t.id === taskId)
+  if (!task) {
+    return
+  }
+
+  confirmMessage.value = `Permanently delete task "${task.title}"?`
+  confirmDetails.value = [
+    'This performs a hard delete from storage.',
+    'Use this only when you do not want the task recoverable from trash.'
+  ]
+  confirmAction.value = async () => {
+    const { getUndoSystem } = await import('@/composables/undoSingleton')
+    await getUndoSystem().permanentlyDeleteTaskWithUndo(task.id)
+    showTaskContextMenu.value = false
+  }
+  showConfirmModal.value = true
 }
 
 const executeConfirmAction = async () => {

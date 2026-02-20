@@ -282,7 +282,7 @@ onBeforeUnmount(() => {
   background-color: transparent !important;
   color: rgba(var(--color-slate-50), 0.9) !important;
   font-size: var(--text-xs);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
   border-radius: var(--radius-md);

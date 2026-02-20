@@ -510,9 +510,9 @@ const handleTimeFilterSelect = (key: string) => {
 .chip-count {
   opacity: 0.6;
   font-size: var(--text-xs);
-  padding-left: var(--space-1);
-  border-left: 1px solid currentColor;
-  margin-left: var(--space-1);
+  padding-inline-start: var(--space-1);
+  border-inline-start: 1px solid currentColor;
+  margin-inline-start: var(--space-1);
 }
 
 /* Advanced Filters Toggle */

@@ -25,6 +25,9 @@ const isTauri =
   process.env.TAURI_ENV_PLATFORM !== undefined ||
   process.env.TAURI_DEV !== undefined
 
+// FEATURE-1345: Check if running in Capacitor context
+const isCapacitor = process.env.CAPACITOR_PLATFORM !== undefined
+
 // FEATURE-1194: Read version from package.json for injection into app
 const packageVersion = JSON.parse(
   readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf-8')
@@ -33,6 +36,7 @@ const packageVersion = JSON.parse(
 export default defineConfig(({ mode }) => ({
   define: {
     '__APP_VERSION__': JSON.stringify(packageVersion),
+    '__IS_CAPACITOR_BUILD__': isCapacitor,
   },
   plugins: [
     vue(),
@@ -40,7 +44,7 @@ export default defineConfig(({ mode }) => ({
     // BUG-336: Use `disable` option instead of conditional inclusion to provide proper stub modules
     // TASK-1009: Switched to injectManifest for custom timer notification handlers
     VitePWA({
-      disable: isTauri, // Provides empty stub modules for virtual:pwa-register imports
+      disable: isTauri || isCapacitor, // Provides empty stub modules for virtual:pwa-register imports
       strategies: 'injectManifest', // TASK-1009: Use custom SW for notification actions
       srcDir: 'src',
       filename: 'sw.ts',

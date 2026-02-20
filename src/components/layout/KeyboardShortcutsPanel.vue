@@ -284,7 +284,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-heavy);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   padding: var(--space-6);
@@ -506,14 +506,14 @@ kbd {
   align-items: center;
   justify-content: center;
   min-width: 24px;
-  padding: 2px 6px;
+  padding: var(--space-0_5) var(--space-1_5);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border-hover);
+  border-radius: var(--radius-sm);
   box-shadow:
     0 2px 0 rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);

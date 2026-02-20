@@ -1,0 +1,839 @@
+
+> flow-state@1.2.65 lint
+> eslint src || true --no-color
+
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/ai/ChatMessage.vue
+   51:72   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   51:101  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   51:112  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   51:123  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   54:49   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   54:78   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   54:88   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   54:99   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  118:42   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  124:12   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  132:58   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  141:60   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  146:16   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  155:62   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  163:68   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  167:66   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  171:66   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  175:67   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  179:65   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  183:63   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  187:60   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  246:30   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  246:58   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  255:30   warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  393:9    warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/base/ProjectEmojiIcon.vue
+  21:7  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/calendar/CalendarDayView.vue
+  64:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/calendar/CalendarMonthView.vue
+   90:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  110:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/calendar/CalendarWeekView.vue
+   10:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   46:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   60:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  109:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/canvas/CanvasModals.vue
+   97:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   98:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   99:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/canvas/GroupNodeSimple.vue
+   88:10  error    'useTaskStore' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+   97:9   warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  130:30  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  263:11  error    'nearMin' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  264:11  error    'nearMax' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/canvas/InboxFilters.vue
+  334:3  error  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  345:3  error  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  356:3  error  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/canvas/InboxTimeFilters.vue
+   95:9   error  'today' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  168:15  error  'todayStr' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/canvas/SectionSelector.vue
+  100:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/canvas/node/TaskNodeMeta.vue
+  80:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/common/GroupModal.vue
+  158:8  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/common/IOSInstallPrompt.vue
+  12:77  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:97  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/common/MarkdownRenderer.vue
+  7:5  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/common/ReloadPrompt.vue
+  14:3  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  22:5  error  Expected an assignment or function call and instead saw an expression                                                @typescript-eslint/no-unused-expressions
+  23:5  error  Expected an assignment or function call and instead saw an expression                                                @typescript-eslint/no-unused-expressions
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/common/TauriUpdateNotification.vue
+  14:32  error  'UpdateStatus' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  24:3   error  'hasUpdate' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  25:3   error  'isChecking' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  26:3   error  'isDownloading' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/AchievementBadge.vue
+  27:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/AchievementToast.vue
+  21:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/AchievementsModal.vue
+  12:7   error    'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  16:7   error    'emit' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  24:75  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/BossFightPanel.vue
+  15:7   error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  21:35  error  'lastWeeklyGeneration' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/ChallengeComplete.vue
+  12:7  error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/DailyChallengesPanel.vue
+  17:7  error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  31:3  error  'lastDailyGeneration' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/GamificationHUD.vue
+  30:7  error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/GamificationPanel.vue
+  86:22  error  Boolean prop with 'true' value should be written in shorthand form  vue/prefer-true-attribute-shorthand
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/ShopModal.vue
+  11:7   error    'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  15:7   error    'emit' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  25:68  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  90:35  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/cyber/CyberAchievements.vue
+  17:41  error    'Lock' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  34:31  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  45:50  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/cyber/CyberDashboardHub.vue
+  267:7  error  'ariaVariant' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/cyber/CyberMissionCard.vue
+  98:9  error  'current' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/cyber/CyberShop.vue
+  64:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/gamification/tooltips/ChallengeTooltipContent.vue
+  12:7  error  'dailies' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/inbox/calendar/CalendarInboxHeader.vue
+  162:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  171:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/inbox/unified/UnifiedInboxHeader.vue
+  196:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/inbox/unified/UnifiedInboxInput.vue
+  99:25  error  'watch' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/kanban/KanbanColumn.vue
+  174:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  181:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  184:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/kanban/TaskCard.vue
+  124:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/kanban/card/TaskCardBadges.vue
+  56:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/layout/SidebarSmartItem.vue
+   90:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  157:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/projects/ProjectTreeItem.vue
+  78:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/quicksort/QuickCaptureTab.vue
+  238:17  error  'isProcessingVoice' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  257:7   error  'isVoiceSupported' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/settings/SettingsOptionPicker.vue
+  15:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/settings/tabs/AISettingsTab.vue
+   12:7   error    'aiChatStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  172:50  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/settings/tabs/StorageSettingsTab.vue
+  41:28  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  42:28  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  45:28  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  93:7   error    'confirmGoldenRestore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/settings/tabs/WeeklyPlanSettingsTab.vue
+    2:15  error    'computed' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   10:90  error    'addMemoryObservation' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   73:12  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u                   @typescript-eslint/no-unused-vars
+  104:50  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/tasks/HierarchicalTaskRowContent.vue
+  138:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  139:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/tasks/TaskContextMenu.vue
+  387:57  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  470:23  error    'event' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/tasks/context-menu/DurationSubmenu.vue
+  34:7  error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/components/tasks/row/TaskRowProject.vue
+  92:7   error    'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  93:11  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/__tests__/useDateTransition.spec.ts
+  2:24  error  'expect' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  6:10  error  'useDateTransition' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/app/useAppInitialization.ts
+   37:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   44:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  228:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  237:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  238:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  239:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  265:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  273:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  274:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  275:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  312:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  332:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  339:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  340:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  341:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  414:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  421:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  422:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  423:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  436:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  442:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  443:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  444:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  463:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  469:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  470:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  471:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/app/useSidebarManagement.ts
+   73:32  error    Empty block statement                     no-empty
+  355:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/board/useBoardActions.ts
+  53:9  error  'errorMessage' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/board/useBoardState.ts
+   83:18  error    'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  205:83  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  227:38  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/calendar/useCalendarDayView.ts
+  228:18  error  'taskError' is defined but never used. Allowed unused caught errors must match /^_/u      @typescript-eslint/no-unused-vars
+  237:16  error  'positionError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  241:14  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  374:16  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  473:14  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  473:21  error  Empty block statement                                                                     no-empty
+  614:18  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  619:12  error  Empty block statement                                                                     no-empty
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/calendar/useCalendarModals.ts
+  55:22  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  55:29  error  Empty block statement                                                             no-empty
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/calendar/useCalendarMonthView.ts
+   54:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   55:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  111:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/calendar/useCalendarWeekView.ts
+  112:32  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  118:33  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  152:18  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/calendar/useExternalCalendar.ts
+  126:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  134:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  183:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/state-machine.ts
+  106:15  error    'previousState' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  209:16  warning  Forbidden non-null assertion                                                              @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasActions.ts
+   40:19  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+   41:18  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+   46:55  error    'removeNodes' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  142:61  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  189:36  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasAlignment.ts
+   59:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   60:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  493:53  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasConnections.ts
+  13:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:70   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:85   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:104  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:114  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasFilteredState.ts
+  1:20  error  'ref' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasGroupActions.ts
+  166:19  error    'sectionNodeId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  200:32  warning  Forbidden non-null assertion                                                              @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasGroups.ts
+   63:20  warning  Forbidden non-null assertion                                                              @typescript-eslint/no-non-null-assertion
+  131:19  error    'oldDirect' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  132:19  error    'oldAggregated' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasInteractions.ts
+     1:15   error    'reactive' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+     1:45   error    'onMounted' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+     1:56   error    'onUnmounted' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+    23:10   error    'getPlatformDiagnostics' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+    23:34   error    'isLinuxTauri' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+   130:11   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   277:28   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   336:31   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   337:36   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   338:16   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   339:34   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   345:14   error    'e' is defined but never used. Allowed unused caught errors must match /^_/u                 @typescript-eslint/no-unused-vars
+   351:13   error    'getNodes' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   354:11   error    'applyNodeChanges' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   355:69   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   621:41   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   622:42   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   654:68   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   707:55   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   805:92   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   847:95   warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   901:103  warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+  1010:114  warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasOperationState.ts
+   52:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   57:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   68:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   99:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  126:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  130:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  191:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasOrchestrator.ts
+  154:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  234:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  718:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  742:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasSelection.ts
+    2:21  error    'useVueFlow' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+    4:10  error    'useTaskStore' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   23:33  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+   81:44  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+   82:53  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  119:36  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasSync.ts
+  109:87  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  250:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  337:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  519:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  519:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  522:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  567:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  570:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  598:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  599:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  615:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  616:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  668:97  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useCanvasTaskActions.ts
+   20:18  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   83:52  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  378:15  error    'gridWidth' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  612:46  warning  Forbidden non-null assertion                                                          @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useNodeSync.ts
+  100:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  127:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  143:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  159:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  248:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/canvas/useSmartGroupMatcher.ts
+   21:8   error    'SmartGroupType' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+   23:3   error    'DAY_OF_WEEK_KEYWORDS' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  103:11  error    'nextOccurrence' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  148:17  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+  149:17  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/inbox/useUnifiedInboxState.ts
+  239:21  error  Unexpected lexical declaration in case block  no-case-declarations
+  240:21  error  Unexpected lexical declaration in case block  no-case-declarations
+  247:21  error  Unexpected lexical declaration in case block  no-case-declarations
+  248:21  error  Unexpected lexical declaration in case block  no-case-declarations
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/sync/useBroadcastChannelSync.ts
+   7:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  30:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  56:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  68:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/sync/useSyncOrchestrator.ts
+  550:10  error    'stopProcessing' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  627:27  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/sync/useTimerLeaderElection.ts
+   11:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/tasks/card/useTaskCardActions.ts
+  7:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/tasks/row/useTaskRowActions.ts
+    7:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   14:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  166:17  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/tasks/useTaskContextMenuActions.ts
+   17:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   46:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/tasks/useTaskEditActions.ts
+  139:52  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  226:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  234:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/tasks/useTaskEditState.ts
+   30:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  164:66  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/tasks/useTaskFiltering.ts
+  158:21  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  305:88  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/undoSingleton.ts
+   19:24  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  483:31  warning  Forbidden non-null assertion                                                 @typescript-eslint/no-non-null-assertion
+  547:31  warning  Forbidden non-null assertion                                                 @typescript-eslint/no-non-null-assertion
+  680:49  error    'operation' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useAIChallengeNarrator.ts
+   16:27  error    'Ref' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  133:12  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useAIChat.ts
+   523:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   953:49  error    Unnecessary escape character: \.          no-useless-escape
+   953:51  error    Unnecessary escape character: \)          no-useless-escape
+  1075:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1131:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1315:30  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useAIProactiveNudges.ts
+  10:15  error  'onMounted' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  10:26  error  'onUnmounted' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  10:39  error  'watch' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useAIUsageTracking.ts
+  313:5   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  322:15  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  363:28  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  386:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useAgentChains.ts
+   82:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   83:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   84:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   94:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   99:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  134:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  135:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  173:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  185:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  230:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  231:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  232:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  330:19  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useBackupSystem.ts
+  1124:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1390:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useCrossTabSync.ts
+   53:9    error    'authStore' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+   56:9    error    'canvasStore' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   74:29   warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+   97:62   warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  104:60   warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  114:21   error    'canvasPosition' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  114:37   error    'parentId' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  114:47   error    'positionFormat' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  114:104  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  159:60   warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useDateTransition.ts
+  14:39  error  'watch' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useDynamicImports.ts
+  319:9  error  'stats' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useHorizontalDragScroll.ts
+  325:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  326:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  327:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useMobileDetection.ts
+   7:77  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:81  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/usePerformanceManager.ts
+  72:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  72:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  85:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  85:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  98:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  98:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/usePersistentRef.ts
+  26:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  27:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  85:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useQuickTasks.ts
+  49:21  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useRenderOptimization.ts
+  228:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  228:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useSafeI18n.ts
+  11:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useSupabaseDatabase.ts
+   205:22  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+   210:27  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+   463:38  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+   655:38  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+   819:58  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+   822:50  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+   936:55  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+   939:47  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+   970:21  error    'error' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+   970:28  error    'count' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1049:38  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1072:38  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1095:38  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1116:21  error    'error' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1116:28  error    'count' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1169:40  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1237:27  error    'error' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1237:34  error    'count' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1542:29  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1545:15  error    'heartbeatInterval' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1545:34  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1555:34  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1557:30  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1582:31  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1592:31  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1605:31  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1618:31  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1629:31  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1641:46  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1641:56  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1735:76  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+  1974:39  warning  Unexpected any. Specify a different type                                                      @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useTauriDebug.ts
+  271:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useTimeBlockNotifications.ts
+  191:35  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useToast.ts
+  1:10  error  'ref' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useWeeklyPlan.ts
+    5:30  error  'DAY_OF_WEEK_KEYWORDS' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+    6:71  error  'WeeklyPlanStatus' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+   16:6   error  'DayKey' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  526:9   error  'appliedStats' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useWeeklyPlanAI.ts
+  316:49   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  316:63   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  316:83   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  316:115  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useWorkProfile.ts
+   97:23  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  104:7   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  120:92  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  129:7   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  404:22  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  461:42  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  518:22  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/layouts/AppHeader.vue
+  194:20  error  'ref' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  212:7   error  'settingsStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  213:7   error  'authStore' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/layouts/AppSidebar.vue
+  778:16  error  'isWhisperSupported' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  779:14  error  'hasWhisperApiKey' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/layouts/ModalManager.vue
+  106:10  error    'useTimerStore' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  249:30  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+  282:20  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+  434:50  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+  445:53  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/main.ts
+  21:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:92  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  83:87  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/mobile/components/TaskCreateBottomSheet.vue
+  169:19  error  'CalendarPlus' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  169:33  error  'CalendarDays' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/mobile/components/VoiceTaskConfirmation.vue
+   9:7  error  Boolean prop with 'true' value should be written in shorthand form  vue/prefer-true-attribute-shorthand
+  10:7  error  Boolean prop with 'true' value should be written in shorthand form  vue/prefer-true-attribute-shorthand
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/mobile/views/MobileInboxView.vue
+  310:3   error  'Circle' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+  310:11  error  'Clock' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+  327:3   error  'selectedProject' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  328:3   error  'selectedPriority' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  331:3   error  'hasActiveFilters' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  333:3   error  'clearFilters' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  335:3   error  'toggleHideDoneTasks' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  505:7   error  'dateOptions' is assigned a value but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  513:7   error  'priorityOptions' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  653:7   error  Unexpected lexical declaration in case block                                                       no-case-declarations
+  839:7   error  'expandQuickAdd' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  844:7   error  'collapseQuickAdd' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  853:7   error  'selectDueDate' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  857:7   error  'selectQuickAddPriority' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  886:7   error  'submitTask' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/mobile/views/MobileQuickSortView.vue
+  587:43  error  'onUnmounted' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+  593:22  error  'Edit3' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+  609:3   error  'currentTaskId' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  621:3   error  'undoLastCategorization' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  705:13  error  'swipeProgress' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/mobile/views/MobileTodayView.vue
+  188:1  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/ai/gamemaster.ts
+  15:3  error  'AIGenerateChallengesResponse' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/ai/providers/groq.ts
+  407:20  error  'parseError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/ai/providers/ollama.ts
+  370:22  error  'parseError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  519:16  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u       @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/ai/proxy/aiChatProxy.ts
+  432:18  error  'parseError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  450:40  error  'provider' is defined but never used. Allowed unused args must match /^_/u             @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/ai/tools.ts
+  1174:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1279:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1294:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/auth/supabase.ts
+  156:80  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  166:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/canvas/PositionManager.ts
+   22:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  205:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  210:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/canvas/types.ts
+  40:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/offline/operationCoalescer.ts
+   93:22  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  111:22  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  228:5   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/offline/operationSorter.ts
+  246:9  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/services/offline/writeQueueDB.ts
+  228:56  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  255:57  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  355:36  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/__tests__/tasks.test.ts
+  142:49  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  167:49  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/aiChat.ts
+  848:19  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/auth.ts
+  161:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  240:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/canvas.ts
+  2:15  error  'watch' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/canvas/canvasGroups.ts
+  196:9  error  'syncUpdateInProgress' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/challenges.ts
+  481:11  error  'userId' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  650:18  error  'archiveToHistory' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  656:11  error  'completionRate' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  721:11  error  'profile' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/gamification.ts
+    34:3   error  'DbXpLog' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+    38:3   error  'DbUserPurchase' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1084:56  error  'multipliers' is defined but never used. Allowed unused args must match /^_/u     @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/notifications.ts
+  367:9  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/projects.ts
+  140:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  181:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  210:53  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  309:31  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  349:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/tasks/taskOperations.ts
+  916:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/tasks/taskPersistence.ts
+    8:37  error    'scheduleTauriSave' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  252:81  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/stores/tasks/taskStates.ts
+  88:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/sw.ts
+  13:22  error  'NetworkOnly' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/utils/canvas/invariants.ts
+  131:65  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  166:32  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  225:61  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  268:61  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  317:54  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/utils/canvas/storeHelpers.ts
+  244:54  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/utils/markdown.ts
+  80:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  87:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/utils/notificationDelivery.ts
+  21:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/utils/performanceBenchmark.ts
+  161:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  169:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  170:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  183:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  183:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  183:84  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  184:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  184:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  184:80  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/utils/supabaseMappers.ts
+  432:24  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/utils/taskValidation.ts
+  315:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/views/AIChatView.vue
+  26:3  error  'ChevronDown' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  27:3  error  'ChevronUp' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/views/CalendarView.vue
+  309:45  error  'handleWeekDragOver' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  309:65  error  'handleWeekDrop' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  309:81  error  'startWeekResize' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/views/CanvasView.vue
+  308:6  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  377:9  error    'menuX' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  378:9  error    'menuY' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/views/PerformanceView.vue
+  138:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  166:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  167:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  192:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  220:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  264:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/views/WeeklyPlanView.vue
+  257:9   error    'profile' is assigned a value but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  257:18  error    'hasCompletedInterview' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  398:27  warning  Unexpected any. Specify a different type                                                          @typescript-eslint/no-explicit-any
+
+✖ 530 problems (165 errors, 365 warnings)
+

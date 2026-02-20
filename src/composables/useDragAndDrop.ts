@@ -35,6 +35,14 @@ let dragOverHandler: ((e: DragEvent) => void) | null = null
 // SortableJS: positioned via mousemove. HTML5: positioned via dragover.
 let ghostEl: HTMLElement | null = null
 
+// BUG-1361: Self-cleaning safety net handlers.
+// When a drag source element is removed from the DOM by Vue reactivity (e.g., inbox task
+// card removed when isInInbox changes to false), the @dragend event never fires on it.
+// These document-level listeners catch the drag end regardless.
+let safetyDropHandler: ((e: Event) => void) | null = null
+let safetyDragEndHandler: (() => void) | null = null
+let safetyTimeout: ReturnType<typeof setTimeout> | null = null
+
 // Shared CSS for the unified ghost pill
 const GHOST_CSS = `position:fixed;padding:8px 16px;max-width:220px;background:#1e1e23;color:#e0e0e0;border:1px solid rgba(78,205,196,0.4);border-radius:8px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:99999;`
 
@@ -43,6 +51,61 @@ function createGhostPill(title: string): HTMLElement {
   const truncated = title.length > 30 ? title.slice(0, 30) + '...' : title
   el.textContent = truncated
   return el
+}
+
+// BUG-1361: Forward declaration — endDrag is referenced by safety net before it's defined.
+// The actual implementation is inside useDragAndDrop(). This variable holds the reference.
+let endDragFn: (() => void) | null = null
+
+/**
+ * BUG-1361: Install document-level safety net that catches drag-end regardless of
+ * whether the source element survives in the DOM.
+ *
+ * Two layers:
+ * 1. `document 'drop'` (capture phase) — fires on the drop TARGET (still in DOM).
+ *    Uses requestAnimationFrame delay so view-specific handlers run first.
+ * 2. `document 'dragend'` (capture phase) — fires when source element is still in DOM.
+ *    Covers normal drags and Escape/cancel.
+ * 3. 10-second timeout — absolute last resort for broken browser states.
+ */
+function installSafetyNet() {
+  removeSafetyNet()
+
+  const scheduleCleanup = () => {
+    requestAnimationFrame(() => {
+      if (dragState.value.isDragging && endDragFn) {
+        endDragFn()
+      }
+    })
+  }
+
+  safetyDropHandler = scheduleCleanup
+  document.addEventListener('drop', safetyDropHandler, true)
+
+  safetyDragEndHandler = scheduleCleanup
+  document.addEventListener('dragend', safetyDragEndHandler, true)
+
+  safetyTimeout = setTimeout(() => {
+    if (dragState.value.isDragging && endDragFn) {
+      console.warn('[BUG-1361] Drag safety timeout (10s) — forcing cleanup')
+      endDragFn()
+    }
+  }, 10000)
+}
+
+function removeSafetyNet() {
+  if (safetyDropHandler) {
+    document.removeEventListener('drop', safetyDropHandler, true)
+    safetyDropHandler = null
+  }
+  if (safetyDragEndHandler) {
+    document.removeEventListener('dragend', safetyDragEndHandler, true)
+    safetyDragEndHandler = null
+  }
+  if (safetyTimeout) {
+    clearTimeout(safetyTimeout)
+    safetyTimeout = null
+  }
 }
 
 export function useDragAndDrop() {
@@ -92,7 +155,7 @@ export function useDragAndDrop() {
     document.body.classList.add('dragging-active')
 
     const title = data.title || 'Task'
-    const ghostMode = data.ghostMode || 'always'
+    const ghostMode = data.ghostMode || 'sidebar-only'
 
     // ALWAYS create persistent ghost — positioned via mousemove or dragover
     ghostEl = createGhostPill(title)
@@ -143,9 +206,16 @@ export function useDragAndDrop() {
     // HTML5 native drag fires dragover (mousemove is suppressed during native drag)
     dragOverHandler = (e: DragEvent) => positionGhostAndDetectTarget(e.clientX, e.clientY)
     document.addEventListener('dragover', dragOverHandler)
+
+    // BUG-1361: Install self-cleaning safety net so endDrag is called even when
+    // the source element is removed from DOM before dragend fires.
+    installSafetyNet()
   }
 
   const endDrag = () => {
+    // BUG-1361: Remove safety net first to prevent re-entrant calls
+    removeSafetyNet()
+
     // Clean up event handlers
     if (mouseMoveHandler) {
       document.removeEventListener('mousemove', mouseMoveHandler)
@@ -171,6 +241,9 @@ export function useDragAndDrop() {
     // Remove visual feedback from body
     document.body.classList.remove('dragging-active')
   }
+
+  // BUG-1361: Store reference for safety net (defined outside composable scope)
+  endDragFn = endDrag
 
   const setDropTarget = (target: string | null) => {
     dragState.value.dropTarget = target

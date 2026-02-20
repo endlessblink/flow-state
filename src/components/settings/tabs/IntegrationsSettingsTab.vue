@@ -370,8 +370,8 @@ const formatLastSynced = (isoString?: string) => {
 }
 
 .icon-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--danger-bg-light);
+  border-color: var(--danger-border-medium);
   color: var(--color-danger);
 }
 

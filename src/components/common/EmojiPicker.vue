@@ -811,7 +811,7 @@ onMounted(() => {
   border-color: rgba(255, 255, 255, 0.8);
   box-shadow:
     0 0 0 3px rgba(255, 255, 255, 0.2),
-    0 8px 16px rgba(0, 0, 0, 0.4);
+    var(--shadow-dark-lg);
   transform: scale(1.05);
 }
 
@@ -859,7 +859,7 @@ onMounted(() => {
 .apply-btn {
   background: var(--brand-primary-bg-medium);
   border-color: var(--brand-primary-alpha-50);
-  color: rgba(78, 205, 196, 1);
+  color: var(--dropdown-selected-color);
   flex: 1;
 }
 

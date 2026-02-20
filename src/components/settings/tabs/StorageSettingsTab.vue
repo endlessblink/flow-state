@@ -531,7 +531,7 @@ onMounted(async () => {
   font-weight: var(--font-medium);
   color: var(--color-success);
   background: rgba(var(--color-success-rgb, 16, 185, 129), 0.2);
-  padding: 2px 8px;
+  padding: var(--space-0_5) var(--space-2);
   border-radius: var(--radius-full);
 }
 

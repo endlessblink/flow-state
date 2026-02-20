@@ -628,7 +628,7 @@ const insertTable = () => {
 
 :deep(.tiptap code) {
   background: var(--glass-bg-medium);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   padding: 0.1em 0.3em;
   font-family: ui-monospace, monospace;
   font-size: 0.9em;
@@ -751,7 +751,7 @@ const insertTable = () => {
   background: var(--glass-bg-heavy);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-dark-md);
 }
 
 .color-swatch {
@@ -786,10 +786,10 @@ const insertTable = () => {
   min-width: 180px;
   max-width: 220px;
   /* Solid opaque background - purple-tinted */
-  background: rgb(35, 32, 48);
+  background: var(--surface-primary);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-dark-md);
   padding: var(--space-1) 0;
   overflow: hidden;
 }

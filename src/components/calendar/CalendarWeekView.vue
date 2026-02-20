@@ -611,6 +611,6 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 2px 4px;
+  padding: var(--space-0_5) var(--space-1);
 }
 </style>

@@ -1158,7 +1158,7 @@ async function onClearMemories() {
 }
 
 .summary-label {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   font-weight: var(--font-medium);
 }
@@ -1227,7 +1227,7 @@ async function onClearMemories() {
 }
 
 .stat-label {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   font-weight: var(--font-medium);
 }
@@ -1257,13 +1257,13 @@ async function onClearMemories() {
 }
 
 .model-name {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-secondary);
   font-family: var(--font-mono, monospace);
 }
 
 .model-tokens {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   font-family: var(--font-mono, monospace);
 }
@@ -1357,19 +1357,19 @@ async function onClearMemories() {
 }
 
 .day-chip.active {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
 
 .day-chip.off.active {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--danger-bg-subtle);
   border-color: var(--color-danger);
   color: var(--color-danger);
 }
 
 .day-chip.meeting.active {
-  background: rgba(245, 158, 11, 0.12);
+  background: var(--orange-bg-light);
   border-color: var(--color-warning);
   color: var(--color-warning);
 }
@@ -1383,7 +1383,7 @@ async function onClearMemories() {
 }
 
 .number-chip.active {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
@@ -1415,7 +1415,7 @@ async function onClearMemories() {
 }
 
 .style-chip.active {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
@@ -1451,7 +1451,7 @@ async function onClearMemories() {
 }
 
 .save-btn:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-bg-dim);
 }
 
 .save-btn:disabled {
@@ -1574,7 +1574,7 @@ async function onClearMemories() {
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-bg-dim);
   padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-xs);
 }
@@ -1601,14 +1601,14 @@ async function onClearMemories() {
   max-width: 80px;
   height: 4px;
   background: var(--glass-bg);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 
 .confidence-fill {
   height: 100%;
   background: var(--brand-primary);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transition: width var(--duration-normal);
 }
 
@@ -1738,11 +1738,11 @@ async function onClearMemories() {
   font-weight: var(--font-medium);
 }
 .groq-test-result.success {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-subtle);
   color: var(--brand-primary);
 }
 .groq-test-result.error {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg-subtle);
   color: var(--color-danger);
 }
 .groq-test-result.testing {
@@ -1851,14 +1851,14 @@ async function onClearMemories() {
 .mh-progress-bar {
   height: 4px;
   background: var(--glass-bg);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 
 .mh-progress-fill {
   height: 100%;
   background: var(--brand-primary);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transition: width var(--duration-normal);
 }
 
@@ -1893,7 +1893,7 @@ async function onClearMemories() {
 }
 
 .mh-run-btn:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-bg-dim);
 }
 
 .mh-run-btn:disabled {

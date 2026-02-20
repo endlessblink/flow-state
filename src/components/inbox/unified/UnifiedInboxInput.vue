@@ -285,7 +285,7 @@ const handleAddTask = () => {
 
 .quick-add-input.voice-active {
   border-color: var(--danger-text, #ef4444);
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+  box-shadow: var(--danger-focus-ring);
 }
 
 /* Mic Button (TASK-1024) */
@@ -370,7 +370,7 @@ const handleAddTask = () => {
   width: 3px;
   height: 6px;
   background: var(--danger-text, #ef4444);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   animation: wave 0.8s ease-in-out infinite;
 }
 
@@ -417,7 +417,7 @@ const handleAddTask = () => {
 .voice-error {
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg-subtle);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: var(--danger-text, #ef4444);

@@ -441,7 +441,7 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .color-preset:hover {
   transform: scale(1.1);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--glass-border-strong);
 }
 
 .color-preset.active {
@@ -504,7 +504,7 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .color-text-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--glass-border-strong);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
 }
 
@@ -563,7 +563,7 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .btn-primary:hover:not(:disabled) {
   background: var(--glass-border-hover);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--glass-border-strong);
 }
 
 .btn-primary:disabled {
@@ -614,12 +614,12 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .parent-select:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--glass-border-strong);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
 }
 
 .parent-select option {
-  background: #1c1a2d;
+  background: var(--surface-secondary);
   color: var(--text-primary);
   padding: var(--space-2);
 }

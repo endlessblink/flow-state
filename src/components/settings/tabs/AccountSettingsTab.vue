@@ -599,7 +599,7 @@ const handleChangePassword = async () => {
   gap: var(--space-2);
   white-space: nowrap;
   background: var(--color-danger-bg-light);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid var(--danger-border-subtle);
   color: var(--color-danger);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-lg);
@@ -610,7 +610,7 @@ const handleChangePassword = async () => {
 }
 
 .logout-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: var(--danger-bg-medium);
   transform: translateY(-1px);
 }
 
@@ -702,7 +702,7 @@ const handleChangePassword = async () => {
 .form-input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  box-shadow: var(--purple-glow-focus);
 }
 
 .toggle-visibility {
@@ -1140,8 +1140,8 @@ const handleChangePassword = async () => {
 }
 
 .icon-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--danger-bg-light);
+  border-color: var(--danger-border-medium);
   color: var(--color-danger);
 }
 

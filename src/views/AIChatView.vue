@@ -785,7 +785,7 @@ onUnmounted(() => {
   height: 100%;
   flex: 1;
   min-height: 0;
-  background: rgba(28, 25, 45, 0.92);
+  background: var(--overlay-component-bg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   color: var(--text-primary);

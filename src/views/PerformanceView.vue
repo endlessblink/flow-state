@@ -300,7 +300,7 @@ const saveAsBaseline = () => {
 
 .performance-view::-webkit-scrollbar-thumb {
   background: var(--brand-primary-alpha-30);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   border: 3px solid transparent;
   background-clip: content-box;
 }
@@ -490,7 +490,7 @@ td {
   width: 60px;
   height: 6px;
   background: var(--glass-border);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   display: inline-block;
   margin-right: var(--space-2);
   vertical-align: middle;
@@ -499,6 +499,6 @@ td {
 .progress {
   height: 100%;
   background: var(--color-indigo);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 </style>

@@ -343,19 +343,19 @@ async function onClearMemories() {
 }
 
 .day-chip.active {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
 
 .day-chip.off.active {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--danger-bg-subtle);
   border-color: var(--color-danger);
   color: var(--color-danger);
 }
 
 .day-chip.meeting.active {
-  background: rgba(245, 158, 11, 0.12);
+  background: var(--orange-bg-light);
   border-color: var(--color-warning);
   color: var(--color-warning);
 }
@@ -369,7 +369,7 @@ async function onClearMemories() {
 }
 
 .number-chip.active {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
@@ -401,7 +401,7 @@ async function onClearMemories() {
 }
 
 .style-chip.active {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
@@ -437,7 +437,7 @@ async function onClearMemories() {
 }
 
 .save-btn:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-bg-dim);
 }
 
 .save-btn:disabled {
@@ -560,7 +560,7 @@ async function onClearMemories() {
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-bg-dim);
   padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-xs);
 }
@@ -587,14 +587,14 @@ async function onClearMemories() {
   max-width: 80px;
   height: 4px;
   background: var(--glass-bg);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 
 .confidence-fill {
   height: 100%;
   background: var(--brand-primary);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transition: width var(--duration-normal);
 }
 

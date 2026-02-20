@@ -261,9 +261,9 @@ const formatDueDateLabel = (dueDate: string) => {
 }
 
 .subtask-complete {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--color-work);
+  background: var(--success-bg-subtle);
+  border-color: var(--success-border);
 }
 
 .task-actions {

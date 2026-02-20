@@ -3403,6 +3403,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
 | ~~**BUG-1367**~~ | **P2** | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20) |
 | ~~**BUG-1368**~~ | **P2** | ✅ **? keyboard shortcut broken on Hebrew layout — event.key check fails on non-Latin layouts, added event.code fallback** (✅ DONE 2026-02-20) |
+| **BUG-1369** | **P0** | **📋 Canvas tasks persist after marked done — completed tasks remain visible on canvas instead of being removed** |
 | **TASK-1345** | **P2** | **🔄 Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering** |
 | **TASK-1344** | **P2** | **🔄 AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync — code done, pending migration deploy + user test** |
 | **FEATURE-1345** | **P2** | **🔄 Capacitor Android App — wrap Vue PWA for Play Store distribution (config + build scaffold done)** |

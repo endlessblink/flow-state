@@ -176,7 +176,7 @@ const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
 }
 
 .intensity-card.active {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--glass-bg-subtle);
   border-color: var(--card-accent, var(--state-active-border));
   border-left-color: var(--card-accent, var(--state-active-border));
   color: var(--text-primary);

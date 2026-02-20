@@ -65,21 +65,21 @@ const priorityTooltip = computed(() => {
 /* Priority colors */
 .priority-high {
   background: var(--color-priority-high, #ef4444);
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+  box-shadow: var(--danger-glow-sm);
 }
 
 .priority-medium {
   background: var(--color-priority-medium, #f59e0b);
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.3);
+  box-shadow: var(--warning-glow-sm);
 }
 
 .priority-low {
   background: var(--color-priority-low, #3b82f6);
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
+  box-shadow: var(--blue-glow-sm);
 }
 
 .priority-none,
 .priority-null {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-hover);
 }
 </style>

@@ -4,15 +4,27 @@
       <div class="emoji-picker" @click.stop>
         <div class="emoji-picker-header">
           <h3>Choose Project Color</h3>
-          <button class="close-btn" @click="closePicker">
+          <button
+            class="close-btn"
+            aria-label="Close picker"
+            title="Close"
+            @click="closePicker"
+          >
             ×
           </button>
         </div>
 
-        <div class="emoji-picker-tabs">
+        <div
+          class="emoji-picker-tabs"
+          role="tablist"
+          aria-label="Picker tabs"
+        >
           <button
             class="tab-btn"
             :class="[{ active: activeTab === 'emoji' }]"
+            role="tab"
+            :aria-selected="activeTab === 'emoji'"
+            aria-controls="emoji-panel"
             @click="activeTab = 'emoji'"
           >
             😀 Emoji
@@ -20,6 +32,9 @@
           <button
             class="tab-btn"
             :class="[{ active: activeTab === 'recent' }]"
+            role="tab"
+            :aria-selected="activeTab === 'recent'"
+            aria-controls="recent-panel"
             @click="activeTab = 'recent'"
           >
             🕐 Recent
@@ -27,6 +42,9 @@
           <button
             class="tab-btn"
             :class="[{ active: activeTab === 'color' }]"
+            role="tab"
+            :aria-selected="activeTab === 'color'"
+            aria-controls="color-panel"
             @click="activeTab = 'color'"
           >
             🎨 Color
@@ -44,12 +62,20 @@
 
         <div class="emoji-picker-content">
           <!-- Emoji Tab -->
-          <div v-if="activeTab === 'emoji'" class="emoji-grid">
+          <div
+            v-if="activeTab === 'emoji'"
+            id="emoji-panel"
+            role="tabpanel"
+            aria-label="Emoji selection"
+            class="emoji-grid"
+          >
             <button
               v-for="emoji in filteredEmojis"
               :key="emoji"
               class="emoji-btn"
               :class="[{ selected: selectedEmoji === emoji }]"
+              :aria-label="getEmojiDescription(emoji)"
+              :title="getEmojiDescription(emoji)"
               @click="selectEmoji(emoji)"
             >
               {{ emoji }}
@@ -57,12 +83,20 @@
           </div>
 
           <!-- Recent Tab -->
-          <div v-if="activeTab === 'recent'" class="emoji-grid">
+          <div
+            v-if="activeTab === 'recent'"
+            id="recent-panel"
+            role="tabpanel"
+            aria-label="Recent emojis"
+            class="emoji-grid"
+          >
             <button
               v-for="emoji in recentEmojis"
               :key="emoji"
               class="emoji-btn"
               :class="[{ selected: selectedEmoji === emoji }]"
+              :aria-label="getEmojiDescription(emoji)"
+              :title="getEmojiDescription(emoji)"
               @click="selectEmoji(emoji)"
             >
               {{ emoji }}
@@ -73,13 +107,21 @@
           </div>
 
           <!-- Color Tab -->
-          <div v-if="activeTab === 'color'" class="color-grid">
+          <div
+            v-if="activeTab === 'color'"
+            id="color-panel"
+            role="tabpanel"
+            aria-label="Color selection"
+            class="color-grid"
+          >
             <button
               v-for="color in colorOptions"
               :key="color"
               class="color-btn"
               :class="[{ selected: selectedColor === color }]"
               :style="{ backgroundColor: color }"
+              :aria-label="getColorName(color)"
+              :title="getColorName(color)"
               @click="selectColor(color)"
             />
           </div>
@@ -160,6 +202,24 @@ const colorOptions = [
 const allEmojis = computed(() => [...new Set(Object.values(emojiCategories).flat())])
 
 const recentEmojis = ref<string[]>([])
+
+const getColorName = (color: string): string => {
+  const names: Record<string, string> = {
+    '#2D7A75': 'Dark Teal',
+    '#1E40AF': 'Navy Blue',
+    '#5B21B6': 'Dark Purple',
+    '#9D174D': 'Dark Pink',
+    '#9A3412': 'Dark Orange',
+    '#854D0E': 'Dark Gold',
+    '#166534': 'Dark Green',
+    '#334155': 'Dark Slate',
+    '#6B21A8': 'Dark Violet',
+    '#115E59': 'Dark Cyan',
+    '#9F1239': 'Dark Rose',
+    '#3730A3': 'Dark Indigo',
+  }
+  return names[color] || color
+}
 
 const filteredEmojis = computed(() => {
   if (!searchQuery.value) return allEmojis.value

@@ -8,7 +8,7 @@ import { useCanvasContextMenus } from './useCanvasContextMenus'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 
-export function useCanvasEvents(syncNodes?: () => void) {
+export function useCanvasEvents(syncNodes?: (tasks?: any[], options?: { force?: boolean }) => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
     const { endDrag: endGlobalDrag } = useDragAndDrop()
@@ -175,7 +175,10 @@ export function useCanvasEvents(syncNodes?: () => void) {
                 isInInbox: false
             })
 
-            if (syncNodes) syncNodes()
+            // BUG-1361: Pass force:true to bypass the drag-settling guard.
+            // Without this, if the user recently dragged a canvas node (3-second settling
+            // window), syncNodes silently returns and the dropped task never renders.
+            if (syncNodes) syncNodes(undefined, { force: true })
 
             // Wait for Vue reactivity to propagate before syncing
             // filteredTasks is a computed that needs time to recalculate
@@ -183,7 +186,7 @@ export function useCanvasEvents(syncNodes?: () => void) {
 
             // Call syncNodes to build the node array with parent-child relationships
             if (syncNodes) {
-                syncNodes()
+                syncNodes(undefined, { force: true })
             }
 
             // Wait for v-model to sync nodes.value to Vue Flow's internal state

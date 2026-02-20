@@ -3828,17 +3828,17 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1158: Resolve tasks.ts ↔ canvas.ts Circular Dependency (🔄 IN PROGRESS)
+### ~~TASK-1158~~: Resolve tasks.ts ↔ canvas.ts Circular Dependency (✅ DONE 2026-02-20)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ **DONE**
 
 **Problem**: Circular import between tasks.ts and canvas.ts requires dynamic import workaround.
 
-**Solution**: Extract shared types to `src/types/`, restructure imports.
+**Solution**: Created neutral bridge module `src/stores/canvasTaskBridge.ts` with shared refs (`sharedTasksRef`, `canvasSyncTrigger`, `canvasUiSyncRequest`). Both stores import from the bridge — neither imports the other. Eliminated all 3 dynamic `import()` calls.
 
 **Related**: BUG-1099 (TDZ error from circular deps)
 
-**Files**: `src/stores/tasks.ts`, `src/stores/canvas.ts`
+**Files**: `src/stores/canvasTaskBridge.ts` (new), `src/stores/tasks.ts`, `src/stores/tasks/taskOperations.ts`, `src/stores/canvas.ts`, `src/stores/canvas/canvasGroups.ts`, `src/composables/canvas/useCanvasOrchestrator.ts`
 
 ---
 

@@ -105,13 +105,13 @@ const dismiss = () => {
   margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .step {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2_5);
 }
 
 .step-icon {

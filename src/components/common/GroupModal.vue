@@ -346,7 +346,7 @@ watch(() => props.isOpen, async (isOpen) => {
   backdrop-filter: blur(20px) saturate(100%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-dark-xl);
   width: 90%;
   max-width: 480px;
   animation: slideUp var(--duration-normal) var(--spring-smooth);

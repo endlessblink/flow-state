@@ -2,6 +2,7 @@ import { ref, nextTick, computed } from 'vue'
 import { useVueFlow, type Node, type Edge } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { errorHandler, ErrorCategory } from '@/utils/errorHandler'
 import { useCanvasContextMenus } from './useCanvasContextMenus'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
@@ -10,6 +11,7 @@ import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
+    const { endDrag: endGlobalDrag } = useDragAndDrop()
     const { screenToFlowCoordinate, setNodes, getNodes, findNode } = useVueFlow()
 
     // --- Interaction State ---
@@ -143,6 +145,12 @@ export function useCanvasEvents(syncNodes?: () => void) {
     // Drag and Drop (Task -> Canvas)
     const handleDrop = async (event: DragEvent) => {
         event.preventDefault()
+
+        // BUG-1361: Clean up global drag ghost pill immediately on drop.
+        // When inbox tasks are dropped, the source DOM element may be removed by
+        // reactive filtering (isInInbox=false) before dragend fires.
+        endGlobalDrag()
+
         const data = event.dataTransfer?.getData('application/json')
         if (!data) return
 

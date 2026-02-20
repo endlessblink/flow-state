@@ -358,7 +358,7 @@ const showFilters = ref(false)
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--overlay-light);
   border-bottom: 1px solid var(--border-subtle);
 }
 

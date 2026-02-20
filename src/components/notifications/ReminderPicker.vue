@@ -316,10 +316,10 @@ function addCustomReminder() {
   height: 14px;
   padding: 0 3px;
   background: var(--brand-primary);
-  color: #fff;
+  color: var(--text-primary);
   font-size: 9px;
   font-weight: var(--font-medium);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -480,8 +480,8 @@ function addCustomReminder() {
 }
 
 .remove-btn:hover {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
+  background: var(--danger-bg-subtle);
+  color: var(--priority-high-text);
 }
 
 /* Divider */
@@ -563,7 +563,7 @@ function addCustomReminder() {
 .label-input {
   width: 100%;
   padding: var(--space-1) var(--space-2);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--overlay-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -602,7 +602,7 @@ function addCustomReminder() {
 
 .add-btn:hover:not(:disabled) {
   background: var(--glass-bg-medium);
-  box-shadow: 0 0 10px rgba(78, 205, 196, 0.2);
+  box-shadow: var(--brand-glow-sm);
 }
 
 .add-btn:disabled {

@@ -235,7 +235,7 @@ const handleEventDblClick = (event: VueCalEvent, _e: MouseEvent) => {
 /* Recurring task styles */
 .custom-vuecal :deep(.vuecal__event.recurring-task) {
   border-left: 3px solid var(--color-recurring, #8b5cf6);
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+  background: linear-gradient(135deg, var(--purple-bg-subtle), transparent);
   position: relative;
 }
 
@@ -250,7 +250,7 @@ const handleEventDblClick = (event: VueCalEvent, _e: MouseEvent) => {
 
 .custom-vuecal :deep(.vuecal__event.recurring-task.isModified) {
   border-left-color: var(--color-modified, #f59e0b);
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+  background: linear-gradient(135deg, var(--orange-bg-light), transparent);
 }
 
 .custom-vuecal :deep(.vuecal__event.recurring-task.isModified::before) {

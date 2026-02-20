@@ -1346,7 +1346,7 @@ const currentTaskProject = computed(() => {
 
 .feedback-overlay.warning {
   background: var(--color-warning);
-  box-shadow: 0 4px 24px rgba(245, 158, 11, 0.4);
+  box-shadow: var(--priority-medium-glow);
 }
 
 .feedback-overlay.danger {
@@ -1827,7 +1827,7 @@ const currentTaskProject = computed(() => {
 }
 
 .ai-batch-tag {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   padding: 1px var(--space-1);
   background: var(--glass-bg-medium);
   border-radius: var(--radius-sm);

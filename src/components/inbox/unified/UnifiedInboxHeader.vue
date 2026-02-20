@@ -581,13 +581,13 @@ const handleTimeFilterSelect = (key: string) => {
 
 /* Active state - green to indicate filtering for completed tasks */
 .done-toggle-btn.active {
-  border: 1px solid #22c55e;
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
+  border: 1px solid var(--color-success);
+  background: var(--success-bg-subtle);
+  color: var(--color-success);
 }
 
 .done-toggle-btn.active:hover {
-  background: rgba(34, 197, 94, 0.25);
+  background: var(--status-done-bg);
 }
 
 .done-count {
@@ -605,9 +605,9 @@ const handleTimeFilterSelect = (key: string) => {
 }
 
 .done-toggle-btn.active .done-count {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.4);
-  color: #22c55e;
+  background: var(--success-bg-subtle);
+  border: 1px solid var(--success-border-medium);
+  color: var(--color-success);
 }
 
 /* TASK-1075: Search Styles */

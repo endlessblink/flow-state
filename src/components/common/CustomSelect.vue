@@ -302,13 +302,13 @@ watch(isOpen, (newVal) => {
   z-index: var(--z-tooltip);
 
   /* Glass morphism - purple-tinted with blur */
-  background: rgba(35, 32, 50, 0.65);
+  background: var(--glass-panel-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--glass-border-soft);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    var(--shadow-dark-lg),
+    0 0 0 1px var(--border-subtle) inset;
   border-radius: var(--radius-md);
 
   max-height: 200px;

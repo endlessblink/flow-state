@@ -701,7 +701,7 @@ async function handleSubscribe() {
 .channel-checkbox input:checked + .checkbox-custom::after {
   content: '✓';
   color: var(--bg-primary);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: var(--font-bold);
 }
 

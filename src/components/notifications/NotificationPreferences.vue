@@ -395,7 +395,7 @@ watch(() => props.initialPreferences, (newPreferences) => {
 .checkbox-input:checked {
   background: var(--state-active-bg);
   border-color: var(--brand-primary);
-  box-shadow: 0 0 8px rgba(78, 205, 196, 0.2);
+  box-shadow: var(--brand-glow-sm);
 }
 
 .checkbox-input:checked::after {
@@ -441,7 +441,7 @@ watch(() => props.initialPreferences, (newPreferences) => {
 
 .time-input {
   padding: var(--space-1) var(--space-2);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--overlay-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -456,7 +456,7 @@ watch(() => props.initialPreferences, (newPreferences) => {
 .select-input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--overlay-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -497,7 +497,7 @@ watch(() => props.initialPreferences, (newPreferences) => {
 }
 
 .status-badge.denied {
-  color: #f87171;
+  color: var(--priority-high-text);
 }
 
 .btn {

@@ -365,7 +365,7 @@ const dueStatus = computed(() => {
   position: absolute;
   top: var(--space-2);
   left: var(--space-2);
-  color: #22c55e;
+  color: var(--color-success);
   display: flex;
   align-items: center;
   justify-content: center;

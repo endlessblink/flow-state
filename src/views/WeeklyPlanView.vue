@@ -592,13 +592,13 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 .day-toggle.active {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
 
 .day-toggle.meeting.active {
-  background: rgba(245, 158, 11, 0.12);
+  background: var(--orange-bg-light);
   border-color: var(--color-warning);
   color: var(--color-warning);
 }
@@ -630,7 +630,7 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 .max-task-chip.active {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
@@ -666,7 +666,7 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 .work-style-chip.active {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
@@ -728,8 +728,8 @@ function handleKeydown(event: KeyboardEvent) {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: rgba(78, 205, 196, 0.06);
-  border: 1px solid rgba(78, 205, 196, 0.15);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--state-active-bg);
   border-radius: var(--radius-md);
   flex-shrink: 0;
 }
@@ -770,7 +770,7 @@ function handleKeydown(event: KeyboardEvent) {
 
 .wp-reasoning-summary::before {
   content: '▸';
-  font-size: 10px;
+  font-size: var(--text-2xs);
   transition: transform var(--duration-fast);
 }
 
@@ -826,7 +826,7 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 .wp-btn-primary:hover {
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-bg-dim);
   border-color: var(--brand-hover);
   color: var(--brand-hover);
   transform: translateY(-1px);

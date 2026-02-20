@@ -153,13 +153,17 @@ export function useCanvasOrchestrator() {
     const modals = useCanvasModals()
 
     // Sync Helpers (Adapter for legacy calls)
-    const syncNodes = (tasks?: any[]) => {
+    // BUG-1361: Added `force` option to bypass the drag-settling guard for user-initiated
+    // drops (inbox → canvas). Without this, tasks dropped during the 3-second settling
+    // window after a canvas node drag would silently fail to render.
+    const syncNodes = (tasks?: any[], options?: { force?: boolean }) => {
         // Prevent sync if explicitly unwanted (e.g. during specific interactions)
         if (canvasUiStore.operationLoading.syncing) return
 
         // TASK-241: State Machine Guard
         // Block READ-PATH syncs if user is interacting (dragging/resizing)
-        if (!canAcceptRemoteUpdate.value) {
+        // unless forced by explicit user action (e.g., inbox drop)
+        if (!options?.force && !canAcceptRemoteUpdate.value) {
             return
         }
 

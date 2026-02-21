@@ -1391,9 +1391,9 @@ Cross-Origin Request Blocked: http://localhost:11434/api/tags
 
 ---
 
-### BUG-1181: Cloudflare Insights SRI Hash Mismatch (📋 PLANNED)
+### ~~BUG-1181~~: Cloudflare Insights SRI Hash Mismatch (✅ DONE)
 
-**Priority**: P3-LOW | **Status**: 📋 PLANNED (2026-02-02)
+**Priority**: P3-LOW | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: Console shows integrity hash mismatch for Cloudflare beacon script:
 ```
@@ -1403,11 +1403,9 @@ None of the "sha512" hashes in the integrity attribute match the content of the 
 
 **Root Cause**: Cloudflare updates their beacon.min.js periodically, but the HTML references a cached integrity hash.
 
-**Impact**: Low - Cloudflare analytics may not load, but app functionality unaffected.
+**Resolution**: Cloudflare script not found in `index.html` — likely auto-injected by Cloudflare dashboard Web Analytics settings. No hardcoded SRI hash exists in the codebase to remove. The mismatch occurs on Cloudflare's side and will resolve when they sync their distribution infrastructure. No action needed in `index.html`.
 
-**Fix**: Remove integrity attribute from Cloudflare script tag, or let Cloudflare CDN handle it automatically.
-
-**Files**: `index.html` or Cloudflare dashboard Web Analytics settings
+**Files**: `index.html` - verified, no Cloudflare script tag present
 
 ---
 
@@ -3012,9 +3010,9 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 ---
 
-### TASK-1387: Centralize all AI model references to single source of truth (🔄 IN PROGRESS)
+### ~~TASK-1387~~: Centralize all AI model references to single source of truth (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Started**: 2026-02-21
+**Priority**: P1 | **Status**: ✅ DONE | **Started**: 2026-02-21 | **Completed**: 2026-02-21
 
 **Problem/Opportunity**: AI model IDs and defaults are scattered across multiple files, making it hard to maintain consistency and update defaults globally. Provider files each define their own `DEFAULT_MODEL`, `useWeeklyPlanAI.ts` has hardcoded smart defaults, and `ai.ts` types have model mappings in multiple places.
 
@@ -3648,7 +3646,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1397** | **P1** | **📋 `mark_task_done` convenience tool — accepts title string, most common user action** |
 | **TASK-1398** | **P1** | **📋 Conversation entity memory — track mentioned tasks, resolve pronouns ("it", "that one")** |
 | **TASK-1386** | **P2** | **✅ Google Calendar proxy Edge Function — list-calendars, list-events, token refresh on 401** |
-| **TASK-1387** | **P1** | **🔄 Centralize all AI model references to single source of truth** |
+| ~~**TASK-1387**~~ | **P1** | **✅ Centralize all AI model references to single source of truth** (✅ DONE 2026-02-21) |
 | **TASK-1372** | **P1** | **📋 Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** |
 | ~~**BUG-1371**~~ | **P0** | ✅ **Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** (✅ DONE 2026-02-20) |
 | ~~**BUG-1370**~~ | **P0** | ✅ **Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** (✅ DONE 2026-02-20) |
@@ -4305,15 +4303,15 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1173: Replace Deprecated crypto-js (🔄 IN PROGRESS)
+### ~~TASK-1173~~: Replace Deprecated crypto-js (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-21)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: crypto-js has CVE-2023-46233 vulnerability and is deprecated.
 
-**Solution**: Replace with Web Crypto API or modern alternative.
+**Solution**: Verified crypto-js was already fully removed from the project (no usages in `src/`, not listed in `package.json`, not present in `node_modules`). Safety test in `tests/safety/dependencies.test.ts` actively prevents re-introduction by scanning `package.json` and lockfiles for `crypto-js` and `@types/crypto-js`. Test passes (✅).
 
-**Files**: Files using crypto-js
+**Files**: `tests/safety/dependencies.test.ts` (guard), `package.json` (clean)
 
 ---
 

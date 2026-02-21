@@ -391,5 +391,12 @@
       "didntReceive": "לא קיבלת את האימייל?",
       "resend": "שלח שוב"
     }
+  },
+  "weeklyPlan": {
+    "modelSelector": {
+      "provider": "ספק",
+      "model": "מודל",
+      "aiModel": "מודל AI"
+    }
   }
 }

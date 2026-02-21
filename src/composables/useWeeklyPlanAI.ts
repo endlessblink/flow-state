@@ -332,8 +332,8 @@ CRITICAL RULES:
 7. Use weekends (Sat/Sun) only as overflow — prefer weekdays.
 
 Return ONLY valid JSON. Keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning, taskReasons.
-Each day key = array of task ID strings. "reasoning" = 2-3 sentences explaining your distribution logic.
-"taskReasons" = object mapping task ID to a short reason (max 10 words) explaining why that day (e.g. {"abc123": "Peak day for complex work", "def456": "Grouped with other ProjectX tasks"}).`
+Each day key = array of task ID strings. "reasoning" = 2-3 sentences explaining your overall distribution strategy considering the user's work patterns and project priorities.
+"taskReasons" = object mapping task ID to a contextual reason (max 15 words) explaining why THIS day makes sense for THIS task based on the user's workflow (e.g. {"abc123": "Complex task on your peak productivity day, after finishing related work", "def456": "Quick errand before Wed deadline, light day for errands"}).`
 
   if (interview) {
     const extras: string[] = []
@@ -386,8 +386,10 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
   const taskList = enriched.map(t => ({
     id: t.id,
     title: t.title,
+    desc: t.description ? t.description.slice(0, 80) : null,
     project: t.projectName || null,
     priority: t.priority,
+    status: t.status,
     dueDate: t.dueDate || null,
     urgency: t.urgencyCategory,
     complexity: t.complexityScore,
@@ -406,13 +408,26 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
       lines.push(`Active projects: ${behavioral.activeProjectNames.join(', ')}`)
     }
     if (behavioral.peakProductivityDays.length > 0) {
-      lines.push(`Peak productivity days: ${behavioral.peakProductivityDays.join(', ')}. Prefer scheduling complex/demanding tasks (complexity ≥ 6) on these days.`)
+      lines.push(`Peak productivity days: ${behavioral.peakProductivityDays.join(', ')}. Schedule demanding tasks on these days.`)
     }
     if (behavioral.avgTasksCompletedPerDay) {
       lines.push(`Historical capacity: ~${behavioral.avgTasksCompletedPerDay} tasks/day`)
     }
+    if (behavioral.completionRate !== null && behavioral.completionRate !== undefined) {
+      lines.push(`Plan completion rate: ${Math.round(behavioral.completionRate)}% — ${behavioral.completionRate < 60 ? 'schedule fewer tasks to be realistic' : 'good follow-through'}`)
+    }
+    if (behavioral.frequentlyMissedProjects.length > 0) {
+      lines.push(`Often-missed projects: ${behavioral.frequentlyMissedProjects.join(', ')} — schedule these early in the week`)
+    }
+    if (behavioral.recentlyCompletedTitles.length > 0) {
+      lines.push(`Recently completed: ${behavioral.recentlyCompletedTitles.slice(0, 5).join(', ')}`)
+    }
+    // Work insights from memory graph — planning-relevant observations
+    if (behavioral.workInsights.length > 0) {
+      lines.push(`Work patterns:\n${behavioral.workInsights.slice(0, 5).map(i => `  - ${i}`).join('\n')}`)
+    }
     if (lines.length > 0) {
-      behavioralSection = `\nContext:\n${lines.join('\n')}\n`
+      behavioralSection = `\nUser Context:\n${lines.join('\n')}\n`
     }
   }
 

@@ -2578,7 +2578,7 @@ npm run tasks:bugs     # Filter by BUG type
 - [ ] **TASK-1331**: Weekly plan AI quality — plan responses feel shallow, don't leverage behavioral context well. Improve planning prompt chain.
 - [ ] **TASK-1332**: Add Kimi K2 to Groq model dropdown — ✅ DONE (added `moonshotai/kimi-k2-instruct-0905`)
 - [ ] **TASK-1363**: AI chat shows done tasks + raw UUIDs + unstructured verbose responses — filter done from list/search by default, hide IDs from AI output, tighten response formatting rules
-- [ ] **BUG-1374**: AI Chat 4-bug combo — (1) English input → Hebrew response (task data context overrides language), (2) Hebrew text renders LTR (Step indicator breaks `dir="auto"`), (3) fluffy generic advice instead of concise analysis, (4) wrong tasks returned (`list_tasks` has no date/priority filter). 🔄 Prompt-level fixes applied 2026-02-21 (strengthened language rule, tightened response prompts, added dueDate/sortBy to tools, unicode-bidi:plaintext CSS). Full programmatic fix: Phase 6 pipeline.
+- [x] ~~**BUG-1374**~~: ✅ AI Chat 4-bug combo — (1) English input → Hebrew response (task data context overrides language), (2) Hebrew text renders LTR (Step indicator breaks `dir="auto"`), (3) fluffy generic advice instead of concise analysis, (4) wrong tasks returned (`list_tasks` has no date/priority filter). Pipeline + prompt-level fixes all applied 2026-02-21. (✅ DONE 2026-02-21)
 
 **Key Files**:
 - `src/components/ai/ChatMessage.vue` — message rendering, task list items, inline actions, RTL CSS
@@ -2620,8 +2620,8 @@ User Input → [Pre-Processing] → LLM (ReAct loop) → [Post-Processing] → R
 **Integration:**
 - [x] ~~**TASK-1381**~~: ✅ Wire pre-processing into useAIChat — call `runPreProcess()` before ReAct loop, replace inline `buildSystemPrompt` task injection with contextOptimizer, pass `PreProcessResult` through loop. Depends: TASK-1375, 1376, 1377.
 - [x] ~~**TASK-1382**~~: ✅ Wire post-processing into useAIChat — run `runPostProcess()` after ReAct loop (before `completeStreamingMessage`), replace inline cleanup. Depends: TASK-1378, 1379, 1380, 1381.
-- [ ] **TASK-1383**: Simplify ChatMessage.vue renderedContent — remove redundant regex stripping (now handled by pipeline). `renderedContent` becomes: sanitize + markdown render only. Depends: TASK-1382.
-- [ ] **TASK-1384**: Unit tests for pipeline — test each guardrail independently (language detection, response cleaning, context optimization, pipeline composition). Depends: TASK-1375–1380.
+- [x] ~~**TASK-1383**~~: ✅ Simplify ChatMessage.vue renderedContent — remove redundant regex stripping (now handled by pipeline). `renderedContent` becomes: sanitize + markdown render only. Depends: TASK-1382.
+- [x] ~~**TASK-1384**~~: ✅ Unit tests for pipeline — test each guardrail independently (language detection, response cleaning, context optimization, pipeline composition). Depends: TASK-1375–1380.
 
 **Dependency graph:**
 ```
@@ -2639,23 +2639,23 @@ Wave 5: TASK-1383 (cleanup, depends on Wave 4)
 **Research basis (2025-2026):** Linear AI / Cursor pattern: compute reasoning in code, LLM only writes prose. Groq Llama 3.3 70B tool calling is documented as intermittent (Agno #4090). uFuzzy outperforms Fuse.js for short string matching. Rule-based validation before LLM-as-judge is the cost-effective quality gate.
 
 **Pillar 1: Pre-Digested Reasoning (highest ROI)**
-- [ ] **TASK-1388**: Pre-digested reasoning engine — instead of sending raw JSON tool results and hoping the LLM reasons, compute the analysis IN CODE (days overdue, subtask progress %, project context, priority ranking) and send pre-written facts the LLM only needs to format naturally. Pattern: `"Task X: 3 days overdue, 0/5 subtasks, high priority in Project Auth"` → LLM writes connecting prose. Inject into tool result follow-up prompt in `useAIChat.ts`. Key insight from Cursor/Linear: minimize what the LLM invents, maximize what deterministic code computes.
-- [ ] **TASK-1389**: Skeleton prompting for agent chains — refactor `useAgentChains.ts` chain prompts to use skeleton pattern: code generates structured sections (overdue analysis, today's priorities, progress summary), LLM fills only 1-sentence natural language bridges between sections. Eliminates "wall of generic text" from plan_my_day and end_of_day_review chains.
+- [x] ~~**TASK-1388**~~: ✅ Pre-digested reasoning engine — instead of sending raw JSON tool results and hoping the LLM reasons, compute the analysis IN CODE (days overdue, subtask progress %, project context, priority ranking) and send pre-written facts the LLM only needs to format naturally. Pattern: `"Task X: 3 days overdue, 0/5 subtasks, high priority in Project Auth"` → LLM writes connecting prose. Inject into tool result follow-up prompt in `useAIChat.ts`. Key insight from Cursor/Linear: minimize what the LLM invents, maximize what deterministic code computes.
+- [x] ~~**TASK-1389**~~: ✅ Skeleton prompting for agent chains — refactor `useAgentChains.ts` chain prompts to use skeleton pattern: code generates structured sections (overdue analysis, today's priorities, progress summary), LLM fills only 1-sentence natural language bridges between sections. Eliminates "wall of generic text" from plan_my_day and end_of_day_review chains.
 
 **Pillar 2: Generic Response Detection + Retry**
-- [ ] **TASK-1390**: Fluff detector guardrail — `src/services/ai/pipeline/fluffDetector.ts`. Heuristic scoring: check if response references actual task titles from context (0.3 weight), contains specific data points like dates/numbers (0.15), has no generic advisory phrases like "consider", "it's essential", "you might want to" (0.05 each). Score 0-1, threshold 0.5 = retry. Based on 2025 "Detecting Prompt Knowledge Gaps" paper specificity dimensions. Zero-cost, runs client-side.
-- [ ] **TASK-1391**: Validation + retry loop — when fluff detector score < 0.5 after tool results, retry once with stricter prompt: append the validation feedback ("your response referenced no specific tasks, try again naming actual tasks from the results"). Max 1 retry to avoid latency. If retry also fails, return best attempt with post-processing cleanup. Wire into `useAIChat.ts` post-ReAct section.
+- [x] ~~**TASK-1390**~~: ✅ Fluff detector guardrail — `src/services/ai/pipeline/fluffDetector.ts`. Heuristic scoring: check if response references actual task titles from context (0.3 weight), contains specific data points like dates/numbers (0.15), has no generic advisory phrases like "consider", "it's essential", "you might want to" (0.05 each). Score 0-1, threshold 0.5 = retry. Based on 2025 "Detecting Prompt Knowledge Gaps" paper specificity dimensions. Zero-cost, runs client-side.
+- [x] ~~**TASK-1391**~~: ✅ Validation + retry loop — when fluff detector score < 0.5 after tool results, retry once with stricter prompt: append the validation feedback ("your response referenced no specific tasks, try again naming actual tasks from the results"). Max 1 retry to avoid latency. If retry also fails, return best attempt with post-processing cleanup. Wire into `useAIChat.ts` post-ReAct section.
 
 **Pillar 3: Tool Hints + Intent Routing**
-- [ ] **TASK-1392**: Keyword-based tool hints — `src/services/ai/pipeline/toolHints.ts`. Deterministic keyword → tool mapping: "overdue" → `get_overdue_tasks`, "plan my week" → `generate_weekly_plan`, "timer" → `get_timer_status`/`start_timer`, "what should I" → `suggest_next_task`. Inject hint into system prompt: "Consider using `get_overdue_tasks` for this query." Reduces ReAct steps from 2-3 to 1. Supports Hebrew keywords too.
-- [ ] **TASK-1393**: `projectId` filter on `list_tasks` — add optional `projectId` parameter to `list_tasks` tool definition and execution. Already has project data accessible. 15-minute quick win.
-- [ ] **TASK-1394**: Counting vs listing system prompt clarification — add explicit rule: "For COUNTING questions (how many, what's total), answer from context — do NOT call tools. For LISTING questions (show me, what are my tasks), use tools to show interactive cards." Prevents unnecessary tool calls.
+- [x] ~~**TASK-1392**~~: ✅ Keyword-based tool hints — `src/services/ai/pipeline/toolHints.ts`. Deterministic keyword → tool mapping: "overdue" → `get_overdue_tasks`, "plan my week" → `generate_weekly_plan`, "timer" → `get_timer_status`/`start_timer`, "what should I" → `suggest_next_task`. Inject hint into system prompt: "Consider using `get_overdue_tasks` for this query." Reduces ReAct steps from 2-3 to 1. Supports Hebrew keywords too.
+- [x] ~~**TASK-1393**~~: ✅ `projectId` filter on `list_tasks` — add optional `projectId` parameter to `list_tasks` tool definition and execution. Already has project data accessible. 15-minute quick win.
+- [x] ~~**TASK-1394**~~: ✅ Counting vs listing system prompt clarification — add explicit rule: "For COUNTING questions (how many, what's total), answer from context — do NOT call tools. For LISTING questions (show me, what are my tasks), use tools to show interactive cards." Prevents unnecessary tool calls.
 
 **Pillar 4: Fuzzy Title Resolution**
-- [ ] **TASK-1395**: Install uFuzzy + `resolveTask()` helper — `npm install @leeoniya/ufuzzy`. Create `src/services/ai/entityResolver.ts` with `resolveTask(idOrTitle, tasks)`: (1) exact UUID match, (2) exact TASK-XXX ID match, (3) uFuzzy title search. Returns best match or top-3 candidates if ambiguous. uFuzzy chosen over Fuse.js: 7.5KB, ~1ms for 1k items, better quality on short strings without tuning.
-- [ ] **TASK-1396**: Wire `resolveTask()` into write tools — modify `validateTaskExists()` in `tools.ts` to fall through to `resolveTask()` when UUID lookup fails. Affects: `update_task`, `update_task_status`, `delete_task`, `start_timer`, `stop_timer`. User says "mark the video as done" → LLM passes title fragment → `resolveTask` finds the task.
-- [ ] **TASK-1397**: `mark_task_done` convenience tool — new tool alias that accepts `taskTitle` (string) instead of requiring UUID. Internally calls `resolveTask()` + `taskStore.updateTask(id, { status: 'done' })`. Most common user action shouldn't depend on UUID resolution.
-- [ ] **TASK-1398**: Conversation entity memory — track recently-mentioned task IDs in conversation metadata. When user says "it", "that task", "the last one", resolve to most recently mentioned entity. Store in `aiChat` store alongside messages. Enables multi-turn: "show overdue tasks" → "mark the first one as done."
+- [x] ~~**TASK-1395**~~: ✅ Install uFuzzy + `resolveTask()` helper — `npm install @leeoniya/ufuzzy`. Create `src/services/ai/entityResolver.ts` with `resolveTask(idOrTitle, tasks)`: (1) exact UUID match, (2) exact TASK-XXX ID match, (3) uFuzzy title search. Returns best match or top-3 candidates if ambiguous. uFuzzy chosen over Fuse.js: 7.5KB, ~1ms for 1k items, better quality on short strings without tuning.
+- [x] ~~**TASK-1396**~~: ✅ Wire `resolveTask()` into write tools — modify `validateTaskExists()` in `tools.ts` to fall through to `resolveTask()` when UUID lookup fails. Affects: `update_task`, `update_task_status`, `delete_task`, `start_timer`, `stop_timer`. User says "mark the video as done" → LLM passes title fragment → `resolveTask` finds the task.
+- [x] ~~**TASK-1397**~~: ✅ `mark_task_done` convenience tool — new tool alias that accepts `taskTitle` (string) instead of requiring UUID. Internally calls `resolveTask()` + `taskStore.updateTask(id, { status: 'done' })`. Most common user action shouldn't depend on UUID resolution.
+- [x] ~~**TASK-1398**~~: ✅ Conversation entity memory — track recently-mentioned task IDs in conversation metadata. When user says "it", "that task", "the last one", resolve to most recently mentioned entity. Store in `aiChat` store alongside messages. Enables multi-turn: "show overdue tasks" → "mark the first one as done."
 
 **Dependency graph:**
 ```
@@ -2917,9 +2917,9 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 ---
 
-### FEATURE-1314: AI Weekly Quick Sort — Sort Week's Tasks with AI + Push to Canvas Date Groups (🔄 IN PROGRESS)
+### ~~FEATURE-1314~~: AI Weekly Quick Sort — Sort Week's Tasks with AI + Push to Canvas Date Groups (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS — V1 implemented, awaiting user testing
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-21)
 
 **Problem/Opportunity**: Starting a new week requires manually reviewing and organizing all tasks for the upcoming week. There's no AI-assisted workflow to quickly sort/prioritize the week's tasks and distribute them to the appropriate day-groups on the canvas.
 
@@ -2941,14 +2941,16 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 **Follow-up Tasks**:
 - **TASK-1326**: Weekly Plan AI Enhancements — task batching by project, weekly focus theme, skip feedback loop, workload warnings, energy-aware scheduling, plan adherence scoring (👀 REVIEW — code implemented, folded into FEATURE-1314 V1, awaiting user testing)
-- **TASK-1385**: Weekly Plan AI — deterministic rebalancer + smarter model routing + prompt quality (📋 PLANNED — reliability for smaller models)
-- **FEATURE-1317**: AI Work Profile / Persistent Memory
+- ~~**TASK-1385**~~: ✅ Weekly Plan AI — deterministic rebalancer + smarter model routing + prompt quality (✅ DONE 2026-02-21)
+- **TASK-1399**: Weekly Plan model/provider selector — connected to centralized AI model registry (✅ DONE)
+- ~~**TASK-1400**~~: ✅ SOP-045 Tauri AppImage Update Workflow + fix stale binary — created SOP, fixed stale v1.2.18 AppImage, removed canvas drag debug logging (✅ DONE 2026-02-21)
+- ~~**FEATURE-1317**~~: ✅ AI Work Profile / Persistent Memory (✅ DONE 2026-02-21)
 
 ---
 
-### TASK-1385: Weekly Plan AI — Deterministic Rebalancer + Smarter Model Routing + Prompt Quality (📋 PLANNED)
+### ~~TASK-1385~~: Weekly Plan AI — Deterministic Rebalancer + Smarter Model Routing + Prompt Quality (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED | **Parent**: FEATURE-1314 (AI Weekly Quick Sort)
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-21) | **Parent**: FEATURE-1314 (AI Weekly Quick Sort)
 
 **Problem/Opportunity**: The weekly plan distribution is unreliable when using smaller models (Groq/Llama). Tasks pile on one day instead of spreading evenly. Root cause: compact prompt optimized for tokens over quality, no post-LLM validation, and model choice.
 
@@ -2981,6 +2983,37 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 - Prompt explicitly guides LLM to distribute by capacity
 - Rebalancer auto-corrects LLM distribution without user action
 - Smaller model output now produces acceptable plans (Groq Llama passes basic distribution test)
+
+---
+
+### ~~TASK-1399~~: Weekly Plan — Model/Provider Selector (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE | **Completed**: 2026-02-21 | **Parent**: TASK-1385
+
+**What was implemented**:
+- Added `getModelsForProvider()` helper to `src/config/aiModels.ts`
+- Updated `WEEKLY_PLAN_DEFAULTS` to better models: `llama-3.3-70b-versatile` (Groq), `deepseek/deepseek-v3.2-20251201:free` (OpenRouter)
+- Added compact model/provider selector widget to `WeeklyPlanView.vue` — visible in idle, interview, and review states
+- Provider dropdown uses `PROVIDER_OPTIONS` from centralized registry; model dropdown dynamically populates via `getModelsForProvider()` with pricing shown
+- Selection persists to `settingsStore.weeklyPlanProvider` / `settingsStore.weeklyPlanModel`
+- Provider change auto-selects `WEEKLY_PLAN_DEFAULTS` for that provider
+- Added i18n keys under `weeklyPlan.modelSelector` (en + he)
+
+---
+
+### ~~TASK-1400~~: SOP-045 Tauri AppImage Update Workflow + fix stale binary (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE | **Completed**: 2026-02-21
+
+**What was done**:
+- Created `docs/sop/SOP-045-tauri-appimage-update-workflow.md` documenting the full Tauri AppImage update workflow, including manual override procedure for when the auto-updater cannot reach old binaries
+- Fixed user's stale v1.2.18 AppImage binary by copying the v1.2.87 build to `~/Applications/`
+- Removed debug logging from the canvas drag pipeline (console.log calls in hot paths that were left from BUG-1364 debugging)
+
+**Background**: User's Tauri desktop app was stuck on v1.2.18 because the auto-updater couldn't self-update an AppImage that was installed from an old .deb package path. The SOP documents how to identify this state and manually replace the binary.
+
+**Files**:
+- `docs/sop/SOP-045-tauri-appimage-update-workflow.md` (new)
 
 ---
 
@@ -3059,9 +3092,9 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 ---
 
-### FEATURE-1317: AI Work Profile / Persistent Memory — Learn User Work Patterns for Smarter Weekly Plans (🔄 IN PROGRESS)
+### ~~FEATURE-1317~~: AI Work Profile / Persistent Memory — Learn User Work Patterns for Smarter Weekly Plans (✅ DONE)
 
-**Priority**: P3 | **Status**: 🔄 IN PROGRESS (2026-02-14)
+**Priority**: P3 | **Status**: ✅ DONE (2026-02-21)
 
 **Problem/Opportunity**: The AI Weekly Plan (FEATURE-1314) starts from scratch every time — it doesn't know the user's work capacity, preferred task distribution, energy patterns, or past scheduling accuracy. A persistent "work profile" would make each week's plan progressively smarter.
 
@@ -3198,9 +3231,9 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 
 ---
 
-### TASK-1117: Enhance Quick Sort UX on Mobile (🔄 IN PROGRESS)
+### ~~TASK-1117~~: Enhance Quick Sort UX on Mobile (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-01-30)
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: Mobile Quick Sort has unclear UX hierarchy and confusing swipe interactions:
 1. Sliding right opens Quick Edit modal instead of sorting
@@ -3543,9 +3576,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### FEATURE-1293: Catalog View UX/UI Redesign (🔄 IN PROGRESS)
+### ~~FEATURE-1293~~: Catalog View UX/UI Redesign (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: The Catalog view (AllTasksView) has poor UX/UI — broken table header layout, no visual hierarchy in list mode, generic feel compared to Canvas and Cyberflow views. Neither Table nor List mode is usable for the owner's workflow.
 
@@ -3570,7 +3603,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
 | **FEATURE-1306** | **P1** | **⏸️ Cyberflow Arena — 3D Wave-Based Productivity Combat (Ruiner-style, from-scratch rewrite)** |
-| **FEATURE-1293** | **P2** | **🔄 Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
+| ~~**FEATURE-1293**~~ | **P2** | ✅ **Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
 | ~~BUG-1206~~ | P0 | ✅ Task details not saved when pressing Save in canvas (3-layer fix: pending write guard + extended isVeryRecent + modal-aware recovery) |
@@ -3593,10 +3626,12 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
 | ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |
 | ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |
-| **FEATURE-1314** | **P2** | **👀 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
+| ~~**FEATURE-1314**~~ | **P2** | ✅ **AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
 | **TASK-1326** | **P2** | **👀 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)** |
-| **TASK-1385** | **P2** | **📋 Weekly Plan AI — deterministic rebalancer + smarter model routing + prompt quality** |
-| **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
+| ~~**TASK-1385**~~ | **P2** | ✅ **Weekly Plan AI — deterministic rebalancer + smarter model routing + prompt quality** |
+| ~~**TASK-1399**~~ | **P2** | ✅ **Weekly Plan — model/provider selector connected to centralized AI model registry** |
+| ~~**TASK-1400**~~ | **P2** | ✅ **SOP-045 Tauri AppImage Update Workflow + fix stale binary — created SOP, fixed user's stale v1.2.18 AppImage, removed debug logging from canvas drag** |
+| ~~**FEATURE-1317**~~ | **P3** | ✅ **AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | ~~**TASK-1341**~~ | **P2** | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16) |
 | **FEATURE-1342** | **P2** | **🔄 AI Task Suggestions — per-task/group button to auto-suggest priority, due date, status based on user data** |
@@ -3623,7 +3658,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
 | ~~**BUG-1367**~~ | **P2** | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20) |
 | ~~**BUG-1368**~~ | **P2** | ✅ **? keyboard shortcut broken on Hebrew layout — event.key check fails on non-Latin layouts, added event.code fallback** (✅ DONE 2026-02-20) |
-| **BUG-1374** | **P1** | **🔄 IN PROGRESS: AI Chat 4-bug combo — Hebrew response on English input, LTR for Hebrew text, fluffy advice, wrong tasks returned (prompt-level fixes done, full pipeline testing pending)** |
+| ~~**BUG-1374**~~ | **P1** | ✅ **AI Chat 4-bug combo — Hebrew response on English input, LTR for Hebrew text, fluffy advice, wrong tasks returned (all fixed 2026-02-21)** |
 | ~~**TASK-1375**~~ | **P1** | ✅ **AI Pipeline orchestrator + types — create pipeline/ with guardrail interfaces and function composition** (✅ DONE 2026-02-21) |
 | ~~**TASK-1376**~~ | **P1** | ✅ **Language detector — deterministic Unicode-range detection, detectLanguageMismatch()** (✅ DONE 2026-02-21) |
 | ~~**TASK-1377**~~ | **P1** | ✅ **Context optimizer — separate task titles from metadata, character budget, date-relative filtering** (✅ DONE 2026-02-21) |
@@ -3632,27 +3667,27 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1380**~~ | **P1** | ✅ **Response length enforcer — cap by intent (greetings, tool summaries, analytical)** (✅ DONE 2026-02-21) |
 | ~~**TASK-1381**~~ | **P1** | ✅ **Wire pre-processing into useAIChat — call runPreProcess before ReAct, use contextOptimizer** (✅ DONE 2026-02-21) |
 | ~~**TASK-1382**~~ | **P1** | ✅ **Wire post-processing into useAIChat — runPostProcess after ReAct, replace inline cleanup** (✅ DONE 2026-02-21) |
-| **TASK-1383** | **P1** | **📋 Simplify ChatMessage.vue renderedContent — remove redundant regex, pipeline handles cleanup** |
-| **TASK-1384** | **P1** | **📋 Unit tests for pipeline — guardrails, language detection, context optimization, composition** |
-| **TASK-1388** | **P1** | **📋 Pre-digested reasoning engine — compute task analysis in code, LLM formats facts naturally** |
-| **TASK-1389** | **P1** | **📋 Skeleton prompting for agent chains — code generates sections, LLM writes bridges** |
-| **TASK-1390** | **P1** | **📋 Fluff detector guardrail — heuristic scoring: task name references, data points, no generic phrases** |
-| **TASK-1391** | **P1** | **📋 Validation + retry loop — retry once with feedback when fluff score < 0.5** |
-| **TASK-1392** | **P1** | **📋 Keyword-based tool hints — deterministic keyword→tool mapping injected into system prompt** |
-| **TASK-1393** | **P1** | **📋 `projectId` filter on `list_tasks` — quick win, 15 minutes** |
-| **TASK-1394** | **P1** | **📋 Counting vs listing clarification — system prompt rule to prevent unnecessary tool calls** |
-| **TASK-1395** | **P1** | **📋 Install uFuzzy + `resolveTask()` helper — fuzzy title matching for entity resolution** |
-| **TASK-1396** | **P1** | **📋 Wire `resolveTask()` into write tools — title-based resolution fallback in `validateTaskExists()`** |
-| **TASK-1397** | **P1** | **📋 `mark_task_done` convenience tool — accepts title string, most common user action** |
-| **TASK-1398** | **P1** | **📋 Conversation entity memory — track mentioned tasks, resolve pronouns ("it", "that one")** |
+| ~~**TASK-1383**~~ | **P1** | ✅ **Simplify ChatMessage.vue renderedContent — remove redundant regex, pipeline handles cleanup** (✅ DONE 2026-02-21) |
+| ~~**TASK-1384**~~ | **P1** | ✅ **Unit tests for pipeline — guardrails, language detection, context optimization, composition** (✅ DONE 2026-02-21) |
+| ~~**TASK-1388**~~ | **P1** | **✅ Pre-digested reasoning engine — compute task analysis in code, LLM formats facts naturally** (✅ DONE) |
+| ~~**TASK-1389**~~ | **P1** | **✅ Skeleton prompting for agent chains — code generates sections, LLM writes bridges** (✅ DONE) |
+| ~~**TASK-1390**~~ | **P1** | **✅ Fluff detector guardrail — heuristic scoring: task name references, data points, no generic phrases** (✅ DONE) |
+| ~~**TASK-1391**~~ | **P1** | **✅ Validation + retry loop — retry once with feedback when fluff score < 0.5** (✅ DONE) |
+| ~~**TASK-1392**~~ | **P1** | **✅ Keyword-based tool hints — deterministic keyword→tool mapping injected into system prompt** (✅ DONE) |
+| ~~**TASK-1393**~~ | **P1** | **✅ `projectId` filter on `list_tasks` — quick win, 15 minutes** (✅ DONE) |
+| ~~**TASK-1394**~~ | **P1** | **✅ Counting vs listing clarification — system prompt rule to prevent unnecessary tool calls** (✅ DONE) |
+| ~~**TASK-1395**~~ | **P1** | **✅ Install uFuzzy + `resolveTask()` helper — fuzzy title matching for entity resolution** (✅ DONE) |
+| ~~**TASK-1396**~~ | **P1** | **✅ Wire `resolveTask()` into write tools — title-based resolution fallback in `validateTaskExists()`** (✅ DONE) |
+| ~~**TASK-1397**~~ | **P1** | **✅ `mark_task_done` convenience tool — accepts title string, most common user action** (✅ DONE) |
+| ~~**TASK-1398**~~ | **P1** | **✅ Conversation entity memory — track mentioned tasks, resolve pronouns ("it", "that one")** (✅ DONE) |
 | **TASK-1386** | **P2** | **✅ Google Calendar proxy Edge Function — list-calendars, list-events, token refresh on 401** |
 | ~~**TASK-1387**~~ | **P1** | **✅ Centralize all AI model references to single source of truth** (✅ DONE 2026-02-21) |
 | **TASK-1372** | **P1** | **📋 Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** |
 | ~~**BUG-1371**~~ | **P0** | ✅ **Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** (✅ DONE 2026-02-20) |
 | ~~**BUG-1370**~~ | **P0** | ✅ **Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** (✅ DONE 2026-02-20) |
 | ~~**BUG-1369**~~ | **P0** | ✅ **Canvas tasks persist after marked done — completed tasks remain visible on canvas instead of being removed** (✅ DONE 2026-02-21) |
-| **TASK-1345** | **P2** | **🔄 Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering** |
-| **TASK-1344** | **P2** | **🔄 AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync — code done, pending migration deploy + user test** |
+| ~~**TASK-1345**~~ | **P2** | ✅ **Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering** |
+| ~~**TASK-1344**~~ | **P2** | ✅ **AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync — code done, useAISync.ts implemented** |
 | **FEATURE-1345** | **P2** | **🔄 Capacitor Android App — wrap Vue PWA for Play Store distribution (config + build scaffold done)** |
 | ~~**TASK-1339**~~ | **P0** | ✅ **Tasks must persist over refresh in guest mode** (✅ DONE 2026-02-17) |
 | ~~**BUG-1340**~~ | **P0** | ✅ **Kanban drag-drop broken — Vue 3 $attrs boolean bug (forceFallback/delayOnTouchOnly passed as empty string)** |
@@ -4243,9 +4278,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1168: Add Unit Tests for Sync/Conflict Resolution (🔄 IN PROGRESS)
+### ~~TASK-1168~~: Add Unit Tests for Sync/Conflict Resolution (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-21)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: Sync and conflict resolution logic has only 4 unit tests, high risk area.
 
@@ -4255,9 +4290,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1169: Add Unit Tests for Database Layer (🔄 IN PROGRESS)
+### TASK-1169: Add Unit Tests for Database Layer (📋 PLANNED)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-21)
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
 
 **Problem**: No dedicated tests for database composable.
 
@@ -4267,9 +4302,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1170: Add Cross-Device Timer Sync Tests (🔄 IN PROGRESS)
+### ~~TASK-1170~~: Add Cross-Device Timer Sync Tests (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-21)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: Timer sync between devices has limited test coverage.
 
@@ -4279,9 +4314,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1171: Add Mobile View E2E Tests (🔄 IN PROGRESS)
+### TASK-1171: Add Mobile View E2E Tests (👀 REVIEW)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-21)
+**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (partial coverage — 1 basic file, needs assessment)
 
 **Problem**: Mobile views have E2E test coverage gaps.
 

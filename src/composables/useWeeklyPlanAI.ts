@@ -331,38 +331,39 @@ function buildDistributionSystemPrompt(interview?: InterviewAnswers, profile?: W
   const maxPerDay = interview?.maxTasksPerDay || 6
   const targetPerDay = taskCount ? Math.min(Math.ceil(taskCount / availableDayCount), maxPerDay) : 4
 
-  let base = `You are a personal weekly planner who DEEPLY understands each task. You must READ every task title and description to understand its nature, then schedule intelligently.
+  let base = `You are a personal weekly planner. You KNOW this person — their routine, where they work each day, what types of tasks they prefer when.
 
-YOUR JOB: Create a weekly plan with REAL reasoning — not random distribution.
+THINK STEP BY STEP before producing the schedule:
+1. First, read the user's "About me" and interview answers. Note their weekly routine (e.g. which days they go where).
+2. Read each task title and description — understand what it IS and WHERE it happens (school tasks → school day, errands → errand day, etc.)
+3. Match tasks to the day that makes sense for the user's LIFE, not just priority math.
 
-SCHEDULING STRATEGY:
-1. READ each task title — understand what it IS (coding, design, meetings, errands, learning, planning, etc.)
-2. GROUP related tasks on the same day (same project, same type of work) to minimize context-switching
-3. SEQUENCE dependencies — if task B builds on task A, put A earlier in the week
-4. MATCH task nature to the day — complex/creative work on peak days, admin/errands on lighter days
-5. RESPECT deadlines — DUE_THIS_WEEK tasks must go on or before their due date
-6. Spread OVERDUE tasks across Mon–Wed (NOT all on Monday)
-7. Target ~${targetPerDay} tasks per available day. NEVER exceed ${maxPerDay} per day
-8. Weekends (Sat/Sun) = overflow only. Each task ID in exactly ONE day or "unscheduled"
+SCHEDULING RULES:
+- Match tasks to the user's routine (school tasks on school day, errands on errand day, etc.)
+- Group same-project tasks on the same day to minimize context-switching
+- DUE_THIS_WEEK tasks go on or before their due date
+- Spread OVERDUE tasks across Mon–Wed (not all on Monday)
+- Target ~${targetPerDay} tasks per available day. NEVER exceed ${maxPerDay}
+- Weekends = overflow only. Each task in exactly ONE day or "unscheduled"
 
 RESPONSE FORMAT — Return ONLY valid JSON:
 {
   "monday": ["id1", "id2"], "tuesday": [...], ..., "sunday": [...], "unscheduled": [...],
-  "reasoning": "2-3 sentences: your OVERALL strategy referencing specific projects and task types",
+  "reasoning": "2-3 sentences about your OVERALL strategy — reference the user's routine and why you placed task groups where you did",
   "taskReasons": {
-    "taskId1": "Specific reason WHY this day (10-20 words)",
-    "taskId2": "Another specific reason..."
+    "taskId1": "1-2 sentences: WHY this specific day for this specific task, referencing the user's routine/preferences",
+    "taskId2": "..."
   }
 }
 
-CRITICAL — taskReasons must be SPECIFIC to each task. Examples:
-  GOOD: "Overdue 3 days — clear early before new project work starts"
-  GOOD: "Groups with 2 other FlowState tasks for focused coding block"
-  GOOD: "Quick 15m admin task — fits Wednesday's lighter schedule after meetings"
-  GOOD: "Creative design work — scheduled on peak productivity Thursday"
-  BAD: "Scheduled for balanced distribution" (generic, says nothing)
-  BAD: "Medium priority task" (just restates metadata)
-  BAD: "Placed on Tuesday" (no reasoning at all)`
+CRITICAL — taskReasons must connect the TASK to the USER'S LIFE:
+  GOOD: "School task → Wednesday when you're at the high school"
+  GOOD: "Batch with grocery shopping on your Tuesday errand run"
+  GOOD: "Creative work early in the week when your energy is highest"
+  GOOD: "Overdue 3 days — clearing Monday so it's off your plate"
+  BAD: "Scheduled for balanced distribution" (generic)
+  BAD: "Medium priority task" (just metadata)
+  BAD: "Placed on Tuesday for lighter workload" (no personal connection)`
 
   if (interview) {
     const extras: string[] = []

@@ -1,11 +1,11 @@
 {
-  "version": "1.2.86",
-  "notes": "BUG-1365: fix canvas done tasks reappear after refresh + board empty columns",
-  "pub_date": "2026-02-19T17:19:14.007Z",
+  "version": "1.2.88",
+  "notes": "BUG-1370: Fix Tauri WebKitGTK drag-and-drop immediate cancel",
+  "pub_date": "2026-02-21T11:20:18.033Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTR2TmJ4QURpWW9FTW1wWEE1S0pXU0FGQkE2V1V4TXc2S0d2Mmt4QXh1bmlDQzBhY0pPa21hcWpzSENWQjVvS25ia0NKQ1dJZ2ZMY0dwblRpaEx0REEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxNTIxNTUzCWZpbGU6Rmxvd1N0YXRlXzEuMi44Nl9hbWQ2NC5BcHBJbWFnZQpxOHZuZ3VBSzJMdmpuc09aQnpLeHprTU5WeHRMQkpXMkl4REhqQ2h2di9DRHQxQ3B0UWozQXIxS0ROd0Y4eGw3UUM0bndKYUFYYzZSUVZacHhFVzJCQT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.86_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTFlTU42YXAwa092T2JkMlR5d0E5N2Z4RmV5OEtZVVBvR2c4ei9zMm5RTTA5V0NiczJCdkV3bUs2dk00OGZXWm43N3dib1ZmbHlkVnNlVWQ3cGZkYVE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxNjcyODE3CWZpbGU6Rmxvd1N0YXRlXzEuMi44OF9hbWQ2NC5BcHBJbWFnZQpwT2x3WjNobXRCOFNMc1dRL0txcXNHQStvMzZkNC8rM1Fsa3FFeHo0b1o2V2VlTmVJVllIcjI5TkwrMHZ3UlBrRlcxby9rZ1E1TWZqb2F6eld1L1ZCdz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.88_amd64.AppImage"
     }
   }
 }

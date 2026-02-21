@@ -114,11 +114,12 @@ async function validateSupabaseAuth(req: Request): Promise<{ id: string }> {
  * Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Supabase secrets.
  */
 async function refreshGoogleToken(refreshToken: string): Promise<string> {
-  const clientId = Deno.env.get('GOOGLE_CLIENT_ID')
-  const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')
+  // Read from Supabase Auth's existing Google OAuth env vars (shared via Doppler)
+  const clientId = Deno.env.get('SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID') || Deno.env.get('GOOGLE_CLIENT_ID')
+  const clientSecret = Deno.env.get('SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET') || Deno.env.get('GOOGLE_CLIENT_SECRET')
 
   if (!clientId || !clientSecret) {
-    throw new Error('Google OAuth credentials not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)')
+    throw new Error('Google OAuth credentials not configured (SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID / SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)')
   }
 
   const params = new URLSearchParams({

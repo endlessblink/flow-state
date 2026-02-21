@@ -292,6 +292,13 @@ const ALLOWED_CIRCULAR_DEPS = [
   // Works because imports are used inside functions (lazy), not at module load time
   ['useSupabaseDatabase.ts', 'auth.ts'],
   ['auth.ts', 'useSupabaseDatabase.ts'],
+  // TASK-1146: supabase/index.ts re-exports through barrel, same lazy pattern as above
+  ['index.ts', 'auth.ts'],
+  ['auth.ts', 'index.ts'],
+  // timer.ts → tasks.ts → taskStates.ts → projects.ts → taskOperations.ts → useGamificationHooks.ts
+  // Pre-existing cycle: gamification hooks import timer store for XP tracking
+  // Works because all cross-store imports are used inside functions/actions, not at module load time
+  ['timer.ts', 'tasks.ts', 'taskStates.ts', 'projects.ts', 'taskOperations.ts', 'useGamificationHooks.ts'],
 ]
 
 function isAllowedCircularDep(cycle: string[]): boolean {

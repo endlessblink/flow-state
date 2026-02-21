@@ -56,7 +56,9 @@ export interface TaskSummary {
 export interface DynamicQuestion {
   id: string
   question: string
-  answer: string
+  type: 'choice' | 'day-select'
+  options: string[]
+  answer: string  // selected option value
 }
 
 export interface InterviewAnswers {
@@ -329,58 +331,79 @@ function buildDistributionSystemPrompt(interview?: InterviewAnswers, profile?: W
   const maxPerDay = interview?.maxTasksPerDay || 6
   const targetPerDay = taskCount ? Math.min(Math.ceil(taskCount / availableDayCount), maxPerDay) : 4
 
-  let base = `You are a weekly task scheduler. Distribute tasks across a work week.
+  let base = `You are a personal weekly planner who DEEPLY understands each task. You must READ every task title and description to understand its nature, then schedule intelligently.
 
-CRITICAL RULES:
-1. DISTRIBUTE EVENLY — target ~${targetPerDay} tasks per available day. NEVER put more than ${maxPerDay} on one day.
-2. Spread overdue and in-progress tasks across Mon–Wed (NOT all on Monday).
-3. DUE_THIS_WEEK → schedule on or before the due date.
-4. Group same-project tasks on the same day when possible.
-5. Each task ID goes in exactly ONE day or "unscheduled".
-6. Put tasks in "unscheduled" only if the week is genuinely full.
-7. Use weekends (Sat/Sun) only as overflow — prefer weekdays.
+YOUR JOB: Create a weekly plan with REAL reasoning — not random distribution.
 
-Return ONLY valid JSON. Keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning, taskReasons.
-Each day key = array of task ID strings. "reasoning" = 2-3 sentences explaining your overall distribution strategy considering the user's work patterns and project priorities.
-"taskReasons" = object mapping task ID to a contextual reason (max 20 words) explaining why THIS day is the best fit for THIS task. Reference the user's personal context, work patterns, batching preferences, or energy levels. Be specific — mention the actual reason, not generic metadata. Bad: "High-priority home task". Good: "Tuesday errand day — batch with grocery shopping per your preference".`
+SCHEDULING STRATEGY:
+1. READ each task title — understand what it IS (coding, design, meetings, errands, learning, planning, etc.)
+2. GROUP related tasks on the same day (same project, same type of work) to minimize context-switching
+3. SEQUENCE dependencies — if task B builds on task A, put A earlier in the week
+4. MATCH task nature to the day — complex/creative work on peak days, admin/errands on lighter days
+5. RESPECT deadlines — DUE_THIS_WEEK tasks must go on or before their due date
+6. Spread OVERDUE tasks across Mon–Wed (NOT all on Monday)
+7. Target ~${targetPerDay} tasks per available day. NEVER exceed ${maxPerDay} per day
+8. Weekends (Sat/Sun) = overflow only. Each task ID in exactly ONE day or "unscheduled"
+
+RESPONSE FORMAT — Return ONLY valid JSON:
+{
+  "monday": ["id1", "id2"], "tuesday": [...], ..., "sunday": [...], "unscheduled": [...],
+  "reasoning": "2-3 sentences: your OVERALL strategy referencing specific projects and task types",
+  "taskReasons": {
+    "taskId1": "Specific reason WHY this day (10-20 words)",
+    "taskId2": "Another specific reason..."
+  }
+}
+
+CRITICAL — taskReasons must be SPECIFIC to each task. Examples:
+  GOOD: "Overdue 3 days — clear early before new project work starts"
+  GOOD: "Groups with 2 other FlowState tasks for focused coding block"
+  GOOD: "Quick 15m admin task — fits Wednesday's lighter schedule after meetings"
+  GOOD: "Creative design work — scheduled on peak productivity Thursday"
+  BAD: "Scheduled for balanced distribution" (generic, says nothing)
+  BAD: "Medium priority task" (just restates metadata)
+  BAD: "Placed on Tuesday" (no reasoning at all)`
 
   if (interview) {
     const extras: string[] = []
     if (interview.topPriority) {
-      extras.push(`- TOP PRIORITY: "${interview.topPriority}". Schedule related tasks earliest.`)
+      extras.push(`- TOP PRIORITY this week: "${interview.topPriority}". Schedule related tasks on the best days, earliest in the week.`)
     }
     if (interview.daysOff && interview.daysOff.length > 0) {
-      extras.push(`- Days OFF (ZERO tasks allowed): ${interview.daysOff.join(', ')}.`)
+      extras.push(`- Days OFF (ZERO tasks): ${interview.daysOff.join(', ')}.`)
     }
     if (interview.heavyMeetingDays && interview.heavyMeetingDays.length > 0) {
-      extras.push(`- Heavy meeting days (max 2 tasks): ${interview.heavyMeetingDays.join(', ')}.`)
+      extras.push(`- Heavy meeting days: ${interview.heavyMeetingDays.join(', ')}. Only schedule quick/simple tasks on these days (max 2).`)
     }
     if (interview.maxTasksPerDay) {
       extras.push(`- HARD LIMIT: max ${interview.maxTasksPerDay} tasks per day.`)
     }
     if (interview.preferredWorkStyle === 'frontload') {
-      extras.push('- Front-load: slightly more Mon-Tue, slightly lighter Thu-Fri.')
+      extras.push('- Work style: front-load (heavier Mon-Tue, lighter Thu-Fri)')
     } else if (interview.preferredWorkStyle === 'backload') {
-      extras.push('- Back-load: slightly lighter Mon-Tue, slightly heavier Thu-Fri.')
+      extras.push('- Work style: back-load (lighter Mon-Tue, heavier Thu-Fri)')
     }
     if (extras.length > 0) {
-      base += `\n\nUser Preferences:\n${extras.join('\n')}`
+      base += `\n\nUSER PREFERENCES (use these to make scheduling decisions):\n${extras.join('\n')}`
     }
   }
 
   if (profile) {
     const insights: string[] = []
     if (profile.avgTasksCompletedPerDay) {
-      insights.push(`- Historical capacity: ~${profile.avgTasksCompletedPerDay} tasks/day`)
+      insights.push(`- This user typically completes ~${profile.avgTasksCompletedPerDay} tasks/day — don't overload beyond this.`)
     }
     if (profile.peakProductivityDays?.length) {
-      insights.push(`- Peak days: ${profile.peakProductivityDays.join(', ')}. Schedule HIGH complexity (score ≥ 6) tasks on these days. Schedule LOW complexity (score ≤ 3) on non-peak days when possible.`)
+      insights.push(`- Peak productivity days: ${profile.peakProductivityDays.join(', ')}. Schedule complex/demanding tasks HERE. Lighter tasks on other days.`)
     }
     if (profile.avgPlanAccuracy && profile.avgPlanAccuracy < 60) {
-      insights.push(`- Past plans only ${profile.avgPlanAccuracy}% accurate — schedule conservatively (fewer tasks/day).`)
+      insights.push(`- Past plans were only ${profile.avgPlanAccuracy}% followed — schedule conservatively.`)
+    }
+    if (profile.preferredWorkStyle) {
+      insights.push(`- Preferred work style: ${profile.preferredWorkStyle}`)
     }
     if (insights.length > 0) {
-      base += `\n\nBehavioral Patterns:\n${insights.join('\n')}`
+      base += `\n\nUSER HISTORY (learned patterns — USE these in your reasoning):\n${insights.join('\n')}`
     }
   }
 
@@ -433,37 +456,49 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
       lines.push(`Active projects: ${behavioral.activeProjectNames.join(', ')}`)
     }
     if (behavioral.peakProductivityDays.length > 0) {
-      lines.push(`Peak productivity days: ${behavioral.peakProductivityDays.join(', ')}. Schedule demanding tasks on these days.`)
+      lines.push(`Peak productivity days: ${behavioral.peakProductivityDays.join(', ')} — put complex tasks HERE`)
     }
     if (behavioral.avgTasksCompletedPerDay) {
-      lines.push(`Historical capacity: ~${behavioral.avgTasksCompletedPerDay} tasks/day`)
+      lines.push(`Typical daily capacity: ~${behavioral.avgTasksCompletedPerDay} tasks/day`)
     }
     if (behavioral.completionRate !== null && behavioral.completionRate !== undefined) {
-      lines.push(`Plan completion rate: ${Math.round(behavioral.completionRate)}% — ${behavioral.completionRate < 60 ? 'schedule fewer tasks to be realistic' : 'good follow-through'}`)
+      lines.push(`Plan follow-through: ${Math.round(behavioral.completionRate)}%${behavioral.completionRate < 60 ? ' (LOW — schedule fewer tasks to be realistic)' : ''}`)
     }
     if (behavioral.frequentlyMissedProjects.length > 0) {
-      lines.push(`Often-missed projects: ${behavioral.frequentlyMissedProjects.join(', ')} — schedule these early in the week`)
+      lines.push(`Often-missed projects: ${behavioral.frequentlyMissedProjects.join(', ')} — schedule these EARLY in the week`)
     }
     if (behavioral.recentlyCompletedTitles.length > 0) {
       lines.push(`Recently completed: ${behavioral.recentlyCompletedTitles.slice(0, 5).join(', ')}`)
     }
-    // Work insights from memory graph — planning-relevant observations
     if (behavioral.workInsights.length > 0) {
       lines.push(`Work patterns:\n${behavioral.workInsights.slice(0, 5).map(i => `  - ${i}`).join('\n')}`)
     }
     if (lines.length > 0) {
-      behavioralSection = `\nUser Context:\n${lines.join('\n')}\n`
+      behavioralSection = `\nIMPORTANT — What I know about this user (USE this for scheduling decisions):\n${lines.join('\n')}\n`
     }
   }
+
+  // Build project summary for grouping awareness
+  const projectGroups: Record<string, number> = {}
+  for (const t of enriched) {
+    if (t.projectName) {
+      projectGroups[t.projectName] = (projectGroups[t.projectName] || 0) + 1
+    }
+  }
+  const projectSummary = Object.entries(projectGroups)
+    .filter(([, count]) => count >= 2)
+    .map(([name, count]) => `${name} (${count} tasks)`)
+    .join(', ')
 
   return `Today: ${today}
 Week: ${formatDate(weekStart)} to ${weekEndStr}
 Total tasks: ${enriched.length} (${overdueCount} overdue, ${inProgressCount} in-progress, ${dueThisWeekCount} due this week)
+${projectSummary ? `Projects with multiple tasks (GROUP these on same day): ${projectSummary}` : ''}
 ${personalSection}${behavioralSection}${dynamicQASection}
 Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
-Distribute these ${enriched.length} tasks EVENLY across the week. Return ONLY JSON with monday..sunday, unscheduled, reasoning, taskReasons.`
+Schedule these ${enriched.length} tasks across the week. READ each task title to understand its nature. Return ONLY JSON with monday..sunday, unscheduled, reasoning, taskReasons.`
 }
 
 // ============================================================================
@@ -743,7 +778,7 @@ function getRouterOptions(): Record<string, unknown> {
   const opts: Record<string, unknown> = {
     taskType: 'planning',
     temperature: 0.3,
-    timeout: 30000,
+    timeout: 60000,  // TASK-1385: Increased from 30s — better models need more time
     contextFeature: 'weeklyplan', // TASK-1350: Enable user context injection
   }
 
@@ -924,11 +959,16 @@ export function useWeeklyPlanAI() {
     }
   }
 
+  /**
+   * Generate 2-3 structured questions with clickable answer options.
+   * Aware of past memory observations to avoid re-asking known preferences.
+   */
   async function generateDynamicQuestions(
     tasks: TaskSummary[],
     personalContext?: string,
     interview?: InterviewAnswers,
-  ): Promise<string[]> {
+    pastLearnings?: string[],
+  ): Promise<Array<{ question: string; type: 'choice' | 'day-select'; options: string[] }>> {
     try {
       const router = await getSharedRouter()
       const routerOpts = getRouterOptions()
@@ -940,6 +980,7 @@ export function useWeeklyPlanAI() {
         if (t.priority) parts.push(`(${t.priority})`)
         if (t.status === 'in_progress') parts.push('— in progress')
         if (t.dueDate) parts.push(`due: ${t.dueDate}`)
+        if (t.description) parts.push(`| ${t.description.slice(0, 60)}`)
         return parts.join(' ')
       }).join('\n')
 
@@ -957,30 +998,47 @@ export function useWeeklyPlanAI() {
         if (parts.length > 0) interviewSection = `\nUser preferences:\n${parts.join('\n')}\n`
       }
 
+      let pastLearningsSection = ''
+      if (pastLearnings && pastLearnings.length > 0) {
+        pastLearningsSection = `\nAlready known about this user (DON'T re-ask these):\n${pastLearnings.map(l => `- ${l}`).join('\n')}\n`
+      }
+
       const messages: ChatMessage[] = [
         {
           role: 'system',
-          content: `You are a weekly planning assistant. Based on the user's task list, ask 2-3 SHORT, specific questions that will help you schedule their tasks better.
+          content: `You are a weekly planning assistant. Generate 2-3 STRUCTURED questions with clickable answer options to help schedule the user's tasks.
 
-Focus on:
-- Task batching preferences (e.g. "I see errands and pet tasks — do you batch these?")
-- Energy/timing preferences for specific task TYPES in their list (e.g. "When do you prefer creative work like writing?")
-- Prioritization trade-offs when there are competing priorities
+QUESTION TYPES:
+1. "day-select" — ask which DAY something should happen. Options are day names.
+   Use when: tasks relate to a specific location, routine, or commitment tied to a day.
+2. "choice" — ask a preference with 2-4 short options.
+   Use when: batching, priority, energy, or approach decisions.
 
-Rules:
-- Ask EXACTLY 2-3 questions, no more
-- Each question must reference SPECIFIC tasks or projects from their list
-- Keep questions short (1-2 sentences max)
-- Don't ask about things already answered in their preferences
-- Don't ask generic scheduling questions — those are already covered
-- Return ONLY a JSON array of question strings, nothing else
+WHAT TO ASK ABOUT:
+- Location/routine connections: If tasks mention a place (school, office, gym), ask which day the user goes there
+- Task batching: Group similar tasks? Errands together? Project work together?
+- Priority trade-offs: Which overdue tasks matter most? What can wait?
+- Energy matching: Creative vs admin work — when?
 
-Example output:
-["I see pet care and grocery shopping — do you prefer batching errands on one day?", "You have blog writing and video editing — when in the week do you do your best creative work?"]`
+RULES:
+- Return ONLY a JSON array of objects
+- Each object has: "question" (string), "type" ("choice" or "day-select"), "options" (string array)
+- For "day-select": options = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+- For "choice": provide 2-4 short option labels (max 5 words each)
+- Questions must reference SPECIFIC tasks from the list
+- Skip things already known from past interviews
+- Keep questions short (1 sentence)
+
+EXAMPLE OUTPUT:
+[
+  {"question":"I see school-related tasks — which day do you go to school?","type":"day-select","options":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]},
+  {"question":"Blog post and video editing are both creative — batch them together?","type":"choice","options":["Yes, same day","No, spread them out","Doesn't matter"]},
+  {"question":"You have 3 overdue tasks — how should I handle them?","type":"choice","options":["Clear them first (Mon-Tue)","Spread across the week","Mix with new tasks"]}
+]`
         },
         {
           role: 'user',
-          content: `${contextSection}${interviewSection}
+          content: `${contextSection}${interviewSection}${pastLearningsSection}
 This week's tasks:
 ${taskSummary}`
         }
@@ -988,21 +1046,36 @@ ${taskSummary}`
 
       const response = await router.chat(messages, {
         ...routerOpts,
-        temperature: 0.5,
+        temperature: 0.4,
         timeout: 15000,
-        maxTokens: 300,
+        maxTokens: 600,
       })
 
-      // Parse response — expect JSON array of strings
+      // Parse response — expect JSON array of structured questions
       let content = response.content.trim()
       const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
       if (codeBlockMatch) content = codeBlockMatch[1].trim()
 
       const parsed = JSON.parse(content)
-      if (Array.isArray(parsed) && parsed.every((q: unknown) => typeof q === 'string')) {
-        return parsed.slice(0, 3) // Cap at 3
-      }
-      return []
+      if (!Array.isArray(parsed)) return []
+
+      const DAY_OPTIONS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+      return parsed.slice(0, 3).map((q: Record<string, unknown>) => {
+        const question = typeof q.question === 'string' ? q.question : ''
+        const type = q.type === 'day-select' ? 'day-select' as const : 'choice' as const
+        let options = Array.isArray(q.options) ? q.options.filter((o: unknown) => typeof o === 'string') as string[] : []
+
+        // Normalize day-select to always have all 7 days
+        if (type === 'day-select') {
+          options = DAY_OPTIONS
+        }
+
+        // Ensure choice has at least 2 options
+        if (type === 'choice' && options.length < 2) return null
+
+        return question ? { question, type, options } : null
+      }).filter(Boolean) as Array<{ question: string; type: 'choice' | 'day-select'; options: string[] }>
     } catch (err) {
       console.warn('[WeeklyPlanAI] Dynamic question generation failed:', err)
       return []

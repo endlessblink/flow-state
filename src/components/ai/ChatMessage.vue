@@ -18,6 +18,7 @@
  */
 
 import { computed, ref } from 'vue'
+import { useTaskStore } from '@/stores/tasks'
 import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Trophy, Flame, Shield, Swords, TrendingUp, Target, Play, CheckCircle2, CalendarDays } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type { ChatMessage, ChatAction } from '@/stores/aiChat'
@@ -72,6 +73,42 @@ const completedTaskIds = ref<Set<string>>(new Set())
 const timerStartedTaskIds = ref<Set<string>>(new Set())
 const actionLoading = ref<Record<string, string>>({}) // taskId -> 'done' | 'timer'
 
+// Live task data from Pinia store (reactive — updates when user edits tasks)
+const taskStore = useTaskStore()
+
+const taskMap = computed(() => {
+  const map = new Map<string, any>()
+  for (const task of taskStore.tasks) {
+    map.set(task.id, task)
+  }
+  return map
+})
+
+/**
+ * Merge a frozen snapshot task with live data from the Pinia task store.
+ * The snapshot determines WHICH task to show; the store provides CURRENT field values.
+ * Falls back to snapshot data if the task was deleted from the store.
+ */
+function liveTask(snapshotTask: any): any {
+  if (!snapshotTask?.id) return snapshotTask
+  const storeTask = taskMap.value.get(snapshotTask.id)
+  if (!storeTask) return snapshotTask
+  return {
+    ...snapshotTask,
+    title: storeTask.title ?? snapshotTask.title,
+    status: storeTask.status ?? snapshotTask.status,
+    priority: storeTask.priority ?? snapshotTask.priority,
+    dueDate: storeTask.dueDate ?? snapshotTask.dueDate,
+    estimatedDuration: storeTask.estimatedDuration ?? snapshotTask.estimatedDuration,
+  }
+}
+
+/** Apply liveTask() to an array of snapshot tasks */
+function liveTasks(tasks: any[]): any[] {
+  if (!Array.isArray(tasks)) return []
+  return tasks.map(t => liveTask(t))
+}
+
 // ============================================================================
 // Computed
 // ============================================================================
@@ -114,26 +151,12 @@ const isThinking = computed(() =>
  * Strip tool JSON blocks and AI preamble, then render markdown.
  */
 const renderedContent = computed(() => {
-  let content = props.message.content || ''
-
-  if (isAssistant.value) {
-    // Strip ```json tool call blocks
-    content = content.replace(/```json\s*\{[\s\S]*?\}\s*```/g, '')
-    // Strip bare JSON tool calls (models sometimes output without code fences)
-    content = content.replace(/\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"parameters"\s*:\s*\{[^}]*\}\s*\}/g, '')
-    // Strip "I'll use the X tool" preamble lines (EN)
-    content = content.replace(/^I['']ll (?:use|call|invoke) the \w[\w\s]* tool.*$/gm, '')
-    // Strip standalone tool name references (e.g. "list_tasks" on its own or at end of line)
-    content = content.replace(/\b(list_tasks|get_overdue_tasks|search_tasks|get_daily_summary|get_timer_status|get_productivity_stats|suggest_next_task|get_weekly_summary|get_gamification_status|get_active_challenges|get_achievements_near_completion|list_projects|list_groups|create_task|update_task|delete_task|mark_task_done|start_timer|stop_timer|bulk_update_tasks|bulk_delete_tasks)\b/g, '')
-    // Strip raw HTML tags that AI models may hallucinate (with html:false they appear as raw text)
-    content = content.replace(/<[^>]+>/g, '')
-    // Clean up extra blank lines left behind
-    content = content.replace(/\n{3,}/g, '\n\n').trim()
-  }
-
+  const content = (props.message.content || '').trim()
   if (!content) return ''
 
-  // FIX: Sanitize the rendered HTML to prevent XSS (even though we strip tags above)
+  // TASK-1383: Pipeline's cleanResponse() handles all stripping (tool blocks, JSON, preambles,
+  // tool names, UUIDs, HTML tags) BEFORE content reaches this component. This computed
+  // now only does: markdown render + XSS sanitization.
   return sanitizeMarkdownHtml(md.render(content))
 })
 
@@ -168,12 +191,12 @@ function isTaskListResult(result: { tool: string; data?: any }): boolean {
 function getTasksFromResult(result: { tool: string; data?: any }): Array<{ id: string; title: string; dueDate?: string; priority?: string; status?: string; daysOverdue?: number }> {
   if (!result.data) return []
   // Direct array (get_overdue_tasks, list_tasks, search_tasks)
-  if (Array.isArray(result.data)) return result.data
+  if (Array.isArray(result.data)) return liveTasks(result.data)
   // Daily summary — merge overdue + due today
   const tasks: any[] = []
   if (result.data.overdueTasks) tasks.push(...result.data.overdueTasks)
   if (result.data.dueTodayTasks) tasks.push(...result.data.dueTodayTasks)
-  return tasks
+  return liveTasks(tasks)
 }
 
 /**
@@ -271,8 +294,9 @@ function toggleSection(key: string) {
 }
 
 function visibleTasks(tasks: any[], sectionKey: string): any[] {
-  if (expandedSections.value.has(sectionKey) || tasks.length <= MAX_VISIBLE_TASKS) return tasks
-  return tasks.slice(0, MAX_VISIBLE_TASKS)
+  const live = liveTasks(tasks)
+  if (expandedSections.value.has(sectionKey) || live.length <= MAX_VISIBLE_TASKS) return live
+  return live.slice(0, MAX_VISIBLE_TASKS)
 }
 
 const quickEditTask = ref<{ id: string; title: string; priority?: string | null; status?: string; dueDate?: string | null; estimatedDuration?: number | null } | null>(null)
@@ -778,7 +802,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
             </div>
             <div class="task-list">
               <button
-                v-for="(task, taskIdx) in result.data"
+                v-for="(task, taskIdx) in liveTasks(result.data)"
                 :key="task.id"
                 class="task-list-item suggest-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -896,7 +920,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                   <span class="section-count">({{ result.data.plan[dayKey].length }})</span>
                 </div>
                 <button
-                  v-for="task in result.data.plan[dayKey]"
+                  v-for="task in liveTasks(result.data.plan[dayKey])"
                   :key="task.id"
                   class="task-list-item"
                   :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -944,7 +968,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 <span class="section-count">({{ result.data.unscheduled.length }})</span>
               </div>
               <button
-                v-for="task in result.data.unscheduled"
+                v-for="task in liveTasks(result.data.unscheduled)"
                 :key="task.id"
                 class="task-list-item task-unscheduled"
                 @click="openQuickEdit(task, $event)"

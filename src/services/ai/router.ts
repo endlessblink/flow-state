@@ -664,10 +664,9 @@ export class AIRouter {
     // Force specific provider if requested
     if (options.forceProvider) {
       const provider = this.providers.get(options.forceProvider)
-      if (!provider) {
-        throw new Error(`Forced provider ${options.forceProvider} not available`)
-      }
-      return provider
+      if (provider) return provider
+      // Forced provider not available — fall through to auto-routing
+      this.log(`Forced provider ${options.forceProvider} not available, falling back to auto-routing`)
     }
 
     // Determine provider order based on task type and config

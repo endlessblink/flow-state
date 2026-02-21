@@ -22,6 +22,26 @@
       <p class="wp-hint">
         Quick skips the interview. Thorough asks a few questions first.
       </p>
+
+      <!-- TASK-1399: Model selector -->
+      <div class="model-selector">
+        <span class="model-selector-label">{{ t('weeklyPlan.modelSelector.aiModel') }}</span>
+        <CustomSelect
+          :model-value="selectedProvider"
+          :options="providerSelectOptions"
+          :compact="true"
+          class="model-selector-select"
+          @update:model-value="selectedProvider = $event as AIProviderKey"
+        />
+        <span class="model-selector-sep">/</span>
+        <CustomSelect
+          :model-value="selectedModel || modelSelectOptions[0]?.value || ''"
+          :options="modelSelectOptions"
+          :compact="true"
+          class="model-selector-select model-selector-select--wide"
+          @update:model-value="selectedModel = $event as string"
+        />
+      </div>
     </div>
 
     <!-- Interview State -->
@@ -111,6 +131,26 @@
         </div>
       </div>
 
+      <!-- TASK-1399: Model selector in interview state -->
+      <div class="model-selector">
+        <span class="model-selector-label">{{ t('weeklyPlan.modelSelector.aiModel') }}</span>
+        <CustomSelect
+          :model-value="selectedProvider"
+          :options="providerSelectOptions"
+          :compact="true"
+          class="model-selector-select"
+          @update:model-value="selectedProvider = $event as AIProviderKey"
+        />
+        <span class="model-selector-sep">/</span>
+        <CustomSelect
+          :model-value="selectedModel || modelSelectOptions[0]?.value || ''"
+          :options="modelSelectOptions"
+          :compact="true"
+          class="model-selector-select model-selector-select--wide"
+          @update:model-value="selectedModel = $event as string"
+        />
+      </div>
+
       <div class="interview-actions">
         <button class="wp-btn wp-btn-primary" @click="onSubmitInterview">
           <Sparkles :size="16" />
@@ -144,6 +184,25 @@
           <span class="wp-stats-inline">{{ scheduledCount }} tasks · {{ daysUsed }} days</span>
         </div>
         <div class="wp-action-bar">
+          <!-- TASK-1399: Compact model selector in review header -->
+          <div class="model-selector model-selector--compact">
+            <span class="model-selector-label">{{ t('weeklyPlan.modelSelector.aiModel') }}</span>
+            <CustomSelect
+              :model-value="selectedProvider"
+              :options="providerSelectOptions"
+              :compact="true"
+              class="model-selector-select"
+              @update:model-value="selectedProvider = $event as AIProviderKey"
+            />
+            <span class="model-selector-sep">/</span>
+            <CustomSelect
+              :model-value="selectedModel || modelSelectOptions[0]?.value || ''"
+              :options="modelSelectOptions"
+              :compact="true"
+              class="model-selector-select model-selector-select--wide"
+              @update:model-value="selectedModel = $event as string"
+            />
+          </div>
           <button class="wp-btn wp-btn-sm wp-btn-primary" @click="onApply">
             <Check :size="14" />
             Apply
@@ -267,19 +326,28 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, reactive, ref } from 'vue'
+import { onMounted, onUnmounted, computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useWeeklyPlan } from '@/composables/useWeeklyPlan'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSettingsStore } from '@/stores/settings'
 import WeeklyPlanGrid from '@/components/weeklyplan/WeeklyPlanGrid.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 import type { WeeklyPlan, InterviewAnswers } from '@/composables/useWeeklyPlanAI'
+import {
+  PROVIDER_OPTIONS,
+  WEEKLY_PLAN_DEFAULTS,
+  getModelsForProvider,
+  type AIProviderKey,
+} from '@/config/aiModels'
 import {
   CalendarDays, RefreshCw, Check, ArrowRight, X, Loader2,
   Zap, MessageCircle, Sparkles, AlertTriangle, TrendingUp,
 } from 'lucide-vue-next'
 
 const router = useRouter()
+const { t } = useI18n()
 const {
   state, taskMap, generatePlan, moveTask, applyPlan,
   removeTaskFromPlan, snoozeTask, changePriority,
@@ -290,6 +358,48 @@ const {
 
 const { loadProfile, savePreferences } = useWorkProfile()
 const settingsStore = useSettingsStore()
+
+// TASK-1399: Model selector — provider + model dropdowns
+const selectedProvider = computed({
+  get: () => settingsStore.weeklyPlanProvider as AIProviderKey,
+  set: (val: AIProviderKey) => { settingsStore.weeklyPlanProvider = val },
+})
+
+const selectedModel = computed({
+  get: () => settingsStore.weeklyPlanModel,
+  set: (val: string) => { settingsStore.weeklyPlanModel = val },
+})
+
+/** Provider options for CustomSelect */
+const providerSelectOptions = computed(() =>
+  PROVIDER_OPTIONS.map(p => ({ value: p.key, label: p.label }))
+)
+
+/** Model options for the current provider */
+const modelSelectOptions = computed(() => {
+  const models = getModelsForProvider(selectedProvider.value)
+  return models.map(m => ({
+    value: m.id,
+    label: m.pricing
+      ? `${m.shortLabel ?? m.label} — ${m.pricing.inputPer1M === 0 ? 'Free' : `$${m.pricing.inputPer1M}/MTok`}`
+      : (m.shortLabel ?? m.label),
+  }))
+})
+
+/** When provider changes, auto-select the weekly-plan default for that provider */
+watch(selectedProvider, (newProvider) => {
+  const defaultId = newProvider === 'groq' ? WEEKLY_PLAN_DEFAULTS.groq
+    : newProvider === 'openrouter' ? WEEKLY_PLAN_DEFAULTS.openrouter
+    : null
+  const models = getModelsForProvider(newProvider)
+  if (defaultId && models.find(m => m.id === defaultId)) {
+    settingsStore.weeklyPlanModel = defaultId
+  } else if (models.length > 0) {
+    settingsStore.weeklyPlanModel = models[0].id
+  } else {
+    settingsStore.weeklyPlanModel = ''
+  }
+})
 
 // TASK-1326: Workload warning state
 const weeklyPlanGridRef = ref<InstanceType<typeof WeeklyPlanGrid> | null>(null)
@@ -1053,5 +1163,50 @@ function handleKeydown(event: KeyboardEvent) {
 .wp-feedback-label {
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+
+/* TASK-1399: Model selector */
+.model-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border-subtle);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: var(--text-sm);
+}
+
+.model-selector-label {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.model-selector-sep {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.model-selector-select {
+  min-width: 80px;
+}
+
+.model-selector-select--wide {
+  min-width: 160px;
+}
+
+/* Compact variant for review header — no padding, no bg (lives inside action bar) */
+.model-selector--compact {
+  padding: 0;
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 </style>

@@ -51,6 +51,9 @@ export const GROQ_MODELS: ModelEntry[] = [
   { id: 'moonshotai/kimi-k2-instruct-0905', label: 'Kimi K2', shortLabel: 'Kimi K2', description: 'Moonshot AI MoE model (preview)', contextLength: 262_144, pricing: { inputPer1M: 1.00, outputPer1M: 3.00 } },
   { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', shortLabel: 'GPT-OSS 120B', description: 'OpenAI open-source 120B model', contextLength: 131_072, pricing: { inputPer1M: 0.15, outputPer1M: 0.60 } },
   { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B', shortLabel: 'GPT-OSS 20B', description: 'OpenAI open-source 20B model', contextLength: 131_072, pricing: { inputPer1M: 0.075, outputPer1M: 0.30 } },
+  { id: 'qwen-qwq-32b', label: 'Qwen QwQ 32B', shortLabel: 'Qwen QwQ 32B', description: 'Dedicated chain-of-thought reasoning model', contextLength: 131_072, pricing: { inputPer1M: 0.29, outputPer1M: 0.39 } },
+  { id: 'deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 Distill 70B', shortLabel: 'DS R1 Distill 70B', description: 'R1 reasoning distilled into Llama 70B', contextLength: 131_072, pricing: { inputPer1M: 0.75, outputPer1M: 0.99 } },
+  { id: 'deepseek-r1-distill-qwen-32b', label: 'DeepSeek R1 Distill 32B', shortLabel: 'DS R1 Distill 32B', description: 'R1 reasoning distilled into Qwen 32B', contextLength: 131_072, pricing: { inputPer1M: 0.69, outputPer1M: 0.69 } },
 ]
 
 /**
@@ -58,6 +61,8 @@ export const GROQ_MODELS: ModelEntry[] = [
  */
 export const OPENROUTER_MODELS: ModelEntry[] = [
   // Anthropic
+  { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6', shortLabel: 'Claude S4.6', description: 'Anthropic latest balanced model', contextLength: 1_000_000, pricing: { inputPer1M: 3.00, outputPer1M: 15.00 } },
+  { id: 'anthropic/claude-opus-4.6', label: 'Claude Opus 4.6', shortLabel: 'Opus 4.6', description: 'Anthropic latest premium model', contextLength: 1_000_000, pricing: { inputPer1M: 5.00, outputPer1M: 25.00 } },
   { id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5', shortLabel: 'Claude 4.5', description: 'Anthropic flagship - fast and intelligent', contextLength: 1_000_000, pricing: { inputPer1M: 3.00, outputPer1M: 15.00 } },
   { id: 'anthropic/claude-sonnet-4', label: 'Claude Sonnet 4', shortLabel: 'Claude S4', description: 'Anthropic balanced model', contextLength: 1_000_000, pricing: { inputPer1M: 3.00, outputPer1M: 15.00 } },
   { id: 'anthropic/claude-opus-4', label: 'Claude Opus 4', shortLabel: 'Opus 4', description: 'Anthropic most powerful model', contextLength: 200_000, pricing: { inputPer1M: 15.00, outputPer1M: 75.00 } },
@@ -66,9 +71,11 @@ export const OPENROUTER_MODELS: ModelEntry[] = [
   // OpenAI
   { id: 'openai/gpt-4o', label: 'GPT-4o', description: 'OpenAI flagship model', contextLength: 128_000, pricing: { inputPer1M: 2.50, outputPer1M: 10.00 } },
   { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', shortLabel: 'GPT-4o Mini', description: 'OpenAI compact model', contextLength: 128_000, pricing: { inputPer1M: 0.15, outputPer1M: 0.60 } },
+  { id: 'openai/gpt-4.1', label: 'GPT-4.1', description: 'OpenAI latest flagship', contextLength: 1_000_000, pricing: { inputPer1M: 2.00, outputPer1M: 8.00 } },
   // Google
   { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', shortLabel: 'Gemini 2.5 Flash', description: 'Google fast model', contextLength: 1_048_576, pricing: { inputPer1M: 0.30, outputPer1M: 2.50 } },
   { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', shortLabel: 'Gemini 2.5 Pro', description: 'Google premium model', contextLength: 1_048_576, pricing: { inputPer1M: 1.25, outputPer1M: 10.00 } },
+  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', shortLabel: 'Gemini Flash Lite', description: 'Google ultra-efficient model', contextLength: 1_048_576, pricing: { inputPer1M: 0.10, outputPer1M: 0.40 } },
   // Meta
   { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B', description: 'Meta open model', contextLength: 131_072, pricing: { inputPer1M: 0.10, outputPer1M: 0.32 } },
   { id: 'meta-llama/llama-4-scout', label: 'Llama 4 Scout', shortLabel: 'Llama 4 Scout', description: 'Meta Llama 4 MoE model', contextLength: 327_680, pricing: { inputPer1M: 0.08, outputPer1M: 0.30 } },
@@ -77,12 +84,16 @@ export const OPENROUTER_MODELS: ModelEntry[] = [
   { id: 'mistralai/mistral-large-2512', label: 'Mistral Large 3', shortLabel: 'Mistral Large', description: 'Mistral flagship model', contextLength: 262_144, pricing: { inputPer1M: 0.50, outputPer1M: 1.50 } },
   // Moonshot
   { id: 'moonshotai/kimi-k2', label: 'Kimi K2', description: 'Moonshot AI MoE - strong tool calling and coding', contextLength: 131_072, pricing: { inputPer1M: 0.50, outputPer1M: 2.40 } },
+  { id: 'moonshotai/kimi-k2.5', label: 'Kimi K2.5', description: 'Moonshot AI latest — enhanced tool calling', contextLength: 262_144, pricing: { inputPer1M: 0.50, outputPer1M: 2.80 } },
   // DeepSeek
   { id: 'deepseek/deepseek-v3.2', label: 'DeepSeek V3.2', shortLabel: 'DeepSeek V3.2', description: 'DeepSeek latest model', contextLength: 163_840, pricing: { inputPer1M: 0.26, outputPer1M: 0.38 } },
   { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1', shortLabel: 'DeepSeek R1', description: 'DeepSeek reasoning model', contextLength: 64_000, pricing: { inputPer1M: 0.70, outputPer1M: 2.50 } },
   // Free models (TASK-1385)
   { id: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air (Free)', shortLabel: 'GLM 4.5 Air', description: 'Z.ai thinking model — free, 131K context', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
-  { id: 'deepseek/deepseek-v3.2-20251201:free', label: 'DeepSeek V3.2 (Free)', shortLabel: 'DeepSeek V3.2 Free', description: 'DeepSeek free tier — strong reasoning', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'deepseek/deepseek-r1-0528:free', label: 'DeepSeek R1 (Free)', shortLabel: 'DeepSeek R1 Free', description: 'Best free reasoning model — O1-comparable', contextLength: 163_840, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'deepseek/deepseek-chat-v3-0324:free', label: 'DeepSeek V3 (Free)', shortLabel: 'DeepSeek V3 Free', description: 'DeepSeek V3 free snapshot — strong general chat', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'qwen/qwen3-235b-a22b-thinking-2507:free', label: 'Qwen3 235B Thinking (Free)', shortLabel: 'Qwen3 235B Free', description: 'Qwen3 MoE reasoning model — 262K context', contextLength: 262_144, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'openai/gpt-oss-120b:free', label: 'GPT-OSS 120B (Free)', shortLabel: 'GPT-OSS 120B Free', description: 'OpenAI open-weights — free via OpenRouter', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
 ]
 
 /**
@@ -91,7 +102,7 @@ export const OPENROUTER_MODELS: ModelEntry[] = [
 export const DEFAULT_MODELS = {
   ollama: 'llama3.2',
   groq: 'llama-3.3-70b-versatile',
-  openrouter: 'anthropic/claude-sonnet-4.5'
+  openrouter: 'anthropic/claude-sonnet-4.6'
 } as const
 
 /**
@@ -99,8 +110,8 @@ export const DEFAULT_MODELS = {
  * These override the chat defaults when no model is explicitly chosen in Settings.
  */
 export const WEEKLY_PLAN_DEFAULTS = {
-  groq: 'openai/gpt-oss-120b',          // $0.15/MTok, reasoning-capable
-  openrouter: 'z-ai/glm-4.5-air:free',  // Free, thinking mode, 131K context
+  groq: 'llama-3.3-70b-versatile',                   // Best quality on Groq for planning
+  openrouter: 'deepseek/deepseek-r1-0528:free',      // Best free reasoning model (O1-comparable, 164K)
 } as const
 
 /**
@@ -183,6 +194,19 @@ export function toAIModels(models: ModelEntry[]): AIModel[] {
     supportsStreaming: m.supportsStreaming ?? true,
     capabilities: ['chat', 'completion'] as ModelCapability[],
   }))
+}
+
+/**
+ * Get models available for a given provider (TASK-1399: model selector)
+ */
+export function getModelsForProvider(provider: AIProviderKey): ModelEntry[] {
+  switch (provider) {
+    case 'groq': return GROQ_MODELS
+    case 'openrouter': return OPENROUTER_MODELS
+    case 'ollama': return OLLAMA_MODELS
+    case 'auto': return GROQ_MODELS // auto defaults to groq
+    default: return []
+  }
 }
 
 /**

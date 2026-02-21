@@ -391,5 +391,12 @@
       "didntReceive": "Didn't receive the email?",
       "resend": "Resend"
     }
+  },
+  "weeklyPlan": {
+    "modelSelector": {
+      "provider": "Provider",
+      "model": "Model",
+      "aiModel": "AI Model"
+    }
   }
 }

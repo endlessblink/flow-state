@@ -58,6 +58,7 @@ export function useWorkProfile() {
         maxTasksPerDay: 6,
         preferredWorkStyle: 'balanced',
         topPriorityNote: null,
+        personalContext: null,
         avgWorkMinutesPerDay: null,
         avgTasksCompletedPerDay: null,
         peakProductivityDays: null,
@@ -278,6 +279,21 @@ export function useWorkProfile() {
       confidence: 0.9,
       source: 'suggestion_feedback'
     })
+  }
+
+  async function saveDynamicAnswersAsObservations(
+    dynamicAnswers: Array<{ question: string; answer: string }>
+  ): Promise<void> {
+    for (const qa of dynamicAnswers) {
+      if (!qa.answer.trim()) continue
+      await addMemoryObservation({
+        entity: 'user',
+        relation: 'scheduling_preference',
+        value: `Q: ${qa.question} → A: ${qa.answer}`,
+        confidence: 0.9,
+        source: 'dynamic_interview'
+      })
+    }
   }
 
   async function generateObservationsFromStats(): Promise<void> {
@@ -580,6 +596,10 @@ export function useWorkProfile() {
 
     const insights: string[] = []
 
+    if (p.personalContext) {
+      insights.push(`User's self-description: "${p.personalContext}"`)
+    }
+
     if (p.avgTasksCompletedPerDay) {
       insights.push(`- Historical capacity: user completes ~${p.avgTasksCompletedPerDay} tasks/day on average`)
     }
@@ -662,6 +682,7 @@ export function useWorkProfile() {
     recordWeeklyOutcome,
     addMemoryObservation,
     addSuggestionFeedback,
+    saveDynamicAnswersAsObservations,
     generateObservationsFromStats,
     generateObservationsFromWeeklyOutcome,
     getProfileContext,

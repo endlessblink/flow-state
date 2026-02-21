@@ -269,6 +269,7 @@ export interface SupabaseWorkProfile {
     max_tasks_per_day: number
     preferred_work_style: string
     top_priority_note: string | null
+    personal_context: string | null
     avg_work_minutes_per_day: number | null
     avg_tasks_completed_per_day: number | null
     peak_productivity_days: string[] | null
@@ -290,6 +291,7 @@ export interface WorkProfile {
     maxTasksPerDay: number
     preferredWorkStyle: 'frontload' | 'balanced' | 'backload'
     topPriorityNote: string | null
+    personalContext: string | null
     avgWorkMinutesPerDay: number | null
     avgTasksCompletedPerDay: number | null
     peakProductivityDays: string[] | null
@@ -798,6 +800,7 @@ export function toSupabaseWorkProfile(profile: Partial<WorkProfile>, userId: str
         ...(profile.maxTasksPerDay !== undefined && { max_tasks_per_day: profile.maxTasksPerDay }),
         ...(profile.preferredWorkStyle !== undefined && { preferred_work_style: profile.preferredWorkStyle }),
         ...(profile.topPriorityNote !== undefined && { top_priority_note: profile.topPriorityNote }),
+        ...(profile.personalContext !== undefined && { personal_context: profile.personalContext }),
         ...(profile.avgWorkMinutesPerDay !== undefined && { avg_work_minutes_per_day: profile.avgWorkMinutesPerDay }),
         ...(profile.avgTasksCompletedPerDay !== undefined && { avg_tasks_completed_per_day: profile.avgTasksCompletedPerDay }),
         ...(profile.peakProductivityDays !== undefined && { peak_productivity_days: profile.peakProductivityDays }),
@@ -819,6 +822,7 @@ export function fromSupabaseWorkProfile(record: SupabaseWorkProfile): WorkProfil
         maxTasksPerDay: record.max_tasks_per_day || 6,
         preferredWorkStyle: (record.preferred_work_style as WorkProfile['preferredWorkStyle']) || 'balanced',
         topPriorityNote: record.top_priority_note || null,
+        personalContext: record.personal_context || null,
         avgWorkMinutesPerDay: record.avg_work_minutes_per_day,
         avgTasksCompletedPerDay: record.avg_tasks_completed_per_day,
         peakProductivityDays: record.peak_productivity_days,

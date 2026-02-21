@@ -17,6 +17,7 @@ import { useGamificationStore } from '@/stores/gamification'
 import { useChallengesStore } from '@/stores/challenges'
 import type { Task } from '@/types/tasks'
 import type { OpenAITool } from './types'
+import { resolveTask } from './entityResolver'
 
 // ============================================================================
 // Constants
@@ -99,6 +100,7 @@ export const AI_TOOLS: ToolDefinition[] = [
       properties: {
         status: { type: 'string', description: 'Filter by status. Default excludes done tasks. Use "all" to include done.', enum: ['planned', 'in_progress', 'done', 'backlog', 'all'] },
         dueDate: { type: 'string', description: 'Filter by due date. "today" = due today only, "tomorrow" = due tomorrow, "this_week" = due this week (Mon-Sun), or exact YYYY-MM-DD date.' },
+        projectId: { type: 'string', description: 'Filter tasks by project ID. Use list_projects to get project IDs first.' },
         sortBy: { type: 'string', description: 'Sort results before applying limit. Default: "priority" (critical > high > medium > low > none).', enum: ['priority', 'dueDate', 'title'] },
         limit: { type: 'number', description: 'Maximum number of tasks to return (default 50)' },
       },
@@ -376,6 +378,18 @@ export const AI_TOOLS: ToolDefinition[] = [
     category: 'read',
     parameters: { type: 'object', properties: {}, required: [] },
   },
+  {
+    name: 'mark_task_done',
+    description: 'Mark a task as done by its title or ID. Accepts a title fragment — no need for exact UUID. Most convenient way to complete a task.',
+    category: 'write',
+    parameters: {
+      type: 'object',
+      properties: {
+        task: { type: 'string', description: 'Task title (or partial title) or UUID. Examples: "marketing video", "weekly report"' },
+      },
+      required: ['task'],
+    },
+  },
 ]
 
 // ============================================================================
@@ -408,9 +422,22 @@ function isValidTimeString(str: string): boolean {
   return /^\d{2}:\d{2}$/.test(str)
 }
 
+/**
+ * Find a task by ID or title fragment (TASK-1396).
+ * First tries exact ID match, then falls through to uFuzzy title resolution.
+ */
 function validateTaskExists(taskStore: ReturnType<typeof useTaskStore>, taskId: string): Task | null {
+  // Strategy 1: Direct ID lookup
   const task = taskStore.getTask(taskId)
-  return task || null
+  if (task) return task
+
+  // Strategy 2: Fuzzy title resolution via entityResolver (TASK-1396)
+  const resolved = resolveTask(taskId, taskStore.tasks)
+  if (resolved && resolved.confidence !== 'low') {
+    return taskStore.getTask(resolved.task.id) || null
+  }
+
+  return null
 }
 
 function formatTime(seconds: number): string {
@@ -514,10 +541,16 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
       case 'list_tasks': {
         const status = call.parameters.status as string | undefined
         const dueDateFilter = call.parameters.dueDate as string | undefined
+        const projectIdFilter = call.parameters.projectId as string | undefined
         const sortBy = (call.parameters.sortBy as string) || 'priority'
         const limit = (call.parameters.limit as number) || 50
 
         let tasks = taskStore.tasks
+
+        // Project filter (TASK-1393)
+        if (projectIdFilter) {
+          tasks = tasks.filter((t: Task) => t.projectId === projectIdFilter)
+        }
 
         if (status === 'all') {
           // Explicit 'all' — include everything
@@ -1714,6 +1747,29 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
             totalScheduled,
             daysUsed,
           },
+        }
+      }
+
+      case 'mark_task_done': {
+        const taskRef = call.parameters.task as string
+        if (!taskRef) {
+          return { success: false, message: 'Please specify which task to mark as done (title or ID).' }
+        }
+
+        const task = validateTaskExists(taskStore, taskRef)
+        if (!task) {
+          return { success: false, message: `No task found matching "${taskRef}". Try a more specific title.` }
+        }
+
+        if (task.status === 'done') {
+          return { success: true, message: `"${task.title}" is already marked as done.` }
+        }
+
+        await taskStore.updateTask(task.id, { status: 'done' })
+        return {
+          success: true,
+          message: `Marked "${task.title}" as done!`,
+          data: { id: task.id, title: task.title, previousStatus: task.status },
         }
       }
 

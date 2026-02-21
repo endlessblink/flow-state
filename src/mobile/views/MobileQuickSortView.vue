@@ -1111,7 +1111,7 @@ const {
   align-items: center;
   gap: var(--space-1);
   padding: 0 var(--space-4);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-1);
   animation: fadeInOut 3s ease-in-out infinite;
 }
 
@@ -1159,7 +1159,7 @@ const {
   justify-content: center;
   perspective: 1000px;
   min-height: var(--kanban-column-min-height);
-  max-height: 320px; /* Component-specific card layout dimension */
+  max-height: 280px; /* Component-specific card layout dimension */
 }
 
 .stack-card {

@@ -119,19 +119,20 @@ export function useUnifiedInboxState(props: InboxContextProps) {
                 return false
             }
 
-            // 3. Context Specific Rules
+            // 3. isInInbox gate — both inboxes only show tasks flagged as inbox
+            // Tasks are removed from inbox explicitly, NOT by being placed on canvas/calendar
+            if (!task.isInInbox) return false
+
+            // 4. Context Specific Rules (cross-context independent)
+            // Canvas inbox does NOT filter by calendar scheduling, and vice versa
             if (props.context === 'calendar') {
-                // CALENDAR INBOX: Show tasks NOT scheduled on the calendar grid
-                // BUG-1351: Only exclude tasks with instances that have scheduledDate
-                // (matching useCalendarInboxState logic). Tasks with empty instances
-                // or instances without scheduledDate should still appear in inbox.
+                // CALENDAR INBOX: Hide tasks already scheduled on the calendar grid
                 const isScheduledOnCalendar = task.instances &&
                     task.instances.length > 0 &&
                     task.instances.some(inst => inst.scheduledDate)
                 return !isScheduledOnCalendar
             } else {
-                // CANVAS INBOX: Show tasks NOT on the canvas
-                // (Dec 16, 2025 FIX: ONLY check canvasPosition)
+                // CANVAS INBOX: Hide tasks already placed on the canvas
                 return !task.canvasPosition
             }
         })

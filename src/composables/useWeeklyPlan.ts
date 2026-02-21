@@ -323,6 +323,8 @@ export function useWeeklyPlan() {
         'stale': (obs) => `${obs.entity.replace('project:', '')} is stale (${obs.value}) — consider scheduling 1 task from it`,
         'most_active': (obs) => `${obs.entity.replace('project:', '')} is the most active project (${obs.value})`,
         'completion_rate': (obs) => `High-priority ${obs.value}`,
+        'scheduling_preference': (obs) => `User preference: ${obs.value}`,
+        'peak_productivity': (obs) => `${obs.entity.replace('day:', '')} is a peak productivity day`,
       }
 
       for (const obs of profile.memoryGraph) {
@@ -447,7 +449,10 @@ export function useWeeklyPlan() {
 
     try {
       const tasks = getEligibleTasks()
-      const questions = await aiGenerateDynamicQuestions(tasks, answers.personalContext, answers)
+      const pastLearnings = workProfile.value?.memoryGraph
+        ?.filter(obs => obs.relation === 'scheduling_preference')
+        ?.map(obs => obs.value) ?? []
+      const questions = await aiGenerateDynamicQuestions(tasks, answers.personalContext, answers, pastLearnings)
 
       if (questions.length === 0) {
         // No questions generated — go straight to plan generation
@@ -457,7 +462,9 @@ export function useWeeklyPlan() {
 
       state.value.dynamicQuestions = questions.map((q, i) => ({
         id: `dq-${i}`,
-        question: q,
+        question: q.question,
+        type: q.type,
+        options: q.options,
         answer: '',
       }))
       // UI will now show the questions

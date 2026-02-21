@@ -41,7 +41,12 @@ import { detectLanguage, detectLanguageMismatch } from '@/services/ai/pipeline/l
 import { cleanResponse } from '@/services/ai/pipeline/responseValidator'
 import { digestToolResults } from '@/services/ai/pipeline/preDigestedReasoning'
 import { detectFluff, extractTaskTitlesFromResults } from '@/services/ai/pipeline/fluffDetector'
+import { getToolHints, formatToolHints } from '@/services/ai/pipeline/toolHints'
+import { EntityMemory } from '@/services/ai/pipeline/entityMemory'
 import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
+import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
+import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
+import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
 
 // ============================================================================
 // Types
@@ -100,6 +105,54 @@ function getPersonalitySystemPrompt(): string {
     return 'You are the Grid Handler, a netrunner AI embedded in the FlowState productivity matrix. You speak in cyberpunk hacker slang. Tasks are \'ops\' or \'jobs\'. Completing work is \'executing\'. The timer is your \'neural clock\'. XP is \'data fragments\'. Challenges are \'contracts\'. You reference \'the Grid\', \'data streams\', and \'neural pathways\'. Keep it fun but still helpful — you\'re assisting a runner with their daily ops. Use short, punchy sentences. Occasionally reference system corruption levels if gamification data is available.'
   }
   return ''
+}
+
+// ============================================================================
+// Error Formatting
+// ============================================================================
+
+/**
+ * Convert raw API errors into user-friendly messages.
+ * Covers: rate limits, credits, auth, network, model-specific issues.
+ */
+function formatUserFriendlyError(rawError: string): string {
+  const lower = rawError.toLowerCase()
+
+  // Credit / quota / billing issues
+  if (lower.includes('insufficient') || lower.includes('credit') || lower.includes('quota') ||
+      lower.includes('billing') || lower.includes('payment') || lower.includes('exceeded')) {
+    return 'No API credits remaining. Please check your API key balance in Settings → AI.'
+  }
+
+  // Rate limiting (429)
+  if (lower.includes('rate limit') || lower.includes('429') || lower.includes('too many requests')) {
+    return 'Too many requests — please wait a moment and try again.'
+  }
+
+  // Auth errors (401, 403)
+  if (lower.includes('401') || lower.includes('403') || lower.includes('unauthorized') ||
+      lower.includes('forbidden') || lower.includes('invalid api key') || lower.includes('invalid_api_key')) {
+    return 'API key is invalid or expired. Please update it in Settings → AI.'
+  }
+
+  // Model not found / unavailable
+  if (lower.includes('model') && (lower.includes('not found') || lower.includes('unavailable') || lower.includes('does not exist'))) {
+    return 'The selected AI model is unavailable. Try switching models in Settings → AI.'
+  }
+
+  // Network / connection
+  if (lower.includes('network') || lower.includes('econnrefused') || lower.includes('fetch failed') ||
+      lower.includes('timeout') || lower.includes('enotfound')) {
+    return 'Could not connect to AI service. Check your internet connection.'
+  }
+
+  // Context length exceeded
+  if (lower.includes('context length') || lower.includes('too long') || lower.includes('max tokens')) {
+    return 'Message too long for this model. Try a shorter question or start a new conversation.'
+  }
+
+  // Fallback: truncate raw error to keep it readable
+  return rawError.length > 150 ? rawError.slice(0, 147) + '...' : rawError
 }
 
 // ============================================================================
@@ -195,6 +248,9 @@ export function useAIChat() {
   // Agent chains integration
   const agentChains = useAgentChains()
 
+  // Conversation entity memory (TASK-1398) — tracks recently-mentioned tasks for pronoun resolution
+  const entityMemory = new EntityMemory()
+
   // ============================================================================
   // Text-Based Tool Call Helpers (Fallback for models that don't use native API)
   // ============================================================================
@@ -285,9 +341,11 @@ export function useAIChat() {
     const ctx = buildContext()
     const aiMessages: RouterChatMessage[] = []
 
-    // System prompt with context
+    // System prompt with context + tool hints based on user message (TASK-1392)
     const systemPrompt = buildSystemPrompt(ctx)
-    aiMessages.push({ role: 'system', content: systemPrompt })
+    const toolHints = getToolHints(userMessage)
+    const toolHintBlock = formatToolHints(toolHints)
+    aiMessages.push({ role: 'system', content: systemPrompt + toolHintBlock })
 
     // Add recent message history (last 10 messages)
     const recentMessages = store.messages.slice(-10)
@@ -321,13 +379,14 @@ export function useAIChat() {
       'You are a thoughtful assistant who understands the user\'s work, weighs priorities, and gives actionable advice. You have full access to the user\'s task data below — USE IT to reason and provide insights. Don\'t just search and dump results. THINK about what matters most, what\'s urgent, what\'s been neglected, and give personalized recommendations.',
       '',
       '## CRITICAL RULES:',
-      '1. LANGUAGE RULE (ABSOLUTE): Respond ENTIRELY in the SAME LANGUAGE the user writes in their LATEST MESSAGE. The task data below may be in a DIFFERENT language than the user — IGNORE the language of task titles/data when choosing your response language. If the user writes English, respond in English even if ALL task titles are in Hebrew. If the user writes Hebrew, respond in Hebrew even if task titles are in English. NEVER mix languages. The task context section below contains real user data that is OFTEN in a different language than the user\'s message — do NOT let it influence your output language. Examples of WRONG mixed output: "אני בודק את ה-tasks שלך" (English word), "generating weekly plan..." in a Hebrew conversation.',
-      '2. Be conversational and analytical. Weigh due dates, priority levels, neglected tasks, and project context.',
-      '3. Use WRITE tools ONLY when user explicitly asks to create, modify, or delete.',
-      '4. You have the user\'s task data in context below. Use it to reason. Use READ tools only when the user wants to see interactive task cards.',
+      '1. LANGUAGE: Respond ENTIRELY in the SAME LANGUAGE as the user\'s LATEST message. Hebrew message → Hebrew response. English message → English response. Task data language does NOT matter — ignore it. NEVER mix languages.',
+      '2. ALWAYS USE TOOLS for task-related questions. When the user asks about tasks (show, list, give me, what are, מה המשימות, תן לי, הצג) — ALWAYS call `list_tasks` or relevant tool. This renders interactive clickable task cards. NEVER answer task questions from context alone — the user needs clickable cards.',
+      '3. GIVE REASONS: For each task you mention, explain WHY it matters — use overdue days, priority, project deadlines, subtask progress, time estimates. Example: "Fix login bug — 3 days overdue, high priority, blocks release".',
+      '4. Use WRITE tools ONLY when user explicitly asks to create, modify, or delete.',
       '5. If the user just says "hi" or has a general question — respond naturally, NO tools needed.',
-      '6. NEVER show JSON, UUIDs, task IDs, or technical details. Just act and give human-friendly responses.',
-      '7. Keep responses CONCISE and STRUCTURED: use bullet points, bold key insights, max 2-3 sentences for analysis. No walls of text. No generic productivity advice ("focus on priorities", "manage your time", "start with urgent tasks", "consider breaking tasks into smaller steps") — the user already knows this. Be specific about THEIR tasks or say nothing.',
+      '6. NEVER show JSON, UUIDs, task IDs, or technical details.',
+      '7. Keep responses CONCISE: bullet points, bold key insights, max 3-4 sentences. No generic productivity advice — be specific about THEIR tasks or say nothing.',
+      '8. COUNTING vs LISTING: For COUNTING questions ("how many", "כמה"), answer from context. For ANYTHING asking to see/show/give tasks — ALWAYS call tools.',
       '',
       buildNativeToolsBehaviorPrompt(),
       ''
@@ -386,6 +445,12 @@ export function useAIChat() {
       parts.push(ctx.additionalContext)
     }
 
+    // Conversation entity memory (TASK-1398) — inject recently-mentioned tasks for pronoun resolution
+    const entityContext = entityMemory.formatForPrompt()
+    if (entityContext) {
+      parts.push(entityContext)
+    }
+
     // Add capabilities
     parts.push('')
     parts.push('You can help with:')
@@ -402,6 +467,11 @@ export function useAIChat() {
     parts.push('- The plan renders as interactive day-by-day cards — do NOT repeat the full task list in your text')
     parts.push('- Be encouraging and practical, not generic')
     parts.push('- IMPORTANT: ALL text must be in the user\'s language — including acknowledgments during tool execution')
+
+    // Reinforce language at END of prompt (recency bias — models attend more to the end)
+    parts.push('')
+    parts.push('## REMINDER (READ LAST):')
+    parts.push('YOUR OUTPUT LANGUAGE = the user\'s language. Hebrew input → Hebrew output. English input → English output. NO EXCEPTIONS.')
 
     return parts.join('\n')
   }
@@ -519,9 +589,273 @@ export function useAIChat() {
 
     if (await handleSlashCommand(trimmedContent)) return
 
-    // Always use ReAct — the model decides if/when to call tools via native function calling.
-    // No hardcoded keyword routing. If the model doesn't call tools, the loop exits on iteration 1.
+    // ── Deterministic pipeline: route intent BEFORE ReAct ──────────────
+    const routed = routeIntent(trimmedContent, taskStore.tasks, entityMemory)
+
+    if (routed.type !== 'freeform') {
+      return sendMessageDeterministic(trimmedContent, routed, options)
+    }
+
+    // Fallback: freeform → existing ReAct loop (unchanged)
     return sendMessageWithReAct(trimmedContent, options)
+  }
+
+  /**
+   * Handle deterministic (non-freeform) intents.
+   *
+   * Flow:
+   * 1. Execute pre-built tool calls directly (no LLM decision)
+   * 2. For skipLLM intents → template response
+   * 3. For query intents → LLM formats with mandatory reasoning directive
+   */
+  async function sendMessageDeterministic(
+    content: string,
+    routed: RoutedIntent,
+    options: SendMessageOptions = {}
+  ): Promise<void> {
+    // TASK-1356: Behavioral event tracking
+    const { trackChatMessage, trackChatSessionStart, trackToolCall } = useAIEventTracking()
+    const sessionId = store.activeConversation?.id || 'unknown'
+    if (store.activeConversation && store.activeConversation.messages.length === 0) {
+      trackChatSessionStart(sessionId)
+    }
+    trackChatMessage(sessionId, { contentLength: content.length })
+
+    // Clear input
+    store.inputText = ''
+    store.clearError()
+
+    // Add user message
+    if (!options.skipHistory) {
+      store.addUserMessage(content)
+    }
+
+    // Start streaming response
+    store.startStreamingMessage()
+
+    try {
+      // ── Step 1: Handle greeting (no tools, no LLM) ──────────────────
+      if (routed.type === 'greeting') {
+        const greeting = getTemplate('greeting', routed.language)
+        const lastMsg = store.messages[store.messages.length - 1]
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.content = greeting
+          store.streamingContent = greeting
+        }
+        store.completeStreamingMessage()
+        return
+      }
+
+      // ── Step 2: Execute pre-built tool calls ────────────────────────
+      const toolResults: ToolResult[] = []
+      for (const call of routed.tools) {
+        console.log(`[AIChat:Deterministic] Executing tool: ${call.tool}`, call.parameters)
+        trackToolCall(sessionId, call.tool)
+        const result = await executeTool(call)
+        toolResults.push(result)
+        console.log(`[AIChat:Deterministic] Tool result:`, result.success, result.message)
+
+        // Push undo if available
+        if (result.success && result.undoAction) {
+          store.pushUndoEntry({
+            toolName: call.tool,
+            timestamp: Date.now(),
+            params: call.parameters,
+            undoAction: result.undoAction,
+            description: result.message,
+          })
+        }
+      }
+
+      // Track entities for pronoun resolution
+      for (const r of toolResults) {
+        if (r.data) entityMemory.trackFromToolResult(r.data)
+      }
+
+      // Store tool results in message metadata
+      const lastMsg = store.messages[store.messages.length - 1]
+      if (lastMsg && lastMsg.isStreaming) {
+        lastMsg.metadata = {
+          ...lastMsg.metadata,
+          toolResults: toolResults.map((r, i) => ({
+            success: r.success,
+            message: r.message,
+            data: r.data,
+            tool: routed.tools[i]?.tool || 'unknown',
+            type: AI_TOOLS.find(t => t.name === routed.tools[i]?.tool)?.category || 'read',
+          })),
+        } as Record<string, unknown>
+      }
+
+      // ── Step 3: Handle errors ───────────────────────────────────────
+      const failedTools = toolResults.filter(r => !r.success)
+      if (failedTools.length > 0 && toolResults.every(r => !r.success)) {
+        // All tools failed — show error template
+        const errorMsg = getTemplate('tool_error', routed.language, failedTools[0].message)
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.content = errorMsg
+          store.streamingContent = errorMsg
+        }
+        store.completeStreamingMessage()
+        return
+      }
+
+      // ── Step 4a: For skipLLM intents → template response ────────────
+      if (routed.skipLLM) {
+        const templateResponse = buildTemplateResponse(routed, toolResults)
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.content = templateResponse
+          store.streamingContent = templateResponse
+        }
+        store.completeStreamingMessage()
+        return
+      }
+
+      // ── Step 4b: For query intents → LLM formats with reasoning ─────
+      const router = await getRouter()
+
+      // Build reasoning directive from tool results
+      const resultData = toolResults.find(r => r.success)?.data
+      const reasoningDirective = buildReasoningDirective(
+        routed.tools[0]?.tool || '',
+        resultData,
+        routed.language
+      )
+
+      // Build the pre-digested reasoning summary (reuse existing pipeline)
+      const toolResultsSummary = toolResults
+        .map((r, i) => {
+          const toolName = routed.tools[i]?.tool || 'unknown'
+          return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`)
+        })
+        .join('\n\n')
+
+      const languageName = routed.language === 'he' ? 'Hebrew (עברית)' : 'English'
+      const formatterMessages: RouterChatMessage[] = [
+        {
+          role: 'system',
+          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name and state the key fact.\n\n${routed.formatDirective}`,
+        },
+        {
+          role: 'user',
+          content: `${reasoningDirective}\n\nData:\n${toolResultsSummary}\n\nRESPONSE RULES:\n- The tool results render as interactive cards below — do NOT repeat the full task list\n- NEVER include task IDs (UUIDs)\n- Use a NUMBERED LIST or BULLET POINTS — one per task/insight. NEVER a paragraph blob.\n- Each bullet: **bold task name** — key fact (e.g. "• **Video project** — 6 days overdue, only 2/5 subtasks done")\n- Max 3-5 bullets. Brief intro sentence is OK.\n- Write ENTIRELY in ${languageName}`,
+        },
+      ]
+
+      let formattedResponse = ''
+      for await (const chunk of router.chatStream(formatterMessages, {
+        taskType: 'chat',
+        forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+        model: selectedModel.value || undefined,
+      })) {
+        formattedResponse += chunk.content
+      }
+
+      // Post-check: language mismatch retry (one attempt)
+      if (detectLanguageMismatch(content, formattedResponse)) {
+        console.warn('[AIChat:Deterministic] Language mismatch detected, retrying...')
+        const retryMessages: RouterChatMessage[] = [
+          ...formatterMessages,
+          { role: 'assistant', content: formattedResponse },
+          { role: 'user', content: `WRONG LANGUAGE. Rewrite ENTIRELY in ${languageName}. Every single word must be in ${languageName}.` },
+        ]
+
+        let retryResponse = ''
+        for await (const chunk of router.chatStream(retryMessages, {
+          taskType: 'chat',
+          forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+          model: selectedModel.value || undefined,
+        })) {
+          retryResponse += chunk.content
+        }
+
+        if (retryResponse.trim()) {
+          formattedResponse = retryResponse
+        }
+      }
+
+      // Clean and set
+      const cleaned = cleanResponse(formattedResponse)
+      if (lastMsg && lastMsg.isStreaming) {
+        lastMsg.content = cleaned
+        store.streamingContent = cleaned
+      }
+
+      // Update provider badge
+      try {
+        const currentRouter = await getRouter()
+        const lastUsed = currentRouter.getLastUsedProvider()
+        if (lastUsed) activeProviderRef.value = lastUsed
+      } catch { /* ignore */ }
+
+      store.completeStreamingMessage()
+
+    } catch (err) {
+      const rawError = err instanceof Error ? err.message : 'Failed to get response'
+      const errorMessage = formatUserFriendlyError(rawError)
+      store.failStreamingMessage(errorMessage)
+      console.error('[AIChat:Deterministic] Error:', err)
+    }
+  }
+
+  /**
+   * Build a template response for skipLLM intents based on tool results.
+   */
+  function buildTemplateResponse(routed: RoutedIntent, toolResults: ToolResult[]): string {
+    const lang = routed.language
+    const result = toolResults[0]
+
+    if (!result) {
+      return getTemplate('tool_error', lang, 'No result')
+    }
+
+    if (!result.success) {
+      return getTemplate('tool_error', lang, result.message)
+    }
+
+    const toolName = routed.tools[0]?.tool || ''
+
+    switch (toolName) {
+      case 'start_timer': {
+        const taskName = (result.data as Record<string, unknown>)?.taskId === 'general'
+          ? (lang === 'he' ? 'סשן מיקוד' : 'Focus Session')
+          : result.message.match(/"([^"]+)"/)?.[1] || (lang === 'he' ? 'משימה' : 'task')
+        const duration = (result.data as Record<string, unknown>)?.durationMinutes as number || 25
+        return getTemplate('timer_started', lang, taskName, duration)
+      }
+
+      case 'stop_timer': {
+        const taskName = result.message.match(/"([^"]+)"/)?.[1] || (lang === 'he' ? 'משימה' : 'task')
+        const remaining = (result.data as Record<string, unknown>)?.remainingTime as string || '0:00'
+        return getTemplate('timer_stopped', lang, taskName, remaining)
+      }
+
+      case 'create_task': {
+        const title = (result.data as Record<string, unknown>)?.title as string || ''
+        return getTemplate('task_created', lang, title)
+      }
+
+      case 'mark_task_done': {
+        const title = (result.data as Record<string, unknown>)?.title as string
+          || result.message.match(/"([^"]+)"/)?.[1] || ''
+        // Check if already done
+        if (result.message.includes('already')) {
+          return getTemplate('task_already_done', lang, title)
+        }
+        return getTemplate('task_done', lang, title)
+      }
+
+      case 'update_task_status': {
+        const title = result.message.match(/"([^"]+)"/)?.[1] || ''
+        if ((routed.tools[0]?.parameters as Record<string, unknown>)?.status === 'done') {
+          return getTemplate('task_done', lang, title)
+        }
+        return result.message
+      }
+
+      default:
+        return result.message
+    }
   }
 
   // Dead code below kept for reference — sendMessage always routes to ReAct now.
@@ -654,6 +988,11 @@ export function useAIChat() {
         }
       }
 
+      // Track entities for pronoun resolution (TASK-1398)
+      for (const r of toolResults) {
+        if (r.data) entityMemory.trackFromToolResult(r.data)
+      }
+
       // Handle tool result feedback
       if (toolResults.length > 0) {
         const failedTools = toolResults.filter(r => !r.success)
@@ -708,7 +1047,8 @@ export function useAIChat() {
       store.completeStreamingMessage({ actions })
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to get response'
+      const rawError = err instanceof Error ? err.message : 'Failed to get response'
+      const errorMessage = formatUserFriendlyError(rawError)
       store.failStreamingMessage(errorMessage)
       console.error('[AIChat] Error:', err)
     }
@@ -860,6 +1200,11 @@ export function useAIChat() {
             }
           }
 
+          // Track entities for pronoun resolution (TASK-1398)
+          for (const r of toolResults) {
+            if (r.data) entityMemory.trackFromToolResult(r.data)
+          }
+
           // Accumulate tool results in message metadata
           const lastMsg = store.messages[store.messages.length - 1]
           if (lastMsg) {
@@ -942,6 +1287,11 @@ export function useAIChat() {
                   description: result.message,
                 })
               }
+            }
+
+            // Track entities for pronoun resolution (TASK-1398)
+            for (const r of toolResults) {
+              if (r.data) entityMemory.trackFromToolResult(r.data)
             }
 
             // Accumulate tool results in message metadata
@@ -1098,7 +1448,9 @@ export function useAIChat() {
       } catch { /* ignore */ }
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to get response'
+      const rawError = err instanceof Error ? err.message : 'Failed to get response'
+      // User-friendly error messages for common API failures
+      const errorMessage = formatUserFriendlyError(rawError)
       store.failStreamingMessage(errorMessage)
       console.error('[AIChat] ReAct error:', err)
     } finally {

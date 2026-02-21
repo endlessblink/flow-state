@@ -51,9 +51,8 @@ export const GROQ_MODELS: ModelEntry[] = [
   { id: 'moonshotai/kimi-k2-instruct-0905', label: 'Kimi K2', shortLabel: 'Kimi K2', description: 'Moonshot AI MoE model (preview)', contextLength: 262_144, pricing: { inputPer1M: 1.00, outputPer1M: 3.00 } },
   { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', shortLabel: 'GPT-OSS 120B', description: 'OpenAI open-source 120B model', contextLength: 131_072, pricing: { inputPer1M: 0.15, outputPer1M: 0.60 } },
   { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B', shortLabel: 'GPT-OSS 20B', description: 'OpenAI open-source 20B model', contextLength: 131_072, pricing: { inputPer1M: 0.075, outputPer1M: 0.30 } },
-  { id: 'qwen-qwq-32b', label: 'Qwen QwQ 32B', shortLabel: 'Qwen QwQ 32B', description: 'Dedicated chain-of-thought reasoning model', contextLength: 131_072, pricing: { inputPer1M: 0.29, outputPer1M: 0.39 } },
-  { id: 'deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 Distill 70B', shortLabel: 'DS R1 Distill 70B', description: 'R1 reasoning distilled into Llama 70B', contextLength: 131_072, pricing: { inputPer1M: 0.75, outputPer1M: 0.99 } },
-  { id: 'deepseek-r1-distill-qwen-32b', label: 'DeepSeek R1 Distill 32B', shortLabel: 'DS R1 Distill 32B', description: 'R1 reasoning distilled into Qwen 32B', contextLength: 131_072, pricing: { inputPer1M: 0.69, outputPer1M: 0.69 } },
+  // NOTE: deepseek-r1-distill-llama-70b, deepseek-r1-distill-qwen-32b, qwen-qwq-32b
+  // were decommissioned by Groq (Feb 2026). Removed to prevent selection errors.
 ]
 
 /**
@@ -88,12 +87,14 @@ export const OPENROUTER_MODELS: ModelEntry[] = [
   // DeepSeek
   { id: 'deepseek/deepseek-v3.2', label: 'DeepSeek V3.2', shortLabel: 'DeepSeek V3.2', description: 'DeepSeek latest model', contextLength: 163_840, pricing: { inputPer1M: 0.26, outputPer1M: 0.38 } },
   { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1', shortLabel: 'DeepSeek R1', description: 'DeepSeek reasoning model', contextLength: 64_000, pricing: { inputPer1M: 0.70, outputPer1M: 2.50 } },
-  // Free models (TASK-1385)
-  { id: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air (Free)', shortLabel: 'GLM 4.5 Air', description: 'Z.ai thinking model — free, 131K context', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
-  { id: 'deepseek/deepseek-r1-0528:free', label: 'DeepSeek R1 (Free)', shortLabel: 'DeepSeek R1 Free', description: 'Best free reasoning model — O1-comparable', contextLength: 163_840, pricing: { inputPer1M: 0, outputPer1M: 0 } },
-  { id: 'deepseek/deepseek-chat-v3-0324:free', label: 'DeepSeek V3 (Free)', shortLabel: 'DeepSeek V3 Free', description: 'DeepSeek V3 free snapshot — strong general chat', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
-  { id: 'qwen/qwen3-235b-a22b-thinking-2507:free', label: 'Qwen3 235B Thinking (Free)', shortLabel: 'Qwen3 235B Free', description: 'Qwen3 MoE reasoning model — 262K context', contextLength: 262_144, pricing: { inputPer1M: 0, outputPer1M: 0 } },
-  { id: 'openai/gpt-oss-120b:free', label: 'GPT-OSS 120B (Free)', shortLabel: 'GPT-OSS 120B Free', description: 'OpenAI open-weights — free via OpenRouter', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  // Free models (TASK-1385) — verified available Feb 2026
+  { id: 'openrouter/free', label: 'Free Auto-Router', shortLabel: 'Free Auto', description: 'Auto-picks best available free model', contextLength: 200_000, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'deepseek/deepseek-r1-0528:free', label: 'DeepSeek R1 (Free)', shortLabel: 'DeepSeek R1 Free', description: 'Best free reasoning model — O1-comparable (rate-limited)', contextLength: 163_840, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air (Free)', shortLabel: 'GLM 4.5 Air', description: 'Z.ai thinking model — most reliable free model', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B (Free)', shortLabel: 'Llama 3.3 Free', description: 'Meta open model — free via OpenRouter', contextLength: 128_000, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'nousresearch/hermes-3-llama-3.1-405b:free', label: 'Hermes 3 405B (Free)', shortLabel: 'Hermes 405B Free', description: 'Nous Research 405B — largest free model', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'mistralai/mistral-small-3.1-24b-instruct:free', label: 'Mistral Small 3.1 (Free)', shortLabel: 'Mistral Small Free', description: 'Mistral efficient 24B — free, fast', contextLength: 128_000, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'google/gemma-3-27b-it:free', label: 'Gemma 3 27B (Free)', shortLabel: 'Gemma 3 Free', description: 'Google Gemma 3 — free, 131K context', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
 ]
 
 /**
@@ -110,8 +111,8 @@ export const DEFAULT_MODELS = {
  * These override the chat defaults when no model is explicitly chosen in Settings.
  */
 export const WEEKLY_PLAN_DEFAULTS = {
-  groq: 'llama-3.3-70b-versatile',                   // Best quality on Groq for planning
-  openrouter: 'deepseek/deepseek-r1-0528:free',      // Best free reasoning model (O1-comparable, 164K)
+  groq: 'moonshotai/kimi-k2-instruct-0905',          // Best reasoning on Groq — MoE 262K context
+  openrouter: 'openrouter/free',                      // Auto-picks best available free model
 } as const
 
 /**

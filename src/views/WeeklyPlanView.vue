@@ -132,13 +132,13 @@
 
         <!-- Q6: Personal context ("About Me") -->
         <div class="interview-card">
-          <label class="interview-label">Tell the AI about yourself</label>
-          <p class="interview-hint">Your routine, energy patterns, scheduling preferences. Saved for future weeks.</p>
+          <label class="interview-label">Tell the AI about your weekly routine</label>
+          <p class="interview-hint">Where do you work each day? When do you run errands? What's your energy like? Saved for future weeks.</p>
           <textarea
             v-model="interviewForm.personalContext"
             class="interview-textarea"
-            rows="3"
-            placeholder="e.g. I'm a morning person. Tuesday is my errand day. I prefer creative work (writing, video) early in the week when I have more energy..."
+            rows="4"
+            placeholder="e.g. I work at the school on Wednesday so school-related tasks go then. Tuesday afternoon I run errands. Mornings are my best focus time. I do creative work (writing, video) early in the week..."
           />
         </div>
       </div>

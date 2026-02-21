@@ -83,24 +83,46 @@ const chains: AgentChain[] = [
           const overdue = results[1]?.data as any
           const suggested = results[2]?.data as any
 
-          const parts = [
-            'Based on today\'s data, create a prioritized plan for my day. Be concise and actionable. Use bullet points.',
-            '',
-            '## Today\'s Summary',
-            summary ? JSON.stringify(summary, null, 2) : 'No summary available',
-            '',
-            '## Overdue Tasks',
-            overdue && Array.isArray(overdue) && overdue.length > 0
-              ? overdue.map((t: any) => `- ${t.title} (due: ${t.dueDate}, ${t.daysOverdue} days overdue)`).join('\n')
-              : 'No overdue tasks',
-            '',
-            '## Suggested Next Tasks',
-            suggested && Array.isArray(suggested) && suggested.length > 0
-              ? suggested.map((t: any) => `- ${t.title} (${t.reason}, priority: ${t.priority})`).join('\n')
-              : 'No suggestions available',
-          ]
+          const sections: string[] = []
+          sections.push('Create a short, personalized daily plan. Write ONE connecting sentence per section. Do NOT repeat the facts — they are shown below and the user can see them.')
+          sections.push('')
 
-          return parts.join('\n')
+          // Pre-digested overdue section
+          if (overdue && Array.isArray(overdue) && overdue.length > 0) {
+            sections.push(`## OVERDUE (${overdue.length} tasks need attention):`)
+            for (const t of overdue.slice(0, 5)) {
+              const days = t.daysOverdue || '?'
+              const pri = t.priority ? ` [${t.priority}]` : ''
+              sections.push(`- "${t.title}" — ${days} days late${pri}`)
+            }
+            sections.push('→ Write 1 sentence about urgency.')
+          } else {
+            sections.push('## No overdue tasks — good!')
+          }
+
+          sections.push('')
+
+          // Pre-digested today section
+          if (summary) {
+            const due = summary.dueToday ?? summary.tasksDueToday ?? 0
+            const done = summary.completedToday ?? 0
+            const inProg = summary.inProgress ?? 0
+            sections.push(`## TODAY: ${due} due, ${done} completed, ${inProg} in progress`)
+          }
+
+          sections.push('')
+
+          // Pre-digested suggestions
+          if (suggested && Array.isArray(suggested) && suggested.length > 0) {
+            sections.push('## RECOMMENDED ORDER:')
+            for (let i = 0; i < Math.min(suggested.length, 3); i++) {
+              const t = suggested[i]
+              sections.push(`${i + 1}. "${t.title}"${t.reason ? ` — ${t.reason}` : ''}${t.estimatedMinutes ? ` (~${t.estimatedMinutes}min)` : ''}`)
+            }
+            sections.push('→ Write 1 sentence motivating the user to start with #1.')
+          }
+
+          return sections.join('\n')
         },
       },
     ],
@@ -135,20 +157,51 @@ const chains: AgentChain[] = [
           const weekly = results[1]?.data as any
           const gamification = results[2]?.data as any
 
-          const parts = [
-            'Summarize my day: what I accomplished, what\'s left, and give me a motivational note. Keep it brief (2-3 sentences).',
-            '',
-            '## Today\'s Stats',
-            stats ? JSON.stringify(stats, null, 2) : 'No stats available',
-            '',
-            '## Weekly Summary',
-            weekly ? JSON.stringify(weekly, null, 2) : 'No weekly data available',
-            '',
-            '## Gamification Status',
-            gamification ? JSON.stringify(gamification, null, 2) : 'No gamification data available',
-          ]
+          const sections: string[] = []
+          sections.push('Write a 3-sentence end-of-day summary. Use the FACTS below — do NOT invent numbers.')
+          sections.push('')
 
-          return parts.join('\n')
+          // Pre-digested stats
+          if (stats) {
+            const completed = stats.todayCompleted ?? stats.completedToday ?? 0
+            const pomodoros = stats.todayPomodoros ?? stats.pomodorosToday ?? 0
+            const streak = stats.currentStreak ?? 0
+            sections.push(`## ACCOMPLISHMENTS: ${completed} tasks completed, ${pomodoros} pomodoros${streak > 0 ? `, ${streak}-day streak` : ''}`)
+
+            if (stats.statusBreakdown) {
+              const sb = stats.statusBreakdown
+              const total = Object.values(sb).reduce((a: number, b: any) => a + (typeof b === 'number' ? b : 0), 0)
+              const remaining = total - (sb.done || 0)
+              sections.push(`## REMAINING: ${remaining} tasks still open out of ${total} total`)
+            }
+          }
+
+          sections.push('')
+
+          // Weekly context
+          if (weekly) {
+            const weekCompleted = weekly.completedThisWeek ?? 0
+            const focusMins = weekly.totalFocusMinutes ?? 0
+            const focusHrs = Math.floor(focusMins / 60)
+            const focusRemMins = focusMins % 60
+            sections.push(`## WEEK SO FAR: ${weekCompleted} tasks done, ${focusHrs}h ${focusRemMins}m focus time`)
+          }
+
+          sections.push('')
+
+          // Gamification
+          if (gamification) {
+            const level = gamification.level ?? gamification.currentLevel ?? '?'
+            const xp = gamification.xp ?? gamification.currentXP ?? 0
+            sections.push(`## LEVEL: ${level} (${xp} XP)`)
+          }
+
+          sections.push('')
+          sections.push('→ Sentence 1: Summarize what was accomplished today (use specific numbers).')
+          sections.push('→ Sentence 2: Note what carries over to tomorrow.')
+          sections.push('→ Sentence 3: Brief motivational close referencing their streak or level.')
+
+          return sections.join('\n')
         },
       },
     ],
@@ -231,27 +284,52 @@ const chains: AgentChain[] = [
           const daily = results[1]?.data as any
           const weeklyPlan = results[2]?.data as any
 
-          const parts = [
-            'Present this weekly plan to the user in a friendly, encouraging way.',
-            'CRITICAL: Respond in the SAME LANGUAGE the user\'s app is in. If context suggests Hebrew, respond in Hebrew.',
-            '',
-            '## Current Situation',
-            overdue && Array.isArray(overdue) && overdue.length > 0
-              ? `${overdue.length} overdue tasks need attention`
-              : 'No overdue tasks',
-            daily ? `Today: ${daily.dueToday || 0} due, ${daily.completedToday || 0} completed, ${daily.inProgress || 0} in progress` : '',
-            '',
-            '## Weekly Plan',
-            weeklyPlan ? JSON.stringify(weeklyPlan, null, 2) : 'Plan generation failed',
-            '',
-            'Instructions:',
-            '- Summarize the plan day-by-day with task names',
-            '- Highlight overdue tasks that need priority attention',
-            '- Add a brief motivational note',
-            '- Keep it concise — the detailed plan card renders below your message',
-          ]
+          const sections: string[] = []
+          sections.push('Present this weekly plan briefly. The detailed plan card renders below your message, so keep your text SHORT (3-4 sentences max).')
+          sections.push('CRITICAL: Respond in the SAME LANGUAGE the user\'s app is in.')
+          sections.push('')
 
-          return parts.join('\n')
+          // Pre-digested situation
+          if (overdue && Array.isArray(overdue) && overdue.length > 0) {
+            sections.push(`## OVERDUE (address first): ${overdue.length} tasks`)
+            for (const t of overdue.slice(0, 3)) {
+              sections.push(`- "${t.title}" — ${t.daysOverdue || '?'} days late`)
+            }
+          }
+
+          if (daily) {
+            sections.push(`## TODAY: ${daily.dueToday || 0} due, ${daily.completedToday || 0} done, ${daily.inProgress || 0} in progress`)
+          }
+
+          sections.push('')
+
+          // Pre-digested plan summary (don't dump the full JSON)
+          if (weeklyPlan && typeof weeklyPlan === 'object') {
+            const plan = weeklyPlan.plan || weeklyPlan
+            if (plan && typeof plan === 'object') {
+              const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+              let totalPlanned = 0
+              for (const day of days) {
+                const dayTasks = plan[day]
+                if (Array.isArray(dayTasks)) {
+                  totalPlanned += dayTasks.length
+                }
+              }
+              sections.push(`## PLAN: ${totalPlanned} tasks distributed across the week`)
+              if (weeklyPlan.reasoning) {
+                sections.push(`Reasoning: ${typeof weeklyPlan.reasoning === 'string' ? weeklyPlan.reasoning.slice(0, 200) : ''}`)
+              }
+            }
+          } else {
+            sections.push('## Plan generation failed — tell the user to try again.')
+          }
+
+          sections.push('')
+          sections.push('→ Sentence 1: Highlight any overdue tasks that need immediate attention.')
+          sections.push('→ Sentence 2: Summarize the distribution (e.g., "X tasks spread across 5 days").')
+          sections.push('→ Sentence 3: Brief motivational close.')
+
+          return sections.join('\n')
         },
       },
     ],

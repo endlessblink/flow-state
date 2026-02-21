@@ -152,7 +152,9 @@ export function useCanvasEvents(syncNodes?: (tasks?: any[], options?: { force?: 
         endGlobalDrag()
 
         const data = event.dataTransfer?.getData('application/json')
-        if (!data) return
+        if (!data) {
+            return
+        }
 
         try {
             const { taskId } = JSON.parse(data)
@@ -167,7 +169,6 @@ export function useCanvasEvents(syncNodes?: (tasks?: any[], options?: { force?: 
             })
             const { x, y } = flowCoords
 
-
             // AWAIT the task update before calling syncNodes
             // Otherwise syncNodes runs with stale task data
             await taskStore.updateTask(taskId, {
@@ -176,12 +177,9 @@ export function useCanvasEvents(syncNodes?: (tasks?: any[], options?: { force?: 
             })
 
             // BUG-1361: Pass force:true to bypass the drag-settling guard.
-            // Without this, if the user recently dragged a canvas node (3-second settling
-            // window), syncNodes silently returns and the dropped task never renders.
             if (syncNodes) syncNodes(undefined, { force: true })
 
             // Wait for Vue reactivity to propagate before syncing
-            // filteredTasks is a computed that needs time to recalculate
             await nextTick()
 
             // Call syncNodes to build the node array with parent-child relationships
@@ -190,12 +188,9 @@ export function useCanvasEvents(syncNodes?: (tasks?: any[], options?: { force?: 
             }
 
             // Wait for v-model to sync nodes.value to Vue Flow's internal state
-            // BEFORE reading getNodes.value. Without this tick, getNodes returns STALE state.
             await nextTick()
 
             // CRITICAL - Use setNodes() to force Vue Flow to reinitialize
-            // Direct array mutation doesn't trigger Vue Flow's complete initialization sequence
-            // setNodes() ensures parent-child relationships are properly discovered
             const currentNodes = getNodes.value
             setNodes(currentNodes)
 

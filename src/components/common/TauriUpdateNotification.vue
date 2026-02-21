@@ -112,27 +112,33 @@ const handleRetry = async () => {
 
 // --- Lifecycle ---
 onMounted(async () => {
+  console.log('[TauriUpdater] TauriUpdateNotification mounted, isTauri:', isTauri())
   if (!isTauri()) return
 
   // Check for updates after a short delay to not block startup
   setTimeout(async () => {
-    console.log('[TauriUpdater] Checking for updates...')
+    console.log('[TauriUpdater] Starting update check...')
     const hasNewVersion = await checkForUpdates()
+    console.log('[TauriUpdater] Check result:', {
+      hasNewVersion,
+      status: status.value,
+      updateInfo: updateInfo.value,
+      error: error.value
+    })
     if (hasNewVersion) {
       console.log('[TauriUpdater] Update available:', updateInfo.value?.version)
       // FEATURE-1194: Auto-download if enabled in settings
       const settingsStore = useSettingsStore()
+      console.log('[TauriUpdater] autoUpdateEnabled:', settingsStore.autoUpdateEnabled)
       if (settingsStore.autoUpdateEnabled) {
-        console.log('[TauriUpdater] Auto-update enabled, downloading...')
+        console.log('[TauriUpdater] Auto-downloading...')
         await downloadAndInstall()
       }
     } else if (status.value === 'error') {
-      // Don't show error notification for "no releases yet" - this is expected
-      // when there's no published release or latest.json doesn't exist
-      console.log('[TauriUpdater] No update manifest found (expected if no releases published)')
+      console.log('[TauriUpdater] Error during check:', error.value)
       dismissed.value = true // Hide the error notification
     } else {
-      console.log('[TauriUpdater] App is up to date')
+      console.log('[TauriUpdater] App is up to date (current version is latest)')
     }
   }, 3000)
 })

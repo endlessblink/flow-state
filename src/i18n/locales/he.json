@@ -162,6 +162,28 @@
     "week": "שבוע",
     "month": "חודש"
   },
+  "google_calendar": {
+    "title": "יומן Google",
+    "connect": "חבר יומן Google",
+    "disconnect": "נתק",
+    "reconnect": "חבר מחדש יומן Google",
+    "connected": "מחובר",
+    "not_connected": "לא מחובר",
+    "connecting": "מתחבר...",
+    "select_calendars": "בחר יומנים להצגה",
+    "no_calendars": "לא נמצאו יומנים",
+    "sync_now": "סנכרן עכשיו",
+    "syncing": "מסנכרן...",
+    "last_synced": "סנכרון אחרון",
+    "show_events": "הצג אירועי יומן Google",
+    "hide_events": "הסתר אירועי יומן Google",
+    "events_hidden": "אירועי יומן Google מוסתרים",
+    "events_visible": "אירועי יומן Google מוצגים",
+    "error_fetch": "שליפת יומנים נכשלה",
+    "error_sync": "סנכרון נכשל",
+    "error_token_expired": "חיבור יומן Google פג תוקף. אנא חבר מחדש.",
+    "requires_reauth": "גישה ליומן דורשת אימות מחדש עם Google"
+  },
   "kanban": {
     "no_tasks_in": "אין משימות {status}",
     "add_task_in": "הוסף משימת {status}",

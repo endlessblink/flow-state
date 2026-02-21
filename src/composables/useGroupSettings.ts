@@ -10,16 +10,7 @@ import { detectPowerKeyword, type PowerKeywordResult } from './useTaskSmartGroup
 import type { AssignOnDropSettings, CollectFilterSettings } from '@/stores/canvas'
 // TASK-144: Use centralized duration defaults
 import { DURATION_DEFAULTS, type DurationCategory } from '@/utils/durationCategories'
-
-/**
- * Format date key as YYYY-MM-DD
- */
-function formatDateKey(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+import { formatDateKey } from '@/utils/dateUtils'
 
 /**
  * Resolve a smart date value (like 'today', 'tomorrow') to an actual date string

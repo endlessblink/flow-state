@@ -25,6 +25,7 @@ import { formatRelativeDate } from '@/utils/dateUtils'
 import TaskQuickEditPopover from './TaskQuickEditPopover.vue'
 import { executeTool } from '@/services/ai/tools'
 import { sanitizeMarkdownHtml } from '@/utils/security'
+import { detectLanguage } from '@/services/ai/pipeline/languageDetector'
 
 // ============================================================================
 // Props
@@ -79,9 +80,29 @@ const isUser = computed(() => props.message.role === 'user')
 const isAssistant = computed(() => props.message.role === 'assistant')
 const isStreaming = computed(() => props.message.isStreaming)
 const hasError = computed(() => !!props.message.error)
-const effectiveDirection = computed<'auto' | 'ltr' | 'rtl'>(() =>
-  props.message.metadata?.forceDirection || props.direction || 'auto'
-)
+/**
+ * Per-message direction based on content language detection.
+ * When direction is 'auto' (or unset), detect from message content:
+ * - Hebrew content → 'rtl'
+ * - English content → 'ltr'
+ * - Unknown → 'auto' (let browser decide)
+ * This prevents English messages from inheriting RTL from the app root.
+ * @see TASK-1381 pipeline integration
+ */
+const effectiveDirection = computed<'auto' | 'ltr' | 'rtl'>(() => {
+  // Explicit override from metadata or parent
+  if (props.message.metadata?.forceDirection) return props.message.metadata.forceDirection
+  if (props.direction && props.direction !== 'auto') return props.direction
+
+  // Auto-detect from content
+  const content = props.message.content || ''
+  if (!content.trim()) return 'auto'
+
+  const lang = detectLanguage(content)
+  if (lang === 'he') return 'rtl'
+  if (lang === 'en') return 'ltr'
+  return 'auto'
+})
 const hasActions = computed(() =>
   props.message.actions && props.message.actions.length > 0
 )
@@ -1172,6 +1193,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   font-size: var(--text-sm);
   line-height: 1.6;
   word-break: break-word;
+  unicode-bidi: plaintext;
 }
 
 /* ============================================================================

@@ -18,13 +18,13 @@ import type {
   ProviderHealthStatus,
 } from '../types'
 import { proxyAIChat, proxyAIChatStream, isProxyAvailable } from '../proxy/aiChatProxy'
-import { GROQ_MODELS, toAIModels } from '@/config/aiModels'
+import { GROQ_MODELS, DEFAULT_MODELS, toAIModels } from '@/config/aiModels'
 
 // ============================================================================
 // Groq Proxy Provider Implementation
 // ============================================================================
 
-const DEFAULT_MODEL = 'llama-3.3-70b-versatile'
+const DEFAULT_MODEL = DEFAULT_MODELS.groq
 const DEFAULT_TIMEOUT = 60000
 
 /**

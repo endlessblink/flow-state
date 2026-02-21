@@ -68,6 +68,7 @@ interface StoredPlanState {
   weekStart: string  // ISO string
   weekEnd: string    // ISO string
   interviewAnswers: InterviewAnswers | null
+  skipFeedback: boolean
   savedAt: number
 }
 
@@ -85,6 +86,7 @@ function savePlanToStorage(state: WeeklyPlanState) {
       weekStart: state.weekStart.toISOString(),
       weekEnd: state.weekEnd.toISOString(),
       interviewAnswers: state.interviewAnswers,
+      skipFeedback: state.skipFeedback ?? false,
       savedAt: Date.now(),
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
@@ -119,6 +121,7 @@ function loadPlanFromStorage(_weekStartsOn: 0 | 1 = 0): WeeklyPlanState | null {
       weekStart: new Date(stored.weekStart),
       weekEnd: new Date(stored.weekEnd),
       interviewAnswers: stored.interviewAnswers,
+      skipFeedback: stored.skipFeedback ?? false,
     }
   } catch {
     localStorage.removeItem(STORAGE_KEY)
@@ -157,6 +160,7 @@ function getOrCreateState(weekStartsOn: 0 | 1 = 0): Ref<WeeklyPlanState> {
       weekStart: getWeekStart(weekStartsOn),
       weekEnd: getWeekEnd(weekStartsOn),
       interviewAnswers: null,
+      skipFeedback: false,
     })
     _stateCreatedAt = now
   }
@@ -583,7 +587,7 @@ export function useWeeklyPlan() {
 
       // FEATURE-1317: Record weekly outcome for feedback loop
       const settingsStoreForFeedback = useSettingsStore()
-      if (settingsStoreForFeedback.aiLearningEnabled) {
+      if (settingsStoreForFeedback.aiLearningEnabled && !state.value.skipFeedback) {
         // Collect all planned task IDs from this plan
         const allPlannedIds: string[] = []
         for (const dayKey of DAY_KEYS) {
@@ -632,6 +636,25 @@ export function useWeeklyPlan() {
   })
 
   // --------------------------------------------------------------------------
+  // Accuracy data from work profile
+  // --------------------------------------------------------------------------
+
+  const lastWeekAccuracy = computed(() => {
+    const history = workProfile.value?.weeklyHistory
+    if (!history || history.length === 0) return null
+    return history[history.length - 1].accuracy
+  })
+
+  const avgAccuracy = computed(() => {
+    return workProfile.value?.avgPlanAccuracy ?? null
+  })
+
+  function setSkipFeedback(val: boolean) {
+    state.value.skipFeedback = val
+    savePlanToStorage(state.value)
+  }
+
+  // --------------------------------------------------------------------------
   // Reset
   // --------------------------------------------------------------------------
 
@@ -646,6 +669,7 @@ export function useWeeklyPlan() {
       weekStart: getWeekStart(settings.weekStartsOn),
       weekEnd: getWeekEnd(settings.weekStartsOn),
       interviewAnswers: null,
+      skipFeedback: false,
     }
     _stateCreatedAt = Date.now()
     clearPlanStorage()
@@ -667,5 +691,8 @@ export function useWeeklyPlan() {
     submitInterview,
     applyPlan,
     reset,
+    lastWeekAccuracy,
+    avgAccuracy,
+    setSkipFeedback,
   }
 }

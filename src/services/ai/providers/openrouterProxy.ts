@@ -26,13 +26,13 @@ import type {
   ProviderHealthStatus,
 } from '../types'
 import { proxyAIChat, proxyAIChatStream, isProxyAvailable } from '../proxy/aiChatProxy'
-import { OPENROUTER_MODELS, toAIModels } from '@/config/aiModels'
+import { OPENROUTER_MODELS, DEFAULT_MODELS, toAIModels } from '@/config/aiModels'
 
 // ============================================================================
 // OpenRouter Proxy Provider Implementation
 // ============================================================================
 
-const DEFAULT_MODEL = 'moonshotai/kimi-k2-instruct-0905'
+const DEFAULT_MODEL = DEFAULT_MODELS.openrouter
 const DEFAULT_TIMEOUT = 60000
 
 /**

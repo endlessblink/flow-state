@@ -5,6 +5,7 @@ import type { AIRouter } from '@/services/ai/router'
 import type { ChatMessage } from '@/services/ai/types'
 import type { WorkProfile } from '@/utils/supabaseMappers'
 import { useSettingsStore } from '@/stores/settings'
+import { WEEKLY_PLAN_DEFAULTS } from '@/config/aiModels'
 
 // ============================================================================
 // Types
@@ -33,6 +34,7 @@ export interface WeeklyPlanState {
   weekStart: Date
   weekEnd: Date
   interviewAnswers: InterviewAnswers | null
+  skipFeedback: boolean
 }
 
 export interface TaskSummary {
@@ -307,20 +309,26 @@ function assembleTaskReasons(
 // TASK-1327: Stripped down to ~300 tokens system + compact task data
 // ============================================================================
 
-function buildDistributionSystemPrompt(interview?: InterviewAnswers, profile?: WorkProfile | null): string {
-  let base = `You distribute tasks across a work week. Return ONLY valid JSON.
+function buildDistributionSystemPrompt(interview?: InterviewAnswers, profile?: WorkProfile | null, taskCount?: number): string {
+  // Calculate distribution targets
+  const daysOff = new Set(interview?.daysOff || [])
+  const availableDayCount = DAY_KEYS.filter(d => !daysOff.has(d)).length
+  const maxPerDay = interview?.maxTasksPerDay || 6
+  const targetPerDay = taskCount ? Math.min(Math.ceil(taskCount / availableDayCount), maxPerDay) : 4
 
-JSON keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning.
-Each day key = array of task ID strings. "reasoning" = brief distribution logic string.
+  let base = `You are a weekly task scheduler. Distribute tasks across a work week.
 
-Rules:
-- OVERDUE tasks → Monday or Tuesday.
-- IN_PROGRESS tasks → early in week.
-- DUE_THIS_WEEK → on or before due date.
-- 3-6 tasks max per day. Weekdays preferred.
-- Group same-project tasks on same day.
-- Each task ID in exactly ONE day or unscheduled.
-- OK to put tasks in unscheduled if week is full.`
+CRITICAL RULES:
+1. DISTRIBUTE EVENLY — target ~${targetPerDay} tasks per available day. NEVER put more than ${maxPerDay} on one day.
+2. Spread overdue and in-progress tasks across Mon–Wed (NOT all on Monday).
+3. DUE_THIS_WEEK → schedule on or before the due date.
+4. Group same-project tasks on the same day when possible.
+5. Each task ID goes in exactly ONE day or "unscheduled".
+6. Put tasks in "unscheduled" only if the week is genuinely full.
+7. Use weekends (Sat/Sun) only as overflow — prefer weekdays.
+
+Return ONLY valid JSON. Keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning.
+Each day key = array of task ID strings. "reasoning" = 2-3 sentences explaining your distribution logic.`
 
   if (interview) {
     const extras: string[] = []
@@ -328,37 +336,37 @@ Rules:
       extras.push(`- TOP PRIORITY: "${interview.topPriority}". Schedule related tasks earliest.`)
     }
     if (interview.daysOff && interview.daysOff.length > 0) {
-      extras.push(`- Days OFF (zero tasks): ${interview.daysOff.join(', ')}.`)
+      extras.push(`- Days OFF (ZERO tasks allowed): ${interview.daysOff.join(', ')}.`)
     }
     if (interview.heavyMeetingDays && interview.heavyMeetingDays.length > 0) {
-      extras.push(`- Heavy meeting days (fewer tasks): ${interview.heavyMeetingDays.join(', ')}.`)
+      extras.push(`- Heavy meeting days (max 2 tasks): ${interview.heavyMeetingDays.join(', ')}.`)
     }
     if (interview.maxTasksPerDay) {
-      extras.push(`- Max tasks/day: ${interview.maxTasksPerDay}.`)
+      extras.push(`- HARD LIMIT: max ${interview.maxTasksPerDay} tasks per day.`)
     }
     if (interview.preferredWorkStyle === 'frontload') {
-      extras.push('- Front-load: more Mon-Tue, lighter Thu-Fri.')
+      extras.push('- Front-load: slightly more Mon-Tue, slightly lighter Thu-Fri.')
     } else if (interview.preferredWorkStyle === 'backload') {
-      extras.push('- Back-load: lighter Mon-Tue, heavier Thu-Fri.')
+      extras.push('- Back-load: slightly lighter Mon-Tue, slightly heavier Thu-Fri.')
     }
     if (extras.length > 0) {
-      base += `\n\nPreferences:\n${extras.join('\n')}`
+      base += `\n\nUser Preferences:\n${extras.join('\n')}`
     }
   }
 
   if (profile) {
     const insights: string[] = []
     if (profile.avgTasksCompletedPerDay) {
-      insights.push(`- Capacity: ~${profile.avgTasksCompletedPerDay} tasks/day`)
+      insights.push(`- Historical capacity: ~${profile.avgTasksCompletedPerDay} tasks/day`)
     }
     if (profile.peakProductivityDays?.length) {
-      insights.push(`- Peak days: ${profile.peakProductivityDays.join(', ')}`)
+      insights.push(`- Peak days: ${profile.peakProductivityDays.join(', ')}. Schedule HIGH complexity (score ≥ 6) tasks on these days. Schedule LOW complexity (score ≤ 3) on non-peak days when possible.`)
     }
     if (profile.avgPlanAccuracy && profile.avgPlanAccuracy < 60) {
-      insights.push(`- Past plans ${profile.avgPlanAccuracy}% accurate — schedule fewer tasks.`)
+      insights.push(`- Past plans only ${profile.avgPlanAccuracy}% accurate — schedule conservatively (fewer tasks/day).`)
     }
     if (insights.length > 0) {
-      base += `\n\nPatterns:\n${insights.join('\n')}`
+      base += `\n\nBehavioral Patterns:\n${insights.join('\n')}`
     }
   }
 
@@ -378,7 +386,13 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
     dueDate: t.dueDate || null,
     urgency: t.urgencyCategory,
     complexity: t.complexityScore,
+    estimatedMinutes: t.estimatedDuration || null,
   }))
+
+  // Count urgency categories to guide the LLM
+  const overdueCount = enriched.filter(t => t.urgencyCategory === 'OVERDUE').length
+  const inProgressCount = enriched.filter(t => t.urgencyCategory === 'IN_PROGRESS').length
+  const dueThisWeekCount = enriched.filter(t => t.urgencyCategory === 'DUE_THIS_WEEK').length
 
   let behavioralSection = ''
   if (behavioral) {
@@ -387,23 +401,24 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
       lines.push(`Active projects: ${behavioral.activeProjectNames.join(', ')}`)
     }
     if (behavioral.peakProductivityDays.length > 0) {
-      lines.push(`Peak days: ${behavioral.peakProductivityDays.join(', ')}`)
+      lines.push(`Peak productivity days: ${behavioral.peakProductivityDays.join(', ')}. Prefer scheduling complex/demanding tasks (complexity ≥ 6) on these days.`)
     }
     if (behavioral.avgTasksCompletedPerDay) {
-      lines.push(`Capacity: ~${behavioral.avgTasksCompletedPerDay} tasks/day`)
+      lines.push(`Historical capacity: ~${behavioral.avgTasksCompletedPerDay} tasks/day`)
     }
     if (lines.length > 0) {
-      behavioralSection = `\n${lines.join('\n')}\n`
+      behavioralSection = `\nContext:\n${lines.join('\n')}\n`
     }
   }
 
   return `Today: ${today}
 Week: ${formatDate(weekStart)} to ${weekEndStr}
+Total tasks: ${enriched.length} (${overdueCount} overdue, ${inProgressCount} in-progress, ${dueThisWeekCount} due this week)
 ${behavioralSection}
 Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
-Return ONLY JSON with monday..sunday, unscheduled, reasoning.`
+Distribute these ${enriched.length} tasks EVENLY across the week. Return ONLY JSON with monday..sunday, unscheduled, reasoning.`
 }
 
 // ============================================================================
@@ -440,6 +455,91 @@ async function generateWeekTheme(
   } catch {
     return null // Silent fail — theme is optional
   }
+}
+
+// ============================================================================
+// STEP 1.5: Deterministic Rebalancer (no LLM, instant)
+// TASK-1385: Safety net that ensures even distribution regardless of LLM quality
+// ============================================================================
+
+function rebalancePlan(
+  plan: WeeklyPlan,
+  enrichedTasks: EnrichedTask[],
+  interview?: InterviewAnswers
+): WeeklyPlan {
+  const taskMap = new Map(enrichedTasks.map(t => [t.id, t]))
+
+  // Determine available days
+  const daysOff = new Set(interview?.daysOff || [])
+  const availableDays = DAY_KEYS.filter(d => !daysOff.has(d))
+
+  if (availableDays.length === 0) return plan
+
+  // Count total scheduled (exclude unscheduled)
+  const totalScheduled = DAY_KEYS.reduce((sum, d) => sum + plan[d].length, 0)
+  if (totalScheduled === 0) return plan
+
+  const maxPerDay = interview?.maxTasksPerDay || 6
+  const targetPerDay = Math.ceil(totalScheduled / availableDays.length)
+
+  // Check if rebalancing is needed: any day has > 150% of target
+  const needsRebalance = availableDays.some(d => plan[d].length > Math.ceil(targetPerDay * 1.5))
+  // Also check if any available day has 0 tasks while others have > target
+  const hasEmptyDays = availableDays.some(d => plan[d].length === 0) && totalScheduled > availableDays.length
+
+  if (!needsRebalance && !hasEmptyDays) return plan
+
+  console.log(`[WeeklyPlanAI] Rebalancer triggered: target=${targetPerDay}/day, max=${maxPerDay}, rebalancing across ${availableDays.length} days`)
+
+  // Collect all scheduled tasks with their priority for redistribution
+  const allTasks: Array<{ id: string; priority: number; urgency: string }> = []
+  for (const day of DAY_KEYS) {
+    for (const taskId of plan[day]) {
+      const task = taskMap.get(taskId)
+      const priorityScore = task?.priority === 'high' ? 3 : task?.priority === 'medium' ? 2 : 1
+      const urgency = task?.urgencyCategory || 'normal'
+      allTasks.push({ id: taskId, priority: priorityScore, urgency })
+    }
+  }
+
+  // Sort: overdue first, then in-progress, then by priority
+  const urgencyOrder: Record<string, number> = { 'OVERDUE': 0, 'IN_PROGRESS': 1, 'DUE_THIS_WEEK': 2, 'normal': 3 }
+  allTasks.sort((a, b) => {
+    const ua = urgencyOrder[a.urgency] ?? 3
+    const ub = urgencyOrder[b.urgency] ?? 3
+    if (ua !== ub) return ua - ub
+    return b.priority - a.priority
+  })
+
+  // Redistribute evenly across available days
+  const newPlan: WeeklyPlan = {
+    monday: [], tuesday: [], wednesday: [], thursday: [],
+    friday: [], saturday: [], sunday: [], unscheduled: [...plan.unscheduled],
+  }
+
+  // Round-robin assignment respecting maxPerDay
+  let dayIdx = 0
+  for (const task of allTasks) {
+    // Find next available day that isn't full
+    let attempts = 0
+    while (newPlan[availableDays[dayIdx]].length >= maxPerDay && attempts < availableDays.length) {
+      dayIdx = (dayIdx + 1) % availableDays.length
+      attempts++
+    }
+
+    if (attempts >= availableDays.length) {
+      // All days full — send to unscheduled
+      newPlan.unscheduled.push(task.id)
+    } else {
+      newPlan[availableDays[dayIdx]].push(task.id)
+      dayIdx = (dayIdx + 1) % availableDays.length
+    }
+  }
+
+  const distribution = availableDays.map(d => `${d}:${newPlan[d].length}`).join(', ')
+  console.log(`[WeeklyPlanAI] Rebalanced: ${distribution}`)
+
+  return newPlan
 }
 
 // ============================================================================
@@ -598,6 +698,13 @@ function getRouterOptions(): Record<string, unknown> {
   }
   if (settings.weeklyPlanModel) {
     opts.model = settings.weeklyPlanModel
+  } else {
+    // TASK-1385/1387: Smart model defaults from centralized registry
+    const wpDefault = WEEKLY_PLAN_DEFAULTS[settings.weeklyPlanProvider as keyof typeof WEEKLY_PLAN_DEFAULTS]
+    if (wpDefault) {
+      opts.model = wpDefault
+    }
+    // 'auto' and 'ollama' use their provider's default model
   }
 
   return opts
@@ -655,7 +762,7 @@ export function useWeeklyPlanAI() {
       let reasoning: string | null = null
 
       const messages: ChatMessage[] = [
-        { role: 'system', content: buildDistributionSystemPrompt(interview, profile) },
+        { role: 'system', content: buildDistributionSystemPrompt(interview, profile, enriched.length) },
         { role: 'user', content: buildDistributionUserPrompt(enriched, weekStart, weekEnd, behavioral) },
       ]
 
@@ -682,6 +789,9 @@ export function useWeeklyPlanAI() {
           reasoning = 'AI was unavailable. Tasks distributed by priority using a round-robin schedule.'
         }
       }
+
+      // ── Step 1.5: Deterministic Rebalancer (instant) ──
+      plan = rebalancePlan(plan, enriched, interview)
 
       // ── Step 2: Deterministic Reason Assembly (instant) ──
       const taskReasons = assembleTaskReasons(enriched, plan)
@@ -712,7 +822,7 @@ export function useWeeklyPlanAI() {
       const routerOpts = getRouterOptions()
 
       const messages: ChatMessage[] = [
-        { role: 'system', content: buildDistributionSystemPrompt(undefined, profile) },
+        { role: 'system', content: buildDistributionSystemPrompt(undefined, profile, allTasks.length) },
         { role: 'user', content: buildDayResuggestPrompt(dayKey, currentPlan, allTasks) },
       ]
 

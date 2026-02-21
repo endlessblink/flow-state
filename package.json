@@ -30,7 +30,7 @@
     "prebuild": "node scripts/check-vite-secrets.cjs",
     "build": "npx vite build --mode production",
     "preview": "vite preview",
-    "tauri": "bash scripts/sync-doppler.sh && npm run verify-auth && tauri",
+    "tauri": "bash scripts/sync-doppler.sh && tauri",
     "tauri:cli": "tauri",
     "tauri:rebuild": "bash scripts/sync-doppler.sh && npm run tauri build && ./src-tauri/target/release/flow-state",
     "tauri:install": "bash scripts/build-and-install.sh",

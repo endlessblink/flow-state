@@ -162,6 +162,28 @@
     "week": "Week",
     "month": "Month"
   },
+  "google_calendar": {
+    "title": "Google Calendar",
+    "connect": "Connect Google Calendar",
+    "disconnect": "Disconnect",
+    "reconnect": "Reconnect Google Calendar",
+    "connected": "Connected",
+    "not_connected": "Not connected",
+    "connecting": "Connecting...",
+    "select_calendars": "Select calendars to display",
+    "no_calendars": "No calendars found",
+    "sync_now": "Sync now",
+    "syncing": "Syncing...",
+    "last_synced": "Last synced",
+    "show_events": "Show Google Calendar events",
+    "hide_events": "Hide Google Calendar events",
+    "events_hidden": "Google Calendar events hidden",
+    "events_visible": "Google Calendar events visible",
+    "error_fetch": "Failed to fetch calendars",
+    "error_sync": "Sync failed",
+    "error_token_expired": "Google Calendar connection expired. Please reconnect.",
+    "requires_reauth": "Calendar access requires re-authentication with Google"
+  },
   "kanban": {
     "no_tasks_in": "No {status} tasks",
     "add_task_in": "Add {status} task",

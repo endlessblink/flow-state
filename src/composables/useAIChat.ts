@@ -22,6 +22,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useAIEventTracking } from '@/composables/useAIEventTracking'
 import { type TaskType, type RouterProviderType } from '@/services/ai'
 import { getSharedRouter } from '@/services/ai/routerFactory'
+import { tauriFetch } from '@/services/ai/utils/tauriHttp'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import {
   parseToolCalls,
@@ -35,6 +36,10 @@ import {
 } from '@/services/ai/tools'
 import type { NativeToolCall } from '@/services/ai/types'
 import { useAgentChains } from './useAgentChains'
+import { optimizeTaskContext, buildTaskStats } from '@/services/ai/pipeline/contextOptimizer'
+import { detectLanguage, detectLanguageMismatch } from '@/services/ai/pipeline/languageDetector'
+import { cleanResponse } from '@/services/ai/pipeline/responseValidator'
+import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 
 // ============================================================================
 // Types
@@ -126,7 +131,8 @@ const providerModelMemory = ref<Record<string, string | null>>({})
  */
 async function fetchOllamaModels(): Promise<string[]> {
   try {
-    const response = await fetch('http://localhost:11434/api/tags')
+    // TASK-1186: Use tauriFetch for CORS-free requests in Tauri desktop app
+    const response = await tauriFetch('http://localhost:11434/api/tags')
     if (!response.ok) return []
     const data = await response.json()
     return data.models?.map((m: { name: string }) => m.name) || []
@@ -313,13 +319,13 @@ export function useAIChat() {
       'You are a thoughtful assistant who understands the user\'s work, weighs priorities, and gives actionable advice. You have full access to the user\'s task data below — USE IT to reason and provide insights. Don\'t just search and dump results. THINK about what matters most, what\'s urgent, what\'s been neglected, and give personalized recommendations.',
       '',
       '## CRITICAL RULES:',
-      '1. LANGUAGE RULE (ABSOLUTE): Respond ENTIRELY in the SAME LANGUAGE the user writes in. If they write Hebrew — EVERY word must be Hebrew, including greetings, transitions, status words, and analysis. If English — respond in English. NEVER mix languages. Examples of WRONG mixed output: "אני בודק את ה-tasks שלך" (English word), "generating weekly plan..." in a Hebrew conversation. CORRECT: "אני מכין את התוכנית השבועית..."',
+      '1. LANGUAGE RULE (ABSOLUTE): Respond ENTIRELY in the SAME LANGUAGE the user writes in their LATEST MESSAGE. The task data below may be in a DIFFERENT language than the user — IGNORE the language of task titles/data when choosing your response language. If the user writes English, respond in English even if ALL task titles are in Hebrew. If the user writes Hebrew, respond in Hebrew even if task titles are in English. NEVER mix languages. The task context section below contains real user data that is OFTEN in a different language than the user\'s message — do NOT let it influence your output language. Examples of WRONG mixed output: "אני בודק את ה-tasks שלך" (English word), "generating weekly plan..." in a Hebrew conversation.',
       '2. Be conversational and analytical. Weigh due dates, priority levels, neglected tasks, and project context.',
       '3. Use WRITE tools ONLY when user explicitly asks to create, modify, or delete.',
       '4. You have the user\'s task data in context below. Use it to reason. Use READ tools only when the user wants to see interactive task cards.',
       '5. If the user just says "hi" or has a general question — respond naturally, NO tools needed.',
       '6. NEVER show JSON, UUIDs, task IDs, or technical details. Just act and give human-friendly responses.',
-      '7. Keep responses CONCISE and STRUCTURED: use bullet points, bold key insights, max 5-6 sentences for analysis. No walls of text.',
+      '7. Keep responses CONCISE and STRUCTURED: use bullet points, bold key insights, max 2-3 sentences for analysis. No walls of text. No generic productivity advice ("focus on priorities", "manage your time", "start with urgent tasks", "consider breaking tasks into smaller steps") — the user already knows this. Be specific about THEIR tasks or say nothing.',
       '',
       buildNativeToolsBehaviorPrompt(),
       ''
@@ -355,61 +361,18 @@ export function useAIChat() {
       // Timer store not available
     }
 
-    // Enhanced context: Task statistics + actual task data for reasoning
+    // Enhanced context: Task statistics + optimized task data for reasoning
+    // TASK-1377: Uses pipeline context optimizer to reduce language contamination
     try {
       const allTasks = taskStore.tasks
-      const today = new Date().toISOString().split('T')[0]
-      const byStatus = {
-        planned: 0,
-        in_progress: 0,
-        done: 0,
-        backlog: 0,
-        on_hold: 0,
-      }
-      let overdueCount = 0
-      for (const t of allTasks) {
-        if (t.status && t.status in byStatus) {
-          byStatus[t.status as keyof typeof byStatus]++
-        }
-        if (t.dueDate && t.dueDate < today && t.status !== 'done') {
-          overdueCount++
-        }
-      }
-      parts.push(
-        `Tasks: ${allTasks.length} total, ${byStatus.planned} planned, ${byStatus.in_progress} in progress, ${byStatus.done} done, ${overdueCount} overdue`
-      )
+      parts.push(buildTaskStats(allTasks))
 
-      // Include actual task data so AI can THINK about it (up to 60 open tasks)
-      const openTasks = allTasks
-        .filter(t => t.status !== 'done' && !t._soft_deleted)
-        .sort((a, b) => {
-          // Sort: overdue first, then by priority, then by due date
-          const aOverdue = a.dueDate && a.dueDate < today ? 1 : 0
-          const bOverdue = b.dueDate && b.dueDate < today ? 1 : 0
-          if (bOverdue !== aOverdue) return bOverdue - aOverdue
-          const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
-          const aPri = priorityOrder[a.priority || ''] ?? 4
-          const bPri = priorityOrder[b.priority || ''] ?? 4
-          if (aPri !== bPri) return aPri - bPri
-          if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
-          if (a.dueDate) return -1
-          if (b.dueDate) return 1
-          return 0
-        })
-        .slice(0, 60)
-
-      if (openTasks.length > 0) {
+      // Optimized context: separates titles from English metadata labels,
+      // groups by urgency tier, respects character budget (3000 chars)
+      const optimized = optimizeTaskContext(allTasks, taskStore.projects)
+      if (optimized) {
         parts.push('')
-        parts.push('## YOUR TASK DATA (use this to think and reason):')
-        for (const t of openTasks) {
-          const pri = t.priority ? `[${t.priority}]` : ''
-          const due = t.dueDate ? `due:${t.dueDate.slice(0, 10)}` : ''
-          const status = t.status || 'planned'
-          const overdue = t.dueDate && t.dueDate < today ? ' ⚠OVERDUE' : ''
-          const project = t.projectId ? taskStore.projects.find(p => p.id === t.projectId)?.name : null
-          const proj = project ? `(${project})` : ''
-          parts.push(`- "${t.title}" ${pri} ${status} ${due}${overdue} ${proj}`.trim())
-        }
+        parts.push(optimized)
       }
     } catch {
       // Task store not available
@@ -781,6 +744,20 @@ export function useAIChat() {
     }
     trackChatMessage(sessionId, { contentLength: content.length })
 
+    // TASK-1381: Pre-processing pipeline — detect language and classify intent
+    const preProcess: PreProcessResult = {
+      detectedLanguage: detectLanguage(content),
+      intent: classifyIntent(content),
+      optimizedContext: '', // filled by buildSystemPrompt via contextOptimizer
+      taskStats: '',
+      meta: {
+        inputCharCount: content.length,
+        hasHebrewInput: detectLanguage(content) === 'he',
+        isQuestion: /[?？]/.test(content) || /^(what|how|why|when|where|which|who|can|do|does|is|are|will|should|could|would|מה|איך|למה|מתי|איפה|מי|האם)\b/i.test(content.trim()),
+        originalInput: content,
+      },
+    }
+
     // Set up abort controller for this ReAct session
     const abortController = new AbortController()
     reactAbortController.value = abortController
@@ -933,7 +910,7 @@ export function useAIChat() {
 
           conversationMessages.push({
             role: 'user',
-            content: `Tool results:\n${toolResultsSummary}\n\nRespond to the user based on these results. RULES:\n- The tool results render as interactive cards the user can see and click. Do NOT repeat task names or list items from the data.\n- NEVER include task IDs (UUIDs) in your response text.\n- Give a SHORT analytical summary: what to prioritize, what's urgent, key insights (2-4 sentences max).\n- Use bullet points or bold text for structure. No walls of text.\n- Respond ENTIRELY in the same language the user used.`,
+            content: `Tool results:\n${toolResultsSummary}\n\nRespond to the user based on these results. STRICT RULES:\n- The tool results render as interactive task cards below — the user can already SEE the task list. Do NOT repeat task names as a list.\n- NEVER include task IDs (UUIDs) in your response.\n- ANALYZE the data: explain WHY certain tasks matter most (overdue days, priority level, project deadlines, subtask progress, time estimates). Use the enriched fields (daysOverdue, project, subtasks, estimatedMinutes, pomodorosCompleted) to give SPECIFIC reasoning.\n- Format as a brief analysis with bullet points for key insights. Example: "Your most urgent task is the video project — it's 3 days overdue with 2/5 subtasks done. After that, focus on the auth bug (high priority, blocks the release)."\n- ABSOLUTELY NO generic advice ("prioritize your tasks", "focus on what matters", "start with urgent ones", "consider breaking tasks down"). If you can't say something specific about THESE tasks, say nothing.\n- CRITICAL: Respond ENTIRELY in the same language the user used in their ORIGINAL question, NOT the language of task data.`,
           })
 
           // Add step indicator to streaming content
@@ -1013,7 +990,7 @@ export function useAIChat() {
               .join('\n\n')
             conversationMessages.push({
               role: 'user',
-              content: `Tool results:\n${toolResultsSummary}\n\nNow THINK about these results. Don't just list them — analyze them:\n1. What patterns do you see? What's most urgent/important and WHY?\n2. What should the user prioritize and what's your reasoning?\n3. Are there risks (overdue items, bottlenecks, too much on one day)?\n4. Give concrete, opinionated recommendations — not just a summary.\nBe a smart advisor who weighs trade-offs, not a search engine that dumps results. Respond in the user's language.`,
+              content: `Tool results:\n${toolResultsSummary}\n\nRespond to the user based on these results. STRICT RULES:\n- The tool results render as interactive task cards below — the user can already SEE the task list. Do NOT repeat task names as a list.\n- NEVER include task IDs (UUIDs) in your response.\n- ANALYZE the data: explain WHY certain tasks matter most (overdue days, priority level, project deadlines, subtask progress, time estimates). Use the enriched fields (daysOverdue, project, subtasks, estimatedMinutes, pomodorosCompleted) to give SPECIFIC reasoning.\n- Format as a brief analysis with bullet points for key insights. Example: "Your most urgent task is the video project — it's 3 days overdue with 2/5 subtasks done. After that, focus on the auth bug (high priority, blocks the release)."\n- ABSOLUTELY NO generic advice ("prioritize your tasks", "focus on what matters", "start with urgent ones", "consider breaking tasks down"). If you can't say something specific about THESE tasks, say nothing.\n- CRITICAL: Respond ENTIRELY in the same language the user used in their ORIGINAL question, NOT the language of task data.`,
             })
 
             // Strip the raw tool call text from the displayed message
@@ -1038,10 +1015,36 @@ export function useAIChat() {
         )
       }
 
-      // Clean up: strip any lingering tool blocks from the final message
+      // TASK-1382: Post-processing pipeline — clean response, check language, enforce length
       const lastMsg = store.messages[store.messages.length - 1]
       if (lastMsg && lastMsg.isStreaming) {
-        lastMsg.content = stripToolBlocks(lastMsg.content || '')
+        // Run pipeline: response validator (strips tools/UUIDs/artifacts) + length enforcer
+        const hadToolCalls = stepCount > 1 || (lastMsg.metadata as Record<string, unknown>)?.toolResults !== undefined
+        let cleaned = cleanResponse(lastMsg.content || '')
+
+        // Length enforcement by intent
+        // Tool call responses get 800 chars (enough for brief analysis with bullet points)
+        const lengthLimit = hadToolCalls ? 800 : (preProcess.intent === 'greeting' ? 200 : 2000)
+        if (cleaned.length > lengthLimit) {
+          const hasStructure = /^[-*•]|\n[-*•]|^#{1,3}\s/m.test(cleaned)
+          if (!hasStructure || cleaned.length > lengthLimit * 2) {
+            const cutPoint = cleaned.lastIndexOf('.', lengthLimit)
+            cleaned = cleaned.slice(0, cutPoint > lengthLimit * 0.5 ? cutPoint + 1 : lengthLimit).trim()
+          }
+        }
+
+        lastMsg.content = cleaned
+
+        // Language mismatch detection — flag in metadata for UI
+        if (detectLanguageMismatch(content, cleaned)) {
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            languageMismatch: true,
+            detectedInputLang: preProcess.detectedLanguage,
+            detectedOutputLang: detectLanguage(cleaned),
+          } as Record<string, unknown>
+          console.warn('[Pipeline] Language mismatch detected:', preProcess.detectedLanguage, '→', detectLanguage(cleaned))
+        }
       }
 
       store.completeStreamingMessage()
@@ -1152,6 +1155,29 @@ export function useAIChat() {
    * Kept only for provider selection hints (local vs cloud preference).
    */
   function inferTaskType(_content: string): TaskType {
+    return 'chat'
+  }
+
+  /**
+   * Classify user intent for pipeline pre-processing.
+   * Used by length enforcer and response quality guardrails.
+   * @see TASK-1381
+   */
+  function classifyIntent(text: string): UserIntent {
+    const trimmed = text.trim().toLowerCase()
+    // Greetings: short, no question marks, common greeting words
+    if (trimmed.length < 20 && /^(hi|hello|hey|yo|sup|שלום|היי|מה קורה|בוקר טוב|ערב טוב)\b/i.test(trimmed)) {
+      return 'greeting'
+    }
+    // Actions: explicit create/delete/update/start/stop verbs
+    if (/^(create|add|make|delete|remove|update|change|set|start|stop|mark|move|assign|rename)\b/i.test(trimmed) ||
+        /^(תצור|תוסיף|תמחק|תעדכן|תתחיל|תעצור|תסמן)\b/.test(trimmed)) {
+      return 'action'
+    }
+    // Queries: questions
+    if (/[?？]/.test(text) || /^(what|how|why|when|where|which|who|can|do|does|is|are|will|should|could|would|show|list|get|find|tell|give|מה|איך|למה|מתי|איפה|מי|האם|תראה|תגיד)\b/i.test(trimmed)) {
+      return 'query'
+    }
     return 'chat'
   }
 

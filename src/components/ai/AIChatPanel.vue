@@ -29,7 +29,7 @@ import { createAIRouter } from '@/services/ai/router'
 import { useAIProactiveNudges } from '@/composables/useAIProactiveNudges'
 import ChatMessage from './ChatMessage.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
-import { GROQ_MODELS, OPENROUTER_MODELS, asValueLabel, getDisplayName } from '@/config/aiModels'
+import { GROQ_MODELS, OPENROUTER_MODELS, asValueLabel, getDisplayName, filterFreeModels } from '@/config/aiModels'
 
 // ============================================================================
 // Composables & Stores
@@ -203,7 +203,7 @@ const friendlyError = computed(() => {
   }
   if (err.includes('all providers failed')) {
     return {
-      message: 'AI is currently unavailable. Check provider settings below.',
+      message: 'No AI providers available. Open Settings (gear icon) to select a provider: Groq (cloud), OpenRouter (cloud), or Local (Ollama).',
       type: 'error' as const,
     }
   }
@@ -363,6 +363,7 @@ function handleOllamaModelChange(value: string | number) {
 // Cloud Model Options (for Groq / OpenRouter)
 // ============================================================================
 
+const showFreeOnly = ref(false)
 const groqModels = asValueLabel(GROQ_MODELS)
 const openrouterModels = asValueLabel(OPENROUTER_MODELS)
 
@@ -375,8 +376,12 @@ const showCloudModelSelector = computed(() =>
 )
 
 const cloudModelOptions = computed(() => {
-  if (currentProvider.value === 'groq') return groqModels
-  if (currentProvider.value === 'openrouter') return openrouterModels
+  if (currentProvider.value === 'groq') {
+    return showFreeOnly.value ? asValueLabel(filterFreeModels(GROQ_MODELS)) : groqModels
+  }
+  if (currentProvider.value === 'openrouter') {
+    return showFreeOnly.value ? asValueLabel(filterFreeModels(OPENROUTER_MODELS)) : openrouterModels
+  }
   return []
 })
 
@@ -626,7 +631,16 @@ onUnmounted(() => {
 
                 <!-- Cloud Model Selector (Groq / OpenRouter) -->
                 <div v-if="showCloudModelSelector" class="settings-section">
-                  <label class="settings-label">Model</label>
+                  <div class="settings-label-row">
+                    <label class="settings-label">Model</label>
+                    <button
+                      class="free-filter-btn"
+                      :class="{ active: showFreeOnly }"
+                      @click="showFreeOnly = !showFreeOnly"
+                    >
+                      Free
+                    </button>
+                  </div>
                   <CustomSelect
                     :model-value="selectedModel || cloudModelOptions[0]?.value || ''"
                     :options="cloudModelOptions"
@@ -1194,6 +1208,30 @@ onUnmounted(() => {
 .refresh-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.free-filter-btn {
+  padding: var(--space-0_5) var(--space-2);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.03em;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.free-filter-btn:hover {
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+}
+
+.free-filter-btn.active {
+  background: var(--brand-bg-light);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .provider-options {

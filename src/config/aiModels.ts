@@ -80,15 +80,27 @@ export const OPENROUTER_MODELS: ModelEntry[] = [
   // DeepSeek
   { id: 'deepseek/deepseek-v3.2', label: 'DeepSeek V3.2', shortLabel: 'DeepSeek V3.2', description: 'DeepSeek latest model', contextLength: 163_840, pricing: { inputPer1M: 0.26, outputPer1M: 0.38 } },
   { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1', shortLabel: 'DeepSeek R1', description: 'DeepSeek reasoning model', contextLength: 64_000, pricing: { inputPer1M: 0.70, outputPer1M: 2.50 } },
+  // Free models (TASK-1385)
+  { id: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air (Free)', shortLabel: 'GLM 4.5 Air', description: 'Z.ai thinking model — free, 131K context', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
+  { id: 'deepseek/deepseek-v3.2-20251201:free', label: 'DeepSeek V3.2 (Free)', shortLabel: 'DeepSeek V3.2 Free', description: 'DeepSeek free tier — strong reasoning', contextLength: 131_072, pricing: { inputPer1M: 0, outputPer1M: 0 } },
 ]
 
 /**
- * Default model per provider
+ * Default model per provider (chat)
  */
 export const DEFAULT_MODELS = {
   ollama: 'llama3.2',
   groq: 'llama-3.3-70b-versatile',
   openrouter: 'anthropic/claude-sonnet-4.5'
+} as const
+
+/**
+ * Smart defaults for Weekly Plan AI — cost-optimized for batch generation.
+ * These override the chat defaults when no model is explicitly chosen in Settings.
+ */
+export const WEEKLY_PLAN_DEFAULTS = {
+  groq: 'openai/gpt-oss-120b',          // $0.15/MTok, reasoning-capable
+  openrouter: 'z-ai/glm-4.5-air:free',  // Free, thinking mode, 131K context
 } as const
 
 /**
@@ -152,6 +164,11 @@ export function getDisplayName(modelId: string): string {
  */
 export function getDefaultModelForProvider(provider: 'ollama' | 'groq' | 'openrouter'): string {
   return DEFAULT_MODELS[provider]
+}
+
+/** Filter model entries to only free models ($0 input AND $0 output) */
+export function filterFreeModels(models: ModelEntry[]): ModelEntry[] {
+  return models.filter(m => m.pricing && m.pricing.inputPer1M === 0 && m.pricing.outputPer1M === 0)
 }
 
 /**

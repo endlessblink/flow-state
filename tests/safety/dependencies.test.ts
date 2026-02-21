@@ -5,6 +5,7 @@ import { join, dirname, resolve } from 'node:path'
 // Get project root directory
 const projectRoot = process.cwd()
 const srcDir = join(projectRoot, 'src')
+const FORBIDDEN_DEPENDENCIES = ['crypto-js', '@types/crypto-js']
 
 interface DependencyNode {
   filePath: string
@@ -299,6 +300,37 @@ function isAllowedCircularDep(cycle: string[]): boolean {
     return allowed.every(file => normalizedCycle.includes(file))
   })
 }
+
+describe('Dependency Safety', () => {
+  it('should not include deprecated crypto-js packages in manifests or lockfiles', () => {
+    const dependencyFiles = [
+      'package.json',
+      'package-lock.json',
+      'pnpm-lock.yaml',
+    ]
+
+    const foundReferences: Array<{ file: string, dependency: string }> = []
+
+    for (const relativePath of dependencyFiles) {
+      const filePath = join(projectRoot, relativePath)
+      let fileContent = ''
+
+      try {
+        fileContent = readFileSync(filePath, 'utf-8')
+      } catch {
+        continue
+      }
+
+      for (const dependency of FORBIDDEN_DEPENDENCIES) {
+        if (fileContent.includes(dependency)) {
+          foundReferences.push({ file: relativePath, dependency })
+        }
+      }
+    }
+
+    expect(foundReferences).toEqual([])
+  })
+})
 
 describe('Circular Dependency Detection', () => {
   it('should not have circular dependencies in source code', () => {

@@ -79,6 +79,8 @@ const supabaseUrl = resolveSupabaseUrl()
 // clean the URL, then call setSession() after client creation.
 // See: https://github.com/supabase/auth-js/issues/455
 let _pendingOAuthTokens: { access_token: string; refresh_token: string } | null = null
+// TASK-1283: Capture Google provider tokens for Calendar API access
+let _pendingProviderTokens: { provider_token: string; provider_refresh_token?: string } | null = null
 
 if (typeof window !== 'undefined' && !isTauri && !isCapacitorRuntime) {
     const hash = window.location.hash
@@ -91,6 +93,18 @@ if (typeof window !== 'undefined' && !isTauri && !isCapacitorRuntime) {
 
         if (accessToken && refreshToken) {
             _pendingOAuthTokens = { access_token: accessToken, refresh_token: refreshToken }
+
+            // TASK-1283: Extract Google provider tokens from hash (for Calendar API)
+            const providerToken = params.get('provider_token')
+            const providerRefreshToken = params.get('provider_refresh_token')
+            if (providerToken) {
+                _pendingProviderTokens = {
+                    provider_token: providerToken,
+                    provider_refresh_token: providerRefreshToken || undefined
+                }
+                console.log('[Supabase] Extracted Google provider tokens from URL hash')
+            }
+
             // Clean URL immediately — remove tokens from address bar for security
             // Use #/ so Vue Router routes to home page
             window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/')
@@ -174,6 +188,13 @@ if (_pendingOAuthTokens && supabaseClient) {
 }
 
 export const supabase = supabaseClient as SupabaseClient | null
+
+// TASK-1283: Consume pending Google provider tokens (called once by auth store after sign-in)
+export function consumePendingProviderTokens(): { provider_token: string; provider_refresh_token?: string } | null {
+    const tokens = _pendingProviderTokens
+    _pendingProviderTokens = null
+    return tokens
+}
 
 // Re-export types for convenience
 export type { User, Session, AuthError } from '@supabase/supabase-js'

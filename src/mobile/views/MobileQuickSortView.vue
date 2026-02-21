@@ -211,206 +211,33 @@
           />
 
           <!-- Active Card -->
-          <div
-            ref="cardRef"
-            class="task-card"
-            :class="{
-              'swiping': swipeState.isSwiping,
-              'swipe-left': swipeDirection === 'left',
-              'swipe-right': swipeDirection === 'right',
-              'swipe-up': swipeDirection === 'up',
-              'swipe-down': swipeDirection === 'down'
-            }"
-            :style="cardStyle"
-          >
-            <!-- Swipe Indicators - Clear action feedback for all 4 directions -->
-            <div
-              class="swipe-indicator left"
-              :style="{ opacity: leftOverlayOpacity }"
-            >
-              <div class="swipe-content">
-                <Trash2 :size="32" />
-                <span>Delete</span>
-              </div>
-            </div>
-            <div
-              class="swipe-indicator right"
-              :style="{ opacity: rightOverlayOpacity }"
-            >
-              <div class="swipe-content">
-                <Save :size="32" />
-                <span>Save</span>
-              </div>
-            </div>
-            <div
-              class="swipe-indicator up"
-              :style="{ opacity: upOverlayOpacity }"
-            >
-              <div class="swipe-content">
-                <Pencil :size="32" />
-                <span>Edit</span>
-              </div>
-            </div>
-            <div
-              class="swipe-indicator down"
-              :style="{ opacity: downOverlayOpacity }"
-            >
-              <div class="swipe-content">
-                <SkipForward :size="32" />
-                <span>Skip</span>
-              </div>
-            </div>
-
-            <!-- Card Content with blur when swiping -->
-            <div v-if="currentTask" class="card-content" :style="contentBlurStyle">
-              <!-- Priority Indicator -->
-              <div
-                class="priority-strip"
-                :class="`priority-${currentTask.priority || 'none'}`"
-              />
-
-              <h2 class="task-title" dir="auto">
-                {{ currentTask.title }}
-              </h2>
-
-              <p v-if="currentTask.description" class="task-description">
-                {{ truncateDescription(currentTask.description) }}
-              </p>
-
-              <!-- Metadata -->
-              <div class="task-meta">
-                <div v-if="currentTask.dueDate" class="meta-item">
-                  <Calendar :size="14" />
-                  <span>{{ formatDueDate(currentTask.dueDate) }}</span>
-                </div>
-                <div v-if="currentTask.priority" class="meta-item" :class="`priority-${currentTask.priority}`">
-                  <Flag :size="14" />
-                  <span class="capitalize">{{ currentTask.priority }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <MobileQuickSortCard
+            v-if="currentTask"
+            :task="currentTask"
+            @swipe-right="onSwipeRight"
+            @swipe-left="onSwipeLeft"
+            @swipe-up="onSwipeUp"
+            @swipe-down="onSwipeDown"
+          />
         </div>
 
         <!-- Quick Edit Actions (Thumb Zone) -->
-        <div class="thumb-zone">
-          <!-- Priority Quick Edit -->
-          <div class="quick-edit-row">
-            <span class="edit-label">Priority</span>
-            <div class="priority-pills">
-              <button
-                class="pill"
-                :class="{ active: currentTask?.priority === 'low' }"
-                @click="setPriority('low')"
-              >
-                Low
-              </button>
-              <button
-                class="pill"
-                :class="{ active: currentTask?.priority === 'medium' }"
-                @click="setPriority('medium')"
-              >
-                Med
-              </button>
-              <button
-                class="pill"
-                :class="{ active: currentTask?.priority === 'high' }"
-                @click="setPriority('high')"
-              >
-                High
-              </button>
-            </div>
-          </div>
-
-          <!-- Date Quick Edit - Scrollable -->
-          <div class="quick-edit-row date-row">
-            <span class="edit-label">Due</span>
-            <div class="date-pills-scroll">
-              <button
-                class="pill"
-                :class="{ active: isToday }"
-                @click="setDueDate('today')"
-              >
-                ☀️ Today
-              </button>
-              <button
-                class="pill"
-                :class="{ active: isTomorrow }"
-                @click="setDueDate('tomorrow')"
-              >
-                🌅 Tmrw
-              </button>
-              <button
-                class="pill"
-                @click="setDueDate('in3days')"
-              >
-                📅 +3d
-              </button>
-              <button
-                class="pill"
-                :class="{ active: isWeekend }"
-                @click="setDueDate('weekend')"
-              >
-                🏖️ Wknd
-              </button>
-              <button
-                class="pill"
-                @click="setDueDate('nextweek')"
-              >
-                📆 +1wk
-              </button>
-              <button
-                class="pill"
-                @click="setDueDate('1month')"
-              >
-                🗓️ +1mo
-              </button>
-              <button
-                class="pill clear"
-                @click="setDueDate('clear')"
-              >
-                <X :size="14" />
-              </button>
-            </div>
-          </div>
-
-          <!-- AI Quick Action (TASK-1221) -->
-          <div class="quick-edit-row ai-row">
-            <span class="edit-label">AI</span>
-            <div class="date-pills-scroll">
-              <button
-                class="pill ai-pill"
-                :class="{ 'is-loading': aiAction === 'suggest' }"
-                :disabled="isAIBusy"
-                @click="handleAISuggest"
-              >
-                <Loader2 v-if="aiAction === 'suggest'" :size="12" class="spin" />
-                <Sparkles v-else :size="12" />
-                Suggest
-              </button>
-            </div>
-          </div>
-
-          <!-- Action Buttons - Four options: Done, Save, Assign, Delete -->
-          <div class="action-row">
-            <button class="action-btn done" @click="handleMarkDone">
-              <CheckCircle :size="20" />
-              <span>Done</span>
-            </button>
-            <button class="action-btn save" @click="handleSave">
-              <Save :size="20" />
-              <span>Save</span>
-              <span v-if="isTaskDirty" class="dirty-dot" />
-            </button>
-            <button class="action-btn assign" @click="showProjectSheet = true">
-              <FolderOpen :size="20" />
-              <span>Assign</span>
-            </button>
-            <button class="action-btn delete" @click="showDeleteConfirm = true">
-              <Trash2 :size="20" />
-            </button>
-          </div>
-        </div>
+        <MobileQuickSortFilters
+          :current-task="currentTask"
+          :is-today="isToday"
+          :is-tomorrow="isTomorrow"
+          :is-weekend="isWeekend"
+          :ai-action="aiAction"
+          :is-a-i-busy="isAIBusy"
+          :is-task-dirty="isTaskDirty"
+          @set-priority="setPriority"
+          @set-date="setDueDate"
+          @ai-suggest="handleAISuggest"
+          @mark-done="handleMarkDone"
+          @save="handleSave"
+          @assign="openProjectSheet"
+          @delete="showDeleteConfirm = true"
+        />
       </div>
 
       <!-- COMPLETION CELEBRATION -->
@@ -696,574 +523,81 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
-import { useLocalStorage } from '@vueuse/core'
 import {
   Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, CalendarDays, Flag,
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, SkipForward, PartyPopper,
   ArrowLeft, Trash2, FolderOpen, Search, Save, Pencil,
   Sparkles, Loader2
 } from 'lucide-vue-next'
-import { useQuickSort } from '@/composables/useQuickSort'
-import { useQuickSortAI } from '@/composables/useQuickSortAI'
-import { useSwipeGestures } from '@/composables/useSwipeGestures'
-import { useTaskStore } from '@/stores/tasks'
-import { useProjectStore } from '@/stores/projects'
-import type { Task } from '@/types/tasks'
-import type { SessionSummary } from '@/stores/quickSort'
 
-const router = useRouter()
-const taskStore = useTaskStore()
-const projectStore = useProjectStore()
+import MobileQuickSortCard from '../components/MobileQuickSortCard.vue'
+import MobileQuickSortFilters from '../components/MobileQuickSortFilters.vue'
+import { useMobileQuickSortLogic } from '../composables/useMobileQuickSortLogic'
 
-// Quick Sort composable
 const {
+  router,
+  activePhase,
+  showProjectSheet,
+  showCelebration,
+  hasSwipedOnce,
+  sessionSummary,
+  showDeleteConfirm,
+  showQuickEditPanel,
+  showAISheet,
+  newTaskTitle,
+  newTaskPriority,
+  newTaskDue,
+  recentlyAdded,
+  captureInputRef,
+  projectSearch,
+  recentProjectIds,
+  confettiRef,
   currentTask,
-  currentTaskId: _currentTaskId,
   uncategorizedTasks,
   progress,
   isComplete,
   isTaskDirty,
-  startSession,
-  endSession,
-  categorizeTask,
-  saveTask,
-  markTaskDone,
-  markDoneAndDeleteTask,
-  skipTask,
-  undoLastCategorization: _undoLastCategorization
-} = useQuickSort()
-
-// AI Command (TASK-1221)
-const quickSortAI = useQuickSortAI()
-const {
   aiState,
   aiAction,
   aiError,
   isAIBusy,
   currentSuggestions,
   suggestedProjectId,
-  suggestedProjectName
-} = quickSortAI
-
-// UI State
-const activePhase = ref<'sort' | 'capture'>('sort')
-const showProjectSheet = ref(false)
-const showCelebration = ref(false)
-const hasSwipedOnce = ref(false)
-const sessionSummary = ref<SessionSummary | null>(null)
-const showDeleteConfirm = ref(false)
-const showQuickEditPanel = ref(false)
-const showAISheet = ref(false)
-
-// Timer cleanup tracking
-const celebrationTimers: ReturnType<typeof setTimeout>[] = []
-
-// Capture phase state
-const newTaskTitle = ref('')
-const newTaskPriority = ref<'low' | 'medium' | 'high' | undefined>()
-const newTaskDue = ref<'today' | 'tomorrow' | undefined>()
-const recentlyAdded = ref<Task[]>([])
-const captureInputRef = ref<HTMLInputElement | null>(null)
-
-// Project picker state
-const projectSearch = ref('')
-const recentProjectIds = useLocalStorage<string[]>('quicksort-recent-projects', [])
-
-// Card and swipe refs
-const cardRef = ref<HTMLElement | null>(null)
-const confettiRef = ref<HTMLElement | null>(null)
-
-// Projects - hierarchical structure for nested display
-const rootProjects = computed(() => projectStore.rootProjects)
-
-// Build flat list with hierarchy info for display
-interface ProjectWithDepth {
-  project: typeof projectStore.projects[number]
-  depth: number
-}
-
-const projectsWithDepth = computed(() => {
-  const result: ProjectWithDepth[] = []
-
-  const addProjectWithChildren = (project: typeof projectStore.projects[number], depth: number) => {
-    result.push({ project, depth })
-    const children = projectStore.getChildProjects(project.id)
-    for (const child of children) {
-      addProjectWithChildren(child, depth + 1)
-    }
-  }
-
-  // Start from root projects
-  for (const rootProject of rootProjects.value) {
-    addProjectWithChildren(rootProject, 0)
-  }
-
-  return result
-})
-
-// Recent projects (last 4 used)
-const recentProjects = computed(() =>
-  recentProjectIds.value
-    .slice(0, 4)
-    .map(id => projectStore.projects.find(p => p.id === id))
-    .filter((p): p is typeof projectStore.projects[number] => Boolean(p))
-)
-
-// Filtered projects for search
-const filteredProjects = computed(() => {
-  if (!projectSearch.value.trim()) return projectsWithDepth.value
-  const search = projectSearch.value.toLowerCase()
-  return projectsWithDepth.value.filter(({ project }) =>
-    project.name.toLowerCase().includes(search)
-  )
-})
-
-// Uncategorized count
-const uncategorizedCount = computed(() => uncategorizedTasks.value.length)
-
-// Stack preview (next 2 tasks)
-const stackPreview = computed(() => {
-  return uncategorizedTasks.value.slice(1, 3)
-})
-
-// Swipe gesture handling
-const {
-  swipeState,
-  deltaX,
-  deltaY,
-  progress: _swipeProgress,
-  direction: swipeDirection,
-  triggerHaptic
-} = useSwipeGestures(cardRef, {
-  threshold: 120,
-  velocityThreshold: 0.4,
-  haptics: true,
-  fourDirectional: true,
-  onSwipeRight: () => {
-    hasSwipedOnce.value = true
-    // Swipe right = Save task
-    handleSave()
-  },
-  onSwipeLeft: () => {
-    hasSwipedOnce.value = true
-    // Swipe left = Delete task (with confirmation)
-    showDeleteConfirm.value = true
-  },
-  onSwipeUp: () => {
-    hasSwipedOnce.value = true
-    // Swipe up = Open task edit modal
-    handleEditTask()
-  },
-  onSwipeDown: () => {
-    hasSwipedOnce.value = true
-    // Swipe down = Skip to next task
-    handleSkip()
-  },
-  onSwipeEnd: () => {
-    // Reset card position handled by transition
-  }
-})
-
-// Card transform style - supports both horizontal and vertical movement
-const cardStyle = computed(() => {
-  if (!swipeState.value.isSwiping) {
-    return {
-      transform: 'translateX(0) translateY(0) rotate(0deg)',
-      transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
-    }
-  }
-
-  const absX = Math.abs(deltaX.value)
-  const absY = Math.abs(deltaY.value)
-  const isHorizontal = absX > absY
-
-  if (isHorizontal) {
-    // Horizontal swipe: translate X + rotate
-    const rotate = deltaX.value * 0.05
-    const maxRotate = 15
-    const clampedRotate = Math.max(-maxRotate, Math.min(maxRotate, rotate))
-    return {
-      transform: `translateX(${deltaX.value}px) rotate(${clampedRotate}deg)`,
-      transition: 'none'
-    }
-  } else {
-    // Vertical swipe: translate Y only (no rotate)
-    return {
-      transform: `translateY(${deltaY.value}px)`,
-      transition: 'none'
-    }
-  }
-})
-
-// Overlay opacities - all 4 directions
-const leftOverlayOpacity = computed(() => {
-  if (deltaX.value >= 0 || Math.abs(deltaY.value) > Math.abs(deltaX.value)) return 0
-  return Math.min(Math.abs(deltaX.value) / 120, 1) * 0.9
-})
-
-const rightOverlayOpacity = computed(() => {
-  if (deltaX.value <= 0 || Math.abs(deltaY.value) > Math.abs(deltaX.value)) return 0
-  return Math.min(deltaX.value / 120, 1) * 0.9
-})
-
-const upOverlayOpacity = computed(() => {
-  if (deltaY.value >= 0 || Math.abs(deltaX.value) > Math.abs(deltaY.value)) return 0
-  return Math.min(Math.abs(deltaY.value) / 120, 1) * 0.9
-})
-
-const downOverlayOpacity = computed(() => {
-  if (deltaY.value <= 0 || Math.abs(deltaX.value) > Math.abs(deltaY.value)) return 0
-  return Math.min(deltaY.value / 120, 1) * 0.9
-})
-
-// Content blur effect when swiping (any direction)
-const contentBlurStyle = computed(() => {
-  const dominant = Math.max(Math.abs(deltaX.value), Math.abs(deltaY.value))
-  const progress = Math.min(dominant / 100, 1)
-  if (progress < 0.1) {
-    return { filter: 'none', opacity: 1 }
-  }
-  const blurAmount = progress * 6 // Max 6px blur
-  const dimAmount = 1 - (progress * 0.4) // Dim to 60%
-  return {
-    filter: `blur(${blurAmount}px)`,
-    opacity: dimAmount,
-    transition: swipeState.value.isSwiping ? 'none' : 'filter 0.2s ease, opacity 0.2s ease'
-  }
-})
-
-// Date detection
-const isToday = computed(() => {
-  if (!currentTask.value?.dueDate) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const taskDate = new Date(currentTask.value.dueDate)
-  taskDate.setHours(0, 0, 0, 0)
-  return taskDate.getTime() === today.getTime()
-})
-
-const isTomorrow = computed(() => {
-  if (!currentTask.value?.dueDate) return false
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  tomorrow.setHours(0, 0, 0, 0)
-  const taskDate = new Date(currentTask.value.dueDate)
-  taskDate.setHours(0, 0, 0, 0)
-  return taskDate.getTime() === tomorrow.getTime()
-})
-
-const isWeekend = computed(() => {
-  if (!currentTask.value?.dueDate) return false
-  // Don't highlight Weekend if Today or Tomorrow is already active
-  if (isToday.value || isTomorrow.value) return false
-  const taskDate = new Date(currentTask.value.dueDate)
-  const dayOfWeek = taskDate.getDay()
-  return dayOfWeek === 0 || dayOfWeek === 6
-})
-
-// Actions
-async function handleQuickAdd() {
-  if (!newTaskTitle.value.trim()) return
-
-  let dueDate: string | undefined
-  if (newTaskDue.value === 'today') {
-    dueDate = new Date().toISOString()
-  } else if (newTaskDue.value === 'tomorrow') {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    dueDate = tomorrow.toISOString()
-  }
-
-  const newTask = await taskStore.createTask({
-    title: newTaskTitle.value.trim(),
-    priority: newTaskPriority.value,
-    dueDate
-  })
-
-  // Add to recently added
-  recentlyAdded.value.unshift(newTask)
-  if (recentlyAdded.value.length > 5) {
-    recentlyAdded.value.pop()
-  }
-
-  // Reset form
-  newTaskTitle.value = ''
-  newTaskPriority.value = undefined
-  newTaskDue.value = undefined
-
-  // Haptic feedback
-  triggerHaptic('medium')
-
-  // Refocus input
-  nextTick(() => {
-    captureInputRef.value?.focus()
-  })
-}
-
-function handleAssignProject(projectId: string) {
-  if (!currentTask.value) return
-
-  // Track as recent project (dedupe, limit 10)
-  recentProjectIds.value = [
-    projectId,
-    ...recentProjectIds.value.filter(id => id !== projectId)
-  ].slice(0, 10)
-
-  categorizeTask(currentTask.value.id, projectId)
-  showProjectSheet.value = false
-  projectSearch.value = '' // Reset search
-
-  // NO celebration, NO auto-advance - task stays for further edits
-  triggerHaptic('medium')
-}
-
-// Sort task without assigning to a project (keep in inbox)
-function handleSortWithoutProject() {
-  if (!currentTask.value) return
-  categorizeTask(currentTask.value.id, '')
-  showProjectSheet.value = false
-  projectSearch.value = '' // Reset search
-  // NO celebration, NO auto-advance - task stays for further edits
-  triggerHaptic('medium')
-}
-
-function handleEditTask() {
-  if (!currentTask.value) return
-  // Open task edit modal via global custom event (ModalManager listens for this)
-  window.dispatchEvent(new CustomEvent('open-task-edit', {
-    detail: { taskId: currentTask.value.id }
-  }))
-  triggerHaptic('medium')
-}
-
-function handleSkip() {
-  skipTask()
-  triggerHaptic('light')
-}
-
-function handleSave() {
-  if (!currentTask.value) return
-  saveTask()
-
-  showCelebration.value = true
-  celebrationTimers.push(setTimeout(() => {
-    showCelebration.value = false
-  }, 600))
-
-  triggerHaptic('heavy')
-}
-
-function handleMarkDone() {
-  if (!currentTask.value) return
-  markTaskDone(currentTask.value.id)
-
-  showCelebration.value = true
-  celebrationTimers.push(setTimeout(() => {
-    showCelebration.value = false
-  }, 600))
-
-  triggerHaptic('heavy')
-}
-
-async function setPriority(priority: 'low' | 'medium' | 'high') {
-  if (!currentTask.value) return
-  // AWAIT to ensure persistence before UI updates (BUG-1051)
-  await taskStore.updateTask(currentTask.value.id, { priority })
-  triggerHaptic('light')
-}
-
-async function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'nextweek' | '1month' | 'clear') {
-  if (!currentTask.value) return
-
-  let dueDate: string | undefined
-  const now = new Date()
-
-  if (preset === 'today') {
-    const today = new Date(now)
-    today.setHours(0, 0, 0, 0)
-    dueDate = today.toISOString()
-  } else if (preset === 'tomorrow') {
-    const tomorrow = new Date(now)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow.setHours(0, 0, 0, 0)
-    dueDate = tomorrow.toISOString()
-  } else if (preset === 'in3days') {
-    const date = new Date(now)
-    date.setDate(date.getDate() + 3)
-    date.setHours(0, 0, 0, 0)
-    dueDate = date.toISOString()
-  } else if (preset === 'weekend') {
-    const dayOfWeek = now.getDay()
-    const daysUntilSaturday = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7
-    const saturday = new Date(now)
-    saturday.setDate(now.getDate() + (daysUntilSaturday || 7))
-    saturday.setHours(0, 0, 0, 0)
-    dueDate = saturday.toISOString()
-  } else if (preset === 'nextweek') {
-    const date = new Date(now)
-    date.setDate(date.getDate() + 7)
-    date.setHours(0, 0, 0, 0)
-    dueDate = date.toISOString()
-  } else if (preset === '1month') {
-    const date = new Date(now)
-    date.setMonth(date.getMonth() + 1)
-    date.setHours(0, 0, 0, 0)
-    dueDate = date.toISOString()
-  } else {
-    dueDate = undefined
-  }
-
-  // AWAIT to ensure persistence before UI updates (BUG-1051)
-  await taskStore.updateTask(currentTask.value.id, { dueDate: dueDate || '' })
-  triggerHaptic('light')
-}
-
-// AI Handler (TASK-1221)
-function handleAISuggest() {
-  if (!currentTask.value || isAIBusy.value) return
-  quickSortAI.autoSuggest(currentTask.value)
-}
-
-function closeAISheet() {
-  showAISheet.value = false
-  quickSortAI.dismiss()
-}
-
-async function handleApplySuggestions() {
-  if (!currentTask.value) return
-  const updates: Record<string, unknown> = {}
-  for (const s of currentSuggestions.value) {
-    if (s.field === 'priority') updates.priority = s.suggestedValue
-    else if (s.field === 'dueDate') updates.dueDate = s.suggestedValue
-    else if (s.field === 'status') updates.status = s.suggestedValue
-    else if (s.field === 'estimatedDuration') updates.estimatedDuration = s.suggestedValue
-  }
-  if (suggestedProjectId.value) updates.projectId = suggestedProjectId.value
-  if (Object.keys(updates).length > 0) {
-    await taskStore.updateTask(currentTask.value.id, updates)
-  }
-  closeAISheet()
-  showCelebration.value = true
-  setTimeout(() => { showCelebration.value = false }, 600)
-}
-
-function cancelDelete() {
-  showDeleteConfirm.value = false
-}
-
-async function confirmDelete() {
-  if (!currentTask.value) return
-  // Use QuickSort's delete function which properly handles the flow (advances to next task, records action)
-  // Must await so the task is removed before closing the dialog
-  await markDoneAndDeleteTask(currentTask.value.id)
-  showDeleteConfirm.value = false
-  triggerHaptic('heavy')
-}
-
-function setPriorityAndClose(priority: 'low' | 'medium' | 'high') {
-  setPriority(priority)
-  showQuickEditPanel.value = false
-}
-
-function setDueDateAndClose(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'nextweek' | '1month' | 'clear') {
-  setDueDate(preset)
-  showQuickEditPanel.value = false
-}
-
-function openProjectSheet() {
-  showQuickEditPanel.value = false
-  showProjectSheet.value = true
-}
-
-function truncateDescription(desc: string): string {
-  if (desc.length <= 120) return desc
-  return desc.slice(0, 120) + '...'
-}
-
-function formatDueDate(date: string): string {
-  const d = new Date(date)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  d.setHours(0, 0, 0, 0)
-
-  if (d.getTime() === today.getTime()) return 'Today'
-  if (d.getTime() === tomorrow.getTime()) return 'Tomorrow'
-
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = seconds % 60
-
-  if (minutes === 0) return `${remainingSeconds}s`
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
-}
-
-// Task context computed properties (reactive to task changes)
-const taskDueDate = computed(() => {
-  if (!currentTask.value?.dueDate) return null
-  const d = new Date(currentTask.value.dueDate)
-  if (isNaN(d.getTime())) return null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const taskDate = new Date(d)
-  taskDate.setHours(0, 0, 0, 0)
-  const diffDays = Math.round((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Tomorrow'
-  if (diffDays === -1) return 'Yesterday'
-  if (diffDays > 1 && diffDays <= 7) return `In ${diffDays} days`
-  if (diffDays < -1) return `${Math.abs(diffDays)} days ago`
-  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-})
-
-const isTaskOverdue = computed(() => {
-  if (!currentTask.value?.dueDate) return false
-  const d = new Date(currentTask.value.dueDate)
-  if (isNaN(d.getTime())) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  d.setHours(0, 0, 0, 0)
-  return d.getTime() < today.getTime()
-})
-
-const currentTaskProject = computed(() => {
-  if (!currentTask.value?.projectId) return null
-  return projectStore.projects.find(p => p.id === currentTask.value!.projectId)
-})
-
-// Watch for completion
-watch(isComplete, (completed) => {
-  if (completed) {
-    const summary = endSession()
-    sessionSummary.value = summary || null
-  }
-})
-
-// Auto-open AI results sheet (TASK-1221)
-watch(aiState, (state) => {
-  if (state === 'preview' || state === 'error') {
-    showAISheet.value = true
-  }
-})
-
-// Lifecycle
-onMounted(() => {
-  startSession()
-})
-
-onUnmounted(() => {
-  // Clear pending celebration timers to avoid setting refs on unmounted component
-  celebrationTimers.forEach(clearTimeout)
-  celebrationTimers.length = 0
-})
+  suggestedProjectName,
+  projectsWithDepth,
+  recentProjects,
+  filteredProjects,
+  uncategorizedCount,
+  stackPreview,
+  isToday,
+  isTomorrow,
+  isWeekend,
+  taskDueDate,
+  isTaskOverdue,
+  currentTaskProject,
+  handleQuickAdd,
+  handleAssignProject,
+  handleSortWithoutProject,
+  handleEditTask,
+  handleSkip,
+  handleSave,
+  handleMarkDone,
+  setPriority,
+  setDueDate,
+  handleAISuggest,
+  closeAISheet,
+  handleApplySuggestions,
+  cancelDelete,
+  confirmDelete,
+  setPriorityAndClose,
+  setDueDateAndClose,
+  openProjectSheet,
+  formatDuration,
+  onSwipeRight,
+  onSwipeLeft,
+  onSwipeUp,
+  onSwipeDown
+} = useMobileQuickSortLogic()
 </script>
 
 <style scoped>

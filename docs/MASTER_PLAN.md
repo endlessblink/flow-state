@@ -2610,18 +2610,18 @@ User Input → [Pre-Processing] → LLM (ReAct loop) → [Post-Processing] → R
 **New file structure:** `src/services/ai/pipeline/` (types, preprocess, postprocess, languageDetector, contextOptimizer, responseValidator)
 
 **Infrastructure:**
-- [ ] **TASK-1375**: Pipeline orchestrator + types — create `src/services/ai/pipeline/` with `types.ts` (PreProcessResult, PostProcessResult, Guardrail, PipelineConfig interfaces) and `index.ts` (createPipeline, runPreProcess, runPostProcess). Pure function composition, fully testable.
-- [ ] **TASK-1376**: Language detector — `languageDetector.ts` with `detectLanguage(text)` using Unicode range analysis (extract from qualityAssessment.ts:468-483) and `detectLanguageMismatch(input, output)`. No LLM calls — deterministic.
-- [ ] **TASK-1377**: Context optimizer — `contextOptimizer.ts` to replace inline task injection in `buildSystemPrompt` (lines 360-418). Separate Hebrew titles from English metadata labels, character budget (3000 chars), date-relative filtering (today/overdue first). **Highest single ROI fix** — reduces language contamination at the source.
+- [x] ~~**TASK-1375**~~: ✅ Pipeline orchestrator + types — create `src/services/ai/pipeline/` with `types.ts` (PreProcessResult, PostProcessResult, Guardrail, PipelineConfig interfaces) and `index.ts` (createPipeline, runPreProcess, runPostProcess). Pure function composition, fully testable.
+- [x] ~~**TASK-1376**~~: ✅ Language detector — `languageDetector.ts` with `detectLanguage(text)` using Unicode range analysis (extract from qualityAssessment.ts:468-483) and `detectLanguageMismatch(input, output)`. No LLM calls — deterministic.
+- [x] ~~**TASK-1377**~~: ✅ Context optimizer — `contextOptimizer.ts` to replace inline task injection in `buildSystemPrompt` (lines 360-418). Separate Hebrew titles from English metadata labels, character budget (3000 chars), date-relative filtering (today/overdue first). **Highest single ROI fix** — reduces language contamination at the source.
 
 **Post-Processing Guardrails:**
-- [ ] **TASK-1378**: Response validator — consolidate ALL response cleanup from 3 locations (stripToolBlocks, stripTextToolCalls, ChatMessage.vue renderedContent regex) into one `responseValidator.ts`. Add UUID stripping, reuse `runRuleChecks` from qualityAssessment.ts.
-- [ ] **TASK-1379**: Language enforcer — post-processing guardrail using TASK-1376's `detectLanguageMismatch()`. V1: detect + flag in metadata (`languageMismatch: true`) for UI indicator. V2 (future): re-call LLM for translation.
-- [ ] **TASK-1380**: Response length enforcer — cap responses by intent (greetings: 200 chars, tool summaries: 500 chars, analytical: warn on >2000 chars without structure).
+- [x] ~~**TASK-1378**~~: ✅ Response validator — consolidate ALL response cleanup from 3 locations (stripToolBlocks, stripTextToolCalls, ChatMessage.vue renderedContent regex) into one `responseValidator.ts`. Add UUID stripping, reuse `runRuleChecks` from qualityAssessment.ts.
+- [x] ~~**TASK-1379**~~: ✅ Language enforcer — post-processing guardrail using TASK-1376's `detectLanguageMismatch()`. V1: detect + flag in metadata (`languageMismatch: true`) for UI indicator. V2 (future): re-call LLM for translation.
+- [x] ~~**TASK-1380**~~: ✅ Response length enforcer — cap responses by intent (greetings: 200 chars, tool summaries: 500 chars, analytical: warn on >2000 chars without structure).
 
 **Integration:**
-- [ ] **TASK-1381**: Wire pre-processing into useAIChat — call `runPreProcess()` before ReAct loop, replace inline `buildSystemPrompt` task injection with contextOptimizer, pass `PreProcessResult` through loop. Depends: TASK-1375, 1376, 1377.
-- [ ] **TASK-1382**: Wire post-processing into useAIChat — run `runPostProcess()` after ReAct loop (before `completeStreamingMessage`), replace inline cleanup. Depends: TASK-1378, 1379, 1380, 1381.
+- [x] ~~**TASK-1381**~~: ✅ Wire pre-processing into useAIChat — call `runPreProcess()` before ReAct loop, replace inline `buildSystemPrompt` task injection with contextOptimizer, pass `PreProcessResult` through loop. Depends: TASK-1375, 1376, 1377.
+- [x] ~~**TASK-1382**~~: ✅ Wire post-processing into useAIChat — run `runPostProcess()` after ReAct loop (before `completeStreamingMessage`), replace inline cleanup. Depends: TASK-1378, 1379, 1380, 1381.
 - [ ] **TASK-1383**: Simplify ChatMessage.vue renderedContent — remove redundant regex stripping (now handled by pipeline). `renderedContent` becomes: sanitize + markdown render only. Depends: TASK-1382.
 - [ ] **TASK-1384**: Unit tests for pipeline — test each guardrail independently (language detection, response cleaning, context optimization, pipeline composition). Depends: TASK-1375–1380.
 
@@ -2909,7 +2909,121 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 **Follow-up Tasks**:
 - **TASK-1326**: Weekly Plan AI Enhancements — task batching by project, weekly focus theme, skip feedback loop, workload warnings, energy-aware scheduling, plan adherence scoring (👀 REVIEW — code implemented, folded into FEATURE-1314 V1, awaiting user testing)
+- **TASK-1385**: Weekly Plan AI — deterministic rebalancer + smarter model routing + prompt quality (📋 PLANNED — reliability for smaller models)
 - **FEATURE-1317**: AI Work Profile / Persistent Memory
+
+---
+
+### TASK-1385: Weekly Plan AI — Deterministic Rebalancer + Smarter Model Routing + Prompt Quality (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED | **Parent**: FEATURE-1314 (AI Weekly Quick Sort)
+
+**Problem/Opportunity**: The weekly plan distribution is unreliable when using smaller models (Groq/Llama). Tasks pile on one day instead of spreading evenly. Root cause: compact prompt optimized for tokens over quality, no post-LLM validation, and model choice.
+
+**Root Cause Analysis**:
+- Prompt is too compact and lacks explicit distribution guidance
+- LLM response isn't validated for even distribution before applying to canvas
+- No deterministic rebalancing when any day exceeds capacity limits
+- Model choice (Groq Llama) lacks reasoning quality needed for scheduling decisions
+- Chain-of-thought reasoning not extracted from LLM
+
+**Scope**:
+1. **Add `rebalancePlan()` deterministic function** — runs after LLM response, ensures even distribution, respects capacity limits, spreads tasks across available days
+2. **Improve system prompt** — remove rigid "OVERDUE → Monday" rule, add explicit even distribution instructions, include target tasks per day in prompt
+3. **Add chain-of-thought extraction** — ask LLM to explain reasoning before JSON, extract per-task scheduling rationale
+4. **Post-LLM validation** — if any day has >150% target load, auto-rebalance without user involvement
+5. **Smarter model routing** — default to better-reasoning model (prefer OpenRouter Claude Haiku over Groq Llama for planning)
+
+**Implementation Plan**:
+- [ ] Refactor `useWeeklyPlanAI.ts` system prompt with explicit distribution rules
+- [ ] Add chain-of-thought prompt phase
+- [ ] Implement `rebalancePlan()` algorithm with capacity enforcement
+- [ ] Add post-LLM validation checks
+- [ ] Update `AIRouter` model selection for planning tasks
+- [ ] Add capacity metrics to prompt context
+- [ ] Add unit tests for rebalancer edge cases
+
+**Success Criteria**:
+- Tasks distribute evenly across available weekdays (no day >130% of average)
+- Overdue tasks don't always land on Monday only
+- Prompt explicitly guides LLM to distribute by capacity
+- Rebalancer auto-corrects LLM distribution without user action
+- Smaller model output now produces acceptable plans (Groq Llama passes basic distribution test)
+
+---
+
+### TASK-1386: Google Calendar Proxy Edge Function (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE | **Completed**: 2026-02-21
+
+**Problem/Opportunity**: FlowState needs to display Google Calendar events in the calendar views without exposing OAuth tokens or making Google API calls from the client.
+
+**Scope**: Create `supabase/functions/google-calendar-proxy/index.ts` — a Supabase Edge Function that:
+- Validates the caller via Supabase JWT before proxying to Google
+- Supports `list-calendars` and `list-events` actions
+- Performs automatic token refresh on Google 401 and returns `newAccessToken` to client
+- Follows the same CORS/auth pattern as `ai-chat-proxy`
+
+**Implementation**:
+- [x] Create `supabase/functions/google-calendar-proxy/index.ts`
+- [x] CORS headers matching ai-chat-proxy (ALLOWED_ORIGINS, getCorsHeaders)
+- [x] Supabase JWT validation via `createClient` + `getUser()`
+- [x] `list-calendars` → GET `/users/me/calendarList`, returns `{ calendars: { id, summary, backgroundColor }[] }`
+- [x] `list-events` → GET `/calendars/{calendarId}/events` with singleEvents/orderBy/timeMin/timeMax/maxResults=250
+- [x] Token refresh on 401: POST to `oauth2.googleapis.com/token`, retry, return `newAccessToken`
+- [x] `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from `Deno.env.get()`
+
+**Files**:
+- `supabase/functions/google-calendar-proxy/index.ts` (new)
+
+---
+
+### TASK-1387: Centralize all AI model references to single source of truth (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Started**: 2026-02-21
+
+**Problem/Opportunity**: AI model IDs and defaults are scattered across multiple files, making it hard to maintain consistency and update defaults globally. Provider files each define their own `DEFAULT_MODEL`, `useWeeklyPlanAI.ts` has hardcoded smart defaults, and `ai.ts` types have model mappings in multiple places.
+
+**Root Cause Analysis**:
+- `src/config/aiModels.ts` exists but doesn't export provider defaults or weekly plan presets
+- `src/services/ai/providers/groq.ts`, `groqProxy.ts`, `openrouterProxy.ts` each define `DEFAULT_MODEL`
+- `openrouterProxy.ts` diverges with different model IDs than other providers
+- `useWeeklyPlanAI.ts` hardcodes smart defaults (groq, claude, llama choices)
+- `src/types/ai.ts` has `DEFAULT_PROVIDER_CONFIGS` with model lists inline
+
+**Scope**:
+1. **Extend `src/config/aiModels.ts`** — Add `WEEKLY_PLAN_DEFAULTS`, `PROVIDER_DEFAULTS`, `MODEL_REGISTRY`
+2. **Update all providers** — Import `DEFAULT_MODEL` from `aiModels.ts` instead of defining locally
+3. **Update `useWeeklyPlanAI.ts`** — Import weekly plan defaults instead of hardcoding
+4. **Update `src/types/ai.ts`** — Use centralized `DEFAULT_PROVIDER_CONFIGS` from `aiModels.ts`
+5. **Document model matrix** — Which model for which provider, why, and when to override
+
+**Implementation Plan**:
+- [ ] Audit current model definitions in all files (groq, groqProxy, openrouterProxy, useWeeklyPlanAI, ai.ts types)
+- [ ] Define `PROVIDER_DEFAULTS`, `WEEKLY_PLAN_DEFAULTS`, `MODEL_REGISTRY` in `aiModels.ts`
+- [ ] Update `groq.ts` to import `DEFAULT_MODEL` from `aiModels.ts`
+- [ ] Update `groqProxy.ts` to import `DEFAULT_MODEL` from `aiModels.ts`
+- [ ] Update `openrouterProxy.ts` to import `DEFAULT_MODEL` from `aiModels.ts` (reconcile divergence)
+- [ ] Update `useWeeklyPlanAI.ts` to import `WEEKLY_PLAN_DEFAULTS` from `aiModels.ts`
+- [ ] Update `src/types/ai.ts` to use centralized `DEFAULT_PROVIDER_CONFIGS`
+- [ ] Add unit tests for model registry exports
+- [ ] Document model selection rationale in code comments
+
+**Files**:
+- `src/config/aiModels.ts` (update)
+- `src/services/ai/providers/groq.ts` (update)
+- `src/services/ai/providers/groqProxy.ts` (update)
+- `src/services/ai/providers/openrouterProxy.ts` (update)
+- `src/composables/useWeeklyPlanAI.ts` (update)
+- `src/types/ai.ts` (update)
+
+**Success Criteria**:
+- Single source of truth for all model IDs and defaults
+- All provider files import from `aiModels.ts`
+- `useWeeklyPlanAI.ts` uses exported presets
+- No hardcoded model strings in provider files
+- Types reference centralized registry
+- Tests confirm model lookup works
 
 ---
 
@@ -3449,6 +3563,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |
 | **FEATURE-1314** | **P2** | **👀 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
 | **TASK-1326** | **P2** | **👀 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)** |
+| **TASK-1385** | **P2** | **📋 Weekly Plan AI — deterministic rebalancer + smarter model routing + prompt quality** |
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | ~~**TASK-1341**~~ | **P2** | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16) |
@@ -3476,17 +3591,19 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
 | ~~**BUG-1367**~~ | **P2** | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20) |
 | ~~**BUG-1368**~~ | **P2** | ✅ **? keyboard shortcut broken on Hebrew layout — event.key check fails on non-Latin layouts, added event.code fallback** (✅ DONE 2026-02-20) |
-| **BUG-1374** | **P1** | **🔄 AI Chat 4-bug combo — Hebrew response on English input, LTR for Hebrew text, fluffy advice, wrong tasks returned** |
-| **TASK-1375** | **P1** | **📋 AI Pipeline orchestrator + types — create pipeline/ with guardrail interfaces and function composition** |
-| **TASK-1376** | **P1** | **📋 Language detector — deterministic Unicode-range detection, detectLanguageMismatch()** |
-| **TASK-1377** | **P1** | **📋 Context optimizer — separate task titles from metadata, character budget, date-relative filtering** |
-| **TASK-1378** | **P1** | **📋 Response validator — consolidate 3 cleanup locations into one, add UUID stripping, reuse qualityAssessment rules** |
-| **TASK-1379** | **P1** | **📋 Language enforcer — post-processing guardrail, detect mismatch + flag in metadata** |
-| **TASK-1380** | **P1** | **📋 Response length enforcer — cap by intent (greetings, tool summaries, analytical)** |
-| **TASK-1381** | **P1** | **📋 Wire pre-processing into useAIChat — call runPreProcess before ReAct, use contextOptimizer** |
-| **TASK-1382** | **P1** | **📋 Wire post-processing into useAIChat — runPostProcess after ReAct, replace inline cleanup** |
+| **BUG-1374** | **P1** | **🔄 IN PROGRESS: AI Chat 4-bug combo — Hebrew response on English input, LTR for Hebrew text, fluffy advice, wrong tasks returned (prompt-level fixes done, full pipeline testing pending)** |
+| ~~**TASK-1375**~~ | **P1** | ✅ **AI Pipeline orchestrator + types — create pipeline/ with guardrail interfaces and function composition** (✅ DONE 2026-02-21) |
+| ~~**TASK-1376**~~ | **P1** | ✅ **Language detector — deterministic Unicode-range detection, detectLanguageMismatch()** (✅ DONE 2026-02-21) |
+| ~~**TASK-1377**~~ | **P1** | ✅ **Context optimizer — separate task titles from metadata, character budget, date-relative filtering** (✅ DONE 2026-02-21) |
+| ~~**TASK-1378**~~ | **P1** | ✅ **Response validator — consolidate 3 cleanup locations into one, add UUID stripping, reuse qualityAssessment rules** (✅ DONE 2026-02-21) |
+| ~~**TASK-1379**~~ | **P1** | ✅ **Language enforcer — post-processing guardrail, detect mismatch + flag in metadata** (✅ DONE 2026-02-21) |
+| ~~**TASK-1380**~~ | **P1** | ✅ **Response length enforcer — cap by intent (greetings, tool summaries, analytical)** (✅ DONE 2026-02-21) |
+| ~~**TASK-1381**~~ | **P1** | ✅ **Wire pre-processing into useAIChat — call runPreProcess before ReAct, use contextOptimizer** (✅ DONE 2026-02-21) |
+| ~~**TASK-1382**~~ | **P1** | ✅ **Wire post-processing into useAIChat — runPostProcess after ReAct, replace inline cleanup** (✅ DONE 2026-02-21) |
 | **TASK-1383** | **P1** | **📋 Simplify ChatMessage.vue renderedContent — remove redundant regex, pipeline handles cleanup** |
 | **TASK-1384** | **P1** | **📋 Unit tests for pipeline — guardrails, language detection, context optimization, composition** |
+| **TASK-1386** | **P2** | **✅ Google Calendar proxy Edge Function — list-calendars, list-events, token refresh on 401** |
+| **TASK-1387** | **P1** | **🔄 Centralize all AI model references to single source of truth** |
 | **TASK-1372** | **P1** | **📋 Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** |
 | ~~**BUG-1371**~~ | **P0** | ✅ **Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** (✅ DONE 2026-02-20) |
 | ~~**BUG-1370**~~ | **P0** | ✅ **Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** (✅ DONE 2026-02-20) |
@@ -3832,15 +3949,15 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1151: Add Cleanup to Timer Store Intervals (📋 PLANNED)
+### ~~TASK-1151~~: Add Cleanup to Timer Store Intervals (✅ DONE 2026-02-21)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE
 
 **Problem**: Timer store creates intervals that may not be properly cleaned up.
 
-**Solution**: Track all interval IDs and clear in cleanup function.
+**Solution**: Added `onScopeDispose` alongside existing `onUnmounted` so cleanup also fires when the Pinia store scope is disposed (via `$dispose()`). Extracted all cleanup into a shared `cleanupAllListeners()` function covering all three `useIntervalFn` intervals plus SW message and visibilitychange event listeners. Fire-and-forget `setTimeout` calls confirmed intentional and safe.
 
-**Files**: `src/stores/timer.ts:79-154`
+**Files**: `src/stores/timer.ts`
 
 ---
 
@@ -3856,15 +3973,19 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1153: Remove Corrupted Files from Repo (📋 PLANNED)
+### ~~TASK-1153~~: Remove Corrupted Files from Repo (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE | **Completed**: 2026-02-21
 
 **Problem**: Corrupted backup files (`.dirty`, `.clean`) exist in repo.
 
-**Solution**: `git rm useCalendarDayView.ts.dirty useCalendarDayView.ts.clean`
+**Solution**: Removed 2 corrupted files via `git rm`:
+- `src/composables/calendar/useCalendarDayView.ts.clean`
+- `src/composables/calendar/useCalendarDayView.ts.dirty`
 
-**Files**: `useCalendarDayView.ts.*`
+**Result**: Repo cleaned. No .orig, .bak, .tmp, or ~ files found.
+
+**Files**: `useCalendarDayView.ts.*` (removed)
 
 ---
 
@@ -4079,9 +4200,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1168: Add Unit Tests for Sync/Conflict Resolution (📋 PLANNED)
+### TASK-1168: Add Unit Tests for Sync/Conflict Resolution (🔄 IN PROGRESS)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-21)
 
 **Problem**: Sync and conflict resolution logic has only 4 unit tests, high risk area.
 
@@ -4091,9 +4212,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1169: Add Unit Tests for Database Layer (📋 PLANNED)
+### TASK-1169: Add Unit Tests for Database Layer (🔄 IN PROGRESS)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-21)
 
 **Problem**: No dedicated tests for database composable.
 
@@ -4103,9 +4224,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1170: Add Cross-Device Timer Sync Tests (📋 PLANNED)
+### TASK-1170: Add Cross-Device Timer Sync Tests (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-21)
 
 **Problem**: Timer sync between devices has limited test coverage.
 
@@ -4115,9 +4236,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1171: Add Mobile View E2E Tests (📋 PLANNED)
+### TASK-1171: Add Mobile View E2E Tests (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-21)
 
 **Problem**: Mobile views have E2E test coverage gaps.
 
@@ -4139,9 +4260,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1173: Replace Deprecated crypto-js (📋 PLANNED)
+### TASK-1173: Replace Deprecated crypto-js (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-21)
 
 **Problem**: crypto-js has CVE-2023-46233 vulnerability and is deprecated.
 

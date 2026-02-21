@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, reactive, onUnmounted, watch } from 'vue'
+import { ref, computed, reactive, onUnmounted, onScopeDispose, watch } from 'vue'
 import { useTaskStore } from './tasks'
 import { useAuthStore } from './auth'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
@@ -1277,7 +1277,12 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   // Cleanup
-  onUnmounted(() => {
+  // TASK-1151: Central cleanup function — pauses all intervals and removes event listeners.
+  // Registered on BOTH onUnmounted (component lifecycle) and onScopeDispose (Pinia store
+  // scope disposal via $dispose()) to ensure cleanup runs regardless of how the store is torn
+  // down. useIntervalFn also registers tryOnScopeDispose internally, so intervals are
+  // covered; this additionally cleans up the SW message listener and visibilitychange listener.
+  const cleanupAllListeners = () => {
     pauseTimerInterval()
     pauseHeartbeat()
     pauseFollowerPoll()
@@ -1289,7 +1294,10 @@ export const useTimerStore = defineStore('timer', () => {
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  })
+  }
+
+  onUnmounted(cleanupAllListeners)
+  onScopeDispose(cleanupAllListeners)
 
   // Watch for auth state changes - initialize when auth becomes ready
   watch(

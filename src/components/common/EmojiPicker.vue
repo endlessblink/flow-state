@@ -705,7 +705,7 @@ onMounted(() => {
 }
 
 .tab-btn.active {
-  border-bottom-color: rgba(78, 205, 196, 0.8);
+  border-bottom-color: var(--brand-primary);
   color: var(--dropdown-selected-color);
   background: transparent;
 }
@@ -808,9 +808,9 @@ onMounted(() => {
 }
 
 .color-btn.selected {
-  border-color: rgba(255, 255, 255, 0.8);
+  border-color: var(--text-secondary);
   box-shadow:
-    0 0 0 3px rgba(255, 255, 255, 0.2),
+    0 0 0 3px var(--border-hover),
     var(--shadow-dark-lg);
   transform: scale(1.05);
 }
@@ -865,7 +865,7 @@ onMounted(() => {
 
 .apply-btn:hover {
   background: var(--state-active-bg);
-  border-color: rgba(78, 205, 196, 0.7);
+  border-color: var(--brand-primary-dim);
   transform: translateY(-2px);
   box-shadow: var(--state-hover-glow);
 }

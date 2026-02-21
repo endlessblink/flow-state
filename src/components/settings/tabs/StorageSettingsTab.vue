@@ -1048,7 +1048,7 @@ onMounted(async () => {
 }
 
 .cleanup-btn:hover:not(:disabled) {
-  background: var(--color-warning-hover, #d97706);
+  background: var(--color-priority-medium);
   transform: translateY(-1px);
 }
 
@@ -1077,7 +1077,7 @@ onMounted(async () => {
 }
 
 .cleanup-result.success {
-  background: var(--success-bg-subtle, rgba(16, 185, 129, 0.1));
-  color: var(--color-success, #10b981);
+  background: var(--brand-primary-subtle);
+  color: var(--color-success);
 }
 </style>

@@ -831,7 +831,7 @@ onUnmounted(() => {
 }
 
 .new-chat-btn:hover {
-  background: var(--accent-hover, #7c3aed);
+  background: var(--accent-hover);
 }
 
 /* ============================================================================
@@ -1050,7 +1050,7 @@ onUnmounted(() => {
 }
 
 .header-icon {
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary);
   flex-shrink: 0;
 }
 
@@ -1111,7 +1111,7 @@ onUnmounted(() => {
 
 .header-btn.active {
   background: var(--surface-hover);
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary);
 }
 
 .back-btn {
@@ -1132,8 +1132,8 @@ onUnmounted(() => {
 
 .back-btn:hover {
   background: var(--surface-hover);
-  border-color: var(--accent-primary, #8b5cf6);
-  color: var(--accent-primary, #8b5cf6);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
 }
 
 .close-btn:hover {
@@ -1142,12 +1142,12 @@ onUnmounted(() => {
 }
 
 .undo-btn {
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary);
 }
 
 .undo-btn:hover {
   background: var(--purple-bg-subtle);
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary);
 }
 
 /* ============================================================================
@@ -1242,7 +1242,7 @@ onUnmounted(() => {
 }
 
 .provider-option.active {
-  background: var(--accent-primary, #8b5cf6);
+  background: var(--accent-primary);
   color: white;
 }
 
@@ -1276,7 +1276,7 @@ onUnmounted(() => {
 }
 
 .personality-option.active {
-  background: var(--accent-primary, #8b5cf6);
+  background: var(--accent-primary);
   color: white;
 }
 
@@ -1361,7 +1361,7 @@ onUnmounted(() => {
 }
 
 .empty-icon {
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary);
   opacity: 0.4;
   margin-bottom: var(--space-4);
 }
@@ -1423,9 +1423,9 @@ onUnmounted(() => {
 
 .error-retry {
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--accent-primary, #8b5cf6);
+  border: 1px solid var(--accent-primary);
   background: transparent;
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary);
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--text-xs);
@@ -1548,7 +1548,7 @@ onUnmounted(() => {
 
 .chat-input:focus {
   outline: none;
-  border-color: var(--accent-primary, #8b5cf6);
+  border-color: var(--accent-primary);
 }
 
 .chat-input::placeholder {
@@ -1567,7 +1567,7 @@ onUnmounted(() => {
   width: var(--space-10);
   height: var(--space-10);
   border: none;
-  background: var(--accent-primary, #8b5cf6);
+  background: var(--accent-primary);
   color: white;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -1576,7 +1576,7 @@ onUnmounted(() => {
 }
 
 .send-btn:hover:not(:disabled) {
-  background: var(--accent-hover, #7c3aed);
+  background: var(--accent-hover);
 }
 
 .send-btn:disabled {
@@ -1608,8 +1608,8 @@ onUnmounted(() => {
 }
 
 .quick-action:hover {
-  border-color: var(--accent-primary, #8b5cf6);
-  color: var(--accent-primary, #8b5cf6);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
   background: var(--purple-bg-subtle);
 }
 

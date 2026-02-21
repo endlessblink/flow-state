@@ -302,7 +302,7 @@ watch(isOpen, (newVal) => {
 
 .trigger-icon.is-open {
   transform: rotate(180deg);
-  color: rgba(78, 205, 196, 0.8);
+  color: var(--brand-primary);
 }
 
 .dropdown-list {

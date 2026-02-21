@@ -234,7 +234,7 @@ const handleEventDblClick = (event: VueCalEvent, _e: MouseEvent) => {
 
 /* Recurring task styles */
 .custom-vuecal :deep(.vuecal__event.recurring-task) {
-  border-left: 3px solid var(--color-recurring, #8b5cf6);
+  border-left: 3px solid var(--color-recurring);
   background: linear-gradient(135deg, var(--purple-bg-subtle), transparent);
   position: relative;
 }
@@ -249,13 +249,13 @@ const handleEventDblClick = (event: VueCalEvent, _e: MouseEvent) => {
 }
 
 .custom-vuecal :deep(.vuecal__event.recurring-task.isModified) {
-  border-left-color: var(--color-modified, #f59e0b);
+  border-left-color: var(--color-modified);
   background: linear-gradient(135deg, var(--orange-bg-light), transparent);
 }
 
 .custom-vuecal :deep(.vuecal__event.recurring-task.isModified::before) {
   content: '✏️';
-  color: var(--color-modified, #f59e0b);
+  color: var(--color-modified);
 }
 
 /* Apply our translucent green design to vue-cal */

@@ -325,7 +325,7 @@ const handleAddTask = () => {
 }
 
 .mic-btn.processing {
-  background: var(--brand-primary, #3b82f6);
+  background: var(--brand-primary);
   color: white;
 }
 
@@ -340,7 +340,7 @@ const handleAddTask = () => {
 
 @keyframes pulse-recording {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 0 0 var(--danger-shadow-strong);
   }
   50% {
     box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);

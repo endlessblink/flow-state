@@ -108,7 +108,7 @@ defineEmits<{
   left: 0;
   right: 0;
   z-index: var(--z-tooltip);
-  background: linear-gradient(135deg, #ff6b6b, #ffa726);
+  background: linear-gradient(135deg, var(--color-priority-high), var(--color-priority-medium));
   color: white;
   padding: var(--space-3) var(--space-4);
   border-bottom: 2px solid var(--border-hover);
@@ -169,7 +169,7 @@ defineEmits<{
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-tooltip);
-  background: linear-gradient(135deg, #ff4757, #ff6b7a);
+  background: linear-gradient(135deg, var(--color-priority-high), var(--color-priority-high));
   color: white;
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-md);

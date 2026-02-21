@@ -561,12 +561,12 @@ const handleDrop = (event: DragEvent) => {
 .base-nav-item[data-project-id="__root__"] .drop-target-label {
   background: linear-gradient(
     135deg,
-    rgba(147, 197, 253, 0.95) 0%,
-    rgba(147, 197, 253, 0.85) 100%
+    color-mix(in srgb, var(--brand-primary) 95%, transparent) 0%,
+    color-mix(in srgb, var(--brand-primary) 85%, transparent) 100%
   );
-  border-color: rgba(147, 197, 253, 1);
+  border-color: var(--brand-primary);
   box-shadow:
-    0 var(--space-1) var(--space-3) rgba(147, 197, 253, 0.3),
-    0 0 0 var(--space-0_5) rgba(147, 197, 253, 0.2);
+    0 var(--space-1) var(--space-3) var(--brand-primary-dim),
+    0 0 0 var(--space-0_5) var(--brand-primary-subtle);
 }
 </style>

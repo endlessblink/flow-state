@@ -466,8 +466,8 @@ defineExpose({
   /* Advanced shadow system */
   box-shadow:
     var(--shadow-soft),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    inset 0 1px 0 var(--border-hover),
+    inset 0 -1px 0 var(--glass-bg-tint);
 
   /* Sophisticated backdrop effects */
   backdrop-filter: var(--blur-medium);
@@ -499,8 +499,8 @@ defineExpose({
   box-shadow:
     var(--shadow-medium),
     var(--shadow-glow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    inset 0 1px 0 var(--border-hover),
+    inset 0 -1px 0 var(--glass-bg-tint);
 }
 
 /* Active state with sophisticated feedback */
@@ -516,7 +516,7 @@ defineExpose({
   box-shadow:
     var(--shadow-medium),
     0 0 0 3px var(--state-focus),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    inset 0 1px 0 var(--border-hover);
 }
 
 /* ==========================================================================
@@ -531,8 +531,8 @@ defineExpose({
   box-shadow:
     var(--shadow-medium),
     var(--shadow-glow-strong),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    inset 0 1px 0 var(--border-hover),
+    inset 0 -1px 0 var(--glass-bg-medium);
 
   backdrop-filter: var(--blur-strong);
 }
@@ -558,8 +558,8 @@ defineExpose({
   box-shadow:
     var(--shadow-medium),
     0 0 24px rgba(var(--toggle-purple-rgb), 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    inset 0 1px 0 var(--border-hover),
+    inset 0 -1px 0 var(--glass-bg-medium);
 
   backdrop-filter: var(--blur-strong);
 }
@@ -583,10 +583,10 @@ defineExpose({
 
   /* Maintain visibility for accessibility */
   background:
-    linear-gradient(135deg, rgba(128, 128, 128, 0.2) 0%, rgba(128, 128, 128, 0.15) 100%),
-    linear-gradient(225deg, rgba(160, 160, 160, 0.1) 0%, rgba(128, 128, 128, 0.05) 100%);
+    linear-gradient(135deg, var(--glass-bg-medium) 0%, var(--glass-bg-light) 100%),
+    linear-gradient(225deg, var(--glass-bg-soft) 0%, var(--glass-bg-subtle) 100%);
 
-  border-color: rgba(128, 128, 128, 0.3) !important;
+  border-color: var(--border-medium) !important;
   box-shadow: var(--shadow-soft) !important;
 }
 
@@ -669,7 +669,7 @@ defineExpose({
   border-radius: var(--radius-xs);
   transition: all var(--transition-normal) var(--spring-smooth);
   background: var(--glass-bg-soft);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 2px var(--glass-bg-tint);
 }
 
 .toggle-box:hover .toggle-box__empty-inner {
@@ -677,7 +677,7 @@ defineExpose({
   background: rgba(var(--color-primary-500), 0.1);
   transform: scale(1.1);
   box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px var(--glass-bg-tint),
     0 0 8px rgba(var(--color-primary-500), 0.2);
 }
 
@@ -701,8 +701,8 @@ defineExpose({
   box-shadow:
     var(--shadow-strong),
     var(--shadow-glow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    inset 0 1px 0 var(--border-hover),
+    inset 0 -1px 0 var(--glass-bg-tint);
 
   backdrop-filter: var(--blur-strong);
   z-index: 1000;
@@ -915,7 +915,7 @@ defineExpose({
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .toggle-box {
-    background: rgba(255, 255, 255, 0.95) !important;
+    background: var(--text-primary) !important;
     border: 2px solid #000 !important;
   }
 

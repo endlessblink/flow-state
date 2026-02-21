@@ -286,10 +286,12 @@ export function useWorkProfile() {
   ): Promise<void> {
     for (const qa of dynamicAnswers) {
       if (!qa.answer.trim()) continue
+      // Store as actionable preference, not raw Q&A
+      // This makes it directly usable by the AI in future prompts
       await addMemoryObservation({
         entity: 'user',
         relation: 'scheduling_preference',
-        value: `Q: ${qa.question} → A: ${qa.answer}`,
+        value: `${qa.answer} (context: ${qa.question})`,
         confidence: 0.9,
         source: 'dynamic_interview'
       })

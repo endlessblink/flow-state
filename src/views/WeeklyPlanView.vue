@@ -196,13 +196,30 @@
             <Sparkles :size="14" class="ai-question-icon" />
             {{ dq.question }}
           </label>
-          <input
-            v-model="dq.answer"
-            type="text"
-            class="interview-input"
-            placeholder="Your answer..."
-            @keydown.enter.prevent="onSubmitDynamicAnswers"
-          >
+          <!-- Day select: day buttons -->
+          <div v-if="dq.type === 'day-select'" class="day-toggle-row">
+            <button
+              v-for="opt in dq.options"
+              :key="opt"
+              class="day-toggle"
+              :class="{ active: dq.answer === opt }"
+              @click="dq.answer = dq.answer === opt ? '' : opt"
+            >
+              {{ opt.slice(0, 3) }}
+            </button>
+          </div>
+          <!-- Choice: option chips -->
+          <div v-else class="dq-choice-row">
+            <button
+              v-for="opt in dq.options"
+              :key="opt"
+              class="dq-choice-chip"
+              :class="{ active: dq.answer === opt }"
+              @click="dq.answer = dq.answer === opt ? '' : opt"
+            >
+              {{ opt }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1185,6 +1202,35 @@ function handleKeydown(event: KeyboardEvent) {
 .ai-question-icon {
   color: var(--brand-primary);
   flex-shrink: 0;
+}
+
+.dq-choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dq-choice-chip {
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.dq-choice-chip:hover {
+  border-color: var(--brand-primary);
+  color: var(--text-primary);
+}
+
+.dq-choice-chip.active {
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  font-weight: var(--font-semibold);
 }
 
 .ai-pulse {

@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { isTauri } from '@/utils/platform'
 
 export interface DragData {
   type: 'task' | 'project'
@@ -157,13 +158,26 @@ export function useDragAndDrop() {
     const title = data.title || 'Task'
     const ghostMode = data.ghostMode || 'sidebar-only'
 
-    // ALWAYS create persistent ghost — positioned via mousemove or dragover
-    ghostEl = createGhostPill(title)
-    ghostEl.style.cssText = GHOST_CSS + 'left:-9999px;top:-9999px;'
-    document.body.appendChild(ghostEl)
+    // BUG-1370: In Tauri/WebKitGTK, DOM mutations during dragstart cancel the drag.
+    // Defer ghost pill creation to after the dragstart event completes.
+    const inTauri = isTauri()
+    if (inTauri) {
+      // Defer ghost creation — WebKitGTK cancels drag if DOM is mutated during dragstart
+      requestAnimationFrame(() => {
+        ghostEl = createGhostPill(title)
+        ghostEl.style.cssText = GHOST_CSS + 'left:-9999px;top:-9999px;'
+        document.body.appendChild(ghostEl)
+      })
+    } else {
+      // Browser mode: create ghost immediately (safe in Chrome/Firefox)
+      ghostEl = createGhostPill(title)
+      ghostEl.style.cssText = GHOST_CSS + 'left:-9999px;top:-9999px;'
+      document.body.appendChild(ghostEl)
+    }
 
-    if (event?.dataTransfer) {
+    if (event?.dataTransfer && !inTauri) {
       // HTML5 native drag — suppress browser's default drag image with transparent 1x1
+      // BUG-1370: Skip in Tauri/WebKitGTK — setDragImage with detached element cancels drag
       const transparent = document.createElement('canvas')
       transparent.width = 1
       transparent.height = 1

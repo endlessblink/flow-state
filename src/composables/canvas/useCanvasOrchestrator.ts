@@ -158,7 +158,9 @@ export function useCanvasOrchestrator() {
     // window after a canvas node drag would silently fail to render.
     const syncNodes = (tasks?: any[], options?: { force?: boolean }) => {
         // Prevent sync if explicitly unwanted (e.g. during specific interactions)
-        if (canvasUiStore.operationLoading.syncing) return
+        if (canvasUiStore.operationLoading.syncing) {
+            return
+        }
 
         // TASK-241: State Machine Guard
         // Block READ-PATH syncs if user is interacting (dragging/resizing)

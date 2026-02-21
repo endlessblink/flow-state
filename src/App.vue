@@ -151,6 +151,7 @@ onMounted(async () => {
     const tauriDebug = useTauriDebug()
     tauriDebug.startMonitoring()
     console.log('[App] Tauri memory monitoring started')
+
   }
 
   // FEATURE-1345: Initialize Capacitor Android services

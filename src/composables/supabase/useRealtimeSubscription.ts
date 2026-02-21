@@ -22,14 +22,14 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
         // cleanup previous channels if any
         if (supabase.realtime.channels.length > 0) {
-            console.log(`📡 [REALTIME] Cleaning up ${supabase.realtime.channels.length} existing channels...`)
+            console.debug(`📡 [REALTIME] Cleaning up ${supabase.realtime.channels.length} existing channels...`)
             supabase.removeAllChannels()
         }
 
         // Unique channel name per tab
-        const tabId = (window as any).__flowstate_tab_id || (() => {
+        const tabId = window.__flowstate_tab_id || (() => {
             const id = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
-                ; (window as any).__flowstate_tab_id = id
+                ; window.__flowstate_tab_id = id
             return id
         })()
 
@@ -46,7 +46,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             }
             supabase.realtime.setAuth(freshSession.access_token)
 
-            console.log(`📡 [REALTIME] Connecting to channel: ${channelName} (Attempt ${retryCount + 1})`)
+            console.debug(`📡 [REALTIME] Connecting to channel: ${channelName} (Attempt ${retryCount + 1})`)
 
             const channel = supabase.channel(channelName)
             currentChannel = channel
@@ -55,35 +55,41 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             channel
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${userId}` },
                     (payload: any) => {
-                        console.log('📡 [REALTIME] PROJECT event received:', {
-                            eventType: payload.eventType,
-                            table: payload.table,
-                            id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
-                            name: payload.new?.name || payload.old?.name
-                        })
+                        if (import.meta.env.DEV) {
+                            console.debug('📡 [REALTIME] PROJECT event received:', {
+                                eventType: payload.eventType,
+                                table: payload.table,
+                                id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
+                                name: payload.new?.name || payload.old?.name
+                            })
+                        }
                         if (payload.table === 'projects') onProjectChange(payload)
                     })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
                     (payload: any) => {
-                        console.log('📡 [REALTIME] TASK event received:', {
-                            eventType: payload.eventType,
-                            table: payload.table,
-                            id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
-                            title: payload.new?.title?.substring(0, 20) || payload.old?.title?.substring(0, 20),
-                            position: payload.new?.position ? `(${payload.new.position.x},${payload.new.position.y})` : 'N/A'
-                        })
+                        if (import.meta.env.DEV) {
+                            console.debug('📡 [REALTIME] TASK event received:', {
+                                eventType: payload.eventType,
+                                table: payload.table,
+                                id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
+                                title: payload.new?.title?.substring(0, 20) || payload.old?.title?.substring(0, 20),
+                                position: payload.new?.position ? `(${payload.new.position.x},${payload.new.position.y})` : 'N/A'
+                            })
+                        }
                         if (payload.table === 'tasks') onTaskChange(payload)
                     })
 
             if (onTimerChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'timer_sessions', filter: `user_id=eq.${userId}` },
                     (payload: any) => {
-                        console.log('📡 [REALTIME] TIMER event received:', {
-                            eventType: payload.eventType,
-                            sessionId: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
-                            isActive: payload.new?.is_active,
-                            remainingTime: payload.new?.remaining_time
-                        })
+                        if (import.meta.env.DEV) {
+                            console.debug('📡 [REALTIME] TIMER event received:', {
+                                eventType: payload.eventType,
+                                sessionId: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
+                                isActive: payload.new?.is_active,
+                                remainingTime: payload.new?.remaining_time
+                            })
+                        }
                         onTimerChange(payload)
                     })
             }
@@ -91,10 +97,12 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             if (onNotificationChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
                     (payload: any) => {
-                        console.log('📡 [REALTIME] NOTIFICATION event received:', {
-                            eventType: payload.eventType,
-                            id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8)
-                        })
+                        if (import.meta.env.DEV) {
+                            console.debug('📡 [REALTIME] NOTIFICATION event received:', {
+                                eventType: payload.eventType,
+                                id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8)
+                            })
+                        }
                         onNotificationChange(payload)
                     })
             }
@@ -102,12 +110,14 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             if (onGroupChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `user_id=eq.${userId}` },
                     (payload: any) => {
-                        console.log('📡 [REALTIME] GROUP event received:', {
-                            eventType: payload.eventType,
-                            id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
-                            name: payload.new?.name || payload.old?.name,
-                            position: payload.new?.position ? `(${payload.new.position.x},${payload.new.position.y})` : 'N/A'
-                        })
+                        if (import.meta.env.DEV) {
+                            console.debug('📡 [REALTIME] GROUP event received:', {
+                                eventType: payload.eventType,
+                                id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
+                                name: payload.new?.name || payload.old?.name,
+                                position: payload.new?.position ? `(${payload.new.position.x},${payload.new.position.y})` : 'N/A'
+                            })
+                        }
                         onGroupChange(payload)
                     })
             }
@@ -129,7 +139,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
                     // BUG-1088: Guard against recursive removeChannel calls that cause stack overflow
                     if (isRemovingChannel) {
-                        console.log('📡 [REALTIME] Skipping duplicate removeChannel (recursion guard)')
+                        console.debug('📡 [REALTIME] Skipping duplicate removeChannel (recursion guard)')
                         return
                     }
 
@@ -149,7 +159,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     const maxRetries = 10
                     if (retryCount < maxRetries) {
                         const delay = Math.pow(1.5, retryCount) * 1000 + (Math.random() * 500)
-                        console.log(`📡 [REALTIME] Reconnecting in ${delay.toFixed(0)}ms...`)
+                        console.debug(`📡 [REALTIME] Reconnecting in ${delay.toFixed(0)}ms...`)
 
                         setTimeout(() => {
                             retryCount++
@@ -163,17 +173,17 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                                         const { useCanvasModalsStore } = await import('@/stores/canvas/modals')
                                         const canvasModals = useCanvasModalsStore()
                                         if (canvasModals.isEditModalOpen || canvasModals.isBatchEditModalOpen) {
-                                            console.log('📡 [REALTIME] Skipping reconnect recovery - edit modal is open (BUG-1206)')
+                                            console.debug('📡 [REALTIME] Skipping reconnect recovery - edit modal is open (BUG-1206)')
                                             return
                                         }
                                     } catch { /* continue */ }
 
-                                    console.log('📡 [REALTIME] Triggering recovery data reload...')
+                                    console.debug('📡 [REALTIME] Triggering recovery data reload...')
                                     // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
                                     invalidateCache.all()
                                     onRecovery().catch(e => console.error('Recovery failed:', e))
                                 } else if (onRecovery) {
-                                    console.log(`📡 [REALTIME] Skipping reconnect recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
+                                    console.debug(`📡 [REALTIME] Skipping reconnect recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
                                 }
                             })
                         }, delay)
@@ -205,14 +215,14 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     const { useCanvasModalsStore } = await import('@/stores/canvas/modals')
                     const canvasModals = useCanvasModalsStore()
                     if (canvasModals.isEditModalOpen || canvasModals.isBatchEditModalOpen) {
-                        console.log('👀 [REALTIME] Skipping visibility recovery - edit modal is open (BUG-1206)')
+                        console.debug('👀 [REALTIME] Skipping visibility recovery - edit modal is open (BUG-1206)')
                         return
                     }
                 } catch {
                     // Canvas modals store not available — continue with normal flow
                 }
 
-                console.log('👀 [REALTIME] App visible - checking connection health...')
+                console.debug('👀 [REALTIME] App visible - checking connection health...')
 
                 // BUG-1182 FIX: Proactively refresh auth token on wake-up.
                 try {
@@ -224,7 +234,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                 const state = currentChannel?.state
 
                 if (!currentChannel || state === 'closed' || state === 'errored') {
-                    console.log('👀 [REALTIME] Connection dead on resume. Force reconnecting...')
+                    console.debug('👀 [REALTIME] Connection dead on resume. Force reconnecting...')
                     // BUG-1088: Guard against recursive removeChannel calls
                     if (currentChannel && !isRemovingChannel) {
                         isRemovingChannel = true
@@ -246,7 +256,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                         invalidateCache.all()
                         onRecovery()
                     } else if (onRecovery) {
-                        console.log(`👀 [REALTIME] Skipping recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
+                        console.debug(`👀 [REALTIME] Skipping recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
                     }
                 } else {
                     // Pulse check - verify we are actually connected
@@ -258,7 +268,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         // ONLINE RESUME
         // BUG-1209: Add same cooldown as visibility handler to prevent clobbering in-flight drags
         const onOnline = async () => {
-            console.log('🌐 [REALTIME] Online event detected. Reconnecting...')
+            console.debug('🌐 [REALTIME] Online event detected. Reconnecting...')
             retryCount = 0
             setupSubscription()
             const timeSinceInteraction = Date.now() - lastUserInteraction
@@ -268,7 +278,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     const { useCanvasModalsStore } = await import('@/stores/canvas/modals')
                     const canvasModals = useCanvasModalsStore()
                     if (canvasModals.isEditModalOpen || canvasModals.isBatchEditModalOpen) {
-                        console.log('🌐 [REALTIME] Skipping online recovery - edit modal is open (BUG-1206)')
+                        console.debug('🌐 [REALTIME] Skipping online recovery - edit modal is open (BUG-1206)')
                         return
                     }
                 } catch { /* continue */ }
@@ -277,7 +287,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                 invalidateCache.all()
                 onRecovery()
             } else if (onRecovery) {
-                console.log(`🌐 [REALTIME] Skipping online recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
+                console.debug(`🌐 [REALTIME] Skipping online recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
             }
         }
         window.addEventListener('online', onOnline)
@@ -285,7 +295,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         // Return cleanup function (Proxy interface for callers)
         return {
             unsubscribe: async () => {
-                console.log('📡 [REALTIME] Unsubscribing explicitly.')
+                console.debug('📡 [REALTIME] Unsubscribing explicitly.')
                 isExplicitlyClosed = true
                 // BUG-1088: Guard against recursive removeChannel calls
                 if (currentChannel && !isRemovingChannel) {

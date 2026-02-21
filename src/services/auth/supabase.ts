@@ -8,7 +8,7 @@ const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
 
 // FEATURE-1345: Detect Capacitor runtime (Android/iOS native app)
 const isCapacitorRuntime = typeof window !== 'undefined' &&
-  !!(window as any).Capacitor?.isNativePlatform?.()
+  !!window.Capacitor?.isNativePlatform?.()
 
 // FIX-MOBILE-PWA & TAURI COMPATIBILITY:
 // - Browser/PWA: Use relative path '/supabase' (from .env) to work via Tunnel/Caddy

@@ -23,7 +23,7 @@ function isTauri(): boolean {
 
 /** Detect if running inside Capacitor native app */
 function isCapacitorNative(): boolean {
-  return !!(window as any).Capacitor?.isNativePlatform?.()
+  return !!window.Capacitor?.isNativePlatform?.()
 }
 
 /**

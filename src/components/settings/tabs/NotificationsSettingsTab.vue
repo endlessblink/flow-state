@@ -14,7 +14,7 @@ const { isSubscribed, subscribe, canUsePush } = usePushSubscription()
 const timeBlockSettings = computed(() => settingsStore.timeBlockNotifications)
 const pushSettings = computed(() => settingsStore.pushNotifications)
 
-const isTauri = ref(!!(window as any).__TAURI_INTERNALS__)
+const isTauri = ref(!!window.__TAURI_INTERNALS__)
 
 // Push notification settings helpers
 function updatePushMasterToggle(val: boolean) {

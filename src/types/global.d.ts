@@ -42,6 +42,41 @@ declare global {
     __STORYBOOK__?: boolean
     // TASK-136: pomoFlowDb removed - PouchDB decommissioned, app uses Supabase
     __pomoFlowUndoSystem?: UndoRedoActions
+
+    // ---- FlowState custom window properties ----
+    // App lifecycle: timestamp when the session started (ms since epoch)
+    FlowStateSessionStart?: number
+
+    // Canvas interaction lock flags (set by drag/resize handlers)
+    __FlowStateIsDragging?: boolean
+    __FlowStateIsResizing?: boolean
+    __FlowStateIsSettling?: boolean
+
+    // Cross-tab coordination: unique ID per browser tab
+    __flowstate_tab_id?: string
+
+    // Dev-only Tauri debug helper (set in useIsTauriDebug when DEV=true)
+    __flowstate_tauri_debug?: {
+      getSummary: () => string
+      exportHistory: () => string
+      getTrend: () => unknown
+    }
+
+    // Tauri runtime markers (injected by Tauri WebView)
+    __TAURI_INTERNALS__?: unknown
+    __TAURI__?: unknown
+
+    // Capacitor native platform detection (Ionic/Capacitor apps)
+    Capacitor?: {
+      isNativePlatform?: () => boolean
+    }
+
+    // Legacy Internet Explorer stream detection (used for iOS check)
+    MSStream?: unknown
+
+    // Legacy Opera browser user-agent property
+    opera?: string
+
     pomoFlowBackup: {
       exportTasks: () => Promise<string>
       importTasks: (data: string) => Promise<void>

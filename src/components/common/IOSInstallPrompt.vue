@@ -9,7 +9,7 @@ const showTooltip = ref(false)
 
 onMounted(() => {
   // Check if iOS
-  isIOS.value = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+  isIOS.value = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
   
   // Check if already installed
   isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone

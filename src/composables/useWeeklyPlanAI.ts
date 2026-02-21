@@ -6,6 +6,7 @@ import type { ChatMessage } from '@/services/ai/types'
 import type { WorkProfile } from '@/utils/supabaseMappers'
 import { useSettingsStore } from '@/stores/settings'
 import { WEEKLY_PLAN_DEFAULTS } from '@/config/aiModels'
+import { formatDateKey as formatDate } from '@/utils/dateUtils'
 
 // ============================================================================
 // Types
@@ -111,10 +112,7 @@ function getWeekBounds(weekStartsOn: 0 | 1 = 0): { weekStart: Date; weekEnd: Dat
   return { weekStart, weekEnd }
 }
 
-// BUG-1321: Use local date (not UTC) to avoid timezone-related overdue false positives
-function formatDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+
 
 // ============================================================================
 // STEP 0: Deterministic Enrichment (no LLM, instant)

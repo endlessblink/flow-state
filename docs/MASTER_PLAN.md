@@ -2634,6 +2634,40 @@ Wave 4: TASK-1382 (depends on Wave 3)
 Wave 5: TASK-1383 (cleanup, depends on Wave 4)
 ```
 
+#### Phase 7: AI Intelligence Layer — From Prompt-Dependent to Code-Enforced Reliability (P1 — PLANNED)
+
+**Goal:** Make AI chat as reliable as ChatGPT/Claude Desktop. Four pillars: (1) pre-digested reasoning so the LLM formats facts rather than discovers them, (2) generic fluff detection with retry, (3) tool hints so the right tool is called first try, (4) fuzzy title resolution so "mark the auth bug as done" just works.
+
+**Research basis (2025-2026):** Linear AI / Cursor pattern: compute reasoning in code, LLM only writes prose. Groq Llama 3.3 70B tool calling is documented as intermittent (Agno #4090). uFuzzy outperforms Fuse.js for short string matching. Rule-based validation before LLM-as-judge is the cost-effective quality gate.
+
+**Pillar 1: Pre-Digested Reasoning (highest ROI)**
+- [ ] **TASK-1388**: Pre-digested reasoning engine — instead of sending raw JSON tool results and hoping the LLM reasons, compute the analysis IN CODE (days overdue, subtask progress %, project context, priority ranking) and send pre-written facts the LLM only needs to format naturally. Pattern: `"Task X: 3 days overdue, 0/5 subtasks, high priority in Project Auth"` → LLM writes connecting prose. Inject into tool result follow-up prompt in `useAIChat.ts`. Key insight from Cursor/Linear: minimize what the LLM invents, maximize what deterministic code computes.
+- [ ] **TASK-1389**: Skeleton prompting for agent chains — refactor `useAgentChains.ts` chain prompts to use skeleton pattern: code generates structured sections (overdue analysis, today's priorities, progress summary), LLM fills only 1-sentence natural language bridges between sections. Eliminates "wall of generic text" from plan_my_day and end_of_day_review chains.
+
+**Pillar 2: Generic Response Detection + Retry**
+- [ ] **TASK-1390**: Fluff detector guardrail — `src/services/ai/pipeline/fluffDetector.ts`. Heuristic scoring: check if response references actual task titles from context (0.3 weight), contains specific data points like dates/numbers (0.15), has no generic advisory phrases like "consider", "it's essential", "you might want to" (0.05 each). Score 0-1, threshold 0.5 = retry. Based on 2025 "Detecting Prompt Knowledge Gaps" paper specificity dimensions. Zero-cost, runs client-side.
+- [ ] **TASK-1391**: Validation + retry loop — when fluff detector score < 0.5 after tool results, retry once with stricter prompt: append the validation feedback ("your response referenced no specific tasks, try again naming actual tasks from the results"). Max 1 retry to avoid latency. If retry also fails, return best attempt with post-processing cleanup. Wire into `useAIChat.ts` post-ReAct section.
+
+**Pillar 3: Tool Hints + Intent Routing**
+- [ ] **TASK-1392**: Keyword-based tool hints — `src/services/ai/pipeline/toolHints.ts`. Deterministic keyword → tool mapping: "overdue" → `get_overdue_tasks`, "plan my week" → `generate_weekly_plan`, "timer" → `get_timer_status`/`start_timer`, "what should I" → `suggest_next_task`. Inject hint into system prompt: "Consider using `get_overdue_tasks` for this query." Reduces ReAct steps from 2-3 to 1. Supports Hebrew keywords too.
+- [ ] **TASK-1393**: `projectId` filter on `list_tasks` — add optional `projectId` parameter to `list_tasks` tool definition and execution. Already has project data accessible. 15-minute quick win.
+- [ ] **TASK-1394**: Counting vs listing system prompt clarification — add explicit rule: "For COUNTING questions (how many, what's total), answer from context — do NOT call tools. For LISTING questions (show me, what are my tasks), use tools to show interactive cards." Prevents unnecessary tool calls.
+
+**Pillar 4: Fuzzy Title Resolution**
+- [ ] **TASK-1395**: Install uFuzzy + `resolveTask()` helper — `npm install @leeoniya/ufuzzy`. Create `src/services/ai/entityResolver.ts` with `resolveTask(idOrTitle, tasks)`: (1) exact UUID match, (2) exact TASK-XXX ID match, (3) uFuzzy title search. Returns best match or top-3 candidates if ambiguous. uFuzzy chosen over Fuse.js: 7.5KB, ~1ms for 1k items, better quality on short strings without tuning.
+- [ ] **TASK-1396**: Wire `resolveTask()` into write tools — modify `validateTaskExists()` in `tools.ts` to fall through to `resolveTask()` when UUID lookup fails. Affects: `update_task`, `update_task_status`, `delete_task`, `start_timer`, `stop_timer`. User says "mark the video as done" → LLM passes title fragment → `resolveTask` finds the task.
+- [ ] **TASK-1397**: `mark_task_done` convenience tool — new tool alias that accepts `taskTitle` (string) instead of requiring UUID. Internally calls `resolveTask()` + `taskStore.updateTask(id, { status: 'done' })`. Most common user action shouldn't depend on UUID resolution.
+- [ ] **TASK-1398**: Conversation entity memory — track recently-mentioned task IDs in conversation metadata. When user says "it", "that task", "the last one", resolve to most recently mentioned entity. Store in `aiChat` store alongside messages. Enables multi-turn: "show overdue tasks" → "mark the first one as done."
+
+**Dependency graph:**
+```
+Wave 1 (no deps):     TASK-1388, TASK-1390, TASK-1392, TASK-1393, TASK-1394, TASK-1395
+Wave 2 (dep Wave 1):  TASK-1389, TASK-1391, TASK-1396, TASK-1397
+Wave 3 (dep Wave 2):  TASK-1398
+```
+
+**npm packages to install:** `@leeoniya/ufuzzy` (7.5KB, fuzzy matching)
+
 ---
 
 ### ~~TASK-1246~~: Collapse Sidebar Group Filters into Dropdown (✅ DONE)
@@ -3602,6 +3636,17 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1382**~~ | **P1** | ✅ **Wire post-processing into useAIChat — runPostProcess after ReAct, replace inline cleanup** (✅ DONE 2026-02-21) |
 | **TASK-1383** | **P1** | **📋 Simplify ChatMessage.vue renderedContent — remove redundant regex, pipeline handles cleanup** |
 | **TASK-1384** | **P1** | **📋 Unit tests for pipeline — guardrails, language detection, context optimization, composition** |
+| **TASK-1388** | **P1** | **📋 Pre-digested reasoning engine — compute task analysis in code, LLM formats facts naturally** |
+| **TASK-1389** | **P1** | **📋 Skeleton prompting for agent chains — code generates sections, LLM writes bridges** |
+| **TASK-1390** | **P1** | **📋 Fluff detector guardrail — heuristic scoring: task name references, data points, no generic phrases** |
+| **TASK-1391** | **P1** | **📋 Validation + retry loop — retry once with feedback when fluff score < 0.5** |
+| **TASK-1392** | **P1** | **📋 Keyword-based tool hints — deterministic keyword→tool mapping injected into system prompt** |
+| **TASK-1393** | **P1** | **📋 `projectId` filter on `list_tasks` — quick win, 15 minutes** |
+| **TASK-1394** | **P1** | **📋 Counting vs listing clarification — system prompt rule to prevent unnecessary tool calls** |
+| **TASK-1395** | **P1** | **📋 Install uFuzzy + `resolveTask()` helper — fuzzy title matching for entity resolution** |
+| **TASK-1396** | **P1** | **📋 Wire `resolveTask()` into write tools — title-based resolution fallback in `validateTaskExists()`** |
+| **TASK-1397** | **P1** | **📋 `mark_task_done` convenience tool — accepts title string, most common user action** |
+| **TASK-1398** | **P1** | **📋 Conversation entity memory — track mentioned tasks, resolve pronouns ("it", "that one")** |
 | **TASK-1386** | **P2** | **✅ Google Calendar proxy Edge Function — list-calendars, list-events, token refresh on 401** |
 | **TASK-1387** | **P1** | **🔄 Centralize all AI model references to single source of truth** |
 | **TASK-1372** | **P1** | **📋 Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** |
@@ -3937,15 +3982,15 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1150: Consolidate formatDueDate/formatDateKey Duplicates (📋 PLANNED)
+### ~~TASK-1150~~: Consolidate formatDueDate/formatDateKey Duplicates (✅ DONE 2026-02-21)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE
 
-**Problem**: Date formatting functions duplicated in 6 locations.
+**Problem**: Date formatting functions duplicated in 6+ locations.
 
-**Solution**: Create single `src/utils/dateFormatters.ts` utility.
+**Solution**: Consolidated into `src/utils/dateUtils.ts`. Added `formatDueDate` export. Replaced local `formatDateKey` copies in `recurrenceUtils.ts`, `useGroupSettings.ts`, `useSmartGroupMatcher.ts` (was `formatDateStr`), `useVoiceNLPParser.ts` (was `formatDate`), `useWeeklyPlan.ts` (was `formatDateISO`), `useWeeklyPlanAI.ts` (was `formatDate`). Replaced local `formatDueDate` copies in `MobileInboxView.vue`, `MobileQuickSortCard.vue`, `QuickCaptureTab.vue` with imports from dateUtils.
 
-**Files**: Multiple files with date formatting
+**Files**: `src/utils/dateUtils.ts` + 8 files updated
 
 ---
 

@@ -82,6 +82,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { formatDueDate } from '@/utils/dateUtils'
 import {
   Trash2, Save, Pencil, SkipForward, Calendar, Flag
 } from 'lucide-vue-next'
@@ -191,18 +192,4 @@ function truncateDescription(desc: string): string {
   return desc.slice(0, 120) + '...'
 }
 
-function formatDueDate(date: string): string {
-  const d = new Date(date)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  d.setHours(0, 0, 0, 0)
-
-  if (d.getTime() === today.getTime()) return 'Today'
-  if (d.getTime() === tomorrow.getTime()) return 'Tomorrow'
-
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
 </script>

@@ -232,6 +232,7 @@ import { X, Plus, Inbox, Flag, Calendar, Zap, Mic, MicOff, Globe } from 'lucide-
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useUrlScraping } from '@/composables/useUrlScraping'
 import { useQuickCapture, type PendingTask } from '@/composables/useQuickCapture'
+import { formatDueDate } from '@/utils/dateUtils'
 
 const emit = defineEmits<{
   switchToSort: []
@@ -407,23 +408,6 @@ function setDueDate(preset: 'today' | 'tomorrow' | 'weekend') {
   }
 
   newTask.dueDate = date.toISOString()
-}
-
-function formatDueDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return ''
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  date.setHours(0, 0, 0, 0)
-
-  const diffDays = Math.round((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Tomorrow'
-  if (diffDays === -1) return 'Yesterday'
-
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function truncateDescription(desc: string): string {

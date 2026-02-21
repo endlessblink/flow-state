@@ -504,7 +504,7 @@ defineExpose({
 
 .title-input.voice-active {
   border-color: var(--danger-text, #ef4444);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 0 0 3px var(--danger-bg-medium);
 }
 
 /* Mic Button (TASK-1024) */
@@ -540,7 +540,7 @@ defineExpose({
 
 @keyframes pulse-recording {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 0 0 var(--danger-shadow-strong);
   }
   50% {
     box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
@@ -570,7 +570,7 @@ defineExpose({
   width: 3px;
   height: 6px;
   background: var(--danger-text, #ef4444);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   animation: wave 0.8s ease-in-out infinite;
 }
 
@@ -617,7 +617,7 @@ defineExpose({
 .voice-error {
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg-subtle);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: var(--danger-text, #ef4444);
@@ -856,7 +856,7 @@ defineExpose({
 }
 
 .sort-all-btn:hover {
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-bg-dim);
   color: var(--brand-hover);
   border-color: var(--brand-hover);
   transform: translateY(-1px);
@@ -933,22 +933,22 @@ defineExpose({
 
 .meta-badge.priority-low {
   color: var(--success);
-  background: rgba(16, 185, 129, 0.1);
+  background: var(--brand-primary-subtle);
 }
 
 .meta-badge.priority-medium {
   color: var(--warning);
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--color-warning-alpha-10);
 }
 
 .meta-badge.priority-high {
   color: var(--danger);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg-subtle);
 }
 
 .meta-badge.due-date {
   color: var(--info);
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--glass-bg-tint);
 }
 
 .task-description-preview {

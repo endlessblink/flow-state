@@ -9,6 +9,7 @@
 import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useTaskStore } from '@/stores/tasks'
+import { useProjectStore } from '@/stores/projects'
 import { useTimerStore } from '@/stores/timer'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { PinnedTask, QuickTaskItem } from '@/types/quickTasks'
@@ -20,6 +21,7 @@ const isLoading = ref(false)
 export function useQuickTasks() {
     const authStore = useAuthStore()
     const taskStore = useTaskStore()
+    const projectStore = useProjectStore()
     const timerStore = useTimerStore()
     const db = useSupabaseDatabase()
 
@@ -103,7 +105,11 @@ export function useQuickTasks() {
             .filter(t =>
                 t.status !== 'done' &&
                 !t._soft_deleted &&
-                (t.completedPomodoros || 0) > 0
+                (t.completedPomodoros || 0) > 0 &&
+                (!taskStore.activeStatusFilter || t.status === taskStore.activeStatusFilter) &&
+                (!projectStore.activeProjectId ||
+                    t.projectId === projectStore.activeProjectId ||
+                    projectStore.isDescendantOf(t.projectId ?? '', projectStore.activeProjectId))
             )
             .sort((a, b) => (b.completedPomodoros || 0) - (a.completedPomodoros || 0))
             .slice(0, 10)
@@ -116,7 +122,16 @@ export function useQuickTasks() {
         const seenTitles = new Set<string>()
 
         // 1. Pinned tasks first (in sort order)
-        for (const pin of [...pinnedTasks.value].sort((a, b) => a.sortOrder - b.sortOrder)) {
+        const visiblePins = [...pinnedTasks.value]
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .filter(pin =>
+                !pin.projectId ||
+                !projectStore.activeProjectId ||
+                pin.projectId === projectStore.activeProjectId ||
+                projectStore.isDescendantOf(pin.projectId, projectStore.activeProjectId)
+            )
+
+        for (const pin of visiblePins) {
             const titleLower = pin.title.toLowerCase()
             seenTitles.add(titleLower)
 

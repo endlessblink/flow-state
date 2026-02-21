@@ -186,9 +186,9 @@ const cardTooltip = computed(() => {
   flex-direction: column;
   gap: var(--space-1_5);
   padding: var(--space-3) var(--space-4);
-  background: rgba(35, 37, 50, 0.95);
+  background: var(--overlay-component-bg);
   backdrop-filter: blur(var(--blur-sm));
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   cursor: grab;
   transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
@@ -366,7 +366,7 @@ const cardTooltip = computed(() => {
 
 .meta-chip.status-in_progress {
   color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-subtle);
 }
 
 /* Expand transition */
@@ -415,7 +415,7 @@ const cardTooltip = computed(() => {
   padding: 0;
   border: none;
   border-radius: var(--radius-full);
-  background: rgba(35, 37, 50, 0.9);
+  background: var(--glass-bg-heavy);
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--duration-fast);

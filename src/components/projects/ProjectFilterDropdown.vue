@@ -317,7 +317,7 @@ onUnmounted(() => {
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-lg);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 8px 32px var(--overlay-bg),
     0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
@@ -335,7 +335,7 @@ onUnmounted(() => {
   border: none !important;
   background: none !important;
   background-color: transparent !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: var(--text-primary) !important;
   font-size: var(--text-sm);
   text-align: left;
   cursor: pointer;
@@ -344,15 +344,15 @@ onUnmounted(() => {
 }
 
 .project-item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
-  color: #fff !important;
+  background: var(--border-subtle) !important;
+  background-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
 }
 
 .project-item.active {
-  background: rgba(78, 205, 196, 0.1) !important;
-  background-color: rgba(78, 205, 196, 0.1) !important;
-  color: #4ecdc4 !important;
+  background: var(--brand-primary-subtle) !important;
+  background-color: var(--brand-primary-subtle) !important;
+  color: var(--brand-primary) !important;
   font-weight: var(--font-semibold);
 }
 

@@ -220,7 +220,8 @@
     "group_status": "Status",
     "group_priority": "Priority",
     "group_due_date": "Due Date",
-    "group_category": "Category"
+    "group_category": "Category",
+    "group_list": "List"
   },
   "quick_sort": {
     "title": "Quick Sort",
@@ -315,6 +316,11 @@
     "task_added": "Task added!",
     "listening": "Listening...",
     "no_tasks_found": "No tasks found"
+  },
+  "canvas": {
+    "dayRotation": {
+      "updated": "{count} day groups updated for today"
+    }
   },
   "auth": {
     "displayName": "Display Name",

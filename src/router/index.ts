@@ -118,7 +118,7 @@ const router = createRouter({
       name: 'focus',
       component: () => import('@/views/FocusView.vue'),
       props: true,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: false }
     },
     // Only include debug routes in development
     ...(import.meta.env.DEV ? [

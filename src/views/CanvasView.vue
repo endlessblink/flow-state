@@ -57,9 +57,16 @@
       />
 
       <!-- Filter Status Indicator -->
-      <CanvasStatusBanner 
+      <CanvasStatusBanner
         :active-status-filter="taskStore.activeStatusFilter"
         @clear-filter="clearStatusFilter"
+      />
+
+      <!-- FEATURE-1048: Day group rotation banner (shown after midnight auto-update) -->
+      <DayRotationBanner
+        :show-banner="dayRotation.showBanner.value"
+        :rotated-groups-count="dayRotation.rotatedGroupsCount.value"
+        @dismiss="dayRotation.dismissBanner()"
       />
 
       <!-- Inbox Sidebar -->
@@ -291,9 +298,11 @@ import CanvasToolbar from '../components/canvas/CanvasToolbar.vue'
 import CanvasStatusBanner from '../components/canvas/CanvasStatusBanner.vue'
 import CanvasLoadingOverlay from '../components/canvas/CanvasLoadingOverlay.vue'
 import CanvasSelectionBox from '../components/canvas/CanvasSelectionBox.vue'
+import DayRotationBanner from '../components/canvas/DayRotationBanner.vue'
 
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
+import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -306,6 +315,9 @@ const nodeTypes = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
 }
+
+// FEATURE-1048: Day group auto-rotation at midnight
+const dayRotation = useDayGroupRotation()
 
 // Initialize Orchestrator
 const orchestrator = useCanvasOrchestrator()

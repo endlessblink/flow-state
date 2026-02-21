@@ -679,9 +679,9 @@ Full push notification system with per-category controls, Web Push subscription,
 
 ---
 
-### BUG-1364: Canvas Cursor Drift Regression on Tauri (🔄 IN PROGRESS)
+### ~~BUG-1364~~: Canvas Cursor Drift Regression on Tauri (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-15)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: Cursor drift during canvas drag is back on Tauri desktop app (regression of BUG-1216).
 
@@ -1337,9 +1337,9 @@ Cross-Origin Request Blocked: http://localhost:11434/api/tags
 
 ---
 
-### TASK-1186: Make AI Accessible in Tauri App (🔄 IN PROGRESS)
+### ~~TASK-1186~~: Make AI Accessible in Tauri App (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-06)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: AI features (Ollama local, Groq/OpenRouter cloud) reliability in Tauri desktop context is unknown. Key concerns:
 1. **Ollama detection skipped** on "production domains" (BUG-1180) - may incorrectly skip in Tauri
@@ -1361,22 +1361,27 @@ Cross-Origin Request Blocked: http://localhost:11434/api/tags
 - ✅ **Hebrew Language Support** - AI responds in user's language
 - ✅ **Conversational Behavior** - Only uses tools when user explicitly asks to create/modify
 
+**Progress (2026-02-21)**:
+- ✅ **Tauri HTTP Plugin (Phase 2)** - `@tauri-apps/plugin-http` fully integrated. All providers use `tauriFetch` for CORS-free requests. Plugin installed in package.json (v2.2.0), Cargo.toml (v2.5.7), capabilities configured in default.json.
+- ✅ **Ollama Model Fetch Fixed** - `fetchOllamaModels()` in `useAIChat.ts` now uses `tauriFetch` instead of raw `fetch()`, fixing CORS in Tauri WebView.
+- ✅ **Clear "AI Unavailable" Message** - Improved error message when all providers fail, guiding users to Settings with specific provider options.
+- ✅ **Ollama in Tauri** - Works via `tauriFetch` which bypasses CORS. No `OLLAMA_ORIGINS` needed when using Tauri HTTP plugin.
+
 **Solution**:
 1. ~~**Phase 1: Fix Tauri Detection**~~ - ✅ DONE - Removed hard block, graceful Ollama detection
-2. **Phase 2: Tauri HTTP Plugin** - Use `@tauri-apps/plugin-http` for CORS-free Ollama requests
+2. ~~**Phase 2: Tauri HTTP Plugin**~~ - ✅ DONE - All HTTP calls route through `tauriFetch` abstraction layer (`src/services/ai/utils/tauriHttp.ts`)
 3. **Phase 3: (Future) Direct API Option** - Store API keys locally for offline cloud AI
 
 **Files Modified**:
 - `src/services/ai/router.ts` - Groq provider, removed production hard-block for Ollama
 - `src/services/ai/providers/groq.ts` - NEW: Groq provider implementation
 - `src/services/ai/tools.ts` - NEW: Tool definitions and execution
-- `src/composables/useAIChat.ts` - Provider/model state, tool execution, improved prompts
-- `src/components/ai/AIChatPanel.vue` - Provider badge, settings dropdown, model selector
+- `src/services/ai/utils/tauriHttp.ts` - NEW: Tauri HTTP abstraction (tauriFetch, isServiceReachable)
+- `src/composables/useAIChat.ts` - Provider/model state, tool execution, tauriFetch for Ollama models
+- `src/components/ai/AIChatPanel.vue` - Provider badge, settings dropdown, model selector, improved error UX
 
-**Remaining**:
-- [ ] Test Ollama in Tauri with `OLLAMA_ORIGINS` configured
-- [ ] Tauri HTTP plugin for CORS-free requests (Phase 2)
-- [ ] Clear "AI unavailable" message when all providers fail
+**Remaining (Future)**:
+- [ ] Phase 3: Direct API key storage for offline cloud AI
 
 **Related**: BUG-1180 (Ollama CORS in production)
 
@@ -2569,6 +2574,7 @@ npm run tasks:bugs     # Filter by BUG type
 - [ ] **TASK-1331**: Weekly plan AI quality — plan responses feel shallow, don't leverage behavioral context well. Improve planning prompt chain.
 - [ ] **TASK-1332**: Add Kimi K2 to Groq model dropdown — ✅ DONE (added `moonshotai/kimi-k2-instruct-0905`)
 - [ ] **TASK-1363**: AI chat shows done tasks + raw UUIDs + unstructured verbose responses — filter done from list/search by default, hide IDs from AI output, tighten response formatting rules
+- [ ] **BUG-1374**: AI Chat 4-bug combo — (1) English input → Hebrew response (task data context overrides language), (2) Hebrew text renders LTR (Step indicator breaks `dir="auto"`), (3) fluffy generic advice instead of concise analysis, (4) wrong tasks returned (`list_tasks` has no date/priority filter)
 
 **Key Files**:
 - `src/components/ai/ChatMessage.vue` — message rendering, task list items, inline actions, RTL CSS
@@ -2588,9 +2594,9 @@ npm run tasks:bugs     # Filter by BUG type
 
 ---
 
-### TASK-1246: Collapse Sidebar Group Filters into Dropdown (🔄 IN PROGRESS)
+### ~~TASK-1246~~: Collapse Sidebar Group Filters into Dropdown (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS
+**Priority**: P0 | **Status**: ✅ DONE (2026-02-21) — Stale: sidebar group filters removed in prior refactors
 
 **Problem**: The sidebar smart view area displays all groups (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday, Today, Tomorrow, New Group, All) with counts in a flat grid that clutters the UI, especially when many groups exist.
 
@@ -2766,9 +2772,9 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 ---
 
-### FEATURE-1248: Quick Tasks - Pinned & Frequent Task Shortcuts (🔄 IN PROGRESS)
+### ~~FEATURE-1248~~: Quick Tasks - Pinned & Frequent Task Shortcuts (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-02-08)
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: Selecting a task to work on requires sifting through the full task list every time. For recurring work (e.g., "flow-state development" done daily), this friction adds up.
 
@@ -2801,12 +2807,12 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 - [x] Quick-add input for pinning new tasks directly from dropdown ✅
 - [x] Respect active filters (project, status, priority) ✅
 
-**Progress (2026-02-21):** Main app implementation complete — all subtasks done including active filter awareness (project + status filters respected in both pinned and frequent sections). KDE widget integration still pending (separate repo).
+**Progress (2026-02-21):** Main app implementation complete — all subtasks done including active filter awareness (project + status filters respected in both pinned and frequent sections). KDE widget migrated to monorepo (`packages/kde-widget/`), all integration items done.
 
-*KDE Widget (pomoflow-kde repo):*
-- [ ] ComboBox dropdown querying `pinned_tasks` via PostgREST REST API
-- [ ] Widget config filters affect results
-- [ ] Separate refresh timer (60s) from timer poll (2s)
+*KDE Widget (monorepo: `packages/kde-widget/`):*
+- [x] ComboBox dropdown querying `pinned_tasks` via PostgREST REST API ✅ (uses chip UI)
+- [x] Widget config filters affect results ✅ (TASK-1373: `filterProjectId` config entry)
+- [x] Separate refresh timer (60s) from timer poll (2s) ✅ (TASK-1373: `pinnedTasksRefreshTimer`)
 
 **Dependencies**: None — standalone feature
 
@@ -2857,8 +2863,10 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 - [x] Route `/weekly-plan` + header tab
 - [ ] User testing and confirmation
 
+**Progress (2026-02-21):** V1 fully implemented (all 6 files, 2365+ lines). Route migrated to /ai?tab=plan (redirect from /weekly-plan). TASK-1326 enhancements already folded into V1 codebase. Awaiting user testing to confirm.
+
 **Follow-up Tasks**:
-- **TASK-1326**: Weekly Plan AI Enhancements — task batching by project, weekly focus theme, skip feedback loop, workload warnings, energy-aware scheduling, plan adherence scoring (🔄 IN PROGRESS)
+- **TASK-1326**: Weekly Plan AI Enhancements — task batching by project, weekly focus theme, skip feedback loop, workload warnings, energy-aware scheduling, plan adherence scoring (👀 REVIEW — code implemented, folded into FEATURE-1314 V1, awaiting user testing)
 - **FEATURE-1317**: AI Work Profile / Persistent Memory
 
 ---
@@ -3269,9 +3277,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### TASK-1284: Add Quick Task Creation to KDE Plasma Widget (🔄 IN PROGRESS)
+### ~~TASK-1284~~: Add Quick Task Creation to KDE Plasma Widget (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Repo**: `pomoflow-kde` (separate)
+**Priority**: P0 | **Status**: ✅ DONE | **Repo**: monorepo `packages/kde-widget/`
 
 **Feature**: Add a quick-capture text field to the pomoflow-kde Plasma panel widget so users can create tasks directly from the desktop without opening FlowState. Tasks land in the Inbox.
 
@@ -3294,9 +3302,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### TASK-1292: Quick Task Creation in KDE Widget (👀 REVIEW)
+### ~~TASK-1292~~: Quick Task Creation in KDE Widget (✅ DONE)
 
-**Priority**: P0 | **Status**: 👀 REVIEW (2026-02-10) | **Repo**: `pomoflow-kde` (separate)
+**Priority**: P0 | **Status**: ✅ DONE (2026-02-21) | **Repo**: monorepo `packages/kde-widget/`
 
 **Feature**: Enhanced quick-capture functionality for the KDE Plasma widget with task creation and pinned task shortcuts.
 
@@ -3318,9 +3326,26 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 - Task creation reuses pattern from TASK-1284 Phase 1
 - Pinned tasks query: `GET /rest/v1/pinned_tasks?user_id=eq.{uuid}&select=*&order=created_at.desc`
 
-**Files**: `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
+**Files**: `packages/kde-widget/contents/ui/main.qml`
 
-**Progress (2026-02-10):** All features implemented. Quick-add input with create/play buttons functional. Pinned tasks chips display and trigger task find/create + timer start. Pin button in task list delegate works. Awaiting user testing.
+**Progress (2026-02-21):** All features implemented and verified. Quick-add input with create/play buttons functional. Pinned tasks chips display and trigger task find/create + timer start. Pin button in task list delegate works. Widget migrated to monorepo.
+
+---
+
+### ~~TASK-1373~~: KDE Widget Monorepo Migration + Quick Tasks Polish (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-02-21)
+
+**Task**: Migrate KDE Plasma widget from installed plasmoid (`~/.local/share/plasma/plasmoids/`) into the flow-state monorepo as `packages/kde-widget/`. Complete remaining FEATURE-1248 KDE integration items.
+
+**Changes**:
+1. Copied widget to `packages/kde-widget/` with full directory structure
+2. Created `install.sh` — symlinks widget for development
+3. Added 60-second `pinnedTasksRefreshTimer` (separate from 2s session sync)
+4. Added `filterProjectId` config entry (`main.xml`) for project-based pinned task filtering
+5. Modified `fetchPinnedTasks()` to client-side filter by project (universal pins always shown)
+
+**Files**: `packages/kde-widget/**`
 
 ---
 
@@ -3340,7 +3365,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 - User requirements: bulk ops, quick scanning, inline editing, review/triage
 - Design direction: Glass morphism (current theme) executed well
 
-**Progress (2026-02-10):** Research phase complete — 4 agents investigated archive-vs-redesign from different perspectives. Decision made to redesign with glass morphism aesthetic. Planning phase next.
+**Progress (2026-02-21):** Implementation complete — TaskTable.vue wired up with view mode toggle in AllTasksView.vue. Features delivered: bulk operations (select-all, multi-delete), inline title editing (dblclick), virtual scrolling (50+ tasks), ADHD-friendly density variants (compact/comfortable/spacious), AI Smart Suggest via TaskList, drag-to-group, List/Table toggle persisted to localStorage (`flowstate-catalog-view-mode`). Both modes receive identical props (tasks, groups, groupBy). Pending user verification.
 
 ---
 
@@ -3350,7 +3375,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 |------|----------|-------------|
 | ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
-| **FEATURE-1306** | **P1** | **🔄 Cyberflow Arena — 3D Wave-Based Productivity Combat (Ruiner-style, from-scratch rewrite)** |
+| **FEATURE-1306** | **P1** | **⏸️ Cyberflow Arena — 3D Wave-Based Productivity Combat (Ruiner-style, from-scratch rewrite)** |
 | **FEATURE-1293** | **P2** | **🔄 Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
@@ -3360,7 +3385,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | BUG-1286 | P2 | 👀 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
 | **BUG-1291** | **P0** | **👀 Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
 | ~~**BUG-1292**~~ | **P1** | ✅ **KDE Widget intermittently fails to start break timer (30s polling gap after session complete)** |
-| **TASK-1292** | **P0** | **👀 Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (pomoflow-kde repo)** |
+| ~~**TASK-1292**~~ | **P0** | ✅ **Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (monorepo)** |
 | ~~**BUG-1293**~~ | **P1** | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements** |
 | ~~**BUG-1294**~~ | **P1** | ✅ **Calendar play button shouldn't reset timer or create new instances when timer is already running for that task** |
 | ~~**BUG-1296**~~ | **P1** | ✅ **Time block notifications never fire — _rawTasks → rawTasks property name mismatch** |
@@ -3374,8 +3399,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
 | ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |
 | ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |
-| **FEATURE-1314** | **P2** | **🔄 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
-| **TASK-1326** | **P2** | **🔄 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)** |
+| **FEATURE-1314** | **P2** | **👀 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
+| **TASK-1326** | **P2** | **👀 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)** |
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | ~~**TASK-1341**~~ | **P2** | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16) |
@@ -3463,7 +3488,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | FEATURE-1201 | P2 | 👀 Single-screen welcome modal — research-backed, auth-aware, replaces WelcomeModal |
 | ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
 | TASK-1283 | P1 | 📋 Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
-| **TASK-1284** | **P0** | **🔄 Add quick task creation to KDE Plasma widget (pomoflow-kde repo)** |
+| ~~**TASK-1284**~~ | **P0** | ✅ **Add quick task creation to KDE Plasma widget (monorepo)** |
 | TASK-292 | P3 | Canvas connection edge visuals (animations, gradients) |
 | TASK-310 | P2 | Automated SQL backup to cloud storage |
 | TASK-293 | P2 | Canvas viewport - center on Today + persist position |
@@ -4452,9 +4477,9 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### FEATURE-1306: Cyberflow Arena — 3D Wave-Based Productivity Combat (🔄 IN PROGRESS)
+### FEATURE-1306: Cyberflow Arena — 3D Wave-Based Productivity Combat (⏸️ PAUSED)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-12)
+**Priority**: P1-HIGH | **Status**: ⏸️ PAUSED (2026-02-21, was IN PROGRESS since 2026-02-12 — no implementation started, paused by user)
 
 **Parent**: FEATURE-1118 (Gamification)
 

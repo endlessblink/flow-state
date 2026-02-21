@@ -10,6 +10,8 @@ defineProps<{
   viewMode: 'day' | 'week' | 'month'
   externalCalendarEnabled?: boolean
   externalCalendarLoading?: boolean
+  googleCalendarConnected?: boolean
+  showGoogleEvents?: boolean
 }>()
 
 defineEmits<{
@@ -19,6 +21,8 @@ defineEmits<{
   (e: 'toggleDoneTasks'): void
   (e: 'update:viewMode', value: 'day' | 'week' | 'month'): void
   (e: 'syncExternalCalendar'): void
+  (e: 'toggleGoogleEvents'): void
+  (e: 'syncGoogleCalendar'): void
 }>()
 
 useI18n()
@@ -77,6 +81,19 @@ const showFilters = ref(false)
         @click="$emit('syncExternalCalendar')"
       >
         <RefreshCw :size="16" :stroke-width="1.5" />
+      </button>
+
+      <!-- TASK-1283: Google Calendar Events Toggle -->
+      <button
+        v-if="googleCalendarConnected"
+        class="google-cal-toggle"
+        :class="{ active: showGoogleEvents }"
+        :title="showGoogleEvents ? $t('google_calendar.hide_events') : $t('google_calendar.show_events')"
+        @click="$emit('toggleGoogleEvents')"
+      >
+        <Eye v-if="showGoogleEvents" :size="16" :stroke-width="1.5" />
+        <EyeOff v-else :size="16" :stroke-width="1.5" />
+        <span class="google-cal-label">G</span>
       </button>
 
       <div class="view-selector view-selector--minimal">
@@ -380,5 +397,40 @@ const showFilters = ref(false)
 .slide-down-enter-to,
 .slide-down-leave-from {
   max-height: 60px;
+}
+
+/* TASK-1283: Google Calendar Toggle */
+.google-cal-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: auto;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.google-cal-toggle:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.google-cal-toggle.active {
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+.google-cal-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  line-height: 1;
 }
 </style>

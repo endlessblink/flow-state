@@ -92,12 +92,14 @@ export const AI_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'list_tasks',
-    description: 'List active tasks (excludes done by default). Pass status="done" to see completed tasks, or status="all" for everything.',
+    description: 'List active tasks (excludes done by default). Pass status="done" to see completed tasks, or status="all" for everything. Use dueDate filter for date-specific queries like "tasks for today" or "what\'s due this week". Use sortBy to control ordering.',
     category: 'read',
     parameters: {
       type: 'object',
       properties: {
         status: { type: 'string', description: 'Filter by status. Default excludes done tasks. Use "all" to include done.', enum: ['planned', 'in_progress', 'done', 'backlog', 'all'] },
+        dueDate: { type: 'string', description: 'Filter by due date. "today" = due today only, "tomorrow" = due tomorrow, "this_week" = due this week (Mon-Sun), or exact YYYY-MM-DD date.' },
+        sortBy: { type: 'string', description: 'Sort results before applying limit. Default: "priority" (critical > high > medium > low > none).', enum: ['priority', 'dueDate', 'title'] },
         limit: { type: 'number', description: 'Maximum number of tasks to return (default 50)' },
       },
       required: [],
@@ -138,7 +140,7 @@ export const AI_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'search_tasks',
-    description: 'Search active tasks by text query (excludes done by default). Pass status="done" to search completed tasks.',
+    description: 'Search active tasks by text query (excludes done by default). Pass status="done" to search completed tasks. Use dueDate to narrow results by date.',
     category: 'read',
     parameters: {
       type: 'object',
@@ -146,6 +148,7 @@ export const AI_TOOLS: ToolDefinition[] = [
         query: { type: 'string', description: 'Text to search for in task titles and descriptions' },
         priority: { type: 'string', description: 'Filter by priority', enum: ['low', 'medium', 'high'] },
         status: { type: 'string', description: 'Filter by status. Only set this if user explicitly asks for done/completed tasks.', enum: ['planned', 'in_progress', 'done', 'backlog'] },
+        dueDate: { type: 'string', description: 'Filter by due date. "today" = due today only, "tomorrow" = due tomorrow, "this_week" = due this week (Mon-Sun), or exact YYYY-MM-DD date.' },
         limit: { type: 'number', description: 'Maximum results (default 20)' },
       },
       required: ['query'],
@@ -510,6 +513,8 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
       case 'list_tasks': {
         const status = call.parameters.status as string | undefined
+        const dueDateFilter = call.parameters.dueDate as string | undefined
+        const sortBy = (call.parameters.sortBy as string) || 'priority'
         const limit = (call.parameters.limit as number) || 50
 
         let tasks = taskStore.tasks
@@ -525,15 +530,95 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
           tasks = tasks.filter((t: Task) => t.status !== 'done')
         }
 
+        // Date filtering
+        if (dueDateFilter) {
+          const today = new Date()
+          const todayStr = today.toISOString().split('T')[0]
+          const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
+
+          if (dueDateFilter === 'today') {
+            tasks = tasks.filter((t: Task) => t.dueDate && normDate(t.dueDate) === todayStr)
+          } else if (dueDateFilter === 'tomorrow') {
+            const tomorrow = new Date(today)
+            tomorrow.setDate(tomorrow.getDate() + 1)
+            const tomorrowStr = tomorrow.toISOString().split('T')[0]
+            tasks = tasks.filter((t: Task) => t.dueDate && normDate(t.dueDate) === tomorrowStr)
+          } else if (dueDateFilter === 'this_week') {
+            const dayOfWeek = today.getDay() // 0=Sun
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+            const monday = new Date(today)
+            monday.setDate(today.getDate() + mondayOffset)
+            const sunday = new Date(monday)
+            sunday.setDate(monday.getDate() + 6)
+            const mondayStr = monday.toISOString().split('T')[0]
+            const sundayStr = sunday.toISOString().split('T')[0]
+            tasks = tasks.filter((t: Task) => {
+              if (!t.dueDate) return false
+              const d = normDate(t.dueDate)
+              return d >= mondayStr && d <= sundayStr
+            })
+          } else if (isValidISODate(dueDateFilter)) {
+            tasks = tasks.filter((t: Task) => t.dueDate && normDate(t.dueDate) === dueDateFilter)
+          }
+        }
+
+        // Sorting
+        const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+        if (sortBy === 'priority') {
+          tasks = [...tasks].sort((a, b) => {
+            const ap = priorityOrder[a.priority || ''] ?? 4
+            const bp = priorityOrder[b.priority || ''] ?? 4
+            if (ap !== bp) return ap - bp
+            // Secondary sort by dueDate ascending
+            if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
+            if (a.dueDate) return -1
+            if (b.dueDate) return 1
+            return 0
+          })
+        } else if (sortBy === 'dueDate') {
+          tasks = [...tasks].sort((a, b) => {
+            if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
+            if (a.dueDate) return -1
+            if (b.dueDate) return 1
+            return 0
+          })
+        } else if (sortBy === 'title') {
+          tasks = [...tasks].sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+        }
+
         tasks = tasks.slice(0, limit)
 
-        const taskList = tasks.map((t: Task) => ({
-          id: t.id,
-          title: t.title,
-          status: t.status,
-          priority: t.priority,
-          dueDate: t.dueDate || null,
-        }))
+        // Enrich task data so the AI can reason about WHY tasks matter
+        const today = new Date().toISOString().split('T')[0]
+        const projectMap = new Map(
+          (taskStore.projects || []).map((p: { id: string; name: string }) => [p.id, p.name])
+        )
+
+        const taskList = tasks.map((t: Task) => {
+          const daysOverdue = t.dueDate && t.dueDate < today
+            ? Math.floor((Date.now() - new Date(t.dueDate).getTime()) / 86400000)
+            : 0
+          const subtotalSubs = t.subtasks?.length ?? 0
+          const completedSubs = t.subtasks?.filter(s => s.isCompleted).length ?? 0
+          const projName = t.projectId ? projectMap.get(t.projectId) : undefined
+
+          const enriched: Record<string, unknown> = {
+            id: t.id,
+            title: t.title,
+            status: t.status,
+            priority: t.priority,
+            dueDate: t.dueDate || null,
+          }
+          if (daysOverdue > 0) enriched.daysOverdue = daysOverdue
+          if (t.estimatedDuration) enriched.estimatedMinutes = t.estimatedDuration
+          if (projName) enriched.project = projName
+          if (subtotalSubs > 0) enriched.subtasks = `${completedSubs}/${subtotalSubs}`
+          if (t.completedPomodoros > 0) enriched.pomodorosCompleted = t.completedPomodoros
+          if (t.description && t.description.length > 0) enriched.hasDescription = true
+          if (t.tags && t.tags.length > 0) enriched.tags = t.tags
+
+          return enriched
+        })
 
         return {
           success: true,
@@ -631,6 +716,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const query = (call.parameters.query as string).toLowerCase()
         const filterPriority = call.parameters.priority as Task['priority'] | undefined
         const filterStatus = call.parameters.status as Task['status'] | undefined
+        const dueDateFilter = call.parameters.dueDate as string | undefined
         const limit = (call.parameters.limit as number) || 20
 
         let results = taskStore.tasks.filter((t: Task) => {
@@ -646,6 +732,38 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         }
         if (filterStatus) {
           results = results.filter((t: Task) => t.status === filterStatus)
+        }
+
+        // Date filtering
+        if (dueDateFilter) {
+          const today = new Date()
+          const todayStr = today.toISOString().split('T')[0]
+          const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
+
+          if (dueDateFilter === 'today') {
+            results = results.filter((t: Task) => t.dueDate && normDate(t.dueDate) === todayStr)
+          } else if (dueDateFilter === 'tomorrow') {
+            const tomorrow = new Date(today)
+            tomorrow.setDate(tomorrow.getDate() + 1)
+            const tomorrowStr = tomorrow.toISOString().split('T')[0]
+            results = results.filter((t: Task) => t.dueDate && normDate(t.dueDate) === tomorrowStr)
+          } else if (dueDateFilter === 'this_week') {
+            const dayOfWeek = today.getDay()
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+            const monday = new Date(today)
+            monday.setDate(today.getDate() + mondayOffset)
+            const sunday = new Date(monday)
+            sunday.setDate(monday.getDate() + 6)
+            const mondayStr = monday.toISOString().split('T')[0]
+            const sundayStr = sunday.toISOString().split('T')[0]
+            results = results.filter((t: Task) => {
+              if (!t.dueDate) return false
+              const d = normDate(t.dueDate)
+              return d >= mondayStr && d <= sundayStr
+            })
+          } else if (isValidISODate(dueDateFilter)) {
+            results = results.filter((t: Task) => t.dueDate && normDate(t.dueDate) === dueDateFilter)
+          }
         }
 
         results = results.slice(0, limit)
@@ -1584,8 +1702,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
           }
         }
 
-        const totalTasks = eligible.length
-        const skippedCount = Math.max(0, allTasks.filter(t => !t._soft_deleted && t.status !== 'done').length - 30)
+        const skippedCount = Math.max(0, allTasks.filter(t => !t._soft_deleted && t.status !== 'done').length - eligible.length)
 
         return {
           success: true,
@@ -1796,7 +1913,7 @@ export function buildNativeToolsBehaviorPrompt(): string {
     'General formatting:',
     '- Use bullet points (•) or numbered lists for any list of recommendations',
     '- Bold (**text**) for emphasis on key points',
-    '- Keep responses concise — never more than 5-6 short sentences for analytical responses',
+    '- Keep responses concise — never more than 2-3 short sentences for analytical responses. No generic productivity advice.',
     '- NEVER show raw IDs, JSON, or technical details to the user',
   ].join('\n')
 }

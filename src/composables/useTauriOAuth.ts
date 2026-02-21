@@ -71,11 +71,17 @@ export async function signInWithGoogleTauri(): Promise<void> {
   })
 
   // 3. Generate Supabase OAuth URL with the actual localhost:port as redirect
+  // TASK-1283: Request calendar.readonly scope for Google Calendar integration
   const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       skipBrowserRedirect: true,
       redirectTo: `http://127.0.0.1:${port}`,
+      scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent'
+      }
     },
   })
 

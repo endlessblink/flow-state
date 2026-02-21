@@ -174,7 +174,19 @@
         </p>
       </details>
 
+      <!-- TASK-1326: Workload warning banner -->
+      <div v-if="overloadedDayNames.length > 0" class="wp-overload-warning">
+        <AlertTriangle :size="14" class="wp-warning-icon" />
+        <span class="wp-warning-text">
+          {{ overloadedDayNames.join(' and ') }} exceed{{ overloadedDayNames.length === 1 ? 's' : '' }} daily capacity. Consider moving tasks to lighter days.
+        </span>
+        <button class="wp-warning-dismiss" @click="warningDismissed = true">
+          <X :size="12" />
+        </button>
+      </div>
+
       <WeeklyPlanGrid
+        ref="weeklyPlanGridRef"
         :plan="state.plan"
         :task-map="taskMap"
         :week-start="state.weekStart"
@@ -198,6 +210,27 @@
       <p class="wp-applied-stats">
         {{ scheduledCount }} tasks scheduled across {{ daysUsed }} days
       </p>
+
+      <!-- TASK-1326: Plan adherence stats -->
+      <div v-if="lastWeekAccuracy !== null || avgAccuracy !== null" class="wp-adherence-stats">
+        <TrendingUp :size="14" class="wp-adherence-icon" />
+        <div class="wp-adherence-text">
+          <span v-if="lastWeekAccuracy !== null">Last week: {{ Math.round(lastWeekAccuracy) }}% of planned tasks completed</span>
+          <span v-if="lastWeekAccuracy !== null && avgAccuracy !== null"> · </span>
+          <span v-if="avgAccuracy !== null">8-week avg: {{ Math.round(avgAccuracy) }}%</span>
+        </div>
+      </div>
+
+      <!-- TASK-1326: Skip feedback toggle -->
+      <label class="wp-feedback-toggle">
+        <input
+          type="checkbox"
+          :checked="!state.skipFeedback"
+          @change="setSkipFeedback(!($event.target as HTMLInputElement).checked)"
+        >
+        <span class="wp-feedback-label">Record this week for learning</span>
+      </label>
+
       <button class="wp-btn wp-btn-primary" @click="router.push('/')">
         <ArrowRight :size="18" />
         Go to Canvas
@@ -234,7 +267,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, reactive } from 'vue'
+import { onMounted, onUnmounted, computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWeeklyPlan } from '@/composables/useWeeklyPlan'
 import { useWorkProfile } from '@/composables/useWorkProfile'
@@ -243,7 +276,7 @@ import WeeklyPlanGrid from '@/components/weeklyplan/WeeklyPlanGrid.vue'
 import type { WeeklyPlan, InterviewAnswers } from '@/composables/useWeeklyPlanAI'
 import {
   CalendarDays, RefreshCw, Check, ArrowRight, X, Loader2,
-  Zap, MessageCircle, Sparkles,
+  Zap, MessageCircle, Sparkles, AlertTriangle, TrendingUp,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -252,10 +285,25 @@ const {
   removeTaskFromPlan, snoozeTask, changePriority,
   regenerateDay, startInterview, submitInterview,
   eligibleTaskCount, reset,
+  lastWeekAccuracy, avgAccuracy, setSkipFeedback,
 } = useWeeklyPlan()
 
 const { loadProfile, savePreferences } = useWorkProfile()
 const settingsStore = useSettingsStore()
+
+// TASK-1326: Workload warning state
+const weeklyPlanGridRef = ref<InstanceType<typeof WeeklyPlanGrid> | null>(null)
+const warningDismissed = ref(false)
+
+const overloadedDayNames = computed(() => {
+  if (warningDismissed.value) return []
+  const grid = weeklyPlanGridRef.value
+  if (!grid) return []
+  // Access the exposed computedOverloadedDays from the grid
+  const days = (grid as any).overloadedDays
+  if (!days || !Array.isArray(days)) return []
+  return days.map((d: any) => d.dayName)
+})
 
 // Interview form state
 const interviewForm = reactive({
@@ -925,5 +973,85 @@ function handleKeydown(event: KeyboardEvent) {
   .wp-skeleton-col {
     animation: none;
   }
+}
+
+/* TASK-1326: Workload warning banner */
+.wp-overload-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  flex-shrink: 0;
+}
+
+.wp-warning-icon {
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.wp-warning-text {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.wp-warning-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--duration-fast);
+}
+
+.wp-warning-dismiss:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
+}
+
+/* TASK-1326: Plan adherence stats */
+.wp-adherence-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.wp-adherence-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.wp-adherence-text {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* TASK-1326: Skip feedback toggle */
+.wp-feedback-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.wp-feedback-toggle input[type="checkbox"] {
+  accent-color: var(--brand-primary);
+}
+
+.wp-feedback-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 </style>

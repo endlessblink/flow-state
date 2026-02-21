@@ -23,11 +23,17 @@ export async function signInWithGoogleCapacitor(): Promise<void> {
   const { App } = await import('@capacitor/app')
 
   // Generate OAuth URL with PKCE and custom scheme redirect
+  // TASK-1283: Request calendar.readonly scope for Google Calendar integration
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       skipBrowserRedirect: true,
       redirectTo: REDIRECT_URL,
+      scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent'
+      }
     },
   })
 

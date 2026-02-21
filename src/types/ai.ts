@@ -10,6 +10,7 @@
 
 import type { Task, TaskPriority } from './tasks'
 import type { CanvasGroup } from './canvas'
+import { DEFAULT_MODELS } from '@/config/aiModels'
 
 // ============================================================================
 // AI Provider Types
@@ -71,7 +72,7 @@ export const DEFAULT_PROVIDER_CONFIGS: Record<AIProvider, Omit<AIProviderConfig,
     provider: AIProvider.OLLAMA,
     enabled: true,
     endpoint: 'http://localhost:11434',
-    model: 'llama3.2',
+    model: DEFAULT_MODELS.ollama,
     maxTokens: 2048,
     temperature: 0.7,
     timeout: 30000
@@ -80,7 +81,7 @@ export const DEFAULT_PROVIDER_CONFIGS: Record<AIProvider, Omit<AIProviderConfig,
     provider: AIProvider.ANTHROPIC,
     enabled: false,
     endpoint: 'https://api.anthropic.com',
-    model: 'claude-sonnet-4-5-20250929',
+    model: DEFAULT_MODELS.openrouter, // Anthropic models go through OpenRouter
     maxTokens: 4096,
     temperature: 0.7,
     timeout: 60000
@@ -89,7 +90,7 @@ export const DEFAULT_PROVIDER_CONFIGS: Record<AIProvider, Omit<AIProviderConfig,
     provider: AIProvider.OPENAI,
     enabled: false,
     endpoint: 'https://api.openai.com/v1',
-    model: 'gpt-4o',
+    model: DEFAULT_MODELS.groq, // OpenAI-compatible models go through Groq
     maxTokens: 4096,
     temperature: 0.7,
     timeout: 60000
@@ -98,7 +99,7 @@ export const DEFAULT_PROVIDER_CONFIGS: Record<AIProvider, Omit<AIProviderConfig,
     provider: AIProvider.GEMINI,
     enabled: false,
     endpoint: 'https://generativelanguage.googleapis.com/v1',
-    model: 'gemini-2.0-flash',
+    model: DEFAULT_MODELS.groq, // Not directly supported, uses Groq default
     maxTokens: 4096,
     temperature: 0.7,
     timeout: 60000

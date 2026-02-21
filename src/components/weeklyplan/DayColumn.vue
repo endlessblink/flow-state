@@ -93,6 +93,7 @@ const emit = defineEmits<{
   'removeTask': [taskId: string]
   'changePriority': [taskId: string]
   'snoozeTask': [taskId: string]
+  'overloaded': [data: { dayName: string; dayKey: string; percent: number; totalMinutes: number }]
 }>()
 
 const localTaskIds = ref<string[]>([...props.modelValue])
@@ -127,6 +128,19 @@ const capacityClass = computed(() => {
   if (pct >= 80) return 'fill-warning'
   return 'fill-normal'
 })
+
+// TASK-1326: Emit overloaded event when capacity crosses 100%
+watch(capacityPercent, (newVal, oldVal) => {
+  if (props.dayKey === 'unscheduled') return
+  if (newVal > 100 && (oldVal === undefined || oldVal <= 100)) {
+    emit('overloaded', {
+      dayName: props.dayName,
+      dayKey: props.dayKey,
+      percent: Math.round(newVal),
+      totalMinutes: totalMinutes.value,
+    })
+  }
+}, { immediate: true })
 
 function formatMinutesShort(mins: number): string {
   if (mins >= 60) {

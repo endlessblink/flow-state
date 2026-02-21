@@ -3,6 +3,7 @@
  * Core logic for generating and managing recurring task instances
  */
 
+import { formatDateKey } from '@/utils/dateUtils'
 import {
   RecurrencePattern,
 } from '@/types/recurrence'
@@ -312,14 +313,6 @@ function setDayOfMonth(currentDate: Date, interval: number, dayOfMonth: number):
  */
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate()
-}
-
-/**
- * Format date as YYYY-MM-DD
- */
-function formatDateKey(date: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 /**

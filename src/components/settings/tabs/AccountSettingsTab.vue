@@ -7,8 +7,10 @@ import SettingsToggle from '../SettingsToggle.vue'
 import { supabase } from '@/services/auth/supabase'
 import { useTauriUpdater } from '@/composables/useTauriUpdater'
 import { isTauri } from '@/composables/useTauriStartup'
-import { useSettingsStore, type ExternalCalendarConfig } from '@/stores/settings'
+import { useSettingsStore, type ExternalCalendarConfig, type GoogleCalendarConfig } from '@/stores/settings'
 import { EXTERNAL_URLS } from '@/config/urls'
+import { useGoogleCalendar } from '@/composables/calendar/useGoogleCalendar'
+import { useI18n } from 'vue-i18n'
 
 const emit = defineEmits<{ closeModal: [] }>()
 
@@ -16,6 +18,54 @@ declare const __APP_VERSION__: string
 
 const authStore = useAuthStore()
 const settingsStore = useSettingsStore()
+
+const { t } = useI18n()
+const googleCalendar = useGoogleCalendar()
+
+// Google Calendar: fetch calendars when connecting
+const googleCalendarLoading = ref(false)
+const googleCalendarError = ref('')
+const availableGoogleCalendars = ref<GoogleCalendarConfig[]>([])
+
+const handleConnectGoogle = async () => {
+  googleCalendarLoading.value = true
+  googleCalendarError.value = ''
+  try {
+    await googleCalendar.connect()
+  } catch (e: any) {
+    googleCalendarError.value = e.message
+  } finally {
+    googleCalendarLoading.value = false
+  }
+}
+
+const handleFetchGoogleCalendars = async () => {
+  googleCalendarLoading.value = true
+  googleCalendarError.value = ''
+  try {
+    availableGoogleCalendars.value = await googleCalendar.fetchAvailableCalendars()
+    // Auto-save selected calendars to settings
+    settingsStore.updateSetting('googleCalendars', availableGoogleCalendars.value)
+  } catch (e: any) {
+    googleCalendarError.value = e.message
+  } finally {
+    googleCalendarLoading.value = false
+  }
+}
+
+const toggleGoogleCalendar = (calId: string) => {
+  const cals = [...(settingsStore.googleCalendars || [])]
+  const idx = cals.findIndex(c => c.id === calId)
+  if (idx !== -1) {
+    cals[idx] = { ...cals[idx], enabled: !cals[idx].enabled }
+    settingsStore.updateSetting('googleCalendars', cals)
+  }
+}
+
+const handleDisconnectGoogle = () => {
+  googleCalendar.disconnect()
+  availableGoogleCalendars.value = []
+}
 
 // ── About section ──
 const updater = useTauriUpdater()
@@ -408,6 +458,72 @@ const handleChangePassword = async () => {
           GitHub
         </button>
       </div>
+    </SettingsSection>
+
+    <!-- TASK-1283: Google Calendar Integration -->
+    <SettingsSection :title="$t('google_calendar.title')">
+      <!-- Not connected state -->
+      <template v-if="!googleCalendar.isConnected.value">
+        <p class="section-description">
+          {{ $t('google_calendar.requires_reauth') }}
+        </p>
+        <div v-if="googleCalendarError" class="cal-form-error">
+          <AlertCircle :size="14" />
+          {{ googleCalendarError }}
+        </div>
+        <button class="add-btn" :disabled="googleCalendarLoading" @click="handleConnectGoogle">
+          <Loader2 v-if="googleCalendarLoading" :size="14" class="spinner" />
+          <Calendar v-else :size="14" />
+          {{ googleCalendarLoading ? $t('google_calendar.connecting') : $t('google_calendar.connect') }}
+        </button>
+      </template>
+
+      <!-- Connected state -->
+      <template v-else>
+        <div class="google-calendar-connected">
+          <div class="connection-status">
+            <CheckCircle :size="14" class="success-icon" />
+            <span>{{ $t('google_calendar.connected') }}</span>
+          </div>
+
+          <!-- Calendar list -->
+          <div v-if="settingsStore.googleCalendars.length > 0" class="calendar-list">
+            <p class="section-description">{{ $t('google_calendar.select_calendars') }}</p>
+            <div
+              v-for="cal in settingsStore.googleCalendars"
+              :key="cal.id"
+              class="calendar-item"
+            >
+              <div class="calendar-item-left">
+                <div class="color-dot" :style="{ backgroundColor: cal.backgroundColor }" />
+                <span class="calendar-name">{{ cal.summary }}</span>
+              </div>
+              <SettingsToggle
+                :label="cal.enabled ? 'On' : 'Off'"
+                :value="cal.enabled"
+                @update="toggleGoogleCalendar(cal.id)"
+              />
+            </div>
+          </div>
+
+          <div v-if="googleCalendarError" class="cal-form-error">
+            <AlertCircle :size="14" />
+            {{ googleCalendarError }}
+          </div>
+
+          <div class="google-calendar-actions">
+            <button class="add-btn" :disabled="googleCalendarLoading" @click="handleFetchGoogleCalendars">
+              <Loader2 v-if="googleCalendarLoading" :size="14" class="spinner" />
+              <RefreshCw v-else :size="14" />
+              {{ googleCalendarLoading ? $t('google_calendar.syncing') : $t('google_calendar.sync_now') }}
+            </button>
+            <button class="icon-btn danger" :title="$t('google_calendar.disconnect')" @click="handleDisconnectGoogle">
+              <Trash2 :size="14" />
+              {{ $t('google_calendar.disconnect') }}
+            </button>
+          </div>
+        </div>
+      </template>
     </SettingsSection>
 
     <!-- Integrations Section (merged from IntegrationsSettingsTab) -->
@@ -1308,5 +1424,31 @@ const handleChangePassword = async () => {
   font-size: var(--text-xs);
   color: var(--text-muted);
   margin-top: var(--space-3);
+}
+
+/* TASK-1283: Google Calendar */
+.google-calendar-connected {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--brand-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+.google-calendar-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
 }
 </style>

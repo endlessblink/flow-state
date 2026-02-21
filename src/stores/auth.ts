@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { supabase, type User, type Session, type AuthError } from '@/services/auth/supabase'
+import { supabase, consumePendingProviderTokens, type User, type Session, type AuthError } from '@/services/auth/supabase'
 import { clearGuestData } from '@/utils/guestModeStorage'
 import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
 import { invalidateCache } from '@/composables/useSupabaseDatabase'
@@ -317,6 +317,23 @@ export const useAuthStore = defineStore('auth', () => {
               return
             }
             handledSignInForUserId = newSession.user.id
+
+            // TASK-1283: Capture Google provider tokens for Calendar API
+            const providerTokens = consumePendingProviderTokens()
+            if (providerTokens) {
+              try {
+                const { useSettingsStore } = await import('@/stores/settings')
+                const settingsStore = useSettingsStore()
+                settingsStore.updateSetting('googleCalendarToken', providerTokens.provider_token)
+                if (providerTokens.provider_refresh_token) {
+                  settingsStore.updateSetting('googleCalendarRefreshToken', providerTokens.provider_refresh_token)
+                }
+                settingsStore.updateSetting('googleCalendarConnected', true)
+                console.log(`👤 [AUTH] Google Calendar provider tokens captured and stored`)
+              } catch (e) {
+                console.warn('[AUTH] Failed to store Google Calendar tokens:', e)
+              }
+            }
 
             if (appInitLoadComplete) {
               // BUG-1339: Defense-in-depth — even if appInitLoadComplete is true,
@@ -762,10 +779,16 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       // PWA: standard OAuth redirect flow
+      // TASK-1283: Request calendar.readonly scope for Google Calendar integration
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: window.location.origin,
+          scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       })
 

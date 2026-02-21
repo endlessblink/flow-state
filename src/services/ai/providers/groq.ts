@@ -8,11 +8,7 @@
  * - Support for Llama, Mixtral, and Gemma models
  * - Streaming responses via Server-Sent Events
  *
- * Supported Models:
- * - llama-3.3-70b-versatile - Fast, high quality general purpose
- * - llama-3.1-8b-instant - Ultra-fast, smaller model
- * - mixtral-8x7b-32768 - Large context window
- * - gemma2-9b-it - Google's Gemma 2
+ * Supported Models: See GROQ_MODELS in src/config/aiModels.ts (single source of truth)
  *
  * @see https://console.groq.com/docs/
  * @see ROAD-011 in MASTER_PLAN.md - AI-Powered Features Roadmap
@@ -31,6 +27,7 @@ import type {
 } from '../types'
 // TASK-1186: Use Tauri HTTP for CORS-free requests in desktop app
 import { tauriFetch } from '../utils/tauriHttp'
+import { DEFAULT_MODELS } from '@/config/aiModels'
 
 // ============================================================================
 // Groq API Types (OpenAI-compatible)
@@ -122,7 +119,7 @@ interface GroqModelsResponse {
 // ============================================================================
 
 const GROQ_API_ENDPOINT = 'https://api.groq.com/openai/v1'
-const DEFAULT_MODEL = 'llama-3.3-70b-versatile'
+const DEFAULT_MODEL = DEFAULT_MODELS.groq
 const DEFAULT_TIMEOUT = 60000
 
 // ============================================================================

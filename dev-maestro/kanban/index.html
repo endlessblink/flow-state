@@ -761,18 +761,20 @@
       position: absolute;
       left: 12px;
       bottom: 8px;
-      width: 20px;
-      height: 20px;
-      border: 1px solid var(--border-medium);
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--brand-primary);
       border-radius: 6px;
-      background: rgba(255, 255, 255, 0.02);
-      color: var(--text-muted);
+      background: rgba(13, 17, 23, 0.95);
+      color: var(--brand-primary);
       display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: all var(--transition-fast);
       z-index: 2;
+      opacity: 1;
+      box-shadow: 0 0 0 1px rgba(78, 205, 196, 0.25);
     }
 
     .task-copy-btn:hover {
@@ -784,6 +786,26 @@
     .task-copy-btn.copied {
       color: var(--color-success);
       border-color: var(--color-success);
+      animation: copyPulse 260ms ease-out;
+    }
+
+    .task-copy-btn.copied::after {
+      content: 'Copied';
+      position: absolute;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: #0f172a;
+      background: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.85);
+      border-radius: 999px;
+      padding: 2px 7px;
+      white-space: nowrap;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+      animation: copiedLabel 900ms ease-out forwards;
     }
 
     .task-copy-btn svg {
@@ -794,6 +816,19 @@
       stroke-linecap: round;
       stroke-linejoin: round;
       fill: none;
+    }
+
+    @keyframes copyPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.14); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes copiedLabel {
+      0% { opacity: 0; transform: translateX(-50%) translateY(4px); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      75% { opacity: 1; transform: translateX(-50%) translateY(-1px); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
     }
 
     .task-card:hover {
@@ -5376,6 +5411,16 @@
             currentSubSection = '';
             continue;
           }
+          if (trimmed.startsWith('## Active Bugs')) {
+            currentSection = 'activeWork';
+            currentSubSection = '';
+            continue;
+          }
+          if (trimmed.startsWith('## Active Tasks')) {
+            currentSection = 'activeWork';
+            currentSubSection = '';
+            continue;
+          }
           if (trimmed.startsWith('## Known Issues')) {
             currentSection = 'issues';
             currentSubSection = '';
@@ -6006,6 +6051,7 @@
                 task.status === 'in-progress' ? 'IN PROGRESS' :
                   task.status === 'paused' ? 'PAUSED' :
                     task.status === 'review' ? 'REVIEW' : 'TODO';
+              const copyTextEncoded = encodeURIComponent(`${task.id} ${task.title}`);
 
               card.innerHTML = `
               <div class="task-header">
@@ -6053,6 +6099,15 @@
                   </div>
                   <div class="progress-percent">${progress}%</div>
                 </div>
+                <button
+                  class="task-copy-btn"
+                  type="button"
+                  title="Copy task ID and title"
+                  aria-label="Copy ${task.id} and task title"
+                  data-copy-text="${copyTextEncoded}"
+                  data-task-id="${task.id}"
+                  onclick="copyTaskSummary(this, event)"
+                >${COPY_ICON_SVG}</button>
               </div>
             `;
 
@@ -7560,7 +7615,11 @@
         cards.forEach(card => column.appendChild(card));
       });
 
-      ensureTaskCopyButtons();
+      try {
+        ensureTaskCopyButtons();
+      } catch (error) {
+        console.error('Copy button setup failed:', error);
+      }
 
       // Re-initialize drag and drop listeners for new cards
       initDragAndDrop();
@@ -7571,8 +7630,10 @@
       cards.forEach(card => {
         if (card.querySelector('.task-copy-btn')) return;
 
-        const taskId = card.querySelector('.task-id')?.textContent?.trim();
-        const taskTitle = card.querySelector('.task-title')?.textContent?.trim();
+        const taskIdEl = card.querySelector('.task-id');
+        const taskTitleEl = card.querySelector('.task-title');
+        const taskId = taskIdEl && typeof taskIdEl.textContent === 'string' ? taskIdEl.textContent.trim() : '';
+        const taskTitle = taskTitleEl && typeof taskTitleEl.textContent === 'string' ? taskTitleEl.textContent.trim() : '';
         if (!taskId || !taskTitle) return;
 
         const copyBtn = document.createElement('button');
@@ -7592,9 +7653,12 @@
       event.preventDefault();
       event.stopPropagation();
 
-      const taskId = buttonEl?.dataset?.taskId || '';
-      const taskTitle = buttonEl?.dataset?.taskTitle || '';
-      const textToCopy = `${taskId} ${taskTitle}`.trim();
+      if (!buttonEl || !buttonEl.dataset) return;
+      const taskId = buttonEl.dataset.taskId || '';
+      const encodedCopyText = buttonEl.dataset.copyText || '';
+      const textToCopy = encodedCopyText
+        ? decodeURIComponent(encodedCopyText)
+        : `${taskId} ${buttonEl.dataset.taskTitle || ''}`.trim();
       if (!textToCopy) return;
 
       try {

@@ -8,7 +8,7 @@ import { useMemoryAssessment } from '@/composables/useMemoryAssessment'
 import { useSettingsStore } from '@/stores/settings'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
-import { PROVIDER_OPTIONS, GROQ_MODELS, OPENROUTER_MODELS, asIdLabel, type AIProviderKey } from '@/config/aiModels'
+import { PROVIDER_OPTIONS, GROQ_MODELS, OPENROUTER_MODELS, asIdLabel, filterFreeModels, type AIProviderKey } from '@/config/aiModels'
 import { tauriFetch } from '@/services/ai/utils/tauriHttp'
 import { resetSharedRouter } from '@/services/ai/routerFactory'
 
@@ -79,6 +79,8 @@ function onModelChange(event: Event) {
   setModel(value || null)
 }
 
+const showFreeOnly = ref(false)
+
 // ── Weekly Plan Provider/Model (TASK-1327) ──
 const wpProviderOptions = PROVIDER_OPTIONS.map(opt => {
   // Override 'auto' description for weekly plan context
@@ -93,9 +95,9 @@ const wpModelOptions = computed(() => {
     case 'ollama':
       return availableOllamaModels.value.map(m => ({ id: m, label: m }))
     case 'groq':
-      return groqModels
+      return showFreeOnly.value ? asIdLabel(filterFreeModels(GROQ_MODELS)) : groqModels
     case 'openrouter':
-      return openrouterModels
+      return showFreeOnly.value ? asIdLabel(filterFreeModels(OPENROUTER_MODELS)) : openrouterModels
     default:
       return []
   }
@@ -466,6 +468,13 @@ async function onClearMemories() {
       <!-- Model selector (when not auto) -->
       <div v-if="settingsStore.weeklyPlanProvider !== 'auto'" class="model-selector">
         <label class="model-selector-label">Model</label>
+        <button
+          class="free-filter-btn"
+          :class="{ active: showFreeOnly }"
+          @click="showFreeOnly = !showFreeOnly"
+        >
+          Free
+        </button>
         <div class="model-select-wrapper">
           <select
             class="model-select"
@@ -999,6 +1008,31 @@ async function onClearMemories() {
 }
 
 .refresh-models-btn:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.free-filter-btn {
+  padding: var(--space-0_5) var(--space-2);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.03em;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  flex-shrink: 0;
+}
+
+.free-filter-btn:hover {
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+}
+
+.free-filter-btn.active {
+  background: var(--brand-bg-light);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }

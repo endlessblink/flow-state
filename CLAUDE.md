@@ -36,7 +36,7 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 | Supabase Sync | ⚠️ Working (offline-first in progress: TASK-1177) |
 | Backup System | ✅ Hardened (Smart Layers 1-3) |
 | Timer Sync | ✅ Working (cross-device via Supabase Realtime) |
-| KDE Widget | ✅ Working (separate repo: `pomoflow-kde`) |
+| KDE Widget | ✅ Working (packages/kde-widget/) |
 | Tauri Desktop | ✅ Working (Linux/Win/Mac releases) |
 | VPS Production | ✅ Live at in-theflow.com (Contabo) |
 | Build/CI | ✅ Passing |

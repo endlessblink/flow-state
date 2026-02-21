@@ -3,6 +3,35 @@
  */
 
 /**
+ * Format a due date for human-readable display in task UIs.
+ * Shows "Today", "Tomorrow", "Yesterday" for near dates; falls back to "Jan 1" format.
+ *
+ * @param dueDate - ISO string, YYYY-MM-DD string, or Date object
+ * @returns Human-readable date label
+ */
+export const formatDueDate = (dueDate: string | Date | null | undefined): string => {
+    if (!dueDate) return ''
+    const date = dueDate instanceof Date ? dueDate : new Date(dueDate)
+    if (isNaN(date.getTime())) return ''
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+
+    const d = new Date(date)
+    d.setHours(0, 0, 0, 0)
+
+    if (d.getTime() === today.getTime()) return 'Today'
+    if (d.getTime() === tomorrow.getTime()) return 'Tomorrow'
+    if (d.getTime() === yesterday.getTime()) return 'Yesterday'
+
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+/**
  * Format date as YYYY-MM-DD
  */
 export const formatDateKey = (date: Date | string): string => {

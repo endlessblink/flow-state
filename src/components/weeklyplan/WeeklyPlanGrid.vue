@@ -15,12 +15,13 @@
       @remove-task="(id) => $emit('removeTask', id)"
       @change-priority="(id) => $emit('changePriority', id)"
       @snooze-task="(id) => $emit('snoozeTask', id)"
+      @overloaded="onDayOverloaded"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import DayColumn from './DayColumn.vue'
 import { useSettingsStore } from '@/stores/settings'
 import type { WeeklyPlan, TaskSummary } from '@/composables/useWeeklyPlanAI'
@@ -45,6 +46,35 @@ const emit = defineEmits<{
 }>()
 
 const settings = useSettingsStore()
+
+// TASK-1326: Track overloaded days for warning banner
+const overloadedDays = ref<Array<{ dayName: string; dayKey: string; percent: number; totalMinutes: number }>>([])
+
+function onDayOverloaded(data: { dayName: string; dayKey: string; percent: number; totalMinutes: number }) {
+  // Replace or add
+  const idx = overloadedDays.value.findIndex(d => d.dayKey === data.dayKey)
+  if (idx >= 0) {
+    overloadedDays.value[idx] = data
+  } else {
+    overloadedDays.value.push(data)
+  }
+}
+
+// Also compute overloaded from current plan data (for initial load / plan restore)
+const computedOverloadedDays = computed(() => {
+  const result: Array<{ dayName: string; dayKey: string; percent: number; totalMinutes: number }> = []
+  for (const col of columns.value) {
+    if (col.key === 'unscheduled') continue
+    const totalMins = col.tasks.reduce((sum, t) => sum + (t.estimatedDuration || 0), 0)
+    const pct = totalMins > 0 ? (totalMins / 360) * 100 : 0  // 360 = default 6h capacity
+    if (pct > 100) {
+      result.push({ dayName: col.label, dayKey: col.key, percent: Math.round(pct), totalMinutes: totalMins })
+    }
+  }
+  return result
+})
+
+defineExpose({ overloadedDays: computedOverloadedDays })
 
 // TASK-1321: Dynamic day config based on weekStartsOn setting
 const DAY_CONFIG = computed(() => {

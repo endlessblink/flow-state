@@ -159,7 +159,7 @@ interface Props {
   currentFilter?: 'today' | 'week' | null
   density?: 'ultrathin' | 'compact' | 'comfortable' | 'spacious'
   showDoneColumn?: boolean
-  viewType?: 'priority' | 'date' | 'status' | 'category'
+  viewType?: 'priority' | 'date' | 'status' | 'category' | 'list'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -175,7 +175,7 @@ const emit = defineEmits<{
   editTask: [taskId: string]
   deleteTask: [taskId: string]
   moveTask: [taskId: string, newStatus: Task['status']]
-  addTask: [payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' | 'category' }]
+  addTask: [payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' | 'category' | 'list' }]
   contextMenu: [event: MouseEvent, task: Task]
   groupContextMenu: [event: MouseEvent, project: Project]
 }>()

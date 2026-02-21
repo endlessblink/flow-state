@@ -59,14 +59,18 @@
         :format-current-date="formatCurrentDate"
         :hide-calendar-done-tasks="hideCalendarDoneTasks"
         :view-mode="viewMode"
-        :external-calendar-enabled="externalCalendar.hasEnabledCalendars.value"
-        :external-calendar-loading="externalCalendar.isLoading.value"
+        :external-calendar-enabled="externalCalendar.hasEnabledCalendars.value || googleCalendar.isConnected.value"
+        :external-calendar-loading="externalCalendar.isLoading.value || googleCalendar.isLoading.value"
         @previous-day="previousDay"
         @next-day="nextDay"
         @go-to-today="goToToday"
         @toggle-done-tasks="taskStore.toggleCalendarDoneTasks()"
         @update:view-mode="viewMode = $event"
         @sync-external-calendar="externalCalendar.syncNow"
+        :google-calendar-connected="googleCalendar.isConnected.value"
+        :show-google-events="googleCalendar.showGoogleEvents.value"
+        @toggle-google-events="googleCalendar.showGoogleEvents.value = !googleCalendar.showGoogleEvents.value"
+        @sync-google-calendar="googleCalendar.syncNow"
       />
 
       <!-- Calendar Grid - Day View -->
@@ -84,7 +88,7 @@
         :hovered-event-id="hoveredEventId"
         :selected-event-ids="selectedEventIds"
         :resize-preview="resizePreview"
-        :external-events="externalCalendar.getEventsForDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`)"
+        :external-events="getMergedEventsForDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`)"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
         @dragleave="onDragLeave"
@@ -116,7 +120,7 @@
         :dragged-event-id="draggedEventId"
         :selected-event-ids="selectedEventIds"
         :resize-preview="weekResizePreview"
-        :external-events="externalCalendar.allEvents.value"
+        :external-events="mergedExternalEvents"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
         @dragleave="onDragLeave"
@@ -139,7 +143,7 @@
         :month-days="monthDays"
         :current-task-id="timerStore.currentTaskId"
         :selected-event-ids="selectedEventIds"
-        :external-events="externalCalendar.allEvents.value"
+        :external-events="mergedExternalEvents"
         @month-drop="handleMonthDrop"
         @month-day-click="handleMonthDayClick"
         @event-drag-start="handleMonthDragStart"
@@ -168,6 +172,7 @@ import { useCalendarWeekView } from '@/composables/calendar/useCalendarWeekView'
 import { useCalendarTimerIntegration } from '@/composables/calendar/useCalendarTimerIntegration'
 import { useCalendarMonthView } from '@/composables/calendar/useCalendarMonthView'
 import { useExternalCalendar } from '@/composables/calendar/useExternalCalendar'
+import { useGoogleCalendar } from '@/composables/calendar/useGoogleCalendar'
 import { useCalendarInteractionHandlers } from '@/composables/calendar/useCalendarInteractionHandlers'
 import { useCalendarModals } from '@/composables/calendar/useCalendarModals'
 import { useCalendarNavigation } from '@/composables/calendar/useCalendarNavigation'
@@ -308,6 +313,21 @@ const monthView = useCalendarMonthView(currentDate, statusFilter)
 
 // TASK-1317: External calendar sync
 const externalCalendar = useExternalCalendar()
+const googleCalendar = useGoogleCalendar()
+
+// TASK-1283: Merge Google Calendar + iCal external events
+const mergedExternalEvents = computed(() => [
+  ...(googleCalendar.showGoogleEvents.value ? googleCalendar.googleEvents.value : []),
+  ...externalCalendar.allEvents.value
+])
+
+function getMergedEventsForDate(dateString: string) {
+  return mergedExternalEvents.value.filter(event => {
+    const d = event.startTime
+    const eventDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return eventDate === dateString
+  })
+}
 
 // Reactive current time for time indicator
 const currentTime = ref(new Date())
@@ -418,7 +438,7 @@ provide('calendar-helpers', {
   handleRemoveFromCalendar,
   getWeekEventStyle,
   isCurrentWeekTimeCell,
-  getExternalEventsForDate: externalCalendar.getEventsForDate
+  getExternalEventsForDate: getMergedEventsForDate
 })
 
 // Positioning and sizing for slot tasks are handled by getSlotTaskStyle from useCalendarDayView

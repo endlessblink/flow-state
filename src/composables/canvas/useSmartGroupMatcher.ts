@@ -21,6 +21,7 @@ import {
   SMART_GROUPS,
 } from '@/composables/usePowerKeywords'
 import { CANVAS } from '@/constants/canvas'
+import { formatDateKey } from '@/utils/dateUtils'
 
 /**
  * Result of group matching with calculated position
@@ -28,13 +29,6 @@ import { CANVAS } from '@/constants/canvas'
 export interface GroupMatchResult {
   group: CanvasGroup
   position: { x: number; y: number }
-}
-
-/**
- * Format date as YYYY-MM-DD string
- */
-function formatDateStr(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 /**
@@ -53,7 +47,7 @@ function getNextDayOfWeekDate(dayIndex: number): string {
 
   const result = new Date(today)
   result.setDate(today.getDate() + daysUntil)
-  return formatDateStr(result)
+  return formatDateKey(result)
 }
 
 /**
@@ -130,7 +124,7 @@ export function findMatchingGroupForDueDate(
   groups: CanvasGroup[]
 ): CanvasGroup | null {
   // Default to today's date if no due date specified
-  const effectiveDate = dueDate || formatDateStr(new Date())
+  const effectiveDate = dueDate || formatDateKey(new Date())
 
   // Filter to only visible groups with power keywords
   const powerGroups = groups.filter(g => {

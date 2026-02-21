@@ -19,6 +19,14 @@ export interface ExternalCalendarConfig {
     error?: string
 }
 
+// TASK-1283: Google Calendar integration — selected calendar config
+export interface GoogleCalendarConfig {
+    id: string
+    summary: string
+    backgroundColor: string
+    enabled: boolean
+}
+
 export interface AppSettings {
     // Timer
     workDuration: number
@@ -72,6 +80,13 @@ export interface AppSettings {
     // TASK-1317: External calendar (iCal) sync
     externalCalendars: ExternalCalendarConfig[]
     externalCalendarSyncInterval: number // minutes, 0 = manual only
+
+    // TASK-1283: Google Calendar integration
+    googleCalendarToken: string
+    googleCalendarRefreshToken: string
+    googleCalendarConnected: boolean
+    googleCalendars: GoogleCalendarConfig[]
+    showGoogleCalendarEvents: boolean
 
     // TASK-1350: AI Setup (BYOK Groq + first-time wizard)
     groqApiKey: string
@@ -173,6 +188,13 @@ export const useSettingsStore = defineStore('settings', {
         // TASK-1317: External calendar defaults
         externalCalendars: [],
         externalCalendarSyncInterval: 30,
+
+        // TASK-1283: Google Calendar defaults
+        googleCalendarToken: '',
+        googleCalendarRefreshToken: '',
+        googleCalendarConnected: false,
+        googleCalendars: [],
+        showGoogleCalendarEvents: true,
 
         // TASK-1350: AI Setup defaults (BYOK Groq + first-time wizard)
         groqApiKey: '',
@@ -299,6 +321,22 @@ export const useSettingsStore = defineStore('settings', {
                     // TASK-1338: Backfill push notification preferences
                     if (!this.$state.pushNotifications) {
                         this.$state.pushNotifications = JSON.parse(JSON.stringify(DEFAULT_PUSH_NOTIFICATION_PREFERENCES))
+                    }
+                    // TASK-1283: Backfill Google Calendar fields
+                    if (this.$state.googleCalendarToken === undefined) {
+                        this.$state.googleCalendarToken = ''
+                    }
+                    if (this.$state.googleCalendarRefreshToken === undefined) {
+                        this.$state.googleCalendarRefreshToken = ''
+                    }
+                    if (this.$state.googleCalendarConnected === undefined) {
+                        this.$state.googleCalendarConnected = false
+                    }
+                    if (!this.$state.googleCalendars) {
+                        this.$state.googleCalendars = []
+                    }
+                    if (this.$state.showGoogleCalendarEvents === undefined) {
+                        this.$state.showGoogleCalendarEvents = true
                     }
                     // TASK-1350: Backfill AI setup fields
                     if (this.$state.groqApiKey === undefined) {

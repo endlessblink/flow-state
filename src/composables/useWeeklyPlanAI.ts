@@ -23,7 +23,7 @@ export interface WeeklyPlan {
   unscheduled: string[]
 }
 
-export type WeeklyPlanStatus = 'idle' | 'interview' | 'loading' | 'review' | 'applying' | 'applied' | 'error'
+export type WeeklyPlanStatus = 'idle' | 'interview' | 'ai-questions' | 'loading' | 'review' | 'applying' | 'applied' | 'error'
 
 export interface WeeklyPlanState {
   status: WeeklyPlanStatus
@@ -36,6 +36,7 @@ export interface WeeklyPlanState {
   weekEnd: Date
   interviewAnswers: InterviewAnswers | null
   skipFeedback: boolean
+  dynamicQuestions: DynamicQuestion[]
 }
 
 export interface TaskSummary {
@@ -52,12 +53,20 @@ export interface TaskSummary {
   completedSubtaskCount?: number
 }
 
+export interface DynamicQuestion {
+  id: string
+  question: string
+  answer: string
+}
+
 export interface InterviewAnswers {
   topPriority?: string
   daysOff?: string[]
   heavyMeetingDays?: string[]
   maxTasksPerDay?: number
   preferredWorkStyle?: 'frontload' | 'balanced' | 'backload'
+  personalContext?: string
+  dynamicAnswers?: DynamicQuestion[]
 }
 
 export interface BehavioralContext {
@@ -333,7 +342,7 @@ CRITICAL RULES:
 
 Return ONLY valid JSON. Keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning, taskReasons.
 Each day key = array of task ID strings. "reasoning" = 2-3 sentences explaining your overall distribution strategy considering the user's work patterns and project priorities.
-"taskReasons" = object mapping task ID to a contextual reason (max 15 words) explaining why THIS day makes sense for THIS task based on the user's workflow (e.g. {"abc123": "Complex task on your peak productivity day, after finishing related work", "def456": "Quick errand before Wed deadline, light day for errands"}).`
+"taskReasons" = object mapping task ID to a contextual reason (max 20 words) explaining why THIS day is the best fit for THIS task. Reference the user's personal context, work patterns, batching preferences, or energy levels. Be specific — mention the actual reason, not generic metadata. Bad: "High-priority home task". Good: "Tuesday errand day — batch with grocery shopping per your preference".`
 
   if (interview) {
     const extras: string[] = []
@@ -378,7 +387,7 @@ Each day key = array of task ID strings. "reasoning" = 2-3 sentences explaining 
   return base
 }
 
-function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, weekEnd: Date, behavioral?: BehavioralContext): string {
+function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, weekEnd: Date, behavioral?: BehavioralContext, interview?: InterviewAnswers): string {
   const today = formatDate(new Date())
   const weekEndStr = formatDate(weekEnd)
 
@@ -400,6 +409,22 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
   const overdueCount = enriched.filter(t => t.urgencyCategory === 'OVERDUE').length
   const inProgressCount = enriched.filter(t => t.urgencyCategory === 'IN_PROGRESS').length
   const dueThisWeekCount = enriched.filter(t => t.urgencyCategory === 'DUE_THIS_WEEK').length
+
+  let personalSection = ''
+  if (interview?.personalContext) {
+    personalSection = `\nAbout the user (their own words):\n"${interview.personalContext}"\n`
+  }
+
+  let dynamicQASection = ''
+  if (interview?.dynamicAnswers && interview.dynamicAnswers.length > 0) {
+    const qaLines = interview.dynamicAnswers
+      .filter(qa => qa.answer.trim())
+      .map(qa => `Q: ${qa.question}\nA: ${qa.answer}`)
+      .join('\n\n')
+    if (qaLines) {
+      dynamicQASection = `\nUser's scheduling preferences (from interview):\n${qaLines}\n`
+    }
+  }
 
   let behavioralSection = ''
   if (behavioral) {
@@ -434,11 +459,11 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
   return `Today: ${today}
 Week: ${formatDate(weekStart)} to ${weekEndStr}
 Total tasks: ${enriched.length} (${overdueCount} overdue, ${inProgressCount} in-progress, ${dueThisWeekCount} due this week)
-${behavioralSection}
+${personalSection}${behavioralSection}${dynamicQASection}
 Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
-Distribute these ${enriched.length} tasks EVENLY across the week. Return ONLY JSON with monday..sunday, unscheduled, reasoning.`
+Distribute these ${enriched.length} tasks EVENLY across the week. Return ONLY JSON with monday..sunday, unscheduled, reasoning, taskReasons.`
 }
 
 // ============================================================================
@@ -794,7 +819,7 @@ export function useWeeklyPlanAI() {
 
       const messages: ChatMessage[] = [
         { role: 'system', content: buildDistributionSystemPrompt(interview, profile, enriched.length) },
-        { role: 'user', content: buildDistributionUserPrompt(enriched, weekStart, weekEnd, behavioral) },
+        { role: 'user', content: buildDistributionUserPrompt(enriched, weekStart, weekEnd, behavioral, interview) },
       ]
 
       console.log(`[WeeklyPlanAI] Step 1: Requesting distribution from LLM`)
@@ -899,9 +924,95 @@ export function useWeeklyPlanAI() {
     }
   }
 
+  async function generateDynamicQuestions(
+    tasks: TaskSummary[],
+    personalContext?: string,
+    interview?: InterviewAnswers,
+  ): Promise<string[]> {
+    try {
+      const router = await getSharedRouter()
+      const routerOpts = getRouterOptions()
+
+      // Build a compact task summary for the LLM
+      const taskSummary = tasks.slice(0, 20).map(t => {
+        const parts = [t.title]
+        if (t.projectName) parts.push(`[${t.projectName}]`)
+        if (t.priority) parts.push(`(${t.priority})`)
+        if (t.status === 'in_progress') parts.push('— in progress')
+        if (t.dueDate) parts.push(`due: ${t.dueDate}`)
+        return parts.join(' ')
+      }).join('\n')
+
+      let contextSection = ''
+      if (personalContext) {
+        contextSection = `\nUser's self-description:\n"${personalContext}"\n`
+      }
+
+      let interviewSection = ''
+      if (interview) {
+        const parts: string[] = []
+        if (interview.topPriority) parts.push(`Top priority: ${interview.topPriority}`)
+        if (interview.daysOff?.length) parts.push(`Days off: ${interview.daysOff.join(', ')}`)
+        if (interview.preferredWorkStyle) parts.push(`Work style: ${interview.preferredWorkStyle}`)
+        if (parts.length > 0) interviewSection = `\nUser preferences:\n${parts.join('\n')}\n`
+      }
+
+      const messages: ChatMessage[] = [
+        {
+          role: 'system',
+          content: `You are a weekly planning assistant. Based on the user's task list, ask 2-3 SHORT, specific questions that will help you schedule their tasks better.
+
+Focus on:
+- Task batching preferences (e.g. "I see errands and pet tasks — do you batch these?")
+- Energy/timing preferences for specific task TYPES in their list (e.g. "When do you prefer creative work like writing?")
+- Prioritization trade-offs when there are competing priorities
+
+Rules:
+- Ask EXACTLY 2-3 questions, no more
+- Each question must reference SPECIFIC tasks or projects from their list
+- Keep questions short (1-2 sentences max)
+- Don't ask about things already answered in their preferences
+- Don't ask generic scheduling questions — those are already covered
+- Return ONLY a JSON array of question strings, nothing else
+
+Example output:
+["I see pet care and grocery shopping — do you prefer batching errands on one day?", "You have blog writing and video editing — when in the week do you do your best creative work?"]`
+        },
+        {
+          role: 'user',
+          content: `${contextSection}${interviewSection}
+This week's tasks:
+${taskSummary}`
+        }
+      ]
+
+      const response = await router.chat(messages, {
+        ...routerOpts,
+        temperature: 0.5,
+        timeout: 15000,
+        maxTokens: 300,
+      })
+
+      // Parse response — expect JSON array of strings
+      let content = response.content.trim()
+      const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+      if (codeBlockMatch) content = codeBlockMatch[1].trim()
+
+      const parsed = JSON.parse(content)
+      if (Array.isArray(parsed) && parsed.every((q: unknown) => typeof q === 'string')) {
+        return parsed.slice(0, 3) // Cap at 3
+      }
+      return []
+    } catch (err) {
+      console.warn('[WeeklyPlanAI] Dynamic question generation failed:', err)
+      return []
+    }
+  }
+
   return {
     generatePlan,
     regenerateDay,
+    generateDynamicQuestions,
     isGenerating,
   }
 }

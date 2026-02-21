@@ -129,6 +129,18 @@
             </button>
           </div>
         </div>
+
+        <!-- Q6: Personal context ("About Me") -->
+        <div class="interview-card">
+          <label class="interview-label">Tell the AI about yourself</label>
+          <p class="interview-hint">Your routine, energy patterns, scheduling preferences. Saved for future weeks.</p>
+          <textarea
+            v-model="interviewForm.personalContext"
+            class="interview-textarea"
+            rows="3"
+            placeholder="e.g. I'm a morning person. Tuesday is my errand day. I prefer creative work (writing, video) early in the week when I have more energy..."
+          />
+        </div>
       </div>
 
       <!-- TASK-1399: Model selector in interview state -->
@@ -153,11 +165,54 @@
 
       <div class="interview-actions">
         <button class="wp-btn wp-btn-primary" @click="onSubmitInterview">
-          <Sparkles :size="16" />
-          Generate Plan
+          <ArrowRight :size="16" />
+          Next
         </button>
         <button class="wp-btn wp-btn-ghost" @click="onCancelInterview">
           Cancel
+        </button>
+      </div>
+    </div>
+
+    <!-- AI Questions State -->
+    <div v-else-if="state.status === 'ai-questions'" class="wp-centered wp-interview">
+      <div class="interview-header">
+        <Sparkles :size="28" class="wp-title-icon ai-pulse" />
+        <h2 class="wp-title">
+          {{ state.dynamicQuestions.length === 0 ? 'AI is thinking...' : 'A few more questions' }}
+        </h2>
+      </div>
+
+      <!-- Loading state while questions are being generated -->
+      <div v-if="state.dynamicQuestions.length === 0" class="ai-questions-loading">
+        <Loader2 :size="24" class="wp-spinner" />
+        <p class="wp-loading-text">Analyzing your tasks...</p>
+      </div>
+
+      <!-- Questions from AI -->
+      <div v-else class="interview-cards">
+        <div v-for="dq in state.dynamicQuestions" :key="dq.id" class="interview-card ai-question-card">
+          <label class="interview-label ai-question-label">
+            <Sparkles :size="14" class="ai-question-icon" />
+            {{ dq.question }}
+          </label>
+          <input
+            v-model="dq.answer"
+            type="text"
+            class="interview-input"
+            placeholder="Your answer..."
+            @keydown.enter.prevent="onSubmitDynamicAnswers"
+          >
+        </div>
+      </div>
+
+      <div v-if="state.dynamicQuestions.length > 0" class="interview-actions">
+        <button class="wp-btn wp-btn-primary" @click="onSubmitDynamicAnswers">
+          <Sparkles :size="16" />
+          Generate Plan
+        </button>
+        <button class="wp-btn wp-btn-ghost" @click="onSkipDynamicQuestions">
+          Skip
         </button>
       </div>
     </div>
@@ -358,6 +413,7 @@ const {
   state, taskMap, generatePlan, moveTask, applyPlan,
   removeTaskFromPlan, snoozeTask, changePriority,
   regenerateDay, startInterview, submitInterview,
+  generateAIQuestions, submitDynamicAnswers,
   eligibleTaskCount, reset,
   lastWeekAccuracy, avgAccuracy, setSkipFeedback,
 } = useWeeklyPlan()
@@ -428,6 +484,7 @@ const interviewForm = reactive({
   heavyMeetingDays: [] as string[],
   maxTasksPerDay: 5,
   preferredWorkStyle: 'balanced' as 'frontload' | 'balanced' | 'backload',
+  personalContext: '',
 })
 
 // TASK-1321: Dynamic day options based on weekStartsOn setting
@@ -493,6 +550,11 @@ function onSubmitInterview() {
   if (interviewForm.heavyMeetingDays.length > 0) answers.heavyMeetingDays = [...interviewForm.heavyMeetingDays]
   if (interviewForm.maxTasksPerDay) answers.maxTasksPerDay = interviewForm.maxTasksPerDay
   answers.preferredWorkStyle = interviewForm.preferredWorkStyle
+  if (interviewForm.personalContext.trim()) {
+    answers.personalContext = interviewForm.personalContext.trim()
+    // Persist personal context to localStorage
+    localStorage.setItem('flowstate-personal-context', interviewForm.personalContext.trim())
+  }
 
   // FEATURE-1317: Persist preferences to work profile
   savePreferences({
@@ -503,7 +565,17 @@ function onSubmitInterview() {
     preferredWorkStyle: interviewForm.preferredWorkStyle,
   }).catch(err => console.warn('[WeeklyPlan] Failed to save preferences:', err))
 
-  submitInterview(answers)
+  // Go to AI questions phase instead of directly generating
+  generateAIQuestions(answers)
+}
+
+function onSubmitDynamicAnswers() {
+  submitDynamicAnswers([...state.value.dynamicQuestions])
+}
+
+function onSkipDynamicQuestions() {
+  // Skip questions and generate plan with just the interview answers
+  generatePlan(state.value.interviewAnswers || undefined)
 }
 
 function onCancelInterview() {
@@ -523,6 +595,10 @@ onMounted(async () => {
     if (savedProfile.maxTasksPerDay) interviewForm.maxTasksPerDay = savedProfile.maxTasksPerDay
     if (savedProfile.preferredWorkStyle) interviewForm.preferredWorkStyle = savedProfile.preferredWorkStyle
   }
+
+  // Load personal context from localStorage
+  const savedContext = localStorage.getItem('flowstate-personal-context')
+  if (savedContext) interviewForm.personalContext = savedContext
 })
 
 onUnmounted(() => {
@@ -585,7 +661,7 @@ function handleKeydown(event: KeyboardEvent) {
   }
   if (event.key === 'Escape') {
     event.preventDefault()
-    if (state.value.status === 'interview') {
+    if (state.value.status === 'interview' || state.value.status === 'ai-questions') {
       onCancelInterview()
     } else {
       onCancel()
@@ -1058,6 +1134,70 @@ function handleKeydown(event: KeyboardEvent) {
 .wp-error-actions {
   display: flex;
   gap: var(--space-3);
+}
+
+/* Personal context textarea + AI questions */
+.interview-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0;
+  opacity: 0.8;
+}
+
+.interview-textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  transition: border-color var(--duration-fast);
+}
+
+.interview-textarea:focus {
+  border-color: var(--brand-primary);
+}
+
+.interview-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.ai-questions-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) 0;
+}
+
+.ai-question-card {
+  border-color: var(--brand-primary-20, rgba(78, 205, 196, 0.2));
+}
+
+.ai-question-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-question-icon {
+  color: var(--brand-primary);
+  flex-shrink: 0;
+}
+
+.ai-pulse {
+  animation: aiPulse 2s ease-in-out infinite;
+}
+
+@keyframes aiPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; color: var(--brand-primary); }
 }
 
 /* Responsive */

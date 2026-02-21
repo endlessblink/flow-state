@@ -12,7 +12,8 @@ import { positionManager } from '@/services/canvas/PositionManager'
 
 
 export interface TaskActionsDeps {
-    syncNodes: (tasks?: Task[]) => void
+    syncNodes: (tasks?: Task[], options?: { force?: boolean }) => void
+    syncEdges?: (options?: { force?: boolean }) => void
     batchSyncNodes?: (priority?: 'high' | 'normal' | 'low') => void
     closeCanvasContextMenu: () => void
     screenToFlowCoordinate: (position: { x: number; y: number }) => { x: number; y: number }
@@ -281,7 +282,11 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             }
 
             canvasStore.setSelectedNodes([])
-            if (deps.batchSyncNodes) deps.batchSyncNodes('high')
+            // BUG-1371: Force sync to bypass drag-settling guard.
+            // Without force, nodes with edges stay visible after deletion.
+            await nextTick()
+            deps.syncNodes(undefined, { force: true })
+            if (deps.syncEdges) deps.syncEdges({ force: true })
             deps.closeCanvasContextMenu()
         } catch (error) {
             console.error('[ASYNC-ERROR] deleteSelectedTasks failed', error)
@@ -324,7 +329,9 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             bulkDeleteItems.value = []
             isBulkDeleteModalOpen.value = false
             await nextTick()
-            deps.syncNodes()
+            // BUG-1371: Force sync to bypass drag-settling guard.
+            deps.syncNodes(undefined, { force: true })
+            if (deps.syncEdges) deps.syncEdges({ force: true })
         } catch (error) {
             console.error('[ASYNC-ERROR] confirmBulkDelete failed', error)
         }

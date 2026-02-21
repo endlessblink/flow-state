@@ -137,7 +137,8 @@ export const useTaskStore = defineStore('tasks', () => {
     activeDurationFilter, // TASK-1215: Persist duration filter
     isLoadingFromDatabase, manualOperationInProgress, isLoadingFilters,
     syncInProgress,
-    runAllTaskMigrations
+    runAllTaskMigrations,
+    isPendingWrite  // BUG-1206: Pass pending write checker for smart merge protection
   )
   const { saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, loadFromDatabase, loadPersistedFilters, persistFilters, importTasks } = persistence
 

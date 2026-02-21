@@ -38,3 +38,8 @@ bd sync               # Sync with git
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 
+## Project Skills
+
+- `next` skill: `.agents/skills/next/SKILL.md`
+  - Trigger: `/next`
+  - Behavior: launches `npm run next:interactive -- choose`

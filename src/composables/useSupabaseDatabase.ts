@@ -1693,11 +1693,21 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
                         setTimeout(() => {
                             retryCount++
-                            setupSubscription().then(() => {
+                            setupSubscription().then(async () => {
                                 // BUG-1207 FIX: Apply same cooldown as visibility/online handlers
                                 // to prevent recovery from clobbering recent user edits
                                 const timeSinceInteraction = Date.now() - lastUserInteraction
                                 if (onRecovery && timeSinceInteraction > RECOVERY_COOLDOWN_MS) {
+                                    // BUG-1206 FIX (Fix 3): Check modal state before reconnect recovery too
+                                    try {
+                                        const { useCanvasModalsStore } = await import('@/stores/canvas/modals')
+                                        const canvasModals = useCanvasModalsStore()
+                                        if (canvasModals.isEditModalOpen || canvasModals.isBatchEditModalOpen) {
+                                            console.log('📡 [REALTIME] Skipping reconnect recovery - edit modal is open (BUG-1206)')
+                                            return
+                                        }
+                                    } catch { /* continue */ }
+
                                     console.log('📡 [REALTIME] Triggering recovery data reload...')
                                     // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
                                     invalidateCache.all()
@@ -1732,6 +1742,20 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         // VISIBILITY RESUME (Handle Background Tab Throttling)
         const onVisibilityChange = async () => {
             if (document.visibilityState === 'visible') {
+                // BUG-1206 FIX (Fix 3): Skip recovery entirely while any edit modal is open.
+                // In Tauri/WebKitGTK, modal close/open can trigger visibility changes.
+                // Running loadFromDatabase() while a modal is open risks clobbering the edit in progress.
+                try {
+                    const { useCanvasModalsStore } = await import('@/stores/canvas/modals')
+                    const canvasModals = useCanvasModalsStore()
+                    if (canvasModals.isEditModalOpen || canvasModals.isBatchEditModalOpen) {
+                        console.log('👀 [REALTIME] Skipping visibility recovery - edit modal is open (BUG-1206)')
+                        return
+                    }
+                } catch {
+                    // Canvas modals store not available — continue with normal flow
+                }
+
                 console.log('👀 [REALTIME] App visible - checking connection health...')
 
                 // BUG-1182 FIX: Proactively refresh auth token on wake-up.
@@ -1782,12 +1806,22 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
         // ONLINE RESUME
         // BUG-1209: Add same cooldown as visibility handler to prevent clobbering in-flight drags
-        const onOnline = () => {
+        const onOnline = async () => {
             console.log('🌐 [REALTIME] Online event detected. Reconnecting...')
             retryCount = 0
             setupSubscription()
             const timeSinceInteraction = Date.now() - lastUserInteraction
             if (onRecovery && timeSinceInteraction > RECOVERY_COOLDOWN_MS) {
+                // BUG-1206 FIX (Fix 3): Check modal state before online recovery too
+                try {
+                    const { useCanvasModalsStore } = await import('@/stores/canvas/modals')
+                    const canvasModals = useCanvasModalsStore()
+                    if (canvasModals.isEditModalOpen || canvasModals.isBatchEditModalOpen) {
+                        console.log('🌐 [REALTIME] Skipping online recovery - edit modal is open (BUG-1206)')
+                        return
+                    }
+                } catch { /* continue */ }
+
                 // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
                 invalidateCache.all()
                 onRecovery()

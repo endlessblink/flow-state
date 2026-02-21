@@ -23,7 +23,8 @@ export function useTaskPersistence(
     _manualOperationInProgress: Ref<boolean>,
     isLoadingFilters: Ref<boolean>,
     _syncInProgress: Ref<boolean>,
-    _runAllTaskMigrations: () => void
+    _runAllTaskMigrations: () => void,
+    isPendingWrite: (taskId: string) => boolean
 ) {
     const projectStore = useProjectStore()
 
@@ -291,6 +292,16 @@ export function useTaskPersistence(
             for (const localTask of _rawTasks.value) {
                 const remoteTask = remoteMap.get(localTask.id)
 
+                // BUG-1206 FIX (Fix 1): Always preserve tasks with active pending writes.
+                // A pending write means the user just edited this task and the save is still
+                // in-flight or the echo hasn't been confirmed. Never accept remote data for these.
+                if (remoteTask && isPendingWrite(localTask.id)) {
+                    console.log(`🛡️ [SMART-MERGE] Preserving pending-write task "${localTask.title?.slice(0, 15)}" (BUG-1206)`)
+                    mergedTasks.push(localTask)
+                    remoteMap.delete(localTask.id)
+                    continue
+                }
+
                 if (remoteTask) {
                     // CONFLICT: Task exists in both. Check who wins.
                     // Win Condition 1: Local is explicitly newer (updatedAt > remote)
@@ -306,7 +317,12 @@ export function useTaskPersistence(
                     // 5s was too narrow — tasks edited 6s ago could be clobbered by recovery reload
                     // if the sync queue hadn't processed them yet (VPS latency can be 20s+).
                     const now = Date.now()
-                    const isVeryRecent = (now - localTime) < 30000
+                    // BUG-1206 FIX (Fix 2): Extend isVeryRecent for Tauri.
+                    // Tauri/WebKitGTK fires aggressive visibility changes that trigger loadFromDatabase()
+                    // more frequently than browsers. 30s is too narrow — align with PENDING_WRITE_TIMEOUT_MS.
+                    const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
+                    const RECENT_THRESHOLD_MS = isTauri ? 120_000 : 30_000
+                    const isVeryRecent = (now - localTime) < RECENT_THRESHOLD_MS
 
                     if (localVer > remoteVer || localTime > remoteTime || isVeryRecent) {
                         console.log(`🛡️ [SMART-MERGE] Preserving local task "${localTask.title?.slice(0, 15)}" (Local v${localVer} > Remote v${remoteVer} || Local newer)`)

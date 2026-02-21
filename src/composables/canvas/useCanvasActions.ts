@@ -14,7 +14,8 @@ import { useCanvasTaskActions } from './useCanvasTaskActions'
 interface ActionsDeps {
     viewport: Ref<{ x: number; y: number; zoom: number }>
     batchedSyncNodes: (priority?: 'high' | 'normal' | 'low') => void
-    syncNodes: () => void
+    syncNodes: (tasks?: any[], options?: { force?: boolean }) => void
+    syncEdges?: (options?: { force?: boolean }) => void
     closeCanvasContextMenu: () => void
     closeEdgeContextMenu: () => void
     closeNodeContextMenu: () => void
@@ -61,6 +62,7 @@ export function useCanvasActions(
     // Tasks
     const taskActions = useCanvasTaskActions({
         syncNodes: deps.syncNodes,
+        syncEdges: deps.syncEdges,
         batchSyncNodes: deps.batchedSyncNodes,
         closeCanvasContextMenu: deps.closeCanvasContextMenu,
         screenToFlowCoordinate: (pos) => screenToFlowCoordinate(pos),

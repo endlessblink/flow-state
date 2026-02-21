@@ -253,11 +253,6 @@ export function useTaskOperations(
         // That was causing every task with a dueDate to appear on the calendar at 9:00 AM.
         // Calendar visibility requires explicit user action: drag to calendar, set time in modal, "Start Now".
         if (updates.dueDate !== undefined && updates.instances === undefined) {
-            // Only mark as not-in-inbox if the task has a due date
-            const newDueDate = updates.dueDate
-            if (newDueDate && newDueDate !== 'null') {
-                synced.isInInbox = false
-            }
             // dueDate cleared — DON'T clear instances (user may have scheduled independently)
         }
 
@@ -357,10 +352,6 @@ export function useTaskOperations(
             // BUG-045 FIX: Removed auto-archive behavior
             // Tasks now stay on canvas when marked as done (no position/inbox changes)
 
-            // Canvas logic
-            if (updates.canvasPosition && !task.canvasPosition) {
-                updates.isInInbox = false
-            }
 
             // BUG-FIX: Explicitly unlock position if removing from canvas
             // This prevents sync from restoring the position due to "Preserve local canvasPosition" logic
@@ -830,9 +821,7 @@ export function useTaskOperations(
 
         const updates: Partial<Task> = {
             scheduledDate: schedule.scheduledDate,
-            scheduledTime: schedule.scheduledTime,
-            // When scheduling on calendar, it's no longer in inbox
-            isInInbox: false
+            scheduledTime: schedule.scheduledTime
         }
 
         // If instance exists, update it too
@@ -932,7 +921,7 @@ export function useTaskOperations(
         }
 
         if (dateColumn === 'noDate') {
-            await updateTask(taskId, { instances: [], dueDate: undefined, isInInbox: false })
+            await updateTask(taskId, { instances: [], dueDate: undefined })
             return
         }
 
@@ -950,7 +939,7 @@ export function useTaskOperations(
         // If task has a past dueDate, clear it so it doesn't stay stuck in Overdue column
         const hasOverdueDueDate = task.dueDate && task.dueDate < todayStr
 
-        const updates: Partial<Task> = { instances: [], isInInbox: false }
+        const updates: Partial<Task> = { instances: [] }
         if (target) {
             const targetDateStr = formatDateKey(target)
             updates.instances = [{

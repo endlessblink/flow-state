@@ -172,8 +172,7 @@ export function useCanvasEvents(syncNodes?: (tasks?: any[], options?: { force?: 
             // AWAIT the task update before calling syncNodes
             // Otherwise syncNodes runs with stale task data
             await taskStore.updateTask(taskId, {
-                canvasPosition: { x, y },
-                isInInbox: false
+                canvasPosition: { x, y }
             })
 
             // BUG-1361: Pass force:true to bypass the drag-settling guard.

@@ -299,8 +299,7 @@ const confirmMoveToSection = async (sectionId: string) => {
     }
 
     const updates: any = {
-      canvasPosition: newPosition,
-      isInInbox: false
+      canvasPosition: newPosition
     }
 
     // Apply "Assign on Drop" settings

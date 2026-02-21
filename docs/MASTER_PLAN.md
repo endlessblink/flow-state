@@ -2799,9 +2799,9 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 - [x] Quick Task selector UI component (`QuickTaskDropdown.vue` in timer area) ✅
 - [x] Pin/unpin action in task context menu (`MoreSubmenu.vue` + `TaskContextMenu.vue`) ✅
 - [x] Quick-add input for pinning new tasks directly from dropdown ✅
-- [ ] Respect active filters (project, status, priority)
+- [x] Respect active filters (project, status, priority) ✅
 
-**Progress (2026-02-08):** Main app implementation complete — `pinned_tasks` table with RLS applied to local + VPS, composable, dropdown component with quick-add, context menu pin action. Content cutoff fix applied. Needs version bump + deploy. KDE widget integration still pending (separate repo).
+**Progress (2026-02-21):** Main app implementation complete — all subtasks done including active filter awareness (project + status filters respected in both pinned and frequent sections). KDE widget integration still pending (separate repo).
 
 *KDE Widget (pomoflow-kde repo):*
 - [ ] ComboBox dropdown querying `pinned_tasks` via PostgREST REST API

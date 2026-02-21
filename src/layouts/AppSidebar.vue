@@ -1035,7 +1035,7 @@ defineExpose({
   width: 100%; /* Fill the grid column */
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.03) 0%,
+    var(--glass-bg-subtle) 0%,
     rgba(255, 255, 255, 0.01) 100%
   );
   backdrop-filter: blur(40px) saturate(200%);
@@ -1249,7 +1249,7 @@ defineExpose({
 }
 
 .quick-task-input.voice-active {
-  border-color: var(--danger-text, #ef4444);
+  border-color: var(--danger-text);
   box-shadow: 0 0 0 2px var(--danger-bg-medium);
 }
 
@@ -1289,7 +1289,7 @@ defineExpose({
 }
 
 .mic-btn.recording {
-  background: var(--danger-text, #ef4444);
+  background: var(--danger-text);
   color: white;
   animation: pulse-recording 1.5s ease-in-out infinite;
 }
@@ -1325,7 +1325,7 @@ defineExpose({
 .wave-bar {
   width: 2px;
   height: 4px;
-  background: var(--danger-text, #ef4444);
+  background: var(--danger-text);
   border-radius: 1px;
   animation: wave 0.8s ease-in-out infinite;
 }
@@ -1364,7 +1364,7 @@ defineExpose({
 
 .voice-cancel:hover {
   background: var(--glass-bg);
-  color: var(--danger-text, #ef4444);
+  color: var(--danger-text);
 }
 
 /* Voice error message */
@@ -1374,7 +1374,7 @@ defineExpose({
   background: var(--danger-bg-subtle);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
-  color: var(--danger-text, #ef4444);
+  color: var(--danger-text);
 }
 
 .task-management-section {
@@ -1545,7 +1545,7 @@ defineExpose({
   margin: 0 16px var(--space-4) 16px;
   padding: var(--space-2);
   background: var(--brand-primary);
-  color: #0a0a0a;
+  color: var(--text-primary);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
@@ -1721,7 +1721,7 @@ defineExpose({
 }
 
 .quick-task-textarea.voice-active {
-  border-color: var(--danger-text, #ef4444);
+  border-color: var(--danger-text);
   box-shadow: 0 0 0 2px var(--danger-bg-medium);
 }
 

@@ -152,7 +152,7 @@ const handleDrop = (event: DragEvent) => {
 
 <style scoped>
 .project-drop-zone {
-  border: 2px dashed #ddd;
+  border: 2px dashed var(--border-medium);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   margin: var(--space-2) 0;
@@ -174,13 +174,13 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .project-drop-zone.is-invalid {
-  border-color: #ff6b6b;
+  border-color: var(--danger-text);
   background: var(--color-danger-bg-light);
 }
 
 .project-drop-zone.is-nested {
   margin-left: var(--space-5);
-  border-color: #96CEB4;
+  border-color: var(--brand-primary);
 }
 
 .project-drop-zone.is-nested.is-valid {
@@ -192,7 +192,7 @@ const handleDrop = (event: DragEvent) => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  color: #666;
+  color: var(--text-muted);
 }
 
 .project-drop-zone.is-valid .drop-zone-content {
@@ -200,7 +200,7 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .project-drop-zone.is-invalid .drop-zone-content {
-  color: #ff6b6b;
+  color: var(--danger-text);
 }
 
 .drop-zone-icon {
@@ -223,7 +223,7 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .drop-zone-title.invalid {
-  color: #ff6b6b;
+  color: var(--danger-text);
 }
 
 .drop-zone-subtitle {

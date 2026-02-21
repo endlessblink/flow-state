@@ -757,6 +757,45 @@
       flex-shrink: 0;
     }
 
+    .task-copy-btn {
+      position: absolute;
+      left: 12px;
+      bottom: 8px;
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--border-medium);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      z-index: 2;
+    }
+
+    .task-copy-btn:hover {
+      color: var(--brand-primary);
+      border-color: var(--brand-primary);
+      background: var(--brand-subtle);
+    }
+
+    .task-copy-btn.copied {
+      color: var(--color-success);
+      border-color: var(--color-success);
+    }
+
+    .task-copy-btn svg {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
     .task-card:hover {
       background: var(--surface-elevated);
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
@@ -5203,6 +5242,8 @@
       check: '<svg class="inline-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'
     };
 
+    const COPY_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
     /**
      * Comprehensive task status parser
      * Recognizes various status patterns from task headers
@@ -7519,8 +7560,76 @@
         cards.forEach(card => column.appendChild(card));
       });
 
+      ensureTaskCopyButtons();
+
       // Re-initialize drag and drop listeners for new cards
       initDragAndDrop();
+    }
+
+    function ensureTaskCopyButtons() {
+      const cards = document.querySelectorAll('.task-card');
+      cards.forEach(card => {
+        if (card.querySelector('.task-copy-btn')) return;
+
+        const taskId = card.querySelector('.task-id')?.textContent?.trim();
+        const taskTitle = card.querySelector('.task-title')?.textContent?.trim();
+        if (!taskId || !taskTitle) return;
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'task-copy-btn';
+        copyBtn.title = 'Copy task ID and title';
+        copyBtn.setAttribute('aria-label', `Copy ${taskId} and task title`);
+        copyBtn.dataset.taskId = taskId;
+        copyBtn.dataset.taskTitle = taskTitle;
+        copyBtn.innerHTML = COPY_ICON_SVG;
+        copyBtn.addEventListener('click', (event) => copyTaskSummary(copyBtn, event));
+        card.appendChild(copyBtn);
+      });
+    }
+
+    async function copyTaskSummary(buttonEl, event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const taskId = buttonEl?.dataset?.taskId || '';
+      const taskTitle = buttonEl?.dataset?.taskTitle || '';
+      const textToCopy = `${taskId} ${taskTitle}`.trim();
+      if (!textToCopy) return;
+
+      try {
+        await writeTextToClipboard(textToCopy);
+        buttonEl.classList.add('copied');
+        setTimeout(() => buttonEl.classList.remove('copied'), 900);
+        showToast(`✓ Copied ${taskId}`, 'success');
+      } catch (error) {
+        console.error('Copy failed:', error);
+        showToast('✗ Failed to copy task info', 'error');
+      }
+    }
+
+    function writeTextToClipboard(text) {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        return navigator.clipboard.writeText(text);
+      }
+
+      return new Promise((resolve, reject) => {
+        try {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(textarea);
+          if (ok) resolve();
+          else reject(new Error('document.execCommand("copy") failed'));
+        } catch (error) {
+          reject(error);
+        }
+      });
     }
 
     // Priority comparison (P1/HIGH > P2/MEDIUM > P3/LOW)

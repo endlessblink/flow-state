@@ -716,13 +716,13 @@ const startLongBreak = async () => {
 }
 
 .ai-toggle-btn:hover {
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary);
   background: var(--state-hover-bg);
 }
 
 .ai-toggle-btn.ai-active {
-  color: var(--accent-primary, #8b5cf6);
-  background: var(--accent-bg, rgba(139, 92, 246, 0.15));
+  color: var(--accent-primary);
+  background: var(--accent-bg);
 }
 
 .ai-badge {
@@ -751,7 +751,7 @@ const startLongBreak = async () => {
 .control-divider {
   width: 1px;
   height: 24px;
-  background: var(--border-subtle, rgba(255, 255, 255, 0.1));
+  background: var(--border-subtle);
   margin: 0 var(--space-2);
 }
 

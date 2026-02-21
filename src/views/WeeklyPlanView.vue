@@ -290,10 +290,16 @@
         <span class="wp-feedback-label">Record this week for learning</span>
       </label>
 
-      <button class="wp-btn wp-btn-primary" @click="router.push('/')">
-        <ArrowRight :size="18" />
-        Go to Canvas
-      </button>
+      <div class="wp-applied-actions">
+        <button class="wp-btn wp-btn-primary" @click="router.push('/')">
+          <ArrowRight :size="18" />
+          Go to Canvas
+        </button>
+        <button class="wp-btn wp-btn-ghost" @click="reset(); generatePlan()">
+          <RefreshCw :size="16" />
+          Plan Again
+        </button>
+      </div>
     </div>
 
     <!-- Error State -->
@@ -1042,6 +1048,11 @@ function handleKeydown(event: KeyboardEvent) {
   font-size: var(--text-base);
   color: var(--color-danger);
   margin: 0;
+}
+
+.wp-applied-actions {
+  display: flex;
+  gap: var(--space-3);
 }
 
 .wp-error-actions {

@@ -767,7 +767,7 @@ export function useWeeklyPlanAI() {
       const enriched = enrichTasksForPlanning(tasks, weekEnd)
       console.log(`[WeeklyPlanAI] Step 0: Enriched ${enriched.length} tasks (${enriched.filter(t => t.language === 'he').length} Hebrew, ${enriched.filter(t => t.urgencyCategory === 'OVERDUE').length} overdue)`)
 
-      const router = getSharedRouter()
+      const router = await getSharedRouter()
       const routerOpts = getRouterOptions()
 
       const validTaskIds = new Set(tasks.map(t => t.id))
@@ -836,7 +836,7 @@ export function useWeeklyPlanAI() {
     isGenerating.value = true
 
     try {
-      const router = getSharedRouter()
+      const router = await getSharedRouter()
       const routerOpts = getRouterOptions()
 
       const messages: ChatMessage[] = [

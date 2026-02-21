@@ -8,19 +8,23 @@
 
 ## Active Bugs (P0-P1)
 
-### TASK-1365: Focus button doesn't do anything (📋 PLANNED)
+### ~~TASK-1365~~: Focus button doesn't do anything (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-19)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: The focus button in the UI has no effect when clicked — nothing happens visually or functionally.
 
+**Fix**: Changed `/focus/:taskId` route in `src/router/index.ts` from `meta: { requiresAuth: true }` to `meta: { requiresAuth: false }` to match all other routes. The guard was silently redirecting unauthenticated users before FocusView could load.
+
 ---
 
-### BUG-1354: Timer start time doesn't reset when reactivating pomodoro on same task (🔄 IN PROGRESS)
+### ~~BUG-1354~~: Timer start time doesn't reset when reactivating pomodoro on same task (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-17)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: When reactivating the play/pomodoro timer several times on the same task, the start time doesn't change — the session just keeps getting longer instead of resetting. Each re-press of play should start a fresh timer session.
+
+**Fix**: Modified `startTimer` guard in `timer.ts:549-559` — when re-pressing play on the same running task, it now calls `clearExistingSession()` and falls through to create a fresh session with new `startTime` and reset `remainingTime`, instead of returning early as a no-op.
 
 ---
 
@@ -2220,15 +2224,17 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ## Active Tasks (IN PROGRESS)
 
-### TASK-1334: Make list view fully scrollable with table layout (🔄 IN PROGRESS)
+### ~~TASK-1334~~: Make list view fully scrollable with table layout (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (Started: 2026-02-16)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: The Board's list view needs to be fully scrollable with tasks displayed in a table layout.
 
 **Scope**:
 1. Make the list view fully scrollable (no truncation or hidden overflow)
 2. Display tasks in a proper table view with columns
+
+**Fix**: TaskTable.vue scroll containment — `.task-table` changed to `overflow: hidden` + `height: 100%`, added `min-height: 0` to `.table-body`/`.table-body-virtual`. BoardView gets `.list-mode` class with `overflow-x: auto` for horizontal scroll on narrow viewports.
 
 ---
 
@@ -2574,7 +2580,7 @@ npm run tasks:bugs     # Filter by BUG type
 - [ ] **TASK-1331**: Weekly plan AI quality — plan responses feel shallow, don't leverage behavioral context well. Improve planning prompt chain.
 - [ ] **TASK-1332**: Add Kimi K2 to Groq model dropdown — ✅ DONE (added `moonshotai/kimi-k2-instruct-0905`)
 - [ ] **TASK-1363**: AI chat shows done tasks + raw UUIDs + unstructured verbose responses — filter done from list/search by default, hide IDs from AI output, tighten response formatting rules
-- [ ] **BUG-1374**: AI Chat 4-bug combo — (1) English input → Hebrew response (task data context overrides language), (2) Hebrew text renders LTR (Step indicator breaks `dir="auto"`), (3) fluffy generic advice instead of concise analysis, (4) wrong tasks returned (`list_tasks` has no date/priority filter)
+- [ ] **BUG-1374**: AI Chat 4-bug combo — (1) English input → Hebrew response (task data context overrides language), (2) Hebrew text renders LTR (Step indicator breaks `dir="auto"`), (3) fluffy generic advice instead of concise analysis, (4) wrong tasks returned (`list_tasks` has no date/priority filter). 🔄 Prompt-level fixes applied 2026-02-21 (strengthened language rule, tightened response prompts, added dueDate/sortBy to tools, unicode-bidi:plaintext CSS). Full programmatic fix: Phase 6 pipeline.
 
 **Key Files**:
 - `src/components/ai/ChatMessage.vue` — message rendering, task list items, inline actions, RTL CSS
@@ -2591,6 +2597,42 @@ npm run tasks:bugs     # Filter by BUG type
 - `src/utils/dateUtils.ts` — date formatting utilities
 
 **Competitors Analyzed**: Linear AI, ClickUp Brain, Notion AI 3.0, Todoist Ramble, Motion, GitHub Copilot Chat, Cursor IDE
+
+#### Phase 6: Programmatic Guardrails Pipeline — ChatGPT-Level Reliability (P1 — PLANNED)
+
+**Goal:** Move AI chat from prompt-engineering-dependent to code-enforced reliability. Pre/post-processing pipeline between user input and LLM output ensures language, quality, and formatting are enforced deterministically — not hoped for via prompts.
+
+**Architecture:**
+```
+User Input → [Pre-Processing] → LLM (ReAct loop) → [Post-Processing] → Render
+```
+
+**New file structure:** `src/services/ai/pipeline/` (types, preprocess, postprocess, languageDetector, contextOptimizer, responseValidator)
+
+**Infrastructure:**
+- [ ] **TASK-1375**: Pipeline orchestrator + types — create `src/services/ai/pipeline/` with `types.ts` (PreProcessResult, PostProcessResult, Guardrail, PipelineConfig interfaces) and `index.ts` (createPipeline, runPreProcess, runPostProcess). Pure function composition, fully testable.
+- [ ] **TASK-1376**: Language detector — `languageDetector.ts` with `detectLanguage(text)` using Unicode range analysis (extract from qualityAssessment.ts:468-483) and `detectLanguageMismatch(input, output)`. No LLM calls — deterministic.
+- [ ] **TASK-1377**: Context optimizer — `contextOptimizer.ts` to replace inline task injection in `buildSystemPrompt` (lines 360-418). Separate Hebrew titles from English metadata labels, character budget (3000 chars), date-relative filtering (today/overdue first). **Highest single ROI fix** — reduces language contamination at the source.
+
+**Post-Processing Guardrails:**
+- [ ] **TASK-1378**: Response validator — consolidate ALL response cleanup from 3 locations (stripToolBlocks, stripTextToolCalls, ChatMessage.vue renderedContent regex) into one `responseValidator.ts`. Add UUID stripping, reuse `runRuleChecks` from qualityAssessment.ts.
+- [ ] **TASK-1379**: Language enforcer — post-processing guardrail using TASK-1376's `detectLanguageMismatch()`. V1: detect + flag in metadata (`languageMismatch: true`) for UI indicator. V2 (future): re-call LLM for translation.
+- [ ] **TASK-1380**: Response length enforcer — cap responses by intent (greetings: 200 chars, tool summaries: 500 chars, analytical: warn on >2000 chars without structure).
+
+**Integration:**
+- [ ] **TASK-1381**: Wire pre-processing into useAIChat — call `runPreProcess()` before ReAct loop, replace inline `buildSystemPrompt` task injection with contextOptimizer, pass `PreProcessResult` through loop. Depends: TASK-1375, 1376, 1377.
+- [ ] **TASK-1382**: Wire post-processing into useAIChat — run `runPostProcess()` after ReAct loop (before `completeStreamingMessage`), replace inline cleanup. Depends: TASK-1378, 1379, 1380, 1381.
+- [ ] **TASK-1383**: Simplify ChatMessage.vue renderedContent — remove redundant regex stripping (now handled by pipeline). `renderedContent` becomes: sanitize + markdown render only. Depends: TASK-1382.
+- [ ] **TASK-1384**: Unit tests for pipeline — test each guardrail independently (language detection, response cleaning, context optimization, pipeline composition). Depends: TASK-1375–1380.
+
+**Dependency graph:**
+```
+Wave 1: TASK-1375, TASK-1376 (no deps)
+Wave 2: TASK-1377, TASK-1378, TASK-1379, TASK-1380 (depend on Wave 1)
+Wave 3: TASK-1381, TASK-1384 (depend on Wave 2)
+Wave 4: TASK-1382 (depends on Wave 3)
+Wave 5: TASK-1383 (cleanup, depends on Wave 4)
+```
 
 ---
 
@@ -3034,13 +3076,19 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 
 ---
 
-### FEATURE-1048: Canvas Auto-Rotating Day Groups (📋 PLANNED)
+### ~~FEATURE-1048~~: Canvas Auto-Rotating Day Groups (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-21)
 
 User-triggered rotation of day groups (Mon-Sun) with midnight notification.
 
-**Key Files**: `src/composables/canvas/useDayGroupRotation.ts` (CREATE), `src/components/canvas/DayRotationBanner.vue` (CREATE)
+**Implementation**:
+- ~~`src/composables/canvas/useDayGroupRotation.ts`~~ ✅ Created — midnight watcher via `useDateTransition`, updates `dueDate` (metadata only, geometry invariant respected)
+- ~~`src/components/canvas/DayRotationBanner.vue`~~ ✅ Created — glass morphism banner with dismiss
+- ~~`src/views/CanvasView.vue`~~ ✅ Wired composable + banner
+- ~~`src/i18n/locales/en.json` + `he.json`~~ ✅ Added `canvas.dayRotation.updated` keys
+
+**Key Files**: `src/composables/canvas/useDayGroupRotation.ts`, `src/components/canvas/DayRotationBanner.vue`
 
 ---
 
@@ -3428,10 +3476,21 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
 | ~~**BUG-1367**~~ | **P2** | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20) |
 | ~~**BUG-1368**~~ | **P2** | ✅ **? keyboard shortcut broken on Hebrew layout — event.key check fails on non-Latin layouts, added event.code fallback** (✅ DONE 2026-02-20) |
+| **BUG-1374** | **P1** | **🔄 AI Chat 4-bug combo — Hebrew response on English input, LTR for Hebrew text, fluffy advice, wrong tasks returned** |
+| **TASK-1375** | **P1** | **📋 AI Pipeline orchestrator + types — create pipeline/ with guardrail interfaces and function composition** |
+| **TASK-1376** | **P1** | **📋 Language detector — deterministic Unicode-range detection, detectLanguageMismatch()** |
+| **TASK-1377** | **P1** | **📋 Context optimizer — separate task titles from metadata, character budget, date-relative filtering** |
+| **TASK-1378** | **P1** | **📋 Response validator — consolidate 3 cleanup locations into one, add UUID stripping, reuse qualityAssessment rules** |
+| **TASK-1379** | **P1** | **📋 Language enforcer — post-processing guardrail, detect mismatch + flag in metadata** |
+| **TASK-1380** | **P1** | **📋 Response length enforcer — cap by intent (greetings, tool summaries, analytical)** |
+| **TASK-1381** | **P1** | **📋 Wire pre-processing into useAIChat — call runPreProcess before ReAct, use contextOptimizer** |
+| **TASK-1382** | **P1** | **📋 Wire post-processing into useAIChat — runPostProcess after ReAct, replace inline cleanup** |
+| **TASK-1383** | **P1** | **📋 Simplify ChatMessage.vue renderedContent — remove redundant regex, pipeline handles cleanup** |
+| **TASK-1384** | **P1** | **📋 Unit tests for pipeline — guardrails, language detection, context optimization, composition** |
 | **TASK-1372** | **P1** | **📋 Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** |
-| **BUG-1371** | **P0** | **📋 Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** |
-| **BUG-1370** | **P0** | **📋 Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** |
-| **BUG-1369** | **P0** | **📋 Canvas tasks persist after marked done — completed tasks remain visible on canvas instead of being removed** |
+| ~~**BUG-1371**~~ | **P0** | ✅ **Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** (✅ DONE 2026-02-20) |
+| ~~**BUG-1370**~~ | **P0** | ✅ **Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** (✅ DONE 2026-02-20) |
+| ~~**BUG-1369**~~ | **P0** | ✅ **Canvas tasks persist after marked done — completed tasks remain visible on canvas instead of being removed** (✅ DONE 2026-02-21) |
 | **TASK-1345** | **P2** | **🔄 Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering** |
 | **TASK-1344** | **P2** | **🔄 AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync — code done, pending migration deploy + user test** |
 | **FEATURE-1345** | **P2** | **🔄 Capacitor Android App — wrap Vue PWA for Play Store distribution (config + build scaffold done)** |

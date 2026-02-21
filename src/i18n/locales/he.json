@@ -220,7 +220,8 @@
     "group_status": "סטטוס",
     "group_priority": "עדיפות",
     "group_due_date": "תאריך יעד",
-    "group_category": "קטגוריה"
+    "group_category": "קטגוריה",
+    "group_list": "רשימה"
   },
   "quick_sort": {
     "title": "מיון מהיר",
@@ -315,6 +316,11 @@
     "task_added": "משימה נוספה!",
     "listening": "מקשיב...",
     "no_tasks_found": "לא נמצאו משימות"
+  },
+  "canvas": {
+    "dayRotation": {
+      "updated": "{count} קבוצות ימים עודכנו להיום"
+    }
   },
   "auth": {
     "displayName": "שם תצוגה",

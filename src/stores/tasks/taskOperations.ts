@@ -475,6 +475,15 @@ export function useTaskOperations(
                 updatedAt: new Date()
             }
 
+            // BUG-1369: Force canvas sync when task is auto-archived off canvas.
+            // triggerCanvasSync() increments canvasUiSyncRequest which tells the canvas
+            // orchestrator to re-evaluate visible nodes. Without this, the node stays
+            // rendered even after canvasPosition is cleared, because updateTask() never
+            // called triggerCanvasSync() — only createTask() did.
+            if (task.canvasPosition && syncedUpdates.canvasPosition === undefined && 'canvasPosition' in syncedUpdates) {
+                triggerCanvasSync('user:context-menu')
+            }
+
             // TASK-1177: Queue for offline-first sync FIRST
             // This ensures the update persists in IndexedDB even if network fails
             const updatedTask = _rawTasks.value[index]

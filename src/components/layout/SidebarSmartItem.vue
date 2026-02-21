@@ -359,7 +359,7 @@ const calculateTargetDate = (): string => {
   -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
-  color: #0a0a0a;
+  color: var(--text-primary);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   white-space: nowrap;

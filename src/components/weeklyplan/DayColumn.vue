@@ -184,11 +184,11 @@ function isTaskOverdue(taskId: string): boolean {
 
 .day-column.is-today {
   border-left: 3px solid var(--brand-primary);
-  background: rgba(78, 205, 196, 0.03);
+  background: var(--glass-bg-subtle);
 }
 
 .day-column.is-overloaded {
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: var(--danger-border-medium);
 }
 
 .column-header {
@@ -262,13 +262,13 @@ function isTaskOverdue(taskId: string): boolean {
   flex: 1;
   height: 3px;
   background: var(--glass-bg-medium);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 
 .capacity-bar-fill {
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transition: width var(--duration-normal) var(--spring-smooth);
 }
 

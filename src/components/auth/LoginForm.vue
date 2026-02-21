@@ -349,7 +349,7 @@ async function handleSubmit() {
   position: relative;
   display: inline-block;
   padding: 0 var(--space-4);
-  background: #1c1a30; /* Matches modal bg - purple-tinted */
+  background: var(--overlay-component-bg); /* Matches modal bg */
   color: var(--text-muted);
   font-size: var(--text-xs);
   font-weight: 600;

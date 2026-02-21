@@ -446,7 +446,7 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .color-preset.active {
   border-color: white;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 2px var(--glass-border);
   transform: scale(1.1);
 }
 

@@ -372,7 +372,7 @@ const getCelebrationStyle = (index: number) => {
       rgba(var(--color-slate-50), 0.4) 0%,
       transparent 70%
     );
-  border-color: rgba(22, 163, 74, 1);
+  border-color: var(--color-success);
   box-shadow:
     0 var(--space-5) var(--space-16) var(--success-shadow),
     0 0 0 var(--space-0_5) rgba(var(--color-success), 0.9),

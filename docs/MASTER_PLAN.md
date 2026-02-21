@@ -2617,9 +2617,9 @@ npm run tasks:bugs     # Filter by BUG type
 
 ---
 
-### TASK-1248: Design Token Audit & Cleanup (🔄 IN PROGRESS)
+### ~~TASK-1248~~: Design Token Audit & Cleanup (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-15)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: ~3,000 hardcoded CSS values across ~130 `.vue` and `.css` files bypass the design token system (`src/assets/design-tokens.css`). This undermines theme consistency, makes future theming/light-mode impossible, and creates maintenance debt.
 
@@ -2644,7 +2644,7 @@ npm run tasks:bugs     # Filter by BUG type
 | 4 | Canvas nodes (`canvas/`) | ~10 | ~200 | Medium — ✅ Complete |
 | 5 | Task components (`tasks/`) | ~10 | ~150 | Medium — ✅ Complete |
 | 6 | CSS files (non-token) | 7 | ~300 | Lower — ✅ Complete |
-| 7 | Remaining (base, calendar, layout, etc.) | ~60 | ~200 | Lowest — mostly clean |
+| 7 | Remaining (base, calendar, layout, etc.) | ~60 | ~200 | Lowest — ✅ Complete |
 
 **Rules**:
 - Replace hardcoded values with existing tokens from `design-tokens.css`
@@ -3424,7 +3424,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
-| TASK-1248 | P1 | 📋 Design token audit & cleanup — replace ~3,000 hardcoded CSS values with design tokens (7 phases) |
+| ~~TASK-1248~~ | P1 | ✅ Design token audit & cleanup — all 7 phases complete, ~100+ violations fixed across 30 files |
 | **TASK-1249** | **P0** | **🔄 Codebase Hygiene Audit — placeholders, hardcoded values, debug leftovers (33 sub-tasks)** |
 | ~~TASK-1250~~ | P0 | ✅ Fix API key storage — removed plaintext localStorage (proxy handles keys server-side) |
 | ~~TASK-1251~~ | P0 | ✅ Fix direct API calls bypassing proxy (AIChatPanel.vue) |

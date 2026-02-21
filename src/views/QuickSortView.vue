@@ -1263,7 +1263,7 @@ const currentTaskProject = computed(() => {
 
 .stat-card.streak-card {
   background: var(--orange-bg-light);
-  border-color: rgba(251, 146, 60, 0.3);
+  border-color: var(--danger-border-medium);
 }
 
 .stat-value {

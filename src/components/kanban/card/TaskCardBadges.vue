@@ -106,12 +106,12 @@ const dueDateClass = computed(() => {
 
 /* Due date highlighting */
 .due-today {
-  color: var(--color-work, #22c55e);
+  color: var(--color-work);
   font-weight: 500;
 }
 
 .due-overdue {
-  color: var(--color-priority-high, #ef4444);
+  color: var(--color-priority-high);
   font-weight: 500;
 }
 

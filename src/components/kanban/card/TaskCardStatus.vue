@@ -64,17 +64,17 @@ const priorityTooltip = computed(() => {
 
 /* Priority colors */
 .priority-high {
-  background: var(--color-priority-high, #ef4444);
+  background: var(--color-priority-high);
   box-shadow: var(--danger-glow-sm);
 }
 
 .priority-medium {
-  background: var(--color-priority-medium, #f59e0b);
+  background: var(--color-priority-medium);
   box-shadow: var(--warning-glow-sm);
 }
 
 .priority-low {
-  background: var(--color-priority-low, #3b82f6);
+  background: var(--color-priority-low);
   box-shadow: var(--blue-glow-sm);
 }
 

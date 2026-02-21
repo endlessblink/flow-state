@@ -515,8 +515,8 @@ kbd {
   border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-sm);
   box-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 2px 0 var(--glass-bg-heavy),
+    inset 0 1px 0 var(--glass-border);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }

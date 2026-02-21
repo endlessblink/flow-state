@@ -68,6 +68,13 @@ defineEmits<{
   padding: 0;
 }
 
+/* Focus state with visible indicator */
+.base-icon-button:focus-visible {
+  outline: var(--space-0_5) solid var(--brand-primary);
+  outline-offset: var(--space-0_5);
+  box-shadow: 0 0 0 var(--space-1) var(--brand-primary-subtle);
+}
+
 .base-icon-button:hover:not(:disabled) {
   background: var(--glass-bg-medium);
   border-color: var(--glass-border-hover);

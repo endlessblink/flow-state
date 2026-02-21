@@ -5,22 +5,45 @@
 
     <!-- Desktop View -->
     <template v-else>
-      <!-- View Controls -->
-      <ViewControls
-        v-model:sort-by="sortBy"
-        v-model:group-by="groupBy"
-        :filter-status="filterStatus"
-        :hide-done-tasks="hideDoneTasks"
-        @update:filter-status="taskStore.setActiveStatusFilter"
-        @update:hide-done-tasks="handleToggleDoneTasksFromControl"
-        @expand-all="handleExpandAll"
-        @collapse-all="handleCollapseAll"
-      />
+      <!-- View Controls + Mode Toggle -->
+      <div class="controls-row">
+        <ViewControls
+          v-model:sort-by="sortBy"
+          v-model:group-by="groupBy"
+          :filter-status="filterStatus"
+          :hide-done-tasks="hideDoneTasks"
+          @update:filter-status="taskStore.setActiveStatusFilter"
+          @update:hide-done-tasks="handleToggleDoneTasksFromControl"
+          @expand-all="handleExpandAll"
+          @collapse-all="handleCollapseAll"
+        />
+
+        <!-- View Mode Toggle -->
+        <div class="view-mode-toggle" role="group" aria-label="View mode">
+          <button
+            class="mode-btn"
+            :class="{ 'mode-btn--active': catalogViewMode === 'list' }"
+            title="List view"
+            @click="catalogViewMode = 'list'"
+          >
+            <List :size="16" />
+          </button>
+          <button
+            class="mode-btn"
+            :class="{ 'mode-btn--active': catalogViewMode === 'table' }"
+            title="Table view"
+            @click="catalogViewMode = 'table'"
+          >
+            <Table2 :size="16" />
+          </button>
+        </div>
+      </div>
 
       <!-- Content Area -->
       <div class="tasks-container">
         <!-- List Mode -->
         <TaskList
+          v-if="catalogViewMode === 'list'"
           ref="taskListRef"
           :tasks="sortedTasks"
           :groups="groupedTasks"
@@ -36,6 +59,20 @@
           @batch-edit="handleBatchEdit"
           @delete-selected="handleDeleteSelected"
           @add-task-to-group="handleAddTaskToGroup"
+        />
+
+        <!-- Table Mode -->
+        <TaskTable
+          v-else
+          :tasks="sortedTasks"
+          :groups="groupedTasks"
+          :group-by="groupBy"
+          density="comfortable"
+          @select="handleSelectTask"
+          @start-timer="handleStartTimer"
+          @edit="handleEditTask"
+          @context-menu="handleContextMenu"
+          @update-task="handleUpdateTask"
         />
       </div>
     </template>
@@ -85,8 +122,10 @@ import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useMobileDetection } from '@/composables/useMobileDetection'
+import { List, Table2 } from 'lucide-vue-next'
 import ViewControls from '@/components/layout/ViewControls.vue'
 import TaskList from '@/components/tasks/TaskList.vue'
+import TaskTable from '@/components/tasks/TaskTable.vue'
 import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
@@ -112,6 +151,8 @@ const { hideDoneTasks } = storeToRefs(taskStore)
 // View State (TASK-1215: Persist across restarts via Tauri store + localStorage)
 const sortBy = usePersistentRef<string>('flowstate:all-tasks-sort-by', 'dueDate')
 const groupBy = usePersistentRef<GroupByType>('flowstate:all-tasks-group-by', 'project')
+// FEATURE-1293: Catalog view mode toggle (list | table), persisted to localStorage
+const catalogViewMode = usePersistentRef<'list' | 'table'>('flowstate-catalog-view-mode', 'list')
 // Use global status filter directly from store (maintains reactivity)
 const filterStatus = computed(() => taskStore.activeStatusFilter || 'all')
 
@@ -520,6 +561,54 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+/* FEATURE-1293: Controls row — ViewControls + mode toggle side-by-side */
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* FEATURE-1293: View mode toggle pill */
+.view-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border-subtle);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  flex-shrink: 0;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+}
+
+.mode-btn:hover {
+  color: var(--text-primary);
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border);
+}
+
+.mode-btn--active {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: var(--glass-bg-medium);
 }
 
 .view-header {

@@ -569,12 +569,13 @@ onUnmounted(() => {
 .task-table {
   display: flex;
   flex-direction: column;
+  height: 100%;
   background: var(--glass-bg-light);
   backdrop-filter: var(--blur-regular);
   -webkit-backdrop-filter: var(--blur-regular);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  overflow: visible;
+  overflow: hidden;
   box-shadow: var(--shadow-2xl);
 }
 
@@ -594,6 +595,7 @@ onUnmounted(() => {
 /* Virtual scroll body container */
 .table-body-virtual {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   position: relative;
   scrollbar-width: thin;
@@ -608,6 +610,7 @@ onUnmounted(() => {
 /* Non-virtual scroll body container */
 .table-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;

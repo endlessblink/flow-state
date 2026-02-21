@@ -55,7 +55,7 @@
     </Transition>
 
     <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
-    <div class="kanban-scroll-container scroll-container">
+    <div class="kanban-scroll-container scroll-container" :class="{ 'list-mode': currentViewType === 'list' }">
       <div class="kanban-board" @click="closeContextMenu">
         <!-- FEATURE-1336: Category view renders ONE swimlane with project columns -->
         <template v-if="currentViewType === 'category'">
@@ -72,6 +72,21 @@
             @delete-task="handleDeleteTask"
             @move-task="handleMoveTask"
             @add-task="handleAddTask"
+            @context-menu="handleContextMenu"
+          />
+        </template>
+
+        <!-- TASK-1334: List view renders TaskTable directly -->
+        <template v-else-if="currentViewType === 'list'">
+          <TaskTable
+            :tasks="allFilteredTasks"
+            :groups="listViewGroups"
+            group-by="project"
+            :density="currentDensity === 'ultrathin' ? 'compact' : currentDensity"
+            @select="handleSelectTask"
+            @start-timer="handleStartTimer"
+            @edit="handleEditTask"
+            @update-task="handleListUpdateTask"
             @context-menu="handleContextMenu"
           />
         </template>
@@ -144,6 +159,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
+import type { Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
 import { provideProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
@@ -158,11 +174,12 @@ import { useBoardState } from '@/composables/board/useBoardState'
 import './BoardView.css'
 
 import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
+import TaskTable from '@/components/tasks/TaskTable.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, ListTodo, FolderOpen } from 'lucide-vue-next'
+import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, ListTodo, FolderOpen, List } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
 
@@ -232,18 +249,45 @@ const currentDensity = computed(() => settingsStore.boardDensity)
 const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', false, 'board-show-filters')
 
 // View Type Switcher (priority, date, status, category) (TASK-1215: Tauri-aware persistence)
-const currentViewType = usePersistentRef<'priority' | 'date' | 'status' | 'category'>('flowstate:board-view-type', 'priority', 'board-view-type')
+const currentViewType = usePersistentRef<'priority' | 'date' | 'status' | 'category' | 'list'>('flowstate:board-view-type', 'priority', 'board-view-type')
 const viewTypeOptions = computed(() => [
   { value: 'priority' as const, label: t('filters.group_priority'), icon: Flag },
   { value: 'date' as const, label: t('filters.group_due_date'), icon: Calendar },
   { value: 'status' as const, label: t('filters.group_status'), icon: ListTodo },
-  { value: 'category' as const, label: t('filters.group_category'), icon: FolderOpen }
+  { value: 'category' as const, label: t('filters.group_category'), icon: FolderOpen },
+  { value: 'list' as const, label: t('filters.group_list'), icon: List }
 ])
 
 // FEATURE-1336: All tasks combined (not split by project) for category view
 const allFilteredTasks = computed(() => {
   return taskStore.filteredTasks.filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
 })
+
+// TASK-1334: Groups for list view (group by project)
+const listViewGroups = computed(() => {
+  const projectMap = new Map<string, { key: string; title: string; tasks: Task[]; parentTasks: Task[] }>()
+
+  for (const task of allFilteredTasks.value) {
+    const projectId = task.projectId || '__uncategorized__'
+    if (!projectMap.has(projectId)) {
+      const project = taskStore.projects.find((p: any) => p.id === projectId)
+      projectMap.set(projectId, {
+        key: projectId,
+        title: project?.name || 'Uncategorized',
+        tasks: [],
+        parentTasks: []
+      })
+    }
+    projectMap.get(projectId)!.tasks.push(task)
+  }
+
+  return Array.from(projectMap.values())
+})
+
+// TASK-1334: Handle inline task updates from list view
+const handleListUpdateTask = (taskId: string, updates: Partial<any>) => {
+  taskStore.updateTask(taskId, updates)
+}
 
 // Load saved settings on mount
 onMounted(() => {

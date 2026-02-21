@@ -362,6 +362,22 @@
   position: relative;
 }
 
+/* List mode: constrain properly so TaskTable scrolls inside the flex chain */
+.kanban-scroll-container.list-mode {
+  overflow-x: auto; /* Show horizontal scrollbar if table is wider than viewport */
+  overflow-y: hidden; /* TaskTable handles its own vertical scroll */
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+.kanban-scroll-container.list-mode .kanban-board {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-4) 0;
+  overflow: hidden;
+}
+
 /* KANBAN BOARD */
 .kanban-board {
   display: flex;

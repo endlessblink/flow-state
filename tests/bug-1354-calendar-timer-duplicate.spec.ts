@@ -248,11 +248,11 @@ test.describe('BUG-1354: Calendar Timer Duplicate/Move', () => {
     expect(posAfterSecond).not.toBeNull()
     expect(posAfterSecond!.top).toBeCloseTo(posAfterFirst!.top, 0)
 
-    // 10. Verify timer is still active with SAME session (not restarted)
+    // 10. Verify timer is active with a NEW session (BUG-1354: re-press restarts fresh)
     timerState = await getTimerState(page)
     expect(timerState?.isActive).toBe(true)
     expect(timerState?.taskId).toBe(taskId)
-    expect(timerState?.sessionId).toBe(firstSessionId)
+    expect(timerState?.sessionId).not.toBe(firstSessionId)
   })
 
   test('pressing play 3 times rapidly should never create duplicates', async ({ page }) => {
@@ -340,7 +340,7 @@ test.describe('BUG-1354: Calendar Timer Duplicate/Move', () => {
     expect(Math.abs(pos!.top - initialPos!.top)).toBeLessThan(15)
 
     // 8. Verify scheduledTime hasn't changed in the store
-    const instanceData = await page.evaluate(({ hour, minute }) => {
+    const instanceData = await page.evaluate(() => {
       const app = (document.querySelector('#app') as any)?.__vue_app__
       if (!app) return null
       const pinia = app.config.globalProperties.$pinia
@@ -352,7 +352,7 @@ test.describe('BUG-1354: Calendar Timer Duplicate/Move', () => {
         scheduledDate: task.instances[0].scheduledDate,
         duration: task.instances[0].duration
       }
-    }, { hour, minute })
+    })
 
     console.log('Instance data after interactions:', instanceData)
     const expectedTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
@@ -365,7 +365,7 @@ test.describe('BUG-1354: Calendar Timer Duplicate/Move', () => {
     const minute = now.getMinutes() < 30 ? 0 : 30
 
     // 1. Create task and start timer
-    const { taskId } = await createCalendarTask(page, TASK_TITLE, hour, minute, 60)
+    await createCalendarTask(page, TASK_TITLE, hour, minute, 60)
     await page.waitForTimeout(500)
 
     await page.evaluate((h) => {

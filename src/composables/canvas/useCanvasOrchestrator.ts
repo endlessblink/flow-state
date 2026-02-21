@@ -189,8 +189,9 @@ export function useCanvasOrchestrator() {
     // Edge sync: build edges from task.dependsOn arrays
     const recentlyRemovedEdges = ref(new Set<string>())
     const edgeSync = useCanvasEdgeSync({ recentlyRemovedEdges })
-    const syncEdges = () => {
-        if (!canAcceptRemoteUpdate.value) {
+    const syncEdges = (options?: { force?: boolean }) => {
+        // BUG-1371: Allow force bypass for user-initiated actions (e.g. node deletion)
+        if (!options?.force && !canAcceptRemoteUpdate.value) {
             return
         }
         edgeSync.syncEdges(tasksWithCanvasPosition.value)
@@ -219,6 +220,7 @@ export function useCanvasOrchestrator() {
         viewport,
         batchedSyncNodes: batchedSyncNodes,
         syncNodes: syncNodes,
+        syncEdges: syncEdges,
         closeCanvasContextMenu: events.closeCanvasContextMenu,
         closeEdgeContextMenu: events.closeEdgeContextMenu,
         closeNodeContextMenu: events.closeNodeContextMenu,

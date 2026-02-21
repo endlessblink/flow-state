@@ -223,7 +223,7 @@
         <span class="wp-theme-text">{{ state.weekTheme }}</span>
       </div>
 
-      <details v-if="state.reasoning" class="wp-reasoning-details">
+      <details v-if="state.reasoning" class="wp-reasoning-details" open>
         <summary class="wp-reasoning-summary">
           <CalendarDays :size="12" />
           AI reasoning

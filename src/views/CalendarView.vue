@@ -474,8 +474,7 @@ const _handleVueDraggableAdd = async (evt: SortableEvent) => {
         scheduledDate: dateStr,
         scheduledTime: timeStr,
         duration: task?.estimatedDuration || 60
-      }],
-      isInInbox: false
+      }]
     })
   }
 

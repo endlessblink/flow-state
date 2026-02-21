@@ -253,8 +253,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
                 estimatedDuration: calendarEvent.duration,
                 projectId: originalTask.projectId,
                 priority: originalTask.priority,
-                status: originalTask.status,
-                isInInbox: false
+                status: originalTask.status
               })
             }
           } else {
@@ -432,8 +431,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
       duration: task.estimatedDuration || 60
     }
     await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
-      instances: [newInstance],
-      isInInbox: false
+      instances: [newInstance]
     })
   }
 

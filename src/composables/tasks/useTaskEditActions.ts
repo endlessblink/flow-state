@@ -124,8 +124,6 @@ export function useTaskEditActions(
             }
         }
 
-        editedTask.value.isInInbox = false
-
         // Apply "Assign on Drop" settings
         if (section.assignOnDrop) {
             const settings = section.assignOnDrop

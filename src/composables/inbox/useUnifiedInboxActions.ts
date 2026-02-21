@@ -272,8 +272,7 @@ export function useUnifiedInboxActions(
             // Single atomic update - GEOMETRY WRITER
             await updateTaskWithUndo(taskId, {
                 canvasPosition,
-                parentId,
-                isInInbox: false
+                parentId
             })
 
             return { success: true, groupName: targetGroup?.name || 'Canvas' }

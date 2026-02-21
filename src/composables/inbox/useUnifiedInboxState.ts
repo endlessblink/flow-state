@@ -166,6 +166,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             if (task.status !== 'done') return false
             // Must not be soft deleted
             if (task._soft_deleted) return false
+            // Must be in inbox
+            if (!task.isInInbox) return false
             // Must be an inbox task (not on canvas/calendar)
             if (props.context === 'calendar') {
                 // BUG-1351: Match baseInboxTasks logic

@@ -119,8 +119,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
           : inst
       )
       await taskStore.updateTask(taskId, {
-        instances: updatedInstances,
-        isInInbox: false
+        instances: updatedInstances
       })
     } else {
       // BUG-1325: Create an explicit instance instead of using legacy scheduledDate fields.
@@ -132,8 +131,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
           scheduledDate: targetDate,
           scheduledTime: scheduledTime,
           duration: existingTask.estimatedDuration || 60
-        }],
-        isInInbox: false
+        }]
       })
     }
   }

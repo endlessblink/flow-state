@@ -563,8 +563,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
                 estimatedDuration: calendarEvent.duration,
                 projectId: originalTask.projectId,
                 priority: originalTask.priority,
-                status: originalTask.status,
-                isInInbox: false
+                status: originalTask.status
               })
             }
           } else {

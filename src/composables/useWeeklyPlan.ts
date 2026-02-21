@@ -3,7 +3,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useSettingsStore } from '@/stores/settings'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
-import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlanStatus, type TaskSummary, type InterviewAnswers, type BehavioralContext } from './useWeeklyPlanAI'
+import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlanStatus, type TaskSummary, type InterviewAnswers, type BehavioralContext, type DynamicQuestion } from './useWeeklyPlanAI'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useProjectStore } from '@/stores/projects'
 import type { MemoryObservation } from '@/utils/supabaseMappers'
@@ -120,6 +120,7 @@ function loadPlanFromStorage(_weekStartsOn: 0 | 1 = 0): WeeklyPlanState | null {
       weekEnd: new Date(stored.weekEnd),
       interviewAnswers: stored.interviewAnswers,
       skipFeedback: stored.skipFeedback ?? false,
+      dynamicQuestions: [],
     }
   } catch {
     localStorage.removeItem(STORAGE_KEY)
@@ -159,6 +160,7 @@ function getOrCreateState(weekStartsOn: 0 | 1 = 0): Ref<WeeklyPlanState> {
       weekEnd: getWeekEnd(weekStartsOn),
       interviewAnswers: null,
       skipFeedback: false,
+      dynamicQuestions: [],
     })
     _stateCreatedAt = now
   }
@@ -175,7 +177,7 @@ export function useWeeklyPlan() {
 
   const state = getOrCreateState(settings.weekStartsOn)
 
-  const { generatePlan: aiGeneratePlan, regenerateDay: aiRegenerateDay } = useWeeklyPlanAI()
+  const { generatePlan: aiGeneratePlan, regenerateDay: aiRegenerateDay, generateDynamicQuestions: aiGenerateDynamicQuestions } = useWeeklyPlanAI()
   const { loadProfile, reloadProfile, computeCapacityMetrics, recordWeeklyOutcome, generateObservationsFromWeeklyOutcome, profile: workProfile } = useWorkProfile()
 
   // --------------------------------------------------------------------------
@@ -438,6 +440,42 @@ export function useWeeklyPlan() {
     generatePlan(answers)
   }
 
+  async function generateAIQuestions(answers: InterviewAnswers) {
+    state.value.interviewAnswers = answers
+    state.value.status = 'ai-questions'
+    state.value.dynamicQuestions = []
+
+    try {
+      const tasks = getEligibleTasks()
+      const questions = await aiGenerateDynamicQuestions(tasks, answers.personalContext, answers)
+
+      if (questions.length === 0) {
+        // No questions generated — go straight to plan generation
+        generatePlan(answers)
+        return
+      }
+
+      state.value.dynamicQuestions = questions.map((q, i) => ({
+        id: `dq-${i}`,
+        question: q,
+        answer: '',
+      }))
+      // UI will now show the questions
+    } catch (err) {
+      console.warn('[WeeklyPlan] Dynamic question generation failed, proceeding to plan:', err)
+      generatePlan(answers)
+    }
+  }
+
+  function submitDynamicAnswers(answeredQuestions: DynamicQuestion[]) {
+    const updatedAnswers: InterviewAnswers = {
+      ...state.value.interviewAnswers!,
+      dynamicAnswers: answeredQuestions,
+    }
+    state.value.interviewAnswers = updatedAnswers
+    generatePlan(updatedAnswers)
+  }
+
   // --------------------------------------------------------------------------
   // Quick actions: remove, snooze, priority cycle
   // --------------------------------------------------------------------------
@@ -668,6 +706,7 @@ export function useWeeklyPlan() {
       weekEnd: getWeekEnd(settings.weekStartsOn),
       interviewAnswers: null,
       skipFeedback: false,
+      dynamicQuestions: [],
     }
     _stateCreatedAt = Date.now()
     clearPlanStorage()
@@ -687,6 +726,8 @@ export function useWeeklyPlan() {
     startInterview,
     skipInterview,
     submitInterview,
+    generateAIQuestions,
+    submitDynamicAnswers,
     applyPlan,
     reset,
     lastWeekAccuracy,

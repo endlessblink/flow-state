@@ -888,9 +888,9 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 
 ---
 
-### BUG-1206: Task Details Not Saved When Pressing Save in Canvas (👀 REVIEW)
+### ~~BUG-1206~~: Task Details Not Saved When Pressing Save in Canvas (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-21)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-21)
 
 **Problem**: After editing task details (description) in the canvas edit modal and pressing Save, data appears lost when re-opening the modal. Save itself works (data persists in Supabase after full refresh). Bug is Tauri-specific - does NOT reproduce in browser/PWA guest mode.
 
@@ -3354,7 +3354,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **FEATURE-1293** | **P2** | **🔄 Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
-| BUG-1206 | P0 | 👀 Task details not saved when pressing Save in canvas (3-layer fix: pending write guard + extended isVeryRecent + modal-aware recovery) |
+| ~~BUG-1206~~ | P0 | ✅ Task details not saved when pressing Save in canvas (3-layer fix: pending write guard + extended isVeryRecent + modal-aware recovery) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | ~~BUG-1212~~ | P0 | ✅ Sync queue CREATE retry causes "duplicate key" corruption |
 | BUG-1286 | P2 | 👀 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
@@ -3403,6 +3403,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
 | ~~**BUG-1367**~~ | **P2** | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20) |
 | ~~**BUG-1368**~~ | **P2** | ✅ **? keyboard shortcut broken on Hebrew layout — event.key check fails on non-Latin layouts, added event.code fallback** (✅ DONE 2026-02-20) |
+| **TASK-1372** | **P1** | **📋 Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** |
 | **BUG-1371** | **P0** | **📋 Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** |
 | **BUG-1370** | **P0** | **📋 Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** |
 | **BUG-1369** | **P0** | **📋 Canvas tasks persist after marked done — completed tasks remain visible on canvas instead of being removed** |

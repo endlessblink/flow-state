@@ -1,10 +1,37 @@
 import { test, expect } from '@playwright/test';
 
+async function dismissBlockingOverlays(page: import('@playwright/test').Page) {
+  const onboarding = page.locator('.onboarding-overlay')
+  if (await onboarding.isVisible({ timeout: 1500 }).catch(() => false)) {
+    const btn = page.locator('.onboarding-modal button').filter({ hasText: /Get Started|Start/i }).first()
+    if (await btn.isVisible().catch(() => false)) await btn.click({ force: true })
+  }
+
+  const aiWizard = page.locator('.wizard-overlay')
+  if (await aiWizard.isVisible({ timeout: 1500 }).catch(() => false)) {
+    const btn = page.locator('.wizard-overlay .close-btn').first()
+    if (await btn.isVisible().catch(() => false)) await btn.click({ force: true })
+  }
+}
+
 test.describe('FlowState Comprehensive E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('flowstate-onboarding-v2', JSON.stringify({
+        seen: true,
+        version: 2,
+        dismissedAt: new Date().toISOString(),
+      }))
+      localStorage.setItem('flowstate-welcome-seen', 'true')
+      localStorage.setItem('flowstate-settings-v2', JSON.stringify({
+        aiSetupComplete: true,
+        aiPreferredProvider: 'groq',
+      }))
+    })
     // Navigate to the application
-    await page.goto('http://localhost:5546');
+    await page.goto('/#/board');
     await page.waitForLoadState('networkidle');
+    await dismissBlockingOverlays(page)
   });
 
   test('Complete task lifecycle workflow', async ({ page }) => {
@@ -53,12 +80,13 @@ test.describe('FlowState Comprehensive E2E Tests', () => {
 
   test('View navigation and data consistency', async ({ page }) => {
     // Test navigation to different views
-    const views = ['/', '/canvas', '/calendar'];
+    const views = ['/#/board', '/#/canvas', '/#/calendar'];
 
     for (const viewPath of views) {
-      await page.goto(`http://localhost:5546${viewPath}`);
+      await page.goto(viewPath);
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(2000);
+      await dismissBlockingOverlays(page)
 
       // Check that application content loads
       const mainContent = page.locator('main, .main-content, [class*="view"], [class*="container"]');
@@ -73,7 +101,7 @@ test.describe('FlowState Comprehensive E2E Tests', () => {
 
   test('Canvas view functionality', async ({ page }) => {
     // Navigate to canvas view
-    await page.goto('http://localhost:5546/canvas');
+    await page.goto('/#/canvas');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -102,7 +130,7 @@ test.describe('FlowState Comprehensive E2E Tests', () => {
 
   test('Calendar view functionality', async ({ page }) => {
     // Navigate to calendar view
-    await page.goto('http://localhost:5546/#/calendar');
+    await page.goto('/#/calendar');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -141,7 +169,7 @@ test.describe('FlowState Comprehensive E2E Tests', () => {
     const taskTitle = `Cross-View Test Task ${Date.now()}`;
 
     // Try to create task in board view
-    await page.goto('http://localhost:5546');
+    await page.goto('/#/board');
     await page.waitForLoadState('networkidle');
 
     const taskInput = page.locator('input[placeholder*="task"], input[placeholder*="add"], .quick-task-input');
@@ -152,10 +180,10 @@ test.describe('FlowState Comprehensive E2E Tests', () => {
     }
 
     // Check if task appears in different views
-    const views = ['/canvas', '/calendar'];
+    const views = ['/#/canvas', '/#/calendar'];
 
     for (const viewPath of views) {
-      await page.goto(`http://localhost:5546${viewPath}`);
+      await page.goto(viewPath);
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(2000);
 
@@ -174,7 +202,7 @@ test.describe('FlowState Comprehensive E2E Tests', () => {
   test('Performance and loading', async ({ page }) => {
     // Measure page load time
     const startTime = Date.now();
-    await page.goto('http://localhost:5546');
+    await page.goto('/#/board');
     await page.waitForLoadState('networkidle');
     const loadTime = Date.now() - startTime;
 
@@ -187,11 +215,12 @@ test.describe('FlowState Comprehensive E2E Tests', () => {
     });
 
     // Navigate through views
-    const views = ['/', '/canvas', '/calendar'];
+    const views = ['/#/board', '/#/canvas', '/#/calendar'];
     for (const viewPath of views) {
-      await page.goto(`http://localhost:5546${viewPath}`);
+      await page.goto(viewPath);
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1000);
+      await dismissBlockingOverlays(page)
     }
 
     const finalMemory = await page.evaluate(() => {
@@ -210,7 +239,7 @@ test.describe('FlowState Comprehensive E2E Tests', () => {
 
   test('Error handling and edge cases', async ({ page }) => {
     // Test navigation to non-existent routes
-    await page.goto('http://localhost:5546/non-existent-route');
+    await page.goto('/#/non-existent-route');
     await page.waitForLoadState('networkidle');
 
     // Should handle gracefully (either show 404 or redirect)
@@ -218,16 +247,16 @@ test.describe('FlowState Comprehensive E2E Tests', () => {
     expect(stillApp).toBeTruthy();
 
     // Test rapid view switching
-    const views = ['/', '/canvas', '/calendar'];
+    const views = ['/#/board', '/#/canvas', '/#/calendar'];
     for (let i = 0; i < 3; i++) {
       for (const viewPath of views) {
-        await page.goto(`http://localhost:5546${viewPath}`);
+        await page.goto(viewPath);
         await page.waitForTimeout(100);
       }
     }
 
     // Should still be functional after rapid switching
-    await page.goto('http://localhost:5546');
+    await page.goto('/#/board');
     await page.waitForLoadState('networkidle');
 
     const timerElement = page.locator('.timer-container');

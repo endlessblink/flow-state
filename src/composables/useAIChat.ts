@@ -39,6 +39,8 @@ import { useAgentChains } from './useAgentChains'
 import { optimizeTaskContext, buildTaskStats } from '@/services/ai/pipeline/contextOptimizer'
 import { detectLanguage, detectLanguageMismatch } from '@/services/ai/pipeline/languageDetector'
 import { cleanResponse } from '@/services/ai/pipeline/responseValidator'
+import { digestToolResults } from '@/services/ai/pipeline/preDigestedReasoning'
+import { detectFluff, extractTaskTitlesFromResults } from '@/services/ai/pipeline/fluffDetector'
 import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 
 // ============================================================================
@@ -895,16 +897,11 @@ export function useAIChat() {
             content: fullContent || '',
           })
 
-          // Add tool results as a user message so the AI can reason about them
+          // TASK-1388: Pre-digested reasoning — compute analysis in code, LLM formats naturally
           const toolResultsSummary = toolResults
-            .map(r => {
-              const base = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
-              if (r.data) {
-                // For weekly plan, include the full reasoning but cap data
-                const dataStr = JSON.stringify(r.data)
-                return `${base}\nData: ${dataStr.slice(0, 2000)}`
-              }
-              return base
+            .map((r, i) => {
+              const toolName = immediateTools[i]?.tool || 'unknown'
+              return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`)
             })
             .join('\n\n')
 
@@ -1015,15 +1012,59 @@ export function useAIChat() {
         )
       }
 
-      // TASK-1382: Post-processing pipeline — clean response, check language, enforce length
+      // TASK-1382: Post-processing pipeline — clean, check fluff, enforce length, check language
       const lastMsg = store.messages[store.messages.length - 1]
       if (lastMsg && lastMsg.isStreaming) {
-        // Run pipeline: response validator (strips tools/UUIDs/artifacts) + length enforcer
         const hadToolCalls = stepCount > 1 || (lastMsg.metadata as Record<string, unknown>)?.toolResults !== undefined
         let cleaned = cleanResponse(lastMsg.content || '')
 
+        // TASK-1391: Fluff detection + retry (max 1 retry to avoid latency)
+        if (hadToolCalls && !abortController.signal.aborted) {
+          const taskTitles = extractTaskTitlesFromResults(
+            ((lastMsg.metadata as Record<string, unknown>)?.toolResults as Array<{ data?: unknown }>) || []
+          )
+          const fluffResult = detectFluff(cleaned, taskTitles, hadToolCalls)
+
+          if (fluffResult.shouldRetry) {
+            console.warn(`[Pipeline:FluffDetector] Score ${fluffResult.score.toFixed(2)} — retrying. Flags: ${fluffResult.flags.join(', ')}`)
+
+            // One retry with explicit feedback about what was wrong
+            try {
+              const retryPrompt = `Your previous response was too generic. Issues: ${fluffResult.flags.join('; ')}.\n\nRewrite your response. You MUST:\n- Reference specific task names from the results above (quote them)\n- Include specific numbers (days overdue, subtask counts, time estimates)\n- NO generic advice whatsoever\n- Be direct and actionable in 2-4 sentences`
+
+              conversationMessages.push({ role: 'assistant', content: cleaned })
+              conversationMessages.push({ role: 'user', content: retryPrompt })
+
+              let retryContent = ''
+              for await (const chunk of router.chatStream(conversationMessages, {
+                taskType,
+                systemPrompt: options.systemPrompt,
+                forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+                model: selectedModel.value || undefined,
+              })) {
+                if (abortController.signal.aborted) break
+                retryContent += chunk.content
+              }
+
+              if (retryContent.trim()) {
+                const retryCleaned = cleanResponse(retryContent)
+                const retryFluff = detectFluff(retryCleaned, taskTitles, true)
+                // Use retry only if it's actually better
+                if (retryFluff.score > fluffResult.score) {
+                  cleaned = retryCleaned
+                  console.log(`[Pipeline:FluffDetector] Retry improved score: ${fluffResult.score.toFixed(2)} → ${retryFluff.score.toFixed(2)}`)
+                } else {
+                  console.log(`[Pipeline:FluffDetector] Retry not better (${retryFluff.score.toFixed(2)}), keeping original`)
+                }
+              }
+            } catch (retryErr) {
+              console.warn('[Pipeline:FluffDetector] Retry failed:', retryErr)
+              // Keep original response
+            }
+          }
+        }
+
         // Length enforcement by intent
-        // Tool call responses get 800 chars (enough for brief analysis with bullet points)
         const lengthLimit = hadToolCalls ? 800 : (preProcess.intent === 'greeting' ? 200 : 2000)
         if (cleaned.length > lengthLimit) {
           const hasStructure = /^[-*•]|\n[-*•]|^#{1,3}\s/m.test(cleaned)

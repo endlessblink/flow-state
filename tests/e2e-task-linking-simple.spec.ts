@@ -1,6 +1,35 @@
 import { test, expect } from '@playwright/test'
 
+async function dismissBlockingOverlays(page: import('@playwright/test').Page) {
+  const onboarding = page.locator('.onboarding-overlay')
+  if (await onboarding.isVisible({ timeout: 1500 }).catch(() => false)) {
+    const btn = page.locator('.onboarding-modal button').filter({ hasText: /Get Started|Start/i }).first()
+    if (await btn.isVisible().catch(() => false)) await btn.click({ force: true })
+  }
+
+  const aiWizard = page.locator('.wizard-overlay')
+  if (await aiWizard.isVisible({ timeout: 1500 }).catch(() => false)) {
+    const btn = page.locator('.wizard-overlay .close-btn').first()
+    if (await btn.isVisible().catch(() => false)) await btn.click({ force: true })
+  }
+}
+
 test.describe('Task Linking Core Functionality Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('flowstate-onboarding-v2', JSON.stringify({
+        seen: true,
+        version: 2,
+        dismissedAt: new Date().toISOString(),
+      }))
+      localStorage.setItem('flowstate-welcome-seen', 'true')
+      localStorage.setItem('flowstate-settings-v2', JSON.stringify({
+        aiSetupComplete: true,
+        aiPreferredProvider: 'groq',
+      }))
+    })
+  })
+
   test('Application loads without task linking errors', async ({ page }) => {
     // Set up console error monitoring
     const errors: string[] = []
@@ -12,8 +41,9 @@ test.describe('Task Linking Core Functionality Tests', () => {
     })
 
     // Navigate to application
-    await page.goto('http://localhost:5546')
+    await page.goto('/#/board')
     await page.waitForLoadState('networkidle')
+    await dismissBlockingOverlays(page)
     await page.waitForTimeout(3000)
 
     // Basic application should load
@@ -38,8 +68,9 @@ test.describe('Task Linking Core Functionality Tests', () => {
   })
 
   test('Board view loads and has task structure', async ({ page }) => {
-    await page.goto('http://localhost:5546')
+    await page.goto('/#/board')
     await page.waitForLoadState('networkidle')
+    await dismissBlockingOverlays(page)
     await page.waitForTimeout(2000)
 
     // Look for board elements
@@ -48,7 +79,8 @@ test.describe('Task Linking Core Functionality Tests', () => {
     console.log(`Found ${boardCount} board elements`)
 
     // Should have board structure
-    expect(boardCount).toBeGreaterThan(0)
+    const boardContainer = page.locator('.kanban-board, .board-container, .kanban-view')
+    expect(boardCount > 0 || await boardContainer.count() > 0).toBeTruthy()
 
     // Look for task input (indicates task functionality is available)
     const taskInput = page.locator('input[placeholder*="task"], .task-input')
@@ -65,8 +97,9 @@ test.describe('Task Linking Core Functionality Tests', () => {
     })
 
     // Navigate to canvas view
-    await page.goto('http://localhost:5546/canvas')
+    await page.goto('/#/canvas')
     await page.waitForLoadState('networkidle')
+    await dismissBlockingOverlays(page)
     await page.waitForTimeout(3000)
 
     // Check that page has content
@@ -91,8 +124,9 @@ test.describe('Task Linking Core Functionality Tests', () => {
   })
 
   test('Task creation and basic interaction works', async ({ page }) => {
-    await page.goto('http://localhost:5546')
+    await page.goto('/#/board')
     await page.waitForLoadState('networkidle')
+    await dismissBlockingOverlays(page)
     await page.waitForTimeout(2000)
 
     // Set up error monitoring

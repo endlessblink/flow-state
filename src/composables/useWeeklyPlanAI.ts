@@ -260,6 +260,7 @@ function enrichTasksForPlanning(tasks: TaskSummary[], weekEnd: Date): EnrichedTa
 function assembleTaskReasons(
   enrichedTasks: EnrichedTask[],
   plan: WeeklyPlan,
+  llmTaskReasons?: Record<string, string>,
 ): Record<string, string> {
   const taskMap = new Map(enrichedTasks.map(t => [t.id, t]))
   const reasons: Record<string, string> = {}
@@ -282,6 +283,11 @@ function assembleTaskReasons(
       if (!task) continue
 
       const bullets = [...task.deterministicReasons]
+
+      // TASK-1385: Prepend LLM "why this day" reason as the FIRST bullet
+      if (llmTaskReasons?.[taskId]) {
+        bullets.unshift(llmTaskReasons[taskId])
+      }
 
       // Add batching note if 2+ tasks from same project on same day
       if (dayKey !== 'unscheduled' && task.projectName) {
@@ -325,8 +331,9 @@ CRITICAL RULES:
 6. Put tasks in "unscheduled" only if the week is genuinely full.
 7. Use weekends (Sat/Sun) only as overflow — prefer weekdays.
 
-Return ONLY valid JSON. Keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning.
-Each day key = array of task ID strings. "reasoning" = 2-3 sentences explaining your distribution logic.`
+Return ONLY valid JSON. Keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning, taskReasons.
+Each day key = array of task ID strings. "reasoning" = 2-3 sentences explaining your distribution logic.
+"taskReasons" = object mapping task ID to a short reason (max 10 words) explaining why that day (e.g. {"abc123": "Peak day for complex work", "def456": "Grouped with other ProjectX tasks"}).`
 
   if (interview) {
     const extras: string[] = []
@@ -480,8 +487,8 @@ function rebalancePlan(
   const maxPerDay = interview?.maxTasksPerDay || 6
   const targetPerDay = Math.ceil(totalScheduled / availableDays.length)
 
-  // Check if rebalancing is needed: any day has > 150% of target
-  const needsRebalance = availableDays.some(d => plan[d].length > Math.ceil(targetPerDay * 1.5))
+  // Check if rebalancing is needed: any day has > 120% of target
+  const needsRebalance = availableDays.some(d => plan[d].length > Math.ceil(targetPerDay * 1.2))
   // Also check if any available day has 0 tasks while others have > target
   const hasEmptyDays = availableDays.some(d => plan[d].length === 0) && totalScheduled > availableDays.length
 
@@ -547,7 +554,7 @@ function rebalancePlan(
 function parseDistributionResponse(
   response: string,
   validTaskIds: Set<string>
-): { plan: WeeklyPlan; reasoning: string | null } {
+): { plan: WeeklyPlan; reasoning: string | null; llmTaskReasons: Record<string, string> } {
   // Strip markdown code fences if present
   let json = response.trim()
   const codeBlockMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/)
@@ -597,7 +604,17 @@ function parseDistributionResponse(
     throw new Error('Parsed plan contains no valid task assignments')
   }
 
-  return { plan, reasoning }
+  // Extract per-task reasons from LLM (TASK-1385: "why this day")
+  const llmTaskReasons: Record<string, string> = {}
+  if (parsed.taskReasons && typeof parsed.taskReasons === 'object' && !Array.isArray(parsed.taskReasons)) {
+    for (const [taskId, reason] of Object.entries(parsed.taskReasons as Record<string, unknown>)) {
+      if (typeof reason === 'string' && validTaskIds.has(taskId)) {
+        llmTaskReasons[taskId] = reason
+      }
+    }
+  }
+
+  return { plan, reasoning, llmTaskReasons }
 }
 
 // ============================================================================
@@ -758,6 +775,7 @@ export function useWeeklyPlanAI() {
       // ── Step 1: LLM Distribution Only ──
       let plan: WeeklyPlan
       let reasoning: string | null = null
+      let llmReasons: Record<string, string> = {}
 
       const messages: ChatMessage[] = [
         { role: 'system', content: buildDistributionSystemPrompt(interview, profile, enriched.length) },
@@ -771,6 +789,7 @@ export function useWeeklyPlanAI() {
         const result = parseDistributionResponse(response.content, validTaskIds)
         plan = result.plan
         reasoning = result.reasoning
+        llmReasons = result.llmTaskReasons
       } catch (firstError) {
         console.warn('[WeeklyPlanAI] Step 1 failed, retrying at temp 0.1...', firstError)
 
@@ -781,6 +800,7 @@ export function useWeeklyPlanAI() {
           const result = parseDistributionResponse(response.content, validTaskIds)
           plan = result.plan
           reasoning = result.reasoning
+          llmReasons = result.llmTaskReasons
         } catch (retryError) {
           console.warn('[WeeklyPlanAI] Step 1 retry failed, using fallback', retryError)
           plan = generateFallbackPlan(tasks, weekStart)
@@ -792,7 +812,7 @@ export function useWeeklyPlanAI() {
       plan = rebalancePlan(plan, enriched, interview)
 
       // ── Step 2: Deterministic Reason Assembly (instant) ──
-      const taskReasons = assembleTaskReasons(enriched, plan)
+      const taskReasons = assembleTaskReasons(enriched, plan, llmReasons)
       console.log(`[WeeklyPlanAI] Step 2: Assembled reasons for ${Object.keys(taskReasons).length} tasks`)
 
       // ── Step 3: LLM Week Theme (optional, silent fail) ──

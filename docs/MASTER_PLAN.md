@@ -8,6 +8,16 @@
 
 ## Active Bugs (P0-P1)
 
+### ~~TASK-1401~~: Canvas task card "Show less" does not collapse long descriptions (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-02-21)
+
+**Problem**: In canvas task cards, clicking **Show less** did not collapse long descriptions, so expanded content stayed open.
+
+**Fix**: Updated `TaskNodeDescription.vue` to apply explicit collapsed/expanded clamp styles on `.markdown-content`, and hardened the toggle button click handler with `@click.stop.prevent` plus dynamic ARIA label.
+
+---
+
 ### ~~TASK-1365~~: Focus button doesn't do anything (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-21)

@@ -9,8 +9,8 @@
       v-if="isLong"
       class="description-toggle"
       :aria-expanded="isExpanded"
-      aria-label="Show more description"
-      @click.stop="$emit('toggleExpand')"
+      :aria-label="isExpanded ? 'Show less description' : 'Show more description'"
+      @click.stop.prevent="$emit('toggleExpand')"
     >
       {{ isExpanded ? 'Show less' : 'Show more' }}
     </button>
@@ -39,6 +39,21 @@ defineEmits<{
   color: var(--text-secondary);
   margin-bottom: var(--space-3);
   line-height: 1.5;
+}
+
+/* Truncate long descriptions by default. Expanded state removes the clamp. */
+.task-description :deep(.markdown-content:not(.expanded)) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  max-height: 12em;
+  overflow: hidden;
+}
+
+.task-description :deep(.markdown-content.expanded) {
+  display: block;
+  max-height: none;
+  overflow: visible;
 }
 
 .description-toggle {

@@ -888,20 +888,20 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 
 ---
 
-### BUG-1206: Task Details Not Saved When Pressing Save in Canvas (🔄 IN PROGRESS)
+### BUG-1206: Task Details Not Saved When Pressing Save in Canvas (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-21)
 
 **Problem**: After editing task details (description) in the canvas edit modal and pressing Save, data appears lost when re-opening the modal. Save itself works (data persists in Supabase after full refresh). Bug is Tauri-specific - does NOT reproduce in browser/PWA guest mode.
 
-**Root Cause Analysis** (3 vectors identified):
-- **A (FIXED)**: Async rollback after modal close - removed rollback, added await (commit 0c92101)
-- **B (Low risk)**: Realtime echo outside pendingWrites window - mitigated by timestamp checks
-- **C (Most likely)**: Visibility change recovery clobber in Tauri/WebKitGTK - `loadFromDatabase()` smart merge may overwrite local with stale remote data when app loses/regains focus
+**Root Cause (Vector C confirmed)**: Tauri/WebKitGTK fires aggressive visibility change events that browsers don't. These trigger `loadFromDatabase()` → smart merge fetches from Supabase → if the `isVeryRecent` 30s window expired, stale remote data overwrites local → user re-opens modal and sees old description.
 
-**Progress (2026-02-06):** Added debug logging across 7 files to trace description data through save→sync→reopen cycle. Awaiting Tauri console output to pinpoint exact root cause.
+**Three-layer fix applied (2026-02-21):**
+- **Fix 1 (pending write guard)**: Smart merge now checks `isPendingWrite()` before accepting remote data. Tasks with active pending writes (120s window) are always preserved locally.
+- **Fix 2 (extended isVeryRecent)**: `isVeryRecent` threshold increased from 30s to 120s in Tauri to match `PENDING_WRITE_TIMEOUT_MS`.
+- **Fix 3 (modal-aware recovery)**: All 3 recovery paths (visibility, reconnect, online) skip `loadFromDatabase()` entirely when edit modal is open.
 
-**Files modified**: `useTaskEditActions.ts`, `tasks.ts`, `taskPersistence.ts`, `useTaskNodeActions.ts`, `useTaskEditState.ts`, `useAppInitialization.ts`, `taskOperations.ts`
+**Files modified**: `taskPersistence.ts` (Fix 1+2), `tasks.ts` (plumbed `isPendingWrite`), `useSupabaseDatabase.ts` (Fix 3)
 
 ---
 
@@ -3354,7 +3354,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **FEATURE-1293** | **P2** | **🔄 Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
-| BUG-1206 | P0 | 🔄 Task details not saved when pressing Save in canvas (Tauri-specific, debug logging added) |
+| BUG-1206 | P0 | 👀 Task details not saved when pressing Save in canvas (3-layer fix: pending write guard + extended isVeryRecent + modal-aware recovery) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | ~~BUG-1212~~ | P0 | ✅ Sync queue CREATE retry causes "duplicate key" corruption |
 | BUG-1286 | P2 | 👀 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |

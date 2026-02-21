@@ -7,6 +7,7 @@ import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlan
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useProjectStore } from '@/stores/projects'
 import type { MemoryObservation } from '@/utils/supabaseMappers'
+import { formatDateKey as formatDateISO } from '@/utils/dateUtils'
 
 // ============================================================================
 // Helpers
@@ -43,10 +44,7 @@ function getWeekEnd(weekStartsOn: 0 | 1 = 0): Date {
   return end
 }
 
-// BUG-1321: Use local date (not UTC) to avoid timezone-related overdue false positives
-function formatDateISO(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+
 
 // ============================================================================
 // Singleton state — persists across navigations AND page refreshes via localStorage

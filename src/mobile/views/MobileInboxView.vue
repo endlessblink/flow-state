@@ -321,6 +321,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { formatDueDate } from '@/utils/dateUtils'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
 import { useTimerStore } from '@/stores/timer'
@@ -1001,21 +1002,6 @@ const isTimerActive = (taskId: string) => {
 }
 
 // Helpers are now provided by useMobileFilters composable (priorityLabel)
-
-const formatDueDate = (dueDate: string | Date): string => {
-  const date = new Date(dueDate)
-  const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  if (date.toDateString() === today.toDateString()) {
-    return 'Today'
-  } else if (date.toDateString() === tomorrow.toDateString()) {
-    return 'Tomorrow'
-  } else {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
-}
 
 const isOverdue = (dueDate: string | Date): boolean => {
   return new Date(dueDate) < new Date()

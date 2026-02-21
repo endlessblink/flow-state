@@ -771,7 +771,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       // FEATURE-1345: Capacitor — use system browser + deep link callback (PKCE)
       const isCapacitorRuntime = typeof window !== 'undefined' &&
-        !!(window as any).Capacitor?.isNativePlatform?.()
+        !!window.Capacitor?.isNativePlatform?.()
       if (isCapacitorRuntime) {
         const { signInWithGoogleCapacitor } = await import('@/composables/useCapacitorOAuth')
         await signInWithGoogleCapacitor()

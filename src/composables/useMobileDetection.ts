@@ -4,7 +4,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 function getInitialMobileState(): boolean {
     if (typeof window === 'undefined') return false
 
-    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera
     const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())
     const isSmallScreen = window.innerWidth <= 768
 
@@ -19,7 +19,7 @@ export function useMobileDetection() {
         if (typeof window === 'undefined') return
 
         // Check for mobile user agent
-        const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera
         const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())
 
         // Check for small screen width (standard tablet/mobile breakpoint)

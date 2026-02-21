@@ -19,10 +19,10 @@ export function useWakeLock() {
 
         try {
             wakeLock.value = await navigator.wakeLock.request('screen')
-            console.log('💡 [WakeLock] Screen wake lock is active')
+            console.debug('💡 [WakeLock] Screen wake lock is active')
 
             wakeLock.value.addEventListener('release', () => {
-                console.log('💡 [WakeLock] Screen wake lock was released')
+                console.debug('💡 [WakeLock] Screen wake lock was released')
                 wakeLock.value = null
             })
         } catch (err) {

@@ -18,7 +18,7 @@ const subscriptionError = ref<string | null>(null)
 /** Check if Web Push is supported in this environment */
 function isPushSupported(): boolean {
   // Web Push not available in Tauri WebView
-  if ((window as any).__TAURI_INTERNALS__) return false
+  if (window.__TAURI_INTERNALS__) return false
   return 'serviceWorker' in navigator && 'PushManager' in window
 }
 

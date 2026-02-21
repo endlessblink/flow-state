@@ -510,7 +510,9 @@ async function processQueue(): Promise<void> {
 
       // Check if we're still online
       if (!state.value.isOnline) {
-        console.log('[SYNC] Went offline during sync, pausing')
+        if (import.meta.env.DEV) {
+          console.debug('[SYNC] Went offline during sync, pausing')
+        }
         break
       }
     }
@@ -598,7 +600,9 @@ export function useSyncOrchestrator() {
       userId
     })
 
-    console.log(`📝 [SYNC] Queued: ${operation.entityType}:${operation.operation} ${operation.entityId.slice(0, 8)}`)
+    if (import.meta.env.DEV) {
+      console.debug(`📝 [SYNC] Queued: ${operation.entityType}:${operation.operation} ${operation.entityId.slice(0, 8)}`)
+    }
 
     // Update status
     await updateStatus()
@@ -615,7 +619,9 @@ export function useSyncOrchestrator() {
    * Force retry all failed operations
    */
   const retryFailed = async (): Promise<void> => {
-    console.log('[SYNC] Manual retry of failed operations')
+    if (import.meta.env.DEV) {
+      console.debug('[SYNC] Manual retry of failed operations')
+    }
 
     // Get all failed operations and reset their retry time
     const operations = await getPendingOperations(100)

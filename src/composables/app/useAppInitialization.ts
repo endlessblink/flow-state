@@ -44,7 +44,7 @@ export function useAppInitialization() {
     onMounted(async () => {
         // MARK: SESSION START for stability guards
         if (typeof window !== 'undefined') {
-            (window as any).FlowStateSessionStart = Date.now()
+            window.FlowStateSessionStart = Date.now()
         }
 
 
@@ -299,9 +299,9 @@ export function useAppInitialization() {
             // HARDENED LOCK: Check store, dragging, resizing, and settling flags
             // BUG-1051: Fix sync race condition - also check for manual operations
             const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
-                (window as any).__FlowStateIsDragging ||
-                (window as any).__FlowStateIsResizing ||
-                (window as any).__FlowStateIsSettling
+                window.__FlowStateIsDragging ||
+                window.__FlowStateIsResizing ||
+                window.__FlowStateIsSettling
             ))
 
             console.log('🔄 [HANDLER] onProjectChange called:', {
@@ -335,9 +335,9 @@ export function useAppInitialization() {
             // HARDENED LOCK: Check store, dragging, resizing, and settling flags
             // BUG-1051: Fix sync race condition - also check for manual operations
             const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
-                (window as any).__FlowStateIsDragging ||
-                (window as any).__FlowStateIsResizing ||
-                (window as any).__FlowStateIsSettling
+                window.__FlowStateIsDragging ||
+                window.__FlowStateIsResizing ||
+                window.__FlowStateIsSettling
             ))
 
             const { eventType, new: newDoc, old: oldDoc } = payload
@@ -382,7 +382,7 @@ export function useAppInitialization() {
 
             if (isHardDelete || isSoftDelete) {
                 // Extra safety: Check session start time
-                const sessionStart = (window as any).FlowStateSessionStart || 0
+                const sessionStart = window.FlowStateSessionStart || 0
                 const timeSinceSessionStart = Date.now() - sessionStart
 
                 // Don't process deletions in the first 5 seconds of the session (anti-race guard)
@@ -409,9 +409,9 @@ export function useAppInitialization() {
 
             // HARDENED LOCK: Check store, dragging, resizing, and settling flags
             const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
-                (window as any).__FlowStateIsDragging ||
-                (window as any).__FlowStateIsResizing ||
-                (window as any).__FlowStateIsSettling
+                window.__FlowStateIsDragging ||
+                window.__FlowStateIsResizing ||
+                window.__FlowStateIsSettling
             ))
 
             const { eventType, new: newDoc, old: oldDoc } = payload
@@ -494,9 +494,9 @@ export function useAppInitialization() {
 
                 // BUG-1207: Add missing window flag checks (match primary handler)
                 const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
-                    (window as any).__FlowStateIsDragging ||
-                    (window as any).__FlowStateIsResizing ||
-                    (window as any).__FlowStateIsSettling
+                    window.__FlowStateIsDragging ||
+                    window.__FlowStateIsResizing ||
+                    window.__FlowStateIsSettling
                 ))
                 if (isLocked) return
 
@@ -515,9 +515,9 @@ export function useAppInitialization() {
 
                 // BUG-1207: Add missing window flag checks (match primary handler)
                 const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
-                    (window as any).__FlowStateIsDragging ||
-                    (window as any).__FlowStateIsResizing ||
-                    (window as any).__FlowStateIsSettling
+                    window.__FlowStateIsDragging ||
+                    window.__FlowStateIsResizing ||
+                    window.__FlowStateIsSettling
                 ))
                 if (isLocked) return
 
@@ -542,9 +542,9 @@ export function useAppInitialization() {
 
                 // BUG-1207: Add missing window flag checks (match primary handler)
                 const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
-                    (window as any).__FlowStateIsDragging ||
-                    (window as any).__FlowStateIsResizing ||
-                    (window as any).__FlowStateIsSettling
+                    window.__FlowStateIsDragging ||
+                    window.__FlowStateIsResizing ||
+                    window.__FlowStateIsSettling
                 ))
                 if (isLocked) return
 

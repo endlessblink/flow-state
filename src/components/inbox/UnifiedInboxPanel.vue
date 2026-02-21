@@ -207,7 +207,7 @@ const handleInboxDragEnter = (e: DragEvent) => {
   try {
     // dataTransfer types are available during dragenter/dragover but data isn't readable
     // Use window.__draggingTaskId as fallback signal (set by startGlobalDrag)
-    if ((window as any).__draggingTaskId || e.dataTransfer?.types.includes('application/json')) {
+    if (window.__draggingTaskId || e.dataTransfer?.types.includes('application/json')) {
       isCalendarDropTarget.value = true
     }
   } catch {
@@ -244,7 +244,7 @@ const handleInboxDrop = (e: DragEvent) => {
 
   // Fallback: check window.__draggingTaskId
   if (!taskId) {
-    taskId = (window as any).__draggingTaskId || null
+    taskId = window.__draggingTaskId || null
     source = 'calendar-event' // assume calendar if using fallback
   }
 

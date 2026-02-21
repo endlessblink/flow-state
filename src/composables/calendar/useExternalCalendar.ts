@@ -123,7 +123,7 @@ function parseICalText(icsText: string, calendarId: string, color: string): Exte
 
 async function fetchICalUrl(url: string): Promise<string> {
   // Tauri desktop: use HTTP plugin (no CORS restrictions)
-  if ((window as any).__TAURI__) {
+  if (window.__TAURI__) {
     try {
       const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http')
       const response = await tauriFetch(url, { method: 'GET' })

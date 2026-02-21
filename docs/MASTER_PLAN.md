@@ -2063,9 +2063,9 @@ Type imports from `@/stores/tasks` instead of `@/types/tasks` triggered module e
 
 ---
 
-### BUG-1057: Fix Failing Unit Tests (📋 PLANNED)
+### ~~BUG-1057~~: Fix Failing Unit Tests (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: ✅ DONE
 
 8 test failures to fix (excluding 13 canvas-characterization tests that require dev server):
 
@@ -2080,9 +2080,9 @@ Type imports from `@/stores/tasks` instead of `@/types/tasks` triggered module e
 
 ---
 
-### BUG-1120: Test Environment localStorage Not Available (📋 PLANNED)
+### ~~BUG-1120~~: Test Environment localStorage Not Available (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE
 
 `tests/repro-bug-030.test.ts` fails with localStorage issue - test environment doesn't have localStorage mocked/available. This is a test infrastructure issue, not a code bug.
 

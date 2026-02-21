@@ -552,17 +552,16 @@ function onSubmitInterview() {
   answers.preferredWorkStyle = interviewForm.preferredWorkStyle
   if (interviewForm.personalContext.trim()) {
     answers.personalContext = interviewForm.personalContext.trim()
-    // Persist personal context to localStorage
-    localStorage.setItem('flowstate-personal-context', interviewForm.personalContext.trim())
   }
 
-  // FEATURE-1317: Persist preferences to work profile
+  // FEATURE-1317: Persist preferences to work profile (including personalContext)
   savePreferences({
     topPriorityNote: interviewForm.topPriority.trim() || null,
     daysOff: [...interviewForm.daysOff],
     heavyMeetingDays: [...interviewForm.heavyMeetingDays],
     maxTasksPerDay: interviewForm.maxTasksPerDay,
     preferredWorkStyle: interviewForm.preferredWorkStyle,
+    personalContext: interviewForm.personalContext.trim() || null,
   }).catch(err => console.warn('[WeeklyPlan] Failed to save preferences:', err))
 
   // Go to AI questions phase instead of directly generating
@@ -594,11 +593,8 @@ onMounted(async () => {
     if (savedProfile.heavyMeetingDays?.length) interviewForm.heavyMeetingDays = [...savedProfile.heavyMeetingDays]
     if (savedProfile.maxTasksPerDay) interviewForm.maxTasksPerDay = savedProfile.maxTasksPerDay
     if (savedProfile.preferredWorkStyle) interviewForm.preferredWorkStyle = savedProfile.preferredWorkStyle
+    if (savedProfile.personalContext) interviewForm.personalContext = savedProfile.personalContext
   }
-
-  // Load personal context from localStorage
-  const savedContext = localStorage.getItem('flowstate-personal-context')
-  if (savedContext) interviewForm.personalContext = savedContext
 })
 
 onUnmounted(() => {

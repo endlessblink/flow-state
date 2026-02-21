@@ -178,7 +178,7 @@ export function useWeeklyPlan() {
   const state = getOrCreateState(settings.weekStartsOn)
 
   const { generatePlan: aiGeneratePlan, regenerateDay: aiRegenerateDay, generateDynamicQuestions: aiGenerateDynamicQuestions } = useWeeklyPlanAI()
-  const { loadProfile, reloadProfile, computeCapacityMetrics, recordWeeklyOutcome, generateObservationsFromWeeklyOutcome, profile: workProfile } = useWorkProfile()
+  const { loadProfile, reloadProfile, computeCapacityMetrics, recordWeeklyOutcome, generateObservationsFromWeeklyOutcome, saveDynamicAnswersAsObservations, profile: workProfile } = useWorkProfile()
 
   // --------------------------------------------------------------------------
   // Eligible tasks
@@ -473,6 +473,15 @@ export function useWeeklyPlan() {
       dynamicAnswers: answeredQuestions,
     }
     state.value.interviewAnswers = updatedAnswers
+
+    // Save answers as memory observations for future AI learning
+    const answered = answeredQuestions.filter(q => q.answer.trim())
+    if (answered.length > 0) {
+      saveDynamicAnswersAsObservations(answered).catch(err =>
+        console.warn('[WeeklyPlan] Failed to save dynamic answers as observations:', err)
+      )
+    }
+
     generatePlan(updatedAnswers)
   }
 

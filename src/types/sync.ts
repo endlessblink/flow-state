@@ -228,19 +228,3 @@ export interface SyncEvents {
   'online-change': (isOnline: boolean) => void
 }
 
-/**
- * Rollback state for optimistic UI updates
- */
-export interface RollbackState<T = unknown> {
-  /** Entity ID */
-  entityId: string
-
-  /** Entity type */
-  entityType: SyncEntityType
-
-  /** Previous state before the update */
-  previousState: T
-
-  /** Timestamp when rollback state was created */
-  createdAt: number
-}

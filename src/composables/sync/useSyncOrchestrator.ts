@@ -161,6 +161,9 @@ const isProcessing = ref(false)
 const processIntervalId = ref<ReturnType<typeof setInterval> | null>(null)
 const PROCESS_INTERVAL_MS = 5000 // Check queue every 5 seconds
 
+// TASK-1177: Permanent failure pub/sub (module-level to match singleton state)
+const permanentFailureCallbacks = new Set<(op: WriteOperation) => void>()
+
 // Online/offline listeners (set up once)
 let listenersSetUp = false
 
@@ -465,6 +468,7 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     await markFailed(operation.id, result.error || 'Permanent error', Date.now() + 365 * 24 * 60 * 60 * 1000) // Far future = won't auto-retry
     state.value.lastError = result.error
     console.error(`❌ [SYNC] Permanent failure: ${operation.entityType}:${operation.entityId.slice(0, 8)} - ${result.error}`)
+    permanentFailureCallbacks.forEach(cb => cb(operation))
   }
 }
 
@@ -659,6 +663,16 @@ export function useSyncOrchestrator() {
     return getStats()
   }
 
+  /**
+   * Subscribe to permanent sync failures (exhausted retries).
+   * Use this to show user-facing toasts or notifications.
+   * Returns an unsubscribe function.
+   */
+  const onPermanentFailure = (cb: (op: WriteOperation) => void): (() => void) => {
+    permanentFailureCallbacks.add(cb)
+    return () => permanentFailureCallbacks.delete(cb)
+  }
+
   return {
     // State
     status: computed(() => state.value.status),
@@ -678,7 +692,8 @@ export function useSyncOrchestrator() {
     retryFailed,
     clearFailed: clearFailedOperations,
     getQueueStats,
-    forceSync: processQueue
+    forceSync: processQueue,
+    onPermanentFailure
   }
 }
 

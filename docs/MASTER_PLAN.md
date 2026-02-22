@@ -1013,7 +1013,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 1. **Silent error swallowing** (`taskOperations.ts:290-301`) - Save failures logged but not retried
 2. **Smart merge drops tasks** (`taskPersistence.ts:272-287`) - Local-only tasks dropped after 5 min
 3. **No write queue** - Failed writes lost forever
-4. **Optimistic UI no rollback** - updateTask has no rollback on failure
+4. ~~**Optimistic UI no rollback**~~ ✅ - updateTask now has rollback on failure (Phase 4)
 5. **Sync timeout silent** (`useNodeSync.ts:252-256`) - Timeout errors explicitly silenced
 6. **No beforeunload** - Can close tab with unsaved data
 
@@ -1034,9 +1034,12 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
    - NEVER drop local-only tasks automatically
    - Queue for sync retry instead
 
-4. **Phase 4: Add Rollback to updateTask** (P1)
-   - Capture previous state before update
-   - Rollback local state on failure
+4. ~~**Phase 4: Add Rollback to updateTask**~~ ✅ (P1) — DONE 2026-02-23
+   - ~~Capture previous state before update~~
+   - ~~Rollback local state on failure~~
+   - Synchronous rollback via `persisted` flag: snapshot → optimistic mutation → track persistence → rollback if ALL paths fail
+   - `onPermanentFailure` pub/sub callback in sync orchestrator for UI notification
+   - Removed unused `RollbackState<T>` type
 
 5. **Phase 5: beforeunload Protection** (P1)
    - Warn user before closing tab with unsaved changes
@@ -4036,7 +4039,7 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ### TASK-1147: Replace 199 `any` Types with Proper Interfaces (🔄 IN PROGRESS)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
 
 **Problem**: 199 instances of `any` type across 90 files weaken type safety.
 
@@ -4058,17 +4061,19 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1149: Split timer.ts into 4 Services (📋 PLANNED)
+### ~~TASK-1149~~: Split timer.ts into 4 Services (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-23)
 
-**Problem**: Timer store is 960 lines with mixed concerns.
+**Problem**: Timer store was 1328 lines with mixed concerns.
 
 **Solution**: Split into focused services:
-- `useTimerState.ts` - core timer state
-- `useTimerSync.ts` - cross-device sync
-- `useTimerAudio.ts` - sound playback
-- `useTimerNotifications.ts` - notification handling
+- `src/stores/timer.ts` — slim orchestrator (456 lines)
+- `src/composables/timer/useTimerSync.ts` — intervals, leadership, DB, Realtime (763 lines)
+- `src/composables/timer/useTimerNotifications.ts` — browser/SW notifications (163 lines)
+- `src/composables/timer/useTimerAudio.ts` — sound playback (86 lines)
+
+Public API unchanged — zero consumer migration needed.
 
 **Files**: `src/stores/timer.ts`
 

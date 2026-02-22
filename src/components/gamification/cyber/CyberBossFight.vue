@@ -418,7 +418,7 @@ watch(damageDealt, (newVal, oldVal) => {
   background: var(--cf-dark-3);
   border-radius: var(--radius-md);
   flex-shrink: 0;
-  box-shadow: 0 var(--space-1) var(--space-3) rgba(0, 0, 0, 0.4);
+  box-shadow: 0 var(--space-1) var(--space-3) var(--cf-black-40);
 }
 
 /* HP Background Layer */
@@ -430,8 +430,8 @@ watch(damageDealt, (newVal, oldVal) => {
   height: 100%;
   background: repeating-linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.02) 0px,
-    rgba(255, 255, 255, 0.02) var(--space-0_5),
+    var(--cf-white-02) 0px,
+    var(--cf-white-02) var(--space-0_5),
     transparent var(--space-0_5),
     transparent var(--space-1)
   );
@@ -455,7 +455,7 @@ watch(damageDealt, (newVal, oldVal) => {
   left: 0;
   height: 100%;
   transition: width 0.3s ease-out, background 0.3s ease;
-  box-shadow: inset 0 0 var(--space-5) rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 var(--space-5) var(--cf-white-20);
 }
 
 .cbf-hp-fill--pulse {
@@ -463,7 +463,7 @@ watch(damageDealt, (newVal, oldVal) => {
 }
 
 .cbf-hp-fill--flash {
-  box-shadow: inset 0 0 var(--space-7_5) rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 0 var(--space-7_5) var(--cf-white-80);
 }
 
 @keyframes hp-pulse {
@@ -477,7 +477,7 @@ watch(damageDealt, (newVal, oldVal) => {
   top: 0;
   width: var(--space-0_5);
   height: 100%;
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--cf-white-40);
   z-index: 2;
 }
 
@@ -499,7 +499,7 @@ watch(damageDealt, (newVal, oldVal) => {
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--text-primary);
-  text-shadow: 0 0 var(--space-1) rgba(0, 0, 0, 0.8), 0 0 var(--space-2) rgba(0, 0, 0, 0.8);
+  text-shadow: 0 0 var(--space-1) var(--cf-black-80), 0 0 var(--space-2) var(--cf-black-80);
   z-index: 3;
   pointer-events: none;
 }
@@ -581,9 +581,9 @@ watch(damageDealt, (newVal, oldVal) => {
 }
 
 .cbf-time-badge--urgent {
-  background: rgba(251, 191, 36, 0.1);
-  border-color: rgba(251, 191, 36, 0.4);
-  color: rgb(251, 191, 36);
+  background: var(--cf-gold-10);
+  border-color: var(--cf-gold-40);
+  color: var(--cf-gold);
   animation: time-urgent-pulse 1.5s ease-in-out infinite;
 }
 
@@ -603,10 +603,10 @@ watch(damageDealt, (newVal, oldVal) => {
   align-items: baseline;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: rgba(255, 107, 53, 0.1);
+  background: var(--cf-orange-10);
   border: var(--space-0_5) solid var(--cf-orange);
   border-radius: var(--radius-md);
-  box-shadow: 0 0 var(--space-3) rgba(255, 107, 53, 0.3);
+  box-shadow: 0 0 var(--space-3) var(--cf-orange-30);
 }
 
 .cbf-damage-label {
@@ -632,7 +632,7 @@ watch(damageDealt, (newVal, oldVal) => {
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: rgba(57, 255, 20, 0.05);
+  background: var(--cf-lime-05);
   border: var(--space-0_5) solid var(--cf-lime);
   border-radius: var(--radius-md);
   flex-shrink: 0;
@@ -692,7 +692,7 @@ watch(damageDealt, (newVal, oldVal) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle, rgba(57, 255, 20, 0.2) 0%, rgba(0, 0, 0, 0.9) 100%);
+  background: radial-gradient(circle, var(--cf-lime-20) 0%, var(--cf-black-90) 100%);
   backdrop-filter: blur(var(--space-1_5));
   z-index: 10;
   pointer-events: none;
@@ -727,7 +727,7 @@ watch(damageDealt, (newVal, oldVal) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle, rgba(255, 107, 53, 0.2) 0%, rgba(0, 0, 0, 0.9) 100%);
+  background: radial-gradient(circle, var(--cf-orange-20) 0%, var(--cf-black-90) 100%);
   backdrop-filter: blur(var(--space-1_5));
   z-index: 10;
   pointer-events: none;

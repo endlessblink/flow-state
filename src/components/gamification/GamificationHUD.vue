@@ -197,7 +197,7 @@ function goToSignIn() {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: rgba(18, 18, 26, 0.85);
+  background: var(--cf-dark-3);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--cf-cyan-20, rgba(0, 240, 255, 0.2));
@@ -215,32 +215,32 @@ function goToSignIn() {
 .gamification-hud:hover::before {
   border-color: var(--cf-cyan-50, rgba(0, 240, 255, 0.5));
   box-shadow:
-    0 0 5px rgba(0, 240, 255, 0.5),
-    0 0 10px rgba(0, 240, 255, 0.2);
+    0 0 5px var(--cf-cyan-50),
+    0 0 10px var(--cf-cyan-20);
 }
 
 /* Active (panel open) */
 .gamification-hud.hud--active::before {
   border-color: var(--cf-cyan, #00f0ff);
   box-shadow:
-    0 0 5px rgba(0, 240, 255, 0.5),
-    0 0 10px rgba(0, 240, 255, 0.2);
+    0 0 5px var(--cf-cyan-50),
+    0 0 10px var(--cf-cyan-20);
 }
 
 /* Intense: always-on glow from cyberflow-design-system §2 */
 .gamification-hud.hud--intense::before {
   border-color: var(--cf-cyan, #00f0ff);
   box-shadow:
-    0 0 5px rgba(0, 240, 255, 0.5),
-    0 0 10px rgba(0, 240, 255, 0.2);
+    0 0 5px var(--cf-cyan-50),
+    0 0 10px var(--cf-cyan-20);
 }
 
 .gamification-hud.hud--intense:hover::before {
   box-shadow:
-    0 0 5px #00f0ff,
-    0 0 10px #00f0ff,
-    0 0 20px #00f0ff,
-    0 0 40px #00f0ff;
+    0 0 5px var(--cf-cyan),
+    0 0 10px var(--cf-cyan),
+    0 0 20px var(--cf-cyan),
+    0 0 40px var(--cf-cyan);
 }
 
 /* ============================================
@@ -259,7 +259,7 @@ function goToSignIn() {
   font-family: var(--font-cyber-data, 'Space Mono', monospace);
   font-size: var(--text-sm);
   font-weight: 700;
-  color: rgba(0, 240, 255, 0.7);
+  color: var(--cf-cyan-70);
   letter-spacing: 0.02em;
 }
 
@@ -281,7 +281,7 @@ function goToSignIn() {
   font-family: var(--font-cyber-data, 'Space Mono', monospace);
   font-size: var(--text-sm);
   font-weight: 700;
-  color: rgba(0, 240, 255, 0.9);
+  color: var(--cf-cyan-90);
   letter-spacing: 0.02em;
   line-height: 1;
 }
@@ -310,7 +310,7 @@ function goToSignIn() {
   position: relative;
   width: 80px;
   height: 4px;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--cf-black-50);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -328,7 +328,7 @@ function goToSignIn() {
 .hud-xp-shine {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, var(--cf-white-30) 50%, transparent 100%);
   background-size: 200% 100%;
   animation: xp-shine 3s ease-in-out infinite;
 }
@@ -348,7 +348,7 @@ function goToSignIn() {
 
 .hud-flame--active {
   color: var(--streak-flame-color, rgb(255, 107, 53));
-  filter: drop-shadow(0 0 4px rgba(255, 107, 53, 0.6));
+  filter: drop-shadow(0 0 4px var(--cf-orange-60));
 }
 
 /* ============================================
@@ -389,7 +389,7 @@ function goToSignIn() {
 .hud-narrative {
   width: 100%;
   font-family: var(--font-cyber-data, 'Space Mono', monospace);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   font-style: italic;
   color: var(--cf-cyan-50, rgba(0, 240, 255, 0.5));
   white-space: nowrap;
@@ -416,7 +416,7 @@ function goToSignIn() {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: rgba(26, 26, 37, 0.85);
+  background: var(--cf-dark-4);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--cf-cyan-20, rgba(0, 240, 255, 0.2));
@@ -432,8 +432,8 @@ function goToSignIn() {
 .hud-connect:hover::before {
   border-color: var(--cf-cyan-50, rgba(0, 240, 255, 0.5));
   box-shadow:
-    0 0 5px rgba(0, 240, 255, 0.3),
-    0 0 10px rgba(0, 240, 255, 0.1);
+    0 0 5px var(--cf-cyan-30),
+    0 0 10px var(--cf-cyan-10);
 }
 
 .hud-connect-label {

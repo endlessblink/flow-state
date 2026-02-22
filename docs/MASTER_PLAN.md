@@ -4008,15 +4008,21 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1145: Split MobileInboxView.vue (📋 PLANNED)
+### ~~TASK-1145~~: Split MobileInboxView.vue (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE
 
-**Problem**: File is 1919 lines, exceeding 500-line limit.
+**Problem**: File was 1919 lines, exceeding 500-line limit.
 
-**Solution**: Extract into composables and sub-components.
+**Solution**: Extracted into composables and sub-components:
+- `MobileInboxView.vue` (369 lines) — orchestration view
+- `useMobileInboxLogic.ts` (445 lines) — business logic composable
+- `MobileInboxHeader.vue` (109 lines) — header component
+- `MobileInboxFilters.vue` (280 lines) — filter controls
+- `MobileInboxTaskList.vue` (390 lines) — task list component
+- `MobileInboxQuickAdd.vue` (348 lines) — quick add bar
 
-**Files**: `src/mobile/views/MobileInboxView.vue`
+**Files**: `src/mobile/views/MobileInboxView.vue`, `src/mobile/composables/useMobileInboxLogic.ts`, `src/mobile/components/MobileInbox*.vue`
 
 ---
 

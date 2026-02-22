@@ -234,9 +234,9 @@ async function handlePurchase(item: ShopItemWithOwnership) {
   align-items: baseline;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2_5);
-  background: rgba(57, 255, 20, 0.05);
+  background: var(--cf-lime-05);
   border-radius: var(--radius-sm);
-  border: var(--space-0_5) solid rgba(57, 255, 20, 0.2);
+  border: var(--space-0_5) solid var(--cf-lime-20);
 }
 
 .cs-credits-value {
@@ -250,7 +250,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 .cs-credits-label {
   font-family: var(--font-cyber-data);
   font-size: var(--text-xs);
-  color: rgba(57, 255, 20, 0.5);
+  color: var(--cf-lime-50);
 }
 
 /* Items Container */
@@ -277,17 +277,17 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 
 .cs-item:hover {
   transform: translateY(calc(-1 * var(--space-0_5)));
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--cf-white-15);
 }
 
 /* Rarity border glow */
 .cs-item--common {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--cf-white-15);
 }
 
 .cs-item--uncommon {
   border-color: var(--cf-lime);
-  box-shadow: 0 0 var(--space-2) rgba(57, 255, 20, 0.2);
+  box-shadow: 0 0 var(--space-2) var(--cf-lime-20);
 }
 
 .cs-item--rare {
@@ -296,13 +296,13 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 }
 
 .cs-item--epic {
-  border-color: rgba(147, 51, 234, 1);
-  box-shadow: 0 0 var(--space-3) rgba(147, 51, 234, 0.4);
+  border-color: var(--cf-purple);
+  box-shadow: 0 0 var(--space-3) var(--cf-purple-40);
 }
 
 .cs-item--legendary {
   border-color: var(--cf-gold);
-  box-shadow: 0 0 var(--space-4) rgba(255, 215, 0, 0.4);
+  box-shadow: 0 0 var(--space-4) var(--cf-gold-40);
 }
 
 /* Owned state */
@@ -325,7 +325,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--cf-white-03);
   border-radius: var(--radius-sm);
 }
 
@@ -336,7 +336,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 
 .cs-item--uncommon .cs-icon { color: var(--cf-lime); }
 .cs-item--rare .cs-icon { color: rgba(0, 150, 255, 1); }
-.cs-item--epic .cs-icon { color: rgba(147, 51, 234, 1); }
+.cs-item--epic .cs-icon { color: var(--cf-purple); }
 .cs-item--legendary .cs-icon { color: var(--cf-gold); }
 
 /* Owned Badge Overlay */
@@ -397,9 +397,9 @@ async function handlePurchase(item: ShopItemWithOwnership) {
   align-items: baseline;
   gap: var(--space-0_75);
   padding: var(--space-1) var(--space-2);
-  background: rgba(57, 255, 20, 0.1);
+  background: var(--cf-lime-10);
   border-radius: var(--radius-sm);
-  border: var(--space-0_5) solid rgba(57, 255, 20, 0.3);
+  border: var(--space-0_5) solid var(--cf-lime-30);
 }
 
 .cs-price-value {
@@ -412,12 +412,12 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 .cs-price-label {
   font-family: var(--font-cyber-data);
   font-size: var(--text-xs);
-  color: rgba(57, 255, 20, 0.6);
+  color: var(--cf-lime-60);
 }
 
 .cs-price--cant-afford {
-  background: rgba(255, 0, 153, 0.1);
-  border-color: rgba(255, 0, 153, 0.3);
+  background: var(--cf-magenta-10);
+  border-color: var(--cf-magenta-30);
 }
 
 .cs-price--cant-afford .cs-price-value {
@@ -425,14 +425,14 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 }
 
 .cs-price--cant-afford .cs-price-label {
-  color: rgba(255, 0, 153, 0.6);
+  color: var(--cf-magenta-60);
 }
 
 /* Buy Button */
 .cs-buy {
   padding: var(--space-1_5) var(--space-3);
-  background: rgba(0, 240, 255, 0.1);
-  border: var(--space-0_5) solid rgba(0, 240, 255, 0.4);
+  background: var(--cf-cyan-10);
+  border: var(--space-0_5) solid var(--cf-cyan-40);
   border-radius: var(--radius-sm);
   color: var(--cf-cyan);
   font-family: var(--font-cyber-title);
@@ -444,9 +444,9 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 }
 
 .cs-buy:hover:not(:disabled) {
-  background: rgba(0, 240, 255, 0.2);
+  background: var(--cf-cyan-20);
   border-color: var(--cf-cyan);
-  box-shadow: 0 0 var(--space-3) rgba(0, 240, 255, 0.3);
+  box-shadow: 0 0 var(--space-3) var(--cf-cyan-30);
 }
 
 .cs-buy:disabled {
@@ -509,8 +509,8 @@ async function handlePurchase(item: ShopItemWithOwnership) {
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: rgba(255, 0, 153, 0.05);
-  border: var(--space-0_5) solid rgba(255, 0, 153, 0.3);
+  background: var(--cf-magenta-05);
+  border: var(--space-0_5) solid var(--cf-magenta-30);
   border-radius: var(--radius-sm);
   color: var(--cf-magenta);
   font-family: var(--font-cyber-title);
@@ -522,9 +522,9 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 }
 
 .cs-browse:hover {
-  background: rgba(255, 0, 153, 0.1);
+  background: var(--cf-magenta-10);
   border-color: var(--cf-magenta);
-  box-shadow: 0 0 var(--space-3) rgba(255, 0, 153, 0.3);
+  box-shadow: 0 0 var(--space-3) var(--cf-magenta-30);
 }
 
 /* Responsive */

@@ -345,7 +345,7 @@ const getCelebrationStyle = (index: number) => {
     linear-gradient(135deg,
       rgba(var(--color-success), 0.9) 0%,
       rgba(22, 163, 74, 0.95) 50%,
-      rgba(16, 185, 129, 0.9) 100%
+      var(--success-gradient-start) 100%
     ),
     radial-gradient(circle at 30% 30%,
       rgba(var(--color-slate-50), 0.3) 0%,
@@ -365,8 +365,8 @@ const getCelebrationStyle = (index: number) => {
   background:
     linear-gradient(135deg,
       rgba(22, 163, 74, 0.95) 0%,
-      rgba(16, 185, 129, 1) 50%,
-      rgba(5, 150, 105, 0.95) 100%
+      var(--color-work) 50%,
+      var(--success-gradient-end) 100%
     ),
     radial-gradient(circle at 70% 70%,
       rgba(var(--color-slate-50), 0.4) 0%,

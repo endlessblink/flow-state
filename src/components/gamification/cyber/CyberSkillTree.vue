@@ -510,8 +510,8 @@ function handleNodeKeydown(
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0, 240, 255, 0.015) var(--space-0_5), transparent var(--space-0_5)),
-    linear-gradient(90deg, rgba(0, 240, 255, 0.015) var(--space-0_5), transparent var(--space-0_5));
+    linear-gradient(var(--cf-cyan-02) var(--space-0_5), transparent var(--space-0_5)),
+    linear-gradient(90deg, var(--cf-cyan-02) var(--space-0_5), transparent var(--space-0_5));
   background-size: var(--space-12) var(--space-12);
   pointer-events: none;
   z-index: 0;
@@ -525,7 +525,7 @@ function handleNodeKeydown(
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-5);
-  border-bottom: var(--space-0_5) solid rgba(0, 240, 255, 0.1);
+  border-bottom: var(--space-0_5) solid var(--cf-cyan-10);
   background: rgba(5, 5, 8, 0.85);
   backdrop-filter: blur(var(--space-2));
   position: relative;
@@ -540,7 +540,7 @@ function handleNodeKeydown(
 
 .st-header-icon {
   color: var(--cf-cyan, #00f0ff);
-  filter: drop-shadow(0 0 var(--space-1_5) rgba(0, 240, 255, 0.6));
+  filter: drop-shadow(0 0 var(--space-1_5) var(--cf-cyan-60));
 }
 
 .st-title {
@@ -550,7 +550,7 @@ function handleNodeKeydown(
   letter-spacing: 0.2em;
   color: var(--text-primary);
   margin: 0;
-  text-shadow: 0 0 var(--space-3) rgba(0, 240, 255, 0.25);
+  text-shadow: 0 0 var(--space-3) var(--cf-cyan-25);
 }
 
 .st-xp-badge {
@@ -558,8 +558,8 @@ function handleNodeKeydown(
   align-items: baseline;
   gap: var(--space-1_5);
   padding: var(--space-1_5) var(--space-3_5);
-  background: rgba(57, 255, 20, 0.06);
-  border: var(--space-0_5) solid rgba(57, 255, 20, 0.25);
+  background: var(--cf-lime-05);
+  border: var(--space-0_5) solid var(--cf-lime-25);
   border-radius: var(--radius-sm);
 }
 
@@ -568,13 +568,13 @@ function handleNodeKeydown(
   font-size: var(--text-base);
   font-weight: 700;
   color: var(--cf-lime, #39ff14);
-  text-shadow: 0 0 var(--space-2_5) rgba(57, 255, 20, 0.5);
+  text-shadow: 0 0 var(--space-2_5) var(--cf-lime-50);
 }
 
 .st-xp-unit {
   font-family: var(--font-cyber-data, 'Space Mono', monospace);
   font-size: var(--text-xs);
-  color: rgba(57, 255, 20, 0.45);
+  color: var(--cf-lime-40);
   letter-spacing: 0.1em;
 }
 
@@ -599,8 +599,8 @@ function handleNodeKeydown(
   align-items: center;
   justify-content: center;
   padding: var(--space-4) var(--space-3);
-  border-right: var(--space-0_5) solid rgba(0, 240, 255, 0.06);
-  background: rgba(0, 0, 0, 0.25);
+  border-right: var(--space-0_5) solid var(--cf-cyan-05);
+  background: var(--cf-black-25);
   overflow: hidden;
 }
 
@@ -630,7 +630,7 @@ function handleNodeKeydown(
   height: var(--space-7_5);
   border-radius: var(--radius-full);
   border: var(--space-0_5) solid var(--border-medium);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--cf-white-02);
 }
 
 .st-sil-neck {
@@ -640,7 +640,7 @@ function handleNodeKeydown(
   transform: translateX(-50%);
   width: var(--space-2);
   height: var(--space-2_5);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--cf-white-03);
   border-left: var(--space-0_5) solid var(--border-subtle);
   border-right: var(--space-0_5) solid var(--border-subtle);
 }
@@ -652,9 +652,9 @@ function handleNodeKeydown(
   transform: translateX(-50%);
   width: var(--space-11);
   height: var(--space-12_5);
-  border: var(--space-0_5) solid rgba(255, 255, 255, 0.1);
+  border: var(--space-0_5) solid var(--cf-white-10);
   border-radius: var(--radius-sm) var(--radius-sm) var(--radius-md) var(--radius-md);
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--cf-white-02);
   clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%);
 }
 
@@ -664,7 +664,7 @@ function handleNodeKeydown(
   width: var(--space-2_5);
   height: var(--space-12);
   border: var(--space-0_5) solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--cf-white-02);
   border-radius: var(--radius-sm);
 }
 
@@ -694,9 +694,9 @@ function handleNodeKeydown(
   bottom: 0;
   width: var(--space-3_25);
   height: var(--space-12_5);
-  border: var(--space-0_5) solid rgba(255, 255, 255, 0.07);
+  border: var(--space-0_5) solid var(--cf-white-08);
   border-radius: 0 0 var(--radius-xs) var(--radius-xs);
-  background: rgba(255, 255, 255, 0.01);
+  background: var(--cf-white-02);
 }
 
 .st-sil-legs::before {
@@ -712,16 +712,16 @@ function handleNodeKeydown(
   position: absolute;
   inset: calc(-1 * var(--space-4));
   border-radius: var(--radius-full);
-  border: var(--space-0_5) dashed rgba(255, 255, 255, 0.04);
+  border: var(--space-0_5) dashed var(--cf-white-03);
   transition: all 0.5s ease;
   pointer-events: none;
 }
 
 .st-sil-aura--active {
-  border-color: rgba(57, 255, 20, 0.2);
+  border-color: var(--cf-lime-20);
   box-shadow:
-    0 0 var(--space-5) rgba(57, 255, 20, 0.06),
-    inset 0 0 var(--space-4) rgba(57, 255, 20, 0.03);
+    0 0 var(--space-5) var(--cf-lime-05),
+    inset 0 0 var(--space-4) var(--cf-lime-03);
   animation: aura-breathe 3s ease-in-out infinite;
 }
 
@@ -743,7 +743,7 @@ function handleNodeKeydown(
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1_75) var(--space-2_5);
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--cf-white-02);
   border: var(--space-0_5) solid var(--glass-border-light);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -755,7 +755,7 @@ function handleNodeKeydown(
 }
 
 .st-slot:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--cf-white-03);
   border-color: var(--border-medium);
 }
 
@@ -772,7 +772,7 @@ function handleNodeKeydown(
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-xs);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--cf-white-02);
   flex-shrink: 0;
 }
 
@@ -953,7 +953,7 @@ function handleNodeKeydown(
 
 /* --- LOCKED --- */
 .st-node--locked {
-  border-color: rgba(255, 255, 255, 0.04);
+  border-color: var(--cf-white-03);
   opacity: 0.35;
   cursor: default;
 }
@@ -1008,7 +1008,7 @@ function handleNodeKeydown(
   right: calc(-1 * var(--space-0_75));
   width: var(--space-3_5);
   height: var(--space-3_5);
-  background: rgba(255, 107, 53, 0.85);
+  background: var(--cf-orange-80);
 }
 
 /* Branch empty state */
@@ -1062,7 +1062,7 @@ function handleNodeKeydown(
 
 .st-legend-swatch--owned {
   background: var(--cf-cyan, #00f0ff);
-  box-shadow: 0 0 var(--space-1_5) rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 var(--space-1_5) var(--cf-cyan-50);
 }
 
 .st-legend-swatch--available {
@@ -1083,7 +1083,7 @@ function handleNodeKeydown(
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-5);
-  border-top: var(--space-0_5) solid rgba(0, 240, 255, 0.08);
+  border-top: var(--space-0_5) solid var(--cf-cyan-08);
   background: rgba(10, 10, 18, 0.92);
   backdrop-filter: blur(var(--space-2));
   min-height: var(--space-13_5);
@@ -1138,8 +1138,8 @@ function handleNodeKeydown(
   align-items: baseline;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2_5);
-  background: rgba(57, 255, 20, 0.06);
-  border: var(--space-0_5) solid rgba(57, 255, 20, 0.2);
+  background: var(--cf-lime-05);
+  border: var(--space-0_5) solid var(--cf-lime-20);
   border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
@@ -1154,12 +1154,12 @@ function handleNodeKeydown(
 .st-detail-price-unit {
   font-family: var(--font-cyber-data, 'Space Mono', monospace);
   font-size: var(--text-2xs);
-  color: rgba(57, 255, 20, 0.45);
+  color: var(--cf-lime-40);
 }
 
 .st-detail-price--expensive {
-  background: rgba(255, 0, 153, 0.06);
-  border-color: rgba(255, 0, 153, 0.2);
+  background: var(--cf-magenta-05);
+  border-color: var(--cf-magenta-20);
 }
 
 .st-detail-price--expensive .st-detail-price-val {
@@ -1167,7 +1167,7 @@ function handleNodeKeydown(
 }
 
 .st-detail-price--expensive .st-detail-price-unit {
-  color: rgba(255, 0, 153, 0.45);
+  color: var(--cf-magenta-40);
 }
 
 /* Level requirement */
@@ -1200,14 +1200,14 @@ function handleNodeKeydown(
 }
 
 .st-status-badge--owned {
-  background: rgba(0, 240, 255, 0.06);
-  border: var(--space-0_5) solid rgba(0, 240, 255, 0.25);
+  background: var(--cf-cyan-05);
+  border: var(--space-0_5) solid var(--cf-cyan-25);
   color: var(--cf-cyan, #00f0ff);
 }
 
 .st-status-badge--locked {
-  background: rgba(255, 107, 53, 0.06);
-  border: var(--space-0_5) solid rgba(255, 107, 53, 0.25);
+  background: var(--cf-orange-05);
+  border: var(--space-0_5) solid var(--cf-orange-25);
   color: var(--cf-orange, #ff6b35);
 }
 
@@ -1219,7 +1219,7 @@ function handleNodeKeydown(
   padding: var(--space-2_5) var(--space-6);
   border: var(--space-0_5) solid var(--border-medium);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--cf-white-02);
   color: var(--text-muted);
   font-family: var(--font-cyber-title, 'Orbitron', sans-serif);
   font-size: var(--text-xs);
@@ -1233,8 +1233,8 @@ function handleNodeKeydown(
 .st-buy--can-afford {
   border-color: var(--cf-cyan, #00f0ff);
   color: var(--cf-cyan, #00f0ff);
-  background: rgba(0, 240, 255, 0.05);
-  box-shadow: 0 0 var(--space-3) rgba(0, 240, 255, 0.12);
+  background: var(--cf-cyan-05);
+  box-shadow: 0 0 var(--space-3) var(--cf-cyan-12);
   animation: buy-glow 2.5s ease-in-out infinite;
 }
 
@@ -1250,10 +1250,10 @@ function handleNodeKeydown(
 }
 
 .st-buy--can-afford:hover {
-  background: rgba(0, 240, 255, 0.1);
+  background: var(--cf-cyan-10);
   box-shadow:
-    0 0 var(--space-5) rgba(0, 240, 255, 0.35),
-    0 0 var(--space-10) rgba(0, 240, 255, 0.12);
+    0 0 var(--space-5) var(--cf-cyan-35),
+    0 0 var(--space-10) var(--cf-cyan-12);
   transform: translateY(calc(-1 * var(--space-0_5)));
 }
 
@@ -1331,7 +1331,7 @@ function handleNodeKeydown(
 
   .st-character {
     border-right: none;
-    border-bottom: var(--space-0_5) solid rgba(0, 240, 255, 0.06);
+    border-bottom: var(--space-0_5) solid var(--cf-cyan-05);
     padding: var(--space-3);
   }
 

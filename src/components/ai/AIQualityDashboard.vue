@@ -801,7 +801,7 @@ onMounted(() => {
   letter-spacing: 0.03em;
 }
 
-.cat-analytical { background: rgba(78, 205, 196, 0.15); color: var(--brand-primary); }
+.cat-analytical { background: var(--state-active-bg); color: var(--brand-primary); }
 .cat-priority { background: rgba(255, 107, 107, 0.15); color: var(--color-error); }
 .cat-assessment { background: rgba(155, 89, 182, 0.15); color: #9b59b6; }
 .cat-greeting { background: rgba(52, 152, 219, 0.15); color: #3498db; }
@@ -884,20 +884,20 @@ onMounted(() => {
 
 .verdict-good {
   color: var(--color-success);
-  background: rgba(46, 204, 113, 0.1);
-  border: 1px solid rgba(46, 204, 113, 0.3);
+  background: var(--success-bg-light);
+  border: 1px solid var(--success-border);
 }
 
 .verdict-warn {
   color: var(--color-warning);
-  background: rgba(241, 196, 15, 0.1);
-  border: 1px solid rgba(241, 196, 15, 0.3);
+  background: var(--color-warning-alpha-10);
+  border: 1px solid var(--amber-border-subtle);
 }
 
 .verdict-bad {
   color: var(--color-error);
-  background: rgba(231, 76, 60, 0.1);
-  border: 1px solid rgba(231, 76, 60, 0.3);
+  background: var(--danger-bg-subtle);
+  border: 1px solid var(--danger-border-medium);
 }
 
 
@@ -1019,12 +1019,12 @@ onMounted(() => {
 
 .rule-check-item.rule-passed {
   color: var(--color-success);
-  background: rgba(46, 204, 113, 0.05);
+  background: var(--success-bg-light);
 }
 
 .rule-check-item.rule-failed {
   color: var(--color-error);
-  background: rgba(231, 76, 60, 0.08);
+  background: var(--danger-bg-subtle);
 }
 
 .rule-icon {

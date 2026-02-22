@@ -134,6 +134,22 @@ async function syncSettingsToSupabase(state: AppSettings) {
     }
 }
 
+// Eagerly read persisted settings so the store is born hydrated.
+// Previously loadFromStorage() was only called from BoardView, causing defaults
+// (e.g. googleCalendarConnected=false) when other views accessed the store first.
+function getPersistedSettings(): Partial<AppSettings> | null {
+    if (typeof window === 'undefined') return null
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        if (saved) return JSON.parse(saved)
+        // Migration: check old key
+        const old = localStorage.getItem('flow-state-settings-v2')
+        if (old) return JSON.parse(old)
+    } catch { /* parse error — use defaults */ }
+    return null
+}
+const _persisted = getPersistedSettings()
+
 export const useSettingsStore = defineStore('settings', {
     state: (): AppSettings => ({
         // Timer defaults
@@ -204,7 +220,10 @@ export const useSettingsStore = defineStore('settings', {
         // Miscellaneous defaults
         sidebarCollapsed: false,
         kanbanSettings: {},
-        canvasViewport: null
+        canvasViewport: null,
+
+        // Spread persisted values last — overrides defaults with saved state
+        ...(_persisted || {})
     }),
 
     actions: {

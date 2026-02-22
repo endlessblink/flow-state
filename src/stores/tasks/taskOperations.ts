@@ -1,5 +1,5 @@
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
-import { type Ref } from 'vue'
+import { type Ref, toRaw } from 'vue'
 import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 // TASK-1158: Canvas sync via shared bridge (breaks circular dependency)
 import { canvasUiSyncRequest } from '../canvasTaskBridge'
@@ -12,6 +12,8 @@ import { useGamificationHooks } from '@/composables/useGamificationHooks'
 import { useTimerStore } from '@/stores/timer'
 // TASK-1177: Offline-first sync queue integration
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
+// TASK-1159: Toast feedback for background save failures
+import { useToast } from '@/composables/useToast'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
@@ -319,6 +321,9 @@ export function useTaskOperations(
 
         try {
             const task = _rawTasks.value[index]
+            // TASK-1177: Deep snapshot for rollback if all persistence paths fail
+            // toRaw() strips Vue reactivity proxy before cloning (structuredClone can't handle Proxy)
+            const previousTask = JSON.parse(JSON.stringify(toRaw(task)))
 
             // GEOMETRY DRIFT DETECTION (TASK-255): Track and warn about geometry changes
             const hasGeometryChange = ('parentId' in updates && updates.parentId !== task.parentId) ||
@@ -529,6 +534,7 @@ export function useTaskOperations(
             // TASK-1177: Queue for offline-first sync FIRST
             // This ensures the update persists in IndexedDB even if network fails
             const updatedTask = _rawTasks.value[index]
+            let persisted = false
             try {
                 const syncOrchestrator = useSyncOrchestrator()
                 // BUGFIX: Filter out undefined values to prevent "null" string errors in Postgres
@@ -624,6 +630,7 @@ export function useTaskOperations(
                     payload: JSON.parse(JSON.stringify(payload)), // Strip all reactivity
                     baseVersion: currentVersion
                 })
+                persisted = true
             } catch (queueError) {
                 const errorMsg = queueError instanceof Error ? queueError.message : String(queueError)
                 console.warn('[SYNC-QUEUE] Failed to queue update, falling back to direct save:', errorMsg)
@@ -632,6 +639,7 @@ export function useTaskOperations(
                 // This replaces the old dual-write where BOTH paths always ran.
                 try {
                     await saveSpecificTasks([updatedTask], `updateTask-fallback-${taskId}`)
+                    persisted = true
                 } catch (saveError) {
                     console.warn(`[SYNC-QUEUE] Fallback save also failed for ${taskId}:`, saveError)
                 }
@@ -644,9 +652,21 @@ export function useTaskOperations(
             // the realtime echo from this save from reverting local state.
             try {
                 await saveSpecificTasks([updatedTask], `updateTask-direct-${taskId}`)
+                persisted = true
             } catch (directSaveError) {
                 // Direct save failed - sync queue will retry. Don't throw, change is queued.
                 console.warn(`[TASK] Direct save failed for ${taskId}, sync queue will retry:`, directSaveError)
+                if (persisted) {
+                    // At least sync queue succeeded — show reassuring toast
+                    const { showToast } = useToast()
+                    showToast('Changes saved locally, will sync when connection restores', 'warning')
+                }
+            }
+
+            // TASK-1177: If ALL persistence paths failed, rollback optimistic update
+            if (!persisted) {
+                console.error(`❌ [TASK] All persistence paths failed for ${taskId}, rolling back optimistic update`)
+                _rawTasks.value[index] = previousTask
             }
         } finally {
             if (!wasManualInProgress) manualOperationInProgress.value = false
@@ -665,9 +685,24 @@ export function useTaskOperations(
         // Without this, the realtime handler would redundantly splice the task again.
         addPendingWrite(taskId)
 
+        // TASK-1159: Optimistic delete — splice from local state immediately for instant UI
+        _rawTasks.value.splice(index, 1)
+
+        // Save to localStorage immediately (for guest mode persistence)
         try {
-            // TASK-1177: Queue deletion for offline-first sync FIRST
-            // This ensures the delete persists in IndexedDB even if network fails
+            await saveTasksToStorage(_rawTasks.value, 'deleteTask')
+        } catch (localSaveError) {
+            // localStorage save failed — rollback immediately
+            console.error(`❌ [DELETE] localStorage save failed, rolling back:`, localSaveError)
+            _rawTasks.value.splice(index, 0, deletedTask)
+            manualOperationInProgress.value = false
+            throw localSaveError
+        }
+
+        // TASK-1159: Background sync — enqueue + direct delete, don't block UI
+        // Errors here show a warning toast but don't throw (task already removed locally)
+        try {
+            // TASK-1177: Queue deletion for offline-first sync
             try {
                 const syncOrchestrator = useSyncOrchestrator()
                 await syncOrchestrator.enqueue({
@@ -682,24 +717,19 @@ export function useTaskOperations(
             }
 
             // Also attempt direct delete for immediate sync when online
-            // BUGFIX: Persist deletion to Supabase FIRST (soft delete)
-            // This ensures task won't reappear on refresh
             await deleteTaskFromStorage(taskId)
-
-            _rawTasks.value.splice(index, 1)
-
-            // Save to localStorage AFTER splice (for guest mode persistence)
-            await saveTasksToStorage(_rawTasks.value, 'deleteTask')
-
-            // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
-            // The watcher detects the deletion and removes only the affected node, preventing position resets
-        } catch (error) {
-            _rawTasks.value.splice(index, 0, deletedTask)
-            console.error(`❌ [DELETE] Failed to delete task ${taskId}:`, error)
-            throw error
+        } catch (bgError) {
+            // TASK-1159: Background delete failed — task is already removed from UI.
+            // Sync queue will retry. Show warning toast so user knows.
+            console.warn(`⚠️ [DELETE] Background delete failed for ${taskId}, sync will retry:`, bgError)
+            const { showToast } = useToast()
+            showToast('Delete will sync when connection restores', 'warning')
         } finally {
             manualOperationInProgress.value = false
         }
+
+        // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
+        // The watcher detects the deletion and removes only the affected node, preventing position resets
     }
 
     // [DEEP-DIVE FIX] Added permanent delete operation
@@ -734,24 +764,41 @@ export function useTaskOperations(
         if (!taskIds.length) return
         manualOperationInProgress.value = true
 
+        // TASK-1159: Echo protection for each deleted task
+        taskIds.forEach(id => addPendingWrite(id))
+
+        // TASK-1159: Capture deleted tasks for rollback, then filter immediately
+        const deletedTasks = _rawTasks.value.filter(t => taskIds.includes(t.id))
+        const deletedIndices = deletedTasks.map(t => _rawTasks.value.indexOf(t))
+        _rawTasks.value = _rawTasks.value.filter(t => !taskIds.includes(t.id))
+
+        // Save to localStorage immediately (for guest mode persistence)
         try {
-            // BUG-025 FIX: Use atomic bulk delete instead of looping
-            await bulkDeleteTasksFromStorage(taskIds)
-
-            const tasksToKeep = _rawTasks.value.filter(t => !taskIds.includes(t.id))
-            _rawTasks.value = tasksToKeep
-
-            // Save to localStorage AFTER filter (for guest mode persistence)
             await saveTasksToStorage(_rawTasks.value, 'bulkDeleteTasks')
+        } catch (localSaveError) {
+            // localStorage save failed — rollback: re-insert tasks at original indices
+            console.error(`❌ [BULK-DELETE] localStorage save failed, rolling back:`, localSaveError)
+            deletedTasks.forEach((task, i) => {
+                _rawTasks.value.splice(deletedIndices[i], 0, task)
+            })
+            manualOperationInProgress.value = false
+            throw localSaveError
+        }
 
-            // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
-            // The watcher detects bulk deletions and removes only the affected nodes, preventing position resets
-        } catch (error) {
-            console.error(`❌ [BULK-DELETE] Failed to delete ${taskIds.length} tasks:`, error)
-            throw error
+        // TASK-1159: Background sync — don't block UI
+        try {
+            // BUG-025 FIX: Use atomic bulk delete
+            await bulkDeleteTasksFromStorage(taskIds)
+        } catch (bgError) {
+            console.warn(`⚠️ [BULK-DELETE] Background delete failed for ${taskIds.length} tasks, sync will retry:`, bgError)
+            const { showToast } = useToast()
+            showToast('Delete will sync when connection restores', 'warning')
         } finally {
             manualOperationInProgress.value = false
         }
+
+        // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
+        // The watcher detects bulk deletions and removes only the affected nodes, preventing position resets
     }
 
     const moveTask = async (taskId: string, newStatus: Task['status']) => {

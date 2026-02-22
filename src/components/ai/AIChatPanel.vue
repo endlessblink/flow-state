@@ -1042,7 +1042,7 @@ onUnmounted(() => {
 }
 
 .header-icon {
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--color-focus);
 }
 
 .grid-handler-icon {
@@ -1108,12 +1108,12 @@ onUnmounted(() => {
 .resize-btn:hover,
 .fullscreen-btn:hover {
   background: var(--purple-bg-subtle);
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--color-focus);
 }
 
 .history-btn.active {
   background: var(--surface-hover);
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--color-focus);
 }
 
 .close-btn:hover {
@@ -1122,12 +1122,12 @@ onUnmounted(() => {
 }
 
 .undo-btn {
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--color-focus);
 }
 
 .undo-btn:hover {
   background: var(--purple-bg-subtle);
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--color-focus);
 }
 
 /* ============================================================================
@@ -1140,7 +1140,7 @@ onUnmounted(() => {
 
 .settings-btn.active {
   background: var(--surface-hover);
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--color-focus);
 }
 
 .settings-dropdown {
@@ -1212,7 +1212,7 @@ onUnmounted(() => {
 
 .free-filter-btn {
   padding: var(--space-0_5) var(--space-2);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   font-weight: var(--font-semibold);
   letter-spacing: 0.03em;
   border: 1px solid var(--glass-border);
@@ -1265,7 +1265,7 @@ onUnmounted(() => {
 }
 
 .provider-option.active {
-  background: var(--accent-primary, #8b5cf6);
+  background: var(--color-focus);
   color: white;
 }
 
@@ -1310,8 +1310,8 @@ onUnmounted(() => {
 }
 
 .new-chat-btn:hover {
-  border-color: var(--accent-primary, #8b5cf6);
-  color: var(--accent-primary, #8b5cf6);
+  border-color: var(--color-focus);
+  color: var(--color-focus);
   background: var(--purple-bg-subtle);
 }
 
@@ -1346,7 +1346,7 @@ onUnmounted(() => {
 
 .chat-history-item.active {
   background: var(--purple-bg-subtle);
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--color-focus);
 }
 
 .chat-history-title {
@@ -1358,7 +1358,7 @@ onUnmounted(() => {
 
 .chat-history-date {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
 }
 
@@ -1463,7 +1463,7 @@ onUnmounted(() => {
 }
 
 .personality-option.active {
-  background: var(--accent-primary, #8b5cf6);
+  background: var(--color-focus);
   color: white;
 }
 
@@ -1557,8 +1557,8 @@ onUnmounted(() => {
 }
 
 .api-key-test-btn:hover:not(:disabled) {
-  border-color: var(--accent-primary, #8b5cf6);
-  color: var(--accent-primary, #8b5cf6);
+  border-color: var(--color-focus);
+  color: var(--color-focus);
 }
 
 .api-key-test-btn:disabled {
@@ -1605,7 +1605,7 @@ onUnmounted(() => {
 }
 
 .empty-icon {
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--color-focus);
   opacity: 0.5;
   margin-bottom: var(--space-3);
 }
@@ -1665,9 +1665,9 @@ onUnmounted(() => {
 
 .error-retry {
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--accent-primary, #8b5cf6);
+  border: 1px solid var(--color-focus);
   background: transparent;
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--color-focus);
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--text-xs);
@@ -1782,7 +1782,7 @@ onUnmounted(() => {
 
 .ai-chat-input:focus {
   outline: none;
-  border-color: var(--accent-primary, #8b5cf6);
+  border-color: var(--color-focus);
 }
 
 .ai-chat-input::placeholder {
@@ -1801,7 +1801,7 @@ onUnmounted(() => {
   width: var(--space-10);
   height: var(--space-10);
   border: none;
-  background: var(--accent-primary, #8b5cf6);
+  background: var(--color-focus);
   color: white;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -1842,8 +1842,8 @@ onUnmounted(() => {
 }
 
 .quick-action:hover {
-  border-color: var(--accent-primary, #8b5cf6);
-  color: var(--accent-primary, #8b5cf6);
+  border-color: var(--color-focus);
+  color: var(--color-focus);
   background: var(--purple-bg-subtle);
 }
 

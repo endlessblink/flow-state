@@ -331,7 +331,7 @@ function close() {
   height: 24px;
   border: none;
   background: transparent;
-  color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
+  color: var(--text-tertiary);
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
   transition: all 0.12s ease;
@@ -362,7 +362,7 @@ function close() {
 }
 
 .tip-item + .tip-item {
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .tip-icon {
@@ -378,7 +378,7 @@ function close() {
 .task-title-row {
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   line-height: 1.4;
   padding: var(--space-2, 8px) var(--space-1, 4px);
   display: -webkit-box;
@@ -392,7 +392,7 @@ function close() {
 /* ── Divider ── */
 .popover-divider {
   height: 1px;
-  background: var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: var(--border-subtle);
   margin: var(--space-1, 4px) 0;
 }
 
@@ -407,7 +407,7 @@ function close() {
 .field-label {
   font-size: var(--text-xs);
   font-weight: 500;
-  color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   width: var(--space-13);
@@ -417,7 +417,7 @@ function close() {
 /* ── Priority Dots ── */
 .priority-dots {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .priority-dot-btn {
@@ -451,14 +451,14 @@ function close() {
 /* ── Status Badges ── */
 .status-badges {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   flex-wrap: wrap;
 }
 
 .status-badge-btn {
   font-size: var(--text-xs);
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 2px var(--space-2);
   border-radius: var(--radius-sm, 4px);
   border: 1px solid transparent;
   cursor: pointer;
@@ -516,8 +516,8 @@ function close() {
 .date-input {
   flex: 1;
   font-size: var(--text-xs);
-  padding: 4px 8px;
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm, 4px);
   background: var(--glass-bg-medium);
   color: var(--text-primary);
@@ -540,7 +540,7 @@ function close() {
 .action-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 5px 10px;
   border-radius: var(--radius-md, 8px);
   font-size: var(--text-xs);
@@ -582,19 +582,19 @@ function close() {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--space-1);
   width: 100%;
-  padding: var(--space-1, 4px);
+  padding: var(--space-1);
   border: none;
   background: transparent;
-  color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
+  color: var(--text-tertiary);
   font-size: var(--text-xs);
   cursor: pointer;
   transition: color 0.12s ease;
 }
 
 .full-editor-link:hover {
-  color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary);
 }
 
 /* ── Success Flash ── */

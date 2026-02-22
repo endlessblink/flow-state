@@ -112,7 +112,7 @@ watch(() => props.shieldEvent, (event) => {
 
 .streak-icon {
   color: var(--streak-flame-color);
-  filter: drop-shadow(0 0 var(--space-1) rgba(255, 107, 53, 0.5));
+  filter: drop-shadow(0 0 var(--space-1) var(--cf-orange-50));
 }
 
 .streak-icon--animated {
@@ -124,8 +124,8 @@ watch(() => props.shieldEvent, (event) => {
   position: absolute;
   left: -4px;
   top: -4px;
-  color: rgba(var(--neon-cyan), 1);
-  filter: drop-shadow(0 0 6px rgba(var(--neon-cyan), 0.8));
+  color: var(--cf-cyan);
+  filter: drop-shadow(0 0 6px var(--cf-cyan-80));
   pointer-events: none;
 }
 
@@ -154,7 +154,7 @@ watch(() => props.shieldEvent, (event) => {
   font-size: var(--text-lg);
   font-weight: var(--font-bold);
   color: var(--streak-text-color);
-  text-shadow: 0 0 var(--space-2) rgba(255, 107, 53, 0.4);
+  text-shadow: 0 0 var(--space-2) var(--cf-orange-40);
 }
 
 .compact .streak-number {
@@ -171,14 +171,14 @@ watch(() => props.shieldEvent, (event) => {
   align-items: center;
   gap: var(--space-0_5);
   padding: var(--space-0_5) var(--space-1_5);
-  background: rgba(var(--neon-cyan), 0.1);
+  background: var(--cf-cyan-10);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
-  color: rgba(var(--neon-cyan), 0.9);
+  color: var(--cf-cyan-90);
 }
 
 .freeze-icon {
-  color: rgba(var(--neon-cyan), 0.8);
+  color: var(--cf-cyan-80);
 }
 
 .streak-warning {
@@ -188,38 +188,38 @@ watch(() => props.shieldEvent, (event) => {
 }
 
 .warning-icon {
-  color: rgb(251, 191, 36);
+  color: var(--amber-text);
 }
 
 /* Streak tier styles */
 .streak--hot .streak-icon {
-  color: #ff6b35;
+  color: var(--cf-orange);
 }
 
 .streak--epic .streak-icon {
-  color: #ff4500;
-  filter: drop-shadow(0 0 var(--space-1_5) rgba(255, 69, 0, 0.6));
+  color: var(--cf-orange);
+  filter: drop-shadow(0 0 var(--space-1_5) var(--cf-orange-60));
 }
 
 .streak--epic .streak-number {
-  color: #ff4500;
+  color: var(--cf-orange);
 }
 
 .streak--legendary .streak-icon {
-  color: #ff00ff;
-  filter: drop-shadow(0 0 var(--space-2) rgba(255, 0, 255, 0.7));
+  color: var(--cf-magenta);
+  filter: drop-shadow(0 0 var(--space-2) var(--cf-magenta-70));
 }
 
 .streak--legendary .streak-number {
-  background: linear-gradient(90deg, #00ffff, #ff00ff);
+  background: linear-gradient(90deg, var(--cf-cyan), var(--cf-magenta));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .streak--legendary {
-  border-color: rgba(255, 0, 255, 0.4);
-  box-shadow: 0 0 var(--space-3) rgba(255, 0, 255, 0.2);
+  border-color: var(--cf-magenta-40);
+  box-shadow: 0 0 var(--space-3) var(--cf-magenta-20);
 }
 
 @keyframes pulse {

@@ -267,16 +267,30 @@ const {
         v-for="ext in positionedExternalEvents"
         :key="`ext-${ext.id}`"
         class="external-event"
+        :class="{
+          'external-event--tiny': ext.height < 25,
+          'external-event--small': ext.height >= 25 && ext.height < 40
+        }"
         :style="{
           top: `${ext.top}px`,
           height: `${ext.height}px`,
-          backgroundColor: ext.color + '25',
+          backgroundColor: ext.color + '20',
           borderColor: ext.color
         }"
-        :title="`${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
+        :title="`${ext.formattedTime} — ${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
       >
-        <span class="external-event-time">{{ ext.formattedTime }}</span>
-        <span class="external-event-title" dir="auto">{{ ext.title }}</span>
+        <!-- Tiny events (< 25min): single line with time + title inline -->
+        <template v-if="ext.height < 25">
+          <span class="external-event-inline" dir="auto">
+            <span class="external-event-time">{{ ext.formattedTime }}</span>
+            {{ ext.title }}
+          </span>
+        </template>
+        <!-- Normal events: time on top, title below -->
+        <template v-else>
+          <span class="external-event-time">{{ ext.formattedTime }}</span>
+          <span class="external-event-title" dir="auto">{{ ext.title }}</span>
+        </template>
       </div>
     </div>
   </div>
@@ -808,16 +822,14 @@ const {
   text-decoration: line-through;
 }
 
-/* TASK-1317: External calendar events (read-only overlays) */
+/* TASK-1317 + TASK-1283: External calendar events (read-only overlays) */
 .external-event {
   position: absolute;
+  left: 55%;
   right: 4px;
-  width: 45%;
-  min-height: 24px;
-  border-left: 3px solid;
-  border-radius: var(--radius-md);
-  padding: var(--space-0_5) var(--space-1_5);
-  font-size: var(--text-sm);
+  min-height: 18px;
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-1_5);
   color: var(--text-primary);
   pointer-events: auto;
   z-index: 3;
@@ -826,15 +838,35 @@ const {
   border-width: 1px 1px 1px 3px;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  justify-content: center;
   cursor: default;
+  backdrop-filter: blur(4px);
+  transition: filter 0.15s;
+}
+
+.external-event:hover {
+  filter: brightness(1.15);
+}
+
+/* Tiny events (< 25min): single inline row */
+.external-event--tiny {
+  flex-direction: row;
+  align-items: center;
+  padding: 0 var(--space-1);
+  gap: var(--space-1);
+}
+
+/* Small events (25-40min): tighter padding */
+.external-event--small {
+  padding: 1px var(--space-1);
 }
 
 .external-event-time {
   font-weight: var(--font-semibold);
   font-size: var(--text-xs);
-  opacity: 0.7;
-  line-height: 1.2;
+  opacity: 0.8;
+  line-height: 1.1;
+  flex-shrink: 0;
 }
 
 .external-event-title {
@@ -842,6 +874,31 @@ const {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.3;
+  line-height: 1.2;
+}
+
+/* Inline layout for tiny events: "14:00 Event Title" on one line */
+.external-event-inline {
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.external-event-inline .external-event-time {
+  margin-right: var(--space-1);
+  font-size: inherit;
+}
+
+/* Ensure readable text in both light and dark mode */
+:root[data-theme="light"] .external-event,
+.light .external-event {
+  color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .external-event,
+.dark .external-event {
+  color: var(--text-primary);
 }
 </style>

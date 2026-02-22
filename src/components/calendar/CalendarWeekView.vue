@@ -291,8 +291,8 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                   position: 'absolute',
                   top: `${(ext.startTime.getMinutes() >= 30 ? 30 : 0)}px`,
                   height: `${Math.max(20, Math.ceil((ext.endTime.getTime() - ext.startTime.getTime()) / 60000 / 30) * 30)}px`,
+                  left: '50%',
                   right: '2px',
-                  width: '35%',
                   borderColor: ext.color,
                   backgroundColor: ext.color + '20'
                 }"
@@ -596,13 +596,19 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 .week-event--external {
   background: transparent !important;
   border: 1px solid;
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
   color: var(--text-primary) !important;
   cursor: default;
-  padding-left: var(--space-1);
+  padding: 1px var(--space-1);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
 }
 
 .week-event--external:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.15);
 }
 
 .week-event--external .external-event-title {
@@ -611,7 +617,6 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: var(--space-0_5) var(--space-1);
-  line-height: 1.3;
+  line-height: 1.2;
 }
 </style>

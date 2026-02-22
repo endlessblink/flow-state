@@ -8,6 +8,22 @@
 
 ## Active Bugs (P0-P1)
 
+### TASK-1405: Replace LLM Distribution with Deterministic Algorithm in Weekly Plan (👀 REVIEW)
+
+**Priority**: P1 | **Status**: 👀 REVIEW (2026-02-22)
+
+**Problem**: Weekly Plan AI used LLM (Llama 3.3 70B via Groq) to assign tasks to days. Even with detailed MANDATORY RULES prompts, the LLM ignored routine preferences, misplaced tasks, and produced generic reasoning.
+
+**Fix**: Replaced Step 1 (LLM distribution) with a deterministic 4-tier algorithm:
+- **Tier 1**: Hard constraints (due dates, routine keyword matches from memory graph)
+- **Tier 2**: Urgency (overdue spread via round-robin across Mon-Wed, in-progress early)
+- **Tier 3**: Priority (high-priority on peak days, top-priority project batching)
+- **Tier 4**: Fill (day scoring by capacity, project batching, complexity/meeting-day penalties)
+
+Kept: LLM week theme (Step 3), dynamic questions, all memory/profile infrastructure. Removed ~300 lines of LLM prompt building + rebalancer + fallback plan code.
+
+---
+
 ### ~~TASK-1403~~: Recurring Tasks — Clone-on-Complete with recurrence_rule column (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-02-22)
@@ -100,6 +116,22 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 3. Added document-level `dragend` safety net in `CalendarView.vue` — fires on every drag end regardless of source/target
 
 **Files Changed**: `src/composables/calendar/useCalendarDayView.ts`, `src/views/CalendarView.vue`
+
+---
+
+### ~~BUG-1404~~: Context menu dropdowns don't work from search right-click (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-02-22)
+
+**Problem**: Right-clicking a task in the SearchModal (Cmd+K) opens the TaskContextMenu correctly, but the hover submenus (Project, Status, Duration) are unreachable — they render behind the search overlay.
+
+**Root Cause**: Z-index layering. SearchModal overlay is `z-index: 1400` (`--z-popover`). TaskContextMenu is `z-index: 9999` (above overlay ✅). But submenus are Teleported to `<body>` with `z-index: calc(--z-dropdown + 1) = 1001` — below the search overlay (1400) ❌.
+
+**Fix**:
+1. `SearchModal.vue`: Close modal in `handleTaskRightClick` before dispatching context menu event
+2. All 4 submenu components: Changed `z-index` from `calc(var(--z-dropdown) + 1)` to `10001` (defense-in-depth)
+
+**Files Changed**: `SearchModal.vue`, `StatusSubmenu.vue`, `DurationSubmenu.vue`, `ProjectSubmenu.vue`, `MoreSubmenu.vue`
 
 ---
 
@@ -277,7 +309,7 @@ Full push notification system with per-category controls, Web Push subscription,
 
 ### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (👀 REVIEW)
 
-**Priority**: P3 | **Status**: 👀 REVIEW
+**Priority**: P3 | **Status**: 🔄 IN PROGRESS
 
 **Goal**: Review and streamline every Storybook story to use the project's design system consistently. Replace all non-design-system elements with proper project components and tokens.
 
@@ -876,9 +908,9 @@ Full push notification system with per-category controls, Web Push subscription,
 
 ---
 
-### TASK-1217: Add "Today" Filter to KDE Plasma Widget (🔄 IN PROGRESS)
+### ~~TASK-1217~~: Add "Today" Filter to KDE Plasma Widget (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-02-07)
+**Priority**: P0 | **Status**: ✅ DONE (2026-02-22)
 
 Add a "Today" button/filter option to the KDE Plasma widget's task list that filters to only show tasks with today's due date. Queries `due_date` column via Supabase REST API.
 
@@ -1204,9 +1236,9 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
-### BUG-1113: Stale Worktrees Not Cleaned Up - Forces Claude Code Context Bloat (🔄 IN PROGRESS)
+### ~~BUG-1113~~: Stale Worktrees Not Cleaned Up - Forces Claude Code Context Bloat (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS | **Parent**: TASK-303
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-22) | **Parent**: TASK-303
 
 **Problem**: The Dev-Maestro orchestrator creates git worktrees in `.agent-worktrees/` for each task but does not clean them up after completion. These stale directories force Claude Code to load them into context, wasting tokens and causing confusion.
 
@@ -2287,9 +2319,9 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### TASK-1060: Infrastructure & E2E Sync Stability (🔄 IN PROGRESS)
+### ~~TASK-1060~~: Infrastructure & E2E Sync Stability (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (Started: 2026-01-24)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-22)
 
 **Problem**: Intermittent sync failures across Web, Tauri, PWA, KDE Widget - 0 tasks shown, WebSocket 403 errors, SIGTERM exits.
 
@@ -2760,9 +2792,9 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ---
 
-### TASK-1249: Codebase Hygiene Audit — Placeholders, Hardcoded Values, Debug Leftovers (🔄 IN PROGRESS)
+### ~~TASK-1249~~: Codebase Hygiene Audit — Placeholders, Hardcoded Values, Debug Leftovers (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-02-08)
+**Priority**: P0 | **Status**: ✅ DONE (2026-02-22)
 
 **Summary**: Comprehensive 7-agent audit found 10 CRITICAL, 34 MEDIUM, 29 LOW issues across placeholders, hardcoded values, demo content, debug leftovers, design token violations, AI config, and metadata.
 
@@ -2789,7 +2821,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 - [x] **~~TASK-1265~~**: ✅ Fix AI proxy health check consuming real API tokens every 60s — switched to OPTIONS request instead of chat completion (`aiChatProxy.ts:412-421`)
 
 #### P2 — Code Quality & Design System
-- [ ] **TASK-1266**: CSS design token migration — top 10 offending files (1,420 raw rgba + 434 hex violations across 129 files). ~305 hardcoded values migrated in 20+ files (DoneToggleVisuals, GamificationPanel, ShopModal, BossFightPanel, ChallengeCard, ChallengeComplete, AchievementBadge, AchievementToast, AchievementsModal, CorruptionOverlay, DailyChallengesPanel, LevelBadge, StreakCounter, XpBar, TaskCreateBottomSheet, TaskEditBottomSheet, CalendarTaskCard, TauriUpdateNotification, ARIAMessage, etc.). Remaining violations still exist.
+- [x] **~~TASK-1266~~**: ✅ CSS design token migration — top 10 offending files migrated (~172 violations fixed in CyberSkillTree, CyberShop, AIChatPanel, CyberBossFight, StreakCounter, GamificationHUD, AIMemoryHealthDashboard, TaskQuickEditPopover, AIQualityDashboard, DoneToggleVisuals). Expanded `cyberflow-tokens.css` with full opacity scale (140+ new `--cf-*` tokens). Combined with prior work: ~477 hardcoded values migrated total.
 - [x] **~~TASK-1267~~**: ✅ Standardize localStorage key prefixes — settings.ts migrated with migration logic for old keys
 - [x] **~~TASK-1268~~**: ✅ Extract magic timeout numbers to named constants — created `src/config/timing.ts` with PENDING_WRITE_TIMEOUT_MS, DRAG_SETTLE_TIMEOUT_MS, FILE_DIALOG_TIMEOUT_MS, CROSS_TAB_DEDUP_TIMEOUT_MS, RESIZE_SETTLE_TIMEOUT_MS
 - [x] **~~TASK-1269~~**: ✅ Create centralized `src/config/urls.ts` — EXTERNAL_URLS with DiceBear, GitHub, production site, Storybook dev
@@ -3646,7 +3678,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1303**~~ | **P2** | ✅ **Mark Done doesn't stop active timer running on that task** (✅ DONE — fix in taskOperations.ts:431) |
 | ~~**BUG-1304**~~ | **P2** | ✅ **Done tasks in calendar view have no visual done indicator** (✅ DONE — visual indicator in all 3 calendar views) |
 | ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
-| **TASK-1337** | **P3** | **👀 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
+| **TASK-1337** | **P3** | **🔄 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
 | ~~**TASK-1338**~~ | **P0** | ✅ **Configurable PWA Push Notifications — per-category controls, quiet hours, server-side push service** |
 | ~~**BUG-1311**~~ | **P3** | ✅ **Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
@@ -3707,6 +3739,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1397**~~ | **P1** | **✅ `mark_task_done` convenience tool — accepts title string, most common user action** (✅ DONE) |
 | ~~**TASK-1398**~~ | **P1** | **✅ Conversation entity memory — track mentioned tasks, resolve pronouns ("it", "that one")** (✅ DONE) |
 | **TASK-1386** | **P2** | **✅ Google Calendar proxy Edge Function — list-calendars, list-events, token refresh on 401** |
+| **TASK-1405** | **P1** | 👀 **Replace LLM Distribution with Deterministic Algorithm in Weekly Plan** (👀 REVIEW 2026-02-22) |
 | ~~**TASK-1403**~~ | **P2** | ✅ **Recurring Tasks — Clone-on-Complete with recurrence_rule column** (✅ DONE 2026-02-22) |
 | ~~**TASK-1402**~~ | **P1** | ✅ **Decouple canvas/calendar inbox filtering — isInInbox now user-controlled, placement uses position-based filtering** (✅ DONE 2026-02-22) |
 | ~~**TASK-1387**~~ | **P1** | **✅ Centralize all AI model references to single source of truth** (✅ DONE 2026-02-21) |
@@ -3732,7 +3765,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
 | ~~TASK-1248~~ | P1 | ✅ Design token audit & cleanup — all 7 phases complete, ~100+ violations fixed across 30 files |
-| **TASK-1249** | **P0** | **🔄 Codebase Hygiene Audit — placeholders, hardcoded values, debug leftovers (33 sub-tasks)** |
+| ~~**TASK-1249**~~ | **P0** | ✅ **Codebase Hygiene Audit — placeholders, hardcoded values, debug leftovers (33/33 sub-tasks done)** |
 | ~~TASK-1250~~ | P0 | ✅ Fix API key storage — removed plaintext localStorage (proxy handles keys server-side) |
 | ~~TASK-1251~~ | P0 | ✅ Fix direct API calls bypassing proxy (AIChatPanel.vue) |
 | ~~TASK-1252~~ | P0 | ✅ Remove/gate /keyboard-test debug route (ships without auth) |
@@ -4430,7 +4463,7 @@ Enables Claude agents to implement code changes using git worktrees for isolatio
 
 | Task | Priority | Description |
 |------|----------|-------------|
-| BUG-1113 | P0 | Stale worktrees not cleaned up - forces Claude Code context bloat |
+| ~~BUG-1113~~ | P0 | ✅ Stale worktrees not cleaned up - forces Claude Code context bloat |
 | BUG-1019 | P0 | Swarm agent cleanup + OOM prevention |
 | TASK-321 | P2 | Test merge/discard workflow E2E |
 | TASK-322 | P2 | Automatic error recovery (exponential backoff, partial progress) |

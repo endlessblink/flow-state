@@ -527,7 +527,7 @@ const handleChangePassword = async () => {
               <RefreshCw v-else :size="14" />
               {{ googleCalendarLoading ? $t('google_calendar.syncing') : $t('google_calendar.sync_now') }}
             </button>
-            <button class="icon-btn danger" :title="$t('google_calendar.disconnect')" @click="handleDisconnectGoogle">
+            <button class="add-btn danger" :title="$t('google_calendar.disconnect')" @click="handleDisconnectGoogle">
               <Trash2 :size="14" />
               {{ $t('google_calendar.disconnect') }}
             </button>
@@ -1397,6 +1397,17 @@ const handleChangePassword = async () => {
   transform: translateY(-1px);
 }
 
+.add-btn.danger {
+  background: var(--danger-bg-light, rgba(239, 68, 68, 0.15));
+  color: var(--color-danger, #ef4444);
+  border: 1px solid var(--danger-border-medium, rgba(239, 68, 68, 0.3));
+}
+
+.add-btn.danger:hover {
+  background: var(--danger-bg-medium, rgba(239, 68, 68, 0.25));
+  border-color: var(--color-danger, #ef4444);
+}
+
 .interval-picker {
   display: flex;
   gap: var(--space-1);
@@ -1471,8 +1482,10 @@ const handleChangePassword = async () => {
 
 .google-calendar-actions {
   display: flex;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
   align-items: center;
+  padding-bottom: var(--space-2);
 }
 
 .spinner {

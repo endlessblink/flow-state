@@ -181,6 +181,7 @@
     "events_visible": "אירועי יומן Google מוצגים",
     "error_fetch": "שליפת יומנים נכשלה",
     "error_sync": "סנכרון נכשל",
+    "token_expired": "פג תוקף החיבור — חבר מחדש לסנכרון אירועים",
     "error_token_expired": "חיבור יומן Google פג תוקף. אנא חבר מחדש.",
     "requires_reauth": "גישה ליומן דורשת אימות מחדש עם Google"
   },

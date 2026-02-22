@@ -123,14 +123,17 @@ try {
             // BUG-339: Explicit auth configuration for reliability
             autoRefreshToken: true,
             persistSession: true,
-            // FEATURE-1202: PKCE flow for Tauri OAuth code exchange
-            // PWA uses implicit flow (default) — PKCE not needed for redirect-based OAuth
-            flowType: (isTauri || isCapacitorRuntime) ? 'pkce' : 'implicit',
+            // FEATURE-1202 + TASK-1283: PKCE flow for ALL platforms.
+            // PKCE does server-side code exchange → returns refresh tokens (needed for Google Calendar).
+            // Implicit flow only gives short-lived access tokens with no refresh capability.
+            // PKCE redirect uses ?code=xxx in query string (not hash), so Vue Router hash mode doesn't interfere.
+            flowType: 'pkce',
             // Use custom storage key to avoid conflicts with other apps
             storageKey: 'flowstate-supabase-auth',
-            // For desktop apps (Tauri), don't try to detect session from URL.
-            // When we have pending OAuth tokens, also disable — we handle session manually via setSession().
-            // This prevents Supabase's _initialize() from racing with Vue Router for URL hash access.
+            // For desktop apps (Tauri/Capacitor), don't detect session from URL (they use deep links).
+            // For web/PWA with PKCE: detectSessionInUrl MUST be true so Supabase picks up ?code=xxx
+            // from the query string and exchanges it for tokens (including provider_refresh_token).
+            // Legacy: if _pendingOAuthTokens is set (old implicit flow hash), disable to avoid conflict.
             detectSessionInUrl: !isTauri && !isCapacitorRuntime && !_pendingOAuthTokens,
             // BUG-339: Use localStorage (reliable in Tauri 2.x)
             // Combined with proactive token refresh in auth.ts for session persistence

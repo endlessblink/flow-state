@@ -481,7 +481,17 @@ const handleChangePassword = async () => {
       <!-- Connected state -->
       <template v-else>
         <div class="google-calendar-connected">
-          <div class="connection-status">
+          <!-- Token expired — show reconnect prompt -->
+          <div v-if="googleCalendar.needsReauth.value" class="reauth-banner">
+            <AlertCircle :size="14" />
+            <span>{{ $t('google_calendar.token_expired') }}</span>
+            <button class="add-btn" :disabled="googleCalendarLoading" @click="handleConnectGoogle">
+              <Loader2 v-if="googleCalendarLoading" :size="14" class="spinner" />
+              <RefreshCw v-else :size="14" />
+              {{ $t('google_calendar.reconnect') }}
+            </button>
+          </div>
+          <div v-else class="connection-status">
             <CheckCircle :size="14" class="success-icon" />
             <span>{{ $t('google_calendar.connected') }}</span>
           </div>
@@ -1440,6 +1450,23 @@ const handleChangePassword = async () => {
   color: var(--brand-primary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
+}
+
+.reauth-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-warning, #f59e0b);
+  border-radius: var(--radius-md);
+  color: var(--color-warning, #f59e0b);
+  font-size: var(--text-sm);
+}
+
+.reauth-banner .add-btn {
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 .google-calendar-actions {

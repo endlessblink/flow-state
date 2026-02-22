@@ -309,9 +309,9 @@ export const useAuthStore = defineStore('auth', () => {
           }
 
           // TASK-1283: Capture Google provider tokens for Calendar API
-          // This must run for BOTH 'SIGNED_IN' and 'INITIAL_SESSION' events.
-          // After OAuth redirect, supabase.ts extracts tokens from the hash and calls setSession().
-          // setSession() fires 'INITIAL_SESSION' (not 'SIGNED_IN'), so we capture here for both.
+          // PKCE flow: Supabase exchanges ?code=xxx for tokens, fires SIGNED_IN with session.provider_token
+          // Legacy implicit flow: tokens from hash via consumePendingProviderTokens(), fires INITIAL_SESSION
+          // We handle both events to cover all flows.
           if ((_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION') && newSession?.user) {
             const providerTokens = consumePendingProviderTokens()
             const providerToken = providerTokens?.provider_token || (newSession as any).provider_token

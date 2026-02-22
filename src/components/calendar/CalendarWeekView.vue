@@ -596,7 +596,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 .week-event--external {
   background: transparent !important;
   border: 1px solid;
-  color: var(--text-secondary) !important;
+  color: var(--text-primary) !important;
   cursor: default;
   padding-left: var(--space-1);
 }
@@ -606,11 +606,12 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 }
 
 .week-event--external .external-event-title {
-  font-size: var(--text-2xs);
-  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: var(--space-0_5) var(--space-1);
+  line-height: 1.3;
 }
 </style>

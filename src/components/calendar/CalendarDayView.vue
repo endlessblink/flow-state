@@ -812,13 +812,13 @@ const {
 .external-event {
   position: absolute;
   right: 4px;
-  width: 35%;
-  min-height: 20px;
+  width: 45%;
+  min-height: 24px;
   border-left: 3px solid;
   border-radius: var(--radius-md);
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
+  padding: var(--space-0_5) var(--space-1_5);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
   pointer-events: auto;
   z-index: 3;
   overflow: hidden;
@@ -826,20 +826,22 @@ const {
   border-width: 1px 1px 1px 3px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   cursor: default;
 }
 
 .external-event-time {
   font-weight: var(--font-semibold);
-  font-size: var(--text-2xs);
-  opacity: 0.8;
+  font-size: var(--text-xs);
+  opacity: 0.7;
+  line-height: 1.2;
 }
 
 .external-event-title {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.3;
 }
 </style>

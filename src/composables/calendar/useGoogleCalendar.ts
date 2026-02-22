@@ -16,8 +16,9 @@ export function useGoogleCalendar() {
   const error = ref<string | null>(null)
   let syncInterval: ReturnType<typeof setInterval> | null = null
 
-  // Computed from settings
-  const isConnected = computed(() => settingsStore.googleCalendarConnected && !!settingsStore.googleCalendarToken)
+  // Computed from settings — connected if flag is true (token may have expired, but user is still "connected")
+  const isConnected = computed(() => settingsStore.googleCalendarConnected)
+  const needsReauth = computed(() => settingsStore.googleCalendarConnected && !settingsStore.googleCalendarToken)
   const showGoogleEvents = computed({
     get: () => settingsStore.showGoogleCalendarEvents,
     set: (val: boolean) => settingsStore.updateSetting('showGoogleCalendarEvents', val)
@@ -59,6 +60,10 @@ export function useGoogleCalendar() {
   // Fetch events from all selected calendars
   async function syncNow() {
     if (!isConnected.value || selectedCalendars.value.length === 0) return
+    if (!settingsStore.googleCalendarToken) {
+      error.value = 'Token expired — please reconnect Google Calendar in Settings'
+      return
+    }
 
     isLoading.value = true
     error.value = null
@@ -84,6 +89,12 @@ export function useGoogleCalendar() {
         allEvents.push(...transformed)
       } catch (e: any) {
         console.error(`[GoogleCalendar] Failed to fetch events for ${cal.summary}:`, e)
+        // Token expired — clear it so UI shows re-auth prompt, but keep connected flag
+        if (e.message?.includes('expired') || e.message?.includes('401')) {
+          settingsStore.updateSetting('googleCalendarToken', '')
+          error.value = 'Google token expired — please reconnect in Settings'
+          break
+        }
         error.value = e.message
       }
     }
@@ -179,6 +190,7 @@ export function useGoogleCalendar() {
     isLoading,
     error,
     isConnected,
+    needsReauth,
     showGoogleEvents,
     selectedCalendars,
     syncNow,

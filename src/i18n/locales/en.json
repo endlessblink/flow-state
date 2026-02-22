@@ -181,6 +181,7 @@
     "events_visible": "Google Calendar events visible",
     "error_fetch": "Failed to fetch calendars",
     "error_sync": "Sync failed",
+    "token_expired": "Session expired — reconnect to sync events",
     "error_token_expired": "Google Calendar connection expired. Please reconnect.",
     "requires_reauth": "Calendar access requires re-authentication with Google"
   },

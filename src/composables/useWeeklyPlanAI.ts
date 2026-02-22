@@ -98,7 +98,26 @@ interface EnrichedTask extends TaskSummary {
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 type DayKey = typeof DAY_KEYS[number]
 
-const WEEKDAY_KEYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+// ============================================================================
+// Deterministic Distribution Types
+// ============================================================================
+
+interface DayBucket {
+  key: DayKey
+  capacity: number
+  complexityCap: number
+  weight: number            // work-style weight (frontload/backload/balanced)
+  routineKeywords: string[] // from memory graph scheduling_preference observations
+  isPeakDay: boolean
+  tasks: string[]           // placed task IDs
+  totalComplexity: number
+}
+
+type TaskTier = 1 | 2 | 3 | 4
+interface ClassifiedTask extends EnrichedTask {
+  tier: TaskTier
+  constrainedDay: DayKey | null  // for Tier 1 tasks
+}
 
 // TASK-1321: Parameterized to support Sunday or Monday week start
 function getWeekBounds(weekStartsOn: 0 | 1 = 0): { weekStart: Date; weekEnd: Date } {
@@ -264,6 +283,592 @@ function enrichTasksForPlanning(tasks: TaskSummary[], weekEnd: Date): EnrichedTa
 }
 
 // ============================================================================
+// STEP 1: Deterministic Distribution Algorithm (no LLM, instant)
+// ============================================================================
+
+/** Parse scheduling_preference observations into day→keywords map */
+function parseSchedulingPreferences(
+  profile?: WorkProfile | null
+): Map<DayKey, string[]> {
+  const map = new Map<DayKey, string[]>()
+  if (!profile?.memoryGraph) return map
+
+  const dayNameMap: Record<string, DayKey> = {
+    sunday: 'sunday', monday: 'monday', tuesday: 'tuesday',
+    wednesday: 'wednesday', thursday: 'thursday', friday: 'friday', saturday: 'saturday',
+  }
+
+  for (const obs of profile.memoryGraph) {
+    if (obs.relation !== 'scheduling_preference' || obs.confidence < 0.6) continue
+    // Format: "wednesday (context: Which day do you go to school?)"
+    const match = obs.value.match(/^(\w+)\s*\(context:\s*(.+?)\??\s*\)/)
+    if (!match) continue
+    const [, dayStr, context] = match
+    const dayKey = dayNameMap[dayStr.toLowerCase()]
+    if (!dayKey) continue
+
+    // Extract keywords from the context question
+    const topic = context
+      .replace(/^Which day (?:do you |does the |is |are you )?(?:go to |at |for |usually )?/i, '')
+      .replace(/^I see .+? — which day (?:do you |does the )?(?:go to |usually )?/i, '')
+      .replace(/^You have .+? — which day/i, '')
+      .trim()
+      .toLowerCase()
+
+    const existing = map.get(dayKey) || []
+    existing.push(topic)
+    map.set(dayKey, existing)
+  }
+
+  return map
+}
+
+/** Routine keyword patterns for matching tasks to routine days (Hebrew + English) */
+const ROUTINE_PATTERNS: Array<{ keywords: RegExp; label: string }> = [
+  { keywords: /תיכון|בית.?ספר|school|high.?school/i, label: 'school' },
+  { keywords: /אוניברסיטה|university|uni|campus|college|לימודים/i, label: 'university' },
+  { keywords: /משרד|office|עבודה|work/i, label: 'office' },
+  { keywords: /חדר.?כושר|gym|fitness|אימון|workout/i, label: 'gym' },
+  { keywords: /סופר|קניות|grocery|shopping|errands|סידורים/i, label: 'errand' },
+]
+
+/** Check if a task's text matches any of the given routine keywords */
+function matchesRoutineKeywords(taskText: string, routineKeywords: string[]): string | null {
+  const textLower = taskText.toLowerCase()
+  for (const kw of routineKeywords) {
+    const kwLower = kw.toLowerCase()
+    // Direct substring match
+    if (textLower.includes(kwLower)) return kw
+    // Check against known routine patterns
+    for (const pattern of ROUTINE_PATTERNS) {
+      if (pattern.label.includes(kwLower) || kwLower.includes(pattern.label)) {
+        if (pattern.keywords.test(taskText)) return kw
+      }
+    }
+  }
+  return null
+}
+
+/** Get the DayKey for a date within the current week, or null if outside */
+function dateToDayKey(dateStr: string, weekStart: Date): DayKey | null {
+  if (!dateStr) return null
+  const d = new Date(dateStr + 'T00:00:00')
+  if (isNaN(d.getTime())) return null
+
+  const diffMs = d.getTime() - weekStart.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  if (diffDays < 0 || diffDays > 6) return null
+
+  // weekStart is the first day of the week; map offset to DAY_KEYS
+  // DAY_KEYS = [monday, tuesday, ..., sunday]
+  // We need to know what day of week weekStart is
+  const startDow = weekStart.getDay() // 0=Sun, 1=Mon...6=Sat
+  const targetDow = (startDow + diffDays) % 7
+
+  // Map JS day-of-week to DayKey
+  const dowToDayKey: Record<number, DayKey> = {
+    0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
+    4: 'thursday', 5: 'friday', 6: 'saturday',
+  }
+  return dowToDayKey[targetDow] || null
+}
+
+/** Classify enriched tasks into tiers */
+function classifyIntoTiers(
+  enriched: EnrichedTask[],
+  interview: InterviewAnswers | undefined,
+  schedulingPrefs: Map<DayKey, string[]>,
+  weekStart: Date,
+): ClassifiedTask[] {
+  const topPriorityProject = interview?.topPriority?.toLowerCase() || ''
+
+  return enriched.map(task => {
+    const taskText = `${task.title} ${task.description || ''} ${task.projectName || ''}`
+    let tier: TaskTier = 4
+    let constrainedDay: DayKey | null = null
+
+    // Check Tier 1: hard-constrained by due date this week
+    const dueDayKey = dateToDayKey(task.dueDate, weekStart)
+    if (dueDayKey && task.urgencyCategory !== 'OVERDUE') {
+      tier = 1
+      constrainedDay = dueDayKey
+    }
+
+    // Check Tier 1: routine keyword match to a specific day
+    if (tier !== 1) {
+      for (const [dayKey, keywords] of schedulingPrefs.entries()) {
+        const matchedKw = matchesRoutineKeywords(taskText, keywords)
+        if (matchedKw) {
+          tier = 1
+          constrainedDay = dayKey
+          break
+        }
+      }
+    }
+
+    // Tier 2: overdue or in-progress
+    if (tier > 2 && (task.urgencyCategory === 'OVERDUE' || task.urgencyCategory === 'IN_PROGRESS')) {
+      tier = 2
+    }
+
+    // Tier 3: high priority, top priority project, or due this week
+    if (tier > 3) {
+      const isHighPriority = task.priority === 'high'
+      const isTopPriorityProject = topPriorityProject && (task.projectName?.toLowerCase() || '').includes(topPriorityProject)
+      const isDueThisWeek = task.urgencyCategory === 'DUE_THIS_WEEK'
+      if (isHighPriority || isTopPriorityProject || isDueThisWeek) {
+        tier = 3
+      }
+    }
+
+    return { ...task, tier, constrainedDay }
+  })
+}
+
+/** Find the nearest available day to a target day */
+function findNearestAvailableDay(
+  targetKey: DayKey,
+  buckets: DayBucket[],
+  maxPerDay: number,
+): DayKey | null {
+  const targetIdx = DAY_KEYS.indexOf(targetKey)
+  // Search outward from target: +1, -1, +2, -2, ...
+  for (let offset = 0; offset <= 6; offset++) {
+    for (const dir of [1, -1]) {
+      if (offset === 0 && dir === -1) continue // skip duplicate at 0
+      const idx = targetIdx + offset * dir
+      if (idx < 0 || idx >= DAY_KEYS.length) continue
+      const bucket = buckets[idx]
+      if (bucket.capacity > 0 && bucket.tasks.length < maxPerDay) {
+        return bucket.key
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Deterministic task distribution algorithm.
+ * Pure function — no async, no LLM calls.
+ */
+function distributeTasksDeterministically(
+  enriched: EnrichedTask[],
+  interview?: InterviewAnswers,
+  profile?: WorkProfile | null,
+  behavioral?: BehavioralContext
+): { plan: WeeklyPlan; reasoning: string; placementReasons: Record<string, string> } {
+  const maxPerDay = interview?.maxTasksPerDay || 6
+  const daysOff = new Set(interview?.daysOff || [])
+  const heavyMeetingDays = new Set(interview?.heavyMeetingDays || [])
+  const workStyle = interview?.preferredWorkStyle || 'balanced'
+
+  // Work-style weights
+  const frontloadWeights: Record<DayKey, number> = {
+    monday: 1.4, tuesday: 1.3, wednesday: 1.0, thursday: 0.8,
+    friday: 0.6, saturday: 0.5, sunday: 0.4,
+  }
+  const backloadWeights: Record<DayKey, number> = {
+    monday: 0.4, tuesday: 0.5, wednesday: 0.6, thursday: 0.8,
+    friday: 1.0, saturday: 1.3, sunday: 1.4,
+  }
+
+  const getWeight = (day: DayKey): number => {
+    if (workStyle === 'frontload') return frontloadWeights[day]
+    if (workStyle === 'backload') return backloadWeights[day]
+    return 1.0
+  }
+
+  // Parse scheduling preferences from memory graph
+  const schedulingPrefs = parseSchedulingPreferences(profile)
+
+  // Peak productivity days
+  const peakDays = new Set<string>(
+    (behavioral?.peakProductivityDays || profile?.peakProductivityDays || [])
+      .map(d => d.toLowerCase())
+  )
+
+  // ── Phase 1: Initialize Day Buckets ──
+  const buckets: DayBucket[] = DAY_KEYS.map(key => {
+    const isOff = daysOff.has(key)
+    const isHeavyMeeting = heavyMeetingDays.has(key)
+
+    return {
+      key,
+      capacity: isOff ? 0 : isHeavyMeeting ? 2 : maxPerDay,
+      complexityCap: isHeavyMeeting ? 3 : 10,
+      weight: isOff ? 0 : getWeight(key),
+      routineKeywords: schedulingPrefs.get(key) || [],
+      isPeakDay: peakDays.has(key),
+      tasks: [],
+      totalComplexity: 0,
+    }
+  })
+
+  const bucketMap = new Map(buckets.map(b => [b.key, b]))
+
+  // Helper to place a task on a day
+  const placeTask = (taskId: string, dayKey: DayKey, complexity: number): boolean => {
+    const bucket = bucketMap.get(dayKey)!
+    if (bucket.tasks.length >= bucket.capacity) return false
+    bucket.tasks.push(taskId)
+    bucket.totalComplexity += complexity
+    return true
+  }
+
+  // Get current week start for date calculations
+  const settingsStore = useSettingsStore()
+  const weekStartDate = (() => {
+    const now = new Date()
+    const day = now.getDay()
+    const weekStartsOn = settingsStore.weekStartsOn
+    let diff: number
+    if (weekStartsOn === 1) {
+      diff = day === 0 ? -6 : 1 - day
+    } else {
+      diff = -day
+    }
+    const start = new Date(now)
+    start.setDate(now.getDate() + diff)
+    start.setHours(0, 0, 0, 0)
+    return start
+  })()
+
+  // ── Phase 2: Classify Tasks into Tiers ──
+  const classified = classifyIntoTiers(enriched, interview, schedulingPrefs, weekStartDate)
+
+  // Sort by tier, then by urgency within tier
+  const tier1 = classified.filter(t => t.tier === 1)
+  const tier2 = classified.filter(t => t.tier === 2)
+  const tier3 = classified.filter(t => t.tier === 3)
+  const tier4 = classified.filter(t => t.tier === 4)
+
+  const placementReasons: Record<string, string> = {}
+  const unscheduled: string[] = []
+
+  // ── Phase 3: Place tasks tier by tier ──
+
+  // Tier 1: Place on constrained day, spill to nearest if full
+  for (const task of tier1) {
+    const targetDay = task.constrainedDay!
+    if (placeTask(task.id, targetDay, task.complexityScore)) {
+      // Determine reason
+      const bucket = bucketMap.get(targetDay)!
+      const matchedKw = matchesRoutineKeywords(
+        `${task.title} ${task.description || ''} ${task.projectName || ''}`,
+        bucket.routineKeywords,
+      )
+      if (matchedKw) {
+        const isHe = task.language === 'he'
+        const dayDisplay = targetDay.charAt(0).toUpperCase() + targetDay.slice(1)
+        placementReasons[task.id] = isHe
+          ? `משימת ${matchedKw} → ${dayDisplay} (היום שלך ל${matchedKw})`
+          : `${matchedKw} task → ${dayDisplay} (your ${matchedKw} day)`
+      } else {
+        const isHe = task.language === 'he'
+        const dayDisplay = targetDay.charAt(0).toUpperCase() + targetDay.slice(1)
+        placementReasons[task.id] = isHe
+          ? `תאריך יעד ב${dayDisplay}`
+          : `Due ${dayDisplay}`
+      }
+    } else {
+      // Spill to nearest available day
+      const spillDay = findNearestAvailableDay(targetDay, buckets, maxPerDay)
+      if (spillDay && placeTask(task.id, spillDay, task.complexityScore)) {
+        const isHe = task.language === 'he'
+        const targetDisplay = targetDay.charAt(0).toUpperCase() + targetDay.slice(1)
+        const spillDisplay = spillDay.charAt(0).toUpperCase() + spillDay.slice(1)
+        placementReasons[task.id] = isHe
+          ? `${targetDisplay} מלא → ${spillDisplay} (היום הקרוב הפנוי)`
+          : `${targetDisplay} full → ${spillDisplay} (nearest available)`
+      } else {
+        unscheduled.push(task.id)
+        placementReasons[task.id] = task.language === 'he' ? 'אין מקום ביום הנדרש' : 'No room on required day'
+      }
+    }
+  }
+
+  // Tier 2: Overdue → spread across early-week; In-progress → early too
+  const tier2Overdue = tier2.filter(t => t.urgencyCategory === 'OVERDUE')
+    .sort((a, b) => b.overdueDays - a.overdueDays) // most overdue first
+  const tier2InProgress = tier2.filter(t => t.urgencyCategory === 'IN_PROGRESS')
+
+  // Get early available weekdays (Mon-Wed) for spreading overdue
+  const earlyWeekdays: DayKey[] = (['monday', 'tuesday', 'wednesday'] as DayKey[])
+    .filter(d => !daysOff.has(d))
+  // Fallback to any available day if all early days are off
+  const earlyDays = earlyWeekdays.length > 0
+    ? earlyWeekdays
+    : DAY_KEYS.filter(d => !daysOff.has(d))
+
+  // Round-robin overdue tasks across early days
+  let earlyIdx = 0
+  for (const task of tier2Overdue) {
+    let placed = false
+    for (let attempts = 0; attempts < earlyDays.length; attempts++) {
+      const dayKey = earlyDays[earlyIdx % earlyDays.length]
+      earlyIdx++
+      if (placeTask(task.id, dayKey, task.complexityScore)) {
+        const isHe = task.language === 'he'
+        const dayDisplay = dayKey.charAt(0).toUpperCase() + dayKey.slice(1)
+        placementReasons[task.id] = isHe
+          ? `${task.overdueDays} ימים באיחור → פינוי ב${dayDisplay}`
+          : `${task.overdueDays} days overdue → clearing ${dayDisplay}`
+        placed = true
+        break
+      }
+    }
+    if (!placed) {
+      // Try any available day
+      const anyDay = findNearestAvailableDay('monday', buckets, maxPerDay)
+      if (anyDay && placeTask(task.id, anyDay, task.complexityScore)) {
+        const isHe = task.language === 'he'
+        const dayDisplay = anyDay.charAt(0).toUpperCase() + anyDay.slice(1)
+        placementReasons[task.id] = isHe
+          ? `${task.overdueDays} ימים באיחור → ${dayDisplay}`
+          : `${task.overdueDays} days overdue → ${dayDisplay}`
+      } else {
+        unscheduled.push(task.id)
+        placementReasons[task.id] = task.language === 'he' ? 'באיחור — אין מקום פנוי' : 'Overdue — no room available'
+      }
+    }
+  }
+
+  // In-progress tasks → early in the week
+  for (const task of tier2InProgress) {
+    let placed = false
+    for (const dayKey of earlyDays) {
+      if (placeTask(task.id, dayKey, task.complexityScore)) {
+        const isHe = task.language === 'he'
+        const dayDisplay = dayKey.charAt(0).toUpperCase() + dayKey.slice(1)
+        placementReasons[task.id] = isHe
+          ? `כבר בתהליך → ${dayDisplay} (מוקדם בשבוע)`
+          : `In progress → ${dayDisplay} (early in week)`
+        placed = true
+        break
+      }
+    }
+    if (!placed) {
+      const anyDay = findNearestAvailableDay('monday', buckets, maxPerDay)
+      if (anyDay && placeTask(task.id, anyDay, task.complexityScore)) {
+        const isHe = task.language === 'he'
+        const dayDisplay = anyDay.charAt(0).toUpperCase() + anyDay.slice(1)
+        placementReasons[task.id] = isHe
+          ? `כבר בתהליך → ${dayDisplay}`
+          : `In progress → ${dayDisplay}`
+      } else {
+        unscheduled.push(task.id)
+        placementReasons[task.id] = task.language === 'he' ? 'בתהליך — אין מקום' : 'In progress — no room'
+      }
+    }
+  }
+
+  // Tier 3: High priority / topPriority project / DUE_THIS_WEEK
+  // Peak days first, batch same-project tasks
+  const topPriorityProject = interview?.topPriority?.toLowerCase() || ''
+  const peakBuckets = buckets.filter(b => b.isPeakDay && b.capacity > 0)
+  const availableBuckets = buckets.filter(b => b.capacity > 0)
+
+  // Group tier3 tasks by project for batching
+  const tier3ByProject = new Map<string, ClassifiedTask[]>()
+  for (const task of tier3) {
+    const projKey = task.projectName?.toLowerCase() || '_none_'
+    const group = tier3ByProject.get(projKey) || []
+    group.push(task)
+    tier3ByProject.set(projKey, group)
+  }
+
+  // Place topPriority project tasks together on peak days first
+  for (const [projKey, tasks] of tier3ByProject.entries()) {
+    const isTopPriority = topPriorityProject && projKey.includes(topPriorityProject)
+
+    // For top priority project, try to batch on the same peak day
+    if (isTopPriority && peakBuckets.length > 0) {
+      // Find peak day with most capacity
+      const bestPeakDay = peakBuckets
+        .filter(b => b.tasks.length < b.capacity)
+        .sort((a, b) => (b.capacity - b.tasks.length) - (a.capacity - a.tasks.length))[0]
+
+      if (bestPeakDay) {
+        for (const task of tasks) {
+          if (placeTask(task.id, bestPeakDay.key, task.complexityScore)) {
+            const isHe = task.language === 'he'
+            const dayDisplay = bestPeakDay.key.charAt(0).toUpperCase() + bestPeakDay.key.slice(1)
+            const projName = task.projectName || topPriorityProject
+            placementReasons[task.id] = isHe
+              ? `עדיפות עליונה (${projName}) → ${dayDisplay} (יום שיא)`
+              : `Top priority (${projName}) → peak day (${dayDisplay})`
+          }
+        }
+        continue
+      }
+    }
+
+    // Non-top-priority or no peak days available: place by scoring
+    for (const task of tasks) {
+      if (placementReasons[task.id]) continue // already placed
+
+      // DUE_THIS_WEEK: place on or before due date
+      if (task.urgencyCategory === 'DUE_THIS_WEEK' && task.dueDate) {
+        const dueDayKey = dateToDayKey(task.dueDate, weekStartDate)
+        if (dueDayKey) {
+          // Try the due day first, then days before it
+          const dueIdx = DAY_KEYS.indexOf(dueDayKey)
+          let placed = false
+          for (let i = dueIdx; i >= 0; i--) {
+            const candidate = buckets[i]
+            if (candidate.capacity > 0 && candidate.tasks.length < candidate.capacity) {
+              placeTask(task.id, candidate.key, task.complexityScore)
+              const isHe = task.language === 'he'
+              const dayDisplay = candidate.key.charAt(0).toUpperCase() + candidate.key.slice(1)
+              placementReasons[task.id] = isHe
+                ? `יעד ב${dueDayKey} → ${dayDisplay}`
+                : `Due ${dueDayKey} → placed ${dayDisplay}`
+              placed = true
+              break
+            }
+          }
+          if (placed) continue
+        }
+      }
+
+      // High priority: prefer peak days
+      const candidateBuckets = task.priority === 'high' && peakBuckets.length > 0
+        ? [...peakBuckets, ...availableBuckets]
+        : availableBuckets
+
+      let placed = false
+      for (const bucket of candidateBuckets) {
+        if (bucket.tasks.length < bucket.capacity) {
+          placeTask(task.id, bucket.key, task.complexityScore)
+          const isHe = task.language === 'he'
+          const dayDisplay = bucket.key.charAt(0).toUpperCase() + bucket.key.slice(1)
+          if (task.priority === 'high' && bucket.isPeakDay) {
+            placementReasons[task.id] = isHe
+              ? `עדיפות גבוהה → ${dayDisplay} (יום שיא)`
+              : `High priority on peak day (${dayDisplay})`
+          } else if (task.priority === 'high') {
+            placementReasons[task.id] = isHe
+              ? `עדיפות גבוהה → ${dayDisplay}`
+              : `High priority → ${dayDisplay}`
+          } else {
+            placementReasons[task.id] = isHe
+              ? `${dayDisplay}`
+              : `Placed ${dayDisplay}`
+          }
+          placed = true
+          break
+        }
+      }
+      if (!placed) {
+        unscheduled.push(task.id)
+        placementReasons[task.id] = task.language === 'he' ? 'אין מקום פנוי' : 'No room available'
+      }
+    }
+  }
+
+  // Tier 4: Fill remaining tasks using scoring
+  // Build a project-day map for batching bonus
+  const projectDayMap = new Map<string, Set<DayKey>>()
+  for (const bucket of buckets) {
+    for (const taskId of bucket.tasks) {
+      const task = enriched.find(t => t.id === taskId)
+      if (task?.projectName) {
+        const existing = projectDayMap.get(task.projectName) || new Set()
+        existing.add(bucket.key)
+        projectDayMap.set(task.projectName, existing)
+      }
+    }
+  }
+
+  for (const task of tier4) {
+    // Score each available day
+    let bestDay: DayBucket | null = null
+    let bestScore = -Infinity
+
+    for (const bucket of buckets) {
+      if (bucket.capacity <= 0 || bucket.tasks.length >= bucket.capacity) continue
+
+      let score = (bucket.capacity - bucket.tasks.length) * bucket.weight
+
+      // Project batch bonus
+      if (task.projectName) {
+        const projDays = projectDayMap.get(task.projectName)
+        if (projDays?.has(bucket.key)) {
+          score += 4
+        }
+      }
+
+      // Complexity penalty for heavy meeting days
+      if (bucket.complexityCap < 10 && task.complexityScore > bucket.complexityCap) {
+        score -= 5
+      }
+
+      // Peak day bonus for complex tasks
+      if (bucket.isPeakDay && task.complexityScore >= 5) {
+        score += 3
+      }
+
+      if (score > bestScore) {
+        bestScore = score
+        bestDay = bucket
+      }
+    }
+
+    if (bestDay && bestScore > -Infinity) {
+      placeTask(task.id, bestDay.key, task.complexityScore)
+      const isHe = task.language === 'he'
+      const dayDisplay = bestDay.key.charAt(0).toUpperCase() + bestDay.key.slice(1)
+
+      // Check if batched with same project
+      const projDays = task.projectName ? projectDayMap.get(task.projectName) : null
+      if (projDays?.has(bestDay.key) && task.projectName) {
+        placementReasons[task.id] = isHe
+          ? `מקובץ עם משימות ${task.projectName} → ${dayDisplay}`
+          : `Grouped with ${task.projectName} tasks → ${dayDisplay}`
+      } else {
+        placementReasons[task.id] = isHe ? dayDisplay : `Placed ${dayDisplay}`
+      }
+
+      // Update project-day map
+      if (task.projectName) {
+        const existing = projectDayMap.get(task.projectName) || new Set()
+        existing.add(bestDay.key)
+        projectDayMap.set(task.projectName, existing)
+      }
+    } else {
+      unscheduled.push(task.id)
+      placementReasons[task.id] = task.language === 'he' ? 'אין מקום פנוי' : 'No room available'
+    }
+  }
+
+  // ── Phase 4: Build plan and reasoning ──
+  const plan: WeeklyPlan = {
+    monday: bucketMap.get('monday')!.tasks,
+    tuesday: bucketMap.get('tuesday')!.tasks,
+    wednesday: bucketMap.get('wednesday')!.tasks,
+    thursday: bucketMap.get('thursday')!.tasks,
+    friday: bucketMap.get('friday')!.tasks,
+    saturday: bucketMap.get('saturday')!.tasks,
+    sunday: bucketMap.get('sunday')!.tasks,
+    unscheduled,
+  }
+
+  // Generate overall reasoning
+  const totalScheduled = enriched.length - unscheduled.length
+  const routineCount = tier1.length
+  const urgentCount = tier2.length
+  const parts: string[] = []
+  if (routineCount > 0) parts.push(`${routineCount} tasks placed by routine`)
+  if (urgentCount > 0) parts.push(`${urgentCount} urgent tasks spread early in week`)
+  if (tier3.length > 0) parts.push(`${tier3.length} high-priority tasks on best days`)
+  if (tier4.length > 0) parts.push(`${tier4.length} tasks filled by scoring`)
+  if (workStyle !== 'balanced') parts.push(`${workStyle}ed per your preference`)
+  const reasoning = `${totalScheduled} of ${enriched.length} tasks scheduled. ${parts.join(', ')}.`
+
+  return { plan, reasoning, placementReasons }
+}
+
+// ============================================================================
 // STEP 2: Deterministic Reason Assembly (no LLM, instant)
 // Merges Step 0 facts + day-specific scheduling context
 // ============================================================================
@@ -271,7 +876,7 @@ function enrichTasksForPlanning(tasks: TaskSummary[], weekEnd: Date): EnrichedTa
 function assembleTaskReasons(
   enrichedTasks: EnrichedTask[],
   plan: WeeklyPlan,
-  llmTaskReasons?: Record<string, string>,
+  placementReasons?: Record<string, string>,
 ): Record<string, string> {
   const taskMap = new Map(enrichedTasks.map(t => [t.id, t]))
   const reasons: Record<string, string> = {}
@@ -295,9 +900,9 @@ function assembleTaskReasons(
 
       const bullets = [...task.deterministicReasons]
 
-      // TASK-1385: Prepend LLM "why this day" reason as the FIRST bullet
-      if (llmTaskReasons?.[taskId]) {
-        bullets.unshift(llmTaskReasons[taskId])
+      // Prepend placement reason as the FIRST bullet
+      if (placementReasons?.[taskId]) {
+        bullets.unshift(placementReasons[taskId])
       }
 
       // Add batching note if 2+ tasks from same project on same day
@@ -319,240 +924,6 @@ function assembleTaskReasons(
   return reasons
 }
 
-// ============================================================================
-// STEP 1: LLM Distribution Prompt (distribution ONLY — no reasoning)
-// TASK-1327: Stripped down to ~300 tokens system + compact task data
-// ============================================================================
-
-function buildDistributionSystemPrompt(interview?: InterviewAnswers, profile?: WorkProfile | null, taskCount?: number): string {
-  // Calculate distribution targets
-  const daysOff = new Set(interview?.daysOff || [])
-  const availableDayCount = DAY_KEYS.filter(d => !daysOff.has(d)).length
-  const maxPerDay = interview?.maxTasksPerDay || 6
-  const targetPerDay = taskCount ? Math.min(Math.ceil(taskCount / availableDayCount), maxPerDay) : 4
-
-  let base = `You are a personal weekly planner. You KNOW this person — their routine, where they work each day, what types of tasks they prefer when.
-
-THINK STEP BY STEP before producing the schedule:
-1. First, read the user's "About me" and interview answers. Note their weekly routine (e.g. which days they go where).
-2. Read each task title and description — understand what it IS and WHERE it happens (school tasks → school day, errands → errand day, etc.)
-3. Match tasks to the day that makes sense for the user's LIFE, not just priority math.
-
-SCHEDULING RULES:
-- Match tasks to the user's routine (school tasks on school day, errands on errand day, etc.)
-- Group same-project tasks on the same day to minimize context-switching
-- DUE_THIS_WEEK tasks go on or before their due date
-- Spread OVERDUE tasks across Mon–Wed (not all on Monday)
-- Target ~${targetPerDay} tasks per available day. NEVER exceed ${maxPerDay}
-- Weekends = overflow only. Each task in exactly ONE day or "unscheduled"
-
-RESPONSE FORMAT — Return ONLY valid JSON:
-{
-  "monday": ["id1", "id2"], "tuesday": [...], ..., "sunday": [...], "unscheduled": [...],
-  "reasoning": "2-3 sentences about your OVERALL strategy — reference the user's routine and why you placed task groups where you did",
-  "taskReasons": {
-    "taskId1": "1-2 sentences: WHY this specific day for this specific task, referencing the user's routine/preferences",
-    "taskId2": "..."
-  }
-}
-
-CRITICAL — taskReasons must connect the TASK to the USER'S LIFE:
-  GOOD: "School task → Wednesday when you're at the high school"
-  GOOD: "Batch with grocery shopping on your Tuesday errand run"
-  GOOD: "Creative work early in the week when your energy is highest"
-  GOOD: "Overdue 3 days — clearing Monday so it's off your plate"
-  BAD: "Scheduled for balanced distribution" (generic)
-  BAD: "Medium priority task" (just metadata)
-  BAD: "Placed on Tuesday for lighter workload" (no personal connection)`
-
-  if (interview) {
-    const extras: string[] = []
-    if (interview.topPriority) {
-      extras.push(`- TOP PRIORITY this week: "${interview.topPriority}". Schedule related tasks on the best days, earliest in the week.`)
-    }
-    if (interview.daysOff && interview.daysOff.length > 0) {
-      extras.push(`- Days OFF (ZERO tasks): ${interview.daysOff.join(', ')}.`)
-    }
-    if (interview.heavyMeetingDays && interview.heavyMeetingDays.length > 0) {
-      extras.push(`- Heavy meeting days: ${interview.heavyMeetingDays.join(', ')}. Only schedule quick/simple tasks on these days (max 2).`)
-    }
-    if (interview.maxTasksPerDay) {
-      extras.push(`- HARD LIMIT: max ${interview.maxTasksPerDay} tasks per day.`)
-    }
-    if (interview.preferredWorkStyle === 'frontload') {
-      extras.push('- Work style: front-load (heavier Mon-Tue, lighter Thu-Fri)')
-    } else if (interview.preferredWorkStyle === 'backload') {
-      extras.push('- Work style: back-load (lighter Mon-Tue, heavier Thu-Fri)')
-    }
-    if (extras.length > 0) {
-      base += `\n\nUSER PREFERENCES (use these to make scheduling decisions):\n${extras.join('\n')}`
-    }
-  }
-
-  if (profile) {
-    const insights: string[] = []
-    if (profile.avgTasksCompletedPerDay) {
-      insights.push(`- This user typically completes ~${profile.avgTasksCompletedPerDay} tasks/day — don't overload beyond this.`)
-    }
-    if (profile.peakProductivityDays?.length) {
-      insights.push(`- Peak productivity days: ${profile.peakProductivityDays.join(', ')}. Schedule complex/demanding tasks HERE. Lighter tasks on other days.`)
-    }
-    if (profile.avgPlanAccuracy && profile.avgPlanAccuracy < 60) {
-      insights.push(`- Past plans were only ${profile.avgPlanAccuracy}% followed — schedule conservatively.`)
-    }
-    if (profile.preferredWorkStyle) {
-      insights.push(`- Preferred work style: ${profile.preferredWorkStyle}`)
-    }
-    if (insights.length > 0) {
-      base += `\n\nUSER HISTORY (learned patterns — USE these in your reasoning):\n${insights.join('\n')}`
-    }
-
-    // Extract MANDATORY day-assignment rules from memory graph scheduling preferences
-    // These go in the SYSTEM prompt for maximum weight with the LLM
-    if (profile.memoryGraph) {
-      const schedRules = profile.memoryGraph
-        .filter(obs => obs.relation === 'scheduling_preference' && obs.confidence >= 0.6)
-        .map(obs => {
-          const match = obs.value.match(/^(\w+)\s*\(context:\s*(.+?)\??\s*\)/)
-          if (match) {
-            const [, day, context] = match
-            const topic = context
-              .replace(/^Which day (?:do you |does the |is |are you )?(?:go to |at |for |usually )?/i, '')
-              .replace(/^I see .+? — which day (?:do you |does the )?(?:go to |usually )?/i, '')
-              .replace(/^You have .+? — which day/i, '')
-              .trim()
-            return `- ${topic} tasks → ${day.toUpperCase()} (user confirmed)`
-          }
-          return null
-        })
-        .filter(Boolean)
-
-      if (schedRules.length > 0) {
-        base += `\n\nDAY ASSIGNMENT RULES (MANDATORY — these override all other scheduling logic):\n${schedRules.join('\n')}\nThese are NON-NEGOTIABLE. If a task relates to one of these topics, it MUST go on the specified day.`
-      }
-    }
-  }
-
-  return base
-}
-
-function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, weekEnd: Date, behavioral?: BehavioralContext, interview?: InterviewAnswers): string {
-  const today = formatDate(new Date())
-  const weekEndStr = formatDate(weekEnd)
-
-  // Compact task list — only fields the LLM needs for distribution
-  const taskList = enriched.map(t => ({
-    id: t.id,
-    title: t.title,
-    desc: t.description ? t.description.slice(0, 80) : null,
-    project: t.projectName || null,
-    priority: t.priority,
-    status: t.status,
-    dueDate: t.dueDate || null,
-    urgency: t.urgencyCategory,
-    complexity: t.complexityScore,
-    estimatedMinutes: t.estimatedDuration || null,
-  }))
-
-  // Count urgency categories to guide the LLM
-  const overdueCount = enriched.filter(t => t.urgencyCategory === 'OVERDUE').length
-  const inProgressCount = enriched.filter(t => t.urgencyCategory === 'IN_PROGRESS').length
-  const dueThisWeekCount = enriched.filter(t => t.urgencyCategory === 'DUE_THIS_WEEK').length
-
-  let personalSection = ''
-  if (interview?.personalContext) {
-    personalSection = `\nAbout the user (their own words):\n"${interview.personalContext}"\n`
-  }
-
-  let dynamicQASection = ''
-  if (interview?.dynamicAnswers && interview.dynamicAnswers.length > 0) {
-    const qaLines = interview.dynamicAnswers
-      .filter(qa => qa.answer.trim())
-      .map(qa => `Q: ${qa.question}\nA: ${qa.answer}`)
-      .join('\n\n')
-    if (qaLines) {
-      dynamicQASection = `\nUser's scheduling preferences (from interview):\n${qaLines}\n`
-    }
-  }
-
-  // Extract MANDATORY scheduling rules from behavioral insights (scheduling_preference observations)
-  let schedulingRulesSection = ''
-  if (behavioral?.workInsights) {
-    const rules = behavioral.workInsights
-      .filter(i => i.startsWith('User preference:'))
-      .map(i => {
-        // Parse "User preference: Wednesday (context: Which day do you go to school?)"
-        const match = i.match(/User preference:\s*(\w+)\s*\(context:\s*(.+?)\??\s*\)/)
-        if (match) {
-          const [, day, context] = match
-          // Extract the topic from the question to create a strong rule
-          const topic = context
-            .replace(/^Which day (?:do you |does the |is |are you )?(?:go to |at |for |usually )?/i, '')
-            .replace(/^I see .+? — which day (?:do you |does the )?(?:go to |usually )?/i, '')
-            .trim()
-          return `- ALL "${topic}" tasks MUST be scheduled on ${day.toUpperCase()} (user confirmed this preference)`
-        }
-        // Fallback: still include as a rule even if parsing fails
-        return `- ${i.replace('User preference: ', 'MUST respect: ')}`
-      })
-    if (rules.length > 0) {
-      schedulingRulesSection = `\n===== MANDATORY SCHEDULING RULES (from user's confirmed preferences — NEVER override these) =====\n${rules.join('\n')}\n===== END MANDATORY RULES =====\n`
-    }
-  }
-
-  let behavioralSection = ''
-  if (behavioral) {
-    const lines: string[] = []
-    if (behavioral.activeProjectNames.length > 0) {
-      lines.push(`Active projects: ${behavioral.activeProjectNames.join(', ')}`)
-    }
-    if (behavioral.peakProductivityDays.length > 0) {
-      lines.push(`Peak productivity days: ${behavioral.peakProductivityDays.join(', ')} — put complex tasks HERE`)
-    }
-    if (behavioral.avgTasksCompletedPerDay) {
-      lines.push(`Typical daily capacity: ~${behavioral.avgTasksCompletedPerDay} tasks/day`)
-    }
-    if (behavioral.completionRate !== null && behavioral.completionRate !== undefined) {
-      lines.push(`Plan follow-through: ${Math.round(behavioral.completionRate)}%${behavioral.completionRate < 60 ? ' (LOW — schedule fewer tasks to be realistic)' : ''}`)
-    }
-    if (behavioral.frequentlyMissedProjects.length > 0) {
-      lines.push(`Often-missed projects: ${behavioral.frequentlyMissedProjects.join(', ')} — schedule these EARLY in the week`)
-    }
-    if (behavioral.recentlyCompletedTitles.length > 0) {
-      lines.push(`Recently completed: ${behavioral.recentlyCompletedTitles.slice(0, 5).join(', ')}`)
-    }
-    // Filter out scheduling_preference insights — they're now in the MANDATORY section above
-    const nonSchedulingInsights = behavioral.workInsights.filter(i => !i.startsWith('User preference:'))
-    if (nonSchedulingInsights.length > 0) {
-      lines.push(`Work patterns:\n${nonSchedulingInsights.slice(0, 5).map(i => `  - ${i}`).join('\n')}`)
-    }
-    if (lines.length > 0) {
-      behavioralSection = `\nIMPORTANT — What I know about this user (USE this for scheduling decisions):\n${lines.join('\n')}\n`
-    }
-  }
-
-  // Build project summary for grouping awareness
-  const projectGroups: Record<string, number> = {}
-  for (const t of enriched) {
-    if (t.projectName) {
-      projectGroups[t.projectName] = (projectGroups[t.projectName] || 0) + 1
-    }
-  }
-  const projectSummary = Object.entries(projectGroups)
-    .filter(([, count]) => count >= 2)
-    .map(([name, count]) => `${name} (${count} tasks)`)
-    .join(', ')
-
-  return `Today: ${today}
-Week: ${formatDate(weekStart)} to ${weekEndStr}
-Total tasks: ${enriched.length} (${overdueCount} overdue, ${inProgressCount} in-progress, ${dueThisWeekCount} due this week)
-${projectSummary ? `Projects with multiple tasks (GROUP these on same day): ${projectSummary}` : ''}
-${personalSection}${schedulingRulesSection}${behavioralSection}${dynamicQASection}
-Tasks:
-${JSON.stringify(taskList, null, 2)}
-
-Schedule these ${enriched.length} tasks across the week. READ each task title to understand its nature.${schedulingRulesSection ? ' OBEY the MANDATORY SCHEDULING RULES above — place location-specific tasks on the user\'s confirmed days.' : ''} Return ONLY JSON with monday..sunday, unscheduled, reasoning, taskReasons.`
-}
 
 // ============================================================================
 // STEP 3: LLM Week Theme (optional, tiny call — ~170 tokens)
@@ -590,237 +961,6 @@ async function generateWeekTheme(
   }
 }
 
-// ============================================================================
-// STEP 1.5: Deterministic Rebalancer (no LLM, instant)
-// TASK-1385: Safety net that ensures even distribution regardless of LLM quality
-// ============================================================================
-
-function rebalancePlan(
-  plan: WeeklyPlan,
-  enrichedTasks: EnrichedTask[],
-  interview?: InterviewAnswers
-): WeeklyPlan {
-  const taskMap = new Map(enrichedTasks.map(t => [t.id, t]))
-
-  // Determine available days
-  const daysOff = new Set(interview?.daysOff || [])
-  const availableDays = DAY_KEYS.filter(d => !daysOff.has(d))
-
-  if (availableDays.length === 0) return plan
-
-  // Count total scheduled (exclude unscheduled)
-  const totalScheduled = DAY_KEYS.reduce((sum, d) => sum + plan[d].length, 0)
-  if (totalScheduled === 0) return plan
-
-  const maxPerDay = interview?.maxTasksPerDay || 6
-  const targetPerDay = Math.ceil(totalScheduled / availableDays.length)
-
-  // Check if rebalancing is needed: any day has > 120% of target
-  const needsRebalance = availableDays.some(d => plan[d].length > Math.ceil(targetPerDay * 1.2))
-  // Also check if any available day has 0 tasks while others have > target
-  const hasEmptyDays = availableDays.some(d => plan[d].length === 0) && totalScheduled > availableDays.length
-
-  if (!needsRebalance && !hasEmptyDays) return plan
-
-  console.log(`[WeeklyPlanAI] Rebalancer triggered: target=${targetPerDay}/day, max=${maxPerDay}, rebalancing across ${availableDays.length} days`)
-
-  // Collect all scheduled tasks with their priority for redistribution
-  const allTasks: Array<{ id: string; priority: number; urgency: string }> = []
-  for (const day of DAY_KEYS) {
-    for (const taskId of plan[day]) {
-      const task = taskMap.get(taskId)
-      const priorityScore = task?.priority === 'high' ? 3 : task?.priority === 'medium' ? 2 : 1
-      const urgency = task?.urgencyCategory || 'normal'
-      allTasks.push({ id: taskId, priority: priorityScore, urgency })
-    }
-  }
-
-  // Sort: overdue first, then in-progress, then by priority
-  const urgencyOrder: Record<string, number> = { 'OVERDUE': 0, 'IN_PROGRESS': 1, 'DUE_THIS_WEEK': 2, 'normal': 3 }
-  allTasks.sort((a, b) => {
-    const ua = urgencyOrder[a.urgency] ?? 3
-    const ub = urgencyOrder[b.urgency] ?? 3
-    if (ua !== ub) return ua - ub
-    return b.priority - a.priority
-  })
-
-  // Redistribute evenly across available days
-  const newPlan: WeeklyPlan = {
-    monday: [], tuesday: [], wednesday: [], thursday: [],
-    friday: [], saturday: [], sunday: [], unscheduled: [...plan.unscheduled],
-  }
-
-  // Round-robin assignment respecting maxPerDay
-  let dayIdx = 0
-  for (const task of allTasks) {
-    // Find next available day that isn't full
-    let attempts = 0
-    while (newPlan[availableDays[dayIdx]].length >= maxPerDay && attempts < availableDays.length) {
-      dayIdx = (dayIdx + 1) % availableDays.length
-      attempts++
-    }
-
-    if (attempts >= availableDays.length) {
-      // All days full — send to unscheduled
-      newPlan.unscheduled.push(task.id)
-    } else {
-      newPlan[availableDays[dayIdx]].push(task.id)
-      dayIdx = (dayIdx + 1) % availableDays.length
-    }
-  }
-
-  const distribution = availableDays.map(d => `${d}:${newPlan[d].length}`).join(', ')
-  console.log(`[WeeklyPlanAI] Rebalanced: ${distribution}`)
-
-  return newPlan
-}
-
-// ============================================================================
-// Response parsing (distribution only — no taskReasons/weekTheme expected)
-// ============================================================================
-
-function parseDistributionResponse(
-  response: string,
-  validTaskIds: Set<string>
-): { plan: WeeklyPlan; reasoning: string | null; llmTaskReasons: Record<string, string> } {
-  // Strip markdown code fences if present
-  let json = response.trim()
-  const codeBlockMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (codeBlockMatch) {
-    json = codeBlockMatch[1].trim()
-  }
-
-  let parsed: Record<string, unknown>
-  try {
-    parsed = JSON.parse(json)
-  } catch {
-    throw new Error('AI response is not valid JSON')
-  }
-
-  // Validate day keys exist
-  for (const key of DAY_KEYS) {
-    if (!Array.isArray(parsed[key])) {
-      parsed[key] = []
-    }
-  }
-  if (!Array.isArray(parsed.unscheduled)) {
-    parsed.unscheduled = []
-  }
-
-  const reasoning = typeof parsed.reasoning === 'string' ? parsed.reasoning : null
-
-  // Filter invalid IDs and deduplicate across days
-  const seen = new Set<string>()
-  const plan: WeeklyPlan = {
-    monday: [], tuesday: [], wednesday: [], thursday: [],
-    friday: [], saturday: [], sunday: [], unscheduled: [],
-  }
-
-  for (const key of [...DAY_KEYS, 'unscheduled'] as const) {
-    const ids = parsed[key] as unknown[]
-    for (const id of ids) {
-      if (typeof id === 'string' && validTaskIds.has(id) && !seen.has(id)) {
-        seen.add(id)
-        plan[key].push(id)
-      }
-    }
-  }
-
-  // Check result isn't completely empty
-  const totalAssigned = Object.values(plan).reduce((sum, arr) => sum + arr.length, 0)
-  if (totalAssigned === 0) {
-    throw new Error('Parsed plan contains no valid task assignments')
-  }
-
-  // Extract per-task reasons from LLM (TASK-1385: "why this day")
-  const llmTaskReasons: Record<string, string> = {}
-  if (parsed.taskReasons && typeof parsed.taskReasons === 'object' && !Array.isArray(parsed.taskReasons)) {
-    for (const [taskId, reason] of Object.entries(parsed.taskReasons as Record<string, unknown>)) {
-      if (typeof reason === 'string' && validTaskIds.has(taskId)) {
-        llmTaskReasons[taskId] = reason
-      }
-    }
-  }
-
-  return { plan, reasoning, llmTaskReasons }
-}
-
-// ============================================================================
-// Fallback plan
-// ============================================================================
-
-function generateFallbackPlan(tasks: TaskSummary[], _weekStart: Date): WeeklyPlan {
-  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
-
-  const sorted = [...tasks].sort((a, b) => {
-    const pa = a.priority ? priorityOrder[a.priority] ?? 3 : 3
-    const pb = b.priority ? priorityOrder[b.priority] ?? 3 : 3
-    if (pa !== pb) return pa - pb
-    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
-    if (a.dueDate) return -1
-    if (b.dueDate) return 1
-    return 0
-  })
-
-  const plan: WeeklyPlan = {
-    monday: [], tuesday: [], wednesday: [], thursday: [],
-    friday: [], saturday: [], sunday: [], unscheduled: [],
-  }
-
-  const MAX_PER_DAY = 8
-  let dayIndex = 0
-
-  for (const task of sorted) {
-    if (dayIndex < WEEKDAY_KEYS.length) {
-      const dayKey = WEEKDAY_KEYS[dayIndex]
-      plan[dayKey].push(task.id)
-      if (plan[dayKey].length >= MAX_PER_DAY) {
-        dayIndex++
-      }
-    } else {
-      plan.unscheduled.push(task.id)
-    }
-  }
-
-  return plan
-}
-
-// ============================================================================
-// Day re-suggest prompt (kept mostly as-is, still useful)
-// ============================================================================
-
-function buildDayResuggestPrompt(
-  dayKey: DayKey,
-  currentPlan: WeeklyPlan,
-  allTasks: TaskSummary[]
-): string {
-  const taskMap = new Map(allTasks.map(t => [t.id, t]))
-
-  const otherDays = DAY_KEYS.filter(k => k !== dayKey)
-  const otherScheduled: Record<string, string[]> = {}
-  for (const d of otherDays) {
-    if (currentPlan[d].length > 0) {
-      otherScheduled[d] = currentPlan[d]
-    }
-  }
-
-  const currentDayTasks = currentPlan[dayKey].map(id => taskMap.get(id)).filter(Boolean)
-  const unscheduledTasks = currentPlan.unscheduled.map(id => taskMap.get(id)).filter(Boolean)
-  const availableTasks = [...currentDayTasks, ...unscheduledTasks]
-
-  return `Re-suggest tasks for ${dayKey}.
-
-Currently scheduled on other days (DO NOT move these):
-${JSON.stringify(otherScheduled, null, 2)}
-
-Available tasks for ${dayKey} (pick from these):
-${JSON.stringify(availableTasks.map(t => ({ id: t!.id, title: t!.title, priority: t!.priority, estimatedDuration: t!.estimatedDuration })), null, 2)}
-
-Return ONLY a JSON object with two keys:
-- "${dayKey}": array of task ID strings for this day
-- "unscheduled": array of remaining task IDs not placed on ${dayKey}
-- "reasoning": brief explanation`
-}
 
 // ============================================================================
 // Router options helper — reads weekly plan provider/model from settings
@@ -958,10 +1098,10 @@ export function useWeeklyPlanAI() {
   const isGenerating = ref(false) as Ref<boolean>
 
   /**
-   * TASK-1327: 2-Call Hybrid Pipeline
+   * Hybrid Pipeline:
    *
    * Step 0: Deterministic enrichment (no LLM, instant)
-   * Step 1: LLM distribution only (~2400 tokens)
+   * Step 1: Deterministic distribution (no LLM, instant)
    * Step 2: Deterministic reason assembly (no LLM, instant)
    * Step 3: LLM week theme (optional, ~170 tokens)
    */
@@ -983,7 +1123,7 @@ export function useWeeklyPlanAI() {
       }
     }
 
-    const { weekStart, weekEnd } = getWeekBounds(useSettingsStore().weekStartsOn)
+    const { weekEnd } = getWeekBounds(useSettingsStore().weekStartsOn)
 
     isGenerating.value = true
 
@@ -992,87 +1132,18 @@ export function useWeeklyPlanAI() {
       const enriched = enrichTasksForPlanning(tasks, weekEnd)
       console.log(`[WeeklyPlanAI] Step 0: Enriched ${enriched.length} tasks (${enriched.filter(t => t.language === 'he').length} Hebrew, ${enriched.filter(t => t.urgencyCategory === 'OVERDUE').length} overdue)`)
 
-      const router = await getSharedRouter()
-      const routerOpts = getRouterOptions()
-
-      const validTaskIds = new Set(tasks.map(t => t.id))
-
-      // ── Step 1: LLM Distribution Only ──
-      let plan: WeeklyPlan
-      let reasoning: string | null = null
-      let llmReasons: Record<string, string> = {}
-
-      const systemPrompt = buildDistributionSystemPrompt(interview, profile, enriched.length)
-      const userPrompt = buildDistributionUserPrompt(enriched, weekStart, weekEnd, behavioral, interview)
-
-      // DEBUG: Log what memory/profile data is reaching the prompts
-      console.log('[WeeklyPlanAI] Step 1: Profile data check:', {
-        hasProfile: !!profile,
-        memoryGraphCount: profile?.memoryGraph?.length ?? 0,
-        schedulingPrefs: profile?.memoryGraph?.filter(o => o.relation === 'scheduling_preference').map(o => o.value) ?? [],
-        peakDays: profile?.peakProductivityDays ?? [],
-        avgTasks: profile?.avgTasksCompletedPerDay ?? null,
-        personalContext: interview?.personalContext?.slice(0, 80) ?? '(none)',
-        dynamicAnswers: interview?.dynamicAnswers?.map(a => `${a.question} → ${a.answer}`) ?? [],
-      })
-      console.log('[WeeklyPlanAI] Step 1: Behavioral insights:', {
-        workInsights: behavioral?.workInsights ?? [],
-        completionRate: behavioral?.completionRate ?? null,
-        frequentlyMissed: behavioral?.frequentlyMissedProjects ?? [],
-      })
-      console.log('[WeeklyPlanAI] Step 1: System prompt length:', systemPrompt.length, 'chars')
-      console.log('[WeeklyPlanAI] Step 1: User prompt length:', userPrompt.length, 'chars')
-      // Log if MANDATORY rules section is present
-      if (userPrompt.includes('MANDATORY SCHEDULING RULES')) {
-        console.log('[WeeklyPlanAI] ✅ MANDATORY SCHEDULING RULES section found in user prompt')
-      } else {
-        console.log('[WeeklyPlanAI] ⚠️ No MANDATORY SCHEDULING RULES in user prompt')
-      }
-      if (systemPrompt.includes('DAY ASSIGNMENT RULES')) {
-        console.log('[WeeklyPlanAI] ✅ DAY ASSIGNMENT RULES section found in system prompt')
-      } else {
-        console.log('[WeeklyPlanAI] ⚠️ No DAY ASSIGNMENT RULES in system prompt')
-      }
-
-      const messages: ChatMessage[] = [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ]
-
-      console.log(`[WeeklyPlanAI] Step 1: Requesting distribution from LLM`)
-
-      try {
-        const response = await router.chat(messages, routerOpts)
-        const result = parseDistributionResponse(response.content, validTaskIds)
-        plan = result.plan
-        reasoning = result.reasoning
-        llmReasons = result.llmTaskReasons
-      } catch (firstError) {
-        console.warn('[WeeklyPlanAI] Step 1 failed, retrying at temp 0.1...', firstError)
-
-        // Retry once at lower temperature
-        try {
-          const retryOpts = { ...routerOpts, temperature: 0.1 }
-          const response = await router.chat(messages, retryOpts)
-          const result = parseDistributionResponse(response.content, validTaskIds)
-          plan = result.plan
-          reasoning = result.reasoning
-          llmReasons = result.llmTaskReasons
-        } catch (retryError) {
-          console.warn('[WeeklyPlanAI] Step 1 retry failed, using fallback', retryError)
-          plan = generateFallbackPlan(tasks, weekStart)
-          reasoning = 'AI was unavailable. Tasks distributed by priority using a round-robin schedule.'
-        }
-      }
-
-      // ── Step 1.5: Deterministic Rebalancer (instant) ──
-      plan = rebalancePlan(plan, enriched, interview)
+      // ── Step 1: Deterministic Distribution (instant) ──
+      const { plan, reasoning, placementReasons } =
+        distributeTasksDeterministically(enriched, interview, profile, behavioral)
+      console.log(`[WeeklyPlanAI] Step 1: Deterministic distribution complete (${Object.values(plan).flat().length - plan.unscheduled.length} scheduled, ${plan.unscheduled.length} unscheduled)`)
 
       // ── Step 2: Deterministic Reason Assembly (instant) ──
-      const taskReasons = assembleTaskReasons(enriched, plan, llmReasons)
+      const taskReasons = assembleTaskReasons(enriched, plan, placementReasons)
       console.log(`[WeeklyPlanAI] Step 2: Assembled reasons for ${Object.keys(taskReasons).length} tasks`)
 
       // ── Step 3: LLM Week Theme (optional, silent fail) ──
+      const router = await getSharedRouter()
+      const routerOpts = getRouterOptions()
       const weekTheme = await generateWeekTheme(router, enriched, routerOpts)
       console.log(`[WeeklyPlanAI] Step 3: Week theme: ${weekTheme || '(none)'}`)
 
@@ -1086,55 +1157,57 @@ export function useWeeklyPlanAI() {
     dayKey: DayKey,
     currentPlan: WeeklyPlan,
     allTasks: TaskSummary[],
-    profile?: WorkProfile | null
+    _profile?: WorkProfile | null
   ): Promise<{ dayTasks: string[]; unscheduled: string[]; reasoning: string | null }> {
-    const validTaskIds = new Set(allTasks.map(t => t.id))
-
     isGenerating.value = true
 
     try {
-      const router = await getSharedRouter()
-      const routerOpts = getRouterOptions()
+      const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
+      const taskMap = new Map(allTasks.map(t => [t.id, t]))
 
-      const messages: ChatMessage[] = [
-        { role: 'system', content: buildDistributionSystemPrompt(undefined, profile, allTasks.length) },
-        { role: 'user', content: buildDayResuggestPrompt(dayKey, currentPlan, allTasks) },
-      ]
+      // Gather available tasks: current day's tasks + unscheduled
+      const available = [...currentPlan[dayKey], ...currentPlan.unscheduled]
 
-      try {
-        const response = await router.chat(messages, {
-          ...routerOpts,
-          temperature: 0.5,
-        })
+      // Score each task for this day
+      const scored = available.map(id => {
+        const task = taskMap.get(id)
+        let score = 0
 
-        let json = response.content.trim()
-        const codeBlockMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/)
-        if (codeBlockMatch) json = codeBlockMatch[1].trim()
+        // Urgency score
+        if (task?.dueDate && task.dueDate < new Date().toISOString().split('T')[0]) score += 100
+        else if (task?.status === 'in_progress') score += 80
 
-        const parsed = JSON.parse(json) as Record<string, unknown>
-        const dayTasks = (Array.isArray(parsed[dayKey]) ? parsed[dayKey] : [])
-          .filter((id: unknown): id is string => typeof id === 'string' && validTaskIds.has(id as string))
-        const unscheduled = (Array.isArray(parsed.unscheduled) ? parsed.unscheduled : [])
-          .filter((id: unknown): id is string => typeof id === 'string' && validTaskIds.has(id as string))
-        const reasoning = typeof parsed.reasoning === 'string' ? parsed.reasoning : null
+        // Due date proximity
+        if (task?.dueDate) {
+          const daysUntilDue = Math.floor(
+            (new Date(task.dueDate + 'T00:00:00').getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+          )
+          if (daysUntilDue <= 0) score += 50
+          else if (daysUntilDue <= 3) score += 30
+          else if (daysUntilDue <= 7) score += 15
+        }
 
-        return { dayTasks, unscheduled, reasoning }
-      } catch (err) {
-        console.warn('[WeeklyPlanAI] Day re-suggest failed, shuffling by priority', err)
+        // Priority score
+        const pScore = task?.priority ? (3 - (priorityOrder[task.priority] ?? 3)) * 10 : 0
+        score += pScore
 
-        const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
-        const taskMap = new Map(allTasks.map(t => [t.id, t]))
-        const available = [...currentPlan[dayKey], ...currentPlan.unscheduled]
-        available.sort((a, b) => {
-          const ta = taskMap.get(a)
-          const tb = taskMap.get(b)
-          const pa = ta?.priority ? priorityOrder[ta.priority] ?? 3 : 3
-          const pb = tb?.priority ? priorityOrder[tb.priority] ?? 3 : 3
-          return pa - pb
-        })
-        const dayTasks = available.slice(0, 6)
-        const unscheduled = available.slice(6)
-        return { dayTasks, unscheduled, reasoning: 'Shuffled by priority (AI unavailable).' }
+        // Project batching bonus: if another task from the same project is already scored higher
+        // (implicit through stable sort)
+
+        return { id, score }
+      })
+
+      // Sort by score descending
+      scored.sort((a, b) => b.score - a.score)
+
+      const maxPerDay = 6
+      const dayTasks = scored.slice(0, maxPerDay).map(s => s.id)
+      const unscheduled = scored.slice(maxPerDay).map(s => s.id)
+
+      return {
+        dayTasks,
+        unscheduled,
+        reasoning: 'Re-sorted by priority and urgency.',
       }
     } finally {
       isGenerating.value = false

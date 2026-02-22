@@ -380,7 +380,6 @@ export function useWeeklyPlan() {
       console.log('[WeeklyPlan] aiLearningEnabled:', settingsStore.aiLearningEnabled)
       if (settingsStore.aiLearningEnabled) {
         profile = await loadProfile()
-        console.log('[WeeklyPlan] Profile after loadProfile:', profile ? 'loaded' : 'null')
         // Auto-refresh observations so AI always gets current task context
         try {
           await computeCapacityMetrics()
@@ -392,20 +391,6 @@ export function useWeeklyPlan() {
 
       // Compute behavioral context from actual app usage data
       const behavioral = computeBehavioralContext(profile)
-      console.log('[WeeklyPlan] Profile loaded:', {
-        hasProfile: !!profile,
-        memoryGraphLength: profile?.memoryGraph?.length ?? 0,
-        allObservations: profile?.memoryGraph?.map(o => `${o.relation}: ${o.value} (confidence: ${o.confidence})`) ?? [],
-        personalContext: profile?.personalContext?.slice(0, 100) ?? '(none)',
-      })
-      console.log('[WeeklyPlan] Behavioral context:', {
-        recentCompleted: behavioral.recentlyCompletedTitles.length,
-        activeProjects: behavioral.activeProjectNames,
-        avgTasks: behavioral.avgTasksCompletedPerDay,
-        completionRate: behavioral.completionRate,
-        workInsightsCount: behavioral.workInsights.length,
-        workInsights: behavioral.workInsights,
-      })
 
       const result = await aiGeneratePlan(tasks, state.value.interviewAnswers || undefined, profile, behavioral)
       state.value.plan = result.plan

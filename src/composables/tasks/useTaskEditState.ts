@@ -112,6 +112,15 @@ export function useTaskEditState(
         // Guard: If we are saving, ignore external updates
         if (isSaving.value || !newTask) return
 
+        // FIX: If user has unsaved edits to THIS task, don't overwrite with sync data.
+        // This prevents the LWW writeback or realtime echo from clobbering the user's work.
+        if (isFormDirty.value && editedTask.value.id === newTask.id) {
+            if (import.meta.env.DEV) {
+                console.log(`[TaskEditState] Ignoring sync update for ${newTask.id.slice(0, 8)} — form has unsaved edits`)
+            }
+            return
+        }
+
         // Fingerprint for change detection
         const currentFingerprint = JSON.stringify({
             ...editedTask.value,

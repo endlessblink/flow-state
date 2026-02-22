@@ -304,6 +304,15 @@ export function useTaskEditActions(
             emit('close')
             isSaving.value = false
 
+            // FIX: Clean up pending write after a short delay.
+            // The 120s safety timeout is too long — reduce to 5s after a successful save.
+            // This still protects against realtime echoes (which arrive within ~1s)
+            // while allowing legitimate sync updates sooner.
+            const savedTaskId = editedTask.value.id
+            setTimeout(() => {
+                taskStore.removePendingWrite(savedTaskId)
+            }, 5000)
+
             // Show success feedback after close
             showToast('Task saved successfully', 'success')
 

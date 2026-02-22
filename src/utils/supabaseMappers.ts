@@ -129,6 +129,9 @@ export interface SupabaseTask {
     recurring_instances?: RecurringTaskInstance[] | null
     notification_prefs?: NotificationPreferences | null
     reminders?: unknown[] | null // FEATURE-1363: Custom date/time reminders
+    recurrence_rule?: Record<string, unknown> | null  // TASK-1403: Simplified recurrence
+    recurrence_parent_id?: string | null
+    recurrence_count?: number
 
     // Hierarchy
     parent_task_id?: string | null
@@ -531,7 +534,12 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         done_for_now_until: sanitizeTimestamp(task.doneForNowUntil),
 
         created_at: sanitizeTimestamp(task.createdAt) || now,
-        updated_at: now
+        updated_at: now,
+
+        // TASK-1403: Only include new recurrence columns when set (safe before migration)
+        ...(task.recurrenceRule ? { recurrence_rule: JSON.parse(JSON.stringify(task.recurrenceRule)) } : {}),
+        ...(task.recurrenceParentId ? { recurrence_parent_id: sanitizeUUID(task.recurrenceParentId) } : {}),
+        ...(task.recurrenceCount ? { recurrence_count: task.recurrenceCount } : {}),
     }
 }
 
@@ -570,6 +578,9 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         instances: record.instances || [],
         connectionTypes: record.connection_types || undefined,
         recurrence: record.recurrence || undefined,
+        recurrenceRule: record.recurrence_rule as import('../types/tasks').SimpleRecurrenceRule | undefined,
+        recurrenceParentId: record.recurrence_parent_id || undefined,
+        recurrenceCount: record.recurrence_count || undefined,
         recurringInstances: record.recurring_instances || [],
         notificationPreferences: record.notification_prefs || undefined,
         reminders: (record.reminders as import('../types/notifications').TaskReminder[]) || [],

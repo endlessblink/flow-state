@@ -20,6 +20,7 @@ import type {
   YearlyRecurrenceRule,
   Weekday
 } from '@/types/recurrence'
+import type { SimpleRecurrenceRule } from '@/types/tasks'
 
 /**
  * Generate recurring task instances based on a recurrence rule
@@ -522,4 +523,108 @@ export function addException(
   }
 
   return result
+}
+
+// ============================================================================
+// TASK-1403: Clone-on-complete recurrence utilities
+// ============================================================================
+
+/**
+ * Compute the next due date for a recurring task (clone-on-complete model)
+ * @param currentDueDate - The current task's due date (YYYY-MM-DD string)
+ * @param rule - The simplified recurrence rule
+ * @param currentCount - How many times this task has already recurred
+ * @returns The next due date as YYYY-MM-DD string, or null if recurrence should end
+ */
+export function computeNextDueDate(
+  currentDueDate: string,
+  rule: SimpleRecurrenceRule,
+  currentCount: number = 0
+): string | null {
+  // Check end conditions FIRST
+  if (rule.endType === 'after_count' && rule.endCount !== undefined && currentCount >= rule.endCount) {
+    return null
+  }
+
+  const currentDate = new Date(currentDueDate + 'T12:00:00') // Noon to avoid TZ edge cases
+  let nextDate: Date
+
+  switch (rule.pattern) {
+    case 'daily':
+      nextDate = new Date(currentDate)
+      nextDate.setDate(nextDate.getDate() + rule.interval)
+      break
+
+    case 'weekly':
+      nextDate = new Date(currentDate)
+      if (rule.weekdays && rule.weekdays.length > 0) {
+        const sortedDays = [...rule.weekdays].sort((a, b) => a - b)
+        const currentDay = currentDate.getDay()
+        const nextDay = sortedDays.find(d => d > currentDay)
+        if (nextDay !== undefined) {
+          nextDate.setDate(nextDate.getDate() + (nextDay - currentDay))
+        } else {
+          // Wrap to next week cycle
+          const firstDay = sortedDays[0]
+          nextDate.setDate(nextDate.getDate() + (7 * rule.interval - currentDay + firstDay))
+        }
+      } else {
+        nextDate.setDate(nextDate.getDate() + (7 * rule.interval))
+      }
+      break
+
+    case 'monthly':
+      nextDate = new Date(currentDate)
+      nextDate.setDate(1) // Avoid month overflow (e.g., Jan 31 -> Mar 3)
+      nextDate.setMonth(nextDate.getMonth() + rule.interval)
+      if (rule.monthDay) {
+        const daysInMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate()
+        nextDate.setDate(Math.min(rule.monthDay, daysInMonth))
+      } else if (rule.monthWeekday) {
+        // Nth weekday of month
+        nextDate.setDate(1)
+        while (nextDate.getDay() !== rule.monthWeekday.day) {
+          nextDate.setDate(nextDate.getDate() + 1)
+        }
+        if (rule.monthWeekday.nth === -1) {
+          // Last occurrence
+          const daysInMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate()
+          nextDate.setDate(nextDate.getDate() + Math.floor((daysInMonth - nextDate.getDate()) / 7) * 7)
+        } else {
+          nextDate.setDate(nextDate.getDate() + (rule.monthWeekday.nth - 1) * 7)
+        }
+      } else {
+        // Default: same day of month
+        const origDay = currentDate.getDate()
+        const daysInMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate()
+        nextDate.setDate(Math.min(origDay, daysInMonth))
+      }
+      break
+
+    case 'yearly':
+      nextDate = new Date(currentDate)
+      nextDate.setFullYear(nextDate.getFullYear() + rule.interval)
+      break
+
+    default:
+      return null
+  }
+
+  // Check end date condition
+  if (rule.endType === 'on_date' && rule.endDate) {
+    const endDate = new Date(rule.endDate + 'T23:59:59')
+    if (nextDate > endDate) return null
+  }
+
+  return formatDateKey(nextDate)
+}
+
+/**
+ * Check if a recurrence should continue based on rule and count
+ */
+export function shouldRecurrenceContinue(rule: SimpleRecurrenceRule, currentCount: number): boolean {
+  if (rule.endType === 'never') return true
+  if (rule.endType === 'after_count') return currentCount < (rule.endCount || 0)
+  // on_date is checked at computation time in computeNextDueDate
+  return true
 }

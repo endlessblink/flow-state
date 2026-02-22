@@ -44,6 +44,18 @@ import { type TaskRecurrence, type RecurringTaskInstance } from './recurrence'
 
 export { type TaskRecurrence, type RecurringTaskInstance }
 
+/** TASK-1403: Simplified recurrence rule for clone-on-complete model */
+export interface SimpleRecurrenceRule {
+  pattern: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  interval: number                    // Every N [days/weeks/months/years]
+  weekdays?: number[]                 // For weekly: [0-6] (Sun-Sat)
+  monthDay?: number                   // For monthly: day of month
+  monthWeekday?: { nth: number, day: number }  // For monthly: Nth weekday
+  endType: 'never' | 'after_count' | 'on_date'
+  endDate?: string                    // ISO date for on_date
+  endCount?: number                   // Max occurrences for after_count
+}
+
 export interface Task {
   id: string
   title: string
@@ -76,7 +88,10 @@ export interface Task {
   tags?: string[] // Task labels for categorization and filtering
   connectionTypes?: { [targetTaskId: string]: 'sequential' | 'blocker' | 'reference' }
   // Recurrence and notification fields
-  recurrence?: TaskRecurrence // Recurrence pattern and generated instances
+  recurrence?: TaskRecurrence // Recurrence pattern and generated instances (legacy)
+  recurrenceRule?: SimpleRecurrenceRule  // TASK-1403: Simplified recurrence for clone-on-complete
+  recurrenceParentId?: string            // Links to original task in recurrence chain
+  recurrenceCount?: number               // How many times this task has recurred
   notificationPreferences?: NotificationPreferences // Notification settings for this task
   reminders?: TaskReminder[] // FEATURE-1363: Custom date/time reminders
   recurringInstances?: RecurringTaskInstance[] // Generated recurring task instances (for backwards compatibility)

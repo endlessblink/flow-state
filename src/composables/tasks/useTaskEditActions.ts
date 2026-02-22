@@ -1,10 +1,12 @@
 import { type Ref, type ComputedRef } from 'vue'
-import { useTaskStore, type Task, type Subtask, type TaskInstance, type TaskRecurrence } from '@/stores/tasks'
+import { useTaskStore, type Task, type Subtask, type TaskInstance } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
-import { generateRecurringInstances } from '@/utils/recurrenceUtils'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { useToast } from '@/composables/useToast'
+import type { SimpleRecurrenceRule } from '@/types/tasks'
+import { RecurrencePattern, EndCondition } from '@/types/recurrence'
+import type { RecurrenceRule as LegacyRecurrenceRule, RecurrenceEndCondition, WeeklyRecurrenceRule, MonthlyRecurrenceRule } from '@/types/recurrence'
 
 
 // Helper for cleaning task instances (from existing code)
@@ -140,6 +142,48 @@ export function useTaskEditActions(
         }
     }
 
+    // TASK-1403: Convert legacy RecurrenceRule to new SimpleRecurrenceRule
+    function convertToSimpleRecurrenceRule(
+        oldRule: LegacyRecurrenceRule,
+        endCondition: RecurrenceEndCondition
+    ): SimpleRecurrenceRule | null {
+        let pattern: SimpleRecurrenceRule['pattern']
+        switch (oldRule.pattern) {
+            case RecurrencePattern.DAILY: pattern = 'daily'; break
+            case RecurrencePattern.WEEKLY: pattern = 'weekly'; break
+            case RecurrencePattern.MONTHLY: pattern = 'monthly'; break
+            case RecurrencePattern.YEARLY: pattern = 'yearly'; break
+            default: return null // NONE or CUSTOM — not supported in new model
+        }
+
+        const rule: SimpleRecurrenceRule = {
+            pattern,
+            interval: (oldRule as { interval?: number }).interval || 1,
+            endType: endCondition.type === EndCondition.NEVER ? 'never'
+                   : endCondition.type === EndCondition.AFTER_COUNT ? 'after_count'
+                   : 'on_date',
+        }
+
+        if (oldRule.pattern === RecurrencePattern.WEEKLY) {
+            rule.weekdays = [...(oldRule as WeeklyRecurrenceRule).weekdays]
+        }
+        if (oldRule.pattern === RecurrencePattern.MONTHLY) {
+            const monthly = oldRule as MonthlyRecurrenceRule
+            if (monthly.dayOfMonth) rule.monthDay = monthly.dayOfMonth
+            if (monthly.weekday !== undefined && monthly.weekOfMonth !== undefined) {
+                rule.monthWeekday = { nth: monthly.weekOfMonth, day: monthly.weekday }
+            }
+        }
+        if (endCondition.type === EndCondition.ON_DATE && endCondition.date) {
+            rule.endDate = endCondition.date
+        }
+        if (endCondition.type === EndCondition.AFTER_COUNT && endCondition.count) {
+            rule.endCount = endCondition.count
+        }
+
+        return rule
+    }
+
     // --- Main Save Action ---
 
     // BUG-291 FIX: Made async to properly await updateTaskWithUndo
@@ -216,24 +260,19 @@ export function useTaskEditActions(
                 // Optimistic sync removed
             }
 
-            // Generate recurring instances if enabled
+            // TASK-1403: Convert recurrence to new SimpleRecurrenceRule format (clone-on-complete)
             if (editedTask.value.recurrence?.isEnabled && editedTask.value.recurrence.rule) {
-                const startDate = editedTask.value.scheduledDate || editedTask.value.dueDate || new Date().toISOString().split('T')[0]
-                const instances = generateRecurringInstances(
-                    editedTask.value.id,
-                    editedTask.value.recurrence.rule,
-                    editedTask.value.recurrence.endCondition,
-                    editedTask.value.recurrence.exceptions || [],
-                    new Date(startDate),
-                    editedTask.value.scheduledTime,
-                    editedTask.value.estimatedDuration
-                )
-                updates.recurringInstances = instances
-                if (updates.recurrence) {
-                    const recurrence = updates.recurrence as TaskRecurrence
-                    recurrence.generatedInstances = instances
-                    recurrence.lastGenerated = new Date().toISOString()
+                const oldRule = editedTask.value.recurrence.rule as LegacyRecurrenceRule
+                const endCondition = editedTask.value.recurrence.endCondition
+                const newRule = convertToSimpleRecurrenceRule(oldRule, endCondition)
+                if (newRule) {
+                    updates.recurrenceRule = newRule
                 }
+                // Keep old recurrence field for backwards compat during migration
+                // but stop writing recurringInstances (no more pre-generation)
+            } else if (editedTask.value.recurrence && !editedTask.value.recurrence.isEnabled) {
+                // Recurrence was disabled — clear the new rule too
+                updates.recurrenceRule = undefined
             }
 
             // BUG-291 FIX: Use direct updateTask for INSTANT feedback
@@ -281,7 +320,7 @@ export function useTaskEditActions(
                     inst.scheduledDate && inst.scheduledDate === editedTask.value.scheduledDate
                 )
 
-                if (sameDayInstance) {
+                if (sameDayInstance && sameDayInstance.id) {
                     taskStore.updateTaskInstanceWithUndo(editedTask.value.id, sameDayInstance.id, {
                         scheduledTime: editedTask.value.scheduledTime,
                         duration: editedTask.value.estimatedDuration || 60

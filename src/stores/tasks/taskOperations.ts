@@ -203,6 +203,16 @@ export function useTaskOperations(
                 if (newTask.doneForNowUntil) {
                     payload.done_for_now_until = newTask.doneForNowUntil
                 }
+                // TASK-1403: Include recurrence fields in create payload
+                if (newTask.recurrenceRule) {
+                    payload.recurrence_rule = JSON.parse(JSON.stringify(newTask.recurrenceRule))
+                }
+                if (newTask.recurrenceParentId) {
+                    payload.recurrence_parent_id = newTask.recurrenceParentId
+                }
+                if (newTask.recurrenceCount) {
+                    payload.recurrence_count = newTask.recurrenceCount
+                }
 
                 await syncOrchestrator.enqueue({
                     entityType: 'task',
@@ -427,6 +437,47 @@ export function useTaskOperations(
                         console.warn('[Timer] Auto-stop on task completion failed:', e)
                     }
 
+                    // TASK-1403: Clone-on-complete for recurring tasks
+                    // When a recurring task is completed, spawn a fresh clone for the next occurrence
+                    if (task.recurrenceRule) {
+                        try {
+                            const { computeNextDueDate } = await import('@/utils/recurrenceUtils')
+                            const currentDueDate = task.dueDate || formatDateKey(new Date())
+                            const currentCount = (task.recurrenceCount || 0) + 1
+                            const nextDueDate = computeNextDueDate(currentDueDate, task.recurrenceRule, currentCount)
+
+                            if (nextDueDate) {
+                                // Spawn a new task for the next occurrence (fire-and-forget)
+                                const clonedTask: Partial<Task> = {
+                                    title: task.title,
+                                    description: task.description,
+                                    priority: task.priority,
+                                    projectId: task.projectId,
+                                    estimatedDuration: task.estimatedDuration,
+                                    estimatedPomodoros: task.estimatedPomodoros,
+                                    tags: task.tags ? [...task.tags] : undefined,
+                                    recurrenceRule: { ...task.recurrenceRule },
+                                    recurrenceParentId: task.recurrenceParentId || task.id,
+                                    recurrenceCount: currentCount,
+                                    dueDate: nextDueDate,
+                                    status: 'planned',
+                                    isInInbox: true,
+                                }
+
+                                createTask(clonedTask).then(() => {
+                                    console.log(`🔄 [RECURRENCE] Cloned recurring task "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (occurrence #${currentCount})`)
+                                }).catch(err => {
+                                    console.error(`❌ [RECURRENCE] Failed to clone recurring task:`, err)
+                                })
+                            } else {
+                                console.log(`🏁 [RECURRENCE] Recurring task "${task.title?.slice(0, 30)}" ended (${task.recurrenceRule.endType})`)
+                            }
+                        } catch (e) {
+                            // Recurrence is non-critical, don't break task completion
+                            console.error('[RECURRENCE] Clone-on-complete failed:', e)
+                        }
+                    }
+
                     // ================================================================
                     // AUTO-ARCHIVE: Move done tasks off canvas to inbox
                     // ================================================================
@@ -553,6 +604,17 @@ export function useTaskOperations(
                 // Without this, offline subtask changes are silently dropped
                 if (updatedTask.subtasks !== undefined) {
                     payload.subtasks = JSON.parse(JSON.stringify(updatedTask.subtasks))
+                }
+                // TASK-1403: Include new recurrence fields in sync queue
+                // Only send when task actually has a recurrence rule (avoid sending on every task update)
+                if (updatedTask.recurrenceRule) {
+                    payload.recurrence_rule = JSON.parse(JSON.stringify(updatedTask.recurrenceRule))
+                }
+                if (updatedTask.recurrenceParentId) {
+                    payload.recurrence_parent_id = updatedTask.recurrenceParentId
+                }
+                if (updatedTask.recurrenceCount) {
+                    payload.recurrence_count = updatedTask.recurrenceCount
                 }
 
                 await syncOrchestrator.enqueue({

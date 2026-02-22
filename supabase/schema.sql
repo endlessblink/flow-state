@@ -80,6 +80,9 @@ create table public.tasks (
   connection_types jsonb, -- e.g. { "taskId": "blocker" }
   recurring_instances jsonb default '[]'::jsonb,
   recurrence jsonb,
+  recurrence_rule jsonb,                    -- TASK-1403: Simplified recurrence for clone-on-complete
+  recurrence_parent_id uuid references tasks(id) on delete set null,
+  recurrence_count integer default 0,
   notification_prefs jsonb,
   
   is_in_inbox boolean default false,

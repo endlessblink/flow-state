@@ -330,9 +330,16 @@ const textColors = [
 // BUG-276 FIX: Track internal updates to prevent watcher from re-setting content during typing
 const isInternalUpdate = ref(false)
 
+// FIX: Track the last markdown TipTap emitted, so the modelValue watcher can compare
+// markdown-to-markdown instead of HTML-to-HTML. The HTML comparison was unreliable because
+// parseMarkdown() (marked.js) and editor.getHTML() (TipTap serializer) produce structurally
+// different HTML for the same content, causing setContent to fire on every prop update.
+const lastEmittedMarkdown = ref(props.modelValue)
+
 // BUG-276 FIX: Debounced emit to prevent rapid-fire conversions during typing
 const debouncedEmit = useDebounceFn((markdown: string) => {
   isInternalUpdate.value = true
+  lastEmittedMarkdown.value = markdown
   emit('update:modelValue', markdown)
   nextTick(() => {
     isInternalUpdate.value = false
@@ -401,11 +408,16 @@ const editor = useEditor({
 // BUG-276 FIX: Skip if this is an internal update from typing to prevent race conditions
 watch(() => props.modelValue, (newValue) => {
   if (!editor.value || isInternalUpdate.value) return
-  // Convert incoming markdown to HTML for comparison
+  // FIX: Compare markdown-to-markdown instead of HTML-to-HTML.
+  // parseMarkdown() and editor.getHTML() produce structurally different HTML for the
+  // same content (marked.js vs TipTap serializer), so the old HTML comparison always
+  // triggered setContent, resetting the editor and destroying user's in-progress edits.
+  if (newValue === lastEmittedMarkdown.value) return
   const newHtml = parseMarkdown(newValue)
   const currentHtml = editor.value.getHTML()
   // Only update if content actually changed (prevents cursor jump)
   if (currentHtml !== newHtml) {
+    lastEmittedMarkdown.value = newValue
     editor.value.commands.setContent(newHtml, { emitUpdate: false })
   }
 })

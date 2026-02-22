@@ -84,6 +84,7 @@ export interface AppSettings {
     // TASK-1283: Google Calendar integration
     googleCalendarToken: string
     googleCalendarRefreshToken: string
+    googleCalendarTokenExpiry: number  // Unix ms — when access token expires (0 = unknown)
     googleCalendarConnected: boolean
     googleCalendars: GoogleCalendarConfig[]
     showGoogleCalendarEvents: boolean
@@ -208,6 +209,7 @@ export const useSettingsStore = defineStore('settings', {
         // TASK-1283: Google Calendar defaults
         googleCalendarToken: '',
         googleCalendarRefreshToken: '',
+        googleCalendarTokenExpiry: 0,
         googleCalendarConnected: false,
         googleCalendars: [],
         showGoogleCalendarEvents: true,
@@ -356,6 +358,9 @@ export const useSettingsStore = defineStore('settings', {
                     }
                     if (this.$state.showGoogleCalendarEvents === undefined) {
                         this.$state.showGoogleCalendarEvents = true
+                    }
+                    if (this.$state.googleCalendarTokenExpiry === undefined) {
+                        this.$state.googleCalendarTokenExpiry = 0
                     }
                     // TASK-1350: Backfill AI setup fields
                     if (this.$state.groqApiKey === undefined) {

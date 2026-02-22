@@ -321,11 +321,13 @@ export const useAuthStore = defineStore('auth', () => {
                 const { useSettingsStore } = await import('@/stores/settings')
                 const settingsStore = useSettingsStore()
                 settingsStore.updateSetting('googleCalendarToken', providerToken)
+                // Google access tokens expire in ~3600s. Store expiry for proactive refresh.
+                settingsStore.updateSetting('googleCalendarTokenExpiry', Date.now() + 3500 * 1000)
                 if (providerRefreshToken) {
                   settingsStore.updateSetting('googleCalendarRefreshToken', providerRefreshToken)
                 }
                 settingsStore.updateSetting('googleCalendarConnected', true)
-                console.log(`👤 [AUTH:${currentTabId}] Google Calendar provider tokens captured and stored (event: ${_event}, source: ${providerTokens ? 'hash' : 'session'})`)
+                console.log(`👤 [AUTH:${currentTabId}] Google Calendar provider tokens captured and stored (event: ${_event}, source: ${providerTokens ? 'hash' : 'session'}, hasRefresh: ${!!providerRefreshToken})`)
               } catch (e) {
                 console.warn('[AUTH] Failed to store Google Calendar tokens:', e)
               }

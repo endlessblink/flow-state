@@ -65,6 +65,14 @@ export interface ChatMessage {
     tokens?: number
     latencyMs?: number
     forceDirection?: 'auto' | 'ltr' | 'rtl'
+    /** Tool results for rendering task cards */
+    toolResults?: any[]
+    /** Schedule onboarding question card */
+    scheduleQuestion?: {
+      type: 'unavailable-days'
+      answered: boolean
+      selectedDays?: string[]
+    }
   }
 }
 

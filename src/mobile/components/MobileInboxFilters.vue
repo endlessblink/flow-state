@@ -74,12 +74,13 @@ const timeFilterIcons = {
   overdue: AlertCircle
 } as const
 
-const groupByIcons = {
+const groupByIcons: Record<GroupByType, any> = {
   none: ListFilter,
   date: Calendar,
   project: FolderOpen,
-  priority: Flag
-} as const
+  priority: Flag,
+  time: CalendarClock
+}
 
 const props = defineProps<{
   viewMode: ViewMode

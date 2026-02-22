@@ -452,14 +452,19 @@ export function useWeeklyPlan() {
       const pastLearnings = workProfile.value?.memoryGraph
         ?.filter(obs => obs.relation === 'scheduling_preference')
         ?.map(obs => obs.value) ?? []
+      console.log(`[WeeklyPlan] Generating dynamic questions for ${tasks.length} tasks, ${pastLearnings.length} known preferences`)
+      if (pastLearnings.length > 0) {
+        console.log('[WeeklyPlan] Known scheduling preferences:', pastLearnings)
+      }
       const questions = await aiGenerateDynamicQuestions(tasks, answers.personalContext, answers, pastLearnings)
 
       if (questions.length === 0) {
-        // No questions generated — go straight to plan generation
+        console.log('[WeeklyPlan] No dynamic questions generated (LLM + deterministic fallback both empty). Proceeding to plan.')
         generatePlan(answers)
         return
       }
 
+      console.log(`[WeeklyPlan] Got ${questions.length} dynamic questions:`, questions.map(q => q.question))
       state.value.dynamicQuestions = questions.map((q, i) => ({
         id: `dq-${i}`,
         question: q.question,

@@ -27,6 +27,7 @@ import TaskQuickEditPopover from './TaskQuickEditPopover.vue'
 import { executeTool } from '@/services/ai/tools'
 import { sanitizeMarkdownHtml } from '@/utils/security'
 import { detectLanguage } from '@/services/ai/pipeline/languageDetector'
+import { useWorkProfile } from '@/composables/useWorkProfile'
 
 // ============================================================================
 // Props
@@ -72,6 +73,11 @@ const copied = ref(false)
 const completedTaskIds = ref<Set<string>>(new Set())
 const timerStartedTaskIds = ref<Set<string>>(new Set())
 const actionLoading = ref<Record<string, string>>({}) // taskId -> 'done' | 'timer'
+
+// Schedule onboarding
+const selectedDays = ref<Set<string>>(new Set())
+const scheduleSaving = ref(false)
+const scheduleSaved = ref(false)
 
 // Live task data from Pinia store (reactive — updates when user edits tasks)
 const taskStore = useTaskStore()
@@ -143,6 +149,10 @@ const effectiveDirection = computed<'auto' | 'ltr' | 'rtl'>(() => {
 const hasActions = computed(() =>
   props.message.actions && props.message.actions.length > 0
 )
+const scheduleQuestion = computed(() => {
+  const meta = props.message.metadata
+  return meta?.scheduleQuestion ?? null
+})
 const isThinking = computed(() =>
   isStreaming.value && (!props.message.content || props.message.content.trim() === '')
 )
@@ -409,6 +419,61 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
     delete actionLoading.value[taskId]
   }
 }
+
+// ============================================================================
+// Schedule Onboarding
+// ============================================================================
+
+const DAY_OPTIONS = [
+  { value: 'sunday', label: 'Sun', labelHe: '\u05D0\u05F3' },
+  { value: 'monday', label: 'Mon', labelHe: '\u05D1\u05F3' },
+  { value: 'tuesday', label: 'Tue', labelHe: '\u05D2\u05F3' },
+  { value: 'wednesday', label: 'Wed', labelHe: '\u05D3\u05F3' },
+  { value: 'thursday', label: 'Thu', labelHe: '\u05D4\u05F3' },
+  { value: 'friday', label: 'Fri', labelHe: '\u05D5\u05F3' },
+  { value: 'saturday', label: 'Sat', labelHe: '\u05E9\u05F3' },
+]
+
+function toggleDay(day: string) {
+  if (scheduleSaved.value) return
+  const days = new Set(selectedDays.value)
+  if (days.has(day)) {
+    days.delete(day)
+  } else {
+    days.add(day)
+  }
+  selectedDays.value = days
+}
+
+async function saveSchedule() {
+  if (scheduleSaving.value || scheduleSaved.value) return
+  if (selectedDays.value.size === 0) return
+
+  scheduleSaving.value = true
+  try {
+    const dayNames = [...selectedDays.value]
+      .map(d => d.charAt(0).toUpperCase() + d.slice(1))
+      .join(', ')
+    const contextStr = `Not available on: ${dayNames}`
+
+    const wp = useWorkProfile()
+    await wp.savePreferences({
+      personalContext: contextStr,
+      daysOff: [...selectedDays.value],
+    })
+
+    scheduleSaved.value = true
+    // Update message metadata to persist the answered state
+    if (props.message.metadata?.scheduleQuestion) {
+      props.message.metadata.scheduleQuestion.answered = true
+      props.message.metadata.scheduleQuestion.selectedDays = [...selectedDays.value]
+    }
+  } catch (err) {
+    console.error('[ChatMessage] Save schedule failed:', err)
+  } finally {
+    scheduleSaving.value = false
+  }
+}
 </script>
 
 <template>
@@ -447,6 +512,40 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
 
       <!-- Streaming cursor (when there IS content) -->
       <span v-if="isStreaming && !isThinking && renderedContent" class="cursor-blink">|</span>
+
+      <!-- Schedule Onboarding Question Card -->
+      <div v-if="scheduleQuestion && !scheduleQuestion.answered && !scheduleSaved" class="schedule-onboarding-card">
+        <div class="schedule-question-text" dir="auto">
+          Which days are you <strong>NOT</strong> available for tasks?
+        </div>
+        <div class="day-select-grid">
+          <button
+            v-for="day in DAY_OPTIONS"
+            :key="day.value"
+            class="day-select-btn"
+            :class="{ 'day-selected': selectedDays.has(day.value) }"
+            @click="toggleDay(day.value)"
+          >
+            {{ day.label }}
+          </button>
+        </div>
+        <button
+          class="schedule-save-btn"
+          :disabled="selectedDays.size === 0 || scheduleSaving"
+          @click="saveSchedule"
+        >
+          <Loader2 v-if="scheduleSaving" :size="14" class="spin" />
+          <Check v-else :size="14" />
+          <span>{{ scheduleSaving ? 'Saving...' : 'Save' }}</span>
+        </button>
+      </div>
+      <!-- Schedule answered confirmation -->
+      <div v-else-if="scheduleQuestion && (scheduleQuestion.answered || scheduleSaved)" class="schedule-answered-card">
+        <Check :size="14" class="schedule-check-icon" />
+        <span dir="auto">
+          Not available on: <strong>{{ (scheduleQuestion.selectedDays || [...selectedDays]).map((d: string) => d.charAt(0).toUpperCase() + d.slice(1)).join(', ') }}</strong>
+        </span>
+      </div>
 
       <!-- Tool Results -->
       <div v-if="toolResults.length > 0 && !isStreaming" class="tool-results">
@@ -2301,5 +2400,100 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   color: var(--text-tertiary);
   font-style: italic;
   border-top: 1px solid var(--glass-border-faint);
+}
+
+/* ============================================================================
+   Schedule Onboarding Card
+   ============================================================================ */
+
+.schedule-onboarding-card {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-soft);
+  backdrop-filter: blur(8px);
+}
+
+.schedule-question-text {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.day-select-grid {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.day-select-btn {
+  padding: var(--space-1_5) var(--space-2_5);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-light);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 48px;
+  text-align: center;
+}
+
+.day-select-btn:hover {
+  border-color: var(--brand-primary);
+  color: var(--text-primary);
+}
+
+.day-select-btn.day-selected {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: white;
+}
+
+.schedule-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1_5) var(--space-3);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.15s ease;
+}
+
+.schedule-save-btn:hover:not(:disabled) {
+  background: var(--brand-primary);
+  color: white;
+}
+
+.schedule-save-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.schedule-answered-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--success-bg-light);
+  color: var(--color-success-500);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+.schedule-check-icon {
+  flex-shrink: 0;
 }
 </style>

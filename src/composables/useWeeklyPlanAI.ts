@@ -1002,9 +1002,41 @@ export function useWeeklyPlanAI() {
       let reasoning: string | null = null
       let llmReasons: Record<string, string> = {}
 
+      const systemPrompt = buildDistributionSystemPrompt(interview, profile, enriched.length)
+      const userPrompt = buildDistributionUserPrompt(enriched, weekStart, weekEnd, behavioral, interview)
+
+      // DEBUG: Log what memory/profile data is reaching the prompts
+      console.log('[WeeklyPlanAI] Step 1: Profile data check:', {
+        hasProfile: !!profile,
+        memoryGraphCount: profile?.memoryGraph?.length ?? 0,
+        schedulingPrefs: profile?.memoryGraph?.filter(o => o.relation === 'scheduling_preference').map(o => o.value) ?? [],
+        peakDays: profile?.peakProductivityDays ?? [],
+        avgTasks: profile?.avgTasksCompletedPerDay ?? null,
+        personalContext: interview?.personalContext?.slice(0, 80) ?? '(none)',
+        dynamicAnswers: interview?.dynamicAnswers?.map(a => `${a.question} → ${a.answer}`) ?? [],
+      })
+      console.log('[WeeklyPlanAI] Step 1: Behavioral insights:', {
+        workInsights: behavioral?.workInsights ?? [],
+        completionRate: behavioral?.completionRate ?? null,
+        frequentlyMissed: behavioral?.frequentlyMissedProjects ?? [],
+      })
+      console.log('[WeeklyPlanAI] Step 1: System prompt length:', systemPrompt.length, 'chars')
+      console.log('[WeeklyPlanAI] Step 1: User prompt length:', userPrompt.length, 'chars')
+      // Log if MANDATORY rules section is present
+      if (userPrompt.includes('MANDATORY SCHEDULING RULES')) {
+        console.log('[WeeklyPlanAI] ✅ MANDATORY SCHEDULING RULES section found in user prompt')
+      } else {
+        console.log('[WeeklyPlanAI] ⚠️ No MANDATORY SCHEDULING RULES in user prompt')
+      }
+      if (systemPrompt.includes('DAY ASSIGNMENT RULES')) {
+        console.log('[WeeklyPlanAI] ✅ DAY ASSIGNMENT RULES section found in system prompt')
+      } else {
+        console.log('[WeeklyPlanAI] ⚠️ No DAY ASSIGNMENT RULES in system prompt')
+      }
+
       const messages: ChatMessage[] = [
-        { role: 'system', content: buildDistributionSystemPrompt(interview, profile, enriched.length) },
-        { role: 'user', content: buildDistributionUserPrompt(enriched, weekStart, weekEnd, behavioral, interview) },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ]
 
       console.log(`[WeeklyPlanAI] Step 1: Requesting distribution from LLM`)

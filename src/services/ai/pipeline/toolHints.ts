@@ -69,7 +69,11 @@ const KEYWORD_MAPPINGS: KeywordMapping[] = [
 
   // --- Weekly planning ---
   {
-    keywords: ['plan my week', 'weekly plan', 'plan the week', 'תכנון שבועי', 'לתכנן שבוע', 'תכנן לי שבוע'],
+    keywords: [
+      'plan my week', 'weekly plan', 'plan the week', 'help me plan',
+      'תכנון שבועי', 'לתכנן את השבוע', 'תכנן לי את השבוע', 'לתכנן שבוע',
+      'תכנן לי שבוע', 'תתכנן לי', 'לתכנן את', 'תכנון השבוע', 'לתכנן', 'תכנן לי',
+    ],
     tool: 'generate_weekly_plan',
     reason: 'User wants a weekly plan',
   },
@@ -83,10 +87,19 @@ const KEYWORD_MAPPINGS: KeywordMapping[] = [
       'next task',
       'recommend a task',
       'what to work on',
+      'most urgent',
+      'most important',
+      'what is urgent',
       'מה לעשות',
       'מה כדאי',
       'מה הבא',
       'הצע משימה',
+      'מה הכי דחוף',
+      'מה דחוף',
+      'הכי חשוב',
+      'מה הכי חשוב',
+      'במה להתחיל',
+      'על מה לעבוד',
     ],
     tool: 'suggest_next_task',
     reason: 'User wants task suggestion',

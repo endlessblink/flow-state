@@ -1268,22 +1268,29 @@ ${taskSummary}`
         return question ? { question, type, options } : null
       }).filter(Boolean) as Array<{ question: string; type: 'choice' | 'day-select'; options: string[] }>
 
-      // Merge: LLM questions first, then fill remaining slots with fallback
-      if (llmQuestions.length > 0) {
-        // Deduplicate — don't ask same routine question if LLM already covers that topic
-        const llmText = llmQuestions.map(q => q.question.toLowerCase()).join(' ')
-        const uniqueFallbacks = fallbackQuestions.filter(fq => {
-          // Check if LLM already asked about a similar topic (school, gym, office, etc.)
-          const fqWords = fq.question.toLowerCase().split(/\s+/)
-          return !fqWords.some(w => w.length > 4 && llmText.includes(w))
+      // Merge: Routine day-select questions FIRST (they learn the user's schedule),
+      // then fill remaining slots with LLM questions
+      const routineQuestions = fallbackQuestions.filter(q => q.type === 'day-select')
+      const otherFallbacks = fallbackQuestions.filter(q => q.type !== 'day-select')
+
+      if (llmQuestions.length > 0 || routineQuestions.length > 0) {
+        // Deduplicate LLM questions — remove any that overlap with routine topics
+        const routineText = routineQuestions.map(q => q.question.toLowerCase()).join(' ')
+        const ROUTINE_KEYWORDS = ['school', 'university', 'office', 'gym', 'errands', 'grocery',
+          'תיכון', 'אוניברסיטה', 'משרד', 'כושר', 'קניות', 'סידורים']
+        const filteredLLM = llmQuestions.filter(lq => {
+          const lqLower = lq.question.toLowerCase()
+          // Remove LLM question if it covers the same routine topic
+          return !ROUTINE_KEYWORDS.some(kw => lqLower.includes(kw) && routineText.includes(kw))
         })
-        const merged = [...llmQuestions, ...uniqueFallbacks].slice(0, 3)
-        console.log(`[WeeklyPlanAI] Questions: ${llmQuestions.length} LLM + ${uniqueFallbacks.length} fallback = ${merged.length} total`)
+
+        const merged = [...routineQuestions, ...filteredLLM, ...otherFallbacks].slice(0, 3)
+        console.log(`[WeeklyPlanAI] Questions: ${routineQuestions.length} routine + ${filteredLLM.length} LLM + ${otherFallbacks.length} other = ${merged.length} total`)
         return merged
       }
 
-      // LLM returned empty valid array — use fallback
-      console.log('[WeeklyPlanAI] LLM returned empty questions, using fallback')
+      // No questions at all — use whatever fallback we have
+      console.log('[WeeklyPlanAI] No LLM or routine questions, using fallback')
       return fallbackQuestions
     } catch (err) {
       console.warn('[WeeklyPlanAI] LLM question generation failed, using routine detection:', err)

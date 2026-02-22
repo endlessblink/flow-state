@@ -424,13 +424,23 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     // Without this, the local store silently diverges from VPS truth.
     if (result.serverData && operation.entityType === 'task') {
       try {
-        const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
         const { useTaskStore } = await import('@/stores/tasks')
         const taskStore = useTaskStore()
-        const mappedTask = fromSupabaseTask(result.serverData as unknown as Parameters<typeof fromSupabaseTask>[0])
-        taskStore.updateTaskFromSync(operation.entityId, mappedTask, false)
-        if (import.meta.env.DEV) {
-          console.log(`[SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+
+        // FIX: Skip LWW writeback when the task has a pending write.
+        // A pending write means we just saved this task — the server data is an echo
+        // of our own save that could overwrite fresher local edits.
+        if (taskStore.isPendingWrite(operation.entityId)) {
+          if (import.meta.env.DEV) {
+            console.log(`[SYNC] Skipping LWW writeback for ${operation.entityId.slice(0, 8)} — pending write (local data is fresher)`)
+          }
+        } else {
+          const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
+          const mappedTask = fromSupabaseTask(result.serverData as unknown as Parameters<typeof fromSupabaseTask>[0])
+          taskStore.updateTaskFromSync(operation.entityId, mappedTask, false)
+          if (import.meta.env.DEV) {
+            console.log(`[SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+          }
         }
       } catch (e) {
         console.warn(`[SYNC] Failed to apply LWW server data to store:`, e)

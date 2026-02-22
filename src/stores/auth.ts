@@ -308,6 +308,30 @@ export const useAuthStore = defineStore('auth', () => {
             appInitLoadComplete = false
           }
 
+          // TASK-1283: Capture Google provider tokens for Calendar API
+          // This must run for BOTH 'SIGNED_IN' and 'INITIAL_SESSION' events.
+          // After OAuth redirect, supabase.ts extracts tokens from the hash and calls setSession().
+          // setSession() fires 'INITIAL_SESSION' (not 'SIGNED_IN'), so we capture here for both.
+          if ((_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION') && newSession?.user) {
+            const providerTokens = consumePendingProviderTokens()
+            const providerToken = providerTokens?.provider_token || (newSession as any).provider_token
+            const providerRefreshToken = providerTokens?.provider_refresh_token || (newSession as any).provider_refresh_token
+            if (providerToken) {
+              try {
+                const { useSettingsStore } = await import('@/stores/settings')
+                const settingsStore = useSettingsStore()
+                settingsStore.updateSetting('googleCalendarToken', providerToken)
+                if (providerRefreshToken) {
+                  settingsStore.updateSetting('googleCalendarRefreshToken', providerRefreshToken)
+                }
+                settingsStore.updateSetting('googleCalendarConnected', true)
+                console.log(`👤 [AUTH:${currentTabId}] Google Calendar provider tokens captured and stored (event: ${_event}, source: ${providerTokens ? 'hash' : 'session'})`)
+              } catch (e) {
+                console.warn('[AUTH] Failed to store Google Calendar tokens:', e)
+              }
+            }
+          }
+
           // BUG-1020: Reload stores when user signs in (projects were empty during guest mode)
           // BUG-1086: Only run ONCE per user to prevent duplicate reloads from repeated SIGNED_IN events
           // BUG-1207: Skip if useAppInitialization already loaded stores (prevents double-load)
@@ -317,23 +341,6 @@ export const useAuthStore = defineStore('auth', () => {
               return
             }
             handledSignInForUserId = newSession.user.id
-
-            // TASK-1283: Capture Google provider tokens for Calendar API
-            const providerTokens = consumePendingProviderTokens()
-            if (providerTokens) {
-              try {
-                const { useSettingsStore } = await import('@/stores/settings')
-                const settingsStore = useSettingsStore()
-                settingsStore.updateSetting('googleCalendarToken', providerTokens.provider_token)
-                if (providerTokens.provider_refresh_token) {
-                  settingsStore.updateSetting('googleCalendarRefreshToken', providerTokens.provider_refresh_token)
-                }
-                settingsStore.updateSetting('googleCalendarConnected', true)
-                console.log(`👤 [AUTH] Google Calendar provider tokens captured and stored`)
-              } catch (e) {
-                console.warn('[AUTH] Failed to store Google Calendar tokens:', e)
-              }
-            }
 
             if (appInitLoadComplete) {
               // BUG-1339: Defense-in-depth — even if appInitLoadComplete is true,

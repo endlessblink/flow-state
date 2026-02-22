@@ -3503,9 +3503,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 - Configure OAuth credentials in Google Cloud Console
 - Set redirect URLs for both PWA and Tauri
 
-### TASK-1283: Google Calendar Plugin — Calendar View Integration (📋 PLANNED)
+### ~~TASK-1283~~: Google Calendar Plugin — Calendar View Integration (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Blocked By**: FEATURE-1202
+**Priority**: P1 | **Status**: ✅ DONE (2026-02-22) | **Blocked By**: ~~FEATURE-1202~~
 
 **Feature**: Add a plugin/settings option to connect Google Calendar. Once connected, display Google Calendar events alongside FlowState tasks in the Calendar view.
 
@@ -3762,7 +3762,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | 👀 Single-screen welcome modal — research-backed, auth-aware, replaces WelcomeModal |
 | ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
-| TASK-1283 | P1 | 📋 Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
+| ~~TASK-1283~~ | P1 | ✅ Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
 | ~~**TASK-1284**~~ | **P0** | ✅ **Add quick task creation to KDE Plasma widget (monorepo)** |
 | TASK-292 | P3 | Canvas connection edge visuals (animations, gradients) |
 | TASK-310 | P2 | Automated SQL backup to cloud storage |

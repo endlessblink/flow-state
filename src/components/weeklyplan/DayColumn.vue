@@ -40,6 +40,11 @@
         class="drag-area"
         :animation="200"
         ghost-class="ghost-card"
+        :scroll="true"
+        :bubble-scroll="true"
+        :scroll-sensitivity="100"
+        :scroll-speed="12"
+        :force-fallback="true"
         @change="onDragChange"
       >
         <template #item="{ element: taskId }">

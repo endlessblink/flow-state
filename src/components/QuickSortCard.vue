@@ -35,6 +35,7 @@
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'low' }"
+            :aria-pressed="task.priority === 'low'"
             @click="updatePriority('low')"
           >
             {{ $t('task.priority_low') }}
@@ -42,6 +43,7 @@
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'medium' }"
+            :aria-pressed="task.priority === 'medium'"
             @click="updatePriority('medium')"
           >
             {{ $t('task.priority_med_abbr') }}
@@ -49,6 +51,7 @@
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'high' }"
+            :aria-pressed="task.priority === 'high'"
             @click="updatePriority('high')"
           >
             {{ $t('task.priority_high') }}
@@ -59,6 +62,7 @@
           <button
             class="quick-date-btn"
             :class="{ active: isToday }"
+            :aria-pressed="isToday"
             @click.stop="setToday"
           >
             ☀️ {{ $t('quick_sort.today') }}
@@ -66,6 +70,7 @@
           <button
             class="quick-date-btn"
             :class="{ active: isTomorrow }"
+            :aria-pressed="isTomorrow"
             @click.stop="setTomorrow"
           >
             🌅 +1
@@ -73,6 +78,7 @@
           <button
             class="quick-date-btn"
             :class="{ active: isNextWeek }"
+            :aria-pressed="isNextWeek"
             @click.stop="setNextWeek"
           >
             📆 +7
@@ -80,6 +86,7 @@
           <button
             class="quick-date-btn clear-btn"
             :class="{ active: hasNoDate }"
+            :aria-pressed="hasNoDate"
             @click.stop="clearDate"
           >
             {{ $t('quick_sort.clear') }}
@@ -95,6 +102,7 @@
               <button
                 class="quick-date-btn pick-btn"
                 title="Pick date"
+                aria-label="Pick date"
                 @click.stop
                 @mousedown.stop
                 @touchstart.stop

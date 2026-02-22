@@ -18,9 +18,11 @@
     </header>
 
     <!-- Tab Navigation -->
-    <div class="tab-navigation">
+    <div class="tab-navigation" role="tablist">
       <button
         class="tab-btn"
+        role="tab"
+        :aria-selected="activeTab === 'sort'"
         :class="{ active: activeTab === 'sort' }"
         @click="activeTab = 'sort'"
       >
@@ -30,6 +32,8 @@
       </button>
       <button
         class="tab-btn"
+        role="tab"
+        :aria-selected="activeTab === 'capture'"
         :class="{ active: activeTab === 'capture' }"
         @click="activeTab = 'capture'"
       >

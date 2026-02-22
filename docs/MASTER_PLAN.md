@@ -1232,7 +1232,9 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 3. Added `scripts/validate-chunks.sh` — post-deploy CI step verifies all 118 chunks (direct + lazy + SW precache) return 200
 4. Diagnostic runbook added to CLAUDE.md (three-layer hash comparison: Cloudflare → VPS → SW)
 
-**Files**: `src/router/index.ts`, `scripts/validate-chunks.sh`, `.github/workflows/deploy.yml`, `CLAUDE.md`
+**Follow-up Fix (2026-02-22)**: Caddy SPA fallback served `index.html` for missing `/assets/*` with `immutable` cache headers → Cloudflare cached HTML as JS → stale SW gets HTML instead of 404 → "unexpected error". Fixed: `/assets/*` now has own `handle @static` block with `file_server` only (no `try_files`). Missing assets return 404.
+
+**Files**: `src/router/index.ts`, `scripts/validate-chunks.sh`, `.github/workflows/deploy.yml`, `CLAUDE.md`, VPS `/etc/caddy/Caddyfile`
 
 ---
 
@@ -2620,7 +2622,7 @@ npm run tasks:bugs     # Filter by BUG type
 
 - [ ] **TASK-1240**: Supabase chat persistence — `ai_conversations` + `ai_messages` tables, cross-device sync
 - [ ] **TASK-1241**: Mobile bottom sheet — replace side panel with bottom sheet on mobile
-- [ ] **TASK-1243**: AI Game Master boss fights — real-time narrated boss encounters via chat
+- [ ] **TASK-1243**: ⏸️ PAUSED — AI Game Master boss fights — real-time narrated boss encounters via chat
 - [ ] **TASK-1245**: Dynamic prompt assembly — only include relevant tool definitions per request type
 - [ ] **TASK-1296**: AI Assist composable — `useAITaskAssist` with 7 actions (subtasks, priority, breakdown, date, title, related, summarize)
 - [ ] **TASK-1297**: AI Assist popover component — `AITaskAssistPopover.vue` with action buttons + result display
@@ -2792,9 +2794,9 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ---
 
-### ~~TASK-1249~~: Codebase Hygiene Audit — Placeholders, Hardcoded Values, Debug Leftovers (✅ DONE)
+### TASK-1249: Codebase Hygiene Audit — Placeholders, Hardcoded Values, Debug Leftovers (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: ✅ DONE (2026-02-22)
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-02-08)
 
 **Summary**: Comprehensive 7-agent audit found 10 CRITICAL, 34 MEDIUM, 29 LOW issues across placeholders, hardcoded values, demo content, debug leftovers, design token violations, AI config, and metadata.
 
@@ -2821,7 +2823,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 - [x] **~~TASK-1265~~**: ✅ Fix AI proxy health check consuming real API tokens every 60s — switched to OPTIONS request instead of chat completion (`aiChatProxy.ts:412-421`)
 
 #### P2 — Code Quality & Design System
-- [x] **~~TASK-1266~~**: ✅ CSS design token migration — top 10 offending files migrated (~172 violations fixed in CyberSkillTree, CyberShop, AIChatPanel, CyberBossFight, StreakCounter, GamificationHUD, AIMemoryHealthDashboard, TaskQuickEditPopover, AIQualityDashboard, DoneToggleVisuals). Expanded `cyberflow-tokens.css` with full opacity scale (140+ new `--cf-*` tokens). Combined with prior work: ~477 hardcoded values migrated total.
+- [ ] **TASK-1266**: CSS design token migration — top 10 offending files (1,420 raw rgba + 434 hex violations across 129 files). ~305 hardcoded values migrated in 20+ files (DoneToggleVisuals, GamificationPanel, ShopModal, BossFightPanel, ChallengeCard, ChallengeComplete, AchievementBadge, AchievementToast, AchievementsModal, CorruptionOverlay, DailyChallengesPanel, LevelBadge, StreakCounter, XpBar, TaskCreateBottomSheet, TaskEditBottomSheet, CalendarTaskCard, TauriUpdateNotification, ARIAMessage, etc.). Remaining violations still exist.
 - [x] **~~TASK-1267~~**: ✅ Standardize localStorage key prefixes — settings.ts migrated with migration logic for old keys
 - [x] **~~TASK-1268~~**: ✅ Extract magic timeout numbers to named constants — created `src/config/timing.ts` with PENDING_WRITE_TIMEOUT_MS, DRAG_SETTLE_TIMEOUT_MS, FILE_DIALOG_TIMEOUT_MS, CROSS_TAB_DEDUP_TIMEOUT_MS, RESIZE_SETTLE_TIMEOUT_MS
 - [x] **~~TASK-1269~~**: ✅ Create centralized `src/config/urls.ts` — EXTERNAL_URLS with DiceBear, GitHub, production site, Storybook dev
@@ -3765,7 +3767,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
 | ~~TASK-1248~~ | P1 | ✅ Design token audit & cleanup — all 7 phases complete, ~100+ violations fixed across 30 files |
-| ~~**TASK-1249**~~ | **P0** | ✅ **Codebase Hygiene Audit — placeholders, hardcoded values, debug leftovers (33/33 sub-tasks done)** |
+| **TASK-1249** | **P0** | **🔄 Codebase Hygiene Audit — placeholders, hardcoded values, debug leftovers (33 sub-tasks)** |
 | ~~TASK-1250~~ | P0 | ✅ Fix API key storage — removed plaintext localStorage (proxy handles keys server-side) |
 | ~~TASK-1251~~ | P0 | ✅ Fix direct API calls bypassing proxy (AIChatPanel.vue) |
 | ~~TASK-1252~~ | P0 | ✅ Remove/gate /keyboard-test debug route (ships without auth) |
@@ -4008,37 +4010,27 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### ~~TASK-1145~~: Split MobileInboxView.vue (✅ DONE)
-
-**Priority**: P1-HIGH | **Status**: ✅ DONE
-
-**Problem**: File was 1919 lines, exceeding 500-line limit.
-
-**Solution**: Extracted into composables and sub-components:
-- `MobileInboxView.vue` (369 lines) — orchestration view
-- `useMobileInboxLogic.ts` (445 lines) — business logic composable
-- `MobileInboxHeader.vue` (109 lines) — header component
-- `MobileInboxFilters.vue` (280 lines) — filter controls
-- `MobileInboxTaskList.vue` (390 lines) — task list component
-- `MobileInboxQuickAdd.vue` (348 lines) — quick add bar
-
-**Files**: `src/mobile/views/MobileInboxView.vue`, `src/mobile/composables/useMobileInboxLogic.ts`, `src/mobile/components/MobileInbox*.vue`
-
----
-
-### TASK-1146: Split useSupabaseDatabase.ts by Domain (📋 PLANNED)
+### TASK-1145: Split MobileInboxView.vue (📋 PLANNED)
 
 **Priority**: P1-HIGH | **Status**: 📋 PLANNED
 
-**Problem**: File is 1736 lines with mixed concerns (tasks, groups, projects, settings).
+**Problem**: File is 1919 lines, exceeding 500-line limit.
 
-**Solution**: Split into domain-specific composables:
-- `useSupabaseTasks.ts`
-- `useSupabaseGroups.ts`
-- `useSupabaseProjects.ts`
-- `useSupabaseSettings.ts`
+**Solution**: Extract into composables and sub-components.
 
-**Files**: `src/composables/useSupabaseDatabase.ts`
+**Files**: `src/mobile/views/MobileInboxView.vue`
+
+---
+
+### ~~TASK-1146~~: Split useSupabaseDatabase.ts by Domain (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-22)
+
+**Problem**: File was 1736 lines with mixed concerns.
+
+**Solution**: Split into 10 domain composables under `src/composables/supabase/` + shared infrastructure. Original file is now a 3-line re-export.
+
+**Files**: `src/composables/supabase/` (13 files)
 
 ---
 
@@ -4196,15 +4188,15 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1159: Implement Optimistic Updates for Task CRUD (📋 PLANNED)
+### ~~TASK-1159~~: Implement Optimistic Updates for Task CRUD (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE
 
 **Problem**: UI waits for network response before updating, causing perceived lag.
 
-**Solution**: Update UI immediately, sync to server in background, rollback on failure.
+**Solution**: Update UI immediately, sync to server in background, rollback on failure. Made `deleteTask` and `bulkDeleteTasks` optimistic (splice before network), added warning toast for `updateTask` direct-save failures.
 
-**Files**: `src/stores/tasks.ts`, `src/composables/useSupabaseDatabase.ts`
+**Files**: `src/stores/tasks/taskOperations.ts`
 
 ---
 

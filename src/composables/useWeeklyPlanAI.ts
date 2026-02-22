@@ -406,6 +406,31 @@ CRITICAL — taskReasons must connect the TASK to the USER'S LIFE:
     if (insights.length > 0) {
       base += `\n\nUSER HISTORY (learned patterns — USE these in your reasoning):\n${insights.join('\n')}`
     }
+
+    // Extract MANDATORY day-assignment rules from memory graph scheduling preferences
+    // These go in the SYSTEM prompt for maximum weight with the LLM
+    if (profile.memoryGraph) {
+      const schedRules = profile.memoryGraph
+        .filter(obs => obs.relation === 'scheduling_preference' && obs.confidence >= 0.6)
+        .map(obs => {
+          const match = obs.value.match(/^(\w+)\s*\(context:\s*(.+?)\??\s*\)/)
+          if (match) {
+            const [, day, context] = match
+            const topic = context
+              .replace(/^Which day (?:do you |does the |is |are you )?(?:go to |at |for |usually )?/i, '')
+              .replace(/^I see .+? — which day (?:do you |does the )?(?:go to |usually )?/i, '')
+              .replace(/^You have .+? — which day/i, '')
+              .trim()
+            return `- ${topic} tasks → ${day.toUpperCase()} (user confirmed)`
+          }
+          return null
+        })
+        .filter(Boolean)
+
+      if (schedRules.length > 0) {
+        base += `\n\nDAY ASSIGNMENT RULES (MANDATORY — these override all other scheduling logic):\n${schedRules.join('\n')}\nThese are NON-NEGOTIABLE. If a task relates to one of these topics, it MUST go on the specified day.`
+      }
+    }
   }
 
   return base
@@ -450,6 +475,31 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
     }
   }
 
+  // Extract MANDATORY scheduling rules from behavioral insights (scheduling_preference observations)
+  let schedulingRulesSection = ''
+  if (behavioral?.workInsights) {
+    const rules = behavioral.workInsights
+      .filter(i => i.startsWith('User preference:'))
+      .map(i => {
+        // Parse "User preference: Wednesday (context: Which day do you go to school?)"
+        const match = i.match(/User preference:\s*(\w+)\s*\(context:\s*(.+?)\??\s*\)/)
+        if (match) {
+          const [, day, context] = match
+          // Extract the topic from the question to create a strong rule
+          const topic = context
+            .replace(/^Which day (?:do you |does the |is |are you )?(?:go to |at |for |usually )?/i, '')
+            .replace(/^I see .+? — which day (?:do you |does the )?(?:go to |usually )?/i, '')
+            .trim()
+          return `- ALL "${topic}" tasks MUST be scheduled on ${day.toUpperCase()} (user confirmed this preference)`
+        }
+        // Fallback: still include as a rule even if parsing fails
+        return `- ${i.replace('User preference: ', 'MUST respect: ')}`
+      })
+    if (rules.length > 0) {
+      schedulingRulesSection = `\n===== MANDATORY SCHEDULING RULES (from user's confirmed preferences — NEVER override these) =====\n${rules.join('\n')}\n===== END MANDATORY RULES =====\n`
+    }
+  }
+
   let behavioralSection = ''
   if (behavioral) {
     const lines: string[] = []
@@ -471,8 +521,10 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
     if (behavioral.recentlyCompletedTitles.length > 0) {
       lines.push(`Recently completed: ${behavioral.recentlyCompletedTitles.slice(0, 5).join(', ')}`)
     }
-    if (behavioral.workInsights.length > 0) {
-      lines.push(`Work patterns:\n${behavioral.workInsights.slice(0, 5).map(i => `  - ${i}`).join('\n')}`)
+    // Filter out scheduling_preference insights — they're now in the MANDATORY section above
+    const nonSchedulingInsights = behavioral.workInsights.filter(i => !i.startsWith('User preference:'))
+    if (nonSchedulingInsights.length > 0) {
+      lines.push(`Work patterns:\n${nonSchedulingInsights.slice(0, 5).map(i => `  - ${i}`).join('\n')}`)
     }
     if (lines.length > 0) {
       behavioralSection = `\nIMPORTANT — What I know about this user (USE this for scheduling decisions):\n${lines.join('\n')}\n`
@@ -495,11 +547,11 @@ function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, 
 Week: ${formatDate(weekStart)} to ${weekEndStr}
 Total tasks: ${enriched.length} (${overdueCount} overdue, ${inProgressCount} in-progress, ${dueThisWeekCount} due this week)
 ${projectSummary ? `Projects with multiple tasks (GROUP these on same day): ${projectSummary}` : ''}
-${personalSection}${behavioralSection}${dynamicQASection}
+${personalSection}${schedulingRulesSection}${behavioralSection}${dynamicQASection}
 Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
-Schedule these ${enriched.length} tasks across the week. READ each task title to understand its nature. Return ONLY JSON with monday..sunday, unscheduled, reasoning, taskReasons.`
+Schedule these ${enriched.length} tasks across the week. READ each task title to understand its nature.${schedulingRulesSection ? ' OBEY the MANDATORY SCHEDULING RULES above — place location-specific tasks on the user\'s confirmed days.' : ''} Return ONLY JSON with monday..sunday, unscheduled, reasoning, taskReasons.`
 }
 
 // ============================================================================
@@ -802,6 +854,103 @@ function getRouterOptions(): Record<string, unknown> {
 }
 
 // ============================================================================
+// Deterministic Routine Detection (no LLM needed — ALWAYS works)
+// ============================================================================
+
+/**
+ * Detect location/routine-related tasks and generate hardcoded questions.
+ * This is the RELIABLE fallback — no LLM needed.
+ */
+function detectRoutineQuestions(
+  tasks: TaskSummary[],
+  pastLearnings?: string[],
+): Array<{ question: string; type: 'choice' | 'day-select'; options: string[] }> {
+  const ALL_DAY_OPTIONS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const questions: Array<{ question: string; type: 'choice' | 'day-select'; options: string[] }> = []
+
+  // Location/routine keyword patterns (Hebrew + English)
+  const routinePatterns: Array<{
+    keywords: RegExp
+    questionTemplate: string
+    alreadyKnownCheck: string
+  }> = [
+    {
+      keywords: /תיכון|בית.?ספר|school|high.?school/i,
+      questionTemplate: 'I see school-related tasks — which day do you go to school?',
+      alreadyKnownCheck: 'school',
+    },
+    {
+      keywords: /אוניברסיטה|university|uni|campus|college|לימודים/i,
+      questionTemplate: 'You have university-related tasks — which day are you on campus?',
+      alreadyKnownCheck: 'university',
+    },
+    {
+      keywords: /משרד|office|עבודה|work/i,
+      questionTemplate: 'I see work/office tasks — which day are you in the office?',
+      alreadyKnownCheck: 'office',
+    },
+    {
+      keywords: /חדר.?כושר|gym|fitness|אימון|workout/i,
+      questionTemplate: 'You have fitness tasks — which day do you usually go to the gym?',
+      alreadyKnownCheck: 'gym',
+    },
+    {
+      keywords: /סופר|קניות|grocery|shopping|errands|סידורים/i,
+      questionTemplate: 'I see errands/shopping tasks — which day do you usually run errands?',
+      alreadyKnownCheck: 'errand',
+    },
+  ]
+
+  const allText = tasks.map(t => `${t.title} ${t.description || ''} ${t.projectName || ''}`).join(' ')
+
+  for (const pattern of routinePatterns) {
+    if (pattern.keywords.test(allText)) {
+      // Check if we already know this preference
+      const alreadyKnown = pastLearnings?.some(l =>
+        l.toLowerCase().includes(pattern.alreadyKnownCheck)
+      )
+      if (!alreadyKnown) {
+        questions.push({
+          question: pattern.questionTemplate,
+          type: 'day-select',
+          options: ALL_DAY_OPTIONS,
+        })
+      }
+    }
+  }
+
+  // If no routine questions detected, add general scheduling questions for 5+ tasks
+  if (questions.length === 0 && tasks.length >= 5) {
+    const today = new Date().toISOString().split('T')[0]
+    const overdueCount = tasks.filter(t => {
+      if (!t.dueDate) return false
+      return t.dueDate < today
+    }).length
+
+    if (overdueCount >= 2) {
+      questions.push({
+        question: `You have ${overdueCount} overdue tasks — how should I prioritize them?`,
+        type: 'choice',
+        options: ['Clear them first (Mon-Tue)', 'Spread across the week', 'Mix with new tasks'],
+      })
+    }
+
+    // Check for multiple projects
+    const projects = new Set(tasks.map(t => t.projectName).filter(Boolean))
+    if (projects.size >= 2) {
+      questions.push({
+        question: 'Should I group tasks by project on the same day or spread them?',
+        type: 'choice',
+        options: ['Group by project', 'Spread them out', 'Doesn\'t matter'],
+      })
+    }
+  }
+
+  console.log(`[WeeklyPlanAI] Routine detection: ${questions.length} questions from ${tasks.length} tasks`)
+  return questions.slice(0, 3)
+}
+
+// ============================================================================
 // Composable
 // ============================================================================
 
@@ -963,6 +1112,9 @@ export function useWeeklyPlanAI() {
   /**
    * Generate 2-3 structured questions with clickable answer options.
    * Aware of past memory observations to avoid re-asking known preferences.
+   *
+   * RELIABILITY: ALWAYS generates deterministic routine-detection questions first.
+   * LLM questions are a nice-to-have enhancement that gets merged in if available.
    */
   async function generateDynamicQuestions(
     tasks: TaskSummary[],
@@ -970,6 +1122,9 @@ export function useWeeklyPlanAI() {
     interview?: InterviewAnswers,
     pastLearnings?: string[],
   ): Promise<Array<{ question: string; type: 'choice' | 'day-select'; options: string[] }>> {
+    // ALWAYS generate deterministic routine questions first (no LLM needed)
+    const fallbackQuestions = detectRoutineQuestions(tasks, pastLearnings)
+
     try {
       const router = await getSharedRouter()
       const routerOpts = getRouterOptions()
@@ -1058,11 +1213,14 @@ ${taskSummary}`
       if (codeBlockMatch) content = codeBlockMatch[1].trim()
 
       const parsed = JSON.parse(content)
-      if (!Array.isArray(parsed)) return []
+      if (!Array.isArray(parsed)) {
+        console.log('[WeeklyPlanAI] LLM returned non-array, using fallback questions')
+        return fallbackQuestions
+      }
 
       const DAY_OPTIONS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-      return parsed.slice(0, 3).map((q: Record<string, unknown>) => {
+      const llmQuestions = parsed.slice(0, 3).map((q: Record<string, unknown>) => {
         const question = typeof q.question === 'string' ? q.question : ''
         const type = q.type === 'day-select' ? 'day-select' as const : 'choice' as const
         let options = Array.isArray(q.options) ? q.options.filter((o: unknown) => typeof o === 'string') as string[] : []
@@ -1077,9 +1235,27 @@ ${taskSummary}`
 
         return question ? { question, type, options } : null
       }).filter(Boolean) as Array<{ question: string; type: 'choice' | 'day-select'; options: string[] }>
+
+      // Merge: LLM questions first, then fill remaining slots with fallback
+      if (llmQuestions.length > 0) {
+        // Deduplicate — don't ask same routine question if LLM already covers that topic
+        const llmText = llmQuestions.map(q => q.question.toLowerCase()).join(' ')
+        const uniqueFallbacks = fallbackQuestions.filter(fq => {
+          // Check if LLM already asked about a similar topic (school, gym, office, etc.)
+          const fqWords = fq.question.toLowerCase().split(/\s+/)
+          return !fqWords.some(w => w.length > 4 && llmText.includes(w))
+        })
+        const merged = [...llmQuestions, ...uniqueFallbacks].slice(0, 3)
+        console.log(`[WeeklyPlanAI] Questions: ${llmQuestions.length} LLM + ${uniqueFallbacks.length} fallback = ${merged.length} total`)
+        return merged
+      }
+
+      // LLM returned empty valid array — use fallback
+      console.log('[WeeklyPlanAI] LLM returned empty questions, using fallback')
+      return fallbackQuestions
     } catch (err) {
-      console.warn('[WeeklyPlanAI] Dynamic question generation failed:', err)
-      return []
+      console.warn('[WeeklyPlanAI] LLM question generation failed, using routine detection:', err)
+      return fallbackQuestions
     }
   }
 

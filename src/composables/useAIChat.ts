@@ -47,6 +47,7 @@ import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
+import { useWorkProfile } from '@/composables/useWorkProfile'
 
 // ============================================================================
 // Types
@@ -245,6 +246,9 @@ export function useAIChat() {
   // Pending confirmation flow: stores a tool call awaiting user approval
   const pendingConfirmation = ref<ToolCall | null>(null)
 
+  // Schedule onboarding: only show once per session
+  const scheduleOnboardingShown = ref(false)
+
   // Agent chains integration
   const agentChains = useAgentChains()
 
@@ -341,11 +345,22 @@ export function useAIChat() {
     const ctx = buildContext()
     const aiMessages: RouterChatMessage[] = []
 
-    // System prompt with context + tool hints based on user message (TASK-1392)
+    // Load personal context from work profile (schedule constraints, self-description)
+    let personalContextBlock = ''
+    try {
+      const wp = useWorkProfile()
+      await wp.loadProfile()
+      const pc = wp.profile.value?.personalContext
+      if (pc) {
+        personalContextBlock = `\n\n## USER'S SCHEDULE & CONSTRAINTS:\n"${pc}"\nIMPORTANT: When suggesting tasks for specific days or what to do today, ALWAYS respect these constraints. Never suggest doing something on a day the user cannot do it.`
+      }
+    } catch { /* work profile unavailable */ }
+
+    // System prompt with context + personal context + tool hints based on user message (TASK-1392)
     const systemPrompt = buildSystemPrompt(ctx)
     const toolHints = getToolHints(userMessage)
     const toolHintBlock = formatToolHints(toolHints)
-    aiMessages.push({ role: 'system', content: systemPrompt + toolHintBlock })
+    aiMessages.push({ role: 'system', content: systemPrompt + personalContextBlock + toolHintBlock })
 
     // Add recent message history (last 10 messages)
     const recentMessages = store.messages.slice(-10)
@@ -576,6 +591,39 @@ export function useAIChat() {
   }
 
   /**
+   * Check if the user has set their schedule context.
+   * If not, inject a schedule onboarding question as an assistant message.
+   * Only shown once per session.
+   */
+  async function maybeShowScheduleOnboarding(): Promise<void> {
+    if (scheduleOnboardingShown.value) return
+    scheduleOnboardingShown.value = true
+
+    try {
+      const wp = useWorkProfile()
+      await wp.loadProfile()
+      const pc = wp.profile.value?.personalContext
+      if (pc && pc.trim().length > 0) return // Already has context
+    } catch {
+      return // Profile unavailable
+    }
+
+    // No personal context — show onboarding card
+    store.addAssistantMessage(
+      'I can give better suggestions if I know your schedule.',
+      {
+        metadata: {
+          scheduleQuestion: {
+            type: 'unavailable-days',
+            answered: false,
+          },
+          forceDirection: 'ltr',
+        },
+      }
+    )
+  }
+
+  /**
    * Send a message and get a streaming response.
    * All providers use native tool calling — the AI model decides which tools to invoke.
    */
@@ -588,6 +636,9 @@ export function useAIChat() {
     if (store.isGenerating) return
 
     if (await handleSlashCommand(trimmedContent)) return
+
+    // ── Schedule onboarding: show once if personal context is empty ────
+    await maybeShowScheduleOnboarding()
 
     // ── Deterministic pipeline: route intent BEFORE ReAct ──────────────
     const routed = routeIntent(trimmedContent, taskStore.tasks, entityMemory)
@@ -731,10 +782,22 @@ export function useAIChat() {
         .join('\n\n')
 
       const languageName = routed.language === 'he' ? 'Hebrew (עברית)' : 'English'
+
+      // Load personal context for the formatter too
+      let userScheduleNote = ''
+      try {
+        const wp = useWorkProfile()
+        await wp.loadProfile()
+        const pc = wp.profile.value?.personalContext
+        if (pc) {
+          userScheduleNote = `\n\nUser's schedule: "${pc}" — respect this when mentioning timing or suggesting what to do.`
+        }
+      } catch { /* ignore */ }
+
       const formatterMessages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name and state the key fact.\n\n${routed.formatDirective}`,
+          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name and state the key fact.\n\n${routed.formatDirective}${userScheduleNote}`,
         },
         {
           role: 'user',

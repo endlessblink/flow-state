@@ -796,11 +796,11 @@ export const useGamificationStore = defineStore('gamification', () => {
         .eq('user_id', authStore.user.id)
         .eq('achievement_id', achievementId)
     } else {
-      await supabase.from('user_achievements').insert({
+      await supabase.from('user_achievements').upsert({
         user_id: authStore.user.id,
         achievement_id: achievementId,
         progress,
-      })
+      }, { onConflict: 'user_id,achievement_id' })
     }
 
     userAchievements.value.set(achievementId, {
@@ -821,7 +821,7 @@ export const useGamificationStore = defineStore('gamification', () => {
         achievement_id: achievement.id,
         progress: achievement.conditionValue,
         earned_at: now.toISOString(),
-      })
+      }, { onConflict: 'user_id,achievement_id' })
 
     if (error) {
       console.error('[Gamification] Failed to unlock achievement:', error)

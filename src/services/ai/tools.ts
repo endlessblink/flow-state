@@ -1696,6 +1696,13 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
           workProfile = await wp.loadProfile()
         } catch { /* work profile not available */ }
 
+        // Inject personal context from saved profile into interview (TASK-1401)
+        // This ensures chat-triggered plans respect the user's schedule constraints
+        // (e.g. "I work at the highschool on Wednesday and Friday")
+        if (workProfile?.personalContext && !interview.personalContext) {
+          interview.personalContext = workProfile.personalContext
+        }
+
         // Generate the plan via AI (with 30s timeout — falls back to deterministic)
         const { useWeeklyPlanAI } = await import('@/composables/useWeeklyPlanAI')
         const { generatePlan } = useWeeklyPlanAI()

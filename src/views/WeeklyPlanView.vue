@@ -57,11 +57,30 @@
         <!-- Q1: Top priority -->
         <div class="interview-card">
           <label class="interview-label">What's your top priority this week?</label>
+          <div class="dq-choice-row">
+            <button
+              v-for="opt in priorityOptions"
+              :key="opt"
+              class="dq-choice-chip"
+              :class="{ active: interviewForm.topPriority === opt }"
+              @click="interviewForm.topPriority = interviewForm.topPriority === opt ? '' : opt"
+            >
+              {{ opt }}
+            </button>
+            <button
+              class="dq-choice-chip"
+              :class="{ active: showCustomPriority }"
+              @click="showCustomPriority = !showCustomPriority"
+            >
+              ✏️ Custom
+            </button>
+          </div>
           <input
+            v-if="showCustomPriority"
             v-model="interviewForm.topPriority"
             type="text"
-            class="interview-input"
-            placeholder="e.g. Ship the new dashboard, fix auth bugs..."
+            class="interview-input interview-input--compact"
+            placeholder="Type your priority..."
           >
         </div>
 
@@ -132,14 +151,33 @@
 
         <!-- Q6: Personal context ("About Me") -->
         <div class="interview-card">
-          <label class="interview-label">Tell the AI about your weekly routine</label>
-          <p class="interview-hint">Where do you work each day? When do you run errands? What's your energy like? Saved for future weeks.</p>
-          <textarea
-            v-model="interviewForm.personalContext"
-            class="interview-textarea"
-            rows="4"
-            placeholder="e.g. I work at the school on Wednesday so school-related tasks go then. Tuesday afternoon I run errands. Mornings are my best focus time. I do creative work (writing, video) early in the week..."
-          />
+          <label class="interview-label">Describe your weekly routine</label>
+          <p class="interview-hint">Select what applies -- the AI will use this to place tasks on the right days.</p>
+          <div class="dq-choice-row">
+            <button
+              v-for="opt in routineOptions"
+              :key="opt.label"
+              class="dq-choice-chip"
+              :class="{ active: selectedRoutines.includes(opt.label) }"
+              @click="toggleRoutine(opt.label)"
+            >
+              {{ opt.label }}
+            </button>
+            <button
+              class="dq-choice-chip"
+              :class="{ active: showCustomRoutine }"
+              @click="showCustomRoutine = !showCustomRoutine"
+            >
+              ✏️ Custom
+            </button>
+          </div>
+          <input
+            v-if="showCustomRoutine"
+            v-model="customRoutineText"
+            type="text"
+            class="interview-input interview-input--compact"
+            placeholder="Add a custom note about your routine..."
+          >
         </div>
       </div>
 
@@ -431,7 +469,7 @@ const {
   removeTaskFromPlan, snoozeTask, changePriority,
   regenerateDay, startInterview, submitInterview,
   generateAIQuestions, submitDynamicAnswers,
-  eligibleTaskCount, reset,
+  eligibleTasks, eligibleTaskCount, reset,
   lastWeekAccuracy, avgAccuracy, setSkipFeedback,
 } = useWeeklyPlan()
 
@@ -527,6 +565,86 @@ const workStyleOptions = [
   { key: 'backload' as const, label: 'Back-load', desc: 'Ramp to Friday' },
 ]
 
+// Q1: Priority chips derived from eligible tasks
+const showCustomPriority = ref(false)
+
+const priorityOptions = computed(() => {
+  const tasks = eligibleTasks.value
+  const options: string[] = []
+
+  // Check for overdue tasks
+  const today = new Date().toISOString().split('T')[0]
+  const overdueCount = tasks.filter(t => t.dueDate && t.dueDate < today).length
+  if (overdueCount > 0) {
+    options.push('Clear overdue tasks')
+  }
+
+  // Check for in-progress tasks
+  const inProgressCount = tasks.filter(t => t.status === 'in_progress').length
+  if (inProgressCount > 0) {
+    options.push('Finish in-progress work')
+  }
+
+  // Get unique project names (top 3 by task count)
+  const projectCounts: Record<string, number> = {}
+  for (const t of tasks) {
+    if (t.projectName) {
+      projectCounts[t.projectName] = (projectCounts[t.projectName] || 0) + 1
+    }
+  }
+  const topProjects = Object.entries(projectCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name]) => name)
+
+  options.push(...topProjects)
+
+  // Always have a general option if nothing else
+  if (options.length === 0) {
+    options.push('Get organized', 'Focus on deadlines')
+  }
+
+  return options.slice(0, 4) // Max 4 options + Custom
+})
+
+// Q6: Routine chips
+const showCustomRoutine = ref(false)
+const customRoutineText = ref('')
+const selectedRoutines = ref<string[]>([])
+
+const routineOptions = [
+  { label: 'Morning person', context: 'I do my best work in the morning' },
+  { label: 'Night owl', context: 'I\'m most productive in the evening' },
+  { label: 'Deep work blocks', context: 'I prefer long uninterrupted work sessions' },
+  { label: 'Quick task batches', context: 'I prefer knocking out many small tasks at once' },
+  { label: 'Errands mid-week', context: 'I run errands mid-week (Tue-Wed)' },
+  { label: 'Weekends for side projects', context: 'I use weekends for personal/side projects' },
+]
+
+function toggleRoutine(label: string) {
+  const idx = selectedRoutines.value.indexOf(label)
+  if (idx === -1) {
+    selectedRoutines.value.push(label)
+  } else {
+    selectedRoutines.value.splice(idx, 1)
+  }
+  buildPersonalContext()
+}
+
+function buildPersonalContext() {
+  const parts: string[] = []
+  for (const label of selectedRoutines.value) {
+    const opt = routineOptions.find(r => r.label === label)
+    if (opt) parts.push(opt.context)
+  }
+  if (customRoutineText.value.trim()) {
+    parts.push(customRoutineText.value.trim())
+  }
+  interviewForm.personalContext = parts.join('. ')
+}
+
+watch(customRoutineText, () => buildPersonalContext())
+
 function toggleDayOff(key: string) {
   const idx = interviewForm.daysOff.indexOf(key)
   if (idx === -1) {
@@ -610,7 +728,24 @@ onMounted(async () => {
     if (savedProfile.heavyMeetingDays?.length) interviewForm.heavyMeetingDays = [...savedProfile.heavyMeetingDays]
     if (savedProfile.maxTasksPerDay) interviewForm.maxTasksPerDay = savedProfile.maxTasksPerDay
     if (savedProfile.preferredWorkStyle) interviewForm.preferredWorkStyle = savedProfile.preferredWorkStyle
-    if (savedProfile.personalContext) interviewForm.personalContext = savedProfile.personalContext
+    if (savedProfile.personalContext) {
+      interviewForm.personalContext = savedProfile.personalContext
+      // Try to reverse-map saved context to routine chips
+      for (const opt of routineOptions) {
+        if (savedProfile.personalContext.includes(opt.context)) {
+          selectedRoutines.value.push(opt.label)
+        }
+      }
+      // Any remaining text that doesn't match options -> custom
+      let remaining = savedProfile.personalContext
+      for (const opt of routineOptions) {
+        remaining = remaining.replace(opt.context, '').replace(/\.\s*/g, ' ').trim()
+      }
+      if (remaining.trim()) {
+        customRoutineText.value = remaining.trim()
+        showCustomRoutine.value = true
+      }
+    }
   }
 })
 
@@ -811,6 +946,11 @@ function handleKeydown(event: KeyboardEvent) {
   font-size: var(--text-sm);
   outline: none;
   transition: border-color var(--duration-fast);
+}
+
+.interview-input--compact {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
 }
 
 .interview-input:focus {

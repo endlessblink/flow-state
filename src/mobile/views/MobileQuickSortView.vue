@@ -670,8 +670,10 @@ const {
   flex-direction: column;
   padding: var(--space-3) var(--space-4);
   padding-bottom: 0;
-  overflow: hidden;
+  overflow-y: auto; /* BUG-1406: Allow scroll to reach action buttons behind nav bar */
+  overflow-x: hidden;
   min-height: 0; /* Allow flex shrinking */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Process Flow Indicator - Shows sorting hierarchy */

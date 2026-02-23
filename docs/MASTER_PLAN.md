@@ -3998,6 +3998,21 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
+### BUG-1406: Mobile Quick Sort — Bottom Controls Cut Off + Missing Project Assignment (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: On mobile Quick Sort view, the bottom thumb zone (action buttons: Done/Save/Assign/Delete) is clipped by the bottom navigation bar. The date pill row is also truncated (only Today/Tmrw/+3d visible, missing Wknd/+1wk/+1mo). No visible way to assign projects from the sort phase.
+
+**Root Cause**: The `MobileQuickSortFilters.vue` thumb zone padding-bottom doesn't account for the mobile bottom nav bar height. The date pills horizontal scroll area may also be constrained.
+
+**Fix**:
+1. Add bottom nav bar safe area to thumb zone padding in MobileQuickSortFilters.vue
+2. Ensure date pills row scrolls fully (all 7 options visible)
+3. Verify Assign button in action row is visible and triggers project sheet
+
+---
+
 ### ~~TASK-1144~~: Split MobileQuickSortView.vue (✅ DONE)
 
 **Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-23)

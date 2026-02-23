@@ -502,6 +502,10 @@ export function useTaskOperations(
                         updates.canvasPosition = undefined
                         updates.isInInbox = true
                         updates.parentId = undefined
+                        // BUG-1410: Force position version increment for auto-archive
+                        // hasGeometryChange was computed BEFORE auto-archive ran, so positionVersion
+                        // wouldn't be incremented. This ensures sync handlers respect the clear.
+                        updates.positionVersion = (task.positionVersion || 0) + 1
                         console.log(`📦 [DONE-ARCHIVE] Task "${task.title?.slice(0, 30)}" moved off canvas to inbox`)
                     }
                 }
@@ -518,7 +522,9 @@ export function useTaskOperations(
             _rawTasks.value[index] = {
                 ...task,
                 ...syncedUpdates,
-                positionVersion: newVersion,
+                // BUG-1410: syncedUpdates.positionVersion takes priority when auto-archive set it
+                // (hasGeometryChange was computed before auto-archive, so newVersion would be stale)
+                positionVersion: syncedUpdates.positionVersion ?? newVersion,
                 updatedAt: new Date()
             }
 
@@ -664,9 +670,13 @@ export function useTaskOperations(
             }
 
             // TASK-1177: If ALL persistence paths failed, rollback optimistic update
+            // Re-find by ID (index may have shifted if another task was deleted concurrently)
             if (!persisted) {
-                console.error(`❌ [TASK] All persistence paths failed for ${taskId}, rolling back optimistic update`)
-                _rawTasks.value[index] = previousTask
+                const rollbackIndex = _rawTasks.value.findIndex(t => t.id === taskId)
+                if (rollbackIndex !== -1) {
+                    console.error(`❌ [TASK] All persistence paths failed for ${taskId}, rolling back optimistic update`)
+                    _rawTasks.value[rollbackIndex] = previousTask
+                }
             }
         } finally {
             if (!wasManualInProgress) manualOperationInProgress.value = false

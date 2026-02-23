@@ -23,6 +23,10 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
   const isOnline = ref(true)
   const failedOperations = ref<WriteOperation[]>([])
 
+  // BUG-1411: Track whether data was loaded from IndexedDB cache (offline mode)
+  const loadedFromCache = ref(false)
+  const cacheTimestamp = ref<number | undefined>(undefined)
+
   // Watch the orchestrator state and update local refs
   // This keeps the store in sync with the orchestrator
   watch(
@@ -90,6 +94,13 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
    * Get human-readable status text
    */
   const statusText = computed(() => {
+    // BUG-1411: Show cache mode info when loaded from IndexedDB
+    if (loadedFromCache.value) {
+      const age = cacheTimestamp.value ? Math.round((Date.now() - cacheTimestamp.value) / 60_000) : undefined
+      const ageText = age !== undefined ? ` (${age}min old)` : ''
+      return `Offline — showing cached data${ageText}`
+    }
+
     switch (status.value) {
       case 'synced':
         return 'All changes saved'
@@ -158,6 +169,23 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
     return count
   }
 
+  /**
+   * BUG-1411: Mark that data was loaded from IndexedDB cache (offline mode).
+   * Called by useAppInitialization when Supabase fetch fails but cache has data.
+   */
+  const markLoadedFromCache = (timestamp?: number) => {
+    loadedFromCache.value = true
+    cacheTimestamp.value = timestamp
+  }
+
+  /**
+   * BUG-1411: Clear the cache-loaded flag (e.g., after successful Supabase reconnection).
+   */
+  const clearCacheMode = () => {
+    loadedFromCache.value = false
+    cacheTimestamp.value = undefined
+  }
+
   return {
     // State
     status,
@@ -167,6 +195,8 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
     lastError,
     isOnline,
     failedOperations,
+    loadedFromCache,
+    cacheTimestamp,
 
     // Computed
     hasPendingChanges,
@@ -182,6 +212,8 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
     // Actions
     retryFailed,
     forceSync,
-    clearFailed
+    clearFailed,
+    markLoadedFromCache,
+    clearCacheMode,
   }
 })

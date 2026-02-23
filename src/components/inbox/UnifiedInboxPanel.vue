@@ -34,6 +34,7 @@
       :root-projects="taskStore.rootProjects"
       :context="context"
       :sort-by="sortBy"
+      :sort-direction="sortDirection"
       :search-query="searchQuery"
 
       @toggle-collapse="isCollapsed = !isCollapsed"
@@ -46,6 +47,7 @@
       @update:selected-durations="selectedDurations = $event"
       @update:hide-done-tasks="toggleHideDoneTasks"
       @update:sort-by="sortBy = $event"
+      @update:sort-direction="sortDirection = $event"
       @update:search-query="searchQuery = $event"
       @clear-all="clearAllFilters"
     />
@@ -163,6 +165,7 @@ const {
   selectedCanvasGroups,
   currentHideDoneTasks,
   sortBy, // TASK-1073
+  sortDirection, // TASK-1412
   searchQuery, // TASK-1075
   canvasGroupOptions,
   baseInboxTasks,

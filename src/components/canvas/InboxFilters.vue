@@ -41,6 +41,16 @@
           <LayoutGrid :size="12" />
           {{ $t('filters.sort_canvas') }}
         </button>
+        <!-- TASK-1412: Sort direction toggle -->
+        <button
+          v-if="sortDirection"
+          class="sort-btn sort-direction-btn"
+          :title="sortDirection === 'asc' ? $t('filters.sort_ascending') : $t('filters.sort_descending')"
+          @click="$emit('update:sortDirection', sortDirection === 'asc' ? 'desc' : 'asc')"
+        >
+          <ArrowUpNarrowWide v-if="sortDirection === 'asc'" :size="12" />
+          <ArrowDownNarrowWide v-else :size="12" />
+        </button>
       </div>
     </div>
 
@@ -216,9 +226,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays, Check, LayoutGrid } from 'lucide-vue-next'
+import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays, Check, LayoutGrid, ArrowUpNarrowWide, ArrowDownNarrowWide } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'
-import type { SortByType } from '@/composables/inbox/useUnifiedInboxState'
+import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 // TASK-144: Use centralized duration categories
 import { type DurationCategory, DURATION_FILTER_OPTIONS, matchesDurationCategory } from '@/utils/durationCategories'
 
@@ -233,6 +243,7 @@ interface Props {
   selectedDurations: Set<DurationCategory>
   hideDoneTasks?: boolean // TASK-076: Separate done filter for each view
   sortBy?: SortByType // TASK-1073: Sort option
+  sortDirection?: SortDirection // TASK-1412: Sort direction toggle
   context?: string // Hide canvas sort when inside canvas view
 }
 
@@ -247,6 +258,7 @@ const emit = defineEmits<{
   'update:selectedDurations': [value: Set<DurationCategory>]
   'update:hideDoneTasks': [value: boolean] // TASK-076
   'update:sortBy': [value: SortByType] // TASK-1073
+  'update:sortDirection': [value: SortDirection] // TASK-1412
   clearAll: []
 }>()
 
@@ -449,6 +461,15 @@ onBeforeUnmount(() => {
   background: var(--state-active-bg);
   border-color: var(--state-active-border);
   color: var(--state-active-text);
+}
+
+/* TASK-1412: Sort direction button */
+.sort-direction-btn {
+  padding: var(--space-1);
+  min-width: 28px;
+  justify-content: center;
+  margin-inline-start: var(--space-1);
+  border-color: var(--glass-border-hover);
 }
 
 .filter-divider {

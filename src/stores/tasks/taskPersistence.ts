@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Task } from '@/types/tasks'
+import { cacheTasks, getCachedTasks } from '@/services/offline/readCacheDB'
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
@@ -412,8 +413,23 @@ export function useTaskPersistence(
 
             console.log(`✅ [SMART-MERGE] Complete. Local: ${localTasksMap.size} -> Merged: ${mergedTasks.length} (Fetched: ${loadedTasks.length})`)
 
+            // BUG-1411: Cache merged tasks to IndexedDB for offline loading
+            cacheTasks(mergedTasks)
+
         } catch (error) {
             console.error('❌ [SUPABASE] Load failed:', error)
+
+            // BUG-1411: Fall back to IndexedDB read cache when Supabase is unreachable
+            if (_rawTasks.value.length === 0) {
+                const cachedTasks = await getCachedTasks()
+                if (cachedTasks && cachedTasks.length > 0) {
+                    console.log(`📦 [OFFLINE] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
+                    _rawTasks.value = cachedTasks
+                    // Don't throw — we have data from cache, degrade gracefully
+                    return
+                }
+            }
+
             // BUG-1339: Re-throw so loadWithRetry in useAppInitialization can actually retry.
             // Previously this swallowed the error, making the retry mechanism dead code.
             throw error

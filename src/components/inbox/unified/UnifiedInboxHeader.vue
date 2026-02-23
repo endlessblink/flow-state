@@ -144,6 +144,7 @@
         :selected-durations="selectedDurations"
         :hide-done-tasks="hideDoneTasks"
         :sort-by="sortBy"
+        :sort-direction="sortDirection"
         :tasks="baseTasks"
         :projects="rootProjects"
         @update:unscheduled-only="$emit('update:unscheduled-only', $event)"
@@ -152,6 +153,7 @@
         @update:selected-durations="$emit('update:selected-durations', $event)"
         @update:hide-done-tasks="$emit('update:hide-done-tasks', $event)"
         @update:sort-by="$emit('update:sortBy', $event)"
+        @update:sort-direction="$emit('update:sort-direction', $event)"
         @clear-all="$emit('clearAll')"
       />
     </Transition>
@@ -166,7 +168,7 @@ import { NBadge, NDropdown, NPopover } from 'naive-ui'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
-import type { TimeFilterType, SortByType } from '@/composables/inbox/useUnifiedInboxState'
+import type { TimeFilterType, SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
 const { t } = useI18n()
 
@@ -199,6 +201,7 @@ const props = defineProps<{
   rootProjects: any[]
   context: string
   sortBy: SortByType // TASK-1073
+  sortDirection: SortDirection // TASK-1412
   searchQuery: string // TASK-1075
 }>()
 
@@ -213,6 +216,7 @@ const emit = defineEmits<{
   (e: 'update:selected-durations', value: Set<DurationCategory>): void
   (e: 'update:hide-done-tasks', value: boolean): void
   (e: 'update:sortBy', value: SortByType): void // TASK-1073
+  (e: 'update:sort-direction', value: SortDirection): void // TASK-1412
   (e: 'update:searchQuery', value: string): void // TASK-1075
   (e: 'clearAll'): void
 }>()

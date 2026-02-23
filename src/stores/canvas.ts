@@ -15,6 +15,7 @@ import { isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 import { useCanvasGroups } from './canvas/canvasGroups'
 import { useCanvasViewport } from './canvas/canvasViewport'
 import { useCanvasPersistence } from './canvas/canvasPersistence'
+import { cacheGroups, getCachedGroups } from '@/services/offline/readCacheDB'
 export * from './canvas/types'
 
 export const useCanvasStore = defineStore('canvas', () => {
@@ -121,6 +122,9 @@ export const useCanvasStore = defineStore('canvas', () => {
       const cleanedGroups = breakGroupCycles(loadedGroups)
       groupsModule.setGroups(cleanedGroups)
 
+      // BUG-1411: Cache groups to IndexedDB for offline loading
+      cacheGroups(cleanedGroups)
+
       // Persist fixes
       cleanedGroups.forEach((g: CanvasGroup, i: number) => {
         if (g.parentGroupId !== loadedGroups[i]?.parentGroupId) {
@@ -140,8 +144,17 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     } catch (e) {
       console.error('[CANVAS:LOAD] Failed to load canvas groups:', e)
-      const localGroups = loadGroupsFromLocalStorage()
-      if (localGroups.length > 0) groupsModule.setGroups(breakGroupCycles(localGroups))
+
+      // BUG-1411: Try IndexedDB cache first (has full group data including positions)
+      const cachedGroups = await getCachedGroups()
+      if (cachedGroups && cachedGroups.length > 0) {
+        console.log(`📦 [OFFLINE] Loaded ${cachedGroups.length} groups from IndexedDB cache`)
+        groupsModule.setGroups(breakGroupCycles(cachedGroups))
+      } else {
+        // Fallback to localStorage (legacy, limited data)
+        const localGroups = loadGroupsFromLocalStorage()
+        if (localGroups.length > 0) groupsModule.setGroups(breakGroupCycles(localGroups))
+      }
     } finally {
       // BUG-1084 v5: Mark initialization complete (even on error)
       _hasInitializedOnce.value = true

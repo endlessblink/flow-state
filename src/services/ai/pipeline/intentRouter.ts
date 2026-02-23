@@ -256,20 +256,31 @@ function isGreeting(message: string): boolean {
 const CLASSIFICATION_PROMPT = `You are a task router. Classify the user's message into ONE tool.
 
 TOOLS:
-- list_tasks: Show/list tasks
-- get_overdue_tasks: Overdue/late tasks
-- suggest_next_task: What to work on next
-- search_tasks: Search tasks by name
+- list_tasks: Show/list/display tasks
+- get_overdue_tasks: Overdue/late/past due tasks
+- suggest_next_task: What to work on next, what's most urgent/important
+- search_tasks: Search/find tasks by name (extract query in params.query)
+- get_task_details: Details about a specific task
 - create_task: Create a new task (extract title in params.title)
-- mark_task_done: Complete a task (extract name in params.task)
-- start_timer: Start timer/pomodoro
+- mark_task_done: Complete/finish/done a task (extract name in params.task)
+- update_task: Change task fields (priority, description, duration, title)
+- update_task_status: Change task status to non-done values (in_progress, planned, backlog)
+- set_task_due_date: Set/change deadline or due date
+- delete_task: Delete/remove a task
+- create_subtasks: Break down a task into subtasks/steps
+- start_timer: Start timer/pomodoro/focus session
 - stop_timer: Stop timer
-- get_timer_status: Timer status
-- generate_weekly_plan: Plan the week
-- get_productivity_stats: Statistics/progress
-- get_daily_summary: Today summary
+- get_timer_status: Timer status/how much time left
+- generate_weekly_plan: Plan the week/schedule tasks
+- get_productivity_stats: Statistics/progress/how am I doing
+- get_daily_summary: Today's summary
 - get_weekly_summary: Week summary
-- NONE: General conversation or unclear
+- list_projects: Show projects
+- assign_task_to_project: Assign task to project
+- get_gamification_status: XP/level/streak/gamification
+- get_active_challenges: Active challenges/daily challenges/boss
+- get_achievements_near_completion: Almost-done achievements
+- NONE: General conversation, unclear, or no tool needed
 
 JSON only: {"tool":"<name>","params":{},"confidence":"high"|"medium"|"low"}`
 

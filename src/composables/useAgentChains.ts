@@ -35,7 +35,7 @@ export interface AgentChainStep {
   /** Extract data from previous step results. Receives all prior results. */
   parametersFn?: (priorResults: ToolResult[]) => Record<string, unknown> | null
   // For 'prompt' type:
-  promptFn?: (priorResults: ToolResult[]) => string
+  promptFn?: (priorResults: ToolResult[], language?: 'he' | 'en') => string
   /** If true, skip this step if parametersFn returns null */
   optional?: boolean
 }
@@ -78,7 +78,7 @@ const chains: AgentChain[] = [
       },
       {
         type: 'prompt',
-        promptFn: (results) => {
+        promptFn: (results, language) => {
           const summary = results[0]?.data as any
           const overdue = results[1]?.data as any
           const suggested = results[2]?.data as any
@@ -122,7 +122,8 @@ const chains: AgentChain[] = [
             sections.push('→ Write 1 sentence motivating the user to start with #1.')
           }
 
-          return sections.join('\n')
+          const langDirective = language === 'he' ? '\n\nIMPORTANT: כתוב את כל התשובה בעברית.' : ''
+          return sections.join('\n') + langDirective
         },
       },
     ],
@@ -152,7 +153,7 @@ const chains: AgentChain[] = [
       },
       {
         type: 'prompt',
-        promptFn: (results) => {
+        promptFn: (results, language) => {
           const stats = results[0]?.data as any
           const weekly = results[1]?.data as any
           const gamification = results[2]?.data as any
@@ -201,7 +202,8 @@ const chains: AgentChain[] = [
           sections.push('→ Sentence 2: Note what carries over to tomorrow.')
           sections.push('→ Sentence 3: Brief motivational close referencing their streak or level.')
 
-          return sections.join('\n')
+          const langDirective = language === 'he' ? '\n\nIMPORTANT: כתוב את כל התשובה בעברית.' : ''
+          return sections.join('\n') + langDirective
         },
       },
     ],
@@ -234,21 +236,23 @@ const chains: AgentChain[] = [
       },
       {
         type: 'prompt',
-        promptFn: (priorResults) => {
+        promptFn: (priorResults, language) => {
           const suggestion = priorResults[0]?.data as any
           const timerResult = priorResults[1] // might be null if skipped
 
+          const langDirective = language === 'he' ? '\n\nIMPORTANT: כתוב את כל התשובה בעברית.' : ''
+
           if (!suggestion || !Array.isArray(suggestion) || suggestion.length === 0) {
-            return 'You don\'t have any actionable tasks right now. Take a break or create some new tasks to work on!'
+            return 'You don\'t have any actionable tasks right now. Take a break or create some new tasks to work on!' + langDirective
           }
 
           const topTask = suggestion[0]
           const taskTitle = topTask.title
 
           if (timerResult?.success) {
-            return `I've started a focus session on "${taskTitle}". Give me a 2-sentence pep talk to stay focused and crush this task.`
+            return `I've started a focus session on "${taskTitle}". Give me a 2-sentence pep talk to stay focused and crush this task.` + langDirective
           } else {
-            return `Your top priority task is "${taskTitle}". Give me a 2-sentence pep talk to get started on it.`
+            return `Your top priority task is "${taskTitle}". Give me a 2-sentence pep talk to get started on it.` + langDirective
           }
         },
       },
@@ -279,7 +283,7 @@ const chains: AgentChain[] = [
       },
       {
         type: 'prompt',
-        promptFn: (results) => {
+        promptFn: (results, language) => {
           const overdue = results[0]?.data as any
           const daily = results[1]?.data as any
           const weeklyPlan = results[2]?.data as any
@@ -329,7 +333,8 @@ const chains: AgentChain[] = [
           sections.push('→ Sentence 2: Summarize the distribution (e.g., "X tasks spread across 5 days").')
           sections.push('→ Sentence 3: Brief motivational close.')
 
-          return sections.join('\n')
+          const langDirective = language === 'he' ? '\n\nIMPORTANT: כתוב את כל התשובה בעברית.' : ''
+          return sections.join('\n') + langDirective
         },
       },
     ],
@@ -347,8 +352,10 @@ export function useAgentChains() {
   /**
    * Execute an agent chain by ID.
    * Returns tool results and final prompt for the AI to process.
+   * @param chainId - The chain to execute
+   * @param language - Optional language for the final prompt (affects promptFn output)
    */
-  async function executeChain(chainId: string): Promise<{
+  async function executeChain(chainId: string, language?: 'he' | 'en'): Promise<{
     results: ToolResult[]
     finalPrompt: string | null
   }> {
@@ -423,7 +430,7 @@ export function useAgentChains() {
         } else if (step.type === 'prompt') {
           // Build final prompt from results
           if (step.promptFn) {
-            finalPrompt = step.promptFn(results)
+            finalPrompt = step.promptFn(results, language)
             console.log(`[AgentChains] Generated final prompt:`, finalPrompt.substring(0, 200) + '...')
           }
         }

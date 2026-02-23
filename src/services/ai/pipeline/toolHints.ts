@@ -143,10 +143,10 @@ const KEYWORD_MAPPINGS: KeywordMapping[] = [
   // --- Daily summary ---
   {
     keywords: [
-      'today',
       'daily summary',
       'day summary',
       'summarize today',
+      'what about today',
       'סיכום יומי',
       'סכם היום',
       'היום',
@@ -186,10 +186,6 @@ const KEYWORD_MAPPINGS: KeywordMapping[] = [
       'mark complete',
       'mark as complete',
       'set status',
-      'done',
-      'complete',
-      'finish',
-      'finished',
       'סיים',
       'הושלם',
       'סמן כסיום',

@@ -43,13 +43,13 @@
 
 ---
 
-### BUG-1408: Canvas tasks get blurry when zooming out (👀 REVIEW)
+### ~~BUG-1408~~: Canvas tasks get blurry when zooming out (✅ DONE)
 
-**Priority**: P0 | **Status**: 👀 REVIEW (2026-02-23)
+**Priority**: P0 | **Status**: ✅ DONE (2026-02-23)
 
-**Problem**: Task nodes on the canvas become blurry/pixelated when zooming out. They should remain sharp at any zoom level. This is a regression — it worked correctly before.
+**Problem**: Task nodes on the canvas become blurry/pixelated when zooming out. Regression from BUG-1216 which removed `transform-style: preserve-3d` and changed `backface-visibility` to `hidden` on the viewport.
 
-**Fix**: Removed `backface-visibility: hidden !important` from `.vue-flow__transformation-pane` / `.vue-flow__viewport` and `.vue-flow__node` rules in `src/assets/vue-flow-overrides.css` — it was forcing GPU compositing layer promotion which rasterized nodes at 1x pixel density and then downsampled when zoomed out. Also replaced `filter: grayscale(0.6) brightness(0.85)` on `.status-done` in `TaskNode.vue` with `opacity: 0.65` — CSS filters also force GPU compositing layers.
+**Fix**: Restored `transform-style: preserve-3d !important` and `backface-visibility: visible !important` on `.vue-flow__transformation-pane`/`.vue-flow__viewport` in `vue-flow-overrides.css`. This prevents the browser from flattening all nodes into a single bitmap texture — each node renders independently at display resolution, staying crisp at any zoom level.
 
 ---
 

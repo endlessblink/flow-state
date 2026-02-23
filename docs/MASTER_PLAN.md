@@ -65,6 +65,25 @@
 
 ---
 
+### FEATURE-1414: Task Image Attachments via Google Drive (🔄 IN PROGRESS)
+
+**Priority**: P3-LOW | **Status**: 🔄 IN PROGRESS (2026-02-23)
+
+**Problem/Opportunity**: Users want to attach images to tasks. VPS storage is limited (Contabo), so images must be stored externally. Google Drive is the chosen backend — user already has Google OAuth configured via Supabase for Calendar integration.
+
+**Approach**: Add `drive.file` scope to existing OAuth, create `google-drive-proxy` edge function (mirrors calendar proxy pattern), add `attachments` JSONB column to tasks table, build drag-drop upload UI in task editor. Client-side image compression (max 1920px, JPEG 0.8). Files stored in auto-created `FlowState/` Drive folder.
+
+**Steps**:
+- [ ] Add `drive.file` scope to OAuth in `auth.ts`
+- [ ] Rename calendar-specific token keys to generic (`googleCalendarToken` → `googleProviderToken`)
+- [ ] Create `google-drive-proxy` edge function
+- [ ] Create `googleDriveService.ts` client service
+- [ ] Add `TaskAttachment` type + `attachments` field to Task + mappers + migration
+- [ ] Build `TaskAttachments.vue` upload UI in task editor
+- [ ] Self-hoster setup guide (SOP)
+
+---
+
 ### ~~TASK-1409~~: Highlight active/in-progress tasks in Calendar view (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-02-23)
@@ -4087,9 +4106,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1145: Split MobileInboxView.vue (📋 PLANNED)
+### ~~TASK-1145~~: Split MobileInboxView.vue (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-23)
 
 **Problem**: File is 1919 lines, exceeding 500-line limit.
 

@@ -8,11 +8,58 @@
 
 ## Active Bugs (P0-P1)
 
-### BUG-1408: Canvas tasks get blurry when zooming out (🔄 IN PROGRESS)
+### BUG-1411: Supabase fetch timeout storm — cascading AbortErrors crash sync (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-02-23)
 
+**Problem**: `fetchActiveTimerSession` polls every ~10s. When VPS/network is slow, each call times out at `supabase.ts:105` (`AbortError`), spawning 3 retries (500ms → 1s → 2s). Before retries finish, the next poll fires — creating overlapping retry cascades. This cascading storm also:
+- Kills WebSocket realtime connection (CHANNEL_ERROR → reconnect loop with exponential backoff)
+- Fails recovery data reloads (fetchTasks, fetchProjects, fetchGroups all timeout too)
+- Causes `fetchActiveTimerSession` "no active session" false positives → timer clears local state incorrectly
+- On fresh page load, gamification and challenges initialization also fail with same AbortError
+
+**Root cause**: Fetch timeout at `src/services/auth/supabase.ts:105` is too aggressive for slow networks, and timer follower poll doesn't gate on previous poll completion (fire-and-forget creates overlapping request storms).
+
+**Potential fixes**:
+1. Gate timer poll: don't fire next poll until previous completes (debounce/mutex)
+2. Increase fetch timeout or make it adaptive based on recent latency
+3. Add circuit breaker: after N consecutive failures, back off polling frequency
+4. Cancel in-flight requests before starting new ones (AbortController per-request)
+
+---
+
+### BUG-1410: Done tasks still appear on canvas after marking as done (👀 REVIEW)
+
+**Priority**: P0 | **Status**: 👀 REVIEW (2026-02-23)
+
+**Problem**: When marking a task as done, it remains visible on the canvas instead of being removed/hidden.
+
+**Root causes**: (1) Auto-archive didn't increment `positionVersion`, so sync could restore old position. (2) Sync handler restored canvas positions for done tasks. (3) No UI toggle to control `hideCanvasDoneTasks` on canvas.
+
+**Fix**: 4 changes across 3 files:
+1. `taskOperations.ts`: Auto-archive now increments `positionVersion`; merge respects it via `syncedUpdates.positionVersion ?? newVersion`
+2. `tasks.ts`: Sync handler skips position restoration for `status === 'done'` tasks (2 locations)
+3. `CanvasToolbar.vue`: Added "Show/Hide done tasks" toggle button
+
+---
+
+### BUG-1408: Canvas tasks get blurry when zooming out (👀 REVIEW)
+
+**Priority**: P0 | **Status**: 👀 REVIEW (2026-02-23)
+
 **Problem**: Task nodes on the canvas become blurry/pixelated when zooming out. They should remain sharp at any zoom level. This is a regression — it worked correctly before.
+
+**Fix**: Removed `backface-visibility: hidden !important` from `.vue-flow__transformation-pane` / `.vue-flow__viewport` and `.vue-flow__node` rules in `src/assets/vue-flow-overrides.css` — it was forcing GPU compositing layer promotion which rasterized nodes at 1x pixel density and then downsampled when zoomed out. Also replaced `filter: grayscale(0.6) brightness(0.85)` on `.status-done` in `TaskNode.vue` with `opacity: 0.65` — CSS filters also force GPU compositing layers.
+
+---
+
+### TASK-1409: Highlight active/in-progress tasks in Calendar view (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-02-23)
+
+**Problem**: In the Calendar day/week view, tasks that are active (status = "in progress") look identical to other tasks. They should have a visual highlight (e.g., teal border glow or accent indicator) so the user can instantly see what they're currently working on.
+
+**Scope**: Calendar event cards only. Similar to the existing timer-active highlight pattern but based on task status rather than timer state.
 
 ---
 
@@ -2654,7 +2701,7 @@ npm run tasks:bugs     # Filter by BUG type
 
 #### Phase 5: AI Chat Intelligence Improvements (P1 — ONGOING)
 
-- [ ] **TASK-1329**: Fix mixed-language responses — AI replies mix Hebrew + English (e.g. "...generating weekly plan" in English mid-Hebrew conversation). Strengthen system prompt language rule, add Hebrew examples, ensure status/tool-calling text follows user language.
+- [x] ~~**TASK-1329**~~: ✅ Fix mixed-language responses — localized pipeline headers (preDigestedReasoning, reasoningDirective, contextOptimizer), localized ReAct tool feedback injection, added ReAct language retry loop, added agent chain language directive. 8 gaps identified, 6 high/medium fixed. (✅ DONE 2026-02-23)
 - [ ] **TASK-1330**: Improve prompt quality — system prompt is generic, tools are not well-described, context is noisy. Audit and tighten all prompts for smarter responses.
 - [ ] **TASK-1331**: Weekly plan AI quality — plan responses feel shallow, don't leverage behavioral context well. Improve planning prompt chain.
 - [ ] **TASK-1332**: Add Kimi K2 to Groq model dropdown — ✅ DONE (added `moonshotai/kimi-k2-instruct-0905`)
@@ -3284,24 +3331,6 @@ Record audio → transcription API (Whisper/Deepgram) → create task. Mobile-fi
 
 ---
 
-### FEATURE-1111: PWA Mobile - Batch Voice Recording for Multiple Tasks (📋 PLANNED)
-
-**Priority**: P2 | **Status**: 📋 PLANNED
-
-**Feature**: Record multiple tasks in sequence without leaving the creation flow.
-
-**Proposed UX**:
-1. "Record another task" button after recording
-2. Approve current recording → record next
-3. See all previous recordings in same panel
-4. "Add all" button to create all recorded tasks at once
-
-**Needs**: UX design/breakdown session before implementation
-
-**Related**: TASK-1002, TASK-1110, FEATURE-1023
-
----
-
 ### TASK-359: Quick Add + Sort Feature (👀 REVIEW)
 
 **Priority**: P2 | **Status**: 👀 REVIEW
@@ -3452,28 +3481,6 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | TASK-363 | Auth edge cases (expired JWT, session timeout, concurrent sessions) |
 | TASK-364 | WebSocket stability (disconnect, reconnect, subscribe cycles) |
 | TASK-366 | Redundancy assessment (SPOF mapping, fallback testing) |
-
----
-
-### FEATURE-1198: Task Image Attachments with Cloud Storage and Compression (📋 PLANNED)
-
-**Priority**: P2 | **Status**: 📋 PLANNED
-
-**Feature**: Allow users to attach images to tasks. Images should be compressed client-side before upload to reduce storage. Optionally store images in Google Drive or Dropbox so the VPS doesn't run out of disk space.
-
-**Requirements**:
-- [ ] Image upload UI in task editor (drag-drop + file picker)
-- [ ] Client-side image compression before upload (e.g., browser-image-compression)
-- [ ] Cloud storage integration (Google Drive and/or Dropbox) to offload VPS storage
-- [ ] Fallback to Supabase Storage if no cloud provider configured
-- [ ] Image preview/gallery in task detail view
-- [ ] Max file size limit and format validation
-
-**Investigation Needed**:
-- Google Drive API vs Dropbox API for image storage
-- Supabase Storage bucket as default backend
-- Compression ratio targets (quality vs size tradeoff)
-- Tauri desktop: local file access vs cloud sync
 
 ---
 
@@ -3685,7 +3692,6 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
 | **FEATURE-1306** | **P1** | **⏸️ Cyberflow Arena — 3D Wave-Based Productivity Combat (Ruiner-style, from-scratch rewrite)** |
 | ~~**FEATURE-1293**~~ | **P2** | ✅ **Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
-| FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
 | ~~BUG-1206~~ | P0 | ✅ Task details not saved when pressing Save in canvas (3-layer fix: pending write guard + extended isVeryRecent + modal-aware recovery) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |

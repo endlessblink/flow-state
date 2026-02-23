@@ -120,7 +120,7 @@ export function digestToolResults(
     const d = data as Record<string, unknown>
 
     // Productivity stats
-    if ('todayCompleted' in d || 'statusBreakdown' in d) {
+    if ('completedToday' in d || 'byStatus' in d) {
       return digestProductivityStats(d, message, language)
     }
 
@@ -130,7 +130,7 @@ export function digestToolResults(
     }
 
     // Timer status
-    if ('isRunning' in d || 'currentTask' in d) {
+    if ('isActive' in d || 'currentTaskName' in d) {
       return digestTimerStatus(d, message, language)
     }
 
@@ -236,13 +236,13 @@ function digestTaskList(
 function digestProductivityStats(data: Record<string, unknown>, message: string, lang: Lang = 'en'): string {
   const lines: string[] = [message, '', t(lang, 'preAnalyzedFactsShort')]
 
-  if (data.todayCompleted !== undefined) lines.push(`- ${t(lang, 'completedToday')} ${data.todayCompleted} ${t(lang, 'tasks')}`)
-  if (data.todayPomodoros !== undefined) lines.push(`- ${t(lang, 'pomodorosToday')} ${data.todayPomodoros}`)
+  if (data.completedToday !== undefined) lines.push(`- ${t(lang, 'completedToday')} ${data.completedToday} ${t(lang, 'tasks')}`)
+  if (data.pomodorosToday !== undefined) lines.push(`- ${t(lang, 'pomodorosToday')} ${data.pomodorosToday}`)
   if (data.currentStreak !== undefined && (data.currentStreak as number) > 0) {
     lines.push(`- ${t(lang, 'currentStreak')} ${data.currentStreak} ${lang === 'he' ? 'ימים' : 'days'}`)
   }
 
-  const breakdown = data.statusBreakdown as Record<string, number> | undefined
+  const breakdown = data.byStatus as Record<string, number> | undefined
   if (breakdown) {
     const total = Object.values(breakdown).reduce((a, b) => a + b, 0)
     const done = breakdown.done || 0
@@ -279,19 +279,19 @@ function digestWeeklySummary(data: Record<string, unknown>, message: string, lan
 function digestTimerStatus(data: Record<string, unknown>, message: string, lang: Lang = 'en'): string {
   const lines: string[] = [message, '', t(lang, 'preAnalyzedFactsShort')]
 
-  if (data.isRunning) {
-    lines.push(`- ${t(lang, 'timerRunning')} on "${data.currentTask || 'unknown'}"`)
+  if (data.isActive) {
+    lines.push(`- ${t(lang, 'timerRunning')} on "${data.currentTaskName || 'unknown'}"`)
     if (data.remainingSeconds !== undefined) {
       const mins = Math.ceil((data.remainingSeconds as number) / 60)
       lines.push(`- ${t(lang, 'timeRemaining')} ${mins} ${lang === 'he' ? 'דקות' : 'minutes'}`)
     }
-    if (data.completedToday !== undefined) {
-      lines.push(`- ${t(lang, 'pomodorosCompletedToday')} ${data.completedToday}`)
+    if (data.sessionsCompleted !== undefined) {
+      lines.push(`- ${t(lang, 'pomodorosCompletedToday')} ${data.sessionsCompleted}`)
     }
   } else {
     lines.push(`- ${t(lang, 'timerNotRunning')}`)
-    if (data.completedToday !== undefined) {
-      lines.push(`- ${t(lang, 'pomodorosCompletedToday')} ${data.completedToday}`)
+    if (data.sessionsCompleted !== undefined) {
+      lines.push(`- ${t(lang, 'pomodorosCompletedToday')} ${data.sessionsCompleted}`)
     }
   }
 

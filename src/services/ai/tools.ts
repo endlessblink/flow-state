@@ -124,7 +124,7 @@ export const AI_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'update_task_status',
-    description: 'Update the status of a task',
+    description: 'Update the status of a task by exact ID. PREFER mark_task_done when the user says "done" or "complete" — it accepts title fragments. Only use this tool when you have an exact task ID and need to set a non-done status (planned, in_progress, backlog, on_hold).',
     category: 'write',
     parameters: {
       type: 'object',
@@ -139,7 +139,7 @@ export const AI_TOOLS: ToolDefinition[] = [
   // ── HIGH PRIORITY: 6 new tools ────────────────────────────────────────────
   {
     name: 'update_task',
-    description: 'Update one or more fields of a task (title, description, priority, dueDate, status, estimatedDuration)',
+    description: 'Update one or more fields of a task by exact ID (title, description, priority, dueDate, status, estimatedDuration). For marking tasks done, PREFER mark_task_done (accepts title fragments). Use this tool when updating non-status fields or when you have the exact task ID.',
     category: 'write',
     parameters: {
       type: 'object',
@@ -1348,7 +1348,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         }
 
         // Gamification stats
-        let gamStats: any = null
+        let gamStats: unknown = null
         try {
           const gamStore = useGamificationStore()
           if (gamStore.isInitialized && gamStore.stats) {
@@ -1453,7 +1453,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         }
 
         // Gamification weekly data
-        let weeklyGam: any = null
+        let weeklyGam: unknown = null
         try {
           const gamStore = useGamificationStore()
           if (gamStore.isInitialized) {
@@ -1468,7 +1468,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         } catch { /* not available */ }
 
         // Challenge stats
-        let challengeStats: any = null
+        let challengeStats: unknown = null
         try {
           const challengeStore = useChallengesStore()
           if (challengeStore.isInitialized) {
@@ -1897,7 +1897,7 @@ export function buildToolsPrompt(): string {
     '- Use DESTRUCTIVE tools (delete, bulk) only when explicitly asked. These need confirmed=true.',
     '- For normal chat, greetings, or general questions unrelated to their data - respond naturally without tools.',
     `- Maximum ${MAX_TOOLS_PER_RESPONSE} tool calls per response.`,
-    '- After using a READ tool, keep your text response to 1 SHORT sentence. The tool results render as interactive cards below your message — do not repeat the data in text.',
+    '- After using a READ tool, write intro sentence + 2-4 bullet points max. Each bullet: **bold task name** — key fact. Tool results render as interactive cards below — do not repeat the task list.',
     '',
     'Available tools:',
     '',
@@ -1984,11 +1984,11 @@ export function buildNativeToolsBehaviorPrompt(): string {
     '## Response Format Rules (CRITICAL):',
     '',
     'After READ tools:',
-    '- Write a SHORT analytical summary (2-4 sentences max)',
-    '- Tool results render as interactive cards — the user sees them. Do NOT repeat task names from the results.',
-    '- NEVER include task IDs (UUIDs) in your text response. The IDs are for internal use only.',
-    '- Structure your response with bullet points or numbered lists, not paragraphs',
-    '- Focus on INSIGHTS (what to prioritize, what\'s overdue, what pattern you see) — not descriptions of what the data contains',
+    '- Write a SHORT analytical summary: intro sentence + 2-4 bullet points max.',
+    '- Each bullet: **bold task name** — key fact.',
+    '- Tool results render as interactive cards below — do NOT repeat the task list.',
+    '- NEVER include task IDs (UUIDs) in your text response.',
+    '- Focus on INSIGHTS (priorities, urgency, patterns) — not descriptions of the data.',
     '',
     'After WRITE tools:',
     '- Say something natural like "Done!" or "Created!" in the user\'s language',

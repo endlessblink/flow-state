@@ -41,7 +41,6 @@ import { detectLanguage, detectLanguageMismatch } from '@/services/ai/pipeline/l
 import { cleanResponse } from '@/services/ai/pipeline/responseValidator'
 import { digestToolResults } from '@/services/ai/pipeline/preDigestedReasoning'
 import { detectFluff, extractTaskTitlesFromResults } from '@/services/ai/pipeline/fluffDetector'
-import { getToolHints, formatToolHints } from '@/services/ai/pipeline/toolHints'
 import { EntityMemory } from '@/services/ai/pipeline/entityMemory'
 import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
@@ -135,9 +134,9 @@ function chatUI(lang: 'he' | 'en', key: string): string {
 
 function buildToolFeedbackMessage(toolResultsSummary: string, lang: 'he' | 'en'): string {
   if (lang === 'he') {
-    return `תוצאות כלים:\n${toolResultsSummary}\n\nענה למשתמש על בסיס התוצאות. כללים:\n- תוצאות הכלים מוצגות ככרטיסי משימה אינטראקטיביים למטה — המשתמש כבר רואה את הרשימה. אל תחזור על שמות משימות כרשימה.\n- לעולם אל תכלול מזהי משימות (UUIDs) בתשובה.\n- נתח את הנתונים: הסבר למה משימות מסוימות חשובות יותר (ימי איחור, רמת עדיפות, מועדי פרויקט, התקדמות תת-משימות, הערכות זמן).\n- פרמט כניתוח קצר עם נקודות לתובנות מרכזיות.\n- אסור בהחלט עצות כלליות. אם אינך יכול לומר משהו ספציפי על משימות אלו, אל תאמר כלום.\n- קריטי: ענה כולו בעברית.`
+    return `תוצאות כלים:\n${toolResultsSummary}\n\nנתח את הנתונים והסבר מה דחוף ולמה. רשימה ממוספרת, בעברית בלבד.`
   }
-  return `Tool results:\n${toolResultsSummary}\n\nRespond to the user based on these results. STRICT RULES:\n- The tool results render as interactive task cards below — the user can already SEE the task list. Do NOT repeat task names as a list.\n- NEVER include task IDs (UUIDs) in your response.\n- ANALYZE the data: explain WHY certain tasks matter most (overdue days, priority level, project deadlines, subtask progress, time estimates). Use the enriched fields (daysOverdue, project, subtasks, estimatedMinutes, pomodorosCompleted) to give SPECIFIC reasoning.\n- Format as a brief analysis with bullet points for key insights. Example: "Your most urgent task is the video project — it's 3 days overdue with 2/5 subtasks done. After that, focus on the auth bug (high priority, blocks the release)."\n- ABSOLUTELY NO generic advice ("prioritize your tasks", "focus on what matters", "start with urgent ones", "consider breaking tasks down"). If you can't say something specific about THESE tasks, say nothing.\n- CRITICAL: Respond ENTIRELY in the same language the user used in their ORIGINAL question, NOT the language of task data.`
+  return `Tool results:\n${toolResultsSummary}\n\nAnalyze the data. Explain what's urgent and why. Numbered list format.`
 }
 
 function formatUserFriendlyError(rawError: string): string {
@@ -383,11 +382,9 @@ export function useAIChat() {
       }
     } catch { /* work profile unavailable */ }
 
-    // System prompt with context + personal context + tool hints based on user message (TASK-1392)
+    // System prompt with context + personal context
     const systemPrompt = buildSystemPrompt(ctx, language)
-    const toolHints = getToolHints(userMessage)
-    const toolHintBlock = formatToolHints(toolHints)
-    aiMessages.push({ role: 'system', content: systemPrompt + personalContextBlock + toolHintBlock })
+    aiMessages.push({ role: 'system', content: systemPrompt + personalContextBlock })
 
     // Add recent message history (last 10 messages)
     const recentMessages = store.messages.slice(-10)
@@ -411,11 +408,13 @@ export function useAIChat() {
    * Includes timer state, task statistics, and additional context.
    */
   function buildSystemPrompt(ctx: ChatContext, language: 'he' | 'en' = 'en'): string {
-    // Prepend personality prompt if active
+    // Prepend personality prompt if active, layered on top of base identity
     const personalityPrompt = getPersonalitySystemPrompt()
+    const baseIdentity = 'You are FlowState AI, a smart productivity assistant that THINKS and ANALYZES.'
+    const identity = personalityPrompt ? `${personalityPrompt}\n\n${baseIdentity}` : baseIdentity
 
     const parts: string[] = [
-      personalityPrompt || 'You are FlowState AI, a smart productivity assistant that THINKS and ANALYZES.',
+      identity,
       '',
       '## YOUR ROLE:',
       'You are a thoughtful assistant who understands the user\'s work, weighs priorities, and gives actionable advice. You have full access to the user\'s task data below — USE IT to reason and provide insights. Don\'t just search and dump results. THINK about what matters most, what\'s urgent, what\'s been neglected, and give personalized recommendations.',
@@ -427,7 +426,7 @@ export function useAIChat() {
       '4. Use WRITE tools ONLY when user explicitly asks to create, modify, or delete.',
       '5. If the user just says "hi" or has a general question — respond naturally, NO tools needed.',
       '6. NEVER show JSON, UUIDs, task IDs, or technical details.',
-      '7. Keep responses CONCISE: bullet points, bold key insights, max 3-4 sentences. No generic productivity advice — be specific about THEIR tasks or say nothing.',
+      '7. No generic productivity advice — be specific about THEIR tasks or say nothing.',
       '8. COUNTING vs LISTING: For COUNTING questions ("how many", "כמה"), answer from context. For ANYTHING asking to see/show/give tasks — ALWAYS call tools.',
       '',
       buildNativeToolsBehaviorPrompt(),
@@ -439,7 +438,7 @@ export function useAIChat() {
 
     // Add selected task context
     if (ctx.selectedTask) {
-      parts.push(`Selected task: "${ctx.selectedTask.title}" (ID: ${ctx.selectedTask.id})`)
+      parts.push(`Selected task: "${ctx.selectedTask.title}"`)
       if (ctx.selectedTask.description) {
         parts.push(`Task description: ${ctx.selectedTask.description}`)
       }
@@ -499,8 +498,7 @@ export function useAIChat() {
     parts.push('- Breaking down tasks into subtasks')
     parts.push('- Suggesting how to organize tasks into groups')
     parts.push('- Managing timers and Pomodoro sessions')
-    parts.push('- Answering questions about task management')
-    parts.push('- Providing productivity tips')
+    parts.push('- Analyzing task data to identify patterns and bottlenecks')
     parts.push('')
     parts.push('## Planning Behavior')
     parts.push('When the user asks to plan their week, schedule tasks, or organize upcoming work:')
@@ -831,7 +829,7 @@ export function useAIChat() {
         },
         {
           role: 'user',
-          content: `${reasoningDirective}\n\nData:\n${toolResultsSummary}\n\nRESPONSE RULES:\n- The tool results render as interactive cards below — do NOT repeat the full task list\n- NEVER include task IDs (UUIDs)\n- Use a NUMBERED LIST or BULLET POINTS — one per task/insight. NEVER a paragraph blob.\n- Each bullet: **bold task name** — key fact (e.g. "• **Video project** — 6 days overdue, only 2/5 subtasks done")\n- Max 3-5 bullets. Brief intro sentence is OK.\n- Write ENTIRELY in ${languageName}`,
+          content: `${reasoningDirective}\n\nData:\n${toolResultsSummary}\n\nWrite ENTIRELY in ${languageName}. No UUIDs.`,
         },
       ]
 
@@ -1944,6 +1942,14 @@ export function useAIChat() {
       return
     }
 
+    // Detect language from recent user messages so chains respond in the user's language
+    const recentUserMessages = store.messages
+      .filter((m) => m.role === 'user')
+      .slice(-5)
+      .map((m) => m.content || '')
+      .join(' ')
+    const chainLang: 'he' | 'en' = detectLanguage(recentUserMessages) === 'he' ? 'he' : 'en'
+
     // Clear input and add user message
     store.inputText = ''
     store.clearError()
@@ -1953,9 +1959,9 @@ export function useAIChat() {
     store.startStreamingMessage()
 
     try {
-      // Execute the chain
-      console.log(`[AIChat] Starting agent chain: ${chain.name}`)
-      const { results, finalPrompt } = await agentChains.executeChain(chainId)
+      // Execute the chain, passing detected language so promptFn can append directives
+      console.log(`[AIChat] Starting agent chain: ${chain.name} (lang: ${chainLang})`)
+      const { results, finalPrompt } = await agentChains.executeChain(chainId, chainLang)
 
       // Show tool results as they come in (add to message metadata)
       const lastMsg = store.messages[store.messages.length - 1]
@@ -1979,7 +1985,6 @@ export function useAIChat() {
       // If there's a final prompt, send it to the AI
       if (finalPrompt) {
         // Update streaming content with a loading message
-        const chainLang = detectLanguage(chain.name) === 'he' ? 'he' : 'en'
         store.appendStreamingContent(chatUI(chainLang, 'analyzingResults'))
 
         // Send the prompt through the AI

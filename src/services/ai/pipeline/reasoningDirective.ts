@@ -90,7 +90,7 @@ interface TimerData {
 // ---------------------------------------------------------------------------
 
 const MAX_ENUMERATED = 5
-const MAX_LENGTH_DEFAULT = '2-4 sentences'
+const MAX_LENGTH_DEFAULT = 'intro + 2-4 bullets'
 
 // ---------------------------------------------------------------------------
 // Language helpers

@@ -2717,7 +2717,7 @@ npm run tasks:bugs     # Filter by BUG type
 #### Phase 5: AI Chat Intelligence Improvements (P1 — ONGOING)
 
 - [x] ~~**TASK-1329**~~: ✅ Fix mixed-language responses — localized pipeline headers (preDigestedReasoning, reasoningDirective, contextOptimizer), localized ReAct tool feedback injection, added ReAct language retry loop, added agent chain language directive. 8 gaps identified, 6 high/medium fixed. (✅ DONE 2026-02-23)
-- [ ] **TASK-1330**: Improve prompt quality — system prompt is generic, tools are not well-described, context is noisy. Audit and tighten all prompts for smarter responses.
+- [x] ~~**TASK-1330**~~: ✅ Improve prompt quality — 14-finding audit: consolidated 6 contradictory length instructions into 1 canonical rule, disambiguated 3 overlapping tools, slimmed tool feedback (~600 tokens/step saved), expanded intent classifier (13→25 tools), removed anti-fluff contradictions, fixed personality prompt override, fixed field name mismatches in pre-digested reasoning, removed broad keywords, added agent chain language awareness. (✅ DONE 2026-02-23)
 - [ ] **TASK-1331**: Weekly plan AI quality — plan responses feel shallow, don't leverage behavioral context well. Improve planning prompt chain.
 - [ ] **TASK-1332**: Add Kimi K2 to Groq model dropdown — ✅ DONE (added `moonshotai/kimi-k2-instruct-0905`)
 - [ ] **TASK-1363**: AI chat shows done tasks + raw UUIDs + unstructured verbose responses — filter done from list/search by default, hide IDs from AI output, tighten response formatting rules

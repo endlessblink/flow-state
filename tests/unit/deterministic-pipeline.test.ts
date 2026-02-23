@@ -183,18 +183,25 @@ describe('intentRouter — routeIntentByKeywords()', () => {
 
   // ── Done / complete actions ───────────────────────────────────────────────
 
-  it('routes "mark video as done" to task_action with mark_task_done via fuzzy match', () => {
-    const result = routeIntentByKeywords('mark video as done', mockTasks, entityMemory)
+  it('routes "mark done video project" to task_action with mark_task_done via keyword match', () => {
+    // "mark done" is a contiguous phrase that matches
+    const result = routeIntentByKeywords('mark done video project', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'mark_task_done')).toBe(true)
   })
 
-  it('routes "done" alone to task_action with mark_task_done (raw fragment passed through)', () => {
+  it('routes "mark video as done" to freeform (keywords not contiguous)', () => {
+    // "mark as done" doesn't appear contiguously in "mark video as done"
+    // The LLM classifier handles this case instead
+    const result = routeIntentByKeywords('mark video as done', mockTasks, entityMemory)
+    expect(result.type).toBe('freeform')
+  })
+
+  it('routes "done" alone to freeform (single-word too broad)', () => {
     const result = routeIntentByKeywords('done', mockTasks, entityMemory)
-    expect(result.type).toBe('task_action')
-    // "done" is treated as a raw task reference fragment — router passes it through to mark_task_done
-    // with skipLLM=false so the LLM/tool can attempt to resolve it at runtime
-    expect(result.tools.some(t => t.tool === 'mark_task_done')).toBe(true)
+    // Single-word "done" is intentionally NOT matched — too ambiguous
+    // (could mean "what's done?", "how many done?", etc.)
+    expect(result.type).toBe('freeform')
     expect(result.skipLLM).toBeFalsy()
   })
 
@@ -232,10 +239,11 @@ describe('intentRouter — routeIntentByKeywords()', () => {
     expect(result.tools.some(t => t.tool === 'get_productivity_stats')).toBe(true)
   })
 
-  it('routes "today" to stats with get_daily_summary', () => {
+  it('routes "today" alone to freeform (single-word too broad)', () => {
     const result = routeIntentByKeywords('today', mockTasks, entityMemory)
-    expect(result.type).toBe('stats')
-    expect(result.tools.some(t => t.tool === 'get_daily_summary')).toBe(true)
+    // Single-word "today" is intentionally NOT matched — too ambiguous
+    // (could mean "create task for today", "what's today?", etc.)
+    expect(result.type).toBe('freeform')
   })
 
   it('routes "this week" to stats with get_weekly_summary', () => {

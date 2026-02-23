@@ -497,14 +497,14 @@ describe('preDigestedReasoning — digestToolResults()', () => {
     expect(result).toContain('3')
   })
 
-  it('digests productivity stats with todayCompleted', () => {
-    const data = { todayCompleted: 5, todayPomodoros: 3 }
+  it('digests productivity stats with completedToday', () => {
+    const data = { completedToday: 5, pomodorosToday: 3 }
     const result = digestToolResults('get_productivity_stats', data, 'Stats')
     expect(result).toContain('Completed today: 5')
   })
 
-  it('digests productivity stats with todayPomodoros', () => {
-    const data = { todayCompleted: 2, todayPomodoros: 4 }
+  it('digests productivity stats with pomodorosToday', () => {
+    const data = { completedToday: 2, pomodorosToday: 4 }
     const result = digestToolResults('get_productivity_stats', data, 'Stats')
     expect(result).toContain('Pomodoros today: 4')
   })
@@ -522,14 +522,14 @@ describe('preDigestedReasoning — digestToolResults()', () => {
   })
 
   it('digests timer status when running', () => {
-    const data = { isRunning: true, currentTask: 'Fix login bug', remainingSeconds: 600 }
+    const data = { isActive: true, currentTaskName: 'Fix login bug', remainingSeconds: 600 }
     const result = digestToolResults('get_timer_status', data, 'Timer status')
     expect(result).toContain('RUNNING')
     expect(result).toContain('Fix login bug')
   })
 
   it('digests timer status when not running', () => {
-    const data = { isRunning: false, completedToday: 2 }
+    const data = { isActive: false, sessionsCompleted: 2 }
     const result = digestToolResults('get_timer_status', data, 'Timer status')
     expect(result).toContain('NOT RUNNING')
   })

@@ -153,7 +153,8 @@ defineEmits<{
 
 .thumb-zone {
   padding: var(--space-4) var(--space-5);
-  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, var(--space-6)));
+  /* BUG-1406: Account for 64px mobile bottom nav bar + device safe area */
+  padding-bottom: calc(var(--space-16) + var(--space-6) + env(safe-area-inset-bottom, 0px));
   background: linear-gradient(to top, var(--overlay-bg), var(--overlay-component-bg-lighter), transparent);
   margin-top: auto;
   flex-shrink: 0;

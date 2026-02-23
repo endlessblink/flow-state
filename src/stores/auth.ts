@@ -743,6 +743,14 @@ export const useAuthStore = defineStore('auth', () => {
       // Clear guest ephemeral data for fresh guest experience
       clearGuestData()
 
+      // BUG-1411: Clear IndexedDB read cache on sign-out (prevent data leaking to guest mode)
+      try {
+        const { clearReadCache } = await import('@/services/offline/readCacheDB')
+        await clearReadCache()
+      } catch (e) {
+        // Non-critical — cache will be overwritten on next sign-in anyway
+      }
+
       // BUG-1352: Disconnect realtime to prevent stale authenticated connections
       try {
         supabase?.realtime.disconnect()

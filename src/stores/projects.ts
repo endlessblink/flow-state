@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Project } from '@/types/tasks'
 import { UNCATEGORIZED_PROJECT_ID } from './tasks/taskOperations'
+import { cacheProjects, getCachedProjects } from '@/services/offline/readCacheDB'
 
 export const useProjectStore = defineStore('projects', () => {
 
@@ -79,8 +80,20 @@ export const useProjectStore = defineStore('projects', () => {
             const loadedProjects = await fetchProjects()
             _rawProjects.value = loadedProjects
             console.log(`✅ [SUPABASE] Loaded ${loadedProjects.length} projects`)
+
+            // BUG-1411: Cache projects to IndexedDB for offline loading
+            cacheProjects(loadedProjects)
         } catch (error) {
             console.error('❌ [SUPABASE] Projects load failed:', error)
+
+            // BUG-1411: Fall back to IndexedDB read cache when Supabase is unreachable
+            if (_rawProjects.value.length === 0) {
+                const cached = await getCachedProjects()
+                if (cached && cached.length > 0) {
+                    console.log(`📦 [OFFLINE] Loaded ${cached.length} projects from IndexedDB cache`)
+                    _rawProjects.value = cached
+                }
+            }
         } finally {
             isLoading.value = false
         }

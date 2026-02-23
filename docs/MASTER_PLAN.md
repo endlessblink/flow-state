@@ -53,6 +53,20 @@
 
 ---
 
+### TASK-1412: Calendar Inbox Canvas Order Sort — right-to-left DFS + sort direction toggle (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-02-23)
+
+**Problem**: The Calendar inbox `canvasOrder` sort used simple group X position (left→right), without connection-aware DFS for nested tasks and with no way to reverse the order. Users wanted right-to-left ordering (rightmost canvas columns first) and a toggle to flip any sort direction.
+
+**Fix**:
+1. `useUnifiedInboxState.ts`: Added `SortDirection` type + `sortDirection` persistent state. `canvasOrder` now sorts groups by descending X (right-to-left), then DFS within each group using `parentTaskId` tree structure. Other sort modes multiplied by `dir` to support asc/desc.
+2. `UnifiedInboxPanel.vue`: Destructures and passes `sortDirection` down to header.
+3. `UnifiedInboxHeader.vue`: Imports `SortDirection`, adds prop + emit, passes to `InboxFilters`.
+4. `InboxFilters.vue`: Imports icons + type, adds prop/emit, renders toggle button after canvas-order sort button.
+
+---
+
 ### TASK-1409: Highlight active/in-progress tasks in Calendar view (👀 REVIEW)
 
 **Priority**: P1 | **Status**: 👀 REVIEW (2026-02-23)
@@ -1069,9 +1083,9 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 
 ---
 
-### TASK-1177: Offline-First Sync System to Prevent Data Loss (🔄 IN PROGRESS)
+### ~~TASK-1177~~: Offline-First Sync System to Prevent Data Loss (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-01)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-23)
 
 **Problem**: User lost significant work on production (in-theflow.com) due to silent sync failures.
 
@@ -1085,18 +1099,18 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 
 **Solution Architecture (Offline-First)**:
 
-1. **Phase 1: Write Queue with IndexedDB** (P0)
+1. ~~**Phase 1: Write Queue with IndexedDB**~~ ✅ (P0)
    - All writes go to IndexedDB FIRST, then sync to Supabase
    - Retry with exponential backoff: 1s, 2s, 4s, 8s... up to 60s max
    - 10 retry attempts before marking as "failed" (requires manual retry)
    - Never discard operations - persist until confirmed synced
 
-2. **Phase 2: Sync Status Indicator** (P0)
+2. ~~**Phase 2: Sync Status Indicator**~~ ✅ (P0)
    - Visual indicator in AppHeader.vue control panel
    - States: Synced (green), Syncing (blue), Pending (amber), Error (red), Offline (gray)
    - Error state NEVER auto-dismisses
 
-3. **Phase 3: Fix Smart Merge Logic** (P0)
+3. ~~**Phase 3: Fix Smart Merge Logic**~~ ✅ (P0)
    - NEVER drop local-only tasks automatically
    - Queue for sync retry instead
 
@@ -1107,7 +1121,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
    - `onPermanentFailure` pub/sub callback in sync orchestrator for UI notification
    - Removed unused `RollbackState<T>` type
 
-5. **Phase 5: beforeunload Protection** (P1)
+5. ~~**Phase 5: beforeunload Protection**~~ ✅ (P1)
    - Warn user before closing tab with unsaved changes
 
 **Files to Create**:
@@ -1129,12 +1143,12 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 - `src/layouts/AppHeader.vue` - Add SyncStatusIndicator
 
 **Success Criteria**:
-- [ ] User NEVER loses data, even with network failures
-- [ ] User ALWAYS sees current sync status
-- [ ] User CANNOT close tab with unsaved changes (without warning)
-- [ ] Failed syncs retry automatically with backoff
-- [ ] Offline edits persist across browser sessions
-- [ ] Smart merge NEVER drops local-only tasks
+- [x] User NEVER loses data, even with network failures
+- [x] User ALWAYS sees current sync status
+- [x] User CANNOT close tab with unsaved changes (without warning)
+- [x] Failed syncs retry automatically with backoff
+- [x] Offline edits persist across browser sessions
+- [x] Smart merge NEVER drops local-only tasks
 
 ---
 
@@ -2931,6 +2945,24 @@ Wave 3 (dep Wave 2):  TASK-1398
 - ~~Add visual drop hint icon (ArrowDownToLine) on group headers during drag~~ ✅
 
 **Files Changed**: `src/components/tasks/TaskList.vue`
+
+---
+
+### INQUIRY-1413: Evaluate open-source readiness for community sharing (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-02-23)
+
+**Question**: Is FlowState ready to share with the open-source community? Users should be able to connect their own Supabase instance and use all features — no paid tiers, no locked features.
+
+**Audit Areas**:
+- Hardcoded secrets, API keys, VPS IPs in committed code
+- Supabase setup documentation (schema, migrations, RLS policies)
+- Environment variable documentation (.env.example completeness)
+- First-run experience (can a new user self-host?)
+- License file
+- README quality for OSS contributors
+- Doppler/proprietary service dependencies
+- Build reproducibility without private infra
 
 ---
 

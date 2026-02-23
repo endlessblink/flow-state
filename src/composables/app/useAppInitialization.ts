@@ -20,6 +20,8 @@ import { useChallengesStore } from '@/stores/challenges'
 // TASK-1177: Offline-first sync system
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
+// BUG-1411: Cache stats for offline mode detection
+import { getCacheStats } from '@/services/offline/readCacheDB'
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
 
@@ -136,11 +138,54 @@ export function useAppInitialization() {
             // BUG-1339: Signal to views that data is ready to render
             isDataReady.value = true
         } else {
-            console.warn('⚠️ [APP-INIT] Load failed — NOT marking appInitLoadComplete so SIGNED_IN handler can retry')
-            // BUG-1339: Even on failure, unblock views after retries are exhausted
-            // so the app doesn't stay on a loading screen forever.
-            // The SIGNED_IN handler will reload data when auth recovers.
-            isDataReady.value = true
+            // BUG-1411: Check if stores loaded from IndexedDB cache (offline mode)
+            const hasDataFromCache = taskStore._rawTasks.length > 0 ||
+                canvasStore.groups.length > 0 ||
+                projectStore.projects.length > 0
+
+            if (hasDataFromCache) {
+                console.log('📦 [APP-INIT] Supabase unreachable but loaded data from IndexedDB cache — offline mode')
+                // Mark as cache-loaded for sync status indicator
+                try {
+                    const { useSyncStatusStore } = await import('@/stores/syncStatus')
+                    const syncStatusStore = useSyncStatusStore()
+                    const stats = await getCacheStats()
+                    syncStatusStore.markLoadedFromCache(stats.tasks?.updatedAt)
+                } catch (e) {
+                    console.warn('[APP-INIT] Failed to mark cache mode:', e)
+                }
+                // Still mark data as ready — user can work with cached data
+                authStore.markAppInitLoadComplete()
+                isDataReady.value = true
+
+                // BUG-1411: Auto-reload from Supabase when connectivity returns
+                const onBackOnline = async () => {
+                    console.log('🌐 [APP-INIT] Network restored — reloading from Supabase...')
+                    window.removeEventListener('online', onBackOnline)
+                    try {
+                        invalidateCache.all()
+                        await Promise.all([
+                            taskStore.loadFromDatabase(),
+                            projectStore.loadProjectsFromDatabase(),
+                            canvasStore.loadFromDatabase()
+                        ])
+                        const { useSyncStatusStore } = await import('@/stores/syncStatus')
+                        useSyncStatusStore().clearCacheMode()
+                        console.log('✅ [APP-INIT] Successfully reloaded from Supabase after reconnection')
+                    } catch (e) {
+                        console.warn('⚠️ [APP-INIT] Reconnection reload failed, will retry on next online event:', e)
+                        // Re-register listener for next attempt
+                        window.addEventListener('online', onBackOnline, { once: true })
+                    }
+                }
+                window.addEventListener('online', onBackOnline, { once: true })
+            } else {
+                console.warn('⚠️ [APP-INIT] Load failed and no cache available — NOT marking appInitLoadComplete so SIGNED_IN handler can retry')
+                // BUG-1339: Even on failure, unblock views after retries are exhausted
+                // so the app doesn't stay on a loading screen forever.
+                // The SIGNED_IN handler will reload data when auth recovers.
+                isDataReady.value = true
+            }
         }
 
         // FEATURE-1118: Initialize gamification system
@@ -454,6 +499,11 @@ export function useAppInitialization() {
                 projectStore.loadProjectsFromDatabase(),
                 canvasStore.loadFromDatabase()
             ])
+            // BUG-1411: Clear offline cache mode — we're back online with fresh data
+            try {
+                const { useSyncStatusStore } = await import('@/stores/syncStatus')
+                useSyncStatusStore().clearCacheMode()
+            } catch { /* non-critical */ }
             // BUG-1357: Re-sync timer state after WebSocket recovery
             // Mobile PWA may have missed timer events while backgrounded
             timerStore.resyncFromDatabase()

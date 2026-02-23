@@ -214,6 +214,8 @@
     "sort_priority": "עדיפות",
     "sort_due": "תאריך",
     "sort_canvas": "קנבס",
+    "sort_ascending": "עולה",
+    "sort_descending": "יורד",
     "sort_due_date": "תאריך יעד",
     "sort_title": "כותרת",
     "sort_created": "נוצר",

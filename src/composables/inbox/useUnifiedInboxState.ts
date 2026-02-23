@@ -16,6 +16,7 @@ export interface InboxContextProps {
 
 export type TimeFilterType = 'all' | 'today' | 'next3days' | 'week' | 'month'
 export type SortByType = 'newest' | 'priority' | 'dueDate' | 'canvasOrder'
+export type SortDirection = 'asc' | 'desc'
 
 export function useUnifiedInboxState(props: InboxContextProps) {
     const taskStore = useTaskStore()
@@ -52,6 +53,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
     // TASK-1073: Sort state (TASK-1215: upgraded to Tauri-aware persistence)
     const sortBy = usePersistentRef<SortByType>('flowstate:inbox-sort-by', 'newest', 'inbox-sort-by')
+    // TASK-1412: Sort direction state
+    const sortDirection = usePersistentRef<SortDirection>('flowstate:inbox-sort-direction', 'asc', 'inbox-sort-direction')
 
     // TASK-1075: Search query
     const searchQuery = ref('')
@@ -245,54 +248,98 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             })
         }
 
-        // TASK-1073: Apply sorting
+        // TASK-1073 / TASK-1412: Apply sorting with direction support
         const priorityOrder = { high: 0, medium: 1, low: 2, undefined: 3 }
+        const dir = sortDirection.value === 'desc' ? -1 : 1
 
-        tasks = [...tasks].sort((a, b) => {
-            switch (sortBy.value) {
-                case 'priority': {
-                    // High priority first
-                    const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 3
-                    const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 3
-                    if (aPriority !== bPriority) return aPriority - bPriority
-                    // Secondary: newest first
-                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-                }
+        if (sortBy.value === 'canvasOrder') {
+            // TASK-1412: Right-to-left group ordering + connection-aware DFS within each group
+            const groups = canvasStore.groups || []
 
-                case 'dueDate': {
-                    // Tasks with due dates first, then by due date
-                    const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
-                    const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
-                    if (aDue !== bDue) return aDue - bDue
-                    // Secondary: newest first
-                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-                }
-
-                case 'canvasOrder': {
-                    // TASK-1303: Sort by group column (left→right), then top→bottom within group
-                    const groups = canvasStore.groups || []
-                    const aGroup = a.parentId ? groups.find(g => g.id === a.parentId) : null
-                    const bGroup = b.parentId ? groups.find(g => g.id === b.parentId) : null
-                    const aGroupX = aGroup?.position?.x ?? Infinity
-                    const bGroupX = bGroup?.position?.x ?? Infinity
-                    if (aGroupX !== bGroupX) return aGroupX - bGroupX
-                    // Within same group: sort by task Y (top to bottom)
-                    const aPos = a.canvasPosition
-                    const bPos = b.canvasPosition
-                    if (!aPos && !bPos) return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-                    if (!aPos) return 1
-                    if (!bPos) return -1
-                    if (aPos.y !== bPos.y) return aPos.y - bPos.y
-                    if (aPos.x !== bPos.x) return aPos.x - bPos.x
-                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-                }
-
-                case 'newest':
-                default:
-                    // Newest first (by createdAt)
-                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            // Build a map of parentId → tasks for DFS bucketing
+            const buckets = new Map<string | null, Task[]>()
+            for (const task of tasks) {
+                const key = task.parentId ?? null
+                if (!buckets.has(key)) buckets.set(key, [])
+                buckets.get(key)!.push(task)
             }
-        })
+
+            // Sort groups by X DESCENDING (rightmost first = right-to-left)
+            const sortedGroups = [...groups].sort((a, b) => (b.position?.x ?? 0) - (a.position?.x ?? 0))
+
+            // DFS: push a task then recursively push its children (by parentTaskId), sorted by y
+            const result: Task[] = []
+            const visited = new Set<string>()
+
+            const dfs = (task: Task) => {
+                if (visited.has(task.id)) return
+                visited.add(task.id)
+                result.push(task)
+                // Find children: tasks whose parentTaskId === task.id, within same canvas group bucket
+                const siblings = buckets.get(task.parentId ?? null) ?? []
+                const children = siblings
+                    .filter(t => t.parentTaskId === task.id && !visited.has(t.id))
+                    .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+                for (const child of children) dfs(child)
+            }
+
+            // Process grouped tasks (rightmost group first)
+            for (const group of sortedGroups) {
+                const bucket = buckets.get(group.id) ?? []
+                // Root tasks in this group: parentTaskId is null/undefined or points outside this bucket
+                const bucketIds = new Set(bucket.map(t => t.id))
+                const roots = bucket
+                    .filter(t => !t.parentTaskId || !bucketIds.has(t.parentTaskId))
+                    .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+                for (const root of roots) dfs(root)
+                // Catch any remaining (orphaned cycles or unvisited)
+                for (const t of bucket) dfs(t)
+            }
+
+            // Ungrouped tasks (parentId is null/undefined) — same DFS logic
+            const ungroupedBucket = buckets.get(null) ?? []
+            const ungroupedIds = new Set(ungroupedBucket.map(t => t.id))
+            const ungroupedRoots = ungroupedBucket
+                .filter(t => !t.parentTaskId || !ungroupedIds.has(t.parentTaskId))
+                .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+            for (const root of ungroupedRoots) dfs(root)
+            for (const t of ungroupedBucket) dfs(t)
+
+            // Catch tasks that weren't visited (edge cases: groups not in canvasStore.groups)
+            for (const t of tasks) dfs(t)
+
+            tasks = sortDirection.value === 'desc' ? result.reverse() : result
+        } else {
+            tasks = [...tasks].sort((a, b) => {
+                switch (sortBy.value) {
+                    case 'priority': {
+                        // asc: high→low, desc: low→high
+                        const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 3
+                        const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 3
+                        if (aPriority !== bPriority) return dir * (aPriority - bPriority)
+                        // Secondary: newest first (always)
+                        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                    }
+
+                    case 'dueDate': {
+                        // asc: earliest first, desc: latest first
+                        const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
+                        const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
+                        if (aDue !== bDue) return dir * (aDue - bDue)
+                        // Secondary: newest first (always)
+                        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                    }
+
+                    case 'newest':
+                    default: {
+                        // asc: newest first, desc: oldest first
+                        const aTime = new Date(a.createdAt || 0).getTime()
+                        const bTime = new Date(b.createdAt || 0).getTime()
+                        return dir * (bTime - aTime)
+                    }
+                }
+            })
+        }
 
         return tasks
     })
@@ -338,6 +385,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         selectedCanvasGroups,
         currentHideDoneTasks,
         sortBy, // TASK-1073
+        sortDirection, // TASK-1412
         searchQuery, // TASK-1075
 
         // Computed (State)

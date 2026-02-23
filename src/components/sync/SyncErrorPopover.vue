@@ -456,17 +456,20 @@ const formatTime = (timestamp: number): string => {
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2_5) var(--space-4);
-  background: var(--color-primary);
-  border: none;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
-  color: white;
+  color: var(--brand-primary);
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-fast);
+  backdrop-filter: blur(8px);
 }
 
 .retry-btn:hover {
-  background: var(--color-primary-hover);
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary-hover);
+  color: var(--brand-primary-hover);
 }
 
 .clear-btn {
@@ -475,17 +478,20 @@ const formatTime = (timestamp: number): string => {
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2_5) var(--space-4);
-  background: var(--color-danger);
-  border: none;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-danger);
   border-radius: var(--radius-md);
-  color: white;
+  color: var(--color-danger);
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-fast);
+  backdrop-filter: blur(8px);
 }
 
 .clear-btn:hover {
-  background: var(--color-danger-hover);
+  background: var(--glass-bg-medium);
+  border-color: var(--color-danger-hover);
+  color: var(--color-danger-hover);
 }
 
 .dismiss-btn {

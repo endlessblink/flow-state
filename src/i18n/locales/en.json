@@ -214,6 +214,8 @@
     "sort_priority": "Priority",
     "sort_due": "Due",
     "sort_canvas": "Canvas",
+    "sort_ascending": "Ascending",
+    "sort_descending": "Descending",
     "sort_due_date": "Due Date",
     "sort_title": "Title",
     "sort_created": "Created",

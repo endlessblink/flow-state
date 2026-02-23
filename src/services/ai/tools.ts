@@ -33,6 +33,21 @@ const VALID_STATUSES: Task['status'][] = ['planned', 'in_progress', 'done', 'bac
 const VALID_PRIORITIES: Array<Task['priority']> = ['low', 'medium', 'high', null]
 
 // ============================================================================
+// Localization Helper
+// ============================================================================
+
+type Lang = 'he' | 'en'
+
+/**
+ * Tool message helper — returns the Hebrew string when lang='he', English otherwise.
+ * Used to localize all ToolResult.message strings so the LLM responds in the
+ * user's language (TASK-1329 Gap 6).
+ */
+function tm(lang: Lang, en: string, he: string): string {
+  return lang === 'he' ? he : en
+}
+
+// ============================================================================
 // Tool Definitions
 // ============================================================================
 
@@ -452,8 +467,10 @@ function formatTime(seconds: number): string {
 
 /**
  * Execute a tool call and return the result.
+ * @param call - The tool call to execute.
+ * @param language - Language for ToolResult.message strings ('en' or 'he'). Defaults to 'en'.
  */
-export async function executeTool(call: ToolCall): Promise<ToolResult> {
+export async function executeTool(call: ToolCall, language: Lang = 'en'): Promise<ToolResult> {
   // Lazy store access - these are Pinia stores and are safe to call here
   // because executeTool is only invoked from UI context (useAIChat) where
   // the Pinia instance is already active.
@@ -466,7 +483,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
     taskStore = useTaskStore()
     canvasStore = useCanvasStore()
   } catch {
-    return { success: false, message: 'Core stores not available. Please try again after the app is fully loaded.' }
+    return { success: false, message: tm(language, 'Core stores not available. Please try again after the app is fully loaded.', 'המערכת לא זמינה. נסה שוב לאחר טעינה מלאה.') }
   }
 
   try {
@@ -499,7 +516,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Created group "${name}"`,
+          message: tm(language, `Created group "${name}"`, `נוצרה קבוצה "${name}"`),
           data: { id: group.id, name: group.name },
         }
       }
@@ -511,14 +528,14 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const dueDate = call.parameters.dueDate as string | undefined
 
         if (dueDate && !isValidISODate(dueDate)) {
-          return { success: false, message: `Invalid date format "${dueDate}". Use YYYY-MM-DD.` }
+          return { success: false, message: tm(language, `Invalid date format "${dueDate}". Use YYYY-MM-DD.`, `פורמט תאריך לא תקין "${dueDate}". השתמש ב-YYYY-MM-DD.`) }
         }
 
         const task = await taskStore.createTask({ title, priority, description, dueDate })
 
         return {
           success: true,
-          message: `Created task "${title}"`,
+          message: tm(language, `Created task "${title}"`, `נוצרה משימה "${title}"`),
           data: { id: task.id, title: task.title, priority: task.priority },
         }
       }
@@ -533,7 +550,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Found ${groups.length} groups`,
+          message: tm(language, `Found ${groups.length} groups`, `נמצאו ${groups.length} קבוצות`),
           data: groupList,
         }
       }
@@ -655,7 +672,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Found ${taskList.length} tasks`,
+          message: tm(language, `Found ${taskList.length} tasks`, `נמצאו ${taskList.length} משימות`),
           data: taskList,
         }
       }
@@ -666,11 +683,11 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         const task = validateTaskExists(taskStore, taskId)
         if (!task) {
-          return { success: false, message: `Task with ID "${taskId}" not found` }
+          return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
         }
 
         if (!VALID_STATUSES.includes(status)) {
-          return { success: false, message: `Invalid status "${status}". Valid: ${VALID_STATUSES.join(', ')}` }
+          return { success: false, message: tm(language, `Invalid status "${status}". Valid: ${VALID_STATUSES.join(', ')}`, `סטטוס לא תקין "${status}". אפשרויות: ${VALID_STATUSES.join(', ')}`) }
         }
 
         const previousStatus = task.status
@@ -678,7 +695,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Updated task "${task.title}" status to "${status}"`,
+          message: tm(language, `Updated task "${task.title}" status to "${status}"`, `עודכן סטטוס משימה "${task.title}" ל-"${status}"`),
           data: { id: taskId, status },
           undoAction: { toolName: 'update_task_status', params: { taskId, status: previousStatus } },
         }
@@ -689,7 +706,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const taskId = call.parameters.taskId as string
         const task = validateTaskExists(taskStore, taskId)
         if (!task) {
-          return { success: false, message: `Task with ID "${taskId}" not found` }
+          return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
         }
 
         const updates: Partial<Task> = {}
@@ -706,7 +723,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         if (call.parameters.priority !== undefined) {
           const p = call.parameters.priority as Task['priority']
           if (!VALID_PRIORITIES.includes(p)) {
-            return { success: false, message: `Invalid priority "${p}". Valid: low, medium, high` }
+            return { success: false, message: tm(language, `Invalid priority "${p}". Valid: low, medium, high`, `עדיפות לא תקינה "${p}". אפשרויות: low, medium, high`) }
           }
           updates.priority = p
           updatedFields.push('priority')
@@ -714,7 +731,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         if (call.parameters.dueDate !== undefined) {
           const dd = call.parameters.dueDate as string
           if (!isValidISODate(dd)) {
-            return { success: false, message: `Invalid date format "${dd}". Use YYYY-MM-DD.` }
+            return { success: false, message: tm(language, `Invalid date format "${dd}". Use YYYY-MM-DD.`, `פורמט תאריך לא תקין "${dd}". השתמש ב-YYYY-MM-DD.`) }
           }
           updates.dueDate = dd
           updatedFields.push('dueDate')
@@ -722,7 +739,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         if (call.parameters.status !== undefined) {
           const s = call.parameters.status as Task['status']
           if (!VALID_STATUSES.includes(s)) {
-            return { success: false, message: `Invalid status "${s}". Valid: ${VALID_STATUSES.join(', ')}` }
+            return { success: false, message: tm(language, `Invalid status "${s}". Valid: ${VALID_STATUSES.join(', ')}`, `סטטוס לא תקין "${s}". אפשרויות: ${VALID_STATUSES.join(', ')}`) }
           }
           updates.status = s
           updatedFields.push('status')
@@ -733,14 +750,14 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         }
 
         if (updatedFields.length === 0) {
-          return { success: false, message: 'No valid fields to update. Provide at least one of: title, description, priority, dueDate, status, estimatedDuration.' }
+          return { success: false, message: tm(language, 'No valid fields to update. Provide at least one of: title, description, priority, dueDate, status, estimatedDuration.', 'אין שדות תקינים לעדכון. ספק לפחות אחד מ: title, description, priority, dueDate, status, estimatedDuration.') }
         }
 
         await taskStore.updateTask(taskId, updates)
 
         return {
           success: true,
-          message: `Updated task "${task.title}": ${updatedFields.join(', ')}`,
+          message: tm(language, `Updated task "${task.title}": ${updatedFields.join(', ')}`, `עודכנה משימה "${task.title}": ${updatedFields.join(', ')}`),
           data: { id: taskId, updatedFields },
         }
       }
@@ -803,7 +820,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Found ${results.length} tasks matching "${call.parameters.query}"`,
+          message: tm(language, `Found ${results.length} tasks matching "${call.parameters.query}"`, `נמצאו ${results.length} משימות התואמות ל-"${call.parameters.query}"`),
           data: results.map((t: Task) => ({
             id: t.id,
             title: t.title,
@@ -818,7 +835,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const taskId = call.parameters.taskId as string
         const task = validateTaskExists(taskStore, taskId)
         if (!task) {
-          return { success: false, message: `Task with ID "${taskId}" not found` }
+          return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
         }
 
         let projectName = 'Uncategorized'
@@ -840,7 +857,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Details for task "${task.title}"`,
+          message: tm(language, `Details for task "${task.title}"`, `פרטי משימה "${task.title}"`),
           data: {
             id: task.id,
             title: task.title,
@@ -871,7 +888,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         try {
           timerStore = useTimerStore()
         } catch {
-          return { success: false, message: 'Timer store not available.' }
+          return { success: false, message: tm(language, 'Timer store not available.', 'מערכת הטיימר לא זמינה.') }
         }
 
         const taskId = call.parameters.taskId as string
@@ -882,12 +899,12 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         if (taskId !== 'general') {
           const task = validateTaskExists(taskStore, taskId)
           if (!task) {
-            return { success: false, message: `Task with ID "${taskId}" not found` }
+            return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
           }
         }
 
         if (timerStore.isTimerActive) {
-          return { success: false, message: 'A timer is already running. Stop it first with stop_timer.' }
+          return { success: false, message: tm(language, 'A timer is already running. Stop it first with stop_timer.', 'יש כבר טיימר פעיל. עצור אותו קודם.') }
         }
 
         await timerStore.startTimer(taskId, durationSeconds)
@@ -895,7 +912,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const taskName = taskId === 'general' ? 'Focus Session' : (validateTaskExists(taskStore, taskId)?.title || taskId)
         return {
           success: true,
-          message: `Started ${durationMinutes}-minute timer for "${taskName}"`,
+          message: tm(language, `Started ${durationMinutes}-minute timer for "${taskName}"`, `הופעל טיימר של ${durationMinutes} דקות עבור "${taskName}"`),
           data: { taskId, durationMinutes },
         }
       }
@@ -904,11 +921,11 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         try {
           timerStore = useTimerStore()
         } catch {
-          return { success: false, message: 'Timer store not available.' }
+          return { success: false, message: tm(language, 'Timer store not available.', 'מערכת הטיימר לא זמינה.') }
         }
 
         if (!timerStore.isTimerActive) {
-          return { success: false, message: 'No timer is currently running.' }
+          return { success: false, message: tm(language, 'No timer is currently running.', 'אין טיימר פעיל כרגע.') }
         }
 
         const taskName = timerStore.currentTaskName || 'Unknown'
@@ -917,7 +934,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Stopped timer for "${taskName}" (${formatTime(remaining)} remaining)`,
+          message: tm(language, `Stopped timer for "${taskName}" (${formatTime(remaining)} remaining)`, `הטיימר נעצר עבור "${taskName}" (נותרו ${formatTime(remaining)})`),
           data: { stoppedTask: taskName, remainingTime: formatTime(remaining) },
         }
       }
@@ -926,21 +943,21 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         try {
           timerStore = useTimerStore()
         } catch {
-          return { success: false, message: 'Timer store not available.' }
+          return { success: false, message: tm(language, 'Timer store not available.', 'מערכת הטיימר לא זמינה.') }
         }
 
         const session = timerStore.currentSession
         if (!session || !timerStore.isTimerActive) {
           return {
             success: true,
-            message: 'No timer is currently running',
+            message: tm(language, 'No timer is currently running', 'אין טיימר פעיל כרגע'),
             data: { isActive: false },
           }
         }
 
         return {
           success: true,
-          message: `Timer active: ${timerStore.currentTaskName} (${formatTime(session.remainingTime)} remaining)`,
+          message: tm(language, `Timer active: ${timerStore.currentTaskName} (${formatTime(session.remainingTime)} remaining)`, `טיימר פעיל: ${timerStore.currentTaskName} (נותרו ${formatTime(session.remainingTime)})`),
           data: {
             isActive: true,
             isPaused: session.isPaused,
@@ -961,13 +978,13 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         const task = validateTaskExists(taskStore, taskId)
         if (!task) {
-          return { success: false, message: `Task with ID "${taskId}" not found` }
+          return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
         }
 
         if (!confirmed) {
           return {
             success: false,
-            message: `Deletion of "${task.title}" requires confirmation. Set confirmed=true to proceed.`,
+            message: tm(language, `Deletion of "${task.title}" requires confirmation. Set confirmed=true to proceed.`, `מחיקת "${task.title}" דורשת אישור. הגדר confirmed=true להמשך.`),
           }
         }
 
@@ -975,7 +992,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Deleted task "${task.title}"`,
+          message: tm(language, `Deleted task "${task.title}"`, `נמחקה משימה "${task.title}"`),
           data: { id: taskId, title: task.title },
         }
       }
@@ -986,12 +1003,12 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         const task = validateTaskExists(taskStore, taskId)
         if (!task) {
-          return { success: false, message: `Task with ID "${taskId}" not found` }
+          return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
         }
 
         const group = canvasStore.groups.find(g => g.id === groupId)
         if (!group) {
-          return { success: false, message: `Group with ID "${groupId}" not found` }
+          return { success: false, message: tm(language, `Group with ID "${groupId}" not found`, `קבוצה עם מזהה "${groupId}" לא נמצאה`) }
         }
 
         // Update task's parentId to move it into the group
@@ -1000,7 +1017,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Moved task "${task.title}" to group "${group.name}"`,
+          message: tm(language, `Moved task "${task.title}" to group "${group.name}"`, `הועברה משימה "${task.title}" לקבוצה "${group.name}"`),
           data: { taskId, groupId, groupName: group.name },
           undoAction: { toolName: 'move_task_to_group', params: { taskId, groupId: previousParentId || '' } },
         }
@@ -1010,7 +1027,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         try {
           projectStore = useProjectStore()
         } catch {
-          return { success: false, message: 'Project store not available.' }
+          return { success: false, message: tm(language, 'Project store not available.', 'מערכת הפרויקטים לא זמינה.') }
         }
 
         const projects = projectStore.projects
@@ -1026,7 +1043,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Found ${projects.length} projects`,
+          message: tm(language, `Found ${projects.length} projects`, `נמצאו ${projects.length} פרויקטים`),
           data: projectList,
         }
       }
@@ -1037,18 +1054,18 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         const task = validateTaskExists(taskStore, taskId)
         if (!task) {
-          return { success: false, message: `Task with ID "${taskId}" not found` }
+          return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
         }
 
         try {
           projectStore = useProjectStore()
         } catch {
-          return { success: false, message: 'Project store not available.' }
+          return { success: false, message: tm(language, 'Project store not available.', 'מערכת הפרויקטים לא זמינה.') }
         }
 
         const project = projectStore.getProjectById(projectId)
         if (!project) {
-          return { success: false, message: `Project with ID "${projectId}" not found` }
+          return { success: false, message: tm(language, `Project with ID "${projectId}" not found`, `פרויקט עם מזהה "${projectId}" לא נמצא`) }
         }
 
         const previousProjectId = task.projectId
@@ -1056,7 +1073,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Assigned task "${task.title}" to project "${project.name}"`,
+          message: tm(language, `Assigned task "${task.title}" to project "${project.name}"`, `שויכה משימה "${task.title}" לפרויקט "${project.name}"`),
           data: { taskId, projectId, projectName: project.name },
           undoAction: { toolName: 'assign_task_to_project', params: { taskId, projectId: previousProjectId } },
         }
@@ -1065,7 +1082,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
       case 'get_daily_summary': {
         const dateStr = (call.parameters.date as string) || new Date().toISOString().split('T')[0]
         if (!isValidISODate(dateStr)) {
-          return { success: false, message: `Invalid date format "${dateStr}". Use YYYY-MM-DD.` }
+          return { success: false, message: tm(language, `Invalid date format "${dateStr}". Use YYYY-MM-DD.`, `פורמט תאריך לא תקין "${dateStr}". השתמש ב-YYYY-MM-DD.`) }
         }
 
         const allTasks = taskStore.tasks
@@ -1099,7 +1116,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Daily summary for ${dateStr}`,
+          message: tm(language, `Daily summary for ${dateStr}`, `סיכום יומי ל-${dateStr}`),
           data: {
             date: dateStr,
             dueToday: dueToday.length,
@@ -1120,11 +1137,11 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         const parentTask = validateTaskExists(taskStore, parentTaskId)
         if (!parentTask) {
-          return { success: false, message: `Parent task with ID "${parentTaskId}" not found` }
+          return { success: false, message: tm(language, `Parent task with ID "${parentTaskId}" not found`, `משימת אב עם מזהה "${parentTaskId}" לא נמצאה`) }
         }
 
         if (!Array.isArray(subtaskDefs) || subtaskDefs.length === 0) {
-          return { success: false, message: 'subtasks must be a non-empty array of objects with title.' }
+          return { success: false, message: tm(language, 'subtasks must be a non-empty array of objects with title.', 'תת-משימות חייבות להיות מערך לא ריק של אובייקטים עם כותרת.') }
         }
 
         const created: Array<{ id: string; title: string }> = []
@@ -1138,7 +1155,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Created ${created.length} subtasks under "${parentTask.title}"`,
+          message: tm(language, `Created ${created.length} subtasks under "${parentTask.title}"`, `נוצרו ${created.length} תת-משימות תחת "${parentTask.title}"`),
           data: { parentTaskId, subtasks: created },
         }
       }
@@ -1151,14 +1168,14 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         const task = validateTaskExists(taskStore, taskId)
         if (!task) {
-          return { success: false, message: `Task with ID "${taskId}" not found` }
+          return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
         }
 
         if (!isValidISODate(dueDate)) {
-          return { success: false, message: `Invalid date format "${dueDate}". Use YYYY-MM-DD.` }
+          return { success: false, message: tm(language, `Invalid date format "${dueDate}". Use YYYY-MM-DD.`, `פורמט תאריך לא תקין "${dueDate}". השתמש ב-YYYY-MM-DD.`) }
         }
         if (dueTime && !isValidTimeString(dueTime)) {
-          return { success: false, message: `Invalid time format "${dueTime}". Use HH:MM.` }
+          return { success: false, message: tm(language, `Invalid time format "${dueTime}". Use HH:MM.`, `פורמט שעה לא תקין "${dueTime}". השתמש ב-HH:MM.`) }
         }
 
         const updates: Partial<Task> = { dueDate }
@@ -1169,7 +1186,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Set due date for "${task.title}" to ${dueDate}${dueTime ? ' at ' + dueTime : ''}`,
+          message: tm(language, `Set due date for "${task.title}" to ${dueDate}${dueTime ? ' at ' + dueTime : ''}`, `נקבע תאריך יעד ל-"${task.title}": ${dueDate}${dueTime ? ' בשעה ' + dueTime : ''}`),
           data: { taskId, dueDate, dueTime: dueTime || null },
           undoAction: { toolName: 'set_task_due_date', params: { taskId, dueDate: previousDueDate } },
         }
@@ -1188,7 +1205,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Found ${overdue.length} overdue tasks`,
+          message: tm(language, `Found ${overdue.length} overdue tasks`, `נמצאו ${overdue.length} משימות באיחור`),
           data: overdue.map((t: Task) => {
             const dueDateKey = t.dueDate.includes('T') ? t.dueDate.split('T')[0] : t.dueDate
             const [y, m, d] = dueDateKey.split('-').map(Number)
@@ -1213,16 +1230,16 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         if (!confirmed) {
           return {
             success: false,
-            message: `Bulk status update of ${taskIds.length} tasks requires confirmation. Set confirmed=true to proceed.`,
+            message: tm(language, `Bulk status update of ${taskIds.length} tasks requires confirmation. Set confirmed=true to proceed.`, `עדכון סטטוס מרוכז של ${taskIds.length} משימות דורש אישור. הגדר confirmed=true להמשך.`),
           }
         }
 
         if (!VALID_STATUSES.includes(status)) {
-          return { success: false, message: `Invalid status "${status}". Valid: ${VALID_STATUSES.join(', ')}` }
+          return { success: false, message: tm(language, `Invalid status "${status}". Valid: ${VALID_STATUSES.join(', ')}`, `סטטוס לא תקין "${status}". אפשרויות: ${VALID_STATUSES.join(', ')}`) }
         }
 
         if (!Array.isArray(taskIds) || taskIds.length === 0) {
-          return { success: false, message: 'taskIds must be a non-empty array.' }
+          return { success: false, message: tm(language, 'taskIds must be a non-empty array.', 'רשימת מזהי המשימות חייבת להיות לא ריקה.') }
         }
 
         const results: Array<{ id: string; title: string; success: boolean }> = []
@@ -1243,7 +1260,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const successCount = results.filter(r => r.success).length
         return {
           success: successCount > 0,
-          message: `Updated ${successCount}/${taskIds.length} tasks to "${status}"`,
+          message: tm(language, `Updated ${successCount}/${taskIds.length} tasks to "${status}"`, `עודכנו ${successCount}/${taskIds.length} משימות ל-"${status}"`),
           data: { status, results },
         }
       }
@@ -1257,7 +1274,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
           if (groups.length === 0) {
             return {
               success: false,
-              message: 'No groups found on the canvas. Create a group first.',
+              message: tm(language, 'No groups found on the canvas. Create a group first.', 'לא נמצאו קבוצות בקנבס. צור קבוצה תחילה.'),
             }
           }
           groupId = groups[0].id
@@ -1277,7 +1294,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         if (overdueTasks.length === 0) {
           return {
             success: true,
-            message: 'No overdue tasks found outside this group.',
+            message: tm(language, 'No overdue tasks found outside this group.', 'לא נמצאו משימות באיחור מחוץ לקבוצה.'),
             data: { overdueCount: 0 },
           }
         }
@@ -1291,7 +1308,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Collecting ${overdueTasks.length} overdue tasks and arranging them near the group`,
+          message: tm(language, `Collecting ${overdueTasks.length} overdue tasks and arranging them near the group`, `אוסף ${overdueTasks.length} משימות באיחור ומסדר ליד הקבוצה`),
           data: {
             groupId,
             overdueCount: overdueTasks.length,
@@ -1355,7 +1372,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: 'Productivity statistics',
+          message: tm(language, 'Productivity statistics', 'סטטיסטיקות פרודוקטיביות'),
           data: {
             totalTasks: allTasks.length,
             completedToday,
@@ -1378,7 +1395,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         )
 
         if (actionable.length === 0) {
-          return { success: true, message: 'No actionable tasks found. Everything is done!', data: { suggestion: null } }
+          return { success: true, message: tm(language, 'No actionable tasks found. Everything is done!', 'לא נמצאו משימות פעילות. הכל הושלם!'), data: { suggestion: null } }
         }
 
         // Score tasks: overdue high-priority first, then due today, then by priority
@@ -1405,7 +1422,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const top = scored.slice(0, 3)
         return {
           success: true,
-          message: `Suggested ${top.length} tasks to work on next`,
+          message: tm(language, `Suggested ${top.length} tasks to work on next`, `הוצעו ${top.length} משימות להמשך עבודה`),
           data: top.map(({ task, score }) => ({
             id: task.id,
             title: task.title,
@@ -1466,7 +1483,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: 'Weekly summary',
+          message: tm(language, 'Weekly summary', 'סיכום שבועי'),
           data: {
             completedThisWeek,
             totalTasks: allTasks.length,
@@ -1482,11 +1499,11 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         try {
           gamStore = useGamificationStore()
         } catch {
-          return { success: false, message: 'Gamification system not available.' }
+          return { success: false, message: tm(language, 'Gamification system not available.', 'מערכת המשחוק לא זמינה.') }
         }
 
         if (!gamStore.isInitialized || !gamStore.profile) {
-          return { success: false, message: 'Gamification not initialized. Please wait for the app to fully load.' }
+          return { success: false, message: tm(language, 'Gamification not initialized. Please wait for the app to fully load.', 'מערכת המשחוק לא אותחלה.') }
         }
 
         const levelInfo = gamStore.levelInfo
@@ -1503,7 +1520,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: 'Gamification status',
+          message: tm(language, 'Gamification status', 'סטטוס משחוק'),
           data: {
             totalXp: gamStore.totalXp,
             availableXp: gamStore.availableXp,
@@ -1529,11 +1546,11 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         try {
           challengeStore = useChallengesStore()
         } catch {
-          return { success: false, message: 'Challenge system not available.' }
+          return { success: false, message: tm(language, 'Challenge system not available.', 'מערכת האתגרים לא זמינה.') }
         }
 
         if (!challengeStore.isInitialized) {
-          return { success: false, message: 'Challenge system not initialized. Please wait for the app to fully load.' }
+          return { success: false, message: tm(language, 'Challenge system not initialized. Please wait for the app to fully load.', 'מערכת האתגרים לא אותחלה.') }
         }
 
         const now = new Date()
@@ -1573,7 +1590,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `${dailies.length} active challenges${bossData ? ' + 1 boss' : ''}`,
+          message: tm(language, `${dailies.length} active challenges${bossData ? ' + 1 boss' : ''}`, `${dailies.length} אתגרים פעילים${bossData ? ' + בוס אחד' : ''}`),
           data: {
             dailies,
             boss: bossData,
@@ -1589,11 +1606,11 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         try {
           gamStore = useGamificationStore()
         } catch {
-          return { success: false, message: 'Gamification system not available.' }
+          return { success: false, message: tm(language, 'Gamification system not available.', 'מערכת המשחוק לא זמינה.') }
         }
 
         if (!gamStore.isInitialized) {
-          return { success: false, message: 'Gamification not initialized.' }
+          return { success: false, message: tm(language, 'Gamification not initialized.', 'מערכת המשחוק לא אותחלה.') }
         }
 
         // Get unearned achievements with >50% progress
@@ -1618,7 +1635,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `${nearComplete.length} achievements near completion`,
+          message: tm(language, `${nearComplete.length} achievements near completion`, `${nearComplete.length} הישגים קרובים להשלמה`),
           data: nearComplete,
         }
       }
@@ -1668,7 +1685,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         if (eligible.length === 0) {
           return {
             success: true,
-            message: 'No tasks available to plan. All tasks are done or deleted.',
+            message: tm(language, 'No tasks available to plan. All tasks are done or deleted.', 'אין משימות לתכנון. כל המשימות הושלמו או נמחקו.'),
             data: {
               plan: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] },
               unscheduled: [],
@@ -1746,7 +1763,11 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
         return {
           success: true,
-          message: `Weekly plan created: ${totalScheduled} tasks across ${daysUsed} days.\n${daySummaries.join('\n')}${unscheduledDetails.length > 0 ? `\nUnscheduled: ${unscheduledDetails.length} tasks` : ''}${skippedCount > 0 ? `\n(${skippedCount} lower-priority tasks excluded from planning)` : ''}`,
+          message: tm(
+            language,
+            `Weekly plan created: ${totalScheduled} tasks across ${daysUsed} days.\n${daySummaries.join('\n')}${unscheduledDetails.length > 0 ? `\nUnscheduled: ${unscheduledDetails.length} tasks` : ''}${skippedCount > 0 ? `\n(${skippedCount} lower-priority tasks excluded from planning)` : ''}`,
+            `תוכנית שבועית נוצרה: ${totalScheduled} משימות לאורך ${daysUsed} ימים.\n${daySummaries.join('\n')}${unscheduledDetails.length > 0 ? `\nלא מתוזמן: ${unscheduledDetails.length} משימות` : ''}${skippedCount > 0 ? `\n(${skippedCount} משימות בעדיפות נמוכה לא נכללו בתכנון)` : ''}`
+          ),
           data: {
             plan: planWithDetails,
             unscheduled: unscheduledDetails,
@@ -1760,22 +1781,22 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
       case 'mark_task_done': {
         const taskRef = call.parameters.task as string
         if (!taskRef) {
-          return { success: false, message: 'Please specify which task to mark as done (title or ID).' }
+          return { success: false, message: tm(language, 'Please specify which task to mark as done (title or ID).', 'נא לציין איזו משימה לסמן כהושלמה (כותרת או מזהה).') }
         }
 
         const task = validateTaskExists(taskStore, taskRef)
         if (!task) {
-          return { success: false, message: `No task found matching "${taskRef}". Try a more specific title.` }
+          return { success: false, message: tm(language, `No task found matching "${taskRef}". Try a more specific title.`, `לא נמצאה משימה התואמת ל-"${taskRef}". נסה כותרת ספציפית יותר.`) }
         }
 
         if (task.status === 'done') {
-          return { success: true, message: `"${task.title}" is already marked as done.` }
+          return { success: true, message: tm(language, `"${task.title}" is already marked as done.`, `"${task.title}" כבר מסומנת כהושלמה.`) }
         }
 
         await taskStore.updateTask(task.id, { status: 'done' })
         return {
           success: true,
-          message: `Marked "${task.title}" as done!`,
+          message: tm(language, `Marked "${task.title}" as done!`, `"${task.title}" סומנה כהושלמה!`),
           data: { id: task.id, title: task.title, previousStatus: task.status },
         }
       }
@@ -1783,13 +1804,13 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
       default:
         return {
           success: false,
-          message: `Unknown tool: ${call.tool}`,
+          message: tm(language, `Unknown tool: ${call.tool}`, `כלי לא מוכר: ${call.tool}`),
         }
     }
   } catch (error) {
     return {
       success: false,
-      message: `Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: tm(language, `Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`, `הפעלת כלי נכשלה: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`),
     }
   }
 }

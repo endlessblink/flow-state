@@ -8,23 +8,21 @@
 
 ## Active Bugs (P0-P1)
 
-### BUG-1411: Supabase fetch timeout storm — cascading AbortErrors crash sync (🔄 IN PROGRESS)
+### ~~BUG-1411~~: Supabase fetch timeout storm — cascading AbortErrors crash sync (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-02-23)
+**Priority**: P0 | **Status**: ✅ DONE (2026-02-23)
 
-**Problem**: `fetchActiveTimerSession` polls every ~10s. When VPS/network is slow, each call times out at `supabase.ts:105` (`AbortError`), spawning 3 retries (500ms → 1s → 2s). Before retries finish, the next poll fires — creating overlapping retry cascades. This cascading storm also:
-- Kills WebSocket realtime connection (CHANNEL_ERROR → reconnect loop with exponential backoff)
-- Fails recovery data reloads (fetchTasks, fetchProjects, fetchGroups all timeout too)
-- Causes `fetchActiveTimerSession` "no active session" false positives → timer clears local state incorrectly
-- On fresh page load, gamification and challenges initialization also fail with same AbortError
+**Problem**: `fetchActiveTimerSession` polls every ~10s. When VPS/network is slow, each call times out at `supabase.ts:105` (`AbortError`), spawning 3 retries (500ms → 1s → 2s). Before retries finish, the next poll fires — creating overlapping retry cascades.
 
-**Root cause**: Fetch timeout at `src/services/auth/supabase.ts:105` is too aggressive for slow networks, and timer follower poll doesn't gate on previous poll completion (fire-and-forget creates overlapping request storms).
-
-**Potential fixes**:
-1. Gate timer poll: don't fire next poll until previous completes (debounce/mutex)
-2. Increase fetch timeout or make it adaptive based on recent latency
-3. Add circuit breaker: after N consecutive failures, back off polling frequency
-4. Cancel in-flight requests before starting new ones (AbortController per-request)
+**Fix** (7 files changed + 1 new):
+1. **Timer poll guards** (`useTimerSync.ts`): `isSaving` mutex on heartbeat, `isPolling` mutex on follower poll, consecutive failure backoff (30s after 3 failures)
+2. **Fetch timeout 10s → 30s** (`supabase.ts`): VPS can be slow under load, 10s was too aggressive
+3. **Offline-first read cache** (`readCacheDB.ts` NEW): Dexie IndexedDB database caches tasks/groups/projects after every successful Supabase fetch
+4. **Cache fallback** (`taskPersistence.ts`, `projects.ts`, `canvas.ts`): When Supabase is unreachable, load last-known-good data from IndexedDB cache
+5. **Offline mode indicator** (`syncStatus.ts`): Shows "Offline — showing cached data (Xmin old)" in sync status
+6. **Auto-reconnect** (`useAppInitialization.ts`): Listens for `online` event, auto-reloads from Supabase when connectivity returns
+7. **Cache isolation** (`auth.ts`): Clears read cache on sign-out to prevent data leaking between users
+8. **75 tests** covering cache CRUD, offline fallback cycles, large datasets, sign-out isolation
 
 ---
 
@@ -67,9 +65,9 @@
 
 ---
 
-### TASK-1409: Highlight active/in-progress tasks in Calendar view (👀 REVIEW)
+### ~~TASK-1409~~: Highlight active/in-progress tasks in Calendar view (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW (2026-02-23)
+**Priority**: P1 | **Status**: ✅ DONE (2026-02-23)
 
 **Problem**: In the Calendar day/week view, tasks that are active (status = "in progress") look identical to other tasks. They should have a visual highlight (e.g., teal border glow or accent indicator) so the user can instantly see what they're currently working on.
 
@@ -171,13 +169,15 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### BUG-1407: Canvas node connections don't work (🔄 IN PROGRESS)
+### ~~BUG-1407~~: Canvas node connections don't work (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-23)
 
 **Problem**: Cannot connect canvas task nodes by dragging from handle to handle. Connections silently fail with no feedback.
 
-**Investigation**: `handleConnect` in `useCanvasConnections.ts` has multiple silent rejection conditions — all return without any user feedback. `syncEdges()` is called without `force: true`, so edges may not render even when `parentTaskId` is saved.
+**Root Cause**: 5 issues: (1) `connect-on-drag-nodes` invalid Vue Flow prop (silently ignored), (2) no `connectionMode` (default "strict" too restrictive), (3) no `connectionRadius` (20px too small), (4) silent rejection when target had `parentTaskId` (no re-parenting), (5) `syncEdges()` without `force: true`.
+
+**Fix**: Removed invalid prop, added `connection-mode="loose"` + `:connection-radius="30"`, allowed re-parenting, force-synced edges on user-initiated connections.
 
 ---
 

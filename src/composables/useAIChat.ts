@@ -120,6 +120,19 @@ function getPersonalitySystemPrompt(): string {
  * Build the tool-result feedback message injected into the ReAct conversation
  * after tool execution. Localized to avoid English scaffold leaking into Hebrew responses.
  */
+/** Localized UI strings for chat action scaffolding */
+function chatUI(lang: 'he' | 'en', key: string): string {
+  const strings: Record<string, Record<'he' | 'en', string>> = {
+    confirm: { en: 'Confirm', he: 'אשר' },
+    cancel: { en: 'Cancel', he: 'בטל' },
+    actionCancelled: { en: 'Action cancelled.', he: 'הפעולה בוטלה.' },
+    confirmationRequired: { en: '**Confirmation required:**', he: '**נדרש אישור:**' },
+    abortedByUser: { en: '*ReAct loop aborted by user.*', he: '*הופסק על ידי המשתמש.*' },
+    analyzingResults: { en: 'Analyzing results...', he: 'מנתח תוצאות...' },
+  }
+  return strings[key]?.[lang] ?? strings[key]?.en ?? key
+}
+
 function buildToolFeedbackMessage(toolResultsSummary: string, lang: 'he' | 'en'): string {
   if (lang === 'he') {
     return `תוצאות כלים:\n${toolResultsSummary}\n\nענה למשתמש על בסיס התוצאות. כללים:\n- תוצאות הכלים מוצגות ככרטיסי משימה אינטראקטיביים למטה — המשתמש כבר רואה את הרשימה. אל תחזור על שמות משימות כרשימה.\n- לעולם אל תכלול מזהי משימות (UUIDs) בתשובה.\n- נתח את הנתונים: הסבר למה משימות מסוימות חשובות יותר (ימי איחור, רמת עדיפות, מועדי פרויקט, התקדמות תת-משימות, הערכות זמן).\n- פרמט כניתוח קצר עם נקודות לתובנות מרכזיות.\n- אסור בהחלט עצות כלליות. אם אינך יכול לומר משהו ספציפי על משימות אלו, אל תאמר כלום.\n- קריטי: ענה כולו בעברית.`
@@ -256,6 +269,9 @@ export function useAIChat() {
 
   // Pending confirmation flow: stores a tool call awaiting user approval
   const pendingConfirmation = ref<ToolCall | null>(null)
+
+  // Last detected language — used by confirmation/cancel handlers outside the ReAct scope
+  const lastDetectedLanguage = ref<'he' | 'en'>('en')
 
   // Schedule onboarding: only show once per session
   const scheduleOnboardingShown = ref(false)
@@ -692,6 +708,9 @@ export function useAIChat() {
       store.addUserMessage(content)
     }
 
+    // Track last detected language for use in confirmation/cancel handlers
+    lastDetectedLanguage.value = routed.language
+
     // Start streaming response
     store.startStreamingMessage()
 
@@ -713,7 +732,7 @@ export function useAIChat() {
       for (const call of routed.tools) {
         console.log(`[AIChat:Deterministic] Executing tool: ${call.tool}`, call.parameters)
         trackToolCall(sessionId, call.tool)
-        const result = await executeTool(call)
+        const result = await executeTool(call, routed.language)
         toolResults.push(result)
         console.log(`[AIChat:Deterministic] Tool result:`, result.success, result.message)
 
@@ -1046,7 +1065,7 @@ export function useAIChat() {
       const toolResults: ToolResult[] = []
       for (const call of immediateTools) {
         console.log('[AIChat] Executing tool:', call.tool, call.parameters)
-        const result = await executeTool(call)
+        const result = await executeTool(call, lastDetectedLanguage.value)
         toolResults.push(result)
         console.log('[AIChat] Tool result:', result)
 
@@ -1112,7 +1131,7 @@ export function useAIChat() {
             : JSON.stringify(confirmCall.parameters)
 
         store.appendStreamingContent(
-          `\n\n**Confirmation required:** ${toolDesc} (${paramSummary})`
+          `\n\n${chatUI(lastDetectedLanguage.value, 'confirmationRequired')} ${toolDesc} (${paramSummary})`
         )
       }
 
@@ -1193,6 +1212,7 @@ export function useAIChat() {
     try {
       const router = await getRouter()
       const lang: 'he' | 'en' = preProcess.detectedLanguage === 'he' ? 'he' : 'en'
+      lastDetectedLanguage.value = lang
       const conversationMessages: RouterChatMessage[] = await buildMessagesForAI(content, lang)
       const taskType = options.taskType ?? inferTaskType(content)
 
@@ -1202,7 +1222,7 @@ export function useAIChat() {
       while (continueLoop && stepCount < MAX_REACT_STEPS) {
         // Check if aborted
         if (abortController.signal.aborted) {
-          store.appendStreamingContent('\n\n---\n*ReAct loop aborted by user.*')
+          store.appendStreamingContent(`\n\n---\n${chatUI(lang, 'abortedByUser')}`)
           break
         }
 
@@ -1233,7 +1253,7 @@ export function useAIChat() {
 
         // If aborted during streaming, exit
         if (abortController.signal.aborted) {
-          store.appendStreamingContent('\n\n---\n*ReAct loop aborted by user.*')
+          store.appendStreamingContent(`\n\n---\n${chatUI(lang, 'abortedByUser')}`)
           break
         }
 
@@ -1260,7 +1280,7 @@ export function useAIChat() {
           for (const call of immediateTools) {
             console.log(`[AIChat] ReAct step ${stepCount} - executing tool:`, call.tool, call.parameters)
             trackToolCall(sessionId, call.tool) // TASK-1356
-            const result = await executeTool(call)
+            const result = await executeTool(call, lang)
             toolResults.push(result)
 
             // Push undo if available
@@ -1305,7 +1325,7 @@ export function useAIChat() {
             const toolDef = AI_TOOLS.find(t => t.name === confirmationTools[0].tool)
             const toolDesc = toolDef?.description || confirmationTools[0].tool
             store.appendStreamingContent(
-              `\n\n**Confirmation required:** ${toolDesc}`
+              `\n\n${chatUI(lang, 'confirmationRequired')} ${toolDesc}`
             )
             continueLoop = false
             break
@@ -1350,7 +1370,7 @@ export function useAIChat() {
             const toolResults: ToolResult[] = []
             for (const call of immediateTools) {
               console.log(`[AIChat] ReAct step ${stepCount} - executing text-detected tool:`, call.tool, call.parameters)
-              const result = await executeTool(call)
+              const result = await executeTool(call, lang)
               toolResults.push(result)
 
               if (result.success && result.undoAction) {
@@ -1392,7 +1412,7 @@ export function useAIChat() {
               pendingConfirmation.value = confirmationTools[0]
               const toolDef = AI_TOOLS.find(t => t.name === confirmationTools[0].tool)
               const toolDesc = toolDef?.description || confirmationTools[0].tool
-              store.appendStreamingContent(`\n\n**Confirmation required:** ${toolDesc}`)
+              store.appendStreamingContent(`\n\n${chatUI(lang, 'confirmationRequired')} ${toolDesc}`)
               continueLoop = false
               break
             }
@@ -1591,7 +1611,7 @@ export function useAIChat() {
     if (confirmationTools.length > 0) {
       actions.push({
         id: 'confirm_action',
-        label: 'Confirm',
+        label: chatUI(lastDetectedLanguage.value, 'confirm'),
         variant: 'danger',
         handler: async () => {
           await confirmPendingAction()
@@ -1599,7 +1619,7 @@ export function useAIChat() {
       })
       actions.push({
         id: 'cancel_action',
-        label: 'Cancel',
+        label: chatUI(lastDetectedLanguage.value, 'cancel'),
         variant: 'secondary',
         handler: async () => {
           cancelPendingAction()
@@ -1632,7 +1652,7 @@ export function useAIChat() {
     }
 
     console.log('[AIChat] Executing confirmed tool:', confirmedCall.tool, confirmedCall.parameters)
-    const result = await executeTool(confirmedCall)
+    const result = await executeTool(confirmedCall, lastDetectedLanguage.value)
     console.log('[AIChat] Confirmed tool result:', result)
 
     if (result.success && result.undoAction) {
@@ -1656,7 +1676,7 @@ export function useAIChat() {
    */
   function cancelPendingAction(): void {
     pendingConfirmation.value = null
-    store.addAssistantMessage('Action cancelled.')
+    store.addAssistantMessage(chatUI(lastDetectedLanguage.value, 'actionCancelled'))
   }
 
   /**
@@ -1726,7 +1746,7 @@ export function useAIChat() {
             },
           }
 
-          const result = await executeTool(call)
+          const result = await executeTool(call, lastDetectedLanguage.value)
           store.addAssistantMessage(
             result.success ? result.message : `Error: ${result.message}`
           )
@@ -1753,7 +1773,7 @@ export function useAIChat() {
             parameters: { name: groupName },
           }
 
-          const result = await executeTool(call)
+          const result = await executeTool(call, lastDetectedLanguage.value)
           store.addAssistantMessage(
             result.success ? result.message : `Error: ${result.message}`
           )
@@ -1868,7 +1888,7 @@ export function useAIChat() {
 
     try {
       console.log('[AIChat] Executing direct tool:', toolCall.tool, toolCall.parameters)
-      const result = await executeTool(toolCall)
+      const result = await executeTool(toolCall, lastDetectedLanguage.value)
       console.log('[AIChat] Direct tool result:', result)
 
       if (result.success && result.undoAction) {
@@ -1959,11 +1979,11 @@ export function useAIChat() {
       // If there's a final prompt, send it to the AI
       if (finalPrompt) {
         // Update streaming content with a loading message
-        store.appendStreamingContent('Analyzing results...')
+        const chainLang = detectLanguage(chain.name) === 'he' ? 'he' : 'en'
+        store.appendStreamingContent(chatUI(chainLang, 'analyzingResults'))
 
         // Send the prompt through the AI
         const router = await getRouter()
-        const chainLang = detectLanguage(chain.name) === 'he' ? 'he' : 'en'
         const langDirective = chainLang === 'he'
           ? ' ענה תמיד בעברית.'
           : ''

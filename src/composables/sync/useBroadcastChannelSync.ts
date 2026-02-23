@@ -4,14 +4,14 @@ interface BroadcastMessage {
     type: string
     senderId: string
     timestamp: number
-    data: any
+    data: unknown
 }
 
 /**
  * Deep clone data to strip Vue reactive Proxy objects before broadcasting.
  * BroadcastChannel uses structured clone which cannot handle Proxy objects.
  */
-const cloneForBroadcast = (data: any): any => {
+const cloneForBroadcast = <T>(data: T): T => {
     if (data === null || data === undefined) return data
     // Use toRaw to strip reactivity, then JSON clone to ensure deep copy
     try {
@@ -27,7 +27,7 @@ export function useBroadcastChannelSync(channelName = 'flow-state-sync') {
     const isConnected = ref(false)
 
     let channel: BroadcastChannel | null = null
-    const messageHandlers = new Map<string, (data: any) => void>()
+    const messageHandlers = new Map<string, (data: unknown) => void>()
 
     const connect = () => {
         if (channel) return
@@ -53,7 +53,7 @@ export function useBroadcastChannelSync(channelName = 'flow-state-sync') {
         isConnected.value = false
     }
 
-    const broadcast = (type: string, data: any) => {
+    const broadcast = (type: string, data: unknown) => {
         if (!channel) return
 
         const message: BroadcastMessage = {
@@ -65,7 +65,7 @@ export function useBroadcastChannelSync(channelName = 'flow-state-sync') {
         channel.postMessage(message)
     }
 
-    const onMessage = (type: string, handler: (data: any) => void) => {
+    const onMessage = (type: string, handler: (data: unknown) => void) => {
         messageHandlers.set(type, handler)
     }
 

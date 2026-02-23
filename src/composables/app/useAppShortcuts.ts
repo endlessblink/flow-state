@@ -53,8 +53,8 @@ export function useAppShortcuts() {
             window.dispatchEvent(new CustomEvent('open-command-palette'))
         }
 
-        // Cmd/Ctrl+P to open search
-        if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
+        // Shift+F to open search (use event.code for Hebrew layout compatibility)
+        if (event.shiftKey && !event.ctrlKey && !event.metaKey && (event.key === 'F' || event.code === 'KeyF')) {
             event.preventDefault()
             window.dispatchEvent(new CustomEvent('open-search'))
         }

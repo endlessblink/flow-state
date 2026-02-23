@@ -527,9 +527,9 @@ const overloadedDayNames = computed(() => {
   const grid = weeklyPlanGridRef.value
   if (!grid) return []
   // Access the exposed computedOverloadedDays from the grid
-  const days = (grid as any).overloadedDays
+  const days = (grid as unknown as { overloadedDays: { dayName: string }[] }).overloadedDays
   if (!days || !Array.isArray(days)) return []
-  return days.map((d: any) => d.dayName)
+  return days.map(d => d.dayName)
 })
 
 // Interview form state

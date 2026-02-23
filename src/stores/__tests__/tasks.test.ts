@@ -195,7 +195,7 @@ describe('TaskStore', () => {
       const store = useTaskStore()
       const task = await store.createTask({
         title: 'Recurring Task',
-        recurrence: { frequency: 'weekly', interval: 1 } as any
+        recurrence: { frequency: 'weekly', interval: 1 } as unknown as Task['recurrence']
       })
 
       await store.createTaskInstance(task.id, {

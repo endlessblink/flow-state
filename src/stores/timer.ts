@@ -16,7 +16,7 @@ import { useTimerAudio } from '@/composables/timer/useTimerAudio'
 import { useTimerNotifications } from '@/composables/timer/useTimerNotifications'
 import { useTimerSync } from '@/composables/timer/useTimerSync'
 
-const getT = () => (i18n as any).global.t as (key: string) => string
+const getT = () => (i18n.global as unknown as { t: (key: string) => string }).t
 
 /**
  * Timer Session Interface

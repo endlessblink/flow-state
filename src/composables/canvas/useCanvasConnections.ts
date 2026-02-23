@@ -6,7 +6,7 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 
 interface ConnectionDeps {
-    syncEdges: () => void
+    syncEdges: (options?: { force?: boolean }) => void
     closeCanvasContextMenu: () => void
     closeEdgeContextMenu: () => void
     closeNodeContextMenu: () => void
@@ -35,6 +35,7 @@ export function useCanvasConnections(
     const taskStore = useTaskStore()
 
     const handleConnectStart = (event: { nodeId?: string; handleId?: string | null; handleType?: string }) => {
+        console.log('[BUG-1407:CONNECT] Connection started from node:', event.nodeId, 'handle:', event.handleId)
         state.isConnecting.value = true
         document.body.classList.add('connecting-active')
 
@@ -96,6 +97,7 @@ export function useCanvasConnections(
         }
 
         const { source, target } = connection
+        console.log('[BUG-1407:CONNECT] handleConnect fired:', { source, target })
 
         deps.closeCanvasContextMenu()
         deps.closeEdgeContextMenu()
@@ -108,19 +110,31 @@ export function useCanvasConnections(
             state.recentlyRemovedEdges.value.delete(potentialEdgeId)
         }
 
-        if (CanvasIds.isGroupNode(source) || CanvasIds.isGroupNode(target)) return
-        if (source === target) return
+        if (CanvasIds.isGroupNode(source) || CanvasIds.isGroupNode(target)) {
+            console.warn('[BUG-1407:CONNECT] Rejected: source or target is a group node')
+            return
+        }
+        if (source === target) {
+            console.warn('[BUG-1407:CONNECT] Rejected: self-connection')
+            return
+        }
 
         const sourceTask = taskStore.tasks.find(t => t.id === source)
         const targetTask = taskStore.tasks.find(t => t.id === target)
+        console.log('[BUG-1407:CONNECT] Found tasks:', { sourceTask: !!sourceTask, targetTask: !!targetTask, sourcePos: !!sourceTask?.canvasPosition, targetPos: !!targetTask?.canvasPosition })
 
         if (sourceTask && targetTask && sourceTask.canvasPosition && targetTask.canvasPosition) {
             // SUBTASK MODEL: Connection makes target a direct child of source (nested hierarchy)
             // Only set if target doesn't already have a parent
             if (!targetTask.parentTaskId) {
                 await taskStore.updateTaskWithUndo(target, { parentTaskId: source })
-                deps.syncEdges()
+                console.log('[BUG-1407:CONNECT] Success: set parentTaskId', { target, parentTaskId: source })
+                deps.syncEdges({ force: true })
+            } else {
+                console.warn('[BUG-1407:CONNECT] Rejected: target already has parentTaskId:', targetTask.parentTaskId)
             }
+        } else {
+            console.warn('[BUG-1407:CONNECT] Rejected: missing task or canvasPosition')
         }
     })
 
@@ -139,7 +153,7 @@ export function useCanvasConnections(
         // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
         if (targetTask && targetTask.parentTaskId) {
             await taskStore.updateTaskWithUndo(targetTask.id, { parentTaskId: null })
-            deps.syncEdges()
+            deps.syncEdges({ force: true })
         }
 
         deps.closeEdgeContextMenu()
@@ -188,7 +202,7 @@ export function useCanvasConnections(
         // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
         if (targetTask && targetTask.parentTaskId) {
             await taskStore.updateTaskWithUndo(targetTask.id, { parentTaskId: null })
-            deps.syncEdges()
+            deps.syncEdges({ force: true })
         }
     }
 

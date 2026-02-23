@@ -20,8 +20,16 @@ export function detectPlatform(): Platform {
     return _detectedPlatform
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const win = window as any
+  interface ExtendedWindow extends Window {
+    isTauri?: boolean
+    __TAURI__?: unknown
+    __TAURI_INTERNALS__?: unknown
+    Capacitor?: {
+      isNativePlatform?: () => boolean
+    }
+  }
+
+  const win = window as unknown as ExtendedWindow
 
   // Tauri detection (must be before Capacitor — both may set window objects)
   if (
@@ -48,8 +56,7 @@ export function detectPlatform(): Platform {
   // PWA detection (installed to home screen)
   if (
     window.matchMedia('(display-mode: standalone)').matches ||
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (navigator as any).standalone
+    (navigator as Navigator & { standalone?: boolean }).standalone
   ) {
     _detectedPlatform = 'pwa'
     return _detectedPlatform

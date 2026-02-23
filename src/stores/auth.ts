@@ -314,8 +314,8 @@ export const useAuthStore = defineStore('auth', () => {
           // We handle both events to cover all flows.
           if ((_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION') && newSession?.user) {
             const providerTokens = consumePendingProviderTokens()
-            const providerToken = providerTokens?.provider_token || (newSession as any).provider_token
-            const providerRefreshToken = providerTokens?.provider_refresh_token || (newSession as any).provider_refresh_token
+            const providerToken = providerTokens?.provider_token || (newSession as unknown as Record<string, unknown>).provider_token as string | undefined
+            const providerRefreshToken = providerTokens?.provider_refresh_token || (newSession as unknown as Record<string, unknown>).provider_refresh_token as string | undefined
             if (providerToken) {
               try {
                 const { useSettingsStore } = await import('@/stores/settings')

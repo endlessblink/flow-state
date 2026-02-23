@@ -270,7 +270,7 @@ const listViewGroups = computed(() => {
   for (const task of allFilteredTasks.value) {
     const projectId = task.projectId || '__uncategorized__'
     if (!projectMap.has(projectId)) {
-      const project = taskStore.projects.find((p: any) => p.id === projectId)
+      const project = taskStore.projects.find(p => p.id === projectId)
       projectMap.set(projectId, {
         key: projectId,
         title: project?.name || 'Uncategorized',
@@ -285,7 +285,7 @@ const listViewGroups = computed(() => {
 })
 
 // TASK-1334: Handle inline task updates from list view
-const handleListUpdateTask = (taskId: string, updates: Partial<any>) => {
+const handleListUpdateTask = (taskId: string, updates: Partial<Task>) => {
   taskStore.updateTask(taskId, updates)
 }
 

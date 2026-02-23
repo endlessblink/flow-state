@@ -7,14 +7,14 @@
 
     <!-- Timer Active Badge -->
     <div v-if="isTimerActive" class="timer-indicator" title="Timer Active">
-      <Timer :size="14" />
+      <Clock :size="12" :stroke-width="2.5" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Timer } from 'lucide-vue-next'
+import { Clock } from 'lucide-vue-next'
 import { truncateUrlsInText } from '@/utils/urlTruncate'
 
 const props = defineProps<{
@@ -53,26 +53,27 @@ const displayTitle = computed(() => truncateUrlsInText(props.title) || 'Untitled
   right: var(--space-2);
   width: var(--space-6);
   height: var(--space-6);
-  background: var(--brand-primary);
-  color: white;
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 5;
-  box-shadow: 0 var(--space-0_5) var(--space-2) var(--brand-primary);
+  border: 2px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 var(--space-2) var(--brand-primary);
   animation: timerPulse 2s ease-in-out infinite;
-  border: var(--space-0_5) solid white;
 }
 
 @keyframes timerPulse {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 var(--space-0_5) var(--space-2) var(--brand-primary);
+    box-shadow: 0 0 var(--space-2) var(--brand-primary);
   }
   50% {
     transform: scale(1.1);
-    box-shadow: 0 var(--space-0_5) var(--space-3) var(--brand-primary), 0 0 var(--space-4) var(--blue-border-medium);
+    box-shadow: 0 0 var(--space-3) var(--brand-primary), 0 0 var(--space-4) var(--brand-primary);
   }
 }
 </style>

@@ -452,7 +452,7 @@ describe('CanvasStore', () => {
       ]
 
       const rect = { x: 50, y: 50, width: 300, height: 200 }
-      store.nodes = nodes as any
+      store.nodes = nodes as unknown as typeof store.nodes
       store.selectNodesInRect(rect)
 
       // Should select task-1 and task-2 (both within rect bounds)

@@ -23,6 +23,8 @@
       <Transition name="dropdown">
         <div
           v-if="isOpen"
+          ref="dropdownRef"
+          class="select-dropdown"
           :style="dropdownStyle"
           role="listbox"
         >
@@ -91,6 +93,7 @@ const emit = defineEmits<{
 const canvasStore = useCanvasStore()
 const selectRef = ref<HTMLElement>()
 const triggerElement = ref<HTMLButtonElement>()
+const dropdownRef = ref<HTMLElement>()
 const isOpen = ref(false)
 
 // Unique ID for this dropdown instance (for global close coordination)
@@ -166,7 +169,20 @@ const selectOption = (sectionId: string | null) => {
 }
 
 const handleClickOutside = (event: MouseEvent) => {
-  if (selectRef.value && !selectRef.value.contains(event.target as Node)) {
+  const target = event.target as Node
+  const isInsideTrigger = selectRef.value?.contains(target)
+  const isInsideDropdown = dropdownRef.value?.contains(target)
+  if (!isInsideTrigger && !isInsideDropdown) {
+    closeDropdown()
+  }
+}
+
+const handleScroll = (event: Event) => {
+  if (isOpen.value) {
+    const target = event.target as HTMLElement
+    if (dropdownRef.value && (target === dropdownRef.value || dropdownRef.value.contains(target))) {
+      return
+    }
     closeDropdown()
   }
 }
@@ -180,16 +196,17 @@ const handleGlobalClose = (event: Event) => {
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+  // Use capture: true so click-outside fires even when parent uses @click.stop
+  document.addEventListener('click', handleClickOutside, true)
   window.addEventListener('resize', calculateDropdownPosition)
-  window.addEventListener('scroll', closeDropdown, true)
+  window.addEventListener('scroll', handleScroll, true)
   window.addEventListener('close-all-dropdowns', handleGlobalClose)
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('click', handleClickOutside, true)
   window.removeEventListener('resize', calculateDropdownPosition)
-  window.removeEventListener('scroll', closeDropdown, true)
+  window.removeEventListener('scroll', handleScroll, true)
   window.removeEventListener('close-all-dropdowns', handleGlobalClose)
 })
 </script>
@@ -326,7 +343,7 @@ onBeforeUnmount(() => {
 
 /* Transitions */
 .dropdown-enter-active, .dropdown-leave-active {
-  transition: opacity var(--duration-normal) var(--var(--ease-out)-out), transform var(--duration-normal) ease;
+  transition: opacity var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
 }
 .dropdown-enter-from, .dropdown-leave-to {
   opacity: 0;

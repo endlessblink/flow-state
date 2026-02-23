@@ -14,7 +14,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         const userId = authStore.user?.id
         if (!userId) return null
 
-        let currentChannel: any = null
+        let currentChannel: unknown = null
         let retryCount = 0
         let isExplicitlyClosed = false
         const _heartbeatInterval: any = null
@@ -54,7 +54,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             // Attach Listeners with detailed logging
             channel
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${userId}` },
-                    (payload: any) => {
+                    (payload: Record<string, unknown>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] PROJECT event received:', {
                                 eventType: payload.eventType,
@@ -66,7 +66,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                         if (payload.table === 'projects') onProjectChange(payload)
                     })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
-                    (payload: any) => {
+                    (payload: Record<string, unknown>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] TASK event received:', {
                                 eventType: payload.eventType,
@@ -81,7 +81,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             if (onTimerChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'timer_sessions', filter: `user_id=eq.${userId}` },
-                    (payload: any) => {
+                    (payload: Record<string, unknown>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] TIMER event received:', {
                                 eventType: payload.eventType,
@@ -96,7 +96,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             if (onNotificationChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-                    (payload: any) => {
+                    (payload: Record<string, unknown>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] NOTIFICATION event received:', {
                                 eventType: payload.eventType,
@@ -109,7 +109,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             if (onGroupChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `user_id=eq.${userId}` },
-                    (payload: any) => {
+                    (payload: Record<string, unknown>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] GROUP event received:', {
                                 eventType: payload.eventType,

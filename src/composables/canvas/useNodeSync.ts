@@ -124,7 +124,7 @@ export function useNodeSync(
                 try {
                     const { useTaskStore } = await import('@/stores/tasks')
                     const taskStore = useTaskStore()
-                    const task = taskStore.tasks.find((t: any) => t.id === nodeId)
+                    const task = taskStore.tasks.find((t: Record<string, unknown>) => t.id === nodeId)
                     if (task?.positionVersion !== undefined) {
                         currentVersion = task.positionVersion
                         versionMap.set(nodeId, currentVersion) // Sync the map
@@ -249,7 +249,7 @@ export function useNodeSync(
             versionMap.set(nodeId, data[0].position_version)
             return true
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('❌ [NODE-SYNC] Failed:', err)
             syncError.value = err.message || 'Sync failed'
 

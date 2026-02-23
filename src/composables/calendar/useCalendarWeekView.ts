@@ -118,13 +118,13 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
           let processedCount = 0
 
           instances
-            .filter((instance: any) => {
+            .filter((instance: Record<string, unknown>) => {
               if (processedCount >= MAX_INSTANCES_PER_TASK) return false
               const matches = instance.scheduledDate === day.dateString
               if (matches) processedCount++
               return matches
             })
-            .forEach((instance: any) => {
+            .forEach((instance: Record<string, unknown>) => {
               const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
               const baseDuration = instance.duration || task.estimatedDuration || 30
 

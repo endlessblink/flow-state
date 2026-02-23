@@ -51,7 +51,7 @@ export function useTombstoneDatabase(ctx: DatabaseContext) {
                     .select('entity_type, entity_id')
                     .eq('user_id', userId)
                 if (error) throw error
-                return data?.map((t: any) => ({ entityType: t.entity_type, entityId: t.entity_id })) || []
+                return data?.map((t: Record<string, unknown>) => ({ entityType: t.entity_type, entityId: t.entity_id })) || []
             }, 'fetchTombstones')
         } catch (e: unknown) {
             console.error('[TASK-317] Failed to fetch tombstones:', e)

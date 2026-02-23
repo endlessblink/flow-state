@@ -116,6 +116,17 @@ function getPersonalitySystemPrompt(): string {
  * Convert raw API errors into user-friendly messages.
  * Covers: rate limits, credits, auth, network, model-specific issues.
  */
+/**
+ * Build the tool-result feedback message injected into the ReAct conversation
+ * after tool execution. Localized to avoid English scaffold leaking into Hebrew responses.
+ */
+function buildToolFeedbackMessage(toolResultsSummary: string, lang: 'he' | 'en'): string {
+  if (lang === 'he') {
+    return `תוצאות כלים:\n${toolResultsSummary}\n\nענה למשתמש על בסיס התוצאות. כללים:\n- תוצאות הכלים מוצגות ככרטיסי משימה אינטראקטיביים למטה — המשתמש כבר רואה את הרשימה. אל תחזור על שמות משימות כרשימה.\n- לעולם אל תכלול מזהי משימות (UUIDs) בתשובה.\n- נתח את הנתונים: הסבר למה משימות מסוימות חשובות יותר (ימי איחור, רמת עדיפות, מועדי פרויקט, התקדמות תת-משימות, הערכות זמן).\n- פרמט כניתוח קצר עם נקודות לתובנות מרכזיות.\n- אסור בהחלט עצות כלליות. אם אינך יכול לומר משהו ספציפי על משימות אלו, אל תאמר כלום.\n- קריטי: ענה כולו בעברית.`
+  }
+  return `Tool results:\n${toolResultsSummary}\n\nRespond to the user based on these results. STRICT RULES:\n- The tool results render as interactive task cards below — the user can already SEE the task list. Do NOT repeat task names as a list.\n- NEVER include task IDs (UUIDs) in your response.\n- ANALYZE the data: explain WHY certain tasks matter most (overdue days, priority level, project deadlines, subtask progress, time estimates). Use the enriched fields (daysOverdue, project, subtasks, estimatedMinutes, pomodorosCompleted) to give SPECIFIC reasoning.\n- Format as a brief analysis with bullet points for key insights. Example: "Your most urgent task is the video project — it's 3 days overdue with 2/5 subtasks done. After that, focus on the auth bug (high priority, blocks the release)."\n- ABSOLUTELY NO generic advice ("prioritize your tasks", "focus on what matters", "start with urgent ones", "consider breaking tasks down"). If you can't say something specific about THESE tasks, say nothing.\n- CRITICAL: Respond ENTIRELY in the same language the user used in their ORIGINAL question, NOT the language of task data.`
+}
+
 function formatUserFriendlyError(rawError: string): string {
   const lower = rawError.toLowerCase()
 
@@ -341,7 +352,7 @@ export function useAIChat() {
   /**
    * Build messages for the AI including context.
    */
-  async function buildMessagesForAI(userMessage: string): Promise<RouterChatMessage[]> {
+  async function buildMessagesForAI(userMessage: string, language: 'he' | 'en' = 'en'): Promise<RouterChatMessage[]> {
     const ctx = buildContext()
     const aiMessages: RouterChatMessage[] = []
 
@@ -357,7 +368,7 @@ export function useAIChat() {
     } catch { /* work profile unavailable */ }
 
     // System prompt with context + personal context + tool hints based on user message (TASK-1392)
-    const systemPrompt = buildSystemPrompt(ctx)
+    const systemPrompt = buildSystemPrompt(ctx, language)
     const toolHints = getToolHints(userMessage)
     const toolHintBlock = formatToolHints(toolHints)
     aiMessages.push({ role: 'system', content: systemPrompt + personalContextBlock + toolHintBlock })
@@ -383,7 +394,7 @@ export function useAIChat() {
    * Build the system prompt with context awareness.
    * Includes timer state, task statistics, and additional context.
    */
-  function buildSystemPrompt(ctx: ChatContext): string {
+  function buildSystemPrompt(ctx: ChatContext, language: 'he' | 'en' = 'en'): string {
     // Prepend personality prompt if active
     const personalityPrompt = getPersonalitySystemPrompt()
 
@@ -441,11 +452,11 @@ export function useAIChat() {
     // TASK-1377: Uses pipeline context optimizer to reduce language contamination
     try {
       const allTasks = taskStore.tasks
-      parts.push(buildTaskStats(allTasks))
+      parts.push(buildTaskStats(allTasks, undefined, language))
 
       // Optimized context: separates titles from English metadata labels,
       // groups by urgency tier, respects character budget (3000 chars)
-      const optimized = optimizeTaskContext(allTasks, taskStore.projects)
+      const optimized = optimizeTaskContext(allTasks, taskStore.projects, { language })
       if (optimized) {
         parts.push('')
         parts.push(optimized)
@@ -641,7 +652,7 @@ export function useAIChat() {
     await maybeShowScheduleOnboarding()
 
     // ── Deterministic pipeline: route intent BEFORE ReAct ──────────────
-    const routed = routeIntent(trimmedContent, taskStore.tasks, entityMemory)
+    const routed = await routeIntent(trimmedContent, taskStore.tasks, entityMemory)
 
     if (routed.type !== 'freeform') {
       return sendMessageDeterministic(trimmedContent, routed, options)
@@ -777,7 +788,7 @@ export function useAIChat() {
       const toolResultsSummary = toolResults
         .map((r, i) => {
           const toolName = routed.tools[i]?.tool || 'unknown'
-          return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`)
+          return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, routed.language)
         })
         .join('\n\n')
 
@@ -1181,7 +1192,8 @@ export function useAIChat() {
 
     try {
       const router = await getRouter()
-      const conversationMessages: RouterChatMessage[] = await buildMessagesForAI(content)
+      const lang: 'he' | 'en' = preProcess.detectedLanguage === 'he' ? 'he' : 'en'
+      const conversationMessages: RouterChatMessage[] = await buildMessagesForAI(content, lang)
       const taskType = options.taskType ?? inferTaskType(content)
 
       let stepCount = 0
@@ -1309,13 +1321,13 @@ export function useAIChat() {
           const toolResultsSummary = toolResults
             .map((r, i) => {
               const toolName = immediateTools[i]?.tool || 'unknown'
-              return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`)
+              return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, preProcess.detectedLanguage === 'he' ? 'he' : 'en')
             })
             .join('\n\n')
 
           conversationMessages.push({
             role: 'user',
-            content: `Tool results:\n${toolResultsSummary}\n\nRespond to the user based on these results. STRICT RULES:\n- The tool results render as interactive task cards below — the user can already SEE the task list. Do NOT repeat task names as a list.\n- NEVER include task IDs (UUIDs) in your response.\n- ANALYZE the data: explain WHY certain tasks matter most (overdue days, priority level, project deadlines, subtask progress, time estimates). Use the enriched fields (daysOverdue, project, subtasks, estimatedMinutes, pomodorosCompleted) to give SPECIFIC reasoning.\n- Format as a brief analysis with bullet points for key insights. Example: "Your most urgent task is the video project — it's 3 days overdue with 2/5 subtasks done. After that, focus on the auth bug (high priority, blocks the release)."\n- ABSOLUTELY NO generic advice ("prioritize your tasks", "focus on what matters", "start with urgent ones", "consider breaking tasks down"). If you can't say something specific about THESE tasks, say nothing.\n- CRITICAL: Respond ENTIRELY in the same language the user used in their ORIGINAL question, NOT the language of task data.`,
+            content: buildToolFeedbackMessage(toolResultsSummary, lang),
           })
 
           // Add step indicator to streaming content
@@ -1400,7 +1412,7 @@ export function useAIChat() {
               .join('\n\n')
             conversationMessages.push({
               role: 'user',
-              content: `Tool results:\n${toolResultsSummary}\n\nRespond to the user based on these results. STRICT RULES:\n- The tool results render as interactive task cards below — the user can already SEE the task list. Do NOT repeat task names as a list.\n- NEVER include task IDs (UUIDs) in your response.\n- ANALYZE the data: explain WHY certain tasks matter most (overdue days, priority level, project deadlines, subtask progress, time estimates). Use the enriched fields (daysOverdue, project, subtasks, estimatedMinutes, pomodorosCompleted) to give SPECIFIC reasoning.\n- Format as a brief analysis with bullet points for key insights. Example: "Your most urgent task is the video project — it's 3 days overdue with 2/5 subtasks done. After that, focus on the auth bug (high priority, blocks the release)."\n- ABSOLUTELY NO generic advice ("prioritize your tasks", "focus on what matters", "start with urgent ones", "consider breaking tasks down"). If you can't say something specific about THESE tasks, say nothing.\n- CRITICAL: Respond ENTIRELY in the same language the user used in their ORIGINAL question, NOT the language of task data.`,
+              content: buildToolFeedbackMessage(toolResultsSummary, lang),
             })
 
             // Strip the raw tool call text from the displayed message
@@ -1487,18 +1499,59 @@ export function useAIChat() {
           }
         }
 
-        lastMsg.content = cleaned
-
-        // Language mismatch detection — flag in metadata for UI
+        // Language mismatch detection — retry once, then flag in metadata for UI
         if (detectLanguageMismatch(content, cleaned)) {
-          lastMsg.metadata = {
-            ...lastMsg.metadata,
-            languageMismatch: true,
-            detectedInputLang: preProcess.detectedLanguage,
-            detectedOutputLang: detectLanguage(cleaned),
-          } as Record<string, unknown>
-          console.warn('[Pipeline] Language mismatch detected:', preProcess.detectedLanguage, '→', detectLanguage(cleaned))
+          const languageName = lang === 'he' ? 'Hebrew (עברית)' : 'English'
+          console.warn(`[Pipeline:ReAct] Language mismatch detected, retrying in ${languageName}...`)
+
+          try {
+            conversationMessages.push({ role: 'assistant', content: cleaned })
+            conversationMessages.push({
+              role: 'user',
+              content: lang === 'he'
+                ? `שפה שגויה. כתוב מחדש את כל התשובה בעברית בלבד. כל מילה חייבת להיות בעברית.`
+                : `WRONG LANGUAGE. Rewrite ENTIRELY in ${languageName}. Every single word must be in ${languageName}.`,
+            })
+
+            let retryContent = ''
+            for await (const chunk of router.chatStream(conversationMessages, {
+              taskType,
+              systemPrompt: options.systemPrompt,
+              forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+              model: selectedModel.value || undefined,
+            })) {
+              if (abortController.signal.aborted) break
+              retryContent += chunk.content
+            }
+
+            if (retryContent.trim()) {
+              const retryCleaned = cleanResponse(retryContent)
+              if (!detectLanguageMismatch(content, retryCleaned)) {
+                cleaned = retryCleaned
+                console.log('[Pipeline:ReAct] Language retry succeeded')
+              } else {
+                // Retry still wrong language — use it anyway if non-empty (often partially better)
+                cleaned = retryCleaned
+                console.warn('[Pipeline:ReAct] Language retry still mismatched, using retry response')
+              }
+            }
+          } catch (retryErr) {
+            console.warn('[Pipeline:ReAct] Language retry failed:', retryErr)
+          }
+
+          // Re-check after retry — flag if still mismatched
+          if (detectLanguageMismatch(content, cleaned)) {
+            lastMsg.metadata = {
+              ...lastMsg.metadata,
+              languageMismatch: true,
+              detectedInputLang: preProcess.detectedLanguage,
+              detectedOutputLang: detectLanguage(cleaned),
+            } as Record<string, unknown>
+          }
         }
+
+        // Update content after all post-processing (including language retry)
+        lastMsg.content = cleaned
       }
 
       store.completeStreamingMessage()
@@ -1910,8 +1963,12 @@ export function useAIChat() {
 
         // Send the prompt through the AI
         const router = await getRouter()
+        const chainLang = detectLanguage(chain.name) === 'he' ? 'he' : 'en'
+        const langDirective = chainLang === 'he'
+          ? ' ענה תמיד בעברית.'
+          : ''
         const aiMessages: RouterChatMessage[] = [
-          { role: 'system', content: 'You are FlowState AI, a friendly productivity assistant. Respond concisely.' },
+          { role: 'system', content: `You are FlowState AI, a friendly productivity assistant. Respond concisely.${langDirective}` },
           { role: 'user', content: finalPrompt },
         ]
 

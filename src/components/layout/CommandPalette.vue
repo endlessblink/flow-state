@@ -201,9 +201,9 @@ defineExpose({ open, close })
 
 /* Modal */
 .command-palette-modal {
-  background: var(--glass-panel-bg);
-  backdrop-filter: var(--blur-xl);
-  -webkit-backdrop-filter: var(--blur-xl);
+  background: var(--surface-primary);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border: 1px solid var(--glass-border-medium);
   border-radius: var(--radius-2xl);
   width: 600px;
@@ -356,9 +356,9 @@ defineExpose({ open, close })
 
 .hint {
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   padding: var(--space-1) var(--space-2);
-  background: transparent;
+  background: var(--surface-primary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
 }

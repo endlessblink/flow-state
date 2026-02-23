@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { routeIntent } from '@/services/ai/pipeline/intentRouter'
+import { routeIntent, routeIntentByKeywords, parseClassification } from '@/services/ai/pipeline/intentRouter'
 import {
   getTemplate,
   hasTemplate,
@@ -34,7 +34,7 @@ const mockTasks = [
 // 1. intentRouter
 // ---------------------------------------------------------------------------
 
-describe('intentRouter — routeIntent()', () => {
+describe('intentRouter — routeIntentByKeywords()', () => {
   let entityMemory: EntityMemory
 
   beforeEach(() => {
@@ -44,25 +44,25 @@ describe('intentRouter — routeIntent()', () => {
   // ── Task queries ──────────────────────────────────────────────────────────
 
   it('routes "show tasks" to task_query with list_tasks tool', () => {
-    const result = routeIntent('show tasks', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('show tasks', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
   })
 
   it('routes "my tasks" to task_query with list_tasks tool', () => {
-    const result = routeIntent('my tasks', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('my tasks', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
   })
 
   it('routes Hebrew "המשימות שלי" to task_query with list_tasks tool', () => {
-    const result = routeIntent('המשימות שלי', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('המשימות שלי', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
   })
 
   it('routes Hebrew "הצג" to task_query with list_tasks tool', () => {
-    const result = routeIntent('הצג', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('הצג', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
   })
@@ -70,13 +70,13 @@ describe('intentRouter — routeIntent()', () => {
   // ── Overdue queries ───────────────────────────────────────────────────────
 
   it('routes "overdue tasks" to task_query with get_overdue_tasks tool', () => {
-    const result = routeIntent('overdue tasks', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('overdue tasks', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
   })
 
   it('routes Hebrew "באיחור" to task_query with get_overdue_tasks tool', () => {
-    const result = routeIntent('באיחור', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('באיחור', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
   })
@@ -84,13 +84,13 @@ describe('intentRouter — routeIntent()', () => {
   // ── Suggestion queries ────────────────────────────────────────────────────
 
   it('routes "what should I do" to task_query with suggest_next_task', () => {
-    const result = routeIntent('what should I do', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('what should I do', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'suggest_next_task')).toBe(true)
   })
 
   it('routes Hebrew "מה לעשות" to task_query with suggest_next_task', () => {
-    const result = routeIntent('מה לעשות', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('מה לעשות', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'suggest_next_task')).toBe(true)
   })
@@ -98,28 +98,28 @@ describe('intentRouter — routeIntent()', () => {
   // ── Timer actions ─────────────────────────────────────────────────────────
 
   it('routes "start timer" to timer with start_timer and skipLLM=true', () => {
-    const result = routeIntent('start timer', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('start timer', mockTasks, entityMemory)
     expect(result.type).toBe('timer')
     expect(result.tools.some(t => t.tool === 'start_timer')).toBe(true)
     expect(result.skipLLM).toBe(true)
   })
 
   it('routes Hebrew "התחל טיימר" to timer with start_timer and skipLLM=true', () => {
-    const result = routeIntent('התחל טיימר', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('התחל טיימר', mockTasks, entityMemory)
     expect(result.type).toBe('timer')
     expect(result.tools.some(t => t.tool === 'start_timer')).toBe(true)
     expect(result.skipLLM).toBe(true)
   })
 
   it('routes "stop timer" to timer with stop_timer and skipLLM=true', () => {
-    const result = routeIntent('stop timer', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('stop timer', mockTasks, entityMemory)
     expect(result.type).toBe('timer')
     expect(result.tools.some(t => t.tool === 'stop_timer')).toBe(true)
     expect(result.skipLLM).toBe(true)
   })
 
   it('routes Hebrew "עצור טיימר" to timer with stop_timer and skipLLM=true', () => {
-    const result = routeIntent('עצור טיימר', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('עצור טיימר', mockTasks, entityMemory)
     expect(result.type).toBe('timer')
     expect(result.tools.some(t => t.tool === 'stop_timer')).toBe(true)
     expect(result.skipLLM).toBe(true)
@@ -127,7 +127,7 @@ describe('intentRouter — routeIntent()', () => {
 
   it('routes generic "timer" to timer with get_timer_status and skipLLM not true', () => {
     // "timer" alone matches the generic catch-all, not start/stop
-    const result = routeIntent('timer', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('timer', mockTasks, entityMemory)
     expect(result.type).toBe('timer')
     expect(result.tools.some(t => t.tool === 'get_timer_status')).toBe(true)
     expect(result.skipLLM).toBeFalsy()
@@ -135,14 +135,14 @@ describe('intentRouter — routeIntent()', () => {
 
   it('routes "start timer" and uses last entity from memory as taskId', () => {
     entityMemory.trackFromToolResult([{ id: 'task-2', title: 'Video project' }])
-    const result = routeIntent('start timer', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('start timer', mockTasks, entityMemory)
     expect(result.tools.some(t => t.tool === 'start_timer')).toBe(true)
     const timerTool = result.tools.find(t => t.tool === 'start_timer')
     expect(timerTool?.parameters?.taskId).toBe('task-2')
   })
 
   it('routes "start timer" with no entity memory → taskId defaults to "general"', () => {
-    const result = routeIntent('start timer', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('start timer', mockTasks, entityMemory)
     const timerTool = result.tools.find(t => t.tool === 'start_timer')
     expect(timerTool?.parameters?.taskId).toBe('general')
   })
@@ -150,7 +150,7 @@ describe('intentRouter — routeIntent()', () => {
   // ── Create actions ────────────────────────────────────────────────────────
 
   it('routes "create task Buy milk" to task_action with create_task and title "Buy milk"', () => {
-    const result = routeIntent('create task Buy milk', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('create task Buy milk', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'create_task')).toBe(true)
     const createTool = result.tools.find(t => t.tool === 'create_task')
@@ -158,7 +158,7 @@ describe('intentRouter — routeIntent()', () => {
   })
 
   it('routes "add task Review PR" to task_action with create_task and title "Review PR"', () => {
-    const result = routeIntent('add task Review PR', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('add task Review PR', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'create_task')).toBe(true)
     const createTool = result.tools.find(t => t.tool === 'create_task')
@@ -166,7 +166,7 @@ describe('intentRouter — routeIntent()', () => {
   })
 
   it('routes Hebrew "צור משימה לקנות חלב" to task_action with create_task', () => {
-    const result = routeIntent('צור משימה לקנות חלב', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('צור משימה לקנות חלב', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'create_task')).toBe(true)
     const createTool = result.tools.find(t => t.tool === 'create_task')
@@ -175,7 +175,7 @@ describe('intentRouter — routeIntent()', () => {
   })
 
   it('routes "create task" with no title to task_action without skipLLM', () => {
-    const result = routeIntent('create task', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('create task', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'create_task')).toBe(true)
     expect(result.skipLLM).toBeFalsy()
@@ -184,13 +184,13 @@ describe('intentRouter — routeIntent()', () => {
   // ── Done / complete actions ───────────────────────────────────────────────
 
   it('routes "mark video as done" to task_action with mark_task_done via fuzzy match', () => {
-    const result = routeIntent('mark video as done', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('mark video as done', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'mark_task_done')).toBe(true)
   })
 
   it('routes "done" alone to task_action with mark_task_done (raw fragment passed through)', () => {
-    const result = routeIntent('done', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('done', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     // "done" is treated as a raw task reference fragment — router passes it through to mark_task_done
     // with skipLLM=false so the LLM/tool can attempt to resolve it at runtime
@@ -199,7 +199,7 @@ describe('intentRouter — routeIntent()', () => {
   })
 
   it('routes Hebrew "סיים video project" to task_action with mark_task_done', () => {
-    const result = routeIntent('סיים video project', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('סיים video project', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'mark_task_done')).toBe(true)
   })
@@ -207,13 +207,13 @@ describe('intentRouter — routeIntent()', () => {
   // ── Planning ──────────────────────────────────────────────────────────────
 
   it('routes "plan my week" to planning with generate_weekly_plan', () => {
-    const result = routeIntent('plan my week', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('plan my week', mockTasks, entityMemory)
     expect(result.type).toBe('planning')
     expect(result.tools.some(t => t.tool === 'generate_weekly_plan')).toBe(true)
   })
 
   it('routes Hebrew "תכנון שבועי" to planning with generate_weekly_plan', () => {
-    const result = routeIntent('תכנון שבועי', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('תכנון שבועי', mockTasks, entityMemory)
     expect(result.type).toBe('planning')
     expect(result.tools.some(t => t.tool === 'generate_weekly_plan')).toBe(true)
   })
@@ -221,25 +221,25 @@ describe('intentRouter — routeIntent()', () => {
   // ── Stats ─────────────────────────────────────────────────────────────────
 
   it('routes "how am I doing" to stats with get_productivity_stats', () => {
-    const result = routeIntent('how am I doing', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('how am I doing', mockTasks, entityMemory)
     expect(result.type).toBe('stats')
     expect(result.tools.some(t => t.tool === 'get_productivity_stats')).toBe(true)
   })
 
   it('routes Hebrew "סטטיסטיקות" to stats with get_productivity_stats', () => {
-    const result = routeIntent('סטטיסטיקות', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('סטטיסטיקות', mockTasks, entityMemory)
     expect(result.type).toBe('stats')
     expect(result.tools.some(t => t.tool === 'get_productivity_stats')).toBe(true)
   })
 
   it('routes "today" to stats with get_daily_summary', () => {
-    const result = routeIntent('today', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('today', mockTasks, entityMemory)
     expect(result.type).toBe('stats')
     expect(result.tools.some(t => t.tool === 'get_daily_summary')).toBe(true)
   })
 
   it('routes "this week" to stats with get_weekly_summary', () => {
-    const result = routeIntent('this week', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('this week', mockTasks, entityMemory)
     expect(result.type).toBe('stats')
     expect(result.tools.some(t => t.tool === 'get_weekly_summary')).toBe(true)
   })
@@ -247,7 +247,7 @@ describe('intentRouter — routeIntent()', () => {
   // ── Greetings ─────────────────────────────────────────────────────────────
 
   it('routes "hi" to greeting with skipLLM=true and no tools', () => {
-    const result = routeIntent('hi', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('hi', mockTasks, entityMemory)
     expect(result.type).toBe('greeting')
     expect(result.skipLLM).toBe(true)
     expect(result.tools).toHaveLength(0)
@@ -258,14 +258,14 @@ describe('intentRouter — routeIntent()', () => {
     // is unreliable in JS regex because \b only works with ASCII word chars. "שלום" alone
     // does not match the pattern so it falls through to freeform/keyword routing.
     // The actual greeting support is via "היי" which uses /^היי\b/.
-    const result = routeIntent('שלום', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('שלום', mockTasks, entityMemory)
     expect(result.language).toBe('he')
     // Type is freeform since "שלום" alone has no matching keywords and greeting regex fails
     expect(result.type).toBe('freeform')
   })
 
   it('routes "hello there" to greeting with skipLLM=true', () => {
-    const result = routeIntent('hello there', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('hello there', mockTasks, entityMemory)
     expect(result.type).toBe('greeting')
     expect(result.skipLLM).toBe(true)
   })
@@ -275,7 +275,7 @@ describe('intentRouter — routeIntent()', () => {
     // "hi can you show my tasks" is 24 chars — under the 30-char cutoff — and starts with "hi",
     // so it IS classified as a greeting. Longer messages with a task keyword after would be
     // handled by callers adding more context or using explicit task language.
-    const result = routeIntent('hi can you show my tasks', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('hi can you show my tasks', mockTasks, entityMemory)
     expect(result.type).toBe('greeting')
     expect(result.skipLLM).toBe(true)
   })
@@ -283,31 +283,31 @@ describe('intentRouter — routeIntent()', () => {
   // ── Freeform fallback ─────────────────────────────────────────────────────
 
   it('routes "how do I organize my day?" to freeform', () => {
-    const result = routeIntent('how do I organize my day?', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('how do I organize my day?', mockTasks, entityMemory)
     expect(result.type).toBe('freeform')
   })
 
   it('routes "tell me a joke" to freeform', () => {
-    const result = routeIntent('tell me a joke', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('tell me a joke', mockTasks, entityMemory)
     expect(result.type).toBe('freeform')
   })
 
   // ── Language detection ────────────────────────────────────────────────────
 
   it('detects Hebrew input language for "מה המשימות שלי?"', () => {
-    const result = routeIntent('מה המשימות שלי?', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('מה המשימות שלי?', mockTasks, entityMemory)
     expect(result.language).toBe('he')
   })
 
   it('detects English input language for "show my tasks"', () => {
-    const result = routeIntent('show my tasks', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('show my tasks', mockTasks, entityMemory)
     expect(result.language).toBe('en')
   })
 
   // ── Edge cases ────────────────────────────────────────────────────────────
 
   it('handles empty string → freeform', () => {
-    const result = routeIntent('', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('', mockTasks, entityMemory)
     expect(result.type).toBe('freeform')
   })
 
@@ -323,7 +323,115 @@ describe('intentRouter — routeIntent()', () => {
       'tell me a joke',
     ]
     for (const msg of messages) {
-      const result = routeIntent(msg, mockTasks, entityMemory)
+      const result = routeIntentByKeywords(msg, mockTasks, entityMemory)
+      expect(result.formatDirective).toBeTruthy()
+      expect(result.formatDirective.length).toBeGreaterThan(0)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 1b. parseClassification (LLM response parser)
+// ---------------------------------------------------------------------------
+
+describe('parseClassification()', () => {
+  it('parses valid JSON response', () => {
+    const result = parseClassification('{"tool":"list_tasks","params":{},"confidence":"high"}')
+    expect(result.tool).toBe('list_tasks')
+    expect(result.confidence).toBe('high')
+    expect(result.params).toEqual({})
+  })
+
+  it('parses JSON with params', () => {
+    const result = parseClassification('{"tool":"create_task","params":{"title":"buy milk"},"confidence":"high"}')
+    expect(result.tool).toBe('create_task')
+    expect(result.params).toEqual({ title: 'buy milk' })
+  })
+
+  it('strips markdown code fences', () => {
+    const result = parseClassification('```json\n{"tool":"stop_timer","params":{},"confidence":"high"}\n```')
+    expect(result.tool).toBe('stop_timer')
+    expect(result.confidence).toBe('high')
+  })
+
+  it('extracts JSON from chatty response', () => {
+    const result = parseClassification('Based on the message, I classify this as: {"tool":"generate_weekly_plan","params":{},"confidence":"medium"} because...')
+    expect(result.tool).toBe('generate_weekly_plan')
+    expect(result.confidence).toBe('medium')
+  })
+
+  it('returns NONE/low for garbage input', () => {
+    const result = parseClassification('this is not json at all')
+    expect(result.tool).toBe('NONE')
+    expect(result.confidence).toBe('low')
+  })
+
+  it('returns NONE/low for empty string', () => {
+    const result = parseClassification('')
+    expect(result.tool).toBe('NONE')
+    expect(result.confidence).toBe('low')
+  })
+
+  it('returns NONE/low for null-ish input', () => {
+    const result = parseClassification(null as unknown as string)
+    expect(result.tool).toBe('NONE')
+    expect(result.confidence).toBe('low')
+  })
+
+  it('defaults confidence to medium when missing', () => {
+    const result = parseClassification('{"tool":"list_tasks","params":{}}')
+    expect(result.tool).toBe('list_tasks')
+    expect(result.confidence).toBe('medium')
+  })
+
+  it('defaults params to empty object when missing', () => {
+    const result = parseClassification('{"tool":"list_tasks","confidence":"high"}')
+    expect(result.params).toEqual({})
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 1c. routeIntent (async, LLM-first with keyword fallback)
+// ---------------------------------------------------------------------------
+
+describe('routeIntent() — async LLM-first router', () => {
+  let entityMemory: EntityMemory
+
+  beforeEach(() => {
+    entityMemory = new EntityMemory()
+  })
+
+  it('greetings bypass LLM classification entirely', async () => {
+    const result = await routeIntent('hi', mockTasks, entityMemory)
+    expect(result.type).toBe('greeting')
+    expect(result.skipLLM).toBe(true)
+    expect(result.tools).toHaveLength(0)
+  })
+
+  it('falls back to keyword matching when LLM is unavailable', async () => {
+    // When no AI provider is configured, getSharedRouter() will throw,
+    // which classifyWithLLM catches and returns null → keyword fallback
+    const result = await routeIntent('show tasks', mockTasks, entityMemory)
+    expect(result.type).toBe('task_query')
+    expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
+  })
+
+  it('returns a valid RoutedIntent (not undefined) for freeform messages', async () => {
+    const result = await routeIntent('tell me a joke', mockTasks, entityMemory)
+    expect(result).toBeDefined()
+    expect(result.type).toBe('freeform')
+    expect(result.formatDirective).toBeTruthy()
+  })
+
+  it('returns Hebrew language for Hebrew input', async () => {
+    const result = await routeIntent('המשימות שלי', mockTasks, entityMemory)
+    expect(result.language).toBe('he')
+  })
+
+  it('every result has a non-empty formatDirective', async () => {
+    const messages = ['show tasks', 'start timer', 'create task Test', 'hi', 'random text']
+    for (const msg of messages) {
+      const result = await routeIntent(msg, mockTasks, entityMemory)
       expect(result.formatDirective).toBeTruthy()
       expect(result.formatDirective.length).toBeGreaterThan(0)
     }
@@ -772,33 +880,33 @@ describe('deterministic pipeline — integration', () => {
 
   it('Hebrew "המשימות שלי" → router classifies task_query with list_tasks tool', () => {
     // "מה המשימות" alone doesn't match any keyword; use "המשימות שלי" which IS in the keyword list
-    const result = routeIntent('המשימות שלי', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('המשימות שלי', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
     expect(result.language).toBe('he')
   })
 
   it('English "show overdue" → router classifies task_query with get_overdue_tasks', () => {
-    const result = routeIntent('show overdue', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('show overdue', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
     expect(result.language).toBe('en')
   })
 
   it('"start timer" → router classifies timer, skipLLM=true', () => {
-    const result = routeIntent('start timer', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('start timer', mockTasks, entityMemory)
     expect(result.type).toBe('timer')
     expect(result.skipLLM).toBe(true)
   })
 
   it('"tell me a joke" → router classifies freeform', () => {
-    const result = routeIntent('tell me a joke', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('tell me a joke', mockTasks, entityMemory)
     expect(result.type).toBe('freeform')
     expect(result.skipLLM).toBeFalsy()
   })
 
   it('greeting returns skipLLM=true with no tools', () => {
-    const result = routeIntent('hello', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('hello', mockTasks, entityMemory)
     expect(result.type).toBe('greeting')
     expect(result.skipLLM).toBe(true)
     expect(result.tools).toHaveLength(0)
@@ -828,7 +936,7 @@ describe('deterministic pipeline — integration', () => {
     }
 
     for (const [expectedType, message] of Object.entries(testMessages)) {
-      const result = routeIntent(message, mockTasks, entityMemory)
+      const result = routeIntentByKeywords(message, mockTasks, entityMemory)
       // verify type matches expectation (or that a directive exists regardless)
       expect(result.formatDirective.length).toBeGreaterThan(0)
     }
@@ -840,7 +948,7 @@ describe('deterministic pipeline — integration', () => {
     // Simulate a prior tool call that listed a task
     entityMemory.trackFromToolResult([{ id: 'task-99', title: 'Important task' }])
 
-    const result = routeIntent('start timer', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('start timer', mockTasks, entityMemory)
     expect(result.type).toBe('timer')
     const startTool = result.tools.find(t => t.tool === 'start_timer')
     expect(startTool?.parameters?.taskId).toBe('task-99')
@@ -848,7 +956,7 @@ describe('deterministic pipeline — integration', () => {
 
   it('start timer defaults to "general" when no entity in memory', () => {
     // No entities tracked — fresh memory
-    const result = routeIntent('start timer', mockTasks, entityMemory)
+    const result = routeIntentByKeywords('start timer', mockTasks, entityMemory)
     const startTool = result.tools.find(t => t.tool === 'start_timer')
     expect(startTool?.parameters?.taskId).toBe('general')
   })

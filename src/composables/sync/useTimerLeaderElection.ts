@@ -8,7 +8,7 @@ interface TimerLeaderState {
 
 interface LeaderElectionDeps {
     tabId: string
-    broadcastMessage: (msg: any) => void
+    broadcastMessage: (msg: Record<string, unknown>) => void
     onBecomeLeader?: () => void
     onLoseLeadership?: () => void
     onSessionUpdate?: (session: unknown) => void

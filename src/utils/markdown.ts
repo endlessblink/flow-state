@@ -84,8 +84,7 @@ marked.use({
 
       let body = ''
       for (const item of items) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        body += (this as any).listitem(item)
+        body += (this as unknown as { listitem: (item: unknown) => string }).listitem(item)
       }
 
       return `<${tag}${dataAttr}${startAttr}>\n${body}</${tag}>\n`

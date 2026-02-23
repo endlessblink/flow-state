@@ -40,10 +40,10 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     if (!data) return []
 
                     // TASK-142 DEBUG: Log what positions we receive from Supabase
-                    const tasksWithPos = data.filter((d: any) => d.position)
+                    const tasksWithPos = data.filter((d: Record<string, unknown>) => d.position)
                     if (tasksWithPos.length > 0) {
                         console.log(`📥 [TASK-142] LOADED ${tasksWithPos.length} tasks with positions from Supabase:`,
-                            tasksWithPos.map((d: any) => ({ id: d.id?.substring(0, 8), pos: d.position })))
+                            tasksWithPos.map((d: Record<string, unknown>) => ({ id: d.id?.substring(0, 8), pos: d.position })))
                     } else {
                         console.log(`📥 [TASK-142] LOADED ${data.length} tasks - NONE have positions in DB`)
                     }
@@ -158,10 +158,10 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 }
 
                 // TASK-142 DEBUG: Log what Supabase returned
-                const positionSaves = data.filter((d: any) => d.position)
+                const positionSaves = data.filter((d: Record<string, unknown>) => d.position)
                 if (positionSaves.length > 0) {
                     console.log(`📥 [TASK-142] RECEIVED ${positionSaves.length} tasks with positions:`,
-                        positionSaves.map((d: any) => ({ id: d.id?.substring(0, 8), pos: d.position })))
+                        positionSaves.map((d: Record<string, unknown>) => ({ id: d.id?.substring(0, 8), pos: d.position })))
                 } else if (tasksWithPos.length > 0) {
                     console.error(`❌ [TASK-142] POSITION LOST! Sent ${tasksWithPos.length} with positions, received 0 back!`)
                 }
@@ -272,7 +272,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     .eq('user_id', userId)
 
                 if (error) throw error
-                return data?.map((d: any) => d.id) || []
+                return data?.map((d: Record<string, unknown>) => d.id) || []
             }, 'fetchDeletedTaskIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted task IDs:', e)

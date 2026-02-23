@@ -871,11 +871,11 @@ const selectSmartView = (view: string) => {
   
   // Check if view is a duration filter
   if (['quick', 'short', 'medium', 'long', 'unestimated'].includes(view)) {
-    taskStore.setActiveDurationFilter(view as any)
+    taskStore.setActiveDurationFilter(view as Parameters<typeof taskStore.setActiveDurationFilter>[0])
     taskStore.setSmartView(null)
   } else {
     // It's a smart view
-    taskStore.setSmartView(view as any)
+    taskStore.setSmartView(view as Parameters<typeof taskStore.setSmartView>[0])
     taskStore.setActiveDurationFilter(null)
   }
   

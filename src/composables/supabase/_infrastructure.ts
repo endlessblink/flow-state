@@ -214,12 +214,12 @@ export function createDatabaseHelpers(
      * TASK-329: Added exponential backoff and auth resilience
      */
     const withRetry = async <T>(operation: () => Promise<T>, context: string, maxRetries = 3): Promise<T> => {
-        let lastErr: any = null
+        let lastErr: unknown = null
 
         for (let i = 0; i < maxRetries; i++) {
             try {
                 return await operation()
-            } catch (err: any) {
+            } catch (err: unknown) {
                 lastErr = err
                 const message = err?.message || String(err)
                 const status = err?.status || err?.code

@@ -114,7 +114,10 @@ function t(
     | 'languageInstruction'
     | 'formatInstruction'
     | 'noTasks'
-    | 'andNMore',
+    | 'andNMore'
+    | 'mandatoryReasoningHeader'
+    | 'responseRules'
+    | 'maxSuffix',
   vars?: Record<string, string | number>
 ): string {
   const v = vars ?? {}
@@ -140,6 +143,18 @@ function t(
     andNMore: {
       en: `…and ${v.n} more task${Number(v.n) === 1 ? '' : 's'}`,
       he: `…ועוד ${v.n} משימות`,
+    },
+    mandatoryReasoningHeader: {
+      en: 'MANDATORY REASONING POINTS (you MUST mention ALL of these in your response):',
+      he: 'נקודות חובה (חייב לציין את כולן בתשובה):',
+    },
+    responseRules: {
+      en: 'RESPONSE RULES:',
+      he: 'כללי תגובה:',
+    },
+    maxSuffix: {
+      en: 'max',
+      he: 'מקסימום',
     },
   }
 
@@ -363,15 +378,18 @@ function extractObjectPoints(
 
 /**
  * Serialise a ReasoningDirective into the imperative prompt string.
+ *
+ * @param directive - The structured directive to serialise
+ * @param language  - Target language for scaffold headers ('he' | 'en')
  */
-function serialiseDirective(directive: ReasoningDirective): string {
+function serialiseDirective(directive: ReasoningDirective, language: 'he' | 'en'): string {
   if (directive.points.length === 0) {
     // Edge case: no points — return the no-tasks short directive
     return directive.formatInstruction
   }
 
   const lines: string[] = [
-    'MANDATORY REASONING POINTS (you MUST mention ALL of these in your response):',
+    t(language, 'mandatoryReasoningHeader'),
   ]
 
   directive.points.forEach((point, idx) => {
@@ -379,9 +397,9 @@ function serialiseDirective(directive: ReasoningDirective): string {
   })
 
   lines.push('')
-  lines.push('RESPONSE RULES:')
+  lines.push(t(language, 'responseRules'))
   lines.push(`- ${directive.languageInstruction}`)
-  lines.push(`- ${directive.maxLength} max`)
+  lines.push(`- ${directive.maxLength} ${t(language, 'maxSuffix')}`)
   lines.push(directive.formatInstruction)
 
   return lines.join('\n')
@@ -450,7 +468,7 @@ export function buildReasoningDirective(
         formatInstruction: t(lang, 'formatInstruction'),
       }
 
-      return serialiseDirective(directive)
+      return serialiseDirective(directive, lang)
     }
 
     // Non-task array — fall through to generic handling
@@ -478,7 +496,7 @@ export function buildReasoningDirective(
       formatInstruction: t(lang, 'formatInstruction'),
     }
 
-    return serialiseDirective(directive)
+    return serialiseDirective(directive, lang)
   }
 
   // --- Unknown shape — skip directive ---

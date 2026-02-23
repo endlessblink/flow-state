@@ -8,6 +8,14 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1408: Canvas tasks get blurry when zooming out (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-02-23)
+
+**Problem**: Task nodes on the canvas become blurry/pixelated when zooming out. They should remain sharp at any zoom level. This is a regression — it worked correctly before.
+
+---
+
 ### TASK-1405: Replace LLM Distribution with Deterministic Algorithm in Weekly Plan (👀 REVIEW)
 
 **Priority**: P1 | **Status**: 👀 REVIEW (2026-02-22)
@@ -99,6 +107,16 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 1. Normalized `task.dueDate` via `.slice(0, 10)` in `useBoardState.ts` — tasks now sort into correct date buckets
 2. Moved "No Date" column to leftmost position, removed dead "Inbox" column
 3. Added `ProjectEmojiIcon` component to swimlane headers for project emoji/color display
+
+---
+
+### BUG-1407: Canvas node connections don't work (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Cannot connect canvas task nodes by dragging from handle to handle. Connections silently fail with no feedback.
+
+**Investigation**: `handleConnect` in `useCanvasConnections.ts` has multiple silent rejection conditions — all return without any user feedback. `syncEdges()` is called without `force: true`, so edges may not render even when `parentTaskId` is saved.
 
 ---
 

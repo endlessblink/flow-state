@@ -265,7 +265,7 @@ const handleQuickTaskCreate = async (data: {
     await taskStore.createTaskWithUndo({
       title: data.title,
       description: data.description,
-      status: data.status as any,
+      status: data.status as Task['status'],
       priority: data.priority,
       dueDate: data.dueDate,
       projectId: data.projectId || undefined
@@ -298,7 +298,7 @@ const confirmMoveToSection = async (sectionId: string) => {
       y: section.position.y + (section.position.height / 2) - 40
     }
 
-    const updates: any = {
+    const updates: Partial<Task> = {
       canvasPosition: newPosition
     }
 
@@ -449,7 +449,7 @@ const handleProjectContextMenu = (event: Event) => {
 
 onMounted(() => {
   window.addEventListener('open-task-edit', handleOpenTaskEdit)
-  window.addEventListener('task-context-menu' as any, handleTaskContextMenu as unknown as EventListener)
+  window.addEventListener('task-context-menu', handleTaskContextMenu as unknown as EventListener)
   window.addEventListener('project-context-menu', handleProjectContextMenu)
   window.addEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
   window.addEventListener('open-search', () => { showSearchModal.value = true })
@@ -460,7 +460,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('open-task-edit', handleOpenTaskEdit)
-  window.removeEventListener('task-context-menu' as any, handleTaskContextMenu as unknown as EventListener)
+  window.removeEventListener('task-context-menu', handleTaskContextMenu as unknown as EventListener)
   window.removeEventListener('project-context-menu', handleProjectContextMenu)
   window.removeEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
   window.removeEventListener('open-search', () => { showSearchModal.value = true })

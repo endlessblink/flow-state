@@ -131,7 +131,7 @@ async function fetchICalUrl(url: string): Promise<string> {
         return await response.text()
       }
       throw new Error(`HTTP ${response.status}`)
-    } catch (e: any) {
+    } catch (e: unknown) {
       // If Tauri fetch fails, fall through to native fetch
       console.warn('[ExternalCalendar] Tauri fetch failed:', e.message)
     }
@@ -180,7 +180,7 @@ export function useExternalCalendar() {
           cals[idx] = { ...cals[idx], lastSynced: new Date().toISOString(), error: undefined }
           settingsStore.updateSetting('externalCalendars', cals)
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(`[ExternalCalendar] Sync failed for ${cal.name}:`, e)
         syncErrors.value.set(cal.id, e.message)
 

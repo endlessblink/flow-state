@@ -22,6 +22,7 @@ import { detectLanguage } from './languageDetector'
 import { getToolHints } from './toolHints'
 import type { EntityMemory } from './entityMemory'
 import type { DetectedLanguage } from './types'
+import { getSharedRouter } from '../routerFactory'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -248,7 +249,129 @@ function isGreeting(message: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Main exported function
+// LLM-based intent classification (Layer 1 upgrade)
+// ---------------------------------------------------------------------------
+
+/** Compact classification prompt — ~500 tokens input, ~50 tokens output */
+const CLASSIFICATION_PROMPT = `You are a task router. Classify the user's message into ONE tool.
+
+TOOLS:
+- list_tasks: Show/list tasks
+- get_overdue_tasks: Overdue/late tasks
+- suggest_next_task: What to work on next
+- search_tasks: Search tasks by name
+- create_task: Create a new task (extract title in params.title)
+- mark_task_done: Complete a task (extract name in params.task)
+- start_timer: Start timer/pomodoro
+- stop_timer: Stop timer
+- get_timer_status: Timer status
+- generate_weekly_plan: Plan the week
+- get_productivity_stats: Statistics/progress
+- get_daily_summary: Today summary
+- get_weekly_summary: Week summary
+- NONE: General conversation or unclear
+
+JSON only: {"tool":"<name>","params":{},"confidence":"high"|"medium"|"low"}`
+
+/** Result of the LLM classification call */
+interface LLMClassification {
+  tool: string
+  params: Record<string, string>
+  confidence: 'high' | 'medium' | 'low'
+}
+
+/**
+ * Parse the LLM's classification response into a structured object.
+ *
+ * Three parsing strategies:
+ * 1. Direct JSON.parse on trimmed response
+ * 2. Strip markdown code fences, retry parse
+ * 3. Regex extract `{..."tool"...}` from chatty response
+ * 4. Give up → return NONE with low confidence
+ */
+export function parseClassification(raw: string): LLMClassification {
+  const fallback: LLMClassification = { tool: 'NONE', params: {}, confidence: 'low' }
+
+  if (!raw || typeof raw !== 'string') return fallback
+
+  const trimmed = raw.trim()
+
+  // Strategy 1: Direct parse
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (parsed && typeof parsed.tool === 'string') {
+      return {
+        tool: parsed.tool,
+        params: parsed.params ?? {},
+        confidence: parsed.confidence ?? 'medium',
+      }
+    }
+  } catch { /* try next strategy */ }
+
+  // Strategy 2: Strip markdown code fences
+  const fenceStripped = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')
+  try {
+    const parsed = JSON.parse(fenceStripped)
+    if (parsed && typeof parsed.tool === 'string') {
+      return {
+        tool: parsed.tool,
+        params: parsed.params ?? {},
+        confidence: parsed.confidence ?? 'medium',
+      }
+    }
+  } catch { /* try next strategy */ }
+
+  // Strategy 3: Regex extract JSON object containing "tool" (allows one level of nested {})
+  const jsonMatch = trimmed.match(/\{(?:[^{}]|\{[^{}]*\})*"tool"\s*:\s*"[^"]*"(?:[^{}]|\{[^{}]*\})*\}/)
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0])
+      if (parsed && typeof parsed.tool === 'string') {
+        return {
+          tool: parsed.tool,
+          params: parsed.params ?? {},
+          confidence: parsed.confidence ?? 'medium',
+        }
+      }
+    } catch { /* give up */ }
+  }
+
+  return fallback
+}
+
+/**
+ * Classify user intent via a lightweight LLM call.
+ *
+ * Uses ~500 tokens input (compact system prompt + user message) and expects
+ * ~50 tokens output (single JSON object). With Groq this takes ~200-400ms.
+ *
+ * @returns Classification result, or null if the LLM call fails
+ */
+async function classifyWithLLM(userMessage: string): Promise<LLMClassification | null> {
+  try {
+    const router = await getSharedRouter()
+    const response = await router.chat(
+      [
+        { role: 'system', content: CLASSIFICATION_PROMPT },
+        { role: 'user', content: userMessage },
+      ],
+      {
+        temperature: 0,
+        maxTokens: 100,
+        skipUserContext: true,
+      }
+    )
+
+    return parseClassification(response.content)
+  } catch (error) {
+    // LLM call failed — caller will fall back to keyword matching
+    console.warn('[intentRouter] LLM classification failed, falling back to keywords:', error)
+    return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Keyword-only routing (exported for tests and as fallback)
 // ---------------------------------------------------------------------------
 
 /**
@@ -271,7 +394,7 @@ function isGreeting(message: string): boolean {
  * @param entityMemory - Per-conversation entity memory for pronoun/context resolution
  * @returns            RoutedIntent with pre-built tool calls ready for execution
  */
-export function routeIntent(
+export function routeIntentByKeywords(
   userMessage: string,
   tasks: TaskLike[],
   entityMemory: EntityMemory,
@@ -422,4 +545,137 @@ export function routeIntent(
     formatDirective: FORMAT_DIRECTIVES[intentType],
     skipLLM,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Main exported function (LLM-first with keyword fallback)
+// ---------------------------------------------------------------------------
+
+/**
+ * Route a user message to an intent + pre-built tool calls.
+ *
+ * Resolution order:
+ * 1. Greeting detection (regex fast path — no LLM call)
+ * 2. LLM classification (~300ms via Groq)
+ *    - high/medium confidence → route to tool
+ *    - low confidence → freeform (ReAct)
+ *    - parse failure → fall through to keyword matching
+ * 3. Keyword matching fallback (instant, existing behavior)
+ *
+ * @param userMessage  - Raw user input string
+ * @param tasks        - Current task list for entity resolution
+ * @param entityMemory - Per-conversation entity memory for pronoun/context resolution
+ * @returns            RoutedIntent with pre-built tool calls ready for execution
+ */
+export async function routeIntent(
+  userMessage: string,
+  tasks: TaskLike[],
+  entityMemory: EntityMemory,
+): Promise<RoutedIntent> {
+  const detected = detectLanguage(userMessage)
+  const language = resolveLanguage(detected)
+
+  // ── 1. Greeting check (fast path — no LLM call) ──────────────────────
+  if (isGreeting(userMessage)) {
+    return {
+      type: 'greeting',
+      tools: [],
+      language,
+      formatDirective: FORMAT_DIRECTIVES.greeting,
+      skipLLM: true,
+    }
+  }
+
+  // ── 2. LLM classification ─────────────────────────────────────────────
+  const classification = await classifyWithLLM(userMessage)
+
+  if (classification && classification.tool !== 'NONE' && classification.confidence !== 'low') {
+    // Map the classified tool to an intent type
+    const intentType: IntentType = TOOL_TO_INTENT[classification.tool] ?? 'freeform'
+
+    // If the tool is unknown (not in TOOL_TO_INTENT), fall through to keywords
+    if (intentType === 'freeform' && classification.tool !== 'NONE') {
+      return routeIntentByKeywords(userMessage, tasks, entityMemory)
+    }
+
+    // ── Build tool call with parameter enrichment ───────────────────────
+    let toolCall: ToolCall
+    let skipLLM = false
+
+    switch (classification.tool) {
+      case 'start_timer': {
+        const lastEntity = entityMemory.getLastMentioned()
+        const taskId = lastEntity?.id ?? 'general'
+        toolCall = { tool: 'start_timer', parameters: { taskId } }
+        skipLLM = true
+        break
+      }
+
+      case 'stop_timer': {
+        toolCall = { tool: 'stop_timer', parameters: {} }
+        skipLLM = true
+        break
+      }
+
+      case 'get_timer_status': {
+        toolCall = { tool: 'get_timer_status', parameters: {} }
+        break
+      }
+
+      case 'create_task': {
+        // Use LLM-extracted title, fall back to keyword extraction
+        const llmTitle = classification.params?.title
+        const title = llmTitle || extractCreateTitle(userMessage)
+        toolCall = {
+          tool: 'create_task',
+          parameters: title ? { title } : { title: '' },
+        }
+        skipLLM = title.length > 0
+        break
+      }
+
+      case 'mark_task_done': {
+        // Use LLM-extracted task reference, fall back to keyword extraction
+        const llmRef = classification.params?.task
+        const ref = llmRef || extractMarkDoneReference(userMessage)
+        const resolved = ref ? resolveTask(ref, tasks) : null
+
+        if (resolved && resolved.confidence !== 'low') {
+          toolCall = {
+            tool: 'mark_task_done',
+            parameters: { task: resolved.task.id },
+          }
+          skipLLM = true
+        } else if (ref) {
+          toolCall = { tool: 'mark_task_done', parameters: { task: ref } }
+        } else {
+          toolCall = { tool: 'list_tasks', parameters: {} }
+        }
+        break
+      }
+
+      case 'search_tasks': {
+        const query = classification.params?.query || userMessage
+        toolCall = { tool: 'search_tasks', parameters: { query } }
+        break
+      }
+
+      default: {
+        // No-parameter read tools: list_tasks, get_overdue_tasks, suggest_next_task, etc.
+        toolCall = { tool: classification.tool, parameters: {} }
+        break
+      }
+    }
+
+    return {
+      type: intentType,
+      tools: [toolCall],
+      language,
+      formatDirective: FORMAT_DIRECTIVES[intentType],
+      skipLLM,
+    }
+  }
+
+  // ── 3. Keyword matching fallback ──────────────────────────────────────
+  return routeIntentByKeywords(userMessage, tasks, entityMemory)
 }

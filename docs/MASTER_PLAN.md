@@ -193,10 +193,11 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Root Cause**: Z-index layering. SearchModal overlay is `z-index: 1400` (`--z-popover`). TaskContextMenu is `z-index: 9999` (above overlay ✅). But submenus are Teleported to `<body>` with `z-index: calc(--z-dropdown + 1) = 1001` — below the search overlay (1400) ❌.
 
 **Fix**:
-1. `SearchModal.vue`: Close modal in `handleTaskRightClick` before dispatching context menu event
-2. All 4 submenu components: Changed `z-index` from `calc(var(--z-dropdown) + 1)` to `10001` (defense-in-depth)
+1. All 4 submenu components: Changed `z-index` from `calc(var(--z-dropdown) + 1)` to `10001` (above search overlay)
+2. `SectionSelector.vue`: Added missing `class="select-dropdown"` + `ref="dropdownRef"` on Teleported div, fixed click-outside handler with `capture: true`, fixed CSS syntax error
+3. `useAppShortcuts.ts`: Added `event.code === 'KeyF'` for Hebrew keyboard layout compatibility
 
-**Files Changed**: `SearchModal.vue`, `StatusSubmenu.vue`, `DurationSubmenu.vue`, `ProjectSubmenu.vue`, `MoreSubmenu.vue`
+**Files Changed**: `StatusSubmenu.vue`, `DurationSubmenu.vue`, `ProjectSubmenu.vue`, `MoreSubmenu.vue`, `SectionSelector.vue`, `useAppShortcuts.ts`
 
 ---
 

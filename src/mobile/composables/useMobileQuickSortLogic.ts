@@ -214,8 +214,19 @@ export function useMobileQuickSortLogic() {
     triggerHaptic('light')
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!currentTask.value) return
+    // Persist any pending local changes (e.g., AI Apply All sets values locally)
+    if (isTaskDirty.value) {
+      const task = currentTask.value
+      await taskStore.updateTask(task.id, {
+        priority: task.priority,
+        dueDate: task.dueDate || '',
+        status: task.status,
+        estimatedDuration: task.estimatedDuration,
+        projectId: task.projectId || undefined
+      })
+    }
     saveTask()
     showCelebration.value = true
     celebrationTimers.push(setTimeout(() => {
@@ -295,22 +306,18 @@ export function useMobileQuickSortLogic() {
     quickSortAI.dismiss()
   }
 
-  async function handleApplySuggestions() {
+  function handleApplySuggestions() {
     if (!currentTask.value) return
-    const updates: Record<string, unknown> = {}
+    const task = currentTask.value
     for (const s of currentSuggestions.value) {
-      if (s.field === 'priority') updates.priority = s.suggestedValue
-      else if (s.field === 'dueDate') updates.dueDate = s.suggestedValue
-      else if (s.field === 'status') updates.status = s.suggestedValue
-      else if (s.field === 'estimatedDuration') updates.estimatedDuration = s.suggestedValue
+      if (s.field === 'priority') task.priority = s.suggestedValue as typeof task.priority
+      else if (s.field === 'dueDate') task.dueDate = s.suggestedValue as string
+      else if (s.field === 'status') task.status = s.suggestedValue as typeof task.status
+      else if (s.field === 'estimatedDuration') task.estimatedDuration = s.suggestedValue as number
     }
-    if (suggestedProjectId.value) updates.projectId = suggestedProjectId.value
-    if (Object.keys(updates).length > 0) {
-      await taskStore.updateTask(currentTask.value.id, updates)
-    }
+    if (suggestedProjectId.value) task.projectId = suggestedProjectId.value
     closeAISheet()
-    showCelebration.value = true
-    setTimeout(() => { showCelebration.value = false }, 600)
+    triggerHaptic('medium')
   }
 
   function cancelDelete() {

@@ -155,7 +155,7 @@ defineEmits<{
   padding: var(--space-4) var(--space-5);
   /* BUG-1406: Account for 64px mobile bottom nav bar + device safe area */
   padding-bottom: calc(var(--space-16) + var(--space-6) + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to top, var(--overlay-bg), var(--overlay-component-bg-lighter), transparent);
+  background: transparent;
   margin-top: auto;
   flex-shrink: 0;
   touch-action: pan-x pan-y;

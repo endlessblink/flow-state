@@ -53,13 +53,13 @@
 
 ---
 
-### TASK-1409: Highlight active/in-progress tasks in Calendar view (🔄 IN PROGRESS)
+### TASK-1409: Highlight active/in-progress tasks in Calendar view (👀 REVIEW)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-02-23)
+**Priority**: P1 | **Status**: 👀 REVIEW (2026-02-23)
 
 **Problem**: In the Calendar day/week view, tasks that are active (status = "in progress") look identical to other tasks. They should have a visual highlight (e.g., teal border glow or accent indicator) so the user can instantly see what they're currently working on.
 
-**Scope**: Calendar event cards only. Similar to the existing timer-active highlight pattern but based on task status rather than timer state.
+**Fix**: Added `status-active` CSS class to all 3 calendar views (Day, Week, Month). In-progress tasks get a teal left border (`--brand-primary`) with subtle inset glow (`--brand-primary-dim`). Follows same pattern as existing `status-done` class. Uses design tokens only — no hardcoded colors.
 
 ---
 

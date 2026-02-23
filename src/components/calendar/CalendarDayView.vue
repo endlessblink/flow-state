@@ -159,7 +159,8 @@ const {
               'selected': selectedEventIds?.has(calEvent.id),
               'has-overlap': calEvent.totalColumns > 1,
               'is-compact': calEvent.duration <= 30,
-              'status-done': getTaskStatus(calEvent) === 'done'
+              'status-done': getTaskStatus(calEvent) === 'done',
+              'status-active': getTaskStatus(calEvent) === 'in_progress'
             }"
             :style="getSlotTaskStyle(calEvent)"
             draggable="true"
@@ -211,14 +212,6 @@ const {
                   >
                     <Play :size="12" />
                   </button>
-                  <div
-                    class="status-indicator"
-                    :class="`status-${getTaskStatus(calEvent)}`"
-                    :title="`Status: ${getStatusLabel(calEvent)} (click to change)`"
-                    @click.stop="$emit('cycleStatus', $event, calEvent)"
-                  >
-                    {{ getStatusIcon(getTaskStatus(calEvent)) }}
-                  </div>
                   <button
                     class="remove-from-calendar-btn"
                     title="Remove from calendar (move to inbox)"
@@ -452,6 +445,7 @@ const {
 
 .task-actions {
   display: flex;
+  align-items: center;
   gap: var(--space-1);
   opacity: 0;
   transition: opacity var(--duration-fast);
@@ -667,20 +661,6 @@ const {
   border-radius: var(--radius-lg);
 }
 
-.status-indicator {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-
-.status-indicator:hover {
-  background: var(--glass-border);
-}
 
 .play-timer-btn {
   background: transparent;
@@ -810,6 +790,12 @@ const {
 @keyframes timer-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.85; }
+}
+
+/* TASK-1409: Visual indicator for in-progress tasks */
+.slot-task.status-active {
+  border-left: 3px solid var(--brand-primary);
+  box-shadow: inset 3px 0 8px -3px var(--brand-primary-dim), 0 0 6px var(--brand-primary-subtle);
 }
 
 /* BUG-1304 + BUG-1343: Visual indicator for done tasks */

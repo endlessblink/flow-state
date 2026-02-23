@@ -125,14 +125,13 @@ export function useCanvasConnections(
 
         if (sourceTask && targetTask && sourceTask.canvasPosition && targetTask.canvasPosition) {
             // SUBTASK MODEL: Connection makes target a direct child of source (nested hierarchy)
-            // Only set if target doesn't already have a parent
-            if (!targetTask.parentTaskId) {
-                await taskStore.updateTaskWithUndo(target, { parentTaskId: source })
-                console.log('[BUG-1407:CONNECT] Success: set parentTaskId', { target, parentTaskId: source })
-                deps.syncEdges({ force: true })
-            } else {
-                console.warn('[BUG-1407:CONNECT] Rejected: target already has parentTaskId:', targetTask.parentTaskId)
+            // Allow re-parenting: if target already has a parent, update to new parent
+            if (targetTask.parentTaskId) {
+                console.log('[BUG-1407:CONNECT] Re-parenting: target changing parent from', targetTask.parentTaskId, 'to', source)
             }
+            await taskStore.updateTaskWithUndo(target, { parentTaskId: source })
+            console.log('[BUG-1407:CONNECT] Success: set parentTaskId', { target, parentTaskId: source })
+            deps.syncEdges({ force: true })
         } else {
             console.warn('[BUG-1407:CONNECT] Rejected: missing task or canvasPosition')
         }

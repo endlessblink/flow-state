@@ -47,7 +47,7 @@ const retryBtnStyle = `flex: 1; display: flex; align-items: center; justify-cont
 
 const clearBtnStyle = `display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-2_5) var(--space-4); background: var(--glass-bg-soft); border: 1px solid var(--color-danger); border-radius: var(--radius-md); color: var(--color-danger); font-weight: var(--font-medium); cursor: pointer; backdrop-filter: blur(8px);`
 
-const dismissBtnStyle = `padding: var(--space-2_5) var(--space-4); background: transparent; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-secondary); font-weight: var(--font-medium); cursor: pointer;`
+const dismissBtnStyle = `padding: var(--space-2_5) var(--space-4); background: var(--glass-bg-soft); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-secondary); font-weight: var(--font-medium); cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);`
 
 const noRetryHintStyle = `color: var(--color-danger); font-style: italic;`
 

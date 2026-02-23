@@ -30,6 +30,18 @@
 
       <!-- Filter Controls Group -->
       <div class="toolbar-group">
+        <!-- Hide Done Tasks Toggle (BUG-1410) -->
+        <button
+          class="toolbar-btn toggle"
+          :class="{ 'active done': !taskStore.hideCanvasDoneTasks }"
+          :title="taskStore.hideCanvasDoneTasks ? 'Show done tasks on canvas' : 'Hide done tasks on canvas'"
+          :aria-label="taskStore.hideCanvasDoneTasks ? 'Show done tasks on canvas' : 'Hide done tasks on canvas'"
+          :aria-pressed="!taskStore.hideCanvasDoneTasks"
+          @click="taskStore.toggleCanvasDoneTasks()"
+        >
+          <CheckCheck :size="14" />
+        </button>
+
         <!-- Hide Overdue Tasks Toggle (TASK-082) -->
         <button
           class="toolbar-btn toggle"
@@ -48,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { Plus, FolderPlus, Calendar, CalendarX } from 'lucide-vue-next'
+import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
 defineEmits<{
@@ -158,5 +170,11 @@ const taskStore = useTaskStore()
   color: var(--color-orange);
   background: var(--orange-bg-soft);
   border-color: var(--orange-border);
+}
+
+.toolbar-btn.toggle.active.done {
+  color: var(--brand-primary);
+  background: var(--glass-bg-soft);
+  border-color: var(--brand-primary);
 }
 </style>

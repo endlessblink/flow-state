@@ -111,7 +111,8 @@
           :min-zoom="0.05"
           :max-zoom="4.0"
           :fit-view-on-init="false"
-          connect-on-drag-nodes
+          connection-mode="loose"
+          :connection-radius="30"
           :zoom-scroll-sensitivity="1.0"
           :zoom-activation-key-code="null"
           prevent-scrolling

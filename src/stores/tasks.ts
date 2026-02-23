@@ -318,14 +318,18 @@ export const useTaskStore = defineStore('tasks', () => {
             }
           } else if (localVersion === remoteVersion && currentTask.canvasPosition && !normalizedTask.canvasPosition) {
             // Same version, local has position but remote doesn't - preserve local
-            normalizedTask.canvasPosition = currentTask.canvasPosition
-            normalizedTask.parentId = currentTask.parentId
+            // BUG-1410: Don't restore position for done tasks (auto-archive cleared it intentionally)
+            if (normalizedTask.status !== 'done') {
+              normalizedTask.canvasPosition = currentTask.canvasPosition
+              normalizedTask.parentId = currentTask.parentId
+            }
           }
 
           if (currentTask.canvasPosition && !normalizedTask.canvasPosition) {
             // BUG-1074 FIX: Only preserve local position if this isn't an intentional inbox move
             // When isInInbox is true, the user explicitly wants to move to inbox - don't restore position
-            if (!normalizedTask.isInInbox) {
+            // BUG-1410: Also skip restoration for done tasks — auto-archive intentionally clears position
+            if (!normalizedTask.isInInbox && normalizedTask.status !== 'done') {
               normalizedTask.canvasPosition = currentTask.canvasPosition
               normalizedTask.isInInbox = currentTask.isInInbox
               normalizedTask.parentId = currentTask.parentId  // Also restore parentId to prevent drift

@@ -779,7 +779,6 @@ const {
   justify-content: center;
   perspective: 1000px;
   min-height: var(--kanban-column-min-height);
-  max-height: 280px; /* Component-specific card layout dimension */
 }
 
 .stack-card {
@@ -1052,7 +1051,6 @@ const {
 
 @media (max-height: 700px) {
   .card-stack {
-    max-height: 200px;
     min-height: 160px;
   }
 

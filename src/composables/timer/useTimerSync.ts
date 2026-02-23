@@ -87,8 +87,11 @@ export function useTimerSync(deps: TimerSyncDeps) {
     }
   }, 1000, { immediate: false })
 
+  // BUG-1411: Guard against overlapping heartbeat saves when network is slow
+  let isSaving = false
   const { pause: pauseHeartbeat, resume: resumeHeartbeat } = useIntervalFn(async () => {
     if (!currentSession.value || !isDeviceLeader.value) { pauseHeartbeat(); return }
+    if (isSaving) return // BUG-1411: Prevent overlapping saves
     // BUG-352: Skip heartbeat save when offline to avoid "Failed to fetch" errors on mobile
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       if (import.meta.env.DEV) {
@@ -96,15 +99,26 @@ export function useTimerSync(deps: TimerSyncDeps) {
       }
       return
     }
-    await saveTimerSessionWithLeadership()
+    isSaving = true
+    try {
+      await saveTimerSessionWithLeadership()
+    } finally {
+      isSaving = false
+    }
   }, DEVICE_HEARTBEAT_INTERVAL_MS, { immediate: false })
 
+  // BUG-1411: Guard against overlapping polls when network is slow
+  let isPolling = false
+  let consecutiveFailures = 0
   const { pause: pauseFollowerPoll, resume: resumeFollowerPoll } = useIntervalFn(async () => {
     // Only poll if we're not the leader (leaders write, followers read)
     if (isDeviceLeader.value) return
+    if (isPolling) return // BUG-1411: Prevent overlapping polls
 
+    isPolling = true
     try {
       const session = await fetchActiveTimerSession()
+      consecutiveFailures = 0 // BUG-1411: Reset failure counter on success
 
       if (!session) {
         // No active session - clear local state if we had one
@@ -191,7 +205,21 @@ export function useTimerSync(deps: TimerSyncDeps) {
         }
       }
     } catch (err) {
+      // BUG-1411: Track consecutive failures and back off if too many
+      consecutiveFailures++
       console.warn('🍅 [TIMER] Follower poll error:', err)
+      if (consecutiveFailures >= 3) {
+        console.warn('🍅 [TIMER] Follower poll: 3 consecutive failures, backing off for 30s')
+        pauseFollowerPoll()
+        setTimeout(() => {
+          consecutiveFailures = 0
+          if (!isDeviceLeader.value && currentSession.value) {
+            resumeFollowerPoll()
+          }
+        }, 30_000)
+      }
+    } finally {
+      isPolling = false // BUG-1411: Always release the guard
     }
   }, FOLLOWER_POLL_INTERVAL_MS, { immediate: false })
 

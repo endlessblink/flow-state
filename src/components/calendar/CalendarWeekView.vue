@@ -237,7 +237,8 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                   'timer-active-event': currentTaskId === event.taskId,
                   'dragging': isDragging && draggedEventId === event.id,
                   'selected': selectedEventIds?.has(event.id),
-                  'status-done': getTaskStatus(event) === 'done'
+                  'status-done': getTaskStatus(event) === 'done',
+                  'status-active': getTaskStatus(event) === 'in_progress'
                 }"
                 :style="{ ...getWeekEventCellStyle(event), backgroundColor: event.color }"
                 :title="getEventTooltip(event)"
@@ -580,6 +581,12 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 @keyframes timer-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.85; }
+}
+
+/* TASK-1409: Visual indicator for in-progress tasks */
+.week-event.status-active {
+  border-left: 3px solid var(--brand-primary);
+  box-shadow: inset 3px 0 8px -3px var(--brand-primary-dim), 0 0 6px var(--brand-primary-subtle);
 }
 
 /* BUG-1304 + BUG-1343: Visual indicator for done tasks */

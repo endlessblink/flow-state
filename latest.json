@@ -1,11 +1,11 @@
 {
-  "version": "1.2.90",
-  "notes": "fix: Hebrew keyword routing for weekly plan and urgent task suggestions",
-  "pub_date": "2026-02-22T06:08:22.487Z",
+  "version": "1.2.91",
+  "notes": "v1.2.91: batch update with accumulated fixes and improvements",
+  "pub_date": "2026-02-23T08:20:27.885Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXlaREl0V1k0UXp3bEttN1RESjdEeFA1bnV4cnhFNGxmU3dVVnlaTGl2Unp3UDRIWWpxMFJyTXVnMkowNm0wUjRjb25VeTRCaG9KRmhScHgrZHJQVFFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxNzQwNTAyCWZpbGU6Rmxvd1N0YXRlXzEuMi45MF9hbWQ2NC5BcHBJbWFnZQphYk9jRmNkV3ArcmNpZXhGV1lGVGJGeVZCc3p5c254R2F4Uld2ZDFhc0VLaXZZa1NYVDlGTjBZNmQ3SlVnNjJ0YzcyRlpFWHVtTzYrMkNTbnRKOVlCQT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.90_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTF3U29VWHZLenM2aWc0UnRIcDF0VHk3VEFkZm9na2xHeTRwWnMydTJoZnJmZlZxNG1CL1hYNFhJRS9YYkpMdXZvVk5pTzRZcmppdTJ0ekVHRkRSVWdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxODM0ODI3CWZpbGU6Rmxvd1N0YXRlXzEuMi45MV9hbWQ2NC5BcHBJbWFnZQo4NjNOTmozRU5JRElxMDI0aHVYbi9Gc0NFcmM4cHdwRkcrc0g2VkVtMjkrUHNUT0Jkek1hVUtDQXhIZWo0OFUyL0F3cWprWElmaVNMS1hMSXZKWGVCdz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.91_amd64.AppImage"
     }
   }
 }

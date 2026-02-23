@@ -146,7 +146,7 @@ const getEventTooltip = (event: any) => {
             v-for="event in day.events"
             :key="event.id"
             class="month-event"
-            :class="{ 'timer-active-event': currentTaskId === event.taskId, 'selected': selectedEventIds?.has(event.id), 'status-done': getTaskStatus(event) === 'done', 'dragging': draggedEventId === event.taskId }"
+            :class="{ 'timer-active-event': currentTaskId === event.taskId, 'selected': selectedEventIds?.has(event.id), 'status-done': getTaskStatus(event) === 'done', 'status-active': getTaskStatus(event) === 'in_progress', 'dragging': draggedEventId === event.taskId }"
             :style="{ backgroundColor: event.color }"
             :title="getEventTooltip(event)"
             draggable="true"
@@ -367,6 +367,12 @@ const getEventTooltip = (event: any) => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+}
+
+/* TASK-1409: Visual indicator for in-progress tasks */
+.month-event.status-active {
+  border-left: 2px solid var(--brand-primary);
+  box-shadow: inset 2px 0 6px -2px var(--brand-primary-dim);
 }
 
 /* BUG-1304 + BUG-1343: Visual indicator for done tasks */

@@ -7,7 +7,9 @@
      * will-change: transform was tried but causes sluggish typing (GPU re-rasterization on keystroke).
      * Zoom smoothness is handled by debounced onMoveEnd in useCanvasOrchestrator. */
     will-change: auto !important;
-    backface-visibility: hidden !important;
+    /* BUG-1408: backface-visibility: hidden removed — forced GPU layer promotion
+     * which rasterized nodes at 1x then downsampled when zoomed out → blurry text.
+     * Without it, the browser re-renders at the actual zoom level → crisp at any zoom. */
 }
 
 /* 2. The Nodes */
@@ -16,9 +18,9 @@
      This prevents the browser from pre-rasterizing the node as a texture. */
     will-change: auto !important;
 
-    /* NOTE: Do NOT set transform here - Vue Flow uses transform for positioning!
-     * The translateZ(0) trick breaks node dragging. */
-    backface-visibility: hidden !important;
+    /* BUG-1408: backface-visibility: hidden removed — caused zoom-out blur.
+     * It forced GPU layer promotion which rasterized nodes at 1x pixel density
+     * then downsampled when zoomed out → blurry text/edges. */
 
     /* BUG-1216: Removed text-rendering: optimizeLegibility — forces expensive kerning
      * calculations on every node. Browser defaults are sufficient for canvas task cards. */

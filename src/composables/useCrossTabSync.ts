@@ -71,7 +71,7 @@ export function useCrossTabSync() {
     cleanup: cleanupLeader
   } = useTimerLeaderElection({
     tabId: currentTabId.value,
-    broadcastMessage: (msg: any) => broadcast('timer_session', msg),
+    broadcastMessage: (msg: Record<string, unknown>) => broadcast('timer_session', msg),
     onBecomeLeader: () => _onBecomeLeader?.(),
     onLoseLeadership: () => _onLoseLeadership?.(),
     onSessionUpdate: (session) => _onTimerSessionUpdate?.(session)

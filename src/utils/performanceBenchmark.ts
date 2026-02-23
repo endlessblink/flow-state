@@ -139,6 +139,10 @@ export class PerformanceBenchmark {
       const taskStore = useTaskStore()
       const canvasStore = useCanvasStore()
 
+      interface BenchTask { id: string }
+      const tStore = taskStore as unknown as { _rawTasks: BenchTask[], tasks: unknown[] }
+      const cStore = canvasStore as unknown as { nodes: BenchTask[], syncTasksToCanvas?: (t: unknown[]) => void }
+
       for (const nodeCount of nodeCounts) {
         const startTime = performance.now()
 
@@ -158,8 +162,7 @@ export class PerformanceBenchmark {
         }))
 
           // Measure batch addition
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ; (taskStore as any)._rawTasks.push(...testTasks)
+          ; tStore._rawTasks.push(...testTasks)
 
         // Wait for next tick to ensure computed properties update
         const { nextTick } = await import('vue')
@@ -167,10 +170,8 @@ export class PerformanceBenchmark {
 
         // 2. Measure Canvas Sync
         const syncStart = performance.now()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof (canvasStore as any).syncTasksToCanvas === 'function') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (canvasStore as any).syncTasksToCanvas(taskStore.tasks || [])
+        if (typeof cStore.syncTasksToCanvas === 'function') {
+          cStore.syncTasksToCanvas(tStore.tasks || [])
         }
         const syncEnd = performance.now()
 
@@ -183,10 +184,8 @@ export class PerformanceBenchmark {
         times.push(Math.max(duration, 0.001))
 
           // Cleanup
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ; (taskStore as any)._rawTasks = (taskStore as any)._rawTasks.filter((t: any) => !t.id.startsWith('bench-task-'))
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ; (canvasStore as any).nodes = (canvasStore as any).nodes.filter((n: any) => !n.id.startsWith('bench-task-'))
+          ; tStore._rawTasks = tStore._rawTasks.filter(t => !t.id.startsWith('bench-task-'))
+          ; cStore.nodes = cStore.nodes.filter(n => !n.id.startsWith('bench-task-'))
         await nextTick()
 
         console.log(`   - ${nodeCount} nodes: ${duration.toFixed(2)}ms (Sync: ${(syncEnd - syncStart).toFixed(2)}ms)`)

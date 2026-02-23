@@ -36,7 +36,7 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
 
                     // DEBUG: Log loaded groups and their dimensions
                     const groups = data as SupabaseGroup[]
-                    groups.forEach((g: any) => {
+                    groups.forEach((g: Record<string, unknown>) => {
                         const pos = g.position_json
                         console.log(`📦 [GROUP-LOAD] "${g.name}" loaded from Supabase: size=${pos?.width}x${pos?.height}`)
                     })
@@ -174,7 +174,7 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
                     .eq('user_id', userId)
 
                 if (error) throw error
-                return data?.map((d: any) => d.id) || []
+                return data?.map((d: Record<string, unknown>) => d.id) || []
             }, 'fetchDeletedGroupIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted group IDs:', e)

@@ -78,6 +78,8 @@
         placeholder="Description"
         aria-label="Task description"
         class="description-input"
+        :class="[descAlignmentClasses]"
+        :style="descAlignmentStyles"
         @keydown.enter="handleCreateTask"
         @keydown.esc="$emit('cancel')"
       >
@@ -231,6 +233,8 @@ const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
 // Computed properties for Hebrew text alignment
 const titleAlignmentClasses = computed(() => getAlignmentClasses(taskTitle.value))
 const titleAlignmentStyles = computed(() => applyInputAlignment(taskTitle.value))
+const descAlignmentClasses = computed(() => getAlignmentClasses(taskDescription.value))
+const descAlignmentStyles = computed(() => applyInputAlignment(taskDescription.value))
 
 // Voice input with Whisper
 const {
@@ -823,21 +827,22 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .create-btn {
-  background: var(--purple-gradient-start);
-  border: 1px solid var(--purple-border-medium);
-  color: white;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary);
+  color: var(--brand-primary);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
+  backdrop-filter: blur(8px);
 }
 
 .create-btn:hover:not(:disabled) {
-  background: var(--purple-gradient-hover-start);
-  border-color: var(--purple-border-strong);
-  box-shadow: var(--purple-shadow-medium);
+  background: var(--glass-bg-heavy);
+  border-color: var(--brand-primary-hover);
+  box-shadow: 0 0 var(--space-2) var(--brand-primary);
 }
 
 .create-btn:disabled {

@@ -14,7 +14,7 @@ function flashTaskCard(taskId: string): void {
 
 export function useTaskContextMenuActions(
     props: { task: Task | null; contextTask?: Task | null; selectedCount?: number },
-    emit: any
+    emit: (event: string, ...args: unknown[]) => void
 ) {
     const taskStore = useTaskStore()
     const timerStore = useTimerStore()
@@ -37,8 +37,8 @@ export function useTaskContextMenuActions(
         const taskId = currentTask.value?.id
         const isBatch = isBatchOperation.value
         // TASK-1362: Capture calendar instance info before menu closes
-        const calendarInstanceId = (currentTask.value as any)?.instanceId as string | undefined
-        const isCalendarEvent = (currentTask.value as any)?.isCalendarEvent as boolean | undefined
+        const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
+        const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
@@ -46,7 +46,7 @@ export function useTaskContextMenuActions(
         if (!taskId) return
 
         if (isBatch) {
-            emit('setDueDate', dateType as any)
+            emit('setDueDate', dateType)
             return
         }
 
@@ -164,7 +164,7 @@ export function useTaskContextMenuActions(
         emit('close')
 
         if (isBatch) {
-            emit('setStatus', status as any)
+            emit('setStatus', status)
         } else if (taskId) {
             try {
                 await taskStore.updateTaskWithUndo(taskId, { status })

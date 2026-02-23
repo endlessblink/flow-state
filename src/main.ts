@@ -18,9 +18,9 @@ import i18n from './i18n'
   // Early Tauri & PWA detection - must run BEFORE CSS import for proper fallback application
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ; (() => {
-    const w = window as any
+    const w = window as unknown as Record<string, unknown>
     const isTauri = ('isTauri' in w && w.isTauri) || ('__TAURI__' in w) || ('__TAURI_INTERNALS__' in w)
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone
 
     if (isTauri) {
       document.documentElement.classList.add('tauri-app')
@@ -71,7 +71,7 @@ async function initializeApp() {
   // WebKitGTK on Linux has limited backdrop-filter support, so we need fallbacks
   // Tauri v2 uses window.isTauri, older versions use __TAURI__ or __TAURI_INTERNALS__
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const win = window as any
+  const win = window as unknown as Record<string, unknown>
   const isTauriEnv = ('isTauri' in win && win.isTauri) ||
     ('__TAURI__' in win) ||
     ('__TAURI_INTERNALS__' in win)
@@ -80,7 +80,7 @@ async function initializeApp() {
     document.documentElement.classList.add('tauri-app')
     document.body?.classList.add('tauri-app')
     console.log('🖥️ [MAIN] Tauri environment detected - applying CSS optimizations')
-  } else if (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone) {
+  } else if (window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone) {
     document.documentElement.classList.add('pwa-app')
     document.body?.classList.add('pwa-app')
     console.log('📱 [MAIN] PWA standalone environment detected - applying CSS optimizations')

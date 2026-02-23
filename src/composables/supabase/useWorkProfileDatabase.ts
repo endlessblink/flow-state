@@ -92,7 +92,7 @@ export function useWorkProfileDatabase(ctx: DatabaseContext) {
                     .order('completed_at', { ascending: false })
                 if (error) throw error
                 if (!data) return []
-                return data.map((row: any) => ({
+                return data.map((row: Record<string, unknown>) => ({
                     taskId: row.task_id,
                     duration: row.duration,
                     isBreak: row.is_break,

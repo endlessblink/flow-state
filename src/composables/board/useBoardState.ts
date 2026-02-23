@@ -206,7 +206,7 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
         const isInProgress = task.status === 'in_progress'
         const isOverdueByDate = dueDateKey && dueDateKey < todayStr
 
-        const hasPastInstance = instances.length > 0 && instances.some((instance: any) => {
+        const hasPastInstance = instances.length > 0 && instances.some((instance: Record<string, unknown>) => {
             const instanceDate = parseDateKey(instance.scheduledDate)
             return instanceDate && instanceDate < today
         })
@@ -247,7 +247,7 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
             return
         }
 
-        instances.forEach((instance: any) => {
+        instances.forEach((instance: Record<string, unknown>) => {
             if (instance.isLater) {
                 result.later.push(task)
                 return

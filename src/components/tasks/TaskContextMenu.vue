@@ -32,16 +32,16 @@
         <span class="section-title">Date</span>
       </div>
       <div class="pill-row">
-        <button class="pill-btn pill-btn--sm" @click="setDueDate('today')">
+        <button class="pill-btn pill-btn--sm" :class="{ active: activeDatePill === 'today' }" @click="setDueDate('today')">
           Today
         </button>
-        <button class="pill-btn pill-btn--sm" @click="setDueDate('tomorrow')">
+        <button class="pill-btn pill-btn--sm" :class="{ active: activeDatePill === 'tomorrow' }" @click="setDueDate('tomorrow')">
           Tmrw
         </button>
-        <button class="pill-btn pill-btn--sm" @click="setDueDate('weekend')">
+        <button class="pill-btn pill-btn--sm" :class="{ active: activeDatePill === 'weekend' }" @click="setDueDate('weekend')">
           Wknd
         </button>
-        <button class="pill-btn pill-btn--sm" @click="setDueDate('nextweek')">
+        <button class="pill-btn pill-btn--sm" :class="{ active: activeDatePill === 'nextweek' }" @click="setDueDate('nextweek')">
           +1wk
         </button>
         <NPopover
@@ -400,6 +400,32 @@ const displayHeaderText = computed(() => {
     return `${props.selectedCount} selected`
   }
   return ''
+})
+
+// Active date pill detection
+const activeDatePill = computed(() => {
+  const dueDate = currentTask.value?.dueDate
+  if (!dueDate) return null
+  const due = new Date(dueDate)
+  const today = new Date()
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  if (isSameDay(due, today)) return 'today'
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (isSameDay(due, tomorrow)) return 'tomorrow'
+  // Weekend = next Saturday
+  const dayOfWeek = today.getDay()
+  const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7
+  const weekend = new Date(today)
+  weekend.setDate(today.getDate() + daysUntilSat)
+  if (isSameDay(due, weekend)) return 'weekend'
+  // Next week = next Monday
+  const daysUntilMon = (1 - dayOfWeek + 7) % 7 || 7
+  const nextWeek = new Date(today)
+  nextWeek.setDate(today.getDate() + daysUntilMon)
+  if (isSameDay(due, nextWeek)) return 'nextweek'
+  return null
 })
 
 const currentStatusLabel = computed(() => {

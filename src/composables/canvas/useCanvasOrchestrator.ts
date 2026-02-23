@@ -738,7 +738,7 @@ export function useCanvasOrchestrator() {
         resizeLineStyle: interactions.resizeLineStyle,
         edgeHandleStyle: interactions.edgeHandleStyle,
 
-        onPaneReady: (instance: any) => {
+        onPaneReady: (instance: Record<string, unknown>) => {
             onPaneReady(instance) // Core handler
             isVueFlowReady.value = true
             isVueFlowMounted.value = true

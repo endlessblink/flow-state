@@ -61,7 +61,7 @@ const handleSelect = (duration: number | null) => {
   box-shadow: var(--overlay-component-shadow);
   padding: var(--space-1) 0;
   min-width: 130px;
-  z-index: calc(var(--z-dropdown) + 1);
+  z-index: 10001;
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
 }
 

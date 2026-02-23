@@ -42,7 +42,53 @@ interface OptimizeOptions {
   charBudget?: number
   /** Today's date in YYYY-MM-DD format (injectable for testing) */
   today?: string
+  /** UI language — localizes section headers and labels (default: 'en') */
+  language?: 'he' | 'en'
 }
+
+/** Localized strings for context output */
+const LABELS = {
+  en: {
+    sectionHeader:
+      "## YOUR TASK DATA (use this to think and reason — titles may be in a DIFFERENT language than the user — ALWAYS reply in the user's language):",
+    overdue: 'OVERDUE',
+    dueToday: 'DUE TODAY',
+    thisWeek: 'THIS WEEK',
+    inProgress: 'IN PROGRESS',
+    otherOpen: 'OTHER OPEN TASKS',
+    truncated: (remaining: number) =>
+      `(${remaining} more open tasks omitted due to space — ask to see more)`,
+    taskTitle: 'Title',
+    taskPriority: 'Priority',
+    taskStatus: 'Status',
+    taskDue: 'Due',
+    taskProject: 'Project',
+    dueToday_inline: 'TODAY',
+    overdue_inline: 'OVERDUE',
+    taskStats: (total: number, planned: number, inProg: number, done: number, overdue: number) =>
+      `Tasks: ${total} total, ${planned} planned, ${inProg} in progress, ${done} done, ${overdue} overdue`,
+  },
+  he: {
+    sectionHeader:
+      '## נתוני המשימות שלך (השתמש בהם לחשיבה — כותרות עשויות להיות בשפה אחרת — תמיד ענה בשפת המשתמש):',
+    overdue: 'באיחור',
+    dueToday: 'להיום',
+    thisWeek: 'השבוע',
+    inProgress: 'בביצוע',
+    otherOpen: 'משימות פתוחות נוספות',
+    truncated: (remaining: number) =>
+      `(${remaining} משימות פתוחות נוספות הושמטו — בקש לראות עוד)`,
+    taskTitle: 'כותרת',
+    taskPriority: 'עדיפות',
+    taskStatus: 'סטטוס',
+    taskDue: 'תאריך יעד',
+    taskProject: 'פרויקט',
+    dueToday_inline: 'היום',
+    overdue_inline: 'באיחור',
+    taskStats: (total: number, planned: number, inProg: number, done: number, overdue: number) =>
+      `משימות: ${total} סה"כ, ${planned} מתוכננות, ${inProg} בביצוע, ${done} הושלמו, ${overdue} באיחור`,
+  },
+} as const
 
 /**
  * Build an optimized task context string for the AI system prompt.
@@ -68,6 +114,7 @@ export function optimizeTaskContext(
 ): string {
   const charBudget = options.charBudget ?? DEFAULT_CHAR_BUDGET
   const today = options.today ?? new Date().toISOString().split('T')[0]
+  const L = LABELS[options.language ?? 'en']
 
   // Filter: only open, non-deleted tasks
   const openTasks = tasks.filter(t => t.status !== 'done' && !t._soft_deleted)
@@ -140,22 +187,22 @@ export function optimizeTaskContext(
   // English metadata tokens, preventing the LLM from treating the title text as
   // part of the metadata language.
   function formatTask(t: OptimizableTask): string {
-    const parts: string[] = [`Title: "${t.title}"`]
-    if (t.priority) parts.push(`Priority: ${t.priority}`)
-    if (t.status && t.status !== 'planned') parts.push(`Status: ${t.status}`)
+    const parts: string[] = [`${L.taskTitle}: "${t.title}"`]
+    if (t.priority) parts.push(`${L.taskPriority}: ${t.priority}`)
+    if (t.status && t.status !== 'planned') parts.push(`${L.taskStatus}: ${t.status}`)
     if (t.dueDate) {
       const dueStr = t.dueDate.slice(0, 10)
       if (dueStr === today) {
-        parts.push('Due: TODAY')
+        parts.push(`${L.taskDue}: ${L.dueToday_inline}`)
       } else if (dueStr < today) {
-        parts.push(`Due: ${dueStr} (OVERDUE)`)
+        parts.push(`${L.taskDue}: ${dueStr} (${L.overdue_inline})`)
       } else {
-        parts.push(`Due: ${dueStr}`)
+        parts.push(`${L.taskDue}: ${dueStr}`)
       }
     }
     if (t.projectId) {
       const projName = projectMap.get(t.projectId)
-      if (projName) parts.push(`Project: ${projName}`)
+      if (projName) parts.push(`${L.taskProject}: ${projName}`)
     }
     return `- ${parts.join(' | ')}`
   }
@@ -163,8 +210,7 @@ export function optimizeTaskContext(
   // Build output sections respecting the character budget.
   // The header note is critical — it tells the LLM that titles may be in a
   // different language and it should still respond in the user's language.
-  const sectionHeader =
-    '## YOUR TASK DATA (use this to think and reason — titles may be in a DIFFERENT language than the user — ALWAYS reply in the user\'s language):'
+  const sectionHeader = L.sectionHeader
 
   const sections: string[] = [sectionHeader]
   let charCount = sectionHeader.length
@@ -185,7 +231,7 @@ export function optimizeTaskContext(
       const totalOpen = openTasks.length
       const remaining = totalOpen - shownSoFar
       if (remaining > 0) {
-        sections.push(`\n(${remaining} more open tasks omitted due to space — ask to see more)`)
+        sections.push(`\n${L.truncated(remaining)}`)
       }
       return false // stop adding sections
     }
@@ -197,11 +243,11 @@ export function optimizeTaskContext(
   }
 
   // Emit sections in urgency order (most critical first)
-  if (!addSection('OVERDUE', overdue)) return sections.join('\n')
-  if (!addSection('DUE TODAY', dueToday)) return sections.join('\n')
-  if (!addSection('THIS WEEK', thisWeek)) return sections.join('\n')
-  if (!addSection('IN PROGRESS', inProgress)) return sections.join('\n')
-  if (!addSection('OTHER OPEN TASKS', other)) return sections.join('\n')
+  if (!addSection(L.overdue, overdue)) return sections.join('\n')
+  if (!addSection(L.dueToday, dueToday)) return sections.join('\n')
+  if (!addSection(L.thisWeek, thisWeek)) return sections.join('\n')
+  if (!addSection(L.inProgress, inProgress)) return sections.join('\n')
+  if (!addSection(L.otherOpen, other)) return sections.join('\n')
 
   return sections.join('\n')
 }
@@ -210,8 +256,13 @@ export function optimizeTaskContext(
  * Build the task statistics line (unchanged from current buildSystemPrompt behavior).
  * Extracted here for reuse in the pre-processing step of the pipeline.
  */
-export function buildTaskStats(tasks: OptimizableTask[], today?: string): string {
+export function buildTaskStats(
+  tasks: OptimizableTask[],
+  today?: string,
+  language: 'he' | 'en' = 'en'
+): string {
   const todayStr = today ?? new Date().toISOString().split('T')[0]
+  const L = LABELS[language]
 
   const byStatus: Record<string, number> = {
     planned: 0,
@@ -231,5 +282,5 @@ export function buildTaskStats(tasks: OptimizableTask[], today?: string): string
     }
   }
 
-  return `Tasks: ${tasks.length} total, ${byStatus.planned} planned, ${byStatus.in_progress} in progress, ${byStatus.done} done, ${overdueCount} overdue`
+  return L.taskStats(tasks.length, byStatus.planned, byStatus.in_progress, byStatus.done, overdueCount)
 }

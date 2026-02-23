@@ -13,6 +13,58 @@
  * @see TASK-1388 in MASTER_PLAN.md
  */
 
+// ---------------------------------------------------------------------------
+// Language helper
+// ---------------------------------------------------------------------------
+
+type Lang = 'he' | 'en'
+
+const STRINGS: Record<string, Record<Lang, string>> = {
+  // digestTaskList
+  preAnalyzedFacts:   { en: 'PRE-ANALYZED FACTS (computed by system — treat as ground truth):', he: 'עובדות מנותחות מראש (חושבו אוטומטית — התייחס כאמת):' },
+  overdue:            { en: 'OVERDUE',            he: 'באיחור' },
+  highPriority:       { en: 'HIGH PRIORITY',      he: 'עדיפות גבוהה' },
+  inProgress:         { en: 'IN PROGRESS',        he: 'בביצוע' },
+  progress:           { en: 'PROGRESS',           he: 'התקדמות' },
+  estimatedEffort:    { en: 'ESTIMATED EFFORT',   he: 'הערכת מאמץ' },
+  spreadAcrossProj:   { en: 'SPREAD ACROSS PROJECTS', he: 'מפוזר בין פרויקטים' },
+  recommendation:     { en: 'RECOMMENDATION (computed):', he: 'המלצה (חושבה אוטומטית):' },
+  startWith:          { en: 'Start with:',        he: 'התחל עם:' },
+  continueWith:       { en: 'Continue:',          he: 'המשך:' },
+  // inline task metadata
+  daysLate:           { en: 'd late',             he: 'ימים באיחור' },
+  priorityLabel:      { en: 'priority',           he: 'עדיפות' },
+  projectLabel:       { en: 'project',            he: 'פרויקט' },
+  dueLabel:           { en: 'due',                he: 'תאריך יעד' },
+  pomodorosLabel:     { en: 'pomodoros done',     he: 'פומודורו הושלמו' },
+  subtasksLabel:      { en: 'subtasks',           he: 'תת-משימות' },
+  subtasksComplete:   { en: 'complete',           he: 'הושלמו' },
+  minutesTotal:       { en: 'minutes total across', he: 'דקות סה"כ עבור' },
+  tasks:              { en: 'tasks',              he: 'משימות' },
+  highPriorityNote:   { en: 'highest priority',  he: 'עדיפות גבוהה ביותר' },
+  alreadyInProgress:  { en: 'already in progress', he: 'כבר בביצוע' },
+  highPriorityShort:  { en: 'high priority',     he: 'עדיפות גבוהה' },
+  daysOverdueNote:    { en: 'days overdue',       he: 'ימים באיחור' },
+  // digestProductivityStats
+  preAnalyzedFactsShort: { en: 'PRE-ANALYZED FACTS:', he: 'עובדות מנותחות:' },
+  completedToday:     { en: 'Completed today:',  he: 'הושלמו היום:' },
+  pomodorosToday:     { en: 'Pomodoros today:',  he: 'פומודורו היום:' },
+  currentStreak:      { en: 'Current streak:',   he: 'רצף נוכחי:' },
+  taskBreakdown:      { en: 'Task breakdown:',   he: 'פירוט משימות:' },
+  // digestWeeklySummary
+  completedThisWeek:  { en: 'Completed this week:', he: 'הושלמו השבוע:' },
+  focusTime:          { en: 'Focus time:',        he: 'זמן מיקוד:' },
+  // digestTimerStatus
+  timerRunning:       { en: 'Timer: RUNNING',    he: 'טיימר: פעיל' },
+  timerNotRunning:    { en: 'Timer: NOT RUNNING', he: 'טיימר: לא פעיל' },
+  timeRemaining:      { en: 'Time remaining:',   he: 'זמן שנותר:' },
+  pomodorosCompletedToday: { en: 'Pomodoros completed today:', he: 'פומודורו שהושלמו היום:' },
+}
+
+function t(lang: Lang, key: string): string {
+  return STRINGS[key]?.[lang] ?? STRINGS[key]?.['en'] ?? key
+}
+
 interface ToolResultData {
   // Task list fields (from list_tasks, search_tasks, get_overdue_tasks)
   id?: string
@@ -42,11 +94,14 @@ interface ToolResultData {
 /**
  * Transform raw tool result data into pre-digested reasoning text.
  * The LLM receives this instead of raw JSON.
+ *
+ * @param language - Target language for section headers and labels ('he' | 'en'). Defaults to 'en'.
  */
 export function digestToolResults(
   toolName: string,
   data: unknown,
-  message: string
+  message: string,
+  language: Lang = 'en'
 ): string {
   if (!data) return message
 
@@ -56,7 +111,7 @@ export function digestToolResults(
 
     // Task list tools (list_tasks, search_tasks, get_overdue_tasks, suggest_next_task)
     if (data[0]?.title !== undefined) {
-      return digestTaskList(toolName, data as ToolResultData[], message)
+      return digestTaskList(toolName, data as ToolResultData[], message, language)
     }
   }
 
@@ -66,17 +121,17 @@ export function digestToolResults(
 
     // Productivity stats
     if ('todayCompleted' in d || 'statusBreakdown' in d) {
-      return digestProductivityStats(d, message)
+      return digestProductivityStats(d, message, language)
     }
 
     // Weekly summary
     if ('completedThisWeek' in d || 'totalFocusMinutes' in d) {
-      return digestWeeklySummary(d, message)
+      return digestWeeklySummary(d, message, language)
     }
 
     // Timer status
     if ('isRunning' in d || 'currentTask' in d) {
-      return digestTimerStatus(d, message)
+      return digestTimerStatus(d, message, language)
     }
 
     // Weekly plan
@@ -96,79 +151,80 @@ export function digestToolResults(
 function digestTaskList(
   toolName: string,
   tasks: ToolResultData[],
-  message: string
+  message: string,
+  lang: Lang = 'en'
 ): string {
   const today = new Date().toISOString().split('T')[0]
   const lines: string[] = [message, '']
 
   // Compute analysis
-  const overdue = tasks.filter(t => t.daysOverdue && t.daysOverdue > 0)
-  const highPri = tasks.filter(t => t.priority === 'high' || t.priority === 'critical')
-  const withProgress = tasks.filter(t => t.subtasks)
-  const inProgress = tasks.filter(t => t.status === 'in_progress')
+  const overdue = tasks.filter(task => task.daysOverdue && task.daysOverdue > 0)
+  const highPri = tasks.filter(task => task.priority === 'high' || task.priority === 'critical')
+  const withProgress = tasks.filter(task => task.subtasks)
+  const inProgress = tasks.filter(task => task.status === 'in_progress')
 
   // Pre-digested facts section
-  lines.push('PRE-ANALYZED FACTS (computed by system — treat as ground truth):')
+  lines.push(t(lang, 'preAnalyzedFacts'))
 
   if (overdue.length > 0) {
-    lines.push(`- OVERDUE (${overdue.length}): ${overdue.map(t =>
-      `"${t.title}" (${t.daysOverdue}d late${t.priority ? ', ' + t.priority + ' priority' : ''}${t.project ? ', project: ' + t.project : ''})`
+    lines.push(`- ${t(lang, 'overdue')} (${overdue.length}): ${overdue.map(task =>
+      `"${task.title}" (${task.daysOverdue}${t(lang, 'daysLate')}${task.priority ? ', ' + task.priority + ' ' + t(lang, 'priorityLabel') : ''}${task.project ? ', ' + t(lang, 'projectLabel') + ': ' + task.project : ''})`
     ).join('; ')}`)
   }
 
-  if (highPri.length > 0 && highPri.some(t => !t.daysOverdue)) {
-    const nonOverdueHighPri = highPri.filter(t => !t.daysOverdue)
+  if (highPri.length > 0 && highPri.some(task => !task.daysOverdue)) {
+    const nonOverdueHighPri = highPri.filter(task => !task.daysOverdue)
     if (nonOverdueHighPri.length > 0) {
-      lines.push(`- HIGH PRIORITY (${nonOverdueHighPri.length}): ${nonOverdueHighPri.map(t =>
-        `"${t.title}"${t.project ? ' (' + t.project + ')' : ''}${t.dueDate ? ' due:' + t.dueDate.slice(0, 10) : ''}`
+      lines.push(`- ${t(lang, 'highPriority')} (${nonOverdueHighPri.length}): ${nonOverdueHighPri.map(task =>
+        `"${task.title}"${task.project ? ' (' + task.project + ')' : ''}${task.dueDate ? ' ' + t(lang, 'dueLabel') + ':' + task.dueDate.slice(0, 10) : ''}`
       ).join('; ')}`)
     }
   }
 
   if (inProgress.length > 0) {
-    lines.push(`- IN PROGRESS (${inProgress.length}): ${inProgress.map(t =>
-      `"${t.title}"${t.pomodorosCompleted ? ' (' + t.pomodorosCompleted + ' pomodoros done)' : ''}${t.subtasks ? ' [subtasks: ' + t.subtasks + ']' : ''}`
+    lines.push(`- ${t(lang, 'inProgress')} (${inProgress.length}): ${inProgress.map(task =>
+      `"${task.title}"${task.pomodorosCompleted ? ' (' + task.pomodorosCompleted + ' ' + t(lang, 'pomodorosLabel') + ')' : ''}${task.subtasks ? ' [' + t(lang, 'subtasksLabel') + ': ' + task.subtasks + ']' : ''}`
     ).join('; ')}`)
   }
 
   if (withProgress.length > 0) {
-    const progDetails = withProgress.map(t => {
-      const [done, total] = (t.subtasks || '0/0').split('/')
+    const progDetails = withProgress.map(task => {
+      const [done, total] = (task.subtasks || '0/0').split('/')
       const pct = total !== '0' ? Math.round((parseInt(done) / parseInt(total)) * 100) : 0
-      return `"${t.title}": ${t.subtasks} subtasks (${pct}% complete)`
+      return `"${task.title}": ${task.subtasks} ${t(lang, 'subtasksLabel')} (${pct}% ${t(lang, 'subtasksComplete')})`
     })
-    lines.push(`- PROGRESS: ${progDetails.join('; ')}`)
+    lines.push(`- ${t(lang, 'progress')}: ${progDetails.join('; ')}`)
   }
 
   // Time estimates
-  const withEstimates = tasks.filter(t => t.estimatedMinutes)
+  const withEstimates = tasks.filter(task => task.estimatedMinutes)
   if (withEstimates.length > 0) {
-    const totalMinutes = withEstimates.reduce((sum, t) => sum + (t.estimatedMinutes || 0), 0)
-    lines.push(`- ESTIMATED EFFORT: ${totalMinutes} minutes total across ${withEstimates.length} tasks`)
+    const totalMinutes = withEstimates.reduce((sum, task) => sum + (task.estimatedMinutes || 0), 0)
+    lines.push(`- ${t(lang, 'estimatedEffort')}: ${totalMinutes} ${t(lang, 'minutesTotal')} ${withEstimates.length} ${t(lang, 'tasks')}`)
   }
 
   // Project grouping
   const projects = new Map<string, number>()
-  for (const t of tasks) {
-    if (t.project) projects.set(t.project, (projects.get(t.project) || 0) + 1)
+  for (const task of tasks) {
+    if (task.project) projects.set(task.project, (projects.get(task.project) || 0) + 1)
   }
   if (projects.size > 1) {
     const projList = Array.from(projects.entries()).map(([name, count]) => `${name}(${count})`).join(', ')
-    lines.push(`- SPREAD ACROSS PROJECTS: ${projList}`)
+    lines.push(`- ${t(lang, 'spreadAcrossProj')}: ${projList}`)
   }
 
   // Recommendation computed by code
   lines.push('')
-  lines.push('RECOMMENDATION (computed):')
+  lines.push(t(lang, 'recommendation'))
   if (overdue.length > 0) {
     const worst = overdue.sort((a, b) => (b.daysOverdue || 0) - (a.daysOverdue || 0))[0]
-    lines.push(`- Start with: "${worst.title}" — ${worst.daysOverdue} days overdue${worst.priority === 'high' || worst.priority === 'critical' ? ', high priority' : ''}`)
+    lines.push(`- ${t(lang, 'startWith')} "${worst.title}" — ${worst.daysOverdue} ${t(lang, 'daysOverdueNote')}${worst.priority === 'high' || worst.priority === 'critical' ? ', ' + t(lang, 'highPriorityShort') : ''}`)
   } else if (highPri.length > 0) {
-    lines.push(`- Start with: "${highPri[0].title}" — highest priority${highPri[0].dueDate ? ', due ' + formatRelativeDate(highPri[0].dueDate, today) : ''}`)
+    lines.push(`- ${t(lang, 'startWith')} "${highPri[0].title}" — ${t(lang, 'highPriorityNote')}${highPri[0].dueDate ? ', ' + t(lang, 'dueLabel') + ' ' + formatRelativeDate(highPri[0].dueDate, today) : ''}`)
   } else if (inProgress.length > 0) {
-    lines.push(`- Continue: "${inProgress[0].title}" — already in progress`)
+    lines.push(`- ${t(lang, 'continueWith')} "${inProgress[0].title}" — ${t(lang, 'alreadyInProgress')}`)
   } else if (tasks.length > 0) {
-    lines.push(`- Start with: "${tasks[0].title}"${tasks[0].dueDate ? ' — due ' + formatRelativeDate(tasks[0].dueDate, today) : ''}`)
+    lines.push(`- ${t(lang, 'startWith')} "${tasks[0].title}"${tasks[0].dueDate ? ' — ' + t(lang, 'dueLabel') + ' ' + formatRelativeDate(tasks[0].dueDate, today) : ''}`)
   }
 
   return lines.join('\n')
@@ -177,13 +233,13 @@ function digestTaskList(
 /**
  * Digest productivity stats.
  */
-function digestProductivityStats(data: Record<string, unknown>, message: string): string {
-  const lines: string[] = [message, '', 'PRE-ANALYZED FACTS:']
+function digestProductivityStats(data: Record<string, unknown>, message: string, lang: Lang = 'en'): string {
+  const lines: string[] = [message, '', t(lang, 'preAnalyzedFactsShort')]
 
-  if (data.todayCompleted !== undefined) lines.push(`- Completed today: ${data.todayCompleted} tasks`)
-  if (data.todayPomodoros !== undefined) lines.push(`- Pomodoros today: ${data.todayPomodoros}`)
+  if (data.todayCompleted !== undefined) lines.push(`- ${t(lang, 'completedToday')} ${data.todayCompleted} ${t(lang, 'tasks')}`)
+  if (data.todayPomodoros !== undefined) lines.push(`- ${t(lang, 'pomodorosToday')} ${data.todayPomodoros}`)
   if (data.currentStreak !== undefined && (data.currentStreak as number) > 0) {
-    lines.push(`- Current streak: ${data.currentStreak} days`)
+    lines.push(`- ${t(lang, 'currentStreak')} ${data.currentStreak} ${lang === 'he' ? 'ימים' : 'days'}`)
   }
 
   const breakdown = data.statusBreakdown as Record<string, number> | undefined
@@ -191,7 +247,11 @@ function digestProductivityStats(data: Record<string, unknown>, message: string)
     const total = Object.values(breakdown).reduce((a, b) => a + b, 0)
     const done = breakdown.done || 0
     const inProg = breakdown.in_progress || 0
-    lines.push(`- Task breakdown: ${total} total — ${done} done, ${inProg} in progress, ${total - done - inProg} remaining`)
+    if (lang === 'he') {
+      lines.push(`- ${t(lang, 'taskBreakdown')} ${total} סה"כ — ${done} הושלמו, ${inProg} בביצוע, ${total - done - inProg} נותרו`)
+    } else {
+      lines.push(`- ${t(lang, 'taskBreakdown')} ${total} total — ${done} done, ${inProg} in progress, ${total - done - inProg} remaining`)
+    }
   }
 
   return lines.join('\n')
@@ -200,14 +260,14 @@ function digestProductivityStats(data: Record<string, unknown>, message: string)
 /**
  * Digest weekly summary.
  */
-function digestWeeklySummary(data: Record<string, unknown>, message: string): string {
-  const lines: string[] = [message, '', 'PRE-ANALYZED FACTS:']
+function digestWeeklySummary(data: Record<string, unknown>, message: string, lang: Lang = 'en'): string {
+  const lines: string[] = [message, '', t(lang, 'preAnalyzedFactsShort')]
 
-  if (data.completedThisWeek !== undefined) lines.push(`- Completed this week: ${data.completedThisWeek} tasks`)
+  if (data.completedThisWeek !== undefined) lines.push(`- ${t(lang, 'completedThisWeek')} ${data.completedThisWeek} ${t(lang, 'tasks')}`)
   if (data.totalFocusMinutes !== undefined) {
     const hours = Math.floor((data.totalFocusMinutes as number) / 60)
     const mins = (data.totalFocusMinutes as number) % 60
-    lines.push(`- Focus time: ${hours}h ${mins}m`)
+    lines.push(`- ${t(lang, 'focusTime')} ${hours}h ${mins}m`)
   }
 
   return lines.join('\n')
@@ -216,22 +276,22 @@ function digestWeeklySummary(data: Record<string, unknown>, message: string): st
 /**
  * Digest timer status.
  */
-function digestTimerStatus(data: Record<string, unknown>, message: string): string {
-  const lines: string[] = [message, '', 'PRE-ANALYZED FACTS:']
+function digestTimerStatus(data: Record<string, unknown>, message: string, lang: Lang = 'en'): string {
+  const lines: string[] = [message, '', t(lang, 'preAnalyzedFactsShort')]
 
   if (data.isRunning) {
-    lines.push(`- Timer: RUNNING on "${data.currentTask || 'unknown'}"`)
+    lines.push(`- ${t(lang, 'timerRunning')} on "${data.currentTask || 'unknown'}"`)
     if (data.remainingSeconds !== undefined) {
       const mins = Math.ceil((data.remainingSeconds as number) / 60)
-      lines.push(`- Time remaining: ${mins} minutes`)
+      lines.push(`- ${t(lang, 'timeRemaining')} ${mins} ${lang === 'he' ? 'דקות' : 'minutes'}`)
     }
     if (data.completedToday !== undefined) {
-      lines.push(`- Pomodoros completed today: ${data.completedToday}`)
+      lines.push(`- ${t(lang, 'pomodorosCompletedToday')} ${data.completedToday}`)
     }
   } else {
-    lines.push('- Timer: NOT RUNNING')
+    lines.push(`- ${t(lang, 'timerNotRunning')}`)
     if (data.completedToday !== undefined) {
-      lines.push(`- Pomodoros completed today: ${data.completedToday}`)
+      lines.push(`- ${t(lang, 'pomodorosCompletedToday')} ${data.completedToday}`)
     }
   }
 

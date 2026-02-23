@@ -81,7 +81,7 @@ const projects = computed(() => projectStore.projects)
   padding: var(--space-1) 0;
   min-width: 160px;
   max-width: 220px;
-  z-index: calc(var(--z-dropdown) + 1);
+  z-index: 10001;
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
 }
 

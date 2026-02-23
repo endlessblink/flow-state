@@ -36,12 +36,14 @@
             @contextmenu.prevent="handleTaskRightClick($event, task)"
             @mouseenter="selectedIndex = tasksStartIndex + index"
           >
-            <div class="result-content">
+            <div class="result-content" dir="auto">
               <!-- eslint-disable-next-line vue/no-v-html -->
               <div class="result-title" v-html="highlightMatch(task.title)" />
               <div class="result-meta">
                 <span v-if="task.projectName" class="result-project">{{ task.projectName }}</span>
-                <span class="result-status">{{ task.status || 'No status' }}</span>
+                <span class="result-status" :class="`status--${task.status}`">{{ formatStatus(task.status) }}</span>
+                <span v-if="task.priority" class="result-priority" :class="`priority--${task.priority}`">{{ task.priority }}</span>
+                <span v-if="task.dueDate" class="result-due">{{ formatDueDate(task.dueDate) }}</span>
               </div>
             </div>
             <ChevronRight :size="16" class="result-arrow" />
@@ -62,7 +64,7 @@
             @click="selectProject(project)"
             @mouseenter="selectedIndex = projectsStartIndex + index"
           >
-            <div class="result-content">
+            <div class="result-content" dir="auto">
               <!-- eslint-disable-next-line vue/no-v-html -->
               <div class="result-title" v-html="highlightMatch(project.name)" />
               <div class="result-meta">
@@ -212,6 +214,23 @@ const highlightMatch = (text: string) => {
 
 const getTaskCountForProject = (projectId: string) => {
   return taskStore.tasks.filter(task => task.projectId === projectId).length
+}
+
+const formatStatus = (status: string | undefined) => {
+  if (!status) return 'No status'
+  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+const formatDueDate = (dueDate: string) => {
+  const date = new Date(dueDate)
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  if (isSameDay(date, today)) return 'Today'
+  if (isSameDay(date, tomorrow)) return 'Tomorrow'
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 // Focus management
@@ -424,6 +443,41 @@ onMounted(() => {
   background: var(--surface-quaternary);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
+}
+
+.result-status.status--done {
+  color: var(--brand-primary);
+}
+
+.result-status.status--in_progress {
+  color: var(--color-warning);
+}
+
+.result-priority {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  text-transform: capitalize;
+  font-weight: var(--font-medium);
+}
+
+.result-priority.priority--high {
+  background: var(--priority-high-bg);
+  color: var(--color-priority-high);
+}
+
+.result-priority.priority--medium {
+  background: var(--priority-medium-bg);
+  color: var(--color-priority-medium);
+}
+
+.result-priority.priority--low {
+  background: var(--priority-low-bg);
+  color: var(--color-priority-low);
+}
+
+.result-due {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
 }
 
 .project-color {

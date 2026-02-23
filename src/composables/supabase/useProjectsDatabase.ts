@@ -171,7 +171,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
                     .eq('user_id', userId)
 
                 if (error) throw error
-                return data?.map((d: any) => d.id) || []
+                return data?.map((d: Record<string, unknown>) => d.id) || []
             }, 'fetchDeletedProjectIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted project IDs:', e)

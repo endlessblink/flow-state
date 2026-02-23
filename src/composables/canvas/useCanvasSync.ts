@@ -665,7 +665,7 @@ export function useCanvasSync() {
 
                     // Check group nodes for drift
                     for (const groupNode of groupNodes) {
-                        const group = groupNode.data?.group || canvasStore._rawGroups?.find((g: any) => g.id === groupNode.data?.id)
+                        const group = groupNode.data?.group || canvasStore._rawGroups?.find((g: Record<string, unknown>) => g.id === groupNode.data?.id)
                         if (!group?.position) continue
 
                         const storeAbsolute = group.position

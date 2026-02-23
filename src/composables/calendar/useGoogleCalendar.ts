@@ -76,7 +76,7 @@ export function useGoogleCalendar() {
       if (!result.newAccessToken) {
         scheduleProactiveRefresh()
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.warn('[GoogleCalendar] Proactive refresh failed:', e.message)
       // If refresh fails with auth error, clear token so UI shows reconnect
       if (e.message?.includes('expired') || e.message?.includes('401') || e.message?.includes('refresh failed')) {
@@ -164,7 +164,7 @@ export function useGoogleCalendar() {
 
         const transformed = result.events.map(e => transformEvent(e, cal.id, cal.backgroundColor))
         allEvents.push(...transformed)
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(`[GoogleCalendar] Failed to fetch events for ${cal.summary}:`, e)
         // Token expired AND refresh failed — clear access token so UI shows re-auth prompt
         if (e.message?.includes('expired') || e.message?.includes('401') || e.message?.includes('refresh failed')) {
@@ -209,7 +209,7 @@ export function useGoogleCalendar() {
       await authStore.signInWithGoogle()
       // After sign-in, the auth store's SIGNED_IN handler captures provider tokens
       // and stores them in settingsStore (see auth.ts TASK-1283 section)
-    } catch (e: any) {
+    } catch (e: unknown) {
       error.value = e.message
     }
   }

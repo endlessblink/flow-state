@@ -127,7 +127,7 @@ interface GroupParentUpdateResult {
 function updateGroupParentAfterDrag(args: {
     groupId: string
     absoluteRect: { x: number; y: number; width: number; height: number }
-    node: any
+    node: { parentNode?: string, extent?: unknown, position?: { x: number, y: number } }
     allGroups: CanvasGroup[]
 }): GroupParentUpdateResult {
     const { groupId, absoluteRect, node, allGroups } = args
@@ -274,7 +274,7 @@ function computeNodeAbsolutePosition(
     allGroups: CanvasGroup[]
 ): { x: number; y: number } {
     // First try computedPosition - this is the most reliable if available
-    const vfNode = node as any
+    const vfNode = node as { computedPosition?: { x: number; y: number } }
     if (vfNode.computedPosition &&
         typeof vfNode.computedPosition.x === 'number' &&
         typeof vfNode.computedPosition.y === 'number' &&
@@ -334,9 +334,9 @@ export interface SelectionBox {
  */
 export function useCanvasInteractions(deps?: {
     findNode: (id: string) => any
-    updateNode: (id: string, node: any) => void
-    nodes: Ref<any[]>
-    applyNodeChanges?: (changes: any[]) => void
+    updateNode: (id: string, node: Record<string, unknown>) => void
+    nodes: import('vue').Ref<unknown[]>
+    applyNodeChanges?: (changes: unknown[]) => void
 }) {
     // Vue Flow context hooks with fallback
     let vueFlow: ReturnType<typeof useVueFlow> | null = null
@@ -659,8 +659,8 @@ export function useCanvasInteractions(deps?: {
                     // 2. Build spatial task with explicit dimensions for center-based containment
                     const spatialTask = {
                         position: absolutePos,
-                        width: (node as any).width ?? DEFAULT_TASK_WIDTH,
-                        height: (node as any).height ?? DEFAULT_TASK_HEIGHT
+                        width: (node as unknown as Record<string, unknown>).width as number ?? DEFAULT_TASK_WIDTH,
+                        height: (node as unknown as Record<string, unknown>).height as number ?? DEFAULT_TASK_HEIGHT
                     }
 
                     // BUG-1061 FIX: Skip if task just followed its parent group (didn't move independently)
@@ -692,7 +692,7 @@ export function useCanvasInteractions(deps?: {
                                         await taskStore.updateTask(task.id, {
                                             canvasPosition: absolutePos,
                                             positionFormat: 'absolute'
-                                        }, 'DRAG-FOLLOW-PARENT' as any)
+                                        }, 'DRAG-FOLLOW-PARENT' as Parameters<typeof taskStore.updateTask>[2])
                                         positionManager.updatePosition(task.id, absolutePos, 'user-drag', oldParentId)
                                     } finally {
                                         // BUG-1209: Delay clearing pendingWrite to catch realtime echo
@@ -843,7 +843,7 @@ export function useCanvasInteractions(deps?: {
 
     // --- RESIZE HANDLERS ---
 
-    const onSectionResizeStart = ({ sectionId: rawSectionId }: { sectionId: string; event: any }) => {
+    const onSectionResizeStart = ({ sectionId: rawSectionId }: { sectionId: string; event: unknown }) => {
         const { id: sectionId } = CanvasIds.parseNodeId(rawSectionId)
         const section = canvasStore.groups.find(s => s.id === sectionId)
         if (!section) return
@@ -885,7 +885,7 @@ export function useCanvasInteractions(deps?: {
         lockManager.acquire(sectionId, 'user-resize')
     }
 
-    const onSectionResize = ({ sectionId: _rawSectionId, event }: { sectionId: string; event: any }) => {
+    const onSectionResize = ({ sectionId: _rawSectionId, event }: { sectionId: string; event: unknown }) => {
         const { id: sectionId } = CanvasIds.parseNodeId(_rawSectionId)
         const typedEvent = event as { params?: { width?: number; height?: number; x?: number; y?: number } }
         const width = typedEvent?.params?.width
@@ -939,7 +939,7 @@ export function useCanvasInteractions(deps?: {
         }
     }
 
-    const onSectionResizeEnd = async ({ sectionId: rawSectionId, event }: { sectionId: string; event: any }) => {
+    const onSectionResizeEnd = async ({ sectionId: rawSectionId, event }: { sectionId: string; event: unknown }) => {
         const { id: sectionId } = CanvasIds.parseNodeId(rawSectionId)
         const vueFlowNode = findNode(CanvasIds.groupNodeId(sectionId))
         if (!vueFlowNode) return
@@ -1048,7 +1048,7 @@ export function useCanvasInteractions(deps?: {
                         console.log(`[BUG-1191] Task "${task.title?.slice(0, 25)}" outside resized group "${resizedGroup.name}". Clearing parentId.`)
                     }
                     // Clear parentId in store and DB
-                    taskStore.updateTask(task.id, { parentId: undefined, positionFormat: 'absolute' }, 'DRAG' as any)
+                    taskStore.updateTask(task.id, { parentId: undefined, positionFormat: 'absolute' }, 'DRAG' as Parameters<typeof taskStore.updateTask>[2])
                     // Fix Vue Flow node
                     const taskNode = findNode(task.id)
                     if (taskNode) {

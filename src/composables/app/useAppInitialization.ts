@@ -290,7 +290,7 @@ export function useAppInitialization() {
         // 3. Initialize Realtime Subscriptions
         const { initRealtimeSubscription } = useSupabaseDatabase()
 
-        const onProjectChange = (payload: any) => {
+        const onProjectChange = (payload: Record<string, unknown>) => {
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const projects = useProjectStore()
@@ -327,7 +327,7 @@ export function useAppInitialization() {
             }
         }
 
-        const onTaskChange = (payload: any) => {
+        const onTaskChange = (payload: Record<string, unknown>) => {
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
@@ -402,7 +402,7 @@ export function useAppInitialization() {
             }
         }
 
-        const onGroupChange = (payload: any) => {
+        const onGroupChange = (payload: Record<string, unknown>) => {
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
@@ -487,7 +487,7 @@ export function useAppInitialization() {
 
             // Simplified handlers for post-login initialization
             // These use the same logic as the onMounted handlers
-            const onProjectChange = (payload: any) => {
+            const onProjectChange = (payload: Record<string, unknown>) => {
                 const canvas = useCanvasStore()
                 const projects = useProjectStore()
                 const tasks = useTaskStore()
@@ -509,7 +509,7 @@ export function useAppInitialization() {
                 }
             }
 
-            const onTaskChange = (payload: any) => {
+            const onTaskChange = (payload: Record<string, unknown>) => {
                 const canvas = useCanvasStore()
                 const tasks = useTaskStore()
 
@@ -536,7 +536,7 @@ export function useAppInitialization() {
                 }
             }
 
-            const onGroupChange = (payload: any) => {
+            const onGroupChange = (payload: Record<string, unknown>) => {
                 const canvas = useCanvasStore()
                 const tasks = useTaskStore()
 

@@ -22,6 +22,7 @@
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'sort' }"
+        :aria-pressed="activeTab === 'sort'"
         @click="activeTab = 'sort'"
       >
         <Zap :size="18" />
@@ -31,6 +32,7 @@
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'capture' }"
+        :aria-pressed="activeTab === 'capture'"
         @click="activeTab = 'capture'"
       >
         <Plus :size="18" />

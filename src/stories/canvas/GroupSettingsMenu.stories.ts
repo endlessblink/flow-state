@@ -114,7 +114,7 @@ export const Default: Story = {
         hoveredIndex.value = -1
       }
 
-      const selectOption = (field: any, option: any) => {
+      const selectOption = (field: unknown, option: unknown) => {
         field.value = option
         openDropdown.value = null
       }

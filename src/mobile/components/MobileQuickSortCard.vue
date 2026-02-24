@@ -200,8 +200,7 @@ function truncateDescription(desc: string): string {
   position: relative;
   width: 92%;
   max-width: 360px;
-  min-height: 160px;
-  max-height: 220px;
+  height: 180px;
   background: linear-gradient(
     145deg,
     var(--canvas-task-bg),
@@ -213,7 +212,7 @@ function truncateDescription(desc: string): string {
     var(--shadow-2xl),
     var(--shadow-dark-lg),
     inset 0 1px 0 var(--glass-bg-weak);
-  z-index: var(--z-sticky);
+  z-index: 1;
   touch-action: none;
   user-select: none;
   overflow: hidden;
@@ -328,7 +327,7 @@ function truncateDescription(desc: string): string {
 }
 
 .task-title {
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-weight: var(--font-bold);
   line-height: var(--leading-tight);
   margin: 0 0 var(--space-3);
@@ -336,10 +335,10 @@ function truncateDescription(desc: string): string {
   letter-spacing: -0.01em;
   overflow-wrap: anywhere;
   word-break: break-word;
-  max-height: 5.2em;
+  max-height: 3.8em;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   text-align: start;
   unicode-bidi: plaintext;
@@ -376,17 +375,26 @@ function truncateDescription(desc: string): string {
 
 .meta-item.priority-high {
   color: var(--color-priority-high);
-  background: var(--priority-high-bg);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-priority-high);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .meta-item.priority-medium {
   color: var(--color-priority-medium);
-  background: var(--priority-medium-bg);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-priority-medium);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .meta-item.priority-low {
   color: var(--color-priority-low);
-  background: var(--priority-low-bg);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-priority-low);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .capitalize {
@@ -395,15 +403,14 @@ function truncateDescription(desc: string): string {
 
 @media (max-height: 700px) {
   .task-card {
-    max-height: 180px;
-    min-height: 140px;
+    height: 160px;
   }
   .card-content {
     padding: var(--space-4);
     padding-bottom: var(--space-5);
   }
   .task-title {
-    font-size: var(--text-lg);
+    font-size: var(--text-base);
     max-height: 3.8em;
     -webkit-line-clamp: 2;
   }

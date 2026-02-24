@@ -101,7 +101,7 @@ async function onClearMemories() {
   isClearingMemories.value = true
   try {
     // Save empty memoryGraph
-    await savePreferences({ memoryGraph: [] } as any)
+    await savePreferences({ memoryGraph: [] } as unknown as import('@/composables/useWorkProfile').WorkProfileData)
   } finally {
     isClearingMemories.value = false
   }

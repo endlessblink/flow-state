@@ -23,7 +23,7 @@ const meta: Meta<typeof GroupModal> = {
     },
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="min-height: 700px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
@@ -62,8 +62,8 @@ export const CreateNew: Story = {
     components: { GroupModal },
     setup() {
       const handleClose = () => console.log('Modal closed')
-      const handleCreated = (group: any) => console.log('Group created:', group)
-      const handleUpdated = (group: any) => console.log('Group updated:', group)
+      const handleCreated = (group: Record<string, unknown>) => console.log('Group created:', group)
+      const handleUpdated = (group: Record<string, unknown>) => console.log('Group updated:', group)
       return { args, handleClose, handleCreated, handleUpdated }
     },
     template: `
@@ -98,8 +98,8 @@ export const EditExisting: Story = {
     components: { GroupModal },
     setup() {
       const handleClose = () => console.log('Modal closed')
-      const handleCreated = (group: any) => console.log('Group created:', group)
-      const handleUpdated = (group: any) => console.log('Group updated:', group)
+      const handleCreated = (group: Record<string, unknown>) => console.log('Group created:', group)
+      const handleUpdated = (group: Record<string, unknown>) => console.log('Group updated:', group)
       return { args, handleClose, handleCreated, handleUpdated }
     },
     template: `
@@ -125,8 +125,8 @@ export const Closed: Story = {
     components: { GroupModal },
     setup() {
       const handleClose = () => console.log('Modal closed')
-      const handleCreated = (group: any) => console.log('Group created:', group)
-      const handleUpdated = (group: any) => console.log('Group updated:', group)
+      const handleCreated = (group: Record<string, unknown>) => console.log('Group created:', group)
+      const handleUpdated = (group: Record<string, unknown>) => console.log('Group updated:', group)
       return { args, handleClose, handleCreated, handleUpdated }
     },
     template: `

@@ -128,7 +128,7 @@ const dragGroup = computed(() => ({
 // FEATURE-1336b: Bridge vuedraggable drag to global useDragAndDrop for sidebar drops
 const { startDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
-const onDragStart = (evt: any) => {
+const onDragStart = (evt: DragEvent) => {
   isDragActive.value = true
 
   // Bridge to global drag state so sidebar can receive drops
@@ -144,7 +144,7 @@ const onDragStart = (evt: any) => {
   }
 }
 
-const onDragEnd = (evt: any) => {
+const onDragEnd = (evt: DragEvent) => {
   isDragActive.value = false
 
   // Check if dropped on a sidebar project (SortableJS forceFallback doesn't fire
@@ -187,7 +187,7 @@ const columnIndicatorColor = computed(() => {
   }
   if (props.columnType === 'category') {
     // FEATURE-1336: Show project color dot for category columns
-    const project = taskStore.projects.find((p: any) => p.id === props.status)
+    const project = taskStore.projects.find(p => p.id === props.status)
     return project?.color || 'rgba(255, 255, 255, 0.2)'
   }
   return null
@@ -216,7 +216,7 @@ const persistOrderForColumn = () => {
   })
 }
 
-const handleDragChange = async (event: any) => {
+const handleDragChange = async (event: { added?: { element: Task }; removed?: { element: Task } }) => {
   if (event.added) {
     try {
       const taskId = event.added.element.id
@@ -228,10 +228,10 @@ const handleDragChange = async (event: any) => {
         taskStore.moveTaskToProject(taskId, targetProjectId === 'uncategorized' ? '' : targetProjectId)
       } else if (props.columnType === 'priority') {
         // Priority columns: update task priority
-        taskStore.moveTaskToPriority(taskId, props.status as any)
+        taskStore.moveTaskToPriority(taskId, props.status as 'high' | 'medium' | 'low')
       } else if (props.columnType === 'date') {
         // Date columns: update task due date
-        taskStore.moveTaskToDate(taskId, props.status as any)
+        taskStore.moveTaskToDate(taskId, props.status)
       } else {
         // Status columns (default): update task status
         await taskStore.moveTaskWithUndo(taskId, props.status)

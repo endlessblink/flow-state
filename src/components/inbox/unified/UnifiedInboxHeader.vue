@@ -198,7 +198,7 @@ const props = defineProps<{
   hideDoneTasks: boolean
   doneTaskCount: number
   baseTasks: Task[]
-  rootProjects: any[]
+  rootProjects: unknown[]
   context: string
   sortBy: SortByType // TASK-1073
   sortDirection: SortDirection // TASK-1412

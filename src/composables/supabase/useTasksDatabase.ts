@@ -488,7 +488,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             })
 
             if (!rpcError && rpcResult) {
-                return (rpcResult as any[]).map(r => ({
+                return (rpcResult as unknown[]).map(r => ({
                     taskId: r.task_id,
                     status: r.status as TaskIdAvailability['status'],
                     reason: r.reason

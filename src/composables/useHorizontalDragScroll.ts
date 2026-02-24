@@ -322,9 +322,9 @@ export function useHorizontalDragScroll(
     container.addEventListener('mousedown', handleMouseDown)
 
     // Store global handlers for cleanup and dynamic attachment
-    const containerExt = container as unknown as Record<string, any>
-    containerExt._globalMouseMoveHandler = handleGlobalMouseMove as any
-    containerExt._globalMouseUpHandler = handleGlobalMouseUp as any
+    const containerExt = container as unknown as Record<string, unknown>
+    containerExt._globalMouseMoveHandler = handleGlobalMouseMove as unknown
+    containerExt._globalMouseUpHandler = handleGlobalMouseUp as unknown
 
     // Touch events
     if (touchEnabled) {

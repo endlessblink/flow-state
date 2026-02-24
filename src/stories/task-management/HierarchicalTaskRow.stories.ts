@@ -23,7 +23,7 @@ const meta = {
         },
     },
     decorators: [
-        (story: any) => ({
+        (story: Record<string, unknown>) => ({
             components: { story },
             setup() {
                 // Force desktop mode by setting window.innerWidth >= 768
@@ -40,7 +40,7 @@ const meta = {
                 projectStore._rawProjects.value = [
                     { id: 'p1', name: 'Work', color: '#4ECDC4', emoji: '💼', colorType: 'emoji', createdAt: new Date(), updatedAt: new Date() },
                     { id: 'p2', name: 'Personal', color: '#FF6B6B', emoji: '🏠', colorType: 'emoji', createdAt: new Date(), updatedAt: new Date() }
-                ] as any
+                ] as unknown
                 return {}
             },
             template: '<div style="padding: var(--space-5); background: var(--app-background-gradient); min-height: 300px; width: 100%;"><div style="min-width: 900px;"><story /></div></div>'
@@ -71,7 +71,7 @@ const mockTask = {
 
 export const Default: Story = {
     args: {
-        task: mockTask as any,
+        task: mockTask as unknown,
         indentLevel: 0,
         selected: false,
         expandedTasks: new Set<string>()
@@ -80,7 +80,7 @@ export const Default: Story = {
 
 export const DeeplyNested: Story = {
     args: {
-        task: { ...mockTask, id: 'nested-1', title: 'Deep Subtask' } as any,
+        task: { ...mockTask, id: 'nested-1', title: 'Deep Subtask' } as unknown,
         indentLevel: 2,
         selected: false,
         expandedTasks: new Set<string>()
@@ -89,7 +89,7 @@ export const DeeplyNested: Story = {
 
 export const HighPriority: Story = {
     args: {
-        task: { ...mockTask, id: 'high-1', priority: 'high', title: 'Urgent Project Task' } as any,
+        task: { ...mockTask, id: 'high-1', priority: 'high', title: 'Urgent Project Task' } as unknown,
         indentLevel: 0,
         selected: false,
         expandedTasks: new Set<string>()
@@ -98,7 +98,7 @@ export const HighPriority: Story = {
 
 export const Completed: Story = {
     args: {
-        task: { ...mockTask, id: 'done-1', status: 'done', progress: 100, title: 'Completed Task' } as any,
+        task: { ...mockTask, id: 'done-1', status: 'done', progress: 100, title: 'Completed Task' } as unknown,
         indentLevel: 0,
         selected: false,
         expandedTasks: new Set<string>()
@@ -107,7 +107,7 @@ export const Completed: Story = {
 
 export const Selected: Story = {
     args: {
-        task: { ...mockTask, id: 'selected-1', title: 'Selected Task' } as any,
+        task: { ...mockTask, id: 'selected-1', title: 'Selected Task' } as unknown,
         indentLevel: 0,
         selected: true,
         expandedTasks: new Set<string>()

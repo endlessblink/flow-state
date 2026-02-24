@@ -1,7 +1,7 @@
 {
   "project": "FlowState",
   "version": "2.2.0",
-  "last_updated": "2026-01-29",
+  "last_updated": "2026-02-24",
   "skills": {
     "dev-maestro": {
       "name": "Dev Maestro",
@@ -726,6 +726,133 @@
         "qa-testing"
       ],
       "description": "Cyberflow RPG Game Master skill — AI-driven challenge system for FlowState gamification. Use for developing, debugging, or extending the RPG challenge engine, ARIA game master, corruption system, boss fights, and narrative features."
+    },
+    "cyberflow-design-system": {
+      "name": "cyberflow-design-system",
+      "category": "design",
+      "triggers": [
+        "implement"
+      ],
+      "keywords": [
+        "cyberflow",
+        "design",
+        "system",
+        "cyberpunk",
+        "visual",
+        "flowstate's"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Cyberpunk visual design system for FlowState's Cyberflow RPG. Encodes augmented-ui patterns, neon glow recipes, scanline/glitch effects, cyberpunk typography, color palette, intensity-level CSS architecture, and prefers-reduced-motion accessibility patterns. Use when implementing any cyberpunk-styled UI component."
+    },
+    "cyberflow-state-machine": {
+      "name": "cyberflow-state-machine",
+      "category": "implement",
+      "triggers": [
+        "implement"
+      ],
+      "keywords": [
+        "cyberflow",
+        "state",
+        "machine",
+        "game",
+        "animation",
+        "choreography"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Game state machine and animation choreography for FlowState's Cyberflow RPG. Encodes level-up sequences, boss defeat sequences, mission complete sequences, corruption tier transitions, Vue composable state machine patterns, interruptibility rules, event queue management, and sound cue integration points. Use when implementing multi-step game animations or state transitions."
+    },
+    "game-ui-components": {
+      "name": "game-ui-components",
+      "category": "implement",
+      "triggers": [],
+      "keywords": [
+        "game",
+        "components",
+        "component",
+        "patterns",
+        "flowstate's",
+        "cyberflow"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Game UI component patterns for FlowState's Cyberflow RPG. Encodes HP bars with damage trails, XP bars with glow, SVG radar charts, level badges with tier glow, streak counters, corruption meters, mission/challenge cards, boss fight UI, floating XP pop-ups, and DiceBear avatar integration. Use when building any game HUD element."
+    },
+    "gamification-intensity-system": {
+      "name": "gamification-intensity-system",
+      "category": "design",
+      "triggers": [
+        "implement"
+      ],
+      "keywords": [
+        "gamification",
+        "intensity",
+        "system",
+        "level",
+        "architecture",
+        "flowstate's"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Gamification intensity level architecture for FlowState's Cyberflow RPG. Encodes the minimal/moderate/intense system — CSS class strategy, component visibility matrix, header widget variants, toast filtering, corruption overlay rules, settings UI with live previews, and performance budgets. Use when implementing intensity-aware UI or modifying gamification visibility."
+    },
+    "oss-readiness": {
+      "name": "oss-readiness",
+      "category": "implement",
+      "triggers": [],
+      "keywords": [
+        "oss",
+        "readiness",
+        "prepare",
+        "flowstate",
+        "open-source",
+        "release.",
+        "secret"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Prepare FlowState for open-source release. Secret scrubbing, infrastructure parameterization, documentation, and community health files. Use when working on INQUIRY-1413 or any OSS preparation task."
+    },
+    "remotion-animations": {
+      "name": "remotion-animations",
+      "category": "implement",
+      "triggers": [],
+      "keywords": [
+        "remotion",
+        "animations",
+        "animation",
+        "integration",
+        "flowstate's",
+        "cyberflow"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Remotion animation integration for FlowState's Cyberflow RPG. Encodes Remotion setup in Vue 3 projects, key animation sequences (level-up celebration, boss defeat, mission complete), composition patterns, asset pipeline for cyberpunk SVGs/graphics, performance optimization with lazy-loading, and CSS-only fallback patterns. Use when building cinematic game animations."
+    },
+    "svg-icon-craft": {
+      "name": "svg-icon-craft",
+      "category": "implement",
+      "triggers": [],
+      "keywords": [
+        "svg",
+        "icon",
+        "craft",
+        "custom",
+        "design",
+        "graphics",
+        "generation"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Custom SVG icon design and graphics generation for FlowState's Cyberflow RPG. Encodes cyberpunk icon design principles (sharp angles, circuit motifs, neon-ready), icon categories (achievements, classes, corruption, bosses, shop, stats), Vue inline SVG component patterns, Nano Banana Pro AI graphics generation integration, SVGO optimization, and animated SVG patterns. Use when creating custom game icons or generating visual assets."
     }
   },
   "categories": {

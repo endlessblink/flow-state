@@ -358,7 +358,7 @@ export function useSidebarManagement() {
       taskStore.setSmartView(null)
     } else {
       // It's a smart view
-      taskStore.setSmartView(view as any) // Cast still needed because view union is wide, but logic is safe
+      taskStore.setSmartView(view as unknown) // Cast still needed because view union is wide, but logic is safe
       taskStore.setActiveDurationFilter(null)
     }
   }

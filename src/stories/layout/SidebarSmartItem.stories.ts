@@ -22,7 +22,7 @@ const meta = {
     }
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="padding: 6.25rem; background: var(--app-background-gradient); min-height: 300px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);">
@@ -57,7 +57,7 @@ export const Default: Story = {
     color: 'azure',
     compact: false
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { SidebarSmartItem, Calendar },
     setup() { return { args } },
     template: `
@@ -76,7 +76,7 @@ export const Active: Story = {
     ...Default.args,
     active: true
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { SidebarSmartItem, Calendar },
     setup() { return { args } },
     template: `
@@ -95,7 +95,7 @@ export const Compact: Story = {
     ...Default.args,
     compact: true
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { SidebarSmartItem, Calendar },
     setup() { return { args } },
     template: `

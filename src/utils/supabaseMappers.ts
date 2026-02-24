@@ -129,6 +129,7 @@ export interface SupabaseTask {
     recurring_instances?: RecurringTaskInstance[] | null
     notification_prefs?: NotificationPreferences | null
     reminders?: unknown[] | null // FEATURE-1363: Custom date/time reminders
+    attachments?: unknown[] | null // FEATURE-1414: Image attachments (stored as JSONB)
     recurrence_rule?: Record<string, unknown> | null  // TASK-1403: Simplified recurrence
     recurrence_parent_id?: string | null
     recurrence_count?: number
@@ -514,6 +515,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         recurring_instances: task.recurringInstances || [],
         notification_prefs: task.notificationPreferences || null,
         reminders: task.reminders || [], // FEATURE-1363: Custom date/time reminders
+        attachments: task.attachments || [],
 
         parent_task_id: sanitizedParentTaskId,
 
@@ -584,6 +586,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         recurringInstances: record.recurring_instances || [],
         notificationPreferences: record.notification_prefs || undefined,
         reminders: (record.reminders as import('../types/notifications').TaskReminder[]) || [],
+        attachments: (record.attachments as import('../types/tasks').TaskAttachment[]) || [],
 
         isInInbox: record.is_in_inbox || false,
         order: record.order || 0,

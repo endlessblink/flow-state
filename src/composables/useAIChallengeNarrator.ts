@@ -130,7 +130,7 @@ export function useAIChallengeNarrator() {
       metadata: {
         narrator: true,
         eventType: event.type,
-      } as any,
+      } as unknown,
     })
   }
 

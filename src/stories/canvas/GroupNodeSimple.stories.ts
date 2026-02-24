@@ -81,7 +81,7 @@ const meta = {
   tags: ['autodocs', 'new'],
   parameters: { layout: 'centered' },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: '<div style="padding: var(--space-8); background: var(--app-background-gradient);"><story /></div>',
     }),

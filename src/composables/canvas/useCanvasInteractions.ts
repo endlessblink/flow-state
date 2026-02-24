@@ -745,7 +745,7 @@ export function useCanvasInteractions(deps?: {
 
                     // TASK-1083: Combine position + smart-group updates into SINGLE save to prevent race condition
                     // Previously: two separate updateTask calls could race with realtime events
-                    const dragUpdates: Record<string, any> = {
+                    const dragUpdates: Record<string, unknown> = {
                         parentId: newParentId ?? undefined,
                         canvasPosition: absolutePos,
                         positionFormat: 'absolute'

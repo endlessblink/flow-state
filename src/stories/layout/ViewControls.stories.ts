@@ -45,7 +45,7 @@ const meta = {
     },
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="padding: var(--space-10); background: var(--app-background-gradient); min-height: 200px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);">
@@ -67,7 +67,7 @@ export const Default: Story = {
     sortBy: 'dueDate',
     filterStatus: 'all',
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { ViewControls },
     setup() {
       const viewType = ref(args.viewType)
@@ -141,7 +141,7 @@ export const ListViewMode: Story = {
     sortBy: 'priority',
     filterStatus: 'in_progress',
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { ViewControls },
     setup() {
       const viewType = ref(args.viewType)

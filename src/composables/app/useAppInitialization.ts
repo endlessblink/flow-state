@@ -36,7 +36,7 @@ export function useAppInitialization() {
     const gamificationStore = useGamificationStore()
     const challengesStore = useChallengesStore()
     const itpProtection = useSafariITPProtection()
-    const activeChannel = ref<any>(null)
+    const activeChannel = ref<unknown>(null)
     const realtimeInitialized = ref(false)
     const onMountedCompleted = ref(false)  // BUG-1106: Prevent race condition between watcher and onMounted
     // BUG-1339: Signal that initial data load has completed (tasks, projects, canvas)

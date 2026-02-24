@@ -113,7 +113,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
     // TASK-1322: Properly handle both instances[] and legacy fields
     if (existingTask.instances && existingTask.instances.length > 0 && instanceId) {
       // Update the specific instance's scheduledDate (move, not duplicate)
-      const updatedInstances = existingTask.instances.map((inst: any) =>
+      const updatedInstances = existingTask.instances.map((inst: unknown) =>
         inst.id === instanceId
           ? { ...inst, scheduledDate: targetDate }
           : inst

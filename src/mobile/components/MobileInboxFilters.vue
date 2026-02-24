@@ -158,8 +158,11 @@ defineEmits<{
 }
 
 .filter-chip.active .filter-count {
-  background: var(--brand-primary);
-  color: white;
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* Controls row (Group By + Sort) */

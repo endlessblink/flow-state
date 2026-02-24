@@ -160,6 +160,7 @@ import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
+import type { TaskAttachment } from '@/types/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
 import { provideProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
@@ -338,13 +339,15 @@ const handleQuickTaskCreate = async (data: {
   priority: 'low' | 'medium' | 'high'
   dueDate?: string
   projectId?: string
+  attachments?: TaskAttachment[]  // FEATURE-1414
 }) => {
   const newTask = await createTaskForColumn(
     data.title,
     data.description,
     pendingTaskColumnKey.value,
     pendingTaskViewType.value,
-    data.projectId || pendingTaskProjectId.value
+    data.projectId || pendingTaskProjectId.value,
+    data.attachments
   )
   if (newTask) {
     closeQuickTaskCreate()

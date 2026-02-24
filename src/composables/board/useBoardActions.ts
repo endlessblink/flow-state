@@ -1,4 +1,5 @@
 import type { useTaskStore, Task } from '@/stores/tasks'
+import type { TaskAttachment } from '@/types/tasks'
 import type { useTimerStore } from '@/stores/timer'
 import type { BoardViewType } from './useBoardModals'
 
@@ -91,13 +92,15 @@ export function useBoardActions(deps: BoardActionsDependencies) {
         description: string,
         columnKey: string,
         viewType: BoardViewType,
-        projectId?: string
+        projectId?: string,
+        attachments?: TaskAttachment[]  // FEATURE-1414
     ) => {
         const taskData: Partial<Task> = {
             title,
             description,
             projectId,
-            status: 'planned' // default status
+            status: 'planned', // default status
+            attachments
         }
 
         // Set correct field based on view type

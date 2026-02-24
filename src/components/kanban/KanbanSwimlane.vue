@@ -63,7 +63,7 @@
             v-for="column in dateColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key as any"
+            :status="column.key"
             :tasks="tasksByDate[column.key]"
             column-type="date"
             :swimlane-id="project.id"
@@ -84,7 +84,7 @@
             v-for="column in categoryColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key as any"
+            :status="column.key"
             :tasks="tasksByCategory[column.key] || []"
             column-type="category"
             swimlane-id="category"
@@ -105,7 +105,7 @@
             v-for="column in priorityColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key as any"
+            :status="column.key"
             :tasks="tasksByPriority[column.key]"
             column-type="priority"
             :swimlane-id="project.id"
@@ -236,15 +236,15 @@ const categoryColumns = computed(() => {
 
   // Get root projects sorted by name
   const rootProjects = taskStore.projects
-    .filter((p: any) => !p.parentId)
-    .sort((a: any, b: any) => a.name.localeCompare(b.name))
+    .filter(p => !p.parentId)
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   for (const project of rootProjects) {
     columns.push({ key: project.id, label: project.name })
     // Add child projects indented
     const children = taskStore.projects
-      .filter((p: any) => p.parentId === project.id)
-      .sort((a: any, b: any) => a.name.localeCompare(b.name))
+      .filter(p => p.parentId === project.id)
+      .sort((a, b) => a.name.localeCompare(b.name))
     for (const child of children) {
       columns.push({ key: child.id, label: `  ${child.name}`, parentId: project.id })
     }

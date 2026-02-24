@@ -13,7 +13,7 @@ const meta = {
         }
     },
     decorators: [
-        (story: any) => ({
+        (story: Record<string, unknown>) => ({
             components: { story },
             template: `
         <div style="padding: var(--space-10); background: var(--app-background-gradient); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center;">
@@ -49,7 +49,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Variants: Story = {
-    render: (args: any) => ({
+    render: (args: Record<string, unknown>) => ({
         components: { BaseBadge },
         setup() {
             return { args }
@@ -68,7 +68,7 @@ export const Variants: Story = {
 }
 
 export const Sizes: Story = {
-    render: (args: any) => ({
+    render: (args: Record<string, unknown>) => ({
         components: { BaseBadge },
         setup() {
             return { args }
@@ -87,7 +87,7 @@ export const Rounded: Story = {
     args: {
         rounded: true
     },
-    render: (args: any) => ({
+    render: (args: Record<string, unknown>) => ({
         components: { BaseBadge },
         setup() {
             return { args }

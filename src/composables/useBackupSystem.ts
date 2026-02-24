@@ -1121,7 +1121,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
         console.error('[Backup] Tauri save failed:', error)
 
         // Method 2: Try global __TAURI__ object as fallback
-        const win = window as any
+        const win = window as unknown
         if (win.__TAURI__?.dialog?.save && win.__TAURI__?.fs?.writeTextFile) {
           console.log('[Backup] Attempting fallback via __TAURI__ global...')
           try {
@@ -1387,7 +1387,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       }
     },
 
-    restoreFromShadow: async (shadowData: any) => {
+    restoreFromShadow: async (shadowData: unknown) => {
       console.log(`[Backup] Restoring from Shadow Hub: ${shadowData.meta?.counts?.tasks} tasks`)
       // TASK-344: Explicitly specify no dry-run to get boolean return
       const result = await restoreBackup({

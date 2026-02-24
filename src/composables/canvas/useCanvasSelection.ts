@@ -19,7 +19,7 @@ export interface SelectionBox {
 
 export function useCanvasSelection(deps: {
     nodes: Ref<Node[]>
-    applyNodeChanges: (changes: any[]) => void
+    applyNodeChanges: (changes: unknown[]) => void
 }) {
     const { nodes, applyNodeChanges } = deps
     const canvasStore = useCanvasStore()
@@ -77,8 +77,8 @@ export function useCanvasSelection(deps: {
     }
 
     // --- SELECTION CHANGE HANDLER (Migrated from CanvasView.vue) ---
-    const handleSelectionChange = (params: any) => {
-        const newSelection = params?.nodes?.map((n: any) => n.id) ?? []
+    const handleSelectionChange = (params: unknown) => {
+        const newSelection = params?.nodes?.map((n: unknown) => n.id) ?? []
         canvasStore.selectedNodeIds = newSelection
     }
 
@@ -115,7 +115,7 @@ export function useCanvasSelection(deps: {
         canvasStore.setSelectedNodes([])
         selectedTask.value = null
 
-        nodes.value.forEach((node: any) => {
+        nodes.value.forEach((node: unknown) => {
             if (node.selected) {
                 node.selected = false
             }

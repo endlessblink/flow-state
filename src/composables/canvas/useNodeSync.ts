@@ -97,7 +97,7 @@ export function useNodeSync(
             // 2. CALCULATE ABSOLUTE POSITION
             // ================================================================
             let absolutePosition: { x: number; y: number }
-            const vfNode = vueFlowNode as any
+            const vfNode = vueFlowNode as unknown
 
             if (vfNode.computedPosition) {
                 absolutePosition = {
@@ -140,7 +140,7 @@ export function useNodeSync(
             // 4. PREPARE DB PAYLOAD
             // ================================================================
             const positionToSave = absolutePosition
-            const updatePayload: Record<string, any> = {
+            const updatePayload: Record<string, unknown> = {
                 position_version: currentVersion + 1,
                 updated_at: new Date().toISOString()
             }
@@ -156,8 +156,8 @@ export function useNodeSync(
                 updatePayload.position_json = {
                     x: positionToSave.x,
                     y: positionToSave.y,
-                    width: vueFlowNode.data?.width || (vueFlowNode as any).width || CANVAS.DEFAULT_GROUP_WIDTH,
-                    height: vueFlowNode.data?.height || (vueFlowNode as any).height || CANVAS.DEFAULT_GROUP_HEIGHT
+                    width: vueFlowNode.data?.width || (vueFlowNode as unknown).width || CANVAS.DEFAULT_GROUP_WIDTH,
+                    height: vueFlowNode.data?.height || (vueFlowNode as unknown).height || CANVAS.DEFAULT_GROUP_HEIGHT
                 }
                 updatePayload.parent_group_id = currentParentId === 'NONE' ? null : currentParentId
             }

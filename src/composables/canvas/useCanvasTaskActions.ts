@@ -1,5 +1,6 @@
 import { type Ref, nextTick } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
+import type { TaskAttachment } from '@/types/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasModalsStore } from '@/stores/canvas/modals'
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
@@ -18,7 +19,7 @@ export interface TaskActionsDeps {
     closeCanvasContextMenu: () => void
     screenToFlowCoordinate: (position: { x: number; y: number }) => { x: number; y: number }
     recentlyDeletedGroups?: Ref<Set<string>>
-    undoHistory: any
+    undoHistory: unknown
     fitView?: (options?: { padding?: number; duration?: number; nodes?: string[] }) => void
 }
 
@@ -146,6 +147,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         priority?: 'low' | 'medium' | 'high'
         dueDate?: string
         projectId?: string
+        attachments?: TaskAttachment[]  // FEATURE-1414
     }
 
     const handleQuickTaskCreate = async (data: QuickTaskData) => {
@@ -167,7 +169,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 priority: data.priority || 'medium',
                 dueDate: data.dueDate,
                 projectId: data.projectId,
-                isInInbox: shouldCreateInInbox
+                isInInbox: shouldCreateInInbox,
+                attachments: data.attachments  // FEATURE-1414
             })
 
             if (deps.batchSyncNodes) {

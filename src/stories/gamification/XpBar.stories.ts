@@ -93,7 +93,7 @@ export const XpGainAnimation: Story = {
   render: () => ({
     components: { XpBar },
     setup() {
-      const xpEvent = ref<any>(undefined)
+      const xpEvent = ref<unknown>(undefined)
       let eventId = 0
 
       const triggerXpGain = () => {

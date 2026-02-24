@@ -150,8 +150,8 @@ interface Props {
   totalSubtasks: number
   isAllSubtasksCompleted: boolean
   isExpanded?: boolean
-  titleAlignmentClasses: any
-  projectVisual: any
+  titleAlignmentClasses: unknown
+  projectVisual: unknown
   projectDisplayName: string
   statusOptions: Array<{ label: string, value: string }>
 }

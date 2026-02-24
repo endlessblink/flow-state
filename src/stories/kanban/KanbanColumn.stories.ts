@@ -32,7 +32,7 @@ const meta = {
     }
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       setup() {
         // Provide mock progressive disclosure state directly

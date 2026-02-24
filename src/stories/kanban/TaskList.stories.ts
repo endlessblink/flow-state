@@ -47,7 +47,7 @@ const mockTasks = [
     updatedAt: new Date(),
     subtasks: [],
   },
-] as any[]
+] as unknown[]
 
 const mockGroups = [
   {
@@ -81,7 +81,7 @@ const meta = {
     },
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       setup() {
         const taskStore = useTaskStore()
@@ -108,5 +108,5 @@ export const Default: Story = {
     tasks: mockTasks,
     groups: mockGroups,
     groupBy: 'project',
-  } as any,
+  } as unknown,
 }

@@ -84,6 +84,13 @@
         @keydown.esc="$emit('cancel')"
       >
 
+      <!-- FEATURE-1414: Image Attachments -->
+      <TaskAttachments
+        :attachments="pendingAttachments"
+        @add="handleAddAttachment"
+        @remove="handleRemoveAttachment"
+      />
+
       <!-- Schedule Section -->
       <div class="date-time-row">
         <!-- Date Picker -->
@@ -137,7 +144,7 @@
           <CheckCircle :size="14" class="property-icon" />
           <CustomSelect
             v-model="status"
-            :options="(statusOptions as any)"
+            :options="(statusOptions as unknown[])"
             class="compact-select"
           />
         </div>
@@ -191,6 +198,8 @@ import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useUrlScraping } from '@/composables/useUrlScraping'
 import { statusOptions } from '@/components/tasks/context-menu/constants'
+import TaskAttachments from './TaskAttachments.vue'
+import type { TaskAttachment } from '@/types/tasks'
 
 interface Props {
   isOpen: boolean
@@ -210,6 +219,7 @@ const emit = defineEmits<{
     priority: 'low' | 'medium' | 'high'
     dueDate?: string
     projectId?: string
+    attachments?: TaskAttachment[]  // FEATURE-1414
   }]
 }>()
 
@@ -226,6 +236,9 @@ const status = ref<string>('planned')
 const priority = ref<'low' | 'medium' | 'high'>('medium')
 const projectId = ref<string>('')
 const localDate = ref('')
+
+// FEATURE-1414: Image attachments
+const pendingAttachments = ref<TaskAttachment[]>([])
 
 // Hebrew alignment
 const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
@@ -370,6 +383,15 @@ const handleAfterOpen = () => {
   })
 }
 
+// FEATURE-1414: Attachment handlers
+function handleAddAttachment(attachment: TaskAttachment) {
+  pendingAttachments.value.push(attachment)
+}
+
+function handleRemoveAttachment(attachmentId: string) {
+  pendingAttachments.value = pendingAttachments.value.filter(a => a.id !== attachmentId)
+}
+
 // Handle task creation
 const handleCreateTask = () => {
   const trimmedTitle = taskTitle.value.trim()
@@ -382,7 +404,8 @@ const handleCreateTask = () => {
     status: status.value,
     priority: priority.value,
     dueDate: localDate.value || undefined,
-    projectId: projectId.value || undefined
+    projectId: projectId.value || undefined,
+    attachments: pendingAttachments.value.length > 0 ? [...pendingAttachments.value] : undefined
   })
 
   // Reset form
@@ -392,6 +415,7 @@ const handleCreateTask = () => {
   priority.value = 'medium'
   projectId.value = ''
   localDate.value = ''
+  pendingAttachments.value = []
 }
 
 // Reset form when modal opens
@@ -406,6 +430,7 @@ watch(() => _props.isOpen, (isOpen) => {
     priority.value = 'medium'
     projectId.value = taskStore.activeProjectId || ''
     localDate.value = ''
+    pendingAttachments.value = []
   }
 })
 </script>

@@ -21,7 +21,7 @@ const meta = {
   },
 
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="padding: var(--space-6); background: var(--glass-bg-soft); border-radius: var(--radius-xl); border: 1px solid var(--glass-border); max-width: 800px;">
@@ -36,7 +36,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { SettingsSection },
     setup() {
       return { args }
@@ -55,7 +55,7 @@ export const WithTitle: Story = {
   args: {
     title: 'Timer Settings',
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { SettingsSection },
     setup() {
       return { args }
@@ -82,7 +82,7 @@ export const NoTitle: Story = {
   args: {
     title: undefined,
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { SettingsSection },
     setup() {
       return { args }

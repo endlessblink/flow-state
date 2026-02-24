@@ -33,7 +33,7 @@ export const SingleHandle = {
     isResizing: false,
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="position: relative; width: 100px; height: 100px; background: var(--glass-bg-soft); border: 1px solid var(--glass-border); border-radius: var(--radius-md);">
@@ -51,7 +51,7 @@ export const Resizing = {
     isResizing: true,
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="position: relative; width: 100px; height: 100px; background: var(--glass-bg-soft); border: 1px solid var(--brand-primary); border-radius: var(--radius-md);">

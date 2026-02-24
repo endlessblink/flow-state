@@ -44,6 +44,16 @@ import { type TaskRecurrence, type RecurringTaskInstance } from './recurrence'
 
 export { type TaskRecurrence, type RecurringTaskInstance }
 
+/** FEATURE-1414: Image attachment stored in Google Drive */
+export interface TaskAttachment {
+  id: string              // Local UUID (crypto.randomUUID())
+  driveFileId: string     // Google Drive file ID
+  name: string            // Original filename
+  mimeType: string        // e.g. 'image/jpeg'
+  thumbnailUrl?: string   // Drive thumbnail URL
+  uploadedAt: string      // ISO date string
+}
+
 /** TASK-1403: Simplified recurrence rule for clone-on-complete model */
 export interface SimpleRecurrenceRule {
   pattern: 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -96,6 +106,7 @@ export interface Task {
   reminders?: TaskReminder[] // FEATURE-1363: Custom date/time reminders
   recurringInstances?: RecurringTaskInstance[] // Generated recurring task instances (for backwards compatibility)
   instances?: TaskInstance[] // Calendar instances for scheduled tasks
+  attachments?: TaskAttachment[] // FEATURE-1414: Image attachments via Google Drive
 
   // New SQL-aligned fields (Migration Phase 2)
   order?: number

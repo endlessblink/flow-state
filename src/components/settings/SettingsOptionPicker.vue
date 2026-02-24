@@ -12,7 +12,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  update: [value: any]
+  update: [value: unknown]
 }>()
 </script>
 

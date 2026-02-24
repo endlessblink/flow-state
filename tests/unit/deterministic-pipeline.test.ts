@@ -702,10 +702,18 @@ describe('reasoningDirective — buildReasoningDirective()', () => {
     expect(result).not.toContain('MANDATORY REASONING POINTS')
   })
 
-  it('returns empty string for weekly plan results (plan + reasoning keys)', () => {
-    const weeklyPlanResult = { plan: ['Monday: Task A'], reasoning: 'Focus on high priority' }
+  it('returns directive with scheduling facts for weekly plan results', () => {
+    const weeklyPlanResult = {
+      plan: { monday: [{ title: 'Task A' }] },
+      reasoning: 'Focus on high priority',
+      totalScheduled: 5,
+      daysUsed: 3,
+    }
     const result = buildReasoningDirective('generate_weekly_plan', weeklyPlanResult, 'en')
-    expect(result).toBe('')
+    expect(result).toContain('MANDATORY REASONING POINTS')
+    expect(result).toContain('Weekly Plan')
+    expect(result).toContain('5 tasks distributed across 3 days')
+    expect(result).toContain('Focus on high priority')
   })
 
   it('skips tasks with no interesting facts', () => {

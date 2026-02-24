@@ -342,6 +342,7 @@ function sync() {
       const args = [
         'create',
         `${id}: ${title}`,
+        '--description', `Auto-synced from MASTER_PLAN.md`,
         '--external-ref', id,
         '--type', beadType,
         '--priority', String(beadPriority),
@@ -402,7 +403,7 @@ function sync() {
           if (issue.external_ref) {
             beadsByRef.set(issue.external_ref, issue.id);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const taskBeadId = beadsByRef.get(task.id);

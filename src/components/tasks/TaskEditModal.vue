@@ -19,7 +19,7 @@
               <h3 class="section-title">
                 Task Details
               </h3>
-            
+
               <TaskEditHeader
                 ref="headerRef"
                 v-model="editedTask"
@@ -55,6 +55,13 @@
                 @dismiss-reminder="handleDismissReminder"
               />
             </section>
+
+            <!-- FEATURE-1414: Task Attachments -->
+            <TaskAttachments
+              :attachments="editedTask.attachments || []"
+              @add="handleAddAttachment"
+              @remove="handleRemoveAttachment"
+            />
 
             <!-- Subtasks -->
             <TaskEditSubtasks
@@ -143,7 +150,9 @@ import TaskEditChildTasks from './edit/TaskEditChildTasks.vue'
 import RecurrenceSelector from './edit/RecurrenceSelector.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import ReminderPicker from '@/components/notifications/ReminderPicker.vue'
+import TaskAttachments from './TaskAttachments.vue'
 import type { TaskReminder } from '@/types/notifications'
+import type { TaskAttachment } from '@/types/tasks'
 
 // Props & Emitters
 const props = defineProps<{
@@ -206,17 +215,17 @@ const childTasks = computed(() => {
 
 const currentSectionId = computed(() => {
   if (!editedTask.value.canvasPosition) return null
-  
+
   const pos = editedTask.value.canvasPosition
   const sections = canvasStore.sections
-  
-  const containingSection = sections.find(s => 
-    pos.x >= s.position.x && 
+
+  const containingSection = sections.find(s =>
+    pos.x >= s.position.x &&
     pos.x <= s.position.x + s.position.width &&
-    pos.y >= s.position.y && 
+    pos.y >= s.position.y &&
     pos.y <= s.position.y + s.position.height
   )
-  
+
   return containingSection?.id || null
 })
 
@@ -310,6 +319,20 @@ function handleDismissReminder(reminderId: string) {
   if (reminder) {
     reminder.dismissed = true
   }
+}
+
+// --- Attachment Handlers (FEATURE-1414) ---
+
+function handleAddAttachment(attachment: TaskAttachment) {
+  if (!editedTask.value.attachments) {
+    editedTask.value.attachments = []
+  }
+  editedTask.value.attachments.push(attachment)
+}
+
+function handleRemoveAttachment(attachmentId: string) {
+  if (!editedTask.value.attachments) return
+  editedTask.value.attachments = editedTask.value.attachments.filter(a => a.id !== attachmentId)
 }
 
 onMounted(() => document.addEventListener('keydown', handleKeyDown))

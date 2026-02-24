@@ -31,7 +31,7 @@ const gamificationStore = useGamificationStore()
 const { cyberflowClasses } = useCyberflowTheme()
 
 // Icon mapping
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, unknown> = {
   rocket: Rocket, target: Target, award: Award, crown: Crown, flame: Flame,
   clock: Clock, hourglass: Hourglass, layers: Layers, fire: Flame,
   calendar: Calendar, trophy: Trophy, star: Star, 'refresh-cw': RefreshCw,

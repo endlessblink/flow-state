@@ -52,7 +52,7 @@ const meta: Meta<typeof TaskEditModal> = {
     },
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="min-height: 800px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); border-radius: var(--radius-xl);">

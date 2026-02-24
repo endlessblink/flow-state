@@ -1,7 +1,7 @@
 # FlowState Standard Operating Procedures (SOPs)
 
-**Last Updated**: January 22, 2026
-**Total Documents**: 38 active, 45 archived (83 total)
+**Last Updated**: February 23, 2026
+**Total Documents**: 39 active, 45 archived (84 total)
 
 ---
 
@@ -12,6 +12,7 @@
 | Canvas | `canvas/`, root `SOP-018` | Vue Flow canvas system |
 | Calendar | `active/CALENDAR-*` | Calendar drag, resize |
 | Distribution | root `SOP-011` | Tauri builds, startup, releases |
+| Attachments | root `SOP-038` | Google Drive image attachments |
 | Cloudflare | root `SOP-023` | Tunnel configuration |
 | Menu Patterns | root `SOP-024` | Teleported menus for Tauri |
 | Vue Flow | root `SOP-025` | Tauri WebKitGTK reactivity |
@@ -42,7 +43,7 @@ docs/sop/
 
 ## Active SOPs by Location
 
-### Root Directory (16 files)
+### Root Directory (17 files)
 
 | File | Description |
 |------|-------------|
@@ -64,6 +65,7 @@ docs/sop/
 | `SOP-025-tauri-vue-flow-reactivity.md` | Tauri Vue Flow reactivity |
 | `SOP-026-custom-domain-deployment.md` | Custom domain (in-theflow.com) setup |
 | `SOP-027-mobile-testing-workflow.md` | Mobile testing via Playwright viewport |
+| `SOP-038-google-drive-attachments.md` | **Google Drive Attachments** (self-hosted setup guide) |
 
 ### Active Directory (12 files)
 
@@ -124,10 +126,15 @@ Historical fixes in `archived/`. Notable entries:
 |-------|-------|
 | SOP-001 to SOP-010 | Legacy/archived |
 | SOP-011 to SOP-021 | Core active SOPs |
-| SOP-022 to SOP-025 | Post-consolidation SOPs |
-| SOP-026+ | Future SOPs |
+| SOP-022 to SOP-027 | Post-consolidation + Addendum SOPs |
+| SOP-038 | Feature-specific SOPs (Google Drive, etc.) |
+| SOP-039+ | Future SOPs |
 
 ---
+
+## Updates (February 23, 2026)
+
+- Added SOP-038: Google Drive Attachments Setup for FEATURE-1414
 
 ## Consolidation Notes (January 22, 2026)
 

@@ -17,7 +17,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         let currentChannel: unknown = null
         let retryCount = 0
         let isExplicitlyClosed = false
-        const _heartbeatInterval: any = null
+        const _heartbeatInterval: unknown = null
         let isRemovingChannel = false // Guard against recursive removeChannel calls (BUG-1088)
 
         // cleanup previous channels if any
@@ -123,7 +123,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             }
 
             // Subscribe with Robust Error Handling
-            channel.subscribe(async (status: any, err: any) => {
+            channel.subscribe(async (status: unknown, err: unknown) => {
                 if (status === 'SUBSCRIBED') {
                     console.log('📡 [REALTIME] Connected! 🟢')
                     retryCount = 0 // Reset backoff
@@ -239,7 +239,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     if (currentChannel && !isRemovingChannel) {
                         isRemovingChannel = true
                         try {
-                            await supabase.removeChannel(currentChannel as any)
+                            await supabase.removeChannel(currentChannel as unknown)
                         } catch (removeErr) {
                             console.warn('👀 [REALTIME] Failed to remove channel (continuing anyway):', removeErr)
                         } finally {

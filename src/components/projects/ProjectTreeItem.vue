@@ -75,7 +75,7 @@ interface Props {
   project: Project
   expandedProjects: string[]
   // Allow Set, Array, or Object (for cross-tab sync compatibility)
-  selectedProjectIds?: Set<string> | string[] | Record<string, any>
+  selectedProjectIds?: Set<string> | string[] | Record<string, unknown>
   nested?: boolean
   nestingDepth?: number
   level?: number

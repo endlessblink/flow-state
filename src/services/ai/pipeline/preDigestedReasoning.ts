@@ -136,7 +136,7 @@ export function digestToolResults(
 
     // Weekly plan
     if ('plan' in d && 'reasoning' in d) {
-      return message // Plan has its own rendering, don't re-digest
+      return digestWeeklyPlan(d, message, language)
     }
   }
 
@@ -293,6 +293,59 @@ function digestTimerStatus(data: Record<string, unknown>, message: string, lang:
     if (data.sessionsCompleted !== undefined) {
       lines.push(`- ${t(lang, 'pomodorosCompletedToday')} ${data.sessionsCompleted}`)
     }
+  }
+
+  return lines.join('\n')
+}
+
+/**
+ * Digest a weekly plan result into pre-analyzed reasoning.
+ * Extracts scheduling facts so the LLM can explain WHY tasks go where.
+ */
+function digestWeeklyPlan(
+  data: Record<string, unknown>,
+  message: string,
+  lang: Lang = 'en'
+): string {
+  const lines: string[] = [message, '']
+
+  const plan = data.plan as Record<string, unknown> | undefined
+  const reasoning = data.reasoning as string | undefined
+  const totalScheduled = data.totalScheduled as number | undefined
+  const daysUsed = data.daysUsed as number | undefined
+  const unscheduled = data.unscheduled as Array<{ title?: string }> | undefined
+
+  if (totalScheduled !== undefined && daysUsed !== undefined) {
+    lines.push(lang === 'he'
+      ? `סה"כ: ${totalScheduled} משימות מתוזמנות ב-${daysUsed} ימים`
+      : `Total: ${totalScheduled} tasks scheduled across ${daysUsed} days`)
+  }
+
+  if (plan && typeof plan === 'object') {
+    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    const dayNamesHe: Record<string, string> = {
+      monday: 'שני', tuesday: 'שלישי', wednesday: 'רביעי', thursday: 'חמישי',
+      friday: 'שישי', saturday: 'שבת', sunday: 'ראשון'
+    }
+    for (const day of dayKeys) {
+      const dayTasks = plan[day] as Array<{ title?: string; priority?: string }> | undefined
+      if (dayTasks && Array.isArray(dayTasks) && dayTasks.length > 0) {
+        const dayName = lang === 'he' ? dayNamesHe[day] : day.charAt(0).toUpperCase() + day.slice(1)
+        const titles = dayTasks.map(t => t.title || '?').join(', ')
+        lines.push(`${dayName}: ${dayTasks.length} — ${titles}`)
+      }
+    }
+  }
+
+  if (unscheduled && Array.isArray(unscheduled) && unscheduled.length > 0) {
+    lines.push(lang === 'he'
+      ? `לא מתוזמן: ${unscheduled.length} משימות`
+      : `Unscheduled: ${unscheduled.length} tasks`)
+  }
+
+  if (reasoning && typeof reasoning === 'string') {
+    lines.push('')
+    lines.push(lang === 'he' ? `לוגיקת התזמון: ${reasoning}` : `Scheduling logic: ${reasoning}`)
   }
 
   return lines.join('\n')

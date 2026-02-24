@@ -23,7 +23,7 @@ const meta: Meta<typeof SearchModal> = {
     },
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="min-height: 600px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
@@ -52,8 +52,8 @@ export const Default: Story = {
     components: { SearchModal },
     setup() {
       const handleClose = () => console.log('Modal closed')
-      const handleSelectTask = (task: any) => console.log('Task selected:', task)
-      const handleSelectProject = (project: any) => console.log('Project selected:', project)
+      const handleSelectTask = (task: Record<string, unknown>) => console.log('Task selected:', task)
+      const handleSelectProject = (project: Record<string, unknown>) => console.log('Project selected:', project)
       return { args, handleClose, handleSelectTask, handleSelectProject }
     },
     template: `
@@ -76,8 +76,8 @@ export const Closed: Story = {
     components: { SearchModal },
     setup() {
       const handleClose = () => console.log('Modal closed')
-      const handleSelectTask = (task: any) => console.log('Task selected:', task)
-      const handleSelectProject = (project: any) => console.log('Project selected:', project)
+      const handleSelectTask = (task: Record<string, unknown>) => console.log('Task selected:', task)
+      const handleSelectProject = (project: Record<string, unknown>) => console.log('Project selected:', project)
       return { args, handleClose, handleSelectTask, handleSelectProject }
     },
     template: `

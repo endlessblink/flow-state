@@ -22,7 +22,7 @@ const selectedCategory = ref<ShopCategory | 'all'>('all')
 const previewingItem = ref<string | null>(null)
 const purchasing = ref(false)
 
-const categories: { id: ShopCategory | 'all'; label: string; icon: any }[] = [
+const categories: { id: ShopCategory | 'all'; label: string; icon: unknown }[] = [
   { id: 'all', label: 'All', icon: ShoppingBag },
   { id: 'theme', label: 'Themes', icon: Palette },
   { id: 'badge_style', label: 'Badges', icon: Award },

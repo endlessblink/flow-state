@@ -87,7 +87,7 @@ const isDragValid = computed(() => {
   // Only accept task drops
   if (dragData.value.type === 'task' && dragData.value.taskId) {
     const targetType = props.dropType === 'date' ? 'date-target' : 'duration-target'
-    return isValidDrop(dragData.value, targetType as any)
+    return isValidDrop(dragData.value, targetType as Parameters<typeof isValidDrop>[1])
   }
 
   return false
@@ -153,8 +153,8 @@ const handleDrop = async (event: DragEvent) => {
   setDropTarget(null)
 
   if (dragData.value && isDragValid.value && dragData.value.type === 'task' && dragData.value.taskId) {
-    const store = taskStore as any
-    const updates: any = {}
+    const store = taskStore as unknown as Record<string, (...args: unknown[]) => unknown>
+    const updates: Partial<Task> = {}
 
     if (props.dropType === 'date') {
       updates.dueDate = calculateTargetDate()

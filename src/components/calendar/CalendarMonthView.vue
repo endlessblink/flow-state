@@ -75,7 +75,7 @@ const externalEventsByDate = computed(() => {
 })
 
 // Inject helpers from parent CalendarView
-const helpers = inject('calendar-helpers') as any
+const helpers = inject('calendar-helpers') as Record<string, unknown>
 const {
   getProjectVisual,
   getProjectName,
@@ -95,7 +95,7 @@ const weekDayHeaders = computed(() => getWeekDayHeaders())
 // TASK-1322: Tooltip with task description
 const taskStore = useTaskStore()
 
-const getEventTooltip = (event: any) => {
+const getEventTooltip = (event: Record<string, unknown>) => {
   const task = taskStore.getTask(event.taskId)
   const lines = [event.title]
   if (task?.description) {

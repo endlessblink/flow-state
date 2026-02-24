@@ -10,7 +10,7 @@ interface ConnectionDeps {
     closeCanvasContextMenu: () => void
     closeEdgeContextMenu: () => void
     closeNodeContextMenu: () => void
-    withVueFlowErrorBoundary: (name: string, fn: (...args: any[]) => any, options?: any) => ((...args: any[]) => any)
+    withVueFlowErrorBoundary: (name: string, fn: (...args: unknown[]) => any, options?: unknown) => ((...args: unknown[]) => any)
     // For drag-to-create feature
     screenToFlowCoordinate?: (pos: { x: number; y: number }) => { x: number; y: number }
     createConnectedTask?: (position: { x: number; y: number }, parentTaskId: string) => void

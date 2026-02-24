@@ -27,7 +27,7 @@ export function useTaskEditState(
             endCondition: { type: 'never' },
             exceptions: [],
             generatedInstances: []
-        } as any,
+        } as unknown,
         createdAt: new Date(),
         updatedAt: new Date()
     })

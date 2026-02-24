@@ -156,7 +156,7 @@ export function useCanvasOrchestrator() {
     // BUG-1361: Added `force` option to bypass the drag-settling guard for user-initiated
     // drops (inbox → canvas). Without this, tasks dropped during the 3-second settling
     // window after a canvas node drag would silently fail to render.
-    const syncNodes = (tasks?: any[], options?: { force?: boolean }) => {
+    const syncNodes = (tasks?: unknown[], options?: { force?: boolean }) => {
         // Prevent sync if explicitly unwanted (e.g. during specific interactions)
         if (canvasUiStore.operationLoading.syncing) {
             return
@@ -762,7 +762,7 @@ export function useCanvasOrchestrator() {
         // Vue Flow Handlers
         // TASK-262: Filter selection changes to prevent unwanted deselection on node click
         // Vue Flow default: clicking a node deselects all others. We only want pane click to deselect.
-        handleNodesChange: (changes: any[]) => {
+        handleNodesChange: (changes: unknown[]) => {
             // TASK-262 FIX: Allow all changes to pass through including deselection
             // Previously, deselection was blocked which prevented clicking on empty canvas
             // from clearing selection. Vue Flow's default behavior is correct - let it work.

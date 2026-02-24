@@ -28,8 +28,8 @@ export function useGoogleCalendar() {
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
   // Computed from settings — connected if flag is true (token may have expired, but user is still "connected")
-  const isConnected = computed(() => settingsStore.googleCalendarConnected)
-  const needsReauth = computed(() => settingsStore.googleCalendarConnected && !settingsStore.googleCalendarToken)
+  const isConnected = computed(() => settingsStore.googleConnected)
+  const needsReauth = computed(() => settingsStore.googleConnected && !settingsStore.googleProviderToken)
   const showGoogleEvents = computed({
     get: () => settingsStore.showGoogleCalendarEvents,
     set: (val: boolean) => settingsStore.updateSetting('showGoogleCalendarEvents', val)
@@ -40,7 +40,7 @@ export function useGoogleCalendar() {
 
   // Check if the access token is expired or about to expire
   function isTokenExpiringSoon(): boolean {
-    const expiry = settingsStore.googleCalendarTokenExpiry
+    const expiry = settingsStore.googleProviderTokenExpiry
     if (!expiry) return false // unknown expiry — let the edge function handle it
     return Date.now() > expiry - TOKEN_REFRESH_BUFFER_MS
   }
@@ -48,9 +48,9 @@ export function useGoogleCalendar() {
   // Helper: update token + expiry when proxy refreshed it
   function handleTokenRefresh(newAccessToken?: string) {
     if (newAccessToken) {
-      settingsStore.updateSetting('googleCalendarToken', newAccessToken)
+      settingsStore.updateSetting('googleProviderToken', newAccessToken)
       // Google access tokens last ~3600s; set expiry with small safety margin
-      settingsStore.updateSetting('googleCalendarTokenExpiry', Date.now() + 3500 * 1000)
+      settingsStore.updateSetting('googleProviderTokenExpiry', Date.now() + 3500 * 1000)
       console.log('[GoogleCalendar] Access token refreshed by proxy, new expiry set')
       scheduleProactiveRefresh()
     }
@@ -59,8 +59,8 @@ export function useGoogleCalendar() {
   // Proactively refresh the token before it expires by making a lightweight API call
   // (list-calendars is cheap). The edge function will detect 401 and refresh automatically.
   async function proactiveRefresh() {
-    if (!isConnected.value || !settingsStore.googleCalendarToken) return
-    if (!settingsStore.googleCalendarRefreshToken) {
+    if (!isConnected.value || !settingsStore.googleProviderToken) return
+    if (!settingsStore.googleProviderRefreshToken) {
       console.log('[GoogleCalendar] No refresh token — skipping proactive refresh')
       return
     }
@@ -68,8 +68,8 @@ export function useGoogleCalendar() {
     console.log('[GoogleCalendar] Proactive token refresh triggered')
     try {
       const result = await fetchCalendars(
-        settingsStore.googleCalendarToken,
-        settingsStore.googleCalendarRefreshToken
+        settingsStore.googleProviderToken,
+        settingsStore.googleProviderRefreshToken
       )
       handleTokenRefresh(result.newAccessToken)
       // Even if no new token (token still valid), reset the timer
@@ -80,8 +80,8 @@ export function useGoogleCalendar() {
       console.warn('[GoogleCalendar] Proactive refresh failed:', e.message)
       // If refresh fails with auth error, clear token so UI shows reconnect
       if (e.message?.includes('expired') || e.message?.includes('401') || e.message?.includes('refresh failed')) {
-        settingsStore.updateSetting('googleCalendarToken', '')
-        settingsStore.updateSetting('googleCalendarTokenExpiry', 0)
+        settingsStore.updateSetting('googleProviderToken', '')
+        settingsStore.updateSetting('googleProviderTokenExpiry', 0)
         error.value = 'Google token expired — please reconnect in Settings'
       }
     }
@@ -90,7 +90,7 @@ export function useGoogleCalendar() {
   // Schedule proactive refresh based on known expiry time
   function scheduleProactiveRefresh() {
     if (refreshTimer) clearTimeout(refreshTimer)
-    const expiry = settingsStore.googleCalendarTokenExpiry
+    const expiry = settingsStore.googleProviderTokenExpiry
     if (!expiry || !isConnected.value) return
 
     const msUntilRefresh = expiry - Date.now() - TOKEN_REFRESH_BUFFER_MS
@@ -129,17 +129,17 @@ export function useGoogleCalendar() {
   // Fetch events from all selected calendars
   async function syncNow() {
     if (!isConnected.value || selectedCalendars.value.length === 0) return
-    if (!settingsStore.googleCalendarToken) {
+    if (!settingsStore.googleProviderToken) {
       error.value = 'Token expired — please reconnect Google Calendar in Settings'
       return
     }
 
     // If token is expiring soon and we have a refresh token, refresh first
-    if (isTokenExpiringSoon() && settingsStore.googleCalendarRefreshToken) {
+    if (isTokenExpiringSoon() && settingsStore.googleProviderRefreshToken) {
       console.log('[GoogleCalendar] Token expiring soon — refreshing before sync')
       await proactiveRefresh()
       // If refresh cleared the token (failure), bail out
-      if (!settingsStore.googleCalendarToken) return
+      if (!settingsStore.googleProviderToken) return
     }
 
     isLoading.value = true
@@ -154,11 +154,11 @@ export function useGoogleCalendar() {
     for (const cal of selectedCalendars.value) {
       try {
         const result = await fetchEvents(
-          settingsStore.googleCalendarToken,
+          settingsStore.googleProviderToken,
           cal.id,
           timeMin,
           timeMax,
-          settingsStore.googleCalendarRefreshToken || undefined
+          settingsStore.googleProviderRefreshToken || undefined
         )
         handleTokenRefresh(result.newAccessToken)
 
@@ -168,8 +168,8 @@ export function useGoogleCalendar() {
         console.error(`[GoogleCalendar] Failed to fetch events for ${cal.summary}:`, e)
         // Token expired AND refresh failed — clear access token so UI shows re-auth prompt
         if (e.message?.includes('expired') || e.message?.includes('401') || e.message?.includes('refresh failed')) {
-          settingsStore.updateSetting('googleCalendarToken', '')
-          settingsStore.updateSetting('googleCalendarTokenExpiry', 0)
+          settingsStore.updateSetting('googleProviderToken', '')
+          settingsStore.updateSetting('googleProviderTokenExpiry', 0)
           error.value = 'Google token expired — please reconnect in Settings'
           break
         }
@@ -183,13 +183,13 @@ export function useGoogleCalendar() {
 
   // Fetch available calendars from Google
   async function fetchAvailableCalendars(): Promise<GoogleCalendarConfig[]> {
-    if (!settingsStore.googleCalendarToken) {
+    if (!settingsStore.googleProviderToken) {
       throw new Error('Not connected to Google Calendar')
     }
 
     const result = await fetchCalendars(
-      settingsStore.googleCalendarToken,
-      settingsStore.googleCalendarRefreshToken || undefined
+      settingsStore.googleProviderToken,
+      settingsStore.googleProviderRefreshToken || undefined
     )
     handleTokenRefresh(result.newAccessToken)
 
@@ -216,10 +216,10 @@ export function useGoogleCalendar() {
 
   // Disconnect: clear tokens and calendars
   function disconnect() {
-    settingsStore.updateSetting('googleCalendarToken', '')
-    settingsStore.updateSetting('googleCalendarRefreshToken', '')
-    settingsStore.updateSetting('googleCalendarTokenExpiry', 0)
-    settingsStore.updateSetting('googleCalendarConnected', false)
+    settingsStore.updateSetting('googleProviderToken', '')
+    settingsStore.updateSetting('googleProviderRefreshToken', '')
+    settingsStore.updateSetting('googleProviderTokenExpiry', 0)
+    settingsStore.updateSetting('googleConnected', false)
     settingsStore.updateSetting('googleCalendars', [])
     googleEvents.value = []
     error.value = null

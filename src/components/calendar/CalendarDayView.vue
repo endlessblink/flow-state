@@ -62,7 +62,7 @@ const positionedExternalEvents = computed(() => {
     })
 })
 // Inject helpers from parent CalendarView
-const helpers = inject('calendar-helpers') as any
+const helpers = inject('calendar-helpers') as Record<string, unknown>
 const {
   formatHour,
   formatEventTime,

@@ -8,7 +8,7 @@
  */
 import { ref, computed } from 'vue'
 
-type Messages = Record<string, any>
+type Messages = Record<string, unknown>
 
 // Inline translations for auth components
 // This bypasses vue-i18n's message compiler which transforms JSON imports to AST objects

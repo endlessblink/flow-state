@@ -9,7 +9,7 @@ const meta = {
   title: '📋 Board/TaskCard',
   tags: ['autodocs'],
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       setup() {
         // Provide mock progressive disclosure state directly

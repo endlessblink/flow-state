@@ -8,7 +8,7 @@ const meta = {
     layout: 'fullscreen',
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="width: 100%; height: 400px; position: relative; background: var(--app-background-gradient); display: flex; align-items: center; justify-content: center; transform: scale(1); border-radius: var(--radius-xl); overflow: hidden;">

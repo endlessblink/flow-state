@@ -731,7 +731,7 @@ const {
   align-items: center;
   gap: var(--space-1);
   padding: 0 var(--space-4);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-3);
   animation: fadeInOut 3s ease-in-out infinite;
 }
 
@@ -742,8 +742,8 @@ const {
 }
 
 @keyframes fadeInOut {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
 }
 
 .hint {
@@ -766,6 +766,10 @@ const {
   color: var(--color-danger);
 }
 
+.hint.hint-down {
+  color: var(--text-secondary);
+}
+
 .hint.hint-right {
   color: var(--brand-primary);
 }
@@ -779,13 +783,14 @@ const {
   justify-content: center;
   perspective: 1000px;
   min-height: var(--kanban-column-min-height);
+  margin-bottom: var(--space-3);
 }
 
 .stack-card {
   position: absolute;
   width: 92%;
   max-width: 360px; /* Component-specific card width */
-  height: 240px; /* Component-specific card height */
+  height: 180px; /* Component-specific card height - matches active card */
   background: var(--glass-bg-subtle);
   border: 1px solid var(--glass-border-light);
   border-radius: var(--radius-2xl);
@@ -1055,7 +1060,7 @@ const {
   }
 
   .stack-card {
-    height: 160px;
+    height: 160px; /* Matches card height on short screens */
   }
 
   .process-flow-indicator {

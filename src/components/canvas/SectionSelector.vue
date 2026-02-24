@@ -100,7 +100,7 @@ const isOpen = ref(false)
 const dropdownId = Math.random().toString(36).substring(2, 9)
 
 // Dropdown positioning (copied from CustomSelect for consistency)
-const dropdownStyle = ref<any>({
+const dropdownStyle = ref<Record<string, string>>({
   position: 'fixed',
   top: '0px',
   left: '0px',

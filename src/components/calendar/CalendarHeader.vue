@@ -10,7 +10,7 @@ defineProps<{
   viewMode: 'day' | 'week' | 'month'
   externalCalendarEnabled?: boolean
   externalCalendarLoading?: boolean
-  googleCalendarConnected?: boolean
+  googleConnected?: boolean
   showGoogleEvents?: boolean
 }>()
 
@@ -85,7 +85,7 @@ const showFilters = ref(false)
 
       <!-- TASK-1283: Google Calendar Events Toggle -->
       <button
-        v-if="googleCalendarConnected"
+        v-if="googleConnected"
         class="google-cal-toggle"
         :class="{ active: showGoogleEvents }"
         :title="showGoogleEvents ? $t('google_calendar.hide_events') : $t('google_calendar.show_events')"

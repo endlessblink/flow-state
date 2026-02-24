@@ -306,9 +306,9 @@ export const InteractiveDemo: Story = {
       }
 
       const handleCreated = (task: unknown) => {
-        lastCreatedTask.value = task as any // Temporary cast until we verify MockTask compatibility if needed, or just use unknown
+        lastCreatedTask.value = task as unknown // Temporary cast until we verify MockTask compatibility if needed, or just use unknown
         // Actually let's use the interface
-        lastCreatedTask.value = task as any
+        lastCreatedTask.value = task as unknown
         console.log('Task created:', task)
         modalState.isOpen = false
       }

@@ -122,7 +122,7 @@ const emit = defineEmits<{
 const router = useRouter()
 const timerStore = useTimerStore()
 const state = useTaskCardState(props)
-const actions = useTaskCardActions(props, emit as any, state)
+const actions = useTaskCardActions(props, emit as (event: string, ...args: unknown[]) => void, state)
 
 // Timer active state
 const isTimerActive = computed(() => {

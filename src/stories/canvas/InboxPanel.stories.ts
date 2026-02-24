@@ -90,7 +90,7 @@ export const ManyTasks: Story = {
     template: '<UnifiedInboxPanel />',
   }),
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="transform: scale(1); min-height: 600px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); padding: var(--space-10); box-sizing: border-box; border-radius: var(--radius-xl); overflow: hidden;">

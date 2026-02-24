@@ -574,7 +574,7 @@ export function parseJudgeResponse(raw: string): { scores: RubricScore[]; overal
     const parsed = JSON.parse(raw)
     if (parsed.scores && Array.isArray(parsed.scores)) {
       return {
-        scores: parsed.scores.map((s: any) => ({
+        scores: parsed.scores.map((s: Record<string, unknown>) => ({
           rubricId: s.rubricId,
           score: Math.min(5, Math.max(1, Number(s.score) || 3)),
           reasoning: s.reasoning || '',
@@ -593,7 +593,7 @@ export function parseJudgeResponse(raw: string): { scores: RubricScore[]; overal
       const parsed = JSON.parse(jsonMatch[1])
       if (parsed.scores && Array.isArray(parsed.scores)) {
         return {
-          scores: parsed.scores.map((s: any) => ({
+          scores: parsed.scores.map((s: Record<string, unknown>) => ({
             rubricId: s.rubricId,
             score: Math.min(5, Math.max(1, Number(s.score) || 3)),
             reasoning: s.reasoning || '',

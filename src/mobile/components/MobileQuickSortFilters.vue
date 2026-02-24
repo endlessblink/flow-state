@@ -222,7 +222,9 @@ defineEmits<{
 }
 
 .pill.active {
-  background: transparent;
+  background: var(--glass-bg-soft);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
@@ -260,9 +262,7 @@ defineEmits<{
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-normal) ease;
 }

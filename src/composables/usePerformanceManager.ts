@@ -69,7 +69,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   const cleanupCacheInterval = ref<NodeJS.Timeout>()
 
   // Debounce function factory
-  const createDebounced = <T extends (...args: any[]) => any>(
+  const createDebounced = <T extends (...args: unknown[]) => any>(
     fn: T,
     delay: number = debounceDelay
   ) => {
@@ -82,7 +82,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 
   // Throttle function factory
-  const createThrottled = <T extends (...args: any[]) => any>(
+  const createThrottled = <T extends (...args: unknown[]) => any>(
     fn: T,
     delay: number = throttleDelay
   ) => {
@@ -95,7 +95,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 
   // Memoized computation factory
-  const createMemoized = <T extends (...args: any[]) => any>(
+  const createMemoized = <T extends (...args: unknown[]) => any>(
     fn: T,
     key: string,
     dependencies: unknown[] = []

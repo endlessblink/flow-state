@@ -29,7 +29,7 @@ const meta = {
   },
 
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="padding: var(--space-4); background: var(--glass-bg-soft); border-radius: var(--radius-lg); border: 1px solid var(--glass-border); max-width: 600px;">

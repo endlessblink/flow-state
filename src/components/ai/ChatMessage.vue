@@ -53,9 +53,11 @@ const md = new MarkdownIt({
 })
 
 // Make links open in new tab
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const defaultRender = md.renderer.rules.link_open || function (tokens: any[], idx: number, options: any, _env: any, self: any) {
   return self.renderToken(tokens, idx, options)
 }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 md.renderer.rules.link_open = function (tokens: any[], idx: number, options: any, env: any, self: any) {
   tokens[idx].attrSet('target', '_blank')
   tokens[idx].attrSet('rel', 'noopener noreferrer')
@@ -83,7 +85,7 @@ const scheduleSaved = ref(false)
 const taskStore = useTaskStore()
 
 const taskMap = computed(() => {
-  const map = new Map<string, any>()
+  const map = new Map<string, unknown>()
   for (const task of taskStore.tasks) {
     map.set(task.id, task)
   }
@@ -95,7 +97,7 @@ const taskMap = computed(() => {
  * The snapshot determines WHICH task to show; the store provides CURRENT field values.
  * Falls back to snapshot data if the task was deleted from the store.
  */
-function liveTask(snapshotTask: any): any {
+function liveTask(snapshotTask: Record<string, unknown>): Record<string, unknown> {
   if (!snapshotTask?.id) return snapshotTask
   const storeTask = taskMap.value.get(snapshotTask.id)
   if (!storeTask) return snapshotTask
@@ -110,7 +112,7 @@ function liveTask(snapshotTask: any): any {
 }
 
 /** Apply liveTask() to an array of snapshot tasks */
-function liveTasks(tasks: any[]): any[] {
+function liveTasks(tasks: Record<string, unknown>[]): Record<string, unknown>[] {
   if (!Array.isArray(tasks)) return []
   return tasks.map(t => liveTask(t))
 }
@@ -170,18 +172,46 @@ const renderedContent = computed(() => {
   return sanitizeMarkdownHtml(md.render(content))
 })
 
+export interface ChatToolResultData {
+  length?: number
+  totalTasks?: number
+  inProgress?: number
+  completedToday?: number
+  dueToday?: number
+  overdueCount?: number
+  timerSessionsCompleted?: number
+  overdueTasks?: Array<Record<string, unknown>>
+  dueTodayTasks?: Array<Record<string, unknown>>
+  level?: number
+  levelProgress?: number
+  totalXp?: number
+  xpToNextLevel?: number
+  currentStreak?: number
+  corruptionLevel?: number
+  achievementsEarned?: number
+  achievementsTotal?: number
+  streakAtRisk?: boolean
+  dailies?: Array<Record<string, unknown>>
+  boss?: Record<string, unknown>
+  plan?: Record<string, unknown>
+  completedThisWeek?: number
+  tasks?: Array<Record<string, unknown>>
+  [index: number]: unknown
+  [key: string]: unknown
+}
+
 /**
  * Tool results extracted from metadata for display.
  * Includes full data for rich rendering (task lists, summaries, etc.)
  */
 const toolResults = computed(() => {
-  const meta = props.message.metadata as any
+  const meta = props.message.metadata as Record<string, unknown>
   if (!meta?.toolResults || !Array.isArray(meta.toolResults)) return []
   return meta.toolResults as Array<{
     tool: string
     message: string
     success: boolean
-    data?: any
+    data?: ChatToolResultData
     type?: 'read' | 'write' | 'destructive'
   }>
 })
@@ -189,63 +219,66 @@ const toolResults = computed(() => {
 /**
  * Check if a tool result contains a task list that should be rendered as clickable items.
  */
-function isTaskListResult(result: { tool: string; data?: any }): boolean {
+function isTaskListResult(result: { tool: string; data?: ChatToolResultData }): boolean {
   if (!result.data) return false
   // Direct array of tasks
-  if (Array.isArray(result.data) && result.data.length > 0 && result.data[0]?.title) return true
+  if (Array.isArray(result.data) && result.data.length > 0 && (result.data[0] as Record<string, unknown>)?.title) return true
   // Daily summary with nested task arrays
-  if (result.data.dueTodayTasks?.length > 0 || result.data.overdueTasks?.length > 0) return true
+  if (result.data.dueTodayTasks?.length && result.data.dueTodayTasks.length > 0) return true
+  if (result.data.overdueTasks?.length && result.data.overdueTasks.length > 0) return true
   return false
 }
 
-function getTasksFromResult(result: { tool: string; data?: any }): Array<{ id: string; title: string; dueDate?: string; priority?: string; status?: string; daysOverdue?: number }> {
+function getTasksFromResult(result: { tool: string; data?: ChatToolResultData }): Array<{ id: string; title: string; dueDate?: string; priority?: string; status?: string; daysOverdue?: number }> {
   if (!result.data) return []
   // Direct array (get_overdue_tasks, list_tasks, search_tasks)
-  if (Array.isArray(result.data)) return liveTasks(result.data)
+  if (Array.isArray(result.data)) return liveTasks(result.data as Record<string, unknown>[]) as any
+  
+  const dataObj = result.data
   // Daily summary — merge overdue + due today
-  const tasks: any[] = []
-  if (result.data.overdueTasks) tasks.push(...result.data.overdueTasks)
-  if (result.data.dueTodayTasks) tasks.push(...result.data.dueTodayTasks)
-  return liveTasks(tasks)
+  const tasks: Record<string, unknown>[] = []
+  if (Array.isArray(dataObj.overdueTasks)) tasks.push(...dataObj.overdueTasks)
+  if (Array.isArray(dataObj.dueTodayTasks)) tasks.push(...dataObj.dueTodayTasks)
+  return liveTasks(tasks) as any
 }
 
 /**
  * Check if a tool result is a daily summary with stats to render as a rich card.
  */
-function isDailySummaryResult(result: { tool: string; data?: any }): boolean {
-  return result.tool === 'get_daily_summary' && result.data && typeof result.data.totalTasks === 'number'
+function isDailySummaryResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+  return result.tool === 'get_daily_summary' && !!result.data && typeof result.data.totalTasks === 'number'
 }
 
 /**
  * Gamification & productivity tool result detection helpers
  */
 
-function isGamificationStatusResult(result: { tool: string; data?: any }): boolean {
-  return result.tool === 'get_gamification_status' && result.data && typeof result.data.level === 'number'
+function isGamificationStatusResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+  return result.tool === 'get_gamification_status' && !!result.data && typeof result.data.level === 'number'
 }
 
-function isActiveChallengesResult(result: { tool: string; data?: any }): boolean {
-  return result.tool === 'get_active_challenges' && result.data && Array.isArray(result.data.dailies)
+function isActiveChallengesResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+  return result.tool === 'get_active_challenges' && !!result.data && Array.isArray(result.data.dailies)
 }
 
-function isAchievementsNearResult(result: { tool: string; data?: any }): boolean {
-  return result.tool === 'get_achievements_near_completion' && Array.isArray(result.data)
+function isAchievementsNearResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+  return result.tool === 'get_achievements_near_completion' && !!result.data && Array.isArray(result.data)
 }
 
-function isProductivityStatsResult(result: { tool: string; data?: any }): boolean {
-  return result.tool === 'get_productivity_stats' && result.data && typeof result.data.totalTasks === 'number'
+function isProductivityStatsResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+  return result.tool === 'get_productivity_stats' && !!result.data && typeof result.data.totalTasks === 'number'
 }
 
-function isSuggestNextTaskResult(result: { tool: string; data?: any }): boolean {
-  return result.tool === 'suggest_next_task' && Array.isArray(result.data)
+function isSuggestNextTaskResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+  return result.tool === 'suggest_next_task' && !!result.data && Array.isArray(result.data)
 }
 
-function isWeeklySummaryResult(result: { tool: string; data?: any }): boolean {
-  return result.tool === 'get_weekly_summary' && result.data && typeof result.data.completedThisWeek === 'number'
+function isWeeklySummaryResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+  return result.tool === 'get_weekly_summary' && !!result.data && typeof result.data.completedThisWeek === 'number'
 }
 
-function isWeeklyPlanResult(result: { tool: string; data?: any }): boolean {
-  return result.tool === 'generate_weekly_plan' && result.data && result.data.plan
+function isWeeklyPlanResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+  return result.tool === 'generate_weekly_plan' && !!result.data && !!result.data.plan
 }
 
 const PLAN_DAY_LABELS: Record<string, string> = {
@@ -303,7 +336,7 @@ function toggleSection(key: string) {
   }
 }
 
-function visibleTasks(tasks: any[], sectionKey: string): any[] {
+function visibleTasks(tasks: Record<string, unknown>[], sectionKey: string): Record<string, unknown>[] {
   const live = liveTasks(tasks)
   if (expandedSections.value.has(sectionKey) || live.length <= MAX_VISIBLE_TASKS) return live
   return live.slice(0, MAX_VISIBLE_TASKS)
@@ -313,15 +346,15 @@ const quickEditTask = ref<{ id: string; title: string; priority?: string | null;
 const quickEditPos = ref({ x: 0, y: 0 })
 const quickEditPosition = ref<'left' | 'auto'>('left')
 
-function openQuickEdit(task: any, event: MouseEvent) {
+function openQuickEdit(task: Record<string, unknown>, event: MouseEvent) {
   event.stopPropagation()
   quickEditTask.value = {
-    id: task.id,
-    title: task.title || '(untitled)',
-    priority: task.priority || null,
-    status: task.status || 'planned',
-    dueDate: task.dueDate || null,
-    estimatedDuration: task.estimatedDuration || null,
+    id: task.id as string,
+    title: (task.title as string) || '(untitled)',
+    priority: (task.priority as string) || null,
+    status: (task.status as string) || 'planned',
+    dueDate: (task.dueDate as string) || null,
+    estimatedDuration: (task.estimatedDuration as number) || null,
   }
   const panel = document.querySelector('.ai-chat-panel')
   const isFullscreen = panel?.classList.contains('panel-fullscreen')

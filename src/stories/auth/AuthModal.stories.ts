@@ -82,7 +82,7 @@ export const Login: Story = {
     isOpen: true,
     view: 'login'
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { AuthModal, LoginForm, GoogleSignInButton },
     setup() {
       const uiStore = useUIStore()
@@ -126,7 +126,7 @@ export const Signup: Story = {
     isOpen: true,
     view: 'signup'
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { AuthModal, SignupForm, GoogleSignInButton },
     setup() {
       const uiStore = useUIStore()
@@ -164,7 +164,7 @@ export const ResetPassword: Story = {
     isOpen: true,
     view: 'reset-password'
   },
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { AuthModal, ResetPasswordView: ResetPasswordViewComponent },
     setup() {
       const uiStore = useUIStore()

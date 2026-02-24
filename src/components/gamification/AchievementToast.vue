@@ -18,7 +18,7 @@ const emit = defineEmits<{
 const isVisible = ref(false)
 const isExiting = ref(false)
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, unknown> = {
   xp: Zap,
   level_up: ArrowUp,
   achievement: Award,

@@ -10,7 +10,7 @@ const meta = {
         layout: 'centered',
     },
     decorators: [
-        (story: any) => ({
+        (story: Record<string, unknown>) => ({
             components: { story },
             setup() {
                 const taskStore = useTaskStore()
@@ -51,13 +51,13 @@ const mockTask = {
 
 export const Default: Story = {
     args: {
-        task: mockTask as any
+        task: mockTask as unknown
     }
 }
 
 export const LowPriority: Story = {
     args: {
-        task: { ...mockTask, priority: 'low', title: 'A minor task' } as any
+        task: { ...mockTask, priority: 'low', title: 'A minor task' } as unknown
     }
 }
 
@@ -68,6 +68,6 @@ export const SwipingRight: Story = {
         template: '<QuickSortCard v-bind="args" class="is-swiping" style="transform: translateX(50px) rotate(5deg);" />'
     }),
     args: {
-        task: mockTask as any
+        task: mockTask as unknown
     }
 }

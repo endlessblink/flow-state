@@ -61,7 +61,7 @@ describe('useTaskContextMenuActions duplicateTask', () => {
         // Added by ModalManager for calendar-origin context menu calls
         instanceId: 'inst-1',
         isCalendarEvent: true
-      } as any,
+      } as unknown,
       contextTask: null,
       selectedCount: 1
     }

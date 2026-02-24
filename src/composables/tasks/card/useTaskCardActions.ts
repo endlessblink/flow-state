@@ -4,7 +4,7 @@ import { useTaskStore } from '@/stores/tasks'
 
 export function useTaskCardActions(
     props: { task: Task; disabled?: boolean },
-    emit: (event: string, ...args: any[]) => void,
+    emit: (event: string, ...args: unknown[]) => void,
     state: {
         isExpanded: Ref<boolean>
         isFocused: Ref<boolean>

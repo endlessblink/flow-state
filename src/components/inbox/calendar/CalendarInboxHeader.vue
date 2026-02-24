@@ -162,7 +162,7 @@ defineProps<{
   todayCount: number
   hasActiveFilters: boolean
   baseCount: number
-  canvasGroupOptions: any[]
+  canvasGroupOptions: unknown[]
   selectedCanvasGroups: Set<string>
   showAdvancedFilters: boolean
   unscheduledOnly: boolean
@@ -171,7 +171,7 @@ defineProps<{
   selectedDurations: Set<DurationCategory>
   hideDoneTasks: boolean
   baseTasks: Task[]
-  rootProjects: any[]
+  rootProjects: unknown[]
   searchQuery: string // TASK-1075
   sortBy?: SortByType // TASK-1303
 }>()

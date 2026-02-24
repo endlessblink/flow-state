@@ -37,11 +37,11 @@ const {
 } = useBackupSystem()
 
 const isRestoring = ref(false)
-const validationInfo = ref<any>(null)
-const shadowSnapshot = ref<any>(null)
+const validationInfo = ref<Record<string, unknown> | null>(null)
+const shadowSnapshot = ref<Record<string, unknown> | null>(null)
 const showValidation = ref(false)
 const isScanningShadow = ref(false)
-const goldenRotation = ref<any[]>([])
+const goldenRotation = ref<unknown[]>([])
 
 // Tauri mode state (only shown in Tauri desktop app)
 const showTauriMode = computed(() => isTauri())

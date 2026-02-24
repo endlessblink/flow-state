@@ -1647,8 +1647,22 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         const today = new Date().toISOString().split('T')[0]
         const priorityScore: Record<string, number> = { high: 3, medium: 2, low: 1 }
 
+        // GAP 1 + GAP 2 (TASK-1331): Import projectStore for name resolution and behavioral context
+        const projectStore = (await import('@/stores/projects')).useProjectStore()
+
         const eligible = allTasks
-          .filter(t => !t._soft_deleted && t.status !== 'done')
+          .filter(t => {
+            if (t._soft_deleted || t.status === 'done') return false
+            if (t.status === 'on_hold') return false
+            // Exclude tasks due after this week (unless in-progress)
+            if (t.dueDate && t.status !== 'in_progress') {
+              const weekEnd = new Date()
+              weekEnd.setDate(weekEnd.getDate() + (6 - weekEnd.getDay())) // end of current week
+              const weekEndStr = weekEnd.toISOString().split('T')[0]
+              if (t.dueDate > weekEndStr) return false
+            }
+            return true
+          })
           .sort((a, b) => {
             // Overdue first
             const aOverdue = a.dueDate && a.dueDate < today ? 1 : 0
@@ -1676,6 +1690,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
             estimatedDuration: t.estimatedDuration,
             status: t.status || 'planned',
             projectId: t.projectId || '',
+            projectName: t.projectId ? (projectStore.getProjectDisplayName(t.projectId) || '') : '',
             description: t.description,
             subtaskCount: t.subtasks?.length ?? 0,
             completedSubtaskCount: t.subtasks?.filter(s => s.isCompleted).length ?? 0,
@@ -1720,10 +1735,85 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           interview.personalContext = workProfile.personalContext
         }
 
+        // GAP 1 (TASK-1331): Compute behavioral context for the plan engine
+        let behavioral: {
+          recentlyCompletedTitles: string[]
+          activeProjectNames: string[]
+          avgTasksCompletedPerDay: number | null
+          avgWorkMinutesPerDay: number | null
+          peakProductivityDays: string[]
+          completionRate: number | null
+          frequentlyMissedProjects: string[]
+          workInsights: string[]
+        } | undefined
+
+        try {
+          const twoWeeksAgo = new Date()
+          twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+
+          const recentlyCompleted = allTasks
+            .filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt as string) >= twoWeeksAgo)
+            .sort((a, b) => {
+              const da = a.completedAt ? new Date(a.completedAt as string).getTime() : 0
+              const db = b.completedAt ? new Date(b.completedAt as string).getTime() : 0
+              return db - da
+            })
+            .slice(0, 15)
+            .map(t => t.title)
+
+          const activeProjectIds = new Set<string>()
+          for (const t of allTasks) {
+            if (t.status === 'done' && t.completedAt && new Date(t.completedAt as string) >= twoWeeksAgo && t.projectId) {
+              activeProjectIds.add(t.projectId)
+            }
+            if (t.status === 'in_progress' && t.projectId) {
+              activeProjectIds.add(t.projectId)
+            }
+          }
+          const activeProjectNames = Array.from(activeProjectIds)
+            .map(id => projectStore.getProjectDisplayName(id))
+            .filter(Boolean) as string[]
+
+          behavioral = {
+            recentlyCompletedTitles: recentlyCompleted,
+            activeProjectNames,
+            avgTasksCompletedPerDay: workProfile?.avgTasksCompletedPerDay ?? null,
+            avgWorkMinutesPerDay: workProfile?.avgWorkMinutesPerDay ?? null,
+            peakProductivityDays: workProfile?.peakProductivityDays ?? [],
+            completionRate: workProfile?.avgPlanAccuracy ?? null,
+            frequentlyMissedProjects: [],
+            workInsights: [],
+          }
+
+          // Extract insights from memory graph
+          if (workProfile?.memoryGraph) {
+            for (const obs of workProfile.memoryGraph) {
+              if (obs.relation === 'frequently_missed' && obs.entity.startsWith('project:')) {
+                const projId = obs.entity.replace('project:', '')
+                const name = projectStore.getProjectDisplayName(projId)
+                if (name) behavioral.frequentlyMissedProjects.push(name)
+              }
+            }
+          }
+        } catch { /* behavioral context is best-effort */ }
+
+        // GAP 7 (TASK-1331): Skip days that already passed this week
+        const now = new Date()
+        const currentDayOfWeek = now.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+        const pastDays: string[] = []
+        for (let d = 0; d < currentDayOfWeek; d++) {
+          pastDays.push(dayNames[d])
+        }
+        if (pastDays.length > 0) {
+          const existingDaysOff = (interview.daysOff as string[]) || []
+          interview.daysOff = [...new Set([...existingDaysOff, ...pastDays])]
+        }
+
         // Generate the plan via AI (with 30s timeout — falls back to deterministic)
         const { useWeeklyPlanAI } = await import('@/composables/useWeeklyPlanAI')
         const { generatePlan } = useWeeklyPlanAI()
-        const { plan, reasoning } = await generatePlan(eligible, interview, workProfile)
+        const { plan, reasoning } = await generatePlan(eligible, interview, workProfile, behavioral)
 
         // Build task lookup for rich output
         const taskLookup = new Map(eligible.map(t => [t.id, t]))

@@ -94,7 +94,7 @@ export const LevelUpAnimation: Story = {
   render: () => ({
     components: { LevelBadge },
     setup() {
-      const levelEvent = ref<any>(undefined)
+      const levelEvent = ref<unknown>(undefined)
       let eventId = 0
 
       const triggerLevelUp = () => {

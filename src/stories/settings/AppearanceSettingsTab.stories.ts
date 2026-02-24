@@ -124,7 +124,7 @@ const meta = {
     layout: 'centered',
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="width: 600px; padding: var(--space-6); background: var(--glass-bg-soft); border-radius: var(--radius-xl); border: 1px solid var(--glass-border);">

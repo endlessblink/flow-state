@@ -291,8 +291,8 @@ const getProjectName = (projectId: string | undefined | null): string | null => 
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  /* Space for teleported quick-add bar (~80px incl padding) - nav spacing handled by MobileLayout */
-  padding-bottom: 80px;
+  /* Space for teleported quick-add bar (now positioned above 64px nav bar) + nav spacing from MobileLayout */
+  padding-bottom: 120px;
 }
 
 /* Debug / Auth Banner */

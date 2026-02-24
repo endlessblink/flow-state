@@ -22,7 +22,7 @@ const meta = {
         },
     },
     decorators: [
-        (story: any) => ({
+        (story: Record<string, unknown>) => ({
             components: { story },
             setup() {
                 const taskStore = useTaskStore()
@@ -58,7 +58,7 @@ export const Default: Story = {
 
 export const ManyProjects: Story = {
     decorators: [
-        (story: any) => ({
+        (story: Record<string, unknown>) => ({
             components: { story },
             setup() {
                 const taskStore = useTaskStore()

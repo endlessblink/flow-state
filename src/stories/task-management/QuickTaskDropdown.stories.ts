@@ -116,7 +116,7 @@ const meta = {
   },
 
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="padding: var(--space-16) var(--space-6) var(--space-6); min-height: 500px;">

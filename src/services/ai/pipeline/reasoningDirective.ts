@@ -478,9 +478,39 @@ export function buildReasoningDirective(
   if (typeof toolResults === 'object' && toolResults !== null && !Array.isArray(toolResults)) {
     const data = toolResults as Record<string, unknown>
 
-    // Weekly plan has its own rendering — don't override it
+    // Weekly plan — build directive from scheduling facts
     if ('plan' in data && 'reasoning' in data) {
-      return ''
+      const planFacts: string[] = []
+      const totalScheduled = data.totalScheduled as number | undefined
+      const daysUsed = data.daysUsed as number | undefined
+      const unscheduled = data.unscheduled as unknown[] | undefined
+      const reasoning = data.reasoning as string | undefined
+
+      if (totalScheduled !== undefined && daysUsed !== undefined) {
+        planFacts.push(lang === 'he'
+          ? `${totalScheduled} משימות חולקו ל-${daysUsed} ימים`
+          : `${totalScheduled} tasks distributed across ${daysUsed} days`)
+      }
+      if (unscheduled && Array.isArray(unscheduled) && unscheduled.length > 0) {
+        planFacts.push(lang === 'he'
+          ? `${unscheduled.length} משימות לא נכנסו לתוכנית`
+          : `${unscheduled.length} tasks couldn't fit (capacity full or low priority)`)
+      }
+      if (reasoning) {
+        planFacts.push(lang === 'he'
+          ? `לוגיקת חלוקה: ${reasoning}`
+          : `Distribution logic: ${reasoning}`)
+      }
+
+      if (planFacts.length === 0) return ''
+
+      const directive: ReasoningDirective = {
+        points: [{ taskTitle: lang === 'he' ? 'תוכנית שבועית' : 'Weekly Plan', facts: planFacts }],
+        languageInstruction: t(lang, 'languageInstruction'),
+        maxLength: MAX_LENGTH_DEFAULT,
+        formatInstruction: t(lang, 'formatInstruction'),
+      }
+      return serialiseDirective(directive, lang)
     }
 
     const points = extractObjectPoints(toolName, data, lang)

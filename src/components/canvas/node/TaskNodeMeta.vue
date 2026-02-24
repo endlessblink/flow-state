@@ -77,7 +77,7 @@ const props = defineProps<{
   showDuration: boolean
   duration?: number
   durationBadgeClass: string
-  durationIcon: any // Component type
+  durationIcon: unknown // Component type
   formattedDuration: string
   isDone: boolean
   isOverdue: boolean

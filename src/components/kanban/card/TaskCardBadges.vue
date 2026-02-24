@@ -53,7 +53,7 @@ const props = defineProps<{
   completedSubtasks: number
   hasDependencies?: boolean
   durationBadgeClass: string
-  projectVisual: any
+  projectVisual: unknown
 }>()
 
 // BUG-1191: Ensure date timer is running for reactive overdue detection

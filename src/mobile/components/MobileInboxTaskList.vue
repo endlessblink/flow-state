@@ -122,7 +122,7 @@ import type { GroupByType } from '@/composables/mobile/useMobileFilters'
 
 defineProps<{
   filteredTasks: Task[]
-  groupedTasks: any[]
+  groupedTasks: unknown[]
   viewMode: ViewMode
   activeTimeFilter: TimeFilterType
   groupBy: GroupByType

@@ -8,7 +8,7 @@ import { useCanvasContextMenus } from './useCanvasContextMenus'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 
-export function useCanvasEvents(syncNodes?: (tasks?: any[], options?: { force?: boolean }) => void) {
+export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { force?: boolean }) => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
     const { endDrag: endGlobalDrag } = useDragAndDrop()

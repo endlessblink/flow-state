@@ -7,7 +7,7 @@ import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCa
 import { truncateUrlsInText } from '@/utils/urlTruncate'
 
 const props = defineProps<{
-  weekDays: any[]
+  weekDays: Record<string, unknown>[]
   workingHours: number[]
   weekEvents: WeekEvent[]
   currentTaskId?: string | null
@@ -44,7 +44,7 @@ defineEmits<{
 }>()
 
 // Inject helpers from parent CalendarView
-const helpers = inject('calendar-helpers') as any
+const helpers = inject('calendar-helpers') as Record<string, unknown>
 const {
   formatHour,
   formatEventTime,
@@ -58,7 +58,7 @@ const {
 // TASK-1322: Tooltip with task description
 const taskStore = useTaskStore()
 
-const getEventTooltip = (event: any) => {
+const getEventTooltip = (event: Record<string, unknown>) => {
   const task = taskStore.getTask(event.taskId)
   const lines = [event.title]
   if (task?.description) {
@@ -115,7 +115,7 @@ const externalEventsByCell = computed(() => {
   for (const event of props.externalEvents) {
     const d = event.startTime
     const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const dayIndex = props.weekDays.findIndex((day: any) => day.dateString === dateString)
+    const dayIndex = props.weekDays.findIndex(day => day.dateString === dateString)
     if (dayIndex === -1) continue
     const hour = d.getHours()
     const key = `${dayIndex}-${hour}`

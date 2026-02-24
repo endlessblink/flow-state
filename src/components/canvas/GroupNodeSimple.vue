@@ -93,7 +93,7 @@ import { NPopover, NDatePicker } from 'naive-ui'
 // Define Props
 const props = defineProps<{
   id: string
-  data: any
+  data: unknown
   selected?: boolean
   dragging?: boolean
 }>()
@@ -126,7 +126,7 @@ const groupColor = computed(() => {
   return storeGroup?.color || props.data?.color || '#3b82f6'
 })
 const taskCount = computed(() => {
-  const data = props.data as any
+  const data = props.data as Record<string, unknown>
   if (!data) return 0
 
   // Determine which count to show based on whether this is a root or child group

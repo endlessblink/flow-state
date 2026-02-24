@@ -23,8 +23,8 @@ import { useStorage, type RemovableRef } from '@vueuse/core'
 import { watch } from 'vue'
 
 // Tauri store singleton
-let tauriStoreInstance: any = null
-let tauriStorePromise: Promise<any> | null = null
+let tauriStoreInstance: unknown = null
+let tauriStorePromise: Promise<unknown> | null = null
 
 const STORE_FILENAME = 'ui-preferences.json'
 

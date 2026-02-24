@@ -42,7 +42,7 @@ const meta: Meta<typeof CanvasContextMenu> = {
     }
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="

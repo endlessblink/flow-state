@@ -104,7 +104,7 @@
             <input
               type="text"
               class="text-input"
-              :value="(safeModelValue.rule as any).customRule || ''"
+              :value="(safeModelValue.rule as Record<string, unknown>).customRule || ''"
               placeholder="e.g. EVERY 2 WEEKS ON MON,FRI"
               @input="updateCustomRule"
             >

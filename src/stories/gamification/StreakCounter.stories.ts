@@ -86,7 +86,7 @@ export const ShieldAnimation: Story = {
   render: () => ({
     components: { StreakCounter },
     setup() {
-      const shieldEvent = ref<any>(undefined)
+      const shieldEvent = ref<unknown>(undefined)
       let eventId = 0
 
       const triggerShield = () => {

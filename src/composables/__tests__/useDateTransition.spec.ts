@@ -14,8 +14,8 @@ vi.mock('@/composables/useDateTransition', () => ({
 }))
 
 describe('Date Transition Logic (TASK-082)', () => {
-    let canvasStore: any
-    let taskStore: any
+    let canvasStore: unknown
+    let taskStore: unknown
 
     beforeEach(() => {
         setActivePinia(createPinia())

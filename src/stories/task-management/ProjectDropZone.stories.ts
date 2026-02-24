@@ -43,7 +43,7 @@ export const Default: Story = {
       const dropCount = ref(0)
       const lastDrop = ref('')
 
-      const handleDrop = (event: any) => {
+      const handleDrop = (event: Record<string, unknown>) => {
         dropCount.value++
         lastDrop.value = JSON.stringify(event, null, 2)
       }
@@ -133,7 +133,7 @@ export const InteractiveDemo: Story = {
         dropZoneActive.value = ''
       }
 
-      const handleDrop = (event: any, zoneId: string) => {
+      const handleDrop = (event: unknown, zoneId: string) => {
         event.preventDefault()
         dropZoneActive.value = ''
         dropCount.value++

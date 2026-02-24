@@ -1,10 +1,11 @@
 <template>
-  <div
-    v-if="isVisible"
-    ref="menuRef"
-    class="context-menu"
-    :style="menuPosition"
-  >
+  <Teleport to="body">
+    <div
+      v-if="isVisible"
+      ref="menuRef"
+      class="context-menu"
+      :style="menuPosition"
+    >
     <!-- Header for inbox/batch operations -->
     <div v-if="showInboxHeader" class="context-menu-header">
       {{ displayHeaderText }}
@@ -277,6 +278,7 @@
       @accept-date="handleAIAcceptDate"
     />
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -455,7 +457,7 @@ const deleteText = computed(() => {
     return `Delete ${props.selectedCount}`
   }
   const task = currentTask.value
-  return (task && 'isCalendarEvent' in task && (task as any).isCalendarEvent) ? 'Remove' : 'Delete'
+  return (task && 'isCalendarEvent' in task && (task as Record<string, unknown>).isCalendarEvent) ? 'Remove' : 'Delete'
 })
 
 // Date picker value (timestamp in milliseconds for Naive UI)
@@ -479,8 +481,8 @@ const handleDatePickerSelect = async (timestamp: number | null) => {
 
   // TASK-1362: Capture calendar instance info before menu closes
   const taskId = currentTask.value.id
-  const calendarInstanceId = (currentTask.value as any)?.instanceId as string | undefined
-  const isCalendarEvent = (currentTask.value as any)?.isCalendarEvent as boolean | undefined
+  const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
+  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
   // Close the popover first
   showDatePicker.value = false
@@ -504,8 +506,8 @@ const handleDatePickerSelect = async (timestamp: number | null) => {
 const handleDoneForNow = async () => {
   // BUG-1184: Capture task data BEFORE closing menu
   const taskId = currentTask.value?.id
-  const calendarInstanceId = (currentTask.value as any)?.instanceId as string | undefined
-  const isCalendarEvent = (currentTask.value as any)?.isCalendarEvent as boolean | undefined
+  const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
+  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
   // BUG-1095: Close menu FIRST to prevent "stuck" menu
   emit('close')

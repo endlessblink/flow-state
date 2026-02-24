@@ -259,9 +259,9 @@ const handleGroupDrop = (event: DragEvent, group: TaskGroup) => {
     const projectId = (group.key === 'uncategorized' || group.key === '__no_project__') ? null : group.key
     emit('moveTask', taskId, projectId, null)
   } else if (props.groupBy === 'status' && group.key) {
-    emit('updateTask', taskId, { status: group.key as any })
+    emit('updateTask', taskId, { status: group.key as Parameters<typeof emit>[2]['status'] })
   } else if (props.groupBy === 'priority' && group.key) {
-    emit('updateTask', taskId, { priority: group.key as any })
+    emit('updateTask', taskId, { priority: group.key as Parameters<typeof emit>[2]['priority'] })
   } else if (props.groupBy === 'dueDate' && group.key) {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())

@@ -92,9 +92,8 @@ defineEmits<{
 /* Quick Add Bar - Now fixed to bottom naturally via teleport */
 .quick-add-bar {
   position: fixed;
-  bottom: 0px;
-  /* Add safe area padding for modern iOS devices with home indicator */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Sit above the 64px mobile nav bar */
+  bottom: var(--space-16);
   left: 0;
   right: 0;
   background: var(--surface-primary);
@@ -188,8 +187,11 @@ defineEmits<{
 }
 
 .add-btn {
-  background: var(--brand-primary);
-  color: white;
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .add-btn:active, .mic-btn:not(.recording):active {

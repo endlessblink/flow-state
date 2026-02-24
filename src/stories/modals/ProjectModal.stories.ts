@@ -21,7 +21,7 @@ const meta = {
   },
 
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="padding: var(--space-10); background: var(--app-background-gradient); min-height: 600px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);">

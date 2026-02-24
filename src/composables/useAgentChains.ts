@@ -79,9 +79,9 @@ const chains: AgentChain[] = [
       {
         type: 'prompt',
         promptFn: (results, language) => {
-          const summary = results[0]?.data as any
-          const overdue = results[1]?.data as any
-          const suggested = results[2]?.data as any
+          const summary = results[0]?.data as unknown
+          const overdue = results[1]?.data as unknown
+          const suggested = results[2]?.data as unknown
 
           const sections: string[] = []
           sections.push('Create a short, personalized daily plan. Write ONE connecting sentence per section. Do NOT repeat the facts — they are shown below and the user can see them.')
@@ -154,9 +154,9 @@ const chains: AgentChain[] = [
       {
         type: 'prompt',
         promptFn: (results, language) => {
-          const stats = results[0]?.data as any
-          const weekly = results[1]?.data as any
-          const gamification = results[2]?.data as any
+          const stats = results[0]?.data as unknown
+          const weekly = results[1]?.data as unknown
+          const gamification = results[2]?.data as unknown
 
           const sections: string[] = []
           sections.push('Write a 3-sentence end-of-day summary. Use the FACTS below — do NOT invent numbers.')
@@ -171,7 +171,7 @@ const chains: AgentChain[] = [
 
             if (stats.statusBreakdown) {
               const sb = stats.statusBreakdown
-              const total = Object.values(sb).reduce((a: number, b: any) => a + (typeof b === 'number' ? b : 0), 0)
+              const total = Object.values(sb).reduce((a: number, b: unknown) => a + (typeof b === 'number' ? b : 0), 0)
               const remaining = total - (sb.done || 0)
               sections.push(`## REMAINING: ${remaining} tasks still open out of ${total} total`)
             }
@@ -225,7 +225,7 @@ const chains: AgentChain[] = [
         type: 'tool',
         tool: 'start_timer',
         parametersFn: (priorResults) => {
-          const suggestion = priorResults[0]?.data as any
+          const suggestion = priorResults[0]?.data as unknown
           if (!suggestion || !Array.isArray(suggestion) || suggestion.length === 0) {
             return null // No task found → skip timer start
           }
@@ -237,7 +237,7 @@ const chains: AgentChain[] = [
       {
         type: 'prompt',
         promptFn: (priorResults, language) => {
-          const suggestion = priorResults[0]?.data as any
+          const suggestion = priorResults[0]?.data as unknown
           const timerResult = priorResults[1] // might be null if skipped
 
           const langDirective = language === 'he' ? '\n\nIMPORTANT: כתוב את כל התשובה בעברית.' : ''
@@ -279,14 +279,24 @@ const chains: AgentChain[] = [
       {
         type: 'tool',
         tool: 'generate_weekly_plan',
-        parameters: {},
+        parametersFn: (priorResults) => {
+          const params: Record<string, unknown> = {}
+
+          // If overdue tasks exist, signal that frontloading may be appropriate
+          const overdue = priorResults[0]?.data as unknown
+          if (overdue && Array.isArray(overdue) && overdue.length >= 3) {
+            params.preferredWorkStyle = 'frontload'
+          }
+
+          return params
+        },
       },
       {
         type: 'prompt',
         promptFn: (results, language) => {
-          const overdue = results[0]?.data as any
-          const daily = results[1]?.data as any
-          const weeklyPlan = results[2]?.data as any
+          const overdue = results[0]?.data as unknown
+          const daily = results[1]?.data as unknown
+          const weeklyPlan = results[2]?.data as unknown
 
           const sections: string[] = []
           sections.push('Present this weekly plan briefly. The detailed plan card renders below your message, so keep your text SHORT (3-4 sentences max).')
@@ -302,27 +312,45 @@ const chains: AgentChain[] = [
           }
 
           if (daily) {
-            sections.push(`## TODAY: ${daily.dueToday || 0} due, ${daily.completedToday || 0} done, ${daily.inProgress || 0} in progress`)
+            const d = daily as Record<string, unknown>
+            sections.push(`## TODAY: ${d.dueToday || 0} due, ${d.completedToday || 0} done, ${d.inProgress || 0} in progress`)
           }
 
           sections.push('')
 
-          // Pre-digested plan summary (don't dump the full JSON)
+          // Pre-digested plan summary
           if (weeklyPlan && typeof weeklyPlan === 'object') {
-            const plan = weeklyPlan.plan || weeklyPlan
+            const wp = weeklyPlan as Record<string, unknown>
+            const plan = wp.plan || wp
             if (plan && typeof plan === 'object') {
+              const p = plan as Record<string, unknown>
               const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
               let totalPlanned = 0
+              const dayCounts: string[] = []
               for (const day of days) {
-                const dayTasks = plan[day]
-                if (Array.isArray(dayTasks)) {
+                const dayTasks = p[day]
+                if (Array.isArray(dayTasks) && dayTasks.length > 0) {
                   totalPlanned += dayTasks.length
+                  dayCounts.push(`${day.charAt(0).toUpperCase() + day.slice(1)}: ${dayTasks.length}`)
                 }
               }
-              sections.push(`## PLAN: ${totalPlanned} tasks distributed across the week`)
-              if (weeklyPlan.reasoning) {
-                sections.push(`Reasoning: ${typeof weeklyPlan.reasoning === 'string' ? weeklyPlan.reasoning.slice(0, 200) : ''}`)
+              sections.push(`## PLAN: ${totalPlanned} tasks distributed`)
+              if (dayCounts.length > 0) {
+                sections.push(`Distribution: ${dayCounts.join(', ')}`)
               }
+              if (wp.reasoning) {
+                sections.push(`Logic: ${typeof wp.reasoning === 'string' ? wp.reasoning.slice(0, 300) : ''}`)
+              }
+            }
+
+            // Unscheduled tasks
+            const unscheduled = wp.unscheduled
+            if (Array.isArray(unscheduled) && unscheduled.length > 0) {
+              const titles = unscheduled.slice(0, 3).map((t: unknown) => {
+                if (typeof t === 'object' && t !== null && 'title' in t) return `"${(t as { title: string }).title}"`
+                return '?'
+              }).join(', ')
+              sections.push(`## UNSCHEDULED: ${unscheduled.length} tasks (${titles}${unscheduled.length > 3 ? ', ...' : ''})`)
             }
           } else {
             sections.push('## Plan generation failed — tell the user to try again.')
@@ -330,7 +358,7 @@ const chains: AgentChain[] = [
 
           sections.push('')
           sections.push('→ Sentence 1: Highlight any overdue tasks that need immediate attention.')
-          sections.push('→ Sentence 2: Summarize the distribution (e.g., "X tasks spread across 5 days").')
+          sections.push('→ Sentence 2: Summarize the distribution (e.g., "X tasks spread across 5 days, heaviest on Monday").')
           sections.push('→ Sentence 3: Brief motivational close.')
 
           const langDirective = language === 'he' ? '\n\nIMPORTANT: כתוב את כל התשובה בעברית.' : ''

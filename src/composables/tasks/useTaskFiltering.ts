@@ -302,7 +302,7 @@ export const useTaskFiltering = (
         let projectTasks = tasks.value.filter(task => projectIds.includes(task.projectId))
 
         if (activeSmartView.value) {
-            projectTasks = applySmartViewFilter(projectTasks, activeSmartView.value as any)
+            projectTasks = applySmartViewFilter(projectTasks, activeSmartView.value as unknown)
         }
 
         if (activeStatusFilter.value) {

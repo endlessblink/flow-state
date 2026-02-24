@@ -128,7 +128,20 @@ const mapperSpies = vi.hoisted(() => ({
   })),
   fromSupabaseUserSettings: vi.fn((row: any) => ({
     theme: row.theme
-  }))
+  })),
+  toSupabaseNotification: vi.fn((n: any, userId: string) => ({
+    id: n.id,
+    user_id: userId
+  })),
+  toSupabasePinnedTask: vi.fn((p: any, userId: string) => ({
+    id: p.id,
+    user_id: userId
+  })),
+  toSupabaseWorkProfile: vi.fn((wp: any, userId: string) => ({
+    user_id: userId,
+    name: wp.name
+  })),
+  toSupabaseQuickSortSession: vi.fn((qs: any, userId: string) => ({ ...qs, user_id: userId }))
 }))
 
 vi.mock('@/utils/supabaseMappers', async () => {
@@ -144,7 +157,11 @@ vi.mock('@/utils/supabaseMappers', async () => {
     toSupabaseTimerSession: mapperSpies.toSupabaseTimerSession,
     fromSupabaseTimerSession: mapperSpies.fromSupabaseTimerSession,
     toSupabaseUserSettings: mapperSpies.toSupabaseUserSettings,
-    fromSupabaseUserSettings: mapperSpies.fromSupabaseUserSettings
+    fromSupabaseUserSettings: mapperSpies.fromSupabaseUserSettings,
+    toSupabaseNotification: mapperSpies.toSupabaseNotification,
+    toSupabasePinnedTask: mapperSpies.toSupabasePinnedTask,
+    toSupabaseWorkProfile: mapperSpies.toSupabaseWorkProfile,
+    toSupabaseQuickSortSession: mapperSpies.toSupabaseQuickSortSession
   }
 })
 

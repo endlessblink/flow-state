@@ -12,7 +12,7 @@ const mockTaskStore = {
   ],
   activeProjectId: '1',
   activeSmartView: 'today',
-  createTask: async (taskData: any) => {
+  createTask: async (taskData: unknown) => {
     console.log('Creating task:', taskData)
     return { id: Date.now().toString(), ...taskData }
   },
@@ -40,14 +40,14 @@ const meta = {
     },
     // Provide mocked store to component
     vue3: {
-      beforeMount(app: any) {
+      beforeMount(app: Record<string, unknown>) {
         app.config.globalProperties.$taskStore = mockTaskStore
         app.provide('taskStore', mockTaskStore)
       }
     }
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       setup() {
         // Apply background to body for Teleport support
@@ -65,7 +65,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { CommandPalette, BaseButton },
     setup() {
       const commandPaletteRef = ref()
@@ -102,7 +102,7 @@ export const Default: Story = {
 }
 
 export const WithPreOpened: Story = {
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { CommandPalette, BaseButton },
     setup() {
       const commandPaletteRef = ref()
@@ -146,7 +146,7 @@ export const WithPreOpened: Story = {
 }
 
 export const IntegrationExample: Story = {
-  render: (args: any) => ({
+  render: (args: Record<string, unknown>) => ({
     components: { CommandPalette, BaseButton },
     setup() {
       const commandPaletteRef = ref()

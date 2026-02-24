@@ -81,11 +81,13 @@ export interface AppSettings {
     externalCalendars: ExternalCalendarConfig[]
     externalCalendarSyncInterval: number // minutes, 0 = manual only
 
-    // TASK-1283: Google Calendar integration
-    googleCalendarToken: string
-    googleCalendarRefreshToken: string
-    googleCalendarTokenExpiry: number  // Unix ms — when access token expires (0 = unknown)
-    googleCalendarConnected: boolean
+    // TASK-1283: Google integration (Calendar + Drive)
+    // FEATURE-1414: Renamed from googleCalendarToken/etc to googleProviderToken/etc
+    //   (same OAuth token now covers both Calendar and Drive scopes)
+    googleProviderToken: string
+    googleProviderRefreshToken: string
+    googleProviderTokenExpiry: number  // Unix ms — when access token expires (0 = unknown)
+    googleConnected: boolean
     googleCalendars: GoogleCalendarConfig[]
     showGoogleCalendarEvents: boolean
 
@@ -206,11 +208,11 @@ export const useSettingsStore = defineStore('settings', {
         externalCalendars: [],
         externalCalendarSyncInterval: 30,
 
-        // TASK-1283: Google Calendar defaults
-        googleCalendarToken: '',
-        googleCalendarRefreshToken: '',
-        googleCalendarTokenExpiry: 0,
-        googleCalendarConnected: false,
+        // TASK-1283: Google integration defaults (FEATURE-1414: renamed from googleCalendarToken/etc)
+        googleProviderToken: '',
+        googleProviderRefreshToken: '',
+        googleProviderTokenExpiry: 0,
+        googleConnected: false,
         googleCalendars: [],
         showGoogleCalendarEvents: true,
 
@@ -343,15 +345,16 @@ export const useSettingsStore = defineStore('settings', {
                     if (!this.$state.pushNotifications) {
                         this.$state.pushNotifications = JSON.parse(JSON.stringify(DEFAULT_PUSH_NOTIFICATION_PREFERENCES))
                     }
-                    // TASK-1283: Backfill Google Calendar fields
-                    if (this.$state.googleCalendarToken === undefined) {
-                        this.$state.googleCalendarToken = ''
+                    // TASK-1283 / FEATURE-1414: Backfill Google integration fields
+                    //   (renamed from googleCalendarToken/etc to googleProviderToken/etc)
+                    if (this.$state.googleProviderToken === undefined) {
+                        this.$state.googleProviderToken = ''
                     }
-                    if (this.$state.googleCalendarRefreshToken === undefined) {
-                        this.$state.googleCalendarRefreshToken = ''
+                    if (this.$state.googleProviderRefreshToken === undefined) {
+                        this.$state.googleProviderRefreshToken = ''
                     }
-                    if (this.$state.googleCalendarConnected === undefined) {
-                        this.$state.googleCalendarConnected = false
+                    if (this.$state.googleConnected === undefined) {
+                        this.$state.googleConnected = false
                     }
                     if (!this.$state.googleCalendars) {
                         this.$state.googleCalendars = []
@@ -359,8 +362,22 @@ export const useSettingsStore = defineStore('settings', {
                     if (this.$state.showGoogleCalendarEvents === undefined) {
                         this.$state.showGoogleCalendarEvents = true
                     }
-                    if (this.$state.googleCalendarTokenExpiry === undefined) {
-                        this.$state.googleCalendarTokenExpiry = 0
+                    if (this.$state.googleProviderTokenExpiry === undefined) {
+                        this.$state.googleProviderTokenExpiry = 0
+                    }
+                    // FEATURE-1414: Migrate calendar-specific token keys to generic Google provider keys
+                    // One-time migration: copy old keys to new keys then remove old keys
+                    if ((this.$state as unknown as Record<string, unknown>).googleCalendarToken !== undefined && this.$state.googleProviderToken === '') {
+                        this.$state.googleProviderToken = (this.$state as unknown as Record<string, unknown>).googleCalendarToken as string || ''
+                        this.$state.googleProviderRefreshToken = (this.$state as unknown as Record<string, unknown>).googleCalendarRefreshToken as string || ''
+                        this.$state.googleProviderTokenExpiry = (this.$state as unknown as Record<string, unknown>).googleCalendarTokenExpiry as number || 0
+                        this.$state.googleConnected = (this.$state as unknown as Record<string, unknown>).googleCalendarConnected as boolean || false
+                        // Remove old keys from persisted state
+                        delete (this.$state as unknown as Record<string, unknown>).googleCalendarToken
+                        delete (this.$state as unknown as Record<string, unknown>).googleCalendarRefreshToken
+                        delete (this.$state as unknown as Record<string, unknown>).googleCalendarTokenExpiry
+                        delete (this.$state as unknown as Record<string, unknown>).googleCalendarConnected
+                        try { this.saveToStorage() } catch (_) { /* non-fatal */ }
                     }
                     // TASK-1350: Backfill AI setup fields
                     if (this.$state.groqApiKey === undefined) {

@@ -19,7 +19,7 @@ const meta = {
   },
 
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="padding: var(--space-10); background: var(--app-background-gradient); border-radius: var(--radius-xl); min-width: 700px; font-family: sans-serif; position: relative;">

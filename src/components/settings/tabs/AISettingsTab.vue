@@ -319,7 +319,7 @@ async function onClearMemories() {
   if (!confirm('Clear all memory observations? The AI will need to re-learn patterns.')) return
   isClearingMemories.value = true
   try {
-    await savePreferences({ memoryGraph: [] } as any)
+    await savePreferences({ memoryGraph: [] } as unknown as import('@/composables/useWorkProfile').WorkProfileData)
   } finally {
     isClearingMemories.value = false
   }

@@ -93,7 +93,7 @@ import { useProjectStore } from '@/stores/projects'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 defineProps<{
-  visual: any
+  visual: unknown
   projectDisplayName: string
   currentProjectId?: string | null
 }>()

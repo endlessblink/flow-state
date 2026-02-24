@@ -67,7 +67,7 @@
         @toggle-done-tasks="taskStore.toggleCalendarDoneTasks()"
         @update:view-mode="viewMode = $event"
         @sync-external-calendar="externalCalendar.syncNow"
-        :google-calendar-connected="googleCalendar.isConnected.value"
+        :google-connected="googleCalendar.isConnected.value"
         :show-google-events="googleCalendar.showGoogleEvents.value"
         @toggle-google-events="googleCalendar.showGoogleEvents.value = !googleCalendar.showGoogleEvents.value"
         @sync-google-calendar="googleCalendar.syncNow"

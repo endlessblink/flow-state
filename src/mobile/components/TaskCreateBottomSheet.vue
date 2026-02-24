@@ -401,7 +401,7 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-// BUG-1350: Check if form has any user-entered content worth protecting
+// BUG-1350: Check if form has unknown user-entered content worth protecting
 const hasUnsavedContent = computed(() => {
   return taskTitle.value.trim().length > 0 ||
     taskDescription.value.trim().length > 0 ||

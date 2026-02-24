@@ -48,7 +48,7 @@ const meta: Meta<typeof TaskNode> = {
     },
   },
   decorators: [
-    (story: any) => ({
+    (story: Record<string, unknown>) => ({
       components: { story },
       template: `
         <div style="padding: var(--space-16); background: var(--app-background-gradient); min-height: 400px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);">

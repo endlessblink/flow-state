@@ -104,6 +104,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Task, type Project } from '@/stores/tasks'
+import type { TaskAttachment } from '@/types/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { createLazyModal } from '@/composables/useLazyComponent'
@@ -260,6 +261,7 @@ const handleQuickTaskCreate = async (data: {
   priority: 'low' | 'medium' | 'high'
   dueDate?: string
   projectId?: string
+  attachments?: TaskAttachment[]  // FEATURE-1414
 }) => {
   try {
     await taskStore.createTaskWithUndo({
@@ -268,7 +270,8 @@ const handleQuickTaskCreate = async (data: {
       status: data.status as Task['status'],
       priority: data.priority,
       dueDate: data.dueDate,
-      projectId: data.projectId || undefined
+      projectId: data.projectId || undefined,
+      attachments: data.attachments
     })
     closeQuickTaskCreate()
   } catch (error) {

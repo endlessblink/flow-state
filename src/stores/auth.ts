@@ -309,6 +309,8 @@ export const useAuthStore = defineStore('auth', () => {
           }
 
           // TASK-1283: Capture Google provider tokens for Calendar API
+          // FEATURE-1414: Renamed keys from googleCalendarToken to googleProviderToken
+          //   (same token now serves both Calendar and Drive APIs)
           // PKCE flow: Supabase exchanges ?code=xxx for tokens, fires SIGNED_IN with session.provider_token
           // Legacy implicit flow: tokens from hash via consumePendingProviderTokens(), fires INITIAL_SESSION
           // We handle both events to cover all flows.
@@ -320,16 +322,16 @@ export const useAuthStore = defineStore('auth', () => {
               try {
                 const { useSettingsStore } = await import('@/stores/settings')
                 const settingsStore = useSettingsStore()
-                settingsStore.updateSetting('googleCalendarToken', providerToken)
+                settingsStore.updateSetting('googleProviderToken', providerToken)
                 // Google access tokens expire in ~3600s. Store expiry for proactive refresh.
-                settingsStore.updateSetting('googleCalendarTokenExpiry', Date.now() + 3500 * 1000)
+                settingsStore.updateSetting('googleProviderTokenExpiry', Date.now() + 3500 * 1000)
                 if (providerRefreshToken) {
-                  settingsStore.updateSetting('googleCalendarRefreshToken', providerRefreshToken)
+                  settingsStore.updateSetting('googleProviderRefreshToken', providerRefreshToken)
                 }
-                settingsStore.updateSetting('googleCalendarConnected', true)
-                console.log(`👤 [AUTH:${currentTabId}] Google Calendar provider tokens captured and stored (event: ${_event}, source: ${providerTokens ? 'hash' : 'session'}, hasRefresh: ${!!providerRefreshToken})`)
+                settingsStore.updateSetting('googleConnected', true)
+                console.log(`👤 [AUTH:${currentTabId}] Google provider tokens captured and stored (event: ${_event}, source: ${providerTokens ? 'hash' : 'session'}, hasRefresh: ${!!providerRefreshToken})`)
               } catch (e) {
-                console.warn('[AUTH] Failed to store Google Calendar tokens:', e)
+                console.warn('[AUTH] Failed to store Google provider tokens:', e)
               }
             }
           }
@@ -797,11 +799,12 @@ export const useAuthStore = defineStore('auth', () => {
 
       // PWA: standard OAuth redirect flow
       // TASK-1283: Request calendar.readonly scope for Google Calendar integration
+      // FEATURE-1414: Added drive.file scope for task image attachments
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin,
-          scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+          scopes: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.file',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent'

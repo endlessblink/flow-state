@@ -97,7 +97,7 @@ export function useTimerLeaderElection(deps: LeaderElectionDeps) {
         }
     }
 
-    const handleLeaderMessage = (sync: any) => {
+    const handleLeaderMessage = (sync: unknown) => {
         switch (sync.action) {
             case 'claim_leadership':
                 if (sync.leaderId !== tabId) {

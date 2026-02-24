@@ -76,7 +76,7 @@
 **Steps**:
 - [ ] Add `drive.file` scope to OAuth in `auth.ts`
 - [ ] Rename calendar-specific token keys to generic (`googleCalendarToken` → `googleProviderToken`)
-- [ ] Create `google-drive-proxy` edge function
+- [x] ~~Create `google-drive-proxy` edge function~~ ✅
 - [ ] Create `googleDriveService.ts` client service
 - [ ] Add `TaskAttachment` type + `attachments` field to Task + mappers + migration
 - [ ] Build `TaskAttachments.vue` upload UI in task editor
@@ -4447,9 +4447,9 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1169: Add Unit Tests for Database Layer (📋 PLANNED)
+### ~~TASK-1169~~: Add Unit Tests for Database Layer (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-23)
 
 **Problem**: No dedicated tests for database composable.
 

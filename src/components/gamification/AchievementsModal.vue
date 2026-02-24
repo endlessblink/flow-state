@@ -21,7 +21,7 @@ const gamificationStore = useGamificationStore()
 
 const selectedCategory = ref<AchievementCategory | 'all'>('all')
 
-const categories: { id: AchievementCategory | 'all'; label: string; icon: any }[] = [
+const categories: { id: AchievementCategory | 'all'; label: string; icon: unknown }[] = [
   { id: 'all', label: 'All', icon: Trophy },
   { id: 'productivity', label: 'Productivity', icon: Target },
   { id: 'consistency', label: 'Consistency', icon: Flame },

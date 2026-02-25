@@ -1,5 +1,5 @@
 <template>
-  <div class="mobile-inbox">
+  <div class="mobile-inbox" ref="inboxEl">
     <!-- Debug Banner (tap to toggle) - dev user only -->
     <template v-if="isDevUser">
       <div v-if="showDebug" class="debug-banner" @click="showDebug = false">
@@ -186,26 +186,71 @@ const authStatus = computed(() => authStore.isAuthenticated ? 'Signed in' : 'Not
 const userId = computed(() => authStore.user?.id?.substring(0, 8) + '...' || null)
 const syncError = computed(() => lastSyncError.value)
 
-// Swipe hint
-const SWIPE_HINT_KEY = 'flowstate-inbox-swipe-hint-dismissed'
+// Swipe hint — hidden by default, revealed by two-finger pull-down gesture
 const showSwipeHint = ref(false)
+const inboxEl = ref<HTMLElement | null>(null)
+
+let twoFingerStartY: number | null = null
+let swipeHintTimer: ReturnType<typeof setTimeout> | null = null
+
+const onTouchStart = (event: TouchEvent) => {
+  if (event.touches.length === 2) {
+    const screenHeight = window.innerHeight
+    const avgY = (event.touches[0].clientY + event.touches[1].clientY) / 2
+    if (avgY > screenHeight * 0.6) {
+      twoFingerStartY = avgY
+    } else {
+      twoFingerStartY = null
+    }
+  } else {
+    twoFingerStartY = null
+  }
+}
+
+const onTouchMove = (event: TouchEvent) => {
+  if (twoFingerStartY === null || event.touches.length !== 2) return
+  const currentY = (event.touches[0].clientY + event.touches[1].clientY) / 2
+  const deltaY = currentY - twoFingerStartY
+  if (deltaY < -60 && !showSwipeHint.value) {
+    showSwipeHint.value = true
+    if (swipeHintTimer) clearTimeout(swipeHintTimer)
+    swipeHintTimer = setTimeout(() => {
+      showSwipeHint.value = false
+      swipeHintTimer = null
+    }, 4000)
+  }
+}
+
+const onTouchEnd = () => {
+  twoFingerStartY = null
+}
+
+const dismissSwipeHint = () => {
+  showSwipeHint.value = false
+  if (swipeHintTimer) {
+    clearTimeout(swipeHintTimer)
+    swipeHintTimer = null
+  }
+}
 
 onMounted(() => {
-  const dismissed = localStorage.getItem(SWIPE_HINT_KEY)
-  if (!dismissed) {
-    showSwipeHint.value = true
-  }
   document.addEventListener('click', handleClickOutside)
+  if (inboxEl.value) {
+    inboxEl.value.addEventListener('touchstart', onTouchStart, { passive: true })
+    inboxEl.value.addEventListener('touchmove', onTouchMove, { passive: true })
+    inboxEl.value.addEventListener('touchend', onTouchEnd, { passive: true })
+  }
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  if (inboxEl.value) {
+    inboxEl.value.removeEventListener('touchstart', onTouchStart)
+    inboxEl.value.removeEventListener('touchmove', onTouchMove)
+    inboxEl.value.removeEventListener('touchend', onTouchEnd)
+  }
+  if (swipeHintTimer) clearTimeout(swipeHintTimer)
 })
-
-const dismissSwipeHint = () => {
-  showSwipeHint.value = false
-  localStorage.setItem(SWIPE_HINT_KEY, 'true')
-}
 
 // Close Dropdown helper
 const handleClickOutside = (event: MouseEvent) => {
@@ -291,8 +336,8 @@ const getProjectName = (projectId: string | undefined | null): string | null => 
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  /* Space for teleported quick-add bar (now positioned above 64px nav bar) + nav spacing from MobileLayout */
-  padding-bottom: 120px;
+  /* Space for nav bar (64px) + FAB clearance — no full-width bar anymore */
+  padding-bottom: 80px;
 }
 
 /* Debug / Auth Banner */
@@ -339,6 +384,12 @@ const getProjectName = (projectId: string | undefined | null): string | null => 
   background: var(--surface-secondary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .hint-text {

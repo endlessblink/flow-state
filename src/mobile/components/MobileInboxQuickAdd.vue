@@ -1,73 +1,45 @@
 <template>
   <Teleport to="body">
-    <div class="quick-add-bar">
-      <div class="quick-add-row">
-        <input
-          type="text"
-          dir="ltr"
-          placeholder="Add a task..."
-          class="quick-add-input"
-          readonly
-          @click="$emit('openTaskCreateSheet')"
-        >
-
-        <!-- Mic button with offline queue badge (TASK-1131) -->
-        <button
-          v-if="isVoiceSupported"
-          class="mic-btn"
-          :class="[{ recording: isListening, offline: !isVoiceOnline }]"
-          @click="$emit('toggleVoiceInput')"
-        >
-          <Mic v-if="!isListening" :size="20" />
-          <MicOff v-else :size="20" />
-          <span v-if="hasVoicePending" class="voice-pending-badge">{{ voicePendingCount }}</span>
-        </button>
-
-        <button
-          class="add-btn"
-          @click="$emit('openTaskCreateSheet')"
-        >
-          <Plus :size="20" />
-        </button>
+    <!-- Voice feedback pill — floats above FAB when recording -->
+    <div
+      v-if="isListening || isProcessingVoice || isVoiceQueued"
+      class="voice-feedback-pill"
+    >
+      <span class="voice-mode-badge whisper">🤖 AI</span>
+      <div class="voice-waveform" :class="{ paused: isVoiceQueued }">
+        <span class="wave-bar" />
+        <span class="wave-bar" />
+        <span class="wave-bar" />
+        <span class="wave-bar" />
+        <span class="wave-bar" />
       </div>
-
-      <!-- Voice feedback (when recording) - Whisper only (TASK-1119) -->
-      <div v-if="isListening || isProcessingVoice || isVoiceQueued" class="voice-feedback">
-        <span class="voice-mode-badge whisper">🤖 AI</span>
-        <div class="voice-waveform" :class="{ paused: isVoiceQueued }">
-          <span class="wave-bar" />
-          <span class="wave-bar" />
-          <span class="wave-bar" />
-          <span class="wave-bar" />
-          <span class="wave-bar" />
-        </div>
-        <span class="voice-status">
-          <template v-if="isVoiceQueued">📥 Saved offline - will transcribe when online</template>
-          <template v-else-if="isProcessingVoice">Processing...</template>
-          <template v-else>{{ recordingDuration }}s - Speak freely...</template>
-        </span>
-        <button v-if="!isVoiceQueued" class="voice-cancel" @click="$emit('cancelVoice')">
-          <X :size="16" />
-        </button>
-      </div>
-
-      <!-- Voice mode indicator when not recording -->
-      <div v-if="isVoiceSupported && !isListening && !isProcessingVoice && !isVoiceQueued" class="voice-lang-hint">
-        <span v-if="!isVoiceOnline" class="voice-offline-badge">📴 Offline</span>
-        <span class="voice-mode-badge whisper">🤖 AI (auto-detect)</span>
-        <span v-if="hasVoicePending" class="voice-queue-status">{{ voicePendingCount }} queued</span>
-      </div>
-
-      <!-- Voice error message -->
-      <div v-if="voiceError && !isListening" class="voice-error">
-        {{ voiceError }}
-      </div>
+      <span class="voice-status">
+        <template v-if="isVoiceQueued">📥 Saved offline - will transcribe when online</template>
+        <template v-else-if="isProcessingVoice">Processing...</template>
+        <template v-else>{{ recordingDuration }}s - Speak freely...</template>
+      </span>
+      <button v-if="!isVoiceQueued" class="voice-cancel" @click="$emit('cancelVoice')">
+        <X :size="16" />
+      </button>
     </div>
+
+    <!-- Floating Action Button -->
+    <button
+      class="fab"
+      aria-label="Add task"
+      @click="$emit('openTaskCreateSheet')"
+    >
+      <Plus :size="24" />
+      <!-- Offline queue badge on FAB when voice is available and has pending -->
+      <span v-if="isVoiceSupported && hasVoicePending" class="voice-pending-badge">
+        {{ voicePendingCount }}
+      </span>
+    </button>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { Mic, MicOff, Plus, X } from 'lucide-vue-next'
+import { Plus, X } from 'lucide-vue-next'
 
 defineProps<{
   isVoiceSupported: boolean
@@ -89,66 +61,35 @@ defineEmits<{
 </script>
 
 <style scoped>
-/* Quick Add Bar - Now fixed to bottom naturally via teleport */
-.quick-add-bar {
+/* Floating Action Button */
+.fab {
   position: fixed;
-  /* Sit above the 64px mobile nav bar */
-  bottom: var(--space-16);
-  left: 0;
-  right: 0;
-  background: var(--surface-primary);
-  border-top: 1px solid var(--border-subtle);
-  padding-top: var(--space-3);
-  padding-left: var(--space-4);
-  padding-right: var(--space-4);
+  bottom: calc(var(--space-16) + var(--space-4));
+  right: var(--space-4);
   z-index: 50;
-  /* Reduced shadow footprint so it doesn't overlap stack content */
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
-  transition: all var(--duration-normal) cubic-bezier(0.2, 0, 0, 1);
-}
-
-.quick-add-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  /* The row itself already has minimal bottom margin, we rely on padding-bottom of container */
-  margin-bottom: var(--space-3);
-}
-
-.quick-add-input {
-  flex: 1;
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--text-base);
-  color: var(--text-primary);
-  transition: all var(--duration-fast);
-}
-
-.quick-add-input:focus {
-  outline: none;
-  border-color: var(--brand-primary);
-  background: var(--surface-primary);
-  box-shadow: 0 0 0 2px var(--brand-primary-subtle);
-}
-
-.mic-btn, .add-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-xl);
-  border: none;
   cursor: pointer;
-  transition: all var(--duration-fast);
-  flex-shrink: 0;
-  position: relative; /* For pending count badge */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.12);
+  transition: transform var(--duration-fast), box-shadow var(--duration-fast);
+  /* fixed elements are containing blocks for absolute children */
 }
 
-/* Offline Queue Badge */
+.fab:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+/* Offline queue badge on FAB */
 .voice-pending-badge {
   position: absolute;
   top: -4px;
@@ -164,64 +105,27 @@ defineEmits<{
   align-items: center;
   justify-content: center;
   border: 2px solid var(--surface-primary);
-  z-index: 2;
   padding: 0 4px;
 }
 
-.mic-btn {
-  background: var(--surface-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-subtle);
-}
-
-.mic-btn.recording {
-  background: var(--danger-bg-subtle);
-  color: var(--color-danger);
-  border-color: var(--color-danger);
-  animation: pulse 2s infinite;
-}
-
-.mic-btn.offline {
-  opacity: 0.8;
-  border-style: dashed;
-}
-
-.add-btn {
-  background: var(--glass-bg-soft);
-  color: var(--brand-primary);
-  border: 1px solid var(--brand-primary);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.add-btn:active, .mic-btn:not(.recording):active {
-  transform: scale(0.95);
-}
-
-/* Base states that are always rendered but hidden */
-.mic-btn.recording {
-  background: var(--danger-bg-subtle);
-  color: var(--color-danger);
-  border-color: var(--color-danger);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 var(--danger-bg-subtle); }
-  70% { box-shadow: 0 0 0 10px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
-}
-
-/* Voice feature UI additions */
-.voice-lang-hint {
+/* Voice feedback pill — floats above the FAB */
+.voice-feedback-pill {
+  position: fixed;
+  bottom: calc(var(--space-16) + var(--space-4) + 56px + var(--space-3));
+  right: var(--space-4);
+  z-index: 50;
   display: flex;
-  justify-content: center;
   align-items: center;
   gap: var(--space-2);
-  margin-top: -var(--space-1);
-  margin-bottom: var(--space-3);
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
+  padding: var(--space-2) var(--space-3);
+  background: var(--danger-bg-subtle);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(var(--color-danger-rgb, 220, 38, 38), 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out forwards;
+  max-width: calc(100vw - var(--space-8));
 }
 
 .voice-mode-badge {
@@ -231,6 +135,7 @@ defineEmits<{
   border-radius: var(--radius-sm);
   font-weight: var(--font-medium);
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .voice-mode-badge.whisper {
@@ -239,41 +144,12 @@ defineEmits<{
   border: 1px solid rgba(var(--brand-primary-rgb), 0.2);
 }
 
-.voice-offline-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--yellow-bg-subtle);
-  color: var(--color-warning);
-  border: 1px solid rgba(var(--color-warning-rgb), 0.2);
-  font-weight: var(--font-medium);
-}
-
-.voice-queue-status {
-  color: var(--color-warning);
-  font-weight: var(--font-semibold);
-  font-size: var(--text-xs);
-}
-
-.voice-feedback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  background: var(--danger-bg-subtle);
-  border-radius: var(--radius-lg);
-  margin-top: -var(--space-2);
-  margin-bottom: var(--space-3);
-  animation: slideUp 0.3s ease-out forwards;
-}
-
 .voice-waveform {
   display: flex;
   align-items: center;
   gap: 3px;
   height: 20px;
+  flex-shrink: 0;
 }
 
 .wave-bar {
@@ -289,12 +165,15 @@ defineEmits<{
   background: var(--color-warning);
 }
 
-.voice-feedback .voice-status {
+.voice-status {
   font-size: var(--text-sm);
   color: var(--color-danger);
   font-weight: var(--font-medium);
   font-variant-numeric: tabular-nums;
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .voice-waveform.paused + .voice-status {
@@ -310,21 +189,12 @@ defineEmits<{
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-full);
+  flex-shrink: 0;
+  cursor: pointer;
 }
 
 .voice-cancel:active {
-  background: rgba(0,0,0,0.05);
-}
-
-.voice-error {
-  margin-top: -var(--space-2);
-  margin-bottom: var(--space-3);
-  padding: var(--space-2);
-  background: var(--danger-bg-subtle);
-  color: var(--color-danger);
-  font-size: var(--text-xs);
-  border-radius: var(--radius-md);
-  text-align: center;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .wave-bar:nth-child(1) { height: 8px; animation-delay: -0.4s; }
@@ -341,10 +211,5 @@ defineEmits<{
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-/* RTL Support */
-[dir="rtl"] .quick-add-input {
-  text-align: right;
 }
 </style>

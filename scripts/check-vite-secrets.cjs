@@ -29,6 +29,7 @@ const ALLOWLISTED_VARS = new Set([
   'VITE_VAPID_PUBLIC_KEY',    // Public by VAPID spec
   'VITE_APP_VERSION',         // Version number
   'VITE_USE_LOCAL_SUPABASE',  // Boolean flag
+  'VITE_SITE_URL',            // Public site URL (not a secret)
 ])
 
 // ============================================================================

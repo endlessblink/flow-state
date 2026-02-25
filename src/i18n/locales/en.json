@@ -335,7 +335,7 @@
   },
   "mobile": {
     "release_to_open": "Release to open",
-    "pull_down": "Pull down for quick actions",
+    "pull_down": "Two-finger pull for quick actions",
     "search_tasks": "Search tasks...",
     "timer": "Timer",
     "task_added": "Task added!",

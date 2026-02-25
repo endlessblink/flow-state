@@ -276,35 +276,45 @@ function openSettings() {
   uiStore.openSettingsModal()
 }
 
-// ─── Pull-down Gesture ───
+// ─── Pull-down Gesture (TWO FINGERS ONLY) ───
 const contentRef = ref<HTMLElement | null>(null)
-const touchStartY = ref(0)
 const pullDistance = ref(0)
 const pullTriggered = ref(false)
-const isPulling = ref(false)
 
 const PULL_THRESHOLD = 80
 
+let twoFingerPullTracking = false
+let twoFingerPullStartY = 0
+
 function onTouchStart(e: TouchEvent) {
   if (isFullScreenView.value || disablePullDown.value || showPanel.value) return
-  const el = contentRef.value
-  if (el && el.scrollTop <= 0) {
-    touchStartY.value = e.touches[0].clientY
-    isPulling.value = true
-    pullTriggered.value = false
+  // Only track when exactly 2 fingers
+  if (e.touches.length === 2) {
+    const el = contentRef.value
+    if (el && el.scrollTop <= 0) {
+      twoFingerPullStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+      twoFingerPullTracking = true
+      pullTriggered.value = false
+    }
+  }
+  // Single finger cancels any tracking
+  if (e.touches.length === 1) {
+    twoFingerPullTracking = false
+    pullDistance.value = 0
   }
 }
 
 function onTouchMove(e: TouchEvent) {
-  if (!isPulling.value || isFullScreenView.value || disablePullDown.value || showPanel.value) return
+  if (!twoFingerPullTracking || e.touches.length !== 2) return
+  if (isFullScreenView.value || disablePullDown.value || showPanel.value) return
   const el = contentRef.value
   if (el && el.scrollTop > 0) {
-    isPulling.value = false
+    twoFingerPullTracking = false
     pullDistance.value = 0
     return
   }
-  const currentY = e.touches[0].clientY
-  const delta = currentY - touchStartY.value
+  const currentY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+  const delta = currentY - twoFingerPullStartY
   if (delta > 0) {
     pullDistance.value = delta
     if (delta >= PULL_THRESHOLD && !pullTriggered.value) {
@@ -315,16 +325,19 @@ function onTouchMove(e: TouchEvent) {
   }
 }
 
-function onTouchEnd() {
+function onTouchEnd(e: TouchEvent) {
   if (pullTriggered.value) {
     showPanel.value = true
     nextTick(() => {
       taskInputRef.value?.focus()
     })
   }
-  isPulling.value = false
-  pullDistance.value = 0
-  pullTriggered.value = false
+  // Reset when all fingers lifted
+  if (e.touches.length === 0) {
+    twoFingerPullTracking = false
+    pullDistance.value = 0
+    pullTriggered.value = false
+  }
 }
 
 onMounted(() => {

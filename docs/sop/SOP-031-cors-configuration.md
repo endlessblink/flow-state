@@ -176,7 +176,7 @@ The CORS allowlist uses Caddy's `map` directive to validate origins. Only reques
 
 ### Adding a New Origin
 
-1. SSH into VPS: `ssh -i ~/.ssh/id_ed25519 root@84.46.253.137`
+1. SSH into VPS: `ssh -i ~/.ssh/id_ed25519 root@$VPS_HOST`
 2. Edit Caddyfile: `sudo nano /etc/caddy/Caddyfile`
 3. Add the origin to the `map` block (both key and value must match)
 4. Reload Caddy: `sudo systemctl reload caddy`

@@ -27,8 +27,11 @@ export function useTaskRowActions(
             type: 'task',
             taskId: props.task.id,
             title: props.task.title,
-            source: 'kanban' // Using kanban/list as generic source
+            source: 'kanban', // Using kanban/list as generic source
+            ghostMode: 'always'
         }
+
+        console.log('[DND-GROUP] dragStart', { taskId: props.task.id, title: props.task.title })
 
         event.dataTransfer.setData('application/json', JSON.stringify(dragData))
         event.dataTransfer.effectAllowed = 'move'
@@ -60,12 +63,13 @@ export function useTaskRowActions(
         state.isDropTarget.value = false
 
         const dataString = event.dataTransfer?.getData('application/json')
+        console.log('[DND-GROUP] handleDrop on row', { targetTaskId: props.task.id, targetTitle: props.task.title, hasData: !!dataString })
         if (!dataString) return
 
         try {
             const dragData = JSON.parse(dataString) as DragData
             if (dragData.type === 'task' && dragData.taskId && dragData.taskId !== props.task.id) {
-                // Dropped task becomes a subtask of this task
+                console.log('[DND-GROUP] emitting moveTask', { draggedId: dragData.taskId, targetParentId: props.task.id })
                 emit('moveTask', dragData.taskId, props.task.projectId || null, props.task.id)
             }
         } catch (error) {

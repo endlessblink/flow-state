@@ -5,6 +5,7 @@
 
 import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue'
 import { usePerformanceManager } from './usePerformanceManager'
+import { EXTERNAL_URLS } from '@/config/urls'
 
 export interface NetworkRequest {
   id: string
@@ -443,7 +444,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   const measureConnectionSpeed = async (): Promise<number> => {
     try {
       const startTime = Date.now()
-      await fetch('https://in-theflow.com', {
+      await fetch(EXTERNAL_URLS.PRODUCTION_SITE, {
         method: 'GET',
         cache: 'no-cache'
       })

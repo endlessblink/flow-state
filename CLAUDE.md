@@ -38,7 +38,7 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 | Timer Sync | ✅ Working (cross-device via Supabase Realtime) |
 | KDE Widget | ✅ Working (packages/kde-widget/) |
 | Tauri Desktop | ✅ Working (Linux/Win/Mac releases) |
-| VPS Production | ✅ Live at in-theflow.com (Contabo) |
+| VPS Production | ✅ Live (Contabo VPS, set VITE_SITE_URL) |
 | Build/CI | ✅ Passing |
 | AI Chat | ✅ Working (Groq/Ollama, Tauri-aware) |
 | Gamification | ✅ Working (XP, achievements, shop) |
@@ -63,7 +63,7 @@ npm run tauri build  # Build desktop app with signing (requires env vars)
 npm run tauri:update-manifest  # Generate latest.json for auto-updater
 
 # Deployment (auto via CI/CD on push to master)
-# Manual deploy: npm run build && rsync -avz dist/ root@84.46.253.137:/var/www/flowstate/
+# Manual deploy: npm run build && rsync -avz dist/ ${VPS_USER:-root}@${VPS_HOST}:/var/www/flowstate/
 ```
 
 ## Development Server
@@ -96,7 +96,7 @@ npm run tauri:update-manifest  # Generate latest.json for auto-updater
 Options: `--skip-deploy` (build only), `--dry-run` (preview). Fallback: `sudo dpkg -i src-tauri/target/release/bundle/deb/FlowState_*.deb` (local only, no auto-updater — only if user explicitly asks).
 
 **Release workflow:** Bump version in 3 files (package.json, tauri.conf.json, Cargo.toml) → git tag → CI/CD auto-builds.
-**Auto-updater endpoint:** `https://in-theflow.com/updates/latest.json` — checks on app launch (3s delay), shows toast with "Download" button. Auto-update toggle in Settings > About.
+**Auto-updater endpoint:** `${VITE_SITE_URL}/updates/latest.json` — checks on app launch (3s delay), shows toast with "Download" button. Auto-update toggle in Settings > About.
 **Signing key:** `~/.tauri/flow-state.key` (NEVER commit). Password in KWallet via `secret-tool`.
 
 ## VPS Production Deployment
@@ -107,10 +107,10 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
                                       PWA Static Files (/var/www/flowstate)
 ```
 
-**URLs:** `in-theflow.com` (PWA), `api.in-theflow.com` (Supabase API) | **VPS IP:** 84.46.253.137
-**SSH:** `ssh -i ~/.ssh/id_ed25519 root@84.46.253.137`
+**URLs:** Set via `VITE_SITE_URL` env var | **VPS:** Set `VPS_HOST` env var
+**SSH:** `ssh -i ~/.ssh/id_ed25519 ${VPS_USER:-root}@${VPS_HOST}`
 
-**Deployment:** CI/CD auto-deploys on push to master. Manual: `doppler run -- npm run build && rsync -avz --delete --exclude='updates/' dist/ root@84.46.253.137:/var/www/flowstate/`
+**Deployment:** CI/CD auto-deploys on push to master. Manual: `doppler run -- npm run build && rsync -avz --delete --exclude='updates/' dist/ ${VPS_USER:-root}@${VPS_HOST}:/var/www/flowstate/`
 
 **Secrets:** NEVER store in `.env` on VPS — use Doppler. `.env` and `.env.production` are gitignored. Full SOP: [SOP-030](docs/sop/SOP-030-doppler-secrets-management.md).
 
@@ -341,4 +341,4 @@ MASTER_PLAN.md auto-syncs to beads. **Never create beads manually** — the sync
 
 **Last Updated**: February 18, 2026
 **Stack**: Vue 3.5.26, Vite 7.3.1, TypeScript 5.9.3, Supabase (self-hosted), Tauri 2.10, tauri-cli 2.10.0
-**Production**: in-theflow.com (Contabo VPS, Ubuntu 22.04)
+**Production**: Set `VITE_SITE_URL` + `VPS_HOST` env vars (Contabo VPS, Ubuntu 22.04)

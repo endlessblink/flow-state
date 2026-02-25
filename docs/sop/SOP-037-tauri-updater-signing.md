@@ -333,7 +333,7 @@ panic = "abort"      # Abort on panic (smaller binary, no unwinding)
 **Create updates directory (first time only):**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@84.46.253.137 "mkdir -p /var/www/flowstate/updates"
+ssh -i ~/.ssh/id_ed25519 root@$VPS_HOST "mkdir -p /var/www/flowstate/updates"
 ```
 
 **Upload AppImage + manifest:**
@@ -342,7 +342,7 @@ ssh -i ~/.ssh/id_ed25519 root@84.46.253.137 "mkdir -p /var/www/flowstate/updates
 scp -i ~/.ssh/id_ed25519 \
   src-tauri/target/release/bundle/appimage/FlowState_1.2.5_amd64.AppImage \
   src-tauri/target/release/bundle/latest.json \
-  root@84.46.253.137:/var/www/flowstate/updates/
+  root@$VPS_HOST:/var/www/flowstate/updates/
 ```
 
 **Upload multi-platform builds (after CI/CD):**
@@ -354,7 +354,7 @@ scp -i ~/.ssh/id_ed25519 \
   artifacts/windows/FlowState_1.2.5_x64-setup.msi \
   artifacts/macos/FlowState_1.2.5_aarch64.dmg \
   latest.json \
-  root@84.46.253.137:/var/www/flowstate/updates/
+  root@$VPS_HOST:/var/www/flowstate/updates/
 ```
 
 ### Verify Upload
@@ -509,7 +509,7 @@ git push origin v1.2.5
 | `TAURI_SIGNING_PRIVATE_KEY` | Content of `~/.tauri/flow-state.key` | Copy entire file content |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password used when generating key | Omit if using passwordless key |
 | `SSH_PRIVATE_KEY` | SSH private key for VPS access | For rsync deployment |
-| `VPS_HOST` | `84.46.253.137` | VPS IP address |
+| `VPS_HOST` | `your-vps-ip` | VPS IP address |
 | `VPS_USER` | `root` | SSH user |
 
 **How to add secrets:**
@@ -568,7 +568,7 @@ jobs:
       - run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/vps_key" \
-            artifacts/ root@84.46.253.137:/var/www/flowstate/updates/
+            artifacts/ root@$VPS_HOST:/var/www/flowstate/updates/
 ```
 
 **Notes:**
@@ -815,8 +815,8 @@ Error checking for updates: error decoding response body: missing field `version
 **Fix:**
 1. Verify endpoint is accessible: `curl https://in-theflow.com/updates/latest.json`
 2. Validate JSON: `cat latest.json | jq .`
-3. Check that `latest.json` exists on VPS: `ssh root@84.46.253.137 "ls /var/www/flowstate/updates/"`
-4. Upload manifest: `scp latest.json root@84.46.253.137:/var/www/flowstate/updates/`
+3. Check that `latest.json` exists on VPS: `ssh root@$VPS_HOST "ls /var/www/flowstate/updates/"`
+4. Upload manifest: `scp latest.json root@$VPS_HOST:/var/www/flowstate/updates/`
 
 ### Issue: "incorrect updater private key password: Wrong password for that key"
 
@@ -917,7 +917,7 @@ Error: Invalid signature for update
    ```
 2. Upload to VPS:
    ```bash
-   scp latest.json root@84.46.253.137:/var/www/flowstate/updates/
+   scp latest.json root@$VPS_HOST:/var/www/flowstate/updates/
    ```
 3. Verify signature field matches `.sig` file content:
    ```bash
@@ -1033,7 +1033,7 @@ ls -lh src-tauri/target/release/bundle/appimage/FlowState_1.2.6_*.AppImage
   ```bash
   scp src-tauri/target/release/bundle/appimage/FlowState_*.AppImage \
       src-tauri/target/release/bundle/latest.json \
-      root@84.46.253.137:/var/www/flowstate/updates/
+      root@$VPS_HOST:/var/www/flowstate/updates/
   ```
 
 - [ ] **Verify upload**

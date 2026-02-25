@@ -20,7 +20,7 @@
 **Diagnosis**:
 ```bash
 # SSH into VPS
-ssh -i ~/.ssh/id_ed25519 root@84.46.253.137
+ssh -i ~/.ssh/id_ed25519 root@$VPS_HOST
 
 # Test host DNS
 nslookup accounts.google.com

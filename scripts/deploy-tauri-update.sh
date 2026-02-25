@@ -22,7 +22,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-VPS_HOST="84.46.253.137"
+VPS_HOST="${VPS_HOST:?Set VPS_HOST env var}"
+SITE_URL="${SITE_URL:?Set SITE_URL env var (e.g., https://yourdomain.com)}"
 VPS_USER="root"
 VPS_PATH="/var/www/flowstate/updates"
 SSH_KEY="$HOME/.ssh/id_ed25519"
@@ -172,7 +173,7 @@ const manifest = {
   platforms: {
     'linux-x86_64': {
       signature: $(node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync('$APPIMAGE_SIG_FOR_MANIFEST', 'utf8').trim()))"),
-      url: 'https://in-theflow.com/updates/$MANIFEST_FILENAME'
+      url: '$SITE_URL/updates/$MANIFEST_FILENAME'
     }
   }
 };
@@ -245,7 +246,7 @@ echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Deploy complete!${NC}"
 echo -e "${GREEN}  Version: $VERSION${NC}"
-echo -e "${GREEN}  Endpoint: https://in-theflow.com/updates/latest.json${NC}"
+echo -e "${GREEN}  Endpoint: $SITE_URL/updates/latest.json${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo "Users will see the update notification on next app launch."

@@ -16,6 +16,35 @@ export const useProjectStore = defineStore('projects', () => {
     // Manual operation flag to prevent watch system conflicts
     const manualOperationInProgress = ref(false)
 
+    const GUEST_PROJECTS_KEY = 'flowstate-guest-projects'
+
+    const saveProjectsToLocalStorage = () => {
+        try {
+            localStorage.setItem(GUEST_PROJECTS_KEY, JSON.stringify(_rawProjects.value))
+        } catch (e) {
+            console.error('❌ [GUEST-MODE] Failed to save projects to localStorage:', e)
+        }
+    }
+
+    const loadProjectsFromLocalStorage = (): Project[] => {
+        try {
+            const stored = localStorage.getItem(GUEST_PROJECTS_KEY)
+            if (stored) {
+                const projects = JSON.parse(stored) as Project[]
+                // Deduplicate by ID
+                const seenIds = new Set<string>()
+                return projects.filter(p => {
+                    if (seenIds.has(p.id)) return false
+                    seenIds.add(p.id)
+                    return true
+                })
+            }
+        } catch (e) {
+            console.error('❌ [GUEST-MODE] Failed to load projects from localStorage:', e)
+        }
+        return []
+    }
+
     // SAFETY: Filtered projects for display
     // - Filters out corrupted projects (missing name, invalid data)
     // - Future: could filter out _soft_deleted projects if that feature is added
@@ -55,8 +84,15 @@ export const useProjectStore = defineStore('projects', () => {
     const saveProjectsToStorage = async (projectsToSave: Project[], context: string = 'unknown'): Promise<void> => {
         if (typeof window !== 'undefined' && (window as unknown as { __STORYBOOK__?: boolean }).__STORYBOOK__) return
 
-        // TASK-142 FIX: ALWAYS try Supabase - if reads work, writes should too
-        // The auth check was causing data loss: loads came from Supabase but saves were blocked
+        // Guest mode: save to localStorage
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+        if (!authStore.isAuthenticated) {
+            saveProjectsToLocalStorage()
+            return
+        }
+
+        // Authenticated: save to Supabase
         try {
             await saveProjects(projectsToSave)
             // console.debug(`✅ [SUPABASE] Saved ${projectsToSave.length} projects (${context})`)
@@ -72,8 +108,8 @@ export const useProjectStore = defineStore('projects', () => {
             const { useAuthStore } = await import('@/stores/auth')
             const authStore = useAuthStore()
             if (!authStore.isAuthenticated) {
-                console.log('👤 [GUEST-MODE] Skipping Supabase fetch - projects start empty')
-                _rawProjects.value = []
+                _rawProjects.value = loadProjectsFromLocalStorage()
+                console.log(`👤 [GUEST-MODE] Loaded ${_rawProjects.value.length} projects from localStorage`)
                 return
             }
 
@@ -115,6 +151,13 @@ export const useProjectStore = defineStore('projects', () => {
                 ...projectData
             } as Project
             _rawProjects.value.push(newProject)
+
+            // Guest mode: persist to localStorage immediately
+            const { useAuthStore: getAuth } = await import('@/stores/auth')
+            if (!getAuth().isAuthenticated) {
+                saveProjectsToLocalStorage()
+            }
+
             await saveProject(newProject)
             return newProject
         } finally {
@@ -132,6 +175,13 @@ export const useProjectStore = defineStore('projects', () => {
                     ...updates,
                     updatedAt: new Date()
                 }
+
+                // Guest mode: persist to localStorage immediately
+                const { useAuthStore: getAuth } = await import('@/stores/auth')
+                if (!getAuth().isAuthenticated) {
+                    saveProjectsToLocalStorage()
+                }
+
                 await saveProject(_rawProjects.value[projectIndex])
             } finally {
                 manualOperationInProgress.value = false
@@ -172,6 +222,12 @@ export const useProjectStore = defineStore('projects', () => {
                 })
 
                 _rawProjects.value.splice(projectIndex, 1)
+
+                // Guest mode: persist to localStorage immediately
+                const { useAuthStore: getAuth } = await import('@/stores/auth')
+                if (!getAuth().isAuthenticated) {
+                    saveProjectsToLocalStorage()
+                }
 
                 // Supabase Soft Delete
                 await deleteProjectRemote(projectId)

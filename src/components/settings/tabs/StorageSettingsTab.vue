@@ -19,6 +19,7 @@ import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import SettingsOptionPicker from '../SettingsOptionPicker.vue'
 import { isTauri, getTauriMode, setTauriMode } from '@/composables/useTauriStartup'
+import { EXTERNAL_URLS } from '@/config/urls'
 import { useTaskStore } from '@/stores/tasks'
 import { clearAll as clearAllOperations } from '@/services/offline/writeQueueDB'
 
@@ -194,7 +195,7 @@ onMounted(async () => {
                 <span v-if="currentTauriMode === 'cloud'" class="mode-badge">Active</span>
               </h4>
               <p class="mode-option-desc">
-                Connect to in-theflow.com (VPS)
+                Connect to {{ EXTERNAL_URLS.PRODUCTION_SITE }} (VPS)
               </p>
               <ul class="mode-option-features">
                 <li>✓ Sync across devices</li>

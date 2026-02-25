@@ -6,45 +6,49 @@ on:
   pull_request:
     branches: [master]
 
+# Fork-safe: pull_request trigger has NO access to secrets.
+# Doppler secrets are NOT fetched here — ci.yml must build without them.
+# Secret-dependent work (deploy, release) lives in deploy.yml / release.yml
+# which only run on push to master or version tags (maintainer-only paths).
+#
+# NEVER add pull_request_target trigger here — it would expose secrets to fork PRs.
+
+permissions:
+  contents: read
+
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      # Install Doppler CLI (optional - for builds requiring secrets)
-      - name: Install Doppler CLI
-        uses: dopplerhq/cli-action@v3
-
-      # Fetch secrets from Doppler if available
-      - name: Fetch Build Secrets
-        run: doppler secrets download --no-file --format env > .env.production
-        env:
-          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-
       - name: Install dependencies
         run: npm ci
 
-      # Lint check - BLOCKING (0 errors achieved Dec 18, 2025)
+      # Lint check — BLOCKING (0 errors baseline achieved Dec 18, 2025)
       - name: Lint check
         run: npm run lint
 
+      # Type check — catches TypeScript errors without a full build
+      - name: Type check
+        run: npm run type-check
+
+      # Build without secrets — uses .env.example / safe defaults
+      # Real VITE_ vars come from Doppler at deploy time, not during CI
       - name: Build application
         run: npm run build
 
-      # Unit tests - enabled after TASK-020 fix (Dec 19, 2025)
+      # Unit tests (enabled after TASK-020 fix, Dec 19, 2025)
       - name: Run safety tests
         run: npx vitest run tests/safety/ --config vitest.ci.config.ts
 
-      # Stress tests for backup system integrity (TASK-338)
+      # Backup system integrity tests (TASK-338)
       - name: Verify backup system
         run: npm run test:backup
         continue-on-error: false

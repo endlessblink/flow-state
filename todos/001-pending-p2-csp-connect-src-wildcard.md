@@ -26,7 +26,7 @@ The Content Security Policy (CSP) `connect-src` directive now allows connections
 ```typescript
 'connect-src': [
   "'self'",
-  'http://84.46.253.137:5984', // CouchDB server - SPECIFIC
+  'http://your-vps-ip:5984', // CouchDB server - SPECIFIC
   // Note: httpbin.org removed in TASK-1258
 ]
 ```

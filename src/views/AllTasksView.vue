@@ -93,16 +93,17 @@
       @close="closeContextMenu"
       @edit="handleEditTask"
       @confirm-delete="handleConfirmDelete"
+      @confirm-permanent-delete="handleConfirmPermanentDelete"
     />
 
     <!-- Confirmation Modal -->
     <ConfirmationModal
       :is-open="showConfirmModal"
-      title="Delete Task"
-      message="Are you sure you want to delete this task? You can press Ctrl+Z to undo."
-      confirm-text="Delete"
-      @confirm="confirmDeleteTask"
-      @cancel="cancelDeleteTask"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-text="confirmText"
+      @confirm="executeConfirmAction"
+      @cancel="cancelConfirmAction"
     />
 
     <!-- Batch Edit Modal -->
@@ -168,6 +169,10 @@ const contextMenuY = ref(0)
 const contextMenuTask = ref<Task | null>(null)
 const showConfirmModal = ref(false)
 const taskToDelete = ref<string | null>(null)
+const confirmTitle = ref('Delete Task')
+const confirmMessage = ref('Are you sure you want to delete this task? You can press Ctrl+Z to undo.')
+const confirmText = ref('Delete')
+const confirmActionFn = ref<(() => void | Promise<void>) | null>(null)
 const showBatchEditModal = ref(false)
 const batchEditTaskIds = ref<string[]>([])
 
@@ -428,14 +433,19 @@ const handleAddTaskToGroup = async (groupKey: string, groupByMode: string) => {
     tomorrow.setDate(tomorrow.getDate() + 1)
     const endOfWeek = new Date(today)
     endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()))
-    const formatDate = (d: Date) => d.toISOString().split('T')[0]
+    const formatLocalDate = (d: Date): string => {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
 
     const dateMap: Record<string, string | undefined> = {
       overdue: undefined,
-      today: formatDate(today),
-      tomorrow: formatDate(tomorrow),
-      thisWeek: formatDate(endOfWeek),
-      later: formatDate(new Date(today.getTime() + 14 * 86400000)),
+      today: formatLocalDate(today),
+      tomorrow: formatLocalDate(tomorrow),
+      thisWeek: formatLocalDate(endOfWeek),
+      later: formatLocalDate(new Date(today.getTime() + 14 * 86400000)),
       noDate: undefined
     }
     if (groupKey in dateMap && dateMap[groupKey]) {
@@ -481,20 +491,46 @@ const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
 
 const handleConfirmDelete = (taskId: string) => {
   taskToDelete.value = taskId
+  confirmTitle.value = 'Delete Task'
+  confirmMessage.value = 'Are you sure you want to delete this task? You can press Ctrl+Z to undo.'
+  confirmText.value = 'Delete'
+  confirmActionFn.value = () => {
+    if (taskToDelete.value) {
+      taskStore.deleteTask(taskToDelete.value)
+      taskToDelete.value = null
+    }
+  }
   showConfirmModal.value = true
 }
 
-const confirmDeleteTask = () => {
-  if (taskToDelete.value) {
-    taskStore.deleteTask(taskToDelete.value)
-    taskToDelete.value = null
+const handleConfirmPermanentDelete = async (taskId: string) => {
+  const task = taskStore.tasks.find(t => t.id === taskId)
+  if (!task) return
+
+  confirmTitle.value = 'Permanently Delete Task'
+  confirmMessage.value = `Permanently delete "${task.title}"? This performs a hard delete from storage.`
+  confirmText.value = 'Permanently Delete'
+  confirmActionFn.value = async () => {
+    const { getUndoSystem } = await import('@/composables/undoSingleton')
+    await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
   }
-  showConfirmModal.value = false
+  showConfirmModal.value = true
 }
 
-const cancelDeleteTask = () => {
-  taskToDelete.value = null
+const executeConfirmAction = async () => {
+  const action = confirmActionFn.value
   showConfirmModal.value = false
+  confirmActionFn.value = null
+  taskToDelete.value = null
+  if (action) {
+    await action()
+  }
+}
+
+const cancelConfirmAction = () => {
+  showConfirmModal.value = false
+  confirmActionFn.value = null
+  taskToDelete.value = null
 }
 
 const getEmptyMessage = () => {

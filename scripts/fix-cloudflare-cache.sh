@@ -2,8 +2,8 @@
 # Fix Cloudflare edge cache MIME type issue
 # This adds Vary header to prevent preload scanner cache conflicts
 
-VPS_HOST="84.46.253.137"
-VPS_USER="root"
+VPS_HOST="${VPS_HOST:?Set VPS_HOST env var}"
+VPS_USER="${VPS_USER:-root}"
 
 echo "=== Cloudflare Cache MIME Type Fix ==="
 echo ""
@@ -59,7 +59,8 @@ ssh ${VPS_USER}@${VPS_HOST} "$SSH_COMMAND"
 
 echo ""
 echo "=== Next Steps ==="
-echo "1. Go to Cloudflare Dashboard → in-theflow.com → Caching → Configuration"
+SITE_DOMAIN="${SITE_DOMAIN:?Set SITE_DOMAIN env var (e.g., yourdomain.com)}"
+echo "1. Go to Cloudflare Dashboard → $SITE_DOMAIN → Caching → Configuration"
 echo "2. Click 'Purge Everything' to clear edge cache"
 echo "3. Wait 30 seconds, then hard refresh your browser (Ctrl+Shift+R)"
 echo ""

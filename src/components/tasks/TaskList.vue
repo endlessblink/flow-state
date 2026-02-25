@@ -47,7 +47,8 @@
       v-for="group in groups"
       :key="group.key"
       class="task-group"
-      :class="{ 'task-group--indented': (group.indent || 0) > 0 }"
+      :class="{ 'task-group--indented': (group.indent || 0) > 0, 'task-group--drop-active': dropTargetGroup === group.key }"
+      :data-group-key="group.key"
     >
       <!-- Sticky Group Header -->
       <div
@@ -96,8 +97,15 @@
         </span>
       </div>
 
-      <!-- Group Tasks (only parent tasks, subtasks rendered recursively) -->
-      <template v-if="groupBy === 'none' || expandedGroups.has(group.key)">
+      <!-- BUG-1415: Group Tasks — wrapped in drop zone when grouped, so dropping
+           anywhere in the group area transfers the task between groups -->
+      <div
+        v-if="groupBy === 'none' || expandedGroups.has(group.key)"
+        class="group-tasks-area"
+        @dragover.capture.prevent="onTaskAreaDragOver($event, group)"
+        @dragleave.capture="onTaskAreaDragLeave"
+        @drop.capture.prevent="onTaskAreaDrop($event, group)"
+      >
         <HierarchicalTaskRow
           v-for="task in group.parentTasks"
           :key="task.id"
@@ -118,7 +126,7 @@
           @move-task="handleMoveTask"
           @update-task="(taskId: string, updates: Partial<Task>) => $emit('updateTask', taskId, updates)"
         />
-      </template>
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -225,13 +233,73 @@ const handleContextMenu = (event: MouseEvent, task: Task) => {
   emit('contextMenu', event, task)
 }
 
-// Drag and drop handler
+// --- Drag to Group Header ---
+const { endDrag } = useDragAndDrop()
+
+// BUG-1415: When grouped, dropping a task on another task should transfer it
+// to the target's group (updating dueDate/status/priority/project) instead of
+// making it a subtask. Only make subtasks when ungrouped (groupBy === 'none').
 const handleMoveTask = (taskId: string, targetProjectId: string | null, targetParentId: string | null) => {
+  console.log('[DND-GROUP] handleMoveTask', { taskId, targetProjectId, targetParentId, groupBy: props.groupBy })
+  if (props.groupBy !== 'none' && targetParentId) {
+    // Find which group the drop-target task belongs to
+    const targetGroup = props.groups.find(g =>
+      g.tasks.some(t => t.id === targetParentId)
+    )
+    if (targetGroup) {
+      console.log('[DND-GROUP] Transferring to group:', { groupKey: targetGroup.key, groupTitle: targetGroup.title })
+      applyGroupTransfer(taskId, targetGroup)
+      endDrag()
+      return
+    }
+    console.warn('[DND-GROUP] Could not find target group for parentId:', targetParentId)
+  }
   emit('moveTask', taskId, targetProjectId, targetParentId)
 }
 
-// --- Drag to Group Header ---
-const { endDrag } = useDragAndDrop()
+// Format a local Date to YYYY-MM-DD string using LOCAL timezone (not UTC)
+const formatLocalDate = (d: Date): string => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// BUG-1415: Transfer a task into a group by updating the relevant property
+const applyGroupTransfer = (taskId: string, group: TaskGroup) => {
+  console.log('[DND-GROUP] applyGroupTransfer', { taskId, groupKey: group.key, groupBy: props.groupBy })
+  if (props.groupBy === 'project') {
+    const projectId = (group.key === 'uncategorized' || group.key === '__no_project__') ? null : group.key
+    emit('moveTask', taskId, projectId, null)
+  } else if (props.groupBy === 'status') {
+    emit('updateTask', taskId, { status: group.key as Parameters<typeof emit>[2]['status'] })
+  } else if (props.groupBy === 'priority') {
+    emit('updateTask', taskId, { priority: group.key as Parameters<typeof emit>[2]['priority'] })
+  } else if (props.groupBy === 'dueDate') {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const endOfWeek = new Date(today)
+    endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()))
+
+    const dateMap: Record<string, string | null> = {
+      overdue: formatLocalDate(today), // Move overdue → today
+      today: formatLocalDate(today),
+      tomorrow: formatLocalDate(tomorrow),
+      thisWeek: formatLocalDate(endOfWeek),
+      later: formatLocalDate(new Date(today.getTime() + 14 * 86400000)),
+      noDate: null
+    }
+    console.log('[DND-GROUP] dueDate mapping', { groupKey: group.key, resolvedDate: dateMap[group.key], today: formatLocalDate(today) })
+    if (group.key in dateMap) {
+      const newDate = dateMap[group.key]
+      emit('updateTask', taskId, { dueDate: newDate ?? undefined })
+    } else {
+      console.warn('[DND-GROUP] Unknown dueDate group key:', group.key)
+    }
+  }
+}
 const dropTargetGroup = ref<string | null>(null)
 
 const handleGroupDragOver = (event: DragEvent, group: TaskGroup) => {
@@ -246,6 +314,7 @@ const handleGroupDragLeave = () => {
 const handleGroupDrop = (event: DragEvent, group: TaskGroup) => {
   dropTargetGroup.value = null
   const raw = event.dataTransfer?.getData('application/json')
+  console.log('[DND-GROUP] handleGroupDrop', { groupKey: group.key, groupBy: props.groupBy, hasData: !!raw })
   if (!raw) return
   let taskId: string
   try {
@@ -254,41 +323,34 @@ const handleGroupDrop = (event: DragEvent, group: TaskGroup) => {
   } catch { return }
   if (!taskId) return
 
-  // Determine what property to update based on groupBy
-  if (props.groupBy === 'project' && group.key) {
-    const projectId = (group.key === 'uncategorized' || group.key === '__no_project__') ? null : group.key
-    emit('moveTask', taskId, projectId, null)
-  } else if (props.groupBy === 'status' && group.key) {
-    emit('updateTask', taskId, { status: group.key as Parameters<typeof emit>[2]['status'] })
-  } else if (props.groupBy === 'priority' && group.key) {
-    emit('updateTask', taskId, { priority: group.key as Parameters<typeof emit>[2]['priority'] })
-  } else if (props.groupBy === 'dueDate' && group.key) {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const endOfWeek = new Date(today)
-    endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()))
-    const formatDate = (d: Date) => d.toISOString().split('T')[0]
-
-    const dateMap: Record<string, string | null> = {
-      today: formatDate(today),
-      tomorrow: formatDate(tomorrow),
-      thisWeek: formatDate(endOfWeek),
-      later: formatDate(new Date(today.getTime() + 14 * 86400000)),
-      noDate: null
-    }
-    // 'overdue' intentionally excluded — can't set a past due date
-
-    if (group.key in dateMap) {
-      const newDate = dateMap[group.key]
-      emit('updateTask', taskId, { dueDate: newDate ?? undefined })
-    }
-  }
+  // Delegate to unified applyGroupTransfer
+  applyGroupTransfer(taskId, group)
 
   // Clean up drag ghost — the original task row may be destroyed by Vue re-render
   // before dragend fires, so we must clean up here
   endDrag()
+}
+
+// BUG-1415: Capture-phase handlers for the task rows area.
+// When grouped, intercept drops on task rows so they transfer the task between groups
+// (updating dueDate/status/priority/project) instead of making subtasks.
+// When ungrouped (groupBy === 'none'), let events pass through to task-row handlers.
+const onTaskAreaDragOver = (event: DragEvent, group: TaskGroup) => {
+  if (props.groupBy === 'none') return
+  event.stopPropagation()
+  handleGroupDragOver(event, group)
+}
+
+const onTaskAreaDragLeave = () => {
+  if (props.groupBy === 'none') return
+  handleGroupDragLeave()
+}
+
+const onTaskAreaDrop = (event: DragEvent, group: TaskGroup) => {
+  console.log('[BUG-1415] onTaskAreaDrop fired', { groupBy: props.groupBy, groupKey: group.key })
+  if (props.groupBy === 'none') return
+  event.stopPropagation()
+  handleGroupDrop(event, group)
 }
 
 // --- AI Smart Suggest Popover ---
@@ -493,6 +555,11 @@ defineExpose({
 .task-group--indented {
   margin-inline-start: var(--space-6);
   margin-bottom: var(--space-2);
+}
+
+.task-group--drop-active {
+  box-shadow: inset 0 0 0 1px var(--brand-primary);
+  background: rgba(78, 205, 196, 0.05);
 }
 
 .task-group:last-child {
@@ -769,6 +836,7 @@ defineExpose({
   align-items: center;
   animation: pulse-hint 1.5s ease-in-out infinite;
 }
+
 
 @keyframes pulse-hint {
   0%, 100% { opacity: 0.3; }

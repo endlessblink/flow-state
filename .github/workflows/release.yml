@@ -1,5 +1,10 @@
 name: Release
 
+# Secrets are available here because only maintainers can push version tags
+# or trigger workflow_dispatch on this repo.
+#
+# NEVER add pull_request or pull_request_target triggers to this file.
+
 on:
   push:
     tags:
@@ -232,6 +237,8 @@ jobs:
   # Linux-only quick build for testing
   build-linux:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4

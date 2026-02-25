@@ -8,6 +8,7 @@ import { usePerformanceManager } from '@/composables/usePerformanceManager'
 import { useVirtualScrolling } from '@/composables/useVirtualScrolling'
 import { useNetworkOptimizer } from '@/composables/useNetworkOptimizer'
 import { useRenderOptimization } from '@/composables/useRenderOptimization'
+import { EXTERNAL_URLS } from '@/config/urls'
 
 export interface BenchmarkConfig {
   iterations?: number
@@ -311,9 +312,9 @@ export class PerformanceBenchmark {
     console.log('🌐 Benchmarking network requests...')
 
     const endpoints = [
-      { url: 'https://in-theflow.com', method: 'GET' as const },
-      { url: 'https://in-theflow.com', method: 'GET' as const },
-      { url: 'https://in-theflow.com', method: 'GET' as const }
+      { url: EXTERNAL_URLS.PRODUCTION_SITE, method: 'GET' as const },
+      { url: EXTERNAL_URLS.PRODUCTION_SITE, method: 'GET' as const },
+      { url: EXTERNAL_URLS.PRODUCTION_SITE, method: 'GET' as const }
     ]
 
     const times: number[] = []
@@ -511,7 +512,7 @@ export class PerformanceBenchmark {
   private async warmupNetworkRequests() {
     for (let i = 0; i < (this.config.warmupIterations || 2); i++) {
       try {
-        await fetch('https://in-theflow.com')
+        await fetch(EXTERNAL_URLS.PRODUCTION_SITE)
       } catch {
         // Ignore warmup errors
       }

@@ -8,6 +8,7 @@
 
 import { ref, onMounted } from 'vue'
 import AppLogo from '@/components/base/AppLogo.vue'
+import { EXTERNAL_URLS } from '@/config/urls'
 
 const emit = defineEmits<{
   select: [mode: 'cloud' | 'local']
@@ -70,7 +71,7 @@ function confirm() {
                 <span class="mode-badge">Recommended</span>
               </h3>
               <p class="mode-subtitle">
-                Connect to in-theflow.com
+                Connect to {{ EXTERNAL_URLS.PRODUCTION_SITE }}
               </p>
             </div>
           </div>

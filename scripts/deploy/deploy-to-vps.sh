@@ -5,7 +5,7 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 
 # Default values (Change these or pass as arguments)
-VPS_TARGET=${1:-"root@84.46.253.137"} # Configured from user Request
+VPS_TARGET=${1:-"${VPS_USER:-root}@${VPS_HOST:?Set VPS_HOST env var}"} # Configured from user Request
 DEST_DIR=${2:-"/opt/flow-state"}
 
 # Colors

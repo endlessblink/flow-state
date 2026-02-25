@@ -3,6 +3,8 @@
  * TASK-136: CouchDB/PouchDB decommissioned Jan 2026 - app uses Supabase
  */
 
+import { EXTERNAL_URLS } from './urls'
+
 export interface EnvironmentConfig {
   name: string
   mode: 'development' | 'staging' | 'production'
@@ -152,7 +154,7 @@ export const stagingConfig: EnvironmentConfig = {
   },
   security: {
     requireHTTPS: true,
-    allowedOrigins: ['https://staging.in-theflow.com'],
+    allowedOrigins: [EXTERNAL_URLS.PRODUCTION_SITE],
     corsEnabled: true,
     validateSSL: true
   },
@@ -206,7 +208,7 @@ export const productionConfig: EnvironmentConfig = {
   },
   security: {
     requireHTTPS: true,
-    allowedOrigins: ['https://in-theflow.com', 'https://www.in-theflow.com'],
+    allowedOrigins: [EXTERNAL_URLS.PRODUCTION_SITE, EXTERNAL_URLS.PRODUCTION_SITE.replace('https://', 'https://www.')],
     corsEnabled: true,
     validateSSL: true
   },

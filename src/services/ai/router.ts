@@ -314,8 +314,8 @@ export class AIRouter {
    * Always attempts detection - if Ollama isn't running or CORS blocks it,
    * it fails gracefully and the router falls back to cloud providers.
    *
-   * For production web (e.g. in-theflow.com), users need:
-   *   OLLAMA_ORIGINS=https://in-theflow.com (or *)
+   * For production web (e.g. VITE_SITE_URL), users need:
+   *   OLLAMA_ORIGINS=<VITE_SITE_URL value> (or *)
    * to allow cross-origin requests from the browser to local Ollama.
    */
   private async createOllamaProvider(): Promise<OllamaProvider | null> {

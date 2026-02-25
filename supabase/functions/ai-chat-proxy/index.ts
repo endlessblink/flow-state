@@ -42,12 +42,19 @@ interface AIChatRequest {
 // CORS Headers
 // ============================================================================
 
-const ALLOWED_ORIGINS = [
-  'https://in-theflow.com',
-  'https://www.in-theflow.com',
-  'http://localhost:5546',    // dev server
-  'tauri://localhost',         // Tauri desktop app
+const DEFAULT_ORIGINS = [
+  'http://localhost:5546',
+  'http://localhost:3000',
+  'tauri://localhost',
 ]
+
+const ALLOWED_ORIGINS = (() => {
+  const envOrigins = Deno.env.get('ALLOWED_ORIGINS')
+  if (envOrigins) {
+    return [...envOrigins.split(',').map(o => o.trim()), ...DEFAULT_ORIGINS]
+  }
+  return DEFAULT_ORIGINS
+})()
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get('origin') || ''
@@ -167,7 +174,7 @@ async function handleOpenRouterRequest(
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': Deno.env.get('SITE_URL') || 'https://in-theflow.com', // Required by OpenRouter
+      'HTTP-Referer': Deno.env.get('SITE_URL') || 'http://localhost:5546', // Required by OpenRouter — set SITE_URL in Supabase secrets
       'X-Title': 'FlowState', // Optional but recommended
     },
     body: JSON.stringify(body),

@@ -5,8 +5,8 @@
 
 set -e
 
-API_URL="${API_URL:-https://api.in-theflow.com}"
-ORIGIN="${ORIGIN:-https://in-theflow.com}"
+API_URL="${API_URL:?Set API_URL env var (e.g., https://api.yourdomain.com)}"
+ORIGIN="${ORIGIN:?Set ORIGIN env var (e.g., https://yourdomain.com)}"
 VERBOSE="${1:-}"
 
 # Colors

@@ -13,12 +13,19 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const ALLOWED_ORIGINS = [
-  'https://in-theflow.com',
-  'https://www.in-theflow.com',
+const DEFAULT_ORIGINS = [
   'http://localhost:5546',
+  'http://localhost:3000',
   'tauri://localhost',
 ]
+
+const ALLOWED_ORIGINS = (() => {
+  const envOrigins = Deno.env.get('ALLOWED_ORIGINS')
+  if (envOrigins) {
+    return [...envOrigins.split(',').map(o => o.trim()), ...DEFAULT_ORIGINS]
+  }
+  return DEFAULT_ORIGINS
+})()
 
 const MAX_HTML_SIZE = 50_000
 const FETCH_TIMEOUT = 10_000

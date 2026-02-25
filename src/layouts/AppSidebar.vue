@@ -20,23 +20,25 @@
         </BaseButton>
 
         <div class="icon-button-group">
-          <button
-            class="icon-btn"
+          <BaseIconButton
+            variant="default"
+            size="lg"
             :title="$t('sidebar.hide_sidebar')"
             :aria-label="$t('sidebar.hide_sidebar')"
             @click="uiStore.toggleMainSidebar"
           >
             <PanelLeftClose :size="18" />
-          </button>
+          </BaseIconButton>
 
-          <button
-            class="icon-btn"
+          <BaseIconButton
+            variant="default"
+            size="lg"
             :title="$t('common.settings')"
             :aria-label="$t('sidebar.open_settings')"
             @click="uiStore.openSettingsModal()"
           >
             <Settings :size="18" />
-          </button>
+          </BaseIconButton>
         </div>
       </div>
 
@@ -494,6 +496,7 @@ import {
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 
 import BaseButton from '@/components/base/BaseButton.vue'
+import BaseIconButton from '@/components/base/BaseIconButton.vue'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
 import SidebarSmartItem from '@/components/layout/SidebarSmartItem.vue'
 import ProjectTreeItem from '@/components/projects/ProjectTreeItem.vue'
@@ -1189,31 +1192,6 @@ defineExpose({
   display: flex;
   gap: var(--space-2);
   margin-top: var(--space-2);
-}
-
-.icon-btn {
-  background: transparent;
-  border: 1px solid var(--border-medium);
-  color: var(--text-secondary);
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--spring-smooth);
-}
-
-.icon-btn:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  color: var(--text-primary);
-  box-shadow: var(--state-hover-shadow);
-}
-
-.icon-btn:active {
-  transform: scale(0.95);
 }
 
 /* Quick Task Section */

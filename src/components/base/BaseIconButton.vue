@@ -10,6 +10,7 @@
     :disabled="disabled"
     :title="title"
     :aria-label="ariaLabel || title"
+    :aria-pressed="pressed"
     @click="$emit('click', $event)"
   >
     <slot />
@@ -25,6 +26,7 @@ interface Props {
   type?: 'button' | 'submit' | 'reset'
   title?: string
   ariaLabel?: string
+  pressed?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
@@ -34,7 +36,8 @@ withDefaults(defineProps<Props>(), {
   disabled: false,
   type: 'button',
   title: undefined,
-  ariaLabel: undefined
+  ariaLabel: undefined,
+  pressed: undefined
 })
 
 defineEmits<{
@@ -66,6 +69,13 @@ defineEmits<{
   -webkit-appearance: none;
   -moz-appearance: none;
   padding: 0;
+}
+
+/* Focus state with visible indicator */
+.base-icon-button:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  box-shadow: var(--brand-focus-ring);
 }
 
 .base-icon-button:hover:not(:disabled) {

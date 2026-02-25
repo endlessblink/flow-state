@@ -17,7 +17,7 @@ Thanks for your interest in contributing to FlowState! This document covers ever
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/user/flow-state.git
+git clone https://github.com/endlessblink/flow-state.git
 cd flow-state
 
 # 2. Install dependencies
@@ -146,7 +146,10 @@ See `docs/claude-md-extension/design-system.md` for the full token reference.
 | `npm run type-check` | TypeScript type checking |
 | `npm run generate:keys` | Generate local Supabase JWT keys |
 | `npm run kill` | Kill all FlowState dev processes |
-| `npx tauri dev` | Run Tauri desktop in dev mode |
+| `npm run tauri:cli` | Run Tauri CLI directly (no Doppler required — use this instead of `npm run tauri`) |
+| `npx tauri dev` | Run Tauri desktop in dev mode (use `npm run tauri:cli dev` as alternative) |
+
+> **Note on Tauri commands:** `npm run tauri` requires [Doppler](https://www.doppler.com/) (the production secrets manager used for official deployments). Contributors should use `npm run tauri:cli` instead, which calls the Tauri CLI directly without Doppler. Example: `npm run tauri:cli -- dev` to start Tauri in dev mode.
 
 ## Testing
 

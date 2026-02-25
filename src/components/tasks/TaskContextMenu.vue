@@ -62,7 +62,7 @@
               panel
               type="date"
               :value="currentDueDateTimestamp"
-              :actions="null"
+              :actions="[]"
               @update:value="handleDatePickerSelect"
             />
             <div class="date-picker-footer">
@@ -210,19 +210,15 @@
         @click="toggleDone"
       >
         <CheckCircle :size="16" />
-        <span class="action-label">Done</span>
       </button>
       <button class="action-btn action-btn--start" title="Start Now (S)" @click="startTaskNow">
         <Play :size="16" />
-        <span class="action-label">Start</span>
       </button>
       <button class="action-btn action-btn--timer" title="Start Timer (Space)" @click="startTimer">
         <Timer :size="16" />
-        <span class="action-label">Timer</span>
       </button>
       <button class="action-btn action-btn--focus" title="Focus Mode (F)" @click="enterFocus">
         <Eye :size="16" />
-        <span class="action-label">Focus</span>
       </button>
     </div>
 
@@ -782,7 +778,9 @@ onUnmounted(() => {
 <style scoped>
 .context-menu {
   position: fixed;
-  background: rgb(22, 19, 38);
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
   border: var(--overlay-component-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--overlay-component-shadow), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
@@ -1060,10 +1058,9 @@ onUnmounted(() => {
 .action-btn {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2_5) var(--space-1_5);
+  justify-content: center;
+  padding: var(--space-2);
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-bg-heavy);
   border-radius: var(--radius-md);
@@ -1094,8 +1091,6 @@ onUnmounted(() => {
 
 .action-btn--focus { color: var(--color-focus); }
 .action-btn--focus:hover { background: rgba(139, 92, 246, 0.15); border-color: var(--color-focus); }
-
-.action-label { font-size: var(--text-xs); font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
 
 /* AI Assist Menu Item */
 .menu-item--ai {

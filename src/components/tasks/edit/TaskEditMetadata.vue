@@ -22,7 +22,7 @@
             panel
             type="date"
             :value="dueDateTimestamp"
-            :actions="null"
+            :actions="[]"
             @update:value="handleDueDateSelect"
           />
           <button

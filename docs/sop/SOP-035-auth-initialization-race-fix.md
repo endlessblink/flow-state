@@ -114,11 +114,11 @@ After deploying, check the browser console:
 [AUTH:xxx] Fetching session from localStorage...
 [AUTH:xxx] Session found: true user@email.com
 [AUTH] Scheduling token refresh in 55 minutes
-👤 [AUTH:xxx] Auth state changed: INITIAL_SESSION userId: 717f5209
-👤 [AUTH:xxx] Auth state changed: SIGNED_IN userId: 717f5209
+👤 [AUTH:xxx] Auth state changed: INITIAL_SESSION userId: xxxxxxxx
+👤 [AUTH:xxx] Auth state changed: SIGNED_IN userId: xxxxxxxx
 👤 [AUTH:xxx] User signed in - reloading stores...
 ✅ [AUTH:xxx] Stores reloaded after sign-in
-👤 [AUTH:xxx] Auth state changed: SIGNED_IN userId: 717f5209
+👤 [AUTH:xxx] Auth state changed: SIGNED_IN userId: xxxxxxxx
 👤 [AUTH:xxx] SIGNED_IN already handled for this user, skipping reload
 ```
 

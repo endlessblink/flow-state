@@ -1,9 +1,18 @@
 name: Deploy to VPS
 
+# Secrets are available here because only maintainers can push to master
+# or trigger workflow_dispatch on this repo.
+#
+# NEVER add pull_request or pull_request_target triggers to this file —
+# that would expose secrets (DOPPLER_TOKEN, SSH_PRIVATE_KEY, etc.) to fork PRs.
+
 on:
   push:
-    branches: [ master, main ]
+    branches: [master]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   deploy:

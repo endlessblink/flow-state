@@ -6,7 +6,7 @@
       ref="triggerRef"
       class="project-emoji-badge project-visual--emoji"
       :title="`Project: ${projectDisplayName}`"
-      @click="toggleDropdown"
+      @click="toggleDropdown($event)"
     >
       <ProjectEmojiIcon
         :emoji="visual.content"
@@ -19,7 +19,7 @@
       ref="triggerRef"
       class="project-emoji-badge project-visual--css-circle"
       :title="`Project: ${projectDisplayName}`"
-      @click="toggleDropdown"
+      @click="toggleDropdown($event)"
     >
       <div
         class="project-css-circle"
@@ -32,7 +32,7 @@
       ref="triggerRef"
       class="project-placeholder"
       title="Click to assign a project"
-      @click="toggleDropdown"
+      @click="toggleDropdown($event)"
     >&#10067;</span>
 
     <!-- Project Selector Dropdown (teleported to body to avoid overflow clipping) -->
@@ -117,27 +117,33 @@ const dropdownStyle = ref<Record<string, string>>({
   left: '0px'
 })
 
-const calculateDropdownPosition = () => {
+const calculateDropdownPosition = (clickEvent?: MouseEvent) => {
   if (!triggerRef.value) return
   const rect = triggerRef.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const dropdownHeight = Math.min((projects.value.length + 1) * 36 + 16, 256)
-  const spaceBelow = viewportHeight - rect.bottom
-  const positionAbove = spaceBelow < dropdownHeight && rect.top > spaceBelow
+
+  // Use click coordinates when available for precise placement
+  const anchorX = clickEvent ? clickEvent.clientX : rect.left + rect.width / 2
+  const anchorBottom = rect.bottom
+  const anchorTop = rect.top
+
+  const spaceBelow = viewportHeight - anchorBottom
+  const positionAbove = spaceBelow < dropdownHeight && anchorTop > spaceBelow
 
   dropdownStyle.value = {
     position: 'fixed',
-    top: positionAbove ? `${rect.top - dropdownHeight - 4}px` : `${rect.bottom + 4}px`,
-    left: `${rect.left + rect.width / 2}px`,
+    top: positionAbove ? `${anchorTop - dropdownHeight - 4}px` : `${anchorBottom + 4}px`,
+    left: `${anchorX}px`,
     transform: 'translateX(-50%)'
   }
 }
 
-const toggleDropdown = async () => {
+const toggleDropdown = async (event?: MouseEvent) => {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
     await nextTick()
-    calculateDropdownPosition()
+    calculateDropdownPosition(event)
   }
 }
 
@@ -214,8 +220,8 @@ onBeforeUnmount(() => {
 }
 
 .project-css-circle {
-  width: var(--project-indicator-size-md, 24px);
-  height: var(--project-indicator-size-md, 24px);
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--project-color);
   box-shadow: var(--project-indicator-shadow-inset);
@@ -224,11 +230,10 @@ onBeforeUnmount(() => {
 }
 
 .project-emoji-badge:hover .project-css-circle {
-  transform: translateZ(0) scale(1.15);
+  transform: translateZ(0) scale(1.08);
   box-shadow:
     var(--project-indicator-shadow-inset),
-    0 0 16px var(--project-color),
-    0 0 32px var(--project-color);
+    0 0 6px color-mix(in srgb, var(--project-color) 50%, transparent);
 }
 
 /* Subtle placeholder for uncategorized tasks */

@@ -4,7 +4,7 @@
 
 set -e
 
-DOMAIN="${DOMAIN:-https://in-theflow.com}"
+DOMAIN="${DOMAIN:?Set DOMAIN env var (e.g., https://yourdomain.com)}"
 FAILED=0
 
 echo "=== Asset Header Validation ==="

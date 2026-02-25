@@ -4,8 +4,8 @@
 
 set -e
 
-VPS_HOST="84.46.253.137"
-VPS_USER="root"
+VPS_HOST="${VPS_HOST:?Set VPS_HOST env var}"
+VPS_USER="${VPS_USER:-root}"
 VPS_PATH="/var/www/flowstate/updates/"
 SSH_KEY="$HOME/.ssh/id_ed25519"
 
@@ -35,7 +35,8 @@ echo ""
 echo "✅ Upload complete!"
 echo ""
 echo "🔍 Verifying endpoint..."
-curl -s "https://in-theflow.com/updates/latest.json" | head -5
+SITE_URL="${SITE_URL:?Set SITE_URL env var (e.g., https://yourdomain.com)}"
+curl -s "${SITE_URL}/updates/latest.json" | head -5
 
 echo ""
 echo "📋 VPS contents:"

@@ -107,7 +107,7 @@
                 panel
                 type="date"
                 :value="currentDueDateTimestamp"
-                :actions="null"
+                :actions="[]"
                 @update:value="handleDatePickerSelect"
               />
             </div>

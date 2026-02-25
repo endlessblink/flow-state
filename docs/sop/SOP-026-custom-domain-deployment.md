@@ -34,8 +34,8 @@ User (HTTPS) → Cloudflare (SSL termination) → VPS Caddy (Origin Cert) → Su
 
 | Type | Name | Value |
 |------|------|-------|
-| A | @ | 84.46.253.137 |
-| A | api | 84.46.253.137 |
+| A | @ | your-vps-ip |
+| A | api | your-vps-ip |
 | CNAME | www | in-theflow.com |
 
 ### SSL/TLS Settings
@@ -163,10 +163,10 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 npm run build
 
 # Deploy to VPS
-rsync -avz --delete dist/ root@84.46.253.137:/var/www/flowstate/
+rsync -avz --delete dist/ root@$VPS_HOST:/var/www/flowstate/
 
 # Restart Caddy if config changed
-ssh root@84.46.253.137 "systemctl restart caddy"
+ssh root@$VPS_HOST "systemctl restart caddy"
 ```
 
 ## Troubleshooting

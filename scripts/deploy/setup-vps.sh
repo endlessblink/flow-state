@@ -2,7 +2,7 @@
 # VPS Setup Script - Installs Docker & Essentials
 # Usage: ./scripts/deploy/setup-vps.sh [USER@HOST]
 
-VPS_TARGET=${1:-"root@84.46.253.137"}
+VPS_TARGET=${1:-"${VPS_USER:-root}@${VPS_HOST:?Set VPS_HOST env var}"}
 
 # Colors
 GREEN='\033[0;32m'

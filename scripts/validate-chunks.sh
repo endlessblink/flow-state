@@ -3,11 +3,11 @@
 # Ensures every JS/CSS chunk referenced in the production bundle exists and loads.
 # Catches: stale assets after rsync --delete, partial deploys, Cloudflare cache mismatches.
 #
-# Usage: DOMAIN=https://in-theflow.com ./scripts/validate-chunks.sh
+# Usage: DOMAIN=https://yourdomain.com ./scripts/validate-chunks.sh
 
 set -euo pipefail
 
-DOMAIN="${DOMAIN:-https://in-theflow.com}"
+DOMAIN="${DOMAIN:?Set DOMAIN env var (e.g., https://yourdomain.com)}"
 FAIL=0
 CHECKED=0
 

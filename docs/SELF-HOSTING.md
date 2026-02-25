@@ -25,7 +25,7 @@ FlowState is a Vue 3 productivity app with task management (Board, Calendar, Can
 The fastest path from zero to a running FlowState instance:
 
 ```bash
-git clone https://github.com/user/flow-state.git
+git clone https://github.com/endlessblink/flow-state.git
 cd flow-state
 ./scripts/self-host-setup.sh
 ```
@@ -120,7 +120,7 @@ This is the recommended approach for running FlowState as a persistent service.
 ### 1. Clone and Run Setup
 
 ```bash
-git clone https://github.com/user/flow-state.git
+git clone https://github.com/endlessblink/flow-state.git
 cd flow-state
 ./scripts/self-host-setup.sh
 ```
@@ -201,7 +201,7 @@ scoop install supabase
 ### 2. Clone and Install
 
 ```bash
-git clone https://github.com/user/flow-state.git
+git clone https://github.com/endlessblink/flow-state.git
 cd flow-state
 npm install
 ```

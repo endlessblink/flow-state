@@ -114,3 +114,18 @@ audit-reports/
 /health-results.json
 /pwa-report.json
 .dev-server.pid
+
+# OSS safety — files containing secrets/PII removed before open-sourcing
+reports/
+console-task-*.txt
+.claude/plans/
+latest.json
+Caddyfile.prod
+snapshot-*.md
+current-state.md
+lint_report.*
+docs/archive/
+any_files.txt
+bulk_replace.js
+typecheck_output.txt
+.claude-and-conquer/

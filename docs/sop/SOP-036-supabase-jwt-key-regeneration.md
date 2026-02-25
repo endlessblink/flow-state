@@ -55,7 +55,7 @@ Common causes:
 ### Step 1: Get VPS JWT Secret
 
 ```bash
-ssh root@84.46.253.137
+ssh root@$VPS_HOST
 cd /opt/supabase/docker
 grep JWT_SECRET .env
 ```
@@ -104,7 +104,7 @@ console.log(createJwt({ iss: 'supabase', role: 'service_role', iat: Math.floor(D
 ### Step 3: Update VPS Supabase
 
 ```bash
-ssh root@84.46.253.137
+ssh root@$VPS_HOST
 cd /opt/supabase/docker
 
 # Edit .env file

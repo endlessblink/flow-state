@@ -21,7 +21,8 @@ interface PushPayload {
 export function initWebPush() {
   const vapidPublicKey = process.env.VAPID_PUBLIC_KEY
   const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
-  const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@in-theflow.com'
+  const vapidSubject = process.env.VAPID_SUBJECT
+  if (!vapidSubject) throw new Error('VAPID_SUBJECT env var is required (e.g., mailto:admin@yourdomain.com)')
 
   if (!vapidPublicKey || !vapidPrivateKey) {
     throw new Error('VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set')

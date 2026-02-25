@@ -790,8 +790,8 @@ onUnmounted(() => {
 }
 
 .project-emoji.project-css-circle {
-  width: var(--project-indicator-size-md);
-  height: var(--project-indicator-size-md);
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--project-color);
   box-shadow: var(--project-indicator-shadow-inset);
@@ -804,36 +804,16 @@ onUnmounted(() => {
   justify-content: center;
   transition: all var(--spring-smooth) ease;
   backdrop-filter: var(--project-indicator-backdrop);
-  box-shadow:
-    var(--project-indicator-shadow-inset),
-    var(--project-indicator-glow-strong);
 }
 
 .project-emoji-badge:hover .project-emoji.project-css-circle {
-  transform: translateZ(0) scale(1.15);
+  transform: translateZ(0) scale(1.08);
   box-shadow:
     var(--project-indicator-shadow-inset),
-    0 0 16px var(--project-color),
-    0 0 32px var(--project-color);
+    0 0 6px color-mix(in srgb, var(--project-color) 50%, transparent);
 }
 
-.project-emoji-badge:hover .project-emoji.project-css-circle::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(
-    circle,
-    var(--project-color) 0%,
-    transparent 70%
-  );
-  opacity: 0.3;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: -1;
-}
+/* Radial glow removed — too distracting */
 
 .project-emoji-badge.project-visual--css-circle {
   background: var(--glass-bg-subtle);

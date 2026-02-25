@@ -14,7 +14,7 @@ Usage:
 
 Options:
   --notes <text>        Release notes (default: "FlowState vX.X.X")
-  --base-url <url>      Base URL for downloads (default: https://in-theflow.com/updates/)
+  --base-url <url>      Base URL for downloads (default: $SITE_URL/updates/ or http://localhost:5546/updates/)
   --output <path>       Output file path (default: ./latest.json)
   --dry-run             Preview manifest without writing file
   --help, -h            Show this help message
@@ -49,7 +49,7 @@ function parseArgs() {
 
   const args = {
     notes: '',
-    baseUrl: 'https://in-theflow.com/updates/',
+    baseUrl: (process.env.SITE_URL ? process.env.SITE_URL.replace(/\/$/, '') + '/updates/' : 'http://localhost:5546/updates/'),
     output: path.join(__dirname, '../latest.json'),
     dryRun: false,
   };

@@ -3820,6 +3820,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1397**~~ | **P1** | **✅ `mark_task_done` convenience tool — accepts title string, most common user action** (✅ DONE) |
 | ~~**TASK-1398**~~ | **P1** | **✅ Conversation entity memory — track mentioned tasks, resolve pronouns ("it", "that one")** (✅ DONE) |
 | **TASK-1386** | **P2** | **✅ Google Calendar proxy Edge Function — list-calendars, list-events, token refresh on 401** |
+| **BUG-1415** | **P0** | **🔄 Catalog drag doesn't move task to target group — drops on task rows make subtasks instead of transferring between groups** |
 | **TASK-1405** | **P1** | 👀 **Replace LLM Distribution with Deterministic Algorithm in Weekly Plan** (👀 REVIEW 2026-02-22) |
 | ~~**TASK-1403**~~ | **P2** | ✅ **Recurring Tasks — Clone-on-Complete with recurrence_rule column** (✅ DONE 2026-02-22) |
 | ~~**TASK-1402**~~ | **P1** | ✅ **Decouple canvas/calendar inbox filtering — isInInbox now user-controlled, placement uses position-based filtering** (✅ DONE 2026-02-22) |

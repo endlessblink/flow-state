@@ -436,7 +436,9 @@ button svg {
 .n-date-picker-panel,
 .n-date-panel,
 .n-date-panel-calendar {
-    background: rgb(22, 19, 38) !important;
+    background: var(--overlay-component-bg) !important;
+    backdrop-filter: var(--overlay-component-backdrop);
+    -webkit-backdrop-filter: var(--overlay-component-backdrop);
     border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08)) !important;
     border-radius: var(--radius-lg, 12px) !important;
 }
@@ -459,15 +461,15 @@ button svg {
     background: transparent !important;
 }
 
-/* Date cells */
-.n-date-panel-date,
-.n-date-panel-date__trigger {
+/* Date cells — high specificity to beat Naive UI weekend red */
+.n-date-panel .n-date-panel-date,
+.n-date-panel .n-date-panel-date .n-date-panel-date__trigger {
     color: var(--text-secondary, rgba(255, 255, 255, 0.7)) !important;
     background: transparent !important;
     border-radius: var(--radius-md, 8px) !important;
 }
 
-.n-date-panel-date:hover .n-date-panel-date__trigger {
+.n-date-panel .n-date-panel-date:hover .n-date-panel-date__trigger {
     background: var(--glass-bg-heavy, rgba(255, 255, 255, 0.08)) !important;
     color: var(--text-primary, rgba(255, 255, 255, 0.95)) !important;
 }
@@ -515,25 +517,25 @@ button svg {
 
 /* Selected date: green stroke + green text, NO fill */
 .n-date-panel .n-date-panel-date.n-date-panel-date--selected {
-    color: #10b981 !important;
+    color: #4ECDC4 !important;
     font-weight: 600 !important;
 }
 
 .n-date-panel .n-date-panel-date.n-date-panel-date--selected .n-date-panel-date__trigger {
     background: transparent !important;
-    border: 2px solid #10b981 !important;
+    border: 2px solid #4ECDC4 !important;
 }
 
 /* Today + Selected: green stroke + green text + green dot */
 .n-date-panel .n-date-panel-date.n-date-panel-date--current.n-date-panel-date--selected {
-    color: #10b981 !important;
+    color: #4ECDC4 !important;
     font-weight: 600 !important;
     position: relative !important;
 }
 
 .n-date-panel .n-date-panel-date.n-date-panel-date--current.n-date-panel-date--selected .n-date-panel-date__trigger {
     background: transparent !important;
-    border: 2px solid #10b981 !important;
+    border: 2px solid #4ECDC4 !important;
 }
 
 /* Green dot for today + selected */
@@ -546,7 +548,7 @@ button svg {
     width: 4px !important;
     height: 4px !important;
     border-radius: 50% !important;
-    background: #10b981 !important;
+    background: #4ECDC4 !important;
     pointer-events: none !important;
     z-index: 1 !important;
 }
@@ -570,6 +572,16 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
 /* Fallback: target all excluded date elements */
 .n-date-panel-date--excluded {
     opacity: 0.35 !important;
+}
+
+/* Weekend dates - neutralize Naive UI red coloring on weekday headers */
+.n-date-panel-weekdays .n-date-panel-weekdays__day {
+    color: var(--text-muted, rgba(255, 255, 255, 0.45)) !important;
+}
+
+/* Kill Naive UI weekend red via CSS variable override at panel level */
+.n-date-panel {
+    --n-item-text-color: var(--text-secondary, rgba(255, 255, 255, 0.7)) !important;
 }
 
 /* Calendar navigation arrows */
@@ -635,18 +647,22 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
    ============================================================================= */
 
 .n-popover:not(.n-popover--raw) {
-    --n-color: rgb(22, 19, 38) !important;
+    --n-color: var(--overlay-component-bg) !important;
     --n-border-radius: var(--radius-lg, 12px) !important;
 }
 
 .n-popover-content,
 .n-popover__content {
-    background: rgb(22, 19, 38) !important;
+    background: var(--overlay-component-bg) !important;
+    backdrop-filter: var(--overlay-component-backdrop);
+    -webkit-backdrop-filter: var(--overlay-component-backdrop);
     border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08)) !important;
     border-radius: var(--radius-lg, 12px) !important;
 }
 
 /* Popover arrow (caret) matches background */
 .n-popover-arrow-wrapper .n-popover-arrow {
-    background: rgb(22, 19, 38) !important;
+    background: var(--overlay-component-bg) !important;
+    backdrop-filter: var(--overlay-component-backdrop);
+    -webkit-backdrop-filter: var(--overlay-component-backdrop);
 }

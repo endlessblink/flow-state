@@ -1,5 +1,9 @@
 # FEATURE-1345: Build FlowState Android APK/AAB via Capacitor
 # Triggered on version tags (v*) — same pattern as Tauri releases
+#
+# Secrets are available here because only maintainers can push version tags
+# or trigger workflow_dispatch on this repo.
+# NEVER add pull_request or pull_request_target triggers to this file.
 name: Android Build
 
 on:
@@ -15,6 +19,9 @@ on:
         options:
           - debug
           - release
+
+permissions:
+  contents: read
 
 jobs:
   android:

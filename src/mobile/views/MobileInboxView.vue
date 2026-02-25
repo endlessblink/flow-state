@@ -181,7 +181,7 @@ const {
 
 // --- Local UI State ---
 const showDebug = ref(false)
-const isDevUser = computed(() => authStore.user?.email === 'endlessblink@gmail.com')
+const isDevUser = computed(() => authStore.isDev)
 const authStatus = computed(() => authStore.isAuthenticated ? 'Signed in' : 'Not signed in')
 const userId = computed(() => authStore.user?.id?.substring(0, 8) + '...' || null)
 const syncError = computed(() => lastSyncError.value)

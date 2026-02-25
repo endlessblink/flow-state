@@ -59,7 +59,7 @@ const themeOverrides: GlobalThemeOverrides = {
     arrowColor: 'rgba(255, 255, 255, 0.45)',
   },
   Popover: {
-    color: 'rgb(22, 19, 38)', // Match context menu bg (fully opaque)
+    color: 'rgb(28, 25, 45)', // Match --overlay-component-bg base RGB
     borderRadius: '12px',
   },
 }

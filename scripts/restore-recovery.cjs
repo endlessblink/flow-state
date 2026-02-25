@@ -38,7 +38,12 @@ async function restore() {
   console.log('  Projects:', backup.projects.length)
   console.log('')
 
-  const userId = '717f5209-42d8-4bb9-8781-740107a384e5'
+  const userId = process.argv[2] || process.env.FLOWSTATE_USER_ID
+  if (!userId) {
+    console.error('Usage: node restore-recovery.cjs <user-id>')
+    console.error('Or set FLOWSTATE_USER_ID environment variable')
+    process.exit(1)
+  }
 
   // Filter to only active (non-deleted) items
   const tasks = backup.tasks.filter(t => !t.is_deleted)

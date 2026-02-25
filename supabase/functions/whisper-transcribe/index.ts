@@ -12,12 +12,19 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
 
-const ALLOWED_ORIGINS = [
-  'https://in-theflow.com',
-  'https://www.in-theflow.com',
-  'http://localhost:5546',    // dev server
-  'tauri://localhost',         // Tauri desktop app
+const DEFAULT_ORIGINS = [
+  'http://localhost:5546',
+  'http://localhost:3000',
+  'tauri://localhost',
 ]
+
+const ALLOWED_ORIGINS = (() => {
+  const envOrigins = Deno.env.get('ALLOWED_ORIGINS')
+  if (envOrigins) {
+    return [...envOrigins.split(',').map(o => o.trim()), ...DEFAULT_ORIGINS]
+  }
+  return DEFAULT_ORIGINS
+})()
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get('origin') || ''

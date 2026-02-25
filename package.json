@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.2.91",
+  "version": "1.2.92",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://in-theflow.com",
   "repository": {
@@ -25,7 +25,7 @@
     "restore": "node scripts/restore-from-shadow.cjs",
     "restore:dry-run": "node scripts/restore-from-shadow.cjs --dry-run",
     "dev:manager": "cd dev-maestro && npm start",
-    "postinstall": "cd dev-maestro && npm install",
+    "postinstall": "[ -d dev-maestro ] && cd dev-maestro && npm install || true",
     "kill": "bash scripts/kill-flow-state.sh",
     "prebuild": "node scripts/check-vite-secrets.cjs",
     "build": "npx vite build --mode production",

@@ -186,33 +186,39 @@ const authStatus = computed(() => authStore.isAuthenticated ? 'Signed in' : 'Not
 const userId = computed(() => authStore.user?.id?.substring(0, 8) + '...' || null)
 const syncError = computed(() => lastSyncError.value)
 
-// Swipe hint — hidden by default, revealed by two-finger pull-down gesture
+// Swipe hint — hidden by default, revealed ONLY by two-finger upward swipe
 const showSwipeHint = ref(false)
 const inboxEl = ref<HTMLElement | null>(null)
 
-let twoFingerStartY: number | null = null
+let twoFingerTracking = false
+let twoFingerStartY = 0
 let swipeHintTimer: ReturnType<typeof setTimeout> | null = null
 
 const onTouchStart = (event: TouchEvent) => {
+  // ONLY start tracking when exactly 2 fingers touch simultaneously
   if (event.touches.length === 2) {
-    const screenHeight = window.innerHeight
     const avgY = (event.touches[0].clientY + event.touches[1].clientY) / 2
-    if (avgY > screenHeight * 0.6) {
+    // Must start in bottom 40% of screen
+    if (avgY > window.innerHeight * 0.6) {
+      twoFingerTracking = true
       twoFingerStartY = avgY
-    } else {
-      twoFingerStartY = null
     }
-  } else {
-    twoFingerStartY = null
+  }
+  // Any single-finger touch cancels tracking
+  if (event.touches.length === 1) {
+    twoFingerTracking = false
   }
 }
 
 const onTouchMove = (event: TouchEvent) => {
-  if (twoFingerStartY === null || event.touches.length !== 2) return
+  // Strict: must be tracking AND exactly 2 fingers right now
+  if (!twoFingerTracking || event.touches.length !== 2) return
   const currentY = (event.touches[0].clientY + event.touches[1].clientY) / 2
   const deltaY = currentY - twoFingerStartY
+  // Upward swipe of at least 60px
   if (deltaY < -60 && !showSwipeHint.value) {
     showSwipeHint.value = true
+    twoFingerTracking = false
     if (swipeHintTimer) clearTimeout(swipeHintTimer)
     swipeHintTimer = setTimeout(() => {
       showSwipeHint.value = false
@@ -221,8 +227,11 @@ const onTouchMove = (event: TouchEvent) => {
   }
 }
 
-const onTouchEnd = () => {
-  twoFingerStartY = null
+const onTouchEnd = (event: TouchEvent) => {
+  // Reset when all fingers lifted
+  if (event.touches.length === 0) {
+    twoFingerTracking = false
+  }
 }
 
 const dismissSwipeHint = () => {
@@ -338,6 +347,8 @@ const getProjectName = (projectId: string | undefined | null): string | null => 
   min-height: 100%;
   /* Space for nav bar (64px) + FAB clearance — no full-width bar anymore */
   padding-bottom: 80px;
+  /* Prevent native pull-to-refresh on single-finger drag */
+  overscroll-behavior-y: contain;
 }
 
 /* Debug / Auth Banner */

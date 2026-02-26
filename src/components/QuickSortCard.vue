@@ -142,7 +142,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { type Task } from '@/stores/tasks'
 import { CalendarDays, Save, Trash2 } from 'lucide-vue-next'
 import { NPopover, NDatePicker } from 'naive-ui'
@@ -158,9 +157,6 @@ const emit = defineEmits<{
   swipeSave: []
   swipeDelete: []
 }>()
-
-const { t } = useI18n()
-// t is used in the template
 
 // Date picker state
 const showDatePicker = ref(false)

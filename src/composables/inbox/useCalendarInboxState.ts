@@ -216,6 +216,19 @@ export function useCalendarInboxState() {
             // Catch tasks that weren't visited (edge cases: groups not in canvasStore.groups)
             for (const t of tasks) dfs(t)
 
+            // DEBUG: diagnose skipped task
+            console.log('[CAL-SORT]', {
+                inputCount: tasks.length, outputCount: result.length,
+                groups: sortedGroups.map(g => ({ name: g.name, x: g.position?.x, id: g.id?.slice(0, 12) })),
+                bucketSizes: Object.fromEntries([...buckets.entries()].map(([k, v]) => [k?.slice(0, 12) ?? 'null', v.length])),
+                sorted: result.slice(0, 10).map((t, i) => ({
+                    '#': i, title: t.title?.slice(0, 30), y: t.canvasPosition?.y, x: t.canvasPosition?.x,
+                    parentId: t.parentId?.slice(0, 12), parentTaskId: t.parentTaskId?.slice(0, 12),
+                    group: sortedGroups.find(g => g.id === t.parentId)?.name ?? 'ungrouped'
+                })),
+                filtered: tasks.slice(0, 10).map(t => ({ title: t.title?.slice(0, 30), parentId: t.parentId?.slice(0, 12) }))
+            })
+
             tasks = sortDirection.value === 'desc' ? result.reverse() : result
         } else {
             tasks = [...tasks].sort((a, b) => {

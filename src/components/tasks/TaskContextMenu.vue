@@ -340,6 +340,7 @@ const emit = defineEmits<{
   deleteSelected: []
   setDuration: [duration: number | null]
   moveToSection: [taskId: string]
+  setProject: [projectId: string | null]
 }>()
 
 // Use the new composable for business logic
@@ -358,7 +359,7 @@ const {
   duplicateTask,
   deleteTask,
   clearSelection
-} = useTaskContextMenuActions(props, emit)
+} = useTaskContextMenuActions(props, emit as (event: string, ...args: unknown[]) => void)
 
 const focusModeState = inject<FocusModeState | null>(FOCUS_MODE_KEY, null)
 const enterFocusModeFn = focusModeState?.enterFocusMode || null

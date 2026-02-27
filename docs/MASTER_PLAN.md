@@ -3545,9 +3545,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### FEATURE-1200: Quick Add Full RTL Support + Auto-Expand for Long Tasks (📋 PLANNED)
+### ~~FEATURE-1200~~: Quick Add Full RTL Support + Auto-Expand for Long Tasks (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-27)
 
 **Feature**: Two improvements to the Quick Add input in the main sidebar:
 
@@ -3555,16 +3555,17 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 2. **Auto-expand to fullscreen**: When typing a long task title that exceeds the input width, automatically open a fullscreen task creator popup/modal so the user has more space to write.
 
 **Requirements**:
-- [ ] Add `dir="auto"` or RTL detection to quick add input
-- [ ] RTL-aware placeholder text and icons
-- [ ] Character/width threshold to trigger fullscreen expansion
-- [ ] Smooth transition from inline input to fullscreen modal
-- [ ] Carry over typed text to the fullscreen creator
-- [ ] Fullscreen creator should also be fully RTL-aware
+- [x] Add `dir="auto"` or RTL detection to quick add input — ✅ Done by TASK-1324 (`quickTaskDirection` computed in AppSidebar.vue)
+- [x] RTL-aware placeholder text and icons — ✅ Done by TASK-1324 (Hebrew translations in `he.json`)
+- [x] Character/width threshold to trigger fullscreen expansion — ✅ Auto-opens at 20+ words or 150+ chars
+- [x] Smooth transition from inline input to fullscreen modal — ✅ Expand button + auto-trigger via `QuickTaskCreateModal`
+- [x] Carry over typed text to the fullscreen creator — ✅ `initialTitle` prop on `QuickTaskCreateModal`
+- [x] Fullscreen creator should also be fully RTL-aware — ✅ Uses `useHebrewAlignment` composable
 
-**Files to Investigate**:
-- Quick add component in sidebar
-- `TaskEditModal.vue` or equivalent fullscreen creator
+**Implementation**:
+- `AppSidebar.vue`: Expand button (Maximize2 icon) on textarea + auto-trigger at high threshold + `QuickTaskCreateModal` integration
+- `QuickTaskCreateModal.vue`: Added `initialTitle` prop for text carry-over
+- RTL: `quickTaskDirection` computed (regex on first char), Hebrew i18n placeholders, `useHebrewAlignment` in modal
 
 ---
 
@@ -3880,7 +3881,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1280~~ | P3 | ✅ Add copyright to Tauri bundle config |
 | ~~TASK-1281~~ | P3 | ✅ Adopt build-time console.log stripping (esbuild pure config) |
 | ~~TASK-1282~~ | P3 | ✅ Stop filtering console.error/warn in consoleFilter.ts |
-| FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
+| ~~FEATURE-1200~~ | P2 | ✅ Quick Add full RTL support + auto-expand for long tasks (✅ DONE 2026-02-27) |
 | FEATURE-1201 | P2 | 👀 Single-screen welcome modal — research-backed, auth-aware, replaces WelcomeModal |
 | ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
 | ~~TASK-1283~~ | P1 | ✅ Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |

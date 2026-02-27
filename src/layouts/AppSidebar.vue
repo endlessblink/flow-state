@@ -85,6 +85,15 @@
             <Mic v-if="!isListening" :size="16" />
             <MicOff v-else :size="16" />
           </button>
+          <!-- FEATURE-1200: Expand to fullscreen button -->
+          <button
+            v-if="isQuickAddExpanded"
+            class="expand-btn"
+            :title="$t('sidebar.expand_to_fullscreen') || 'Expand to full editor'"
+            @click="expandToFullscreen"
+          >
+            <Maximize2 :size="14" />
+          </button>
         </div>
 
         <!-- Metadata row (date + priority pickers) - TASK-1324 Feature 2 & 3 -->
@@ -455,6 +464,14 @@
       </div>
 
 
+      <!-- FEATURE-1200: Fullscreen task creator modal -->
+      <QuickTaskCreateModal
+        :is-open="showFullscreenCreator"
+        :initial-title="quickTaskText"
+        @cancel="handleFullscreenCancel"
+        @create="handleFullscreenCreate"
+      />
+
       <!-- User Profile Footer -->
       <div class="sidebar-footer">
         <button v-if="!authStore.user" class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
@@ -489,7 +506,7 @@ import {
   Plus, PanelLeftClose, Settings, FolderOpen,
   Calendar, List, Inbox, Zap, Clock, HelpCircle,
   ChevronRight, Coffee, Hourglass, Mountain, Trash2, X,
-  Layers, Mic, MicOff, CalendarDays, Flag
+  Layers, Mic, MicOff, CalendarDays, Flag, Maximize2
 } from 'lucide-vue-next'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 
@@ -498,6 +515,7 @@ import BaseNavItem from '@/components/base/BaseNavItem.vue'
 import SidebarSmartItem from '@/components/layout/SidebarSmartItem.vue'
 import ProjectTreeItem from '@/components/projects/ProjectTreeItem.vue'
 import AppLogo from '@/components/base/AppLogo.vue'
+import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -668,6 +686,7 @@ const quickTaskRef = ref<HTMLInputElement | null>(null)
 const quickTaskExpandedRef = ref<HTMLTextAreaElement | null>(null)
 const quickTaskText = ref('')
 const quickTaskFocused = ref(false)
+const showFullscreenCreator = ref(false)
 
 const showSuccessFlash = ref(false)
 
@@ -705,9 +724,78 @@ watch(isQuickAddExpanded, (expanded) => {
   }
 })
 
+// FEATURE-1200: Auto-expand to fullscreen modal for very long text
+const shouldAutoExpand = computed(() => {
+  const text = quickTaskText.value.trim()
+  if (!text) return false
+  const wordCount = text.split(/\s+/).length
+  return wordCount >= 20 || text.length > 150
+})
+
+watch(shouldAutoExpand, (shouldExpand) => {
+  if (shouldExpand && !showFullscreenCreator.value) {
+    expandToFullscreen()
+  }
+})
+
 // Collapse quick add (clear text)
 const collapseQuickAdd = () => {
   quickTaskText.value = ''
+}
+
+// FEATURE-1200: Open fullscreen creator with current text
+const expandToFullscreen = () => {
+  showFullscreenCreator.value = true
+  // Carry over typed text to modal's title input via DOM (modal resets on open)
+  const textToCarry = quickTaskText.value.trim()
+  if (textToCarry) {
+    nextTick(() => {
+      // Double nextTick: first for modal render, second for modal's own watch reset
+      nextTick(() => {
+        const modalInput = document.querySelector('.task-form .title-input') as HTMLInputElement
+        if (modalInput) {
+          // Use native setter to trigger Vue's v-model reactivity
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
+          nativeInputValueSetter?.call(modalInput, textToCarry)
+          modalInput.dispatchEvent(new Event('input', { bubbles: true }))
+          modalInput.focus()
+        }
+      })
+    })
+  }
+}
+
+const handleFullscreenCreate = async (data: {
+  title: string
+  description: string
+  status: string
+  priority: 'low' | 'medium' | 'high'
+  dueDate?: string
+  projectId?: string
+}) => {
+  try {
+    await taskStore.createTaskWithUndo({
+      title: data.title,
+      description: data.description,
+      status: data.status as 'todo' | 'in-progress' | 'done',
+      priority: data.priority,
+      dueDate: data.dueDate,
+      projectId: data.projectId
+    })
+    quickTaskText.value = ''
+    quickTaskDueDate.value = null
+    quickTaskPriority.value = null
+    showFullscreenCreator.value = false
+    showSuccessFlash.value = true
+    setTimeout(() => { showSuccessFlash.value = false }, 1200)
+  } catch (error) {
+    console.error('Error creating task from fullscreen:', error)
+  }
+}
+
+const handleFullscreenCancel = () => {
+  showFullscreenCreator.value = false
+  // Don't clear text - user might want to continue editing inline
 }
 
 // TASK-1324 Feature 2: Date picker
@@ -1292,6 +1380,27 @@ defineExpose({
   background: var(--danger-text);
   color: white;
   animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+/* FEATURE-1200: Expand to fullscreen button */
+.expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-7);
+  height: var(--space-7);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-soft);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.expand-btn:hover {
+  background: var(--purple-bg-subtle);
+  color: var(--brand-primary);
 }
 
 @keyframes pulse-recording {

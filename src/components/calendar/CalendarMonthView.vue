@@ -165,7 +165,7 @@ const getEventTooltip = (event: CalendarEvent) => {
               'timer-active-event': currentTaskId === event.taskId,
               'selected': selectedEventIds?.has(event.id),
               'status-done': getTaskStatus(event) === 'done',
-              'status-active': getTaskStatus(event) === 'in_progress',
+              'status-active': getTaskStatus(event) === 'todo',
               'dragging': draggedEventId === event.taskId,
               'month-event--virtual': event.isVirtual
             }"

@@ -252,7 +252,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                   'dragging': isDragging && draggedEventId === event.id,
                   'selected': selectedEventIds?.has(event.id),
                   'status-done': getTaskStatus(event) === 'done',
-                  'status-active': getTaskStatus(event) === 'in_progress',
+                  'status-active': getTaskStatus(event) === 'todo',
                   'week-event--virtual': event.isVirtual
                 }"
                 :style="{ ...getWeekEventCellStyle(event), backgroundColor: event.isVirtual ? undefined : event.color }"

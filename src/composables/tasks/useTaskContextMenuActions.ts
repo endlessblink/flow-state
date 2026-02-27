@@ -313,7 +313,7 @@ export function useTaskContextMenuActions(
         emit('close')
 
         if (isBatch) {
-            // Batch project change not supported yet
+            emit('setProject', projectId)
             return
         }
 

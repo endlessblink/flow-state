@@ -214,14 +214,14 @@ const handleGlobalClose = (event: Event) => {
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+  document.addEventListener('click', handleClickOutside, true)
   window.addEventListener('resize', handleResize)
   window.addEventListener('scroll', handleScroll, true)
   window.addEventListener('close-all-dropdowns', handleGlobalClose)
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('click', handleClickOutside, true)
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('scroll', handleScroll, true)
   window.removeEventListener('close-all-dropdowns', handleGlobalClose)

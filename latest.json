@@ -1,11 +1,11 @@
 {
-  "version": "1.2.92",
-  "notes": "v1.2.92: OSS readiness, CI/CD parameterization, new edge functions, accumulated fixes",
-  "pub_date": "2026-02-25T16:20:16.167Z",
+  "version": "1.2.93",
+  "notes": "v1.2.93: batch accumulated changes — calendar, kanban, mobile, recurrence, AI pipeline improvements",
+  "pub_date": "2026-02-27T19:18:45.030Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRSt3VnpYRStQWW9FekNhaTU3VFBJZWlGT1g4NmExQ3lJT0s4dWxPcVE2cllaRVdUaXJGd3dSOTd3TC9tS0tFcE0vanl3cmwzVlJCcm1CNnBqQkd6L3dzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcyMDM2NDE2CWZpbGU6Rmxvd1N0YXRlXzEuMi45Ml9hbWQ2NC5BcHBJbWFnZQpCeml3TlREUHpENFdlQjlaREpxMUVUOEVLVFd4MFhkcnFlMGZvVkYxQ2t5dkxnN3NhTW9YeTc2cFhwTG5wM2pCQ0hueGVmQ2plTkg3L2RwRTFLTExDZz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.92_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTIwQkVVelo1a2NVd1B1MURmYjhUSEx3WFE2S094aEg5Tyt3SVlwd1RtQXdoYXVacDU4bjVTMzVSMFpVZ1Q3U3Z1WmZ4Q0pqNE8yMjcxZkN6SmRMWGdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcyMjE5OTI0CWZpbGU6Rmxvd1N0YXRlXzEuMi45M19hbWQ2NC5BcHBJbWFnZQpUZnR5SUJkMzlxYThMZEtJSVdtVmttYk5lQTJDMWRqZHliR1pXc2hZQzk2TnI2NUUvYzZGM3kzanExN1NTNjlCWWNyQVhOUTlCVVJyMERnNkpFZndBdz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.93_amd64.AppImage"
     }
   }
 }

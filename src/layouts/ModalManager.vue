@@ -34,6 +34,7 @@
       :x="contextMenuX"
       :y="contextMenuY"
       :task="contextMenuTask"
+      :selected-count="contextMenuSelectedCount"
       :compact-mode="settingsStore.boardDensity === 'ultrathin'"
       @close="closeTaskContextMenu"
       @edit="(taskId: string) => {
@@ -43,6 +44,12 @@
       @confirm-delete="handleContextMenuDelete"
       @confirm-permanent-delete="handleContextMenuPermanentDelete"
       @move-to-section="handleMoveToSection"
+      @set-priority="handleBatchSetPriority"
+      @set-status="handleBatchSetStatus"
+      @set-due-date="handleBatchSetDueDate"
+      @set-duration="handleBatchSetDuration"
+      @set-project="handleBatchSetProject"
+      @delete-selected="handleBatchDeleteSelected"
     />
 
     <!-- PROJECT CONTEXT MENU -->
@@ -142,6 +149,8 @@ const showTaskContextMenu = ref(false)
 const contextMenuX = ref(0)
 const contextMenuY = ref(0)
 const contextMenuTask = ref<Task | null>(null)
+const contextMenuSelectedIds = ref<string[]>([])
+const contextMenuSelectedCount = ref(0)
 
 const showProjectContextMenu = ref(false)
 const projectContextMenuX = ref(0)
@@ -168,6 +177,8 @@ const openEditTask = (task: Task) => {
 const closeTaskContextMenu = () => {
   showTaskContextMenu.value = false
   contextMenuTask.value = null
+  contextMenuSelectedIds.value = []
+  contextMenuSelectedCount.value = 0
 }
 
 const confirmDeleteTask = async (task: Task) => {
@@ -326,6 +337,118 @@ const confirmMoveToSection = async (sectionId: string) => {
   selectedTaskForSection.value = null
 }
 
+// TASK-1419: Batch operation handlers for multi-select context menu
+const handleBatchSetPriority = async (priority: 'low' | 'medium' | 'high') => {
+  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+  const { updateTaskWithUndo } = useUnifiedUndoRedo()
+  for (const taskId of contextMenuSelectedIds.value) {
+    await updateTaskWithUndo(taskId, { priority })
+  }
+  canvasStore.requestSync('user:context-menu')
+}
+
+const handleBatchSetStatus = async (status: 'todo' | 'done') => {
+  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+  const { updateTaskWithUndo } = useUnifiedUndoRedo()
+  for (const taskId of contextMenuSelectedIds.value) {
+    await updateTaskWithUndo(taskId, { status })
+  }
+  canvasStore.requestSync('user:context-menu')
+}
+
+const handleBatchSetDueDate = async (dateType: string) => {
+  const today = new Date()
+  let dueDate: Date | null = null
+
+  switch (dateType) {
+    case 'today':
+      dueDate = today
+      break
+    case 'tomorrow':
+      dueDate = new Date(today)
+      dueDate.setDate(today.getDate() + 1)
+      break
+    case 'weekend': {
+      dueDate = new Date(today)
+      const daysUntilSaturday = (6 - today.getDay()) % 7 || 7
+      dueDate.setDate(today.getDate() + daysUntilSaturday)
+      break
+    }
+    case 'nextweek':
+      dueDate = new Date(today)
+      dueDate.setDate(today.getDate() + 7)
+      break
+    case 'nextmonth':
+      dueDate = new Date(today)
+      dueDate.setMonth(today.getMonth() + 1)
+      break
+    case 'twomonths':
+      dueDate = new Date(today)
+      dueDate.setMonth(today.getMonth() + 2)
+      break
+    case 'nextquarter':
+      dueDate = new Date(today)
+      dueDate.setMonth(today.getMonth() + 3)
+      break
+    case 'halfyear':
+      dueDate = new Date(today)
+      dueDate.setMonth(today.getMonth() + 6)
+      break
+    default:
+      return
+  }
+
+  if (!dueDate) return
+  const formattedDate = dueDate.toISOString().split('T')[0]
+  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+  const { updateTaskWithUndo } = useUnifiedUndoRedo()
+  for (const taskId of contextMenuSelectedIds.value) {
+    await updateTaskWithUndo(taskId, { dueDate: formattedDate })
+  }
+  canvasStore.requestSync('user:context-menu')
+}
+
+const handleBatchSetDuration = async (duration: number | null) => {
+  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+  const { updateTaskWithUndo } = useUnifiedUndoRedo()
+  for (const taskId of contextMenuSelectedIds.value) {
+    await updateTaskWithUndo(taskId, { estimatedDuration: duration ?? undefined })
+  }
+  canvasStore.requestSync('user:context-menu')
+}
+
+const handleBatchSetProject = async (projectId: string | null) => {
+  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+  const { updateTaskWithUndo } = useUnifiedUndoRedo()
+  for (const taskId of contextMenuSelectedIds.value) {
+    await updateTaskWithUndo(taskId, {
+      projectId: projectId ?? undefined,
+      isUncategorized: !projectId
+    })
+  }
+  canvasStore.requestSync('user:context-menu')
+}
+
+const handleBatchDeleteSelected = () => {
+  const selectedIds = [...contextMenuSelectedIds.value]
+  if (selectedIds.length === 0) return
+
+  const selectedTasks = taskStore.tasks.filter(task => selectedIds.includes(task.id))
+  confirmMessage.value = `Delete ${selectedTasks.length} selected tasks?`
+  confirmDetails.value = [
+    'This will remove the following tasks:',
+    ...selectedTasks.map(task => `• ${task.title}`)
+  ]
+  confirmAction.value = async () => {
+    const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+    const undoRedoActions = useUnifiedUndoRedo()
+    for (const taskId of selectedIds) {
+      await undoRedoActions.deleteTaskWithUndo(taskId)
+    }
+  }
+  showConfirmModal.value = true
+}
+
 const projectContextMenuItems = computed<ContextMenuItem[]>(() => {
   if (!contextMenuProject.value) return []
   const project = contextMenuProject.value
@@ -419,7 +542,7 @@ const handleOpenTaskEdit = (event: Event) => {
 
 const handleTaskContextMenu = (event: Event) => {
   const customEvent = event as CustomEvent
-  const { event: mouseEvent, task, instanceId, isCalendarEvent } = customEvent.detail
+  const { event: mouseEvent, task, instanceId, isCalendarEvent, selectedIds, selectedCount } = customEvent.detail
 
   if (isCalendarEvent && instanceId) {
     contextMenuTask.value = {
@@ -430,6 +553,10 @@ const handleTaskContextMenu = (event: Event) => {
   } else {
     contextMenuTask.value = task
   }
+
+  // TASK-1419: Pass multi-select info to context menu
+  contextMenuSelectedIds.value = selectedIds || [task.id]
+  contextMenuSelectedCount.value = selectedCount || 1
 
   // BUG-1096: Use normalized coordinates for Tauri compatibility
   const { x, y } = getViewportCoordinates(mouseEvent)

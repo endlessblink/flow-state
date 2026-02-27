@@ -94,6 +94,18 @@
           @update:model-value="$emit('sectionChange', $event)"
         />
       </div>
+
+      <!-- Project -->
+      <div class="metadata-field metadata-field--dropdown">
+        <component :is="FolderOpen" :size="14" />
+        <span class="field-label">Project</span>
+        <CustomSelect
+          :model-value="modelValue.projectId || ''"
+          :options="projectOptions"
+          compact
+          @update:model-value="updateProject"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -102,10 +114,10 @@
 import { computed, ref } from 'vue'
 import {
   Calendar, TimerReset, Flag, Zap, Circle,
-  CheckCircle, Layers
+  CheckCircle, Layers, FolderOpen
 } from 'lucide-vue-next'
 import { NPopover, NDatePicker } from 'naive-ui'
-import { type Task } from '@/stores/tasks'
+import { type Task, useTaskStore } from '@/stores/tasks'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import SectionSelector from '@/components/canvas/SectionSelector.vue'
 
@@ -121,6 +133,8 @@ const emit = defineEmits<{
   (e: 'sectionChange', id: string | null): void
   (e: 'scheduleChange'): void
 }>()
+
+const taskStore = useTaskStore()
 
 const showDueDatePicker = ref(false)
 
@@ -139,6 +153,14 @@ const durationOptions = [
   { label: '3 hours', value: 180 },
   { label: '4 hours', value: 240 },
 ]
+
+const projectOptions = computed(() => [
+  { label: 'Uncategorized', value: '' },
+  ...taskStore.projects.map(p => ({
+    label: `${p.emoji || '•'} ${p.name}`,
+    value: p.id
+  }))
+])
 
 // Format date for display (human-readable)
 const formattedDueDate = computed(() => {
@@ -186,6 +208,11 @@ const updatePriority = (value: string | number) => {
 
 const updateStatus = (value: string | number) => {
   const newTask = { ...props.modelValue, status: value as 'todo' | 'done' }
+  emit('update:modelValue', newTask)
+}
+
+const updateProject = (value: string | number) => {
+  const newTask = { ...props.modelValue, projectId: String(value) || '' }
   emit('update:modelValue', newTask)
 }
 

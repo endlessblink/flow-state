@@ -37,30 +37,30 @@ export function useToast() {
 
         // Icon selection
         let icon = 'ℹ️'
-        let bgColor = 'var(--bg-card, #1e293b)' // Default dark
-        let borderColor = 'var(--border-color, #334155)'
+        let bgColor = 'var(--overlay-component-bg)' // Default dark glass background
+        let borderColor = 'var(--border-medium)'
 
         switch (type) {
             case 'success':
                 icon = '✓'
-                bgColor = 'var(--success-bg-start, #064e3b)' // Dark green
-                borderColor = 'var(--color-success, #10b981)'
+                bgColor = 'var(--success-bg-subtle)' // Dark green tint
+                borderColor = 'var(--color-success)'
                 break
             case 'error':
                 icon = '✕'
-                bgColor = 'var(--danger-bg-start, #450a0a)' // Dark red
-                borderColor = 'var(--color-danger, #ef4444)'
+                bgColor = 'var(--danger-bg-subtle)' // Dark red tint
+                borderColor = 'var(--color-danger)'
                 break
             case 'warning':
                 icon = '⚠️'
-                bgColor = 'var(--warning-bg-start, #451a03)' // Dark orange
-                borderColor = 'var(--color-warning, #f59e0b)'
+                bgColor = 'var(--amber-bg-light)' // Dark amber tint
+                borderColor = 'var(--color-warning)'
                 break
             case 'info':
             default:
                 icon = 'ℹ️' // Default blue-ish
-                bgColor = 'var(--info-bg-start, #0f172a)'
-                borderColor = 'var(--color-info, #3b82f6)'
+                bgColor = 'var(--overlay-component-bg)'
+                borderColor = 'var(--color-info)'
                 break
         }
 
@@ -75,7 +75,7 @@ export function useToast() {
       gap: 12px;
       font-size: 14px;
       font-weight: 500;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      box-shadow: var(--shadow-dark-md);
       animation: slideIn 0.2s ease-out;
       min-width: 240px;
       max-width: 400px;

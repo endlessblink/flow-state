@@ -37,10 +37,10 @@ export function useUnifiedInboxActions(
 
         createTaskWithUndo({
             title: title.trim(),
-            status: 'planned',
+            status: 'todo',
             isInInbox: true,
             ...(options?.priority && { priority: options.priority as 'low' | 'medium' | 'high' }),
-            ...(options?.dueDate && { dueDate: options.dueDate.toISOString() }),
+            ...(options?.dueDate && { dueDate: `${options.dueDate.getFullYear()}-${String(options.dueDate.getMonth() + 1).padStart(2, '0')}-${String(options.dueDate.getDate()).padStart(2, '0')}` }),
             ...(options?.description && { description: options.description })
         })
     }

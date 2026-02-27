@@ -117,8 +117,8 @@ export function useTaskCardActions(
     // --- Status Logic ---
 
     const cycleStatus = () => {
-        const statusCycle: Task['status'][] = ['planned', 'in_progress', 'done', 'backlog', 'on_hold']
-        const currentStatus = props.task.status || 'backlog'
+        const statusCycle: Task['status'][] = ['todo', 'done']
+        const currentStatus = props.task.status || 'todo'
         const currentIndex = statusCycle.indexOf(currentStatus)
         const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length]
 

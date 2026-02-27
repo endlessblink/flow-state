@@ -4,6 +4,7 @@
  * FEATURE-1118: Purchase themes and cosmetics with XP
  */
 import { computed, ref } from 'vue'
+import type { Component } from 'vue'
 import { useGamificationStore } from '@/stores/gamification'
 import type { ShopCategory, ShopItemWithOwnership } from '@/types/gamification'
 import { X, ShoppingBag, Check, Lock, Palette, Award, Sparkles, Volume2 } from 'lucide-vue-next'
@@ -87,7 +88,7 @@ async function equipTheme(itemId: string) {
 }
 
 function getCategoryIcon(category: ShopCategory) {
-  const map: Record<ShopCategory, any> = {
+  const map: Record<ShopCategory, Component> = {
     theme: Palette,
     badge_style: Award,
     animation: Sparkles,

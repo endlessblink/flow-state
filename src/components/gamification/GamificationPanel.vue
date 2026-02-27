@@ -488,9 +488,9 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 }
 
 .xp-badge.penalty {
-  background: rgba(255, 100, 100, 0.15);
-  border-color: rgba(255, 100, 100, 0.3);
-  color: rgba(255, 100, 100, 0.9);
+  background: var(--danger-bg-subtle);
+  border-color: var(--danger-border-medium);
+  color: var(--priority-high-text);
 }
 
 .xp-badge.bronze {

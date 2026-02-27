@@ -36,7 +36,7 @@ const createTestTask = async (): Promise<string> => {
   const testTaskData = {
     title: `Test Task ${Date.now()}`,
     description: 'Created for keyboard deletion testing',
-    status: 'planned' as const,
+    status: 'todo' as const,
     canvasPosition: { x: 100, y: 100 }
   }
 

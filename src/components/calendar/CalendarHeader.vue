@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, SlidersHorizontal, RefreshCw } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, SlidersHorizontal, RefreshCw, Repeat } from 'lucide-vue-next'
 import ProjectFilterDropdown from '@/components/projects/ProjectFilterDropdown.vue'
 
 defineProps<{
   formatCurrentDate: string
   hideCalendarDoneTasks: boolean
+  showFutureRecurring: boolean
   viewMode: 'day' | 'week' | 'month'
   externalCalendarEnabled?: boolean
   externalCalendarLoading?: boolean
@@ -19,6 +20,7 @@ defineEmits<{
   (e: 'nextDay'): void
   (e: 'goToToday'): void
   (e: 'toggleDoneTasks'): void
+  (e: 'toggleFutureRecurring'): void
   (e: 'update:viewMode', value: 'day' | 'week' | 'month'): void
   (e: 'syncExternalCalendar'): void
   (e: 'toggleGoogleEvents'): void
@@ -70,6 +72,16 @@ const showFilters = ref(false)
       >
         <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" />
         <Eye v-else :size="16" :stroke-width="1.5" />
+      </button>
+
+      <!-- TASK-1418: Show/Hide Future Recurring Events -->
+      <button
+        class="future-recurring-toggle"
+        :class="{ active: showFutureRecurring }"
+        :title="showFutureRecurring ? 'Hide future recurring events' : 'Show future recurring events'"
+        @click="$emit('toggleFutureRecurring')"
+      >
+        <Repeat :size="16" :stroke-width="1.5" />
       </button>
 
       <!-- TASK-1317: External Calendar Sync Button -->
@@ -230,6 +242,30 @@ const showFilters = ref(false)
 .hide-done-toggle.active {
   background: var(--color-indigo-bg-medium);
   color: var(--color-indigo);
+}
+
+.future-recurring-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.future-recurring-toggle:hover {
+  background: var(--glass-bg-heavy);
+  color: var(--text-primary);
+}
+
+.future-recurring-toggle.active {
+  background: var(--color-indigo-bg-medium);
+  color: var(--brand-primary);
 }
 
 .view-selector {

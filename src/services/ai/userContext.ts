@@ -124,7 +124,7 @@ function getCurrentWorkload(): string | null {
   const tasks = taskStore.tasks
   const today = new Date().toISOString().split('T')[0]
 
-  const inProgress = tasks.filter(t => t.status === 'in_progress').length
+  const todoTasks = tasks.filter(t => t.status === 'todo' && !t._soft_deleted).length
   const overdue = tasks.filter(t =>
     t.dueDate && t.dueDate.slice(0, 10) < today &&
     t.status !== 'done' && !t._soft_deleted
@@ -134,22 +134,22 @@ function getCurrentWorkload(): string | null {
     t.status !== 'done' && !t._soft_deleted
   ).length
   const totalOpen = tasks.filter(t => t.status !== 'done' && !t._soft_deleted).length
-  const plannedUnsorted = tasks.filter(t =>
-    t.status === 'planned' && !t.priority && !t._soft_deleted
+  const unsorted = tasks.filter(t =>
+    t.status === 'todo' && !t.priority && !t._soft_deleted
   ).length
 
   const lines: string[] = ['Current workload:']
 
-  if (inProgress > 0) lines.push(`- ${inProgress} tasks in progress`)
+  if (todoTasks > 0) lines.push(`- ${todoTasks} open tasks`)
   if (dueToday > 0) lines.push(`- ${dueToday} tasks due today`)
   if (overdue > 0) lines.push(`- ${overdue} overdue tasks`)
   lines.push(`- ${totalOpen} total open tasks`)
-  if (plannedUnsorted > 0) lines.push(`- ${plannedUnsorted} unsorted (no priority)`)
+  if (unsorted > 0) lines.push(`- ${unsorted} unsorted (no priority)`)
 
   // Overload indicator
-  if (overdue > 5 || (inProgress > 8 && overdue > 2)) {
+  if (overdue > 5 || (todoTasks > 8 && overdue > 2)) {
     lines.push('- ⚠ User appears overloaded — suggest conservative actions, fewer new commitments')
-  } else if (overdue === 0 && inProgress <= 3) {
+  } else if (overdue === 0 && todoTasks <= 3) {
     lines.push('- User workload is light — can take on more')
   }
 

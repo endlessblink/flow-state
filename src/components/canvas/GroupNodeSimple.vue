@@ -42,6 +42,7 @@
           panel
           type="date"
           :value="currentTargetTimestamp"
+          :actions="[]"
           @update:value="handleDateSelect"
         />
       </NPopover>

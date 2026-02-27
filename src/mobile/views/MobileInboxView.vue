@@ -307,9 +307,9 @@ const openTaskCreateSheet = () => {
 const handleTaskSheetCreated = (data: { title: string; description: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }) => {
   taskStore.createTask({
     title: data.title,
-    status: 'planned',
+    status: 'todo',
     ...(data.description && { description: data.description }),
-    ...(data.dueDate && { dueDate: data.dueDate.toISOString() }),
+    ...(data.dueDate && { dueDate: `${data.dueDate.getFullYear()}-${String(data.dueDate.getMonth() + 1).padStart(2, '0')}-${String(data.dueDate.getDate()).padStart(2, '0')}` }),
     ...(data.priority && { priority: data.priority })
   })
   handleTaskCreateClose()
@@ -317,7 +317,7 @@ const handleTaskSheetCreated = (data: { title: string; description: string; prio
 
 // Task Item Actions
 const toggleTask = async (task: Task) => {
-  const newStatus = task.status === 'done' ? 'planned' : 'done'
+  const newStatus = task.status === 'done' ? 'todo' : 'done'
   await taskStore.updateTask(task.id, { status: newStatus })
 }
 

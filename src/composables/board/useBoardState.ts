@@ -132,10 +132,7 @@ function sortByOrder(tasks: Task[]): Task[] {
 
 export function groupTasksByStatus(tasks: Task[]) {
     const result: Record<string, Task[]> = {
-        planned: [],
-        in_progress: [],
-        backlog: [],
-        on_hold: [],
+        todo: [],
         done: []
     }
     tasks.forEach(task => {
@@ -203,7 +200,7 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
 
         const isCreatedToday = taskCreatedDate.getTime() === today.getTime()
         const isDueToday = dueDateKey === todayStr
-        const isInProgress = task.status === 'in_progress'
+        const isInProgress = task.status !== 'done'
         const isOverdueByDate = dueDateKey && dueDateKey < todayStr
 
         const hasPastInstance = instances.length > 0 && instances.some((instance: Record<string, unknown>) => {
@@ -211,7 +208,7 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
             return instanceDate && instanceDate < today
         })
         const isOldAndUnscheduled = taskCreatedDate < oneDayAgo && instances.length === 0 &&
-            !dueDateKey && task.status !== 'backlog'
+            !dueDateKey
 
         // Overdue check
         if (task.status !== 'done' && (isOverdueByDate || hasPastInstance || isOldAndUnscheduled)) {

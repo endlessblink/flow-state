@@ -62,7 +62,22 @@ const positionedExternalEvents = computed(() => {
     })
 })
 // Inject helpers from parent CalendarView
-const helpers = inject('calendar-helpers') as Record<string, unknown>
+interface CalendarHelpers {
+  formatHour: (hour: number) => string
+  formatEventTime: (event: CalendarEvent) => string
+  isCurrentTimeSlot: (slot: TimeSlot) => boolean
+  getTasksForSlot: (slot: TimeSlot) => CalendarEvent[]
+  isTaskPrimarySlot: (task: CalendarEvent, slot: TimeSlot) => boolean
+  getSlotTaskStyle: (task: CalendarEvent, slot: TimeSlot) => Record<string, string>
+  getProjectVisual: (event: { projectId?: string }) => { type: 'color' | 'emoji'; content: string }
+  getProjectName: (event: CalendarEvent) => string
+  getProjectColor: (event: CalendarEvent) => string
+  getPriorityClass: (event: CalendarEvent) => string
+  getPriorityLabel: (event: CalendarEvent) => string
+  getTaskStatus: (event: CalendarEvent) => string
+  getStatusLabel: (event: CalendarEvent) => string
+  getStatusIcon: (status: string) => string
+}
 const {
   formatHour,
   formatEventTime,
@@ -78,7 +93,7 @@ const {
   getTaskStatus,
   getStatusLabel,
   getStatusIcon
-} = helpers
+} = inject('calendar-helpers') as CalendarHelpers
 
 </script>
 
@@ -160,17 +175,19 @@ const {
               'has-overlap': calEvent.totalColumns > 1,
               'is-compact': calEvent.duration <= 30,
               'status-done': getTaskStatus(calEvent) === 'done',
-              'status-active': getTaskStatus(calEvent) === 'in_progress'
+              'status-active': getTaskStatus(calEvent) === 'in_progress',
+              'slot-task--virtual': calEvent.isVirtual
             }"
             :style="getSlotTaskStyle(calEvent)"
-            draggable="true"
-            @mouseenter="$emit('eventMouseEnter', calEvent.id)"
-            @mouseleave="$emit('eventMouseLeave')"
-            @dragstart="$emit('eventDragStart', $event, calEvent)"
-            @dragend="$emit('eventDragEnd', $event, calEvent)"
-            @click="$emit('eventClick', $event, calEvent)"
-            @dblclick="$emit('eventDblClick', calEvent)"
-            @contextmenu.prevent="$emit('eventContextMenu', $event, calEvent)"
+            :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
+            :draggable="!calEvent.isVirtual"
+            @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"
+            @mouseleave="!calEvent.isVirtual && $emit('eventMouseLeave')"
+            @dragstart="!calEvent.isVirtual && $emit('eventDragStart', $event, calEvent)"
+            @dragend="!calEvent.isVirtual && $emit('eventDragEnd', $event, calEvent)"
+            @click="!calEvent.isVirtual && $emit('eventClick', $event, calEvent)"
+            @dblclick="!calEvent.isVirtual && $emit('eventDblClick', calEvent)"
+            @contextmenu.prevent="!calEvent.isVirtual && $emit('eventContextMenu', $event, calEvent)"
           >
             <!-- Project Stripe -->
             <div
@@ -806,6 +823,27 @@ const {
 
 .slot-task.status-done .task-title {
   text-decoration: line-through;
+}
+
+/* TASK-1418: Virtual recurring event ghost styling */
+.slot-task--virtual {
+  opacity: 0.5;
+  border-style: dashed !important;
+  border-width: 1px;
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-subtle) !important;
+  pointer-events: none;
+  cursor: default;
+  position: relative;
+}
+
+.slot-task--virtual::after {
+  content: '\1F501';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  opacity: 0.7;
 }
 
 /* TASK-1317 + TASK-1283: External calendar events (read-only overlays) */

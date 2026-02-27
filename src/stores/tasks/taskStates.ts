@@ -56,6 +56,9 @@ export function useTaskStates() {
     // TASK-082: Hide overdue tasks on canvas (tasks with due date before today)
     const hideCanvasOverdueTasks = ref(false)
 
+    // TASK-1418: Show/hide virtual future recurring events on calendar
+    const showFutureRecurring = ref(false)
+
     // Backward compatibility computed - used by useTaskFiltering and legacy code
     const hideDoneTasks = computed({
         get: () => hideCanvasDoneTasks.value || hideCalendarDoneTasks.value,
@@ -117,6 +120,7 @@ export function useTaskStates() {
         hideCanvasDoneTasks,
         hideCalendarDoneTasks,
         hideCanvasOverdueTasks,
+        showFutureRecurring,
         runAllTaskMigrations,
         filteredTasks, // Keep for backward compatibility
         tasksByStatus,

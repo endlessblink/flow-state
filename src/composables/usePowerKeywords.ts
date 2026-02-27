@@ -61,9 +61,7 @@ export const PRIORITY_KEYWORDS = {
  */
 export const STATUS_KEYWORDS = {
   DONE: ['done', 'completed', 'finished'],
-  IN_PROGRESS: ['in progress', 'working', 'active'],
-  BACKLOG: ['backlog', 'later'],
-  PLANNED: ['planned', 'todo', 'to do']
+  TODO: ['todo', 'to do', 'planned', 'in progress', 'working', 'active', 'backlog', 'later']
 } as const
 
 /**

@@ -67,6 +67,30 @@ export const getTodayDateKey = (): string => {
 }
 
 /**
+ * Normalize a dueDate value to YYYY-MM-DD format (local timezone).
+ * Handles ISO 8601 strings ("2026-02-25T00:00:00.000Z"), YYYY-MM-DD passthrough,
+ * and Date objects. Returns empty string for null/undefined/invalid.
+ *
+ * BUG-1416: Canonical dueDate format is YYYY-MM-DD. This function heals
+ * any ISO timestamps that leaked in from older code paths.
+ */
+export const normalizeDueDate = (value: string | Date | null | undefined): string => {
+    if (!value) return ''
+    if (value instanceof Date) return formatDateKey(value)
+    // Already correct YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+    // ISO 8601 or other parseable string — extract local date
+    if (value.includes('T')) {
+        const [datePart] = value.split('T')
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart
+    }
+    // Try to parse as date
+    const d = new Date(value)
+    if (!isNaN(d.getTime())) return formatDateKey(d)
+    return ''
+}
+
+/**
  * Format a date for display in AI chat task results.
  * Handles both YYYY-MM-DD date strings and full ISO timestamps.
  * Uses Intl APIs for automatic Hebrew/English/any locale formatting.

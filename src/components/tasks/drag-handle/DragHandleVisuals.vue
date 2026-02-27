@@ -180,22 +180,22 @@ const getDotStyle = (index: number) => ({
   --accent-rgb: 99, 102, 241;
 
   /* State Colors */
-  --state-dragging: rgba(var(--primary-rgb), 0.9);
-  --state-hover: rgba(var(--primary-rgb), 0.15);
-  --state-focus: rgba(var(--primary-rgb), 0.12);
-  --state-active: rgba(var(--accent-rgb), 0.2);
+  --state-dragging: rgba(var(--primary-rgb), 0.9); /* no token match for brand-primary at 0.9 */
+  --state-hover: var(--state-active-bg); /* rgba(78,205,196,0.15) */
+  --state-focus: var(--brand-primary-subtle); /* rgba(78,205,196,0.1) — closest to 0.12 */
+  --state-active: rgba(var(--accent-rgb), 0.2); /* no token match — accent indigo */
 
   /* Blur Values - component-specific (includes blur() wrapper) */
   --blur-light: blur(6px);
   --blur-medium: blur(10px);
   --blur-strong: blur(14px);
 
-  /* Shadows - component-specific (reference local --primary-rgb) */
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.10);
-  --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.14);
-  --shadow-glow: 0 0 20px rgba(var(--primary-rgb), 0.25);
-  --shadow-glow-strong: 0 0 32px rgba(var(--primary-rgb), 0.35);
+  /* Shadows - use global tokens from design-tokens.css */
+  --shadow-soft: var(--shadow-xs);
+  --shadow-medium: var(--shadow-md);
+  --shadow-strong: var(--shadow-lg);
+  --shadow-glow: var(--brand-primary-glow);
+  --shadow-glow-strong: 0 0 32px var(--brand-primary-dim); /* no token match for this exact value */
 
   /* Transitions — use global --duration-* tokens directly (no local aliases) */
 
@@ -224,8 +224,8 @@ const getDotStyle = (index: number) => ({
   /* Advanced shadow system */
   box-shadow:
     var(--shadow-soft),
-    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.15),
-    inset 0 calc(-1 * var(--space-0_5)) 0 rgba(var(--color-slate-900), 0.08);
+    inset 0 var(--space-0_5) 0 var(--glass-border-medium),
+    inset 0 calc(-1 * var(--space-0_5)) 0 var(--glass-bg-light);
 
   /* Sophisticated backdrop effects */
   backdrop-filter: var(--blur-medium);
@@ -264,8 +264,8 @@ const getDotStyle = (index: number) => ({
   border-color: var(--glass-border-strong);
   box-shadow:
     var(--shadow-medium),
-    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.25),
-    inset 0 calc(-1 * var(--space-0_5)) 0 rgba(var(--color-slate-900), 0.05);
+    inset 0 var(--space-0_5) 0 var(--glass-border-strong),
+    inset 0 calc(-1 * var(--space-0_5)) 0 var(--glass-bg-weak);
   cursor: grab;
 }
 
@@ -275,11 +275,11 @@ const getDotStyle = (index: number) => ({
   transform: scale(0.95);
   background:
     linear-gradient(135deg, var(--glass-bg-medium) 0%, var(--state-active) 100%);
-  border-color: rgba(var(--primary-rgb), 0.5);
+  border-color: var(--state-active-border); /* rgba(78,205,196,0.60) — closest to 0.5 */
   box-shadow:
     var(--shadow-soft),
     var(--shadow-glow),
-    inset 0 var(--space-0_5) var(--space-1) rgba(var(--color-slate-900), 0.1);
+    inset 0 var(--space-0_5) var(--space-1) var(--glass-bg-tint);
   cursor: grabbing;
   z-index: 100;
 }
@@ -288,10 +288,10 @@ const getDotStyle = (index: number) => ({
 .drag-handle:focus-visible,
 .drag-handle--focused {
   outline: none;
-  border-color: rgba(var(--primary-rgb), 0.8);
+  border-color: rgba(var(--primary-rgb), 0.8); /* no token match for brand-primary at 0.8 */
   box-shadow:
     var(--shadow-medium),
-    0 0 0 var(--space-0_5) rgba(var(--primary-rgb), 0.3);
+    0 0 0 var(--space-0_5) var(--brand-primary-dim);
   transform: translateY(calc(-1 * var(--space-0_5)));
 }
 
@@ -317,7 +317,7 @@ const getDotStyle = (index: number) => ({
 }
 
 .drag-handle__touch-area--active {
-  background-color: rgba(var(--primary-rgb), 0.05);
+  background-color: var(--brand-bg-dim); /* rgba(78,205,196,0.08) — closest to 0.05 */
 }
 
 /* Grip Container */
@@ -367,7 +367,7 @@ const getDotStyle = (index: number) => ({
   height: var(--space-1);
   background: var(--glass-border-strong);
   border-radius: var(--radius-full);
-  box-shadow: 0 var(--space-0_5) var(--space-0_5) rgba(var(--color-slate-900), 0.2);
+  box-shadow: 0 var(--space-0_5) var(--space-0_5) var(--glass-bg-medium);
   transition:
     background-color var(--duration-normal) ease,
     transform var(--duration-normal) var(--spring-bouncy),
@@ -375,15 +375,15 @@ const getDotStyle = (index: number) => ({
 }
 
 .drag-handle__dot--dragging {
-  background: rgb(var(--primary-light-rgb));
-  box-shadow: 0 0 var(--space-1) rgba(var(--primary-rgb), 0.6);
+  background: rgb(var(--primary-light-rgb)); /* no token match — primary-300 rgb tuple */
+  box-shadow: 0 0 var(--space-1) rgba(var(--primary-rgb), 0.6); /* no token match for brand-primary at 0.6 */
   transform: scale(1.2);
   animation: dot-pulse 1.5s infinite var(--spring-gentle);
 }
 
 .drag-handle:hover .drag-handle__dot {
   background: var(--text-primary);
-  box-shadow: 0 0 var(--space-1) rgba(var(--color-slate-50), 0.5);
+  box-shadow: 0 0 var(--space-1) var(--glass-handle);
 }
 
 /* Glow Layer */
@@ -396,7 +396,7 @@ const getDotStyle = (index: number) => ({
   transform: translate(-50%, -50%);
   background: radial-gradient(
     circle,
-    rgba(var(--primary-rgb), 0.4) 0%,
+    rgba(var(--primary-rgb), 0.4) 0%, /* no token match for brand-primary at 0.4 */
     transparent 70%
   );
   opacity: 0;
@@ -415,7 +415,7 @@ const getDotStyle = (index: number) => ({
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  border: var(--space-0_5) solid rgba(var(--primary-rgb), 0.5);
+  border: var(--space-0_5) solid var(--state-active-border); /* rgba(78,205,196,0.60) — closest to 0.5 */
   opacity: 0;
   pointer-events: none;
 }
@@ -442,7 +442,7 @@ const getDotStyle = (index: number) => ({
 
 .drag-handle__indicator {
   position: absolute;
-  background: rgba(var(--primary-rgb), 0.3);
+  background: var(--brand-primary-dim); /* rgba(78,205,196,0.3) */
   border-radius: var(--radius-full);
   display: none; /* Hidden by default, simpler visual preferred for now */
 }
@@ -450,7 +450,7 @@ const getDotStyle = (index: number) => ({
 /* Animations */
 @keyframes dot-pulse {
   0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 var(--space-2) rgba(var(--primary-rgb), 0.8); }
+  50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 var(--space-2) rgba(var(--primary-rgb), 0.8); } /* no token match for brand-primary at 0.8 */
 }
 
 @keyframes glow-pulse {

@@ -180,7 +180,7 @@ import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, ListTodo, FolderOpen, List } from 'lucide-vue-next'
+import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, FolderOpen, List } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
 
@@ -249,12 +249,11 @@ const currentDensity = computed(() => settingsStore.boardDensity)
 // TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
 const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', false, 'board-show-filters')
 
-// View Type Switcher (priority, date, status, category) (TASK-1215: Tauri-aware persistence)
-const currentViewType = usePersistentRef<'priority' | 'date' | 'status' | 'category' | 'list'>('flowstate:board-view-type', 'priority', 'board-view-type')
+// View Type Switcher (priority, date, category, list) (TASK-1215: Tauri-aware persistence)
+const currentViewType = usePersistentRef<'priority' | 'date' | 'category' | 'list'>('flowstate:board-view-type', 'priority', 'board-view-type')
 const viewTypeOptions = computed(() => [
   { value: 'priority' as const, label: t('filters.group_priority'), icon: Flag },
   { value: 'date' as const, label: t('filters.group_due_date'), icon: Calendar },
-  { value: 'status' as const, label: t('filters.group_status'), icon: ListTodo },
   { value: 'category' as const, label: t('filters.group_category'), icon: FolderOpen },
   { value: 'list' as const, label: t('filters.group_list'), icon: List }
 ])
@@ -317,7 +316,7 @@ const handleBoardKeydown = (event: KeyboardEvent) => {
 }
 
 // Task management methods (wrappers for composables to match template emitters)
-const handleAddTask = (payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' | 'category' }) => {
+const handleAddTask = (payload: { columnKey: string, projectId: string, viewType: 'priority' | 'date' | 'category' | 'list' }) => {
   openQuickTaskCreate(payload.columnKey, payload.projectId, payload.viewType)
 }
 

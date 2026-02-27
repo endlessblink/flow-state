@@ -3,6 +3,7 @@ import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { WeekEvent } from '@/types/tasks'
 import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
+import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
 
 export interface WeekDay {
   dayName: string
@@ -166,6 +167,49 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
       // Calculate overlapping positions for this day
       eventsByDay[dayIndex] = calculateOverlappingPositions(dayEvents) as WeekEvent[]
     })
+
+    // TASK-1418: Merge virtual recurring events when toggle is ON
+    if (taskStore.showFutureRecurring) {
+      const rangeStart = weekDays.value[0].dateString
+      const rangeEnd = weekDays.value[6].dateString
+      const virtualEvents = generateVirtualCalendarEvents(
+        taskStore.calendarFilteredTasks,
+        rangeStart,
+        rangeEnd
+      )
+
+      for (const virtual of virtualEvents) {
+        const dayIndex = weekDays.value.findIndex(d => d.dateString === virtual.scheduledDate)
+        if (dayIndex >= 0) {
+          const [hour, minute] = (virtual.scheduledTime || '09:00').split(':').map(Number)
+          const duration = virtual.duration || 30
+
+          if (hour >= 6 && hour < 23) {
+            const startTime = new Date(`${virtual.scheduledDate}T${virtual.scheduledTime || '09:00'}`)
+            const endTime = new Date(startTime.getTime() + duration * 60000)
+
+            eventsByDay[dayIndex].push({
+              id: virtual.id,
+              taskId: virtual.taskId,
+              instanceId: virtual.id,
+              title: virtual.title,
+              projectId: virtual.projectId,
+              startTime,
+              endTime,
+              duration,
+              startSlot: (hour - 6) * 2 + (minute === 30 ? 1 : 0),
+              slotSpan: Math.ceil(duration / 30),
+              color: '#4ECDC4',
+              column: 0,
+              totalColumns: 1,
+              dayIndex,
+              isDueDate: false,
+              isVirtual: true,
+            } as WeekEvent & { isVirtual: boolean })
+          }
+        }
+      }
+    }
 
     // Flatten all events into a single array
     return eventsByDay.flat()

@@ -2,10 +2,7 @@
 import { markRaw } from 'vue'
 import {
     CheckCircle,
-    Loader,
-    CalendarDays,
-    Inbox,
-    PauseCircle,
+    Circle,
     Zap,
     Timer,
     Clock,
@@ -13,11 +10,8 @@ import {
 } from 'lucide-vue-next'
 
 export const statusOptions = [
-    { value: 'done', label: 'Done', icon: markRaw(CheckCircle) },
-    { value: 'in_progress', label: 'In Progress', icon: markRaw(Loader) },
-    { value: 'planned', label: 'Planned', icon: markRaw(CalendarDays) },
-    { value: 'backlog', label: 'Backlog', icon: markRaw(Inbox) },
-    { value: 'on_hold', label: 'On Hold', icon: markRaw(PauseCircle) }
+    { value: 'todo', label: 'To Do', icon: markRaw(Circle) },
+    { value: 'done', label: 'Done', icon: markRaw(CheckCircle) }
 ] as const
 
 export const durationOptions = [

@@ -74,7 +74,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
             () => taskStore.createTaskWithUndo({
                 title,
                 description,
-                status: status as 'planned' | 'in_progress' | 'done',
+                status: status as 'todo' | 'done',
                 projectId: projectId
             }),
             '❌ Error creating task:'
@@ -99,7 +99,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
             title,
             description,
             projectId,
-            status: 'planned', // default status
+            status: 'todo', // default status
             attachments
         }
 
@@ -130,7 +130,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
 
     const moveTask = async (taskId: string, newStatus: string) => {
         return handleWithError(
-            () => taskStore.moveTaskWithUndo(taskId, newStatus as 'planned' | 'in_progress' | 'done'),
+            () => taskStore.moveTaskWithUndo(taskId, newStatus as 'todo' | 'done'),
             '❌ Error moving task:'
         )
     }

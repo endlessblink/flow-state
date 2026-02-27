@@ -207,6 +207,19 @@ export function useAppInitialization() {
             console.warn('⚠️ Challenge system initialization failed:', error)
         }
 
+        // TASK-1418: Process deferred recurring task clones
+        // Creates clones for recurring tasks whose next due date has arrived
+        try {
+            const { useRecurrenceScheduler } = await import('@/composables/useRecurrenceScheduler')
+            const scheduler = useRecurrenceScheduler()
+            const created = await scheduler.processDeferred()
+            if (created > 0) {
+                console.log(`[RECURRENCE] Created ${created} deferred recurring clone(s)`)
+            }
+        } catch (error) {
+            console.warn('[RECURRENCE] Deferred scheduler failed (non-critical):', error)
+        }
+
         // FEATURE-1317: Auto-refresh work profile insights (non-blocking)
         if (authStore.isAuthenticated) {
             try {

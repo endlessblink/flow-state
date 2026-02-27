@@ -103,7 +103,7 @@ export function validateTask(task: unknown): TaskValidationResult {
 
   // Check for required fields
   if (!taskObj.status) {
-    warnings.push('Task has no status, will default to "planned"')
+    warnings.push('Task has no status, will default to "todo"')
   }
 
   // Check dates
@@ -201,7 +201,7 @@ export function sanitizeTask(task: unknown, options: {
       ? taskObj.title
       : 'Recovered Task',
     description: typeof taskObj.description === 'string' ? taskObj.description : '',
-    status: isValidStatus(taskObj.status) ? taskObj.status : 'planned',
+    status: isValidStatus(taskObj.status) ? taskObj.status : 'todo',
     priority: isValidPriority(taskObj.priority) ? taskObj.priority : 'medium',
     progress: typeof taskObj.progress === 'number' ? taskObj.progress : 0,
     completedPomodoros: typeof taskObj.completedPomodoros === 'number' ? taskObj.completedPomodoros : 0,
@@ -306,7 +306,7 @@ export function validateBeforeSave(tasks: Task[]): {
 
 // Helper functions
 function isValidStatus(status: unknown): status is Task['status'] {
-  const validStatuses = ['planned', 'in_progress', 'done', 'backlog', 'on_hold']
+  const validStatuses = ['todo', 'done']
   return typeof status === 'string' && validStatuses.includes(status)
 }
 

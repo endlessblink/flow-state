@@ -91,7 +91,7 @@ export class GlobalErrorHandler {
     const stack = error instanceof Error ? error.stack : undefined
 
     const report: ErrorReport = {
-      id: `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `err_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       severity,
       category,
       message: errorMessage,
@@ -156,11 +156,12 @@ export class GlobalErrorHandler {
     this.lastNotificationTime = now
     this.activeNotifications++
 
+    // Note: CSS vars work in inline styles once element is in DOM
     const colors = {
-      [ErrorSeverity.INFO]: '#3b82f6',     // Blue
-      [ErrorSeverity.WARNING]: '#f59e0b',  // Amber
-      [ErrorSeverity.ERROR]: '#ef4444',    // Red
-      [ErrorSeverity.CRITICAL]: '#dc2626'  // Dark red
+      [ErrorSeverity.INFO]: 'var(--color-info)',        // Blue
+      [ErrorSeverity.WARNING]: 'var(--color-warning)',  // Amber
+      [ErrorSeverity.ERROR]: 'var(--color-danger)',     // Red
+      [ErrorSeverity.CRITICAL]: '#dc2626'               // Dark red — no exact token for critical-dark-red
     }
 
     const notification = document.createElement('div')
@@ -172,7 +173,7 @@ export class GlobalErrorHandler {
       color: white;
       padding: 16px;
       border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: var(--shadow-dark-md);
       z-index: 10001;
       max-width: 400px;
       font-family: system-ui, -apple-system, sans-serif;
@@ -295,11 +296,11 @@ export class GlobalErrorHandler {
       position: fixed;
       top: 20px;
       right: 20px;
-      background: #ef4444;
+      background: var(--color-danger);
       color: white;
       padding: 16px;
       border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      box-shadow: var(--shadow-dark-md);
       z-index: 10001;
       max-width: 400px;
       font-family: system-ui, -apple-system, sans-serif;
@@ -348,7 +349,7 @@ export class GlobalErrorHandler {
     buttonDiv.style.gap = '8px'
 
     const copyButton = document.createElement('button')
-    copyButton.style.background = 'rgba(255,255,255,0.2)'
+    copyButton.style.background = 'var(--border-hover)' /* rgba(255,255,255,0.20) */
     copyButton.style.border = 'none'
     copyButton.style.color = 'white'
     copyButton.style.padding = '6px 12px'
@@ -365,7 +366,7 @@ export class GlobalErrorHandler {
     })
 
     const detailsButton = document.createElement('button')
-    detailsButton.style.background = 'rgba(255,255,255,0.1)'
+    detailsButton.style.background = 'var(--glass-border)' /* rgba(255,255,255,0.10) */
     detailsButton.style.border = 'none'
     detailsButton.style.color = 'white'
     detailsButton.style.padding = '6px 12px'
@@ -439,7 +440,7 @@ window.showFullError = (encodedError: string) => {
     modal.style.cssText = `
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.5);
+      background: var(--overlay-bg);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -455,7 +456,7 @@ window.showFullError = (encodedError: string) => {
       max-width: 600px;
       max-height: 80vh;
       overflow-y: auto;
-      color: #1f2937;
+      color: #1f2937; /* intentional: light-theme debug modal, dark text on white */
     `
 
     const errorText = error.stack
@@ -478,7 +479,7 @@ window.showFullError = (encodedError: string) => {
     const closeBtn = document.createElement('button')
     closeBtn.style.background = 'none'
     closeBtn.style.border = 'none'
-    closeBtn.style.color = '#6b7280'
+    closeBtn.style.color = '#6b7280' /* intentional: light-theme debug modal */
     closeBtn.style.cursor = 'pointer'
     closeBtn.style.fontSize = '24px'
     closeBtn.textContent = '×'
@@ -488,7 +489,7 @@ window.showFullError = (encodedError: string) => {
     headerDiv.appendChild(closeBtn)
 
     const pre = document.createElement('pre')
-    pre.style.background = '#f3f4f6'
+    pre.style.background = '#f3f4f6' /* intentional: light-theme debug modal */
     pre.style.padding = '16px'
     pre.style.borderRadius = '8px'
     pre.style.fontSize = '12px'
@@ -502,7 +503,7 @@ window.showFullError = (encodedError: string) => {
     buttonDiv.style.gap = '8px'
 
     const copyBtn = document.createElement('button')
-    copyBtn.style.background = '#3b82f6'
+    copyBtn.style.background = '#3b82f6' /* intentional: light-theme debug modal */
     copyBtn.style.color = 'white'
     copyBtn.style.border = 'none'
     copyBtn.style.padding = '8px 16px'
@@ -519,8 +520,8 @@ window.showFullError = (encodedError: string) => {
     })
 
     const closeBtn2 = document.createElement('button')
-    closeBtn2.style.background = '#e5e7eb'
-    closeBtn2.style.color = '#374151'
+    closeBtn2.style.background = '#e5e7eb' /* intentional: light-theme debug modal */
+    closeBtn2.style.color = '#374151'   /* intentional: light-theme debug modal */
     closeBtn2.style.border = 'none'
     closeBtn2.style.padding = '8px 16px'
     closeBtn2.style.borderRadius = '6px'

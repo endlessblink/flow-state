@@ -230,7 +230,14 @@ async function updateStatus() {
  * Execute a single sync operation against Supabase
  */
 async function executeOperation(operation: WriteOperation): Promise<SyncResult> {
-  const { entityType, entityId, payload } = operation
+  const { entityType, entityId, payload: rawPayload } = operation
+
+  // TASK-1418: Sanitize task status in sync queue payloads.
+  // Stale IndexedDB entries from before the status migration may contain 'todo'
+  // which the DB constraint rejects. Map to 'planned' for all task writes.
+  const payload = (entityType === 'task' && rawPayload.status === 'todo')
+    ? { ...rawPayload, status: 'planned' }
+    : rawPayload
 
   // Map entity type to Supabase table name
   const tableMap: Record<SyncEntityType, string> = {

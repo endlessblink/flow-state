@@ -16,6 +16,7 @@ export function useTaskPersistence(
     hideCanvasDoneTasks: Ref<boolean>,
     hideCalendarDoneTasks: Ref<boolean>,
     hideCanvasOverdueTasks: Ref<boolean>,
+    showFutureRecurring: Ref<boolean>,
     activeSmartView: Ref<SmartView>,
     activeStatusFilter: Ref<string | null>,
     // TASK-1215: Added duration filter persistence
@@ -43,6 +44,7 @@ export function useTaskPersistence(
         hideCanvasDoneTasks?: boolean
         hideCalendarDoneTasks?: boolean
         hideCanvasOverdueTasks?: boolean
+        showFutureRecurring?: boolean
     }
 
     // --- SQL PERSISTENCE ---
@@ -455,6 +457,7 @@ export function useTaskPersistence(
         hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? true
         hideCalendarDoneTasks.value = state.hideCalendarDoneTasks ?? false
         hideCanvasOverdueTasks.value = state.hideCanvasOverdueTasks ?? false
+        showFutureRecurring.value = state.showFutureRecurring ?? false
     }
 
     const loadFiltersFromLocalStorage = () => {
@@ -520,7 +523,8 @@ export function useTaskPersistence(
                 activeDurationFilter: activeDurationFilter.value,
                 hideCanvasDoneTasks: hideCanvasDoneTasks.value,
                 hideCalendarDoneTasks: hideCalendarDoneTasks.value,
-                hideCanvasOverdueTasks: hideCanvasOverdueTasks.value
+                hideCanvasOverdueTasks: hideCanvasOverdueTasks.value,
+                showFutureRecurring: showFutureRecurring.value
             }
             localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
 

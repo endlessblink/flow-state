@@ -165,7 +165,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 canvasPosition: shouldCreateInInbox ? undefined : { x, y },
                 parentId: shouldCreateInInbox ? undefined : parentId,
                 parentTaskId: shouldCreateInInbox ? undefined : parentTaskId,
-                status: (data.status as 'planned' | 'in_progress' | 'done') || 'planned',
+                status: (data.status as 'todo' | 'done') || 'todo',
                 priority: data.priority || 'medium',
                 dueDate: data.dueDate,
                 projectId: data.projectId,

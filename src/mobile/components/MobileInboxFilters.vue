@@ -58,6 +58,7 @@
 </template>
 
 <script setup lang="ts">
+import type { Component } from 'vue'
 import {
   Inbox, Calendar, CalendarClock, AlertCircle,
   Layers, ChevronDown, ListFilter, FolderOpen, Flag, CheckCircle2, ArrowUpDown
@@ -74,7 +75,7 @@ const timeFilterIcons = {
   overdue: AlertCircle
 } as const
 
-const groupByIcons: Record<GroupByType, any> = {
+const groupByIcons: Record<GroupByType, Component> = {
   none: ListFilter,
   date: Calendar,
   project: FolderOpen,

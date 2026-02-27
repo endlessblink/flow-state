@@ -10,7 +10,7 @@ export function useBoardModals() {
 
     // Quick Task Create Modal state
     const showQuickTaskCreate = ref(false)
-    const pendingTaskColumnKey = ref<string>('planned')
+    const pendingTaskColumnKey = ref<string>('todo')
     const pendingTaskProjectId = ref<string | undefined>(undefined)
     const pendingTaskViewType = ref<BoardViewType>('status')
 
@@ -41,7 +41,7 @@ export function useBoardModals() {
 
     const closeQuickTaskCreate = () => {
         showQuickTaskCreate.value = false
-        pendingTaskColumnKey.value = 'planned'
+        pendingTaskColumnKey.value = 'todo'
         pendingTaskProjectId.value = undefined
         pendingTaskViewType.value = 'status'
     }

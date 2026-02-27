@@ -409,15 +409,15 @@ defineExpose({
   --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* State colors derived from global teal brand color */
-  --state-selected: rgba(var(--color-primary-500), 0.85);
-  --state-selected-hover: rgba(var(--color-primary-500), 0.95);
-  --state-indeterminate: rgba(var(--toggle-purple-rgb), 0.85);
-  --state-hover: rgba(var(--color-primary-500), 0.15);
-  --state-focus: rgba(var(--color-primary-500), 0.12);
+  --state-selected: rgba(var(--color-primary-500), 0.85); /* no token match for brand-primary at 0.85 */
+  --state-selected-hover: rgba(var(--color-primary-500), 0.95); /* no token match for brand-primary at 0.95 */
+  --state-indeterminate: rgba(var(--toggle-purple-rgb), 0.85); /* no token match — local purple */
+  --state-hover: var(--state-active-bg); /* rgba(78,205,196,0.15) */
+  --state-focus: var(--brand-primary-subtle); /* rgba(78,205,196,0.1) — closest to 0.12 */
 
   /* Glow shadows derived from global teal brand color */
-  --shadow-glow: 0 0 24px rgba(var(--color-primary-500), 0.3);
-  --shadow-glow-strong: 0 0 32px rgba(var(--color-primary-500), 0.4);
+  --shadow-glow: 0 0 24px var(--brand-primary-dim); /* rgba(78,205,196,0.3) */
+  --shadow-glow-strong: 0 0 32px rgba(var(--color-primary-500), 0.4); /* --state-hover-border is 0.4 but is a border token, not shadow */
 }
 
 /* ==========================================================================
@@ -494,7 +494,7 @@ defineExpose({
     linear-gradient(135deg, var(--state-hover) 0%, var(--glass-bg-medium) 50%, var(--glass-bg-light) 100%),
     linear-gradient(225deg, var(--glass-bg-heavy) 0%, var(--glass-bg-medium) 100%);
 
-  border-color: rgba(var(--color-primary-500), 0.4);
+  border-color: var(--state-hover-border); /* rgba(78,205,196,0.40) */
 
   box-shadow:
     var(--shadow-medium),
@@ -512,7 +512,7 @@ defineExpose({
 /* Focus state with enhanced visibility */
 .toggle-box:focus-visible {
   outline: none;
-  border-color: rgba(var(--color-primary-500), 0.6);
+  border-color: var(--state-active-border); /* rgba(78,205,196,0.60) */
   box-shadow:
     var(--shadow-medium),
     0 0 0 3px var(--state-focus),
@@ -524,10 +524,10 @@ defineExpose({
    ========================================================================== */
 .toggle-box--selected {
   background:
-    linear-gradient(135deg, var(--state-selected) 0%, rgba(var(--color-primary-300), 0.9) 100%),
-    linear-gradient(225deg, rgba(var(--color-primary-500), 0.8) 0%, var(--state-selected) 100%);
+    linear-gradient(135deg, var(--state-selected) 0%, rgba(var(--color-primary-300), 0.9) 100%), /* no token match — primary-300 at 0.9 */
+    linear-gradient(225deg, rgba(var(--color-primary-500), 0.8) 0%, var(--state-selected) 100%); /* no token match — brand-primary at 0.8 */
 
-  border-color: rgba(var(--color-primary-500), 1);
+  border-color: var(--brand-primary);
   box-shadow:
     var(--shadow-medium),
     var(--shadow-glow-strong),
@@ -540,9 +540,9 @@ defineExpose({
 .toggle-box--selected:hover:not(.toggle-box--disabled) {
   background:
     linear-gradient(135deg, var(--state-selected-hover) 0%, var(--state-selected) 100%),
-    linear-gradient(225deg, rgba(var(--color-primary-300), 0.95) 0%, var(--state-selected-hover) 100%);
+    linear-gradient(225deg, rgba(var(--color-primary-300), 0.95) 0%, var(--state-selected-hover) 100%); /* no token match — primary-300 at 0.95 */
 
-  border-color: rgba(var(--color-primary-500), 1);
+  border-color: var(--brand-primary);
   transform: translateY(-2px) scale(1.08) translateZ(0);
 }
 
@@ -551,7 +551,7 @@ defineExpose({
    ========================================================================== */
 .toggle-box--indeterminate {
   background:
-    linear-gradient(135deg, var(--state-indeterminate) 0%, rgba(167, 139, 250, 0.9) 100%),
+    linear-gradient(135deg, var(--state-indeterminate) 0%, rgba(167, 139, 250, 0.9) 100%), /* no token match — light purple-300 tint */
     linear-gradient(225deg, rgba(var(--toggle-purple-rgb), 0.8) 0%, var(--state-indeterminate) 100%);
 
   border-color: rgba(var(--toggle-purple-rgb), 1);
@@ -566,8 +566,8 @@ defineExpose({
 
 .toggle-box--indeterminate:hover:not(.toggle-box--disabled) {
   background:
-    linear-gradient(135deg, rgba(167, 139, 250, 0.95) 0%, var(--state-indeterminate) 100%),
-    linear-gradient(225deg, rgba(196, 181, 253, 0.95) 0%, rgba(167, 139, 250, 0.95) 100%);
+    linear-gradient(135deg, rgba(167, 139, 250, 0.95) 0%, var(--state-indeterminate) 100%), /* no token match — light purple-300 tint */
+    linear-gradient(225deg, rgba(196, 181, 253, 0.95) 0%, rgba(167, 139, 250, 0.95) 100%); /* no token match — purple-200 tint */
 
   transform: translateY(-2px) scale(1.08) translateZ(0);
 }
@@ -611,7 +611,7 @@ defineExpose({
   inset: -2px; /* RTL: full coverage glow layer */
   background: linear-gradient(45deg,
     transparent 30%,
-    rgba(var(--color-primary-500), 0.1) 50%,
+    var(--brand-primary-subtle) 50%,
     transparent 70%);
   border-radius: var(--radius-md);
   opacity: 0;
@@ -627,7 +627,7 @@ defineExpose({
 .toggle-box__border-glow {
   position: absolute;
   inset: 0; /* RTL: full coverage border glow */
-  border: 1px solid rgba(var(--color-primary-500), 0.3);
+  border: 1px solid var(--brand-primary-dim);
   border-radius: calc(var(--radius-md) - 1px);
   opacity: 0;
   transition: all var(--transition-normal) var(--spring-smooth);
@@ -636,7 +636,7 @@ defineExpose({
 
 .toggle-box--selected .toggle-box__border-glow {
   opacity: 1;
-  border-color: rgba(var(--color-primary-500), 0.6);
+  border-color: var(--state-active-border); /* rgba(78,205,196,0.60) */
   animation: borderPulse 2s ease-in-out infinite;
 }
 
@@ -649,7 +649,7 @@ defineExpose({
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 1px 2px var(--overlay-bg));
   animation: checkmarkAppear 0.4s var(--ease-out-back);
 }
 
@@ -665,7 +665,7 @@ defineExpose({
 .toggle-box__empty-inner {
   width: 12px;
   height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.6);
+  border: 2px solid var(--glass-border-strong);
   border-radius: var(--radius-xs);
   transition: all var(--transition-normal) var(--spring-smooth);
   background: var(--glass-bg-soft);
@@ -673,12 +673,12 @@ defineExpose({
 }
 
 .toggle-box:hover .toggle-box__empty-inner {
-  border-color: rgba(var(--color-primary-500), 0.8);
-  background: rgba(var(--color-primary-500), 0.1);
+  border-color: rgba(var(--color-primary-500), 0.8); /* no token match for brand-primary at 0.8 */
+  background: var(--brand-primary-subtle);
   transform: scale(1.1);
   box-shadow:
     inset 0 1px 2px var(--glass-bg-tint),
-    0 0 8px rgba(var(--color-primary-500), 0.2);
+    0 0 8px var(--brand-bg-light); /* rgba(78,205,196,0.12) — closest to 0.2 glow */
 }
 
 /* ==========================================================================
@@ -763,14 +763,14 @@ defineExpose({
 
 .toolbar-btn:hover {
   background: var(--glass-bg-medium);
-  border-color: rgba(var(--color-primary-500), 0.3);
-  color: rgba(var(--color-primary-500), 0.9);
+  border-color: var(--brand-primary-dim); /* rgba(78,205,196,0.3) */
+  color: rgba(var(--color-primary-500), 0.9); /* no token match — brand-primary at 0.9 */
   transform: translateY(-1px) translateZ(0);
 }
 
 .toolbar-btn--active {
   background: var(--state-selected);
-  border-color: rgba(var(--color-primary-500), 0.6);
+  border-color: var(--state-active-border); /* rgba(78,205,196,0.60) */
   color: white;
 }
 

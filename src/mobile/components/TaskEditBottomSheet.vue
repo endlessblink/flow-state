@@ -160,7 +160,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import {
   Flag, Calendar, CalendarPlus, CalendarDays, X,
-  Circle, Clock, CheckCircle2, Pause, Archive
+  Circle, CheckCircle2
 } from 'lucide-vue-next'
 import type { Task } from '@/types/tasks'
 
@@ -182,7 +182,7 @@ const editedDescription = ref('')
 const editedPriority = ref<'low' | 'medium' | 'high' | null>(null)
 const editedDueDate = ref<string | undefined>(undefined)
 const editedDueDateInput = ref('')
-const editedStatus = ref<Task['status']>('planned')
+const editedStatus = ref<Task['status']>('todo')
 const showDatePicker = ref(false)
 
 // Refs
@@ -197,11 +197,8 @@ const priorityOptions = [
 ]
 
 const statusOptions = [
-  { value: 'planned' as const, label: 'To Do', icon: Circle },
-  { value: 'in_progress' as const, label: 'In Progress', icon: Clock },
-  { value: 'done' as const, label: 'Done', icon: CheckCircle2 },
-  { value: 'on_hold' as const, label: 'On Hold', icon: Pause },
-  { value: 'backlog' as const, label: 'Backlog', icon: Archive }
+  { value: 'todo' as const, label: 'To Do', icon: Circle },
+  { value: 'done' as const, label: 'Done', icon: CheckCircle2 }
 ]
 
 // Computed
@@ -287,7 +284,7 @@ function setDueDate(preset: 'today' | 'tomorrow') {
     date.setDate(date.getDate() + 1)
   }
   date.setHours(0, 0, 0, 0)
-  editedDueDate.value = date.toISOString()
+  editedDueDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   editedDueDateInput.value = date.toISOString().split('T')[0]
   triggerHaptic(10)
 }
@@ -301,7 +298,7 @@ function clearDueDate() {
 function handleDatePickerChange() {
   if (editedDueDateInput.value) {
     const date = new Date(editedDueDateInput.value + 'T00:00:00')
-    editedDueDate.value = date.toISOString()
+    editedDueDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   }
   showDatePicker.value = false
 }

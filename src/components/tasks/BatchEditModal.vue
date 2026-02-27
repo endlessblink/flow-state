@@ -250,11 +250,8 @@ const emit = defineEmits<{
 
 // Status options for CustomSelect
 const statusOptions = [
-  { label: 'Planned', value: 'planned' },
-  { label: 'Active', value: 'in_progress' },
-  { label: '✓', value: 'done' },
-  { label: 'Backlog', value: 'backlog' },
-  { label: 'On Hold', value: 'on_hold' }
+  { label: 'To Do', value: 'todo' },
+  { label: '✓', value: 'done' }
 ]
 
 // Priority options for CustomSelect

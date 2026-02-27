@@ -458,7 +458,20 @@ export function fromSupabaseProject(record: SupabaseProject): Project {
 }
 
 // Valid status values per database constraint
-const VALID_TASK_STATUSES = ['planned', 'in_progress', 'done', 'backlog', 'on_hold'] as const
+const VALID_TASK_STATUSES = ['todo', 'done'] as const
+
+/**
+ * TASK-1418: Convert app status ('todo'/'done') to DB status ('planned'/'done')
+ * until the DB migration runs. Use this in ANY code that writes status to the DB
+ * without going through toSupabaseTask() (e.g., sync queue payloads, RPC calls).
+ *
+ * After running the DB migration (ALTER CHECK constraint to accept 'todo'),
+ * remove this function and all its call sites.
+ */
+export function toDbStatus(appStatus: string): string {
+    const DB_STATUS_MAP: Record<string, string> = { 'todo': 'planned', 'done': 'done' }
+    return DB_STATUS_MAP[appStatus] || 'planned'
+}
 
 export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
     const now = new Date().toISOString()
@@ -473,7 +486,13 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
     // SAFETY: Ensure status is valid per database constraint (tasks_status_check)
     const sanitizedStatus = VALID_TASK_STATUSES.includes(task.status as typeof VALID_TASK_STATUSES[number])
         ? task.status
-        : 'planned' // Default fallback
+        : 'todo' // Default fallback
+
+    // TASK-1418: Reverse mapping for DB compatibility until migration runs
+    const dbStatus = toDbStatus(sanitizedStatus)
+    if (import.meta.env?.DEV && sanitizedStatus !== dbStatus) {
+        console.debug(`[TASK-1418] toSupabaseTask status mapping: '${sanitizedStatus}' → '${dbStatus}' for task ${task.id?.slice(0, 8)}`)
+    }
 
     return {
         id: task.id,
@@ -481,7 +500,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         project_id: sanitizedProjectId,
         title: task.title,
         description: task.description,
-        status: sanitizedStatus,
+        status: dbStatus,
         priority: task.priority,
 
         progress: task.progress,
@@ -550,7 +569,18 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         id: record.id,
         title: record.title,
         description: record.description || '',
-        status: record.status as Task['status'],
+        status: (() => {
+            const statusRaw = record.status as string
+            const STATUS_MIGRATION: Record<string, 'todo' | 'done'> = {
+                'planned': 'todo',
+                'in_progress': 'todo',
+                'backlog': 'todo',
+                'on_hold': 'todo',
+                'todo': 'todo',
+                'done': 'done'
+            }
+            return STATUS_MIGRATION[statusRaw] || 'todo'
+        })(),
         priority: (record.priority as Task['priority']) || null,
 
         projectId: record.project_id || UNCATEGORIZED_PROJECT_ID,
@@ -560,7 +590,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         estimatedPomodoros: record.estimated_pomodoros || 1,
         progress: record.progress || 0,
 
-        dueDate: record.due_date || '', // App uses empty string for no date sometimes? Types say string.
+        dueDate: record.due_date ? (record.due_date.includes('T') ? record.due_date.split('T')[0] : record.due_date) : '',
         dueTime: record.due_time || undefined,
         estimatedDuration: record.estimated_duration || undefined,
 

@@ -227,14 +227,14 @@ function updatePriority(priority: 'low' | 'medium' | 'high') {
 function setToday() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  emit('updateTask', { dueDate: today.toISOString() })
+  emit('updateTask', { dueDate: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}` })
 }
 
 function setTomorrow() {
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
   tomorrow.setHours(0, 0, 0, 0)
-  emit('updateTask', { dueDate: tomorrow.toISOString() })
+  emit('updateTask', { dueDate: `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}` })
 }
 
 function setNextWeek() {
@@ -243,7 +243,7 @@ function setNextWeek() {
   const daysUntilNextMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek
   nextMonday.setDate(nextMonday.getDate() + daysUntilNextMonday)
   nextMonday.setHours(0, 0, 0, 0)
-  emit('updateTask', { dueDate: nextMonday.toISOString() })
+  emit('updateTask', { dueDate: `${nextMonday.getFullYear()}-${String(nextMonday.getMonth() + 1).padStart(2, '0')}-${String(nextMonday.getDate()).padStart(2, '0')}` })
 }
 
 function clearDate() {
@@ -255,7 +255,7 @@ function handleDatePickerSelect(timestamp: number | null) {
   if (timestamp) {
     const date = new Date(timestamp)
     date.setHours(0, 0, 0, 0)
-    emit('updateTask', { dueDate: date.toISOString() })
+    emit('updateTask', { dueDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` })
   } else {
     emit('updateTask', { dueDate: '' })
   }

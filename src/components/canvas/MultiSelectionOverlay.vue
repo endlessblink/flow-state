@@ -49,17 +49,11 @@
           <div v-if="showBulkMenu" class="bulk-menu">
             <div class="bulk-menu-section">
               <span class="bulk-menu-title">Status</span>
-              <button class="bulk-menu-item" @click="bulkUpdateStatus('planned')">
-                Planned
-              </button>
-              <button class="bulk-menu-item" @click="bulkUpdateStatus('in_progress')">
-                In Progress
+              <button class="bulk-menu-item" @click="bulkUpdateStatus('todo')">
+                To Do
               </button>
               <button class="bulk-menu-item" @click="bulkUpdateStatus('done')">
                 Done
-              </button>
-              <button class="bulk-menu-item" @click="bulkUpdateStatus('backlog')">
-                Backlog
               </button>
             </div>
             

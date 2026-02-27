@@ -494,13 +494,13 @@ export function useAITaskAssist() {
     }
 
     // Status fallback
-    if (task.dueDate && task.dueDate < today && task.status !== 'in_progress' && task.status !== 'done') {
+    if (task.dueDate && task.dueDate < today && task.status !== 'done') {
       suggestions.push({
         field: 'status',
         currentValue: task.status || null,
-        suggestedValue: 'in_progress',
+        suggestedValue: 'todo',
         confidence: 0.5,
-        reasoning: 'Task is overdue, should be in progress'
+        reasoning: 'Task is overdue, should be active'
       })
     }
 

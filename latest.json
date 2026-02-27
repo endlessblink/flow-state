@@ -1,11 +1,11 @@
 {
-  "version": "1.2.91",
-  "notes": "v1.2.91: batch update with accumulated fixes and improvements",
-  "pub_date": "2026-02-23T08:20:27.885Z",
+  "version": "1.2.92",
+  "notes": "v1.2.92: OSS readiness, CI/CD parameterization, new edge functions, accumulated fixes",
+  "pub_date": "2026-02-25T16:20:16.167Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTF3U29VWHZLenM2aWc0UnRIcDF0VHk3VEFkZm9na2xHeTRwWnMydTJoZnJmZlZxNG1CL1hYNFhJRS9YYkpMdXZvVk5pTzRZcmppdTJ0ekVHRkRSVWdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxODM0ODI3CWZpbGU6Rmxvd1N0YXRlXzEuMi45MV9hbWQ2NC5BcHBJbWFnZQo4NjNOTmozRU5JRElxMDI0aHVYbi9Gc0NFcmM4cHdwRkcrc0g2VkVtMjkrUHNUT0Jkek1hVUtDQXhIZWo0OFUyL0F3cWprWElmaVNMS1hMSXZKWGVCdz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.91_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRSt3VnpYRStQWW9FekNhaTU3VFBJZWlGT1g4NmExQ3lJT0s4dWxPcVE2cllaRVdUaXJGd3dSOTd3TC9tS0tFcE0vanl3cmwzVlJCcm1CNnBqQkd6L3dzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcyMDM2NDE2CWZpbGU6Rmxvd1N0YXRlXzEuMi45Ml9hbWQ2NC5BcHBJbWFnZQpCeml3TlREUHpENFdlQjlaREpxMUVUOEVLVFd4MFhkcnFlMGZvVkYxQ2t5dkxnN3NhTW9YeTc2cFhwTG5wM2pCQ0hueGVmQ2plTkg3L2RwRTFLTExDZz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.92_amd64.AppImage"
     }
   }
 }

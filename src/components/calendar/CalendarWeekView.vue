@@ -3,11 +3,12 @@ import { ref, computed, inject, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { WeekEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
+import type { WeekDay } from '@/composables/calendar/useCalendarWeekView'
 import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
 import { truncateUrlsInText } from '@/utils/urlTruncate'
 
 const props = defineProps<{
-  weekDays: Record<string, unknown>[]
+  weekDays: WeekDay[]
   workingHours: number[]
   weekEvents: WeekEvent[]
   currentTaskId?: string | null
@@ -44,7 +45,15 @@ defineEmits<{
 }>()
 
 // Inject helpers from parent CalendarView
-const helpers = inject('calendar-helpers') as Record<string, unknown>
+interface CalendarHelpers {
+  formatHour: (hour: number) => string
+  formatEventTime: (event: WeekEvent) => string
+  isCurrentWeekTimeCell: (dateString: string, hour: number) => boolean
+  getPriorityClass: (event: WeekEvent) => string
+  getTaskStatus: (event: WeekEvent) => string
+  getStatusIcon: (status: string) => string
+  getStatusLabel: (event: WeekEvent) => string
+}
 const {
   formatHour,
   formatEventTime,
@@ -53,12 +62,17 @@ const {
   getTaskStatus,
   getStatusIcon,
   getStatusLabel
-} = helpers
+} = inject('calendar-helpers') as CalendarHelpers
 
 // TASK-1322: Tooltip with task description
 const taskStore = useTaskStore()
 
-const getEventTooltip = (event: Record<string, unknown>) => {
+const getEventTooltip = (event: WeekEvent) => {
+  // TASK-1418: Virtual events get a "Recurring preview" tooltip
+  if (event.isVirtual) {
+    const dateStr = event.startTime?.toISOString?.()?.slice(0, 10) || ''
+    return `Recurring — will be created on ${dateStr}`
+  }
   const task = taskStore.getTask(event.taskId)
   const lines = [event.title]
   if (task?.description) {
@@ -67,7 +81,7 @@ const getEventTooltip = (event: Record<string, unknown>) => {
   }
   const time = formatEventTime(event)
   if (time) lines.unshift(`🕐 ${time}`)
-  const status = getStatusLabel(getTaskStatus(event))
+  const status = getStatusLabel(event)
   if (status) lines.push(`Status: ${status}`)
   return lines.join('\n')
 }
@@ -238,16 +252,17 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                   'dragging': isDragging && draggedEventId === event.id,
                   'selected': selectedEventIds?.has(event.id),
                   'status-done': getTaskStatus(event) === 'done',
-                  'status-active': getTaskStatus(event) === 'in_progress'
+                  'status-active': getTaskStatus(event) === 'in_progress',
+                  'week-event--virtual': event.isVirtual
                 }"
-                :style="{ ...getWeekEventCellStyle(event), backgroundColor: event.color }"
+                :style="{ ...getWeekEventCellStyle(event), backgroundColor: event.isVirtual ? undefined : event.color }"
                 :title="getEventTooltip(event)"
-                draggable="true"
-                @dragstart="$emit('eventDragStart', $event, event)"
-                @dragend="$emit('eventDragEnd', $event, event)"
-                @click.stop="$emit('eventClick', $event, event)"
-                @dblclick.stop="$emit('eventDblClick', event)"
-                @contextmenu.prevent.stop="$emit('eventContextMenu', $event, event)"
+                :draggable="!event.isVirtual"
+                @dragstart="!event.isVirtual && $emit('eventDragStart', $event, event)"
+                @dragend="!event.isVirtual && $emit('eventDragEnd', $event, event)"
+                @click.stop="!event.isVirtual && $emit('eventClick', $event, event)"
+                @dblclick.stop="!event.isVirtual && $emit('eventDblClick', event)"
+                @contextmenu.prevent.stop="!event.isVirtual && $emit('eventContextMenu', $event, event)"
               >
                 <!-- Priority Stripe -->
                 <div
@@ -597,6 +612,28 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 
 .week-event.status-done .event-title {
   text-decoration: line-through;
+}
+
+/* TASK-1418: Virtual recurring event ghost styling */
+.week-event--virtual {
+  opacity: 0.5;
+  border-style: dashed !important;
+  border-width: 1px;
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-subtle) !important;
+  color: var(--text-primary) !important;
+  pointer-events: none;
+  cursor: default;
+  position: relative;
+}
+
+.week-event--virtual::after {
+  content: '\1F501';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  opacity: 0.7;
 }
 
 /* TASK-1317: External calendar events */

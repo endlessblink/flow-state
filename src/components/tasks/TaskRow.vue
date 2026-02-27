@@ -45,7 +45,7 @@
     <!-- Status Dropdown -->
     <div class="task-row__status" @click.stop>
       <CustomSelect
-        :model-value="task.status || 'planned'"
+        :model-value="task.status || 'todo'"
         :options="statusOptions"
         :placeholder="$t('task.select_status')"
         @update:model-value="(val) => $emit('updateStatus', task.id, String(val))"
@@ -128,11 +128,8 @@ defineEmits<{
 }>()
 
 const statusOptions = computed(() => [
-  { label: t('task.status_todo'), value: 'planned' },
-  { label: t('task.status_in_progress'), value: 'in_progress' },
-  { label: t('task.status_done'), value: 'done' },
-  { label: t('task.status_backlog'), value: 'backlog' },
-  { label: t('task.status_on_hold'), value: 'on_hold' }
+  { label: t('task.status_todo'), value: 'todo' },
+  { label: t('task.status_done'), value: 'done' }
 ])
 
 const router = useRouter()
@@ -213,10 +210,10 @@ onUnmounted(() => {
 }
 
 .task-row:hover {
-  background: rgba(var(--color-slate-50), 0.07);
+  background: var(--surface-hover);
   border-color: var(--border-hover);
   transform: translateY(calc(-1 * var(--space-0_5)));
-  box-shadow: 0 var(--space-1) var(--space-3) rgba(var(--color-slate-900), 0.2);
+  box-shadow: 0 var(--space-1) var(--space-3) var(--shadow-color-sm);
 }
 
 .task-row--selected {
@@ -227,7 +224,7 @@ onUnmounted(() => {
 
 /* ADHD Visual Anchor - Every 5th row */
 .task-row--anchor {
-  background: rgba(var(--color-slate-50), 0.035);
+  background: var(--glass-border-faint); /* no token match for rgba(white, 0.035) */
 }
 
 .task-row--anchor:hover {
@@ -273,7 +270,7 @@ onUnmounted(() => {
 }
 
 .task-row__title-text {
-  color: rgba(var(--color-slate-50), 0.9);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -318,17 +315,17 @@ onUnmounted(() => {
 
 .task-row__tag {
   padding: var(--space-0_5) var(--space-1_5);
-  background: rgba(var(--color-slate-900), 0.2);
+  background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
-  color: rgba(var(--color-slate-50), 0.6);
+  color: var(--text-tertiary);
   white-space: nowrap;
 }
 
 .task-row__tag-more {
   font-size: var(--text-xs);
-  color: rgba(var(--color-slate-50), 0.4);
+  color: var(--text-muted);
 }
 
 /* Actions Cell */
@@ -354,17 +351,17 @@ onUnmounted(() => {
   background: var(--glass-bg-soft);
   border: var(--space-0_5) solid var(--glass-border);
   border-radius: var(--radius-sm);
-  color: rgba(var(--color-slate-50), 0.7);
+  color: var(--text-tertiary);
   cursor: pointer;
   transition: all var(--duration-normal);
 }
 
 .task-row__action-btn:hover {
   background: var(--glass-border-hover);
-  border-color: rgba(var(--color-slate-50), 0.4);
+  border-color: var(--glass-handle);
   color: var(--text-primary);
   transform: scale(1.1);
-  box-shadow: 0 0 var(--space-2_5) rgba(var(--color-slate-50), 0.1);
+  box-shadow: 0 0 var(--space-2_5) var(--glass-border);
 }
 
 .task-row__action-btn--focus:hover {
@@ -430,29 +427,29 @@ onUnmounted(() => {
 
 @keyframes row-flash-green {
   0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); background: transparent; }
-  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-5) var(--space-1) var(--color-success); background: rgba(16, 185, 129, 0.2); }
-  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3) var(--space-0_5) var(--color-success); background: rgba(16, 185, 129, 0.1); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-5) var(--space-1) var(--color-success); background: var(--success-bg-subtle); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3) var(--space-0_5) var(--color-success); background: var(--success-bg-light); }
   100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); background: transparent; }
 }
 
 @keyframes row-flash-red {
   0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); background: transparent; }
-  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-5) var(--space-1) var(--color-danger); background: rgba(var(--color-danger), 0.2); }
-  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3) var(--space-0_5) var(--color-danger); background: rgba(var(--color-danger), 0.1); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-5) var(--space-1) var(--color-danger); background: var(--danger-bg-medium); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3) var(--space-0_5) var(--color-danger); background: var(--danger-bg-light); }
   100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); background: transparent; }
 }
 
 @keyframes row-flash-amber {
-  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); background: transparent; }
-  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-5) var(--space-1) var(--color-orange); background: rgba(var(--color-orange), 0.2); }
-  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3) var(--space-0_5) var(--color-orange); background: rgba(var(--color-orange), 0.1); }
-  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); background: transparent; }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-warning); background: transparent; }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-5) var(--space-1) var(--color-warning); background: var(--orange-bg-medium); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3) var(--space-0_5) var(--color-warning); background: var(--orange-bg-light); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-warning); background: transparent; }
 }
 
 @keyframes row-flash-blue {
-  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); background: transparent; }
-  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-5) var(--space-1) var(--color-blue); background: rgba(var(--color-blue), 0.2); }
-  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3) var(--space-0_5) var(--color-blue); background: rgba(var(--color-blue), 0.1); }
-  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); background: transparent; }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-info); background: transparent; }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-5) var(--space-1) var(--color-info); background: var(--blue-bg-medium); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3) var(--space-0_5) var(--color-info); background: var(--blue-bg-light); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-info); background: transparent; }
 }
 </style>

@@ -4,6 +4,7 @@ import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useSettingsStore } from '@/stores/settings'
 import type { CalendarEvent } from '@/types/tasks'
+import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
 
 export interface MonthDay {
   dateString: string
@@ -84,6 +85,40 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
         isToday: dateString === today,
         events: dayEvents
       })
+    }
+
+    // TASK-1418: Merge virtual recurring events when toggle is ON
+    if (taskStore.showFutureRecurring && days.length >= 2) {
+      const rangeStart = days[0].dateString
+      const rangeEnd = days[days.length - 1].dateString
+      const virtualEvents = generateVirtualCalendarEvents(
+        taskStore.calendarFilteredTasks,
+        rangeStart,
+        rangeEnd
+      )
+
+      for (const virtual of virtualEvents) {
+        const dayEntry = days.find(d => d.dateString === virtual.scheduledDate)
+        if (dayEntry) {
+          dayEntry.events.push({
+            id: virtual.id,
+            taskId: virtual.taskId,
+            instanceId: virtual.id,
+            title: virtual.title,
+            projectId: virtual.projectId,
+            startTime: new Date(`${virtual.scheduledDate}T${virtual.scheduledTime || '09:00'}`),
+            endTime: new Date(`${virtual.scheduledDate}T${virtual.scheduledTime || '09:00'}`),
+            duration: virtual.duration || 30,
+            startSlot: 0,
+            slotSpan: 0,
+            color: getPriorityColor(virtual.priority),
+            column: 0,
+            totalColumns: 1,
+            isDueDate: false,
+            isVirtual: true,
+          } as CalendarEvent & { isVirtual: boolean })
+        }
+      }
     }
 
     return days

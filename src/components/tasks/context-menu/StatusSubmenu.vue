@@ -86,9 +86,6 @@ defineEmits<{
 .menu-text { flex: 1; }
 
 .status-icon { flex-shrink: 0; }
-.status-icon.planned { color: var(--color-info); }
-.status-icon.in_progress { color: var(--color-break); }
+.status-icon.todo { color: var(--text-muted); }
 .status-icon.done { color: var(--color-work); }
-.status-icon.backlog { color: var(--text-muted); }
-.status-icon.on_hold { color: var(--color-danger); }
 </style>

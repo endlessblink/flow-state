@@ -11,7 +11,7 @@ export function useTaskEditState(
         id: '',
         title: '',
         description: '',
-        status: 'planned',
+        status: 'todo',
         priority: 'medium',
         progress: 0,
         completedPomodoros: 0,
@@ -101,10 +101,8 @@ export function useTaskEditState(
     ]
 
     const statusOptions = [
-        { label: 'Planned', value: 'planned' },
-        { label: 'Active', value: 'in_progress' },
-        { label: 'Done', value: 'done' },
-        { label: 'Backlog', value: 'backlog' }
+        { label: 'To Do', value: 'todo' },
+        { label: 'Done', value: 'done' }
     ]
 
     // Watch for task changes to sync local state

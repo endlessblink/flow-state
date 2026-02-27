@@ -1,6 +1,6 @@
 import type { Task } from '@/types/tasks'
 import {
-    toSupabaseTask, fromSupabaseTask,
+    toSupabaseTask, fromSupabaseTask, toDbStatus,
     type SupabaseTask
 } from '@/utils/supabaseMappers'
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
@@ -348,7 +348,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 p_user_id: userId,
                 p_title: task.title,
                 p_description: task.description || '',
-                p_status: task.status || 'planned',
+                p_status: toDbStatus(task.status || 'todo'),
                 p_priority: task.priority || 'medium',
                 p_due_date: task.dueDate || null,
                 p_project_id: sanitizedProjectId,

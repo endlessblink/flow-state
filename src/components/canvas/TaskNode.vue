@@ -7,7 +7,6 @@
       'priority-medium': task?.priority === 'medium',
       'priority-low': task?.priority === 'low',
       'status-done': task?.status === 'done',
-      'status-in-progress': task?.status === 'in_progress',
       'timer-active': isTimerActive,
       'selected': isSelected,
       'multi-select-mode': multiSelectMode,
@@ -410,8 +409,8 @@ onUnmounted(() => {
   box-shadow:
     0 var(--space-3) var(--space-6) var(--shadow-color-sm),
     0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
-    0 0 var(--space-5) rgba(239, 68, 68, 0.25),
-    inset 0 0 0 var(--space-0_5) rgba(239, 68, 68, 0.1);
+    0 0 var(--space-5) rgba(239, 68, 68, 0.15),
+    inset 0 0 0 var(--space-0_5) rgba(239, 68, 68, 0.06);
 }
 
 .priority-medium {
@@ -419,8 +418,8 @@ onUnmounted(() => {
   box-shadow:
     0 var(--space-3) var(--space-6) var(--shadow-color-sm),
     0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
-    0 0 var(--space-5) rgba(245, 158, 11, 0.25),
-    inset 0 0 0 var(--space-0_5) rgba(245, 158, 11, 0.1);
+    0 0 var(--space-5) rgba(245, 158, 11, 0.15),
+    inset 0 0 0 var(--space-0_5) rgba(245, 158, 11, 0.06);
 }
 
 .priority-low {
@@ -428,8 +427,8 @@ onUnmounted(() => {
   box-shadow:
     0 var(--space-3) var(--space-6) var(--shadow-color-sm),
     0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
-    0 0 var(--space-5) rgba(59, 130, 246, 0.25),
-    inset 0 0 0 var(--space-0_5) rgba(59, 130, 246, 0.1);
+    0 0 var(--space-5) rgba(59, 130, 246, 0.15),
+    inset 0 0 0 var(--space-0_5) rgba(59, 130, 246, 0.06);
 }
 
 .timer-active {
@@ -456,11 +455,6 @@ onUnmounted(() => {
 .status-done::before {
   /* Slightly darker/muted purple backdrop for completed tasks */
   background: var(--canvas-task-bg);
-}
-
-.status-in-progress {
-  border: none;
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
 }
 
 .selected {

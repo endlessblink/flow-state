@@ -217,7 +217,7 @@ export function useQuickTasks() {
                     description: '',
                     projectId: item.projectId || 'uncategorized',
                     priority: item.priority as Task['priority'] || null,
-                    status: 'in_progress'
+                    status: 'todo'
                 })
                 taskId = newTask?.id || item.title
             }

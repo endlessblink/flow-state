@@ -70,7 +70,7 @@ export interface Task {
   id: string
   title: string
   description: string
-  status: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
+  status: 'todo' | 'done'
   priority: 'low' | 'medium' | 'high' | null
   progress: number
   completedPomodoros: number
@@ -157,6 +157,21 @@ export interface CalendarEvent {
   projectId?: string // Project association for visual styling
   instanceStatus?: 'scheduled' | 'completed' | 'skipped' // TASK-1285: Instance completion tracking
   taskStatus?: Task['status'] // TASK-1285: Parent task status for UI display
+  isVirtual?: boolean // Display-only recurring event preview (no physical task)
+}
+
+/** TASK-1418: Virtual recurring event for calendar preview (display-only, no physical task) */
+export interface VirtualCalendarEvent {
+  id: string              // 'virtual-{taskId}-{date}'
+  taskId: string          // The chain head task's ID
+  title: string
+  scheduledDate: string   // YYYY-MM-DD
+  scheduledTime?: string
+  duration?: number
+  isVirtual: true         // Discriminator — always true
+  projectId?: string
+  priority: Task['priority']
+  recurrenceRule: SimpleRecurrenceRule
 }
 
 export interface WeekEvent extends CalendarEvent {

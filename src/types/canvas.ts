@@ -54,7 +54,7 @@ export interface CanvasGroup {
     isVisible: boolean
     isCollapsed: boolean
     /** @deprecated Use assignOnDrop instead */
-    propertyValue?: string | 'high' | 'medium' | 'low' | 'planned' | 'in_progress' | 'done' | 'backlog'
+    propertyValue?: string | 'high' | 'medium' | 'low' | 'todo' | 'done'
     autoCollect?: boolean // Auto-collect matching tasks from inbox
     collapsedHeight?: number // Store height when collapsed to restore on expand
     // Power group fields

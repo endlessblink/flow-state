@@ -11,6 +11,7 @@
       v-model:selected-projects="selectedProjects"
       v-model:selected-durations="selectedDurations"
       v-model:sort-by="sortBy"
+      v-model:sort-direction="sortDirection"
       :inbox-count="inboxTasks.length"
       :today-count="todayCount"
       :has-active-filters="hasActiveFilters"
@@ -81,6 +82,7 @@ const {
   selectedCanvasGroups,
   searchQuery, // TASK-1075
   sortBy, // TASK-1303
+  sortDirection, // TASK-1412
   hideCalendarDoneTasks,
   canvasGroupOptions,
   baseInboxTasks,
@@ -102,7 +104,7 @@ const addTask = () => {
 
   createTaskWithUndo({
     title: newTaskTitle.value.trim(),
-    status: 'planned',
+    status: 'todo',
     isInInbox: true
   })
 
@@ -116,7 +118,7 @@ const addTaskWithDescription = (title: string, description: string) => {
   createTaskWithUndo({
     title: title.trim(),
     description: description.trim(),
-    status: 'planned',
+    status: 'todo',
     isInInbox: true
   })
 

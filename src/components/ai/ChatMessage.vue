@@ -413,7 +413,7 @@ function openQuickEdit(task: TaskListItem, event: MouseEvent) {
     id: task.id,
     title: task.title || '(untitled)',
     priority: (task.priority as string) || null,
-    status: task.status || 'planned',
+    status: task.status || 'todo',
     dueDate: task.dueDate || null,
     estimatedDuration: task.estimatedDuration || null,
   }

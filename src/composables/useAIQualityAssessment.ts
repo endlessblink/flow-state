@@ -105,7 +105,7 @@ export function useAIQualityAssessment() {
         for (const t of openTasks) {
           const pri = t.priority ? `[${t.priority}]` : ''
           const due = t.dueDate ? `due:${t.dueDate.slice(0, 10)}` : ''
-          const status = t.status || 'planned'
+          const status = t.status || 'todo'
           const overdue = t.dueDate && t.dueDate < today ? ' ⚠OVERDUE' : ''
           parts.push(`- "${t.title}" ${pri} ${status} ${due}${overdue}`.trim())
         }

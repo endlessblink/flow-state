@@ -74,10 +74,8 @@ const PRIORITY_OPTIONS = [
 ] as const
 
 const STATUS_OPTIONS = [
-  { value: 'planned', label: 'Planned' },
-  { value: 'in_progress', label: 'Active' },
+  { value: 'todo', label: 'Todo' },
   { value: 'done', label: 'Done' },
-  { value: 'backlog', label: 'Backlog' },
 ] as const
 
 // ============================================================================

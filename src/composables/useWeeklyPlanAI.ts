@@ -213,7 +213,7 @@ function generateDeterministicReasons(task: EnrichedTask): string[] {
   }
 
   // 2. Status
-  if (task.status === 'in_progress') {
+  if (task.status === 'todo') {
     bullets.push(isHe ? 'כבר בתהליך עבודה' : 'Already in progress')
   }
 
@@ -263,7 +263,7 @@ function enrichTasksForPlanning(tasks: TaskSummary[], weekEnd: Date): EnrichedTa
     const overdueDays = computeOverdueDays(t.dueDate, today)
     let urgencyCategory: EnrichedTask['urgencyCategory'] = 'normal'
     if (overdueDays > 0) urgencyCategory = 'OVERDUE'
-    else if (t.status === 'in_progress') urgencyCategory = 'IN_PROGRESS'
+    else if (t.status === 'todo') urgencyCategory = 'IN_PROGRESS'
     else if (t.dueDate && t.dueDate <= weekEndStr) urgencyCategory = 'DUE_THIS_WEEK'
 
     const language = detectTaskLanguage(t.title)
@@ -1175,7 +1175,7 @@ export function useWeeklyPlanAI() {
 
         // Urgency score
         if (task?.dueDate && task.dueDate < new Date().toISOString().split('T')[0]) score += 100
-        else if (task?.status === 'in_progress') score += 80
+        else if (task?.status === 'todo') score += 80
 
         // Due date proximity
         if (task?.dueDate) {
@@ -1239,7 +1239,7 @@ export function useWeeklyPlanAI() {
         const parts = [t.title]
         if (t.projectName) parts.push(`[${t.projectName}]`)
         if (t.priority) parts.push(`(${t.priority})`)
-        if (t.status === 'in_progress') parts.push('— in progress')
+        if (t.status === 'todo') parts.push('— todo')
         if (t.dueDate) parts.push(`due: ${t.dueDate}`)
         if (t.description) parts.push(`| ${t.description.slice(0, 60)}`)
         return parts.join(' ')

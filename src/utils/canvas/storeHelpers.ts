@@ -149,7 +149,7 @@ export const applySmartGroupNormalizations = (group: Omit<CanvasGroup, 'id'> | P
                     break
                 case 'status':
                     if (powerInfo.value === 'done') group.color = '#10b981'
-                    else if (powerInfo.value === 'in_progress') group.color = '#f59e0b'
+                    else if (powerInfo.value === 'todo') group.color = '#f59e0b'
                     break
                 case 'date':
                     group.color = '#8b5cf6'

@@ -785,7 +785,7 @@ describe('contextOptimizer', () => {
 
   function makeTask(overrides: Partial<OptimizableTask> & { id: string; title: string }): OptimizableTask {
     return {
-      status: 'planned',
+      status: 'todo',
       priority: null,
       dueDate: null,
       projectId: null,
@@ -836,10 +836,10 @@ describe('contextOptimizer', () => {
       expect(result).toContain('Week task')
     })
 
-    it('places in-progress tasks in IN PROGRESS section when no due date', () => {
-      const tasks = [makeTask({ id: '1', title: 'WIP task', status: 'in_progress' })]
+    it('places todo tasks in TODO section when no due date', () => {
+      const tasks = [makeTask({ id: '1', title: 'WIP task', status: 'todo' })]
       const result = optimizeTaskContext(tasks, [], { today: TODAY })
-      expect(result).toContain('IN PROGRESS')
+      expect(result).toContain('TODO')
       expect(result).toContain('WIP task')
     })
 
@@ -920,13 +920,13 @@ describe('contextOptimizer', () => {
       expect(result).toContain('0 overdue')
     })
 
-    it('counts in_progress tasks', () => {
+    it('counts todo tasks', () => {
       const tasks = [
-        makeTask({ id: '1', title: 'WIP task', status: 'in_progress' }),
-        makeTask({ id: '2', title: 'WIP task 2', status: 'in_progress' }),
+        makeTask({ id: '1', title: 'WIP task', status: 'todo' }),
+        makeTask({ id: '2', title: 'WIP task 2', status: 'todo' }),
       ]
       const result = buildTaskStats(tasks, TODAY)
-      expect(result).toContain('2 in progress')
+      expect(result).toContain('2 todo')
     })
 
     it('returns string containing "Tasks:"', () => {

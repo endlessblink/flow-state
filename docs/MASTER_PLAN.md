@@ -3817,7 +3817,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1386** | **P2** | **✅ Google Calendar proxy Edge Function — list-calendars, list-events, token refresh on 401** |
 | ~~**BUG-1417**~~ | **P1** | ✅ **Canvas nodes nearly invisible — undefined `--shadow-color-sm` token + near-identical bg = no depth** (✅ DONE 2026-02-27) |
 | ~~**TASK-1420**~~ | **P1** | ✅ **Add project selector to task edit modal — TaskEditMetadata missing project field** (✅ DONE 2026-02-27) |
-| **TASK-1419** | **P1** | 🔄 **Inbox multi-select bulk property updates — context menu actions apply to all selected tasks** |
+| ~~**TASK-1419**~~ | **P1** | ✅ **Inbox multi-select bulk property updates — context menu actions apply to all selected tasks** (✅ DONE 2026-02-27) |
 | ~~**TASK-1418**~~ | **P1** | ✅ **Too many buttons on calendar dashboard — consolidate into dropdown or settings** (✅ DONE 2026-02-27) |
 | **TASK-1421** | **P0** | 🔄 **Investigate & fix sluggish localhost performance** (🔄 IN PROGRESS 2026-02-27) |
 | **BUG-1416** | **P0** | 🔄 **Calendar inbox "today" filter shows wrong tasks — dueDate format mismatch (ISO vs YYYY-MM-DD)** (🔄 IN PROGRESS 2026-02-25) |

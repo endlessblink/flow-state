@@ -253,11 +253,8 @@
     outline: none !important;
 }
 
-/* Comprehensive border removal - target all possible Vue Flow elements */
-.vue-flow__node,
-.vue-flow__node *,
-.vue-flow__node::before,
-.vue-flow__node::after {
+/* Border removal on Vue Flow wrapper only — children handle their own styles */
+.vue-flow__node {
     border: none !important;
     outline: none !important;
     box-shadow: none !important;

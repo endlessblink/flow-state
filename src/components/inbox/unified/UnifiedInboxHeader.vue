@@ -139,6 +139,7 @@
         v-if="showAdvancedFilters"
         :context="context"
         :unscheduled-only="unscheduledOnly"
+        :on-canvas-only="onCanvasOnly"
         :selected-priorities="selectedPriorities"
         :selected-projects="selectedProjects"
         :selected-durations="selectedDurations"
@@ -148,6 +149,7 @@
         :tasks="baseTasks"
         :projects="rootProjects"
         @update:unscheduled-only="$emit('update:unscheduled-only', $event)"
+        @update:on-canvas-only="$emit('update:on-canvas-only', $event)"
         @update:selected-priorities="$emit('update:selected-priorities', $event)"
         @update:selected-projects="$emit('update:selected-projects', $event)"
         @update:selected-durations="$emit('update:selected-durations', $event)"
@@ -192,6 +194,7 @@ const props = defineProps<{
   selectedCanvasGroups: Set<string>
   showAdvancedFilters: boolean
   unscheduledOnly: boolean
+  onCanvasOnly: boolean
   selectedPriorities: Set<string>
   selectedProjects: Set<string>
   selectedDurations: Set<DurationCategory>
@@ -211,6 +214,7 @@ const emit = defineEmits<{
   (e: 'toggleAdvancedFilters'): void
   (e: 'update:selected-canvas-groups', groups: Set<string>): void
   (e: 'update:unscheduled-only', value: boolean): void
+  (e: 'update:on-canvas-only', value: boolean): void
   (e: 'update:selected-priorities', value: Set<string>): void
   (e: 'update:selected-projects', value: Set<string>): void
   (e: 'update:selected-durations', value: Set<DurationCategory>): void

@@ -33,6 +33,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // --- Advanced Filter State (TASK-1215: Persist across restarts via Tauri store + localStorage) ---
     const showAdvancedFilters = usePersistentRef<boolean>('flowstate:inbox-advanced-filters', false)
     const unscheduledOnly = usePersistentRef<boolean>('flowstate:inbox-unscheduled-only', false)
+    const onCanvasOnly = usePersistentRef<boolean>('flowstate:inbox-on-canvas-only', false)
+
     // TASK-1246: Multi-select filters (array-backed for JSON-safe persistence, Set API via computed)
     const _selectedPriorities = usePersistentRef<string[]>('flowstate:inbox-priority-filters', [])
     const _selectedProjects = usePersistentRef<string[]>('flowstate:inbox-project-filters', [])
@@ -217,6 +219,11 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             tasks = tasks.filter(task => !isScheduledOnCalendar(task))
         }
 
+        // On Canvas filter — show only tasks placed on the canvas
+        if (onCanvasOnly.value) {
+            tasks = tasks.filter(task => !!task.canvasPosition)
+        }
+
         // 4. Priority Filter (TASK-1246: multi-select, OR within)
         if (selectedPriorities.value.size > 0) {
             tasks = tasks.filter(task => selectedPriorities.value.has(task.priority ?? ''))
@@ -308,6 +315,17 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // Catch tasks that weren't visited (edge cases: groups not in canvasStore.groups)
             for (const t of tasks) dfs(t)
 
+            // DEBUG: diagnose skipped task (console.warn bypasses consoleFilter)
+            console.warn('[DFS-SORT]', {
+                inputCount: tasks.length, outputCount: result.length, dir: sortDirection.value,
+                groups: sortedGroups.map(g => ({ name: g.name, x: g.position?.x })),
+                sorted: result.slice(0, 12).map((t, i) => ({
+                    i, title: t.title?.slice(0, 30), y: t.canvasPosition?.y, x: t.canvasPosition?.x,
+                    parentId: t.parentId?.slice(0, 12), parentTaskId: t.parentTaskId?.slice(0, 12),
+                    group: sortedGroups.find(g => g.id === t.parentId)?.name ?? 'ungrouped'
+                }))
+            })
+
             tasks = sortDirection.value === 'desc' ? result.reverse() : result
         } else {
             tasks = [...tasks].sort((a, b) => {
@@ -346,6 +364,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
     const clearAllFilters = () => {
         unscheduledOnly.value = false
+        onCanvasOnly.value = false
         selectedPriorities.value = new Set()
         selectedProjects.value = new Set()
         selectedDurations.value = new Set()
@@ -379,6 +398,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         activeTimeFilter,
         showAdvancedFilters,
         unscheduledOnly,
+        onCanvasOnly,
         selectedPriorities,
         selectedProjects,
         selectedDurations,

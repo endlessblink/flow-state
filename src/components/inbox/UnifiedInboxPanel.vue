@@ -25,6 +25,7 @@
       :selected-canvas-groups="selectedCanvasGroups"
       :show-advanced-filters="showAdvancedFilters"
       :unscheduled-only="unscheduledOnly"
+      :on-canvas-only="onCanvasOnly"
       :selected-priorities="selectedPriorities"
       :selected-projects="selectedProjects"
       :selected-durations="selectedDurations"
@@ -42,6 +43,7 @@
       @toggle-advanced-filters="showAdvancedFilters = !showAdvancedFilters"
       @update:selected-canvas-groups="selectedCanvasGroups = $event"
       @update:unscheduled-only="unscheduledOnly = $event"
+      @update:on-canvas-only="onCanvasOnly = $event"
       @update:selected-priorities="selectedPriorities = $event"
       @update:selected-projects="selectedProjects = $event"
       @update:selected-durations="selectedDurations = $event"
@@ -159,6 +161,7 @@ const {
   activeTimeFilter,
   showAdvancedFilters,
   unscheduledOnly,
+  onCanvasOnly,
   selectedPriorities,
   selectedProjects,
   selectedDurations,

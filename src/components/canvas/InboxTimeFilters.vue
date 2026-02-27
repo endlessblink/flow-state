@@ -133,7 +133,7 @@ const filterTasks = (filterKey: string) => {
         if (task.dueDate === today) return true
 
         // Tasks currently in progress
-        if (task.status === 'in_progress') return true
+        if (task.status === 'todo') return true
 
         return false
       }

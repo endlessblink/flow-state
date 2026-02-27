@@ -155,7 +155,7 @@ export function useTaskContextMenuActions(
         }
     }
 
-    const setStatus = async (status: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold') => {
+    const setStatus = async (status: 'todo' | 'done') => {
         // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
         const taskId = currentTask.value?.id
         const isBatch = isBatchOperation.value
@@ -207,7 +207,7 @@ export function useTaskContextMenuActions(
         if (isBatch) {
             emit('setStatus', 'done')
         } else if (taskId) {
-            const newStatus = currentStatus === 'done' ? 'planned' : 'done'
+            const newStatus = currentStatus === 'done' ? 'todo' : 'done'
             try {
                 await taskStore.updateTaskWithUndo(taskId, { status: newStatus })
                 canvasStore.requestSync('user:context-menu')

@@ -189,16 +189,16 @@ describe('CanvasStore', () => {
     it('creates status sections', async () => {
       const store = useCanvasStore()
 
-      const planned = await store.createSection({ name: 'Planned', type: 'status', propertyValue: 'planned', color: '#6366f1', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
-      const inProgress = await store.createSection({ name: 'In Progress', type: 'status', propertyValue: 'in_progress', color: '#f59e0b', position: { x: 350, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
+      const todo = await store.createSection({ name: 'Todo', type: 'status', propertyValue: 'todo', color: '#6366f1', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
+      const todo2 = await store.createSection({ name: 'Todo', type: 'status', propertyValue: 'todo', color: '#f59e0b', position: { x: 350, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
       const done = await store.createSection({ name: 'Done', type: 'status', propertyValue: 'done', color: '#10b981', position: { x: 700, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
-      expect(planned.name).toBe('Planned')
-      expect(planned.type).toBe('status')
-      expect(planned.propertyValue).toBe('planned')
+      expect(todo.name).toBe('Todo')
+      expect(todo.type).toBe('status')
+      expect(todo.propertyValue).toBe('todo')
 
-      expect(inProgress.name).toBe('In Progress')
-      expect(inProgress.propertyValue).toBe('in_progress')
+      expect(todo2.name).toBe('Todo')
+      expect(todo2.propertyValue).toBe('todo')
 
       expect(done.name).toBe('Done')
       expect(done.propertyValue).toBe('done')
@@ -229,7 +229,7 @@ describe('CanvasStore', () => {
           id: '1',
           title: 'High Task',
           description: '',
-          status: 'planned',
+          status: 'todo',
           priority: 'high',
           progress: 0,
           completedPomodoros: 0,
@@ -243,7 +243,7 @@ describe('CanvasStore', () => {
           id: '2',
           title: 'Medium Task',
           description: '',
-          status: 'planned',
+          status: 'todo',
           priority: 'medium',
           progress: 0,
           completedPomodoros: 0,
@@ -268,14 +268,14 @@ describe('CanvasStore', () => {
     it('filters tasks by status section', async () => {
       const store = useCanvasStore()
 
-      const section = await store.createSection({ name: 'In Progress', type: 'status', propertyValue: 'in_progress', color: '#f59e0b', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
+      const section = await store.createSection({ name: 'Todo', type: 'status', propertyValue: 'todo', color: '#f59e0b', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
       const tasks: Task[] = [
         {
           id: '1',
           title: 'Task 1',
           description: '',
-          status: 'in_progress',
+          status: 'todo',
           priority: 'medium',
           progress: 0,
           completedPomodoros: 0,
@@ -289,7 +289,7 @@ describe('CanvasStore', () => {
           id: '2',
           title: 'Task 2',
           description: '',
-          status: 'planned',
+          status: 'done',
           priority: 'medium',
           progress: 0,
           completedPomodoros: 0,
@@ -306,7 +306,7 @@ describe('CanvasStore', () => {
 
       expect(filtered.length).toBe(1)
       expect(filtered[0].id).toBe('1')
-      expect(filtered[0].status).toBe('in_progress')
+      expect(filtered[0].status).toBe('todo')
     })
   })
 
@@ -319,7 +319,7 @@ describe('CanvasStore', () => {
         id: '1',
         title: 'High Priority Task',
         description: '',
-        status: 'planned',
+        status: 'todo',
         priority: 'high',
         progress: 0,
         completedPomodoros: 0,
@@ -359,14 +359,14 @@ describe('CanvasStore', () => {
         updatedAt: new Date()
       }
 
-      const plannedTask: Task = {
+      const todoTask: Task = {
         ...doneTask,
         id: '2',
-        status: 'planned'
+        status: 'todo'
       }
 
       expect(store.taskMatchesSection(doneTask, section.id)).toBe(true)
-      expect(store.taskMatchesSection(plannedTask, section.id)).toBe(false)
+      expect(store.taskMatchesSection(todoTask, section.id)).toBe(false)
     })
 
     it('matches task to project section', async () => {
@@ -377,7 +377,7 @@ describe('CanvasStore', () => {
         id: '1',
         title: 'Task 1',
         description: '',
-        status: 'planned',
+        status: 'todo',
         priority: 'medium',
         progress: 0,
         completedPomodoros: 0,

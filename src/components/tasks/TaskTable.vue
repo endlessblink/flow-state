@@ -134,7 +134,7 @@
 
             <div class="table-cell status-cell" @click.stop>
               <CustomSelect
-                :model-value="task.status || 'planned'"
+                :model-value="task.status || 'todo'"
                 :options="statusOptions"
                 placeholder="Select status..."
                 @update:model-value="(val) => updateTaskStatus(task.id, String(val) as Task['status'])"
@@ -268,7 +268,7 @@
 
               <div class="table-cell status-cell" @click.stop>
                 <CustomSelect
-                  :model-value="task.status || 'planned'"
+                  :model-value="task.status || 'todo'"
                   :options="statusOptions"
                   placeholder="Select status..."
                   @update:model-value="(val) => updateTaskStatus(task.id, String(val) as Task['status'])"
@@ -366,11 +366,8 @@ interface Props {
 
 // Status options for CustomSelect
 const statusOptions = computed(() => [
-  { label: t('task.status_todo'), value: 'planned' },
-  { label: t('task.status_in_progress'), value: 'in_progress' },
-  { label: t('task.status_done'), value: 'done' },
-  { label: t('task.status_backlog'), value: 'backlog' },
-  { label: t('task.status_on_hold'), value: 'on_hold' }
+  { label: t('task.status_todo'), value: 'todo' },
+  { label: t('task.status_done'), value: 'done' }
 ])
 
 const taskStore = useTaskStore()

@@ -151,7 +151,7 @@ export class PerformanceBenchmark {
         const testTasks = Array.from({ length: nodeCount }, (_, i) => ({
           id: `bench-task-${nodeCount}-${i}`,
           title: `Benchmark Task ${i}`,
-          status: 'planned' as const,
+          status: 'todo' as const,
           priority: 'medium' as const,
           projectId: 'bench-project',
           canvasPosition: { x: (i % 20) * 250, y: Math.floor(i / 20) * 150 },

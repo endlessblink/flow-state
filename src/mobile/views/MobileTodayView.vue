@@ -509,7 +509,7 @@ const getDueBadge = (task: Task): string => {
 }
 
 const toggleTask = async (task: Task) => {
-  const newStatus = task.status === 'done' ? 'planned' : 'done'
+  const newStatus = task.status === 'done' ? 'todo' : 'done'
   // BUG-1051: AWAIT to ensure persistence
   await taskStore.updateTask(task.id, { status: newStatus })
 }

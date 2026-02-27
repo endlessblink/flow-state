@@ -124,7 +124,7 @@
                 :model-value="smartSettings.status || ''"
                 :options="statusOptions"
                 placeholder="Select status..."
-                @update:model-value="(val) => smartSettings.status = val === '' ? null : (val as 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold')"
+                @update:model-value="(val) => smartSettings.status = val === '' ? null : (val as 'todo' | 'done')"
               />
             </div>
 
@@ -239,11 +239,8 @@ const priorityOptions = [
 
 const statusOptions = [
   { label: "Don't change", value: '' },
-  { label: 'Planned', value: 'planned' },
-  { label: 'In Progress', value: 'in_progress' },
-  { label: 'Done', value: 'done' },
-  { label: 'Backlog', value: 'backlog' },
-  { label: 'On Hold', value: 'on_hold' }
+  { label: 'To Do', value: 'todo' },
+  { label: 'Done', value: 'done' }
 ]
 
 const dueDateOptions = [

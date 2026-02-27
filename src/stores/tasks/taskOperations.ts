@@ -5,13 +5,15 @@ import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 import { canvasUiSyncRequest } from '../canvasTaskBridge'
 // TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool)
 import { guardTaskCreation } from '@/utils/demoContentGuard'
-import { formatDateKey } from '@/utils/dateUtils'
+import { formatDateKey, normalizeDueDate } from '@/utils/dateUtils'
 // FEATURE-1118: Gamification hooks for task completion
 import { useGamificationHooks } from '@/composables/useGamificationHooks'
 // BUG-1303: Stop timer when task marked done
 import { useTimerStore } from '@/stores/timer'
 // TASK-1177: Offline-first sync queue integration
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
+// TASK-1418: Reverse status mapping for sync queue payloads (bypasses toSupabaseTask)
+import { toDbStatus } from '@/utils/supabaseMappers'
 // TASK-1159: Toast feedback for background save failures
 import { useToast } from '@/composables/useToast'
 // TASK-089 FIX: Unlock position when removing from canvas
@@ -118,14 +120,14 @@ export function useTaskOperations(
                 id: taskId,
                 title: taskData.title || 'New Task',
                 description: taskData.description || '',
-                status: taskData.status || 'planned',
+                status: taskData.status || 'todo',
                 priority: taskData.priority || 'medium',
                 progress: 0,
                 completedPomodoros: 0,
                 subtasks: [],
                 // BUG-1325: dueDate only set if explicitly provided or inferred from scheduledDate
                 // (scheduledDate implies a deadline on that date, but does NOT create calendar instances)
-                dueDate: taskData.dueDate || taskData.scheduledDate || '',
+                dueDate: normalizeDueDate(taskData.dueDate || taskData.scheduledDate || ''),
                 projectId,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -172,7 +174,7 @@ export function useTaskOperations(
                     user_id: userId, // Required for RLS - MUST be valid UUID
                     title: newTask.title,
                     description: newTask.description,
-                    status: newTask.status,
+                    status: toDbStatus(newTask.status), // TASK-1418: Map 'todo'→'planned' for DB
                     priority: newTask.priority,
                     progress: newTask.progress,
                     completed_pomodoros: newTask.completedPomodoros,
@@ -447,12 +449,22 @@ export function useTaskOperations(
                     if (task.recurrenceRule) {
                         try {
                             const { computeNextDueDate } = await import('@/utils/recurrenceUtils')
-                            const currentDueDate = task.dueDate || formatDateKey(new Date())
-                            const currentCount = (task.recurrenceCount || 0) + 1
-                            const nextDueDate = computeNextDueDate(currentDueDate, task.recurrenceRule, currentCount)
+                            const { formatDateKey } = await import('@/utils/dateUtils')
+                            const today = formatDateKey(new Date())
+                            const currentDueDate = task.dueDate || today
+                            let count = (task.recurrenceCount || 0) + 1
+                            let nextDueDate = computeNextDueDate(currentDueDate, task.recurrenceRule, count)
 
-                            if (nextDueDate) {
-                                // Spawn a new task for the next occurrence (fire-and-forget)
+                            // TASK-1418: Skip-to-present — advance past missed occurrences
+                            while (nextDueDate && nextDueDate < today) {
+                                const advanced = computeNextDueDate(nextDueDate, task.recurrenceRule, count + 1)
+                                if (!advanced || advanced <= nextDueDate) break // Safety: prevent infinite loop
+                                count++
+                                nextDueDate = advanced
+                            }
+
+                            // TASK-1418: Only create clone if due today or earlier (defer future dates)
+                            if (nextDueDate && nextDueDate <= today) {
                                 const clonedTask: Partial<Task> = {
                                     title: task.title,
                                     description: task.description,
@@ -463,17 +475,19 @@ export function useTaskOperations(
                                     tags: task.tags ? [...task.tags] : undefined,
                                     recurrenceRule: { ...task.recurrenceRule },
                                     recurrenceParentId: task.recurrenceParentId || task.id,
-                                    recurrenceCount: currentCount,
+                                    recurrenceCount: count,
                                     dueDate: nextDueDate,
-                                    status: 'planned',
+                                    status: 'todo',
                                     isInInbox: true,
                                 }
 
                                 createTask(clonedTask).then(() => {
-                                    console.log(`🔄 [RECURRENCE] Cloned recurring task "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (occurrence #${currentCount})`)
+                                    console.log(`🔄 [RECURRENCE] Cloned recurring task "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (occurrence #${count})`)
                                 }).catch(err => {
                                     console.error(`❌ [RECURRENCE] Failed to clone recurring task:`, err)
                                 })
+                            } else if (nextDueDate) {
+                                console.log(`⏳ [RECURRENCE] Deferred clone for "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (future, will create on app load)`)
                             } else {
                                 console.log(`🏁 [RECURRENCE] Recurring task "${task.title?.slice(0, 30)}" ended (${task.recurrenceRule.endType})`)
                             }
@@ -481,6 +495,13 @@ export function useTaskOperations(
                             // Recurrence is non-critical, don't break task completion
                             console.error('[RECURRENCE] Clone-on-complete failed:', e)
                         }
+                    }
+
+                    // TASK-1418: Clear calendar instances on recurring task completion
+                    // Completed recurring tasks should not remain visible on calendar views
+                    if (task.recurrenceRule) {
+                        updates.instances = []
+                        updates.recurringInstances = []
                     }
 
                     // ================================================================
@@ -519,6 +540,12 @@ export function useTaskOperations(
             // BUG-1321: Sync date fields bidirectionally before save
             const syncedUpdates = syncDateFields(task, updates)
 
+            // BUG-1416: Normalize dueDate to canonical YYYY-MM-DD format.
+            // This is the SINGLE chokepoint — all task mutations flow through here.
+            if (syncedUpdates.dueDate !== undefined && syncedUpdates.dueDate !== '') {
+                syncedUpdates.dueDate = normalizeDueDate(syncedUpdates.dueDate)
+            }
+
             _rawTasks.value[index] = {
                 ...task,
                 ...syncedUpdates,
@@ -548,7 +575,7 @@ export function useTaskOperations(
                 const payload: Record<string, unknown> = {
                     title: updatedTask.title,
                     description: updatedTask.description,
-                    status: updatedTask.status,
+                    status: toDbStatus(updatedTask.status), // TASK-1418: Map 'todo'→'planned' for DB
                     priority: updatedTask.priority,
                     progress: updatedTask.progress,
                     completed_pomodoros: updatedTask.completedPomodoros,
@@ -985,7 +1012,7 @@ export function useTaskOperations(
         const updatedInstances = isRecurring
             ? [...(task.instances || []), newInstance]
             : [newInstance]
-        await updateTask(taskId, { instances: updatedInstances, status: 'in_progress' })
+        await updateTask(taskId, { instances: updatedInstances, status: 'todo' })
     }
 
     const moveTaskToSmartGroup = async (taskId: string, type: string) => {

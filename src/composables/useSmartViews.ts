@@ -385,7 +385,7 @@ export const useSmartViews = () => {
    * Check if a task is in progress
    */
   const isInProgressTask = (task: Task): boolean => {
-    return task.status === 'in_progress'
+    return task.status !== 'done'
   }
 
   /**

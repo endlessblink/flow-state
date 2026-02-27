@@ -35,17 +35,16 @@
         </div>
       </NPopover>
 
-      <div class="metadata-field">
+      <div class="metadata-field metadata-field--dropdown">
         <TimerReset :size="14" />
         <span class="field-label">Duration</span>
-        <input
-          v-model.number="estimatedDuration"
-          type="number"
-          class="inline-input duration-input"
-          placeholder="60"
-          min="1"
-        >
-        <span class="unit">min</span>
+        <CustomSelect
+          :model-value="estimatedDuration"
+          :options="durationOptions"
+          class="inline-select"
+          compact
+          @update:model-value="estimatedDuration = $event"
+        />
       </div>
     </div>
 
@@ -103,7 +102,7 @@
 import { computed, ref } from 'vue'
 import {
   Calendar, TimerReset, Flag, Zap, Circle,
-  PlayCircle, CheckCircle, Archive, AlertCircle, Layers
+  CheckCircle, Layers
 } from 'lucide-vue-next'
 import { NPopover, NDatePicker } from 'naive-ui'
 import { type Task } from '@/stores/tasks'
@@ -127,8 +126,19 @@ const showDueDatePicker = ref(false)
 
 const estimatedDuration = computed({
   get: () => props.modelValue.estimatedDuration,
-  set: (val) => emit('update:modelValue', { ...props.modelValue, estimatedDuration: val })
+  set: (val) => emit('update:modelValue', { ...props.modelValue, estimatedDuration: val as number })
 })
+
+const durationOptions = [
+  { label: '15 min', value: 15 },
+  { label: '30 min', value: 30 },
+  { label: '45 min', value: 45 },
+  { label: '1 hour', value: 60 },
+  { label: '1.5 hours', value: 90 },
+  { label: '2 hours', value: 120 },
+  { label: '3 hours', value: 180 },
+  { label: '4 hours', value: 240 },
+]
 
 // Format date for display (human-readable)
 const formattedDueDate = computed(() => {
@@ -152,7 +162,10 @@ const handleDueDateSelect = (timestamp: number | null) => {
   if (timestamp) {
     const date = new Date(timestamp)
     date.setHours(0, 0, 0, 0)
-    const newTask = { ...props.modelValue, dueDate: date.toISOString() }
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const newTask = { ...props.modelValue, dueDate: `${year}-${month}-${day}` }
     emit('update:modelValue', newTask)
   } else {
     clearDueDate()
@@ -172,7 +185,7 @@ const updatePriority = (value: string | number) => {
 }
 
 const updateStatus = (value: string | number) => {
-  const newTask = { ...props.modelValue, status: value as 'planned' | 'in_progress' | 'done' | 'backlog' }
+  const newTask = { ...props.modelValue, status: value as 'todo' | 'done' }
   emit('update:modelValue', newTask)
 }
 
@@ -196,20 +209,14 @@ const priorityIconClass = computed(() => {
 
 const statusIcon = computed(() => {
   switch (props.modelValue.status) {
-    case 'planned': return Circle
-    case 'in_progress': return PlayCircle
     case 'done': return CheckCircle
-    case 'backlog': return Archive
-    default: return AlertCircle
+    default: return Circle
   }
 })
 
 const statusIconClass = computed(() => {
   switch (props.modelValue.status) {
-    case 'planned': return 'status-planned'
-    case 'in_progress': return 'status-progress'
     case 'done': return 'status-done'
-    case 'backlog': return 'status-backlog'
     default: return 'status-planned'
   }
 })
@@ -331,6 +338,11 @@ const statusIconClass = computed(() => {
 .date-clear-btn:hover {
   background: var(--glass-bg-soft);
   color: var(--danger);
+}
+
+.inline-select {
+  flex: 1;
+  min-width: 100px;
 }
 
 .priority-low { color: var(--color-priority-low); }

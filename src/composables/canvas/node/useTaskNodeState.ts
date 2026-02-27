@@ -71,13 +71,10 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
     // BUG-291: All computed properties now use reactive task from store
     const statusLabel = computed(() => {
         const labels: Record<TaskStatus, string> = {
-            planned: 'Plan',
-            in_progress: 'Active',
-            done: 'Done',
-            backlog: 'Back',
-            on_hold: 'Hold'
+            todo: 'Todo',
+            done: 'Done'
         }
-        return labels[task.value?.status] || 'Unknown'
+        return labels[task.value?.status] || 'Todo'
     })
 
     const hasSchedule = computed(() =>

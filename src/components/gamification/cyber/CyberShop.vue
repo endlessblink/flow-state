@@ -7,6 +7,7 @@
  * compact layout. Visual novel aesthetic: show, don't tell.
  */
 import { computed, ref } from 'vue'
+import type { Component } from 'vue'
 import { useGamificationStore } from '@/stores/gamification'
 import { useCyberflowTheme } from '@/composables/useCyberflowTheme'
 import type { ShopItemWithOwnership, ShopCategory } from '@/types/gamification'
@@ -61,7 +62,7 @@ function getItemRarity(item: ShopItemWithOwnership): 'common' | 'uncommon' | 'ra
 }
 
 // Category icon components (Lucide icons)
-const categoryIcons: Record<ShopCategory, any> = {
+const categoryIcons: Record<ShopCategory, Component> = {
   theme: Palette,
   badge_style: Hexagon,
   animation: Sparkles,

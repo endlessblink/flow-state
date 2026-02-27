@@ -580,7 +580,7 @@ const priorityOptions = computed(() => {
   }
 
   // Check for in-progress tasks
-  const inProgressCount = tasks.filter(t => t.status === 'in_progress').length
+  const inProgressCount = tasks.filter(t => t.status === 'todo').length
   if (inProgressCount > 0) {
     options.push('Finish in-progress work')
   }

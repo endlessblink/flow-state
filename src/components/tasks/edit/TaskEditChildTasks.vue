@@ -41,7 +41,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import {
-  ChevronDown, Circle, PlayCircle, CheckCircle, Archive, AlertCircle
+  ChevronDown, Circle, CheckCircle, AlertCircle
 } from 'lucide-vue-next'
 import { type Task } from '@/stores/tasks'
 
@@ -61,27 +61,24 @@ const completedCount = computed(() =>
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case 'planned': return Circle
-    case 'in_progress': return PlayCircle
+    case 'todo': return Circle
     case 'done': return CheckCircle
-    case 'backlog': return Archive
     default: return AlertCircle
   }
 }
 
 const getStatusClass = (status: string) => {
   switch (status) {
-    case 'planned': return 'status-planned'
-    case 'in_progress': return 'status-progress'
+    case 'todo': return 'status-planned'
     case 'done': return 'status-done'
-    case 'backlog': return 'status-backlog'
     default: return 'status-planned'
   }
 }
 
 const getStatusLabel = (status: string) => {
   switch (status) {
-    case 'in_progress': return 'Active'
+    case 'todo': return 'To Do'
+    case 'done': return 'Done'
     default: return status.charAt(0).toUpperCase() + status.slice(1)
   }
 }

@@ -92,6 +92,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const {
     // SAFETY: tasks is now filteredTasks (safe for dis-
     _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
+    showFutureRecurring,
     activeSmartView, activeStatusFilter,
     activeDurationFilter, isLoadingFromDatabase, manualOperationInProgress,
     isLoadingFilters, syncInProgress, runAllTaskMigrations, calendarFilteredTasks
@@ -133,6 +134,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // SAFETY: Pass _rawTasks for load/save operations
   const persistence = useTaskPersistence(
     _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
+    showFutureRecurring,
     activeSmartView, activeStatusFilter,
     activeDurationFilter, // TASK-1215: Persist duration filter
     isLoadingFromDatabase, manualOperationInProgress, isLoadingFilters,

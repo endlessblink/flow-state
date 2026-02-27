@@ -16,7 +16,7 @@ interface UndoSystemState {
   canRedo: ComputedRef<boolean> | null
   undoCount: ComputedRef<number> | null
   redoCount: ComputedRef<number> | null
-  history: ComputedRef<any[]> | null
+  history: ComputedRef<import('@vueuse/core').UseRefHistoryRecord<UnifiedUndoState>[]> | null
   undo: (() => void) | null
   redo: (() => void) | null
   commit: (() => void) | null

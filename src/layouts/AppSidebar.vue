@@ -841,7 +841,7 @@ const createQuickTask = async () => {
     await taskStore.createTaskWithUndo({
       title,
       description: '',
-      status: 'planned',
+      status: 'todo',
       projectId: undefined,
       ...(quickTaskDueDate.value && { dueDate: quickTaskDueDate.value }),
       ...(quickTaskPriority.value && { priority: quickTaskPriority.value })

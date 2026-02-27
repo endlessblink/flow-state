@@ -31,7 +31,7 @@ describe('TaskStore', () => {
 
       expect(task).toBeDefined()
       expect(task.title).toBe('Test Task')
-      expect(task.status).toBe('planned')
+      expect(task.status).toBe('todo')
       expect(task.priority).toBe('medium')
       expect(task.progress).toBe(0)
       expect(task.completedPomodoros).toBe(0)
@@ -62,12 +62,12 @@ describe('TaskStore', () => {
 
       store.updateTask(task.id, {
         title: 'Updated',
-        status: 'in_progress'
+        status: 'todo'
       })
 
       const updatedTask = store.tasks.find(t => t.id === task.id)
       expect(updatedTask?.title).toBe('Updated')
-      expect(updatedTask?.status).toBe('in_progress')
+      expect(updatedTask?.status).toBe('todo')
     })
 
     it('deletes a task', async () => {
@@ -83,19 +83,19 @@ describe('TaskStore', () => {
 
     it('moves a task to different status', async () => {
       const store = useTaskStore()
-      const task = await store.createTask({ title: 'Task', status: 'planned' })
+      const task = await store.createTask({ title: 'Task', status: 'todo' })
 
-      await store.moveTask(task.id, 'in_progress') // BUG-1051: AWAIT to ensure persistence
+      await store.moveTask(task.id, 'todo') // BUG-1051: AWAIT to ensure persistence
 
       const movedTask = store.tasks.find(t => t.id === task.id)
-      expect(movedTask?.status).toBe('in_progress')
+      expect(movedTask?.status).toBe('todo')
     })
 
     it('auto-archives completed tasks (removes from canvas)', async () => {
       const store = useTaskStore()
       const task = await store.createTask({
         title: 'Task',
-        status: 'in_progress',
+        status: 'todo',
         canvasPosition: { x: 100, y: 100 },
         isInInbox: false
       })
@@ -440,7 +440,7 @@ describe('TaskStore', () => {
         id: '1',
         title: 'Task',
         description: '',
-        status: 'planned',
+        status: 'todo',
         priority: 'medium',
         progress: 0,
         completedPomodoros: 0,
@@ -471,7 +471,7 @@ describe('TaskStore', () => {
         id: '1',
         title: 'Legacy Task',
         description: '',
-        status: 'planned',
+        status: 'todo',
         priority: 'medium',
         progress: 0,
         completedPomodoros: 0,
@@ -494,7 +494,7 @@ describe('TaskStore', () => {
         id: '1',
         title: 'Unscheduled',
         description: '',
-        status: 'planned',
+        status: 'todo',
         priority: 'medium',
         progress: 0,
         completedPomodoros: 0,
@@ -514,13 +514,12 @@ describe('TaskStore', () => {
     it('groups tasks by status correctly', async () => {
       const store = useTaskStore()
 
-      await store.createTask({ title: 'Planned 1', status: 'planned' })
-      await store.createTask({ title: 'Planned 2', status: 'planned' })
-      await store.createTask({ title: 'In Progress', status: 'in_progress' })
+      await store.createTask({ title: 'Todo 1', status: 'todo' })
+      await store.createTask({ title: 'Todo 2', status: 'todo' })
+      await store.createTask({ title: 'Todo', status: 'todo' })
       await store.createTask({ title: 'Done', status: 'done' })
 
-      expect(store.tasksByStatus.planned.length).toBe(2)
-      expect(store.tasksByStatus.in_progress.length).toBe(1)
+      expect(store.tasksByStatus.todo.length).toBe(3)
       expect(store.tasksByStatus.done.length).toBe(1)
     })
 
@@ -539,7 +538,7 @@ describe('TaskStore', () => {
 
       await store.createTask({ title: 'Task 1', status: 'done' })
       await store.createTask({ title: 'Task 2', status: 'done' })
-      await store.createTask({ title: 'Task 3', status: 'planned' })
+      await store.createTask({ title: 'Task 3', status: 'todo' })
 
       expect(store.completedTasks).toBe(2)
     })

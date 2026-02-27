@@ -151,11 +151,12 @@ export function useMobileQuickSortLogic() {
 
     let dueDate: string | undefined
     if (newTaskDue.value === 'today') {
-      dueDate = new Date().toISOString()
+      const today = new Date()
+      dueDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     } else if (newTaskDue.value === 'tomorrow') {
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
-      dueDate = tomorrow.toISOString()
+      dueDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
     }
 
     const newTask = await taskStore.createTask({
@@ -260,34 +261,34 @@ export function useMobileQuickSortLogic() {
     if (preset === 'today') {
       const today = new Date(now)
       today.setHours(0, 0, 0, 0)
-      dueDate = today.toISOString()
+      dueDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     } else if (preset === 'tomorrow') {
       const tomorrow = new Date(now)
       tomorrow.setDate(tomorrow.getDate() + 1)
       tomorrow.setHours(0, 0, 0, 0)
-      dueDate = tomorrow.toISOString()
+      dueDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
     } else if (preset === 'in3days') {
       const date = new Date(now)
       date.setDate(date.getDate() + 3)
       date.setHours(0, 0, 0, 0)
-      dueDate = date.toISOString()
+      dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     } else if (preset === 'weekend') {
       const dayOfWeek = now.getDay()
       const daysUntilSaturday = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7
       const saturday = new Date(now)
       saturday.setDate(now.getDate() + (daysUntilSaturday || 7))
       saturday.setHours(0, 0, 0, 0)
-      dueDate = saturday.toISOString()
+      dueDate = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`
     } else if (preset === 'nextweek') {
       const date = new Date(now)
       date.setDate(date.getDate() + 7)
       date.setHours(0, 0, 0, 0)
-      dueDate = date.toISOString()
+      dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     } else if (preset === '1month') {
       const date = new Date(now)
       date.setMonth(date.getMonth() + 1)
       date.setHours(0, 0, 0, 0)
-      dueDate = date.toISOString()
+      dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     } else {
       dueDate = undefined
     }

@@ -145,7 +145,7 @@ export function useQuickCapture() {
         priority: task.priority,
         dueDate: task.dueDate,
         projectId: projectId,
-        status: 'planned'
+        status: 'todo'
       })
 
       // Track in summary

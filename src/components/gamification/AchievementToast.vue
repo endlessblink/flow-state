@@ -135,7 +135,7 @@ onMounted(() => {
   background: var(--toast-xp-bg);
   border: 1px solid var(--toast-xp-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 var(--space-1) var(--space-5) rgba(0, 0, 0, 0.3);
+  box-shadow: 0 var(--space-1) var(--space-5) var(--cf-black-30);
   backdrop-filter: blur(var(--space-2));
   cursor: pointer;
   transform: translateX(100%) scale(0.9);
@@ -268,12 +268,12 @@ onMounted(() => {
 
 /* Hover glow effect */
 .achievement-toast:hover {
-  box-shadow: 0 var(--space-1) var(--space-6) rgba(0, 0, 0, 0.4),
+  box-shadow: 0 var(--space-1) var(--space-6) var(--cf-black-40),
               0 0 var(--space-4) rgba(var(--neon-cyan), 0.1);
 }
 
 .toast--level_up:hover {
-  box-shadow: 0 var(--space-1) var(--space-6) rgba(0, 0, 0, 0.4),
+  box-shadow: 0 var(--space-1) var(--space-6) var(--cf-black-40),
               0 0 var(--space-4) rgba(var(--neon-magenta), 0.2);
 }
 </style>

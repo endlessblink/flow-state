@@ -194,11 +194,8 @@ export const useTaskFiltering = (
     const tasksByStatus = computed(() => {
         const tasksToGroup = filteredTasks.value
         return {
-            planned: tasksToGroup.filter(task => task.status === 'planned'),
-            in_progress: tasksToGroup.filter(task => task.status === 'in_progress'),
-            done: tasksToGroup.filter(task => task.status === 'done'),
-            backlog: tasksToGroup.filter(task => task.status === 'backlog'),
-            on_hold: tasksToGroup.filter(task => task.status === 'on_hold')
+            todo: tasksToGroup.filter(task => task.status !== 'done'),
+            done: tasksToGroup.filter(task => task.status === 'done')
         }
     })
 

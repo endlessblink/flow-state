@@ -343,8 +343,8 @@ const getCelebrationStyle = (index: number) => {
   /* Rich gradient glass morphism for completed state */
   background:
     linear-gradient(135deg,
-      rgba(var(--color-success), 0.9) 0%,
-      rgba(22, 163, 74, 0.95) 50%,
+      rgba(var(--color-success-500), 0.9) 0%,
+      var(--success-gradient-start) 50%,
       var(--success-gradient-start) 100%
     ),
     radial-gradient(circle at 30% 30%,
@@ -364,7 +364,7 @@ const getCelebrationStyle = (index: number) => {
 .done-toggle__button--completed:hover {
   background:
     linear-gradient(135deg,
-      rgba(22, 163, 74, 0.95) 0%,
+      var(--success-gradient-start) 0%,
       var(--color-work) 50%,
       var(--success-gradient-end) 100%
     ),
@@ -616,15 +616,15 @@ const getCelebrationStyle = (index: number) => {
 .done-toggle__button--prominent {
   background:
     linear-gradient(135deg,
-      rgba(var(--color-blue), 0.95) 0%,
-      rgba(37, 99, 235, 1) 50%,
-      rgba(29, 78, 216, 0.95) 100%
+      var(--blue-gradient-start) 0%,
+      var(--blue-gradient-start) 50%,
+      var(--blue-gradient-end) 100%
     ),
     radial-gradient(circle at 30% 30%,
       rgba(var(--color-slate-50), 0.2) 0%,
       transparent 70%
     );
-  border-color: var(--color-blue);
+  border-color: var(--color-navigation);
   color: white;
   box-shadow:
     var(--purple-shadow-deep),
@@ -636,9 +636,9 @@ const getCelebrationStyle = (index: number) => {
 .done-toggle__button--prominent:hover {
   background:
     linear-gradient(135deg,
-      rgba(37, 99, 235, 1) 0%,
-      rgba(29, 78, 216, 1) 50%,
-      rgba(30, 64, 175, 1) 100%
+      var(--blue-gradient-start) 0%,
+      var(--blue-gradient-end) 50%,
+      var(--blue-gradient-end) 100%
     ),
     radial-gradient(circle at 70% 70%,
       rgba(var(--color-slate-50), 0.3) 0%,
@@ -646,7 +646,7 @@ const getCelebrationStyle = (index: number) => {
     );
   box-shadow:
     0 var(--space-5) var(--space-16) var(--blue-shadow),
-    0 0 0 var(--space-0_5) rgba(var(--color-blue), 0.9);
+    0 0 0 var(--space-0_5) var(--blue-border-active);
 }
 
 .done-toggle__button--prominent .done-toggle__circle {

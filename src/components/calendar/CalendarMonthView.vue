@@ -75,7 +75,17 @@ const externalEventsByDate = computed(() => {
 })
 
 // Inject helpers from parent CalendarView
-const helpers = inject('calendar-helpers') as Record<string, unknown>
+interface CalendarHelpers {
+  getProjectVisual: (event: { projectId?: string }) => { type: 'color' | 'emoji'; content: string }
+  getProjectName: (event: CalendarEvent) => string
+  getProjectColor: (event: CalendarEvent) => string
+  getPriorityClass: (event: CalendarEvent) => string
+  getPriorityLabel: (event: CalendarEvent) => string
+  getTaskStatus: (event: CalendarEvent) => string
+  getStatusLabel: (event: CalendarEvent) => string
+  getStatusIcon: (status: string) => string
+  formatEventTime: (event: CalendarEvent) => string
+}
 const {
   getProjectVisual,
   getProjectName,
@@ -86,7 +96,7 @@ const {
   getStatusLabel,
   getStatusIcon,
   formatEventTime
-} = helpers
+} = inject('calendar-helpers') as CalendarHelpers
 
 // TASK-1321: Dynamic weekday headers based on weekStartsOn setting
 const { getWeekDayHeaders } = useCalendarCore()
@@ -95,7 +105,12 @@ const weekDayHeaders = computed(() => getWeekDayHeaders())
 // TASK-1322: Tooltip with task description
 const taskStore = useTaskStore()
 
-const getEventTooltip = (event: Record<string, unknown>) => {
+const getEventTooltip = (event: CalendarEvent) => {
+  // TASK-1418: Virtual events get a "Recurring preview" tooltip
+  if (event.isVirtual) {
+    const dateStr = event.startTime?.toISOString?.()?.slice(0, 10) || ''
+    return `Recurring — will be created on ${dateStr}`
+  }
   const task = taskStore.getTask(event.taskId)
   const lines = [event.title]
   if (task?.description) {
@@ -104,7 +119,7 @@ const getEventTooltip = (event: Record<string, unknown>) => {
   }
   const time = formatEventTime(event)
   if (time) lines.unshift(`🕐 ${time}`)
-  const status = getStatusLabel(getTaskStatus(event))
+  const status = getStatusLabel(event)
   if (status) lines.push(`Status: ${status}`)
   return lines.join('\n')
 }
@@ -146,15 +161,22 @@ const getEventTooltip = (event: Record<string, unknown>) => {
             v-for="event in day.events"
             :key="event.id"
             class="month-event"
-            :class="{ 'timer-active-event': currentTaskId === event.taskId, 'selected': selectedEventIds?.has(event.id), 'status-done': getTaskStatus(event) === 'done', 'status-active': getTaskStatus(event) === 'in_progress', 'dragging': draggedEventId === event.taskId }"
-            :style="{ backgroundColor: event.color }"
+            :class="{
+              'timer-active-event': currentTaskId === event.taskId,
+              'selected': selectedEventIds?.has(event.id),
+              'status-done': getTaskStatus(event) === 'done',
+              'status-active': getTaskStatus(event) === 'in_progress',
+              'dragging': draggedEventId === event.taskId,
+              'month-event--virtual': event.isVirtual
+            }"
+            :style="{ backgroundColor: event.isVirtual ? undefined : event.color }"
             :title="getEventTooltip(event)"
-            draggable="true"
-            @dragstart="handleEventDragStart($event, event)"
-            @dragend="handleEventDragEnd($event)"
-            @click.stop="$emit('eventClick', $event, event)"
-            @dblclick.stop="$emit('eventDblClick', event)"
-            @contextmenu.prevent.stop="$emit('eventContextMenu', $event, event)"
+            :draggable="!event.isVirtual"
+            @dragstart="!event.isVirtual && handleEventDragStart($event, event)"
+            @dragend="!event.isVirtual && handleEventDragEnd($event)"
+            @click.stop="!event.isVirtual && $emit('eventClick', $event, event)"
+            @dblclick.stop="!event.isVirtual && $emit('eventDblClick', event)"
+            @contextmenu.prevent.stop="!event.isVirtual && $emit('eventContextMenu', $event, event)"
           >
             <!-- Project Stripe -->
             <div
@@ -388,6 +410,23 @@ const getEventTooltip = (event: Record<string, unknown>) => {
 .month-event.dragging {
   opacity: 0.35 !important;
   transform: scale(0.95);
+}
+
+/* TASK-1418: Virtual recurring event ghost styling */
+.month-event--virtual {
+  opacity: 0.5;
+  border-style: dashed !important;
+  border-width: 1px;
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-subtle) !important;
+  color: var(--text-primary) !important;
+  pointer-events: none;
+  cursor: default;
+}
+
+.month-event--virtual .event-title-short::before {
+  content: '\1F501 ';
+  font-size: 10px;
 }
 
 /* TASK-1317: External calendar events */

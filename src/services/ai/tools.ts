@@ -27,7 +27,7 @@ import { resolveTask } from './entityResolver'
 export const MAX_TOOLS_PER_RESPONSE = 5
 
 /** Valid task statuses */
-const VALID_STATUSES: Task['status'][] = ['planned', 'in_progress', 'done', 'backlog', 'on_hold']
+const VALID_STATUSES: Task['status'][] = ['todo', 'done']
 
 /** Valid task priorities */
 const VALID_PRIORITIES: Array<Task['priority']> = ['low', 'medium', 'high', null]
@@ -113,7 +113,7 @@ export const AI_TOOLS: ToolDefinition[] = [
     parameters: {
       type: 'object',
       properties: {
-        status: { type: 'string', description: 'Filter by status. Default excludes done tasks. Use "all" to include done.', enum: ['planned', 'in_progress', 'done', 'backlog', 'all'] },
+        status: { type: 'string', description: 'Filter by status. Default excludes done tasks. Use "all" to include done.', enum: ['todo', 'done', 'all'] },
         dueDate: { type: 'string', description: 'Filter by due date. "today" = due today only, "tomorrow" = due tomorrow, "this_week" = due this week (Mon-Sun), or exact YYYY-MM-DD date.' },
         projectId: { type: 'string', description: 'Filter tasks by project ID. Use list_projects to get project IDs first.' },
         sortBy: { type: 'string', description: 'Sort results before applying limit. Default: "priority" (critical > high > medium > low > none).', enum: ['priority', 'dueDate', 'title'] },
@@ -124,13 +124,13 @@ export const AI_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'update_task_status',
-    description: 'Update the status of a task by exact ID. PREFER mark_task_done when the user says "done" or "complete" — it accepts title fragments. Only use this tool when you have an exact task ID and need to set a non-done status (planned, in_progress, backlog, on_hold).',
+    description: 'Update the status of a task by exact ID. PREFER mark_task_done when the user says "done" or "complete" — it accepts title fragments. Only use this tool when you have an exact task ID and need to set a non-done status.',
     category: 'write',
     parameters: {
       type: 'object',
       properties: {
         taskId: { type: 'string', description: 'The ID of the task to update' },
-        status: { type: 'string', description: 'The new status', enum: ['planned', 'in_progress', 'done', 'backlog'] },
+        status: { type: 'string', description: 'The new status', enum: ['todo', 'done'] },
       },
       required: ['taskId', 'status'],
     },
@@ -149,7 +149,7 @@ export const AI_TOOLS: ToolDefinition[] = [
         description: { type: 'string', description: 'New description' },
         priority: { type: 'string', description: 'New priority', enum: ['low', 'medium', 'high'] },
         dueDate: { type: 'string', description: 'New due date in YYYY-MM-DD format' },
-        status: { type: 'string', description: 'New status', enum: ['planned', 'in_progress', 'done', 'backlog'] },
+        status: { type: 'string', description: 'New status', enum: ['todo', 'done'] },
         estimatedDuration: { type: 'number', description: 'Estimated duration in minutes' },
       },
       required: ['taskId'],
@@ -164,7 +164,7 @@ export const AI_TOOLS: ToolDefinition[] = [
       properties: {
         query: { type: 'string', description: 'Text to search for in task titles and descriptions' },
         priority: { type: 'string', description: 'Filter by priority', enum: ['low', 'medium', 'high'] },
-        status: { type: 'string', description: 'Filter by status. Only set this if user explicitly asks for done/completed tasks.', enum: ['planned', 'in_progress', 'done', 'backlog'] },
+        status: { type: 'string', description: 'Filter by status. Only set this if user explicitly asks for done/completed tasks.', enum: ['todo', 'done'] },
         dueDate: { type: 'string', description: 'Filter by due date. "today" = due today only, "tomorrow" = due tomorrow, "this_week" = due this week (Mon-Sun), or exact YYYY-MM-DD date.' },
         limit: { type: 'number', description: 'Maximum results (default 20)' },
       },
@@ -334,7 +334,7 @@ export const AI_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         taskIds: { type: 'array', description: 'Array of task IDs to update', items: { type: 'string' } },
-        status: { type: 'string', description: 'The new status for all tasks', enum: ['planned', 'in_progress', 'done', 'backlog'] },
+        status: { type: 'string', description: 'The new status for all tasks', enum: ['todo', 'done'] },
         confirmed: { type: 'boolean', description: 'Must be true to confirm bulk operation' },
       },
       required: ['taskIds', 'status', 'confirmed'],
@@ -1126,7 +1126,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
             overdueTasks: overdue.slice(0, 10).map((t: Task) => ({ id: t.id, title: t.title, dueDate: t.dueDate })),
             timerSessionsCompleted: sessionsCompleted,
             totalTasks: allTasks.length,
-            inProgress: allTasks.filter((t: Task) => t.status === 'in_progress').length,
+            inProgress: allTasks.filter((t: Task) => t.status === 'todo').length,
           },
         }
       }
@@ -1389,9 +1389,9 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         const todayStr = new Date().toISOString().split('T')[0]
         const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
 
-        // Filter actionable tasks (not done, not on_hold)
+        // Filter actionable tasks (not done)
         const actionable = allTasks.filter((t: Task) =>
-          t.status !== 'done' && t.status !== 'on_hold'
+          t.status !== 'done'
         )
 
         if (actionable.length === 0) {
@@ -1411,8 +1411,8 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           if (t.priority === 'high') score += 30
           else if (t.priority === 'medium') score += 15
           else if (t.priority === 'low') score += 5
-          // In-progress tasks get a small boost
-          if (t.status === 'in_progress') score += 10
+          // Active tasks get a small boost
+          if (t.status === 'todo') score += 10
 
           return { task: t, score }
         })
@@ -1653,9 +1653,8 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         const eligible = allTasks
           .filter(t => {
             if (t._soft_deleted || t.status === 'done') return false
-            if (t.status === 'on_hold') return false
-            // Exclude tasks due after this week (unless in-progress)
-            if (t.dueDate && t.status !== 'in_progress') {
+            // Exclude tasks due after this week
+            if (t.dueDate) {
               const weekEnd = new Date()
               weekEnd.setDate(weekEnd.getDate() + (6 - weekEnd.getDay())) // end of current week
               const weekEndStr = weekEnd.toISOString().split('T')[0]
@@ -1668,9 +1667,9 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
             const aOverdue = a.dueDate && a.dueDate < today ? 1 : 0
             const bOverdue = b.dueDate && b.dueDate < today ? 1 : 0
             if (aOverdue !== bOverdue) return bOverdue - aOverdue
-            // In-progress next
-            const aProgress = a.status === 'in_progress' ? 1 : 0
-            const bProgress = b.status === 'in_progress' ? 1 : 0
+            // Active (todo) next
+            const aProgress = a.status === 'todo' ? 1 : 0
+            const bProgress = b.status === 'todo' ? 1 : 0
             if (aProgress !== bProgress) return bProgress - aProgress
             // By priority
             const pa = a.priority ? priorityScore[a.priority] ?? 0 : 0
@@ -1688,7 +1687,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
             priority: t.priority as 'low' | 'medium' | 'high' | null,
             dueDate: t.dueDate || '',
             estimatedDuration: t.estimatedDuration,
-            status: t.status || 'planned',
+            status: t.status || 'todo',
             projectId: t.projectId || '',
             projectName: t.projectId ? (projectStore.getProjectDisplayName(t.projectId) || '') : '',
             description: t.description,
@@ -1766,7 +1765,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
             if (t.status === 'done' && t.completedAt && new Date(t.completedAt as string) >= twoWeeksAgo && t.projectId) {
               activeProjectIds.add(t.projectId)
             }
-            if (t.status === 'in_progress' && t.projectId) {
+            if (t.status === 'todo' && t.projectId) {
               activeProjectIds.add(t.projectId)
             }
           }

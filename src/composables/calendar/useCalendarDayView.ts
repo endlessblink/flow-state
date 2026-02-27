@@ -4,6 +4,7 @@ import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
+import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
 
 export interface TimeSlot {
   id: string
@@ -244,6 +245,43 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       // Calculate overlapping positions with error handling
       try {
         const positionedEvents = calculateOverlappingPositions(dedupedEvents)
+
+        // TASK-1418: Merge virtual recurring events when toggle is ON
+        if (taskStore.showFutureRecurring) {
+          const virtualEvents = generateVirtualCalendarEvents(
+            taskStore.calendarFilteredTasks,
+            dateStr,
+            dateStr
+          )
+
+          for (const virtual of virtualEvents) {
+            if (virtual.scheduledDate === dateStr) {
+              const [hour, minute] = (virtual.scheduledTime || '09:00').split(':').map(Number)
+              const startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
+              const duration = virtual.duration || 30
+              const endTime = new Date(startTime.getTime() + duration * 60000)
+              const startSlot = (hour * 2) + (minute >= 30 ? 1 : 0)
+
+              positionedEvents.push({
+                id: virtual.id,
+                taskId: virtual.taskId,
+                instanceId: virtual.id,
+                title: virtual.title,
+                startTime,
+                endTime,
+                duration,
+                startSlot,
+                slotSpan: Math.max(1, Math.ceil(duration / 30)),
+                color: '#4ECDC4',
+                column: 0,
+                totalColumns: 1,
+                isDueDate: false,
+                isVirtual: true,
+              } as CalendarEvent & { isVirtual: boolean })
+            }
+          }
+        }
+
         return positionedEvents as CalendarEvent[]
       } catch (_positionError) {
         // Return events without positioning if calculation fails

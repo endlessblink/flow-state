@@ -13,8 +13,8 @@ export interface CategoryAction {
   newDueDate?: string
   oldPriority?: 'low' | 'medium' | 'high' | undefined
   newPriority?: 'low' | 'medium' | 'high' | undefined
-  oldStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
-  newStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
+  oldStatus?: 'todo' | 'done'
+  newStatus?: 'todo' | 'done'
   deletedTask?: import('./tasks').Task // Store full task data for undo of deleted tasks
   oldDescription?: string
   newDescription?: string

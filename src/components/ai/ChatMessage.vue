@@ -19,8 +19,11 @@
 
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
+import type { Task } from '@/stores/tasks'
 import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Trophy, Flame, Shield, Swords, TrendingUp, Target, Play, CheckCircle2, CalendarDays } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
+import type Token from 'markdown-it/lib/token.mjs'
+import type Renderer from 'markdown-it/lib/renderer.mjs'
 import type { ChatMessage, ChatAction } from '@/stores/aiChat'
 import { formatRelativeDate } from '@/utils/dateUtils'
 import TaskQuickEditPopover from './TaskQuickEditPopover.vue'
@@ -53,12 +56,10 @@ const md = new MarkdownIt({
 })
 
 // Make links open in new tab
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const defaultRender = md.renderer.rules.link_open || function (tokens: any[], idx: number, options: any, _env: any, self: any) {
+const defaultRender = md.renderer.rules.link_open || function (tokens: Token[], idx: number, options: MarkdownIt.Options, _env: unknown, self: Renderer) {
   return self.renderToken(tokens, idx, options)
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-md.renderer.rules.link_open = function (tokens: any[], idx: number, options: any, env: any, self: any) {
+md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: MarkdownIt.Options, env: unknown, self: Renderer) {
   tokens[idx].attrSet('target', '_blank')
   tokens[idx].attrSet('rel', 'noopener noreferrer')
   return defaultRender(tokens, idx, options, env, self)
@@ -85,19 +86,32 @@ const scheduleSaved = ref(false)
 const taskStore = useTaskStore()
 
 const taskMap = computed(() => {
-  const map = new Map<string, unknown>()
+  const map = new Map<string, Task>()
   for (const task of taskStore.tasks) {
     map.set(task.id, task)
   }
   return map
 })
 
+/** Snapshot task item from AI tool results */
+type TaskListItem = {
+  id: string
+  title?: string
+  status?: string
+  priority?: string
+  dueDate?: string
+  estimatedDuration?: number
+  reason?: string
+  daysOverdue?: number
+  [key: string]: unknown
+}
+
 /**
  * Merge a frozen snapshot task with live data from the Pinia task store.
  * The snapshot determines WHICH task to show; the store provides CURRENT field values.
  * Falls back to snapshot data if the task was deleted from the store.
  */
-function liveTask(snapshotTask: Record<string, unknown>): Record<string, unknown> {
+function liveTask(snapshotTask: TaskListItem): TaskListItem {
   if (!snapshotTask?.id) return snapshotTask
   const storeTask = taskMap.value.get(snapshotTask.id)
   if (!storeTask) return snapshotTask
@@ -112,7 +126,7 @@ function liveTask(snapshotTask: Record<string, unknown>): Record<string, unknown
 }
 
 /** Apply liveTask() to an array of snapshot tasks */
-function liveTasks(tasks: Record<string, unknown>[]): Record<string, unknown>[] {
+function liveTasks(tasks: TaskListItem[]): TaskListItem[] {
   if (!Array.isArray(tasks)) return []
   return tasks.map(t => liveTask(t))
 }
@@ -172,6 +186,32 @@ const renderedContent = computed(() => {
   return sanitizeMarkdownHtml(md.render(content))
 })
 
+/** Challenge item from AI tool results */
+type ChallengeItem = {
+  id: string
+  title?: string
+  difficulty?: string
+  narrativeFlavor?: string
+  progressPercent?: number
+  objectiveCurrent?: number
+  objectiveTarget?: number
+  rewardXp?: number
+  timeRemaining?: number
+  [key: string]: unknown
+}
+
+/** Achievement item from AI tool results */
+type AchievementItem = {
+  id: string
+  tier?: string
+  name?: string
+  progressPercent?: number
+  description?: string
+  remaining?: number
+  xpReward?: number
+  [key: string]: unknown
+}
+
 export interface ChatToolResultData {
   length?: number
   totalTasks?: number
@@ -180,8 +220,8 @@ export interface ChatToolResultData {
   dueToday?: number
   overdueCount?: number
   timerSessionsCompleted?: number
-  overdueTasks?: Array<Record<string, unknown>>
-  dueTodayTasks?: Array<Record<string, unknown>>
+  overdueTasks?: TaskListItem[]
+  dueTodayTasks?: TaskListItem[]
   level?: number
   levelProgress?: number
   totalXp?: number
@@ -191,11 +231,21 @@ export interface ChatToolResultData {
   achievementsEarned?: number
   achievementsTotal?: number
   streakAtRisk?: boolean
-  dailies?: Array<Record<string, unknown>>
+  dailies?: ChallengeItem[]
   boss?: Record<string, unknown>
-  plan?: Record<string, unknown>
+  plan?: Record<string, TaskListItem[]>
   completedThisWeek?: number
-  tasks?: Array<Record<string, unknown>>
+  totalFocusMinutes?: number
+  pomodorosToday?: number
+  statusBreakdown?: Record<string, number>
+  unscheduled?: TaskListItem[]
+  tasks?: TaskListItem[]
+  totalScheduled?: number
+  daysUsed?: number
+  reasoning?: string
+  remainingTasks?: number
+  focusMinutes?: number
+  challenges?: { completedToday?: number; corruptionLevel?: number; [key: string]: unknown }
   [index: number]: unknown
   [key: string]: unknown
 }
@@ -211,7 +261,7 @@ const toolResults = computed(() => {
     tool: string
     message: string
     success: boolean
-    data?: ChatToolResultData
+    data: ChatToolResultData
     type?: 'read' | 'write' | 'destructive'
   }>
 })
@@ -219,7 +269,7 @@ const toolResults = computed(() => {
 /**
  * Check if a tool result contains a task list that should be rendered as clickable items.
  */
-function isTaskListResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+function isTaskListResult(result: { tool: string; data: ChatToolResultData }): boolean {
   if (!result.data) return false
   // Direct array of tasks
   if (Array.isArray(result.data) && result.data.length > 0 && (result.data[0] as Record<string, unknown>)?.title) return true
@@ -229,23 +279,23 @@ function isTaskListResult(result: { tool: string; data?: ChatToolResultData }): 
   return false
 }
 
-function getTasksFromResult(result: { tool: string; data?: ChatToolResultData }): Array<{ id: string; title: string; dueDate?: string; priority?: string; status?: string; daysOverdue?: number }> {
+function getTasksFromResult(result: { tool: string; data: ChatToolResultData }): TaskListItem[] {
   if (!result.data) return []
   // Direct array (get_overdue_tasks, list_tasks, search_tasks)
-  if (Array.isArray(result.data)) return liveTasks(result.data as Record<string, unknown>[]) as any
-  
+  if (Array.isArray(result.data)) return liveTasks(result.data as TaskListItem[])
+
   const dataObj = result.data
   // Daily summary — merge overdue + due today
-  const tasks: Record<string, unknown>[] = []
+  const tasks: TaskListItem[] = []
   if (Array.isArray(dataObj.overdueTasks)) tasks.push(...dataObj.overdueTasks)
   if (Array.isArray(dataObj.dueTodayTasks)) tasks.push(...dataObj.dueTodayTasks)
-  return liveTasks(tasks) as any
+  return liveTasks(tasks)
 }
 
 /**
  * Check if a tool result is a daily summary with stats to render as a rich card.
  */
-function isDailySummaryResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+function isDailySummaryResult(result: { tool: string; data: ChatToolResultData }): boolean {
   return result.tool === 'get_daily_summary' && !!result.data && typeof result.data.totalTasks === 'number'
 }
 
@@ -253,32 +303,42 @@ function isDailySummaryResult(result: { tool: string; data?: ChatToolResultData 
  * Gamification & productivity tool result detection helpers
  */
 
-function isGamificationStatusResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+function isGamificationStatusResult(result: { tool: string; data: ChatToolResultData }): boolean {
   return result.tool === 'get_gamification_status' && !!result.data && typeof result.data.level === 'number'
 }
 
-function isActiveChallengesResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+function isActiveChallengesResult(result: { tool: string; data: ChatToolResultData }): boolean {
   return result.tool === 'get_active_challenges' && !!result.data && Array.isArray(result.data.dailies)
 }
 
-function isAchievementsNearResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+function isAchievementsNearResult(result: { tool: string; data: ChatToolResultData }): boolean {
   return result.tool === 'get_achievements_near_completion' && !!result.data && Array.isArray(result.data)
 }
 
-function isProductivityStatsResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+function isProductivityStatsResult(result: { tool: string; data: ChatToolResultData }): boolean {
   return result.tool === 'get_productivity_stats' && !!result.data && typeof result.data.totalTasks === 'number'
 }
 
-function isSuggestNextTaskResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+function isSuggestNextTaskResult(result: { tool: string; data: ChatToolResultData }): boolean {
   return result.tool === 'suggest_next_task' && !!result.data && Array.isArray(result.data)
 }
 
-function isWeeklySummaryResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+function isWeeklySummaryResult(result: { tool: string; data: ChatToolResultData }): boolean {
   return result.tool === 'get_weekly_summary' && !!result.data && typeof result.data.completedThisWeek === 'number'
 }
 
-function isWeeklyPlanResult(result: { tool: string; data?: ChatToolResultData }): boolean {
+function isWeeklyPlanResult(result: { tool: string; data: ChatToolResultData }): boolean {
   return result.tool === 'generate_weekly_plan' && !!result.data && !!result.data.plan
+}
+
+function getAchievementsFromResult(data: ChatToolResultData): AchievementItem[] {
+  if (!Array.isArray(data)) return []
+  return data as unknown as AchievementItem[]
+}
+
+function getSuggestedTasksFromResult(data: ChatToolResultData): TaskListItem[] {
+  if (!Array.isArray(data)) return []
+  return liveTasks(data as unknown as TaskListItem[])
 }
 
 const PLAN_DAY_LABELS: Record<string, string> = {
@@ -293,7 +353,8 @@ function formatMinutes(minutes: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-function formatTimeRemaining(minutes: number): string {
+function formatTimeRemaining(minutes: number | undefined): string {
+  if (minutes === undefined) return ''
   if (minutes < 60) return `${minutes}m left`
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
@@ -336,7 +397,7 @@ function toggleSection(key: string) {
   }
 }
 
-function visibleTasks(tasks: Record<string, unknown>[], sectionKey: string): Record<string, unknown>[] {
+function visibleTasks(tasks: TaskListItem[], sectionKey: string): TaskListItem[] {
   const live = liveTasks(tasks)
   if (expandedSections.value.has(sectionKey) || live.length <= MAX_VISIBLE_TASKS) return live
   return live.slice(0, MAX_VISIBLE_TASKS)
@@ -346,15 +407,15 @@ const quickEditTask = ref<{ id: string; title: string; priority?: string | null;
 const quickEditPos = ref({ x: 0, y: 0 })
 const quickEditPosition = ref<'left' | 'auto'>('left')
 
-function openQuickEdit(task: Record<string, unknown>, event: MouseEvent) {
+function openQuickEdit(task: TaskListItem, event: MouseEvent) {
   event.stopPropagation()
   quickEditTask.value = {
-    id: task.id as string,
-    title: (task.title as string) || '(untitled)',
+    id: task.id,
+    title: task.title || '(untitled)',
     priority: (task.priority as string) || null,
-    status: (task.status as string) || 'planned',
-    dueDate: (task.dueDate as string) || null,
-    estimatedDuration: (task.estimatedDuration as number) || null,
+    status: task.status || 'planned',
+    dueDate: task.dueDate || null,
+    estimatedDuration: task.estimatedDuration || null,
   }
   const panel = document.querySelector('.ai-chat-panel')
   const isFullscreen = panel?.classList.contains('panel-fullscreen')
@@ -864,7 +925,7 @@ async function saveSchedule() {
               No achievements close to completion yet. Keep going!
             </div>
             <div
-              v-for="ach in result.data"
+              v-for="ach in getAchievementsFromResult(result.data)"
               :key="ach.id"
               class="achievement-item"
             >
@@ -934,7 +995,7 @@ async function saveSchedule() {
             </div>
             <div class="task-list">
               <button
-                v-for="(task, taskIdx) in liveTasks(result.data)"
+                v-for="(task, taskIdx) in getSuggestedTasksFromResult(result.data)"
                 :key="task.id"
                 class="task-list-item suggest-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -947,7 +1008,7 @@ async function saveSchedule() {
                     class="task-priority-dot"
                     :style="{ background: priorityColor(task.priority) }"
                   />
-                  <span class="suggest-reason" :class="'reason-' + task.reason.replace(/\s+/g, '-')" dir="auto">{{ task.reason }}</span>
+                  <span class="suggest-reason" :class="task.reason ? 'reason-' + task.reason.replace(/\s+/g, '-') : ''" dir="auto">{{ task.reason }}</span>
                   <span v-if="task.dueDate" class="task-due-date">{{ formatRelativeDate(task.dueDate) }}</span>
                 </div>
                 <div class="task-inline-actions" @click.stop>
@@ -1046,13 +1107,13 @@ async function saveSchedule() {
               </div>
             </div>
             <template v-for="(dayKey) in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']" :key="dayKey">
-              <div v-if="result.data.plan[dayKey]?.length > 0" class="task-list">
+              <div v-if="result.data.plan?.[dayKey]?.length > 0" class="task-list">
                 <div class="summary-section-label">
                   {{ PLAN_DAY_LABELS[dayKey] }}
-                  <span class="section-count">({{ result.data.plan[dayKey].length }})</span>
+                  <span class="section-count">({{ result.data.plan?.[dayKey]?.length }})</span>
                 </div>
                 <button
-                  v-for="task in liveTasks(result.data.plan[dayKey])"
+                  v-for="task in liveTasks(result.data.plan?.[dayKey] ?? [])"
                   :key="task.id"
                   class="task-list-item"
                   :class="{ 'task-completed': completedTaskIds.has(task.id) }"

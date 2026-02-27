@@ -117,8 +117,7 @@ const groupByOptions = computed(() => [
 
 const filterOptions = computed(() => [
   { label: t('filters.all_status'), value: 'all' },
-  { label: t('task.status_todo'), value: 'planned' },
-  { label: t('task.status_in_progress'), value: 'in_progress' },
+  { label: t('task.status_todo'), value: 'todo' },
   { label: t('task.status_done'), value: 'done' }
 ])
 </script>

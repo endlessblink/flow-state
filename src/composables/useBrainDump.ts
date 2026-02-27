@@ -63,7 +63,7 @@ export function useBrainDump() {
                 createTaskWithUndo({
                     title: scrapeResult.title,
                     description: scrapeResult.description,
-                    status: 'planned',
+                    status: 'todo',
                     isInInbox: true
                 })
                 return
@@ -98,7 +98,7 @@ export function useBrainDump() {
                 title,
                 priority,
                 estimatedDuration,
-                status: 'planned',
+                status: 'todo',
                 isInInbox: true
             })
         })

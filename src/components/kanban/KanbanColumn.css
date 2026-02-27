@@ -2,7 +2,7 @@
 .kanban-column {
     background: transparent;
     border: none;
-    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 1px solid var(--glass-border-light);
     border-radius: 0;
     display: flex;
     flex-direction: column;
@@ -46,7 +46,7 @@
 
 .column-title {
     /* Clean, simple title - no uppercase, no shadows */
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary);
     font-weight: 500;
     font-size: 13px;
 }
@@ -55,14 +55,14 @@
 .task-count {
     font-size: 12px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-muted);
 }
 
 /* Add Task Button - Simple like TickTick */
 .add-task-btn {
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-muted);
     width: 24px;
     height: 24px;
     border-radius: var(--radius-sm);
@@ -74,7 +74,7 @@
 }
 
 .add-task-btn:hover {
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-secondary);
 }
 
 /* Tasks Container - Clean spacing */
@@ -104,12 +104,12 @@
 }
 
 .tasks-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--glass-border);
     border-radius: 4px;
 }
 
 .tasks-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--border-hover);
 }
 
 /* Empty State */
@@ -120,28 +120,28 @@
     justify-content: center;
     padding: 32px 16px;
     text-align: center;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--glass-bg-subtle);
     border-radius: 12px;
-    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border: 1px dashed var(--glass-border);
     margin-top: 8px;
     transition: all 0.2s ease;
 }
 
 .empty-column:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--glass-bg-weak);
+    border-color: var(--border-hover);
 }
 
 .empty-message {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-muted);
     font-size: 13px;
     margin-bottom: 12px;
 }
 
 .add-first-task {
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    color: #a5b4fc;
+    background: var(--purple-bg-start); /* rgba(99,102,241,0.16) */
+    border: 1px solid var(--purple-border-medium);
+    color: var(--indigo-text); /* #818cf8 — no exact indigo-300 token */
     padding: 8px 16px;
     border-radius: 8px;
     cursor: pointer;
@@ -154,11 +154,11 @@
 }
 
 .add-first-task:hover {
-    background: rgba(99, 102, 241, 0.25);
-    border-color: rgba(99, 102, 241, 0.5);
-    color: #fff;
+    background: var(--calendar-ghost-bg-start); /* rgba(99,102,241,0.25) */
+    border-color: var(--purple-border-strong);
+    color: var(--text-primary);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    box-shadow: var(--purple-shadow-subtle);
 }
 
 /* Task Item Transitions */
@@ -168,22 +168,22 @@
 
 .ghost-card {
     opacity: 0.4;
-    background: rgba(59, 130, 246, 0.1) !important;
-    border: 2px dashed rgba(59, 130, 246, 0.5) !important;
+    background: var(--blue-bg-light) !important;
+    border: 2px dashed var(--blue-border-medium) !important;
 }
 
 .chosen-card {
     opacity: 1;
-    background: rgba(255, 255, 255, 0.1) !important;
+    background: var(--glass-border) !important;
     transform: scale(1.02);
     z-index: 1000;
 }
 
 .drag-card {
     opacity: 1;
-    background: rgba(40, 40, 50, 0.95) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    background: var(--canvas-task-bg) !important; /* rgba(35,32,52,0.95) — closest dark surface */
+    border: 1px solid var(--border-hover) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* no token for 0.5 opacity shadow */
     cursor: grabbing;
 }
 
@@ -194,9 +194,9 @@
     z-index: 9999 !important;
     pointer-events: none !important;
     opacity: 1 !important;
-    background: rgba(35, 37, 50, 0.98) !important;
+    background: var(--canvas-task-bg) !important; /* rgba(35,32,52,0.95) — closest dark surface */
     border: 1px solid var(--brand-primary, #4ECDC4) !important;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(78, 205, 196, 0.15) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px var(--brand-bg-dim) !important; /* no 0.5 shadow token */
     border-radius: var(--radius-lg) !important;
     transform: rotate(1deg) scale(1.03) !important;
 }

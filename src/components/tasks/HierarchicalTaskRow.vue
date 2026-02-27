@@ -123,11 +123,8 @@ const taskStore = useTaskStore()
 const router = useRouter()
 
 const statusOptions = [
-  { label: 'To Do', value: 'planned' },
-  { label: 'In Progress', value: 'in_progress' },
-  { label: 'Done', value: 'done' },
-  { label: 'Backlog', value: 'backlog' },
-  { label: 'On Hold', value: 'on_hold' }
+  { label: 'To Do', value: 'todo' },
+  { label: 'Done', value: 'done' }
 ]
 
 // Initialize Composables

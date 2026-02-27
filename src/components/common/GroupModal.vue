@@ -505,7 +505,7 @@ watch(() => props.isOpen, async (isOpen) => {
 .color-text-input:focus {
   outline: none;
   border-color: var(--glass-border-strong);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 2px var(--glass-border-faint);
 }
 
 .color-picker-input {
@@ -615,7 +615,7 @@ watch(() => props.isOpen, async (isOpen) => {
 .parent-select:focus {
   outline: none;
   border-color: var(--glass-border-strong);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 2px var(--glass-border-faint);
 }
 
 .parent-select option {

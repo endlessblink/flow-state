@@ -59,8 +59,8 @@ defineEmits<{
 
   /* Layered shadow for depth */
   box-shadow:
-    0 var(--space-2) var(--space-8) rgba(var(--color-slate-900), 0.8),
-    0 var(--space-1) var(--space-4) rgba(var(--color-slate-900), 0.4);
+    0 var(--space-2) var(--space-8) var(--overlay-heavy), /* no token match for 0.8 dark */
+    0 var(--space-1) var(--space-4) var(--overlay-light); /* no token match for 0.4 dark */
 
   /* Animation */
   transition: all var(--duration-normal) var(--spring-smooth);
@@ -80,8 +80,8 @@ defineEmits<{
   border-color: var(--glass-border-hover);
   background: var(--glass-bg-medium);
   box-shadow:
-    0 var(--space-3) var(--space-10) rgba(var(--color-slate-900), 0.9),
-    0 var(--space-1_5) var(--space-5) rgba(var(--color-slate-900), 0.5);
+    0 var(--space-3) var(--space-10) var(--overlay-heavy), /* no token match for 0.9 dark */
+    0 var(--space-1_5) var(--space-5) var(--overlay-bg); /* no token match for 0.5 dark */
   transform: translateY(calc(var(--space-0_5) * -1));
 }
 
@@ -92,17 +92,17 @@ defineEmits<{
   -webkit-backdrop-filter: blur(var(--space-5)) saturate(100%);
   border: 1px solid var(--glass-border);
   box-shadow:
-    0 var(--space-2) var(--space-8) rgba(var(--color-slate-900), 0.4),
-    0 var(--space-1) var(--space-4) rgba(var(--color-slate-900), 0.2),
-    inset 0 1px 0 rgba(var(--color-slate-50), 0.05);
+    0 var(--space-2) var(--space-8) var(--overlay-light), /* no token match for 0.4 dark */
+    0 var(--space-1) var(--space-4) var(--shadow-color-sm), /* no token match for 0.2 dark */
+    inset 0 1px 0 var(--glass-border-faint);
 }
 
 .base-card.is-glass:hover {
   border-color: var(--glass-border-hover);
   box-shadow:
-    0 var(--space-3) var(--space-10) rgba(var(--color-slate-900), 0.5),
-    0 var(--space-1_5) var(--space-5) rgba(var(--color-slate-900), 0.3),
-    inset 0 1px 0 rgba(var(--color-slate-50), 0.08);
+    0 var(--space-3) var(--space-10) var(--overlay-bg), /* no token match for 0.5 dark */
+    0 var(--space-1_5) var(--space-5) var(--shadow-color-sm), /* no token match for 0.3 dark */
+    inset 0 1px 0 var(--border-subtle);
 }
 
 /* Elevated variant - same base look, just deeper shadows for hierarchy */
@@ -112,15 +112,15 @@ defineEmits<{
   -webkit-backdrop-filter: blur(var(--space-5)) saturate(100%);
   border: 1px solid var(--glass-border);
   box-shadow:
-    0 var(--space-4) var(--space-12) rgba(var(--color-slate-900), 0.5),
-    0 var(--space-2) var(--space-6) rgba(var(--color-slate-900), 0.3);
+    0 var(--space-4) var(--space-12) var(--overlay-bg), /* no token match for 0.5 dark */
+    0 var(--space-2) var(--space-6) var(--shadow-color-sm); /* no token match for 0.3 dark */
 }
 
 .base-card.is-elevated:hover {
   border-color: var(--glass-border-hover);
   box-shadow:
-    0 var(--space-5) 56px rgba(var(--color-slate-900), 0.6),
-    0 var(--space-2_5) var(--space-7_5) rgba(var(--color-slate-900), 0.4);
+    0 var(--space-5) 56px var(--overlay-heavy), /* no token match for 0.6 dark */
+    0 var(--space-2_5) var(--space-7_5) var(--overlay-light); /* no token match for 0.4 dark */
 }
 
 /* Variant: Outlined - pure stroke, transparent */
@@ -162,7 +162,7 @@ defineEmits<{
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(var(--color-slate-50), 0.02) 100%
+    var(--glass-border-faint) 100% /* no token match for rgba(white, 0.02) */
   );
 }
 

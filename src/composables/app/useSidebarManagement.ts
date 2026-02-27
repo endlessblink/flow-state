@@ -189,7 +189,7 @@ export function useSidebarManagement() {
       undoRedoActions.createTaskWithUndo({
         title: newTaskTitle.value.trim(),
         description: '',
-        status: 'planned',
+        status: 'todo',
         projectId: undefined // ✅ FIXED: Use undefined instead of forbidden '1'
       })
       newTaskTitle.value = ''

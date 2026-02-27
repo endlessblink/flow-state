@@ -352,7 +352,7 @@ export function useCanvasInteractions(deps?: {
     const findNode = deps?.findNode || vueFlow?.findNode || (() => null)
     const updateNode = deps?.updateNode || vueFlow?.updateNode || (() => { })
     const _applyNodeChanges = deps?.applyNodeChanges || vueFlow?.applyNodeChanges || (() => { })
-    const nodes = (deps?.nodes || vueFlow?.nodes || ref([])) as Ref<any[]>
+    const nodes = (deps?.nodes || vueFlow?.nodes || ref([])) as Ref<Node[]>
 
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()

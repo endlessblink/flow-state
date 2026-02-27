@@ -117,7 +117,7 @@ const createTask = async () => {
   const newTask: Partial<Task> = {
     title: taskTitle.value.trim(),
     description: '',
-    status: 'planned',
+    status: 'todo',
     priority: priority.value as Task['priority'], // Cast to Task priority type
     projectId: selectedProject.value || taskStore.activeProjectId || undefined
   }
@@ -144,7 +144,7 @@ const createAndContinue = async () => {
   const newTask: Partial<Task> = {
     title: taskTitle.value.trim(),
     description: '',
-    status: 'planned',
+    status: 'todo',
     priority: priority.value as Task['priority'], // Cast to Task priority type
     projectId: selectedProject.value || taskStore.activeProjectId || undefined
   }

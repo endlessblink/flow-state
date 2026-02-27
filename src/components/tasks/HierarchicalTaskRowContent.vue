@@ -73,7 +73,7 @@
     <!-- Status Cell -->
     <div class="task-row__status table-cell status-cell" @click.stop>
       <CustomSelect
-        :model-value="task.status || 'planned'"
+        :model-value="task.status || 'todo'"
         :options="statusOptions"
         placeholder="Select status..."
         @update:model-value="(val) => $emit('updateStatus', String(val))"

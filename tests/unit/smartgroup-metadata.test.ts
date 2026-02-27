@@ -89,12 +89,12 @@ describe('Smart-Group Metadata-Only Behavior', () => {
       expect(result!.value).toBe('high')
     })
 
-    it('detects "In Progress" as a status power keyword', () => {
+    it('detects "In Progress" as a todo status power keyword', () => {
       const result = detectPowerKeyword('In Progress')
 
       expect(result).not.toBeNull()
       expect(result!.category).toBe('status')
-      expect(result!.value).toBe('in_progress')
+      expect(result!.value).toBe('todo')
     })
 
     it('detects "Done" as a status power keyword', () => {

@@ -199,11 +199,7 @@ export function useWeeklyPlan() {
 
       // HARD EXCLUDE: Task has due date AFTER this week
       // If the user set a future date, they decided it's not for this week.
-      // Exception: in_progress tasks (user started it, keep it regardless)
-      if (t.dueDate && t.dueDate > weekEnd && t.status !== 'in_progress') return false
-
-      // HARD EXCLUDE: on_hold — user explicitly paused
-      if (t.status === 'on_hold') return false
+      if (t.dueDate && t.dueDate > weekEnd) return false
 
       return true
     })
@@ -219,10 +215,8 @@ export function useWeeklyPlan() {
       // Due this week: highly relevant
       else if (t.dueDate && t.dueDate <= weekEnd) score += 80
 
-      // In-progress: already started, must continue
-      if (t.status === 'in_progress') score += 60
-      // Planned: user has actively planned this
-      else if (t.status === 'planned') score += 30
+      // Active tasks get a boost
+      if (t.status === 'todo') score += 30
 
       // Priority
       score += (priorityScore[t.priority || ''] || 0) * 10
@@ -301,7 +295,7 @@ export function useWeeklyPlan() {
       if (t.projectId) activeProjectIds.add(t.projectId)
     }
     for (const t of taskStore.tasks) {
-      if (t.status === 'in_progress' && t.projectId) activeProjectIds.add(t.projectId)
+      if (t.status === 'todo' && t.projectId) activeProjectIds.add(t.projectId)
     }
     const activeProjectNames = Array.from(activeProjectIds)
       .map(id => projectStore.getProjectDisplayName(id))

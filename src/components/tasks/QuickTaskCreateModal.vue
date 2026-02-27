@@ -232,7 +232,7 @@ const dateInputRef = ref<HTMLInputElement>()
 // Form state
 const taskTitle = ref('')
 const taskDescription = ref('')
-const status = ref<string>('planned')
+const status = ref<string>('todo')
 const priority = ref<'low' | 'medium' | 'high'>('medium')
 const projectId = ref<string>('')
 const localDate = ref('')
@@ -411,7 +411,7 @@ const handleCreateTask = () => {
   // Reset form
   taskTitle.value = ''
   taskDescription.value = ''
-  status.value = 'planned'
+  status.value = 'todo'
   priority.value = 'medium'
   projectId.value = ''
   localDate.value = ''
@@ -426,7 +426,7 @@ watch(() => _props.isOpen, (isOpen) => {
   if (isOpen) {
     taskTitle.value = ''
     taskDescription.value = ''
-    status.value = 'planned'
+    status.value = 'todo'
     priority.value = 'medium'
     projectId.value = taskStore.activeProjectId || ''
     localDate.value = ''

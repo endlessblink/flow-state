@@ -20,7 +20,7 @@ import type {
   YearlyRecurrenceRule,
   Weekday
 } from '@/types/recurrence'
-import type { SimpleRecurrenceRule } from '@/types/tasks'
+import type { SimpleRecurrenceRule, Task, VirtualCalendarEvent } from '@/types/tasks'
 
 /**
  * Generate recurring task instances based on a recurrence rule
@@ -627,4 +627,93 @@ export function shouldRecurrenceContinue(rule: SimpleRecurrenceRule, currentCoun
   if (rule.endType === 'after_count') return currentCount < (rule.endCount || 0)
   // on_date is checked at computation time in computeNextDueDate
   return true
+}
+
+/**
+ * TASK-1418: Generate virtual calendar events for recurring task preview
+ * These are display-only ghost events that show where future recurring tasks would appear.
+ * No physical tasks are created.
+ */
+export function generateVirtualCalendarEvents(
+  tasks: Task[],
+  startDate: string,
+  endDate: string
+): VirtualCalendarEvent[] {
+  const virtualEvents: VirtualCalendarEvent[] = []
+
+  // Group tasks by recurrence chain — find the "head" (highest recurrenceCount) of each chain
+  const chainHeads = new Map<string, Task>()
+
+  for (const task of tasks) {
+    if (!task.recurrenceRule || task._soft_deleted) continue
+
+    const chainId = task.recurrenceParentId || task.id
+    const existing = chainHeads.get(chainId)
+
+    if (!existing || (task.recurrenceCount || 0) > (existing.recurrenceCount || 0)) {
+      chainHeads.set(chainId, task)
+    }
+  }
+
+  // For each chain head, generate future virtual events within the date range
+  for (const [, headTask] of chainHeads) {
+    if (!headTask.recurrenceRule || !headTask.dueDate) continue
+
+    // Only generate virtuals for non-done tasks or done tasks awaiting deferred clone
+    // Start computing from the head's due date
+    let currentDate = headTask.dueDate
+    let count = (headTask.recurrenceCount || 0)
+
+    // If the head is done, start from the next occurrence
+    if (headTask.status === 'done') {
+      count++
+      const next = computeNextDueDate(currentDate, headTask.recurrenceRule, count)
+      if (!next) continue
+      currentDate = next
+    }
+
+    // Generate up to 50 future dates
+    const MAX_VIRTUAL_EVENTS = 50
+    let generated = 0
+
+    while (generated < MAX_VIRTUAL_EVENTS) {
+      // Skip dates before the visible range
+      if (currentDate > endDate) break
+
+      if (currentDate >= startDate && currentDate <= endDate) {
+        // Don't create virtual event if a real task exists for this date in this chain
+        const chainId = headTask.recurrenceParentId || headTask.id
+        const realTaskExists = tasks.some(t =>
+          !t._soft_deleted &&
+          t.dueDate === currentDate &&
+          (t.recurrenceParentId === chainId || t.id === chainId) &&
+          t.status !== 'done'
+        )
+
+        if (!realTaskExists) {
+          virtualEvents.push({
+            id: `virtual-${headTask.id}-${currentDate}`,
+            taskId: headTask.id,
+            title: headTask.title,
+            scheduledDate: currentDate,
+            scheduledTime: headTask.dueTime,
+            duration: headTask.estimatedDuration,
+            isVirtual: true,
+            projectId: headTask.projectId,
+            priority: headTask.priority,
+            recurrenceRule: headTask.recurrenceRule,
+          })
+          generated++
+        }
+      }
+
+      // Advance to next occurrence
+      count++
+      const next = computeNextDueDate(currentDate, headTask.recurrenceRule, count)
+      if (!next || next <= currentDate) break // Safety: prevent infinite loop
+      currentDate = next
+    }
+  }
+
+  return virtualEvents
 }

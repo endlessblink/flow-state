@@ -724,7 +724,7 @@ const handleChangePassword = async () => {
   align-items: center;
   gap: var(--space-2);
   white-space: nowrap;
-  background: var(--color-danger-bg-light);
+  background: var(--danger-bg-light);
   border: 1px solid var(--danger-border-subtle);
   color: var(--color-danger);
   padding: var(--space-2) var(--space-4);
@@ -781,7 +781,7 @@ const handleChangePassword = async () => {
 }
 
 .change-password-btn:hover {
-  background: var(--glass-bg-strong);
+  background: var(--glass-bg-heavy);
   color: var(--text-primary);
 }
 
@@ -918,7 +918,7 @@ const handleChangePassword = async () => {
 .app-icon {
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-active));
   border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
@@ -982,7 +982,7 @@ const handleChangePassword = async () => {
 .update-status.success {
   background: var(--glass-bg-soft);
   border: 1px solid var(--success-border);
-  color: var(--success-text);
+  color: var(--color-success);
 }
 
 .update-status.checking {
@@ -993,7 +993,7 @@ const handleChangePassword = async () => {
 
 .update-status.error {
   background: var(--glass-bg-soft);
-  border: 1px solid var(--danger-border);
+  border: 1px solid var(--danger-border-subtle);
   color: var(--danger-text);
 }
 
@@ -1001,7 +1001,7 @@ const handleChangePassword = async () => {
   width: 20px;
   height: 20px;
   border: 2px solid var(--glass-border);
-  border-top-color: var(--primary-500);
+  border-top-color: var(--brand-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -1044,7 +1044,7 @@ const handleChangePassword = async () => {
 }
 
 .download-percent {
-  color: var(--primary-500);
+  color: var(--brand-primary);
   font-weight: var(--font-semibold);
 }
 
@@ -1059,7 +1059,7 @@ const handleChangePassword = async () => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-active));
   border-radius: var(--radius-full);
   transition: width 0.3s var(--spring-smooth);
 }
@@ -1079,7 +1079,7 @@ const handleChangePassword = async () => {
 }
 
 .update-btn.primary {
-  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-active));
   color: white;
   box-shadow: 0 4px 12px var(--shadow-strong);
 }
@@ -1327,7 +1327,7 @@ const handleChangePassword = async () => {
 }
 
 .cal-field-input:focus {
-  border-color: var(--accent-primary);
+  border-color: var(--brand-primary);
 }
 
 .cal-field-input::placeholder {
@@ -1382,7 +1382,7 @@ const handleChangePassword = async () => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  background: var(--accent-primary);
+  background: var(--brand-primary);
   color: white;
   border: none;
   border-radius: var(--radius-md);
@@ -1398,14 +1398,14 @@ const handleChangePassword = async () => {
 }
 
 .add-btn.danger {
-  background: var(--danger-bg-light, rgba(239, 68, 68, 0.15));
-  color: var(--color-danger, #ef4444);
-  border: 1px solid var(--danger-border-medium, rgba(239, 68, 68, 0.3));
+  background: var(--danger-bg-light);
+  color: var(--color-danger);
+  border: 1px solid var(--danger-border-medium);
 }
 
 .add-btn.danger:hover {
-  background: var(--danger-bg-medium, rgba(239, 68, 68, 0.25));
-  border-color: var(--color-danger, #ef4444);
+  background: var(--danger-bg-medium);
+  border-color: var(--color-danger);
 }
 
 .interval-picker {
@@ -1469,9 +1469,9 @@ const handleChangePassword = async () => {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: var(--glass-bg-soft);
-  border: 1px solid var(--color-warning, #f59e0b);
+  border: 1px solid var(--color-warning);
   border-radius: var(--radius-md);
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning);
   font-size: var(--text-sm);
 }
 

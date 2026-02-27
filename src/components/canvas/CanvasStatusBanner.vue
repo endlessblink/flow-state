@@ -34,10 +34,7 @@ const filterLabel = computed(() => {
   if (!props.activeStatusFilter) return ''
   const labels: Record<string, string> = {
     'done': 'Completed',
-    'in_progress': 'In Progress',
-    'planned': 'Planned',
-    'backlog': 'Backlog',
-    'on_hold': 'On Hold'
+    'todo': 'To Do'
   }
   return labels[props.activeStatusFilter] || props.activeStatusFilter
 })

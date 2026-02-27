@@ -24,12 +24,12 @@ export const useTaskMigrations = (tasks: Ref<Task[]>) => {
     }
 
     /**
-     * Migrate task status values to fix "todo" -> "planned" mapping
+     * Migrate task status values to fix old status -> "todo" mapping
      */
     const migrateTaskStatuses = () => {
         tasks.value.forEach(task => {
-            if ((task.status as string) === 'todo') {
-                task.status = 'planned'
+            if ((task.status as string) === 'planned' || (task.status as string) === 'in_progress' || (task.status as string) === 'backlog' || (task.status as string) === 'on_hold') {
+                task.status = 'todo'
             }
         })
     }

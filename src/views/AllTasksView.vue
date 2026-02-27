@@ -287,17 +287,14 @@ const groupedTasks = computed((): TaskGroup[] => {
       })
     }
   } else if (groupBy.value === 'status') {
-    const statusOrder = ['in_progress', 'planned', 'backlog', 'on_hold', 'done']
+    const statusOrder = ['todo', 'done']
     const statusLabels: Record<string, string> = {
-      in_progress: 'In Progress',
-      planned: 'To Do',
-      backlog: 'Backlog',
-      on_hold: 'On Hold',
+      todo: 'To Do',
       done: 'Done'
     }
     const statusMap = new Map<string, Task[]>()
     tasks.forEach(task => {
-      const key = task.status || 'planned'
+      const key = task.status === 'done' ? 'done' : 'todo'
       if (!statusMap.has(key)) statusMap.set(key, [])
       statusMap.get(key)!.push(task)
     })
@@ -478,7 +475,7 @@ const closeContextMenu = () => {
 const handleToggleComplete = async (taskId: string) => {
   const task = taskStore.tasks.find(t => t.id === taskId)
   if (task) {
-    const newStatus = task.status === 'done' ? 'planned' : 'done'
+    const newStatus = task.status === 'done' ? 'todo' : 'done'
     // BUG-1051: AWAIT to ensure persistence
     await taskStore.updateTask(taskId, { status: newStatus })
   }

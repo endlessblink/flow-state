@@ -58,6 +58,7 @@
       <CalendarHeader
         :format-current-date="formatCurrentDate"
         :hide-calendar-done-tasks="hideCalendarDoneTasks"
+        :show-future-recurring="showFutureRecurring"
         :view-mode="viewMode"
         :external-calendar-enabled="externalCalendar.hasEnabledCalendars.value || googleCalendar.isConnected.value"
         :external-calendar-loading="externalCalendar.isLoading.value || googleCalendar.isLoading.value"
@@ -65,6 +66,7 @@
         @next-day="nextDay"
         @go-to-today="goToToday"
         @toggle-done-tasks="taskStore.toggleCalendarDoneTasks()"
+        @toggle-future-recurring="showFutureRecurring = !showFutureRecurring; taskStore.persistFilters()"
         @update:view-mode="viewMode = $event"
         @sync-external-calendar="externalCalendar.syncNow"
         :google-connected="googleCalendar.isConnected.value"
@@ -233,7 +235,7 @@ const handleReloadPage = () => {
 
 // Extract reactive refs from store
 // TASK-076: Use calendar-specific done filter
-const { hideCalendarDoneTasks } = storeToRefs(taskStore)
+const { hideCalendarDoneTasks, showFutureRecurring } = storeToRefs(taskStore)
 
 // Navigation (Extracted)
 const {

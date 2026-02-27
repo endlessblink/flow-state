@@ -604,7 +604,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--overlay-darker);
+  background: var(--overlay-bg);
   backdrop-filter: blur(12px) saturate(100%);
   -webkit-backdrop-filter: blur(12px) saturate(100%);
   display: flex;
@@ -734,7 +734,7 @@ onMounted(() => {
 
 .search-input:focus {
   outline: none;
-  border-color: var(--brand-primary-alpha-50);
+  border-color: var(--brand-primary-dim);
   background: var(--glass-bg-tint);
   box-shadow: var(--brand-focus-ring), var(--brand-glow-sm);
 }
@@ -776,8 +776,8 @@ onMounted(() => {
 }
 
 .emoji-btn.selected {
-  background: var(--brand-primary-bg-heavy);
-  border-color: var(--brand-primary-alpha-50);
+  background: var(--brand-primary-dim);
+  border-color: var(--brand-primary-dim);
   box-shadow: var(--state-hover-glow);
   transform: scale(1.08);
 }
@@ -857,8 +857,8 @@ onMounted(() => {
 }
 
 .apply-btn {
-  background: var(--brand-primary-bg-medium);
-  border-color: var(--brand-primary-alpha-50);
+  background: var(--brand-primary-subtle);
+  border-color: var(--brand-primary-dim);
   color: var(--dropdown-selected-color);
   flex: 1;
 }

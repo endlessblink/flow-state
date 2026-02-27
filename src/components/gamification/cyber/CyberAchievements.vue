@@ -7,6 +7,7 @@
  * Visual novel aesthetic: show, don't tell.
  */
 import { computed } from 'vue'
+import type { Component } from 'vue'
 import { useGamificationStore } from '@/stores/gamification'
 import { useCyberflowTheme } from '@/composables/useCyberflowTheme'
 import type { AchievementWithProgress, AchievementTier, AchievementCategory } from '@/types/gamification'
@@ -42,7 +43,7 @@ const iconMap: Record<string, unknown> = {
 }
 
 // Category icon shapes (simple SVG fallback)
-const categoryIcons: Record<AchievementCategory, any> = {
+const categoryIcons: Record<AchievementCategory, Component> = {
   productivity: Rocket,
   consistency: Flame,
   mastery: Crown,

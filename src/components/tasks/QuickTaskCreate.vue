@@ -146,18 +146,14 @@
           />
         </div>
 
-        <!-- Duration (editable) -->
-        <div class="property-chip duration-chip">
-          <Clock :size="14" />
-          <input
-            v-model.number="duration"
-            type="number"
-            min="15"
-            step="15"
-            class="duration-input"
-            aria-label="Duration in minutes"
-          >
-          <span>mins</span>
+        <!-- Duration dropdown -->
+        <div class="property-select">
+          <Clock :size="14" class="property-icon" />
+          <CustomSelect
+            v-model="duration"
+            :options="durationOptions"
+            class="compact-select"
+          />
         </div>
 
         <!-- Project Dropdown -->
@@ -271,6 +267,17 @@ const priorityOptions = [
   { label: 'High', value: 'high' }
 ]
 
+const durationOptions = [
+  { label: '15 min', value: 15 },
+  { label: '30 min', value: 30 },
+  { label: '45 min', value: 45 },
+  { label: '1 hour', value: 60 },
+  { label: '1.5 hours', value: 90 },
+  { label: '2 hours', value: 120 },
+  { label: '3 hours', value: 180 },
+  { label: '4 hours', value: 240 },
+]
+
 const projectOptions = computed(() => [
   { label: 'Inbox', value: '' },
   ...projects.value.map(p => ({ label: p.name, value: p.id }))
@@ -345,7 +352,7 @@ const aiAssistTaskProxy = computed(() => ({
   id: '',
   title: taskTitle.value,
   description: taskDescription.value,
-  status: 'planned' as const,
+  status: 'todo' as const,
   priority: priority.value,
   progress: 0,
   completedPomodoros: 0,
@@ -409,7 +416,7 @@ const handleCreate = async () => {
     title: taskTitle.value.trim(),
     description: taskDescription.value.trim(),
     priority: priority.value,
-    status: 'planned',
+    status: 'todo',
     estimatedDuration: duration.value,
     projectId: projectId.value || undefined,
     instances: [instanceData]
@@ -846,25 +853,6 @@ watch(() => props.isOpen, (isOpen) => {
 
 .compact-select :deep(.select-icon.is-open) {
   color: var(--text-primary);
-}
-
-.duration-chip {
-  gap: var(--space-2);
-}
-
-.duration-input {
-  width: var(--space-10);
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  text-align: right;
-  outline: none;
-}
-
-.duration-input::-webkit-inner-spin-button {
-  opacity: 0.5;
 }
 
 /* Actions Row */

@@ -111,7 +111,7 @@ export function useCalendarCore() {
   const getTaskStatus = (event: CalendarEvent): Task['status'] => {
     // BUG-1304: Use rawTasks (unfiltered) — taskStore.tasks may filter out done tasks
     const task = taskStore.rawTasks.find(t => t.id === event.taskId)
-    return task?.status || 'planned'
+    return task?.status || 'todo'
   }
 
   const getStatusLabel = (event: CalendarEvent): string => {
@@ -121,11 +121,8 @@ export function useCalendarCore() {
 
   const getStatusIcon = (status: string): string => {
     const icons: Record<string, string> = {
-      'planned': '○',
-      'in_progress': '▶',
+      'todo': '○',
       'done': '✓',
-      'backlog': '⏸',
-      'on_hold': '⏸'
     }
     return icons[status] || '○'
   }
@@ -138,7 +135,7 @@ export function useCalendarCore() {
     const task = taskStore.rawTasks.find(t => t.id === calendarEvent.taskId)
     if (!task) return
 
-    const statusCycle: Task['status'][] = ['planned', 'in_progress', 'done', 'backlog', 'on_hold']
+    const statusCycle: Task['status'][] = ['todo', 'done']
     const currentIndex = statusCycle.indexOf(task.status)
     const nextIndex = (currentIndex + 1) % statusCycle.length
     const nextStatus = statusCycle[nextIndex]

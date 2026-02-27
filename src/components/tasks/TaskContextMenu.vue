@@ -177,7 +177,7 @@
       :current-status="currentTask?.status"
       @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('status')"
-      @select="(s: string) => { closeAllSubmenusNow(); setStatus(s as 'planned' | 'in_progress' | 'done') }"
+      @select="(s: string) => { closeAllSubmenusNow(); setStatus(s as 'todo' | 'done') }"
     />
 
     <DurationSubmenu
@@ -334,7 +334,7 @@ const emit = defineEmits<{
   confirmPermanentDelete: [taskId: string]
   clearSelection: []
   setPriority: [priority: 'low' | 'medium' | 'high']
-  setStatus: [status: 'planned' | 'in_progress' | 'done']
+  setStatus: [status: 'todo' | 'done']
   setDueDate: [dateType: 'today' | 'tomorrow' | 'weekend' | 'nextweek']
   enterFocusMode: []
   deleteSelected: []
@@ -585,7 +585,7 @@ const handleAIAcceptBreakdown = async (tasks: Array<{ title: string; priority?: 
     await taskStore.createTask({
       title: t.title,
       priority: validPriority,
-      status: 'planned'
+      status: 'todo'
     })
   }
   showAIAssist.value = false

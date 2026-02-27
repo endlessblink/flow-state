@@ -93,6 +93,19 @@
         <span v-if="unscheduledCount > 0" class="chip-count">{{ unscheduledCount }}</span>
       </button>
 
+      <!-- On Canvas Filter (calendar context only) -->
+      <button
+        v-if="context !== 'canvas'"
+        class="filter-chip"
+        :class="{ active: onCanvasOnly }"
+        title="Show only tasks placed on the canvas"
+        @click="$emit('update:onCanvasOnly', !onCanvasOnly)"
+      >
+        <LayoutGrid :size="14" />
+        <span class="chip-label">{{ $t('filters.on_canvas') }}</span>
+        <span v-if="onCanvasCount > 0" class="chip-count">{{ onCanvasCount }}</span>
+      </button>
+
       <!-- TASK-1246: Priority Multi-Select Filter -->
       <div ref="priorityDropdownRef" class="filter-dropdown">
         <button
@@ -238,6 +251,7 @@ interface Props {
   tasks: Task[]
   projects: Project[]
   unscheduledOnly: boolean
+  onCanvasOnly: boolean
   selectedPriorities: Set<string>
   selectedProjects: Set<string>
   selectedDurations: Set<DurationCategory>
@@ -253,6 +267,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'update:unscheduledOnly': [value: boolean]
+  'update:onCanvasOnly': [value: boolean]
   'update:selectedPriorities': [value: Set<string>]
   'update:selectedProjects': [value: Set<string>]
   'update:selectedDurations': [value: Set<DurationCategory>]
@@ -291,6 +306,11 @@ const unscheduledCount = computed(() => {
   return props.tasks.filter(task => !isScheduledOnCalendar(task)).length
 })
 
+// Computed: Count of tasks placed on the canvas
+const onCanvasCount = computed(() => {
+  return props.tasks.filter(t => !!t.canvasPosition).length
+})
+
 // TASK-1246: Computed labels with count badges
 const priorityLabel = computed(() => {
   const count = props.selectedPriorities.size
@@ -320,7 +340,7 @@ const projectLabel = computed(() => {
 
 // Computed: Check if any filters are active
 const hasActiveFilters = computed(() => {
-  return props.unscheduledOnly || props.selectedPriorities.size > 0 || props.selectedProjects.size > 0 || props.selectedDurations.size > 0 || props.hideDoneTasks
+  return props.unscheduledOnly || props.onCanvasOnly || props.selectedPriorities.size > 0 || props.selectedProjects.size > 0 || props.selectedDurations.size > 0 || props.hideDoneTasks
 })
 
 // Get count of tasks with specific priority
@@ -380,6 +400,7 @@ const clearDurations = () => {
 // Clear all filters
 const clearAllFilters = () => {
   emit('update:unscheduledOnly', false)
+  emit('update:onCanvasOnly', false)
   emit('update:selectedPriorities', new Set())
   emit('update:selectedProjects', new Set())
   emit('update:selectedDurations', new Set())

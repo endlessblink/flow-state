@@ -177,8 +177,9 @@ const openEditTask = (task: Task) => {
 const closeTaskContextMenu = () => {
   showTaskContextMenu.value = false
   contextMenuTask.value = null
-  contextMenuSelectedIds.value = []
-  contextMenuSelectedCount.value = 0
+  // TASK-1419: Do NOT clear selectedIds/selectedCount here.
+  // Batch handlers fire AFTER close (composable emits 'close' before batch events
+  // per BUG-1095). IDs are overwritten on next open in handleTaskContextMenu.
 }
 
 const confirmDeleteTask = async (task: Task) => {

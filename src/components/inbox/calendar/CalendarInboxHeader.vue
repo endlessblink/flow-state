@@ -127,6 +127,7 @@
         :selected-durations="selectedDurations"
         :hide-done-tasks="hideDoneTasks"
         :sort-by="sortBy"
+        :sort-direction="sortDirection"
         :tasks="baseTasks"
         :projects="rootProjects"
         @update:unscheduled-only="$emit('update:unscheduledOnly', $event)"
@@ -135,6 +136,7 @@
         @update:selected-durations="$emit('update:selectedDurations', $event)"
         @update:hide-done-tasks="$emit('toggleHideDoneTasks')"
         @update:sort-by="$emit('update:sortBy', $event)"
+        @update:sort-direction="$emit('update:sortDirection', $event)"
         @clear-all="$emit('clearAllFilters')"
       />
     </Transition>
@@ -151,7 +153,7 @@ import CustomSelect from '@/components/common/CustomSelect.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import { type Task } from '@/stores/tasks'
 import { type DurationCategory } from '@/utils/durationCategories'
-import type { SortByType } from '@/composables/inbox/useUnifiedInboxState'
+import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
 const { t } = useI18n()
 
@@ -174,6 +176,7 @@ defineProps<{
   rootProjects: unknown[]
   searchQuery: string // TASK-1075
   sortBy?: SortByType // TASK-1303
+  sortDirection?: SortDirection // TASK-1412
 }>()
 
 const emit = defineEmits<{
@@ -187,6 +190,7 @@ const emit = defineEmits<{
   (e: 'update:selectedDurations', value: Set<DurationCategory>): void
   (e: 'update:searchQuery', value: string): void // TASK-1075
   (e: 'update:sortBy', value: SortByType): void // TASK-1303
+  (e: 'update:sortDirection', value: SortDirection): void // TASK-1412
   (e: 'toggleHideDoneTasks'): void
   (e: 'clearAllFilters'): void
 }>()

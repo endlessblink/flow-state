@@ -532,9 +532,9 @@
   --priority-low-bg: rgba(59, 130, 246, 0.3);
 
   /* Priority indicator glows */
-  --priority-high-glow: 0 4px 8px rgba(239, 68, 68, 0.3), 0 0 12px rgba(239, 68, 68, 0.2);
-  --priority-medium-glow: 0 4px 8px rgba(245, 158, 11, 0.3), 0 0 12px rgba(245, 158, 11, 0.2);
-  --priority-low-glow: 0 4px 8px rgba(59, 130, 246, 0.3), 0 0 12px rgba(59, 130, 246, 0.2);
+  --priority-high-glow: 0 4px 8px rgba(239, 68, 68, 0.18), 0 0 12px rgba(239, 68, 68, 0.12);
+  --priority-medium-glow: 0 4px 8px rgba(245, 158, 11, 0.18), 0 0 12px rgba(245, 158, 11, 0.12);
+  --priority-low-glow: 0 4px 8px rgba(59, 130, 246, 0.18), 0 0 12px rgba(59, 130, 246, 0.12);
 
   /* Alpha variants for priority colors */
   --color-warning-alpha-10: rgba(245, 158, 11, 0.1);
@@ -953,6 +953,10 @@
   --shadow-dark-md: 0 4px 8px rgba(0, 0, 0, 0.30);
   --shadow-dark-lg: 0 8px 16px rgba(0, 0, 0, 0.35);
   --shadow-dark-xl: 0 12px 24px rgba(0, 0, 0, 0.40);
+
+  /* Shadow Colors - for composing box-shadow declarations */
+  --shadow-color-sm: rgba(0, 0, 0, 0.25);
+  --shadow-color-md: rgba(0, 0, 0, 0.35);
 
   /* Additional shadow variations */
   --shadow-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.3);

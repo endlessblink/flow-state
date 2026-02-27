@@ -433,7 +433,7 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
       args: [expect.objectContaining({ is_deleted: true, deleted_at: expect.any(String) })]
     })
     expect(queryCalls).toContainEqual({ table: 'tasks', method: 'eq', args: ['id', 'task-delete-1'] })
-    expect(queryCalls).toContainEqual({ table: 'tasks', method: 'select', args: ['*', { count: 'exact' }] })
+    expect(queryCalls).toContainEqual({ table: 'tasks', method: 'select', args: ['*', { count: 'exact', head: false }] })
   })
 
   // GROUP TESTS

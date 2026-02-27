@@ -1121,7 +1121,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
         console.error('[Backup] Tauri save failed:', error)
 
         // Method 2: Try global __TAURI__ object as fallback
-        const win = window as unknown
+        const win = window as unknown as { __TAURI__?: { dialog?: { save: (opts: unknown) => Promise<string> }, fs?: { writeTextFile: (path: string, content: string) => Promise<void> } } }
         if (win.__TAURI__?.dialog?.save && win.__TAURI__?.fs?.writeTextFile) {
           console.log('[Backup] Attempting fallback via __TAURI__ global...')
           try {

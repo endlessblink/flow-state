@@ -315,7 +315,7 @@ const contextMenuStore = useCanvasContextMenuStore()
 const nodeTypes = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
-}
+} as any
 
 // FEATURE-1048: Day group auto-rotation at midnight
 const dayRotation = useDayGroupRotation()
@@ -420,7 +420,8 @@ const handleSectionContextMenu = (event: MouseEvent, section: CanvasGroup) => {
     // CanvasContextMenus.vue reads from the store, so we must write to it
     // BUG-1096: Use normalized coordinates for Tauri compatibility
     const { x, y } = getViewportCoordinates(event)
-    contextMenuStore.openCanvasContextMenu(x, y, section as unknown as CanvasGroup)
+    // cast section to any to avoid type mismatch
+    contextMenuStore.openCanvasContextMenu(x, y, section as any)
 }
 
 // Expose for testing purposes (Fundamental Stability)

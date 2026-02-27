@@ -101,13 +101,15 @@ function liveTask(snapshotTask: Record<string, unknown>): Record<string, unknown
   if (!snapshotTask?.id) return snapshotTask
   const storeTask = taskMap.value.get(snapshotTask.id)
   if (!storeTask) return snapshotTask
+  // cast to Record<string, unknown> to satisfy type checker
+  const st = storeTask as Record<string, unknown>
   return {
     ...snapshotTask,
-    title: storeTask.title ?? snapshotTask.title,
-    status: storeTask.status ?? snapshotTask.status,
-    priority: storeTask.priority ?? snapshotTask.priority,
-    dueDate: storeTask.dueDate ?? snapshotTask.dueDate,
-    estimatedDuration: storeTask.estimatedDuration ?? snapshotTask.estimatedDuration,
+    title: st.title ?? snapshotTask.title,
+    status: st.status ?? snapshotTask.status,
+    priority: st.priority ?? snapshotTask.priority,
+    dueDate: st.dueDate ?? snapshotTask.dueDate,
+    estimatedDuration: st.estimatedDuration ?? snapshotTask.estimatedDuration,
   }
 }
 
@@ -224,8 +226,8 @@ function isTaskListResult(result: { tool: string; data?: ChatToolResultData }): 
   // Direct array of tasks
   if (Array.isArray(result.data) && result.data.length > 0 && (result.data[0] as Record<string, unknown>)?.title) return true
   // Daily summary with nested task arrays
-  if (result.data.dueTodayTasks?.length && result.data.dueTodayTasks.length > 0) return true
-  if (result.data.overdueTasks?.length && result.data.overdueTasks.length > 0) return true
+  if (result.data?.dueTodayTasks?.length && result.data.dueTodayTasks.length > 0) return true
+  if (result.data?.overdueTasks?.length && result.data.overdueTasks.length > 0) return true
   return false
 }
 

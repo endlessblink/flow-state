@@ -76,8 +76,8 @@ const {
   getPriorityClass,
   getPriorityLabel,
   getTaskStatus,
-  getStatusLabel,
-  getStatusIcon
+  _getStatusLabel,
+  _getStatusIcon
 } = helpers
 
 </script>

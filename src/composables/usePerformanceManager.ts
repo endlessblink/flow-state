@@ -69,7 +69,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   const cleanupCacheInterval = ref<NodeJS.Timeout>()
 
   // Debounce function factory
-  const createDebounced = <T extends (...args: unknown[]) => any>(
+  const createDebounced = <T extends (...args: any[]) => any>(
     fn: T,
     delay: number = debounceDelay
   ) => {
@@ -82,7 +82,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 
   // Throttle function factory
-  const createThrottled = <T extends (...args: unknown[]) => any>(
+  const createThrottled = <T extends (...args: any[]) => any>(
     fn: T,
     delay: number = throttleDelay
   ) => {

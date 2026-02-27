@@ -157,6 +157,9 @@ export default [
       'vue/no-deprecated-slot-attribute': 'error',
       'vue/no-deprecated-slot-scope-attribute': 'error',
 
+      // Deprecated rule - remove if causing errors, or keep off if needed
+      // 'vue/no-deprecated-v-on-native-modifier': 'off',
+
       // TypeScript rules for Vue files (allow underscore prefix to silence unused vars)
       '@typescript-eslint/no-unused-vars': ['error', {
         argsIgnorePattern: '^_',

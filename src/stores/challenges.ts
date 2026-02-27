@@ -273,7 +273,7 @@ export const useChallengesStore = defineStore('challenges', () => {
           status: 'active',
           generatedAt: new Date(),
           expiresAt,
-          aiContext: context as unknown as Record<string, unknown>,
+          aiContext: context as any,
         }
 
         const { data, error } = await supabase
@@ -347,7 +347,7 @@ export const useChallengesStore = defineStore('challenges', () => {
         generatedAt: new Date(),
         expiresAt,
         aiContext: {
-          ...(context as unknown as Record<string, unknown>),
+          ...(context as any),
           total_hp: generated.total_hp,
         },
       }

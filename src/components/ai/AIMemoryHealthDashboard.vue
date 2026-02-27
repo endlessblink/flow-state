@@ -69,8 +69,12 @@
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <p>No assessment results yet.</p>
-      <p class="empty-hint">"Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).</p>
+      <p>
+        No assessment results yet.
+      </p>
+      <p class="empty-hint">
+        "Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).
+      </p>
     </div>
 
     <!-- Sections -->

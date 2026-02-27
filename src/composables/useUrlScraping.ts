@@ -102,7 +102,7 @@ export function useUrlScraping() {
         originalUrl: trimmed,
       }
     } catch (err: unknown) {
-      error.value = err?.message || 'Scraping failed'
+      error.value = (err as Error)?.message || 'Scraping failed'
       return null
     } finally {
       isScraping.value = false

@@ -161,9 +161,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (isInitialized.value) return
 
     // BUG-1056: Generate tab ID for multi-tab debugging
-    const tabId = (window as unknown as { __flowstate_tab_id?: string }).__flowstate_tab_id || (() => {
+    const tabId = (window as any).__flowstate_tab_id || (() => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-        ; (window as unknown as { __flowstate_tab_id?: string }).__flowstate_tab_id = id
+        ; (window as any).__flowstate_tab_id = id
       return id
     })()
 
@@ -240,7 +240,7 @@ export const useAuthStore = defineStore('auth', () => {
         // Listen for auth changes (sign in, sign out, etc.)
         // BUG-1056: This fires across all tabs when auth state changes (via localStorage sync)
         supabase.auth.onAuthStateChange(async (_event: string, newSession: Session | null) => {
-          const currentTabId = (window as unknown as { __flowstate_tab_id?: string }).__flowstate_tab_id || 'unknown'
+          const currentTabId = (window as any).__flowstate_tab_id || 'unknown'
           const currentUserId = user.value?.id?.substring(0, 8) || 'none'
           const newUserId = newSession?.user?.id?.substring(0, 8) || 'none'
           console.log(`👤 [AUTH:${currentTabId}] Auth state changed:`, _event,

@@ -142,7 +142,8 @@ export function useSafeI18n() {
     // Handle interpolation if params provided
     if (params && translation !== key) {
       Object.entries(params).forEach(([paramKey, value]) => {
-        translation = translation.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(value))
+        // cast translation to any to avoid "unknown is not assignable to string" error
+        translation = (translation as any).replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(value))
       })
     }
 

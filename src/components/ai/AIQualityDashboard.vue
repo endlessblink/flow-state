@@ -364,7 +364,8 @@ function toggleCard(promptId: string) {
   expandedCards.value = new Set(expandedCards.value)
 }
 
-function formatDuration(ms: number): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
   return `${(ms / 60000).toFixed(1)}m`

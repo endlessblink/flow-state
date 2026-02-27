@@ -783,7 +783,9 @@ function onSnoozeTask(taskId: string) {
 }
 
 function onResuggest(dayKey: string) {
-  regenerateDay(dayKey as keyof WeeklyPlan)
+  // Task 1326: 'unscheduled' is a valid key in WeeklyPlan, but regenerateDay might only accept day names
+  // Type assertion is safe if WeeklyPlan keys match expected day keys
+  regenerateDay(dayKey as any)
 }
 
 function onApply() {

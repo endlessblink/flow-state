@@ -94,24 +94,27 @@ export function useCrossTabSync() {
             if (taskStore.manualOperationInProgress) return
 
             // Prevent stale data from overwriting newer data
-            const incomingTimestamp = (operation.taskData as unknown).updatedAt
+            const taskDataAny = operation.taskData as any
+            const incomingTimestamp = taskDataAny.updatedAt
             if (incomingTimestamp && task.updatedAt &&
                 new Date(task.updatedAt) > new Date(incomingTimestamp)) {
               return
             }
 
             // CRITICAL FIX: Version-aware update - never overwrite geometry from cross-tab
-            const incomingVersion = (operation.taskData as unknown).positionVersion ?? 0
+            const incomingVersion = taskDataAny.positionVersion ?? 0
             const localVersion = task.positionVersion ?? 0
 
             // Only accept if incoming version is newer
             if (incomingVersion < localVersion) {
-              console.log(`[CROSS-TAB] Skipping stale update for ${operation.taskId.slice(0, 8)} (local v${localVersion} > remote v${incomingVersion})`)
+              if (operation.taskId) {
+                console.log(`[CROSS-TAB] Skipping stale update for ${operation.taskId.slice(0, 8)} (local v${localVersion} > remote v${incomingVersion})`)
+              }
               return
             }
 
             // Strip geometry fields from cross-tab sync - geometry should only come from drag handlers
-            const { canvasPosition: _canvasPosition, parentId: _parentId, positionFormat: _positionFormat, ...safeUpdates } = operation.taskData as unknown
+            const { canvasPosition: _canvasPosition, parentId: _parentId, positionFormat: _positionFormat, ...safeUpdates } = taskDataAny
 
             // Apply only non-geometry updates
             Object.assign(task, safeUpdates)

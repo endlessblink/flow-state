@@ -1,4 +1,5 @@
 import { supabase, invalidateCache, type DatabaseContext } from './_infrastructure'
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 export function useRealtimeSubscription(ctx: DatabaseContext) {
     const { authStore, handleError } = ctx
@@ -14,14 +15,14 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         const userId = authStore.user?.id
         if (!userId) return null
 
-        let currentChannel: unknown = null
+        let currentChannel: RealtimeChannel | null = null
         let retryCount = 0
         let isExplicitlyClosed = false
         const _heartbeatInterval: unknown = null
         let isRemovingChannel = false // Guard against recursive removeChannel calls (BUG-1088)
 
         // cleanup previous channels if any
-        if (supabase.realtime.channels.length > 0) {
+        if (supabase && supabase.realtime && supabase.realtime.channels.length > 0) {
             console.debug(`📡 [REALTIME] Cleaning up ${supabase.realtime.channels.length} existing channels...`)
             supabase.removeAllChannels()
         }
@@ -37,6 +38,8 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
         const setupSubscription = async () => {
             if (isExplicitlyClosed) return
+
+            if (!supabase) return
 
             // connection guard
             const { data: { session: freshSession } } = await supabase.auth.getSession()
@@ -54,7 +57,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             // Attach Listeners with detailed logging
             channel
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${userId}` },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] PROJECT event received:', {
                                 eventType: payload.eventType,
@@ -66,7 +69,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                         if (payload.table === 'projects') onProjectChange(payload)
                     })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] TASK event received:', {
                                 eventType: payload.eventType,
@@ -81,7 +84,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             if (onTimerChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'timer_sessions', filter: `user_id=eq.${userId}` },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] TIMER event received:', {
                                 eventType: payload.eventType,
@@ -96,7 +99,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             if (onNotificationChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] NOTIFICATION event received:', {
                                 eventType: payload.eventType,
@@ -109,7 +112,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             if (onGroupChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `user_id=eq.${userId}` },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] GROUP event received:', {
                                 eventType: payload.eventType,
@@ -123,7 +126,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             }
 
             // Subscribe with Robust Error Handling
-            channel.subscribe(async (status: unknown, err: unknown) => {
+            channel.subscribe(async (status: string, err: Error | null) => {
                 if (status === 'SUBSCRIBED') {
                     console.log('📡 [REALTIME] Connected! 🟢')
                     retryCount = 0 // Reset backoff
@@ -147,7 +150,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     // Supabase docs recommend removing the channel before reconnecting
                     isRemovingChannel = true
                     try {
-                        await supabase.removeChannel(channel)
+                        if (supabase) await supabase.removeChannel(channel)
                     } catch (removeErr) {
                         console.warn('📡 [REALTIME] Failed to remove channel (continuing anyway):', removeErr)
                     } finally {
@@ -226,7 +229,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
                 // BUG-1182 FIX: Proactively refresh auth token on wake-up.
                 try {
-                    await supabase.auth.refreshSession()
+                    if (supabase) await supabase.auth.refreshSession()
                 } catch (e) {
                     console.warn('👀 [REALTIME] Token refresh on wake failed:', e)
                 }
@@ -239,7 +242,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     if (currentChannel && !isRemovingChannel) {
                         isRemovingChannel = true
                         try {
-                            await supabase.removeChannel(currentChannel as unknown)
+                            if (supabase) await supabase.removeChannel(currentChannel as RealtimeChannel)
                         } catch (removeErr) {
                             console.warn('👀 [REALTIME] Failed to remove channel (continuing anyway):', removeErr)
                         } finally {
@@ -301,7 +304,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                 if (currentChannel && !isRemovingChannel) {
                     isRemovingChannel = true
                     try {
-                        await supabase.removeChannel(currentChannel)
+                        if (supabase) await supabase.removeChannel(currentChannel as RealtimeChannel)
                     } catch (removeErr) {
                         console.warn('📡 [REALTIME] Failed to remove channel during cleanup:', removeErr)
                     } finally {

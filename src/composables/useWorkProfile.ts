@@ -556,10 +556,12 @@ export function useWorkProfile() {
       if (!projectMissCount.has(projectId)) {
         projectMissCount.set(projectId, { missed: 0, total: 0 })
       }
-      const counts = projectMissCount.get(projectId)!
-      counts.total++
-      if (!completedSet.has(taskId)) {
-        counts.missed++
+      const counts = projectMissCount.get(projectId)
+      if (counts) {
+        counts.total++
+        if (!completedSet.has(taskId)) {
+          counts.missed++
+        }
       }
     }
 

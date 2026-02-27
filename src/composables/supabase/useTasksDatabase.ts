@@ -29,6 +29,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         return swrCache.getOrFetch(cacheKey, async () => {
             try {
                 return await withRetry(async () => {
+                    if (!supabase) throw new Error('Supabase client not initialized')
                     const { data, error } = await supabase
                         .from('tasks')
                         .select('*')
@@ -43,7 +44,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     const tasksWithPos = data.filter((d: Record<string, unknown>) => d.position)
                     if (tasksWithPos.length > 0) {
                         console.log(`📥 [TASK-142] LOADED ${tasksWithPos.length} tasks with positions from Supabase:`,
-                            tasksWithPos.map((d: Record<string, unknown>) => ({ id: d.id?.substring(0, 8), pos: d.position })))
+                            tasksWithPos.map((d: Record<string, unknown>) => ({ id: (d.id as string)?.substring(0, 8), pos: d.position })))
                     } else {
                         console.log(`📥 [TASK-142] LOADED ${data.length} tasks - NONE have positions in DB`)
                     }
@@ -62,6 +63,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         try {
             // BUG-1107: Wrap in withRetry for mobile PWA network resilience
             return await withRetry(async () => {
+                if (!supabase) throw new Error('Supabase client not initialized')
                 const { data, error } = await supabase
                     .from('tasks')
                     .select('*')
@@ -91,6 +93,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // FK-aware upsert with single retry for orphaned parent references
             const attemptUpsert = async (payloadToSave: typeof payload, isRetry = false): Promise<void> => {
+                if (!supabase) throw new Error('Supabase client not initialized')
                 const { error } = await supabase.from('tasks').upsert(payloadToSave, { onConflict: 'id' })
 
                 // Handle FK constraint violation on parent_task_id
@@ -131,11 +134,12 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             const tasksWithPos = payload.filter(p => p.position)
             if (tasksWithPos.length > 0) {
                 console.log(`📤 [TASK-142] SENDING ${tasksWithPos.length} tasks with positions:`,
-                    tasksWithPos.map(t => ({ id: t.id?.substring(0, 8), pos: t.position })))
+                    tasksWithPos.map(t => ({ id: (t.id as string)?.substring(0, 8), pos: t.position })))
             }
 
             // FK-aware upsert with single retry for orphaned parent references
             const attemptUpsert = async (payloadToSave: typeof payload, isRetry = false): Promise<void> => {
+                if (!supabase) throw new Error('Supabase client not initialized')
                 const { data, error } = await supabase
                     .from('tasks')
                     .upsert(payloadToSave, { onConflict: 'id' })
@@ -161,7 +165,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 const positionSaves = data.filter((d: Record<string, unknown>) => d.position)
                 if (positionSaves.length > 0) {
                     console.log(`📥 [TASK-142] RECEIVED ${positionSaves.length} tasks with positions:`,
-                        positionSaves.map((d: Record<string, unknown>) => ({ id: d.id?.substring(0, 8), pos: d.position })))
+                        positionSaves.map((d: Record<string, unknown>) => ({ id: (d.id as string)?.substring(0, 8), pos: d.position })))
                 } else if (tasksWithPos.length > 0) {
                     console.error(`❌ [TASK-142] POSITION LOST! Sent ${tasksWithPos.length} with positions, received 0 back!`)
                 }
@@ -193,11 +197,12 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // BUG-352: Wrap in withRetry for mobile network resilience
             const { error: _error, count: _count } = await withRetry(async () => {
+                if (!supabase) throw new Error('Supabase client not initialized')
                 const { error, count } = await supabase
                     .from('tasks')
                     .update({ is_deleted: true, deleted_at: new Date().toISOString() })
                     .eq('id', taskId)
-                    .select('*', { count: 'exact' })
+                    .select('*', { count: 'exact', head: false })
 
                 console.log(`🗑️ [SUPABASE-DELETE] Result - error: ${error?.message || 'none'}, affected rows: ${count ?? 'unknown'}`)
 
@@ -221,6 +226,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             isSyncing.value = true
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
+                if (!supabase) throw new Error('Supabase client not initialized')
                 const { error } = await supabase
                     .from('tasks')
                     .update({ is_deleted: false, deleted_at: null })
@@ -242,6 +248,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             await recordTombstone('task', taskId)
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
+                if (!supabase) throw new Error('Supabase client not initialized')
                 const { error } = await supabase
                     .from('tasks')
                     .delete()
@@ -265,6 +272,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // BUG-1311: Wrap in withRetry for network resilience
             return await withRetry(async () => {
+                if (!supabase) throw new Error('Supabase client not initialized')
                 const { data, error } = await supabase
                     .from('tasks')
                     .select('id')
@@ -294,12 +302,13 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // BUG-352: Wrap in withRetry for mobile network resilience
             const { error: _error, count: _count } = await withRetry(async () => {
+                if (!supabase) throw new Error('Supabase client not initialized')
                 const { error, count } = await supabase
                     .from('tasks')
                     // FIX: Schema compatibility - remove deleted_at if not in DB
                     .update({ is_deleted: true })
                     .in('id', taskIds)
-                    .select('*', { count: 'exact' })
+                    .select('*', { count: 'exact', head: false })
 
                 console.log(`🗑️ [SUPABASE-BULK-DELETE] Result - error: ${error?.message || 'none'}, affected rows: ${count ?? 'unknown'}`)
 
@@ -337,6 +346,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         }
 
         try {
+            if (!supabase) throw new Error('Supabase client not initialized')
             // Try to use the RPC function if available (more efficient)
             // TASK-1183: Sanitize project_id - 'uncategorized' is not a valid UUID
             const sanitizedProjectId = task.projectId === UNCATEGORIZED_PROJECT_ID || task.projectId === '1'
@@ -387,6 +397,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
      */
     const safeCreateTaskManual = async (task: Task, userId: string): Promise<SafeCreateTaskResult> => {
         try {
+            if (!supabase) throw new Error('Supabase client not initialized')
             // 1. Check if task already exists
             const { data: existing, error: existError } = await supabase
                 .from('tasks')
@@ -481,6 +492,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         }
 
         try {
+            if (!supabase) throw new Error('Supabase client not initialized')
             // Try RPC function first
             const { data: rpcResult, error: rpcError } = await supabase.rpc('check_task_ids_availability', {
                 p_user_id: userId,
@@ -512,6 +524,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         const results: TaskIdAvailability[] = []
 
         try {
+            if (!supabase) throw new Error('Supabase client not initialized')
             // Batch fetch existing tasks
             const { data: existingTasks, error: tasksError } = await supabase
                 .from('tasks')
@@ -589,6 +602,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         if (!userId) return
 
         try {
+            if (!supabase) return
             await supabase.from('task_dedup_audit').insert({
                 user_id: userId,
                 operation,

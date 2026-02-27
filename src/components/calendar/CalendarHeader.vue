@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, SlidersHorizontal, RefreshCw, Repeat } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, SlidersHorizontal, RefreshCw, Repeat, MoreVertical } from 'lucide-vue-next'
 import ProjectFilterDropdown from '@/components/projects/ProjectFilterDropdown.vue'
+import BasePopover from '@/components/base/BasePopover.vue'
 
 defineProps<{
   formatCurrentDate: string
@@ -31,6 +32,21 @@ useI18n()
 
 // TASK-157: Filters hidden by default for cleaner look
 const showFilters = ref(false)
+
+// TASK-1418: View Options Dropdown
+const showViewOptions = ref(false)
+const viewOptionsTriggerRef = ref<HTMLElement>()
+const popoverX = ref(0)
+const popoverY = ref(0)
+
+const toggleViewOptions = () => {
+  if (viewOptionsTriggerRef.value) {
+    const rect = viewOptionsTriggerRef.value.getBoundingClientRect()
+    popoverX.value = rect.left + rect.width / 2 // Center of trigger for position="bottom"
+    popoverY.value = rect.bottom + 4
+  }
+  showViewOptions.value = !showViewOptions.value
+}
 </script>
 
 <template>
@@ -53,60 +69,87 @@ const showFilters = ref(false)
         {{ $t('calendar.today') }}
       </button>
 
-      <!-- Filter Toggle (collapsed by default) -->
+      <!-- TASK-1418: View Options Dropdown trigger -->
       <button
-        class="filter-toggle"
-        :class="{ active: showFilters }"
-        :title="$t('calendar.toggle_filters')"
-        @click="showFilters = !showFilters"
+        ref="viewOptionsTriggerRef"
+        class="view-options-trigger"
+        :class="{ active: showViewOptions || showFilters || hideCalendarDoneTasks || showFutureRecurring }"
+        title="View options"
+        @click="toggleViewOptions"
       >
-        <SlidersHorizontal :size="20" :stroke-width="1.5" />
+        <MoreVertical :size="16" :stroke-width="1.5" />
       </button>
 
-      <!-- BUG-1343: Hide/Show Done Tasks — always visible in header -->
-      <button
-        class="hide-done-toggle"
-        :class="{ active: hideCalendarDoneTasks }"
-        :title="hideCalendarDoneTasks ? $t('calendar.show_completed') : $t('calendar.hide_completed')"
-        @click="$emit('toggleDoneTasks')"
+      <!-- TASK-1418: View Options Popover -->
+      <BasePopover
+        :is-visible="showViewOptions"
+        :x="popoverX"
+        :y="popoverY"
+        position="bottom"
+        variant="menu"
+        :close-on-click-outside="true"
+        @close="showViewOptions = false"
       >
-        <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" />
-        <Eye v-else :size="16" :stroke-width="1.5" />
-      </button>
+        <div class="view-options-menu">
+          <!-- Project Filters -->
+          <button
+            class="view-option-item"
+            :class="{ active: showFilters }"
+            @click="showFilters = !showFilters"
+          >
+            <SlidersHorizontal :size="16" :stroke-width="1.5" class="option-icon" />
+            <span class="option-label">{{ $t('calendar.toggle_filters') }}</span>
+            <span v-if="showFilters" class="option-indicator" />
+          </button>
 
-      <!-- TASK-1418: Show/Hide Future Recurring Events -->
-      <button
-        class="future-recurring-toggle"
-        :class="{ active: showFutureRecurring }"
-        :title="showFutureRecurring ? 'Hide future recurring events' : 'Show future recurring events'"
-        @click="$emit('toggleFutureRecurring')"
-      >
-        <Repeat :size="16" :stroke-width="1.5" />
-      </button>
+          <!-- Hide/Show Completed -->
+          <button
+            class="view-option-item"
+            :class="{ active: hideCalendarDoneTasks }"
+            @click="$emit('toggleDoneTasks')"
+          >
+            <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" class="option-icon" />
+            <Eye v-else :size="16" :stroke-width="1.5" class="option-icon" />
+            <span class="option-label">{{ hideCalendarDoneTasks ? $t('calendar.show_completed') : $t('calendar.hide_completed') }}</span>
+            <span v-if="hideCalendarDoneTasks" class="option-indicator" />
+          </button>
 
-      <!-- TASK-1317: External Calendar Sync Button -->
-      <button
-        v-if="externalCalendarEnabled"
-        class="sync-btn"
-        :class="{ syncing: externalCalendarLoading }"
-        :title="$t('calendar.sync_external')"
-        @click="$emit('syncExternalCalendar')"
-      >
-        <RefreshCw :size="16" :stroke-width="1.5" />
-      </button>
+          <!-- Future Recurring -->
+          <button
+            class="view-option-item"
+            :class="{ active: showFutureRecurring }"
+            @click="$emit('toggleFutureRecurring')"
+          >
+            <Repeat :size="16" :stroke-width="1.5" class="option-icon" />
+            <span class="option-label">{{ showFutureRecurring ? 'Hide future recurring' : 'Show future recurring' }}</span>
+            <span v-if="showFutureRecurring" class="option-indicator" />
+          </button>
 
-      <!-- TASK-1283: Google Calendar Events Toggle -->
-      <button
-        v-if="googleConnected"
-        class="google-cal-toggle"
-        :class="{ active: showGoogleEvents }"
-        :title="showGoogleEvents ? $t('google_calendar.hide_events') : $t('google_calendar.show_events')"
-        @click="$emit('toggleGoogleEvents')"
-      >
-        <Eye v-if="showGoogleEvents" :size="16" :stroke-width="1.5" />
-        <EyeOff v-else :size="16" :stroke-width="1.5" />
-        <span class="google-cal-label">G</span>
-      </button>
+          <!-- Sync External Calendar (conditional) -->
+          <button
+            v-if="externalCalendarEnabled"
+            class="view-option-item"
+            :class="{ syncing: externalCalendarLoading }"
+            @click="$emit('syncExternalCalendar')"
+          >
+            <RefreshCw :size="16" :stroke-width="1.5" class="option-icon" :class="{ spinning: externalCalendarLoading }" />
+            <span class="option-label">{{ $t('calendar.sync_external') }}</span>
+          </button>
+
+          <!-- Google Calendar Toggle (conditional) -->
+          <button
+            v-if="googleConnected"
+            class="view-option-item"
+            :class="{ active: showGoogleEvents }"
+            @click="$emit('toggleGoogleEvents')"
+          >
+            <Eye v-if="showGoogleEvents" :size="16" :stroke-width="1.5" class="option-icon" />
+            <EyeOff v-else :size="16" :stroke-width="1.5" class="option-icon" />
+            <span class="option-label">Google Calendar</span>
+            <span v-if="showGoogleEvents" class="option-indicator" />
+          </button>
+        </div>
+      </BasePopover>
 
       <div class="view-selector view-selector--minimal">
         <button
@@ -220,7 +263,8 @@ const showFilters = ref(false)
   transform: translateY(-1px);
 }
 
-.hide-done-toggle {
+/* TASK-1418: View Options Dropdown */
+.view-options-trigger {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,38 +278,66 @@ const showFilters = ref(false)
   transition: all var(--duration-fast) var(--ease-out);
 }
 
-.hide-done-toggle:hover {
+.view-options-trigger:hover {
   background: var(--glass-bg-heavy);
   color: var(--text-primary);
 }
 
-.hide-done-toggle.active {
-  background: var(--color-indigo-bg-medium);
-  color: var(--color-indigo);
-}
-
-.future-recurring-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.future-recurring-toggle:hover {
-  background: var(--glass-bg-heavy);
-  color: var(--text-primary);
-}
-
-.future-recurring-toggle.active {
-  background: var(--color-indigo-bg-medium);
+.view-options-trigger.active {
   color: var(--brand-primary);
+}
+
+.view-options-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 220px;
+}
+
+.view-option-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  text-align: left;
+  width: 100%;
+}
+
+.view-option-item:hover {
+  background: var(--glass-bg-light);
+  border-color: var(--glass-border);
+}
+
+.view-option-item.active {
+  color: var(--brand-primary);
+}
+
+.view-option-item .option-icon {
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.view-option-item .option-label {
+  flex: 1;
+}
+
+.option-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--brand-primary);
+  flex-shrink: 0;
+}
+
+.view-option-item .spinning {
+  animation: spin 1s linear infinite;
 }
 
 .view-selector {
@@ -332,55 +404,6 @@ const showFilters = ref(false)
   background: var(--glass-bg-heavy);
 }
 
-.filter-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.filter-toggle:hover {
-  background: var(--glass-bg-heavy);
-  color: var(--text-primary);
-}
-
-.filter-toggle.active {
-  background: var(--color-indigo-bg-medium);
-  color: var(--color-indigo);
-}
-
-/* TASK-1317: Sync button */
-.sync-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.sync-btn:hover {
-  background: var(--glass-bg-heavy);
-  color: var(--text-primary);
-}
-
-.sync-btn.syncing {
-  color: var(--accent-primary);
-  animation: spin 1s linear infinite;
-}
-
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -435,38 +458,4 @@ const showFilters = ref(false)
   max-height: 60px;
 }
 
-/* TASK-1283: Google Calendar Toggle */
-.google-cal-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  width: auto;
-  min-width: 32px;
-  height: 32px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg-subtle);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-
-.google-cal-toggle:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--border-hover);
-  transform: translateY(-1px);
-}
-
-.google-cal-toggle.active {
-  color: var(--brand-primary);
-  border-color: var(--brand-primary);
-}
-
-.google-cal-label {
-  font-size: var(--text-xs);
-  font-weight: var(--font-bold);
-  line-height: 1;
-}
 </style>

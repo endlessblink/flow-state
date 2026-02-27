@@ -175,7 +175,7 @@ const {
               'has-overlap': calEvent.totalColumns > 1,
               'is-compact': calEvent.duration <= 30,
               'status-done': getTaskStatus(calEvent) === 'done',
-              'status-active': getTaskStatus(calEvent) === 'in_progress',
+              'status-active': getTaskStatus(calEvent) === 'todo',
               'slot-task--virtual': calEvent.isVirtual
             }"
             :style="getSlotTaskStyle(calEvent)"

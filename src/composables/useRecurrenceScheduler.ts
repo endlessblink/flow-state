@@ -73,7 +73,7 @@ export function useRecurrenceScheduler() {
                         recurrenceParentId: task.recurrenceParentId || task.id,
                         recurrenceCount: count,
                         dueDate: nextDate,
-                        status: 'planned',
+                        status: 'todo',
                         isInInbox: true,
                     })
                     cloneCount++

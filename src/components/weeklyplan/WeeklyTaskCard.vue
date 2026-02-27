@@ -154,10 +154,8 @@ const truncatedDescription = computed(() => {
 
 const statusLabel = computed(() => {
   switch (props.task.status) {
-    case 'in_progress': return 'In Progress'
-    case 'planned': return 'Planned'
-    case 'backlog': return 'Backlog'
-    case 'on_hold': return 'On Hold'
+    case 'todo': return 'To Do'
+    case 'done': return 'Done'
     default: return props.task.status
   }
 })

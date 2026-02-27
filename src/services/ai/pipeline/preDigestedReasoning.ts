@@ -161,7 +161,7 @@ function digestTaskList(
   const overdue = tasks.filter(task => task.daysOverdue && task.daysOverdue > 0)
   const highPri = tasks.filter(task => task.priority === 'high' || task.priority === 'critical')
   const withProgress = tasks.filter(task => task.subtasks)
-  const inProgress = tasks.filter(task => task.status === 'in_progress')
+  const inProgress = tasks.filter(task => task.status === 'todo')
 
   // Pre-digested facts section
   lines.push(t(lang, 'preAnalyzedFacts'))

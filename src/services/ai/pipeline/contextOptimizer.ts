@@ -54,7 +54,7 @@ const LABELS = {
     overdue: 'OVERDUE',
     dueToday: 'DUE TODAY',
     thisWeek: 'THIS WEEK',
-    inProgress: 'IN PROGRESS',
+    inProgress: 'TODO',
     otherOpen: 'OTHER OPEN TASKS',
     truncated: (remaining: number) =>
       `(${remaining} more open tasks omitted due to space — ask to see more)`,
@@ -65,8 +65,8 @@ const LABELS = {
     taskProject: 'Project',
     dueToday_inline: 'TODAY',
     overdue_inline: 'OVERDUE',
-    taskStats: (total: number, planned: number, inProg: number, done: number, overdue: number) =>
-      `Tasks: ${total} total, ${planned} planned, ${inProg} in progress, ${done} done, ${overdue} overdue`,
+    taskStats: (total: number, todo: number, _inProg: number, done: number, overdue: number) =>
+      `Tasks: ${total} total, ${todo} todo, ${done} done, ${overdue} overdue`,
   },
   he: {
     sectionHeader:
@@ -74,7 +74,7 @@ const LABELS = {
     overdue: 'באיחור',
     dueToday: 'להיום',
     thisWeek: 'השבוע',
-    inProgress: 'בביצוע',
+    inProgress: 'לביצוע',
     otherOpen: 'משימות פתוחות נוספות',
     truncated: (remaining: number) =>
       `(${remaining} משימות פתוחות נוספות הושמטו — בקש לראות עוד)`,
@@ -163,7 +163,7 @@ export function optimizeTaskContext(
 
   // Pass 4: In progress (not already placed by date tier)
   for (const t of openTasks) {
-    if (!placed.has(t.id) && t.status === 'in_progress') {
+    if (!placed.has(t.id) && t.status === 'todo') {
       inProgress.push(t)
       placed.add(t.id)
     }
@@ -189,7 +189,7 @@ export function optimizeTaskContext(
   function formatTask(t: OptimizableTask): string {
     const parts: string[] = [`${L.taskTitle}: "${t.title}"`]
     if (t.priority) parts.push(`${L.taskPriority}: ${t.priority}`)
-    if (t.status && t.status !== 'planned') parts.push(`${L.taskStatus}: ${t.status}`)
+    if (t.status && t.status !== 'todo') parts.push(`${L.taskStatus}: ${t.status}`)
     if (t.dueDate) {
       const dueStr = t.dueDate.slice(0, 10)
       if (dueStr === today) {
@@ -265,11 +265,8 @@ export function buildTaskStats(
   const L = LABELS[language]
 
   const byStatus: Record<string, number> = {
-    planned: 0,
-    in_progress: 0,
+    todo: 0,
     done: 0,
-    backlog: 0,
-    on_hold: 0,
   }
   let overdueCount = 0
 
@@ -282,5 +279,5 @@ export function buildTaskStats(
     }
   }
 
-  return L.taskStats(tasks.length, byStatus.planned, byStatus.in_progress, byStatus.done, overdueCount)
+  return L.taskStats(tasks.length, byStatus.todo, 0, byStatus.done, overdueCount)
 }

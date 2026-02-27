@@ -544,7 +544,7 @@ Format: { "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration"
 Rules:
 - priority: "high", "medium", "low"
 - dueDate: "YYYY-MM-DD" (today or future only)
-- status: "planned", "in_progress", "backlog"
+- status: "todo"
 - estimatedDuration: minutes (15, 30, 60, 90, 120)
 - Only suggest fields that need changing. Omit good values.
 - confidence 0.9+ = very sure, 0.7 = fairly sure, <0.7 = guess
@@ -553,7 +553,7 @@ Rules:
 
       const descSnippet = task.description ? task.description.slice(0, 100) : ''
       const userPrompt = `Task: "${task.title}"${descSnippet ? `\nDescription: "${descSnippet}"` : ''}
-Current: priority=${task.priority || 'none'}, dueDate=${task.dueDate || 'none'}, status=${task.status || 'planned'}, duration=${task.estimatedDuration || 'none'}min
+Current: priority=${task.priority || 'none'}, dueDate=${task.dueDate || 'none'}, status=${task.status || 'todo'}, duration=${task.estimatedDuration || 'none'}min
 Project: ${taskStore.getProjectDisplayName(task.projectId) || 'none'} | Subtasks: ${subtasks.length} (${subtasksDone} done)${siblings.length > 0 ? `\nSiblings: ${siblings.join(', ')}` : ''}
 Today: ${today} | Overdue tasks: ${overdueTasks}`
 
@@ -580,7 +580,7 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
       // Validate and normalize suggestions
       const validFields = new Set(['priority', 'dueDate', 'status', 'estimatedDuration'])
       const validPriorities = new Set(['high', 'medium', 'low'])
-      const validStatuses = new Set(['planned', 'in_progress', 'backlog'])
+      const validStatuses = new Set(['todo'])
       const validDurations = new Set([15, 30, 60, 90, 120])
 
       const currentValues: Record<string, string | number | null> = {
@@ -654,14 +654,14 @@ Format: { "tasks": [{ "taskId": "...", "suggestions": [{ "field": "priority|dueD
 Rules:
 - priority: "high", "medium", "low"
 - dueDate: "YYYY-MM-DD" (today or future only)
-- status: "planned", "in_progress", "backlog"
+- status: "todo"
 - estimatedDuration: minutes (15, 30, 60, 90, 120)
 - Only suggest fields that need changing per task. Omit good values.
 - confidence 0.9+ = very sure, 0.7 = fairly sure, <0.7 = guess
 - reason: 1 short sentence` + langHint
 
       const taskList = tasks.map(t =>
-        `[${t.id}] "${t.title}" — priority=${t.priority || 'none'}, due=${t.dueDate || 'none'}, status=${t.status || 'planned'}, est=${t.estimatedDuration || 'none'}min`
+        `[${t.id}] "${t.title}" — priority=${t.priority || 'none'}, due=${t.dueDate || 'none'}, status=${t.status || 'todo'}, est=${t.estimatedDuration || 'none'}min`
       ).join('\n')
 
       const messages: RouterChatMessage[] = [
@@ -690,7 +690,7 @@ Rules:
       // Validate and normalize
       const validFields = new Set(['priority', 'dueDate', 'status', 'estimatedDuration'])
       const validPriorities = new Set(['high', 'medium', 'low'])
-      const validStatuses = new Set(['planned', 'in_progress', 'backlog'])
+      const validStatuses = new Set(['todo'])
       const validDurations = new Set([15, 30, 60, 90, 120])
       const taskMap = new Map(tasks.map(t => [t.id, t]))
 

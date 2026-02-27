@@ -368,17 +368,17 @@ export function useWorkProfile() {
     const observations: Omit<MemoryObservation, 'createdAt'>[] = []
 
     // --- 1. Status distribution snapshot ---
-    const statusCounts = { planned: 0, in_progress: 0, done: 0, backlog: 0, on_hold: 0 }
+    const statusCounts = { todo: 0, done: 0 }
     for (const t of allTasks) {
       if (t.status in statusCounts) statusCounts[t.status as keyof typeof statusCounts]++
     }
     const total = allTasks.length
-    const backlogRatio = total > 0 ? statusCounts.backlog / total : 0
-    if (backlogRatio > 0.4 && statusCounts.backlog >= 5) {
+    const todoRatio = total > 0 ? statusCounts.todo / total : 0
+    if (todoRatio > 0.4 && statusCounts.todo >= 5) {
       observations.push({
         entity: 'user',
         relation: 'backlog_heavy',
-        value: `${statusCounts.backlog} of ${total} tasks (${Math.round(backlogRatio * 100)}%) in backlog`,
+        value: `${statusCounts.todo} of ${total} tasks (${Math.round(todoRatio * 100)}%) in todo`,
         confidence: 0.8,
         source: 'task_analysis'
       })
@@ -522,12 +522,12 @@ export function useWorkProfile() {
       }
     }
 
-    // --- 7. In-progress WIP limit check ---
-    if (statusCounts.in_progress >= 5) {
+    // --- 7. Todo WIP limit check ---
+    if (statusCounts.todo >= 5) {
       observations.push({
         entity: 'user',
         relation: 'high_wip',
-        value: `${statusCounts.in_progress} tasks in progress simultaneously`,
+        value: `${statusCounts.todo} tasks in todo simultaneously`,
         confidence: 0.8,
         source: 'task_analysis'
       })

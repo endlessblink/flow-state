@@ -63,7 +63,7 @@ export function getTaskContextTips(
 
   // Large task suggestion
   if (
-    task.status === 'planned' &&
+    task.status === 'todo' &&
     task.estimatedDuration &&
     task.estimatedDuration > 120 &&
     tips.length < 2
@@ -79,7 +79,7 @@ export function getTaskContextTips(
 
   // In progress but no timer running
   if (
-    task.status === 'in_progress' &&
+    task.status === 'todo' &&
     timerStore &&
     !timerStore.isTimerActive &&
     tips.length < 2
@@ -115,7 +115,7 @@ export function getTaskContextTips(
         // Check if completing this task type could count toward challenge
         if (
           challenge.objectiveType === 'complete_tasks' ||
-          (challenge.objectiveType === 'focus_time_minutes' && task.status === 'in_progress')
+          (challenge.objectiveType === 'focus_time_minutes' && task.status === 'todo')
         ) {
           tips.push({
             text: `Completing this counts toward your "${challenge.title}" challenge!`,

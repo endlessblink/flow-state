@@ -48,6 +48,10 @@ const meta = {
     required: {
       control: 'boolean',
       description: 'Whether the input is required'
+    },
+    ariaDescribedBy: {
+      control: 'text',
+      description: 'ID of the element describing the input'
     }
   },
   args: {
@@ -73,6 +77,35 @@ export const Default: Story = {
     template: `
       <div style="width: 320px;">
         <BaseInput v-bind="args" v-model="value" />
+      </div>
+    `
+  })
+}
+
+export const Accessibility: Story = {
+  render: (args) => ({
+    components: { BaseInput },
+    setup() {
+      return { args }
+    },
+    template: `
+      <div style="width: 320px; display: flex; flex-direction: column; gap: var(--space-5);">
+        <BaseInput
+          label="Auto-linked Helper Text"
+          helperText="Screen readers will announce this when the input is focused."
+          placeholder="Focus me!"
+        />
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <p id="external-desc" style="font-size: 12px; color: var(--text-muted);">
+            This is an external description paragraph.
+          </p>
+          <BaseInput
+            label="External Description"
+            ariaDescribedBy="external-desc"
+            placeholder="I am described by the text above."
+          />
+        </div>
       </div>
     `
   })

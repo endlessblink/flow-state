@@ -41,7 +41,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@tauri-apps/api/path': fileURLToPath(new URL('./tests/mocks/tauri-path.ts', import.meta.url)),
+      '@tauri-apps/api/core': fileURLToPath(new URL('./tests/mocks/tauri-core.ts', import.meta.url)),
+      '@tauri-apps/api/window': fileURLToPath(new URL('./tests/mocks/tauri-window.ts', import.meta.url)),
+      '@tauri-apps/plugin-fs': fileURLToPath(new URL('./tests/mocks/tauri-plugin-fs.ts', import.meta.url)),
+      '@tauri-apps/plugin-dialog': fileURLToPath(new URL('./tests/mocks/tauri-plugin-dialog.ts', import.meta.url))
     }
   }
 });

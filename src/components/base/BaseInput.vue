@@ -16,6 +16,7 @@
         :placeholder="placeholder"
         :disabled="disabled"
         :required="required"
+        :aria-describedby="computedAriaDescribedBy"
         :class="inputClasses"
         :style="inputStyles"
         @blur="$emit('blur', $event)"
@@ -26,7 +27,11 @@
       <slot name="suffix" />
     </div>
 
-    <span v-if="helperText" class="helper-text">
+    <span
+      v-if="helperText"
+      :id="`${inputId}-helper`"
+      class="helper-text"
+    >
       {{ helperText }}
     </span>
   </div>
@@ -45,6 +50,7 @@ interface Props {
   disabled?: boolean
   required?: boolean
   id?: string
+  ariaDescribedBy?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -55,7 +61,8 @@ const props = withDefaults(defineProps<Props>(), {
   helperText: undefined,
   disabled: false,
   required: false,
-  id: undefined
+  id: undefined,
+  ariaDescribedBy: undefined
 })
 
 const emit = defineEmits<{
@@ -67,6 +74,12 @@ const emit = defineEmits<{
 
 const inputRef = ref<HTMLInputElement>()
 const inputId = computed(() => props.id || `input-${Math.random().toString(36).substr(2, 9)}`)
+
+// Accessibility: Associate input with helper text
+const computedAriaDescribedBy = computed(() => {
+  if (props.ariaDescribedBy) return props.ariaDescribedBy
+  return props.helperText ? `${inputId.value}-helper` : undefined
+})
 
 // Initialize slots for Vue 3 Composition API
 const slots = useSlots()

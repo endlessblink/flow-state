@@ -268,7 +268,7 @@ export function getTauriDebugInstance() {
 
 // Expose to window for debugging (DEV only)
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  window.__flowstate_tauri_debug = {
+  (window as unknown as Record<string, unknown>).__flowstate_tauri_debug = {
     getSummary: () => globalInstance?.getSummary() || 'Not initialized',
     exportHistory: () => globalInstance?.exportHistory() || '{}',
     getTrend: () => globalInstance?.trend.value

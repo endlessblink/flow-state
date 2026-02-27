@@ -52,7 +52,7 @@ import { ref, computed } from 'vue'
 import { Calendar, Clock } from 'lucide-vue-next'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
-import { useTaskStore } from '@/stores/tasks'
+import { useTaskStore, type Task } from '@/stores/tasks'
 
 interface Props {
   active?: boolean

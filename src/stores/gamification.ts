@@ -370,6 +370,8 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   async function loadOrCreateProfile(userId: string) {
+    if (!supabase) return
+
     const { data, error } = await supabase
       .from('user_gamification')
       .select('*')
@@ -395,6 +397,8 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   async function loadAchievements() {
+    if (!supabase) return
+
     const { data, error } = await supabase.from('achievements').select('*')
 
     if (error) throw error
@@ -402,6 +406,8 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   async function loadUserAchievements(userId: string) {
+    if (!supabase) return
+
     const { data, error } = await supabase
       .from('user_achievements')
       .select('*')
@@ -421,6 +427,8 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   async function loadShopItems() {
+    if (!supabase) return
+
     const { data, error } = await supabase
       .from('shop_items')
       .select('*')
@@ -431,6 +439,8 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   async function loadUserPurchases(userId: string) {
+    if (!supabase) return
+
     const { data, error } = await supabase
       .from('user_purchases')
       .select('item_id')
@@ -441,6 +451,8 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   async function loadUserStats(userId: string) {
+    if (!supabase) return
+
     const { data, error } = await supabase
       .from('user_stats')
       .select('*')
@@ -482,7 +494,7 @@ export const useGamificationStore = defineStore('gamification', () => {
       metadata?: Record<string, unknown>
     }
   ): Promise<XpAwardResult | null> {
-    if (!isEnabled.value || !profile.value || !authStore.user?.id) {
+    if (!supabase || !isEnabled.value || !profile.value || !authStore.user?.id) {
       return null
     }
 
@@ -608,7 +620,7 @@ export const useGamificationStore = defineStore('gamification', () => {
    * Record daily activity and update streak
    */
   async function recordDailyActivity(): Promise<StreakUpdateResult | null> {
-    if (!profile.value || !authStore.user?.id) return null
+    if (!supabase || !profile.value || !authStore.user?.id) return null
 
     // Use date strings for comparison to avoid timezone issues
     // getLocalDateString returns "YYYY-MM-DD" in local timezone
@@ -785,7 +797,7 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   async function updateAchievementProgress(achievementId: string, progress: number) {
-    if (!authStore.user?.id) return
+    if (!supabase || !authStore.user?.id) return
 
     const existing = userAchievements.value.get(achievementId)
 
@@ -810,7 +822,7 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   async function unlockAchievement(achievement: Achievement): Promise<AchievementUnlockResult | null> {
-    if (!authStore.user?.id) return null
+    if (!supabase || !authStore.user?.id) return null
 
     const now = new Date()
 
@@ -879,7 +891,7 @@ export const useGamificationStore = defineStore('gamification', () => {
     statKey: keyof Omit<UserStats, 'userId' | 'viewsUsed' | 'featuresUsed' | 'updatedAt'>,
     amount = 1
   ) {
-    if (!stats.value || !authStore.user?.id) return
+    if (!supabase || !stats.value || !authStore.user?.id) return
 
     const currentValue = stats.value[statKey] as number
     const newValue = currentValue + amount
@@ -904,7 +916,7 @@ export const useGamificationStore = defineStore('gamification', () => {
    * Track view/feature usage
    */
   async function trackViewUsage(viewName: string) {
-    if (!stats.value || !authStore.user?.id) return
+    if (!supabase || !stats.value || !authStore.user?.id) return
     if (stats.value.viewsUsed[viewName]) return // Already tracked
 
     const newViewsUsed = { ...stats.value.viewsUsed, [viewName]: true }
@@ -922,7 +934,7 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   async function trackFeatureUsage(featureName: string) {
-    if (!stats.value || !authStore.user?.id) return
+    if (!supabase || !stats.value || !authStore.user?.id) return
     if (stats.value.featuresUsed[featureName]) return
 
     const newFeaturesUsed = { ...stats.value.featuresUsed, [featureName]: true }
@@ -946,7 +958,7 @@ export const useGamificationStore = defineStore('gamification', () => {
    * Protected by mutex to prevent double-purchase race conditions
    */
   async function purchaseItem(itemId: string): Promise<PurchaseResult> {
-    if (!profile.value || !authStore.user?.id) {
+    if (!supabase || !profile.value || !authStore.user?.id) {
       return { success: false, item: {} as ShopItem, xpSpent: 0, newAvailableXp: 0, error: 'Not logged in' }
     }
 
@@ -1033,7 +1045,7 @@ export const useGamificationStore = defineStore('gamification', () => {
    * Equip a theme
    */
   async function equipTheme(themeId: string) {
-    if (!profile.value || !authStore.user?.id) return false
+    if (!supabase || !profile.value || !authStore.user?.id) return false
 
     // Must own the theme (or it's 'default')
     if (themeId !== 'default' && !ownedItems.value.has(themeId)) {

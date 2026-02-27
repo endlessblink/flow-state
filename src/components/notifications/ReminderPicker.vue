@@ -161,7 +161,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'add-reminder', reminder: TaskReminder): void
-  (e: 'remove-reminder', reminderId: string): void
+  (e: 'removeReminder', reminderId: string): void
   (e: 'dismiss-reminder', reminderId: string): void
 }>()
 

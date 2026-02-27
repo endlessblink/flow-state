@@ -186,6 +186,8 @@ export const useChallengesStore = defineStore('challenges', () => {
   }
 
   async function loadActiveChallenges(userId: string) {
+    if (!supabase) return
+
     const { data, error } = await supabase
       .from('user_challenges')
       .select('*')
@@ -210,6 +212,8 @@ export const useChallengesStore = defineStore('challenges', () => {
   }
 
   async function loadCorruptionState(userId: string) {
+    if (!supabase) return
+
     const { data, error } = await supabase
       .from('user_gamification')
       .select('corruption_level, active_multiplier')
@@ -254,6 +258,7 @@ export const useChallengesStore = defineStore('challenges', () => {
 
       // Save to database
       const challenges: Challenge[] = []
+      if (!supabase) throw new Error('Supabase client not initialized')
       for (const gen of generated) {
         const challenge: Partial<Challenge> = {
           userId,
@@ -291,6 +296,7 @@ export const useChallengesStore = defineStore('challenges', () => {
       lastDailyGeneration.value = today
 
       // Update last_daily_generation in user_gamification
+      if (!supabase) throw new Error('Supabase client not initialized')
       await supabase
         .from('user_gamification')
         .update({ last_daily_generation: today })
@@ -352,6 +358,7 @@ export const useChallengesStore = defineStore('challenges', () => {
         },
       }
 
+      if (!supabase) throw new Error('Supabase client not initialized')
       const { data, error } = await supabase
         .from('user_challenges')
         .insert(mapChallengeToDb(challenge))
@@ -365,6 +372,7 @@ export const useChallengesStore = defineStore('challenges', () => {
       lastWeeklyGeneration.value = weekStart
 
       // Update last_weekly_generation in user_gamification
+      if (!supabase) throw new Error('Supabase client not initialized')
       await supabase
         .from('user_gamification')
         .update({ last_weekly_generation: weekStart })
@@ -403,6 +411,7 @@ export const useChallengesStore = defineStore('challenges', () => {
         const newCurrent = challenge.objectiveCurrent + increment
 
         // Update in database (atomic)
+        if (!supabase) throw new Error('Supabase client not initialized')
         const { data, error } = await supabase
           .from('user_challenges')
           .update({
@@ -476,6 +485,7 @@ export const useChallengesStore = defineStore('challenges', () => {
 
   async function completeChallenge(challenge: Challenge): Promise<void> {
     if (!authStore.user?.id) return
+    if (!supabase) return
 
     const now = new Date()
     const userId = authStore.user.id
@@ -550,6 +560,7 @@ export const useChallengesStore = defineStore('challenges', () => {
     reason: 'expired' | 'failed'
   ): Promise<void> {
     if (!authStore.user?.id) return
+    if (!supabase) return
 
     // Update status in DB
     const { error: updateError } = await supabase
@@ -599,6 +610,7 @@ export const useChallengesStore = defineStore('challenges', () => {
 
   async function updateCorruption(delta: number): Promise<void> {
     if (!authStore.user?.id) return
+    if (!supabase) return
 
     const newLevel = Math.max(0, Math.min(100, corruptionLevel.value + delta))
     corruptionLevel.value = newLevel
@@ -619,6 +631,7 @@ export const useChallengesStore = defineStore('challenges', () => {
 
   async function updateActiveMultiplier(multiplier: number): Promise<void> {
     if (!authStore.user?.id) return
+    if (!supabase) return
 
     activeMultiplier.value = multiplier
 
@@ -652,6 +665,7 @@ export const useChallengesStore = defineStore('challenges', () => {
     status: 'completed' | 'failed' | 'expired'
   ): Promise<void> {
     if (!authStore.user?.id) return
+    if (!supabase) return
 
     const completionRate = challenge.objectiveCurrent / challenge.objectiveTarget
     const now = new Date()
@@ -681,6 +695,7 @@ export const useChallengesStore = defineStore('challenges', () => {
     result: 'completed' | 'failed'
   ): Promise<void> {
     if (!authStore.user?.id || result === 'failed') return
+    if (!supabase) return
 
     try {
       const { data } = await supabase
@@ -726,7 +741,7 @@ export const useChallengesStore = defineStore('challenges', () => {
     let recentFailed = 0
     let recentTypes: ChallengeObjective[] = []
 
-    if (authStore.user?.id) {
+    if (authStore.user?.id && supabase) {
       const twoWeeksAgo = new Date()
       twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
 

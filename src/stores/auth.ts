@@ -625,6 +625,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const signInWithPassword = async (email: string, password: string) => {
+    if (!supabase) throw new Error('Supabase client not initialized')
     try {
       // 1. Capture guest data BEFORE sign-in clears/changes state
       // (Actually, sign-in itself doesn't clear store, but the subsequent app reload/sync might)
@@ -668,6 +669,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const signIn = async (email: string) => { // Basic Magic Link for now (easiest to start)
+    if (!supabase) throw new Error('Supabase client not initialized')
     try {
       isLoading.value = true
       error.value = null
@@ -722,10 +724,12 @@ export const useAuthStore = defineStore('auth', () => {
         // localStorage might not be available in some edge cases
       }
 
-      try {
-        await supabase.auth.signOut({ scope: 'local' })
-      } catch (signOutErr) {
-        console.warn('[AUTH] supabase.auth.signOut() failed, clearing locally:', signOutErr)
+      if (supabase) {
+        try {
+          await supabase.auth.signOut({ scope: 'local' })
+        } catch (signOutErr) {
+          console.warn('[AUTH] supabase.auth.signOut() failed, clearing locally:', signOutErr)
+        }
       }
 
       // Always clear auth state regardless of signOut result
@@ -800,6 +804,7 @@ export const useAuthStore = defineStore('auth', () => {
       // PWA: standard OAuth redirect flow
       // TASK-1283: Request calendar.readonly scope for Google Calendar integration
       // FEATURE-1414: Added drive.file scope for task image attachments
+      if (!supabase) throw new Error('Supabase client not initialized')
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -828,6 +833,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const signUpWithEmail = async (email: string, password: string, metadata?: Record<string, unknown>) => {
+    if (!supabase) throw new Error('Supabase client not initialized')
     try {
       isLoading.value = true
       error.value = null
@@ -864,6 +870,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const sendPasswordResetEmail = async (email: string) => {
+    if (!supabase) throw new Error('Supabase client not initialized')
     try {
       isLoading.value = true
       error.value = null

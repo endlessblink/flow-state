@@ -4,7 +4,7 @@
       <header class="settings-header">
         <h2 class="settings-title">
           {{ $t('settings.title') }}
-</h2>
+        </h2>
         <button class="close-btn" @click="$emit('close')">
           <X :size="16" />
         </button>

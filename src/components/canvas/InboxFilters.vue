@@ -247,9 +247,9 @@ interface Props {
   context?: string // Hide canvas sort when inside canvas view
 }
 
-const { t } = useI18n()
-
 const props = defineProps<Props>()
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   'update:unscheduledOnly': [value: boolean]

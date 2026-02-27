@@ -14,8 +14,9 @@ import { CacheFirst, NetworkFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
 // VitePWA injects __WB_MANIFEST at build time
-// VitePWA injects __WB_MANIFEST at build time
-declare const self: ServiceWorkerGlobalScope & typeof globalThis;
+declare let self: ServiceWorkerGlobalScope & {
+  __WB_MANIFEST: any
+}
 
 // ============================================================================
 // WORKBOX PRECACHING (auto-injected by VitePWA)
@@ -32,7 +33,7 @@ precacheAndRoute(self.__WB_MANIFEST)
 // If precache fails, try network directly
 registerRoute(
   new Route(
-    ({ url }) => url.pathname.startsWith('/assets/') &&
+    ({ url }: { url: URL }) => url.pathname.startsWith('/assets/') &&
       (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')),
     new NetworkFirst({
       cacheName: 'asset-fallback-cache',
@@ -55,7 +56,7 @@ registerRoute(
 // NetworkFirst with networkTimeoutSeconds fails fast and falls back to a minimal cache.
 registerRoute(
   new Route(
-    ({ url }) => {
+    ({ url }: { url: URL }) => {
       // Match Supabase API endpoints
       // Uses path-based detection so self-hosted instances work on any hostname
       const isRestAPI = url.pathname.includes('/rest/v1/')
@@ -79,7 +80,7 @@ registerRoute(
 // Images: Cache-first with 30-day expiry
 registerRoute(
   new Route(
-    ({ request }) => request.destination === 'image',
+    ({ request }: { request: Request }) => request.destination === 'image',
     new CacheFirst({
       cacheName: 'image-cache',
       plugins: [
@@ -95,7 +96,7 @@ registerRoute(
 // Fonts: Cache-first with 1-year expiry
 registerRoute(
   new Route(
-    ({ request }) => request.destination === 'font',
+    ({ request }: { request: Request }) => request.destination === 'font',
     new CacheFirst({
       cacheName: 'font-cache',
       plugins: [
@@ -121,10 +122,13 @@ interface TimerCompleteMessage {
 }
 
 interface NotificationData {
-  sessionId: string
-  wasBreak: boolean
-  taskId: string
+  sessionId?: string
+  wasBreak?: boolean
+  taskId?: string
   taskName?: string
+  type?: string
+  url?: string
+  timestamp?: string
 }
 
 interface NotificationAction {

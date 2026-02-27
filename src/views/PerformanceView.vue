@@ -31,7 +31,7 @@
         <div class="card glass stat-card">
           <h3>Canvas Latency</h3>
           <div class="stat-value">
-            {{ canvasLatency }}ms
+            {{ canvasLatency }}
           </div>
           <div class="stat-label">
             1000 nodes sync
@@ -41,7 +41,7 @@
         <div class="card glass stat-card">
           <h3>Memory Usage</h3>
           <div class="stat-value">
-            {{ memoryUsage }}MB
+            {{ memoryUsage }}
           </div>
           <div class="stat-label">
             Heap size
@@ -173,16 +173,16 @@ onMounted(async () => {
 // Metrics helpers
 const canvasLatency = computed(() => {
   if (results.value?.canvasPerformance) {
-    return results.value.canvasPerformance.averageTime.toFixed(1)
+    return results.value.canvasPerformance.averageTime.toFixed(1) + 'ms'
   }
-  return '0.0'
+  return '0.0ms'
 })
 
 const memoryUsage = computed(() => {
   if (results.value?.memoryEfficiency?.memoryUsage) {
-    return (results.value.memoryEfficiency.memoryUsage / 1024 / 1024).toFixed(1)
+    return (results.value.memoryEfficiency.memoryUsage / 1024 / 1024).toFixed(1) + 'MB'
   }
-  return '0.0'
+  return '0.0MB'
 })
 
 const performanceGrade = computed(() => {

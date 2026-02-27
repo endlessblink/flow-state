@@ -105,11 +105,11 @@ function liveTask(snapshotTask: Record<string, unknown>): Record<string, unknown
   const st = storeTask as Record<string, unknown>
   return {
     ...snapshotTask,
-    title: st.title ?? snapshotTask.title,
-    status: st.status ?? snapshotTask.status,
-    priority: st.priority ?? snapshotTask.priority,
-    dueDate: st.dueDate ?? snapshotTask.dueDate,
-    estimatedDuration: st.estimatedDuration ?? snapshotTask.estimatedDuration,
+    title: st.title ?? (snapshotTask.title as string | undefined),
+    status: st.status ?? (snapshotTask.status as string | undefined),
+    priority: st.priority ?? (snapshotTask.priority as string | undefined),
+    dueDate: st.dueDate ?? (snapshotTask.dueDate as string | undefined),
+    estimatedDuration: st.estimatedDuration ?? (snapshotTask.estimatedDuration as number | undefined),
   }
 }
 
@@ -264,7 +264,7 @@ function isActiveChallengesResult(result: { tool: string; data?: ChatToolResultD
 }
 
 function isAchievementsNearResult(result: { tool: string; data?: ChatToolResultData }): boolean {
-  return result.tool === 'get_achievements_near_completion' && !!result.data && Array.isArray(result.data)
+  return result.tool === 'get_achievements_near_completion' && !!result.data && Array.isArray(result.data as unknown)
 }
 
 function isProductivityStatsResult(result: { tool: string; data?: ChatToolResultData }): boolean {
@@ -272,7 +272,7 @@ function isProductivityStatsResult(result: { tool: string; data?: ChatToolResult
 }
 
 function isSuggestNextTaskResult(result: { tool: string; data?: ChatToolResultData }): boolean {
-  return result.tool === 'suggest_next_task' && !!result.data && Array.isArray(result.data)
+  return result.tool === 'suggest_next_task' && !!result.data && Array.isArray(result.data as unknown)
 }
 
 function isWeeklySummaryResult(result: { tool: string; data?: ChatToolResultData }): boolean {
@@ -395,7 +395,8 @@ async function handleAction(action: ChatAction) {
 
   try {
     await action.handler()
-    action.completed = true
+    // Cast action to any to allow mutation since it's a prop object reference
+    ;(action as any).completed = true
   } catch (err) {
     console.error('[ChatMessage] Action failed:', err)
   } finally {
@@ -593,32 +594,32 @@ async function saveSchedule() {
             </div>
             <div class="summary-stats-grid">
               <div class="summary-stat">
-                <span class="summary-stat-value">{{ result.data.totalTasks }}</span>
+                <span class="summary-stat-value">{{ result.data?.totalTasks ?? 0 }}</span>
                 <span class="summary-stat-label">Total</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value">{{ result.data.inProgress }}</span>
+                <span class="summary-stat-value">{{ result.data?.inProgress ?? 0 }}</span>
                 <span class="summary-stat-label">In Progress</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value summary-stat-success">{{ result.data.completedToday }}</span>
+                <span class="summary-stat-value summary-stat-success">{{ result.data?.completedToday ?? 0 }}</span>
                 <span class="summary-stat-label">Done Today</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value">{{ result.data.dueToday }}</span>
+                <span class="summary-stat-value">{{ result.data?.dueToday ?? 0 }}</span>
                 <span class="summary-stat-label">Due Today</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': (result.data?.overdueCount ?? 0) > 0 }">{{ result.data?.overdueCount ?? 0 }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value">{{ result.data.timerSessionsCompleted }}</span>
+                <span class="summary-stat-value">{{ result.data?.timerSessionsCompleted ?? 0 }}</span>
                 <span class="summary-stat-label">Pomodoros</span>
               </div>
             </div>
             <!-- Overdue task list if any -->
-            <div v-if="result.data.overdueTasks?.length > 0" class="task-list">
+            <div v-if="result.data.overdueTasks && result.data.overdueTasks.length > 0" class="task-list">
               <div class="summary-section-label">
                 Overdue Tasks
                 <span class="section-count">({{ result.data.overdueTasks.length }})</span>
@@ -678,7 +679,7 @@ async function saveSchedule() {
               </button>
             </div>
             <!-- Due today task list if any -->
-            <div v-if="result.data.dueTodayTasks?.length > 0" class="task-list">
+            <div v-if="result.data.dueTodayTasks && result.data.dueTodayTasks.length > 0" class="task-list">
               <div class="summary-section-label">
                 Due Today
                 <span class="section-count">({{ result.data.dueTodayTasks.length }})</span>

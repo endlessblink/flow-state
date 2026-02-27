@@ -154,7 +154,7 @@
               :dragging="nodeProps.dragging"
               @update="(data) => handleSectionUpdate(nodeProps.id, data)"
               @collect="collectTasksForSection"
-              @context-menu="handleSectionContextMenu"
+              @context-menu="(e) => handleSectionContextMenu(e, nodeProps.data)"
               @open-settings="handleOpenSectionSettings"
               @resize-start="handleSectionResizeStart"
               @resize="handleSectionResize"
@@ -411,7 +411,7 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
     }))
 }
 
-const handleSectionContextMenu = (event: MouseEvent, section: CanvasGroup) => {
+const handleSectionContextMenu = (event: MouseEvent, section: any) => {
     if (event) {
         event.preventDefault()
         event.stopPropagation() // STOP PROPAGATION to prevent pane menu
@@ -421,7 +421,7 @@ const handleSectionContextMenu = (event: MouseEvent, section: CanvasGroup) => {
     // BUG-1096: Use normalized coordinates for Tauri compatibility
     const { x, y } = getViewportCoordinates(event)
     // cast section to any to avoid type mismatch
-    contextMenuStore.openCanvasContextMenu(x, y, section as any)
+    contextMenuStore.openCanvasContextMenu(x, y, section)
 }
 
 // Expose for testing purposes (Fundamental Stability)

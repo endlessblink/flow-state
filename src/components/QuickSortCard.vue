@@ -142,13 +142,14 @@ interface Props {
   task: Task
 }
 
-const { t } = useI18n()
 const props = defineProps<Props>()
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]
   swipeSave: []
   swipeDelete: []
 }>()
+// @ts-ignore - 't' is unused in script but used in template
+const { t } = useI18n()
 
 // Date picker state
 const showDatePicker = ref(false)

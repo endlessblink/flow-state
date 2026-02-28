@@ -77,9 +77,6 @@ import { ChevronDown, Check } from 'lucide-vue-next'
 import BasePopover from './BasePopover.vue'
 import type { Component } from 'vue'
 
-// Unique ID for a11y
-const dropdownListId = `dropdown-list-${useId()}`
-
 export interface DropdownOption {
   label: string
   value: string | number
@@ -106,6 +103,9 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[]]
 }>()
+
+// Unique ID for a11y
+const dropdownListId = `dropdown-list-${useId()}`
 
 const triggerElement = ref<HTMLElement>()
 const isOpen = ref(false)

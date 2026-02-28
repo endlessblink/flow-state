@@ -5,6 +5,9 @@
       class="dropdown-trigger"
       :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
       :disabled="disabled"
+      aria-haspopup="listbox"
+      :aria-expanded="isOpen"
+      :aria-controls="dropdownListId"
       @click="toggleDropdown"
       @keydown.down.prevent="openAndFocusFirst"
       @keydown.up.prevent="openAndFocusLast"
@@ -28,6 +31,7 @@
       @close="closeDropdown"
     >
       <ul
+        :id="dropdownListId"
         class="dropdown-list"
         role="listbox"
         @keydown.down.prevent="focusNext"
@@ -68,10 +72,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useId } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
 import BasePopover from './BasePopover.vue'
 import type { Component } from 'vue'
+
+// Unique ID for a11y
+const dropdownListId = `dropdown-list-${useId()}`
 
 export interface DropdownOption {
   label: string

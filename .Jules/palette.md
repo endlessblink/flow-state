@@ -1,0 +1,3 @@
+## 2024-05-24 - BaseDropdown ARIA Attributes
+**Learning:** The `BaseDropdown.vue` component previously lacked proper ARIA attributes to connect the trigger button to the listbox menu, which is a common accessibility issue for custom dropdown implementations.
+**Action:** When creating or modifying custom popup menus or dropdowns in Vue, always ensure the trigger has `aria-haspopup="listbox"`, dynamically binds `aria-expanded`, and uses Vue 3.5+'s `useId()` to generate a unique ID for `aria-controls` to link it to the controlled element.

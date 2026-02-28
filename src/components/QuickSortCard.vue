@@ -148,7 +148,7 @@ const emit = defineEmits<{
   swipeSave: []
   swipeDelete: []
 }>()
-// @ts-ignore - 't' is unused in script but used in template
+// @ts-expect-error - 't' is unused in script but used in template
 const { t } = useI18n()
 
 // Date picker state

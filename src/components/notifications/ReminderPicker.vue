@@ -62,7 +62,7 @@
               <button
                 class="remove-btn"
                 title="Remove reminder"
-                @click="emit('remove-reminder', reminder.id)"
+                @click="emit('removeReminder', reminder.id)"
               >
                 <X :size="12" />
               </button>
@@ -156,13 +156,15 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  dueDate: undefined,
+  dueTime: undefined,
   compact: false
 })
 
 const emit = defineEmits<{
-  (e: 'add-reminder', reminder: TaskReminder): void
-  (e: 'remove-reminder', reminderId: string): void
-  (e: 'dismiss-reminder', reminderId: string): void
+  (e: 'addReminder', reminder: TaskReminder): void
+  (e: 'removeReminder', reminderId: string): void
+  (e: 'dismissReminder', reminderId: string): void
 }>()
 
 const popoverVisible = ref(false)
@@ -242,7 +244,7 @@ function addQuickReminder(type: '1hour' | 'tomorrow9am' | 'nextMonday9am') {
     dismissed: false,
     createdAt: new Date().toISOString()
   }
-  emit('add-reminder', reminder)
+  emit('addReminder', reminder)
 }
 
 function addCustomReminder() {
@@ -258,7 +260,7 @@ function addCustomReminder() {
     dismissed: false,
     createdAt: new Date().toISOString()
   }
-  emit('add-reminder', reminder)
+  emit('addReminder', reminder)
   newDateTimestamp.value = null
   newTimeTimestamp.value = null
   newLabel.value = ''

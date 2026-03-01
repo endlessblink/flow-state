@@ -126,7 +126,7 @@ const groupColor = computed(() => {
   const storeGroup = canvasStore.groups.find(g => g.id === groupId)
   return storeGroup?.color || props.data?.color || '#3b82f6'
 })
-const taskCount = computed(() => {
+const taskCount = computed((): number => {
   const data = props.data as Record<string, unknown>
   if (!data) return 0
 
@@ -134,8 +134,8 @@ const taskCount = computed(() => {
   // - Root groups (no parent): show aggregated count (includes descendants)
   // - Child groups: show only direct count (tasks in this group only)
   const isRootGroup = !data.parentGroupId || data.parentGroupId === 'NONE'
-  const direct = data.directTaskCount ?? 0
-  const aggregated = data.aggregatedTaskCount ?? direct
+  const direct = (data.directTaskCount as number) ?? 0
+  const aggregated = (data.aggregatedTaskCount as number) ?? direct
 
   return isRootGroup ? aggregated : direct
 })

@@ -145,7 +145,6 @@
 
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, Search, X } from 'lucide-vue-next'
 import { NBadge } from 'naive-ui'
 import BaseBadge from '@/components/base/BaseBadge.vue'
@@ -154,8 +153,6 @@ import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import { type Task } from '@/stores/tasks'
 import { type DurationCategory } from '@/utils/durationCategories'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
-
-const { t } = useI18n()
 
 defineProps<{
   isCollapsed: boolean

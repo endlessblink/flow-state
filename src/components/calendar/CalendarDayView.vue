@@ -38,7 +38,7 @@ defineEmits<{
   (e: 'eventDragStart', event: DragEvent, calEvent: CalendarEvent): void
   (e: 'eventDragEnd', event: DragEvent, calEvent: CalendarEvent): void
   (e: 'eventClick', event: MouseEvent, calEvent: CalendarEvent): void
-  (e: 'eventDblClick', calEvent: CalendarEvent): void
+  (e: 'eventDblClick', calEvent: CalendarEvent, event: MouseEvent): void
   (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent): void
   (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent): void
   (e: 'removeFromCalendar', calEvent: CalendarEvent): void
@@ -164,7 +164,7 @@ const {
         <div class="slot-tasks-container">
           <div
             v-for="calEvent in getTasksForSlot(slot)"
-            v-show="isTaskPrimarySlot(slot, calEvent)"
+            v-show="isTaskPrimarySlot(calEvent, slot)"
             :key="`${calEvent.id}-${slot.slotIndex}`"
             class="slot-task is-primary"
             :class="{
@@ -178,7 +178,7 @@ const {
               'status-active': getTaskStatus(calEvent) === 'todo',
               'slot-task--virtual': calEvent.isVirtual
             }"
-            :style="getSlotTaskStyle(calEvent)"
+            :style="getSlotTaskStyle(calEvent, slot)"
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
             :draggable="!calEvent.isVirtual"
             @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"
@@ -186,7 +186,7 @@ const {
             @dragstart="!calEvent.isVirtual && $emit('eventDragStart', $event, calEvent)"
             @dragend="!calEvent.isVirtual && $emit('eventDragEnd', $event, calEvent)"
             @click="!calEvent.isVirtual && $emit('eventClick', $event, calEvent)"
-            @dblclick="!calEvent.isVirtual && $emit('eventDblClick', calEvent)"
+            @dblclick="!calEvent.isVirtual && $emit('eventDblClick', calEvent, $event)"
             @contextmenu.prevent="!calEvent.isVirtual && $emit('eventContextMenu', $event, calEvent)"
           >
             <!-- Project Stripe -->

@@ -25,7 +25,9 @@
 
           <!-- ═══ Step 1: Choose Provider ═══ -->
           <div v-if="step === 1" class="step-content">
-            <h2 class="step-title">Set up AI</h2>
+            <h2 class="step-title">
+              Set up AI
+            </h2>
             <p class="step-desc">
               FlowState uses AI for smart suggestions, task analysis, and chat.
               Choose how you'd like to power it.

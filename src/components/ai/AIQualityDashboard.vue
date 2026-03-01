@@ -143,7 +143,7 @@
               <span class="result-grade" :class="scoreColorClass(result.overallScore)">
                 {{ result.grade }}
               </span>
-              <span class="result-grade-dot" :class="gradeDotClass(result.grade)"></span>
+              <span class="result-grade-dot" :class="gradeDotClass(result.grade)" />
             </div>
           </div>
 
@@ -156,7 +156,9 @@
           <!-- AI Response Preview (first 3 lines) -->
           <div class="result-response-preview">
             <span class="preview-label">AI Response:</span>
-            <div class="preview-text">{{ result.response }}</div>
+            <div class="preview-text">
+              {{ result.response }}
+            </div>
           </div>
 
           <!-- Simple Verdict (derived from judge reasoning) -->
@@ -168,12 +170,16 @@
           <div v-if="expandedCards.has(result.promptId)" class="expanded-content">
             <div class="expanded-section">
               <h4>Full AI Response</h4>
-              <div class="response-text">{{ result.response }}</div>
+              <div class="response-text">
+                {{ result.response }}
+              </div>
             </div>
 
             <div v-if="result.judgeReasoning" class="expanded-section">
               <h4>Judge's Detailed Assessment</h4>
-              <div class="judge-text">{{ result.judgeReasoning }}</div>
+              <div class="judge-text">
+                {{ result.judgeReasoning }}
+              </div>
             </div>
 
             <!-- Expected Behavior -->
@@ -274,7 +280,9 @@
           <span class="history-time">{{ formatTime(h.timestamp) }}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" @click="handleClearHistory">Clear History</button>
+      <button class="btn btn-ghost" @click="handleClearHistory">
+        Clear History
+      </button>
     </div>
   </div>
 </template>

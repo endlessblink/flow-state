@@ -917,7 +917,7 @@ async function saveSchedule() {
                 </div>
                 <div class="challenge-meta">
                   <span class="challenge-reward boss-reward">+{{ result.data.boss.rewardXp }} XP</span>
-                  <span class="challenge-time">{{ formatTimeRemaining(result.data.boss.timeRemaining) }}</span>
+                  <span class="challenge-time">{{ formatTimeRemaining(result.data.boss.timeRemaining as number | undefined) }}</span>
                 </div>
               </div>
             </div>
@@ -1113,12 +1113,12 @@ async function saveSchedule() {
                 <span class="summary-stat-label">Days Used</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.unscheduled?.length > 0 }">{{ result.data.unscheduled?.length || 0 }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.unscheduled && result.data.unscheduled.length > 0 }">{{ result.data.unscheduled ? result.data.unscheduled.length : 0 }}</span>
                 <span class="summary-stat-label">Unscheduled</span>
               </div>
             </div>
             <template v-for="(dayKey) in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']" :key="dayKey">
-              <div v-if="result.data.plan?.[dayKey]?.length > 0" class="task-list">
+              <div v-if="result.data.plan && result.data.plan[dayKey] && result.data.plan[dayKey].length > 0" class="task-list">
                 <div class="summary-section-label">
                   {{ PLAN_DAY_LABELS[dayKey] }}
                   <span class="section-count">({{ result.data.plan?.[dayKey]?.length }})</span>

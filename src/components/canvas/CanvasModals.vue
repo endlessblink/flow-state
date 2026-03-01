@@ -33,19 +33,19 @@
   <!-- Unified Group Modal (create + edit with optional smart settings) -->
   <UnifiedGroupModal
     :is-open="modals.isGroupModalOpen"
-    :group="modals.selectedGroup"
+    :group="modals.selectedGroup as any"
     :position="modals.groupModalPosition"
     @close="modals.closeGroupModal"
-    @created="(group) => $emit('handleGroupCreated', group)"
-    @updated="(group) => $emit('handleGroupUpdated', group)"
+    @created="(group: any) => $emit('handleGroupCreated', group)"
+    @updated="(group: any) => $emit('handleGroupUpdated', group)"
   />
 
   <!-- Group Edit Modal -->
   <GroupEditModal
-    :section="modals.selectedSectionForEdit"
+    :section="modals.selectedSectionForEdit as any"
     :is-visible="modals.isGroupEditModalOpen"
     @close="modals.closeGroupEditModal"
-    @save="(updatedSection) => $emit('handleGroupEditSave', updatedSection)"
+    @save="(updatedSection: any) => $emit('handleGroupEditSave', updatedSection)"
   />
 
   <!-- Group Delete Confirmation Modal -->

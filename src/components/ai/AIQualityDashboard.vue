@@ -9,9 +9,9 @@
       <div class="actions">
         <button
           class="btn btn-ghost"
+          title="Quick check with 1 run per test"
           :disabled="isRunning"
           @click="handleRunTests(1)"
-          title="Quick check with 1 run per test"
         >
           Quick (1x)
         </button>
@@ -45,8 +45,12 @@
     <div v-if="report" class="summary-cards">
       <div class="card glass score-card" :class="gradeClass">
         <h3>Overall Grade</h3>
-        <div class="grade-display">{{ report.grade }}</div>
-        <p>{{ gradeLabel }}</p>
+        <div class="grade-display">
+          {{ report.grade }}
+        </div>
+        <p>
+          {{ gradeLabel }}
+        </p>
       </div>
 
       <div class="card glass stat-card">
@@ -54,7 +58,9 @@
         <div class="stat-value" :class="scoreColorClass(report.averageScore)">
           {{ passedTestsCount }} of {{ report.results.length }}
         </div>
-        <p>{{ passRateLabel }}</p>
+        <p>
+          {{ passRateLabel }}
+        </p>
       </div>
 
       <div class="card glass stat-card">
@@ -62,19 +68,27 @@
         <div class="stat-value" :class="rulePassRateColor">
           {{ (report.ruleCheckPassRate * 100).toFixed(0) }}%
         </div>
-        <p>pass rate</p>
+        <p>
+          pass rate
+        </p>
       </div>
 
       <div class="card glass stat-card">
         <h3>Provider</h3>
-        <div class="stat-value stat-value--small">{{ report.provider }}</div>
-        <p>{{ formatTime(report.timestamp) }}</p>
+        <div class="stat-value stat-value--small">
+          {{ report.provider }}
+        </div>
+        <p>
+          {{ formatTime(report.timestamp) }}
+        </p>
       </div>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <h3 class="empty-title">AI Quality Assessment</h3>
+      <h3 class="empty-title">
+        AI Quality Assessment
+      </h3>
       <p class="empty-desc">
         Tests your AI assistant by sending {{ testPrompts.length }} prompts across {{ new Set(testPrompts.map(t => t.category)).size }} categories,
         then judges each response against {{ rubrics.length }} quality rubrics using a second LLM call.

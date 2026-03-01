@@ -44,7 +44,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'selectTask': [taskId: string]
   'task-click': [task: TaskListItem]
-  'update-message': [message: Message]
+  'updateMessage': [message: ChatMessage]
 }>()
 
 // ============================================================================
@@ -561,7 +561,7 @@ async function saveSchedule() {
     scheduleSaved.value = true
     // Emit an event to update the message instead of mutating the prop
     if (props.message.metadata?.scheduleQuestion) {
-      emit('update-message', {
+      emit('updateMessage', {
         ...props.message,
         metadata: {
           ...props.message.metadata,
@@ -754,11 +754,11 @@ async function saveSchedule() {
                 <span class="section-count">({{ result.data.dueTodayTasks.length }})</span>
               </div>
               <button
-                v-for="task in visibleTasks(result.data.dueTodayTasks, 'duetoday-' + result.tool)"
+                v-for="task in visibleTasks(result.data.dueTodayTasks as TaskListItem[], 'duetoday-' + result.tool)"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
-                @click="openQuickEdit(task, $event)"
+                @click="openQuickEdit(task as TaskListItem, $event)"
               >
                 <span
                   class="task-priority-dot"
@@ -838,7 +838,7 @@ async function saveSchedule() {
                 <span class="gam-stat-value">{{ result.data.currentStreak }}</span>
                 <span class="gam-stat-label">Streak</span>
               </div>
-              <div class="gam-stat">
+              <div v-if="result.data.corruptionLevel !== undefined" class="gam-stat">
                 <Shield :size="14" class="gam-stat-icon gam-corruption-icon" :class="{ 'gam-corruption-high': result.data.corruptionLevel > 60 }" />
                 <span class="gam-stat-value">{{ result.data.corruptionLevel }}%</span>
                 <span class="gam-stat-label">Corruption</span>
@@ -861,7 +861,7 @@ async function saveSchedule() {
               <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
             <!-- Daily Challenges -->
-            <div v-if="result.data.dailies.length > 0" class="challenge-section">
+            <div v-if="result.data.dailies && result.data.dailies.length > 0" class="challenge-section">
               <div class="summary-section-label">
                 Daily Missions
               </div>
@@ -881,8 +881,8 @@ async function saveSchedule() {
                   <div class="challenge-progress-bar-wrapper">
                     <div
                       class="challenge-progress-bar"
-                      :style="{ width: ch.progressPercent + '%' }"
-                      :class="{ 'bar-complete': ch.progressPercent >= 100 }"
+                      :style="{ width: (ch.progressPercent || 0) + '%' }"
+                      :class="{ 'bar-complete': (ch.progressPercent || 0) >= 100 }"
                     />
                   </div>
                   <span class="challenge-progress-text">{{ ch.objectiveCurrent }}/{{ ch.objectiveTarget }}</span>
@@ -921,7 +921,7 @@ async function saveSchedule() {
                 </div>
               </div>
             </div>
-            <div v-if="result.data.dailies.length === 0 && !result.data.boss" class="gam-empty" dir="auto">
+            <div v-if="result.data.dailies && result.data.dailies.length === 0 && !result.data.boss" class="gam-empty" dir="auto">
               No active challenges. New dailies generate each morning.
             </div>
           </div>
@@ -1010,7 +1010,7 @@ async function saveSchedule() {
                 :key="task.id"
                 class="task-list-item suggest-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
-                @click="openQuickEdit(task, $event)"
+                @click="openQuickEdit(task as TaskListItem, $event)"
               >
                 <span class="suggest-rank">{{ Number(taskIdx) + 1 }}</span>
                 <span class="task-title" :dir="direction || 'auto'">{{ task.title }}</span>
@@ -1088,10 +1088,10 @@ async function saveSchedule() {
             </div>
             <!-- Challenge info if available -->
             <div v-if="result.data.challenges" class="gam-footer-row">
-              <span v-if="result.data.challenges.completedToday > 0" class="gam-footer-badge gam-badge-success">
+              <span v-if="result.data.challenges.completedToday !== undefined && result.data.challenges.completedToday > 0" class="gam-footer-badge gam-badge-success">
                 {{ result.data.challenges.completedToday }} challenges done today
               </span>
-              <span v-if="result.data.challenges.corruptionLevel > 0" class="gam-footer-badge gam-badge-corruption">
+              <span v-if="result.data.challenges.corruptionLevel !== undefined && result.data.challenges.corruptionLevel > 0" class="gam-footer-badge gam-badge-corruption">
                 Corruption: {{ result.data.challenges.corruptionLevel }}%
               </span>
             </div>
@@ -1128,7 +1128,7 @@ async function saveSchedule() {
                   :key="task.id"
                   class="task-list-item"
                   :class="{ 'task-completed': completedTaskIds.has(task.id) }"
-                  @click="openQuickEdit(task, $event)"
+                  @click="openQuickEdit(task as TaskListItem, $event)"
                 >
                   <span
                     class="task-priority-dot"
@@ -1166,13 +1166,13 @@ async function saveSchedule() {
                 </button>
               </div>
             </template>
-            <div v-if="result.data.unscheduled?.length > 0" class="task-list">
+            <div v-if="result.data.unscheduled?.length && result.data.unscheduled.length > 0" class="task-list">
               <div class="summary-section-label">
                 Unscheduled
                 <span class="section-count">({{ result.data.unscheduled.length }})</span>
               </div>
               <button
-                v-for="task in liveTasks(result.data.unscheduled)"
+                v-for="task in liveTasks(result.data.unscheduled as TaskListItem[])"
                 :key="task.id"
                 class="task-list-item task-unscheduled"
                 @click="openQuickEdit(task, $event)"
@@ -1202,7 +1202,7 @@ async function saveSchedule() {
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
-                @click="openQuickEdit(task, $event)"
+                @click="openQuickEdit(task as TaskListItem, $event)"
               >
                 <span
                   class="task-priority-dot"

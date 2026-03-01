@@ -15,7 +15,7 @@ import {
   Rocket, Target, Award, Crown, Flame, Clock, Hourglass, Layers,
   Calendar, Trophy, Star, RefreshCw, Shield, Timer, Brain,
   Zap, Infinity, Activity, Layout, Columns, Smartphone, Palette,
-  Moon, Sunrise, CheckCircle, Database, Lock, ChevronRight
+  Moon, Sunrise, CheckCircle, Database, ChevronRight
 } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{

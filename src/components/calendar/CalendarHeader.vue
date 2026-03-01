@@ -142,7 +142,12 @@ const toggleViewOptions = () => {
             :class="{ syncing: externalCalendarLoading }"
             @click="$emit('syncExternalCalendar')"
           >
-            <RefreshCw :size="16" :stroke-width="1.5" class="option-icon" :class="{ spinning: externalCalendarLoading }" />
+            <RefreshCw
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+              :class="{ spinning: externalCalendarLoading }"
+            />
             <span class="option-label">{{ $t('calendar.sync_external') }}</span>
           </button>
 
@@ -153,8 +158,18 @@ const toggleViewOptions = () => {
             :class="{ active: showGoogleEvents }"
             @click="$emit('toggleGoogleEvents')"
           >
-            <Eye v-if="showGoogleEvents" :size="16" :stroke-width="1.5" class="option-icon" />
-            <EyeOff v-else :size="16" :stroke-width="1.5" class="option-icon" />
+            <Eye
+              v-if="showGoogleEvents"
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
+            <EyeOff
+              v-else
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
             <span class="option-label">Google Calendar</span>
             <span v-if="showGoogleEvents" class="option-indicator" />
           </button>

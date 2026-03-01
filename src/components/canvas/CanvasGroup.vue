@@ -47,7 +47,12 @@
           </button>
 
           <!-- Collect Dropdown Menu -->
-          <div v-if="showCollectMenu" class="collect-menu" role="menu" @click.stop>
+          <div
+            v-if="showCollectMenu"
+            class="collect-menu"
+            role="menu"
+            @click.stop
+          >
             <button class="collect-option" role="menuitem" @click="handleCollect('move')">
               Move {{ matchingInboxCount }} tasks here
             </button>

@@ -87,7 +87,7 @@ const toggleViewOptions = () => {
         :y="popoverY"
         position="bottom"
         variant="menu"
-        :close-on-click-outside="true"
+        close-on-click-outside
         @close="showViewOptions = false"
       >
         <div class="view-options-menu">
@@ -108,8 +108,18 @@ const toggleViewOptions = () => {
             :class="{ active: hideCalendarDoneTasks }"
             @click="$emit('toggleDoneTasks')"
           >
-            <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" class="option-icon" />
-            <Eye v-else :size="16" :stroke-width="1.5" class="option-icon" />
+            <EyeOff
+              v-if="hideCalendarDoneTasks"
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
+            <Eye
+              v-else
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
             <span class="option-label">{{ hideCalendarDoneTasks ? $t('calendar.show_completed') : $t('calendar.hide_completed') }}</span>
             <span v-if="hideCalendarDoneTasks" class="option-indicator" />
           </button>

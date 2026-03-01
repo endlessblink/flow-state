@@ -43,6 +43,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'selectTask': [taskId: string]
+  'task-click': [task: TaskListItem]
+  'update-message': [message: Message]
 }>()
 
 // ============================================================================
@@ -56,10 +58,10 @@ const md = new MarkdownIt({
 })
 
 // Make links open in new tab
-const defaultRender = md.renderer.rules.link_open || function (tokens: Token[], idx: number, options: MarkdownIt.Options, _env: unknown, self: Renderer) {
+const defaultRender = md.renderer.rules.link_open || function (tokens: Token[], idx: number, options: any, _env: unknown, self: Renderer) {
   return self.renderToken(tokens, idx, options)
 }
-md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: MarkdownIt.Options, env: unknown, self: Renderer) {
+md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: any, env: unknown, self: Renderer) {
   tokens[idx].attrSet('target', '_blank')
   tokens[idx].attrSet('rel', 'noopener noreferrer')
   return defaultRender(tokens, idx, options, env, self)
@@ -274,8 +276,8 @@ function isTaskListResult(result: { tool: string; data: ChatToolResultData }): b
   // Direct array of tasks
   if (Array.isArray(result.data) && result.data.length > 0 && (result.data[0] as Record<string, unknown>)?.title) return true
   // Daily summary with nested task arrays
-  if (result.data.dueTodayTasks?.length && result.data.dueTodayTasks.length > 0) return true
-  if (result.data.overdueTasks?.length && result.data.overdueTasks.length > 0) return true
+  if (result.data.dueTodayTasks && result.data.dueTodayTasks.length > 0) return true
+  if (result.data.overdueTasks && result.data.overdueTasks.length > 0) return true
   return false
 }
 
@@ -557,10 +559,19 @@ async function saveSchedule() {
     })
 
     scheduleSaved.value = true
-    // Update message metadata to persist the answered state
+    // Emit an event to update the message instead of mutating the prop
     if (props.message.metadata?.scheduleQuestion) {
-      props.message.metadata.scheduleQuestion.answered = true
-      props.message.metadata.scheduleQuestion.selectedDays = [...selectedDays.value]
+      emit('update-message', {
+        ...props.message,
+        metadata: {
+          ...props.message.metadata,
+          scheduleQuestion: {
+            ...props.message.metadata.scheduleQuestion,
+            answered: true,
+            selectedDays: [...selectedDays.value]
+          }
+        }
+      })
     }
   } catch (err) {
     console.error('[ChatMessage] Save schedule failed:', err)
@@ -668,7 +679,7 @@ async function saveSchedule() {
                 <span class="summary-stat-label">Due Today</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount && result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">
@@ -677,17 +688,17 @@ async function saveSchedule() {
               </div>
             </div>
             <!-- Overdue task list if any -->
-            <div v-if="result.data.overdueTasks?.length > 0" class="task-list">
+            <div v-if="result.data.overdueTasks?.length && result.data.overdueTasks.length > 0" class="task-list">
               <div class="summary-section-label">
                 Overdue Tasks
                 <span class="section-count">({{ result.data.overdueTasks.length }})</span>
               </div>
               <button
-                v-for="task in visibleTasks(result.data.overdueTasks, 'overdue-' + result.tool)"
+                v-for="task in visibleTasks(result.data.overdueTasks as TaskListItem[], 'overdue-' + result.tool)"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
-                @click="openQuickEdit(task, $event)"
+                @click="openQuickEdit(task as TaskListItem, $event)"
               >
                 <span
                   class="task-priority-dot"
@@ -727,7 +738,7 @@ async function saveSchedule() {
                 </div>
               </button>
               <button
-                v-if="result.data.overdueTasks.length > MAX_VISIBLE_TASKS"
+                v-if="result.data.overdueTasks && result.data.overdueTasks.length > MAX_VISIBLE_TASKS"
                 class="show-more-btn"
                 @click="toggleSection('overdue-' + result.tool)"
               >
@@ -737,7 +748,7 @@ async function saveSchedule() {
               </button>
             </div>
             <!-- Due today task list if any -->
-            <div v-if="result.data.dueTodayTasks?.length > 0" class="task-list">
+            <div v-if="result.data.dueTodayTasks?.length && result.data.dueTodayTasks.length > 0" class="task-list">
               <div class="summary-section-label">
                 Due Today
                 <span class="section-count">({{ result.data.dueTodayTasks.length }})</span>
@@ -791,7 +802,7 @@ async function saveSchedule() {
                 </div>
               </button>
               <button
-                v-if="result.data.dueTodayTasks.length > MAX_VISIBLE_TASKS"
+                v-if="result.data.dueTodayTasks && result.data.dueTodayTasks.length > MAX_VISIBLE_TASKS"
                 class="show-more-btn"
                 @click="toggleSection('duetoday-' + result.tool)"
               >
@@ -966,7 +977,7 @@ async function saveSchedule() {
                 <span class="summary-stat-label">Total Tasks</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount && result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">

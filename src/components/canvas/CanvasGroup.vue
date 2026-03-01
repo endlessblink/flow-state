@@ -38,6 +38,8 @@
             class="control-btn collect-btn"
             :class="{ 'has-matches': matchingInboxCount > 0 }"
             :title="`Collect matching tasks (${matchingInboxCount} available)`"
+            aria-haspopup="menu"
+            :aria-expanded="showCollectMenu"
             @click.stop="toggleCollectMenu"
           >
             <Magnet :size="14" />
@@ -45,11 +47,11 @@
           </button>
 
           <!-- Collect Dropdown Menu -->
-          <div v-if="showCollectMenu" class="collect-menu" @click.stop>
-            <button class="collect-option" @click="handleCollect('move')">
+          <div v-if="showCollectMenu" class="collect-menu" role="menu" @click.stop>
+            <button class="collect-option" role="menuitem" @click="handleCollect('move')">
               Move {{ matchingInboxCount }} tasks here
             </button>
-            <button class="collect-option" @click="handleCollect('highlight')">
+            <button class="collect-option" role="menuitem" @click="handleCollect('highlight')">
               Highlight matching tasks
             </button>
           </div>
@@ -61,6 +63,7 @@
           class="control-btn"
           :class="{ 'power-active': isPowerMode }"
           :title="isPowerMode ? 'Disable power mode' : 'Enable power mode'"
+          :aria-pressed="isPowerMode"
           @click.stop="togglePowerMode"
         >
           <Zap :size="14" />
@@ -69,6 +72,7 @@
         <button
           class="control-btn"
           :title="section.isCollapsed ? 'Expand' : 'Collapse'"
+          :aria-expanded="!section.isCollapsed"
           @click.stop="toggleCollapse"
         >
           <ChevronDown v-if="!section.isCollapsed" :size="14" />

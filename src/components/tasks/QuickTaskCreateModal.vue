@@ -205,11 +205,20 @@ interface Props {
   isOpen: boolean
   loading?: boolean
   initialTitle?: string
+  // TASK-1428: Properties inherited from parent group (pre-fills form)
+  inheritedProps?: {
+    dueDate?: string
+    priority?: 'low' | 'medium' | 'high'
+    status?: string
+    projectId?: string
+    estimatedDuration?: number
+  } | null
 }
 
 const _props = withDefaults(defineProps<Props>(), {
   loading: false,
-  initialTitle: ''
+  initialTitle: '',
+  inheritedProps: null
 })
 
 const emit = defineEmits<{
@@ -424,14 +433,17 @@ const handleCreateTask = () => {
 // BUG-1335: Auto-select the active project so tasks created on canvas
 // inherit the currently selected sidebar project (especially nested 3rd-depth+).
 // Without this, tasks are created as 'uncategorized' and filtered out.
+// TASK-1428: Pre-fill form from inherited group properties (Today → today's date, etc.)
 watch(() => _props.isOpen, (isOpen) => {
   if (isOpen) {
+    const inherited = _props.inheritedProps
     taskTitle.value = _props.initialTitle || ''
     taskDescription.value = ''
-    status.value = 'todo'
-    priority.value = 'medium'
-    projectId.value = taskStore.activeProjectId || ''
-    localDate.value = ''
+    status.value = inherited?.status || 'todo'
+    priority.value = inherited?.priority || 'medium'
+    // TASK-1428: Inherited projectId takes precedence, then active sidebar project
+    projectId.value = inherited?.projectId || taskStore.activeProjectId || ''
+    localDate.value = inherited?.dueDate || ''
     pendingAttachments.value = []
   }
 })

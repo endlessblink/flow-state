@@ -51,6 +51,16 @@
 
 ---
 
+### TASK-1428: Auto-inherit group properties when creating task in a group (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-03-02)
+
+**Problem**: Creating a task inside a group like "Today" should automatically assign that group's properties to the new task (e.g., today's due date). Currently the user must manually set properties after creation.
+
+**Scope**: Investigate which group types carry inheritable properties (date-based groups, status groups, priority groups, project groups) and implement reliable auto-assignment on task creation within those groups.
+
+---
+
 ### ~~TASK-1412~~: Calendar Inbox Canvas Order Sort — right-to-left DFS + sort direction toggle (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-02-27)
@@ -65,22 +75,48 @@
 
 ---
 
-### FEATURE-1414: Task Image Attachments via Google Drive (🔄 IN PROGRESS)
+### TASK-1424: KDE Widget Nanny Notifications — Schedule-Gated Idle Reminders (🔄 IN PROGRESS)
 
-**Priority**: P3-LOW | **Status**: 🔄 IN PROGRESS (2026-02-23)
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-03-02)
+
+**Problem/Opportunity**: User wants a gentle reminder from the KDE widget when no Pomodoro session is active during configured work hours. Must be helpful without being counterproductive (notification fatigue, guilt, off-hours annoyance).
+
+**Research findings**: Clockify/Toggl Track model is best practice — schedule-gated, low-frequency, invitation-framed. Guilt framing (Duolingo-style) backfires long-term. Key: reminders should feel like a friendly assistant, not a boss.
+
+**Approach** (evidence-based):
+1. **Settings**: opt-in (default OFF), configurable work hours (Mon-Fri 9am-6pm default), trigger threshold (30/60/90 min of no active session), intensity/tone preference
+2. **Trigger logic**: `IF (current day in active_days) AND (current time in work_hours) AND (no timer running for >= threshold) THEN notify`
+3. **Notification**: KDE system notification with positive framing, rotating message bank (5-10 variants), one-click "Start Session" action
+4. **Escape valves**: "Snooze 1hr", "Quiet today", configurable or disable entirely
+5. **Never fire** if Pomodoro or break timer is currently active
+6. **Cap**: max 1 notification per hour
+
+**Steps**:
+- [ ] Add nanny notification settings to KDE widget config UI (enable/disable, work hours, days, interval, tone)
+- [ ] Implement idle detection timer in widget (poll timer status, track idle duration)
+- [ ] Create message bank with 5-10 positive-framed rotation variants
+- [ ] Wire KDE system notifications with "Start Session" + "Snooze" actions
+- [ ] Add "Quiet today" toggle to widget UI
+- [ ] Test edge cases (break timer active, outside work hours, snooze expiry)
+
+---
+
+### ~~FEATURE-1414~~: Task Image Attachments via Google Drive (✅ DONE)
+
+**Priority**: P3-LOW | **Status**: ✅ DONE (2026-03-02)
 
 **Problem/Opportunity**: Users want to attach images to tasks. VPS storage is limited (Contabo), so images must be stored externally. Google Drive is the chosen backend — user already has Google OAuth configured via Supabase for Calendar integration.
 
-**Approach**: Add `drive.file` scope to existing OAuth, create `google-drive-proxy` edge function (mirrors calendar proxy pattern), add `attachments` JSONB column to tasks table, build drag-drop upload UI in task editor. Client-side image compression (max 1920px, JPEG 0.8). Files stored in auto-created `FlowState/` Drive folder.
+**Approach**: Add `drive.file` scope to existing OAuth, create `google-drive-proxy` edge function (mirrors calendar proxy pattern), add `attachments` JSONB column to tasks table, build drag-drop upload UI in task editor. Client-side image compression (max 1920px, JPEG 0.8). Files stored in auto-created `FlowState/` Drive folder. Client-side thumbnail generation for instant preview.
 
 **Steps**:
-- [ ] Add `drive.file` scope to OAuth in `auth.ts`
-- [ ] Rename calendar-specific token keys to generic (`googleCalendarToken` → `googleProviderToken`)
+- [x] ~~Add `drive.file` scope to OAuth in `auth.ts`~~ ✅
+- [x] ~~Rename calendar-specific token keys to generic (`googleCalendarToken` → `googleProviderToken`)~~ ✅
 - [x] ~~Create `google-drive-proxy` edge function~~ ✅
-- [ ] Create `googleDriveService.ts` client service
-- [ ] Add `TaskAttachment` type + `attachments` field to Task + mappers + migration
-- [ ] Build `TaskAttachments.vue` upload UI in task editor
-- [ ] Self-hoster setup guide (SOP)
+- [x] ~~Create `googleDriveService.ts` client service~~ ✅
+- [x] ~~Add `TaskAttachment` type + `attachments` field to Task + mappers + migration~~ ✅
+- [x] ~~Build `TaskAttachments.vue` upload UI in task editor~~ ✅
+- [x] ~~Self-hoster setup guide (SOP-038)~~ ✅
 
 ---
 
@@ -3819,6 +3855,13 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1420**~~ | **P1** | ✅ **Add project selector to task edit modal — TaskEditMetadata missing project field** (✅ DONE 2026-02-27) |
 | ~~**TASK-1419**~~ | **P1** | ✅ **Inbox multi-select bulk property updates — context menu actions apply to all selected tasks** (✅ DONE 2026-02-27) |
 | ~~**TASK-1418**~~ | **P1** | ✅ **Too many buttons on calendar dashboard — consolidate into dropdown or settings** (✅ DONE 2026-02-27) |
+| **TASK-1424** | **P2** | 🔄 **KDE widget nanny notifications — schedule-gated idle reminders when no Pomodoro active** (🔄 IN PROGRESS 2026-03-02) |
+| **TASK-1423** | **P2** | 📋 **KDE widget: add button to open Tauri or web app** (📋 PLANNED 2026-03-02) |
+| **TASK-1428** | **P0** | 🔄 **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (🔄 IN PROGRESS 2026-03-02) |
+| **TASK-1427** | **P0** | 📋 **Offline: merge write queue into read cache on offline load** (📋 PLANNED 2026-03-02) |
+| **TASK-1426** | **P0** | 📋 **Offline: auth grace period — keep expired session for local ops** (📋 PLANNED 2026-03-02) |
+| **TASK-1425** | **P0** | 📋 **Offline: fast startup — skip Supabase when navigator.onLine=false** (📋 PLANNED 2026-03-02) |
+| **TASK-1422** | **P0** | 🔄 **Full offline mobile support — PWA works E2E without network** (🔄 IN PROGRESS 2026-03-02) |
 | **TASK-1421** | **P0** | 🔄 **Investigate & fix sluggish localhost performance** (🔄 IN PROGRESS 2026-02-27) |
 | **BUG-1416** | **P0** | 🔄 **Calendar inbox "today" filter shows wrong tasks — dueDate format mismatch (ISO vs YYYY-MM-DD)** (🔄 IN PROGRESS 2026-02-25) |
 | ~~**BUG-1415**~~ | **P0** | ✅ **Catalog drag doesn't move task to target group — drops on task rows make subtasks instead of transferring between groups** (✅ DONE 2026-02-25) |

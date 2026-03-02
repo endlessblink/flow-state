@@ -4,12 +4,14 @@ import { useMobileFilters } from '@/composables/mobile/useMobileFilters'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useOfflineVoiceQueue } from '@/composables/useOfflineVoiceQueue'
 import { useHaptics } from '@/composables/useHaptics'
+import { useCanvasStore } from '@/stores/canvas'
 
 export type ViewMode = 'tasks' | 'today'
 export type TimeFilterType = 'all' | 'today' | 'week' | 'overdue'
 
 export function useMobileInboxLogic() {
     const taskStore = useTaskStore()
+    const canvasStore = useCanvasStore()
     const { triggerHaptic } = useHaptics()
 
     const {
@@ -28,7 +30,7 @@ export function useMobileInboxLogic() {
     }
 
     const activeTimeFilter = ref<TimeFilterType>('all')
-    const sortBy = ref<'newest' | 'priority' | 'dueDate'>('newest')
+    const sortBy = ref<'newest' | 'priority' | 'dueDate' | 'canvasOrder'>('canvasOrder')
     const showGroupByDropdown = ref(false)
     const isTaskCreateOpen = ref(false)
 
@@ -204,26 +206,78 @@ export function useMobileInboxLogic() {
             }
         }
 
-        switch (sortBy.value) {
-            case 'priority': {
-                const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3, none: 4 }
-                tasks.sort((a, b) => (priorityOrder[a.priority || 'none'] || 4) - (priorityOrder[b.priority || 'none'] || 4))
-                break
+        if (sortBy.value === 'canvasOrder') {
+            // TASK-1412: Right-to-left group ordering + connection-aware DFS
+            const groups = canvasStore.groups || []
+
+            // Build a map of parentId → tasks for DFS bucketing
+            const buckets = new Map<string | null, Task[]>()
+            for (const task of tasks) {
+                const key = task.parentId ?? null
+                if (!buckets.has(key)) buckets.set(key, [])
+                buckets.get(key)!.push(task)
             }
-            case 'dueDate':
-                tasks.sort((a, b) => {
-                    if (!a.dueDate) return 1
-                    if (!b.dueDate) return -1
-                    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-                })
-                break
-            case 'newest':
-            default:
-                tasks.sort((a, b) => {
-                    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
-                    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
-                    return bTime - aTime
-                })
+
+            // Sort groups by X DESCENDING (rightmost first = right-to-left)
+            const sortedGroups = [...groups].sort((a, b) => (b.position?.x ?? 0) - (a.position?.x ?? 0))
+
+            const result: Task[] = []
+            const visited = new Set<string>()
+
+            const dfs = (task: Task) => {
+                if (visited.has(task.id)) return
+                visited.add(task.id)
+                result.push(task)
+                const siblings = buckets.get(task.parentId ?? null) ?? []
+                const children = siblings
+                    .filter(t => t.parentTaskId === task.id && !visited.has(t.id))
+                    .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+                for (const child of children) dfs(child)
+            }
+
+            for (const group of sortedGroups) {
+                const bucket = buckets.get(group.id) ?? []
+                const bucketIds = new Set(bucket.map(t => t.id))
+                const roots = bucket
+                    .filter(t => !t.parentTaskId || !bucketIds.has(t.parentTaskId))
+                    .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+                for (const root of roots) dfs(root)
+                for (const t of bucket) dfs(t)
+            }
+
+            const ungroupedBucket = buckets.get(null) ?? []
+            const ungroupedIds = new Set(ungroupedBucket.map(t => t.id))
+            const ungroupedRoots = ungroupedBucket
+                .filter(t => !t.parentTaskId || !ungroupedIds.has(t.parentTaskId))
+                .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+            for (const root of ungroupedRoots) dfs(root)
+            for (const t of ungroupedBucket) dfs(t)
+
+            for (const t of tasks) dfs(t)
+
+            tasks = result
+        } else {
+            switch (sortBy.value) {
+                case 'priority': {
+                    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3, none: 4 }
+                    tasks.sort((a, b) => (priorityOrder[a.priority || 'none'] || 4) - (priorityOrder[b.priority || 'none'] || 4))
+                    break
+                }
+                case 'dueDate':
+                    tasks.sort((a, b) => {
+                        if (!a.dueDate) return 1
+                        if (!b.dueDate) return -1
+                        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+                    })
+                    break
+                case 'newest':
+                default:
+                    tasks.sort((a, b) => {
+                        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+                        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+                        return bTime - aTime
+                    })
+            }
         }
 
         return tasks
@@ -266,6 +320,7 @@ export function useMobileInboxLogic() {
         switch (sortBy.value) {
             case 'priority': return 'Priority'
             case 'dueDate': return 'Due'
+            case 'canvasOrder': return 'Canvas'
             default: return 'Newest'
         }
     })
@@ -275,7 +330,7 @@ export function useMobileInboxLogic() {
     }
 
     const toggleSort = () => {
-        const sortOptions: Array<'newest' | 'priority' | 'dueDate'> = ['newest', 'priority', 'dueDate']
+        const sortOptions: Array<'newest' | 'priority' | 'dueDate' | 'canvasOrder'> = ['canvasOrder', 'newest', 'priority', 'dueDate']
         const currentIndex = sortOptions.indexOf(sortBy.value)
         sortBy.value = sortOptions[(currentIndex + 1) % sortOptions.length]
     }

@@ -40,6 +40,7 @@
       <CalendarInboxList
         :tasks="inboxTasks"
         :has-group-filter="selectedCanvasGroups.size > 0"
+        :show-canvas-badge="sortBy === 'canvasOrder'"
         @task-dragstart="onDragStart"
         @task-dragend="onDragEnd"
         @task-click="handleTaskClick"

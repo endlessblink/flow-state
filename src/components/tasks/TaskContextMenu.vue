@@ -522,11 +522,17 @@ const handleDoneForNow = async () => {
   const tomorrowStr = `${year}-${month}-${day}`
 
   try {
-    // Set both dueDate and doneForNowUntil to track the badge
-    await taskStore.updateTaskWithUndo(taskId, {
+    const task = currentTask.value
+    // Set dueDate, doneForNowUntil, and scheduledDate (if present) to tomorrow
+    // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
+    const updatePayload: Record<string, string> = {
       dueDate: tomorrowStr,
       doneForNowUntil: tomorrowStr
-    })
+    }
+    if (task?.scheduledDate) {
+      updatePayload.scheduledDate = tomorrowStr
+    }
+    await taskStore.updateTaskWithUndo(taskId, updatePayload)
     // TASK-1362: Also move calendar instance to tomorrow
     if (isCalendarEvent && calendarInstanceId) {
       await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: tomorrowStr })

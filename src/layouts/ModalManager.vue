@@ -108,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Task, type Project } from '@/stores/tasks'
 import type { TaskAttachment } from '@/types/tasks'
@@ -132,6 +132,7 @@ import SectionSelectionModal from '@/components/canvas/SectionSelectionModal.vue
 import KeyboardShortcutsPanel from '@/components/layout/KeyboardShortcutsPanel.vue'
 const CommandPalette = createLazyModal(() => import('@/components/layout/CommandPalette.vue'))
 
+import { useRoute, useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 
 // Stores
@@ -140,6 +141,52 @@ const settingsStore = useSettingsStore()
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const sidebar = useSidebarManagement()
+const route = useRoute()
+const router = useRouter()
+
+// Deep link: wait for tasks to load (app init is async)
+const waitForTasks = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (taskStore.tasks.length > 0) {
+      resolve()
+      return
+    }
+    const timeout = setTimeout(() => {
+      reject(new Error('Timed out waiting for tasks to load'))
+    }, 10000)
+
+    const unwatch = watch(() => taskStore.tasks.length, (len) => {
+      if (len > 0) {
+        clearTimeout(timeout)
+        unwatch()
+        resolve()
+      }
+    })
+  })
+}
+
+// Deep link: ?editTask=<id> opens the task edit modal
+watch(() => route.query.editTask, async (taskId) => {
+  if (!taskId || typeof taskId !== 'string') return
+
+  try {
+    await waitForTasks()
+  } catch {
+    console.warn('[DeepLink] Timed out waiting for tasks to load')
+    return
+  }
+
+  const task = taskStore.tasks.find(t => t.id === taskId)
+  if (task) {
+    openEditTask(task)
+  } else {
+    console.warn('[DeepLink] Task not found:', taskId)
+  }
+
+  // Clean up query param to prevent re-opening on refresh
+  const { editTask: _editTask, ...rest } = route.query
+  router.replace({ query: rest })
+}, { immediate: true })
 
 // State
 const showTaskEditModal = ref(false)

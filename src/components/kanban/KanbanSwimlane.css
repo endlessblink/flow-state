@@ -164,9 +164,9 @@
 }
 
 .swimlane-column {
-    flex: 0 0 260px;
-    min-width: 260px;
-    width: 260px;
+    flex: 0 0 300px;
+    min-width: 300px;
+    width: 300px;
     height: auto;
 }
 
@@ -195,17 +195,17 @@
 /* Responsive */
 @media (max-width: 1400px) {
     .swimlane-column {
-        flex: 0 0 300px !important;
-        min-width: 300px !important;
-        width: 300px !important;
+        flex: 0 0 320px !important;
+        min-width: 320px !important;
+        width: 320px !important;
     }
 }
 
 @media (max-width: 768px) {
     .swimlane-column {
-        flex: 0 0 280px !important;
-        min-width: 280px !important;
-        width: 280px !important;
+        flex: 0 0 300px !important;
+        min-width: 300px !important;
+        width: 300px !important;
     }
 
     .swimlane-header {

@@ -341,7 +341,8 @@ const {
   handleEdgesChange, handleNodesChange,
   handleNodeContextMenu, handleEdgeContextMenu, handleEdgeDoubleClick,
   handleNodeClick, handleSelectionChange,
-  
+  screenToFlowCoordinate,
+
   // From consolidated features
   selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
   alignLeft, alignRight, alignTop, alignBottom, alignCenterHorizontal, alignCenterVertical,
@@ -382,6 +383,28 @@ useEventListener(window, 'collect-overdue-tasks', (e: Event) => {
   if (detail?.groupId) {
     collectOverdueTasksNearGroup(detail.groupId)
   }
+})
+
+// Sidebar quick-add on canvas view: create task at viewport center
+useEventListener(window, 'sidebar-quick-task-create', async (e: Event) => {
+  const data = (e as CustomEvent).detail
+  if (!data?.title) return
+
+  // Calculate viewport center in flow coordinates
+  const vueFlowElement = document.querySelector('.vue-flow')
+  if (vueFlowElement) {
+    const rect = vueFlowElement.getBoundingClientRect()
+    const screenCenter = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    }
+    const flowCoords = screenToFlowCoordinate(screenCenter)
+    modalsStore.quickTaskPosition = flowCoords
+  } else {
+    modalsStore.quickTaskPosition = { x: 200, y: 200 }
+  }
+
+  await handleQuickTaskCreate(data)
 })
 
 // TASK-288 DEBUG: Wrapper to trace createTaskInGroup call

@@ -10,6 +10,7 @@
   <QuickTaskCreateModal
     :is-open="modals.isQuickTaskCreateOpen"
     :loading="false"
+    :inherited-props="modals.groupInheritedProps"
     @cancel="modals.closeQuickTaskCreate"
     @create="handleQuickTaskCreateAndClose"
   />

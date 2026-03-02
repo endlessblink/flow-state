@@ -9,6 +9,8 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { CANVAS } from '@/constants/canvas'
 import { useToast } from '@/composables/useToast'
 import { positionManager } from '@/services/canvas/PositionManager'
+import { useCanvasSectionProperties } from './useCanvasSectionProperties'
+import type { CanvasSection } from '@/stores/canvas/types'
 
 
 
@@ -36,6 +38,12 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         isQuickTaskCreateOpen,
         quickTaskPosition
     } = storeToRefs(modalsStore)
+
+    // TASK-1428: Section properties helper for group inheritance
+    const { getSectionProperties } = useCanvasSectionProperties({
+        taskStore,
+        getAllContainingSections: () => []  // Not needed for getSectionProperties
+    })
 
     const removeGhostNodeRef = (id: string) => {
         if (canvasStore.nodes) {
@@ -131,6 +139,21 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             parentId: group.id
         }
 
+        // TASK-1428: Compute inherited properties from group (name keywords + assignOnDrop + parent chain)
+        const allGroups = canvasStore._rawGroups || []
+        const inheritedProps = getSectionProperties(group as CanvasSection, allGroups)
+        modalsStore.groupInheritedProps = Object.keys(inheritedProps).length > 0 ? {
+            dueDate: inheritedProps.dueDate,
+            priority: inheritedProps.priority as 'low' | 'medium' | 'high' | undefined,
+            status: inheritedProps.status,
+            projectId: inheritedProps.projectId,
+            estimatedDuration: inheritedProps.estimatedDuration
+        } : null
+
+        if (import.meta.env.DEV && modalsStore.groupInheritedProps) {
+            console.log(`[TASK-1428] Group "${group.name}" inherited props:`, modalsStore.groupInheritedProps)
+        }
+
         quickTaskPosition.value = finalPosition
         deps.closeCanvasContextMenu()
         isQuickTaskCreateOpen.value = true
@@ -159,6 +182,9 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
             const { x, y, parentId, parentTaskId } = quickTaskPosition.value
 
+            // TASK-1428: Read inherited group properties (pre-filled in modal, also used as fallbacks)
+            const inherited = modalsStore.groupInheritedProps
+
             await taskStore.createTaskWithUndo({
                 title: data.title,
                 description: data.description,
@@ -167,8 +193,9 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 parentTaskId: shouldCreateInInbox ? undefined : parentTaskId,
                 status: (data.status as 'todo' | 'done') || 'todo',
                 priority: data.priority || 'medium',
-                dueDate: data.dueDate,
-                projectId: data.projectId,
+                // TASK-1428: Use inherited dueDate/projectId if user didn't set one in the form
+                dueDate: data.dueDate || inherited?.dueDate,
+                projectId: data.projectId || inherited?.projectId,
                 isInInbox: shouldCreateInInbox,
                 attachments: data.attachments  // FEATURE-1414
             })

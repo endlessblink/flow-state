@@ -76,6 +76,14 @@
         <span class="metadata-badge status-badge" :class="`status-${task.status}`">
           {{ statusEmoji(task.status) }}
         </span>
+
+        <!-- Not on Canvas Badge -->
+        <span
+          v-if="showCanvasBadge && !task.canvasPosition"
+          class="metadata-badge not-on-canvas-badge"
+        >
+          Not on Canvas
+        </span>
       </div>
     </div>
 
@@ -112,6 +120,7 @@ import { truncateUrlsInText } from '@/utils/urlTruncate'
 const props = defineProps<{
   task: Task
   isTimerActive: boolean
+  showCanvasBadge?: boolean
 }>()
 
 defineEmits<{
@@ -297,6 +306,12 @@ const formatDueDateLabel = (dueDate: string) => {
 .action-btn:hover {
   background: var(--brand-primary);
   color: white;
+}
+
+.not-on-canvas-badge {
+  color: var(--text-muted);
+  background: var(--glass-bg-soft);
+  border-style: dashed;
 }
 
 .timer-indicator {

@@ -15,6 +15,8 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<AuthError | null>(null)
   const isInitialized = ref(false)
   const initializationFailed = ref(false)
+  // TASK-1426: True when the JWT expired while offline — session kept for local ops (user.id valid)
+  const isOfflineGracePeriod = ref(false)
 
   // BUG-1086: Promise lock to prevent concurrent initialization attempts
   // Multiple callers (router guard, useAppInitialization) may call initialize() simultaneously
@@ -80,6 +82,12 @@ export const useAuthStore = defineStore('auth', () => {
         } else {
           console.error('[AUTH] Token refresh failed after all retries:', refreshError)
           // Don't clear session - let user continue until actual API call fails
+          // TASK-1426: If we're offline, explicitly enter grace period so other parts of
+          // the app know the session is expired but being kept for local operations only
+          if (!navigator.onLine) {
+            console.log('[AUTH] Proactive refresh exhausted retries while offline — entering grace period')
+            isOfflineGracePeriod.value = true
+          }
         }
         return
       }
@@ -199,6 +207,38 @@ export const useAuthStore = defineStore('auth', () => {
             console.log('[AUTH] Session expired or expiring soon, refreshing...')
             const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
             if (refreshError) {
+              // TASK-1426: Offline grace period — expired session is kept in memory when offline
+              // The JWT is useless for API calls, but user.id is valid for local IndexedDB operations
+              // (sync queue writes, offline reads). When back online, we attempt a real refresh.
+              if (!navigator.onLine) {
+                console.log('[AUTH] Session expired but offline — keeping auth for local operations (grace period)')
+                session.value = data.session  // keep expired session; user.id stays accessible
+                user.value = data.session.user
+                isOfflineGracePeriod.value = true
+                window.addEventListener('online', async () => {
+                  console.log('[AUTH] Back online — attempting session refresh after offline grace period')
+                  if (!supabase) return
+                  const { data: onlineData, error: onlineError } = await supabase.auth.refreshSession()
+                  if (!onlineError && onlineData.session) {
+                    console.log('[AUTH] Session refreshed successfully after coming online')
+                    session.value = onlineData.session
+                    user.value = onlineData.session.user
+                    isOfflineGracePeriod.value = false
+                    if (onlineData.session.expires_at) {
+                      scheduleTokenRefresh(onlineData.session.expires_at)
+                    }
+                  } else {
+                    console.error('[AUTH] Session refresh failed after coming online:', onlineError)
+                    // Server is reachable but refresh still failed — now it's a real failure
+                    error.value = onlineError
+                    initializationFailed.value = true
+                    session.value = null
+                    user.value = null
+                    isOfflineGracePeriod.value = false
+                  }
+                }, { once: true })
+                return
+              }
               console.error('[AUTH] Failed to refresh session:', refreshError)
               // TASK-1060: Mark initialization as failed so UI can show error state
               error.value = refreshError
@@ -893,6 +933,8 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     isInitialized,
     initializationFailed,
+    // TASK-1426: True when JWT expired while offline — user.id still valid for local ops
+    isOfflineGracePeriod,
 
     // Getters
     isAuthenticated,

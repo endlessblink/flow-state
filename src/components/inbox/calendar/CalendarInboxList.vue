@@ -19,6 +19,7 @@
       :key="task.id"
       :task="task"
       :is-timer-active="isTimerActive(task.id)"
+      :show-canvas-badge="showCanvasBadge"
       @dragstart="$emit('taskDragstart', $event, task)"
       @dragend="$emit('taskDragend')"
       @click="$emit('taskClick', $event, task)"
@@ -40,6 +41,7 @@ import CalendarTaskCard from './CalendarTaskCard.vue'
 defineProps<{
   tasks: Task[]
   hasGroupFilter: boolean
+  showCanvasBadge?: boolean
 }>()
 
 defineEmits<{

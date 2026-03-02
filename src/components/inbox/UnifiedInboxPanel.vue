@@ -99,6 +99,7 @@
       :multi-select-mode="multiSelectMode"
       :has-selected-groups="selectedCanvasGroups.size > 0"
       :are-globals-filtered="taskStore.filteredTasks.length > 0"
+      :show-canvas-badge="sortBy === 'canvasOrder'"
       @drag-start="onDragStart"
       @drag-end="onDragEnd"
       @task-click="handleTaskClick"

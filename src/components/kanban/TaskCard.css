@@ -1,25 +1,24 @@
 .task-card {
-    /* Clean card - TickTick style */
-    background: var(--canvas-task-bg); /* rgba(35,32,52,0.95) */
-    backdrop-filter: blur(var(--blur-sm));
-    -webkit-backdrop-filter: blur(var(--blur-sm));
-    /* Subtle but visible border */
-    border: 1px solid var(--border-medium);
-    border-radius: var(--radius-md);
-    /* Compact padding */
+    /* TASK-1429: Glass morphism card - Spectrum UI inspired */
+    background: var(--kanban-card-glass-bg);
+    backdrop-filter: blur(var(--blur-regular));
+    -webkit-backdrop-filter: blur(var(--blur-regular));
+    border: 1px solid var(--glass-border-light);
+    border-radius: var(--radius-xl);
     padding: var(--space-3);
     margin-bottom: var(--space-2);
     cursor: pointer;
-    transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
+    transition: all var(--duration-fast) ease;
     position: relative;
     width: 100%;
     box-sizing: border-box;
 }
 
 .task-card:hover {
-    /* Subtle hover - just background shift like TickTick */
-    background: var(--canvas-task-bg); /* rgba(35,32,52,0.95) — hover is nearly same surface */
-    border-color: var(--border-strong);
+    /* TASK-1429: Hover lift + glow */
+    border-color: var(--glass-border);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
 /* Hide action buttons by default, show on hover */
@@ -261,6 +260,55 @@
     color: var(--brand-primary);
 }
 
+/* TASK-1429: Card body - description + tags */
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.card-description {
+    font-size: var(--text-sm);
+    color: var(--kanban-card-description-color);
+    line-height: 1.4;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.card-tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    background: var(--kanban-card-tag-bg);
+    border: 1px solid var(--kanban-card-tag-border);
+    border-radius: var(--radius-full);
+    padding: 1px 8px;
+    white-space: nowrap;
+}
+
+.card-tag--overflow {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* TASK-1429: Card footer with separator */
+.card-footer {
+    border-top: 1px solid var(--kanban-card-footer-border);
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+}
+
 /* Expanded card details */
 .card-details {
     margin-top: var(--space-2);
@@ -309,6 +357,7 @@
     padding: var(--space-1) var(--space-2);
     margin-bottom: var(--space-1);
     min-height: 32px;
+    border-radius: var(--radius-md);
 }
 
 .task-card--ultrathin .completion-circle {
@@ -336,6 +385,11 @@
     /* Always hide details in ultrathin mode */
 }
 
+.task-card--ultrathin .card-body,
+.task-card--ultrathin .card-footer {
+    display: none;
+}
+
 .task-card--ultrathin .compact-actions {
     opacity: 1;
     /* Always show actions in ultrathin mode */
@@ -350,6 +404,7 @@
     padding: var(--space-1_5) var(--space-2);
     margin-bottom: var(--space-1_5);
     min-height: 44px;
+    border-radius: var(--radius-lg);
 }
 
 .task-card--compact .completion-circle {
@@ -373,21 +428,36 @@
     height: 22px;
 }
 
+.task-card--compact .card-description {
+    display: none;
+}
+
+.task-card--compact .card-footer {
+    margin-top: var(--space-2);
+    padding-top: var(--space-1);
+}
+
 .task-card--comfortable {
     padding: var(--space-2) var(--space-3);
     margin-bottom: var(--space-2);
     min-height: 52px;
+    border-radius: var(--radius-xl);
 }
 
 .task-card--spacious {
     padding: var(--space-4);
     margin-bottom: var(--space-3);
     min-height: 64px;
+    border-radius: var(--radius-xl);
 }
 
 .task-card--spacious .task-title {
     font-size: var(--text-base);
     margin-bottom: var(--space-2);
+}
+
+.task-card--spacious .card-description {
+    -webkit-line-clamp: 3;
 }
 
 /* Enhanced Accessibility & Focus Management */

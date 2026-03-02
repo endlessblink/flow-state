@@ -1,27 +1,24 @@
-/* Clean Column Container - TickTick/Todoist style */
+/* Glass Morphism Column Container - Spectrum UI inspired */
 .kanban-column {
-    background: transparent;
-    border: none;
-    border-left: 1px solid var(--glass-border-light);
-    border-radius: 0;
+    background: var(--kanban-column-bg);
+    backdrop-filter: blur(var(--blur-regular));
+    -webkit-backdrop-filter: blur(var(--blur-regular));
+    border: 1px solid var(--glass-border-light);
+    border-radius: var(--radius-2xl);
     display: flex;
     flex-direction: column;
-    min-width: 240px;
-    width: 280px;
+    min-width: 280px;
+    width: 300px;
     flex-shrink: 0;
-    padding: var(--space-2);
+    padding: var(--space-4);
+    transition: background var(--duration-fast) ease;
 }
 
-.kanban-column:first-child {
-    border-left: none;
-}
-
-/* Columns don't need hover effects */
 .kanban-column:hover {
-    /* No visual change on column hover */
+    background: var(--kanban-column-bg-hover);
 }
 
-/* Clean Header - TickTick style */
+/* Glass Header */
 .column-header {
     display: flex;
     align-items: center;
@@ -36,48 +33,54 @@
     gap: var(--space-2);
 }
 
-/* Priority column indicator dot */
+/* Priority column indicator dot - larger with glow */
 .column-priority-dot {
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     flex-shrink: 0;
+    box-shadow: 0 0 8px currentColor;
+    filter: brightness(1.1);
 }
 
 .column-title {
-    /* Clean, simple title - no uppercase, no shadows */
-    color: var(--text-secondary);
-    font-weight: 500;
+    color: var(--text-primary);
+    font-weight: 600;
     font-size: 13px;
 }
 
-/* Simple task count - just the number */
+/* Task count pill */
 .task-count {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: var(--text-muted);
+    background: var(--surface-tertiary);
+    padding: 1px 8px;
+    border-radius: var(--radius-full);
 }
 
-/* Add Task Button - Simple like TickTick */
+/* Add Task Button - Glass pill */
 .add-task-btn {
-    background: transparent;
-    border: none;
+    background: var(--glass-bg-soft);
+    border: 1px solid var(--glass-border-light);
     color: var(--text-muted);
-    width: 24px;
-    height: 24px;
-    border-radius: var(--radius-sm);
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color var(--duration-fast) ease;
+    transition: all var(--duration-fast) ease;
 }
 
 .add-task-btn:hover {
+    background: var(--glass-bg-medium);
+    border-color: var(--glass-border);
     color: var(--text-secondary);
 }
 
-/* Tasks Container - Clean spacing */
+/* Tasks Container */
 .tasks-container {
     flex: 1;
     display: flex;
@@ -121,7 +124,7 @@
     padding: 32px 16px;
     text-align: center;
     background: var(--glass-bg-subtle);
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     border: 1px dashed var(--glass-border);
     margin-top: 8px;
     transition: all 0.2s ease;
@@ -139,11 +142,11 @@
 }
 
 .add-first-task {
-    background: var(--purple-bg-start); /* rgba(99,102,241,0.16) */
+    background: var(--purple-bg-start);
     border: 1px solid var(--purple-border-medium);
-    color: var(--indigo-text); /* #818cf8 — no exact indigo-300 token */
+    color: var(--indigo-text);
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -154,7 +157,7 @@
 }
 
 .add-first-task:hover {
-    background: var(--calendar-ghost-bg-start); /* rgba(99,102,241,0.25) */
+    background: var(--calendar-ghost-bg-start);
     border-color: var(--purple-border-strong);
     color: var(--text-primary);
     transform: translateY(-1px);
@@ -166,10 +169,12 @@
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
+/* BUG-1335: Drag classes - preserve all existing behavior, update radius only */
 .ghost-card {
     opacity: 0.4;
     background: var(--blue-bg-light) !important;
     border: 2px dashed var(--blue-border-medium) !important;
+    border-radius: var(--radius-xl) !important;
 }
 
 .chosen-card {
@@ -177,14 +182,16 @@
     background: var(--glass-border) !important;
     transform: scale(1.02);
     z-index: 1000;
+    border-radius: var(--radius-xl) !important;
 }
 
 .drag-card {
     opacity: 1;
-    background: var(--canvas-task-bg) !important; /* rgba(35,32,52,0.95) — closest dark surface */
+    background: var(--canvas-task-bg) !important;
     border: 1px solid var(--border-hover) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* no token for 0.5 opacity shadow */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     cursor: grabbing;
+    border-radius: var(--radius-xl) !important;
 }
 
 /* BUG-050 FIX: Sortable fallback ghost - fixed positioning for consistent appearance across scroll */
@@ -194,10 +201,10 @@
     z-index: 9999 !important;
     pointer-events: none !important;
     opacity: 1 !important;
-    background: var(--canvas-task-bg) !important; /* rgba(35,32,52,0.95) — closest dark surface */
+    background: var(--canvas-task-bg) !important;
     border: 1px solid var(--brand-primary, #4ECDC4) !important;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px var(--brand-bg-dim) !important; /* no 0.5 shadow token */
-    border-radius: var(--radius-lg) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px var(--brand-bg-dim) !important;
+    border-radius: var(--radius-xl) !important;
     transform: rotate(1deg) scale(1.03) !important;
 }
 

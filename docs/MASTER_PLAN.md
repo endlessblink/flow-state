@@ -3857,6 +3857,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1418**~~ | **P1** | ✅ **Too many buttons on calendar dashboard — consolidate into dropdown or settings** (✅ DONE 2026-02-27) |
 | **TASK-1424** | **P2** | 🔄 **KDE widget nanny notifications — schedule-gated idle reminders when no Pomodoro active** (🔄 IN PROGRESS 2026-03-02) |
 | **TASK-1423** | **P2** | 📋 **KDE widget: add button to open Tauri or web app** (📋 PLANNED 2026-03-02) |
+| **TASK-1429** | **P1** | 📋 **Quick "Due Today" button — one-click set due date to today without opening calendar** (📋 PLANNED 2026-03-02) |
 | **TASK-1428** | **P0** | 🔄 **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (🔄 IN PROGRESS 2026-03-02) |
 | **TASK-1427** | **P0** | 📋 **Offline: merge write queue into read cache on offline load** (📋 PLANNED 2026-03-02) |
 | **TASK-1426** | **P0** | 📋 **Offline: auth grace period — keep expired session for local ops** (📋 PLANNED 2026-03-02) |

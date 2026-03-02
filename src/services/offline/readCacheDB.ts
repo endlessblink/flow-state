@@ -210,6 +210,154 @@ export async function getCachedProjects(): Promise<Project[] | null> {
   }
 }
 
+// ── TASK-1427: Merge write queue into read cache on offline load ────────
+
+/**
+ * Load tasks from cache AND apply any pending (unsynced) write operations on top.
+ *
+ * This solves the problem where tasks created/updated/deleted while offline
+ * are stored in the write queue but NOT reflected in the read cache snapshot.
+ * On app restart offline those tasks appeared to vanish until the queue synced.
+ *
+ * Statuses included: 'pending', 'failed', 'syncing'
+ * ('syncing' ops that are stuck from a previous session crash are also included
+ * so their local changes are not lost from the visible task list)
+ *
+ * Order of operations is preserved (oldest createdAt first) so that if both
+ * a create and an update exist for the same entity the update wins.
+ */
+export async function getCachedTasksWithPendingWrites(): Promise<Task[] | null> {
+  // TASK-1427: Load base snapshot
+  const cachedTasks = await getCachedTasks()
+
+  // TASK-1427: Load pending write operations from FlowStateSyncQueue
+  let pendingOps: Array<{ entityType: string; operation: string; entityId: string; payload: Record<string, unknown> }> = []
+  try {
+    const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
+    const queueDB = getWriteQueueDB()
+
+    // Include 'pending', 'failed', and 'syncing' — all represent locally-committed
+    // changes that have not yet been confirmed by Supabase
+    const allUnsynced = await queueDB.operations
+      .where('status')
+      .anyOf(['pending', 'failed', 'syncing'])
+      .toArray()
+
+    // Sort ascending by createdAt to preserve operation order
+    allUnsynced.sort((a, b) => a.createdAt - b.createdAt)
+
+    pendingOps = allUnsynced.filter(op => op.entityType === 'task')
+  } catch (e) {
+    console.warn('[READ-CACHE] TASK-1427: Could not load pending writes for tasks:', e)
+    return cachedTasks
+  }
+
+  if (pendingOps.length === 0) return cachedTasks
+
+  // TASK-1427: Build a mutable map from the cached snapshot (or empty if no cache)
+  const taskMap = new Map<string, Task>()
+  if (cachedTasks) {
+    for (const task of cachedTasks) {
+      taskMap.set(task.id, task)
+    }
+  }
+
+  // TASK-1427: Apply pending operations in chronological order
+  for (const op of pendingOps) {
+    switch (op.operation) {
+      case 'create':
+        // Only add if not already present in the cache snapshot
+        if (!taskMap.has(op.entityId)) {
+          taskMap.set(op.entityId, { id: op.entityId, ...op.payload } as Task)
+        }
+        break
+      case 'update': {
+        const existing = taskMap.get(op.entityId)
+        if (existing) {
+          taskMap.set(op.entityId, { ...existing, ...op.payload } as Task)
+        }
+        break
+      }
+      case 'delete':
+        taskMap.delete(op.entityId)
+        break
+    }
+  }
+
+  const merged = Array.from(taskMap.values())
+  console.log(
+    `📦 [READ-CACHE] TASK-1427: Merged ${cachedTasks?.length ?? 0} cached + ${pendingOps.length} pending ops → ${merged.length} tasks`
+  )
+  return merged.length > 0 ? merged : null
+}
+
+/**
+ * Load groups from cache AND apply any pending (unsynced) write operations on top.
+ *
+ * Same merge strategy as getCachedTasksWithPendingWrites() but for canvas groups.
+ * Includes 'pending', 'failed', and 'syncing' write-queue entries for entity type 'group'.
+ */
+export async function getCachedGroupsWithPendingWrites(): Promise<CanvasGroup[] | null> {
+  // TASK-1427: Load base snapshot
+  const cachedGroups = await getCachedGroups()
+
+  // TASK-1427: Load pending write operations from FlowStateSyncQueue
+  let pendingOps: Array<{ entityType: string; operation: string; entityId: string; payload: Record<string, unknown> }> = []
+  try {
+    const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
+    const queueDB = getWriteQueueDB()
+
+    const allUnsynced = await queueDB.operations
+      .where('status')
+      .anyOf(['pending', 'failed', 'syncing'])
+      .toArray()
+
+    allUnsynced.sort((a, b) => a.createdAt - b.createdAt)
+
+    pendingOps = allUnsynced.filter(op => op.entityType === 'group')
+  } catch (e) {
+    console.warn('[READ-CACHE] TASK-1427: Could not load pending writes for groups:', e)
+    return cachedGroups
+  }
+
+  if (pendingOps.length === 0) return cachedGroups
+
+  // TASK-1427: Build a mutable map from the cached snapshot (or empty if no cache)
+  const groupMap = new Map<string, CanvasGroup>()
+  if (cachedGroups) {
+    for (const group of cachedGroups) {
+      groupMap.set(group.id, group)
+    }
+  }
+
+  // TASK-1427: Apply pending operations in chronological order
+  for (const op of pendingOps) {
+    switch (op.operation) {
+      case 'create':
+        if (!groupMap.has(op.entityId)) {
+          groupMap.set(op.entityId, { id: op.entityId, ...op.payload } as CanvasGroup)
+        }
+        break
+      case 'update': {
+        const existing = groupMap.get(op.entityId)
+        if (existing) {
+          groupMap.set(op.entityId, { ...existing, ...op.payload } as CanvasGroup)
+        }
+        break
+      }
+      case 'delete':
+        groupMap.delete(op.entityId)
+        break
+    }
+  }
+
+  const merged = Array.from(groupMap.values())
+  console.log(
+    `📦 [READ-CACHE] TASK-1427: Merged ${cachedGroups?.length ?? 0} cached + ${pendingOps.length} pending ops → ${merged.length} groups`
+  )
+  return merged.length > 0 ? merged : null
+}
+
 // ── Utilities ──────────────────────────────────────────────────────────
 
 /**

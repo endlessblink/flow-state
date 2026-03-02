@@ -10,6 +10,8 @@ import {
     calculatePositionInGroup,
     getPlacementLabel
 } from '@/composables/canvas/useSmartGroupMatcher'
+import { useCanvasSectionProperties } from '@/composables/canvas/useCanvasSectionProperties'
+import type { CanvasSection } from '@/stores/canvas/types'
 
 export function useUnifiedInboxActions(
     inboxTasks: { value: Task[] },
@@ -20,6 +22,12 @@ export function useUnifiedInboxActions(
     const { createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
     const { showToast } = useToast()
     const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
+
+    // TASK-1428: Section properties for group inheritance on send-to-canvas
+    const { getSectionProperties } = useCanvasSectionProperties({
+        taskStore,
+        getAllContainingSections: () => []  // Not needed for getSectionProperties
+    })
 
     // Multi-select state (Actions)
     const selectedTaskIds = ref<Set<string>>(new Set())
@@ -269,10 +277,27 @@ export function useUnifiedInboxActions(
         }
 
         try {
+            // TASK-1428: Apply group properties (assignOnDrop, power keywords) when sending to canvas
+            let groupProps: Record<string, unknown> = {}
+            if (targetGroup) {
+                const inherited = getSectionProperties(targetGroup as CanvasSection, allGroups)
+                if (Object.keys(inherited).length > 0) {
+                    groupProps = { ...inherited }
+                    // Don't override dueDate if the task already has one (it was used to match the group)
+                    if (task.dueDate && inherited.dueDate) {
+                        delete groupProps.dueDate
+                    }
+                    if (import.meta.env.DEV) {
+                        console.log(`[TASK-1428:sendToCanvas] Applying group "${targetGroup.name}" props:`, groupProps)
+                    }
+                }
+            }
+
             // Single atomic update - GEOMETRY WRITER
             await updateTaskWithUndo(taskId, {
                 canvasPosition,
-                parentId
+                parentId,
+                ...groupProps
             })
 
             return { success: true, groupName: targetGroup?.name || 'Canvas' }

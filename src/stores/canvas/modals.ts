@@ -11,6 +11,14 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
     // Quick Task Create Modal
     const isQuickTaskCreateOpen = ref(false)
     const quickTaskPosition = ref<{ x: number; y: number; parentId?: string; parentTaskId?: string }>({ x: 0, y: 0 })
+    // TASK-1428: Inherited properties from group (pre-fills modal form)
+    const groupInheritedProps = ref<{
+        dueDate?: string
+        priority?: 'low' | 'medium' | 'high'
+        status?: string
+        projectId?: string
+        estimatedDuration?: number
+    } | null>(null)
 
     // Batch Edit Modal
     const isBatchEditModalOpen = ref(false)
@@ -57,6 +65,7 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
     }
     const closeQuickTaskCreate = () => {
         isQuickTaskCreateOpen.value = false
+        groupInheritedProps.value = null  // TASK-1428: Clear inherited props on close
     }
 
     const openBatchEditModal = (taskIds: string[]) => {
@@ -119,7 +128,7 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
 
     return {
         isEditModalOpen, selectedTask,
-        isQuickTaskCreateOpen, quickTaskPosition,
+        isQuickTaskCreateOpen, quickTaskPosition, groupInheritedProps,
         isBatchEditModalOpen, batchEditTaskIds,
         isSectionSettingsOpen, editingSection,
         isGroupModalOpen, selectedGroup, groupModalPosition,

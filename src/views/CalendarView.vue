@@ -766,12 +766,16 @@ watch(currentDate, (newDate, _oldDate) => {
 }
 
 .calendar-main::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
+  background: rgba(255, 255, 255, 0.25);
   border-radius: var(--radius-md);
+}
+
+.calendar-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .calendar-main {
   scrollbar-width: thin;
-  scrollbar-color: var(--glass-border) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
 }
 </style>

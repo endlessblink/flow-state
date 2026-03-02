@@ -21,7 +21,9 @@ import { useChallengesStore } from '@/stores/challenges'
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
 // BUG-1411: Cache stats for offline mode detection
-import { getCacheStats } from '@/services/offline/readCacheDB'
+// TASK-1425: Full cache read functions for fast offline startup
+// TASK-1427: Merged versions include pending write queue operations
+import { getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
 
@@ -71,6 +73,83 @@ export function useAppInitialization() {
 
         uiStore.loadState()
 
+        // TASK-1425: Fast offline startup — skip Supabase entirely when navigator.onLine=false.
+        // Previously the app hung for 30-90s (3 retries × 30s timeout) before falling back to cache.
+        // Now: if the browser knows we're offline, load from IndexedDB immediately.
+        // The BUG-1411 fallback below this block still handles the case where navigator.onLine=true
+        // but Supabase is actually unreachable (captive portals, flaky VPS, etc.).
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            console.log('📵 [TASK-1425] navigator.onLine=false — loading from IndexedDB cache immediately (skipping Supabase)')
+
+            // TASK-1427: Use merged versions that include pending write queue operations
+            // This ensures tasks created/updated offline appear after app restart
+            const [cachedTasks, cachedGroups, cachedProjects] = await Promise.all([
+                getCachedTasksWithPendingWrites(),
+                getCachedGroupsWithPendingWrites(),
+                getCachedProjects()
+            ])
+
+            const hasCache = (cachedTasks && cachedTasks.length > 0) ||
+                (cachedGroups && cachedGroups.length > 0) ||
+                (cachedProjects && cachedProjects.length > 0)
+
+            if (hasCache) {
+                if (cachedTasks && cachedTasks.length > 0) {
+                    // Pinia auto-unwraps refs — assign directly (no .value outside store)
+                    taskStore._rawTasks = cachedTasks
+                    console.log(`📦 [TASK-1425] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
+                }
+                if (cachedGroups && cachedGroups.length > 0) {
+                    canvasStore.setGroups(cachedGroups)
+                    console.log(`📦 [TASK-1425] Loaded ${cachedGroups.length} groups from IndexedDB cache`)
+                }
+                if (cachedProjects && cachedProjects.length > 0) {
+                    // Pinia auto-unwraps refs — assign directly (no .value outside store)
+                    projectStore._rawProjects = cachedProjects
+                    console.log(`📦 [TASK-1425] Loaded ${cachedProjects.length} projects from IndexedDB cache`)
+                }
+            } else {
+                console.warn('📭 [TASK-1425] Offline but no IndexedDB cache found — app will show empty state')
+            }
+
+            // Load persisted filters (same as online path)
+            await taskStore.loadPersistedFilters()
+
+            // Mark sync status as loaded-from-cache
+            try {
+                const { useSyncStatusStore } = await import('@/stores/syncStatus')
+                const syncStatusStore = useSyncStatusStore()
+                const stats = await getCacheStats()
+                syncStatusStore.markLoadedFromCache(stats.tasks?.updatedAt)
+            } catch (e) {
+                console.warn('[TASK-1425] Failed to mark cache mode:', e)
+            }
+
+            authStore.markAppInitLoadComplete()
+            isDataReady.value = true
+
+            // Register online listener to reload from Supabase when connectivity returns
+            const onBackOnline = async () => {
+                console.log('🌐 [TASK-1425] Network restored — reloading from Supabase...')
+                window.removeEventListener('online', onBackOnline)
+                try {
+                    invalidateCache.all()
+                    await Promise.all([
+                        taskStore.loadFromDatabase(),
+                        projectStore.loadProjectsFromDatabase(),
+                        canvasStore.loadFromDatabase()
+                    ])
+                    const { useSyncStatusStore } = await import('@/stores/syncStatus')
+                    useSyncStatusStore().clearCacheMode()
+                    console.log('✅ [TASK-1425] Successfully reloaded from Supabase after reconnection')
+                } catch (e) {
+                    console.warn('⚠️ [TASK-1425] Reconnection reload failed, will retry on next online event:', e)
+                    window.addEventListener('online', onBackOnline, { once: true })
+                }
+            }
+            window.addEventListener('online', onBackOnline, { once: true })
+
+        } else {
         // TASK-1060: Add retry wrapper for initial load to handle transient auth failures
         // BUG-1339: Now actually works — loadFromDatabase() propagates errors instead of swallowing them
         // BUG-1339 Fix: Returns boolean so we know whether to mark appInitLoadComplete
@@ -187,6 +266,7 @@ export function useAppInitialization() {
                 isDataReady.value = true
             }
         }
+        } // end else (navigator.onLine !== false) — TASK-1425
 
         // FEATURE-1118: Initialize gamification system
         try {

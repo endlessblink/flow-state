@@ -290,6 +290,10 @@
   /* Count badges */
   --kanban-card-glass-bg: rgba(35, 32, 55, 0.7);
   /* Purple-tinted semi-transparent card background */
+  --kanban-card-footer-border: var(--glass-border-light);
+  --kanban-card-tag-bg: var(--glass-bg-medium);
+  --kanban-card-tag-border: var(--glass-border);
+  --kanban-card-description-color: var(--text-tertiary);
 
   /* ===== TASKCARD STATUS ICON COLORS ===== */
   /* Planned status (blue) */
@@ -434,6 +438,8 @@
   /* 20px (more rounded!) */
   --radius-2xl: 1.5rem;
   /* 24px */
+  --radius-3xl: 2rem;
+  /* 32px */
   --radius-full: 9999px;
 
   /* ===== TRANSITIONS & ANIMATIONS ===== */
@@ -927,6 +933,8 @@
   /* 20px - XL (more rounded!) */
   --radius-2xl: 1.5rem;
   /* 24px - XXL */
+  --radius-3xl: 2rem;
+  /* 32px */
   --radius-full: 9999px;
   /* Pill shape */
 
@@ -1039,6 +1047,10 @@
   --kanban-column-bg: rgba(45, 40, 70, 0.15);
   --kanban-column-bg-hover: rgba(45, 40, 70, 0.25);
   --kanban-card-glass-bg: rgba(35, 32, 55, 0.7);
+  --kanban-card-footer-border: var(--glass-border-light);
+  --kanban-card-tag-bg: var(--glass-bg-medium);
+  --kanban-card-tag-border: var(--glass-border);
+  --kanban-card-description-color: var(--text-tertiary);
 
   /* Explicit Sidebar overrides to ensure perfect parity */
   --sidebar-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);

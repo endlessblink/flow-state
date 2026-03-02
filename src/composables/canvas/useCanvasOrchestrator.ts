@@ -776,6 +776,9 @@ export function useCanvasOrchestrator() {
         handleConnectStart: connections.handleConnectStart,
         handleConnectEnd: connections.handleConnectEnd,
 
+        // Coordinate conversion (for external callers like sidebar quick-add)
+        screenToFlowCoordinate,
+
         // Debug
         syncNodes,
         syncEdges,

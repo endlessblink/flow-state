@@ -972,8 +972,11 @@ const selectSmartView = (view: string) => {
     taskStore.setActiveDurationFilter(null)
   }
   
-  // TASK-1330: Verify navigation to tasks view when selecting a smart view
-  router.push('/tasks')
+  // BUG-1429: Only navigate to /tasks if current view doesn't support smart view filters
+  const filterableViews = ['/', '/board', '/calendar', '/tasks', '/catalog']
+  if (!filterableViews.includes(route.path)) {
+    router.push('/tasks')
+  }
 }
 
 const handleStartQuickSort = () => {

@@ -79,6 +79,25 @@ export function useTaskCardState(props: { task: Task; disabled?: boolean }) {
         return `Task: ${props.task.title}, ${status}, priority ${priority}${selectedStatus}`
     })
 
+    // TASK-1429: Card description preview (strip HTML, truncate)
+    const descriptionPreview = computed(() => {
+        const raw = props.task.description || ''
+        if (!raw) return ''
+        // Strip HTML tags
+        const text = raw.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+        if (text.length <= 80) return text
+        return text.slice(0, 80).trimEnd() + '…'
+    })
+
+    // TASK-1429: Visible tags (max 3)
+    const visibleTags = computed(() => props.task.tags?.slice(0, 3) ?? [])
+
+    // TASK-1429: Whether there are more tags than shown
+    const hasMoreTags = computed(() => (props.task.tags?.length ?? 0) > 3)
+
+    // TASK-1429: How many overflow tags
+    const remainingTagCount = computed(() => Math.max(0, (props.task.tags?.length ?? 0) - 3))
+
     return {
         isExpanded,
         isFocused,
@@ -94,6 +113,10 @@ export function useTaskCardState(props: { task: Task; disabled?: boolean }) {
         isRtl,
         projectVisual,
         taskAriaLabel,
-        progressiveDisclosureEnabled
+        progressiveDisclosureEnabled,
+        descriptionPreview,
+        visibleTags,
+        hasMoreTags,
+        remainingTagCount
     }
 }

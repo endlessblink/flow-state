@@ -63,6 +63,14 @@
           <Clock :size="12" />
           {{ task.estimatedDuration }}m
         </span>
+
+        <!-- Not on Canvas Badge -->
+        <span
+          v-if="showCanvasBadge && !task.canvasPosition"
+          class="metadata-badge not-on-canvas-badge"
+        >
+          Not on Canvas
+        </span>
       </div>
     </div>
 
@@ -106,6 +114,7 @@ import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
 const props = defineProps<{
   task: Task
   isSelected: boolean
+  showCanvasBadge?: boolean
 }>()
 
 defineEmits<{
@@ -373,5 +382,13 @@ const dueStatus = computed(() => {
 
 .task-card.is-done .task-content--inbox {
   padding-inline-start: var(--space-5);
+}
+
+.not-on-canvas-badge {
+  color: var(--text-muted);
+  background: var(--glass-bg-soft);
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-0_5) var(--space-1_5);
 }
 </style>

@@ -43,6 +43,7 @@
             :key="task.id"
             :task="task"
             :is-selected="selectedTaskIds.has(task.id)"
+            :show-canvas-badge="showCanvasBadge"
             :style="{
               position: 'absolute',
               top: `${index * ITEM_HEIGHT}px`,
@@ -70,6 +71,7 @@
         :key="task.id"
         :task="task"
         :is-selected="selectedTaskIds.has(task.id)"
+        :show-canvas-badge="showCanvasBadge"
         @drag-start="$emit('dragStart', $event, task)"
         @drag-end="$emit('dragEnd')"
         @task-click="$emit('taskClick', $event, task)"
@@ -98,6 +100,7 @@ const props = defineProps<{
   multiSelectMode: boolean
   hasSelectedGroups: boolean
   areGlobalsFiltered: boolean
+  showCanvasBadge?: boolean
 }>() ;defineEmits<{
   (e: 'dragStart', event: DragEvent, task: Task): void
   (e: 'dragEnd'): void
@@ -180,7 +183,7 @@ defineExpose({ scrollTo })
   flex-direction: column;
   gap: var(--space-2);
   scrollbar-width: thin;
-  scrollbar-color: var(--glass-border) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
 }
 
 /* Virtual scroll container */
@@ -189,7 +192,7 @@ defineExpose({ scrollTo })
   overflow-y: auto;
   position: relative;
   scrollbar-width: thin;
-  scrollbar-color: var(--glass-border) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
 }
 
 .virtual-wrapper {

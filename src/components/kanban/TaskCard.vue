@@ -48,20 +48,6 @@
           {{ truncateUrlsInText(task.title) }}
         </h3>
 
-        <!-- Metadata Badges -->
-        <TaskCardBadges
-          v-if="!progressiveDisclosureEnabled || isExpanded"
-          v-bind="{
-            task,
-            density,
-            formattedDueDate,
-            formattedDuration,
-            completedSubtasks,
-            hasDependencies,
-            durationBadgeClass,
-            projectVisual
-          }"
-        />
       </div>
 
       <!-- Action Buttons -->
@@ -69,6 +55,31 @@
         @focus-mode="enterFocusMode"
         @start-timer="$emit('startTimer', task.id)"
         @edit="$emit('edit', task.id)"
+      />
+    </div>
+
+    <!-- TASK-1429: Card body - description preview + tags -->
+    <div v-if="(!progressiveDisclosureEnabled || isExpanded) && (descriptionPreview || visibleTags.length > 0)" class="card-body">
+      <p v-if="descriptionPreview" class="card-description">{{ descriptionPreview }}</p>
+      <div v-if="visibleTags.length > 0" class="card-tags">
+        <span v-for="tag in visibleTags" :key="tag" class="card-tag">{{ tag }}</span>
+        <span v-if="hasMoreTags" class="card-tag card-tag--overflow">+{{ remainingTagCount }}</span>
+      </div>
+    </div>
+
+    <!-- TASK-1429: Card footer - badges in separator row -->
+    <div v-if="!progressiveDisclosureEnabled || isExpanded" class="card-footer">
+      <TaskCardBadges
+        v-bind="{
+          task,
+          density,
+          formattedDueDate,
+          formattedDuration,
+          completedSubtasks,
+          hasDependencies,
+          durationBadgeClass,
+          projectVisual
+        }"
       />
     </div>
 
@@ -134,7 +145,8 @@ const {
   isSelected, hasDependencies, completedSubtasks,
   formattedDueDate, formattedDuration, durationBadgeClass,
   titleAlignmentClasses, isRtl, projectVisual, taskAriaLabel,
-  progressiveDisclosureEnabled
+  progressiveDisclosureEnabled,
+  descriptionPreview, visibleTags, hasMoreTags, remainingTagCount
 } = state
 
 const {

@@ -4,45 +4,57 @@
     role="group"
     aria-label="Task metadata"
   >
-    <!-- Due Date -->
-    <span
-      v-if="task.dueDate"
-      class="meta-badge"
-      :class="dueDateClass"
-      :title="`Due: ${formattedDueDate}`"
-    >
-      {{ formattedDueDate }}
-    </span>
+    <div class="badge-left">
+      <!-- Due Date -->
+      <span
+        v-if="task.dueDate"
+        class="badge-item"
+        :class="dueDateClass"
+        :title="`Due: ${formattedDueDate}`"
+      >
+        <Calendar :size="12" />
+        <span class="badge-text">{{ formattedDueDate }}</span>
+      </span>
 
-    <!-- Dot separator -->
-    <span v-if="task.dueDate && task.subtasks?.length" class="badge-separator">·</span>
+      <!-- Subtasks -->
+      <span
+        v-if="task.subtasks?.length"
+        class="badge-item"
+        :title="`Subtasks: ${completedSubtasks}/${task.subtasks.length}`"
+      >
+        <CheckSquare :size="12" />
+        <span class="badge-text">{{ completedSubtasks }}/{{ task.subtasks.length }}</span>
+      </span>
 
-    <!-- Subtasks -->
-    <span
-      v-if="task.subtasks?.length"
-      class="meta-badge"
-      :title="`Subtasks: ${completedSubtasks}/${task.subtasks.length}`"
-    >
-      {{ completedSubtasks }}/{{ task.subtasks.length }}
-    </span>
+      <!-- Pomodoros -->
+      <span
+        v-if="task.completedPomodoros > 0"
+        class="badge-item badge-pomodoro"
+        :title="`Pomodoro sessions: ${task.completedPomodoros}`"
+      >
+        <Timer :size="12" />
+        <span class="badge-text">{{ task.completedPomodoros }}</span>
+      </span>
 
-    <!-- Dot separator for pomodoros -->
-    <span v-if="(task.dueDate || task.subtasks?.length) && task.completedPomodoros > 0" class="badge-separator">·</span>
+      <!-- Attachments -->
+      <span
+        v-if="task.attachments?.length"
+        class="badge-item"
+        :title="`Attachments: ${task.attachments.length}`"
+      >
+        <Paperclip :size="12" />
+        <span class="badge-text">{{ task.attachments.length }}</span>
+      </span>
+    </div>
 
-    <!-- Pomodoros (if any) -->
-    <span
-      v-if="task.completedPomodoros > 0"
-      class="meta-badge pomodoro-badge"
-      :title="`Pomodoro sessions: ${task.completedPomodoros}`"
-    >
-      {{ task.completedPomodoros }}
-    </span>
+    <!-- Project visual is rendered by parent card, not in footer badges -->
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Task } from '@/stores/tasks'
+import { Calendar, CheckSquare, Timer, Paperclip } from 'lucide-vue-next'
 import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
 
 const props = defineProps<{
@@ -62,7 +74,6 @@ ensureDateTimer()
 // BUG-1191: Highlight overdue or today's tasks (reactive to date changes)
 const dueDateClass = computed(() => {
   if (!props.task.dueDate) return ''
-  // BUG-1191: Reactive dependency - ensures re-evaluation at midnight
   const _todayTrigger = reactiveToday.value
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -78,55 +89,57 @@ const dueDateClass = computed(() => {
 <style scoped>
 .task-card-badges {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   min-height: 18px;
-  margin-top: var(--space-1);
 }
 
-/* Base Badge - Clean, minimal text style */
-.meta-badge {
+.badge-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.badge-right {
+  display: flex;
+  align-items: center;
+  margin-inline-start: auto;
+}
+
+.badge-item {
   display: inline-flex;
   align-items: center;
+  gap: 3px;
   font-size: var(--text-meta);
-  font-weight: 400;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
-/* Dot separator between badges */
-.badge-separator {
-  color: var(--text-subtle);
+.badge-text {
   font-size: var(--text-meta);
-  margin: 0 var(--space-1);
-  user-select: none;
+  font-weight: 400;
 }
 
 /* Due date highlighting */
 .due-today {
   color: var(--color-work);
+}
+
+.due-today .badge-text {
   font-weight: 500;
 }
 
 .due-overdue {
   color: var(--color-priority-high);
+}
+
+.due-overdue .badge-text {
   font-weight: 500;
 }
 
-/* Pomodoro badge - subtle tomato indicator */
-.pomodoro-badge {
+/* Pomodoro badge */
+.badge-pomodoro {
   color: rgba(239, 68, 68, 0.6);
-}
-
-.pomodoro-badge::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  margin-inline-end: 4px;
 }
 </style>

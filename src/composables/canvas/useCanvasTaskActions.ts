@@ -8,6 +8,7 @@ import { storeToRefs } from 'pinia'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { CANVAS } from '@/constants/canvas'
 import { useToast } from '@/composables/useToast'
+import { formatDateKey } from '@/utils/dateUtils'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { useCanvasSectionProperties } from './useCanvasSectionProperties'
 import type { CanvasSection } from '@/stores/canvas/types'
@@ -276,15 +277,21 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         // Calculate tomorrow's date in YYYY-MM-DD format
         const tomorrow = new Date()
         tomorrow.setDate(tomorrow.getDate() + 1)
-        const tomorrowStr = tomorrow.toISOString().split('T')[0]
+        const tomorrowStr = formatDateKey(tomorrow)
 
         try {
             for (const nodeId of selectedNodeIds) {
-                // Set both dueDate and doneForNowUntil to track the badge
-                await undoHistory.updateTaskWithUndo(nodeId, {
+                const task = taskStore.tasks.find(t => t.id === nodeId)
+                // Set dueDate, doneForNowUntil, and scheduledDate (if present) to tomorrow
+                // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
+                const updatePayload: Record<string, string> = {
                     dueDate: tomorrowStr,
                     doneForNowUntil: tomorrowStr
-                })
+                }
+                if (task?.scheduledDate) {
+                    updatePayload.scheduledDate = tomorrowStr
+                }
+                await undoHistory.updateTaskWithUndo(nodeId, updatePayload)
             }
 
             // Show toast notification

@@ -35,6 +35,42 @@
         </div>
       </NPopover>
 
+      <!-- Quick date shortcuts — always visible -->
+      <div class="quick-date-pills">
+        <button
+          type="button"
+          class="pill-btn"
+          :class="{ active: activeDatePill === 'today' }"
+          @click="setQuickDate('today')"
+        >
+          Today
+        </button>
+        <button
+          type="button"
+          class="pill-btn"
+          :class="{ active: activeDatePill === 'tomorrow' }"
+          @click="setQuickDate('tomorrow')"
+        >
+          Tmrw
+        </button>
+        <button
+          type="button"
+          class="pill-btn"
+          :class="{ active: activeDatePill === 'weekend' }"
+          @click="setQuickDate('weekend')"
+        >
+          Wknd
+        </button>
+        <button
+          type="button"
+          class="pill-btn"
+          :class="{ active: activeDatePill === 'nextweek' }"
+          @click="setQuickDate('nextweek')"
+        >
+          +1wk
+        </button>
+      </div>
+
       <div class="metadata-field metadata-field--dropdown">
         <TimerReset :size="14" />
         <span class="field-label">Duration</span>
@@ -199,6 +235,74 @@ const clearDueDate = () => {
   const newTask = { ...props.modelValue, dueDate: '' }
   emit('update:modelValue', newTask)
   showDueDatePicker.value = false
+}
+
+// Quick date helpers
+const getDateString = (date: Date): string => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+const activeDatePill = computed(() => {
+  const due = props.modelValue.dueDate
+  if (!due) return ''
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayStr = getDateString(today)
+  if (due === todayStr) return 'today'
+
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (due === getDateString(tomorrow)) return 'tomorrow'
+
+  // Weekend = next Saturday
+  const dayOfWeek = today.getDay()
+  const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7
+  const weekend = new Date(today)
+  weekend.setDate(weekend.getDate() + daysUntilSat)
+  if (due === getDateString(weekend)) return 'weekend'
+
+  // Next week = next Monday
+  const daysUntilMon = (1 - dayOfWeek + 7) % 7 || 7
+  const nextweek = new Date(today)
+  nextweek.setDate(nextweek.getDate() + daysUntilMon)
+  if (due === getDateString(nextweek)) return 'nextweek'
+
+  return ''
+})
+
+const setQuickDate = (preset: 'today' | 'tomorrow' | 'weekend' | 'nextweek') => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  let target: Date
+
+  switch (preset) {
+    case 'today':
+      target = today
+      break
+    case 'tomorrow':
+      target = new Date(today)
+      target.setDate(target.getDate() + 1)
+      break
+    case 'weekend': {
+      const dayOfWeek = today.getDay()
+      const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7
+      target = new Date(today)
+      target.setDate(target.getDate() + daysUntilSat)
+      break
+    }
+    case 'nextweek': {
+      const dayOfWeek = today.getDay()
+      const daysUntilMon = (1 - dayOfWeek + 7) % 7 || 7
+      target = new Date(today)
+      target.setDate(target.getDate() + daysUntilMon)
+      break
+    }
+  }
+
+  handleDueDateSelect(target!.getTime())
 }
 
 const updatePriority = (value: string | number) => {
@@ -380,4 +484,34 @@ const statusIconClass = computed(() => {
 .status-progress { color: var(--color-active); }
 .status-done { color: var(--color-success); }
 .status-backlog { color: var(--text-tertiary); }
+
+.quick-date-pills {
+  display: flex;
+  gap: var(--space-1_5);
+  align-items: center;
+}
+
+.pill-btn {
+  padding: var(--space-1) var(--space-2_5);
+  background: var(--glass-bg-base);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  white-space: nowrap;
+}
+
+.pill-btn:hover {
+  background: var(--glass-bg-soft);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.pill-btn.active {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--surface-primary);
+}
 </style>

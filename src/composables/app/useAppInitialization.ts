@@ -73,200 +73,128 @@ export function useAppInitialization() {
 
         uiStore.loadState()
 
-        // TASK-1425: Fast offline startup — skip Supabase entirely when navigator.onLine=false.
-        // Previously the app hung for 30-90s (3 retries × 30s timeout) before falling back to cache.
-        // Now: if the browser knows we're offline, load from IndexedDB immediately.
-        // The BUG-1411 fallback below this block still handles the case where navigator.onLine=true
-        // but Supabase is actually unreachable (captive portals, flaky VPS, etc.).
-        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            console.log('📵 [TASK-1425] navigator.onLine=false — loading from IndexedDB cache immediately (skipping Supabase)')
+        // TASK-1428: Cache-first loading — always load from IndexedDB first (instant),
+        // then background-sync from Supabase. This eliminates the 93-second worst-case
+        // startup time (3 retries × 30s Supabase timeout) when offline or on flaky networks.
 
-            // TASK-1427: Use merged versions that include pending write queue operations
-            // This ensures tasks created/updated offline appear after app restart
+        // Phase A (blocking): Load from IndexedDB cache (~10-50ms)
+        let hasCache = false
+        try {
             const [cachedTasks, cachedGroups, cachedProjects] = await Promise.all([
                 getCachedTasksWithPendingWrites(),
                 getCachedGroupsWithPendingWrites(),
                 getCachedProjects()
             ])
 
-            const hasCache = (cachedTasks && cachedTasks.length > 0) ||
-                (cachedGroups && cachedGroups.length > 0) ||
-                (cachedProjects && cachedProjects.length > 0)
+            hasCache = !!(cachedTasks && cachedTasks.length > 0) ||
+                !!(cachedGroups && cachedGroups.length > 0) ||
+                !!(cachedProjects && cachedProjects.length > 0)
 
             if (hasCache) {
                 if (cachedTasks && cachedTasks.length > 0) {
-                    // Pinia auto-unwraps refs — assign directly (no .value outside store)
                     taskStore._rawTasks = cachedTasks
-                    console.log(`📦 [TASK-1425] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
+                    console.log(`📦 [CACHE-FIRST] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
                 }
                 if (cachedGroups && cachedGroups.length > 0) {
                     canvasStore.setGroups(cachedGroups)
-                    console.log(`📦 [TASK-1425] Loaded ${cachedGroups.length} groups from IndexedDB cache`)
+                    console.log(`📦 [CACHE-FIRST] Loaded ${cachedGroups.length} groups from IndexedDB cache`)
                 }
                 if (cachedProjects && cachedProjects.length > 0) {
-                    // Pinia auto-unwraps refs — assign directly (no .value outside store)
                     projectStore._rawProjects = cachedProjects
-                    console.log(`📦 [TASK-1425] Loaded ${cachedProjects.length} projects from IndexedDB cache`)
+                    console.log(`📦 [CACHE-FIRST] Loaded ${cachedProjects.length} projects from IndexedDB cache`)
                 }
-            } else {
-                console.warn('📭 [TASK-1425] Offline but no IndexedDB cache found — app will show empty state')
-            }
 
-            // Load persisted filters (same as online path)
-            await taskStore.loadPersistedFilters()
-
-            // Mark sync status as loaded-from-cache
-            try {
-                const { useSyncStatusStore } = await import('@/stores/syncStatus')
-                const syncStatusStore = useSyncStatusStore()
-                const stats = await getCacheStats()
-                syncStatusStore.markLoadedFromCache(stats.tasks?.updatedAt)
-            } catch (e) {
-                console.warn('[TASK-1425] Failed to mark cache mode:', e)
-            }
-
-            authStore.markAppInitLoadComplete()
-            isDataReady.value = true
-
-            // Register online listener to reload from Supabase when connectivity returns
-            const onBackOnline = async () => {
-                console.log('🌐 [TASK-1425] Network restored — reloading from Supabase...')
-                window.removeEventListener('online', onBackOnline)
-                try {
-                    invalidateCache.all()
-                    await Promise.all([
-                        taskStore.loadFromDatabase(),
-                        projectStore.loadProjectsFromDatabase(),
-                        canvasStore.loadFromDatabase()
-                    ])
-                    const { useSyncStatusStore } = await import('@/stores/syncStatus')
-                    useSyncStatusStore().clearCacheMode()
-                    console.log('✅ [TASK-1425] Successfully reloaded from Supabase after reconnection')
-                } catch (e) {
-                    console.warn('⚠️ [TASK-1425] Reconnection reload failed, will retry on next online event:', e)
-                    window.addEventListener('online', onBackOnline, { once: true })
-                }
-            }
-            window.addEventListener('online', onBackOnline, { once: true })
-
-        } else {
-        // TASK-1060: Add retry wrapper for initial load to handle transient auth failures
-        // BUG-1339: Now actually works — loadFromDatabase() propagates errors instead of swallowing them
-        // BUG-1339 Fix: Returns boolean so we know whether to mark appInitLoadComplete
-        const loadWithRetry = async (maxRetries = 3, delayMs = 1000): Promise<boolean> => {
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    await Promise.all([
-                        taskStore.loadFromDatabase(),
-                        projectStore.loadProjectsFromDatabase(),
-                        canvasStore.loadFromDatabase()
-                    ])
-                    return true // Success
-                } catch (error) {
-                    console.warn(`⚠️ [TASK-1060] Database load attempt ${attempt}/${maxRetries} failed:`, error)
-                    if (attempt === maxRetries) {
-                        // BUG-1339: Don't throw — log clearly so user knows to refresh
-                        console.error('❌ [APP-INIT] All database load attempts failed. Tasks may not be visible. Try refreshing the page.')
-                        return false // Graceful degradation instead of unhandled rejection
-                    }
-                    // BUG-1339: Clear SWR cache between retries so we get fresh fetch, not cached error
-                    invalidateCache.all()
-                    // Exponential backoff
-                    await new Promise(resolve => setTimeout(resolve, delayMs * attempt))
-                }
-            }
-            return false
-        }
-
-        const loadSucceeded = await loadWithRetry()
-
-        // BUG-1339 FIX: Defense-in-depth — if authenticated but got 0 tasks,
-        // the initial fetch may have hit an RLS timing issue. Schedule a delayed retry.
-        if (loadSucceeded && authStore.isAuthenticated && taskStore._rawTasks.length === 0) {
-            console.warn('⚠️ [BUG-1339] Authenticated but 0 tasks loaded — scheduling delayed retry (2s)')
-            setTimeout(async () => {
-                if (taskStore._rawTasks.length === 0 && authStore.isAuthenticated) {
-                    console.log('🔄 [BUG-1339] Delayed retry: invalidating cache and reloading...')
-                    invalidateCache.all()
-                    try {
-                        await Promise.all([
-                            taskStore.loadFromDatabase(),
-                            projectStore.loadProjectsFromDatabase(),
-                            canvasStore.loadFromDatabase()
-                        ])
-                        console.log(`✅ [BUG-1339] Delayed retry loaded ${taskStore._rawTasks.length} tasks`)
-                    } catch (e) {
-                        console.warn('⚠️ [BUG-1339] Delayed retry failed:', e)
-                    }
-                }
-            }, 2000)
-        }
-
-        // TASK-1215: Load persisted filters (smart view, project, duration, etc.)
-        // This was previously missing — loadFromDatabase() only loads tasks,
-        // not the filter state. Without this, activeSmartView resets to null on restart.
-        await taskStore.loadPersistedFilters()
-
-        // BUG-1207: Tell auth store that app init has loaded stores
-        // This prevents the SIGNED_IN handler from doing a redundant double-load
-        // BUG-1339: Only mark complete if load actually succeeded — if it failed
-        // (e.g., expired token), leave appInitLoadComplete=false so the SIGNED_IN
-        // handler can retry when auth eventually succeeds
-        if (loadSucceeded) {
-            authStore.markAppInitLoadComplete()
-            // BUG-1339: Signal to views that data is ready to render
-            isDataReady.value = true
-        } else {
-            // BUG-1411: Check if stores loaded from IndexedDB cache (offline mode)
-            const hasDataFromCache = taskStore._rawTasks.length > 0 ||
-                canvasStore.groups.length > 0 ||
-                projectStore.projects.length > 0
-
-            if (hasDataFromCache) {
-                console.log('📦 [APP-INIT] Supabase unreachable but loaded data from IndexedDB cache — offline mode')
-                // Mark as cache-loaded for sync status indicator
+                // Mark sync status as loaded-from-cache (will be cleared after background refresh)
                 try {
                     const { useSyncStatusStore } = await import('@/stores/syncStatus')
                     const syncStatusStore = useSyncStatusStore()
                     const stats = await getCacheStats()
                     syncStatusStore.markLoadedFromCache(stats.tasks?.updatedAt)
                 } catch (e) {
-                    console.warn('[APP-INIT] Failed to mark cache mode:', e)
+                    console.warn('[CACHE-FIRST] Failed to mark cache mode:', e)
                 }
-                // Still mark data as ready — user can work with cached data
-                authStore.markAppInitLoadComplete()
-                isDataReady.value = true
+            } else {
+                console.log('📭 [CACHE-FIRST] No IndexedDB cache found — will load from Supabase')
+            }
+        } catch (cacheError) {
+            console.warn('[CACHE-FIRST] IndexedDB cache read failed:', cacheError)
+        }
 
-                // BUG-1411: Auto-reload from Supabase when connectivity returns
-                const onBackOnline = async () => {
-                    console.log('🌐 [APP-INIT] Network restored — reloading from Supabase...')
-                    window.removeEventListener('online', onBackOnline)
+        // Load persisted filters (applies regardless of cache hit)
+        await taskStore.loadPersistedFilters()
+
+        // Mark data as ready — UI can render with cached data (or empty state)
+        authStore.markAppInitLoadComplete()
+        isDataReady.value = true
+
+        // Phase B (non-blocking): Background sync from Supabase
+        if (authStore.isAuthenticated) {
+            const backgroundRefresh = async () => {
+                try {
+                    invalidateCache.all()
+                    await Promise.all([
+                        taskStore.loadFromDatabase(),
+                        projectStore.loadProjectsFromDatabase(),
+                        canvasStore.loadFromDatabase()
+                    ])
+
+                    // Clear cache-mode indicator — we have fresh data now
                     try {
-                        invalidateCache.all()
-                        await Promise.all([
-                            taskStore.loadFromDatabase(),
-                            projectStore.loadProjectsFromDatabase(),
-                            canvasStore.loadFromDatabase()
-                        ])
                         const { useSyncStatusStore } = await import('@/stores/syncStatus')
                         useSyncStatusStore().clearCacheMode()
-                        console.log('✅ [APP-INIT] Successfully reloaded from Supabase after reconnection')
-                    } catch (e) {
-                        console.warn('⚠️ [APP-INIT] Reconnection reload failed, will retry on next online event:', e)
-                        // Re-register listener for next attempt
-                        window.addEventListener('online', onBackOnline, { once: true })
+                    } catch { /* non-critical */ }
+
+                    console.log('✅ [CACHE-FIRST] Background refresh complete')
+
+                    // BUG-1339: If authenticated but got 0 tasks, schedule delayed retry
+                    if (authStore.isAuthenticated && taskStore._rawTasks.length === 0) {
+                        console.warn('⚠️ [BUG-1339] Authenticated but 0 tasks after refresh — scheduling delayed retry (2s)')
+                        setTimeout(async () => {
+                            if (taskStore._rawTasks.length === 0 && authStore.isAuthenticated) {
+                                console.log('🔄 [BUG-1339] Delayed retry: invalidating cache and reloading...')
+                                invalidateCache.all()
+                                try {
+                                    await Promise.all([
+                                        taskStore.loadFromDatabase(),
+                                        projectStore.loadProjectsFromDatabase(),
+                                        canvasStore.loadFromDatabase()
+                                    ])
+                                    console.log(`✅ [BUG-1339] Delayed retry loaded ${taskStore._rawTasks.length} tasks`)
+                                } catch (e) {
+                                    console.warn('⚠️ [BUG-1339] Delayed retry failed:', e)
+                                }
+                            }
+                        }, 2000)
                     }
+                } catch (refreshError) {
+                    console.warn('⚠️ [CACHE-FIRST] Background refresh failed:', refreshError)
+
+                    // Register online listener to retry when connectivity returns
+                    const onBackOnline = async () => {
+                        console.log('🌐 [CACHE-FIRST] Network restored — reloading from Supabase...')
+                        window.removeEventListener('online', onBackOnline)
+                        try {
+                            invalidateCache.all()
+                            await Promise.all([
+                                taskStore.loadFromDatabase(),
+                                projectStore.loadProjectsFromDatabase(),
+                                canvasStore.loadFromDatabase()
+                            ])
+                            const { useSyncStatusStore } = await import('@/stores/syncStatus')
+                            useSyncStatusStore().clearCacheMode()
+                            console.log('✅ [CACHE-FIRST] Successfully reloaded from Supabase after reconnection')
+                        } catch (e) {
+                            console.warn('⚠️ [CACHE-FIRST] Reconnection reload failed, will retry on next online event:', e)
+                            window.addEventListener('online', onBackOnline, { once: true })
+                        }
+                    }
+                    window.addEventListener('online', onBackOnline, { once: true })
                 }
-                window.addEventListener('online', onBackOnline, { once: true })
-            } else {
-                console.warn('⚠️ [APP-INIT] Load failed and no cache available — NOT marking appInitLoadComplete so SIGNED_IN handler can retry')
-                // BUG-1339: Even on failure, unblock views after retries are exhausted
-                // so the app doesn't stay on a loading screen forever.
-                // The SIGNED_IN handler will reload data when auth recovers.
-                isDataReady.value = true
             }
+
+            // Fire-and-forget — don't block UI rendering
+            backgroundRefresh()
         }
-        } // end else (navigator.onLine !== false) — TASK-1425
 
         // FEATURE-1118: Initialize gamification system
         try {

@@ -8,6 +8,23 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1429: Catalog Today filter shows Tomorrow tasks after "Done for now" (👀 REVIEW)
+
+**Priority**: P1 | **Status**: 👀 REVIEW (2026-03-02)
+
+**Problem**: In Catalog view, filtering by "Today" also shows tasks with "Tomorrow" due date after using "Done for now".
+
+**Root causes**:
+1. **scheduledDate not updated** (PRIMARY): "Done for now" only updated `dueDate` + `doneForNowUntil` to tomorrow, but left `scheduledDate` at today. `isTodayTask()` matches on `scheduledDate` (line 106-111 of `useSmartViews.ts`), so the task still appeared in the Today filter despite `dueDate` being tomorrow.
+2. **UTC timezone bug** (SECONDARY): `useCanvasTaskActions.ts:279` used `tomorrow.toISOString().split('T')[0]` (UTC). For UTC+2/+3 users, this could produce today's date. Same in `useTaskContextMenuActions.ts:124`.
+
+**Fix** (3 files):
+1. `useCanvasTaskActions.ts`: Fixed UTC bug (`formatDateKey`), now also updates `scheduledDate` to tomorrow if present
+2. `useTaskContextMenuActions.ts`: Fixed UTC bug (`formatDateKey`)
+3. `TaskContextMenu.vue`: Now also updates `scheduledDate` to tomorrow if present (not just for calendar events)
+
+---
+
 ### ~~BUG-1411~~: Supabase fetch timeout storm — cascading AbortErrors crash sync (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-02-23)

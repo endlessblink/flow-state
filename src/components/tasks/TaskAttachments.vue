@@ -42,12 +42,21 @@
         class="thumbnail-item"
       >
         <img
+          v-if="!failedThumbnails.has(attachment.id)"
           :src="getThumbnailSrc(attachment)"
           :alt="attachment.name"
           class="thumbnail-img"
           loading="lazy"
           @click="openInDrive(attachment)"
+          @error="handleThumbnailError(attachment)"
         />
+        <div
+          v-else
+          class="thumbnail-fallback"
+          @click="openInDrive(attachment)"
+        >
+          <ImagePlus :size="24" />
+        </div>
         <button
           class="thumbnail-delete"
           :title="`Remove ${attachment.name}`"
@@ -85,6 +94,11 @@ const uploadProgress = ref(0)
 const errorMessage = ref<string | null>(null)
 
 const isGoogleConnected = computed(() => settingsStore.googleConnected)
+const failedThumbnails = ref<Set<string>>(new Set())
+
+function handleThumbnailError(attachment: TaskAttachment) {
+  failedThumbnails.value = new Set([...failedThumbnails.value, attachment.id])
+}
 
 const uploadStatusText = computed(() => {
   switch (uploadStatus.value) {
@@ -384,6 +398,17 @@ async function confirmDelete(attachment: TaskAttachment) {
 .thumbnail-delete:hover {
   background: var(--danger-bg-subtle);
   border-color: var(--color-priority-high);
+}
+
+.thumbnail-fallback {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg-soft);
+  color: var(--text-muted);
+  cursor: pointer;
 }
 
 .thumbnail-name {

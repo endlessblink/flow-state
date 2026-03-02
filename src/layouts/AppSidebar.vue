@@ -497,7 +497,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
@@ -519,6 +519,7 @@ import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const uiStore = useUIStore()
 const taskStore = useTaskStore()
 const authStore = useAuthStore()
@@ -746,23 +747,6 @@ const collapseQuickAdd = () => {
 // FEATURE-1200: Open fullscreen creator with current text
 const expandToFullscreen = () => {
   showFullscreenCreator.value = true
-  // Carry over typed text to modal's title input via DOM (modal resets on open)
-  const textToCarry = quickTaskText.value.trim()
-  if (textToCarry) {
-    nextTick(() => {
-      // Double nextTick: first for modal render, second for modal's own watch reset
-      nextTick(() => {
-        const modalInput = document.querySelector('.task-form .title-input') as HTMLInputElement
-        if (modalInput) {
-          // Use native setter to trigger Vue's v-model reactivity
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
-          nativeInputValueSetter?.call(modalInput, textToCarry)
-          modalInput.dispatchEvent(new Event('input', { bubbles: true }))
-          modalInput.focus()
-        }
-      })
-    })
-  }
 }
 
 const handleFullscreenCreate = async (data: {
@@ -925,6 +909,27 @@ const createQuickTask = async () => {
   if (!quickTaskText.value.trim()) return
 
   const title = quickTaskText.value.trim()
+
+  // When on canvas view, dispatch event so CanvasView handles creation at viewport center
+  if (route.path === '/canvas') {
+    window.dispatchEvent(new CustomEvent('sidebar-quick-task-create', {
+      detail: {
+        title,
+        description: '',
+        status: 'todo',
+        priority: quickTaskPriority.value || 'medium',
+        dueDate: quickTaskDueDate.value || undefined,
+      }
+    }))
+    quickTaskText.value = ''
+    quickTaskDueDate.value = null
+    quickTaskPriority.value = null
+    showSuccessFlash.value = true
+    setTimeout(() => { showSuccessFlash.value = false }, 1200)
+    return
+  }
+
+  // Default: create inbox task
   try {
     await taskStore.createTaskWithUndo({
       title,

@@ -101,7 +101,7 @@ const MAX_DIMENSION = 1920
 const JPEG_QUALITY = 0.8
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB before compression
 
-async function compressImage(file: File): Promise<{ data: string; mimeType: string }> {
+async function compressImage(file: File): Promise<{ data: string; mimeType: string; thumbnailDataUrl: string }> {
   if (file.size > MAX_FILE_SIZE) {
     throw new Error(`File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB (max ${MAX_FILE_SIZE / 1024 / 1024}MB)`)
   }
@@ -123,11 +123,28 @@ async function compressImage(file: File): Promise<{ data: string; mimeType: stri
   const canvas = new OffscreenCanvas(targetWidth, targetHeight)
   const ctx = canvas.getContext('2d')!
   ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight)
-  bitmap.close()
 
   const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: JPEG_QUALITY })
 
-  // Convert to base64
+  // Generate small thumbnail data URL (~2-5KB) for instant preview
+  const THUMB_SIZE = 120
+  const thumbRatio = Math.min(THUMB_SIZE / targetWidth, THUMB_SIZE / targetHeight)
+  const thumbW = Math.round(targetWidth * thumbRatio)
+  const thumbH = Math.round(targetHeight * thumbRatio)
+  const thumbCanvas = new OffscreenCanvas(thumbW, thumbH)
+  const thumbCtx = thumbCanvas.getContext('2d')!
+  thumbCtx.drawImage(bitmap, 0, 0, thumbW, thumbH)
+  bitmap.close()
+  const thumbBlob = await thumbCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.6 })
+  const thumbBuffer = await thumbBlob.arrayBuffer()
+  const thumbBytes = new Uint8Array(thumbBuffer)
+  let thumbBinary = ''
+  for (let i = 0; i < thumbBytes.length; i++) {
+    thumbBinary += String.fromCharCode(thumbBytes[i])
+  }
+  const thumbnailDataUrl = `data:image/jpeg;base64,${btoa(thumbBinary)}`
+
+  // Convert full image to base64 for upload
   const arrayBuffer = await blob.arrayBuffer()
   const bytes = new Uint8Array(arrayBuffer)
   let binary = ''
@@ -136,7 +153,7 @@ async function compressImage(file: File): Promise<{ data: string; mimeType: stri
   }
   const base64 = btoa(binary)
 
-  return { data: base64, mimeType: 'image/jpeg' }
+  return { data: base64, mimeType: 'image/jpeg', thumbnailDataUrl }
 }
 
 // ============================================================================
@@ -188,7 +205,7 @@ export async function uploadImage(
       driveFileId: data.fileId,
       name: data.name || file.name,
       mimeType: data.mimeType || compressed.mimeType,
-      thumbnailUrl: data.thumbnailLink,
+      thumbnailUrl: compressed.thumbnailDataUrl,
       uploadedAt: new Date().toISOString(),
     },
     ...(data.newAccessToken ? { newAccessToken: data.newAccessToken } : {}),
@@ -235,8 +252,10 @@ export async function getFileMetadata(
 
 /**
  * Construct a Google Drive thumbnail URL for a given file ID.
- * This uses the direct thumbnail endpoint which requires the file to be publicly viewable.
+ * Uses lh3.googleusercontent.com which serves images directly without redirects.
+ * Requires the file to have public 'anyone/reader' permission.
+ * Falls back to drive.google.com/thumbnail if needed.
  */
 export function getThumbnailUrl(driveFileId: string, size = 220): string {
-  return `https://drive.google.com/thumbnail?id=${driveFileId}&sz=s${size}`
+  return `https://lh3.googleusercontent.com/d/${driveFileId}=s${size}`
 }

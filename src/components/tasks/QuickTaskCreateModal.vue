@@ -144,7 +144,7 @@
           <CheckCircle :size="14" class="property-icon" />
           <CustomSelect
             v-model="status"
-            :options="(statusOptions as unknown[])"
+            :options="(statusOptions as { label: string; value: string | number }[])"
             class="compact-select"
           />
         </div>
@@ -204,10 +204,12 @@ import type { TaskAttachment } from '@/types/tasks'
 interface Props {
   isOpen: boolean
   loading?: boolean
+  initialTitle?: string
 }
 
 const _props = withDefaults(defineProps<Props>(), {
-  loading: false
+  loading: false,
+  initialTitle: ''
 })
 
 const emit = defineEmits<{
@@ -424,7 +426,7 @@ const handleCreateTask = () => {
 // Without this, tasks are created as 'uncategorized' and filtered out.
 watch(() => _props.isOpen, (isOpen) => {
   if (isOpen) {
-    taskTitle.value = ''
+    taskTitle.value = _props.initialTitle || ''
     taskDescription.value = ''
     status.value = 'todo'
     priority.value = 'medium'

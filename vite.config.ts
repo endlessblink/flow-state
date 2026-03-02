@@ -175,7 +175,13 @@ export default defineConfig(({ mode }) => ({
       'naive-ui',
       '@vueuse/core',
       '@vue-flow/core',
-      'date-fns'
+      'date-fns',
+      '@supabase/supabase-js',
+      'dexie',
+      'lucide-vue-next',
+      'vue-i18n',
+      'dompurify',
+      'marked'
     ],
     // Force ESM interop for CJS modules
     needsInterop: [

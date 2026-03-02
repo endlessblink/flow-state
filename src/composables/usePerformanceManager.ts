@@ -379,9 +379,6 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 }
 
-// Global performance manager instance
-export const globalPerformanceManager = usePerformanceManager()
-
 // Performance presets for common scenarios
 export const performancePresets = {
   // For heavy computations

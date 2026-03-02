@@ -390,7 +390,4 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
   }
 }
 
-// Global render optimization instance
-export const globalRenderOptimizer = useRenderOptimization()
-
 export default useRenderOptimization

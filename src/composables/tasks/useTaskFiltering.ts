@@ -183,9 +183,11 @@ export const useTaskFiltering = (
         }
 
         const allTasks = [...filtered, ...nestedTasks]
-        const finalResult = allTasks.filter((task, index, self) =>
-            index === self.findIndex(t => t.id === task.id)
-        )
+        const seen = new Map<string, Task>()
+        for (const task of allTasks) {
+            if (!seen.has(task.id)) seen.set(task.id, task)
+        }
+        const finalResult = Array.from(seen.values())
 
         console.debug(`✅ [FILTER-DEBUG] Final filtered tasks: ${finalResult.length} (ActiveProject: ${activeProjectId.value || 'None'})`)
         return finalResult
@@ -278,20 +280,26 @@ export const useTaskFiltering = (
             baseTasks = baseTasks.filter(task => task.status !== 'done')
         }
 
-        return {
-            today: baseTasks.filter(task => isTodayTask(task)).length,
-            week: baseTasks.filter(task => isWeekTask(task)).length,
-            uncategorized: baseTasks.filter(task => isUncategorizedTask(task)).length,
-            unscheduled: baseTasks.filter(task => isUnscheduledTask(task)).length,
-            inProgress: baseTasks.filter(task => isInProgressTask(task)).length,
-            allActive: baseTasks.filter(task => task.status !== 'done').length,
-            all: baseTasks.length,
-            quick: baseTasks.filter(task => isQuickTask(task)).length,
-            short: baseTasks.filter(task => isShortTask(task)).length,
-            medium: baseTasks.filter(task => isMediumTask(task)).length,
-            long: baseTasks.filter(task => isLongTask(task)).length,
-            unestimated: baseTasks.filter(task => isUnestimatedTask(task)).length
+        const counts = {
+            today: 0, week: 0, uncategorized: 0, unscheduled: 0,
+            inProgress: 0, allActive: 0, all: 0,
+            quick: 0, short: 0, medium: 0, long: 0, unestimated: 0
         }
+        for (const task of baseTasks) {
+            counts.all++
+            if (isTodayTask(task)) counts.today++
+            if (isWeekTask(task)) counts.week++
+            if (isUncategorizedTask(task)) counts.uncategorized++
+            if (isUnscheduledTask(task)) counts.unscheduled++
+            if (isInProgressTask(task)) counts.inProgress++
+            if (task.status !== 'done') counts.allActive++
+            if (isQuickTask(task)) counts.quick++
+            if (isShortTask(task)) counts.short++
+            if (isMediumTask(task)) counts.medium++
+            if (isLongTask(task)) counts.long++
+            if (isUnestimatedTask(task)) counts.unestimated++
+        }
+        return counts
     })
 
     const getProjectTaskCount = (projectId: string): number => {
@@ -299,7 +307,7 @@ export const useTaskFiltering = (
         let projectTasks = tasks.value.filter(task => projectIds.includes(task.projectId))
 
         if (activeSmartView.value) {
-            projectTasks = applySmartViewFilter(projectTasks, activeSmartView.value as unknown)
+            projectTasks = applySmartViewFilter(projectTasks, activeSmartView.value)
         }
 
         if (activeStatusFilter.value) {

@@ -172,15 +172,6 @@ import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
 import type { TimeFilterType, SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
-const { t } = useI18n()
-
-interface GroupOption {
-  label: string
-  value: string
-  color?: string
-  count?: number
-}
-
 const props = defineProps<{
   isCollapsed: boolean
   taskCount: number
@@ -207,6 +198,17 @@ const props = defineProps<{
   sortDirection: SortDirection // TASK-1412
   searchQuery: string // TASK-1075
 }>()
+
+const { t } = useI18n()
+
+interface GroupOption {
+  label: string
+  value: string
+  color?: string
+  count?: number
+}
+
+
 
 const emit = defineEmits<{
   (e: 'toggleCollapse'): void

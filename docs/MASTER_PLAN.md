@@ -8,20 +8,30 @@
 
 ## Active Bugs (P0-P1)
 
-### BUG-1429: Catalog Today filter shows Tomorrow tasks after "Done for now" (👀 REVIEW)
+### ~~BUG-1430~~: Sidebar Date Filters Navigate to Catalog View (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW (2026-03-02)
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-02)
 
-**Problem**: In Catalog view, filtering by "Today" also shows tasks with "Tomorrow" due date after using "Done for now".
+**Problem**: Clicking "Today", "This Week", or other smart view filters in the sidebar navigated users to the Catalog view (`/tasks`) instead of staying on the current view (Canvas, Board, Calendar).
 
-**Root causes**:
-1. **scheduledDate not updated** (PRIMARY): "Done for now" only updated `dueDate` + `doneForNowUntil` to tomorrow, but left `scheduledDate` at today. `isTodayTask()` matches on `scheduledDate` (line 106-111 of `useSmartViews.ts`), so the task still appeared in the Today filter despite `dueDate` being tomorrow.
-2. **UTC timezone bug** (SECONDARY): `useCanvasTaskActions.ts:279` used `tomorrow.toISOString().split('T')[0]` (UTC). For UTC+2/+3 users, this could produce today's date. Same in `useTaskContextMenuActions.ts:124`.
+**Root cause**: `AppSidebar.vue:976` had an unconditional `router.push('/tasks')` in the local `selectSmartView` function (from TASK-1330).
 
-**Fix** (3 files):
-1. `useCanvasTaskActions.ts`: Fixed UTC bug (`formatDateKey`), now also updates `scheduledDate` to tomorrow if present
-2. `useTaskContextMenuActions.ts`: Fixed UTC bug (`formatDateKey`)
-3. `TaskContextMenu.vue`: Now also updates `scheduledDate` to tomorrow if present (not just for calendar events)
+**Fix**: Made navigation conditional — only navigate to `/tasks` if the current route doesn't support smart view filters (Canvas `/`, Board `/board`, Calendar `/calendar`, Catalog `/tasks`/`/catalog` all support them natively).
+
+---
+
+### BUG-1429: Calendar Inbox Duplicate Display (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-02)
+
+**Problem**: Tasks dragged from Calendar Inbox onto calendar grid remain visible in the inbox after being scheduled, creating duplicate task entries.
+
+**Root cause**: TASK-1412 added `canvasOrder` sort which bypasses the scheduling check in `useUnifiedInboxState.ts`. When a task is dragged to the calendar and assigned a date, the inbox filter should remove it (task is now scheduled), but the inbox still displays it due to the filter logic being skipped.
+
+**Fix** (in progress):
+1. `useUnifiedInboxState.ts`: Restore scheduling check in filter logic even when using `canvasOrder` sort
+2. Verify inbox filter properly excludes scheduled tasks regardless of sort mode
+3. Test drag-drop from inbox to calendar grid doesn't leave duplicate entries
 
 ---
 

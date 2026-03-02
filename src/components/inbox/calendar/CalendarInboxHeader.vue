@@ -155,6 +155,7 @@ import { type Task } from '@/stores/tasks'
 import { type DurationCategory } from '@/utils/durationCategories'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const { t } = useI18n()
 
 defineProps<{

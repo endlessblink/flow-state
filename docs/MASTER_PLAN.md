@@ -3863,7 +3863,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1426** | **P0** | 📋 **Offline: auth grace period — keep expired session for local ops** (📋 PLANNED 2026-03-02) |
 | **TASK-1425** | **P0** | 📋 **Offline: fast startup — skip Supabase when navigator.onLine=false** (📋 PLANNED 2026-03-02) |
 | **TASK-1422** | **P0** | 🔄 **Full offline mobile support — PWA works E2E without network** (🔄 IN PROGRESS 2026-03-02) |
-| **TASK-1421** | **P0** | 🔄 **Investigate & fix sluggish localhost performance** (🔄 IN PROGRESS 2026-02-27) |
+| ~~**TASK-1421**~~ | **P0** | ✅ **Investigate & fix sluggish localhost performance** (✅ DONE 2026-03-02) |
 | **BUG-1416** | **P0** | 🔄 **Calendar inbox "today" filter shows wrong tasks — dueDate format mismatch (ISO vs YYYY-MM-DD)** (🔄 IN PROGRESS 2026-02-25) |
 | ~~**BUG-1415**~~ | **P0** | ✅ **Catalog drag doesn't move task to target group — drops on task rows make subtasks instead of transferring between groups** (✅ DONE 2026-02-25) |
 | **TASK-1405** | **P1** | 👀 **Replace LLM Distribution with Deterministic Algorithm in Weekly Plan** (👀 REVIEW 2026-02-22) |

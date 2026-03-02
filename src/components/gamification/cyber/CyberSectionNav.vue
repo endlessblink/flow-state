@@ -25,8 +25,12 @@ const handleTabClick = (tabId: typeof tabs[number]['id']) => {
 </script>
 
 <template>
-  <nav class="cyber-section-nav">
+  <nav class="cyber-section-nav" role="tablist">
     <button
+      role="tab"
+      :aria-selected="activeSection === tab.id"
+      :aria-controls="`panel-${tab.id}`"
+      :id="`tab-${tab.id}`"
       v-for="tab in tabs"
       :key="tab.id"
       class="cyber-nav-tab"

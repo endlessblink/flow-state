@@ -15,12 +15,7 @@
     />
 
     <!-- Section Content -->
-    <div
-      class="cf-content"
-      role="tabpanel"
-      :id="`panel-${activeSection}`"
-      :aria-labelledby="`tab-${activeSection}`"
-    >
+    <div class="cf-content">
       <!-- OVERVIEW Tab -->
       <CyberDashboardHub
         v-if="activeSection === 'overview'"

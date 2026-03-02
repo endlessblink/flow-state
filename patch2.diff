@@ -1,0 +1,16 @@
+--- src/views/CyberflowView.vue
++++ src/views/CyberflowView.vue
+@@ -14,7 +14,12 @@
+     />
+
+     <!-- Section Content -->
+-    <div class="cf-content">
++    <div
++      class="cf-content"
++      role="tabpanel"
++      :id="`panel-${activeSection}`"
++      :aria-labelledby="`tab-${activeSection}`"
++    >
+       <!-- OVERVIEW Tab -->
+       <CyberDashboardHub
+         v-if="activeSection === 'overview'"

@@ -16,6 +16,8 @@ import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { toDbStatus } from '@/utils/supabaseMappers'
 // TASK-1159: Toast feedback for background save failures
 import { useToast } from '@/composables/useToast'
+// TASK-1428: Keep IndexedDB read cache warm after offline mutations
+import { cacheTasks } from '@/services/offline/readCacheDB'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
@@ -231,6 +233,9 @@ export function useTaskOperations(
 
             // Also attempt direct save (for immediate sync when online)
             await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
+
+            // TASK-1428: Update IndexedDB read cache so offline reloads see the new task
+            cacheTasks([..._rawTasks.value])
 
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
@@ -705,6 +710,9 @@ export function useTaskOperations(
                     _rawTasks.value[rollbackIndex] = previousTask
                 }
             }
+
+            // TASK-1428: Update IndexedDB read cache so offline reloads see the updated task
+            cacheTasks([..._rawTasks.value])
         } finally {
             if (!wasManualInProgress) manualOperationInProgress.value = false
         }
@@ -728,6 +736,8 @@ export function useTaskOperations(
         // Save to localStorage immediately (for guest mode persistence)
         try {
             await saveTasksToStorage(_rawTasks.value, 'deleteTask')
+            // TASK-1428: Update IndexedDB read cache so offline reloads reflect the deletion
+            cacheTasks([..._rawTasks.value])
         } catch (localSaveError) {
             // localStorage save failed — rollback immediately
             console.error(`❌ [DELETE] localStorage save failed, rolling back:`, localSaveError)

@@ -8,6 +8,7 @@ import {
 import type { Task } from '@/types/tasks'
 import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
 import { type ContainerBounds, isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
+import { cacheGroups } from '@/services/offline/readCacheDB'
 
 export const useCanvasGroups = (
     persistence: {
@@ -57,6 +58,33 @@ export const useCanvasGroups = (
             positionFormat: 'absolute'
         }
         _rawGroups.value.push(newGroup)
+
+        // TASK-1428: Update IndexedDB read cache after create
+        cacheGroups([..._rawGroups.value])
+
+        // TASK-1428: Queue for offline-first sync (secondary persistence)
+        try {
+            const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+            const syncOrchestrator = useSyncOrchestrator()
+            const { useAuthStore } = await import('@/stores/auth')
+            const userId = useAuthStore().user?.id
+            if (userId) {
+                const { toSupabaseGroup } = await import('@/utils/supabaseMappers')
+                const payload = toSupabaseGroup(newGroup, userId)
+                if (payload) {
+                    await syncOrchestrator.enqueue({
+                        entityType: 'group',
+                        operation: 'create',
+                        entityId: newGroup.id,
+                        payload: JSON.parse(JSON.stringify(payload)),
+                        baseVersion: 0
+                    })
+                }
+            }
+        } catch (queueError) {
+            console.warn('[SYNC-QUEUE] Failed to queue group create:', queueError)
+        }
+
         await persistence.saveGroupToStorage(newGroup)
         return newGroup
     }
@@ -98,6 +126,33 @@ export const useCanvasGroups = (
                 positionVersion: newVersion,
                 updatedAt: new Date().toISOString()
             }
+
+            // TASK-1428: Update IndexedDB read cache after update
+            cacheGroups([..._rawGroups.value])
+
+            // TASK-1428: Queue for offline-first sync
+            try {
+                const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+                const syncOrchestrator = useSyncOrchestrator()
+                const { useAuthStore } = await import('@/stores/auth')
+                const userId = useAuthStore().user?.id
+                if (userId) {
+                    const { toSupabaseGroup } = await import('@/utils/supabaseMappers')
+                    const payload = toSupabaseGroup(_rawGroups.value[index], userId)
+                    if (payload) {
+                        await syncOrchestrator.enqueue({
+                            entityType: 'group',
+                            operation: 'update',
+                            entityId: id,
+                            payload: JSON.parse(JSON.stringify(payload)),
+                            baseVersion: _rawGroups.value[index].positionVersion || 0
+                        })
+                    }
+                }
+            } catch (queueError) {
+                console.warn('[SYNC-QUEUE] Failed to queue group update:', queueError)
+            }
+
             await persistence.saveGroupToStorage(_rawGroups.value[index])
         }
     }
@@ -109,6 +164,25 @@ export const useCanvasGroups = (
             if (activeSectionId.value === id) {
                 activeSectionId.value = null
             }
+
+            // TASK-1428: Update IndexedDB read cache after delete
+            cacheGroups([..._rawGroups.value])
+
+            // TASK-1428: Queue for offline-first sync
+            try {
+                const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+                const syncOrchestrator = useSyncOrchestrator()
+                await syncOrchestrator.enqueue({
+                    entityType: 'group',
+                    operation: 'delete',
+                    entityId: id,
+                    payload: { id },
+                    baseVersion: 0
+                })
+            } catch (queueError) {
+                console.warn('[SYNC-QUEUE] Failed to queue group delete:', queueError)
+            }
+
             persistence.saveGroupsToLocalStorage(_rawGroups.value)
             await persistence.deleteGroupRemote(id)
         }

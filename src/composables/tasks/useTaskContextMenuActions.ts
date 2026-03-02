@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
+import { formatDateKey } from '@/utils/dateUtils'
 import type { Task } from '@/stores/tasks'
 
 // Dispatch event to trigger brief flash animation on task card
@@ -121,7 +122,7 @@ export function useTaskContextMenuActions(
         if (dueDate) {
             try {
                 // Use ISO date format (YYYY-MM-DD) for Supabase compatibility
-                const formattedDate = dueDate.toISOString().split('T')[0]
+                const formattedDate = formatDateKey(dueDate)
                 await taskStore.updateTaskWithUndo(taskId, { dueDate: formattedDate })
                 // TASK-1362: Also move calendar instance to the new date
                 if (isCalendarEvent && calendarInstanceId) {

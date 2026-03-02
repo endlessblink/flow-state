@@ -138,7 +138,17 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             if (props.context === 'calendar') {
                 // TASK-1412: When canvasOrder sort is active, include ALL canvas tasks
                 // regardless of calendar scheduling — the inbox should mirror the canvas.
-                if (sortBy.value === 'canvasOrder' && isOnCanvas) return true
+                if (sortBy.value === 'canvasOrder' && isOnCanvas) {
+                    // BUG-1429: Still exclude tasks scheduled on the calendar
+                    const isScheduled = task.instances &&
+                        task.instances.length > 0 &&
+                        task.instances.some(inst => inst.scheduledDate)
+                    return !isScheduled
+                }
+
+                if (import.meta.env.DEV && task.instances?.length) {
+                    console.log(`[INBOX-FILTER] Task "${task.title?.slice(0,25)}" has ${task.instances.length} instances, isScheduled=${task.instances.some(inst => inst.scheduledDate)}`)
+                }
 
                 // CALENDAR INBOX: Hide tasks already scheduled on the calendar grid
                 const isScheduledOnCalendar = task.instances &&

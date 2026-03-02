@@ -152,6 +152,30 @@ export const useProjectStore = defineStore('projects', () => {
             } as Project
             _rawProjects.value.push(newProject)
 
+            // TASK-1428: Update IndexedDB read cache after create
+            cacheProjects([..._rawProjects.value])
+
+            // TASK-1428: Queue for offline-first sync (secondary persistence)
+            try {
+                const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+                const syncOrchestrator = useSyncOrchestrator()
+                const { useAuthStore: getAuthForSync } = await import('@/stores/auth')
+                const userId = getAuthForSync().user?.id
+                if (userId) {
+                    const { toSupabaseProject } = await import('@/utils/supabaseMappers')
+                    const payload = toSupabaseProject(newProject, userId)
+                    await syncOrchestrator.enqueue({
+                        entityType: 'project',
+                        operation: 'create',
+                        entityId: newProject.id,
+                        payload: JSON.parse(JSON.stringify(payload)),
+                        baseVersion: 0
+                    })
+                }
+            } catch (queueError) {
+                console.warn('[SYNC-QUEUE] Failed to queue project create:', queueError)
+            }
+
             // Guest mode: persist to localStorage immediately
             const { useAuthStore: getAuth } = await import('@/stores/auth')
             if (!getAuth().isAuthenticated) {
@@ -174,6 +198,30 @@ export const useProjectStore = defineStore('projects', () => {
                     ..._rawProjects.value[projectIndex],
                     ...updates,
                     updatedAt: new Date()
+                }
+
+                // TASK-1428: Update IndexedDB read cache after update
+                cacheProjects([..._rawProjects.value])
+
+                // TASK-1428: Queue for offline-first sync
+                try {
+                    const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+                    const syncOrchestrator = useSyncOrchestrator()
+                    const { useAuthStore: getAuthForSync } = await import('@/stores/auth')
+                    const userId = getAuthForSync().user?.id
+                    if (userId) {
+                        const { toSupabaseProject } = await import('@/utils/supabaseMappers')
+                        const payload = toSupabaseProject(_rawProjects.value[projectIndex], userId)
+                        await syncOrchestrator.enqueue({
+                            entityType: 'project',
+                            operation: 'update',
+                            entityId: projectId,
+                            payload: JSON.parse(JSON.stringify(payload)),
+                            baseVersion: 0
+                        })
+                    }
+                } catch (queueError) {
+                    console.warn('[SYNC-QUEUE] Failed to queue project update:', queueError)
                 }
 
                 // Guest mode: persist to localStorage immediately
@@ -222,6 +270,24 @@ export const useProjectStore = defineStore('projects', () => {
                 })
 
                 _rawProjects.value.splice(projectIndex, 1)
+
+                // TASK-1428: Update IndexedDB read cache after delete
+                cacheProjects([..._rawProjects.value])
+
+                // TASK-1428: Queue for offline-first sync
+                try {
+                    const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+                    const syncOrchestrator = useSyncOrchestrator()
+                    await syncOrchestrator.enqueue({
+                        entityType: 'project',
+                        operation: 'delete',
+                        entityId: projectId,
+                        payload: { id: projectId },
+                        baseVersion: 0
+                    })
+                } catch (queueError) {
+                    console.warn('[SYNC-QUEUE] Failed to queue project delete:', queueError)
+                }
 
                 // Guest mode: persist to localStorage immediately
                 const { useAuthStore: getAuth } = await import('@/stores/auth')

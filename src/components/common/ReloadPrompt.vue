@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RefreshCw, X, CheckCircle2 } from 'lucide-vue-next'
 import { NButton, NCard, NText } from 'naive-ui'
 
@@ -18,9 +18,8 @@ if (typeof window !== 'undefined' && !('__TAURI__' in window)) {
     needRefresh.value = sw.needRefresh.value
     updateServiceWorker = sw.updateServiceWorker
 
-    // Watch for changes
-    if (sw.offlineReady.value) { offlineReady.value = true }
-    if (sw.needRefresh.value) { needRefresh.value = true }
+    watch(sw.offlineReady, (val) => { offlineReady.value = val })
+    watch(sw.needRefresh, (val) => { needRefresh.value = val })
   }).catch(() => {
     // PWA plugin not available (Tauri build), ignore
   })

@@ -1,0 +1,29 @@
+--- src/components/base/BaseModal.vue
++++ src/components/base/BaseModal.vue
+@@ -107,6 +107,13 @@
+   preventOutsideClick: false
+ })
+
++const emit = defineEmits<{
++  close: []
++  cancel: []
++  confirm: []
++  open: []
++}>()
++
+ const { t } = useI18n()
+ const slots = useSlots()
+
+@@ -159,13 +166,6 @@
+ const finalConfirmText = computed(() => props.confirmText || t('common.confirm'))
+ const finalCloseAriaLabel = computed(() => props.closeAriaLabel || t('common.close'))
+
+-const emit = defineEmits<{
+-  close: []
+-  cancel: []
+-  confirm: []
+-  open: []
+-}>()
+-
+ // Reactive state
+ const activeModalId = ref<string | null>(null) // Unique ID for ARIA attributes

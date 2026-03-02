@@ -56,10 +56,10 @@ const md = new MarkdownIt({
 })
 
 // Make links open in new tab
-const defaultRender = md.renderer.rules.link_open || function (tokens: Token[], idx: number, options: any, _env: unknown, self: Renderer) {
+const defaultRender = md.renderer.rules.link_open || function (tokens: Token[], idx: number, options: MarkdownIt.Options, _env: unknown, self: Renderer) {
   return self.renderToken(tokens, idx, options)
 }
-md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: any, env: unknown, self: Renderer) {
+md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: MarkdownIt.Options, env: unknown, self: Renderer) {
   tokens[idx].attrSet('target', '_blank')
   tokens[idx].attrSet('rel', 'noopener noreferrer')
   return defaultRender(tokens, idx, options, env, self)
@@ -558,11 +558,8 @@ async function saveSchedule() {
 
     scheduleSaved.value = true
     // Update message metadata to persist the answered state
-    // eslint-disable-next-line vue/no-mutating-props
     if (props.message.metadata?.scheduleQuestion) {
-      // eslint-disable-next-line vue/no-mutating-props
       props.message.metadata.scheduleQuestion.answered = true
-      // eslint-disable-next-line vue/no-mutating-props
       props.message.metadata.scheduleQuestion.selectedDays = [...selectedDays.value]
     }
   } catch (err) {
@@ -671,7 +668,7 @@ async function saveSchedule() {
                 <span class="summary-stat-label">Due Today</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data?.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">
@@ -969,7 +966,7 @@ async function saveSchedule() {
                 <span class="summary-stat-label">Total Tasks</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data?.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">

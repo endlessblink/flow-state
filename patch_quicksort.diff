@@ -1,0 +1,12 @@
+--- src/components/QuickSortCard.vue
++++ src/components/QuickSortCard.vue
+@@ -142,8 +142,8 @@
+   task: Task
+ }
+
+-const { t } = useI18n()
+ const props = defineProps<Props>()
++const { t } = useI18n()
+ const emit = defineEmits<{
+   updateTask: [updates: Partial<Task>]
+   swipeSave: []

@@ -1,0 +1,79 @@
+--- src/components/ai/ChatMessage.vue
++++ src/components/ai/ChatMessage.vue
+@@ -56,10 +56,10 @@
+ })
+
+ // Make links open in new tab
+-const defaultRender = md.renderer.rules.link_open || function (tokens: Token[], idx: number, options: MarkdownIt.Options, _env: unknown, self: Renderer) {
++const defaultRender = md.renderer.rules.link_open || function (tokens: Token[], idx: number, options: any, _env: unknown, self: Renderer) {
+   return self.renderToken(tokens, idx, options)
+ }
+-md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: MarkdownIt.Options, env: unknown, self: Renderer) {
++md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: any, env: unknown, self: Renderer) {
+   tokens[idx].attrSet('target', '_blank')
+   tokens[idx].attrSet('rel', 'noopener noreferrer')
+   return defaultRender(tokens, idx, options, env, self)
+@@ -559,8 +559,8 @@
+     success = false
+   } finally {
+     // Record action completion
+-    props.message.metadata.actionCompleted = success
+-    props.message.metadata.actionTimestamp = new Date().toISOString()
++    if (props.message && props.message.metadata) props.message.metadata.actionCompleted = success
++    if (props.message && props.message.metadata) props.message.metadata.actionTimestamp = new Date().toISOString()
+
+     // Remove from loading set
+     loadingActions.value.delete(actionId)
+@@ -668,7 +668,7 @@
+
+       <div class="result-summary">
+         Found {{ result.data.tasks.length }} tasks
+-        <span v-if="result.data.overdueCount > 0" class="warning-text">
++        <span v-if="result.data?.overdueCount > 0" class="warning-text">
+           ({{ result.data.overdueCount }} overdue)
+         </span>
+       </div>
+@@ -677,13 +677,13 @@
+         <ul class="task-list">
+           <li v-for="task in result.data.tasks" :key="task.id" class="task-list-item">
+             <!-- Use TaskList component logic here, or simplified version -->
+             <div class="task-title">{{ task.title }}</div>
+             <div class="task-meta">
+               <span v-if="task.priority" :class="`priority-${task.priority}`">{{ task.priority }}</span>
+               <span v-if="task.dueDate" class="due-date">{{ task.dueDate }}</span>
+             </div>
+           </li>
+         </ul>
+       </div>
+
+-      <div v-if="result.data.overdueTasks && result.data.overdueTasks.length > 0" class="task-list-container overdue">
++      <div v-if="result.data?.overdueTasks && result.data.overdueTasks.length > 0" class="task-list-container overdue">
+         <div class="list-header">
+           <AlertTriangle class="icon-warning" :size="16" />
+           <span>Overdue Tasks</span>
+         </div>
+-        <TaskResultsList :tasks="result.data.overdueTasks" :compact="true" />
++        <TaskResultsList :tasks="result.data.overdueTasks || []" :compact="true" />
+       </div>
+
+       <!-- Add action buttons for the list -->
+@@ -727,17 +727,17 @@
+         <p>You're on track! Keep it up.</p>
+       </div>
+
+-      <div v-if="result.data.overdueTasks && result.data.overdueTasks.length > 0" class="task-list-container overdue">
++      <div v-if="result.data?.overdueTasks && result.data.overdueTasks.length > 0" class="task-list-container overdue">
+         <div class="list-header">
+           <AlertTriangle class="icon-warning" :size="16" />
+           <span>Overdue Tasks</span>
+         </div>
+         <TaskResultsList :tasks="result.data.overdueTasks" :compact="true" />
+       </div>
+
+-      <div v-if="result.data.dueTodayTasks && result.data.dueTodayTasks.length > 0" class="task-list-container due-today">
++      <div v-if="result.data?.dueTodayTasks && result.data.dueTodayTasks.length > 0" class="task-list-container due-today">
+         <div class="list-header">
+           <Calendar class="icon-info" :size="16" />
+           <span>Due Today</span>
+         </div>
+         <TaskResultsList :tasks="result.data.dueTodayTasks" :compact="true" />

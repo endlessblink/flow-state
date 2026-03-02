@@ -1,0 +1,15 @@
+--- src/components/base/BaseModal.vue
++++ src/components/base/BaseModal.vue
+@@ -170,12 +170,6 @@
+ const finalConfirmText = computed(() => props.confirmText || t('common.confirm'))
+ const finalCloseAriaLabel = computed(() => props.closeAriaLabel || t('common.close'))
+
+-const emit = defineEmits<{
+-  close: []
+-  cancel: []
+-  confirm: []
+-  open: []
+-}>()
+
+ // Reactive state
+ const isVisible = ref(props.isOpen)

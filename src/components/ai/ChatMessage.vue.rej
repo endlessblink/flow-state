@@ -1,0 +1,37 @@
+--- src/components/ai/ChatMessage.vue
++++ src/components/ai/ChatMessage.vue
+@@ -559,8 +559,8 @@
+     success = false
+   } finally {
+     // Record action completion
+-    props.message.metadata.actionCompleted = success
+-    props.message.metadata.actionTimestamp = new Date().toISOString()
++    if (props.message && props.message.metadata) props.message.metadata.actionCompleted = success
++    if (props.message && props.message.metadata) props.message.metadata.actionTimestamp = new Date().toISOString()
+
+     // Remove from loading set
+     loadingActions.value.delete(actionId)
+@@ -668,7 +668,7 @@
+
+       <div class="result-summary">
+         Found {{ result.data.tasks.length }} tasks
+-        <span v-if="result.data.overdueCount > 0" class="warning-text">
++        <span v-if="result.data?.overdueCount > 0" class="warning-text">
+           ({{ result.data.overdueCount }} overdue)
+         </span>
+       </div>
+@@ -677,13 +677,13 @@
+         <ul class="task-list">
+           <li v-for="task in result.data.tasks" :key="task.id" class="task-list-item">
+             <!-- Use TaskList component logic here, or simplified version -->
+             <div class="task-title">{{ task.title }}</div>
+             <div class="task-meta">
+               <span v-if="task.priority" :class="`priority-${task.priority}`">{{ task.priority }}</span>
+               <span v-if="task.dueDate" class="due-date">{{ task.dueDate }}</span>
+             </div>
+           </li>
+         </ul>
+       </div>
+
+-      <div v-if="result.data.overdueTasks && result.data.overdueTasks.length > 0" class="task-list-container overdue">
++      <div v-if="result.data?.overdueTasks && result.data.overdueTasks.length > 0" class="task-list-container overdue">

@@ -28,7 +28,7 @@
       ]
     },
     "types": [
-      "vite/client"
+
     ]
   },
   "include": [

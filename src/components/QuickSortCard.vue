@@ -142,8 +142,8 @@ interface Props {
   task: Task
 }
 
-const { t } = useI18n()
 const props = defineProps<Props>()
+const { t } = useI18n()
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]
   swipeSave: []

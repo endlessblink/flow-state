@@ -156,6 +156,12 @@ const props = withDefaults(defineProps<Props>(), {
   trapFocus: true
 })
 
+const emit = defineEmits<{
+  close: []
+  cancel: []
+  confirm: []
+  open: []
+}>()
 
 const { t } = useI18n()
 

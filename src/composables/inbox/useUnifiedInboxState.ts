@@ -136,6 +136,10 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // 4. Context Specific Rules (cross-context independent)
             // Canvas inbox does NOT filter by calendar scheduling, and vice versa
             if (props.context === 'calendar') {
+                // TASK-1412: When canvasOrder sort is active, include ALL canvas tasks
+                // regardless of calendar scheduling — the inbox should mirror the canvas.
+                if (sortBy.value === 'canvasOrder' && isOnCanvas) return true
+
                 // CALENDAR INBOX: Hide tasks already scheduled on the calendar grid
                 const isScheduledOnCalendar = task.instances &&
                     task.instances.length > 0 &&
@@ -264,24 +268,6 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         const priorityOrder = { high: 0, medium: 1, low: 2, undefined: 3 }
         const dir = sortDirection.value === 'desc' ? -1 : 1
 
-        // DEBUG TASK-1412: Log pre-sort state (console.error bypasses consoleFilter)
-        if (sortBy.value === 'canvasOrder') {
-            console.error('🔴 [INBOX-DFS] Pre-sort:', {
-                context: props.context,
-                totalTasks: tasks.length,
-                sortDir: sortDirection.value,
-                tasks: tasks.slice(0, 15).map(t => ({
-                    title: t.title?.slice(0, 25),
-                    parentId: t.parentId?.slice(0, 12),
-                    parentTaskId: t.parentTaskId?.slice(0, 12),
-                    y: t.canvasPosition?.y,
-                    x: t.canvasPosition?.x,
-                    isInInbox: t.isInInbox,
-                    status: t.status
-                }))
-            })
-        }
-
         if (sortBy.value === 'canvasOrder') {
             // TASK-1412: Right-to-left group ordering + connection-aware DFS within each group
             const groups = canvasStore.groups || []
@@ -337,16 +323,6 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
             // Catch tasks that weren't visited (edge cases: groups not in canvasStore.groups)
             for (const t of tasks) dfs(t)
-
-            // DEBUG TASK-1412: Post-sort result
-            console.error('🔴 [INBOX-DFS] Post-sort:', {
-                groups: sortedGroups.map(g => ({ name: g.name, x: g.position?.x })),
-                result: result.slice(0, 12).map((t, i) => ({
-                    i, title: t.title?.slice(0, 25), y: t.canvasPosition?.y, x: t.canvasPosition?.x,
-                    parentTaskId: t.parentTaskId?.slice(0, 12),
-                    group: sortedGroups.find(g => g.id === t.parentId)?.name ?? '?'
-                }))
-            })
 
             tasks = sortDirection.value === 'desc' ? result.reverse() : result
         } else {

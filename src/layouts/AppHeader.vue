@@ -102,9 +102,6 @@
               <div class="timer-time">
                 {{ timerStore.displayTime }}
               </div>
-              <div class="timer-task" dir="auto">
-                {{ timerStore.currentTaskName || '&nbsp;' }}
-              </div>
             </div>
             <div class="timer-controls">
               <div v-if="!timerStore.currentSession" class="timer-start-options">
@@ -160,6 +157,25 @@
             </div>
           </div>
         </div>
+
+        <!-- TASK-1435: Active Task Glass Pill -->
+        <Transition name="task-pill">
+          <div
+            v-if="timerStore.isTimerActive && timerStore.currentTaskName"
+            class="active-task-pill"
+          >
+            <span
+              v-if="activeTaskProject"
+              class="active-task-dot"
+              :class="{ 'active-task-dot--emoji': activeTaskProject.type === 'emoji' }"
+              :style="activeTaskProject.type !== 'emoji' ? { backgroundColor: activeTaskProject.color || '#6B7280' } : undefined"
+            >
+              <template v-if="activeTaskProject.type === 'emoji'">{{ activeTaskProject.content }}</template>
+            </span>
+            <span v-else class="active-task-dot" />
+            <span class="active-task-name" dir="auto">{{ timerStore.currentTaskName }}</span>
+          </div>
+        </Transition>
       </div>
     </div>
 
@@ -215,6 +231,15 @@ const aiChatStore = useAIChatStore()
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
 const uiStore = useUIStore()
+
+// TASK-1435: Active task project visual for glass pill
+const activeTaskProject = computed(() => {
+  const taskId = timerStore.currentTaskId
+  if (!taskId) return null
+  const task = taskStore.tasks.find((t: any) => t.id === taskId)
+  if (!task?.projectId) return null
+  return taskStore.getProjectVisual(task.projectId)
+})
 
 // Route name to display title mapping
 const routeNameToTitle = computed(() => ({
@@ -545,19 +570,6 @@ const startLongBreak = async () => {
   letter-spacing: 0.025em;
 }
 
-.timer-task {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  font-weight: var(--font-medium);
-  max-width: 150px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* RTL support: auto-detect text direction for Hebrew/Arabic */
-  unicode-bidi: plaintext;
-  text-align: start;
-}
-
 .timer-controls {
   display: flex;
   gap: var(--space-1);
@@ -821,5 +833,73 @@ const startLongBreak = async () => {
 @keyframes cyberflowPulse {
   0%, 100% { filter: brightness(1); }
   50% { filter: brightness(1.15); }
+}
+
+/* TASK-1435: Active Task Glass Pill */
+.active-task-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1_5) var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: default;
+  max-width: 240px;
+  transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.active-task-pill:hover {
+  border-color: var(--state-hover-border);
+  background: var(--glass-bg-medium);
+}
+
+.active-task-dot {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  border-radius: var(--radius-full);
+  background-color: #6B7280;
+}
+
+.active-task-dot--emoji {
+  width: auto;
+  height: auto;
+  min-width: auto;
+  background: none;
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+.active-task-name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Transition: fade + slide */
+.task-pill-enter-active {
+  transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.task-pill-leave-active {
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.task-pill-enter-from {
+  opacity: 0;
+  transform: translateX(-8px);
+}
+
+.task-pill-leave-to {
+  opacity: 0;
+  transform: translateX(-8px);
 }
 </style>

@@ -35,6 +35,14 @@ PlasmoidItem {
     // ===== TIMER STATE =====
     property string currentSessionId: ""
     property string currentTaskId: ""  // TASK-1087: Track active task for highlighting
+    // TASK-1435: Resolve currentTaskId to task title for companion widget
+    readonly property string currentTaskName: {
+        if (!currentTaskId || currentTaskId === "general") return ""
+        for (var i = 0; i < tasks.length; i++) {
+            if (tasks[i].id === currentTaskId) return tasks[i].title || ""
+        }
+        return ""
+    }
     property bool hasActiveSession: false
     property int totalSeconds: plasmoid.configuration.workDuration * 60
     property int secondsRemaining: totalSeconds
@@ -309,6 +317,33 @@ PlasmoidItem {
             Qt.openUrlExternally(deepLink)
             console.log("[OPEN-APP] Opening web app with deep link:", deepLink)
         }
+    }
+
+    // TASK-1435: Write active task state for companion widget
+    function writeActiveTaskFile() {
+        // Resolve task name inline (more reliable than QML binding)
+        var resolvedName = ""
+        if (root.currentTaskId && root.currentTaskId !== "general") {
+            for (var i = 0; i < root.tasks.length; i++) {
+                if (root.tasks[i].id === root.currentTaskId) {
+                    resolvedName = root.tasks[i].title || ""
+                    break
+                }
+            }
+        }
+        var obj = {
+            taskName: resolvedName,
+            taskId: root.currentTaskId,
+            isActive: root.hasActiveSession && root.isRunning,
+            isWork: root.isWorkSession,
+            timeDisplay: root.timeDisplay,
+            progress: root.progress,
+            timestamp: Date.now()
+        }
+        var json = JSON.stringify(obj)
+        var escaped = json.replace(/'/g, "'\\''")
+        var cmd = "printf '%s' '" + escaped + "' > /tmp/flowstate-active-task.json"
+        executableDataSource.connectSource(cmd)
     }
 
     // ===== FULL-SCREEN BREAK OVERLAY (Fokus-style) =====
@@ -2770,6 +2805,7 @@ PlasmoidItem {
                         root.isRunning = false
                         root.isDeviceLeader = false
                         root.nannyLastSessionEndTime = Date.now()  // TASK-1424
+                        root.writeActiveTaskFile()
                     }
                 } else {
                     // Session not found at all - clear silently
@@ -2780,6 +2816,7 @@ PlasmoidItem {
                     root.isRunning = false
                     root.isDeviceLeader = false
                     root.nannyLastSessionEndTime = Date.now()  // TASK-1424
+                    root.writeActiveTaskFile()
                 }
             } else if (xhr.readyState === XMLHttpRequest.DONE) {
                 console.warn("[SYNC] Session check failed:", xhr.status)
@@ -2789,6 +2826,7 @@ PlasmoidItem {
                 root.currentTaskId = ""
                 root.isRunning = false
                 root.isDeviceLeader = false
+                root.writeActiveTaskFile()
             }
         }
         xhr.send()
@@ -2890,6 +2928,7 @@ PlasmoidItem {
                 }
 
                 root.isRunning = s.is_active && !s.is_paused
+                root.writeActiveTaskFile()
             } else {
                 // BUG-1292: Don't clear state during transition - notify.sh curl may still be in flight
                 if (root.sessionJustCompleted || root.isInTransition) {
@@ -2911,6 +2950,7 @@ PlasmoidItem {
                     root.currentTaskId = ""  // TASK-1087: Clear active task
                     root.isRunning = false
                     root.isDeviceLeader = false
+                    root.writeActiveTaskFile()
                 }
             }
         }
@@ -3391,6 +3431,7 @@ PlasmoidItem {
                 if (xhr.status === 200) {
                     root.tasks = JSON.parse(xhr.responseText)
                     if (root.debugLogging) console.log("[TASKS] Loaded", root.tasks.length, "tasks")
+                    root.writeActiveTaskFile()
                 } else {
                     console.log("[TASKS] Error:", xhr.status, xhr.responseText)
                 }

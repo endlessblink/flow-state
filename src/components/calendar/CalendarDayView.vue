@@ -91,8 +91,6 @@ const {
   getPriorityClass,
   getPriorityLabel,
   getTaskStatus,
-  getStatusLabel,
-  getStatusIcon
 } = inject('calendar-helpers') as CalendarHelpers
 
 </script>

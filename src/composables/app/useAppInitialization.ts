@@ -130,6 +130,79 @@ export function useAppInitialization() {
         // Phase B (non-blocking): Background sync from Supabase
         // Skip entirely when offline — no point in fetching, just wait for 'online' event
         const isOnline = typeof navigator !== 'undefined' ? navigator.onLine !== false : true
+
+        // TASK-1428: Re-apply unsynced local changes after any Supabase refresh.
+        // Without this, loadFromDatabase() overwrites _rawTasks with server data
+        // that doesn't reflect offline deletes/creates/updates yet.
+        const reapplyPendingWrites = async () => {
+            try {
+                const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
+                const queueDB = getWriteQueueDB()
+                const pendingOps = await queueDB.operations
+                    .where('status')
+                    .anyOf(['pending', 'failed', 'syncing'])
+                    .toArray()
+
+                if (pendingOps.length === 0) return
+
+                // Sort by createdAt to preserve operation order
+                pendingOps.sort((a, b) => a.createdAt - b.createdAt)
+
+                let applied = 0
+
+                // Apply task operations
+                const taskOps = pendingOps.filter(op => op.entityType === 'task')
+                for (const op of taskOps) {
+                    if (op.operation === 'delete') {
+                        const idx = taskStore._rawTasks.findIndex(t => t.id === op.entityId)
+                        if (idx !== -1) {
+                            taskStore._rawTasks.splice(idx, 1)
+                            applied++
+                        }
+                    } else if (op.operation === 'create') {
+                        if (!taskStore._rawTasks.find(t => t.id === op.entityId)) {
+                            try {
+                                const task = fromSupabaseTask(op.payload as unknown as SupabaseTask)
+                                taskStore._rawTasks.push(task)
+                                applied++
+                            } catch { /* mapper failed, skip */ }
+                        }
+                    }
+                }
+
+                // Apply project operations
+                const projectOps = pendingOps.filter(op => op.entityType === 'project')
+                for (const op of projectOps) {
+                    if (op.operation === 'delete') {
+                        const idx = projectStore._rawProjects.findIndex(p => p.id === op.entityId)
+                        if (idx !== -1) {
+                            projectStore._rawProjects.splice(idx, 1)
+                            applied++
+                        }
+                    }
+                }
+
+                // Apply group operations
+                const groupOps = pendingOps.filter(op => op.entityType === 'group')
+                for (const op of groupOps) {
+                    if (op.operation === 'delete') {
+                        const rawGroups = canvasStore._rawGroups
+                        const idx = rawGroups.findIndex(g => g.id === op.entityId)
+                        if (idx !== -1) {
+                            rawGroups.splice(idx, 1)
+                            applied++
+                        }
+                    }
+                }
+
+                if (applied > 0) {
+                    console.log(`🔄 [CACHE-FIRST] Re-applied ${applied} pending write queue operations after refresh`)
+                }
+            } catch (e) {
+                console.warn('[CACHE-FIRST] Failed to re-apply pending writes:', e)
+            }
+        }
+
         if (authStore.isAuthenticated && isOnline) {
             const backgroundRefresh = async () => {
                 try {
@@ -139,6 +212,9 @@ export function useAppInitialization() {
                         projectStore.loadProjectsFromDatabase(),
                         canvasStore.loadFromDatabase()
                     ])
+
+                    // TASK-1428: Re-apply unsynced offline changes that Supabase doesn't know about yet
+                    await reapplyPendingWrites()
 
                     // Clear cache-mode indicator — we have fresh data now
                     try {
@@ -161,6 +237,7 @@ export function useAppInitialization() {
                                         projectStore.loadProjectsFromDatabase(),
                                         canvasStore.loadFromDatabase()
                                     ])
+                                    await reapplyPendingWrites()
                                     console.log(`✅ [BUG-1339] Delayed retry loaded ${taskStore._rawTasks.length} tasks`)
                                 } catch (e) {
                                     console.warn('⚠️ [BUG-1339] Delayed retry failed:', e)

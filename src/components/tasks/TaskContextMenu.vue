@@ -143,6 +143,19 @@
       </div>
     </div>
 
+    <!-- TASK-1429: Canvas Group Selector -->
+    <div
+      class="inline-row inline-row--single"
+      @mouseenter="openSubmenu('canvasGroup', $event)"
+      @mouseleave="closeSubmenu('canvasGroup')"
+    >
+      <div class="inline-select inline-select--full">
+        <LayoutGrid :size="14" class="inline-icon" />
+        <span class="inline-value">{{ currentCanvasGroupLabel }}</span>
+        <ChevronDown :size="12" class="inline-arrow" />
+      </div>
+    </div>
+
     <!-- Status & Duration Row -->
     <div class="inline-row">
       <!-- Status with Submenu -->
@@ -199,6 +212,17 @@
       @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('project')"
       @select="(id: string | null) => { closeAllSubmenusNow(); setProject(id) }"
+    />
+
+    <!-- TASK-1429: Canvas Group Submenu -->
+    <CanvasGroupSubmenu
+      :is-visible="showCanvasGroupSubmenu"
+      :parent-visible="isVisible"
+      :style="canvasGroupSubmenuStyle"
+      :current-group-id="currentTask?.parentId"
+      @mouseenter="keepSubmenuOpen"
+      @mouseleave="closeSubmenu('canvasGroup')"
+      @select="(id: string | null) => { closeAllSubmenusNow(); handleMoveToGroup(id) }"
     />
 
     <!-- Quick Actions Row -->
@@ -292,6 +316,7 @@ import {
   Play,
   Flag,
   FolderOpen,
+  LayoutGrid,
   ChevronRight,
   ChevronDown,
   Pencil,
@@ -313,6 +338,7 @@ import StatusSubmenu from './context-menu/StatusSubmenu.vue'
 import DurationSubmenu from './context-menu/DurationSubmenu.vue'
 import MoreSubmenu from './context-menu/MoreSubmenu.vue'
 import ProjectSubmenu from './context-menu/ProjectSubmenu.vue'
+import CanvasGroupSubmenu from './context-menu/CanvasGroupSubmenu.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 
 interface Props {
@@ -340,6 +366,7 @@ const emit = defineEmits<{
   deleteSelected: []
   setDuration: [duration: number | null]
   moveToSection: [taskId: string]
+  moveToGroup: [groupId: string | null]
   setProject: [projectId: string | null]
 }>()
 
@@ -381,11 +408,13 @@ const showStatusSubmenu = ref(false)
 const showDurationSubmenu = ref(false)
 const showMoreSubmenu = ref(false)
 const showProjectSubmenu = ref(false)
+const showCanvasGroupSubmenu = ref(false)
 const submenuTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const statusSubmenuPosition = ref({ x: 0, y: 0 })
 const durationSubmenuPosition = ref({ x: 0, y: 0 })
 const moreSubmenuPosition = ref({ x: 0, y: 0 })
 const projectSubmenuPosition = ref({ x: 0, y: 0 })
+const canvasGroupSubmenuPosition = ref({ x: 0, y: 0 })
 
 // Computed properties for display
 const showInboxHeader = computed(() => {
@@ -447,6 +476,14 @@ const currentProjectLabel = computed(() => {
   const projectId = currentTask.value?.projectId
   if (!projectId) return 'No Project'
   return projectStore.getProjectDisplayName(projectId)
+})
+
+// TASK-1429: Canvas Group label for context menu
+const currentCanvasGroupLabel = computed(() => {
+  const parentId = currentTask.value?.parentId
+  if (!parentId) return 'No Group'
+  const group = canvasStore._rawGroups.find((g: { id: string; name: string }) => g.id === parentId)
+  return group?.name || 'No Group'
 })
 
 const deleteText = computed(() => {
@@ -560,6 +597,12 @@ const pinAsQuickTask = async () => {
     }
 }
 
+// TASK-1429: Handle Canvas Group selection
+const handleMoveToGroup = (groupId: string | null) => {
+  emit('moveToGroup', groupId)
+  emit('close')
+}
+
 // AI Assist handlers
 const openAIAssist = (_event: MouseEvent) => {
   const menuRect = menuRef.value?.getBoundingClientRect()
@@ -659,8 +702,13 @@ const projectSubmenuStyle = computed(() => ({
   top: projectSubmenuPosition.value.y + 'px'
 }))
 
+const canvasGroupSubmenuStyle = computed(() => ({
+  left: canvasGroupSubmenuPosition.value.x + 'px',
+  top: canvasGroupSubmenuPosition.value.y + 'px'
+}))
+
 // Submenu handlers
-const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project', event: MouseEvent) => {
+const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project' | 'canvasGroup', event: MouseEvent) => {
   if (submenuTimeout.value) {
     clearTimeout(submenuTimeout.value)
     submenuTimeout.value = null
@@ -671,11 +719,12 @@ const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project', event: Mo
   showDurationSubmenu.value = false
   showMoreSubmenu.value = false
   showProjectSubmenu.value = false
+  showCanvasGroupSubmenu.value = false
 
   const target = event.currentTarget as HTMLElement
   const triggerRect = target.getBoundingClientRect()
   const menuRect = menuRef.value?.getBoundingClientRect()
-  const submenuWidth = type === 'project' ? 200 : 150
+  const submenuWidth = (type === 'project' || type === 'canvasGroup') ? 200 : 150
 
   // BUG-1095: Position to the right of the MENU, not the trigger
   let x = menuRect ? menuRect.right + 4 : triggerRect.right + 4
@@ -687,7 +736,7 @@ const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project', event: Mo
     x = menuRect ? menuRect.left - submenuWidth - 4 : triggerRect.left - submenuWidth - 4
   }
 
-  const submenuHeight = type === 'more' ? 100 : type === 'project' ? 250 : 180
+  const submenuHeight = type === 'more' ? 100 : (type === 'project' || type === 'canvasGroup') ? 250 : 180
   if (y + submenuHeight > window.innerHeight - 8) {
     y = window.innerHeight - submenuHeight - 8
   }
@@ -701,6 +750,9 @@ const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project', event: Mo
   } else if (type === 'project') {
     projectSubmenuPosition.value = { x, y }
     showProjectSubmenu.value = true
+  } else if (type === 'canvasGroup') {
+    canvasGroupSubmenuPosition.value = { x, y }
+    showCanvasGroupSubmenu.value = true
   } else {
     moreSubmenuPosition.value = { x, y }
     showMoreSubmenu.value = true
@@ -714,11 +766,12 @@ const keepSubmenuOpen = () => {
   }
 }
 
-const closeSubmenu = (type: 'status' | 'duration' | 'more' | 'project') => {
+const closeSubmenu = (type: 'status' | 'duration' | 'more' | 'project' | 'canvasGroup') => {
   submenuTimeout.value = setTimeout(() => {
     if (type === 'status') showStatusSubmenu.value = false
     else if (type === 'duration') showDurationSubmenu.value = false
     else if (type === 'project') showProjectSubmenu.value = false
+    else if (type === 'canvasGroup') showCanvasGroupSubmenu.value = false
     else showMoreSubmenu.value = false
   }, 150)
 }
@@ -733,6 +786,7 @@ const closeAllSubmenusNow = () => {
   showDurationSubmenu.value = false
   showMoreSubmenu.value = false
   showProjectSubmenu.value = false
+  showCanvasGroupSubmenu.value = false
 }
 
 const enterFocus = () => {
@@ -772,6 +826,7 @@ watch(() => props.isVisible, (isVisible) => {
     showDurationSubmenu.value = false
     showMoreSubmenu.value = false
     showProjectSubmenu.value = false
+    showCanvasGroupSubmenu.value = false
     showAIAssist.value = false
   }
 })

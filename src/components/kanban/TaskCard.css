@@ -4,7 +4,7 @@
     backdrop-filter: blur(var(--blur-regular));
     -webkit-backdrop-filter: blur(var(--blur-regular));
     border: 1px solid var(--glass-border-light);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
     padding: var(--space-3);
     margin-bottom: var(--space-2);
     cursor: pointer;
@@ -15,10 +15,7 @@
 }
 
 .task-card:hover {
-    /* TASK-1429: Hover lift + glow */
     border-color: var(--glass-border);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
 }
 
 /* Hide action buttons by default, show on hover */
@@ -264,8 +261,8 @@
 .card-body {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-    margin-top: var(--space-2);
+    gap: var(--space-1);
+    margin-top: var(--space-1_5);
 }
 
 .card-description {
@@ -293,7 +290,7 @@
     background: var(--kanban-card-tag-bg);
     border: 1px solid var(--kanban-card-tag-border);
     border-radius: var(--radius-full);
-    padding: 1px 8px;
+    padding: 0px 6px;
     white-space: nowrap;
 }
 
@@ -302,11 +299,9 @@
     font-weight: 500;
 }
 
-/* TASK-1429: Card footer with separator */
+/* TASK-1429: Card footer - no separator, compact */
 .card-footer {
-    border-top: 1px solid var(--kanban-card-footer-border);
-    margin-top: var(--space-3);
-    padding-top: var(--space-2);
+    margin-top: var(--space-1_5);
 }
 
 /* Expanded card details */
@@ -441,14 +436,14 @@
     padding: var(--space-2) var(--space-3);
     margin-bottom: var(--space-2);
     min-height: 52px;
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
 }
 
 .task-card--spacious {
     padding: var(--space-4);
     margin-bottom: var(--space-3);
     min-height: 64px;
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
 }
 
 .task-card--spacious .task-title {
@@ -513,7 +508,7 @@
 
 /* Pressed state animation */
 .task-card:active {
-    transform: translateY(-1px) scale(0.98);
+    transform: scale(0.98);
     transition: transform 0.1s ease;
 }
 

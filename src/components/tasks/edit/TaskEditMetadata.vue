@@ -503,6 +503,11 @@ const statusIconClass = computed(() => {
   white-space: nowrap;
 }
 
+.pill-btn--primary {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
 .pill-btn:hover {
   background: var(--glass-bg-soft);
   border-color: var(--brand-primary);
@@ -510,8 +515,8 @@ const statusIconClass = computed(() => {
 }
 
 .pill-btn.active {
-  background: var(--brand-primary);
+  background: var(--brand-bg-subtle);
   border-color: var(--brand-primary);
-  color: var(--surface-primary);
+  color: var(--brand-primary);
 }
 </style>

@@ -3942,13 +3942,13 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1424**~~ | **P2** | ✅ **KDE widget nanny notifications — schedule-gated idle reminders when no Pomodoro active** (✅ DONE 2026-03-03) |
 | ~~**TASK-1423**~~ | **P2** | ✅ **KDE widget: add button to open Tauri or web app** (✅ DONE 2026-03-03) |
 | ~~**TASK-1431**~~ | **P2** | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02) |
-| **TASK-1429** | **P0** | 👀 **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link** (👀 REVIEW 2026-03-02) |
+| ~~**TASK-1429**~~ | **P0** | ✅ **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link + perm delete + duration presets** (✅ DONE 2026-03-03) |
 | ~~**TASK-1428**~~ | **P0** | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03) |
 | ~~**TASK-1440**~~ | **P1** | ✅ **Gamification offline resilience — local-first state updates + try/catch wrapping for all Supabase writes** (✅ DONE 2026-03-03) |
 | ~~**TASK-1441**~~ | **P2** | ✅ **Graceful offline UX for non-cacheable features — AI chat, file uploads, Drive show informative messages instead of failing silently** (✅ DONE 2026-03-03) |
 | **BUG-1442** | **P1** | 📋 **timer_sessions.position_version column does not exist — DB schema mismatch** (📋 PLANNED 2026-03-03) |
 | **INQUIRY-1438** | **P0** | 🔄 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (🔄 IN PROGRESS 2026-03-03) |
-| **TASK-1434** | **P0** | 📋 **Calendar drag-to-create — click and drag on time slots to create a new task** (📋 PLANNED 2026-03-03) |
+| ~~**TASK-1434**~~ | **P0** | ✅ **Calendar drag-to-create — click and drag on time slots to create a new task** (✅ DONE 2026-03-03) |
 | ~~**TASK-1433**~~ | **P0** | ✅ **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (✅ DONE 2026-03-03) |
 | **BUG-1432** | **P1** | 🔄 **Overdue tasks display today's date instead of actual due date** (🔄 IN PROGRESS 2026-03-03) |
 | **TASK-1427** | **P0** | 📋 **Offline: merge write queue into read cache on offline load** (📋 PLANNED 2026-03-02) |

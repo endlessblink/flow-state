@@ -857,9 +857,9 @@ PlasmoidItem {
 
     // ===== FULL REPRESENTATION (POPUP) =====
     fullRepresentation: Rectangle {
-        Layout.minimumWidth: 340
+        Layout.minimumWidth: 380
         Layout.minimumHeight: root.isAuthenticated ? 750 : 320
-        Layout.preferredWidth: 360
+        Layout.preferredWidth: 400
         Layout.preferredHeight: root.isAuthenticated ? 850 : 350
 
         color: root.bgColor
@@ -2085,7 +2085,7 @@ PlasmoidItem {
                                                     contentItem: Text {
                                                         text: modelData
                                                         font.pixelSize: 11
-                                                        color: root.textColor
+                                                        color: highlighted ? "#FFFFFF" : root.textColor
                                                         verticalAlignment: Text.AlignVCenter
                                                     }
                                                     background: Rectangle {
@@ -2152,7 +2152,7 @@ PlasmoidItem {
                                                     contentItem: Text {
                                                         text: modelData
                                                         font.pixelSize: 11
-                                                        color: root.textColor
+                                                        color: highlighted ? "#FFFFFF" : root.textColor
                                                         verticalAlignment: Text.AlignVCenter
                                                     }
                                                     background: Rectangle {
@@ -2180,64 +2180,111 @@ PlasmoidItem {
                                                 color: root.mutedColor
                                             }
 
-                                            Row {
-                                                spacing: 4
+                                            Rectangle {
                                                 width: parent.width
+                                                height: 28
+                                                radius: 4
+                                                color: Qt.rgba(0.18, 0.16, 0.27, 0.6)
+                                                border.width: 1
+                                                border.color: dueDateInput.activeFocus ? root.workColor : Qt.rgba(1, 1, 1, 0.1)
 
-                                                Rectangle {
-                                                    width: parent.width - clearDateBtn.width - 4
-                                                    height: 28
-                                                    radius: 4
-                                                    color: Qt.rgba(0.18, 0.16, 0.27, 0.6)
-                                                    border.width: 1
-                                                    border.color: dueDateInput.activeFocus ? root.workColor : Qt.rgba(1, 1, 1, 0.1)
+                                                TextInput {
+                                                    id: dueDateInput
+                                                    anchors.fill: parent
+                                                    anchors.leftMargin: 6
+                                                    anchors.rightMargin: 6
+                                                    verticalAlignment: Text.AlignVCenter
+                                                    font.pixelSize: 11
+                                                    color: root.textColor
+                                                    clip: true
+                                                    selectByMouse: true
 
-                                                    TextInput {
-                                                        id: dueDateInput
-                                                        anchors.fill: parent
-                                                        anchors.leftMargin: 6
-                                                        anchors.rightMargin: 6
-                                                        verticalAlignment: Text.AlignVCenter
+                                                    Component.onCompleted: {
+                                                        text = modelData.due_date ? modelData.due_date.substring(0, 10) : ""
+                                                    }
+
+                                                    // Placeholder
+                                                    Text {
+                                                        visible: !dueDateInput.text && !dueDateInput.activeFocus
+                                                        text: "YYYY-MM-DD"
                                                         font.pixelSize: 11
-                                                        color: root.textColor
-                                                        text: modelData.due_date ? modelData.due_date.substring(0, 10) : ""
-                                                        inputMask: "9999-99-99"
-
-                                                        // Placeholder
-                                                        Text {
-                                                            visible: !dueDateInput.text && !dueDateInput.activeFocus
-                                                            text: "YYYY-MM-DD"
-                                                            font.pixelSize: 11
-                                                            color: root.mutedColor
-                                                            anchors.verticalCenter: parent.verticalCenter
-                                                            anchors.left: parent.left
-                                                        }
+                                                        color: root.mutedColor
+                                                        anchors.verticalCenter: parent.verticalCenter
+                                                        anchors.left: parent.left
                                                     }
                                                 }
 
-                                                // Clear date button
-                                                Rectangle {
-                                                    id: clearDateBtn
-                                                    width: 28
-                                                    height: 28
-                                                    radius: 4
-                                                    color: clearDateMA.containsMouse ? Qt.rgba(1, 0.3, 0.3, 0.2) : Qt.rgba(0.18, 0.16, 0.27, 0.6)
-                                                    border.width: 1
-                                                    border.color: Qt.rgba(1, 1, 1, 0.1)
-
-                                                    Text {
-                                                        anchors.centerIn: parent
-                                                        text: "\u2715"
-                                                        font.pixelSize: 12
-                                                        color: root.mutedColor
-                                                    }
+                                                // Clear button
+                                                Text {
+                                                    visible: dueDateInput.text !== ""
+                                                    anchors.right: parent.right
+                                                    anchors.rightMargin: 6
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    text: "\u00d7"
+                                                    font.pixelSize: 14
+                                                    color: root.mutedColor
 
                                                     MouseArea {
-                                                        id: clearDateMA
                                                         anchors.fill: parent
-                                                        hoverEnabled: true
+                                                        anchors.margins: -4
                                                         cursorShape: Qt.PointingHandCursor
                                                         onClicked: dueDateInput.text = ""
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Row 2b: Duration quick-set templates
+                                    Row {
+                                        spacing: 4
+                                        width: parent.width
+
+                                        Text {
+                                            text: "Set due:"
+                                            font.pixelSize: 10
+                                            color: root.mutedColor
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+
+                                        Repeater {
+                                            model: [
+                                                { label: "15m", mins: 15 },
+                                                { label: "30m", mins: 30 },
+                                                { label: "1h", mins: 60 },
+                                                { label: "2h", mins: 120 },
+                                                { label: "3h", mins: 180 }
+                                            ]
+
+                                            Rectangle {
+                                                width: durationLabel.implicitWidth + 12
+                                                height: 22
+                                                radius: 11
+                                                color: durationChipMA.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2)
+                                                                                     : Qt.rgba(1, 1, 1, 0.06)
+                                                border.width: 1
+                                                border.color: durationChipMA.containsMouse ? root.workColor : Qt.rgba(1, 1, 1, 0.1)
+
+                                                Text {
+                                                    id: durationLabel
+                                                    anchors.centerIn: parent
+                                                    text: modelData.label
+                                                    font.pixelSize: 10
+                                                    color: durationChipMA.containsMouse ? root.workColor : root.textColor
+                                                }
+
+                                                MouseArea {
+                                                    id: durationChipMA
+                                                    anchors.fill: parent
+                                                    hoverEnabled: true
+                                                    cursorShape: Qt.PointingHandCursor
+                                                    onClicked: {
+                                                        var now = new Date()
+                                                        now.setMinutes(now.getMinutes() + modelData.mins)
+                                                        var y = now.getFullYear()
+                                                        var m = ("0" + (now.getMonth() + 1)).slice(-2)
+                                                        var d = ("0" + now.getDate()).slice(-2)
+                                                        dueDateInput.text = y + "-" + m + "-" + d
                                                     }
                                                 }
                                             }

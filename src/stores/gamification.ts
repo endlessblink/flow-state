@@ -521,6 +521,27 @@ export const useGamificationStore = defineStore('gamification', () => {
     const xpAwarded = Math.round(finalAmount)
     const previousLevel = profile.value.level
 
+    // [OFFLINE-SAFE] Update local state FIRST — Supabase failure will not revert this.
+    // XP will be stale on server until next successful write; user sees correct values locally.
+    const newTotalXp = profile.value.totalXp + xpAwarded
+    const newAvailableXp = profile.value.availableXp + xpAwarded
+    const newLevel = levelFromXp(newTotalXp)
+    const leveledUp = newLevel > previousLevel
+
+    profile.value.totalXp = newTotalXp
+    profile.value.availableXp = newAvailableXp
+    profile.value.level = newLevel
+
+    // Show notification (local state already updated)
+    if (settings.value.showXpNotifications) {
+      showXpToast(xpAwarded, reason, multipliers)
+    }
+
+    // Show level up notification
+    if (leveledUp && settings.value.showAchievementNotifications) {
+      showLevelUpToast(newLevel)
+    }
+
     try {
       // Insert XP log
       const { error: logError } = await supabase.from('xp_logs').insert({
@@ -536,64 +557,48 @@ export const useGamificationStore = defineStore('gamification', () => {
       })
       if (logError) console.warn('[Gamification] Failed to log XP award:', logError)
 
-      // ATOMIC UPDATE: Use SQL increment to prevent race conditions
-      // Two simultaneous XP awards will both increment correctly
+      // [OFFLINE-SAFE] Persist XP to Supabase — failure keeps local state intact.
       const { data: updated, error } = await supabase
         .from('user_gamification')
         .update({
-          total_xp: profile.value.totalXp + xpAwarded,
-          available_xp: profile.value.availableXp + xpAwarded,
+          total_xp: newTotalXp,
+          available_xp: newAvailableXp,
         })
         .eq('user_id', authStore.user.id)
         .select('total_xp, available_xp')
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.warn('[Gamification] Failed to persist XP to Supabase (local state preserved):', error)
+      } else if (updated) {
+        // Reconcile with server values to ensure consistency
+        profile.value.totalXp = updated.total_xp
+        profile.value.availableXp = updated.available_xp
+        profile.value.level = levelFromXp(updated.total_xp)
 
-      // Use returned values to ensure consistency
-      const newTotalXp = updated.total_xp
-      const newAvailableXp = updated.available_xp
-      const newLevel = levelFromXp(newTotalXp)
-      const leveledUp = newLevel > previousLevel
-
-      // Update level if changed
-      if (newLevel !== profile.value.level) {
-        await supabase
-          .from('user_gamification')
-          .update({ level: newLevel })
-          .eq('user_id', authStore.user.id)
-      }
-
-      // Update local state with actual DB values
-      profile.value.totalXp = newTotalXp
-      profile.value.availableXp = newAvailableXp
-      profile.value.level = newLevel
-
-      // Show notification
-      if (settings.value.showXpNotifications) {
-        showXpToast(xpAwarded, reason, multipliers)
-      }
-
-      // Show level up notification
-      if (leveledUp && settings.value.showAchievementNotifications) {
-        showLevelUpToast(newLevel)
-      }
-
-      // Check achievements
-      await checkAchievements()
-
-      return {
-        xpAwarded,
-        newTotalXp,
-        newAvailableXp,
-        newLevel,
-        leveledUp,
-        previousLevel,
-        multipliers,
+        // Update level in DB if changed
+        if (newLevel !== previousLevel) {
+          await supabase
+            .from('user_gamification')
+            .update({ level: profile.value.level })
+            .eq('user_id', authStore.user.id)
+        }
       }
     } catch (e) {
-      console.error('[Gamification] Failed to award XP:', e)
-      return null
+      console.warn('[Gamification] XP Supabase write failed (local state preserved):', e)
+    }
+
+    // Check achievements (runs regardless of Supabase success)
+    await checkAchievements()
+
+    return {
+      xpAwarded,
+      newTotalXp,
+      newAvailableXp,
+      newLevel,
+      leveledUp,
+      previousLevel,
+      multipliers,
     }
   }
 
@@ -647,14 +652,19 @@ export const useGamificationStore = defineStore('gamification', () => {
         : 999
 
       if (daysMissed <= 2 && profile.value.streakFreezes > 0) {
-        // Use freeze
+        // Use freeze — [OFFLINE-SAFE] update local state first
         freezeUsed = true
         newStreak = profile.value.currentStreak + 1
-        await supabase
-          .from('user_gamification')
-          .update({ streak_freezes: profile.value.streakFreezes - 1 })
-          .eq('user_id', authStore.user.id)
         profile.value.streakFreezes--
+        // [OFFLINE-SAFE] Persist freeze deduction — failure keeps local state intact.
+        supabase
+          .from('user_gamification')
+          .update({ streak_freezes: profile.value.streakFreezes })
+          .eq('user_id', authStore.user.id)
+          .then(({ error }) => {
+            if (error) console.warn('[Gamification] Failed to persist streak freeze deduction (local state preserved):', error)
+          })
+          .catch((e) => console.warn('[Gamification] Streak freeze Supabase write failed (local state preserved):', e))
       } else {
         // Streak broken
         streakBroken = true
@@ -686,26 +696,31 @@ export const useGamificationStore = defineStore('gamification', () => {
       }
     }
 
-    // Update profile
+    // [OFFLINE-SAFE] Update local state FIRST — streak loss is extremely frustrating.
+    // Supabase failure keeps the streak alive locally; server will reconcile on next load.
     const longestStreak = Math.max(profile.value.longestStreak, newStreak)
-    const { error } = await supabase
-      .from('user_gamification')
-      .update({
-        current_streak: newStreak,
-        longest_streak: longestStreak,
-        last_activity_date: todayStr,
-        xp_decay_date: null, // Reset decay timer
-      })
-      .eq('user_id', authStore.user.id)
-
-    if (error) {
-      console.error('[Gamification] Failed to update streak:', error)
-      return null
-    }
-
     profile.value.currentStreak = newStreak
     profile.value.longestStreak = longestStreak
     profile.value.lastActivityDate = today
+
+    // [OFFLINE-SAFE] Persist streak to Supabase — failure keeps local state intact.
+    try {
+      const { error } = await supabase
+        .from('user_gamification')
+        .update({
+          current_streak: newStreak,
+          longest_streak: longestStreak,
+          last_activity_date: todayStr,
+          xp_decay_date: null, // Reset decay timer
+        })
+        .eq('user_id', authStore.user.id)
+
+      if (error) {
+        console.warn('[Gamification] Failed to persist streak to Supabase (local state preserved):', error)
+      }
+    } catch (e) {
+      console.warn('[Gamification] Streak Supabase write failed (local state preserved):', e)
+    }
 
     return {
       newStreak,
@@ -814,35 +829,41 @@ export const useGamificationStore = defineStore('gamification', () => {
 
     const now = new Date()
 
-    const { error } = await supabase
-      .from('user_achievements')
-      .upsert({
-        user_id: authStore.user.id,
-        achievement_id: achievement.id,
-        progress: achievement.conditionValue,
-        earned_at: now.toISOString(),
-      }, { onConflict: 'user_id,achievement_id' })
-
-    if (error) {
-      console.error('[Gamification] Failed to unlock achievement:', error)
-      return null
-    }
-
+    // [OFFLINE-SAFE] Update local state FIRST — achievement unlock is visible immediately.
+    // Supabase failure will not revert the unlock; server will reconcile on next load.
     userAchievements.value.set(achievement.id, {
       progress: achievement.conditionValue,
       earnedAt: now,
     })
 
-    // Award XP for achievement
+    // Show notification (local state already updated)
+    if (settings.value.showAchievementNotifications) {
+      showAchievementToast(achievement)
+    }
+
+    // [OFFLINE-SAFE] Persist unlock to Supabase — failure keeps local state intact.
+    try {
+      const { error } = await supabase
+        .from('user_achievements')
+        .upsert({
+          user_id: authStore.user.id,
+          achievement_id: achievement.id,
+          progress: achievement.conditionValue,
+          earned_at: now.toISOString(),
+        }, { onConflict: 'user_id,achievement_id' })
+
+      if (error) {
+        console.warn('[Gamification] Failed to persist achievement unlock to Supabase (local state preserved):', error)
+      }
+    } catch (e) {
+      console.warn('[Gamification] Achievement Supabase write failed (local state preserved):', e)
+    }
+
+    // Award XP for achievement (runs regardless of Supabase success)
     if (achievement.xpReward > 0) {
       await awardXp(achievement.xpReward, 'achievement', {
         metadata: { achievementId: achievement.id },
       })
-    }
-
-    // Show notification
-    if (settings.value.showAchievementNotifications) {
-      showAchievementToast(achievement)
     }
 
     return {
@@ -884,19 +905,24 @@ export const useGamificationStore = defineStore('gamification', () => {
     const currentValue = stats.value[statKey] as number
     const newValue = currentValue + amount
 
-    const { error } = await supabase
-      .from('user_stats')
-      .update({ [camelToSnake(statKey)]: newValue })
-      .eq('user_id', authStore.user.id)
+    // [OFFLINE-SAFE] Update local state FIRST — Supabase failure will not revert this.
+    ;(stats.value[statKey] as number) = newValue
 
-    if (error) {
-      console.error('[Gamification] Failed to increment stat:', error)
-      return
+    // [OFFLINE-SAFE] Persist stat to Supabase — failure keeps local state intact.
+    try {
+      const { error } = await supabase
+        .from('user_stats')
+        .update({ [camelToSnake(statKey)]: newValue })
+        .eq('user_id', authStore.user.id)
+
+      if (error) {
+        console.warn('[Gamification] Failed to persist stat to Supabase (local state preserved):', error)
+      }
+    } catch (e) {
+      console.warn('[Gamification] Stat Supabase write failed (local state preserved):', e)
     }
 
-    (stats.value[statKey] as number) = newValue
-
-    // Check achievements after stat update
+    // Check achievements after stat update (runs regardless of Supabase success)
     await checkAchievements()
   }
 
@@ -981,49 +1007,50 @@ export const useGamificationStore = defineStore('gamification', () => {
     purchaseInProgress = true
     const newAvailableXp = profile.value.availableXp - item.priceXp
 
+    // [OFFLINE-SAFE] Update local state FIRST — XP deduction and item ownership are visible immediately.
+    // Supabase failure will not revert the purchase locally; server reconciles on next load.
+    profile.value.availableXp = newAvailableXp
+    ownedItems.value.add(itemId)
+    if (item.category === 'theme') {
+      profile.value.unlockedThemes.push(itemId)
+    }
+
     try {
-      // Insert purchase record
-      await supabase.from('user_purchases').insert({
+      // [OFFLINE-SAFE] Persist purchase record to Supabase — failure keeps local state intact.
+      const { error: purchaseError } = await supabase.from('user_purchases').insert({
         user_id: authStore.user.id,
         item_id: itemId,
         xp_spent: item.priceXp,
       })
+      if (purchaseError) console.warn('[Gamification] Failed to persist purchase record (local state preserved):', purchaseError)
 
-      // Log XP spent
-      await supabase.from('xp_logs').insert({
+      // [OFFLINE-SAFE] Log XP spent — failure keeps local state intact.
+      const { error: logError } = await supabase.from('xp_logs').insert({
         user_id: authStore.user.id,
         xp_amount: -item.priceXp,
         xp_type: 'spent',
         reason: 'purchase',
         metadata: { itemId, itemName: item.name },
       })
+      if (logError) console.warn('[Gamification] Failed to log XP spend (local state preserved):', logError)
 
-      // Update profile
+      // [OFFLINE-SAFE] Update profile XP in DB — failure keeps local state intact.
       const updates: Partial<DbUserGamification> = {
         available_xp: newAvailableXp,
       }
-
-      // Add to unlocked themes if it's a theme
       if (item.category === 'theme') {
-        updates.unlocked_themes = [...profile.value.unlockedThemes, itemId]
+        updates.unlocked_themes = [...(profile.value.unlockedThemes)]
       }
-
-      await supabase.from('user_gamification').update(updates).eq('user_id', authStore.user.id)
-
-      // Update local state
-      profile.value.availableXp = newAvailableXp
-      ownedItems.value.add(itemId)
-      if (item.category === 'theme') {
-        profile.value.unlockedThemes.push(itemId)
-      }
+      const { error: profileError } = await supabase.from('user_gamification').update(updates).eq('user_id', authStore.user.id)
+      if (profileError) console.warn('[Gamification] Failed to persist XP deduction to Supabase (local state preserved):', profileError)
 
       // Check theme purchase achievement
       await triggerSpecialAchievement('theme_purchased')
 
       return { success: true, item, xpSpent: item.priceXp, newAvailableXp }
     } catch (e) {
-      console.error('[Gamification] Purchase failed:', e)
-      return { success: false, item, xpSpent: 0, newAvailableXp: profile.value?.availableXp ?? 0, error: 'Purchase failed' }
+      console.warn('[Gamification] Purchase Supabase writes failed (local state preserved):', e)
+      return { success: true, item, xpSpent: item.priceXp, newAvailableXp }
     } finally {
       purchaseInProgress = false
     }

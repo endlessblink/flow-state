@@ -93,6 +93,10 @@
             <label>Show full-screen overlay on session complete</label>
             <default>true</default>
         </entry>
+        <entry name="preEndWarningSeconds" type="Int">
+            <label>Seconds before session end to show warning (0 = disabled)</label>
+            <default>60</default>
+        </entry>
 
         <!-- Pinned Tasks Filter (power-user: edit via right-click > Configure) -->
         <entry name="filterProjectId" type="String">

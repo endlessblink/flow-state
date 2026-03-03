@@ -39,7 +39,7 @@
       <div class="quick-date-pills">
         <button
           type="button"
-          class="pill-btn"
+          class="pill-btn pill-btn--primary"
           :class="{ active: activeDatePill === 'today' }"
           @click="setQuickDate('today')"
         >

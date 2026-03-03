@@ -1118,8 +1118,52 @@ kquitapp6 plasmashell && sleep 1 && kstart plasmashell &  # Restart panel
 
 ---
 
+# PART 12: KANBAN BOARD DESIGN
+
+## 12.1 Card Anatomy (Good Code Reference)
+
+```
+┌─────────────────────────────┐
+│ **Title** (bold, 14-15px)   │  ← weight 600, --text-primary
+│ Description preview that    │  ← --text-tertiary, 13px
+│ wraps to two lines max...   │  ← -webkit-line-clamp: 2
+│                             │
+│ 📅 Jan 15  ☑ 3/5  🍅 2    │  ← 12px icons, --text-muted, inline
+│ [Tag1] [Tag2]               │  ← small pills, subtle bg+border
+└─────────────────────────────┘
+```
+
+## 12.2 Column Rules
+
+- Columns are **TRANSPARENT** — cards are the visual focus
+- Column header: title (600 weight) + count pill + add button
+- No column background, no glass, no container border
+- Left-border separator between columns (the TickTick way)
+
+## 12.3 Card Rules
+
+- Card radius: 10-12px (`--radius-lg`), NEVER 20px+
+- Card padding: 10-12px (`--space-2_5` to `--space-3`)
+- Hover: border-color change ONLY — no `translateY` lift, no shadow
+- NO separator lines inside cards — hierarchy via font size/weight/color
+- Information density > visual chrome
+- Empty metadata = hidden (no empty footers/dividers)
+
+## 12.4 Anti-Patterns (TASK-1429 v1 Lessons)
+
+| Anti-Pattern | Why It's Wrong | Correct Approach |
+|-------------|----------------|------------------|
+| Glass morphism column containers | Too heavy, distracting from cards | `background: transparent` |
+| `border-top` separator in card footer | Visual noise, wastes space | Hierarchy via spacing alone |
+| `translateY` hover lift + shadow | Feels floaty, not grounded | `border-color` change only |
+| `border-radius: 20px+` on cards | Too bubbly, wastes space | `--radius-lg` (12px) |
+| `padding: 16px` on cards | Too spacious for compact board | 10-12px padding |
+| Solid-fill buttons in columns | Breaks glass morphism system | Glass bg + border buttons |
+
+---
+
 **Skill Keywords:** UI design, UX, color theory, typography, spacing, layout, grid, accessibility, WCAG 2.2, animation, design tokens, visual hierarchy, Gestalt, app icons, ImageMagick, Tauri
 
 **Standards:** WCAG 2.2 (June 2024), Material Design 3, Apple HIG
 
-**Last Updated:** January 2026
+**Last Updated:** March 2026

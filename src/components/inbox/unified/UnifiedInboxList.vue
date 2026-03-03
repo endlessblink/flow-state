@@ -182,8 +182,11 @@ defineExpose({ scrollTo })
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  /* Static scrollbar-color covers the KDE system overlay scrollbar.
+     NO hover toggle — toggling transparent↔visible causes ghost/dual-render.
+     Webkit browsers use ::-webkit-scrollbar rules from styles.css instead. */
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 /* Virtual scroll container */
@@ -192,7 +195,7 @@ defineExpose({ scrollTo })
   overflow-y: auto;
   position: relative;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 .virtual-wrapper {

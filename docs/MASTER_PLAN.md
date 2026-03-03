@@ -20,9 +20,9 @@
 
 ---
 
-### BUG-1429: Calendar Inbox Duplicate Display (🔄 IN PROGRESS)
+### ~~BUG-1429~~: Calendar Inbox Duplicate Display (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-02)
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-02)
 
 **Problem**: Tasks dragged from Calendar Inbox onto calendar grid remain visible in the inbox after being scheduled, creating duplicate task entries.
 
@@ -78,9 +78,9 @@
 
 ---
 
-### TASK-1428: Auto-inherit group properties when creating task in a group (🔄 IN PROGRESS)
+### ~~TASK-1428~~: Auto-inherit group properties when creating task in a group (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-03-02)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-03-03)
 
 **Problem**: Creating a task inside a group like "Today" should automatically assign that group's properties to the new task (e.g., today's due date). Currently the user must manually set properties after creation.
 
@@ -3886,7 +3886,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1423** | **P2** | 📋 **KDE widget: add button to open Tauri or web app** (📋 PLANNED 2026-03-02) |
 | ~~**TASK-1431**~~ | **P2** | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02) |
 | **TASK-1429** | **P0** | 👀 **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link** (👀 REVIEW 2026-03-02) |
-| **TASK-1428** | **P0** | 🔄 **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (🔄 IN PROGRESS 2026-03-02) |
+| ~~**TASK-1428**~~ | **P0** | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03) |
 | **TASK-1427** | **P0** | 📋 **Offline: merge write queue into read cache on offline load** (📋 PLANNED 2026-03-02) |
 | **TASK-1426** | **P0** | 📋 **Offline: auth grace period — keep expired session for local ops** (📋 PLANNED 2026-03-02) |
 | **TASK-1425** | **P0** | 📋 **Offline: fast startup — skip Supabase when navigator.onLine=false** (📋 PLANNED 2026-03-02) |

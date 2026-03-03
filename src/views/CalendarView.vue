@@ -756,7 +756,7 @@ watch(currentDate, (newDate, _oldDate) => {
   opacity: 0;
 }
 
-/* Custom scrollbar for calendar-main */
+/* Custom scrollbar for calendar-main — hidden by default, visible on hover */
 .calendar-main::-webkit-scrollbar {
   width: 6px;
 }
@@ -766,16 +766,16 @@ watch(currentDate, (newDate, _oldDate) => {
 }
 
 .calendar-main::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
+  background: transparent;
   border-radius: var(--radius-md);
 }
 
-.calendar-main::-webkit-scrollbar-thumb:hover {
+.calendar-main:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.calendar-main:hover::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.4);
 }
 
-.calendar-main {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
-}
 </style>

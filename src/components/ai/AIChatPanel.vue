@@ -224,6 +224,11 @@ function retryLastMessage() {
  * Handle quick action click — direct tool call if available, else send as message.
  */
 function handleQuickAction(action: { label: string; message: string; directTool?: { tool: string; parameters: Record<string, unknown> } | null }) {
+  // TASK-1441: Quick actions use AI which requires network
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    error.value = 'AI chat requires an internet connection. Please check your network and try again.'
+    return
+  }
   if (action.directTool) {
     executeDirectTool(action.label, action.directTool)
   } else {
@@ -444,6 +449,11 @@ function scrollToBottom() {
 
 function handleSubmit() {
   if (!canSend.value) return
+  // TASK-1441: AI chat requires a network connection — show informative message offline
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    error.value = 'AI chat requires an internet connection. Please check your network and try again.'
+    return
+  }
   const message = inputText.value.trim()
   if (message) {
     lastUserMessage.value = message
@@ -526,6 +536,8 @@ function selectProviderOption(provider: 'auto' | 'groq' | 'openrouter' | 'ollama
 // Handle nudge send events
 function handleNudgeSend(event: Event) {
   const detail = (event as CustomEvent).detail
+  // TASK-1441: Suppress nudge messages when offline — AI requires network
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return
   if (detail?.content) {
     sendMessage(detail.content)
   }

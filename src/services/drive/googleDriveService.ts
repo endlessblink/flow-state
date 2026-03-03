@@ -54,6 +54,10 @@ function resolveSupabaseUrl(): string {
 // ============================================================================
 
 async function callGoogleDriveProxy(body: Record<string, unknown>): Promise<unknown> {
+  // TASK-1441: Drive API requires network — fail fast with a clear message instead of cryptic fetch errors
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Google Drive requires an internet connection. Please check your network and try again.')
+  }
   const supabaseUrl = resolveSupabaseUrl()
   if (!supabaseUrl) {
     throw new Error('[GoogleDriveService] VITE_SUPABASE_URL is not configured')

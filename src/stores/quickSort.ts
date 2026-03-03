@@ -165,6 +165,9 @@ export const useQuickSortStore = defineStore('quickSort', () => {
   const supabaseDb = useSupabaseDatabase()
   const authStore = useAuthStore()
 
+  // TASK-1442: Pending session for retry-on-reconnect
+  const pendingSessionSave = ref<SessionSummary | null>(null)
+
   async function saveToDatabase(newSession?: SessionSummary) {
     // Always save to localStorage first (fast, reliable)
     saveToLocalStorage()
@@ -173,9 +176,28 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     if (authStore.user?.id && newSession) {
       try {
         await supabaseDb.saveQuickSortSession(newSession)
+        pendingSessionSave.value = null
         console.log('📊 Quick Sort session saved to Supabase')
       } catch (error) {
-        console.warn('Failed to save Quick Sort session to Supabase (localStorage already saved):', error)
+        console.warn('[QUICK-SORT] Failed to save session to Supabase, will retry on reconnect:', error)
+        pendingSessionSave.value = newSession
+
+        // TASK-1442: Register one-time online listener for retry
+        if (typeof window !== 'undefined') {
+          const retryOnReconnect = async () => {
+            if (pendingSessionSave.value) {
+              try {
+                await supabaseDb.saveQuickSortSession(pendingSessionSave.value)
+                pendingSessionSave.value = null
+                console.log('[QUICK-SORT] Session saved on reconnect')
+              } catch {
+                // Still offline, re-register
+                window.addEventListener('online', retryOnReconnect, { once: true })
+              }
+            }
+          }
+          window.addEventListener('online', retryOnReconnect, { once: true })
+        }
       }
     }
   }

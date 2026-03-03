@@ -120,10 +120,13 @@ find_matching_task() {
           echo "$task_id|$task_status"
           return 0
         fi
-        # Also check full path for directory patterns
-        if echo "$file_path" | grep -qE "$regex" 2>/dev/null; then
-          echo "$task_id|$task_status"
-          return 0
+        # Also check full path for directory patterns (only if pattern contains '/')
+        # Prevents false matches from project path segments (e.g. "endlessblink" matching "link**")
+        if [[ "$pattern" == *"/"* ]]; then
+          if echo "$file_path" | grep -qE "$regex" 2>/dev/null; then
+            echo "$task_id|$task_status"
+            return 0
+          fi
         fi
       fi
     done

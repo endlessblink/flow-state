@@ -24,6 +24,11 @@ const props = defineProps<{
     direction: 'top' | 'bottom'
   } | null
   externalEvents?: ExternalCalendarEvent[]
+  // TASK-1434: Drag-to-create state from parent
+  isCreatingTask?: boolean
+  createStartSlotIndex?: number | null
+  createEndSlotIndex?: number | null
+  createDate?: string | null
 }>()
 
 // Same emit signatures as CalendarDayView — uses TimeSlot for drop targets
@@ -42,6 +47,7 @@ defineEmits<{
   (e: 'startTimer', weekEvent: WeekEvent): void
   (e: 'startResize', event: MouseEvent, weekEvent: WeekEvent, direction: 'top' | 'bottom'): void
   (e: 'cellDblClick', dateString: string, hour: number): void
+  (e: 'cellMouseDown', event: MouseEvent, dateString: string, hour: number): void
 }>()
 
 // Inject helpers from parent CalendarView
@@ -167,6 +173,19 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   }
 }
 
+// TASK-1434: Check if a week cell is within the drag-to-create range
+const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
+  if (!props.isCreatingTask || props.createDate !== dateString) return false
+  if (props.createStartSlotIndex == null || props.createEndSlotIndex == null) return false
+
+  const startIdx = Math.min(props.createStartSlotIndex, props.createEndSlotIndex)
+  const endIdx = Math.max(props.createStartSlotIndex, props.createEndSlotIndex)
+  const cellStartIdx = hour * 2
+  const cellEndIdx = hour * 2 + 1
+
+  return cellEndIdx >= startIdx && cellStartIdx <= endIdx
+}
+
 </script>
 
 <template>
@@ -213,14 +232,18 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
               v-for="hour in workingHours"
               :key="`${dayIndex}-${hour}`"
               class="week-time-cell"
+              :data-slot-date="day.dateString"
+              :data-hour="hour"
               :class="{
                 'current-time': isCurrentWeekTimeCell(day.dateString, hour),
-                'drag-over': activeDragCell?.dayIndex === dayIndex && activeDragCell?.hour === hour
+                'drag-over': activeDragCell?.dayIndex === dayIndex && activeDragCell?.hour === hour,
+                'creating': isWeekCellInCreateRange(day.dateString, hour)
               }"
               @dragover.prevent="activeDragCell = { dayIndex, hour }; $emit('dragover', $event, createSlot(day.dateString, hour))"
               @dragenter.prevent="activeDragCell = { dayIndex, hour }; $emit('dragenter', $event, createSlot(day.dateString, hour))"
               @dragleave="$emit('dragleave')"
               @drop.prevent="activeDragCell = null; $emit('drop', $event, createSlot(day.dateString, hour))"
+              @mousedown.self="$emit('cellMouseDown', $event, day.dateString, hour)"
               @dblclick.self="$emit('cellDblClick', day.dateString, hour)"
             >
               <!-- Ghost Preview (during inbox drag) — same as day view -->
@@ -430,6 +453,11 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 .week-time-cell.current-time {
   background: var(--danger-bg-subtle);
   box-shadow: inset 0 -2px 0 var(--color-danger);
+}
+
+.week-time-cell.creating {
+  background: var(--brand-primary-subtle, rgba(78, 205, 196, 0.1));
+  border-color: var(--brand-primary);
 }
 
 /* Week event — absolute-positioned time-spanning block (like Google Calendar) */

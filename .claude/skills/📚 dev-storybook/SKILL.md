@@ -192,6 +192,38 @@ border: 1px solid var(--glass-border-medium);
 
 ## Critical Rules
 
+### NEVER Solid Fill for Active Chips/Buttons
+
+**Active state on pill buttons, chips, and date shortcuts MUST use glass morphism — NEVER solid `var(--brand-primary)` background.**
+
+```css
+/* ❌ WRONG — Solid fill (violates glass morphism rule) */
+.pill-btn.active {
+  background: var(--brand-primary);
+  color: var(--surface-primary);
+}
+
+/* ✅ CORRECT — Glass with teal border + teal text */
+.pill-btn.active {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+```
+
+Per CLAUDE.md: Solid `var(--brand-primary)` background is ONLY acceptable for small indicators (checkbox fills, toggle dots, progress bars), NOT buttons or chips.
+
+### Modals MUST Render on Top of Background
+
+**Modals must ALWAYS appear above the backdrop/background, never behind it.** In Storybook, modal stories must ensure the overlay renders at the correct z-index (`var(--z-modal)` = 1300).
+
+Common causes of modals rendering behind backgrounds:
+- Story decorator creates a stacking context (e.g., `transform`, `filter`, `will-change`) that traps `position: fixed`
+- Missing `z-index` on modal overlay
+- Parent container has `overflow: hidden` clipping the modal
+
+**Fix**: Ensure story decorators don't create unwanted stacking contexts. Use `position: relative; z-index: 0;` on the story wrapper if needed, or render the modal via a portal/teleport.
+
 ### Vue 3 Template Restrictions
 
 **NEVER use `<style>` or `<script>` tags inside runtime templates**:

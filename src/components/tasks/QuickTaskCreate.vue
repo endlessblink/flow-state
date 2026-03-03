@@ -1,12 +1,13 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-overlay"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Quick create task"
-    @click.self="$emit('close')"
-  >
+  <Teleport to="body">
+    <div
+      v-if="isOpen"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Quick create task"
+      @click.self="$emit('close')"
+    >
     <div class="quick-create-modal">
       <!-- Task Title Input with AI Assist -->
       <div class="title-row">
@@ -191,6 +192,7 @@
       />
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

@@ -1,10 +1,11 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-overlay"
-    @click="$emit('close')"
-    @keydown="handleKeydown"
-  >
+  <Teleport to="body">
+    <div
+      v-if="isOpen"
+      class="modal-overlay"
+      @click="$emit('close')"
+      @keydown="handleKeydown"
+    >
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h2 class="modal-title">
@@ -103,6 +104,7 @@
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

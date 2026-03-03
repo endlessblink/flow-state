@@ -35,6 +35,7 @@
       :y="contextMenuY"
       :task="contextMenuTask"
       :selected-count="contextMenuSelectedCount"
+      :selected-ids="contextMenuSelectedIds"
       :compact-mode="settingsStore.boardDensity === 'ultrathin'"
       @close="closeTaskContextMenu"
       @edit="(taskId: string) => {
@@ -44,7 +45,6 @@
       @confirm-delete="handleContextMenuDelete"
       @confirm-permanent-delete="handleContextMenuPermanentDelete"
       @move-to-section="handleMoveToSection"
-      @move-to-group="handleMoveToGroup"
       @set-priority="handleBatchSetPriority"
       @set-status="handleBatchSetStatus"
       @set-due-date="handleBatchSetDueDate"
@@ -345,21 +345,6 @@ const handleMoveToSection = (taskId: string) => {
     selectedTaskForSection.value = task
     showSectionSelectionModal.value = true
     showTaskContextMenu.value = false
-  }
-}
-
-// TASK-1429: Handle Canvas Group selection from context menu
-const handleMoveToGroup = async (groupId: string | null) => {
-  const { useMoveToCanvasGroup } = await import('@/composables/canvas/useMoveToCanvasGroup')
-  const { moveToGroupWithToast } = useMoveToCanvasGroup()
-
-  // Use batch IDs if available, otherwise use the context menu task
-  const taskIds = contextMenuSelectedIds.value.length > 1
-    ? contextMenuSelectedIds.value
-    : contextMenuTask.value ? [contextMenuTask.value.id] : []
-
-  if (taskIds.length > 0) {
-    await moveToGroupWithToast(taskIds, groupId)
   }
 }
 

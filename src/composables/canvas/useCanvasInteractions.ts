@@ -771,12 +771,10 @@ export function useCanvasInteractions(deps?: {
                             if (key === 'dueDate' && (!value || value === 'null')) {
                                 continue
                             }
-                            // BUG-1432: Don't overwrite existing dueDate — preserve overdue dates.
-                            // Smart group properties should only FILL IN missing metadata, not overwrite.
-                            // Matches the guard in useUnifiedInboxActions.ts (sendToCanvas path).
-                            if (key === 'dueDate' && task.dueDate) {
-                                continue
-                            }
+                            // BUG-1437: Removed BUG-1432 guard that skipped dueDate inheritance.
+                            // The outer condition (oldParentId !== newParentId) already prevents
+                            // same-group repositioning from overwriting dates. Cross-group moves
+                            // SHOULD inherit the new group's dueDate.
                             const taskKey = key as keyof typeof task
                             if (task[taskKey] !== value) {
                                 dragUpdates[key] = value

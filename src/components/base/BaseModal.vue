@@ -1,16 +1,17 @@
 <template>
-  <div
-    v-if="isOpen"
-    ref="overlayRef"
-    class="modal-overlay"
-    :class="{ 'modal-closing': isClosing }"
-    role="dialog"
-    :aria-modal="isOpen"
-    :aria-labelledby="titleId"
-    :aria-describedby="descriptionId"
-    @mousedown.self="handleOverlayClick"
-    @keydown="handleEscapeKey"
-  >
+  <Teleport to="body">
+    <div
+      v-if="isOpen"
+      ref="overlayRef"
+      class="modal-overlay"
+      :class="{ 'modal-closing': isClosing }"
+      role="dialog"
+      :aria-modal="isOpen"
+      :aria-labelledby="titleId"
+      :aria-describedby="descriptionId"
+      @mousedown.self="handleOverlayClick"
+      @keydown="handleEscapeKey"
+    >
     <div
       ref="modalRef"
       class="modal-container"
@@ -96,6 +97,7 @@
       />
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

@@ -3944,6 +3944,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1431**~~ | **P2** | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02) |
 | **TASK-1429** | **P0** | 👀 **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link** (👀 REVIEW 2026-03-02) |
 | ~~**TASK-1428**~~ | **P0** | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03) |
+| **TASK-1440** | **P1** | 🔄 **Gamification offline resilience — local-first state updates + try/catch wrapping for all Supabase writes** (🔄 IN PROGRESS 2026-03-03) |
+| **TASK-1441** | **P2** | 🔄 **Graceful offline UX for non-cacheable features — AI chat, file uploads, Drive show informative messages instead of failing silently** (🔄 IN PROGRESS 2026-03-03) |
 | **INQUIRY-1438** | **P0** | 🔄 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (🔄 IN PROGRESS 2026-03-03) |
 | **TASK-1434** | **P0** | 📋 **Calendar drag-to-create — click and drag on time slots to create a new task** (📋 PLANNED 2026-03-03) |
 | **TASK-1433** | **P0** | 🔄 **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (🔄 IN PROGRESS 2026-03-03) |
@@ -5152,6 +5154,27 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 - `src/components/calendar/CalendarInboxView.vue`
 - `src/composables/useCalendarDayView.ts`
 - `src/composables/useCalendarInboxState.ts`
+
+---
+
+### TASK-1440: Gamification Offline Resilience (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-03)
+
+**Problem**: Gamification store writes directly to Supabase. When offline, XP awards, streak updates, stat increments, achievement unlocks, and purchases silently fail — causing data loss for gamification state.
+
+**Strategy**: Local-first state updates — update Pinia state BEFORE Supabase writes. Wrap all Supabase writes in try/catch with `console.warn`. On failure, local state stays updated; server reconciles on next load.
+
+**Changes** (`src/stores/gamification.ts`):
+- `awardXp`: Local XP/level update first, notifications fire immediately, Supabase write in try/catch, reconcile from server on success
+- `recordDailyActivity`: Local streak update first (streak loss is critical UX), Supabase write in try/catch + warn on failure; streak freeze deduction also local-first via fire-and-forget
+- `incrementStat`: Local stat update first, Supabase write in try/catch
+- `unlockAchievement`: Local achievement unlock first + toast shows immediately, Supabase upsert in try/catch
+- `purchaseItem`: Local XP deduction + item ownership first, all Supabase writes in try/catch with warn (purchase still succeeds locally)
+
+**Marker**: All wrapped calls tagged with `[OFFLINE-SAFE]` comment for traceability.
+
+**Files**: `src/stores/gamification.ts`
 
 ---
 

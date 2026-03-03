@@ -1,21 +1,16 @@
 /* Glass Morphism Column Container - Spectrum UI inspired */
 .kanban-column {
-    background: var(--kanban-column-bg);
-    backdrop-filter: blur(var(--blur-regular));
-    -webkit-backdrop-filter: blur(var(--blur-regular));
-    border: 1px solid var(--glass-border-light);
-    border-radius: var(--radius-2xl);
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--glass-border-light);
+    border-radius: 0;
     display: flex;
     flex-direction: column;
     min-width: 280px;
     width: 300px;
     flex-shrink: 0;
-    padding: var(--space-4);
+    padding: var(--space-2);
     transition: background var(--duration-fast) ease;
-}
-
-.kanban-column:hover {
-    background: var(--kanban-column-bg-hover);
 }
 
 /* Glass Header */
@@ -39,8 +34,6 @@
     height: 12px;
     border-radius: 50%;
     flex-shrink: 0;
-    box-shadow: 0 0 8px currentColor;
-    filter: brightness(1.1);
 }
 
 .column-title {
@@ -174,7 +167,7 @@
     opacity: 0.4;
     background: var(--blue-bg-light) !important;
     border: 2px dashed var(--blue-border-medium) !important;
-    border-radius: var(--radius-xl) !important;
+    border-radius: var(--radius-lg) !important;
 }
 
 .chosen-card {
@@ -182,7 +175,7 @@
     background: var(--glass-border) !important;
     transform: scale(1.02);
     z-index: 1000;
-    border-radius: var(--radius-xl) !important;
+    border-radius: var(--radius-lg) !important;
 }
 
 .drag-card {
@@ -191,7 +184,7 @@
     border: 1px solid var(--border-hover) !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     cursor: grabbing;
-    border-radius: var(--radius-xl) !important;
+    border-radius: var(--radius-lg) !important;
 }
 
 /* BUG-050 FIX: Sortable fallback ghost - fixed positioning for consistent appearance across scroll */
@@ -204,7 +197,7 @@
     background: var(--canvas-task-bg) !important;
     border: 1px solid var(--brand-primary, #4ECDC4) !important;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px var(--brand-bg-dim) !important;
-    border-radius: var(--radius-xl) !important;
+    border-radius: var(--radius-lg) !important;
     transform: rotate(1deg) scale(1.03) !important;
 }
 

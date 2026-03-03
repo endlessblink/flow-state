@@ -67,21 +67,21 @@
       </div>
     </div>
 
-    <!-- TASK-1429: Card footer - badges in separator row -->
-    <div v-if="!progressiveDisclosureEnabled || isExpanded" class="card-footer">
-      <TaskCardBadges
-        v-bind="{
-          task,
-          density,
-          formattedDueDate,
-          formattedDuration,
-          completedSubtasks,
-          hasDependencies,
-          durationBadgeClass,
-          projectVisual
-        }"
-      />
-    </div>
+    <!-- Badges: directly placed, no wrapper, no border -->
+    <TaskCardBadges
+      v-if="!progressiveDisclosureEnabled || isExpanded"
+      class="card-badges"
+      v-bind="{
+        task,
+        density,
+        formattedDueDate,
+        formattedDuration,
+        completedSubtasks,
+        hasDependencies,
+        durationBadgeClass,
+        projectVisual
+      }"
+    />
 
     <!-- Progressive Disclosure Content (only when expanded) -->
     <Transition name="expand">

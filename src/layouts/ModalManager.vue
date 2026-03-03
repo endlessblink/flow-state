@@ -44,6 +44,7 @@
       @confirm-delete="handleContextMenuDelete"
       @confirm-permanent-delete="handleContextMenuPermanentDelete"
       @move-to-section="handleMoveToSection"
+      @move-to-group="handleMoveToGroup"
       @set-priority="handleBatchSetPriority"
       @set-status="handleBatchSetStatus"
       @set-due-date="handleBatchSetDueDate"
@@ -347,39 +348,29 @@ const handleMoveToSection = (taskId: string) => {
   }
 }
 
+// TASK-1429: Handle Canvas Group selection from context menu
+const handleMoveToGroup = async (groupId: string | null) => {
+  const { useMoveToCanvasGroup } = await import('@/composables/canvas/useMoveToCanvasGroup')
+  const { moveToGroupWithToast } = useMoveToCanvasGroup()
+
+  // Use batch IDs if available, otherwise use the context menu task
+  const taskIds = contextMenuSelectedIds.value.length > 1
+    ? contextMenuSelectedIds.value
+    : contextMenuTask.value ? [contextMenuTask.value.id] : []
+
+  if (taskIds.length > 0) {
+    await moveToGroupWithToast(taskIds, groupId)
+  }
+}
+
 const confirmMoveToSection = async (sectionId: string) => {
   if (!selectedTaskForSection.value) return
 
-  const task = selectedTaskForSection.value
-  const section = canvasStore.sections.find(s => s.id === sectionId)
-  
-  if (section) {
-    // Calculate new position (center of section)
-    const newPosition = {
-      x: section.position.x + (section.position.width / 2) - 100,
-      y: section.position.y + (section.position.height / 2) - 40
-    }
+  // TASK-1429: Use the shared composable for consistent behavior
+  const { useMoveToCanvasGroup } = await import('@/composables/canvas/useMoveToCanvasGroup')
+  const { moveToGroupWithToast } = useMoveToCanvasGroup()
 
-    const updates: Partial<Task> = {
-      canvasPosition: newPosition
-    }
-
-    // Apply "Assign on Drop" settings
-    if (section.assignOnDrop) {
-      if (section.assignOnDrop.priority) updates.priority = section.assignOnDrop.priority
-      if (section.assignOnDrop.status) updates.status = section.assignOnDrop.status
-      if (section.assignOnDrop.projectId) updates.projectId = section.assignOnDrop.projectId
-      
-      if (section.assignOnDrop.dueDate) {
-        const { resolveDueDate } = await import('@/composables/useGroupSettings')
-        const dateStr = await resolveDueDate(section.assignOnDrop.dueDate)
-        if (dateStr) updates.dueDate = dateStr
-      }
-    }
-
-    await taskStore.updateTaskWithUndo(task.id, updates)
-    canvasStore.requestSync('user:context-menu')
-  }
+  await moveToGroupWithToast(selectedTaskForSection.value.id, sectionId)
 
   showSectionSelectionModal.value = false
   selectedTaskForSection.value = null

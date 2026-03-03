@@ -8,6 +8,14 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1432: Overdue tasks display today's date instead of actual due date (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-03)
+
+**Problem**: Tasks that should appear as overdue are shown with today's date everywhere — visible in the "Today" group on the canvas. Their actual due date is being overwritten or misread as the current date.
+
+---
+
 ### ~~BUG-1430~~: Sidebar Date Filters Navigate to Catalog View (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-03-02)
@@ -3887,6 +3895,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1431**~~ | **P2** | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02) |
 | **TASK-1429** | **P0** | 👀 **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link** (👀 REVIEW 2026-03-02) |
 | ~~**TASK-1428**~~ | **P0** | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03) |
+| **BUG-1432** | **P1** | 🔄 **Overdue tasks display today's date instead of actual due date** (🔄 IN PROGRESS 2026-03-03) |
 | **TASK-1427** | **P0** | 📋 **Offline: merge write queue into read cache on offline load** (📋 PLANNED 2026-03-02) |
 | **TASK-1426** | **P0** | 📋 **Offline: auth grace period — keep expired session for local ops** (📋 PLANNED 2026-03-02) |
 | **TASK-1425** | **P0** | 📋 **Offline: fast startup — skip Supabase when navigator.onLine=false** (📋 PLANNED 2026-03-02) |

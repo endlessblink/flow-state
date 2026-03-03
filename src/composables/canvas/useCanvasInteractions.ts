@@ -754,7 +754,10 @@ export function useCanvasInteractions(deps?: {
                     // 6. Collect Smart Section Properties (Today, Tomorrow, Priorities, etc.)
                     // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
                     // TASK-1177: Pass allGroups to enable parent chain property inheritance
-                    if (targetGroup) {
+                    // BUG-1432: Only apply smart properties when task moves to a DIFFERENT group.
+                    // Previously, repositioning within the same group (e.g., dragging inside "Today")
+                    // would overwrite an overdue task's dueDate with today's date.
+                    if (targetGroup && oldParentId !== newParentId) {
                         // TASK-1177: Pass allGroups to getSectionProperties for parent chain inheritance
                         // This allows child groups to inherit properties (like dueDate) from parent groups
                         const smartUpdates = getSectionProperties(
@@ -766,6 +769,12 @@ export function useCanvasInteractions(deps?: {
                         for (const [key, value] of Object.entries(smartUpdates)) {
                             // Skip invalid dueDate values (empty string, null, undefined, "null" string)
                             if (key === 'dueDate' && (!value || value === 'null')) {
+                                continue
+                            }
+                            // BUG-1432: Don't overwrite existing dueDate — preserve overdue dates.
+                            // Smart group properties should only FILL IN missing metadata, not overwrite.
+                            // Matches the guard in useUnifiedInboxActions.ts (sendToCanvas path).
+                            if (key === 'dueDate' && task.dueDate) {
                                 continue
                             }
                             const taskKey = key as keyof typeof task

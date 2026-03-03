@@ -47,7 +47,6 @@
       </span>
     </div>
 
-    <!-- Project visual is rendered by parent card, not in footer badges -->
   </div>
 </template>
 
@@ -92,6 +91,7 @@ const dueDateClass = computed(() => {
   align-items: center;
   justify-content: space-between;
   min-height: 18px;
+  margin-top: var(--space-1_5);
 }
 
 .badge-left {
@@ -99,12 +99,6 @@ const dueDateClass = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-}
-
-.badge-right {
-  display: flex;
-  align-items: center;
-  margin-inline-start: auto;
 }
 
 .badge-item {

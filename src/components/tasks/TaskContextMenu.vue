@@ -340,6 +340,7 @@ import MoreSubmenu from './context-menu/MoreSubmenu.vue'
 import ProjectSubmenu from './context-menu/ProjectSubmenu.vue'
 import CanvasGroupSubmenu from './context-menu/CanvasGroupSubmenu.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
+import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 
 interface Props {
   isVisible: boolean
@@ -348,6 +349,7 @@ interface Props {
   task: Task | null
   compactMode?: boolean
   selectedCount?: number
+  selectedIds?: string[]
   contextTask?: Task | null
 }
 
@@ -366,9 +368,11 @@ const emit = defineEmits<{
   deleteSelected: []
   setDuration: [duration: number | null]
   moveToSection: [taskId: string]
-  moveToGroup: [groupId: string | null]
   setProject: [projectId: string | null]
 }>()
+
+// TASK-1429: Initialize canvas group move composable at setup time
+const { moveToGroupWithToast } = useMoveToCanvasGroup()
 
 // Use the new composable for business logic
 const {
@@ -597,10 +601,13 @@ const pinAsQuickTask = async () => {
     }
 }
 
-// TASK-1429: Handle Canvas Group selection
-const handleMoveToGroup = (groupId: string | null) => {
-  emit('moveToGroup', groupId)
+// TASK-1429: Handle Canvas Group selection — calls composable directly (no emit chain)
+const handleMoveToGroup = async (groupId: string | null) => {
+  const ids = props.selectedIds?.length ? [...props.selectedIds] : currentTask.value ? [currentTask.value.id] : []
+  console.log('[MOVE-GROUP] handleMoveToGroup', { groupId, ids })
   emit('close')
+  if (ids.length === 0) return
+  await moveToGroupWithToast(ids, groupId)
 }
 
 // AI Assist handlers

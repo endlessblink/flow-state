@@ -1,4 +1,4 @@
-import { ref, reactive, nextTick, onUnmounted } from 'vue'
+import { ref, reactive, onUnmounted } from 'vue'
 
 interface TimeSlot {
   slotIndex: number
@@ -37,13 +37,12 @@ export function useCalendarDragCreate() {
     // Check both old (.calendar-event) and new (.slot-task) class names for compatibility
     if ((event.target as HTMLElement).closest('.calendar-event')) return
     if ((event.target as HTMLElement).closest('.slot-task')) return
+    if ((event.target as HTMLElement).closest('.week-event')) return
     if ((event.target as HTMLElement).classList.contains('resize-handle')) return
     if (event.button !== 0) return // Only left mouse button
 
     event.preventDefault()
     event.stopPropagation()
-
-    console.log('Slot mousedown triggered:', slot) // Debug log
 
     startCreateDrag(event, slot)
   }
@@ -54,8 +53,6 @@ export function useCalendarDragCreate() {
     createDragState.startSlot = slot
     createDragState.currentSlot = slot
     createDragState.startCoords = { x: event.clientX, y: event.clientY }
-
-    console.log('Started create drag:', slot) // Debug log
 
     // Add event listeners to document for mouse move, up, keydown, and window blur
     document.addEventListener('mousemove', handleCreateDragMove, { passive: false })
@@ -73,28 +70,47 @@ export function useCalendarDragCreate() {
 
     event.preventDefault()
 
-    // Find the slot under the mouse cursor
+    // Find the slot under the mouse cursor — try day view (.time-slot) then week view (.week-time-cell)
     const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY)
     const slotElement = elementUnderMouse?.closest('.time-slot') as HTMLElement
+      || elementUnderMouse?.closest('.week-time-cell') as HTMLElement
 
     if (slotElement) {
-      const slotIndex = parseInt(slotElement.dataset.slotIndex || '0')
-      const slotDate = slotElement.dataset.slotDate || ''
-      const hour = parseInt(slotElement.dataset.hour || '0')
-      const minute = parseInt(slotElement.dataset.minute || '0')
+      const isWeekCell = slotElement.classList.contains('week-time-cell')
 
-      createDragState.currentSlot = {
-        slotIndex,
-        date: slotDate,
-        hour,
-        minute,
-        id: `${slotDate}-${slotIndex}`
+      let slotIndex: number
+      let slotDate: string
+      let hour: number
+      let minute: number
+
+      if (isWeekCell) {
+        // Week view: each cell is 1 hour (60px). Compute 30-min precision from mouse Y.
+        const rect = slotElement.getBoundingClientRect()
+        const relativeY = event.clientY - rect.top
+        const isBottomHalf = relativeY >= rect.height / 2
+
+        hour = parseInt(slotElement.dataset.hour || '0')
+        minute = isBottomHalf ? 30 : 0
+        slotDate = slotElement.dataset.slotDate || ''
+        slotIndex = hour * 2 + (isBottomHalf ? 1 : 0)
+      } else {
+        // Day view: each slot has explicit data attributes
+        slotIndex = parseInt(slotElement.dataset.slotIndex || '0')
+        slotDate = slotElement.dataset.slotDate || ''
+        hour = parseInt(slotElement.dataset.hour || '0')
+        minute = parseInt(slotElement.dataset.minute || '0')
       }
 
-      // Force reactivity update
-      nextTick(() => {
-        console.log('Current slot updated:', createDragState.currentSlot)
-      })
+      // Only update if same date — prevent cross-day drag in week view
+      if (!createDragState.startSlot.date || slotDate === createDragState.startSlot.date) {
+        createDragState.currentSlot = {
+          slotIndex,
+          date: slotDate || createDragState.startSlot.date,
+          hour,
+          minute,
+          id: `${slotDate}-${slotIndex}`
+        }
+      }
     }
   }
 
@@ -103,8 +119,6 @@ export function useCalendarDragCreate() {
       resetCreateDrag()
       return
     }
-
-    console.log('Create drag ended:', createDragState) // Debug log
 
     // Calculate start and end times
     const startSlot = createDragState.startSlot
@@ -128,8 +142,6 @@ export function useCalendarDragCreate() {
     quickCreateData.endTime = endTime
     quickCreateData.duration = duration
     showQuickCreateModal.value = true
-
-    console.log('Opening modal with:', quickCreateData)
 
     resetCreateDrag()
   }
@@ -192,6 +204,7 @@ export function useCalendarDragCreate() {
 
   return {
     isCreatingTask,
+    createDragState,
     showQuickCreateModal,
     quickCreateData,
     handleSlotMouseDown,

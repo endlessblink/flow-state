@@ -36,8 +36,10 @@ export function useMoveToCanvasGroup() {
      * Move a single task into a canvas group
      */
     async function moveTaskToGroup(taskId: string, groupId: string): Promise<boolean> {
+        console.log('[MOVE-GROUP] moveTaskToGroup', { taskId, groupId, rawGroupsCount: canvasStore._rawGroups.length })
         const group = canvasStore._rawGroups.find((g: CanvasGroup) => g.id === groupId)
         if (!group) {
+            console.warn('[MOVE-GROUP] Group not found!', { groupId, availableIds: canvasStore._rawGroups.map((g: CanvasGroup) => g.id) })
             showToast('Group not found', 'error')
             return false
         }
@@ -56,9 +58,12 @@ export function useMoveToCanvasGroup() {
             ...inheritedProps
         }
 
+        console.log('[MOVE-GROUP] Applying updates', { taskId, updates, groupName: group.name })
+
         try {
             await taskStore.updateTaskWithUndo(taskId, updates)
             canvasStore.requestSync('user:context-menu')
+            console.log('[MOVE-GROUP] Task moved successfully')
             return true
         } catch (error) {
             console.error('[TASK-1429] Failed to move task to group:', error)

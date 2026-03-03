@@ -25,6 +25,7 @@ const props = defineProps<{
     direction: 'top' | 'bottom'
   } | null
   externalEvents?: ExternalCalendarEvent[]
+  isSlotInCreateRange?: (slot: TimeSlot) => boolean
 }>()
 
 defineEmits<{
@@ -148,9 +149,13 @@ const {
         :key="slot.id"
         class="time-slot"
         :data-slot-index="slot.slotIndex"
+        :data-slot-date="slot.date"
+        :data-hour="slot.hour"
+        :data-minute="slot.minute"
         :class="{
           'drag-over': activeDropSlot === slot.slotIndex,
-          'current-time': isCurrentTimeSlot(slot)
+          'current-time': isCurrentTimeSlot(slot),
+          'creating': isSlotInCreateRange?.(slot)
         }"
         @dragover.prevent="$emit('dragover', $event, slot)"
         @dragenter.prevent="$emit('dragenter', $event, slot)"
@@ -390,6 +395,11 @@ const {
 
 .time-slot.current-time {
   background: var(--color-danger-bg-subtle);
+}
+
+.time-slot.creating {
+  background: var(--brand-primary-subtle, rgba(78, 205, 196, 0.1));
+  border-color: var(--brand-primary);
 }
 
 .slot-task {

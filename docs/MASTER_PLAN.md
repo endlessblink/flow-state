@@ -2455,6 +2455,31 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ## Active Tasks (IN PROGRESS)
 
+### ~~BUG-1437~~: Task doesn't inherit group properties on move (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-03)
+
+**Problem**: When moving a task into a canvas group, the task doesn't inherit the group's properties (e.g., due date from a date-based group). The task retains its old values instead of adopting the group's context.
+
+**Fix**: Removed the overly aggressive BUG-1432 guard (`if (key === 'dueDate' && task.dueDate) continue`) from `src/composables/canvas/useCanvasInteractions.ts` lines 774-779. The guard was inside the `if (targetGroup && oldParentId !== newParentId)` block — meaning it only ran on cross-group moves anyway. The outer condition already prevents same-group repositioning from overwriting dates, making the inner guard redundant and harmful. Cross-group moves now correctly inherit the new group's dueDate.
+
+---
+
+### TASK-1436: Active Task Glass Pill next to Pomodoro Timer (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-03)
+
+**Problem**: The Pomodoro timer shows the task name as a small muted text inside the timer display. This lacks visual prominence and doesn't match the glass morphism design system.
+
+**Scope**:
+1. Remove old `.timer-task` inline text from timer display
+2. Add a separate glass pill component after the timer in `.control-panel`
+3. Pill shows project color dot (or emoji) + task name with fade+slide transition
+
+**Files**: `src/layouts/AppHeader.vue`
+
+---
+
 ### ~~TASK-1334~~: Make list view fully scrollable with table layout (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-21)
@@ -3895,6 +3920,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1431**~~ | **P2** | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02) |
 | **TASK-1429** | **P0** | 👀 **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link** (👀 REVIEW 2026-03-02) |
 | ~~**TASK-1428**~~ | **P0** | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03) |
+| **INQUIRY-1438** | **P0** | 🔄 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (🔄 IN PROGRESS 2026-03-03) |
 | **TASK-1434** | **P0** | 📋 **Calendar drag-to-create — click and drag on time slots to create a new task** (📋 PLANNED 2026-03-03) |
 | **TASK-1433** | **P0** | 🔄 **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (🔄 IN PROGRESS 2026-03-03) |
 | **BUG-1432** | **P1** | 🔄 **Overdue tasks display today's date instead of actual due date** (🔄 IN PROGRESS 2026-03-03) |

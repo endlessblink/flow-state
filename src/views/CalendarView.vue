@@ -91,6 +91,7 @@
         :selected-event-ids="selectedEventIds"
         :resize-preview="resizePreview"
         :external-events="getMergedEventsForDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`)"
+        :is-slot-in-create-range="dragCreate.isSlotInCreateRange"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
         @dragleave="onDragLeave"
@@ -123,6 +124,10 @@
         :selected-event-ids="selectedEventIds"
         :resize-preview="weekResizePreview"
         :external-events="mergedExternalEvents"
+        :is-creating-task="dragCreate.isCreatingTask.value"
+        :create-start-slot-index="dragCreate.createDragState.startSlot?.slotIndex ?? null"
+        :create-end-slot-index="dragCreate.createDragState.currentSlot?.slotIndex ?? null"
+        :create-date="dragCreate.createDragState.startSlot?.date ?? null"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
         @dragleave="onDragLeave"
@@ -137,6 +142,7 @@
         @start-timer="startTimerOnCalendarEvent"
         @start-resize="startWeekResize"
         @cell-dbl-click="handleWeekCellDblClick"
+        @cell-mouse-down="handleWeekCellMouseDown"
       />
 
       <!-- Month View -->
@@ -274,6 +280,18 @@ const dragCreate = useCalendarDragCreate()
 
 const handleTaskCreated = () => {
   dragCreate.showQuickCreateModal.value = false
+}
+
+// TASK-1434: Handle mousedown on week view cell for drag-to-create
+const handleWeekCellMouseDown = (event: MouseEvent, dateString: string, hour: number) => {
+  const slot = {
+    id: `${dateString}-${hour * 2}`,
+    slotIndex: hour * 2,
+    date: dateString,
+    hour,
+    minute: 0
+  }
+  dragCreate.handleSlotMouseDown(event, slot)
 }
 
 // Double-click empty cell in week view → open quick create modal

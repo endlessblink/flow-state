@@ -59,7 +59,10 @@ const config: StorybookConfig = {
       ],
       optimizeDeps: {
         ...config.optimizeDeps,
-        exclude: ['vue-i18n', '@intlify/unplugin-vue-i18n']
+        include: [
+          ...(config.optimizeDeps?.include || []),
+          'vue-i18n'
+        ]
       }
     }
   }

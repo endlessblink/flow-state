@@ -33,6 +33,46 @@
         <span class="menu-text">Move to Section</span>
       </button>
 
+      <div class="submenu-divider" />
+
+      <div
+        v-if="!isBatchOperation"
+        class="menu-item menu-item--sm has-submenu"
+        @mouseenter.stop="$emit('openCanvasGroup', $event)"
+        @mouseleave.stop="$emit('closeCanvasGroup')"
+      >
+        <LayoutGrid :size="14" class="menu-icon" />
+        <span class="menu-text">Canvas Group</span>
+        <ChevronRight :size="12" class="submenu-arrow" />
+      </div>
+
+      <div
+        class="menu-item menu-item--sm has-submenu"
+        @mouseenter.stop="$emit('openDuration', $event)"
+        @mouseleave.stop="$emit('closeDuration')"
+      >
+        <Timer :size="14" class="menu-icon" />
+        <span class="menu-text">Duration</span>
+        <ChevronRight :size="12" class="submenu-arrow" />
+      </div>
+
+      <button v-if="!isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('focusMode')">
+        <Eye :size="14" class="menu-icon" />
+        <span class="menu-text">Focus Mode</span>
+      </button>
+
+      <button v-if="!isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('startNow')">
+        <Play :size="14" class="menu-icon" />
+        <span class="menu-text">Start Now</span>
+      </button>
+
+      <div class="submenu-divider" />
+
+      <button v-if="!isBatchOperation" class="menu-item menu-item--sm menu-item--danger" @click.stop="$emit('permanentDelete')">
+        <Trash2 :size="14" class="menu-icon" />
+        <span class="menu-text">Permanently Delete</span>
+      </button>
+
       <button v-if="isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('clearSelection')">
         <X :size="14" class="menu-icon" />
         <span class="menu-text">Clear Selection</span>
@@ -42,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { Copy, Layout, X, Clock, Pin } from 'lucide-vue-next'
+import { Copy, Layout, X, Clock, Pin, LayoutGrid, ChevronRight, Eye, Play, Trash2, Timer } from 'lucide-vue-next'
 import type { CSSProperties } from 'vue'
 
 defineProps<{
@@ -61,6 +101,13 @@ defineEmits<{
   clearSelection: []
   mouseenter: []
   mouseleave: []
+  openCanvasGroup: [event: MouseEvent]
+  closeCanvasGroup: []
+  openDuration: [event: MouseEvent]
+  closeDuration: []
+  focusMode: []
+  startNow: []
+  permanentDelete: []
 }>()
 </script>
 
@@ -104,4 +151,10 @@ defineEmits<{
 
 .menu-text { flex: 1; }
 .menu-icon { flex-shrink: 0; opacity: 0.8; }
+
+.has-submenu { position: relative; }
+.submenu-arrow { color: var(--text-muted); margin-inline-start: auto; }
+.submenu-divider { height: 1px; background: var(--glass-bg-heavy); margin: var(--space-1) 0; }
+.menu-item--danger { color: var(--danger-text); }
+.menu-item--danger:hover { background: var(--danger-bg-subtle); }
 </style>

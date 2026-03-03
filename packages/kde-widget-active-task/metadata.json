@@ -1,0 +1,12 @@
+{
+    "KPlugin": {
+        "Id": "com.pomoflow.activetask",
+        "Name": "PomoFlow Active Task",
+        "Category": "Utilities",
+        "Description": "Shows the currently active Pomodoro task as a glass pill in the panel",
+        "Version": "1.0.0",
+        "Icon": "view-task"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "KPackageStructure": "Plasma/Applet"
+}

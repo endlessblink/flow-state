@@ -27,6 +27,14 @@ interface WahaWebhookPayload {
     fromMe: boolean
     body: string
     hasMedia: boolean
+    mediaUrl?: string
+    mimetype?: string
+    title?: string        // document filename
+    _data?: {
+      type?: string       // 'image', 'video', 'audio', 'document', 'sticker'
+      caption?: string
+      filename?: string
+    }
   }
 }
 
@@ -88,22 +96,46 @@ serve(async (req) => {
     // Allow fromMe messages (forwards) — this is a personal webhook,
     // all messages (sent and received) can become tasks.
 
-    const messageBody = body.payload?.body
-    if (!messageBody || messageBody.trim() === '') {
+    const wahaMessageId = body.payload.id
+    const messageBody = body.payload?.body || ''
+    const hasMedia = body.payload?.hasMedia || false
+
+    // Skip only if BOTH text and media are empty
+    if (!messageBody.trim() && !hasMedia) {
       return new Response(
-        JSON.stringify({ ok: true, skipped: true, reason: 'Empty message body' }),
+        JSON.stringify({ ok: true, skipped: true, reason: 'Empty message (no text or media)' }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
-    const wahaMessageId = body.payload.id
-
-    // Parse title (first line) and description (remaining lines)
-    const lines = messageBody.split('\n')
-    const title = lines[0].trim().substring(0, 200)
-    const description = lines.length > 1
-      ? lines.slice(1).join('\n').trim()
+    // Determine media type for title/description
+    const mediaType = body.payload?._data?.type || body.payload?.mimetype?.split('/')[0] || ''
+    const mediaLabel = hasMedia
+      ? { image: '📷 Photo', video: '🎥 Video', audio: '🎵 Audio', document: '📄 Document', sticker: '🏷️ Sticker' }[mediaType] || '📎 Media'
       : ''
+    const caption = body.payload?._data?.caption || ''
+    const filename = body.payload?._data?.filename || body.payload?.title || ''
+
+    // Build title: prefer text body, fall back to caption, then media label
+    let title: string
+    let description: string
+
+    if (messageBody.trim()) {
+      const lines = messageBody.split('\n')
+      title = lines[0].trim().substring(0, 200)
+      description = lines.length > 1 ? lines.slice(1).join('\n').trim() : ''
+      if (hasMedia) {
+        description = description ? `${mediaLabel}\n\n${description}` : mediaLabel
+      }
+    } else if (caption.trim()) {
+      const lines = caption.split('\n')
+      title = lines[0].trim().substring(0, 200)
+      description = lines.length > 1 ? lines.slice(1).join('\n').trim() : ''
+      description = description ? `${mediaLabel}\n\n${description}` : mediaLabel
+    } else {
+      title = `${mediaLabel}${filename ? ': ' + filename : ''}`
+      description = ''
+    }
 
     // Build description with WAHA metadata for dedup and traceability
     const metaLine = `[waha:${wahaMessageId}]`

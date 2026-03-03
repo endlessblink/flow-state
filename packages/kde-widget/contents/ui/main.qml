@@ -116,6 +116,9 @@ PlasmoidItem {
     // BUG-1347: Reactive transition flag (replaces impure Date.now() in binding)
     property bool isInTransition: false
 
+    // Pre-end warning: reset each session to prevent repeat warnings
+    property bool preEndWarningShown: false
+
     // ===== SUPABASE CONFIG (hardcoded for PomoFlow) =====
     readonly property string supabaseUrl: plasmoid.configuration.supabaseUrl || "http://127.0.0.1:54321"
     readonly property string supabaseKey: plasmoid.configuration.supabaseAnonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODMzMzkxMjR9.quujL-cYcPusBhirDQFq9p-iTN0hRwjY2GLx6XUtYDg"
@@ -213,6 +216,12 @@ PlasmoidItem {
 
         console.log("[NANNY] Showing popup:", msg, "with", Math.min(root.pinnedTasks.length, 5), "pinned tasks")
 
+        // Position on the same screen as the widget
+        var sg = root.getWidgetScreenGeometry()
+        if (sg.screen) nannyPopup.screen = sg.screen
+        nannyPopup.x = sg.x + sg.width - nannyPopup.width - 24
+        nannyPopup.y = sg.y + sg.height - nannyPopup.height - 24
+
         nannyPopup.nannyMessage = msg
         nannyPopup.visible = true
         nannyPopup.raise()
@@ -224,6 +233,9 @@ PlasmoidItem {
     // TASK-1424: Start a new work session with a specific task
     function startNewSessionWithTask(taskId) {
         if (!root.isAuthenticated) return
+
+        // Reset pre-end warning for new session
+        root.preEndWarningShown = false
 
         root.sessionJustCompleted = false
         var sessionId = generateUUID()
@@ -354,11 +366,7 @@ PlasmoidItem {
         color: "transparent"
         visible: false
 
-        // Cover all screens
-        x: 0
-        y: 0
-        width: Screen.desktopAvailableWidth
-        height: Screen.desktopAvailableHeight
+        // x/y/width/height set programmatically in showFullScreenOverlay() to target widget's screen
 
         // Semi-transparent dark background
         Rectangle {
@@ -524,8 +532,7 @@ PlasmoidItem {
 
         width: 400
         height: 350
-        x: Screen.desktopAvailableWidth - width - 24
-        y: Screen.desktopAvailableHeight - height - 24
+        // x/y set programmatically in sendNannyNotification() to target widget's screen
 
         property string nannyMessage: ""
 
@@ -732,15 +739,144 @@ PlasmoidItem {
         }
     }
 
+    // ===== PRE-END WARNING POPUP =====
+    Window {
+        id: preEndWarningPopup
+        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+        color: "transparent"
+        visible: false
+
+        width: 360
+        height: 160
+        // x/y set programmatically in showPreEndWarning()
+
+        // Auto-dismiss after 15 seconds
+        Timer {
+            id: preEndWarningDismiss
+            interval: 15000
+            running: preEndWarningPopup.visible
+            onTriggered: preEndWarningPopup.visible = false
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: preEndWarningPopup.visible = false
+            }
+
+            // Glass card
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 10
+                radius: 16
+                color: Qt.rgba(root.bgColor.r, root.bgColor.g, root.bgColor.b, 0.95)
+                border.width: 2
+                border.color: root.currentAccent
+
+                // Glow effect
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -6
+                    radius: 22
+                    color: "transparent"
+                    border.width: 3
+                    border.color: Qt.rgba(root.currentAccent.r, root.currentAccent.g, root.currentAccent.b, 0.3)
+                    z: -1
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {} // Absorb clicks
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    spacing: 16
+
+                    // Timer icon
+                    Text {
+                        text: root.isWorkSession ? "\u23F0" : "\u2615"
+                        font.pixelSize: 36
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Text {
+                            text: root.isWorkSession ? "Almost done!" : "Break ending soon!"
+                            font.pixelSize: 18
+                            font.bold: true
+                            color: root.textColor
+                        }
+
+                        Text {
+                            property int secs: plasmoid.configuration.preEndWarningSeconds || 60
+                            text: secs >= 60 ? Math.floor(secs / 60) + " minute" + (Math.floor(secs / 60) > 1 ? "s" : "") + " left" : secs + " seconds left"
+                            font.pixelSize: 14
+                            color: root.mutedColor
+                        }
+
+                        Text {
+                            text: root.isWorkSession ? "Wrap up your current task" : "Get ready to focus"
+                            font.pixelSize: 13
+                            color: root.mutedColor
+                            opacity: 0.7
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Show pre-end warning notification on widget's screen
+    function showPreEndWarning() {
+        console.log("[TIMER] Showing pre-end warning")
+        var sg = root.getWidgetScreenGeometry()
+        if (sg.screen) preEndWarningPopup.screen = sg.screen
+        preEndWarningPopup.x = sg.x + sg.width - preEndWarningPopup.width - 24
+        preEndWarningPopup.y = sg.y + sg.height - preEndWarningPopup.height - 24
+        preEndWarningPopup.visible = true
+        preEndWarningPopup.raise()
+        preEndWarningPopup.requestActivate()
+    }
+
     // Function to show the full-screen overlay
     function showFullScreenOverlay() {
         console.log("[OVERLAY] showFullScreenOverlay called, config:", plasmoid.configuration.showFullscreenBreak)
         if (plasmoid.configuration.showFullscreenBreak !== false) {
-            console.log("[OVERLAY] Showing full-screen overlay")
+            // Position on the same screen as the widget
+            var sg = root.getWidgetScreenGeometry()
+            if (sg.screen) fullScreenOverlay.screen = sg.screen
+            fullScreenOverlay.x = sg.x
+            fullScreenOverlay.y = sg.y
+            fullScreenOverlay.width = sg.width
+            fullScreenOverlay.height = sg.height
+            console.log("[OVERLAY] Showing full-screen overlay on screen:", sg.x, sg.y, sg.width, "x", sg.height)
             fullScreenOverlay.visible = true
             fullScreenOverlay.raise()
             fullScreenOverlay.requestActivate()
         }
+    }
+
+    function getWidgetScreenGeometry() {
+        // Method 1: Window.window (panel window → correct screen)
+        var w = Window.window
+        if (w && w.screen) {
+            var geom = w.screen.availableGeometry
+            console.log("[NANNY] Screen from panel window:", w.screen.name,
+                        "geom:", geom.x, geom.y, geom.width, geom.height)
+            return { x: geom.x, y: geom.y, width: geom.width, height: geom.height, screen: w.screen }
+        }
+        // Fallback: Screen attached property (per-screen, NOT virtual desktop)
+        console.log("[NANNY] Screen fallback: virtualX=", Screen.virtualX, "virtualY=", Screen.virtualY,
+                    "w=", Screen.width, "h=", Screen.height)
+        return { x: Screen.virtualX, y: Screen.virtualY, width: Screen.width, height: Screen.height, screen: null }
     }
 
     // ===== COMPACT REPRESENTATION (TASKBAR) =====
@@ -857,9 +993,9 @@ PlasmoidItem {
 
     // ===== FULL REPRESENTATION (POPUP) =====
     fullRepresentation: Rectangle {
-        Layout.minimumWidth: 380
+        Layout.minimumWidth: 440
         Layout.minimumHeight: root.isAuthenticated ? 750 : 320
-        Layout.preferredWidth: 400
+        Layout.preferredWidth: 480
         Layout.preferredHeight: root.isAuthenticated ? 850 : 350
 
         color: root.bgColor
@@ -2066,34 +2202,46 @@ PlasmoidItem {
                                                 popup: QQC2.Popup {
                                                     y: statusCombo.height
                                                     width: statusCombo.width
-                                                    padding: 1
+                                                    padding: 2
                                                     background: Rectangle {
                                                         color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
                                                         border.width: 1
                                                         border.color: Qt.rgba(1, 1, 1, 0.12)
                                                         radius: 4
                                                     }
-                                                    contentItem: ListView {
-                                                        implicitHeight: contentHeight
-                                                        model: statusCombo.delegateModel
-                                                        clip: true
+                                                    contentItem: Column {
+                                                        Repeater {
+                                                            model: statusCombo.model
+                                                            Rectangle {
+                                                                width: statusCombo.width - 4
+                                                                height: 28
+                                                                radius: 2
+                                                                color: sOptMA.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2) : "transparent"
+
+                                                                Text {
+                                                                    anchors.verticalCenter: parent.verticalCenter
+                                                                    anchors.left: parent.left
+                                                                    anchors.leftMargin: 8
+                                                                    text: modelData
+                                                                    font.pixelSize: 11
+                                                                    color: sOptMA.containsMouse ? "#FFFFFF" : root.textColor
+                                                                }
+
+                                                                MouseArea {
+                                                                    id: sOptMA
+                                                                    anchors.fill: parent
+                                                                    hoverEnabled: true
+                                                                    cursorShape: Qt.PointingHandCursor
+                                                                    onClicked: {
+                                                                        statusCombo.currentIndex = index
+                                                                        statusCombo.popup.close()
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
-                                                delegate: QQC2.ItemDelegate {
-                                                    width: statusCombo.width
-                                                    height: 28
-                                                    contentItem: Text {
-                                                        text: modelData
-                                                        font.pixelSize: 11
-                                                        color: highlighted ? "#FFFFFF" : root.textColor
-                                                        verticalAlignment: Text.AlignVCenter
-                                                    }
-                                                    background: Rectangle {
-                                                        color: highlighted ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2) : "transparent"
-                                                        radius: 2
-                                                    }
-                                                    highlighted: statusCombo.highlightedIndex === index
-                                                }
+
                                             }
                                         }
 
@@ -2133,102 +2281,160 @@ PlasmoidItem {
                                                 popup: QQC2.Popup {
                                                     y: priorityCombo.height
                                                     width: priorityCombo.width
-                                                    padding: 1
+                                                    padding: 2
                                                     background: Rectangle {
                                                         color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
                                                         border.width: 1
                                                         border.color: Qt.rgba(1, 1, 1, 0.12)
                                                         radius: 4
                                                     }
-                                                    contentItem: ListView {
-                                                        implicitHeight: contentHeight
-                                                        model: priorityCombo.delegateModel
-                                                        clip: true
+                                                    contentItem: Column {
+                                                        Repeater {
+                                                            model: priorityCombo.model
+                                                            Rectangle {
+                                                                width: priorityCombo.width - 4
+                                                                height: 28
+                                                                radius: 2
+                                                                color: pOptMA.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2) : "transparent"
+
+                                                                Text {
+                                                                    anchors.verticalCenter: parent.verticalCenter
+                                                                    anchors.left: parent.left
+                                                                    anchors.leftMargin: 8
+                                                                    text: modelData
+                                                                    font.pixelSize: 11
+                                                                    color: pOptMA.containsMouse ? "#FFFFFF" : root.textColor
+                                                                }
+
+                                                                MouseArea {
+                                                                    id: pOptMA
+                                                                    anchors.fill: parent
+                                                                    hoverEnabled: true
+                                                                    cursorShape: Qt.PointingHandCursor
+                                                                    onClicked: {
+                                                                        priorityCombo.currentIndex = index
+                                                                        priorityCombo.popup.close()
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
-                                                delegate: QQC2.ItemDelegate {
-                                                    width: priorityCombo.width
-                                                    height: 28
-                                                    contentItem: Text {
-                                                        text: modelData
-                                                        font.pixelSize: 11
-                                                        color: highlighted ? "#FFFFFF" : root.textColor
-                                                        verticalAlignment: Text.AlignVCenter
-                                                    }
-                                                    background: Rectangle {
-                                                        color: highlighted ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2) : "transparent"
-                                                        radius: 2
-                                                    }
-                                                    highlighted: priorityCombo.highlightedIndex === index
-                                                }
+
                                             }
                                         }
                                     }
 
                                     // Row 2: Due date
-                                    Row {
-                                        spacing: 8
+                                    Column {
+                                        spacing: 2
                                         width: parent.width
 
-                                        Column {
-                                            spacing: 2
+                                        Text {
+                                            text: "Due Date"
+                                            font.pixelSize: 10
+                                            color: root.mutedColor
+                                        }
+
+                                        QQC2.ComboBox {
+                                            id: dueDateCombo
                                             width: parent.width
 
-                                            Text {
-                                                text: "Due Date"
-                                                font.pixelSize: 10
-                                                color: root.mutedColor
+                                            property string dateValue: ""
+
+                                            function formatDate(d) {
+                                                var y = d.getFullYear()
+                                                var m = ("0" + (d.getMonth() + 1)).slice(-2)
+                                                var day = ("0" + d.getDate()).slice(-2)
+                                                return y + "-" + m + "-" + day
                                             }
 
-                                            Rectangle {
-                                                width: parent.width
-                                                height: 28
+                                            function applySelection(idx) {
+                                                var now = new Date()
+                                                switch(idx) {
+                                                    case 0: dateValue = ""; displayText = "No due date"; break
+                                                    case 1: dateValue = formatDate(now); displayText = dateValue; break
+                                                    case 2: now.setDate(now.getDate() + 1); dateValue = formatDate(now); displayText = dateValue; break
+                                                    case 3: now.setDate(now.getDate() + 3); dateValue = formatDate(now); displayText = dateValue; break
+                                                    case 4:
+                                                        var dayOfWeek = now.getDay()
+                                                        var daysUntilSat = (6 - dayOfWeek + 7) % 7
+                                                        if (daysUntilSat === 0) daysUntilSat = 7
+                                                        now.setDate(now.getDate() + daysUntilSat)
+                                                        dateValue = formatDate(now); displayText = dateValue; break
+                                                    case 5: now.setDate(now.getDate() + 7); dateValue = formatDate(now); displayText = dateValue; break
+                                                    case 6: now.setMonth(now.getMonth() + 1); dateValue = formatDate(now); displayText = dateValue; break
+                                                }
+                                            }
+
+                                            model: ["No due date", "Today", "Tomorrow", "In 3 days", "Weekend", "Next week", "In a month"]
+
+                                            Component.onCompleted: {
+                                                if (modelData.due_date) {
+                                                    dateValue = modelData.due_date.substring(0, 10)
+                                                    displayText = dateValue
+                                                } else {
+                                                    currentIndex = 0
+                                                    dateValue = ""
+                                                    displayText = "No due date"
+                                                }
+                                            }
+
+                                            onActivated: function(idx) { applySelection(idx) }
+
+                                            background: Rectangle {
                                                 radius: 4
                                                 color: Qt.rgba(0.18, 0.16, 0.27, 0.6)
                                                 border.width: 1
-                                                border.color: dueDateInput.activeFocus ? root.workColor : Qt.rgba(1, 1, 1, 0.1)
-
-                                                TextInput {
-                                                    id: dueDateInput
-                                                    anchors.fill: parent
-                                                    anchors.leftMargin: 6
-                                                    anchors.rightMargin: 6
-                                                    verticalAlignment: Text.AlignVCenter
-                                                    font.pixelSize: 11
-                                                    color: root.textColor
-                                                    clip: true
-                                                    selectByMouse: true
-
-                                                    Component.onCompleted: {
-                                                        text = modelData.due_date ? modelData.due_date.substring(0, 10) : ""
-                                                    }
-
-                                                    // Placeholder
-                                                    Text {
-                                                        visible: !dueDateInput.text && !dueDateInput.activeFocus
-                                                        text: "YYYY-MM-DD"
-                                                        font.pixelSize: 11
-                                                        color: root.mutedColor
-                                                        anchors.verticalCenter: parent.verticalCenter
-                                                        anchors.left: parent.left
-                                                    }
+                                                border.color: Qt.rgba(1, 1, 1, 0.1)
+                                            }
+                                            contentItem: Text {
+                                                text: dueDateCombo.displayText
+                                                font.pixelSize: 11
+                                                color: root.textColor
+                                                verticalAlignment: Text.AlignVCenter
+                                                leftPadding: 6
+                                            }
+                                            popup: QQC2.Popup {
+                                                y: dueDateCombo.height
+                                                width: dueDateCombo.width
+                                                padding: 2
+                                                background: Rectangle {
+                                                    color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                                    border.width: 1
+                                                    border.color: Qt.rgba(1, 1, 1, 0.12)
+                                                    radius: 4
                                                 }
+                                                contentItem: Column {
+                                                    Repeater {
+                                                        model: dueDateCombo.model
+                                                        Rectangle {
+                                                            width: dueDateCombo.width - 4
+                                                            height: 28
+                                                            radius: 2
+                                                            color: dOptMA.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2) : "transparent"
 
-                                                // Clear button
-                                                Text {
-                                                    visible: dueDateInput.text !== ""
-                                                    anchors.right: parent.right
-                                                    anchors.rightMargin: 6
-                                                    anchors.verticalCenter: parent.verticalCenter
-                                                    text: "\u00d7"
-                                                    font.pixelSize: 14
-                                                    color: root.mutedColor
+                                                            Text {
+                                                                anchors.verticalCenter: parent.verticalCenter
+                                                                anchors.left: parent.left
+                                                                anchors.leftMargin: 8
+                                                                text: modelData
+                                                                font.pixelSize: 11
+                                                                color: dOptMA.containsMouse ? "#FFFFFF" : root.textColor
+                                                            }
 
-                                                    MouseArea {
-                                                        anchors.fill: parent
-                                                        anchors.margins: -4
-                                                        cursorShape: Qt.PointingHandCursor
-                                                        onClicked: dueDateInput.text = ""
+                                                            MouseArea {
+                                                                id: dOptMA
+                                                                anchors.fill: parent
+                                                                hoverEnabled: true
+                                                                cursorShape: Qt.PointingHandCursor
+                                                                onClicked: {
+                                                                    dueDateCombo.currentIndex = index
+                                                                    dueDateCombo.applySelection(index)
+                                                                    dueDateCombo.popup.close()
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -2284,7 +2490,9 @@ PlasmoidItem {
                                                         var y = now.getFullYear()
                                                         var m = ("0" + (now.getMonth() + 1)).slice(-2)
                                                         var d = ("0" + now.getDate()).slice(-2)
-                                                        dueDateInput.text = y + "-" + m + "-" + d
+                                                        var dateStr = y + "-" + m + "-" + d
+                                                        dueDateCombo.dateValue = dateStr
+                                                        dueDateCombo.displayText = dateStr
                                                     }
                                                 }
                                             }
@@ -2326,7 +2534,7 @@ PlasmoidItem {
                                                         modelData.id,
                                                         statusCombo.currentText,
                                                         priorityCombo.currentText,
-                                                        dueDateInput.text
+                                                        dueDateCombo.dateValue
                                                     )
                                                 }
                                             }
@@ -2363,7 +2571,7 @@ PlasmoidItem {
 
                                         // Delete button (glass + red)
                                         Rectangle {
-                                            width: root.confirmingDelete && taskDelegate.isEditing ? 90 : 60
+                                            width: root.confirmingDelete && taskDelegate.isEditing ? 90 : 95
                                             height: 28
                                             radius: 4
                                             color: deleteMA.containsMouse ? Qt.rgba(0.97, 0.44, 0.44, 0.2) : Qt.rgba(0.97, 0.44, 0.44, 0.1)
@@ -2396,7 +2604,7 @@ PlasmoidItem {
 
                                         // Spacer
                                         Item {
-                                            width: Math.max(0, parent.width - 60 - 60 - (root.confirmingDelete && taskDelegate.isEditing ? 90 : 60) - openAppLink.width - 32)
+                                            width: Math.max(0, parent.width - 60 - 60 - (root.confirmingDelete && taskDelegate.isEditing ? 90 : 95) - openAppLink.width - 32)
                                             height: 1
                                         }
 
@@ -2510,6 +2718,12 @@ PlasmoidItem {
         onTriggered: {
             if (root.secondsRemaining > 0) {
                 root.secondsRemaining--
+                // Pre-end warning check
+                var warningSeconds = plasmoid.configuration.preEndWarningSeconds || 0
+                if (warningSeconds > 0 && !root.preEndWarningShown && root.secondsRemaining <= warningSeconds && root.secondsRemaining > 0) {
+                    root.preEndWarningShown = true
+                    root.showPreEndWarning()
+                }
             } else {
                 root.onSessionComplete()
             }
@@ -3025,6 +3239,9 @@ PlasmoidItem {
     function startNewSession(isBreak) {
         if (!root.isAuthenticated) return
 
+        // Reset pre-end warning for new session
+        root.preEndWarningShown = false
+
         // Clear session complete state
         root.sessionJustCompleted = false
 
@@ -3156,6 +3373,8 @@ PlasmoidItem {
     function onSessionComplete() {
         root.isRunning = false
         root.completedSessions++
+        // Reset pre-end warning so next session can show it
+        root.preEndWarningShown = false
 
         if (root.completedSessions >= root.maxSessions) {
             root.completedSessions = 0
@@ -3177,9 +3396,11 @@ PlasmoidItem {
         root.isInTransition = true
         transitionTimer.restart()
 
-        // BUG-1112: Show ONLY system notification (no overlay, no in-widget popup)
+        // Show system notification (sound + action buttons via notify-send)
         showTimerNotification(root.isWorkSession)
-        console.log("[TIMER] Session complete, system notification triggered")
+        // Show full-screen overlay on widget's screen (rich QML with Start Break/Work + Postpone)
+        showFullScreenOverlay()
+        console.log("[TIMER] Session complete, notification + overlay triggered")
 
         // TASK-1424: Update nanny timestamp so idle timer resets
         root.nannyLastSessionEndTime = Date.now()

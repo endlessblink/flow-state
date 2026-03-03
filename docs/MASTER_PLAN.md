@@ -8,6 +8,18 @@
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1435~~: KDE Widget — new task not appearing in task list after creation (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-03)
+
+**Problem**: Creating a task via the widget's quick-add input didn't show the new task in the widget's task list, even with "newest first" sort active.
+
+**Root cause**: `createTask()` called `fetchTasks()` on success but had no optimistic update. The new task was invisible until the async GET completed, and QML `property var` array replacement could miss reactivity.
+
+**Fix**: Parse the POST response body (already returned via `Prefer: return=representation`) and immediately prepend the new task to `root.tasks` using a fresh array for QML reactivity. `fetchTasks()` still runs for eventual consistency.
+
+---
+
 ### BUG-1432: Overdue tasks display today's date instead of actual due date (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-03)
@@ -3895,6 +3907,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1431**~~ | **P2** | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02) |
 | **TASK-1429** | **P0** | 👀 **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link** (👀 REVIEW 2026-03-02) |
 | ~~**TASK-1428**~~ | **P0** | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03) |
+| **TASK-1434** | **P0** | 📋 **Calendar drag-to-create — click and drag on time slots to create a new task** (📋 PLANNED 2026-03-03) |
+| **TASK-1433** | **P0** | 🔄 **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (🔄 IN PROGRESS 2026-03-03) |
 | **BUG-1432** | **P1** | 🔄 **Overdue tasks display today's date instead of actual due date** (🔄 IN PROGRESS 2026-03-03) |
 | **TASK-1427** | **P0** | 📋 **Offline: merge write queue into read cache on offline load** (📋 PLANNED 2026-03-02) |
 | **TASK-1426** | **P0** | 📋 **Offline: auth grace period — keep expired session for local ops** (📋 PLANNED 2026-03-02) |

@@ -122,6 +122,8 @@ defineEmits<{
   box-shadow: var(--overlay-component-shadow);
   padding: var(--space-1) 0;
   min-width: 130px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   z-index: 10001;
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
 }

@@ -3949,7 +3949,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1442** | **P1** | 📋 **timer_sessions.position_version column does not exist — DB schema mismatch** (📋 PLANNED 2026-03-03) |
 | **INQUIRY-1438** | **P0** | 🔄 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (🔄 IN PROGRESS 2026-03-03) |
 | **TASK-1434** | **P0** | 📋 **Calendar drag-to-create — click and drag on time slots to create a new task** (📋 PLANNED 2026-03-03) |
-| **TASK-1433** | **P0** | 🔄 **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (🔄 IN PROGRESS 2026-03-03) |
+| ~~**TASK-1433**~~ | **P0** | ✅ **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (✅ DONE 2026-03-03) |
 | **BUG-1432** | **P1** | 🔄 **Overdue tasks display today's date instead of actual due date** (🔄 IN PROGRESS 2026-03-03) |
 | **TASK-1427** | **P0** | 📋 **Offline: merge write queue into read cache on offline load** (📋 PLANNED 2026-03-02) |
 | **TASK-1426** | **P0** | 📋 **Offline: auth grace period — keep expired session for local ops** (📋 PLANNED 2026-03-02) |

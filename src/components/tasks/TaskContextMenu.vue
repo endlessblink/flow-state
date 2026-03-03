@@ -11,14 +11,64 @@
       {{ displayHeaderText }}
     </div>
 
-    <!-- Edit Task (only show for single task, not batch) -->
+    <!-- Edit Task (single only) -->
     <button v-if="!isBatchOperation" class="menu-item" @click="handleEdit">
       <Pencil :size="16" class="menu-icon" />
       <span class="menu-text">Edit</span>
       <span class="menu-shortcut">Ctrl+E</span>
     </button>
 
-    <div v-if="!isBatchOperation" class="menu-divider" />
+    <!-- Mark as Done / Mark as To Do -->
+    <button class="menu-item" @click="toggleDone">
+      <CheckCircle :size="16" class="menu-icon" :class="{ 'icon-done': currentTask?.status === 'done' }" />
+      <span class="menu-text">{{ doneToggleLabel }}</span>
+    </button>
+
+    <div class="menu-divider" />
+
+    <!-- Due Date with submenu -->
+    <div
+      class="menu-item has-submenu"
+      @mouseenter="openSubmenu('dueDate', $event)"
+      @mouseleave="closeSubmenu('dueDate')"
+    >
+      <Calendar :size="16" class="menu-icon" />
+      <span class="menu-text">Due Date</span>
+      <span class="menu-item-value">{{ currentDueDateLabel }}</span>
+      <ChevronRight :size="14" class="submenu-arrow" />
+    </div>
+
+    <!-- Priority with submenu -->
+    <div
+      class="menu-item has-submenu"
+      @mouseenter="openSubmenu('priority', $event)"
+      @mouseleave="closeSubmenu('priority')"
+    >
+      <span class="priority-dot-sm" :class="currentTask?.priority || 'none'" />
+      <span class="menu-text">Priority</span>
+      <span class="menu-item-value">{{ currentPriorityLabel }}</span>
+      <ChevronRight :size="14" class="submenu-arrow" />
+    </div>
+
+    <!-- Project with submenu -->
+    <div
+      class="menu-item has-submenu"
+      @mouseenter="openSubmenu('project', $event)"
+      @mouseleave="closeSubmenu('project')"
+    >
+      <FolderOpen :size="16" class="menu-icon" />
+      <span class="menu-text">Project</span>
+      <span class="menu-item-value">{{ currentProjectLabel }}</span>
+      <ChevronRight :size="14" class="submenu-arrow" />
+    </div>
+
+    <div class="menu-divider" />
+
+    <!-- Start Timer -->
+    <button class="menu-item" @click="startTimer">
+      <Timer :size="16" class="menu-icon" />
+      <span class="menu-text">Start Timer</span>
+    </button>
 
     <!-- AI Assist -->
     <button class="menu-item menu-item--ai" @click="openAIAssist">
@@ -26,227 +76,9 @@
       <span class="menu-text">AI Assist</span>
     </button>
 
-    <!-- Date Section - Compact Pills -->
-    <div class="menu-section menu-section--tight">
-      <div class="section-header section-header--inline">
-        <Calendar :size="12" class="section-icon" />
-        <span class="section-title">Date</span>
-      </div>
-      <div class="pill-row">
-        <button class="pill-btn pill-btn--sm" :class="{ active: activeDatePill === 'today' }" @click="setDueDate('today')">
-          Today
-        </button>
-        <button class="pill-btn pill-btn--sm" :class="{ active: activeDatePill === 'tomorrow' }" @click="setDueDate('tomorrow')">
-          Tmrw
-        </button>
-        <button class="pill-btn pill-btn--sm" :class="{ active: activeDatePill === 'weekend' }" @click="setDueDate('weekend')">
-          Wknd
-        </button>
-        <button class="pill-btn pill-btn--sm" :class="{ active: activeDatePill === 'nextweek' }" @click="setDueDate('nextweek')">
-          +1wk
-        </button>
-        <NPopover
-          trigger="click"
-          placement="right-start"
-          :show="showDatePicker"
-          :z-index="10001"
-          @update:show="showDatePicker = $event"
-        >
-          <template #trigger>
-            <button class="pill-btn pill-btn--sm pill-btn--icon" title="Pick date">
-              <CalendarPlus :size="12" />
-            </button>
-          </template>
-          <div class="date-picker-popover" @click.stop>
-            <NDatePicker
-              panel
-              type="date"
-              :value="currentDueDateTimestamp"
-              :actions="[]"
-              @update:value="handleDatePickerSelect"
-            />
-            <div class="date-picker-footer">
-              <button class="footer-btn" @click="setDueDate('nextmonth'); showDatePicker = false">
-                +1mo
-              </button>
-              <button class="footer-btn" @click="setDueDate('twomonths'); showDatePicker = false">
-                +2mo
-              </button>
-              <button class="footer-btn" @click="setDueDate('nextquarter'); showDatePicker = false">
-                +3mo
-              </button>
-              <button class="footer-btn" @click="setDueDate('halfyear'); showDatePicker = false">
-                +6mo
-              </button>
-              <button class="footer-btn footer-btn--now" @click="setDueDate('today'); showDatePicker = false">
-                Now
-              </button>
-            </div>
-          </div>
-        </NPopover>
-      </div>
-    </div>
-
-    <!-- Done for now - prominent action -->
-    <button class="menu-item menu-item--highlight" @click="handleDoneForNow">
-      <Clock :size="16" class="menu-icon" />
-      <span class="menu-text">Done for now</span>
-      <span class="menu-hint">→ Tomorrow</span>
-    </button>
-
     <div class="menu-divider" />
 
-    <!-- Priority Section - Compact Pills -->
-    <div class="menu-section menu-section--tight">
-      <div class="section-header section-header--inline">
-        <Flag :size="12" class="section-icon" />
-        <span class="section-title">Priority</span>
-      </div>
-      <div class="pill-row">
-        <button
-          class="pill-btn pill-btn--sm pill-btn--priority-high"
-          :class="{ active: currentTask?.priority === 'high' }"
-          @click="setPriority('high')"
-        >
-          <span class="priority-dot high" />
-          High
-        </button>
-        <button
-          class="pill-btn pill-btn--sm pill-btn--priority-medium"
-          :class="{ active: currentTask?.priority === 'medium' }"
-          @click="setPriority('medium')"
-        >
-          <span class="priority-dot medium" />
-          Med
-        </button>
-        <button
-          class="pill-btn pill-btn--sm pill-btn--priority-low"
-          :class="{ active: currentTask?.priority === 'low' }"
-          @click="setPriority('low')"
-        >
-          <span class="priority-dot low" />
-          Low
-        </button>
-      </div>
-    </div>
-
-    <!-- TASK-1336: Project Selector -->
-    <div
-      class="inline-row inline-row--single"
-      @mouseenter="openSubmenu('project', $event)"
-      @mouseleave="closeSubmenu('project')"
-    >
-      <div class="inline-select inline-select--full">
-        <FolderOpen :size="14" class="inline-icon" />
-        <span class="inline-value">{{ currentProjectLabel }}</span>
-        <ChevronDown :size="12" class="inline-arrow" />
-      </div>
-    </div>
-
-    <!-- TASK-1429: Canvas Group Selector -->
-    <div
-      class="inline-row inline-row--single"
-      @mouseenter="openSubmenu('canvasGroup', $event)"
-      @mouseleave="closeSubmenu('canvasGroup')"
-    >
-      <div class="inline-select inline-select--full">
-        <LayoutGrid :size="14" class="inline-icon" />
-        <span class="inline-value">{{ currentCanvasGroupLabel }}</span>
-        <ChevronDown :size="12" class="inline-arrow" />
-      </div>
-    </div>
-
-    <!-- Status & Duration Row -->
-    <div class="inline-row">
-      <!-- Status with Submenu -->
-      <div
-        class="inline-select"
-        @mouseenter="openSubmenu('status', $event)"
-        @mouseleave="closeSubmenu('status')"
-      >
-        <CheckCircle :size="14" class="inline-icon" />
-        <span class="inline-value">{{ currentStatusLabel || 'Status' }}</span>
-        <ChevronDown :size="12" class="inline-arrow" />
-      </div>
-
-      <!-- Duration with Submenu -->
-      <div
-        class="inline-select"
-        @mouseenter="openSubmenu('duration', $event)"
-        @mouseleave="closeSubmenu('duration')"
-      >
-        <Clock :size="14" class="inline-icon" />
-        <span class="inline-value">{{ currentDurationLabel || 'Time' }}</span>
-        <ChevronDown :size="12" class="inline-arrow" />
-      </div>
-    </div>
-
-    <!-- Decomposed Submenus -->
-    <!-- BUG-1095: Pass parentVisible to ensure submenus close when parent closes -->
-    <StatusSubmenu
-      :is-visible="showStatusSubmenu"
-      :parent-visible="isVisible"
-      :style="statusSubmenuStyle"
-      :current-status="currentTask?.status"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('status')"
-      @select="(s: string) => { closeAllSubmenusNow(); setStatus(s as 'todo' | 'done') }"
-    />
-
-    <DurationSubmenu
-      :is-visible="showDurationSubmenu"
-      :parent-visible="isVisible"
-      :style="durationSubmenuStyle"
-      :current-duration="currentTask?.estimatedDuration"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('duration')"
-      @select="(d: number | null) => { closeAllSubmenusNow(); setDuration(d) }"
-    />
-
-    <!-- TASK-1336: Project Submenu -->
-    <ProjectSubmenu
-      :is-visible="showProjectSubmenu"
-      :parent-visible="isVisible"
-      :style="projectSubmenuStyle"
-      :current-project-id="currentTask?.projectId"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('project')"
-      @select="(id: string | null) => { closeAllSubmenusNow(); setProject(id) }"
-    />
-
-    <!-- TASK-1429: Canvas Group Submenu -->
-    <CanvasGroupSubmenu
-      :is-visible="showCanvasGroupSubmenu"
-      :parent-visible="isVisible"
-      :style="canvasGroupSubmenuStyle"
-      :current-group-id="currentTask?.parentId"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('canvasGroup')"
-      @select="(id: string | null) => { closeAllSubmenusNow(); handleMoveToGroup(id) }"
-    />
-
-    <!-- Quick Actions Row -->
-    <div class="action-bar">
-      <button
-        class="action-btn action-btn--done"
-        :class="{ active: currentTask?.status === 'done' }"
-        title="Mark Done (D)"
-        @click="toggleDone"
-      >
-        <CheckCircle :size="16" />
-      </button>
-      <button class="action-btn action-btn--start" title="Start Now (S)" @click="startTaskNow">
-        <Play :size="16" />
-      </button>
-      <button class="action-btn action-btn--timer" title="Start Timer (Space)" @click="startTimer">
-        <Timer :size="16" />
-      </button>
-      <button class="action-btn action-btn--focus" title="Focus Mode (F)" @click="enterFocus">
-        <Eye :size="16" />
-      </button>
-    </div>
-
-    <!-- More Actions with Submenu -->
+    <!-- More submenu -->
     <div
       class="menu-item has-submenu"
       @mouseenter="openSubmenu('more', $event)"
@@ -257,6 +89,7 @@
       <ChevronRight :size="14" class="submenu-arrow" />
     </div>
 
+    <!-- MoreSubmenu with ALL event handlers including nested submenus -->
     <MoreSubmenu
       :is-visible="showMoreSubmenu"
       :parent-visible="isVisible"
@@ -268,8 +101,73 @@
       @done-for-now="() => { closeAllSubmenusNow(); handleDoneForNow() }"
       @duplicate="() => { closeAllSubmenusNow(); duplicateTask() }"
       @pin-quick-task="() => { closeAllSubmenusNow(); pinAsQuickTask() }"
-      @move-to-section="taskId => { closeAllSubmenusNow(); $emit('moveToSection', taskId); $emit('close') }"
+      @move-to-section="(taskId: string) => { closeAllSubmenusNow(); $emit('moveToSection', taskId); $emit('close') }"
       @clear-selection="() => { closeAllSubmenusNow(); clearSelection() }"
+      @open-canvas-group="handleMoreCanvasGroup"
+      @close-canvas-group="closeSubmenu('canvasGroup')"
+      @open-duration="handleMoreDuration"
+      @close-duration="closeSubmenu('duration')"
+      @focus-mode="enterFocus"
+      @start-now="() => { closeAllSubmenusNow(); startTaskNow(); emit('close') }"
+      @permanent-delete="permanentlyDeleteTask"
+    />
+
+    <!-- DueDateSubmenu -->
+    <DueDateSubmenu
+      :is-visible="showDueDateSubmenu"
+      :parent-visible="isVisible"
+      :style="dueDateSubmenuStyle"
+      :current-due-date="currentTask?.dueDate"
+      @mouseenter="keepSubmenuOpen"
+      @mouseleave="closeSubmenu('dueDate')"
+      @select="(dateType: string) => { closeAllSubmenusNow(); setDueDate(dateType as 'today' | 'tomorrow' | 'weekend' | 'nextweek') }"
+      @pick-date="handleDatePickerSelect"
+      @clear-date="() => { closeAllSubmenusNow(); clearDueDate() }"
+    />
+
+    <!-- PrioritySubmenu -->
+    <PrioritySubmenu
+      :is-visible="showPrioritySubmenu"
+      :parent-visible="isVisible"
+      :style="prioritySubmenuStyle"
+      :current-priority="currentTask?.priority"
+      @mouseenter="keepSubmenuOpen"
+      @mouseleave="closeSubmenu('priority')"
+      @select="(p: 'high' | 'medium' | 'low') => { closeAllSubmenusNow(); setPriority(p) }"
+      @clear-priority="() => { closeAllSubmenusNow(); clearPriority() }"
+    />
+
+    <!-- ProjectSubmenu -->
+    <ProjectSubmenu
+      :is-visible="showProjectSubmenu"
+      :parent-visible="isVisible"
+      :style="projectSubmenuStyle"
+      :current-project-id="currentTask?.projectId"
+      @mouseenter="keepSubmenuOpen"
+      @mouseleave="closeSubmenu('project')"
+      @select="(id: string | null) => { closeAllSubmenusNow(); setProject(id) }"
+    />
+
+    <!-- CanvasGroupSubmenu (triggered from More submenu) -->
+    <CanvasGroupSubmenu
+      :is-visible="showCanvasGroupSubmenu"
+      :parent-visible="isVisible"
+      :style="canvasGroupSubmenuStyle"
+      :current-group-id="currentTask?.parentId"
+      @mouseenter="keepSubmenuOpen"
+      @mouseleave="closeSubmenu('canvasGroup')"
+      @select="(id: string | null) => { closeAllSubmenusNow(); handleMoveToGroup(id) }"
+    />
+
+    <!-- DurationSubmenu (triggered from More submenu) -->
+    <DurationSubmenu
+      :is-visible="showDurationSubmenu"
+      :parent-visible="isVisible"
+      :style="durationSubmenuStyle"
+      :current-duration="currentTask?.estimatedDuration"
+      @mouseenter="keepSubmenuOpen"
+      @mouseleave="closeSubmenu('duration')"
+      @select="(d: number | null) => { closeAllSubmenusNow(); setDuration(d) }"
     />
 
     <div class="menu-divider" />
@@ -278,11 +176,6 @@
     <button class="menu-item danger" @click="deleteTask">
       <Trash2 :size="16" class="menu-icon" />
       <span class="menu-text">{{ deleteText }}</span>
-    </button>
-
-    <button v-if="!isBatchOperation" class="menu-item danger" @click="permanentlyDeleteTask">
-      <Trash2 :size="16" class="menu-icon" />
-      <span class="menu-text">Permanently Delete</span>
     </button>
 
     <!-- AI Assist Popover -->
@@ -308,23 +201,15 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useProjectStore } from '@/stores/projects'
 import {
   Calendar,
-  CalendarPlus,
   CheckCircle,
   Timer,
-  Clock,
-  Eye,
-  Play,
-  Flag,
   FolderOpen,
-  LayoutGrid,
   ChevronRight,
-  ChevronDown,
   Pencil,
   Trash2,
   MoreHorizontal,
   Sparkles
 } from 'lucide-vue-next'
-import { NPopover, NDatePicker } from 'naive-ui'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
 import type { Task } from '@/stores/tasks'
@@ -333,8 +218,8 @@ import type { Task } from '@/stores/tasks'
 import { useTaskContextMenuActions } from '@/composables/tasks/useTaskContextMenuActions'
 import { useQuickTasks } from '@/composables/useQuickTasks'
 import { useToast } from '@/composables/useToast'
-import { statusOptions } from './context-menu/constants'
-import StatusSubmenu from './context-menu/StatusSubmenu.vue'
+import DueDateSubmenu from './context-menu/DueDateSubmenu.vue'
+import PrioritySubmenu from './context-menu/PrioritySubmenu.vue'
 import DurationSubmenu from './context-menu/DurationSubmenu.vue'
 import MoreSubmenu from './context-menu/MoreSubmenu.vue'
 import ProjectSubmenu from './context-menu/ProjectSubmenu.vue'
@@ -401,20 +286,21 @@ const canvasStore = useCanvasStore()
 const projectStore = useProjectStore()
 
 const menuRef = ref<HTMLElement | null>(null)
-const showDatePicker = ref(false)
 
 // AI Assist popover state
 const showAIAssist = ref(false)
 const aiAssistPosition = ref({ x: 0, y: 0 })
 
 // Submenu state
-const showStatusSubmenu = ref(false)
+const showDueDateSubmenu = ref(false)
+const showPrioritySubmenu = ref(false)
 const showDurationSubmenu = ref(false)
 const showMoreSubmenu = ref(false)
 const showProjectSubmenu = ref(false)
 const showCanvasGroupSubmenu = ref(false)
-const submenuTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
-const statusSubmenuPosition = ref({ x: 0, y: 0 })
+const submenuTimeouts = ref(new Map<string, ReturnType<typeof setTimeout>>())
+const dueDateSubmenuPosition = ref({ x: 0, y: 0 })
+const prioritySubmenuPosition = ref({ x: 0, y: 0 })
 const durationSubmenuPosition = ref({ x: 0, y: 0 })
 const moreSubmenuPosition = ref({ x: 0, y: 0 })
 const projectSubmenuPosition = ref({ x: 0, y: 0 })
@@ -434,45 +320,33 @@ const displayHeaderText = computed(() => {
   return ''
 })
 
-// Active date pill detection
-const activeDatePill = computed(() => {
+const doneToggleLabel = computed(() => {
+  if (isBatchOperation.value) {
+    return `Mark ${props.selectedCount} as Done`
+  }
+  return currentTask.value?.status === 'done' ? 'Mark as To Do' : 'Mark as Done'
+})
+
+const currentDueDateLabel = computed(() => {
   const dueDate = currentTask.value?.dueDate
-  if (!dueDate) return null
+  if (!dueDate) return ''
   const due = new Date(dueDate)
+  if (isNaN(due.getTime())) return ''
   const today = new Date()
   const isSameDay = (a: Date, b: Date) =>
     a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-  if (isSameDay(due, today)) return 'today'
+  if (isSameDay(due, today)) return 'Today'
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
-  if (isSameDay(due, tomorrow)) return 'tomorrow'
-  // Weekend = next Saturday
-  const dayOfWeek = today.getDay()
-  const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7
-  const weekend = new Date(today)
-  weekend.setDate(today.getDate() + daysUntilSat)
-  if (isSameDay(due, weekend)) return 'weekend'
-  // Next week = next Monday
-  const daysUntilMon = (1 - dayOfWeek + 7) % 7 || 7
-  const nextWeek = new Date(today)
-  nextWeek.setDate(today.getDate() + daysUntilMon)
-  if (isSameDay(due, nextWeek)) return 'nextweek'
-  return null
+  if (isSameDay(due, tomorrow)) return 'Tomorrow'
+  // Format as "Mar 15" style
+  return due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 })
 
-const currentStatusLabel = computed(() => {
-  const status = currentTask.value?.status
-  return statusOptions.find(s => s.value === status)?.label || ''
-})
-
-const currentDurationLabel = computed(() => {
-  const duration = currentTask.value?.estimatedDuration
-  if (!duration) return ''
-  if (duration === 15) return '15m'
-  if (duration === 30) return '30m'
-  if (duration === 60) return '1h'
-  if (duration === 120) return '2h'
-  return `${duration}m`
+const currentPriorityLabel = computed(() => {
+  const priority = currentTask.value?.priority
+  if (!priority) return ''
+  return priority.charAt(0).toUpperCase() + priority.slice(1)
 })
 
 // TASK-1336: Project label for context menu
@@ -480,14 +354,6 @@ const currentProjectLabel = computed(() => {
   const projectId = currentTask.value?.projectId
   if (!projectId) return 'No Project'
   return projectStore.getProjectDisplayName(projectId)
-})
-
-// TASK-1429: Canvas Group label for context menu
-const currentCanvasGroupLabel = computed(() => {
-  const parentId = currentTask.value?.parentId
-  if (!parentId) return 'No Group'
-  const group = canvasStore._rawGroups.find((g: { id: string; name: string }) => g.id === parentId)
-  return group?.name || 'No Group'
 })
 
 const deleteText = computed(() => {
@@ -498,17 +364,9 @@ const deleteText = computed(() => {
   return (task && 'isCalendarEvent' in task && (task as Record<string, unknown>).isCalendarEvent) ? 'Remove' : 'Delete'
 })
 
-// Date picker value (timestamp in milliseconds for Naive UI)
-const currentDueDateTimestamp = computed(() => {
-  const dueDate = currentTask.value?.dueDate
-  if (!dueDate) return null
-  const date = new Date(dueDate)
-  return isNaN(date.getTime()) ? null : date.getTime()
-})
-
-// Handle date selection from picker - directly update task store
-const handleDatePickerSelect = async (timestamp: number | null) => {
-  if (!timestamp || !currentTask.value) return
+// Handle date selection from DueDateSubmenu picker - directly update task store
+const handleDatePickerSelect = async (timestamp: number) => {
+  if (!currentTask.value) return
 
   // Use local date components to avoid timezone shift
   const date = new Date(timestamp)
@@ -522,8 +380,7 @@ const handleDatePickerSelect = async (timestamp: number | null) => {
   const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
   const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
-  // Close the popover first
-  showDatePicker.value = false
+  closeAllSubmenusNow()
 
   // Update the task directly via task store
   try {
@@ -537,6 +394,30 @@ const handleDatePickerSelect = async (timestamp: number | null) => {
     console.error('Error updating task due date:', error)
   }
 
+  emit('close')
+}
+
+// Clear due date
+const clearDueDate = async () => {
+  if (!currentTask.value) return
+  try {
+    await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: '' })
+    canvasStore.requestSync('user:context-menu')
+  } catch (error) {
+    console.error('Error clearing task due date:', error)
+  }
+  emit('close')
+}
+
+// Clear priority
+const clearPriority = async () => {
+  if (!currentTask.value) return
+  try {
+    await taskStore.updateTaskWithUndo(currentTask.value.id, { priority: null })
+    canvasStore.requestSync('user:context-menu')
+  } catch (error) {
+    console.error('Error clearing task priority:', error)
+  }
   emit('close')
 }
 
@@ -608,6 +489,40 @@ const handleMoveToGroup = async (groupId: string | null) => {
   emit('close')
   if (ids.length === 0) return
   await moveToGroupWithToast(ids, groupId)
+}
+
+// Handle MoreSubmenu nested Canvas Group submenu positioning
+const handleMoreCanvasGroup = (event: MouseEvent) => {
+  const target = event.currentTarget as HTMLElement
+  const triggerRect = target.getBoundingClientRect()
+  const submenuWidth = 200
+  let x = triggerRect.right + 4
+  let y = triggerRect.top
+  if (x + submenuWidth > window.innerWidth - 8) {
+    x = triggerRect.left - submenuWidth - 4
+  }
+  if (y + 250 > window.innerHeight - 8) {
+    y = window.innerHeight - 250 - 8
+  }
+  canvasGroupSubmenuPosition.value = { x, y }
+  showCanvasGroupSubmenu.value = true
+}
+
+// Handle MoreSubmenu nested Duration submenu positioning
+const handleMoreDuration = (event: MouseEvent) => {
+  const target = event.currentTarget as HTMLElement
+  const triggerRect = target.getBoundingClientRect()
+  const submenuWidth = 150
+  let x = triggerRect.right + 4
+  let y = triggerRect.top
+  if (x + submenuWidth > window.innerWidth - 8) {
+    x = triggerRect.left - submenuWidth - 4
+  }
+  if (y + 180 > window.innerHeight - 8) {
+    y = window.innerHeight - 180 - 8
+  }
+  durationSubmenuPosition.value = { x, y }
+  showDurationSubmenu.value = true
 }
 
 // AI Assist handlers
@@ -689,9 +604,14 @@ const menuPosition = computed(() => {
 })
 
 // Submenu styles
-const statusSubmenuStyle = computed(() => ({
-  left: statusSubmenuPosition.value.x + 'px',
-  top: statusSubmenuPosition.value.y + 'px'
+const dueDateSubmenuStyle = computed(() => ({
+  left: dueDateSubmenuPosition.value.x + 'px',
+  top: dueDateSubmenuPosition.value.y + 'px'
+}))
+
+const prioritySubmenuStyle = computed(() => ({
+  left: prioritySubmenuPosition.value.x + 'px',
+  top: prioritySubmenuPosition.value.y + 'px'
 }))
 
 const durationSubmenuStyle = computed(() => ({
@@ -715,14 +635,17 @@ const canvasGroupSubmenuStyle = computed(() => ({
 }))
 
 // Submenu handlers
-const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project' | 'canvasGroup', event: MouseEvent) => {
-  if (submenuTimeout.value) {
-    clearTimeout(submenuTimeout.value)
-    submenuTimeout.value = null
-  }
+const clearAllSubmenuTimeouts = () => {
+  for (const t of submenuTimeouts.value.values()) clearTimeout(t)
+  submenuTimeouts.value.clear()
+}
+
+const openSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup', event: MouseEvent) => {
+  clearAllSubmenuTimeouts()
 
   // BUG-1095: Close ALL other submenus before opening a new one
-  showStatusSubmenu.value = false
+  showDueDateSubmenu.value = false
+  showPrioritySubmenu.value = false
   showDurationSubmenu.value = false
   showMoreSubmenu.value = false
   showProjectSubmenu.value = false
@@ -731,7 +654,7 @@ const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project' | 'canvasG
   const target = event.currentTarget as HTMLElement
   const triggerRect = target.getBoundingClientRect()
   const menuRect = menuRef.value?.getBoundingClientRect()
-  const submenuWidth = (type === 'project' || type === 'canvasGroup') ? 200 : 150
+  const submenuWidth = (type === 'project' || type === 'canvasGroup') ? 200 : (type === 'dueDate') ? 180 : 150
 
   // BUG-1095: Position to the right of the MENU, not the trigger
   let x = menuRect ? menuRect.right + 4 : triggerRect.right + 4
@@ -743,14 +666,17 @@ const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project' | 'canvasG
     x = menuRect ? menuRect.left - submenuWidth - 4 : triggerRect.left - submenuWidth - 4
   }
 
-  const submenuHeight = type === 'more' ? 100 : (type === 'project' || type === 'canvasGroup') ? 250 : 180
+  const submenuHeight = type === 'more' ? 360 : (type === 'project' || type === 'canvasGroup') ? 250 : (type === 'dueDate') ? 300 : 180
   if (y + submenuHeight > window.innerHeight - 8) {
     y = window.innerHeight - submenuHeight - 8
   }
 
-  if (type === 'status') {
-    statusSubmenuPosition.value = { x, y }
-    showStatusSubmenu.value = true
+  if (type === 'dueDate') {
+    dueDateSubmenuPosition.value = { x, y }
+    showDueDateSubmenu.value = true
+  } else if (type === 'priority') {
+    prioritySubmenuPosition.value = { x, y }
+    showPrioritySubmenu.value = true
   } else if (type === 'duration') {
     durationSubmenuPosition.value = { x, y }
     showDurationSubmenu.value = true
@@ -767,29 +693,44 @@ const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project' | 'canvasG
 }
 
 const keepSubmenuOpen = () => {
-  if (submenuTimeout.value) {
-    clearTimeout(submenuTimeout.value)
-    submenuTimeout.value = null
-  }
+  clearAllSubmenuTimeouts()
 }
 
-const closeSubmenu = (type: 'status' | 'duration' | 'more' | 'project' | 'canvasGroup') => {
-  submenuTimeout.value = setTimeout(() => {
-    if (type === 'status') showStatusSubmenu.value = false
-    else if (type === 'duration') showDurationSubmenu.value = false
+const closeSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup') => {
+  // Clear any existing timeout for this type
+  const existing = submenuTimeouts.value.get(type)
+  if (existing) clearTimeout(existing)
+
+  const timeout = setTimeout(() => {
+    submenuTimeouts.value.delete(type)
+    if (type === 'dueDate') showDueDateSubmenu.value = false
+    else if (type === 'priority') showPrioritySubmenu.value = false
+    else if (type === 'duration') {
+      showDurationSubmenu.value = false
+      // Also close More if no nested child is open
+      if (!showCanvasGroupSubmenu.value) showMoreSubmenu.value = false
+    }
     else if (type === 'project') showProjectSubmenu.value = false
-    else if (type === 'canvasGroup') showCanvasGroupSubmenu.value = false
-    else showMoreSubmenu.value = false
+    else if (type === 'canvasGroup') {
+      showCanvasGroupSubmenu.value = false
+      // Also close More if no nested child is open
+      if (!showDurationSubmenu.value) showMoreSubmenu.value = false
+    }
+    else {
+      // Closing 'more' — skip if a nested child submenu is still open
+      if (!showCanvasGroupSubmenu.value && !showDurationSubmenu.value) {
+        showMoreSubmenu.value = false
+      }
+    }
   }, 150)
+  submenuTimeouts.value.set(type, timeout)
 }
 
 // BUG-1095: Immediately close ALL submenus - no timeout
 const closeAllSubmenusNow = () => {
-  if (submenuTimeout.value) {
-    clearTimeout(submenuTimeout.value)
-    submenuTimeout.value = null
-  }
-  showStatusSubmenu.value = false
+  clearAllSubmenuTimeouts()
+  showDueDateSubmenu.value = false
+  showPrioritySubmenu.value = false
   showDurationSubmenu.value = false
   showMoreSubmenu.value = false
   showProjectSubmenu.value = false
@@ -829,7 +770,8 @@ watch(() => props.isVisible, (isVisible) => {
     setTimeout(() => document.addEventListener('click', handleClickOutside), 0)
   } else {
     document.removeEventListener('click', handleClickOutside)
-    showStatusSubmenu.value = false
+    showDueDateSubmenu.value = false
+    showPrioritySubmenu.value = false
     showDurationSubmenu.value = false
     showMoreSubmenu.value = false
     showProjectSubmenu.value = false
@@ -840,7 +782,7 @@ watch(() => props.isVisible, (isVisible) => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
-  if (submenuTimeout.value) clearTimeout(submenuTimeout.value)
+  clearAllSubmenuTimeouts()
 })
 </script>
 
@@ -856,6 +798,8 @@ onUnmounted(() => {
   padding: var(--space-2) 0;
   min-width: 240px;
   max-width: 280px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   z-index: 9999;
   animation: menuSlideIn 150ms ease-out;
 }
@@ -901,27 +845,6 @@ onUnmounted(() => {
 .menu-item.danger { color: var(--danger-text); }
 .menu-item.danger:hover { background: var(--danger-bg-subtle); }
 
-/* Highlighted menu item - stands out */
-.menu-item--highlight {
-  background: var(--amber-bg-light);
-  border-inline-start: 3px solid var(--amber-text);
-  margin: var(--space-1) var(--space-2);
-  border-radius: var(--radius-md);
-  width: calc(100% - var(--space-4));
-}
-.menu-item--highlight:hover {
-  background: var(--amber-bg-medium);
-}
-.menu-item--highlight .menu-icon {
-  color: var(--amber-text);
-}
-
-.menu-hint {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  opacity: 0.7;
-}
-
 .menu-icon { flex-shrink: 0; opacity: 0.8; }
 .menu-text { flex: 1; }
 .menu-shortcut { color: var(--text-muted); font-size: var(--text-xs); opacity: 0.6; }
@@ -932,234 +855,32 @@ onUnmounted(() => {
   margin: var(--space-2) 0;
 }
 
-/* Sections */
-.menu-section { padding: var(--space-1_5) var(--space-3); }
-.menu-section--tight { padding: var(--space-1_5) var(--space-3) var(--space-2); }
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1_5);
-  margin-bottom: var(--space-2);
-}
-
-.section-header--inline {
-  margin-bottom: var(--space-1_5);
-}
-
-.section-icon { color: var(--text-muted); opacity: 0.6; }
-.section-title {
-  font-size: var(--text-xs);
-  font-weight: 600;
+/* Current value shown on right side of submenu trigger */
+.menu-item-value {
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Pill Row */
-.pill-row {
-  display: flex;
-  gap: var(--space-1_5);
-  flex-wrap: nowrap;
-}
-
-.pill-btn {
-  padding: var(--space-1) var(--space-2_5);
-  border-radius: var(--radius-xl);
-  background: var(--glass-bg-heavy);
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
   font-size: var(--text-xs);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--spring-smooth);
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
+  margin-inline-start: auto;
+  margin-inline-end: var(--space-1);
   white-space: nowrap;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.pill-btn--sm { padding: var(--space-1) var(--space-2); font-size: var(--text-xs); }
-
-.pill-btn:hover {
-  background: var(--glass-border);
-  border-color: var(--glass-border-hover);
-  color: var(--text-primary);
-}
-
-.pill-btn.active {
-  background: var(--brand-bg-subtle);
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-}
-
-.pill-btn--icon {
-  padding: var(--space-0_5) var(--space-1);
-  min-width: 24px;
-  justify-content: center;
-}
-
-/* Priority Pills */
-.pill-btn--priority-high:hover,
-.pill-btn--priority-high.active {
-  background: var(--priority-high-bg);
-  border-color: var(--color-priority-high);
-  color: var(--color-priority-high);
-}
-
-.pill-btn--priority-medium:hover,
-.pill-btn--priority-medium.active {
-  background: var(--priority-medium-bg);
-  border-color: var(--color-priority-medium);
-  color: var(--color-priority-medium);
-}
-
-.pill-btn--priority-low:hover,
-.pill-btn--priority-low.active {
-  background: var(--priority-low-bg);
-  border-color: var(--color-priority-low);
-  color: var(--color-priority-low);
-}
-
-.priority-dot {
-  width: var(--space-1_75);
-  height: var(--space-1_75);
+/* Small priority dot for the priority trigger item */
+.priority-dot-sm {
+  width: 8px;
+  height: 8px;
   border-radius: var(--radius-full);
+  flex-shrink: 0;
 }
+.priority-dot-sm.high { background: var(--color-priority-high); }
+.priority-dot-sm.medium { background: var(--color-priority-medium); }
+.priority-dot-sm.low { background: var(--color-priority-low); }
+.priority-dot-sm.none { background: var(--text-muted); opacity: 0.4; }
 
-.priority-dot.high { background: var(--color-priority-high); }
-.priority-dot.medium { background: var(--color-priority-medium); }
-.priority-dot.low { background: var(--color-priority-low); }
-
-/* Date Picker Popover */
-.date-picker-popover {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.date-picker-footer {
-  display: flex;
-  gap: var(--space-1);
-  justify-content: flex-end;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--glass-border);
-}
-
-.footer-btn {
-  padding: 0 var(--space-2);
-  height: var(--space-7);
-  background: transparent;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-
-.footer-btn:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-}
-
-.footer-btn--now {
-  background: var(--glass-bg-soft);
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-  font-weight: var(--font-semibold);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.footer-btn--now:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--brand-primary-hover, var(--brand-primary));
-}
-
-/* Inline Row for Status/Duration */
-.inline-row {
-  display: flex;
-  gap: var(--space-2);
-  padding: var(--space-1_5) var(--space-3) var(--space-2_5);
-}
-
-.inline-select {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1_5);
-  padding: var(--space-1_5) var(--space-2_5);
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-bg-heavy);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--spring-smooth);
-}
-
-.inline-select:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--glass-border-hover);
-}
-
-.inline-row--single {
-  padding: 0 var(--space-3) var(--space-1);
-}
-
-.inline-select--full {
-  flex: 1;
-}
-
-.inline-icon { color: var(--text-muted); flex-shrink: 0; }
-.inline-value { flex: 1; font-size: var(--text-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.inline-arrow { color: var(--text-muted); opacity: 0.5; }
-
-/* Action Bar */
-.action-bar {
-  display: flex;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  justify-content: space-between;
-}
-
-.action-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2);
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-bg-heavy);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--spring-smooth);
-  color: var(--text-secondary);
-}
-
-.action-btn:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--glass-border-hover);
-  color: var(--text-primary);
-}
-
-.action-btn--done { color: var(--color-work); }
-.action-btn--done:hover { background: var(--status-done-bg); border-color: var(--color-work); }
-.action-btn--done.active {
-  background: var(--status-done-bg);
-  border-color: var(--color-work);
-  color: var(--color-work);
-}
-
-.action-btn--start { color: var(--color-break); }
-.action-btn--start:hover { background: var(--status-in-progress-bg); border-color: var(--color-break); }
-
-.action-btn--timer { color: var(--brand-primary); }
-.action-btn--timer:hover { background: var(--brand-bg-subtle); border-color: var(--brand-primary); }
-
-.action-btn--focus { color: var(--color-focus); }
-.action-btn--focus:hover { background: rgba(139, 92, 246, 0.15); border-color: var(--color-focus); }
+/* Done checkmark teal color */
+.icon-done { color: var(--brand-primary); opacity: 1; }
 
 /* AI Assist Menu Item */
 .menu-item--ai {

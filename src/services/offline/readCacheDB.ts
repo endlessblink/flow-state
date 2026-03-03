@@ -262,19 +262,41 @@ export async function getCachedTasksWithPendingWrites(): Promise<Task[] | null> 
     }
   }
 
+  // TASK-1428: Import mapper to convert write queue payloads (snake_case DB format)
+  // to app format (camelCase). Write queue stores payloads in Supabase column format
+  // (e.g., created_at, is_in_inbox, status: "planned") but the app expects
+  // camelCase fields (createdAt, isInInbox, status: "todo").
+  let mapPayloadToTask: ((payload: Record<string, unknown>) => Task) | null = null
+  try {
+    const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
+    mapPayloadToTask = (payload) => fromSupabaseTask(payload as import('@/utils/supabaseMappers').SupabaseTask)
+  } catch (e) {
+    console.warn('[READ-CACHE] TASK-1428: Could not load mapper, using raw payloads:', e)
+  }
+
   // TASK-1427: Apply pending operations in chronological order
   for (const op of pendingOps) {
     switch (op.operation) {
       case 'create':
         // Only add if not already present in the cache snapshot
         if (!taskMap.has(op.entityId)) {
-          taskMap.set(op.entityId, { id: op.entityId, ...op.payload } as Task)
+          // TASK-1428: Convert DB-format payload to app-format Task
+          const task = mapPayloadToTask
+            ? mapPayloadToTask(op.payload)
+            : { id: op.entityId, ...op.payload } as Task
+          taskMap.set(op.entityId, task)
         }
         break
       case 'update': {
         const existing = taskMap.get(op.entityId)
         if (existing) {
-          taskMap.set(op.entityId, { ...existing, ...op.payload } as Task)
+          // For updates, merge mapped payload on top of existing task
+          if (mapPayloadToTask) {
+            const mapped = mapPayloadToTask({ ...op.payload, id: op.entityId })
+            taskMap.set(op.entityId, { ...existing, ...mapped })
+          } else {
+            taskMap.set(op.entityId, { ...existing, ...op.payload } as Task)
+          }
         }
         break
       }
@@ -330,18 +352,35 @@ export async function getCachedGroupsWithPendingWrites(): Promise<CanvasGroup[] 
     }
   }
 
+  // TASK-1428: Import mapper for groups (same snake_case→camelCase issue as tasks)
+  let mapPayloadToGroup: ((payload: Record<string, unknown>) => CanvasGroup) | null = null
+  try {
+    const { fromSupabaseGroup } = await import('@/utils/supabaseMappers')
+    mapPayloadToGroup = (payload) => fromSupabaseGroup(payload as import('@/utils/supabaseMappers').SupabaseGroup)
+  } catch (e) {
+    console.warn('[READ-CACHE] TASK-1428: Could not load group mapper:', e)
+  }
+
   // TASK-1427: Apply pending operations in chronological order
   for (const op of pendingOps) {
     switch (op.operation) {
       case 'create':
         if (!groupMap.has(op.entityId)) {
-          groupMap.set(op.entityId, { id: op.entityId, ...op.payload } as CanvasGroup)
+          const group = mapPayloadToGroup
+            ? mapPayloadToGroup(op.payload)
+            : { id: op.entityId, ...op.payload } as CanvasGroup
+          groupMap.set(op.entityId, group)
         }
         break
       case 'update': {
         const existing = groupMap.get(op.entityId)
         if (existing) {
-          groupMap.set(op.entityId, { ...existing, ...op.payload } as CanvasGroup)
+          if (mapPayloadToGroup) {
+            const mapped = mapPayloadToGroup({ ...op.payload, id: op.entityId })
+            groupMap.set(op.entityId, { ...existing, ...mapped })
+          } else {
+            groupMap.set(op.entityId, { ...existing, ...op.payload } as CanvasGroup)
+          }
         }
         break
       }

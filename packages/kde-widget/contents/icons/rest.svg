@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Person sitting/resting -->
+  <!-- Head -->
+  <circle cx="12" cy="6" r="3" fill="#22C55E"/>
+  <!-- Body -->
+  <path d="M12 9 L12 14" stroke="#22C55E" stroke-width="2" stroke-linecap="round"/>
+  <!-- Arms relaxed -->
+  <path d="M12 11 L8 13" stroke="#22C55E" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 11 L16 13" stroke="#22C55E" stroke-width="2" stroke-linecap="round"/>
+  <!-- Legs sitting -->
+  <path d="M12 14 L9 19" stroke="#22C55E" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 14 L15 19" stroke="#22C55E" stroke-width="2" stroke-linecap="round"/>
+</svg>

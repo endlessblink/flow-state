@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "pomoflow@example.com",
+                "Name": "PomoFlow"
+            }
+        ],
+        "Category": "Utilities",
+        "Description": "Pomodoro timer widget with Supabase task integration",
+        "Icon": "chronometer",
+        "Id": "com.pomoflow.widget",
+        "Name": "PomoFlow Timer",
+        "Version": "1.0.0",
+        "Website": "https://github.com/pomoflow"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "KPackageStructure": "Plasma/Applet"
+}

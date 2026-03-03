@@ -110,9 +110,32 @@
 
 ---
 
-### TASK-1424: KDE Widget Nanny Notifications — Schedule-Gated Idle Reminders (🔄 IN PROGRESS)
+### ~~TASK-1435~~: Active Task Glass Pill — KDE Companion Widget + AppHeader (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-03-02)
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-03)
+
+**Problem/Opportunity**: When a Pomodoro timer is running on a task, the user wants to see the active task name at a glance — both in the web app header and in the KDE Plasma panel next to the timer widget.
+
+**Approach**: Two-part implementation:
+1. **Web app**: Glass-morphism pill in `AppHeader.vue` next to the timer, showing project color dot + task name with smooth enter/leave transitions
+2. **KDE Plasma widget**: Separate companion widget (`com.pomoflow.activetask`) that reads task state from `/tmp/flowstate-active-task.json` written by the main timer widget via a temp file bridge
+
+**Key decisions**:
+- Temp file bridge avoids duplicating Supabase auth in the companion widget
+- Main widget resolves task name inline in `writeActiveTaskFile()` for reliable reactivity
+- Companion widget uses `Plasma5Support.DataSource` with shell `cat` command (not XMLHttpRequest, which is sandboxed in Plasma widgets)
+
+**Steps**:
+- [x] ~~AppHeader.vue: add glass pill with project dot + task name + transitions~~ ✅
+- [x] ~~Main KDE widget: add `currentTaskName` property + `writeActiveTaskFile()` bridge~~ ✅
+- [x] ~~New KDE widget: `packages/kde-widget-active-task/` with compact pill + full popup~~ ✅
+- [x] ~~Install script + metadata.json for `com.pomoflow.activetask`~~ ✅
+
+---
+
+### ~~TASK-1424~~: KDE Widget Nanny Notifications — Schedule-Gated Idle Reminders (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-03)
 
 **Problem/Opportunity**: User wants a gentle reminder from the KDE widget when no Pomodoro session is active during configured work hours. Must be helpful without being counterproductive (notification fatigue, guilt, off-hours annoyance).
 
@@ -3915,7 +3938,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1420**~~ | **P1** | ✅ **Add project selector to task edit modal — TaskEditMetadata missing project field** (✅ DONE 2026-02-27) |
 | ~~**TASK-1419**~~ | **P1** | ✅ **Inbox multi-select bulk property updates — context menu actions apply to all selected tasks** (✅ DONE 2026-02-27) |
 | ~~**TASK-1418**~~ | **P1** | ✅ **Too many buttons on calendar dashboard — consolidate into dropdown or settings** (✅ DONE 2026-02-27) |
-| **TASK-1424** | **P2** | 🔄 **KDE widget nanny notifications — schedule-gated idle reminders when no Pomodoro active** (🔄 IN PROGRESS 2026-03-02) |
+| ~~**TASK-1435**~~ | **P2** | ✅ **Active task glass pill — KDE companion widget + AppHeader pill showing current Pomodoro task** (✅ DONE 2026-03-03) |
+| ~~**TASK-1424**~~ | **P2** | ✅ **KDE widget nanny notifications — schedule-gated idle reminders when no Pomodoro active** (✅ DONE 2026-03-03) |
 | ~~**TASK-1423**~~ | **P2** | ✅ **KDE widget: add button to open Tauri or web app** (✅ DONE 2026-03-03) |
 | ~~**TASK-1431**~~ | **P2** | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02) |
 | **TASK-1429** | **P0** | 👀 **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link** (👀 REVIEW 2026-03-02) |

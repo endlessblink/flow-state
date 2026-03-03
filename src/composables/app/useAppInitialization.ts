@@ -128,7 +128,9 @@ export function useAppInitialization() {
         isDataReady.value = true
 
         // Phase B (non-blocking): Background sync from Supabase
-        if (authStore.isAuthenticated) {
+        // Skip entirely when offline — no point in fetching, just wait for 'online' event
+        const isOnline = typeof navigator !== 'undefined' ? navigator.onLine !== false : true
+        if (authStore.isAuthenticated && isOnline) {
             const backgroundRefresh = async () => {
                 try {
                     invalidateCache.all()
@@ -193,7 +195,33 @@ export function useAppInitialization() {
             }
 
             // Fire-and-forget — don't block UI rendering
-            backgroundRefresh()
+            backgroundRefresh().catch(e => {
+                console.warn('⚠️ [CACHE-FIRST] Unhandled background refresh error:', e)
+            })
+        } else if (authStore.isAuthenticated && !isOnline) {
+            // Offline: register listener to sync when connectivity returns
+            console.log('📵 [CACHE-FIRST] Offline — will sync from Supabase when network returns')
+            const onBackOnline = async () => {
+                console.log('🌐 [CACHE-FIRST] Network restored — reloading from Supabase...')
+                window.removeEventListener('online', onBackOnline)
+                try {
+                    invalidateCache.all()
+                    await Promise.all([
+                        taskStore.loadFromDatabase(),
+                        projectStore.loadProjectsFromDatabase(),
+                        canvasStore.loadFromDatabase()
+                    ])
+                    try {
+                        const { useSyncStatusStore } = await import('@/stores/syncStatus')
+                        useSyncStatusStore().clearCacheMode()
+                    } catch { /* non-critical */ }
+                    console.log('✅ [CACHE-FIRST] Successfully reloaded from Supabase after reconnection')
+                } catch (e) {
+                    console.warn('⚠️ [CACHE-FIRST] Reconnection reload failed, will retry on next online event:', e)
+                    window.addEventListener('online', onBackOnline, { once: true })
+                }
+            }
+            window.addEventListener('online', onBackOnline, { once: true })
         }
 
         // FEATURE-1118: Initialize gamification system

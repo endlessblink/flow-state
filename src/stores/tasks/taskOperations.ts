@@ -231,17 +231,25 @@ export function useTaskOperations(
                 console.warn('[SYNC-QUEUE] Failed to queue create, falling back to direct save:', queueError)
             }
 
-            // Also attempt direct save (for immediate sync when online)
-            await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
-
-            // TASK-1428: Update IndexedDB read cache so offline reloads see the new task
+            // TASK-1428: Update IndexedDB read cache BEFORE the direct save attempt.
+            // If offline, saveSpecificTasks will fail but the cache is already warm.
             cacheTasks([..._rawTasks.value])
+
+            // Also attempt direct save (for immediate sync when online)
+            // Wrapped in try/catch: offline failure must NOT roll back the task —
+            // it's already in _rawTasks + sync queue + read cache.
+            try {
+                await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
+            } catch (directSaveError) {
+                console.warn(`[TASK] Direct save failed for new task ${taskId.slice(0, 8)}, sync queue will retry:`, directSaveError)
+            }
 
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
 
             return newTask
         } catch (error) {
+            // Only reaches here if sync queue AND cache both failed (extremely unlikely)
             const index = _rawTasks.value.findIndex(t => t.id === taskId)
             if (index !== -1) _rawTasks.value.splice(index, 1)
             throw error

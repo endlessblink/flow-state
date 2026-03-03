@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+    <kcfgfile name=""/>
+
+    <group name="General">
+        <!-- Supabase Configuration -->
+        <entry name="supabaseUrl" type="String">
+            <label>Supabase Project URL</label>
+            <default></default>
+        </entry>
+        <entry name="supabaseAnonKey" type="String">
+            <label>Supabase Anon Key</label>
+            <default></default>
+        </entry>
+
+        <!-- Authentication Storage (tokens only, never password) -->
+        <entry name="storageEmail" type="String">
+            <label>Stored User Email</label>
+            <default></default>
+        </entry>
+        <entry name="storageAccessToken" type="String">
+            <label>Stored Access Token</label>
+            <default></default>
+        </entry>
+        <entry name="storageRefreshToken" type="String">
+            <label>Stored Refresh Token</label>
+            <default></default>
+        </entry>
+        <entry name="storageUserId" type="String">
+            <label>Stored User ID</label>
+            <default></default>
+        </entry>
+
+        <!-- Login trigger (set to email:password to trigger sign in) -->
+        <entry name="loginTrigger" type="String">
+            <label>Login Trigger</label>
+            <default></default>
+        </entry>
+
+        <!-- Timer Settings -->
+        <entry name="workDuration" type="Int">
+            <label>Work duration in minutes</label>
+            <default>25</default>
+        </entry>
+        <entry name="breakDuration" type="Int">
+            <label>Break duration in minutes</label>
+            <default>5</default>
+        </entry>
+        <entry name="longBreakDuration" type="Int">
+            <label>Long break duration in minutes</label>
+            <default>15</default>
+        </entry>
+        <entry name="sessionsBeforeLongBreak" type="Int">
+            <label>Work sessions before long break</label>
+            <default>4</default>
+        </entry>
+
+        <!-- Nanny (Focus Reminder) Settings -->
+        <entry name="nannyEnabled" type="Bool">
+            <label>Enable focus reminder notifications when idle during work hours</label>
+            <default>false</default>
+        </entry>
+        <entry name="nannyWorkDays" type="String">
+            <label>Work days for reminders (comma-separated: 0=Sun, 1=Mon, ..., 6=Sat)</label>
+            <default>1,2,3,4,5</default>
+        </entry>
+        <entry name="nannyStartHour" type="Int">
+            <label>Work hours start (0-23)</label>
+            <default>9</default>
+        </entry>
+        <entry name="nannyEndHour" type="Int">
+            <label>Work hours end (0-23)</label>
+            <default>18</default>
+        </entry>
+        <entry name="nannyIntervalMinutes" type="Int">
+            <label>Minutes idle before reminding</label>
+            <default>60</default>
+        </entry>
+        <entry name="nannyTone" type="String">
+            <label>Reminder tone: gentle or direct</label>
+            <default>gentle</default>
+        </entry>
+
+        <!-- Display Settings -->
+        <entry name="showTaskList" type="Bool">
+            <label>Show task list in popup</label>
+            <default>true</default>
+        </entry>
+        <entry name="showFullscreenBreak" type="Bool">
+            <label>Show full-screen overlay on session complete</label>
+            <default>true</default>
+        </entry>
+
+        <!-- Pinned Tasks Filter (power-user: edit via right-click > Configure) -->
+        <entry name="filterProjectId" type="String">
+            <label>Filter pinned tasks to this project ID (empty = show all)</label>
+            <default></default>
+        </entry>
+
+        <!-- Open App Settings -->
+        <entry name="openAppMode" type="String">
+            <label>How to open FlowState (web or tauri)</label>
+            <default>tauri</default>
+        </entry>
+        <entry name="appUrl" type="String">
+            <label>Web app URL (for web mode)</label>
+            <default>http://localhost:5546</default>
+        </entry>
+        <entry name="tauriAppPath" type="String">
+            <label>Path to Tauri AppImage (for tauri mode)</label>
+            <default></default>
+        </entry>
+    </group>
+</kcfg>

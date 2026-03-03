@@ -8,18 +8,6 @@
 
 ## Active Bugs (P0-P1)
 
-### ~~BUG-1435~~: KDE Widget — new task not appearing in task list after creation (✅ DONE)
-
-**Priority**: P1 | **Status**: ✅ DONE (2026-03-03)
-
-**Problem**: Creating a task via the widget's quick-add input didn't show the new task in the widget's task list, even with "newest first" sort active.
-
-**Root cause**: `createTask()` called `fetchTasks()` on success but had no optimistic update. The new task was invisible until the async GET completed, and QML `property var` array replacement could miss reactivity.
-
-**Fix**: Parse the POST response body (already returned via `Prefer: return=representation`) and immediately prepend the new task to `root.tasks` using a fresh array for QML reactivity. `fetchTasks()` still runs for eventual consistency.
-
----
-
 ### BUG-1432: Overdue tasks display today's date instead of actual due date (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-03)
@@ -3903,7 +3891,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1419**~~ | **P1** | ✅ **Inbox multi-select bulk property updates — context menu actions apply to all selected tasks** (✅ DONE 2026-02-27) |
 | ~~**TASK-1418**~~ | **P1** | ✅ **Too many buttons on calendar dashboard — consolidate into dropdown or settings** (✅ DONE 2026-02-27) |
 | **TASK-1424** | **P2** | 🔄 **KDE widget nanny notifications — schedule-gated idle reminders when no Pomodoro active** (🔄 IN PROGRESS 2026-03-02) |
-| **TASK-1423** | **P2** | 📋 **KDE widget: add button to open Tauri or web app** (📋 PLANNED 2026-03-02) |
+| ~~**TASK-1423**~~ | **P2** | ✅ **KDE widget: add button to open Tauri or web app** (✅ DONE 2026-03-03) |
 | ~~**TASK-1431**~~ | **P2** | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02) |
 | **TASK-1429** | **P0** | 👀 **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link** (👀 REVIEW 2026-03-02) |
 | ~~**TASK-1428**~~ | **P0** | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03) |

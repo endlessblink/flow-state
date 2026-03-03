@@ -657,14 +657,14 @@ export const useGamificationStore = defineStore('gamification', () => {
         newStreak = profile.value.currentStreak + 1
         profile.value.streakFreezes--
         // [OFFLINE-SAFE] Persist freeze deduction — failure keeps local state intact.
-        supabase
-          .from('user_gamification')
-          .update({ streak_freezes: profile.value.streakFreezes })
-          .eq('user_id', authStore.user.id)
-          .then(({ error }) => {
-            if (error) console.warn('[Gamification] Failed to persist streak freeze deduction (local state preserved):', error)
-          })
-          .catch((e) => console.warn('[Gamification] Streak freeze Supabase write failed (local state preserved):', e))
+        void Promise.resolve(
+          supabase!
+            .from('user_gamification')
+            .update({ streak_freezes: profile.value.streakFreezes })
+            .eq('user_id', authStore.user.id)
+        ).then(({ error }) => {
+          if (error) console.warn('[Gamification] Failed to persist streak freeze deduction (local state preserved):', error)
+        }).catch((e: unknown) => console.warn('[Gamification] Streak freeze Supabase write failed (local state preserved):', e))
       } else {
         // Streak broken
         streakBroken = true

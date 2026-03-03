@@ -259,6 +259,25 @@ export const useTimerStore = defineStore('timer', () => {
     if (import.meta.env.DEV) {
       console.log('🍅 [TIMER] Timer started successfully, interval resumed')
     }
+
+    // TASK-1439: Queue for offline-first sync (secondary persistence)
+    try {
+      const userId = authStore.user?.id
+      if (userId && currentSession.value) {
+        const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+        const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')
+        const payload = toSupabaseTimerSession(currentSession.value, userId, deviceId)
+        await useSyncOrchestrator().enqueue({
+          entityType: 'timer_session',
+          operation: 'create',
+          entityId: currentSession.value.id,
+          payload: JSON.parse(JSON.stringify(payload)),
+          baseVersion: 0
+        })
+      }
+    } catch (queueError) {
+      console.warn('[SYNC-QUEUE] Failed to queue timer start:', queueError)
+    }
   }
 
   const pauseTimer = () => {
@@ -310,6 +329,25 @@ export const useTimerStore = defineStore('timer', () => {
         console.log('🍅 [TIMER] stopTimer: Session saved to DB successfully')
       }
 
+      // TASK-1439: Queue for offline-first sync
+      try {
+        const userId = authStore.user?.id
+        if (userId) {
+          const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+          const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')
+          const payload = toSupabaseTimerSession(stoppedSession, userId, deviceId)
+          await useSyncOrchestrator().enqueue({
+            entityType: 'timer_session',
+            operation: 'update',
+            entityId: stoppedSession.id,
+            payload: JSON.parse(JSON.stringify(payload)),
+            baseVersion: 0
+          })
+        }
+      } catch (queueError) {
+        console.warn('[SYNC-QUEUE] Failed to queue timer stop:', queueError)
+      }
+
       // Update local state
       completedSessions.value.push(stoppedSession)
       // BUG-1318: Track stopped session to prevent resurrection
@@ -353,6 +391,25 @@ export const useTimerStore = defineStore('timer', () => {
         await saveActiveTimerSession(completedForDb, deviceId)
         if (import.meta.env.DEV) {
           console.log('🍅 [TIMER] completeSession: Saved completed state to DB', { sessionId: completedSession.id })
+        }
+
+        // TASK-1439: Queue for offline-first sync
+        try {
+          const userId = authStore.user?.id
+          if (userId) {
+            const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+            const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')
+            const payload = toSupabaseTimerSession(completedForDb, userId, deviceId)
+            await useSyncOrchestrator().enqueue({
+              entityType: 'timer_session',
+              operation: 'update',
+              entityId: completedSession.id,
+              payload: JSON.parse(JSON.stringify(payload)),
+              baseVersion: 0
+            })
+          }
+        } catch (queueError) {
+          console.warn('[SYNC-QUEUE] Failed to queue timer complete:', queueError)
         }
       } catch (e) {
         console.warn('🍅 [TIMER] completeSession: Failed to save to DB (session may reappear on sync):', e)

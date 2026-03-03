@@ -155,6 +155,11 @@ async function handleFileSelect(e: Event) {
 
 async function processUpload(file: File) {
   errorMessage.value = null
+  // TASK-1441: File uploads require network access — show informative message offline
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    errorMessage.value = 'File uploads require an internet connection. Please check your network and try again.'
+    return
+  }
   const googleToken = settingsStore.googleProviderToken
   const googleRefreshToken = settingsStore.googleProviderRefreshToken || undefined
 
@@ -230,6 +235,11 @@ async function confirmDelete(attachment: TaskAttachment) {
   if (!confirm(`Remove "${attachment.name}"? This will also delete it from Google Drive.`)) return
 
   errorMessage.value = null
+  // TASK-1441: Drive deletion requires network access — show informative message offline
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    errorMessage.value = 'Deleting Drive files requires an internet connection. Please check your network and try again.'
+    return
+  }
   const googleToken = settingsStore.googleProviderToken
   const googleRefreshToken = settingsStore.googleProviderRefreshToken || undefined
 

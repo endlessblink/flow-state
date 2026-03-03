@@ -150,7 +150,7 @@ export function useAppInitialization() {
 
                 let applied = 0
 
-                // Apply task operations
+                // Apply task operations (create, update, delete)
                 const taskOps = pendingOps.filter(op => op.entityType === 'task')
                 for (const op of taskOps) {
                     if (op.operation === 'delete') {
@@ -167,10 +167,19 @@ export function useAppInitialization() {
                                 applied++
                             } catch { /* mapper failed, skip */ }
                         }
+                    } else if (op.operation === 'update') {
+                        const idx = taskStore._rawTasks.findIndex(t => t.id === op.entityId)
+                        if (idx !== -1) {
+                            try {
+                                const mapped = fromSupabaseTask({ ...op.payload, id: op.entityId } as unknown as SupabaseTask)
+                                taskStore._rawTasks[idx] = { ...taskStore._rawTasks[idx], ...mapped }
+                                applied++
+                            } catch { /* mapper failed, skip */ }
+                        }
                     }
                 }
 
-                // Apply project operations
+                // Apply project operations (create, update, delete)
                 const projectOps = pendingOps.filter(op => op.entityType === 'project')
                 for (const op of projectOps) {
                     if (op.operation === 'delete') {
@@ -179,10 +188,27 @@ export function useAppInitialization() {
                             projectStore._rawProjects.splice(idx, 1)
                             applied++
                         }
+                    } else if (op.operation === 'create') {
+                        if (!projectStore._rawProjects.find(p => p.id === op.entityId)) {
+                            try {
+                                const project = fromSupabaseProject(op.payload as unknown as SupabaseProject)
+                                projectStore._rawProjects.push(project)
+                                applied++
+                            } catch { /* mapper failed, skip */ }
+                        }
+                    } else if (op.operation === 'update') {
+                        const idx = projectStore._rawProjects.findIndex(p => p.id === op.entityId)
+                        if (idx !== -1) {
+                            try {
+                                const mapped = fromSupabaseProject({ ...op.payload, id: op.entityId } as unknown as SupabaseProject)
+                                projectStore._rawProjects[idx] = { ...projectStore._rawProjects[idx], ...mapped }
+                                applied++
+                            } catch { /* mapper failed, skip */ }
+                        }
                     }
                 }
 
-                // Apply group operations
+                // Apply group operations (create, update, delete)
                 const groupOps = pendingOps.filter(op => op.entityType === 'group')
                 for (const op of groupOps) {
                     if (op.operation === 'delete') {
@@ -191,6 +217,25 @@ export function useAppInitialization() {
                         if (idx !== -1) {
                             rawGroups.splice(idx, 1)
                             applied++
+                        }
+                    } else if (op.operation === 'create') {
+                        const rawGroups = canvasStore._rawGroups
+                        if (!rawGroups.find(g => g.id === op.entityId)) {
+                            try {
+                                const group = fromSupabaseGroup(op.payload as unknown as SupabaseGroup)
+                                rawGroups.push(group)
+                                applied++
+                            } catch { /* mapper failed, skip */ }
+                        }
+                    } else if (op.operation === 'update') {
+                        const rawGroups = canvasStore._rawGroups
+                        const idx = rawGroups.findIndex(g => g.id === op.entityId)
+                        if (idx !== -1) {
+                            try {
+                                const mapped = fromSupabaseGroup({ ...op.payload, id: op.entityId } as unknown as SupabaseGroup)
+                                rawGroups[idx] = { ...rawGroups[idx], ...mapped }
+                                applied++
+                            } catch { /* mapper failed, skip */ }
                         }
                     }
                 }

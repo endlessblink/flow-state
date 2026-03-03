@@ -30,6 +30,7 @@
 }
 
 /* Thin scrollbar for inbox task list (global - Vue scoped styles don't work with ::webkit-scrollbar) */
+/* Scrollbar is hidden by default, appears on container hover to avoid a permanent dark gutter */
 .inbox-tasks::-webkit-scrollbar {
   width: 6px;
 }
@@ -39,11 +40,15 @@
 }
 
 .inbox-tasks::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
+  background: transparent;
   border-radius: var(--radius-md);
 }
 
-.inbox-tasks::-webkit-scrollbar-thumb:hover {
+.inbox-tasks:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.inbox-tasks:hover::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.4);
 }
 
@@ -915,8 +920,11 @@ select option {
   background: var(--brand-primary) !important;
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling — hidden by default, visible on hover */
 .tauri-app .unified-inbox-panel .inbox-tasks {
+  scrollbar-color: transparent transparent !important;
+}
+.tauri-app .unified-inbox-panel .inbox-tasks:hover {
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
 }
 

@@ -85,13 +85,8 @@ serve(async (req) => {
       )
     }
 
-    // Skip messages sent by the user themselves
-    if (body.payload?.fromMe) {
-      return new Response(
-        JSON.stringify({ ok: true, skipped: true, reason: 'Ignored own message' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+    // Allow fromMe messages (forwards) — this is a personal webhook,
+    // all messages (sent and received) can become tasks.
 
     const messageBody = body.payload?.body
     if (!messageBody || messageBody.trim() === '') {

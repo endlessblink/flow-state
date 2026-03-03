@@ -756,7 +756,7 @@ watch(currentDate, (newDate, _oldDate) => {
   opacity: 0;
 }
 
-/* Custom scrollbar for calendar-main — hidden by default, visible on hover */
+/* Custom scrollbar for calendar-main */
 .calendar-main::-webkit-scrollbar {
   width: 6px;
 }
@@ -766,16 +766,17 @@ watch(currentDate, (newDate, _oldDate) => {
 }
 
 .calendar-main::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
 }
 
-.calendar-main:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
+.calendar-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.calendar-main:hover::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
+/* Static scrollbar-color covers KDE system overlay scrollbar */
+.calendar-main {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
-
 </style>

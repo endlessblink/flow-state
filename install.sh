@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-cd /media/endlessblink/data/my-projects/ai-development/productivity/flow-state
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
 echo "=== Killing existing processes ==="
 pkill -9 -f flow-state 2>/dev/null || true

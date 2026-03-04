@@ -1120,45 +1120,170 @@ kquitapp6 plasmashell && sleep 1 && kstart plasmashell &  # Restart panel
 
 # PART 12: KANBAN BOARD DESIGN
 
-## 12.1 Card Anatomy (Good Code Reference)
+Industry-standard measurements based on research across Linear, Todoist, TickTick, Notion, Trello, GitHub Projects, and Asana.
+
+## 12.1 Industry Consensus Measurements
+
+These values appeared consistently across 5+ top apps:
+
+| Property | Industry Standard | FlowState Value |
+|----------|------------------|-----------------|
+| Card padding | **8px** (Trello, Linear, GitHub) | `8px` |
+| Card border-radius | **6-8px** (Primer=6px, Trello=8px) | `8px` |
+| Card background | Subtle surface, semi-transparent | `rgba(35, 32, 55, 0.4)` |
+| Title font size | **14px** (universal) | `14px` |
+| Title font weight | **500** (medium, universal) | `500` |
+| Title line-height | **1.25** | `1.25` (1.3+ causes bloat — 2px/line adds up) |
+| Metadata font size | **12px** (universal) | `12px / var(--text-meta)` |
+| Metadata font weight | **400** (regular) | `400` |
+| Card-to-card gap | **6-8px** | `6px` |
+| Column width | **260-320px** (272=Trello, 300=common) | `300px` |
+| Column background | **Transparent** (Linear, GitHub, Notion) | `transparent` |
+
+## 12.2 Card Anatomy
 
 ```
-┌─────────────────────────────┐
-│ **Title** (bold, 14-15px)   │  ← weight 600, --text-primary
-│ Description preview that    │  ← --text-tertiary, 13px
-│ wraps to two lines max...   │  ← -webkit-line-clamp: 2
-│                             │
-│ 📅 Jan 15  ☑ 3/5  🍅 2    │  ← 12px icons, --text-muted, inline
-│ [Tag1] [Tag2]               │  ← small pills, subtle bg+border
-└─────────────────────────────┘
+┌────────────────────────────────────────┐
+│ ● Title text here (14px/500)  [⊕][▶] │  ← priority dot + title + hover actions (HORIZONTAL)
+│ Description preview max 2 lines...     │  ← 12px, --text-tertiary, line-clamp: 2
+│ 📅 Jan 15  ☑ 3/5  🍅 2  [Tag1]      │  ← 12px badges + tags, same row
+└────────────────────────────────────────┘
+ 6px gap to next card
 ```
 
-## 12.2 Column Rules
+### Visual Hierarchy (3 tiers)
+
+1. **Primary** (title): 14px, weight 500, `--text-primary` — scanned first
+2. **Secondary** (description): 12px, weight 400, `--text-tertiary` — read if interested
+3. **Tertiary** (badges/tags): 12px icons + text, `--text-muted` — glanced for context
+
+## 12.3 Column Rules
 
 - Columns are **TRANSPARENT** — cards are the visual focus
-- Column header: title (600 weight) + count pill + add button
+- Column header: title (13px, 600 weight) + count pill + add button
 - No column background, no glass, no container border
-- Left-border separator between columns (the TickTick way)
+- 1px left-border separator between columns (`--glass-border-light`)
+- Column padding: `var(--space-2)` (8px)
+- Tasks container gap: 6px between cards
 
-## 12.3 Card Rules
+## 12.4 Card Rules
 
-- Card radius: 10-12px (`--radius-lg`), NEVER 20px+
-- Card padding: 10-12px (`--space-2_5` to `--space-3`)
-- Hover: border-color change ONLY — no `translateY` lift, no shadow
-- NO separator lines inside cards — hierarchy via font size/weight/color
-- Information density > visual chrome
-- Empty metadata = hidden (no empty footers/dividers)
+| Rule | Value | Rationale |
+|------|-------|-----------|
+| Border-radius | **8px** | Industry standard (Primer medium, Trello post-2022) |
+| Padding | **8px** | Matches Trello, Linear, GitHub. Anything >12px is "Asana-bulky" |
+| Hover | **border-color only** | No translateY, no shadow. Linear/GitHub pattern |
+| Action buttons | **Hover-only, HORIZONTAL, `position: absolute`** | MUST be absolutely positioned so they don't steal title width. In normal flow, 4 buttons = 80px width stolen = title wraps = card doubles in height |
+| Action button size | **18px** | Minimal footprint, fits 4 in a row |
+| Description | **Optional**, 12px, 2-line clamp | Linear/Todoist don't show it at all. TickTick shows snippet |
+| Separator lines | **NEVER** | Visual hierarchy via font size/weight/color only |
+| Empty metadata | **Hidden** | No empty footers, no empty badge rows |
+| Card background | **Semi-transparent** (0.4 opacity) | Cards should breathe, not be opaque blocks |
+| min-height | **unset** | Cards should be as small as their content |
 
-## 12.4 Anti-Patterns (TASK-1429 v1 Lessons)
+## 12.5 Anti-Patterns (Verified Against Industry)
 
-| Anti-Pattern | Why It's Wrong | Correct Approach |
-|-------------|----------------|------------------|
-| Glass morphism column containers | Too heavy, distracting from cards | `background: transparent` |
-| `border-top` separator in card footer | Visual noise, wastes space | Hierarchy via spacing alone |
-| `translateY` hover lift + shadow | Feels floaty, not grounded | `border-color` change only |
-| `border-radius: 20px+` on cards | Too bubbly, wastes space | `--radius-lg` (12px) |
-| `padding: 16px` on cards | Too spacious for compact board | 10-12px padding |
-| Solid-fill buttons in columns | Breaks glass morphism system | Glass bg + border buttons |
+| Anti-Pattern | Why It's Wrong | Evidence |
+|-------------|----------------|----------|
+| Glass morphism column containers | Distracting from cards | Linear, GitHub, Notion all use transparent |
+| `border-top` separator in card | Visual noise | Zero top apps use internal separators |
+| `translateY` hover lift + shadow | Floaty, not grounded | Only Trello uses shadow on hover (others: bg shift) |
+| `border-radius: 12px+` on cards | Too bubbly, wastes corner space | Primer=6px, Trello=8px, max industry=8px |
+| `padding: 12px+` on cards | Too spacious, "Asana problem" | Asana at 16px is criticized by own users |
+| Vertical action button stack | Takes ~100px height, destroys density | All apps use horizontal row or single icon |
+| Always-visible action buttons | Wastes space on every card | Asana's pattern, universally criticized |
+| Description always visible | Adds height to every card | Linear/Todoist/GitHub don't show it |
+
+## 12.6 Progressive Disclosure Layers
+
+| Layer | Trigger | Content | Reference App |
+|-------|---------|---------|--------------|
+| **Glance** (card face) | Always visible | Title + priority + 2-3 badges | All apps |
+| **Hover** (<500ms dwell) | Mouse hover | Action buttons appear, border highlights | Linear, GitHub |
+| **Peek** (keyboard) | Space bar / quick preview | Full description, all metadata | Linear only |
+| **Full Detail** (click) | Click card | Everything: description, subtasks, comments | All apps |
+
+## 12.7 Reference App Card Comparison
+
+| App | Padding | Radius | Gap | Width | Column BG | Description | Actions |
+|-----|---------|--------|-----|-------|-----------|-------------|---------|
+| **Linear** | 8px | 6-8px | 6-8px | 260-280px | Transparent | Never | Hover context menu |
+| **Todoist** | 8-10px | 8px | 8px | 260-280px | Transparent | Never | Minimal |
+| **TickTick** | 10-12px | 8px | 8px | 375px | Light grey | Snippet | Hover icons |
+| **Trello** | 8px | 8px | 8px | 272px | #f1f2f4 | Never | Hover pencil |
+| **GitHub** | 8-12px | 6px | 8px | 320px | Transparent | Never | Hover 3-dot |
+| **Notion** | 10-12px | 6px | 8px | 260-300px | Transparent | Configurable | Open button |
+| **Asana** | 16px | 8px | 12-16px | 300-340px | Light grey | Configurable | Always visible |
+
+## 12.8 FlowState Implementation Files
+
+| File | Controls | Override Source |
+|------|----------|----------------|
+| `global-overrides.css` | **ALL visual card/column styles** (with `!important`) | Last-loaded, wins everything |
+| `TaskCard.css` | Base card styles (overridden by above) | Component CSS |
+| `TaskCardActions.vue` (scoped) | Action button layout | Scoped styles |
+| `TaskCardBadges.vue` (scoped) | Badge layout | Scoped styles |
+| `KanbanColumn.css` | Column base styles (overridden by global) | Component CSS |
+| `styles.css` | `--kanban-card-glass-bg` token (overridden by global) | Design tokens |
+
+**CRITICAL**: Always edit `global-overrides.css` for kanban visual changes. Component CSS files are completely overridden by global `!important` rules.
+
+## 12.9 CSS Debugging Protocol (MANDATORY for card size changes)
+
+**NEVER trust that top-level CSS properties (padding, radius, background) are the only thing controlling card size.**
+
+### Step 1: Measure EVERY child element height
+
+Before making any card CSS change, run this in Playwright/DevTools:
+```js
+document.querySelectorAll('.task-card')[0].children  // Check ALL children
+// For each child: getBoundingClientRect().height, getComputedStyle().margin/padding/display
+```
+
+### Step 2: Known Hidden Space Wasters
+
+| Element | Trap | Fix |
+|---------|------|-----|
+| `.card-details` | Empty div with `margin-top: 8px + padding-top: 8px + border-top` = **17px wasted** | `display: none !important` in global-overrides |
+| `.compact-actions` (action buttons) | In normal flow = **steals 80px title width**, forces text wrap to 2+ lines, doubling card height | `position: absolute !important` — float over card, don't take layout space |
+| `.priority-dot` | `margin-inline-end: var(--space-3)` = **12px right margin** | Override to `4px` |
+| `.task-title` | `line-height: 1.5` = **22.5px per line** instead of 17.5px. Also `margin-bottom: var(--space-1)` | `line-height: 1.25 !important; margin: 0 !important` |
+| `.drag-area` (vuedraggable) | `display: block` — CSS `gap` on parent `.tasks-container` **doesn't reach cards** | Must set `.drag-area { display: flex; flex-direction: column; gap: 6px }` |
+
+### Step 3: Verify ACTUAL gap between cards
+
+```js
+const cards = document.querySelectorAll('.task-card');
+cards[1].getBoundingClientRect().top - cards[0].getBoundingClientRect().bottom
+// If negative or 0, gap CSS is NOT working — check if parent is display:block
+```
+
+### Step 4: CSS Specificity Stack (load order)
+
+```
+1. design-tokens.css     — CSS custom properties
+2. styles.css            — base styles + some !important token overrides
+3. Component .css/.vue   — TaskCard.css, KanbanColumn.css
+4. Scoped <style>        — TaskCardActions.vue [data-v-xxx] (HIGHEST for component internals)
+5. global-overrides.css  — !important on everything (wins for non-scoped selectors)
+```
+
+**Scoped styles with `!important` beat global `!important`** because of the `[data-v-xxx]` attribute selector. For scoped component internals (like `.action-btn` inside `TaskCardActions.vue`), you MUST either:
+- Edit the scoped component directly, OR
+- Use a more specific selector in global-overrides: `.task-card .compact-actions .action-btn`
+
+### Anti-Pattern: Surface-Level CSS Tweaking
+
+**WRONG approach** (wastes hours):
+```
+"Card too big" → adjust padding from 12px to 8px → "still big" → adjust radius → "still big"
+```
+
+**CORRECT approach** (measure first):
+```
+"Card too big" → measure ALL children heights → find .card-details=17px, actions=80px width steal
+→ fix root causes → card goes from 73px to 38px
+```
 
 ---
 

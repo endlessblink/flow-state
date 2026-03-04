@@ -14,7 +14,8 @@ NC='\033[0m'
 # Install if not present
 if [ ! -d "$INSTALL_DIR" ]; then
     echo -e "${BLUE}Dev Maestro not installed. Installing...${NC}"
-    curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash -s -- --master-plan "/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/docs/MASTER_PLAN.md"
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash -s -- --master-plan "$SCRIPT_DIR/docs/MASTER_PLAN.md"
 fi
 
 # Read autoUpdate setting from local config (default: true)
@@ -61,6 +62,7 @@ if [[ "$*" != *"--no-update"* ]] && [ "$AUTO_UPDATE" = "true" ]; then
 fi
 
 # Use the configured MASTER_PLAN.md path for this project
-export MASTER_PLAN_PATH="/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/docs/MASTER_PLAN.md"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export MASTER_PLAN_PATH="$SCRIPT_DIR/docs/MASTER_PLAN.md"
 
 cd "$INSTALL_DIR" && npm start

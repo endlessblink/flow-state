@@ -54,7 +54,7 @@ export const Documentation: Story = {
           </p>
           <ol style="margin-left: var(--space-6); color: var(--text-secondary);">
             <li>Click Brave icon in address bar</li>
-            <li>Turn off shields for in-theflow.com</li>
+            <li>Turn off shields for your-domain.com</li>
             <li>OR use Chrome/Firefox for full functionality</li>
           </ol>
         </section>

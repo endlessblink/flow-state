@@ -12,7 +12,8 @@
         "Id": "com.pomoflow.widget",
         "Name": "PomoFlow Timer",
         "Version": "1.0.0",
-        "Website": "https://github.com/pomoflow"
+        "Website": "https://github.com/pomoflow",
+        "License": "GPL-2.0-or-later"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "KPackageStructure": "Plasma/Applet"

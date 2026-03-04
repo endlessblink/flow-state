@@ -64,9 +64,9 @@ defineEmits<{
 /* Floating Action Button */
 .fab {
   position: fixed;
-  bottom: calc(var(--space-16) + var(--space-4));
+  bottom: calc(var(--space-16) + var(--space-4) + env(safe-area-inset-bottom, 0px));
   right: var(--space-4);
-  z-index: 50;
+  z-index: calc(var(--z-dropdown) + 1);
   width: 56px;
   height: 56px;
   border-radius: var(--radius-full);
@@ -111,9 +111,9 @@ defineEmits<{
 /* Voice feedback pill — floats above the FAB */
 .voice-feedback-pill {
   position: fixed;
-  bottom: calc(var(--space-16) + var(--space-4) + 56px + var(--space-3));
+  bottom: calc(var(--space-16) + var(--space-4) + env(safe-area-inset-bottom, 0px) + 56px + var(--space-3));
   right: var(--space-4);
-  z-index: 50;
+  z-index: calc(var(--z-dropdown) + 1);
   display: flex;
   align-items: center;
   gap: var(--space-2);

@@ -23,6 +23,7 @@
     :data-status="task.status"
     :data-priority="task.priority || 'none'"
     @click="handleCardClick"
+    @dblclick="handleCardDblClick"
     @keydown="handleKeydown"
     @contextmenu.prevent="handleRightClick"
     @focus="handleFocus"
@@ -60,7 +61,7 @@
 
     <!-- TASK-1429: Card body - description preview + tags -->
     <div v-if="(!progressiveDisclosureEnabled || isExpanded) && (descriptionPreview || visibleTags.length > 0)" class="card-body">
-      <p v-if="descriptionPreview" class="card-description">{{ descriptionPreview }}</p>
+      <p v-if="descriptionPreview" class="card-description" dir="auto">{{ descriptionPreview }}</p>
       <div v-if="visibleTags.length > 0" class="card-tags">
         <span v-for="tag in visibleTags" :key="tag" class="card-tag">{{ tag }}</span>
         <span v-if="hasMoreTags" class="card-tag card-tag--overflow">+{{ remainingTagCount }}</span>
@@ -150,7 +151,7 @@ const {
 } = state
 
 const {
-  handleCardClick, handleKeydown, handleFocus,
+  handleCardClick, handleCardDblClick, handleKeydown, handleFocus,
   handleBlur, handleRightClick, cycleStatus
 } = actions
 

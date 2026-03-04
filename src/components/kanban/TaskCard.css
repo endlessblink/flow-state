@@ -223,37 +223,34 @@
     }
 }
 
-/* Compact action buttons */
+/* Compact action buttons — ghost style, subtle */
 .action-btn {
-    background: var(--glass-bg-light);
-    border: 1px solid var(--glass-border);
+    background: transparent;
+    border: none;
     color: var(--text-muted);
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     border-radius: var(--radius-sm);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--duration-normal) var(--spring-smooth);
+    opacity: 0.45;
+    transition: all var(--duration-fast);
 }
 
 .action-btn:hover {
-    background: var(--glass-bg-medium);
-    border-color: var(--glass-border-hover);
-    color: var(--text-secondary);
-    transform: scale(1.1);
+    opacity: 1;
+    background: var(--glass-bg-soft);
+    color: var(--text-primary);
+    transform: none;
 }
 
 .timer-btn:hover {
-    background: var(--success-bg-subtle);
-    border-color: var(--success-border);
     color: var(--color-work);
 }
 
 .edit-btn:hover {
-    background: var(--purple-bg-subtle);
-    border-color: var(--purple-border-subtle);
     color: var(--brand-primary);
 }
 

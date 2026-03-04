@@ -10,8 +10,8 @@ import { test, expect } from '@playwright/test'
  * Run with: npx playwright test tests/e2e/asset-headers.spec.ts
  */
 
-const PRODUCTION_URL = process.env.TEST_URL || 'https://in-theflow.com'
-const IS_PRODUCTION = PRODUCTION_URL.includes('in-theflow.com')
+const PRODUCTION_URL = process.env.TEST_URL || 'https://api.example.com'
+const IS_PRODUCTION = !!process.env.TEST_URL
 
 test.describe('Asset Headers (Cloudflare Cache Prevention)', () => {
   test.describe.configure({ mode: 'parallel' })
@@ -168,7 +168,7 @@ test.describe('Asset Headers (Cloudflare Cache Prevention)', () => {
 })
 
 test.describe('CORS Headers (API)', () => {
-  const API_URL = process.env.API_URL || 'https://api.in-theflow.com'
+  const API_URL = process.env.API_URL || 'https://api.example.com'
 
   test('OPTIONS preflight returns correct CORS headers', async ({ request }) => {
     const response = await request.fetch(`${API_URL}/rest/v1/tasks`, {

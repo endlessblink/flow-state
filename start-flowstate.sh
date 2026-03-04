@@ -8,12 +8,13 @@ if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:54321/rest/v1/ 2>/dev
     echo "✅ Supabase already running"
 else
     echo "⏳ Starting Supabase..."
-    cd /media/endlessblink/data/my-projects/ai-development/productivity/flow-state
+    cd "$(dirname "${BASH_SOURCE[0]}")"
     supabase start
 fi
 
 # Start the Tauri app
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "🍅 Launching FlowState..."
-/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src-tauri/target/release/flow-state &
+"$SCRIPT_DIR/src-tauri/target/release/flow-state" &
 
 echo "✅ FlowState started!"

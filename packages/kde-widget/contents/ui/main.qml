@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
 import QtQuick.Controls as QQC2
+import QtCore
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasma5support as Plasma5Support
@@ -200,7 +201,8 @@ PlasmoidItem {
 
         // Use the static Plasma5Support.DataSource to run the notification script
         // Pass all params needed for functional buttons
-        var cmd = '/home/endlessblink/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/scripts/notify.sh "' +
+        var scriptDir = Qt.resolvedUrl("../scripts/").toString().replace("file://", "")
+        var cmd = scriptDir + 'notify.sh "' +
             title + '" "' + body + '" "' + btn1 + '" "+5 min" "' + isWork + '" "' +
             root.supabaseUrl + '" "' + root.supabaseKey + '" "' + root.accessToken + '" "' +
             root.userId + '" "' + workDuration + '" "' + breakDuration + '"'
@@ -296,7 +298,8 @@ PlasmoidItem {
                 cmd = 'bash -c \'"' + appPath + '" &\''
             } else {
                 // Auto-detect: PATH binary (.deb) → AppImage → gtk-launch → web fallback
-                cmd = 'bash -c \'if command -v flow-state >/dev/null 2>&1; then nohup flow-state >/dev/null 2>&1 & elif APP=$(find ~/Applications ~/.local/bin -maxdepth 1 \\( -name "FlowState*.AppImage" -o -name "flow-state*.AppImage" \\) 2>/dev/null | head -1) && [ -n "$APP" ]; then nohup "$APP" >/dev/null 2>&1 & else gtk-launch FlowState 2>/dev/null || xdg-open https://in-theflow.com; fi\''
+                var webFallbackUrl = plasmoid.configuration.appUrl || "http://localhost:5546"
+                cmd = 'bash -c \'if command -v flow-state >/dev/null 2>&1; then nohup flow-state >/dev/null 2>&1 & elif APP=$(find ~/Applications ~/.local/bin -maxdepth 1 \\( -name "FlowState*.AppImage" -o -name "flow-state*.AppImage" \\) 2>/dev/null | head -1) && [ -n "$APP" ]; then nohup "$APP" >/dev/null 2>&1 & else gtk-launch FlowState 2>/dev/null || xdg-open "' + webFallbackUrl + '"; fi\''
             }
             executableDataSource.connectSource(cmd)
             console.log("[OPEN-APP] Launching Tauri app")
@@ -2977,7 +2980,7 @@ PlasmoidItem {
         root.isAuthenticating = true
         root.authError = ""
 
-        var scriptPath = "/home/endlessblink/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/scripts/oauth-google.py"
+        var scriptPath = Qt.resolvedUrl("../scripts/oauth-google.py").toString().replace("file://", "")
         var cmd = 'python3 "' + scriptPath + '" "' + root.supabaseUrl + '" "' + root.supabaseKey + '"'
         console.log("[OAUTH] Starting Google sign-in:", cmd)
         oauthDataSource.connectSource(cmd)
@@ -2989,7 +2992,7 @@ PlasmoidItem {
         root.authError = ""
 
         var xhr = new XMLHttpRequest()
-        var filePath = "/home/endlessblink/.config/flowstate/session.json"
+        var filePath = StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/flowstate/session.json"
 
         xhr.open("GET", "file://" + filePath, true)
         xhr.onreadystatechange = function() {

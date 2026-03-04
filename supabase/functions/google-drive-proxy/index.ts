@@ -63,12 +63,19 @@ interface TokenRefreshResponse {
 // CORS Headers
 // ============================================================================
 
-const ALLOWED_ORIGINS = [
-  'https://in-theflow.com',
-  'https://www.in-theflow.com',
-  'http://localhost:5546',   // dev server
-  'tauri://localhost',        // Tauri desktop app
+const DEFAULT_ORIGINS = [
+  'http://localhost:5546',
+  'http://localhost:3000',
+  'tauri://localhost',
 ]
+
+const ALLOWED_ORIGINS = (() => {
+  const envOrigins = Deno.env.get('ALLOWED_ORIGINS')
+  if (envOrigins) {
+    return [...envOrigins.split(',').map(o => o.trim()), ...DEFAULT_ORIGINS]
+  }
+  return DEFAULT_ORIGINS
+})()
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') || ''

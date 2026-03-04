@@ -39,7 +39,7 @@ export const Documentation: Story = {
         <section style="margin-bottom: var(--space-6);">
           <h2 style="margin-bottom: var(--space-2);">Auto-Update Flow</h2>
           <ol style="margin-left: var(--space-6); color: var(--text-secondary);">
-            <li>App checks <code>https://in-theflow.com/updates/latest.json</code> on launch (3s delay)</li>
+            <li>App checks <code>https://your-domain.com/updates/latest.json</code> on launch (3s delay)</li>
             <li>Compares version with current</li>
             <li>If auto-update enabled in settings, downloads automatically</li>
             <li>Verifies signature with embedded public key</li>
@@ -56,7 +56,7 @@ export const Documentation: Story = {
   "platforms": {
     "linux-x86_64": {
       "signature": "dW50cnV...",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.18_amd64.AppImage.tar.gz"
+      "url": "https://your-domain.com/updates/FlowState_1.2.18_amd64.AppImage.tar.gz"
     }
   }
 }</code></pre>

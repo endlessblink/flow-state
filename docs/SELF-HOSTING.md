@@ -12,8 +12,12 @@ FlowState is a Vue 3 productivity app with task management (Board, Calendar, Can
 - [Option A: Docker Self-Hosting](#option-a-docker-self-hosting)
 - [Option B: Local Development](#option-b-local-development)
 - [Option C: Build Tauri Desktop App](#option-c-build-tauri-desktop-app)
+- [Option D: Supabase Cloud](#option-d-supabase-cloud)
 - [Enabling External Access](#enabling-external-access)
+- [Deploy to a VPS](#deploy-to-a-vps)
+- [Optional Features](#optional-features)
 - [Optional: AI Chat](#optional-ai-chat)
+- [Complete Secrets Reference](#complete-secrets-reference)
 - [Troubleshooting](#troubleshooting)
 - [Updating](#updating)
 - [Architecture Overview](#architecture-overview)
@@ -350,6 +354,69 @@ npx tauri dev
 
 ---
 
+## Option D: Supabase Cloud
+
+For users who don't want to self-host the database. Supabase Cloud handles all the infrastructure; you only deploy the frontend.
+
+**Free tier:** 2 projects, 500 MB database, 5 GB bandwidth.
+
+### 1. Create a Supabase Project
+
+1. Sign up at [supabase.com](https://supabase.com/)
+2. Click **New project** and fill in a name, database password, and region
+3. Wait for the project to finish provisioning (~2 min)
+
+### 2. Get Your Credentials
+
+Go to **Settings → API** and copy:
+- **Project URL** (e.g. `https://abcdefghij.supabase.co`)
+- **anon / public** key
+
+### 3. Run Migrations
+
+```bash
+git clone https://github.com/endlessblink/flow-state.git
+cd flow-state
+npm install
+
+# Link to your cloud project
+supabase link --project-ref YOUR_PROJECT_REF
+
+# Push all migrations
+supabase db push
+```
+
+### 4. Deploy Edge Functions
+
+```bash
+supabase functions deploy --all
+
+# Set required secrets
+supabase secrets set ALLOWED_ORIGINS=https://your-domain.com
+```
+
+### 5. Build the Frontend
+
+```bash
+VITE_SUPABASE_URL=https://your-project.supabase.co \
+VITE_SUPABASE_ANON_KEY=your-anon-key \
+npm run build
+```
+
+### 6. Serve the `dist/` Folder
+
+The build output is a static site — host it anywhere:
+
+| Host | Deploy command |
+|------|---------------|
+| Vercel | `vercel deploy dist/` |
+| Netlify | `netlify deploy --dir=dist --prod` |
+| Caddy | `root * /path/to/dist` + `file_server` |
+| nginx | Serve `dist/` as webroot with `try_files $uri /index.html` |
+| Docker (Option A) | Use only the `flowstate` container pointed at your cloud Supabase |
+
+---
+
 ## Enabling External Access
 
 To make your FlowState instance accessible from the internet, the recommended approach is a Cloudflare Tunnel (free, no port forwarding needed).
@@ -405,6 +472,159 @@ api.yourdomain.com {
 
 ---
 
+## Deploy to a VPS
+
+Step-by-step for a fresh Ubuntu 22.04+ VPS (DigitalOcean, Hetzner, Contabo, etc. — $5–6/mo). This covers bringing up a new machine and running the full FlowState stack on it.
+
+### 1. SSH Into Your Server
+
+```bash
+ssh root@YOUR_SERVER_IP
+```
+
+### 2. Install Docker
+
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+# Log out and back in for the group change to take effect
+```
+
+### 3. Install Node.js 20
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+### 4. Clone and Run Setup
+
+```bash
+git clone https://github.com/endlessblink/flow-state.git
+cd flow-state
+./scripts/self-host-setup.sh
+```
+
+The setup wizard will ask for your **SITE_URL** — enter your domain (e.g. `https://flowstate.yourdomain.com`). It generates all secrets, starts the Docker stack, and prints the access URL when done.
+
+### 5. Expose to the Internet
+
+**Option 1 — Cloudflare Tunnel (recommended, free, no port forwarding):**
+
+The setup wizard can enable this automatically if you provide a Cloudflare Tunnel token. See [Enabling External Access](#enabling-external-access) for the full walkthrough.
+
+**Option 2 — Caddy (on the VPS):**
+
+```bash
+sudo apt-get install -y caddy
+```
+
+Create `/etc/caddy/Caddyfile`:
+
+```
+yourdomain.com {
+    reverse_proxy localhost:3000
+}
+
+api.yourdomain.com {
+    reverse_proxy localhost:8000
+}
+```
+
+```bash
+sudo systemctl reload caddy
+```
+
+Caddy handles HTTPS automatically via Let's Encrypt.
+
+### 6. Verify
+
+```bash
+# Check all services are healthy
+docker compose -f docker-compose.self-host.yml ps
+
+# Verify the frontend is reachable
+curl http://localhost:3000
+
+# Verify the Supabase API gateway
+curl http://localhost:8000
+```
+
+---
+
+## Optional Features
+
+FlowState works out of the box with just Supabase. The features below can be enabled by adding API keys or running extra services — nothing is required.
+
+| Feature | What You Get | What You Need | Setup Time |
+|---------|-------------|---------------|------------|
+| AI Chat (Local) | Private AI assistant, no cloud needed | [Ollama](https://ollama.com/) installed locally | 5 min |
+| AI Chat (Cloud) | Fast cloud AI (Llama, Mixtral) | [Groq](https://groq.com/) API key (free tier) | 2 min |
+| AI Chat (Premium) | Claude, GPT-4, 100+ models | [OpenRouter](https://openrouter.ai/) API key | 2 min |
+| Google Sign-In | "Sign in with Google" button | Google Cloud project + OAuth credentials | 15 min |
+| Google Calendar | See Google events in Calendar view | Same Google project, enable Calendar API | 5 min |
+| Google Drive | Image attachments on tasks | Same Google project, enable Drive API | 5 min |
+| Push Notifications | Browser alerts for reminders/timers | VAPID keys + push service daemon | 10 min |
+| Voice Input | Dictate tasks by voice | Groq API key (Whisper transcription) | 2 min |
+| WhatsApp → Tasks | Forward messages as tasks | WAHA Docker container + Edge Function | 20 min |
+| KDE Plasma Widgets | Timer + active task in KDE panel | Install widget packages, configure URL | 5 min |
+| Cloudflare Tunnel | HTTPS access from internet | Free Cloudflare account | 10 min |
+
+### Setting Up Google Features
+
+See [Google Cloud Setup Guide](GOOGLE-CLOUD-SETUP.md) for a complete walkthrough.
+
+### Setting Up Push Notifications
+
+1. Generate VAPID keys:
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+2. Add the public key to your environment:
+   - `VITE_VAPID_PUBLIC_KEY` (in `.env.self-host` or `.env.local`)
+3. Configure and start the push service:
+   ```bash
+   cd server/push-service
+   cp .env.example .env
+   # Edit .env with your VAPID keys and Supabase credentials
+   npm install
+   npm start
+   ```
+4. For production, install as a systemd service:
+   ```bash
+   sudo cp flowstate-push.service /etc/systemd/system/
+   sudo systemctl enable flowstate-push
+   sudo systemctl start flowstate-push
+   ```
+
+### Setting Up WhatsApp Integration
+
+See [packages/whatsapp-bot/README.md](../packages/whatsapp-bot/README.md) for setup instructions.
+
+### Installing KDE Plasma Widgets
+
+FlowState includes two KDE Plasma 6 widgets:
+
+1. **PomoFlow Timer** — Full Pomodoro timer with task list
+2. **PomoFlow Active Task** — Compact panel pill showing current task
+
+```bash
+# Timer widget
+cd packages/kde-widget
+./install.sh
+
+# Active task widget (optional)
+cd packages/kde-widget-active-task
+./install.sh
+
+# Restart Plasma to load widgets
+plasmashell --replace &
+```
+
+Then add the widget to your panel or desktop and configure your Supabase URL and anon key in the widget settings.
+
+---
+
 ## Optional: AI Chat
 
 FlowState includes an AI chat sidebar that can help with task management. It supports two backends:
@@ -448,6 +668,58 @@ supabase secrets set OPENROUTER_API_KEY=your-key
 # Deploy the proxy function
 supabase functions deploy ai-chat-proxy
 ```
+
+---
+
+## Complete Secrets Reference
+
+A full list of every environment variable and secret a self-hoster might encounter.
+
+### Core (Required)
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `POSTGRES_PASSWORD` | `.env.self-host` | Database password |
+| `JWT_SECRET` | `.env.self-host` | Supabase JWT signing secret |
+| `ANON_KEY` | `.env.self-host` | Supabase anonymous/public key |
+| `SERVICE_ROLE_KEY` | `.env.self-host` | Supabase admin key (server-side only, never expose to browser) |
+| `VITE_SUPABASE_URL` | `.env.self-host` / `.env.local` | Supabase API URL |
+| `VITE_SUPABASE_ANON_KEY` | `.env.self-host` / `.env.local` | Supabase public key for the frontend |
+
+### Supabase Edge Function Secrets
+
+Set via `supabase secrets set KEY=value` (or via the Supabase dashboard for cloud projects):
+
+| Variable | Required For | How To Get |
+|----------|-------------|------------|
+| `GROQ_API_KEY` | AI chat + Whisper voice input | [console.groq.com](https://console.groq.com/) |
+| `OPENROUTER_API_KEY` | Premium AI models (Claude, GPT-4) | [openrouter.ai](https://openrouter.ai/) |
+| `SITE_URL` | OpenRouter (HTTP-Referer header) | Your app's public URL |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` | Google sign-in / calendar / drive | Google Cloud Console |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` | Google sign-in / calendar / drive | Google Cloud Console |
+| `ALLOWED_ORIGINS` | All Edge Functions (CORS) | Your domain(s), comma-separated |
+| `WAHA_WEBHOOK_SECRET` | WhatsApp integration | Any random string |
+| `FLOWSTATE_USER_ID` | WhatsApp integration | Your Supabase user UUID |
+
+### Push Notifications
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `VITE_VAPID_PUBLIC_KEY` | `.env.self-host` / `.env.local` | Web push subscription (frontend) |
+| `VAPID_PRIVATE_KEY` | `server/push-service/.env` | Push notification sending (server) |
+| `VAPID_SUBJECT` | `server/push-service/.env` | Contact email for push service |
+
+### CI/CD Only (not needed for self-hosting)
+
+These are used by the official automated pipeline and are listed here for completeness. Self-hosters can ignore them.
+
+| Variable | Purpose |
+|----------|---------|
+| `DOPPLER_TOKEN` | Secrets management (replace with direct env vars) |
+| `SSH_PRIVATE_KEY` | VPS deployment |
+| `CLOUDFLARE_ZONE_ID` | CDN cache purging |
+| `CLOUDFLARE_API_TOKEN` | CDN cache purging |
+| `TAURI_SIGNING_PRIVATE_KEY` | Desktop app code signing |
 
 ---
 

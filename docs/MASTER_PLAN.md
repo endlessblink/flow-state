@@ -3962,7 +3962,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1403**~~ | **P2** | ✅ **Recurring Tasks — Clone-on-Complete with recurrence_rule column** (✅ DONE 2026-02-22) |
 | ~~**TASK-1402**~~ | **P1** | ✅ **Decouple canvas/calendar inbox filtering — isInInbox now user-controlled, placement uses position-based filtering** (✅ DONE 2026-02-22) |
 | ~~**TASK-1387**~~ | **P1** | **✅ Centralize all AI model references to single source of truth** (✅ DONE 2026-02-21) |
-| **TASK-1372** | **P1** | **📋 Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** |
+| **TASK-1372** | **P1** | **🔄 Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** (🔄 IN PROGRESS 2026-03-04) |
 | ~~**BUG-1371**~~ | **P0** | ✅ **Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** (✅ DONE 2026-02-20) |
 | ~~**BUG-1370**~~ | **P0** | ✅ **Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** (✅ DONE 2026-02-20) |
 | ~~**BUG-1369**~~ | **P0** | ✅ **Canvas tasks persist after marked done — completed tasks remain visible on canvas instead of being removed** (✅ DONE 2026-02-21) |
@@ -4035,6 +4035,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | TASK-079 | P3 | Tauri mobile (Android/iOS) |
 | TASK-157 | P3 | ADHD-Friendly view redesign (Phases 2-4 pending) |
 | TASK-1120 | P2 | 🔄 Deep UX/UI analysis and enhancement of catalog views |
+| **FEATURE-1443** | **P0** | **Morning Dashboard — futuristic news headline page with playful task setting** |
 
 ---
 
@@ -4169,15 +4170,15 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### BUG-1141: Add CSP Headers to Limit XSS Impact (🔄 IN PROGRESS)
+### ~~BUG-1141~~: Add CSP Headers to Limit XSS Impact (✅ DONE)
 
-**Priority**: P3-LOW | **Status**: 🔄 IN PROGRESS
+**Priority**: P3-LOW | **Status**: ✅ DONE (2026-03-04)
 
-**Problem**: No Content Security Policy headers configured.
+**Problem**: No Content Security Policy headers configured on production web app.
 
-**Solution**: Add CSP headers to Caddy and Tauri config.
+**Solution**: Added enforcing CSP header to VPS Caddyfile. Policy: `default-src 'self'`, SHA-256 hash for FOUC inline script, `'unsafe-inline'` for Vue scoped styles, explicit allowlist for Google Fonts, Dicebear avatars, Supabase API/WebSocket. Tauri CSP was already configured. `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'` for XSS mitigation.
 
-**Files**: `/etc/caddy/Caddyfile`, `src-tauri/tauri.conf.json`
+**Files**: `/etc/caddy/Caddyfile` (VPS), `src-tauri/tauri.conf.json` (already had CSP)
 
 ---
 

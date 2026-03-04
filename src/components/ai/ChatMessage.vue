@@ -1108,7 +1108,7 @@ async function saveSchedule() {
                 <span class="summary-stat-label">Days Used</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.unscheduled?.length > 0 }">{{ result.data.unscheduled?.length || 0 }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': (result.data.unscheduled?.length || 0) > 0 }">{{ result.data.unscheduled?.length || 0 }}</span>
                 <span class="summary-stat-label">Unscheduled</span>
               </div>
             </div>
@@ -1161,13 +1161,13 @@ async function saveSchedule() {
                 </button>
               </div>
             </template>
-            <div v-if="result.data.unscheduled?.length > 0" class="task-list">
+            <div v-if="(result.data.unscheduled?.length || 0) > 0" class="task-list">
               <div class="summary-section-label">
                 Unscheduled
-                <span class="section-count">({{ result.data.unscheduled.length }})</span>
+                <span class="section-count">({{ result.data.unscheduled?.length || 0 }})</span>
               </div>
               <button
-                v-for="task in liveTasks(result.data.unscheduled)"
+                v-for="task in liveTasks(result.data.unscheduled || [])"
                 :key="task.id"
                 class="task-list-item task-unscheduled"
                 @click="openQuickEdit(task, $event)"

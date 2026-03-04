@@ -261,10 +261,6 @@ interface Props {
   context?: string // Hide canvas sort when inside canvas view
 }
 
-const { t } = useI18n()
-
-const props = defineProps<Props>()
-
 const emit = defineEmits<{
   'update:unscheduledOnly': [value: boolean]
   'update:onCanvasOnly': [value: boolean]
@@ -276,6 +272,8 @@ const emit = defineEmits<{
   'update:sortDirection': [value: SortDirection] // TASK-1412
   clearAll: []
 }>()
+
+const props = defineProps<Props>()
 
 // Dropdown visibility state
 const showPriorityDropdown = ref(false)

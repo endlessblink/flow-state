@@ -6,12 +6,12 @@
       @click="$emit('close')"
       @keydown="handleKeydown"
     >
-    <div class="modal-content" @click.stop>
-      <div class="modal-header">
-        <h2 class="modal-title">
-          <Group :size="18" />
-          {{ isEditing ? 'Edit Group' : 'Create Group' }}
-        </h2>
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <Group :size="18" />
+            {{ isEditing ? 'Edit Group' : 'Create Group' }}
+          </h2>
         <button class="close-btn" aria-label="Close modal" @click="$emit('close')">
           <X :size="16" :stroke-width="1.5" />
         </button>

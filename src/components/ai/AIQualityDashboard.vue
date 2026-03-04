@@ -71,14 +71,20 @@
 
       <div class="card glass stat-card">
         <h3>Provider</h3>
-        <div class="stat-value stat-value--small">{{ report.provider }}</div>
-        <p>{{ formatTime(report.timestamp) }}</p>
+        <div class="stat-value stat-value--small">
+          {{ report.provider }}
+        </div>
+        <p>
+          {{ formatTime(report.timestamp) }}
+        </p>
       </div>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <h3 class="empty-title">AI Quality Assessment</h3>
+      <h3 class="empty-title">
+        AI Quality Assessment
+      </h3>
       <p class="empty-desc">
         Tests your AI assistant by sending {{ testPrompts.length }} prompts across {{ new Set(testPrompts.map(t => t.category)).size }} categories,
         then judges each response against {{ rubrics.length }} quality rubrics using a second LLM call.
@@ -126,14 +132,12 @@
         >
           <!-- Header: Category badge + Grade + Quick status dot -->
           <div class="result-header">
-            <span class="category-badge" :class="'cat-' + result.category">
-              {{ result.category }}
-            </span>
+            <span class="category-badge" :class="'cat-' + result.category">{{ result.category }}</span>
             <div class="result-grade-area">
               <span class="result-grade" :class="scoreColorClass(result.overallScore)">
                 {{ result.grade }}
               </span>
-              <span class="result-grade-dot" :class="gradeDotClass(result.grade)"></span>
+              <span class="result-grade-dot" :class="gradeDotClass(result.grade)" />
             </div>
           </div>
 
@@ -158,12 +162,16 @@
           <div v-if="expandedCards.has(result.promptId)" class="expanded-content">
             <div class="expanded-section">
               <h4>Full AI Response</h4>
-              <div class="response-text">{{ result.response }}</div>
+              <div class="response-text">
+                {{ result.response }}
+              </div>
             </div>
 
             <div v-if="result.judgeReasoning" class="expanded-section">
               <h4>Judge's Detailed Assessment</h4>
-              <div class="judge-text">{{ result.judgeReasoning }}</div>
+              <div class="judge-text">
+                {{ result.judgeReasoning }}
+              </div>
             </div>
 
             <!-- Expected Behavior -->

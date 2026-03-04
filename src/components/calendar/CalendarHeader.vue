@@ -112,8 +112,18 @@ const toggleViewOptions = () => {
             :class="{ active: hideCalendarDoneTasks }"
             @click="$emit('toggleDoneTasks')"
           >
-            <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" class="option-icon" />
-            <Eye v-else :size="16" :stroke-width="1.5" class="option-icon" />
+            <EyeOff
+              v-if="hideCalendarDoneTasks"
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
+            <Eye
+              v-else
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
             <span class="option-label">{{ hideCalendarDoneTasks ? $t('calendar.show_completed') : $t('calendar.hide_completed') }}</span>
             <span v-if="hideCalendarDoneTasks" class="option-indicator" />
           </button>
@@ -156,8 +166,18 @@ const toggleViewOptions = () => {
             :class="{ active: showGoogleEvents }"
             @click="$emit('toggleGoogleEvents')"
           >
-            <Eye v-if="showGoogleEvents" :size="16" :stroke-width="1.5" class="option-icon" />
-            <EyeOff v-else :size="16" :stroke-width="1.5" class="option-icon" />
+            <Eye
+              v-if="showGoogleEvents"
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
+            <EyeOff
+              v-else
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
             <span class="option-label">Google Calendar</span>
             <span v-if="showGoogleEvents" class="option-indicator" />
           </button>

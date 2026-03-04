@@ -18,6 +18,7 @@
         :required="required"
         :class="inputClasses"
         :style="inputStyles"
+        :aria-describedby="computedAriaDescribedBy"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
         @keydown.enter="$emit('enter', $event)"
@@ -26,14 +27,14 @@
       <slot name="suffix" />
     </div>
 
-    <span v-if="helperText" class="helper-text">
+    <span v-if="helperText" :id="helperTextId" class="helper-text">
       {{ helperText }}
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, useSlots } from 'vue'
+import { ref, computed, useSlots, useId } from 'vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {
@@ -45,6 +46,7 @@ interface Props {
   disabled?: boolean
   required?: boolean
   id?: string
+  ariaDescribedBy?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -55,7 +57,8 @@ const props = withDefaults(defineProps<Props>(), {
   helperText: undefined,
   disabled: false,
   required: false,
-  id: undefined
+  id: undefined,
+  ariaDescribedBy: undefined
 })
 
 const emit = defineEmits<{
@@ -66,7 +69,15 @@ const emit = defineEmits<{
 }>()
 
 const inputRef = ref<HTMLInputElement>()
-const inputId = computed(() => props.id || `input-${Math.random().toString(36).substr(2, 9)}`)
+const internalId = useId()
+const inputId = computed(() => props.id || `input-${internalId}`)
+const helperTextId = computed(() => `helper-${internalId}`)
+
+const computedAriaDescribedBy = computed(() => {
+  if (props.ariaDescribedBy) return props.ariaDescribedBy
+  if (props.helperText) return helperTextId.value
+  return undefined
+})
 
 // Initialize slots for Vue 3 Composition API
 const slots = useSlots()

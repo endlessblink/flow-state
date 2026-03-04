@@ -51,6 +51,12 @@ services:
           hide_credentials: false
           key_names:
             - apikey
+      # BUG-1142: Rate limit auth endpoints to prevent brute-force attacks
+      - name: rate-limiting
+        config:
+          minute: 20
+          policy: local
+          hide_client_headers: false
 
   # REST (PostgREST)
   - name: rest-v1
@@ -90,6 +96,12 @@ services:
           hide_credentials: false
           key_names:
             - apikey
+      # BUG-1142: Rate limit REST API (generous for normal app usage)
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+          hide_client_headers: false
 
   # Realtime
   - name: realtime-v1

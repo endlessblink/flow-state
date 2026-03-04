@@ -12,6 +12,7 @@
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const DEFAULT_ORIGINS = [
   'http://localhost:5546',
@@ -72,6 +73,34 @@ function isPrivateUrl(urlStr: string): boolean {
   }
 }
 
+/**
+ * BUG-1142: Validate Supabase JWT from the Authorization header.
+ * Prevents unauthenticated access to the URL scraper proxy.
+ */
+async function validateSupabaseAuth(req: Request): Promise<{ id: string }> {
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('Missing or invalid Authorization header')
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase environment not configured')
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  })
+
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    throw new Error('Invalid or expired Supabase session')
+  }
+
+  return user
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
 
@@ -80,6 +109,9 @@ serve(async (req) => {
   }
 
   try {
+    // BUG-1142: Require authenticated user
+    await validateSupabaseAuth(req)
+
     const { url } = await req.json()
 
     if (!url || typeof url !== 'string') {

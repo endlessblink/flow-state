@@ -5,6 +5,7 @@ import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useOfflineVoiceQueue } from '@/composables/useOfflineVoiceQueue'
 import { useHaptics } from '@/composables/useHaptics'
 import { useCanvasStore } from '@/stores/canvas'
+import { supabase } from '@/composables/supabase/_infrastructure'
 
 export type ViewMode = 'tasks' | 'today'
 export type TimeFilterType = 'all' | 'today' | 'week' | 'overdue'
@@ -92,7 +93,13 @@ export function useMobileInboxLogic() {
                     : 'webm'
         formData.append('file', blob, `audio.${extension}`)
         formData.append('model', 'whisper-large-v3-turbo')
-        const response = await fetch(getWhisperEndpoint(), { method: 'POST', body: formData })
+        // BUG-1142: Include auth token for edge function authentication
+        const headers: Record<string, string> = {}
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`
+        }
+        const response = await fetch(getWhisperEndpoint(), { method: 'POST', headers, body: formData })
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
             throw new Error(errorData.error?.message || `API error: ${response.status}`)

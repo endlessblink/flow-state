@@ -11,6 +11,7 @@
 
 import { ref, computed, readonly, onUnmounted } from 'vue'
 import { useOnline } from '@vueuse/core'
+import { supabase } from '@/composables/supabase/_infrastructure'
 
 export type WhisperStatus = 'idle' | 'recording' | 'processing' | 'error' | 'queued'
 
@@ -310,8 +311,16 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       console.log('[VOICE] Sending to Whisper:', { model, language: 'he', audioSize: audioBlob.size, mimeType: audioBlob.type })
 
       // Call Edge Function (API key is server-side, synced from Doppler)
+      // BUG-1142: Include auth token for edge function authentication
+      const headers: Record<string, string> = {}
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+
       const response = await fetch(getWhisperEndpoint(), {
         method: 'POST',
+        headers,
         body: formData
       })
 

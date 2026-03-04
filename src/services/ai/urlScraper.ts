@@ -10,6 +10,7 @@
  */
 
 import { tauriFetchWithTimeout, isTauriEnvironment } from './utils/tauriHttp'
+import { supabase } from '@/composables/supabase/_infrastructure'
 
 export interface ScrapedUrlData {
   url: string
@@ -146,9 +147,16 @@ async function fetchHtmlProxy(url: string, signal?: AbortSignal): Promise<string
   const endpoint = getProxyEndpoint()
   console.log('[urlScraper] Trying proxy fetch:', endpoint)
 
+  // BUG-1142: Include auth token for edge function authentication
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`
+  }
+
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ url }),
     signal,
   })

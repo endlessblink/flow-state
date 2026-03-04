@@ -9,6 +9,7 @@
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
 
@@ -36,6 +37,34 @@ function getCorsHeaders(req: Request) {
   }
 }
 
+/**
+ * BUG-1142: Validate Supabase JWT from the Authorization header.
+ * Prevents unauthenticated access to the Groq API proxy.
+ */
+async function validateSupabaseAuth(req: Request): Promise<{ id: string }> {
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('Missing or invalid Authorization header')
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase environment not configured')
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  })
+
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    throw new Error('Invalid or expired Supabase session')
+  }
+
+  return user
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
 
@@ -45,6 +74,9 @@ serve(async (req) => {
   }
 
   try {
+    // BUG-1142: Require authenticated user
+    await validateSupabaseAuth(req)
+
     // Get API key from Supabase secrets (synced from Doppler)
     const groqApiKey = Deno.env.get('GROQ_API_KEY')
 

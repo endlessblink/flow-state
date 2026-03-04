@@ -1,5 +1,8 @@
 # FlowState
 
+![CI](https://github.com/endlessblink/flow-state/actions/workflows/ci.yml/badge.svg)
+![License: Polyform Shield](https://img.shields.io/badge/license-Polyform%20Shield-blue)
+
 A sophisticated Vue 3 productivity application combining Pomodoro timer functionality with task management across multiple views.
 
 **Live demo:** [in-theflow.com](https://in-theflow.com)
@@ -32,7 +35,6 @@ cp .env.example .env.local
 # Start development server
 npm run dev
 # Open http://localhost:5546
-# Login: dev@flowstate.local / dev123
 ```
 
 ## Self-Hosting
@@ -104,8 +106,10 @@ src/
 
 - **CLAUDE.md** - Development guidance and patterns
 - **docs/MASTER_PLAN.md** - Project roadmap and architecture
-- **docs/SELF-HOSTING.md** - Self-hosting guide
+- **[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md)** - Self-hosting guide
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
 
 ## License
 
-MIT
+[Polyform Shield 1.0.0](LICENSE). You may use FlowState for personal and internal business purposes. Commercial SaaS use requires a separate agreement.

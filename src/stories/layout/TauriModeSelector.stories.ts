@@ -104,7 +104,7 @@ export const Default: Story = {
                     Cloud Mode
                     <span :style="badgeStyle">Recommended</span>
                   </h3>
-                  <p :style="cardSubtitleStyle">Connect to in-theflow.com</p>
+                  <p :style="cardSubtitleStyle">Connect to your-domain.com</p>
                 </div>
               </div>
               <ul :style="featureListStyle">
@@ -186,7 +186,7 @@ export const LocalModeSelected: Story = {
                     Cloud Mode
                     <span :style="badgeStyle">Recommended</span>
                   </h3>
-                  <p :style="cardSubtitleStyle">Connect to in-theflow.com</p>
+                  <p :style="cardSubtitleStyle">Connect to your-domain.com</p>
                 </div>
               </div>
               <ul :style="featureListStyle">

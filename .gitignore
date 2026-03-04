@@ -115,6 +115,12 @@ audit-reports/
 /pwa-report.json
 .dev-server.pid
 
+# TLS certificates (private key must never be committed)
+scripts/certificates/server.key
+
+# Claude Code local settings (may contain personal paths/preferences)
+.claude/settings.local.json
+
 # OSS safety — files containing secrets/PII removed before open-sourcing
 reports/
 console-task-*.txt
@@ -124,6 +130,7 @@ Caddyfile.prod
 snapshot-*.md
 current-state.md
 lint_report.*
+components_lint_report.json
 docs/archive/
 any_files.txt
 bulk_replace.js

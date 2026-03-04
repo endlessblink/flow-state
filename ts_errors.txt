@@ -1,0 +1,943 @@
+
+> flow-state@1.2.91 type-check
+> vue-tsc --noEmit -p tsconfig.json --composite false
+
+src/components/ai/ChatMessage.vue(102,39): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(106,22): error TS2339: Property 'title' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(107,23): error TS2339: Property 'status' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(108,25): error TS2339: Property 'priority' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(109,24): error TS2339: Property 'dueDate' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(110,34): error TS2339: Property 'estimatedDuration' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(594,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(598,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(602,74): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(606,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(610,83): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(610,83): error TS18048: 'result.data.overdueCount' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(610,118): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(614,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(619,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(619,24): error TS18048: 'result.data.overdueTasks.length' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(622,49): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(622,49): error TS18048: 'result.data.overdueTasks' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(625,45): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(625,45): error TS2345: Argument of type 'Record<string, unknown>[] | undefined' is not assignable to parameter of type 'Record<string, unknown>[]'.
+  Type 'undefined' is not assignable to type 'Record<string, unknown>[]'.
+src/components/ai/ChatMessage.vue(626,18): error TS2322: Type 'unknown' is not assignable to type 'PropertyKey | undefined'.
+src/components/ai/ChatMessage.vue(628,66): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(637,89): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string | number | Date | null | undefined'.
+src/components/ai/ChatMessage.vue(641,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(643,54): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(645,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(647,50): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(651,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(653,54): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(655,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(657,50): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(660,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(663,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(669,23): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(669,23): error TS18048: 'result.data.overdueTasks' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(675,33): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(675,33): error TS18048: 'result.data.overdueTasks' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(679,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(679,24): error TS18048: 'result.data.dueTodayTasks.length' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(682,49): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(682,49): error TS18048: 'result.data.dueTodayTasks' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(685,45): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(685,45): error TS2345: Argument of type 'Record<string, unknown>[] | undefined' is not assignable to parameter of type 'Record<string, unknown>[]'.
+  Type 'undefined' is not assignable to type 'Record<string, unknown>[]'.
+src/components/ai/ChatMessage.vue(686,18): error TS2322: Type 'unknown' is not assignable to type 'PropertyKey | undefined'.
+src/components/ai/ChatMessage.vue(688,66): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(693,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | undefined'.
+src/components/ai/ChatMessage.vue(705,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(707,54): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(709,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(711,50): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(715,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(717,54): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(719,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(721,50): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(724,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(727,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(733,23): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(733,23): error TS18048: 'result.data.dueTodayTasks' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(739,33): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(739,33): error TS18048: 'result.data.dueTodayTasks' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(751,51): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(756,60): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(759,22): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(759,60): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(766,49): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(770,111): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(770,111): error TS18048: 'result.data.corruptionLevel' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(771,49): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(776,49): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(776,86): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(780,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(781,69): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(792,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(792,24): error TS18048: 'result.data.dailies' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(797,30): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(798,18): error TS2322: Type 'unknown' is not assignable to type 'PropertyKey | undefined'.
+src/components/ai/ChatMessage.vue(813,49): error TS18046: 'ch.progressPercent' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(820,71): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'number'.
+src/components/ai/ChatMessage.vue(825,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(831,90): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(834,28): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(835,22): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(841,40): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(844,60): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(844,100): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(847,66): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(848,71): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(848,71): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'number'.
+src/components/ai/ChatMessage.vue(852,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(852,24): error TS18048: 'result.data.dailies' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(852,61): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(863,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(868,21): error TS18046: 'ach' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(872,84): error TS18046: 'ach' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(873,51): error TS18046: 'ach' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(874,54): error TS18046: 'ach' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(877,20): error TS18046: 'ach' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(883,38): error TS18046: 'ach' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(883,87): error TS18046: 'ach' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(886,56): error TS18046: 'ach' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(888,52): error TS18046: 'ach' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(900,74): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(904,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(908,83): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(908,83): error TS18048: 'result.data.overdueCount' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(908,118): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(912,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(915,26): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(916,67): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(916,67): error TS2345: Argument of type '{}' is not assignable to parameter of type 'number'.
+src/components/ai/ChatMessage.vue(919,26): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(920,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(932,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(937,53): error TS2345: Argument of type 'ChatToolResultData | undefined' is not assignable to parameter of type 'Record<string, unknown>[]'.
+  Type 'undefined' is not assignable to type 'Record<string, unknown>[]'.
+src/components/ai/ChatMessage.vue(938,18): error TS2322: Type 'unknown' is not assignable to type 'PropertyKey | undefined'.
+src/components/ai/ChatMessage.vue(940,66): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(948,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | undefined'.
+src/components/ai/ChatMessage.vue(950,68): error TS18046: 'task.reason' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(951,89): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string | number | Date | null | undefined'.
+src/components/ai/ChatMessage.vue(955,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(957,54): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(959,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(961,50): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(965,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(967,54): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(969,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(971,50): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(974,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(977,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(993,74): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(997,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1000,26): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1001,56): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1004,26): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1005,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1008,26): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1009,67): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1009,67): error TS2345: Argument of type '{}' is not assignable to parameter of type 'number'.
+src/components/ai/ChatMessage.vue(1012,26): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1013,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1018,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1019,27): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1019,50): error TS2339: Property 'completedToday' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(1020,20): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1020,43): error TS2339: Property 'completedToday' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(1022,27): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1022,50): error TS2339: Property 'corruptionLevel' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(1023,32): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1023,55): error TS2339: Property 'corruptionLevel' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(1036,74): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1040,53): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1044,83): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1044,108): error TS2339: Property 'length' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(1044,125): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1044,150): error TS2339: Property 'length' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(1049,26): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1049,26): error TS18048: 'result.data.plan' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1049,52): error TS2339: Property 'length' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(1052,51): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1052,51): error TS18048: 'result.data.plan' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1052,51): error TS2571: Object is of type 'unknown'.
+src/components/ai/ChatMessage.vue(1055,44): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1055,44): error TS18048: 'result.data.plan' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1055,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/components/ai/ChatMessage.vue(1056,20): error TS2322: Type 'unknown' is not assignable to type 'PropertyKey | undefined'.
+src/components/ai/ChatMessage.vue(1058,68): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1063,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | undefined'.
+src/components/ai/ChatMessage.vue(1068,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1070,56): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(1072,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1074,52): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(1078,54): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1080,56): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(1082,46): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1084,52): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(1087,54): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1090,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1097,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1097,49): error TS2339: Property 'length' does not exist on type '{}'.
+src/components/ai/ChatMessage.vue(1100,49): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1100,49): error TS18046: 'result.data.unscheduled' is of type 'unknown'.
+src/components/ai/ChatMessage.vue(1103,42): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1103,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/components/ai/ChatMessage.vue(1104,18): error TS2322: Type 'unknown' is not assignable to type 'PropertyKey | undefined'.
+src/components/ai/ChatMessage.vue(1110,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | undefined'.
+src/components/ai/ChatMessage.vue(1115,24): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1116,18): error TS18048: 'result.data' is possibly 'undefined'.
+src/components/ai/ChatMessage.vue(1130,18): error TS2322: Type 'unknown' is not assignable to type 'PropertyKey | undefined'.
+src/components/ai/ChatMessage.vue(1132,66): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1137,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | undefined'.
+src/components/ai/ChatMessage.vue(1145,42): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string | number | Date | null | undefined'.
+src/components/ai/ChatMessage.vue(1154,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1156,54): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(1158,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1160,50): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(1164,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1166,54): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(1168,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1170,50): error TS2538: Type 'unknown' cannot be used as an index type.
+src/components/ai/ChatMessage.vue(1173,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/ai/ChatMessage.vue(1176,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/calendar/CalendarDayView.vue(94,12): error TS18046: '__VLS_ctx.formatHour' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(138,27): error TS18046: '__VLS_ctx.isCurrentTimeSlot' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(151,32): error TS18046: '__VLS_ctx.getTasksForSlot' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(152,21): error TS18046: '__VLS_ctx.isTaskPrimarySlot' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(162,30): error TS18046: '__VLS_ctx.getTaskStatus' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(163,32): error TS18046: '__VLS_ctx.getTaskStatus' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(165,21): error TS18046: '__VLS_ctx.getSlotTaskStyle' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(177,21): error TS18046: '__VLS_ctx.getProjectVisual' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(179,35): error TS18046: '__VLS_ctx.getProjectName' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(182,25): error TS18046: '__VLS_ctx.getProjectVisual' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(190,42): error TS18046: '__VLS_ctx.getProjectColor' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(191,35): error TS18046: '__VLS_ctx.getProjectName' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(197,35): error TS18046: '__VLS_ctx.getPriorityClass' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(198,36): error TS18046: '__VLS_ctx.getPriorityLabel' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(225,29): error TS18046: '__VLS_ctx.formatEventTime' is of type 'unknown'.
+src/components/calendar/CalendarDayView.vue(225,77): error TS18046: '__VLS_ctx.formatEventTime' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(99,34): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/calendar/CalendarMonthView.vue(105,16): error TS18046: 'formatEventTime' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(107,18): error TS18046: 'getStatusLabel' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(107,33): error TS18046: 'getTaskStatus' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(149,137): error TS18046: '__VLS_ctx.getTaskStatus' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(149,187): error TS18046: '__VLS_ctx.getTaskStatus' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(151,37): error TS2345: Argument of type 'CalendarEvent' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'CalendarEvent'.
+src/components/calendar/CalendarMonthView.vue(161,21): error TS18046: '__VLS_ctx.getProjectVisual' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(163,35): error TS18046: '__VLS_ctx.getProjectName' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(166,25): error TS18046: '__VLS_ctx.getProjectVisual' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(168,37): error TS18046: '__VLS_ctx.getProjectName' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(175,42): error TS18046: '__VLS_ctx.getProjectColor' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(176,35): error TS18046: '__VLS_ctx.getProjectName' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(182,35): error TS18046: '__VLS_ctx.getPriorityClass' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(183,36): error TS18046: '__VLS_ctx.getPriorityLabel' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(185,25): error TS18046: '__VLS_ctx.formatEventTime' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(185,71): error TS18046: '__VLS_ctx.formatEventTime' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(192,18): error TS18046: '__VLS_ctx.getStatusIcon' is of type 'unknown'.
+src/components/calendar/CalendarMonthView.vue(192,32): error TS18046: '__VLS_ctx.getTaskStatus' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(62,34): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/calendar/CalendarWeekView.vue(68,16): error TS18046: 'formatEventTime' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(70,18): error TS18046: 'getStatusLabel' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(70,33): error TS18046: 'getTaskStatus' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(186,14): error TS18046: '__VLS_ctx.formatHour' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(203,33): error TS18046: '__VLS_ctx.isCurrentWeekTimeCell' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(206,108): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/calendar/CalendarWeekView.vue(207,110): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/calendar/CalendarWeekView.vue(209,86): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/calendar/CalendarWeekView.vue(210,53): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/components/calendar/CalendarWeekView.vue(240,34): error TS18046: '__VLS_ctx.getTaskStatus' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(241,36): error TS18046: '__VLS_ctx.getTaskStatus' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(244,41): error TS2345: Argument of type 'WeekEvent' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'WeekEvent'.
+src/components/calendar/CalendarWeekView.vue(255,39): error TS18046: '__VLS_ctx.getPriorityClass' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(260,47): error TS18046: '__VLS_ctx.formatEventTime' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(262,24): error TS18046: '__VLS_ctx.getStatusIcon' is of type 'unknown'.
+src/components/calendar/CalendarWeekView.vue(262,38): error TS18046: '__VLS_ctx.getTaskStatus' is of type 'unknown'.
+src/components/canvas/CanvasModals.vue(39,32): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"handleGroupCreated"' is not assignable to parameter of type '"handleGroupEditSave"'.
+src/components/canvas/CanvasModals.vue(40,32): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"handleGroupUpdated"' is not assignable to parameter of type '"handleGroupEditSave"'.
+src/components/canvas/CanvasModals.vue(48,61): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'CanvasGroup' is not assignable to parameter of type 'Record<string, unknown>'.
+      Index signature for type 'string' is missing in type 'CanvasGroup'.
+src/components/canvas/GroupNodeSimple.vue(51,57): error TS2365: Operator '>' cannot be applied to types '{}' and 'number'.
+src/components/canvas/GroupNodeSimple.vue(53,36): error TS2365: Operator '>' cannot be applied to types '{}' and 'number'.
+src/components/canvas/GroupNodeSimple.vue(117,44): error TS2339: Property 'section' does not exist on type '{}'.
+src/components/canvas/GroupNodeSimple.vue(118,50): error TS2339: Property 'isCollapsed' does not exist on type '{}'.
+src/components/canvas/GroupNodeSimple.vue(123,31): error TS2339: Property 'id' does not exist on type '{}'.
+src/components/canvas/GroupNodeSimple.vue(124,36): error TS2339: Property 'color' does not exist on type '{}'.
+src/components/canvas/GroupNodeSimple.vue(126,43): error TS2339: Property 'color' does not exist on type '{}'.
+src/components/canvas/GroupNodeSimple.vue(143,37): error TS2339: Property 'name' does not exist on type '{}'.
+src/components/canvas/GroupNodeSimple.vue(214,13): error TS18046: 'props.data' is of type 'unknown'.
+src/components/canvas/GroupNodeSimple.vue(219,29): error TS18046: 'props.data' is of type 'unknown'.
+src/components/canvas/GroupNodeSimple.vue(226,31): error TS2339: Property 'id' does not exist on type '{}'.
+src/components/common/IOSInstallPrompt.vue(15,3): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+src/components/inbox/calendar/CalendarInboxHeader.vue(103,8): error TS2322: Type 'unknown[]' is not assignable to type 'SelectOption[]'.
+  Type 'unknown' is not assignable to type 'SelectOption'.
+src/components/inbox/calendar/CalendarInboxHeader.vue(131,10): error TS2322: Type 'unknown[]' is not assignable to type 'Project[]'.
+  Type 'unknown' is not assignable to type 'Project'.
+src/components/inbox/unified/UnifiedInboxHeader.vue(149,10): error TS2322: Type 'unknown[]' is not assignable to type 'Project[]'.
+  Type 'unknown' is not assignable to type 'Project'.
+src/components/kanban/KanbanColumn.vue(135,22): error TS2339: Property 'item' does not exist on type 'DragEvent'.
+src/components/kanban/KanbanColumn.vue(135,51): error TS2339: Property 'item' does not exist on type 'DragEvent'.
+src/components/kanban/KanbanColumn.vue(136,25): error TS2339: Property 'item' does not exist on type 'DragEvent'.
+src/components/kanban/KanbanColumn.vue(152,24): error TS2339: Property 'originalEvent' does not exist on type 'DragEvent'.
+src/components/kanban/KanbanColumn.vue(159,28): error TS2339: Property 'item' does not exist on type 'DragEvent'.
+src/components/kanban/KanbanColumn.vue(159,57): error TS2339: Property 'item' does not exist on type 'DragEvent'.
+src/components/kanban/KanbanColumn.vue(259,13): error TS2551: Property 'moved' does not exist on type '{ added?: { element: Task; } | undefined; removed?: { element: Task; } | undefined; }'. Did you mean 'removed'?
+src/components/kanban/KanbanSwimlane.vue(66,14): error TS2322: Type 'string' is not assignable to type '"planned" | "in_progress" | "done" | "backlog" | "on_hold"'.
+src/components/kanban/KanbanSwimlane.vue(87,14): error TS2322: Type 'string' is not assignable to type '"planned" | "in_progress" | "done" | "backlog" | "on_hold"'.
+src/components/kanban/KanbanSwimlane.vue(108,14): error TS2322: Type 'string' is not assignable to type '"planned" | "in_progress" | "done" | "backlog" | "on_hold"'.
+src/components/layout/SidebarSmartItem.vue(157,28): error TS2304: Cannot find name 'Task'.
+src/components/settings/tabs/AISettingsTab.vue(322,100): error TS2694: Namespace '"/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useWorkProfile"' has no exported member 'WorkProfileData'.
+src/components/settings/tabs/AccountSettingsTab.vue(36,33): error TS18046: 'e' is of type 'unknown'.
+src/components/settings/tabs/AccountSettingsTab.vue(50,33): error TS18046: 'e' is of type 'unknown'.
+src/components/settings/tabs/AppearanceSettingsTab.vue(55,69): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '0 | 1'.
+src/components/settings/tabs/NotificationsSettingsTab.vue(304,14): error TS2322: Type '(val: number) => void' is not assignable to type '(value: unknown) => any'.
+  Types of parameters 'val' and 'value' are incompatible.
+    Type 'unknown' is not assignable to type 'number'.
+src/components/settings/tabs/NotificationsSettingsTab.vue(312,14): error TS2322: Type '(val: number) => void' is not assignable to type '(value: unknown) => any'.
+  Types of parameters 'val' and 'value' are incompatible.
+    Type 'unknown' is not assignable to type 'number'.
+src/components/settings/tabs/NotificationsSettingsTab.vue(322,10): error TS2322: Type '(val: number) => void' is not assignable to type '(value: unknown) => any'.
+  Types of parameters 'val' and 'value' are incompatible.
+    Type 'unknown' is not assignable to type 'number'.
+src/components/settings/tabs/NotificationsSettingsTab.vue(330,10): error TS2322: Type '(val: number) => void' is not assignable to type '(value: unknown) => any'.
+  Types of parameters 'val' and 'value' are incompatible.
+    Type 'unknown' is not assignable to type 'number'.
+src/components/settings/tabs/StorageSettingsTab.vue(167,5): error TS2322: Type 'GoldenBackupValidation | null' is not assignable to type 'Record<string, unknown> | null'.
+  Type 'GoldenBackupValidation' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'GoldenBackupValidation'.
+src/components/settings/tabs/StorageSettingsTab.vue(252,25): error TS2322: Type 'unknown' is not assignable to type 'number'.
+src/components/settings/tabs/StorageSettingsTab.vue(260,25): error TS2322: Type 'unknown' is not assignable to type 'number'.
+src/components/settings/tabs/StorageSettingsTab.vue(324,50): error TS18046: '__VLS_ctx.shadowSnapshot.meta' is of type 'unknown'.
+src/components/settings/tabs/StorageSettingsTab.vue(328,41): error TS18046: '__VLS_ctx.shadowSnapshot.meta' is of type 'unknown'.
+src/components/settings/tabs/StorageSettingsTab.vue(363,19): error TS18046: 'backup' is of type 'unknown'.
+src/components/settings/tabs/StorageSettingsTab.vue(371,47): error TS18046: 'backup' is of type 'unknown'.
+src/components/settings/tabs/StorageSettingsTab.vue(372,55): error TS18046: 'backup' is of type 'unknown'.
+src/components/settings/tabs/StorageSettingsTab.vue(385,46): error TS2339: Property 'length' does not exist on type '{}'.
+src/components/settings/tabs/StorageSettingsTab.vue(390,37): error TS18047: '__VLS_ctx.validationInfo' is possibly 'null'.
+src/components/settings/tabs/WeeklyPlanSettingsTab.vue(104,100): error TS2694: Namespace '"/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/useWorkProfile"' has no exported member 'WorkProfileData'.
+src/components/settings/tabs/WorkflowSettingsTab.vue(61,69): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '"comfortable" | "compact" | "ultrathin"'.
+src/components/settings/tabs/WorkflowSettingsTab.vue(71,79): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '"always" | "only_empty" | "ask"'.
+src/components/tasks/HierarchicalTaskRowContent.vue(56,8): error TS2322: Type 'unknown' is not assignable to type 'string | object'.
+src/components/tasks/QuickTaskCreateModal.vue(140,14): error TS2322: Type 'unknown[]' is not assignable to type 'SelectOption[]'.
+  Type 'unknown' is not assignable to type 'SelectOption'.
+src/components/tasks/QuickTaskCreateModal.vue(140,24): error TS2352: Conversion of type 'readonly [{ readonly value: "done"; readonly label: "Done"; readonly icon: Raw<FunctionalComponent<LucideProps, {}, any, {}>>; }, { readonly value: "in_progress"; readonly label: "In Progress"; readonly icon: Raw<...>; }, { ...; }, { ...; }, { ...; }]' to type 'unknown[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  The type 'readonly [{ readonly value: "done"; readonly label: "Done"; readonly icon: Raw<FunctionalComponent<LucideProps, {}, any, {}>>; }, { readonly value: "in_progress"; readonly label: "In Progress"; readonly icon: Raw<...>; }, { ...; }, { ...; }, { ...; }]' is 'readonly' and cannot be assigned to the mutable type 'unknown[]'.
+src/components/tasks/TaskContextMenu.vue(363,38): error TS2345: Argument of type '((evt: "close") => void) & ((evt: "clearSelection") => void) & ((evt: "edit", taskId: string) => void) & ((evt: "setPriority", priority: "low" | "medium" | "high") => void) & ((evt: "setDueDate", dateType: "today" | ... 2 more ... | "nextweek") => void) & ... 6 more ... & ((evt: "confirmPermanentDelete", taskId: str...' is not assignable to parameter of type '(event: string, ...args: unknown[]) => void'.
+  Types of parameters 'evt' and 'event' are incompatible.
+    Type 'string' is not assignable to type '"close"'.
+src/components/tasks/TaskList.vue(262,82): error TS2339: Property 'status' does not exist on type 'String'.
+src/components/tasks/TaskList.vue(264,84): error TS2339: Property 'priority' does not exist on type 'String'.
+src/components/tasks/row/TaskRowProject.vue(5,13): error TS18046: '__VLS_ctx.visual' is of type 'unknown'.
+src/components/tasks/row/TaskRowProject.vue(12,17): error TS18046: '__VLS_ctx.visual' is of type 'unknown'.
+src/components/tasks/row/TaskRowProject.vue(18,18): error TS18046: '__VLS_ctx.visual' is of type 'unknown'.
+src/components/tasks/row/TaskRowProject.vue(26,38): error TS18046: '__VLS_ctx.visual' is of type 'unknown'.
+src/composables/__tests__/useDateTransition.spec.ts(48,9): error TS18046: 'canvasStore' is of type 'unknown'.
+src/composables/__tests__/useDateTransition.spec.ts(67,9): error TS18046: 'taskStore' is of type 'unknown'.
+src/composables/app/useAppInitialization.ts(355,41): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(355,77): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(364,61): error TS2339: Property 'is_deleted' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(366,56): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(366,70): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(389,36): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(389,50): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(395,32): error TS2339: Property 'title' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(395,67): error TS2339: Property 'title' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(426,51): error TS2339: Property 'is_deleted' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(467,34): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(467,65): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(468,31): error TS2339: Property 'name' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(468,47): error TS2339: Property 'name' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(476,61): error TS2339: Property 'is_deleted' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(478,52): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(478,66): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(512,50): error TS2345: Argument of type '(payload: Record<string, unknown>) => void' is not assignable to parameter of type '(payload: unknown) => void'.
+  Types of parameters 'payload' and 'payload' are incompatible.
+    Type 'unknown' is not assignable to type 'Record<string, unknown>'.
+src/composables/app/useAppInitialization.ts(554,65): error TS2339: Property 'is_deleted' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(555,60): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(555,74): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(575,40): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(575,54): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(580,55): error TS2339: Property 'is_deleted' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(602,65): error TS2339: Property 'is_deleted' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(603,56): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(603,70): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/app/useAppInitialization.ts(621,54): error TS2345: Argument of type '(payload: Record<string, unknown>) => void' is not assignable to parameter of type '(payload: unknown) => void'.
+  Types of parameters 'payload' and 'payload' are incompatible.
+    Type 'unknown' is not assignable to type 'Record<string, unknown>'.
+src/composables/app/useAppInitialization.ts(634,33): error TS2339: Property 'unsubscribe' does not exist on type '{}'.
+src/composables/app/useSidebarManagement.ts(361,30): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'SmartView'.
+src/composables/board/useBoardState.ts(209,72): error TS2345: Argument of type '(instance: Record<string, unknown>) => boolean | null' is not assignable to parameter of type '((value: TaskInstance, index: number, array: TaskInstance[]) => unknown) & ((value: RecurringTaskInstance, index: number, array: RecurringTaskInstance[]) => unknown)'.
+  Type '(instance: Record<string, unknown>) => boolean | null' is not assignable to type '(value: TaskInstance, index: number, array: TaskInstance[]) => unknown'.
+    Types of parameters 'instance' and 'value' are incompatible.
+      Type 'TaskInstance' is not assignable to type 'Record<string, unknown>'.
+        Index signature for type 'string' is missing in type 'TaskInstance'.
+src/composables/board/useBoardState.ts(210,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/composables/board/useBoardState.ts(250,27): error TS2345: Argument of type '(instance: Record<string, unknown>) => void' is not assignable to parameter of type '((value: RecurringTaskInstance, index: number, array: RecurringTaskInstance[]) => void) & ((value: TaskInstance, index: number, array: TaskInstance[]) => void)'.
+  Type '(instance: Record<string, unknown>) => void' is not assignable to type '(value: RecurringTaskInstance, index: number, array: RecurringTaskInstance[]) => void'.
+    Types of parameters 'instance' and 'value' are incompatible.
+      Type 'RecurringTaskInstance' is not assignable to type 'Record<string, unknown>'.
+        Index signature for type 'string' is missing in type 'RecurringTaskInstance'.
+src/composables/board/useBoardState.ts(256,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/composables/calendar/useCalendarMonthView.ts(56,21): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(predicate: (value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => value is RecurringTaskInstance | TaskInstance, thisArg?: any): (RecurringTaskInstance | TaskInstance)[]', gave the following error.
+    Argument of type '(instance: Record<string, unknown>) => boolean' is not assignable to parameter of type '(value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => value is RecurringTaskInstance | TaskInstance'.
+      Types of parameters 'instance' and 'value' are incompatible.
+        Type 'RecurringTaskInstance | TaskInstance' is not assignable to type 'Record<string, unknown>'.
+          Type 'RecurringTaskInstance' is not assignable to type 'Record<string, unknown>'.
+            Index signature for type 'string' is missing in type 'RecurringTaskInstance'.
+  Overload 2 of 2, '(predicate: (value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => unknown, thisArg?: any): (RecurringTaskInstance | TaskInstance)[]', gave the following error.
+    Argument of type '(instance: Record<string, unknown>) => boolean' is not assignable to parameter of type '(value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => unknown'.
+      Types of parameters 'instance' and 'value' are incompatible.
+        Type 'RecurringTaskInstance | TaskInstance' is not assignable to type 'Record<string, unknown>'.
+          Type 'RecurringTaskInstance' is not assignable to type 'Record<string, unknown>'.
+            Index signature for type 'string' is missing in type 'RecurringTaskInstance'.
+src/composables/calendar/useCalendarMonthView.ts(57,22): error TS2345: Argument of type '(instance: Record<string, unknown>) => void' is not assignable to parameter of type '(value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => void'.
+  Types of parameters 'instance' and 'value' are incompatible.
+    Type 'RecurringTaskInstance | TaskInstance' is not assignable to type 'Record<string, unknown>'.
+      Type 'RecurringTaskInstance' is not assignable to type 'Record<string, unknown>'.
+        Index signature for type 'string' is missing in type 'RecurringTaskInstance'.
+src/composables/calendar/useCalendarMonthView.ts(58,76): error TS2339: Property 'split' does not exist on type '{}'.
+src/composables/calendar/useCalendarMonthView.ts(62,17): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/composables/calendar/useCalendarMonthView.ts(64,17): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/composables/calendar/useCalendarMonthView.ts(68,111): error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/composables/calendar/useCalendarMonthView.ts(69,17): error TS2322: Type '{}' is not assignable to type 'number'.
+src/composables/calendar/useCalendarMonthView.ts(117,9): error TS18046: 'inst' is of type 'unknown'.
+src/composables/calendar/useCalendarMonthView.ts(118,15): error TS2698: Spread types may only be created from object types.
+src/composables/calendar/useCalendarWeekView.ts(121,21): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(predicate: (value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => value is RecurringTaskInstance | TaskInstance, thisArg?: any): (RecurringTaskInstance | TaskInstance)[]', gave the following error.
+    Argument of type '(instance: Record<string, unknown>) => boolean' is not assignable to parameter of type '(value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => value is RecurringTaskInstance | TaskInstance'.
+      Types of parameters 'instance' and 'value' are incompatible.
+        Type 'RecurringTaskInstance | TaskInstance' is not assignable to type 'Record<string, unknown>'.
+          Type 'RecurringTaskInstance' is not assignable to type 'Record<string, unknown>'.
+            Index signature for type 'string' is missing in type 'RecurringTaskInstance'.
+  Overload 2 of 2, '(predicate: (value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => unknown, thisArg?: any): (RecurringTaskInstance | TaskInstance)[]', gave the following error.
+    Argument of type '(instance: Record<string, unknown>) => boolean' is not assignable to parameter of type '(value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => unknown'.
+      Types of parameters 'instance' and 'value' are incompatible.
+        Type 'RecurringTaskInstance | TaskInstance' is not assignable to type 'Record<string, unknown>'.
+          Type 'RecurringTaskInstance' is not assignable to type 'Record<string, unknown>'.
+            Index signature for type 'string' is missing in type 'RecurringTaskInstance'.
+src/composables/calendar/useCalendarWeekView.ts(127,22): error TS2345: Argument of type '(instance: Record<string, unknown>) => void' is not assignable to parameter of type '(value: RecurringTaskInstance | TaskInstance, index: number, array: (RecurringTaskInstance | TaskInstance)[]) => void'.
+  Types of parameters 'instance' and 'value' are incompatible.
+    Type 'RecurringTaskInstance | TaskInstance' is not assignable to type 'Record<string, unknown>'.
+      Type 'RecurringTaskInstance' is not assignable to type 'Record<string, unknown>'.
+        Index signature for type 'string' is missing in type 'RecurringTaskInstance'.
+src/composables/calendar/useCalendarWeekView.ts(128,74): error TS2339: Property 'split' does not exist on type '{}'.
+src/composables/calendar/useCalendarWeekView.ts(132,80): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/composables/calendar/useCalendarWeekView.ts(133,32): error TS2365: Operator '+' cannot be applied to types '{}' and '{}'.
+src/composables/calendar/useCalendarWeekView.ts(141,19): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/composables/calendar/useCalendarWeekView.ts(143,19): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/composables/calendar/useCalendarWeekView.ts(156,19): error TS2322: Type 'unknown' is not assignable to type '"scheduled" | "completed" | "skipped" | undefined'.
+src/composables/calendar/useExternalCalendar.ts(136,62): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useExternalCalendar.ts(185,38): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useExternalCalendar.ts(190,46): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useGoogleCalendar.ts(80,66): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useGoogleCalendar.ts(82,11): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useGoogleCalendar.ts(82,45): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useGoogleCalendar.ts(82,75): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useGoogleCalendar.ts(170,13): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useGoogleCalendar.ts(170,47): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useGoogleCalendar.ts(170,77): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useGoogleCalendar.ts(176,23): error TS18046: 'e' is of type 'unknown'.
+src/composables/calendar/useGoogleCalendar.ts(213,21): error TS18046: 'e' is of type 'unknown'.
+src/composables/canvas/useCanvasActions.ts(59,9): error TS2322: Type 'unknown' is not assignable to type '{ isGroupModalOpen: Ref<boolean, boolean>; selectedGroup: Ref<CanvasGroup | null, CanvasGroup | null>; groupModalPosition: Ref<{ x: number; y: number; }, { ...; }>; isGroupEditModalOpen: Ref<...>; selectedSectionForEdit: Ref<...>; isDeleteGroupModalOpen: Ref<...>; groupPendingDelete: Ref<...>; } | undefined'.
+src/composables/canvas/useCanvasActions.ts(144,21): error TS2322: Type 'unknown' is not assignable to type '{ x: number; y: number; width: number; height: number; }'.
+src/composables/canvas/useCanvasActions.ts(192,24): error TS18046: 'vfNode' is of type 'unknown'.
+src/composables/canvas/useCanvasActions.ts(192,71): error TS18046: 'vfNode' is of type 'unknown'.
+src/composables/canvas/useCanvasActions.ts(193,19): error TS18046: 'vfNode' is of type 'unknown'.
+src/composables/canvas/useCanvasActions.ts(195,24): error TS18046: 'vfNode' is of type 'unknown'.
+src/composables/canvas/useCanvasActions.ts(195,71): error TS18046: 'vfNode' is of type 'unknown'.
+src/composables/canvas/useCanvasActions.ts(196,19): error TS18046: 'vfNode' is of type 'unknown'.
+src/composables/canvas/useCanvasAlignment.ts(59,33): error TS2571: Object is of type 'unknown'.
+src/composables/canvas/useCanvasAlignment.ts(60,35): error TS2571: Object is of type 'unknown'.
+src/composables/canvas/useCanvasConnections.ts(93,74): error TS2345: Argument of type '(connection: { source: string; target: string; sourceHandle?: string; targetHandle?: string; }) => Promise<void>' is not assignable to parameter of type '(...args: unknown[]) => any'.
+  Types of parameters 'connection' and 'args' are incompatible.
+    Type 'unknown' is not assignable to type '{ source: string; target: string; sourceHandle?: string | undefined; targetHandle?: string | undefined; }'.
+src/composables/canvas/useCanvasOperationState.ts(64,33): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(id: number | undefined): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'.
+  Overload 2 of 2, '(timeout: string | number | Timeout | undefined): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Timeout | undefined'.
+src/composables/canvas/useCanvasOperationState.ts(146,33): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(id: number | undefined): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'.
+  Overload 2 of 2, '(timeout: string | number | Timeout | undefined): void', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Timeout | undefined'.
+src/composables/canvas/useCanvasOrchestrator.ts(134,9): error TS2322: Type '(changes: NodeChange[]) => GraphNode<any, any, string>[]' is not assignable to type '(changes: unknown[]) => void'.
+  Types of parameters 'changes' and 'changes' are incompatible.
+    Type 'unknown[]' is not assignable to type 'NodeChange[]'.
+      Type 'unknown' is not assignable to type 'NodeChange'.
+src/composables/canvas/useCanvasOrchestrator.ts(140,9): error TS2322: Type '(changes: NodeChange[]) => GraphNode<any, any, string>[]' is not assignable to type '(changes: unknown[]) => void'.
+  Types of parameters 'changes' and 'changes' are incompatible.
+    Type 'unknown[]' is not assignable to type 'NodeChange[]'.
+      Type 'unknown' is not assignable to type 'NodeChange'.
+src/composables/canvas/useCanvasOrchestrator.ts(174,43): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'Task[]'.
+  Type 'unknown' is not assignable to type 'Task'.
+src/composables/canvas/useCanvasOrchestrator.ts(504,17): error TS18046: 'payload' is of type 'unknown'.
+src/composables/canvas/useCanvasOrchestrator.ts(504,51): error TS18046: 'payload' is of type 'unknown'.
+src/composables/canvas/useCanvasOrchestrator.ts(506,106): error TS18046: 'payload' is of type 'unknown'.
+src/composables/canvas/useCanvasOrchestrator.ts(513,39): error TS18046: 'payload' is of type 'unknown'.
+src/composables/canvas/useCanvasOrchestrator.ts(515,25): error TS18046: 'payload' is of type 'unknown'.
+src/composables/canvas/useCanvasOrchestrator.ts(517,70): error TS18046: 'payload' is of type 'unknown'.
+src/composables/canvas/useCanvasOrchestrator.ts(520,36): error TS18046: 'payload' is of type 'unknown'.
+src/composables/canvas/useCanvasOrchestrator.ts(521,36): error TS18046: 'payload' is of type 'unknown'.
+src/composables/canvas/useCanvasOrchestrator.ts(742,25): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type '(param: VueFlowStore) => void'.
+  Type 'Record<string, unknown>' provides no match for the signature '(param: VueFlowStore): void'.
+src/composables/canvas/useCanvasOrchestrator.ts(770,30): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'NodeChange[]'.
+  Type 'unknown' is not assignable to type 'NodeChange'.
+src/composables/canvas/useCanvasSelection.ts(81,38): error TS2339: Property 'nodes' does not exist on type '{}'.
+src/composables/canvas/useCanvasSelection.ts(81,65): error TS18046: 'n' is of type 'unknown'.
+src/composables/canvas/useCanvasSelection.ts(119,17): error TS18046: 'node' is of type 'unknown'.
+src/composables/canvas/useCanvasSelection.ts(120,17): error TS18046: 'node' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(126,50): error TS18046: 'g' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(129,37): error TS2339: Property 'parentGroupId' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(337,31): error TS2571: Object is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(522,61): error TS18046: 'n' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(525,44): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(529,34): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(529,59): error TS2339: Property 'position' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(530,34): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(530,59): error TS2339: Property 'position' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(533,25): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(533,52): error TS2339: Property 'parentNode' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(536,25): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(536,53): error TS2339: Property 'data' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(537,25): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(537,54): error TS2339: Property 'data' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(541,25): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(541,60): error TS2339: Property 'type' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(542,39): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(543,45): error TS2339: Property 'data' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(554,25): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(554,63): error TS2339: Property 'type' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(555,29): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(555,57): error TS2339: Property 'data' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(556,29): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(556,57): error TS2339: Property 'data' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(557,29): error TS18046: 'nodeA' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(557,61): error TS2339: Property 'data' does not exist on type '{}'.
+src/composables/canvas/useCanvasSync.ts(567,74): error TS18046: 'n' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(570,75): error TS18046: 'o' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(570,84): error TS18046: 'newNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(571,63): error TS18046: 'newNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(572,64): error TS18046: 'newNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(572,142): error TS18046: 'newNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(573,44): error TS18046: 'newNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(575,46): error TS18046: 'newNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(598,71): error TS18046: 'n' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(600,29): error TS18046: 'n' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(600,49): error TS18046: 'n' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(615,72): error TS18046: 'n' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(617,29): error TS18046: 'n' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(617,43): error TS18046: 'n' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(641,38): error TS18046: 'taskNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(645,46): error TS18046: 'taskNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(668,39): error TS18046: 'groupNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(668,134): error TS18046: 'groupNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(672,46): error TS18046: 'groupNode' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(701,25): error TS18046: 'node' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(701,62): error TS18046: 'node' is of type 'unknown'.
+src/composables/canvas/useCanvasSync.ts(705,26): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'Node<any, any, string>[] | ((nodes: GraphNode<any, any, string>[]) => Node<any, any, string>[])'.
+  Type 'unknown[]' is not assignable to type 'Node<any, any, string>[]'.
+    Type 'unknown' is not assignable to type 'Node<any, any, string>'.
+src/composables/canvas/useCanvasTaskActions.ts(223,23): error TS18046: 'undoHistory' is of type 'unknown'.
+src/composables/canvas/useCanvasTaskActions.ts(254,23): error TS18046: 'undoHistory' is of type 'unknown'.
+src/composables/canvas/useCanvasTaskActions.ts(281,23): error TS18046: 'undoHistory' is of type 'unknown'.
+src/composables/canvas/useCanvasTaskActions.ts(316,27): error TS18046: 'undoHistory' is of type 'unknown'.
+src/composables/canvas/useCanvasTaskActions.ts(318,27): error TS18046: 'undoHistory' is of type 'unknown'.
+src/composables/canvas/useCanvasTaskActions.ts(490,27): error TS18046: 'undoHistory' is of type 'unknown'.
+src/composables/canvas/useCanvasTaskActions.ts(643,27): error TS18046: 'undoHistory' is of type 'unknown'.
+src/composables/canvas/useNodeSync.ts(102,17): error TS18046: 'vfNode' is of type 'unknown'.
+src/composables/canvas/useNodeSync.ts(104,24): error TS18046: 'vfNode' is of type 'unknown'.
+src/composables/canvas/useNodeSync.ts(105,24): error TS18046: 'vfNode' is of type 'unknown'.
+src/composables/canvas/useNodeSync.ts(127,55): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(predicate: (value: Task, index: number, obj: Task[]) => value is Task, thisArg?: any): Task | undefined', gave the following error.
+    Argument of type '(t: Record<string, unknown>) => boolean' is not assignable to parameter of type '(value: Task, index: number, obj: Task[]) => value is Task'.
+      Types of parameters 't' and 'value' are incompatible.
+        Type 'Task' is not assignable to type 'Record<string, unknown>'.
+          Index signature for type 'string' is missing in type 'Task'.
+  Overload 2 of 2, '(predicate: (value: Task, index: number, obj: Task[]) => unknown, thisArg?: any): Task | undefined', gave the following error.
+    Argument of type '(t: Record<string, unknown>) => boolean' is not assignable to parameter of type '(value: Task, index: number, obj: Task[]) => unknown'.
+      Types of parameters 't' and 'value' are incompatible.
+        Type 'Task' is not assignable to type 'Record<string, unknown>'.
+          Index signature for type 'string' is missing in type 'Task'.
+src/composables/canvas/useNodeSync.ts(159,55): error TS2571: Object is of type 'unknown'.
+src/composables/canvas/useNodeSync.ts(160,57): error TS2571: Object is of type 'unknown'.
+src/composables/canvas/useNodeSync.ts(177,31): error TS18047: 'supabase' is possibly 'null'.
+src/composables/canvas/useNodeSync.ts(201,67): error TS18047: 'supabase' is possibly 'null'.
+src/composables/canvas/useNodeSync.ts(220,38): error TS18047: 'supabase' is possibly 'null'.
+src/composables/canvas/useNodeSync.ts(254,31): error TS18046: 'err' is of type 'unknown'.
+src/composables/canvas/useNodeSync.ts(260,17): error TS18046: 'err' is of type 'unknown'.
+src/composables/canvas/useNodeSync.ts(262,24): error TS18046: 'err' is of type 'unknown'.
+src/composables/supabase/_infrastructure.ts(224,38): error TS2339: Property 'message' does not exist on type '{}'.
+src/composables/supabase/_infrastructure.ts(225,37): error TS2339: Property 'status' does not exist on type '{}'.
+src/composables/supabase/_infrastructure.ts(225,52): error TS2339: Property 'code' does not exist on type '{}'.
+src/composables/supabase/_infrastructure.ts(243,31): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/_tombstone.ts(23,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/_tombstone.ts(48,13): error TS2322: Type '{ entityType: unknown; entityId: unknown; }[]' is not assignable to type '{ entityType: string; entityId: string; }[]'.
+  Type '{ entityType: unknown; entityId: unknown; }' is not assignable to type '{ entityType: string; entityId: string; }'.
+    Types of property 'entityType' are incompatible.
+      Type 'unknown' is not assignable to type 'string'.
+src/composables/supabase/_tombstone.ts(49,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useGroupsDatabase.ts(29,51): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useGroupsDatabase.ts(39,36): error TS2345: Argument of type '(g: Record<string, unknown>) => void' is not assignable to parameter of type '(value: SupabaseGroup, index: number, array: SupabaseGroup[]) => void'.
+  Types of parameters 'g' and 'value' are incompatible.
+    Type 'SupabaseGroup' is not assignable to type 'Record<string, unknown>'.
+      Index signature for type 'string' is missing in type 'SupabaseGroup'.
+src/composables/supabase/useGroupsDatabase.ts(41,100): error TS2339: Property 'width' does not exist on type '{}'.
+src/composables/supabase/useGroupsDatabase.ts(41,114): error TS2339: Property 'height' does not exist on type '{}'.
+src/composables/supabase/useGroupsDatabase.ts(72,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useGroupsDatabase.ts(110,54): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useGroupsDatabase.ts(115,47): error TS2554: Expected 0-1 arguments, but got 2.
+src/composables/supabase/useGroupsDatabase.ts(147,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useGroupsDatabase.ts(169,13): error TS2322: Type 'unknown[]' is not assignable to type 'string[]'.
+  Type 'unknown' is not assignable to type 'string'.
+src/composables/supabase/useGroupsDatabase.ts(170,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useNotificationsDatabase.ts(15,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useNotificationsDatabase.ts(41,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useNotificationsDatabase.ts(61,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useNotificationsDatabase.ts(74,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/usePinnedTasksDatabase.ts(18,51): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/usePinnedTasksDatabase.ts(46,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/usePinnedTasksDatabase.ts(60,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/usePinnedTasksDatabase.ts(79,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useProjectsDatabase.ts(28,51): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useProjectsDatabase.ts(56,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useProjectsDatabase.ts(81,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useProjectsDatabase.ts(103,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useProjectsDatabase.ts(123,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useProjectsDatabase.ts(145,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useProjectsDatabase.ts(166,13): error TS2322: Type 'unknown[]' is not assignable to type 'string[]'.
+  Type 'unknown' is not assignable to type 'string'.
+src/composables/supabase/useProjectsDatabase.ts(167,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useQuickSortDatabase.ts(15,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useQuickSortDatabase.ts(41,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(24,13): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(25,56): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(26,13): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(42,63): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(47,13): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(51,29): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(62,50): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(62,86): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(63,52): error TS2339: Property 'name' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(63,73): error TS2339: Property 'name' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(74,50): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(74,86): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(75,53): error TS2339: Property 'title' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(75,93): error TS2339: Property 'title' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(76,56): error TS2339: Property 'position' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(76,83): error TS2339: Property 'position' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(76,109): error TS2339: Property 'position' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(88,57): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(88,93): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(89,56): error TS2339: Property 'is_active' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(90,61): error TS2339: Property 'remaining_time' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(103,50): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(103,86): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(116,50): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(116,86): error TS2339: Property 'id' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(117,52): error TS2339: Property 'name' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(117,73): error TS2339: Property 'name' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(118,56): error TS2339: Property 'position' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(118,83): error TS2339: Property 'position' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(118,109): error TS2339: Property 'position' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(150,31): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(229,27): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(234,47): error TS2339: Property 'state' does not exist on type '{}'.
+src/composables/supabase/useRealtimeSubscription.ts(242,35): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(242,58): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'RealtimeChannel'.
+src/composables/supabase/useRealtimeSubscription.ts(304,31): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useRealtimeSubscription.ts(304,54): error TS2345: Argument of type '{}' is not assignable to parameter of type 'RealtimeChannel'.
+  Type '{}' is missing the following properties from type 'RealtimeChannel': topic, params, socket, bindings, and 20 more.
+src/composables/supabase/useSettingsDatabase.ts(18,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useSettingsDatabase.ts(46,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(32,51): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(46,91): error TS2339: Property 'substring' does not exist on type '{}'.
+src/composables/supabase/useTasksDatabase.ts(65,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(94,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(139,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(164,88): error TS2339: Property 'substring' does not exist on type '{}'.
+src/composables/supabase/useTasksDatabase.ts(196,48): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(200,34): error TS2554: Expected 0-1 arguments, but got 2.
+src/composables/supabase/useTasksDatabase.ts(224,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(245,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(267,13): error TS2322: Type 'unknown[]' is not assignable to type 'string[]'.
+  Type 'unknown' is not assignable to type 'string'.
+src/composables/supabase/useTasksDatabase.ts(268,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(297,48): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(302,34): error TS2554: Expected 0-1 arguments, but got 2.
+src/composables/supabase/useTasksDatabase.ts(346,64): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(391,65): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(414,65): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(438,50): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(485,64): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(492,29): error TS18046: 'r' is of type 'unknown'.
+src/composables/supabase/useTasksDatabase.ts(493,29): error TS18046: 'r' is of type 'unknown'.
+src/composables/supabase/useTasksDatabase.ts(494,29): error TS18046: 'r' is of type 'unknown'.
+src/composables/supabase/useTasksDatabase.ts(516,70): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(530,66): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTasksDatabase.ts(592,19): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTimerDatabase.ts(22,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTimerDatabase.ts(56,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useTimerDatabase.ts(75,41): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useWorkProfileDatabase.ts(15,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useWorkProfileDatabase.ts(38,37): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useWorkProfileDatabase.ts(60,37): error TS18047: 'supabase' is possibly 'null'.
+src/composables/supabase/useWorkProfileDatabase.ts(86,13): error TS2322: Type '{ taskId: unknown; duration: unknown; isBreak: unknown; startedAt: unknown; completedAt: unknown; }[]' is not assignable to type '{ taskId: string | null; duration: number; isBreak: boolean; startedAt: string; completedAt: string; }[]'.
+  Type '{ taskId: unknown; duration: unknown; isBreak: unknown; startedAt: unknown; completedAt: unknown; }' is not assignable to type '{ taskId: string | null; duration: number; isBreak: boolean; startedAt: string; completedAt: string; }'.
+    Types of property 'taskId' are incompatible.
+      Type 'unknown' is not assignable to type 'string | null'.
+src/composables/supabase/useWorkProfileDatabase.ts(87,47): error TS18047: 'supabase' is possibly 'null'.
+src/composables/sync/useSyncOrchestrator.ts(257,24): error TS18047: 'supabase' is possibly 'null'.
+src/composables/sync/useSyncOrchestrator.ts(271,21): error TS18047: 'supabase' is possibly 'null'.
+src/composables/sync/useSyncOrchestrator.ts(287,37): error TS18047: 'supabase' is possibly 'null'.
+src/composables/sync/useSyncOrchestrator.ts(319,39): error TS18047: 'supabase' is possibly 'null'.
+src/composables/sync/useSyncOrchestrator.ts(354,24): error TS18047: 'supabase' is possibly 'null'.
+src/composables/sync/useTimerLeaderElection.ts(101,17): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(103,21): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(113,35): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(114,40): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(115,39): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(118,25): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(119,41): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(125,42): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(126,55): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(127,54): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(129,44): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(130,41): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(137,54): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(138,55): error TS18046: 'sync' is of type 'unknown'.
+src/composables/sync/useTimerLeaderElection.ts(142,37): error TS18046: 'sync' is of type 'unknown'.
+src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts(70,57): error TS2345: Argument of type '{ task: unknown; contextTask: null; selectedCount: number; }' is not assignable to parameter of type '{ task: Task | null; contextTask?: Task | null | undefined; selectedCount?: number | undefined; }'.
+  Types of property 'task' are incompatible.
+    Type 'unknown' is not assignable to type 'Task | null'.
+src/composables/tasks/row/useTaskRowActions.ts(69,17): error TS18046: 'emit' is of type 'unknown'.
+src/composables/tasks/row/useTaskRowActions.ts(79,9): error TS18046: 'emit' is of type 'unknown'.
+src/composables/tasks/row/useTaskRowActions.ts(83,9): error TS18046: 'emit' is of type 'unknown'.
+src/composables/tasks/row/useTaskRowActions.ts(88,13): error TS18046: 'emit' is of type 'unknown'.
+src/composables/tasks/row/useTaskRowActions.ts(132,21): error TS18046: 'emit' is of type 'unknown'.
+src/composables/tasks/row/useTaskRowActions.ts(138,21): error TS18046: 'emit' is of type 'unknown'.
+src/composables/tasks/row/useTaskRowActions.ts(176,9): error TS18046: 'emit' is of type 'unknown'.
+src/composables/tasks/row/useTaskRowActions.ts(183,9): error TS18046: 'emit' is of type 'unknown'.
+src/composables/tasks/useTaskEditState.ts(24,9): error TS2322: Type 'unknown' is not assignable to type 'TaskRecurrence | undefined'.
+src/composables/tasks/useTaskFiltering.ts(305,63): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'SmartView'.
+src/composables/useAIChallengeNarrator.ts(130,7): error TS2322: Type 'unknown' is not assignable to type '{ model?: string | undefined; provider?: string | undefined; tokens?: number | undefined; latencyMs?: number | undefined; forceDirection?: "auto" | "ltr" | "rtl" | undefined; toolResults?: unknown[] | undefined; scheduleQuestion?: { ...; } | undefined; } | undefined'.
+src/composables/useAIChat.ts(1097,11): error TS2322: Type 'unknown' is not assignable to type '{ model?: string | undefined; provider?: string | undefined; tokens?: number | undefined; latencyMs?: number | undefined; forceDirection?: "auto" | "ltr" | "rtl" | undefined; toolResults?: unknown[] | undefined; scheduleQuestion?: { ...; } | undefined; } | undefined'.
+src/composables/useAIChat.ts(1909,9): error TS2322: Type 'unknown' is not assignable to type '{ model?: string | undefined; provider?: string | undefined; tokens?: number | undefined; latencyMs?: number | undefined; forceDirection?: "auto" | "ltr" | "rtl" | undefined; toolResults?: unknown[] | undefined; scheduleQuestion?: { ...; } | undefined; } | undefined'.
+src/composables/useAIChat.ts(1969,9): error TS2322: Type 'unknown' is not assignable to type '{ model?: string | undefined; provider?: string | undefined; tokens?: number | undefined; latencyMs?: number | undefined; forceDirection?: "auto" | "ltr" | "rtl" | undefined; toolResults?: unknown[] | undefined; scheduleQuestion?: { ...; } | undefined; } | undefined'.
+src/composables/useAISync.ts(70,37): error TS2551: Property 'fetchAISettings' does not exist on type '{ initRealtimeSubscription: (onProjectChange: (payload: unknown) => void, onTaskChange: (payload: unknown) => void, onTimerChange?: ((payload: unknown) => void) | undefined, onNotificationChange?: ((payload: unknown) => void) | undefined, onGroupChange?: ((payload: unknown) => void) | undefined, onRecovery?: (() => ...'. Did you mean 'fetchUserSettings'?
+src/composables/useAISync.ts(72,13): error TS2339: Property 'saveSettings' does not exist on type 'Store<"aiChat", Pick<{ isPanelOpen: Ref<boolean, boolean>; conversations: Ref<{ id: string; title: string; messages: { id: string; role: ChatRole; content: string; timestamp: Date; ... 4 more ...; metadata?: { ...; } | undefined; }[]; createdAt: Date; updatedAt: Date; }[], Conversation[] | { ...; }[]>; ... 45 more ....'.
+src/composables/useAISync.ts(82,34): error TS2339: Property 'fetchAIConversations' does not exist on type '{ initRealtimeSubscription: (onProjectChange: (payload: unknown) => void, onTaskChange: (payload: unknown) => void, onTimerChange?: ((payload: unknown) => void) | undefined, onNotificationChange?: ((payload: unknown) => void) | undefined, onGroupChange?: ((payload: unknown) => void) | undefined, onRecovery?: (() => ...'.
+src/composables/useAISync.ts(129,14): error TS2339: Property 'syncAIUsageLog' does not exist on type '{ initRealtimeSubscription: (onProjectChange: (payload: unknown) => void, onTaskChange: (payload: unknown) => void, onTimerChange?: ((payload: unknown) => void) | undefined, onNotificationChange?: ((payload: unknown) => void) | undefined, onGroupChange?: ((payload: unknown) => void) | undefined, onRecovery?: (() => ...'.
+src/composables/useAISync.ts(187,11): error TS2339: Property 'onConversationDelete' does not exist on type 'Store<"aiChat", Pick<{ isPanelOpen: Ref<boolean, boolean>; conversations: Ref<{ id: string; title: string; messages: { id: string; role: ChatRole; content: string; timestamp: Date; ... 4 more ...; metadata?: { ...; } | undefined; }[]; createdAt: Date; updatedAt: Date; }[], Conversation[] | { ...; }[]>; ... 45 more ....'.
+src/composables/useAISync.ts(198,18): error TS2339: Property 'saveAIConversation' does not exist on type '{ initRealtimeSubscription: (onProjectChange: (payload: unknown) => void, onTaskChange: (payload: unknown) => void, onTimerChange?: ((payload: unknown) => void) | undefined, onNotificationChange?: ((payload: unknown) => void) | undefined, onGroupChange?: ((payload: unknown) => void) | undefined, onRecovery?: (() => ...'.
+src/composables/useAISync.ts(207,16): error TS2339: Property 'saveAISettings' does not exist on type '{ initRealtimeSubscription: (onProjectChange: (payload: unknown) => void, onTaskChange: (payload: unknown) => void, onTimerChange?: ((payload: unknown) => void) | undefined, onNotificationChange?: ((payload: unknown) => void) | undefined, onGroupChange?: ((payload: unknown) => void) | undefined, onRecovery?: (() => ...'.
+src/composables/useAISync.ts(219,18): error TS2339: Property 'syncAIUsageLog' does not exist on type '{ initRealtimeSubscription: (onProjectChange: (payload: unknown) => void, onTaskChange: (payload: unknown) => void, onTimerChange?: ((payload: unknown) => void) | undefined, onNotificationChange?: ((payload: unknown) => void) | undefined, onGroupChange?: ((payload: unknown) => void) | undefined, onRecovery?: (() => ...'.
+src/composables/useAISync.ts(234,14): error TS2339: Property 'deleteAIConversation' does not exist on type '{ initRealtimeSubscription: (onProjectChange: (payload: unknown) => void, onTaskChange: (payload: unknown) => void, onTimerChange?: ((payload: unknown) => void) | undefined, onNotificationChange?: ((payload: unknown) => void) | undefined, onGroupChange?: ((payload: unknown) => void) | undefined, onRecovery?: (() => ...'.
+src/composables/useAgentChains.ts(107,33): error TS2339: Property 'dueToday' does not exist on type '{}'.
+src/composables/useAgentChains.ts(107,53): error TS2339: Property 'tasksDueToday' does not exist on type '{}'.
+src/composables/useAgentChains.ts(108,34): error TS2339: Property 'completedToday' does not exist on type '{}'.
+src/composables/useAgentChains.ts(109,36): error TS2339: Property 'inProgress' does not exist on type '{}'.
+src/composables/useAgentChains.ts(167,37): error TS2339: Property 'todayCompleted' does not exist on type '{}'.
+src/composables/useAgentChains.ts(167,61): error TS2339: Property 'completedToday' does not exist on type '{}'.
+src/composables/useAgentChains.ts(168,37): error TS2339: Property 'todayPomodoros' does not exist on type '{}'.
+src/composables/useAgentChains.ts(168,61): error TS2339: Property 'pomodorosToday' does not exist on type '{}'.
+src/composables/useAgentChains.ts(169,34): error TS2339: Property 'currentStreak' does not exist on type '{}'.
+src/composables/useAgentChains.ts(172,23): error TS2339: Property 'statusBreakdown' does not exist on type '{}'.
+src/composables/useAgentChains.ts(173,32): error TS2339: Property 'statusBreakdown' does not exist on type '{}'.
+src/composables/useAgentChains.ts(184,42): error TS2339: Property 'completedThisWeek' does not exist on type '{}'.
+src/composables/useAgentChains.ts(185,38): error TS2339: Property 'totalFocusMinutes' does not exist on type '{}'.
+src/composables/useAgentChains.ts(195,40): error TS2339: Property 'level' does not exist on type '{}'.
+src/composables/useAgentChains.ts(195,62): error TS2339: Property 'currentLevel' does not exist on type '{}'.
+src/composables/useAgentChains.ts(196,37): error TS2339: Property 'xp' does not exist on type '{}'.
+src/composables/useAgentChains.ts(196,56): error TS2339: Property 'currentXP' does not exist on type '{}'.
+src/composables/useAgentChains.ts(305,46): error TS2339: Property 'dueToday' does not exist on type '{}'.
+src/composables/useAgentChains.ts(305,74): error TS2339: Property 'completedToday' does not exist on type '{}'.
+src/composables/useAgentChains.ts(305,109): error TS2339: Property 'inProgress' does not exist on type '{}'.
+src/composables/useAgentChains.ts(312,37): error TS2339: Property 'plan' does not exist on type 'object'.
+src/composables/useAgentChains.ts(323,30): error TS2339: Property 'reasoning' does not exist on type 'object'.
+src/composables/useAgentChains.ts(324,63): error TS2339: Property 'reasoning' does not exist on type 'object'.
+src/composables/useAgentChains.ts(324,99): error TS2339: Property 'reasoning' does not exist on type 'object'.
+src/composables/useBackupSystem.ts(1125,13): error TS18046: 'win' is of type 'unknown'.
+src/composables/useBackupSystem.ts(1125,44): error TS18046: 'win' is of type 'unknown'.
+src/composables/useBackupSystem.ts(1128,36): error TS18046: 'win' is of type 'unknown'.
+src/composables/useBackupSystem.ts(1133,21): error TS18046: 'win' is of type 'unknown'.
+src/composables/useBackupSystem.ts(1391,58): error TS18046: 'shadowData' is of type 'unknown'.
+src/composables/useBackupSystem.ts(1394,9): error TS2698: Spread types may only be created from object types.
+src/composables/useBackupSystem.ts(1395,23): error TS18046: 'shadowData' is of type 'unknown'.
+src/composables/useBackupSystem.ts(1396,20): error TS18046: 'shadowData' is of type 'unknown'.
+src/composables/useBackupSystem.ts(1401,22): error TS18046: 'shadowData' is of type 'unknown'.
+src/composables/useBackupSystem.ts(1402,25): error TS18046: 'shadowData' is of type 'unknown'.
+src/composables/useBackupSystem.ts(1403,23): error TS18046: 'shadowData' is of type 'unknown'.
+src/composables/useCrossTabSync.ts(97,39): error TS2571: Object is of type 'unknown'.
+src/composables/useCrossTabSync.ts(104,37): error TS2571: Object is of type 'unknown'.
+src/composables/useCrossTabSync.ts(114,21): error TS2339: Property 'canvasPosition' does not exist on type 'unknown'.
+src/composables/useCrossTabSync.ts(114,54): error TS2339: Property 'parentId' does not exist on type 'unknown'.
+src/composables/useCrossTabSync.ts(114,75): error TS2339: Property 'positionFormat' does not exist on type 'unknown'.
+src/composables/useCrossTabSync.ts(114,111): error TS2700: Rest types may only be created from object types.
+src/composables/useCrossTabSync.ts(140,31): error TS2345: Argument of type '(operation: TaskOperation) => Promise<void>' is not assignable to parameter of type '(data: unknown) => void'.
+  Types of parameters 'operation' and 'data' are incompatible.
+    Type 'unknown' is not assignable to type 'TaskOperation'.
+src/composables/useCrossTabSync.ts(141,32): error TS2345: Argument of type '(change: UIStateChange) => void' is not assignable to parameter of type '(data: unknown) => void'.
+  Types of parameters 'change' and 'data' are incompatible.
+    Type 'unknown' is not assignable to type 'UIStateChange'.
+src/composables/useMobileDetection.ts(8,98): error TS18048: 'userAgent' is possibly 'undefined'.
+src/composables/useMobileDetection.ts(23,102): error TS18048: 'userAgent' is possibly 'undefined'.
+src/composables/usePerformanceManager.ts(280,30): error TS2345: Argument of type '<R>(fn: () => R) => R' is not assignable to parameter of type '(...args: unknown[]) => any'.
+  Types of parameters 'fn' and 'args' are incompatible.
+    Type 'unknown' is not assignable to type '() => any'.
+src/composables/usePerformanceManager.ts(282,28): error TS2345: Argument of type '<R>(fn: () => R) => R' is not assignable to parameter of type '(...args: unknown[]) => any'.
+  Types of parameters 'fn' and 'args' are incompatible.
+    Type 'unknown' is not assignable to type '() => any'.
+src/composables/useRenderOptimization.ts(228,18): error TS2571: Object is of type 'unknown'.
+src/composables/useRenderOptimization.ts(228,46): error TS2571: Object is of type 'unknown'.
+src/composables/useSafeI18n.ts(119,54): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(callbackfn: (previousValue: string, currentValue: string, currentIndex: number, array: string[]) => string, initialValue: string): string', gave the following error.
+    Type 'unknown' is not assignable to type 'string'.
+  Overload 2 of 3, '(callbackfn: (previousValue: Messages, currentValue: string, currentIndex: number, array: string[]) => Messages, initialValue: Messages): Messages', gave the following error.
+    Type 'unknown' is not assignable to type 'Messages'.
+src/composables/useUrlScraping.ts(105,26): error TS2339: Property 'message' does not exist on type '{}'.
+src/composables/useWorkProfile.ts(99,7): error TS18048: 'dayData' is possibly 'undefined'.
+src/composables/useWorkProfile.ts(100,25): error TS18048: 'dayData' is possibly 'undefined'.
+src/mobile/components/MobileInboxTaskList.vue(18,48): error TS18046: 'group' is of type 'unknown'.
+src/mobile/components/MobileInboxTaskList.vue(20,23): error TS18046: 'group' is of type 'unknown'.
+src/mobile/components/MobileInboxTaskList.vue(20,87): error TS18046: 'group' is of type 'unknown'.
+src/mobile/components/MobileInboxTaskList.vue(21,40): error TS18046: 'group' is of type 'unknown'.
+src/mobile/components/MobileInboxTaskList.vue(22,40): error TS18046: 'group' is of type 'unknown'.
+src/mobile/components/MobileInboxTaskList.vue(25,26): error TS18046: 'group' is of type 'unknown'.
+src/mobile/views/MobileTodayView.vue(188,1): error TS2578: Unused '@ts-expect-error' directive.
+src/stores/auth.ts(268,52): error TS18047: 'supabase' is possibly 'null'.
+src/stores/auth.ts(298,15): error TS18047: 'supabase' is possibly 'null'.
+src/stores/auth.ts(636,50): error TS18047: 'supabase' is possibly 'null'.
+src/stores/auth.ts(675,44): error TS18047: 'supabase' is possibly 'null'.
+src/stores/auth.ts(726,15): error TS18047: 'supabase' is possibly 'null'.
+src/stores/auth.ts(803,44): error TS18047: 'supabase' is possibly 'null'.
+src/stores/auth.ts(835,50): error TS18047: 'supabase' is possibly 'null'.
+src/stores/auth.ts(871,43): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(189,35): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(213,35): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(279,39): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(294,13): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(355,37): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(368,13): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(406,39): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(484,42): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(555,42): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(607,29): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(625,29): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(659,29): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(686,30): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(705,31): error TS18047: 'supabase' is possibly 'null'.
+src/stores/challenges.ts(733,30): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(373,35): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(382,62): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(398,35): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(405,35): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(424,35): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(434,35): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(444,35): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(452,60): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(526,41): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(541,46): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(561,15): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(653,15): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(691,29): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(793,13): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(799,13): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(817,29): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(887,29): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(912,29): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(930,29): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(986,13): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(993,13): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(1011,13): error TS18047: 'supabase' is possibly 'null'.
+src/stores/gamification.ts(1044,29): error TS18047: 'supabase' is possibly 'null'.
+src/stores/tasks/taskHistory.ts(71,29): error TS2339: Property 'moveTaskWithUndo' does not exist on type 'unknown'.
+src/sw.ts(280,18): error TS2339: Property 'type' does not exist on type 'NotificationData'.
+src/sw.ts(282,30): error TS2339: Property 'url' does not exist on type 'NotificationData'.
+src/sw.ts(371,5): error TS2353: Object literal may only specify known properties, and 'vibrate' does not exist in type 'NotificationOptions & { actions?: NotificationAction[] | undefined; }'.
+src/utils/productionLogger.ts(539,43): error TS18047: 'supabase' is possibly 'null'.
+src/views/CalendarView.vue(99,10): error TS2322: Type '(event: DragEvent, calendarEvent: Record<string, unknown>) => void' is not assignable to type '(event: DragEvent, calEvent: CalendarEvent) => any'.
+  Types of parameters 'calendarEvent' and 'calEvent' are incompatible.
+    Type 'CalendarEvent' is not assignable to type 'Record<string, unknown>'.
+      Index signature for type 'string' is missing in type 'CalendarEvent'.
+src/views/CalendarView.vue(100,10): error TS2322: Type '(event: DragEvent, calendarEvent: Record<string, unknown>) => void' is not assignable to type '(event: DragEvent, calEvent: CalendarEvent) => any'.
+  Types of parameters 'calendarEvent' and 'calEvent' are incompatible.
+    Type 'CalendarEvent' is not assignable to type 'Record<string, unknown>'.
+      Index signature for type 'string' is missing in type 'CalendarEvent'.
+src/views/CalendarView.vue(114,10): error TS2322: Type 'WeekDay[]' is not assignable to type 'Record<string, unknown>[]'.
+  Type 'WeekDay' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'WeekDay'.
+src/views/CalendarView.vue(128,10): error TS2322: Type '(event: DragEvent, calendarEvent: Record<string, unknown>) => void' is not assignable to type '(event: DragEvent, weekEvent: WeekEvent) => any'.
+  Types of parameters 'calendarEvent' and 'weekEvent' are incompatible.
+    Type 'WeekEvent' is not assignable to type 'Record<string, unknown>'.
+      Index signature for type 'string' is missing in type 'WeekEvent'.
+src/views/CalendarView.vue(129,10): error TS2322: Type '(event: DragEvent, calendarEvent: Record<string, unknown>) => void' is not assignable to type '(event: DragEvent, weekEvent: WeekEvent) => any'.
+  Types of parameters 'calendarEvent' and 'weekEvent' are incompatible.
+    Type 'WeekEvent' is not assignable to type 'Record<string, unknown>'.
+      Index signature for type 'string' is missing in type 'WeekEvent'.
+src/views/CalendarView.vue(149,10): error TS2322: Type '(event: DragEvent, calendarEvent: Record<string, unknown> & { taskId?: string; title?: string; }) => void' is not assignable to type '(event: DragEvent, calEvent: CalendarEvent) => any'.
+  Types of parameters 'calendarEvent' and 'calEvent' are incompatible.
+    Type 'CalendarEvent' is not assignable to type 'Record<string, unknown> & { taskId?: string | undefined; title?: string | undefined; }'.
+      Type 'CalendarEvent' is not assignable to type 'Record<string, unknown>'.
+        Index signature for type 'string' is missing in type 'CalendarEvent'.
+src/views/CalendarView.vue(348,29): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'CalendarEvent'.
+  Type 'Record<string, unknown>' is missing the following properties from type 'CalendarEvent': id, taskId, instanceId, title, and 9 more.
+src/views/CalendarView.vue(353,27): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'CalendarEvent'.
+  Type 'Record<string, unknown>' is missing the following properties from type 'CalendarEvent': id, taskId, instanceId, title, and 9 more.
+src/views/CalendarView.vue(358,29): error TS2345: Argument of type 'Record<string, unknown> & { taskId?: string | undefined; title?: string | undefined; }' is not assignable to parameter of type 'CalendarEvent'.
+  Type 'Record<string, unknown> & { taskId?: string | undefined; title?: string | undefined; }' is missing the following properties from type 'CalendarEvent': id, instanceId, startTime, endTime, and 7 more.
+src/views/CanvasView.vue(97,12): error TS2322: Type '{ taskNode: Raw<DefineComponent<Props, {}, {}, {}, {}, ComponentOptionsMixin, ComponentOptionsMixin, { select: (task: Task, multiSelect: boolean) => any; contextMenu: (event: MouseEvent, task: Task) => any; edit: (task: Task) => any; }, ... 11 more ..., any>>; sectionNode: Raw<...>; }' is not assignable to type 'NodeTypesObject'.
+  Type '{ taskNode: Raw<DefineComponent<Props, {}, {}, {}, {}, ComponentOptionsMixin, ComponentOptionsMixin, { select: (task: Task, multiSelect: boolean) => any; contextMenu: (event: MouseEvent, task: Task) => any; edit: (task: Task) => any; }, ... 11 more ..., any>>; sectionNode: Raw<...>; }' is not assignable to type 'Record<string, NodeComponent>'.
+    Property 'taskNode' is incompatible with index signature.
+      Type 'Raw<DefineComponent<Props, {}, {}, {}, {}, ComponentOptionsMixin, ComponentOptionsMixin, { select: (task: Task, multiSelect: boolean) => any; contextMenu: (event: MouseEvent, task: Task) => any; edit: (task: Task) => any; }, ... 11 more ..., any>>' is not assignable to type 'NodeComponent'.
+        Type 'Raw<DefineComponent<Props, {}, {}, {}, {}, ComponentOptionsMixin, ComponentOptionsMixin, { select: (task: Task, multiSelect: boolean) => any; contextMenu: (event: MouseEvent, task: Task) => any; edit: (task: Task) => any; }, ... 11 more ..., any>>' is not assignable to type 'ComponentPublicInstanceConstructor<NodeProps<any, object, string>, any, any, any, ComputedOptions, MethodOptions>'.
+          Type 'CreateComponentPublicInstanceWithMixins<ToResolvedProps<Props, { select: (task: Task, multiSelect: boolean) => any; contextMenu: (event: MouseEvent, task: Task) => any; edit: (task: Task) => any; }>, ... 24 more ..., { ...; }>' is missing the following properties from type 'NodeProps<any, object, string>': id, type, selected, connectable, and 7 more.
+src/views/CanvasView.vue(114,11): error TS2322: Type '"loose"' is not assignable to type 'ConnectionMode | undefined'.
+src/views/CanvasView.vue(233,8): error TS2322: Type '(updatedSection: Partial<CanvasSection> & { id: string; }) => void' is not assignable to type '(settings: Record<string, unknown>) => any'.
+  Types of parameters 'updatedSection' and 'settings' are incompatible.
+    Type 'Record<string, unknown>' is not assignable to type 'Partial<CanvasGroup> & { id: string; }'.
+      Property 'id' is missing in type 'Record<string, unknown>' but required in type '{ id: string; }'.
+src/views/CanvasView.vue(234,8): error TS2322: Type '(_group: CanvasSection) => void' is not assignable to type '(group: Record<string, unknown>) => any'.
+  Types of parameters '_group' and 'group' are incompatible.
+    Type 'Record<string, unknown>' is missing the following properties from type 'CanvasGroup': id, name, type, position, and 4 more.
+src/views/CanvasView.vue(235,8): error TS2322: Type '(_group: CanvasSection) => void' is not assignable to type '(group: Record<string, unknown>) => any'.
+  Types of parameters '_group' and 'group' are incompatible.
+    Type 'Record<string, unknown>' is missing the following properties from type 'CanvasGroup': id, name, type, position, and 4 more.
+src/views/CanvasView.vue(236,8): error TS2322: Type '(updatedSection: Partial<CanvasSection> & { id: string; }) => void' is not assignable to type '(updatedSection: Record<string, unknown>) => any'.
+  Types of parameters 'updatedSection' and 'updatedSection' are incompatible.
+    Type 'Record<string, unknown>' is not assignable to type 'Partial<CanvasGroup> & { id: string; }'.
+      Property 'id' is missing in type 'Record<string, unknown>' but required in type '{ id: string; }'.
+src/views/PerformanceView.vue(70,22): error TS18048: 'result' is possibly 'undefined'.
+src/views/PerformanceView.vue(72,24): error TS18048: 'result' is possibly 'undefined'.
+src/views/PerformanceView.vue(73,24): error TS18048: 'result' is possibly 'undefined'.
+src/views/PerformanceView.vue(73,58): error TS18048: 'result' is possibly 'undefined'.
+src/views/PerformanceView.vue(74,25): error TS18048: 'result' is possibly 'undefined'.
+src/views/PerformanceView.vue(77,60): error TS18048: 'result' is possibly 'undefined'.
+src/views/PerformanceView.vue(79,33): error TS18048: 'result' is possibly 'undefined'.
+src/views/PerformanceView.vue(82,69): error TS2345: Argument of type '{ name: string; iterations: number; totalTime: number; averageTime: number; minTime: number; maxTime: number; standardDeviation: number; throughput: number; memoryUsage?: number | undefined; memoryDelta?: number | undefined; cpuUsage?: number | undefined; successRate: number; errors: string[]; } | undefined' is not assignable to parameter of type 'BenchmarkResult'.
+  Type 'undefined' is not assignable to type 'BenchmarkResult'.
+src/views/PerformanceView.vue(83,39): error TS2345: Argument of type '{ name: string; iterations: number; totalTime: number; averageTime: number; minTime: number; maxTime: number; standardDeviation: number; throughput: number; memoryUsage?: number | undefined; memoryDelta?: number | undefined; cpuUsage?: number | undefined; successRate: number; errors: string[]; } | undefined' is not assignable to parameter of type 'BenchmarkResult'.
+  Type 'undefined' is not assignable to type 'BenchmarkResult'.
+src/views/PerformanceView.vue(248,7): error TS18048: 'results.value.canvasPerformance.averageTime' is possibly 'undefined'.
+src/views/PerformanceView.vue(251,7): error TS18048: 'results.value.memoryEfficiency.memoryUsage' is possibly 'undefined'.
+src/views/PerformanceView.vue(254,7): error TS18048: 'results.value.renderPerformance.averageTime' is possibly 'undefined'.
+src/views/WeeklyPlanView.vue(786,17): error TS2345: Argument of type 'keyof WeeklyPlan' is not assignable to parameter of type '"sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday"'.
+  Type '"unscheduled"' is not assignable to type '"sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday"'.

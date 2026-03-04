@@ -346,7 +346,7 @@ const getProjectName = (projectId: string | undefined | null): string | null => 
   flex-direction: column;
   min-height: 100%;
   /* Space for nav bar (64px) + FAB clearance — no full-width bar anymore */
-  padding-bottom: 80px;
+  padding-bottom: 0;
   /* Prevent native pull-to-refresh on single-finger drag */
   overscroll-behavior-y: contain;
 }

@@ -5,7 +5,8 @@
         "Category": "Utilities",
         "Description": "Shows the currently active Pomodoro task as a glass pill in the panel",
         "Version": "1.0.0",
-        "Icon": "view-task"
+        "Icon": "view-task",
+        "License": "GPL-2.0-or-later"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "KPackageStructure": "Plasma/Applet"

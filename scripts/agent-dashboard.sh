@@ -2,7 +2,9 @@
 # Agent Dashboard - Watch all running Claude subagents in real-time
 # Usage: ./scripts/agent-dashboard.sh
 
-TASK_DIR="/tmp/claude-1000/-media-endlessblink-data-my-projects-ai-development-productivity-flow-state/tasks"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+_PROJECT_SLUG="${PROJECT_DIR//\//-}"        # e.g. /foo/bar → -foo-bar
+TASK_DIR="/tmp/claude-$(id -u)/${_PROJECT_SLUG}/tasks"
 SESSION="agents"
 
 # Kill existing session if any

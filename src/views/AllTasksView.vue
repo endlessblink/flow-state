@@ -593,7 +593,8 @@ onMounted(() => {
 .all-tasks-view {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 100%;
+  flex: 1;
 }
 
 /* FEATURE-1293: Controls row — ViewControls + mode toggle side-by-side */

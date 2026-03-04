@@ -1,8 +1,10 @@
 #!/bin/bash
+# NOTE: This is a development utility script. Paths may need adjustment for your system.
 # BUG-339: Quick install and test script
 set -e
 
-cd /media/endlessblink/data/my-projects/ai-development/productivity/flow-state
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
 
 echo "=== Killing old processes ==="
 pkill -f flow-state 2>/dev/null || true

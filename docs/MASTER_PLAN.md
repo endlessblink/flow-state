@@ -3906,7 +3906,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1360**~~ | **P0** | ✅ **Canvas long task cards cut off when zooming — removed LOD content hiding, overflow:hidden chain, title 3-line clamp** (✅ DONE 2026-02-20) |
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
-| **BUG-1346** | **P1** | **📋 Mobile Inbox tab broken in PWA on mobile — layout/design broken** |
+| **BUG-1346** | **P1** | **🔄 Mobile Inbox tab broken in PWA on mobile — layout/design broken** (🔄 IN PROGRESS 2026-03-04) |
 | ~~**TASK-1362**~~ | **P0** | ✅ **Calendar task selection, multi-select & keyboard actions — click to select, Ctrl+click multi-select, Delete→inbox, Shift+Delete→remove, drag-back to inbox** (✅ DONE 2026-02-20) |
 | ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
 | ~~**BUG-1367**~~ | **P2** | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20) |
@@ -3946,14 +3946,14 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1428**~~ | **P0** | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03) |
 | ~~**TASK-1440**~~ | **P1** | ✅ **Gamification offline resilience — local-first state updates + try/catch wrapping for all Supabase writes** (✅ DONE 2026-03-03) |
 | ~~**TASK-1441**~~ | **P2** | ✅ **Graceful offline UX for non-cacheable features — AI chat, file uploads, Drive show informative messages instead of failing silently** (✅ DONE 2026-03-03) |
-| **BUG-1442** | **P1** | 📋 **timer_sessions.position_version column does not exist — DB schema mismatch** (📋 PLANNED 2026-03-03) |
+| ~~**BUG-1442**~~ | **P1** | ✅ **timer_sessions.position_version column does not exist — DB schema mismatch** (✅ DONE 2026-03-04 — code already guards correctly, no path queries this column) |
 | **INQUIRY-1438** | **P0** | 🔄 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (🔄 IN PROGRESS 2026-03-03) |
 | ~~**TASK-1434**~~ | **P0** | ✅ **Calendar drag-to-create — click and drag on time slots to create a new task** (✅ DONE 2026-03-03) |
 | ~~**TASK-1433**~~ | **P0** | ✅ **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (✅ DONE 2026-03-03) |
 | **BUG-1432** | **P1** | 🔄 **Overdue tasks display today's date instead of actual due date** (🔄 IN PROGRESS 2026-03-03) |
-| **TASK-1427** | **P0** | 📋 **Offline: merge write queue into read cache on offline load** (📋 PLANNED 2026-03-02) |
-| **TASK-1426** | **P0** | 📋 **Offline: auth grace period — keep expired session for local ops** (📋 PLANNED 2026-03-02) |
-| **TASK-1425** | **P0** | 📋 **Offline: fast startup — skip Supabase when navigator.onLine=false** (📋 PLANNED 2026-03-02) |
+| ~~**TASK-1427**~~ | **P0** | ✅ **Offline: merge write queue into read cache on offline load** (✅ DONE 2026-03-04) |
+| ~~**TASK-1426**~~ | **P0** | ✅ **Offline: auth grace period — keep expired session for local ops** (✅ DONE 2026-03-04) |
+| ~~**TASK-1425**~~ | **P0** | ✅ **Offline: fast startup — skip Supabase when navigator.onLine=false** (✅ DONE 2026-03-04) |
 | **TASK-1422** | **P0** | 🔄 **Full offline mobile support — PWA works E2E without network** (🔄 IN PROGRESS 2026-03-02) |
 | ~~**TASK-1421**~~ | **P0** | ✅ **Investigate & fix sluggish localhost performance** (✅ DONE 2026-03-02) |
 | **BUG-1416** | **P0** | 🔄 **Calendar inbox "today" filter shows wrong tasks — dueDate format mismatch (ISO vs YYYY-MM-DD)** (🔄 IN PROGRESS 2026-02-25) |
@@ -4109,15 +4109,15 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### BUG-1136: Add Entity Ownership Check to Tombstone RLS (📋 PLANNED)
+### ~~BUG-1136~~: Add Entity Ownership Check to Tombstone RLS (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-04)
 
-**Problem**: Tombstone soft-delete RLS policy may not verify entity ownership before allowing operations.
+**Problem**: Tombstone soft-delete RLS policy was missing UPDATE policy — upsert with onConflict silently failed for authenticated users.
 
-**Solution**: Ensure RLS policies check `auth.uid() = user_id` before soft delete operations.
+**Solution**: Added UPDATE RLS policy with `auth.uid() = user_id` check. Migration: `20260304000000_tombstone_rls_update_policy.sql`. Applied to local + production.
 
-**Files**: `supabase/migrations/`
+**Files**: `supabase/migrations/20260304000000_tombstone_rls_update_policy.sql`
 
 ---
 
@@ -4169,9 +4169,9 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### BUG-1141: Add CSP Headers to Limit XSS Impact (📋 PLANNED)
+### BUG-1141: Add CSP Headers to Limit XSS Impact (🔄 IN PROGRESS)
 
-**Priority**: P3-LOW | **Status**: 📋 PLANNED
+**Priority**: P3-LOW | **Status**: 🔄 IN PROGRESS
 
 **Problem**: No Content Security Policy headers configured.
 

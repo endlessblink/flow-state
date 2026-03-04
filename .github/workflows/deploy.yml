@@ -116,7 +116,7 @@ jobs:
               "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
               -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
               -H "Content-Type: application/json" \
-              --data '{"files":["https://in-theflow.com/","https://in-theflow.com/index.html","https://in-theflow.com/sw.js","https://in-theflow.com/manifest.webmanifest"]}')
+              --data "{\"files\":[\"${{ vars.SITE_URL }}/\",\"${{ vars.SITE_URL }}/index.html\",\"${{ vars.SITE_URL }}/sw.js\",\"${{ vars.SITE_URL }}/manifest.webmanifest\"]}")
 
             # Check if purge succeeded
             SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
@@ -130,7 +130,7 @@ jobs:
 
             # Verify cache was purged (should get MISS or DYNAMIC)
             echo "Verifying cache status..."
-            CF_STATUS=$(curl -sI "https://in-theflow.com/" | grep -i "cf-cache-status" | tr -d '\r')
+            CF_STATUS=$(curl -sI "${{ vars.SITE_URL }}/" | grep -i "cf-cache-status" | tr -d '\r')
             echo "  $CF_STATUS"
 
       # Validate CORS configuration after deployment
@@ -141,8 +141,8 @@ jobs:
             chmod +x ./scripts/validate-cors.sh
             ./scripts/validate-cors.sh
         env:
-          API_URL: https://api.in-theflow.com
-          ORIGIN: https://in-theflow.com
+          API_URL: ${{ vars.API_URL }}
+          ORIGIN: ${{ vars.SITE_URL }}
 
       # Validate asset headers (prevents Cloudflare cache MIME type issues)
       - name: Validate Asset Headers
@@ -150,13 +150,13 @@ jobs:
             chmod +x ./scripts/validate-asset-headers.sh
             ./scripts/validate-asset-headers.sh
         env:
-          DOMAIN: https://in-theflow.com
+          DOMAIN: ${{ vars.SITE_URL }}
 
       # Health check
       - name: Verify Deployment
         run: |
             echo "Checking web app..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://in-theflow.com)
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ vars.SITE_URL }})
             if [ "$HTTP_CODE" != "200" ]; then
               echo "✗ Web app returned HTTP $HTTP_CODE"
               exit 1
@@ -164,7 +164,7 @@ jobs:
             echo "✓ Web app is healthy (HTTP $HTTP_CODE)"
 
             echo "Checking API..."
-            API_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://api.in-theflow.com/rest/v1/)
+            API_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ vars.API_URL }}/rest/v1/)
             if [ "$API_CODE" != "401" ] && [ "$API_CODE" != "200" ]; then
               echo "✗ API returned unexpected HTTP $API_CODE"
               exit 1
@@ -178,4 +178,4 @@ jobs:
             chmod +x ./scripts/validate-chunks.sh
             ./scripts/validate-chunks.sh
         env:
-          DOMAIN: https://in-theflow.com
+          DOMAIN: ${{ vars.SITE_URL }}

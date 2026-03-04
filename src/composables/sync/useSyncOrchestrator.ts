@@ -277,7 +277,9 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
         let query = supabase.from(tableName).update(payload).eq('id', entityId)
 
-        if (operation.baseVersion !== undefined) {
+        // Only tasks and groups have position_version column for optimistic locking
+        const hasPositionVersion = entityType === 'task' || entityType === 'group'
+        if (hasPositionVersion && operation.baseVersion !== undefined) {
           // Optimistic lock using position_version
           query = query.eq('position_version', operation.baseVersion)
         }
@@ -375,7 +377,9 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
     }
 
     // Extract new version if available
-    const newVersion = result.data?.[0]?.position_version
+    const newVersion = (entityType === 'task' || entityType === 'group')
+      ? result.data?.[0]?.position_version
+      : undefined
 
     return {
       success: true,

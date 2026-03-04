@@ -12,7 +12,8 @@
 # - If port occupant is parented but unhealthy → kill stuck process
 
 PORT=5546
-PID_FILE="/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/.dev-server.pid"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PID_FILE="$PROJECT_DIR/.dev-server.pid"
 
 kill_port() {
   ALL_PIDS=$(lsof -ti:$PORT 2>/dev/null)

@@ -4,7 +4,7 @@
 # Writes .dev-server.pid so predev-port-check.sh can distinguish
 # legitimate servers from orphaned zombies.
 
-PROJECT_DIR="/media/endlessblink/data/my-projects/ai-development/productivity/flow-state"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PID_FILE="$PROJECT_DIR/.dev-server.pid"
 
 # Write our PID so predev-port-check.sh can identify us as legitimate

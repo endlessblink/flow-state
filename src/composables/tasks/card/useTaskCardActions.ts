@@ -29,6 +29,13 @@ export function useTaskCardActions(
         }
     }
 
+    const handleCardDblClick = (event: MouseEvent) => {
+        if (props.disabled) return
+        event.preventDefault()
+        event.stopPropagation()
+        emit('edit', props.task.id)
+    }
+
     const handleSelectionClick = (event: MouseEvent) => {
         if (event.ctrlKey || event.metaKey) {
             // Multi-select toggle
@@ -128,6 +135,7 @@ export function useTaskCardActions(
 
     return {
         handleCardClick,
+        handleCardDblClick,
         handleKeydown,
         handleFocus,
         handleBlur,

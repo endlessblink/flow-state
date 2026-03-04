@@ -61,7 +61,10 @@ serve(async (req) => {
     )
   }
 
-  const providedSecret = req.headers.get('x-webhook-secret')
+  // Accept secret via header OR query param (?secret=...) since WAHA CORE
+  // doesn't reliably send custom headers via WHATSAPP_HOOK_URL_HEADERS env var
+  const url = new URL(req.url)
+  const providedSecret = req.headers.get('x-webhook-secret') || url.searchParams.get('secret')
   if (!providedSecret || providedSecret !== webhookSecret) {
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),

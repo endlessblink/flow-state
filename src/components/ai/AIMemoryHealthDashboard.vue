@@ -36,7 +36,9 @@
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="error-banner glass">{{ error }}</div>
+    <div v-if="error" class="error-banner glass">
+      {{ error }}
+    </div>
 
     <!-- Summary Cards -->
     <div v-if="report" class="summary-cards">
@@ -83,8 +85,12 @@
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <p>No assessment results yet.</p>
-      <p class="empty-hint">"Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).</p>
+      <p>
+        No assessment results yet.
+      </p>
+      <p class="empty-hint">
+        "Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).
+      </p>
     </div>
 
     <!-- Sections -->
@@ -129,7 +135,9 @@
               <span class="check-name">{{ check.name }}</span>
               <span class="check-score" :class="scoreColorClass(check.score)">{{ check.score }}%</span>
             </div>
-            <div class="check-value">{{ check.value }}</div>
+            <div class="check-value">
+              {{ check.value }}
+            </div>
             <div v-if="check.recommendation" class="check-recommendation">
               {{ check.recommendation }}
             </div>
@@ -168,13 +176,17 @@
           :key="h.id"
           class="history-item glass"
         >
-          <span class="history-grade" :class="scoreColorClass(h.overallScore)">{{ h.grade }}</span>
+          <span class="history-grade" :class="scoreColorClass(h.overallScore)">
+            {{ h.grade }}
+          </span>
           <span class="history-score">{{ h.overallScore }}/100</span>
           <span class="history-mode">{{ h.mode }}</span>
           <span class="history-time">{{ formatTime(h.timestamp) }}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" @click="handleClearHistory">Clear History</button>
+      <button class="btn btn-ghost" @click="handleClearHistory">
+        Clear History
+      </button>
     </div>
   </div>
 </template>
@@ -183,6 +195,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useMemoryAssessment } from '@/composables/useMemoryAssessment'
 import { getMemoryGradeColor } from '@/services/ai/memoryAssessment'
+
+defineProps<{}>()
 
 const {
   isRunning,

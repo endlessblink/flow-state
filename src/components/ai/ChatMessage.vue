@@ -856,12 +856,12 @@ async function saveSchedule() {
               <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
             <!-- Daily Challenges -->
-            <div v-if="result.data.dailies.length > 0" class="challenge-section">
+            <div v-if="(result.data.dailies?.length || 0) > 0" class="challenge-section">
               <div class="summary-section-label">
                 Daily Missions
               </div>
               <div
-                v-for="ch in result.data.dailies"
+                v-for="ch in (result.data.dailies || [])"
                 :key="ch.id"
                 class="challenge-item"
               >
@@ -876,8 +876,8 @@ async function saveSchedule() {
                   <div class="challenge-progress-bar-wrapper">
                     <div
                       class="challenge-progress-bar"
-                      :style="{ width: ch.progressPercent + '%' }"
-                      :class="{ 'bar-complete': ch.progressPercent >= 100 }"
+                      :style="{ width: (ch.progressPercent || 0) + '%' }"
+                      :class="{ 'bar-complete': (ch.progressPercent || 0) >= 100 }"
                     />
                   </div>
                   <span class="challenge-progress-text">{{ ch.objectiveCurrent }}/{{ ch.objectiveTarget }}</span>
@@ -916,7 +916,7 @@ async function saveSchedule() {
                 </div>
               </div>
             </div>
-            <div v-if="result.data.dailies.length === 0 && !result.data.boss" class="gam-empty" dir="auto">
+            <div v-if="(result.data.dailies?.length || 0) === 0 && !result.data.boss" class="gam-empty" dir="auto">
               No active challenges. New dailies generate each morning.
             </div>
           </div>
@@ -1083,10 +1083,10 @@ async function saveSchedule() {
             </div>
             <!-- Challenge info if available -->
             <div v-if="result.data.challenges" class="gam-footer-row">
-              <span v-if="result.data.challenges.completedToday > 0" class="gam-footer-badge gam-badge-success">
+              <span v-if="(result.data.challenges.completedToday || 0) > 0" class="gam-footer-badge gam-badge-success">
                 {{ result.data.challenges.completedToday }} challenges done today
               </span>
-              <span v-if="result.data.challenges.corruptionLevel > 0" class="gam-footer-badge gam-badge-corruption">
+              <span v-if="(result.data.challenges.corruptionLevel || 0) > 0" class="gam-footer-badge gam-badge-corruption">
                 Corruption: {{ result.data.challenges.corruptionLevel }}%
               </span>
             </div>

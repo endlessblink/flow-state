@@ -158,13 +158,6 @@ const props = withDefaults(defineProps<Props>(), {
   trapFocus: true
 })
 
-const { t } = useI18n()
-
-// I18n defaults (if props not provided)
-const finalCancelText = computed(() => props.cancelText || t('common.cancel'))
-const finalConfirmText = computed(() => props.confirmText || t('common.confirm'))
-const finalCloseAriaLabel = computed(() => props.closeAriaLabel || t('common.close'))
-
 const emit = defineEmits<{
   close: []
   cancel: []
@@ -173,6 +166,13 @@ const emit = defineEmits<{
   afterOpen: []
   afterClose: []
 }>()
+
+const { t } = useI18n()
+
+// I18n defaults (if props not provided)
+const finalCancelText = computed(() => props.cancelText || t('common.cancel'))
+const finalConfirmText = computed(() => props.confirmText || t('common.confirm'))
+const finalCloseAriaLabel = computed(() => props.closeAriaLabel || t('common.close'))
 
 // RTL support
 // Logical properties handle direction automatically, so manual isRTL check removed

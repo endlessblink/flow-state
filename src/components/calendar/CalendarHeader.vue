@@ -87,7 +87,7 @@ const toggleViewOptions = () => {
         :y="popoverY"
         position="bottom"
         variant="menu"
-        :close-on-click-outside="true"
+        close-on-click-outside
         @close="showViewOptions = false"
       >
         <div class="view-options-menu">
@@ -97,7 +97,11 @@ const toggleViewOptions = () => {
             :class="{ active: showFilters }"
             @click="showFilters = !showFilters"
           >
-            <SlidersHorizontal :size="16" :stroke-width="1.5" class="option-icon" />
+            <SlidersHorizontal
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
             <span class="option-label">{{ $t('calendar.toggle_filters') }}</span>
             <span v-if="showFilters" class="option-indicator" />
           </button>
@@ -120,7 +124,11 @@ const toggleViewOptions = () => {
             :class="{ active: showFutureRecurring }"
             @click="$emit('toggleFutureRecurring')"
           >
-            <Repeat :size="16" :stroke-width="1.5" class="option-icon" />
+            <Repeat
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+            />
             <span class="option-label">{{ showFutureRecurring ? 'Hide future recurring' : 'Show future recurring' }}</span>
             <span v-if="showFutureRecurring" class="option-indicator" />
           </button>
@@ -132,7 +140,12 @@ const toggleViewOptions = () => {
             :class="{ syncing: externalCalendarLoading }"
             @click="$emit('syncExternalCalendar')"
           >
-            <RefreshCw :size="16" :stroke-width="1.5" class="option-icon" :class="{ spinning: externalCalendarLoading }" />
+            <RefreshCw
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+              :class="{ spinning: externalCalendarLoading }"
+            />
             <span class="option-label">{{ $t('calendar.sync_external') }}</span>
           </button>
 

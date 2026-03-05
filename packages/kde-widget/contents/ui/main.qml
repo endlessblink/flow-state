@@ -2955,6 +2955,15 @@ PlasmoidItem {
         onTriggered: root.fetchPinnedTasks()
     }
 
+    // Task list periodic refresh (sync with changes from Vue app)
+    Timer {
+        id: taskListRefreshTimer
+        interval: 30000  // 30 seconds
+        running: root.isAuthenticated
+        repeat: true
+        onTriggered: root.fetchTasks()
+    }
+
     // BUG-1347: Timer to clear transition state (replaces Date.now() < transitionUntil)
     Timer {
         id: transitionTimer

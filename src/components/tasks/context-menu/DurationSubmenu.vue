@@ -7,6 +7,7 @@
       :style="style"
       @mouseenter="$emit('mouseenter')"
       @mouseleave="$emit('mouseleave')"
+      @wheel.stop
     >
       <button
         v-for="dur in durationOptions"

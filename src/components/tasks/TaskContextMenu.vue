@@ -5,6 +5,7 @@
       ref="menuRef"
       class="context-menu"
       :style="menuPosition"
+      @wheel.stop
     >
     <!-- Header for inbox/batch operations -->
     <div v-if="showInboxHeader" class="context-menu-header">
@@ -30,7 +31,7 @@
     <div
       class="menu-item has-submenu"
       @mouseenter="openSubmenu('dueDate', $event)"
-      @mouseleave="closeSubmenu('dueDate')"
+      @mouseleave="handleTriggerLeave('dueDate', $event)"
     >
       <Calendar :size="16" class="menu-icon" />
       <span class="menu-text">Due Date</span>
@@ -42,7 +43,7 @@
     <div
       class="menu-item has-submenu"
       @mouseenter="openSubmenu('priority', $event)"
-      @mouseleave="closeSubmenu('priority')"
+      @mouseleave="handleTriggerLeave('priority', $event)"
     >
       <span class="priority-dot-sm" :class="currentTask?.priority || 'none'" />
       <span class="menu-text">Priority</span>
@@ -54,7 +55,7 @@
     <div
       class="menu-item has-submenu"
       @mouseenter="openSubmenu('project', $event)"
-      @mouseleave="closeSubmenu('project')"
+      @mouseleave="handleTriggerLeave('project', $event)"
     >
       <FolderOpen :size="16" class="menu-icon" />
       <span class="menu-text">Project</span>
@@ -82,7 +83,7 @@
     <div
       class="menu-item has-submenu"
       @mouseenter="openSubmenu('more', $event)"
-      @mouseleave="closeSubmenu('more')"
+      @mouseleave="handleTriggerLeave('more', $event)"
     >
       <MoreHorizontal :size="16" class="menu-icon" />
       <span class="menu-text">More</span>
@@ -96,8 +97,8 @@
       :style="moreSubmenuStyle"
       :is-batch-operation="isBatchOperation"
       :task-id="currentTask?.id"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('more')"
+      @mouseenter="handlePanelEnter"
+      @mouseleave="handlePanelLeave('more')"
       @done-for-now="() => { closeAllSubmenusNow(); handleDoneForNow() }"
       @duplicate="() => { closeAllSubmenusNow(); duplicateTask() }"
       @pin-quick-task="() => { closeAllSubmenusNow(); pinAsQuickTask() }"
@@ -118,8 +119,8 @@
       :parent-visible="isVisible"
       :style="dueDateSubmenuStyle"
       :current-due-date="currentTask?.dueDate"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('dueDate')"
+      @mouseenter="handlePanelEnter"
+      @mouseleave="handlePanelLeave('dueDate')"
       @select="(dateType: string) => { closeAllSubmenusNow(); setDueDate(dateType as 'today' | 'tomorrow' | 'weekend' | 'nextweek') }"
       @pick-date="handleDatePickerSelect"
       @clear-date="() => { closeAllSubmenusNow(); clearDueDate() }"
@@ -131,8 +132,8 @@
       :parent-visible="isVisible"
       :style="prioritySubmenuStyle"
       :current-priority="currentTask?.priority"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('priority')"
+      @mouseenter="handlePanelEnter"
+      @mouseleave="handlePanelLeave('priority')"
       @select="(p: 'high' | 'medium' | 'low') => { closeAllSubmenusNow(); setPriority(p) }"
       @clear-priority="() => { closeAllSubmenusNow(); clearPriority() }"
     />
@@ -143,8 +144,8 @@
       :parent-visible="isVisible"
       :style="projectSubmenuStyle"
       :current-project-id="currentTask?.projectId"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('project')"
+      @mouseenter="handlePanelEnter"
+      @mouseleave="handlePanelLeave('project')"
       @select="(id: string | null) => { closeAllSubmenusNow(); setProject(id) }"
     />
 
@@ -154,8 +155,8 @@
       :parent-visible="isVisible"
       :style="canvasGroupSubmenuStyle"
       :current-group-id="currentTask?.parentId"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('canvasGroup')"
+      @mouseenter="handlePanelEnter"
+      @mouseleave="handlePanelLeave('canvasGroup')"
       @select="(id: string | null) => { closeAllSubmenusNow(); handleMoveToGroup(id) }"
     />
 
@@ -165,8 +166,8 @@
       :parent-visible="isVisible"
       :style="durationSubmenuStyle"
       :current-duration="currentTask?.estimatedDuration"
-      @mouseenter="keepSubmenuOpen"
-      @mouseleave="closeSubmenu('duration')"
+      @mouseenter="handlePanelEnter"
+      @mouseleave="handlePanelLeave('duration')"
       @select="(d: number | null) => { closeAllSubmenusNow(); setDuration(d) }"
     />
 
@@ -191,6 +192,7 @@
       @accept-date="handleAIAcceptDate"
     />
   </div>
+
   </Teleport>
 </template>
 
@@ -226,6 +228,7 @@ import ProjectSubmenu from './context-menu/ProjectSubmenu.vue'
 import CanvasGroupSubmenu from './context-menu/CanvasGroupSubmenu.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
+import { useSubmenuSafePolygon } from '@/composables/useSubmenuSafePolygon'
 
 interface Props {
   isVisible: boolean
@@ -305,6 +308,9 @@ const durationSubmenuPosition = ref({ x: 0, y: 0 })
 const moreSubmenuPosition = ref({ x: 0, y: 0 })
 const projectSubmenuPosition = ref({ x: 0, y: 0 })
 const canvasGroupSubmenuPosition = ref({ x: 0, y: 0 })
+
+// TASK-1445: Safe polygon hover intent for submenu navigation
+const safePolygon = useSubmenuSafePolygon()
 
 // Computed properties for display
 const showInboxHeader = computed(() => {
@@ -641,7 +647,9 @@ const clearAllSubmenuTimeouts = () => {
 }
 
 const openSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup', event: MouseEvent) => {
+  console.log('[MENU] openSubmenu:', type, '→ closing all others')
   clearAllSubmenuTimeouts()
+  safePolygon.stopTracking()
 
   // BUG-1095: Close ALL other submenus before opening a new one
   showDueDateSubmenu.value = false
@@ -694,34 +702,96 @@ const openSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'proje
 
 const keepSubmenuOpen = () => {
   clearAllSubmenuTimeouts()
+  safePolygon.stopTracking()
 }
 
-const closeSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup') => {
-  // Clear any existing timeout for this type
+// TASK-1445: Get the known rect of a submenu by type (position + estimated size)
+type SubmenuType = 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup'
+
+const getSubmenuRect = (type: SubmenuType) => {
+  const posMap: Record<SubmenuType, { value: { x: number; y: number } }> = {
+    dueDate: dueDateSubmenuPosition,
+    priority: prioritySubmenuPosition,
+    duration: durationSubmenuPosition,
+    more: moreSubmenuPosition,
+    project: projectSubmenuPosition,
+    canvasGroup: canvasGroupSubmenuPosition,
+  }
+  const sizeMap: Record<SubmenuType, { width: number; height: number }> = {
+    dueDate: { width: 180, height: 300 },
+    priority: { width: 150, height: 160 },
+    duration: { width: 150, height: 180 },
+    more: { width: 180, height: 360 },
+    project: { width: 200, height: 250 },
+    canvasGroup: { width: 200, height: 250 },
+  }
+  const pos = posMap[type].value
+  const size = sizeMap[type]
+  return { x: pos.x, y: pos.y, width: size.width, height: size.height }
+}
+
+// Actually close a submenu (called by safe polygon or panel leave)
+const actuallyCloseSubmenu = (type: SubmenuType) => {
+  if (type === 'dueDate') showDueDateSubmenu.value = false
+  else if (type === 'priority') showPrioritySubmenu.value = false
+  else if (type === 'duration') {
+    showDurationSubmenu.value = false
+    if (!showCanvasGroupSubmenu.value) showMoreSubmenu.value = false
+  }
+  else if (type === 'project') showProjectSubmenu.value = false
+  else if (type === 'canvasGroup') {
+    showCanvasGroupSubmenu.value = false
+    if (!showDurationSubmenu.value) showMoreSubmenu.value = false
+  }
+  else {
+    // Closing 'more' — skip if a nested child submenu is still open
+    if (!showCanvasGroupSubmenu.value && !showDurationSubmenu.value) {
+      showMoreSubmenu.value = false
+    }
+  }
+}
+
+// TASK-1445: When cursor leaves a TRIGGER item, use safe polygon tracking
+// instead of a blind timeout. The polygon allows diagonal cursor movement
+// toward the submenu without closing it.
+const handleTriggerLeave = (type: SubmenuType, event: MouseEvent) => {
+  console.log('[MENU] handleTriggerLeave:', type, { x: event.clientX, y: event.clientY })
+  clearAllSubmenuTimeouts()
+  const rect = getSubmenuRect(type)
+  console.log('[MENU] submenuRect:', rect)
+  safePolygon.startTracking(event, rect, () => {
+    console.log('[MENU] safePolygon onClose callback → actuallyCloseSubmenu:', type)
+    actuallyCloseSubmenu(type)
+  })
+}
+
+// When cursor enters a submenu PANEL, stop polygon tracking — cursor landed
+const handlePanelEnter = () => {
+  console.log('[MENU] handlePanelEnter — cursor on submenu panel')
+  clearAllSubmenuTimeouts()
+  safePolygon.stopTracking()
+}
+
+// When cursor leaves a submenu PANEL, use a short delay
+const handlePanelLeave = (type: SubmenuType) => {
   const existing = submenuTimeouts.value.get(type)
   if (existing) clearTimeout(existing)
 
   const timeout = setTimeout(() => {
     submenuTimeouts.value.delete(type)
-    if (type === 'dueDate') showDueDateSubmenu.value = false
-    else if (type === 'priority') showPrioritySubmenu.value = false
-    else if (type === 'duration') {
-      showDurationSubmenu.value = false
-      // Also close More if no nested child is open
-      if (!showCanvasGroupSubmenu.value) showMoreSubmenu.value = false
-    }
-    else if (type === 'project') showProjectSubmenu.value = false
-    else if (type === 'canvasGroup') {
-      showCanvasGroupSubmenu.value = false
-      // Also close More if no nested child is open
-      if (!showDurationSubmenu.value) showMoreSubmenu.value = false
-    }
-    else {
-      // Closing 'more' — skip if a nested child submenu is still open
-      if (!showCanvasGroupSubmenu.value && !showDurationSubmenu.value) {
-        showMoreSubmenu.value = false
-      }
-    }
+    actuallyCloseSubmenu(type)
+  }, 150)
+  submenuTimeouts.value.set(type, timeout)
+}
+
+// Legacy closeSubmenu kept for nested submenu triggers in MoreSubmenu
+const closeSubmenu = (type: SubmenuType) => {
+  const existing = submenuTimeouts.value.get(type)
+  if (existing) clearTimeout(existing)
+
+  const timeout = setTimeout(() => {
+    submenuTimeouts.value.delete(type)
+    actuallyCloseSubmenu(type)
   }, 300)
   submenuTimeouts.value.set(type, timeout)
 }
@@ -729,6 +799,7 @@ const closeSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'proj
 // BUG-1095: Immediately close ALL submenus - no timeout
 const closeAllSubmenusNow = () => {
   clearAllSubmenuTimeouts()
+  safePolygon.stopTracking()
   showDueDateSubmenu.value = false
   showPrioritySubmenu.value = false
   showDurationSubmenu.value = false
@@ -761,6 +832,7 @@ const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
   if (target.closest('.submenu')) return
   if (menuRef.value && !menuRef.value.contains(target)) {
+    console.log('[MENU] handleClickOutside → emit close', { target: target.tagName, classes: target.className })
     emit('close')
   }
 }
@@ -783,6 +855,7 @@ watch(() => props.isVisible, (isVisible) => {
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
   clearAllSubmenuTimeouts()
+  safePolygon.stopTracking()
 })
 </script>
 
@@ -898,18 +971,6 @@ onUnmounted(() => {
 
 /* Submenu */
 .has-submenu { position: relative; }
-
-/* TASK-1445: Invisible hover bridge extending toward submenu panel.
-   Prevents submenu from closing when cursor moves diagonally from
-   the trigger item toward the submenu. */
-.has-submenu::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -30px;
-  width: 30px;
-  height: 100%;
-}
 
 .submenu-arrow { color: var(--text-muted); margin-inline-start: auto; }
 </style>

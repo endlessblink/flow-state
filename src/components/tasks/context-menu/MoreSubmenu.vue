@@ -7,6 +7,7 @@
       :style="style"
       @mouseenter="$emit('mouseenter')"
       @mouseleave="$emit('mouseleave')"
+      @wheel.stop
     >
       <!-- Done for now - reschedule to tomorrow -->
       <button class="menu-item menu-item--sm" @click.stop="$emit('doneForNow')">
@@ -155,16 +156,6 @@ defineEmits<{
 .menu-icon { flex-shrink: 0; opacity: 0.8; }
 
 .has-submenu { position: relative; }
-
-/* TASK-1445: Hover bridge for nested submenu triggers */
-.has-submenu::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -30px;
-  width: 30px;
-  height: 100%;
-}
 
 .submenu-arrow { color: var(--text-muted); margin-inline-start: auto; }
 .submenu-divider { height: 1px; background: var(--glass-bg-heavy); margin: var(--space-1) 0; }

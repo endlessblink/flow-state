@@ -56,7 +56,10 @@
         </template>
 
         <template #footer>
-          <div v-if="tasks.length === 0" class="empty-column">
+          <div v-if="hasMore" class="show-more-footer" @click="isExpanded = true">
+            <span class="show-more-text">Show {{ hiddenCount }} more</span>
+          </div>
+          <div v-else-if="allTasks.length === 0" class="empty-column">
             <span class="empty-message">{{ $t('kanban.no_tasks_in', { status: title.toLowerCase() }) }}</span>
             <button class="add-first-task" @click="$emit('addTask', status)">
               <Plus :size="16" />
@@ -106,15 +109,41 @@ defineEmits<{
 // BUG-1193: Track drag state to prevent reactive overwrites during drag
 const isDragActive = ref(false)
 
-const localTasks = ref([...props.tasks])
+// TASK-1160: Progressive rendering — limit rendered tasks per column
+const COLUMN_RENDER_LIMIT = 30
+const isExpanded = ref(false)
+
+const allTasks = ref([...props.tasks])
+
+const localTasks = computed({
+  get: () => {
+    if (isExpanded.value || allTasks.value.length <= COLUMN_RENDER_LIMIT) {
+      return allTasks.value
+    }
+    return allTasks.value.slice(0, COLUMN_RENDER_LIMIT)
+  },
+  set: (val) => {
+    if (isExpanded.value || allTasks.value.length <= COLUMN_RENDER_LIMIT) {
+      allTasks.value = val
+    } else {
+      // During drag on truncated list: merge back with hidden items
+      const hiddenTasks = allTasks.value.slice(COLUMN_RENDER_LIMIT)
+      allTasks.value = [...val, ...hiddenTasks]
+    }
+  }
+})
+
 watch(() => props.tasks, (newTasks) => {
-  // BUG-1193: Don't overwrite localTasks during active drag operation
+  // BUG-1193: Don't overwrite allTasks during active drag operation
   // vuedraggable manages the array during drag - reactive updates cause desync
   // where the wrong task element gets associated with the drag ghost
   if (!isDragActive.value) {
-    localTasks.value = [...newTasks]
+    allTasks.value = [...newTasks]
   }
 })
+
+const hasMore = computed(() => !isExpanded.value && allTasks.value.length > COLUMN_RENDER_LIMIT)
+const hiddenCount = computed(() => Math.max(0, allTasks.value.length - COLUMN_RENDER_LIMIT))
 
 // BUG-1335: Use a shared drag group across all swimlanes so tasks can be dragged
 // between projects. When dropped in a different swimlane, the project is updated.
@@ -166,13 +195,13 @@ const onDragEnd = (evt: DragEvent) => {
   }
 
   endGlobalDrag()
-  // Sync localTasks with store state after drag completes
+  // Sync allTasks with store state after drag completes
   nextTick(() => {
-    localTasks.value = [...props.tasks]
+    allTasks.value = [...props.tasks]
   })
 }
 
-const taskCount = computed(() => props.tasks.length)
+const taskCount = computed(() => allTasks.value.length)
 
 // Column color indicator (priority dot or project color)
 const columnIndicatorColor = computed(() => {
@@ -209,7 +238,7 @@ const taskStore = useTaskStore()
  * Uses simple integer indexing (0, 1, 2, ...) and persists via updateTask.
  */
 const persistOrderForColumn = () => {
-  localTasks.value.forEach((task, index) => {
+  allTasks.value.forEach((task, index) => {
     if (task.order !== index) {
       taskStore.updateTask(task.id, { order: index })
     }

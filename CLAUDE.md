@@ -294,13 +294,49 @@ AI orchestration dashboard at `http://localhost:6010`. Start: `./maestro.sh`. Ch
 
 **MASTER_PLAN.md Parsing:** Task headers use `### TASK-XXX: Title (STATUS)`. Completed: `### ~~TASK-XXX~~: Title (✅ DONE)`. Status keywords: `DONE`/`✅`, `IN PROGRESS`/`🔄`, `PAUSED`/`⏸️`, `REVIEW`/`👀`. Completed tasks need BOTH `~~strikethrough~~` AND `✅ DONE`. Full SOP: [SOP-031](docs/sop/SOP-031-dev-maestro-parser.md).
 
-## UI Component Standards
+## UI Component Standards (MANDATORY)
 
-| Component Type | Use This |
-|----------------|----------|
-| Dropdowns | `CustomSelect.vue` (NEVER native `<select>`) |
-| Context Menus | `ContextMenu.vue` (NEVER browser menus) |
-| Modals | `BaseModal.vue`, `BasePopover.vue` |
+**BEFORE creating any UI element**, check `src/components/base/` and `src/components/common/` for an existing component. This project has 20+ reusable primitives with glass morphism, keyboard nav, and Tauri compatibility built in. **NEVER** reinvent what already exists.
+
+| Need | Use This | NEVER Use |
+|------|----------|-----------|
+| Buttons | `BaseButton` (variant: primary\|secondary\|ghost\|danger\|active) | Ad-hoc `<button>` with inline styles |
+| Icon buttons | `BaseIconButton` (variant: default\|primary\|success\|warning\|danger) | Manual icon `<button>` |
+| Text inputs | `BaseInput` (label, helper text, prefix/suffix slots, RTL) | Native `<input>` without wrapper |
+| Dropdowns | `CustomSelect` (ONLY dropdown — see below) | Native `<select>`, `<NSelect>`, `BaseDropdown` |
+| Context menus | `ContextMenu` | Browser right-click menus |
+| Modals | `BaseModal` (size: sm\|md\|lg\|xl\|full) | Custom modal divs |
+| Delete confirms | `ConfirmationModal` (wraps BaseModal) | Building delete dialogs from scratch |
+| Popovers | `BasePopover` (variant: menu\|tooltip\|dropdown) | Manual positioned divs |
+| Status pills | `BaseBadge` (variant: default\|success\|warning\|danger\|info\|count) | Inline `<span>` for status |
+| Cards | `BaseCard` (glass prop for glass morphism) | Manual `div.glass` CSS |
+| Markdown display | `MarkdownRenderer` | Raw `v-html` or new markdown libs |
+| Markdown editing | `MarkdownEditor` (wraps TipTap) | New rich-text library |
+| Task completion | `DoneToggle` (animated, celebration particles) | Native checkbox for done state |
+| Project icons | `ProjectEmojiIcon` (emoji\|SVG\|gradient) | Plain text emoji rendering |
+| Overflow text | `OverflowTooltip` (tooltip only when text overflows) | Manual text truncation |
+
+**All base components:** `src/components/base/` | **All common components:** `src/components/common/`
+**Storybook:** `🧩 Primitives/*` at http://localhost:6006
+
+### CustomSelect — The ONLY Dropdown Component
+
+**Import:** `import CustomSelect from '@/components/common/CustomSelect.vue'`
+
+```vue
+<CustomSelect
+  v-model="selectedValue"
+  :options="[
+    { label: 'Option A', value: 'a' },
+    { label: 'Option B', value: 'b' },
+  ]"
+  placeholder="Select..."
+  :compact="false"
+/>
+```
+
+**Props:** `modelValue: string | number | null`, `options: { label: string, value: string | number }[]`, `placeholder?: string`, `compact?: boolean`
+**Emits:** `update:modelValue`
 
 ## Multi-Instance Task Locking
 

@@ -6,6 +6,7 @@
       :style="style"
       @mouseenter="$emit('mouseenter')"
       @mouseleave="$emit('mouseleave')"
+      @wheel.stop
     >
       <!-- No Group option -->
       <button

@@ -6,6 +6,7 @@
       :style="style"
       @mouseenter="$emit('mouseenter')"
       @mouseleave="$emit('mouseleave')"
+      @wheel.stop
     >
       <button
         class="menu-item menu-item--sm"

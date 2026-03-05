@@ -197,7 +197,6 @@ const handleOverlayClick = () => {
   }
 }
 
-
 // Handle keyboard events (Escape and Enter)
 const handleEscapeKey = (event: KeyboardEvent) => {
   // Handle Escape key - close modal

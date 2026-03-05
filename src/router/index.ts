@@ -141,9 +141,9 @@ const router = createRouter({
     },
     // TODO: Add other views when implemented
     {
-      path: '/cyberflow',
-      name: 'cyberflow',
-      component: () => import('@/views/CyberflowView.vue'),
+      path: '/todo',
+      name: 'todo',
+      component: () => import('@/views/TodoView.vue'),
       meta: { requiresAuth: false } // Temporarily disabled for development
     }
   ]

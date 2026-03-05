@@ -12,12 +12,12 @@
       @mousedown.self="handleOverlayClick"
       @keydown="handleEscapeKey"
     >
-      <div
-        ref="modalRef"
-        class="modal-container"
-        :class="[`size-${size}`, `variant-${variant}`, { 'modal-closing': isClosing }]"
-        @click.stop
-      >
+    <div
+      ref="modalRef"
+      class="modal-container"
+      :class="[`size-${size}`, `variant-${variant}`, { 'modal-closing': isClosing }]"
+      @click.stop
+    >
       <!-- Modal Header -->
       <header v-if="showHeader" class="modal-header">
         <div class="header-content--modal">

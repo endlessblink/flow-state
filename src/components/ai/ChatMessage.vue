@@ -56,10 +56,10 @@ const md = new MarkdownIt({
 })
 
 // Make links open in new tab
-const defaultRender = md.renderer.rules.link_open || function (tokens: Token[], idx: number, options: any, _env: unknown, self: Renderer) {
+const defaultRender = md.renderer.rules.link_open || function (tokens: Token[], idx: number, options: MarkdownIt.Options, _env: unknown, self: Renderer) {
   return self.renderToken(tokens, idx, options)
 }
-md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: any, env: unknown, self: Renderer) {
+md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: MarkdownIt.Options, env: unknown, self: Renderer) {
   tokens[idx].attrSet('target', '_blank')
   tokens[idx].attrSet('rel', 'noopener noreferrer')
   return defaultRender(tokens, idx, options, env, self)
@@ -558,8 +558,10 @@ async function saveSchedule() {
 
     scheduleSaved.value = true
     // Update message metadata to persist the answered state
-    // To avoid mutating props, we could emit an event, but since this is just UI state,
-    // we'll rely on the scheduleSaved ref for the current session.
+    if (props.message.metadata?.scheduleQuestion) {
+      props.message.metadata.scheduleQuestion.answered = true
+      props.message.metadata.scheduleQuestion.selectedDays = [...selectedDays.value]
+    }
   } catch (err) {
     console.error('[ChatMessage] Save schedule failed:', err)
   } finally {
@@ -666,22 +668,22 @@ async function saveSchedule() {
                 <span class="summary-stat-label">Due Today</span>
               </div>
               <div class="summary-stat">
-              <div class="summary-stat-value">{{ result.data.overdueCount || 0 }}</div>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">
-              <span class="summary-stat-value">{{ result.data.timerSessionsCompleted || 0 }}</span>
+                <span class="summary-stat-value">{{ result.data.timerSessionsCompleted }}</span>
                 <span class="summary-stat-label">Pomodoros</span>
               </div>
             </div>
             <!-- Overdue task list if any -->
-          <div v-if="result.data.overdueTasks && result.data.overdueTasks.length > 0" class="task-list">
+            <div v-if="result.data.overdueTasks?.length > 0" class="task-list">
               <div class="summary-section-label">
                 Overdue Tasks
                 <span class="section-count">({{ result.data.overdueTasks.length }})</span>
               </div>
               <button
-                v-for="task in visibleTasks(result.data.overdueTasks || [], 'overdue-' + result.tool)"
+                v-for="task in visibleTasks(result.data.overdueTasks, 'overdue-' + result.tool)"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -725,7 +727,7 @@ async function saveSchedule() {
                 </div>
               </button>
               <button
-                v-if="result.data.overdueTasks && result.data.overdueTasks.length > MAX_VISIBLE_TASKS"
+                v-if="result.data.overdueTasks.length > MAX_VISIBLE_TASKS"
                 class="show-more-btn"
                 @click="toggleSection('overdue-' + result.tool)"
               >
@@ -735,13 +737,13 @@ async function saveSchedule() {
               </button>
             </div>
             <!-- Due today task list if any -->
-            <div v-if="result.data.dueTodayTasks && result.data.dueTodayTasks.length > 0" class="task-list">
+            <div v-if="result.data.dueTodayTasks?.length > 0" class="task-list">
               <div class="summary-section-label">
                 Due Today
                 <span class="section-count">({{ result.data.dueTodayTasks.length }})</span>
               </div>
               <button
-                v-for="task in visibleTasks(result.data.dueTodayTasks || [], 'duetoday-' + result.tool)"
+                v-for="task in visibleTasks(result.data.dueTodayTasks, 'duetoday-' + result.tool)"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -789,7 +791,7 @@ async function saveSchedule() {
                 </div>
               </button>
               <button
-                v-if="result.data.dueTodayTasks && result.data.dueTodayTasks.length > MAX_VISIBLE_TASKS"
+                v-if="result.data.dueTodayTasks.length > MAX_VISIBLE_TASKS"
                 class="show-more-btn"
                 @click="toggleSection('duetoday-' + result.tool)"
               >

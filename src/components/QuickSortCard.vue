@@ -132,7 +132,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { type Task } from '@/stores/tasks'
 import { CalendarDays, Save, Trash2 } from 'lucide-vue-next'
 import { NPopover, NDatePicker } from 'naive-ui'
@@ -142,7 +141,6 @@ interface Props {
   task: Task
 }
 
-const { t } = useI18n()
 const props = defineProps<Props>()
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]

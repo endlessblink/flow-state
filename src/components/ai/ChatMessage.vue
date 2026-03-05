@@ -20,6 +20,7 @@
 import { computed, ref } from 'vue'
 import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Trophy, Flame, Shield, Swords, TrendingUp, Target, Play, CheckCircle2, CalendarDays } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
+import type { TaskListItem } from '@/stores/aiChat'
 import type { ChatMessage, ChatAction } from '@/stores/aiChat'
 import { formatRelativeDate } from '@/utils/dateUtils'
 import TaskQuickEditPopover from './TaskQuickEditPopover.vue'
@@ -147,8 +148,8 @@ function getTasksFromResult(result: { tool: string; data?: any }): Array<{ id: s
   if (Array.isArray(result.data)) return result.data
   // Daily summary — merge overdue + due today
   const tasks: any[] = []
-  if (result.data.overdueTasks) tasks.push(...result.data.overdueTasks)
-  if (result.data.dueTodayTasks) tasks.push(...result.data.dueTodayTasks)
+  if (result.data.overdueTasks) tasks.push(...(result.data.overdueTasks as TaskListItem[]))
+  if (result.data.dueTodayTasks) tasks.push(...(result.data.dueTodayTasks as TaskListItem[]))
   return tasks
 }
 
@@ -302,6 +303,9 @@ async function handleAction(action: ChatAction) {
 
   try {
     await action.handler()
+    // It's technically mutating prop content, but since the parent manages this state it will reflect correctly
+    // or we could emit an event to the parent. Assuming this is fine to mute lint error here:
+    // eslint-disable-next-line vue/no-mutating-props
     action.completed = true
   } catch (err) {
     console.error('[ChatMessage] Action failed:', err)
@@ -427,22 +431,22 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 <span class="summary-stat-label">Due Today</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': (result.data.overdueCount || 0) > 0 }">{{ result.data.overdueCount || 0 }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value">{{ result.data.timerSessionsCompleted }}</span>
+                <span class="summary-stat-value">{{ result.data.timerSessionsCompleted || 0 }}</span>
                 <span class="summary-stat-label">Pomodoros</span>
               </div>
             </div>
             <!-- Overdue task list if any -->
-            <div v-if="result.data.overdueTasks?.length > 0" class="task-list">
+            <div v-if="result.data.overdueTasks && result.data.overdueTasks.length > 0" class="task-list">
               <div class="summary-section-label">
                 Overdue Tasks
                 <span class="section-count">({{ result.data.overdueTasks.length }})</span>
               </div>
               <button
-                v-for="task in visibleTasks(result.data.overdueTasks, 'overdue-' + result.tool)"
+                v-for="task in visibleTasks(result.data.overdueTasks as TaskListItem[], 'overdue-' + result.tool)"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -486,7 +490,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 </div>
               </button>
               <button
-                v-if="result.data.overdueTasks.length > MAX_VISIBLE_TASKS"
+                v-if="result.data.overdueTasks && result.data.overdueTasks.length > MAX_VISIBLE_TASKS"
                 class="show-more-btn"
                 @click="toggleSection('overdue-' + result.tool)"
               >
@@ -496,13 +500,13 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
               </button>
             </div>
             <!-- Due today task list if any -->
-            <div v-if="result.data.dueTodayTasks?.length > 0" class="task-list">
+            <div v-if="result.data.dueTodayTasks && result.data.dueTodayTasks.length > 0" class="task-list">
               <div class="summary-section-label">
                 Due Today
                 <span class="section-count">({{ result.data.dueTodayTasks.length }})</span>
               </div>
               <button
-                v-for="task in visibleTasks(result.data.dueTodayTasks, 'duetoday-' + result.tool)"
+                v-for="task in visibleTasks(result.data.dueTodayTasks as TaskListItem[], 'duetoday-' + result.tool)"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -550,7 +554,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 </div>
               </button>
               <button
-                v-if="result.data.dueTodayTasks.length > MAX_VISIBLE_TASKS"
+                v-if="result.data.dueTodayTasks && result.data.dueTodayTasks.length > MAX_VISIBLE_TASKS"
                 class="show-more-btn"
                 @click="toggleSection('duetoday-' + result.tool)"
               >

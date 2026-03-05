@@ -12,10 +12,10 @@
     @keydown="handleEscapeKey"
   >
     <div
-      ref="modalRef"
-      class="modal-container"
-      :class="[`size-${size}`, `variant-${variant}`, { 'modal-closing': isClosing }]"
-      @click.stop
+        ref="modalRef"
+        class="modal-container"
+        :class="[`size-${size}`, `variant-${variant}`, { 'modal-closing': isClosing }]"
+        @click.stop
     >
       <!-- Modal Header -->
       <header v-if="showHeader" class="modal-header">

@@ -109,6 +109,13 @@ jobs:
       # Fingerprinted assets (index-abc123.js) auto-invalidate via hash change
       - name: Purge Cloudflare Cache
         run: |
+            SITE_URL="${{ vars.SITE_URL }}"
+            if [ -z "$SITE_URL" ]; then
+              echo "⚠ SITE_URL variable is not set — skipping Cloudflare cache purge"
+              echo "Set it via: gh variable set SITE_URL --body 'https://your-domain.com'"
+              exit 0
+            fi
+
             echo "Purging Cloudflare cache for index.html, sw.js, and manifest..."
 
             # BUG-1089: Must purge sw.js to prevent stale ServiceWorker serving old asset hashes
@@ -116,7 +123,7 @@ jobs:
               "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
               -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
               -H "Content-Type: application/json" \
-              --data "{\"files\":[\"${{ vars.SITE_URL }}/\",\"${{ vars.SITE_URL }}/index.html\",\"${{ vars.SITE_URL }}/sw.js\",\"${{ vars.SITE_URL }}/manifest.webmanifest\"]}")
+              --data "{\"files\":[\"${SITE_URL}/\",\"${SITE_URL}/index.html\",\"${SITE_URL}/sw.js\",\"${SITE_URL}/manifest.webmanifest\"]}")
 
             # Check if purge succeeded
             SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
@@ -130,7 +137,7 @@ jobs:
 
             # Verify cache was purged (should get MISS or DYNAMIC)
             echo "Verifying cache status..."
-            CF_STATUS=$(curl -sI "${{ vars.SITE_URL }}/" | grep -i "cf-cache-status" | tr -d '\r')
+            CF_STATUS=$(curl -sI "${SITE_URL}/" | grep -i "cf-cache-status" | tr -d '\r')
             echo "  $CF_STATUS"
 
       # Validate CORS configuration after deployment

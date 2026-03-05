@@ -33,7 +33,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'select-task': [taskId: string]
+  selectTask: [taskId: string]
 }>()
 
 // ============================================================================
@@ -117,14 +117,13 @@ const toolResults = computed(() => {
 /**
  * Check if a tool result contains a task list that should be rendered as clickable items.
  */
-const TASK_LIST_TOOLS = ['get_overdue_tasks', 'list_tasks', 'search_tasks', 'get_daily_summary']
 
 function isTaskListResult(result: { tool: string; data?: any }): boolean {
   if (!result.data) return false
   // Direct array of tasks
   if (Array.isArray(result.data) && result.data.length > 0 && result.data[0]?.title) return true
   // Daily summary with nested task arrays
-  if (result.data.dueTodayTasks?.length > 0 || result.data.overdueTasks?.length > 0) return true
+  if ((result.data.dueTodayTasks && result.data.dueTodayTasks.length > 0) || (result.data.overdueTasks && result.data.overdueTasks.length > 0)) return true
   return false
 }
 
@@ -134,8 +133,8 @@ function getTasksFromResult(result: { tool: string; data?: any }): Array<{ id: s
   if (Array.isArray(result.data)) return result.data
   // Daily summary — merge overdue + due today
   const tasks: any[] = []
-  if (result.data.overdueTasks) tasks.push(...result.data.overdueTasks)
-  if (result.data.dueTodayTasks) tasks.push(...result.data.dueTodayTasks)
+  if (result.data.overdueTasks && Array.isArray(result.data.overdueTasks)) tasks.push(...(result.data.overdueTasks as any[]))
+  if (result.data.dueTodayTasks && Array.isArray(result.data.dueTodayTasks)) tasks.push(...(result.data.dueTodayTasks as any[]))
   return tasks
 }
 
@@ -149,8 +148,6 @@ function isDailySummaryResult(result: { tool: string; data?: any }): boolean {
 /**
  * Gamification & productivity tool result detection helpers
  */
-const GAMIFICATION_TOOLS = ['get_gamification_status', 'get_active_challenges', 'get_achievements_near_completion']
-const PRODUCTIVITY_TOOLS = ['get_productivity_stats', 'suggest_next_task', 'get_weekly_summary']
 
 function isGamificationStatusResult(result: { tool: string; data?: any }): boolean {
   return result.tool === 'get_gamification_status' && result.data && typeof result.data.level === 'number'
@@ -236,7 +233,7 @@ function closeQuickEdit() {
 
 function openFullEditor() {
   if (quickEditTask.value) {
-    emit('select-task', quickEditTask.value.id)
+    emit('selectTask', quickEditTask.value.id)
   }
   closeQuickEdit()
 }
@@ -322,7 +319,7 @@ function toolIcon(type?: string) {
 
       <!-- Tool Results -->
       <div v-if="toolResults.length > 0 && !isStreaming" class="tool-results">
-        <template v-for="(result, idx) in toolResults" :key="idx">
+        <template v-for="(result, resultIdx) in toolResults" :key="resultIdx">
           <!-- Daily summary stats card -->
           <div v-if="isDailySummaryResult(result)" class="tool-result-card">
             <div class="tool-result-header tool-read">
@@ -356,7 +353,7 @@ function toolIcon(type?: string) {
               </div>
             </div>
             <!-- Overdue task list if any -->
-            <div v-if="result.data.overdueTasks?.length > 0" class="task-list">
+            <div v-if="result.data.overdueTasks && result.data.overdueTasks.length > 0" class="task-list">
               <div class="summary-section-label">Overdue Tasks</div>
               <button
                 v-for="task in result.data.overdueTasks"
@@ -375,7 +372,7 @@ function toolIcon(type?: string) {
               </button>
             </div>
             <!-- Due today task list if any -->
-            <div v-if="result.data.dueTodayTasks?.length > 0" class="task-list">
+            <div v-if="result.data.dueTodayTasks && result.data.dueTodayTasks.length > 0" class="task-list">
               <div class="summary-section-label">Due Today</div>
               <button
                 v-for="task in result.data.dueTodayTasks"

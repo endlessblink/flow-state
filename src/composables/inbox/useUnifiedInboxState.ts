@@ -210,8 +210,26 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         return task.instances.some(inst => inst.scheduledDate)
     }
 
+    // TASK-1451: Recently created tasks bypass filters so they're visible immediately
+    const recentlyCreatedTaskIds = ref<Set<string>>(new Set())
+
+    const registerNewTask = (taskId: string) => {
+        recentlyCreatedTaskIds.value = new Set([...recentlyCreatedTaskIds.value, taskId])
+        setTimeout(() => {
+            const next = new Set(recentlyCreatedTaskIds.value)
+            next.delete(taskId)
+            recentlyCreatedTaskIds.value = next
+        }, 5000)
+    }
+
     // Final Inbox Tasks (Apply all local filters)
     const inboxTasks = computed(() => {
+        // Pull out recently created tasks before filtering
+        const recentIds = recentlyCreatedTaskIds.value
+        const recentTasks = recentIds.size > 0
+            ? baseInboxTasks.value.filter(t => recentIds.has(t.id))
+            : []
+
         let tasks = baseInboxTasks.value
 
         // 1. Canvas Group Filter (Multi-select)
@@ -272,6 +290,16 @@ export function useUnifiedInboxState(props: InboxContextProps) {
                 const descMatch = task.description?.toLowerCase().includes(query)
                 return titleMatch || descMatch
             })
+        }
+
+        // TASK-1451: Merge back recently created tasks that were filtered out
+        if (recentTasks.length > 0) {
+            const existingIds = new Set(tasks.map(t => t.id))
+            for (const t of recentTasks) {
+                if (!existingIds.has(t.id)) {
+                    tasks = [...tasks, t]
+                }
+            }
         }
 
         // TASK-1073 / TASK-1412: Apply sorting with direction support
@@ -428,6 +456,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
         // Actions (State Mutators)
         toggleHideDoneTasks,
-        clearAllFilters
+        clearAllFilters,
+        registerNewTask
     }
 }

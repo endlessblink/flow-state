@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
@@ -16,7 +16,9 @@ import type { CanvasSection } from '@/stores/canvas/types'
 
 export function useUnifiedInboxActions(
     inboxTasks: { value: Task[] },
-    context: string
+    context: string,
+    activeTimeFilter?: Ref<string>,
+    registerNewTask?: (taskId: string) => void
 ) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
@@ -42,11 +44,23 @@ export function useUnifiedInboxActions(
 
     // --- Task Operations ---
 
-    const addTask = (title: string, options?: { priority?: string; dueDate?: Date; description?: string }) => {
+    // TASK-1451: Compute dueDate from local time filter (e.g. inbox "Today" button)
+    const localTimeFilterDefaults = computed(() => {
+        const defaults: Partial<Task> = {}
+        const tf = activeTimeFilter?.value
+        if (tf === 'today' || tf === 'next3days' || tf === 'week') {
+            const d = new Date()
+            defaults.dueDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        }
+        return defaults
+    })
+
+    const addTask = async (title: string, options?: { priority?: string; dueDate?: Date; description?: string }) => {
         if (!title.trim()) return
 
-        createTaskWithUndo({
+        const newTask = await createTaskWithUndo({
             ...filterDefaults.value,
+            ...localTimeFilterDefaults.value,
             title: title.trim(),
             status: 'todo',
             isInInbox: true,
@@ -54,6 +68,11 @@ export function useUnifiedInboxActions(
             ...(options?.dueDate && { dueDate: `${options.dueDate.getFullYear()}-${String(options.dueDate.getMonth() + 1).padStart(2, '0')}-${String(options.dueDate.getDate()).padStart(2, '0')}` }),
             ...(options?.description && { description: options.description })
         })
+
+        // TASK-1451: Register so the task bypasses filters for a few seconds
+        if (newTask?.id && registerNewTask) {
+            registerNewTask(newTask.id)
+        }
     }
 
     const deleteSelectedTasks = () => {

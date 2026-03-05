@@ -180,7 +180,8 @@ const {
   monthCount,
   doneTaskCount,
   toggleHideDoneTasks,
-  clearAllFilters
+  clearAllFilters,
+  registerNewTask
 } = useUnifiedInboxState(props)
 
 // Action Logic
@@ -197,7 +198,7 @@ const {
   onDragEnd,
   sendTaskToCanvas,
   sendSelectedToCanvas
-} = useUnifiedInboxActions(inboxTasks, props.context)
+} = useUnifiedInboxActions(inboxTasks, props.context, activeTimeFilter, registerNewTask)
 
 // TASK-1362: Drop target for dragging calendar events back to inbox
 const isCalendarDropTarget = ref(false)

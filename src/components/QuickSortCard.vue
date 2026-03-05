@@ -24,27 +24,27 @@
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'low' }"
-            @click="updatePriority('low')"
             aria-label="Set priority to Low"
             title="Set priority to Low"
+            @click="updatePriority('low')"
           >
             Low
           </button>
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'medium' }"
-            @click="updatePriority('medium')"
             aria-label="Set priority to Medium"
             title="Set priority to Medium"
+            @click="updatePriority('medium')"
           >
             Med
           </button>
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'high' }"
-            @click="updatePriority('high')"
             aria-label="Set priority to High"
             title="Set priority to High"
+            @click="updatePriority('high')"
           >
             High
           </button>
@@ -54,36 +54,36 @@
           <button
             class="quick-date-btn"
             :class="{ active: isToday }"
-            @click.stop="setToday"
             aria-label="Set due date to Today"
             title="Set due date to Today"
+            @click.stop="setToday"
           >
             ☀️ Today
           </button>
           <button
             class="quick-date-btn"
             :class="{ active: isTomorrow }"
-            @click.stop="setTomorrow"
             aria-label="Set due date to Tomorrow"
             title="Set due date to Tomorrow"
+            @click.stop="setTomorrow"
           >
             🌅 +1
           </button>
           <button
             class="quick-date-btn"
             :class="{ active: isNextWeek }"
-            @click.stop="setNextWeek"
             aria-label="Set due date to Next Week"
             title="Set due date to Next Week"
+            @click.stop="setNextWeek"
           >
             📆 +7
           </button>
           <button
             class="quick-date-btn clear-btn"
             :class="{ active: hasNoDate }"
-            @click.stop="clearDate"
             aria-label="Clear due date"
             title="Clear due date"
+            @click.stop="clearDate"
           >
             Clear
           </button>
@@ -110,6 +110,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]
 }>()

@@ -259,6 +259,7 @@ async function handleAction(action: ChatAction) {
 
   try {
     await action.handler()
+    // eslint-disable-next-line vue/no-mutating-props
     action.completed = true
   } catch (err) {
     console.error('[ChatMessage] Action failed:', err)
@@ -383,7 +384,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 <span class="summary-stat-label">Due Today</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': (result.data?.overdueCount || 0) > 0 }">{{ result.data?.overdueCount || 0 }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">
@@ -392,10 +393,10 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
               </div>
             </div>
             <!-- Overdue task list if any -->
-            <div v-if="result.data.overdueTasks?.length > 0" class="task-list">
+            <div v-if="result.data?.overdueTasks?.length > 0" class="task-list">
               <div class="summary-section-label">Overdue Tasks</div>
               <button
-                v-for="task in result.data.overdueTasks"
+                v-for="task in result.data?.overdueTasks || []"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -440,10 +441,10 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
               </button>
             </div>
             <!-- Due today task list if any -->
-            <div v-if="result.data.dueTodayTasks?.length > 0" class="task-list">
+            <div v-if="result.data?.dueTodayTasks?.length > 0" class="task-list">
               <div class="summary-section-label">Due Today</div>
               <button
-                v-for="task in result.data.dueTodayTasks"
+                v-for="task in result.data?.dueTodayTasks || []"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -645,7 +646,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 <span class="summary-stat-label">Total Tasks</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': (result.data?.overdueCount || 0) > 0 }">{{ result.data?.overdueCount || 0 }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">

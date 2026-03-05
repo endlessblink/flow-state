@@ -19,7 +19,7 @@ export interface PinnedTask {
 export interface QuickTaskItem {
     /** Unique key for rendering (pinned: pin ID, frequent: task ID) */
     key: string
-    type: 'pinned' | 'frequent'
+    type: 'pinned' | 'frequent' | 'search'
     title: string
     /** For pinned: the pin ID. For frequent: the task ID */
     sourceId: string

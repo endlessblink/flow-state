@@ -18,19 +18,20 @@
           tabindex="-1"
           @keydown="handleKeydown"
         >
-          <!-- Quick Add Input (authenticated only) -->
+          <!-- Search / Pin Input (authenticated only) -->
           <div v-if="authStore.isAuthenticated" class="quick-add-row">
+            <Search :size="14" class="search-icon" />
             <input
               ref="inputRef"
               v-model="newTaskTitle"
               class="quick-add-input"
-              placeholder="Pin a new quick task..."
+              placeholder="Search or pin a task..."
               dir="auto"
-              @keydown.enter.stop="addQuickPin"
+              @keydown.enter.stop="handleInputEnter"
               @keydown.esc.stop="isOpen = false"
             >
             <button
-              v-if="newTaskTitle.trim()"
+              v-if="newTaskTitle.trim() && !isSearching"
               class="quick-add-btn"
               title="Add pin"
               @click="addQuickPin"
@@ -43,10 +44,71 @@
             <span>Sign in to use Quick Tasks</span>
           </div>
 
-          <div v-if="pinnedItems.length > 0 || frequentItems.length > 0" class="section-divider" />
+          <!-- Search Results -->
+          <template v-if="isSearching && searchResults.length > 0">
+            <div class="section-divider" />
+            <div class="section-header">
+              <Search :size="11" class="section-icon" />
+              <span>Tasks</span>
+            </div>
+            <div
+              v-for="(item, index) in searchResults"
+              :key="item.key"
+              class="quick-item"
+              :class="{ 'quick-item--focused': focusedIndex === index }"
+              @click="handleSearchSelect(item)"
+              @mouseenter="focusedIndex = index"
+            >
+              <span
+                v-if="item.projectColor"
+                class="project-dot"
+                :style="{ backgroundColor: item.projectColor }"
+              />
+              <span class="quick-item-title" dir="auto">{{ item.title }}</span>
+              <button
+                class="quick-item-action"
+                title="Pin this task"
+                @click.stop="handlePinFromSearch(item)"
+              >
+                <Pin :size="12" />
+              </button>
+              <button
+                class="quick-item-play"
+                title="Start Timer"
+                @click.stop="handleSearchSelect(item)"
+              >
+                <Play :size="12" />
+              </button>
+            </div>
+            <!-- Pin as new option at bottom of search -->
+            <div
+              class="quick-item quick-item--create"
+              :class="{ 'quick-item--focused': focusedIndex === searchResults.length }"
+              @click="addQuickPin"
+              @mouseenter="focusedIndex = searchResults.length"
+            >
+              <Plus :size="14" class="create-icon" />
+              <span class="quick-item-title" dir="auto">Pin "{{ newTaskTitle.trim() }}"</span>
+            </div>
+          </template>
 
-          <!-- Pinned Section -->
-          <template v-if="pinnedItems.length > 0">
+          <!-- Search: no results -->
+          <template v-else-if="isSearching && searchResults.length === 0">
+            <div class="section-divider" />
+            <div
+              class="quick-item quick-item--create"
+              :class="{ 'quick-item--focused': focusedIndex === 0 }"
+              @click="addQuickPin"
+              @mouseenter="focusedIndex = 0"
+            >
+              <Plus :size="14" class="create-icon" />
+              <span class="quick-item-title" dir="auto">Pin "{{ newTaskTitle.trim() }}"</span>
+            </div>
+          </template>
+
+          <!-- Pinned Section (when not searching) -->
+          <template v-if="!isSearching && pinnedItems.length > 0">
+            <div v-if="authStore.isAuthenticated" class="section-divider" />
             <div class="section-header">
               <Pin :size="11" class="section-icon" />
               <span>Pinned</span>
@@ -82,8 +144,8 @@
             </div>
           </template>
 
-          <!-- Frequent Section -->
-          <template v-if="frequentItems.length > 0">
+          <!-- Frequent Section (when not searching) -->
+          <template v-if="!isSearching && frequentItems.length > 0">
             <div v-if="pinnedItems.length > 0" class="section-divider" />
             <div class="section-header">
               <TrendingUp :size="11" class="section-icon" />
@@ -123,8 +185,8 @@
           </template>
 
           <!-- Empty State (authenticated, no items, no input) -->
-          <div v-if="authStore.isAuthenticated && pinnedItems.length === 0 && frequentItems.length === 0 && !newTaskTitle.trim()" class="empty-state">
-            <span>Type above to pin your common tasks</span>
+          <div v-if="authStore.isAuthenticated && !isSearching && pinnedItems.length === 0 && frequentItems.length === 0" class="empty-state">
+            <span>Search tasks or type to pin</span>
           </div>
         </div>
       </Transition>
@@ -143,13 +205,17 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue'
-import { Zap, Pin, Play, X, TrendingUp, Plus } from 'lucide-vue-next'
+import { Zap, Pin, Play, X, TrendingUp, Plus, Search } from 'lucide-vue-next'
 import { useQuickTasks } from '@/composables/useQuickTasks'
 import { useAuthStore } from '@/stores/auth'
+import { useTaskStore } from '@/stores/tasks'
+import { useProjectStore } from '@/stores/projects'
 import type { QuickTaskItem } from '@/types/quickTasks'
 
-const { quickTaskItems, unpinTask, pinTask, selectAndStartTimer, loadPinnedTasks } = useQuickTasks()
+const { quickTaskItems, unpinTask, pinTask, pinFromTask, selectAndStartTimer, loadPinnedTasks } = useQuickTasks()
 const authStore = useAuthStore()
+const taskStore = useTaskStore()
+const projectStore = useProjectStore()
 
 const isOpen = ref(false)
 const focusedIndex = ref(-1)
@@ -160,7 +226,52 @@ const inputRef = ref<HTMLInputElement | null>(null)
 
 const pinnedItems = computed(() => quickTaskItems.value.filter(i => i.type === 'pinned'))
 const frequentItems = computed(() => quickTaskItems.value.filter(i => i.type === 'frequent'))
-const allItems = computed(() => [...pinnedItems.value, ...frequentItems.value])
+
+// Search results: active tasks matching the input query
+const searchQuery = computed(() => newTaskTitle.value.trim().toLowerCase())
+const searchResults = computed(() => {
+    if (!searchQuery.value || searchQuery.value.length < 2) return []
+
+    const pinnedTitles = new Set(pinnedItems.value.map(p => p.title.toLowerCase()))
+    const frequentIds = new Set(frequentItems.value.map(f => f.sourceId))
+
+    return taskStore.tasks
+        .filter(t =>
+            t.status !== 'done' &&
+            !t._soft_deleted &&
+            t.title.toLowerCase().includes(searchQuery.value) &&
+            !pinnedTitles.has(t.title.toLowerCase()) &&
+            !frequentIds.has(t.id)
+        )
+        .slice(0, 8)
+        .map(t => {
+            const project = t.projectId && t.projectId !== 'uncategorized'
+                ? projectStore.getProjectById(t.projectId)
+                : null
+            const projectColor = project?.color
+                ? (Array.isArray(project.color) ? project.color[0] : project.color)
+                : null
+            return {
+                key: `search-${t.id}`,
+                type: 'search' as const,
+                title: t.title,
+                sourceId: t.id,
+                projectId: t.projectId === 'uncategorized' ? null : t.projectId,
+                projectName: project?.name || null,
+                projectColor,
+                priority: t.priority,
+                frequency: 0,
+                isPinned: false
+            } satisfies QuickTaskItem
+        })
+})
+
+const isSearching = computed(() => searchQuery.value.length >= 2)
+
+const allItems = computed(() => {
+    if (isSearching.value) return searchResults.value
+    return [...pinnedItems.value, ...frequentItems.value]
+})
 
 const dropdownPosition = computed(() => {
     if (!wrapperRef.value) return {}
@@ -193,8 +304,23 @@ const addQuickPin = async () => {
     if (!title) return
     await pinTask(title)
     newTaskTitle.value = ''
-    // Keep dropdown open so user can add more
     nextTick(() => inputRef.value?.focus())
+}
+
+const handleInputEnter = () => {
+    if (isSearching.value) {
+        // If searching and there are results, select first (or focused)
+        const idx = focusedIndex.value >= 0 ? focusedIndex.value : 0
+        const items = allItems.value
+        if (idx < items.length) {
+            handleSearchSelect(items[idx] as QuickTaskItem)
+        } else {
+            // "Pin as new" option
+            addQuickPin()
+        }
+    } else {
+        addQuickPin()
+    }
 }
 
 const handleSelect = async (item: QuickTaskItem) => {
@@ -202,46 +328,72 @@ const handleSelect = async (item: QuickTaskItem) => {
     await selectAndStartTimer(item)
 }
 
+const handleSearchSelect = async (item: QuickTaskItem) => {
+    isOpen.value = false
+    const timerStore = (await import('@/stores/timer')).useTimerStore()
+    await timerStore.startTimer(item.sourceId)
+}
+
+const handlePinFromSearch = async (item: QuickTaskItem) => {
+    const task = taskStore.tasks.find(t => t.id === item.sourceId)
+    if (task) {
+        await pinFromTask(task)
+        newTaskTitle.value = ''
+        nextTick(() => inputRef.value?.focus())
+    }
+}
+
 const handleUnpin = async (pinId: string) => {
     await unpinTask(pinId)
 }
 
 const handlePin = async (item: QuickTaskItem) => {
-    const { useTaskStore } = await import('@/stores/tasks')
-    const taskStore = useTaskStore()
     const task = taskStore.tasks.find(t => t.id === item.sourceId)
     if (task) {
-        const { pinFromTask } = useQuickTasks()
         await pinFromTask(task)
     }
 }
 
 const handleKeydown = (e: KeyboardEvent) => {
-    // Don't intercept arrows/enter when input is focused
+    if (e.key === 'Escape') {
+        e.preventDefault()
+        isOpen.value = false
+        return
+    }
+
+    // Allow arrow navigation even when input focused (for search results)
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const total = isSearching.value
+            ? searchResults.value.length + 1 // +1 for "Pin as new" option
+            : allItems.value.length
+        if (total === 0) return
+
+        e.preventDefault()
+        if (e.key === 'ArrowDown') {
+            focusedIndex.value = (focusedIndex.value + 1) % total
+        } else {
+            focusedIndex.value = (focusedIndex.value - 1 + total) % total
+        }
+        // Blur input so Enter triggers selection
+        if (focusedIndex.value >= 0) inputRef.value?.blur()
+        return
+    }
+
+    // Don't intercept other keys when input is focused
     if (document.activeElement === inputRef.value) return
 
-    const total = allItems.value.length
-    if (total === 0) return
-
-    switch (e.key) {
-        case 'ArrowDown':
-            e.preventDefault()
-            focusedIndex.value = (focusedIndex.value + 1) % total
-            break
-        case 'ArrowUp':
-            e.preventDefault()
-            focusedIndex.value = (focusedIndex.value - 1 + total) % total
-            break
-        case 'Enter':
-            e.preventDefault()
-            if (focusedIndex.value >= 0 && focusedIndex.value < total) {
+    if (e.key === 'Enter') {
+        e.preventDefault()
+        const total = allItems.value.length
+        if (focusedIndex.value >= 0 && focusedIndex.value < total) {
+            if (isSearching.value) {
+                handleSearchSelect(allItems.value[focusedIndex.value])
+            } else {
                 handleSelect(allItems.value[focusedIndex.value])
             }
-            break
-        case 'Escape':
-            e.preventDefault()
-            isOpen.value = false
-            break
+        } else if (isSearching.value) {
+            addQuickPin()
+        }
     }
 }
 
@@ -253,6 +405,11 @@ watch(isOpen, (open) => {
         focusedIndex.value = -1
         newTaskTitle.value = ''
     }
+})
+
+// Reset focus when search query changes
+watch(newTaskTitle, () => {
+    focusedIndex.value = -1
 })
 </script>
 
@@ -302,12 +459,18 @@ watch(isOpen, (open) => {
     outline: none;
 }
 
-/* Quick Add Input */
+/* Quick Add / Search Input */
 .quick-add-row {
     display: flex;
     align-items: center;
     gap: var(--space-1);
     padding: var(--space-1_5) var(--space-3);
+}
+
+.search-icon {
+    color: var(--text-muted);
+    opacity: 0.5;
+    flex-shrink: 0;
 }
 
 .quick-add-input {
@@ -453,6 +616,20 @@ watch(isOpen, (open) => {
 .quick-item-play:hover {
     background: var(--state-hover-bg);
     color: var(--color-work);
+}
+
+.quick-item--create {
+    opacity: 0.7;
+}
+
+.quick-item--create:hover,
+.quick-item--create.quick-item--focused {
+    opacity: 1;
+}
+
+.create-icon {
+    color: var(--text-muted);
+    flex-shrink: 0;
 }
 
 .empty-state {

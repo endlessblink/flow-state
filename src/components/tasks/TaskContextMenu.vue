@@ -503,7 +503,9 @@ const handleMoveToGroup = async (groupId: string | null) => {
 }
 
 // Handle MoreSubmenu nested Canvas Group submenu positioning
+// TASK-1445: Close sibling nested submenu (Duration) to prevent overlap
 const handleMoreCanvasGroup = (event: MouseEvent) => {
+  showDurationSubmenu.value = false
   const target = event.currentTarget as HTMLElement
   const triggerRect = target.getBoundingClientRect()
   const submenuWidth = 200
@@ -520,7 +522,9 @@ const handleMoreCanvasGroup = (event: MouseEvent) => {
 }
 
 // Handle MoreSubmenu nested Duration submenu positioning
+// TASK-1445: Close sibling nested submenu (Canvas Group) to prevent overlap
 const handleMoreDuration = (event: MouseEvent) => {
+  showCanvasGroupSubmenu.value = false
   const target = event.currentTarget as HTMLElement
   const triggerRect = target.getBoundingClientRect()
   const submenuWidth = 150

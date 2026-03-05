@@ -2967,9 +2967,10 @@ PlasmoidItem {
     }
 
     // Task list periodic refresh (sync with changes from Vue app)
+    // BUG-1451: Faster polling (10s) when timer active for responsive done/delete sync
     Timer {
         id: taskListRefreshTimer
-        interval: 30000  // 30 seconds
+        interval: root.hasActiveSession ? 10000 : 30000
         running: root.isAuthenticated
         repeat: true
         onTriggered: root.fetchTasks()
@@ -3891,9 +3892,12 @@ PlasmoidItem {
         if (root.taskFilter === "all") {
             url += "&status=neq.done"
         } else if (root.taskFilter === "todo") {
-            url += "&status=eq.todo"
+            // BUG-1451: DB stores 'planned' not 'todo' (toDbStatus mapping)
+            url += "&status=eq.planned"
         } else if (root.taskFilter === "in_progress") {
-            url += "&status=eq.in_progress"
+            // BUG-1451: DB stores 'planned' for in_progress too (toDbStatus fallback)
+            // This filter effectively shows same as "todo" until DB migration adds 'in_progress'
+            url += "&status=eq.planned"
         } else if (root.taskFilter === "on_canvas") {
             url += "&status=neq.done"
             url += "&position=not.is.null"

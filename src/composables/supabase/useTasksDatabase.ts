@@ -120,7 +120,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         if (tasks.length === 0) return
         const userId = getUserIdSafe()
         if (!userId) {
-            console.debug('⏭️ [GUEST] Skipping saveTasks - not authenticated')
+            console.warn('[BUG-1451] saveTasks SKIPPED — not authenticated! Task changes will NOT reach Supabase.')
             return
         }
         try {
@@ -168,6 +168,10 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             }
 
             await withRetry(() => attemptUpsert(payload), 'saveTasks')
+
+            if (import.meta.env.DEV) {
+                console.log(`[BUG-1451] saveTasks SUCCESS: ${payload.map(t => `${t.id?.slice(0, 8)}:${t.status}`).join(', ')}`)
+            }
 
             // TASK-1083: Invalidate cache after successful write to prevent stale reads
             invalidateCache.tasks()

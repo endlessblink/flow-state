@@ -704,6 +704,9 @@ export function useTaskOperations(
             try {
                 await saveSpecificTasks([updatedTask], `updateTask-direct-${taskId}`)
                 persisted = true
+                if (import.meta.env.DEV && syncedUpdates.status) {
+                    console.log(`[BUG-1451] updateTask: ${taskId.slice(0, 8)} status→${syncedUpdates.status} PERSISTED to Supabase`)
+                }
             } catch (directSaveError) {
                 // Direct save failed - sync queue will retry. Don't throw, change is queued.
                 console.warn(`[TASK] Direct save failed for ${taskId}, sync queue will retry:`, directSaveError)
@@ -781,6 +784,9 @@ export function useTaskOperations(
 
             // Also attempt direct delete for immediate sync when online
             await deleteTaskFromStorage(taskId)
+            if (import.meta.env.DEV) {
+                console.log(`[BUG-1451] deleteTask: ${taskId.slice(0, 8)} soft-deleted in Supabase`)
+            }
         } catch (bgError) {
             // TASK-1159: Background delete failed — task is already removed from UI.
             // Sync queue will retry. Show warning toast so user knows.

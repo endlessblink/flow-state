@@ -8,6 +8,16 @@
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1449~~: KDE widget notification barrage + popup dismiss + nanny task selection (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-05)
+
+**Problems**: Six KDE widget bugs — pre-end warning & overlay card inner MouseArea absorbed clicks instead of dismissing; session completion triggered multiple notifications (barrage) when concurrent `checkSessionCompletion()` XHR calls each fired `onSessionComplete()`; nanny popup task click passed pinned_tasks table ID instead of real task ID; nanny popup too narrow (buttons clipped); overlay card too short (dismiss text clipped); Start Work button used solid fill.
+
+**Fixes**: Dismiss on card click; dual barrage guard (`checkingCompletion` + `sessionJustCompleted`); nanny uses `selectPinnedTask()`; popup 500x380; overlay card height 400; glass morphism button.
+
+---
+
 ### BUG-1432: Overdue tasks display today's date instead of actual due date (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-03)
@@ -3949,11 +3959,14 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1442**~~ | **P1** | ✅ **timer_sessions.position_version column does not exist — DB schema mismatch** (✅ DONE 2026-03-04 — code already guards correctly, no path queries this column) |
 | ~~**TASK-1443**~~ | **P2** | ✅ **Calendar Delete key shows confirmation dialog before unscheduling event (instead of silent action)** (✅ DONE 2026-03-04) |
 | ~~**TASK-1448**~~ | **P2** | ✅ **KDE Widget quick-add due date dropdown — default "Today" so tasks appear in today views** (✅ DONE 2026-03-05) |
+| **TASK-1450** | **P2** | 🔄 **Integrate Quick Sort sessions into offline sync queue for full PWA offline support** (🔄 IN PROGRESS 2026-03-05) |
+| **TASK-1451** | **P2** | 👀 **Auto-inherit filter context when creating tasks — useFilterDefaults composable** (👀 REVIEW 2026-03-05) |
 | **BUG-1447** | **P2** | 📋 **Pin task disappears on Enter + no common tasks shown in pin dropdown** (📋 PLANNED 2026-03-05) |
 | **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |
 | **TASK-1445** | **P2** | 📋 **Fix focus mode dropdown closing on hover + overlapping menus — UX research & redesign** (📋 PLANNED 2026-03-04) |
 | **TASK-1444** | **P1** | 🔄 **Tauri desktop app design parity — investigate and fix visual discrepancies vs web/Storybook** (🔄 IN PROGRESS 2026-03-04) |
 | **INQUIRY-1438** | **P0** | 🔄 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (🔄 IN PROGRESS 2026-03-03) |
+| ~~**BUG-1449**~~ | **P1** | ✅ **KDE widget notification barrage + popup dismiss + nanny task selection** (✅ DONE 2026-03-05) |
 | ~~**TASK-1434**~~ | **P0** | ✅ **Calendar drag-to-create — click and drag on time slots to create a new task** (✅ DONE 2026-03-03) |
 | ~~**TASK-1433**~~ | **P0** | ✅ **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (✅ DONE 2026-03-03) |
 | **BUG-1432** | **P1** | 🔄 **Overdue tasks display today's date instead of actual due date** (🔄 IN PROGRESS 2026-03-03) |

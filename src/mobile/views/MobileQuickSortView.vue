@@ -373,7 +373,7 @@
                 </span>
                 <span
                   class="project-indicator"
-                  :style="{ backgroundColor: project.color }"
+                  :style="{ backgroundColor: (project.color as string) || 'var(--border-subtle)' }"
                 >
                   {{ project.emoji || project.name.charAt(0) }}
                 </span>

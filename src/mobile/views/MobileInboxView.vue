@@ -369,7 +369,6 @@ const toggleVoiceMode = () => {
   } else if (hasWhisperApiKey.value) {
     voiceMode.value = 'whisper'
   }
-  triggerHaptic(10)
 }
 
 // Toggle voice language (only for browser mode)
@@ -378,7 +377,6 @@ const toggleVoiceLanguage = async () => {
   voiceLanguage.value = voiceLanguage.value === 'he-IL' ? 'en-US' : 'he-IL'
   console.log('[Voice] 🌐 Language switched:', oldLang, '→', voiceLanguage.value)
   await setLanguage(voiceLanguage.value)
-  triggerHaptic(10)
 }
 
 // Unified voice control functions

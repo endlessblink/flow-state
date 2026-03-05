@@ -259,7 +259,7 @@
 
 <script setup lang="ts">
 import { markRaw } from 'vue'
-import { VueFlow, type NodeMouseEvent, type NodeTypes } from '@vue-flow/core'
+import { VueFlow, type NodeMouseEvent } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -298,7 +298,7 @@ const modalsStore = useCanvasModalsStore()
 const contextMenuStore = useCanvasContextMenuStore()
 
 // Register custom node types
-const nodeTypes: NodeTypes = {
+const nodeTypes: any = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
 }

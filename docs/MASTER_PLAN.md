@@ -4399,15 +4399,15 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1156: Split useBackupSystem.ts (📋 PLANNED)
+### ~~TASK-1156~~: Split useBackupSystem.ts (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-05)
 
-**Problem**: File is 1411 lines, exceeding 500-line limit.
+**Problem**: File was 1412 lines, exceeding 500-line limit.
 
-**Solution**: Split into backup strategy composables.
+**Solution**: Split into 8 modular sub-composables under `src/composables/backup/` using Context + Factory pattern. Old import path preserved as re-export barrel. 22/22 tests pass.
 
-**Files**: `src/composables/useBackupSystem.ts`
+**Files**: `src/composables/backup/` (8 files), `src/composables/useBackupSystem.ts` (barrel)
 
 ---
 
@@ -4449,9 +4449,9 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1160: Add Virtualized Task Lists (📋 PLANNED)
+### ~~TASK-1160~~: Add Virtualized Task Lists (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-05)
 
 **Problem**: Rendering 500+ tasks causes performance issues.
 

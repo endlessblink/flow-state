@@ -51,6 +51,13 @@ export function useMoveToCanvasGroup() {
         const allGroups = canvasStore._rawGroups as CanvasGroup[]
         const inheritedProps = getSectionProperties(group, allGroups)
 
+        // BUG-1432: Don't override existing dueDate (prevents overdue tasks from losing their actual date)
+        // Mirrors the guard in useUnifiedInboxActions.ts:302-305
+        const existingTask = taskStore.tasks.find(t => t.id === taskId)
+        if (existingTask?.dueDate && inheritedProps.dueDate) {
+            delete inheritedProps.dueDate
+        }
+
         const updates: Partial<Task> = {
             parentId: groupId,
             canvasPosition: position,

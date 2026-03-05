@@ -206,7 +206,7 @@ export function sanitizeTask(task: unknown, options: {
     progress: typeof taskObj.progress === 'number' ? taskObj.progress : 0,
     completedPomodoros: typeof taskObj.completedPomodoros === 'number' ? taskObj.completedPomodoros : 0,
     subtasks: Array.isArray(taskObj.subtasks) ? taskObj.subtasks : [],
-    dueDate: typeof taskObj.dueDate === 'string' ? taskObj.dueDate : new Date().toISOString().split('T')[0],
+    dueDate: typeof taskObj.dueDate === 'string' ? taskObj.dueDate : '',
     projectId: typeof taskObj.projectId === 'string' ? taskObj.projectId : UNCATEGORIZED_PROJECT_ID,
     createdAt: parseDate(taskObj.createdAt) || new Date(),
     updatedAt: parseDate(taskObj.updatedAt) || new Date(),

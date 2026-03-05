@@ -1007,6 +1007,12 @@
   --z-popover: 1400;
   --z-toast: 1450;
   --z-tooltip: 1500;
+
+  /* Context menu layer hierarchy */
+  --z-context-menu: 9999;
+  --z-submenu: 10001;
+  --z-submenu-nested: 10002;
+  --z-submenu-popover: 10003;
 }
 
 /* ===== TAURI / WEBKITGTK TOKEN OVERRIDES ===== */

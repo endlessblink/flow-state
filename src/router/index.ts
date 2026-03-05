@@ -120,6 +120,18 @@ const router = createRouter({
       props: true,
       meta: { requiresAuth: false }
     },
+    {
+      path: '/morning',
+      name: 'morning',
+      component: () => import('@/views/MorningDashboardView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/today-flow',
+      name: 'today-flow',
+      component: () => import('@/views/TodayFlowView.vue'),
+      meta: { requiresAuth: false }
+    },
     // Only include debug routes in development
     ...(import.meta.env.DEV ? [
       {

@@ -161,26 +161,33 @@ if [[ -z "$APPIMAGE_FOR_MANIFEST" ]] || [[ ! -f "$APPIMAGE_SIG_FOR_MANIFEST" ]];
   exit 1
 fi
 
-MANIFEST_SIG=$(cat "$APPIMAGE_SIG_FOR_MANIFEST")
 MANIFEST_FILENAME=$(basename "$APPIMAGE_FOR_MANIFEST")
 MANIFEST_NOTES="${NOTES:-"FlowState v$LOCKED_VERSION"}"
 
+# Pass all values as environment variables to avoid shell quoting issues
+export MANIFEST_NOTES_EXPORT="$MANIFEST_NOTES"
+export MANIFEST_VERSION_EXPORT="$LOCKED_VERSION"
+export SIG_FILE="$APPIMAGE_SIG_FOR_MANIFEST"
+export ARTIFACT_NAME="$MANIFEST_FILENAME"
+export MANIFEST_PROJECT_DIR="$PROJECT_DIR"
+
 node -e "
+const fs = require('fs');
 const manifest = {
-  version: '$LOCKED_VERSION',
-  notes: $(node -e "process.stdout.write(JSON.stringify('$MANIFEST_NOTES'))"),
+  version: process.env.MANIFEST_VERSION_EXPORT,
+  notes: process.env.MANIFEST_NOTES_EXPORT,
   pub_date: new Date().toISOString(),
   platforms: {
     'linux-x86_64': {
-      signature: $(node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync('$APPIMAGE_SIG_FOR_MANIFEST', 'utf8').trim()))"),
-      url: '$SITE_URL/updates/$MANIFEST_FILENAME'
+      signature: fs.readFileSync(process.env.SIG_FILE, 'utf8').trim(),
+      url: process.env.SITE_URL + '/updates/' + process.env.ARTIFACT_NAME
     }
   }
 };
-require('fs').writeFileSync('$PROJECT_DIR/latest.json', JSON.stringify(manifest, null, 2) + '\n');
+fs.writeFileSync(process.env.MANIFEST_PROJECT_DIR + '/latest.json', JSON.stringify(manifest, null, 2) + '\n');
 console.log('  Version:   ' + manifest.version);
 console.log('  Platforms: ' + Object.keys(manifest.platforms).join(', '));
-console.log('  Artifact:  ' + '$MANIFEST_FILENAME');
+console.log('  Artifact:  ' + process.env.ARTIFACT_NAME);
 "
 
 # Verify manifest

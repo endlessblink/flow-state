@@ -76,6 +76,9 @@ PlasmoidItem {
     property string taskFilter: "all"
     property bool todayOnly: false
 
+    // ===== QUICK-ADD DUE DATE (TASK-1447) =====
+    property string quickAddDueDate: ""
+
     // ===== INLINE EDIT STATE (TASK-1429) =====
     property string editingTaskId: ""
     property bool isSavingEdit: false
@@ -119,6 +122,7 @@ PlasmoidItem {
 
     // Pre-end warning: reset each session to prevent repeat warnings
     property bool preEndWarningShown: false
+    property bool checkingCompletion: false
 
     // ===== SUPABASE CONFIG (hardcoded for PomoFlow) =====
     readonly property string supabaseUrl: plasmoid.configuration.supabaseUrl || "http://127.0.0.1:54321"
@@ -389,7 +393,7 @@ PlasmoidItem {
             Rectangle {
                 anchors.centerIn: parent
                 width: 450
-                height: 350
+                height: 400
                 radius: 24
                 color: Qt.rgba(root.bgColor.r, root.bgColor.g, root.bgColor.b, 0.98)
                 border.width: 3
@@ -414,7 +418,10 @@ PlasmoidItem {
                 // Stop click propagation on card
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: {} // Absorb clicks
+                    onClicked: {
+                        fullScreenOverlay.visible = false
+                        root.sessionJustCompleted = false
+                    }
                 }
 
                 ColumnLayout {
@@ -464,14 +471,21 @@ PlasmoidItem {
                             width: 160
                             height: 52
                             radius: 14
-                            color: root.lastCompletedWasWork ? root.breakColor : root.workColor
+                            color: Qt.rgba(
+                                root.lastCompletedWasWork ? root.breakColor.r : root.workColor.r,
+                                root.lastCompletedWasWork ? root.breakColor.g : root.workColor.g,
+                                root.lastCompletedWasWork ? root.breakColor.b : root.workColor.b,
+                                0.15
+                            )
+                            border.width: 2
+                            border.color: root.lastCompletedWasWork ? root.breakColor : root.workColor
 
                             Text {
                                 anchors.centerIn: parent
                                 text: root.lastCompletedWasWork ? "☕ Start Break" : "🍅 Start Work"
                                 font.pixelSize: 18
                                 font.bold: true
-                                color: "white"
+                                color: root.lastCompletedWasWork ? root.breakColor : root.workColor
                             }
 
                             MouseArea {
@@ -533,8 +547,8 @@ PlasmoidItem {
         color: "transparent"
         visible: false
 
-        width: 400
-        height: 350
+        width: 500
+        height: 380
         // x/y set programmatically in sendNannyNotification() to target widget's screen
 
         property string nannyMessage: ""
@@ -577,10 +591,10 @@ PlasmoidItem {
                     z: -1
                 }
 
-                // Stop click propagation on card
+                // Click anywhere on card to dismiss
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: {} // Absorb clicks
+                    onClicked: nannyPopup.visible = false
                 }
 
                 ColumnLayout {
@@ -655,7 +669,7 @@ PlasmoidItem {
                                     hoverEnabled: true
                                     onClicked: {
                                         var task = root.pinnedTasks[index]
-                                        root.startNewSessionWithTask(task.task_id || task.id)
+                                        root.selectPinnedTask(task)
                                         nannyPopup.visible = false
                                     }
                                 }
@@ -721,6 +735,35 @@ PlasmoidItem {
                                     root.nannyLastNotifyTime = Date.now()
                                     root.nannyLastSessionEndTime = Date.now()
                                     console.log("[NANNY] Snoozed for 1 hour")
+                                }
+                            }
+                        }
+
+                        // "Stop today" button - muted style
+                        Rectangle {
+                            width: 130
+                            height: 42
+                            radius: 12
+                            color: "transparent"
+                            border.width: 1.5
+                            border.color: root.mutedColor
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "\uD83D\uDD07 Stop today"
+                                font.pixelSize: 14
+                                color: root.textColor
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    nannyPopup.visible = false
+                                    root.nannyQuietToday = true
+                                    var today = new Date()
+                                    root.nannyQuietDate = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000)
+                                    console.log("[NANNY] Stopped for today via popup")
                                 }
                             }
                         }
@@ -792,7 +835,7 @@ PlasmoidItem {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: {} // Absorb clicks
+                    onClicked: preEndWarningPopup.visible = false
                 }
 
                 RowLayout {
@@ -887,13 +930,9 @@ PlasmoidItem {
         id: compactRoot
 
         // Size for circular progress in panel
-        Layout.minimumWidth: 28
-        Layout.minimumHeight: 28
-        Layout.preferredWidth: 28
-        Layout.preferredHeight: 28
-
-        implicitWidth: 28
-        implicitHeight: 28
+        Layout.fillHeight: true
+        Layout.preferredWidth: compactRoot.height > 0 ? compactRoot.height : 36
+        Layout.minimumWidth: 36
 
         hoverEnabled: true
         property bool wasExpanded: false
@@ -904,14 +943,14 @@ PlasmoidItem {
         Canvas {
             id: compactCanvas
             anchors.fill: parent
-            anchors.margins: 2
 
             onPaint: {
                 var ctx = getContext("2d")
                 var centerX = width / 2
                 var centerY = height / 2
-                var radius = Math.min(width, height) / 2 - 2
-                var lineWidth = 3
+                // 3px inset for glow room, scale stroke with widget size
+                var radius = Math.min(width, height) / 2 - 3
+                var lineWidth = Math.max(2, Math.round(Math.min(width, height) / 12))
 
                 ctx.reset()
 
@@ -933,7 +972,7 @@ PlasmoidItem {
                     ctx.lineWidth = lineWidth
                     ctx.lineCap = "round"
                     ctx.shadowColor = root.currentAccent
-                    ctx.shadowBlur = 6
+                    ctx.shadowBlur = 4
                     ctx.shadowOffsetX = 0
                     ctx.shadowOffsetY = 0
                     ctx.stroke()
@@ -977,7 +1016,7 @@ PlasmoidItem {
         Text {
             anchors.centerIn: parent
             text: root.hasActiveSession ? root.minutes.toString() : ""
-            font.pixelSize: 10
+            font.pixelSize: Math.max(8, Math.round(parent.height * 0.25))
             font.bold: true
             color: root.hasActiveSession ? root.currentAccent : Kirigami.Theme.textColor
             visible: root.hasActiveSession
@@ -986,8 +1025,8 @@ PlasmoidItem {
         // Tomato icon when no session
         Image {
             anchors.centerIn: parent
-            width: 16
-            height: 16
+            width: parent.width * 0.6
+            height: parent.height * 0.6
             source: "../icons/tomato.svg"
             visible: !root.hasActiveSession
             smooth: true
@@ -1617,6 +1656,108 @@ PlasmoidItem {
                     }
                 }
 
+                // TASK-1447: Due date dropdown for quick-add
+                Rectangle {
+                    width: 80
+                    height: 30
+                    radius: 6
+                    color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                    border.width: 1
+                    border.color: quickAddDueDateCombo.popup.visible ? root.workColor : Qt.rgba(1, 1, 1, 0.10)
+
+                    QQC2.ComboBox {
+                        id: quickAddDueDateCombo
+                        anchors.fill: parent
+
+                        property var dueDateLabels: ["Today", "Tomorrow", "3 days", "Next wk", "No date"]
+
+                        function computeQuickAddDate(idx) {
+                            var d = new Date()
+                            if (idx === 0) { /* today */ }
+                            else if (idx === 1) { d.setDate(d.getDate() + 1) }
+                            else if (idx === 2) { d.setDate(d.getDate() + 3) }
+                            else if (idx === 3) { d.setDate(d.getDate() + 7) }
+                            else { root.quickAddDueDate = ""; return }
+                            var mm = ("0" + (d.getMonth() + 1)).slice(-2)
+                            var dd = ("0" + d.getDate()).slice(-2)
+                            root.quickAddDueDate = d.getFullYear() + "-" + mm + "-" + dd
+                        }
+
+                        model: dueDateLabels
+                        currentIndex: 0
+
+                        Component.onCompleted: {
+                            computeQuickAddDate(0)
+                        }
+
+                        onActivated: function(idx) {
+                            computeQuickAddDate(idx)
+                        }
+
+                        background: Rectangle {
+                            color: "transparent"
+                        }
+
+                        contentItem: Text {
+                            text: quickAddDueDateCombo.dueDateLabels[quickAddDueDateCombo.currentIndex]
+                            font.pixelSize: 12
+                            color: root.textColor
+                            verticalAlignment: Text.AlignVCenter
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+
+                        indicator: Item {}
+
+                        popup: QQC2.Popup {
+                            y: quickAddDueDateCombo.height + 2
+                            width: 90
+                            padding: 2
+
+                            background: Rectangle {
+                                color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                border.width: 1
+                                border.color: Qt.rgba(1, 1, 1, 0.12)
+                                radius: 6
+                            }
+
+                            contentItem: Column {
+                                Repeater {
+                                    model: quickAddDueDateCombo.dueDateLabels
+                                    Rectangle {
+                                        width: 86
+                                        height: 26
+                                        radius: 4
+                                        color: qaDateMA.containsMouse
+                                            ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2)
+                                            : "transparent"
+
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 8
+                                            text: modelData
+                                            font.pixelSize: 11
+                                            color: qaDateMA.containsMouse ? "#FFFFFF" : root.textColor
+                                        }
+
+                                        MouseArea {
+                                            id: qaDateMA
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                quickAddDueDateCombo.currentIndex = index
+                                                quickAddDueDateCombo.computeQuickAddDate(index)
+                                                quickAddDueDateCombo.popup.close()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Add button (create only)
                 Rectangle {
                     width: 30
@@ -1680,56 +1821,117 @@ PlasmoidItem {
                 }
             }
 
-            // ===== TODAY TOGGLE (full-width accent bar) =====
-            Rectangle {
+            // ===== TODAY + NANNY TOGGLES (shared row) =====
+            RowLayout {
                 Layout.fillWidth: true
-                height: 32
-                radius: 6
-                color: root.todayOnly
-                    ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2)
-                    : (todayChipMouse.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.1) : Qt.rgba(1, 1, 1, 0.03))
-                border.width: 1
-                border.color: root.todayOnly ? root.workColor : Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.3)
+                spacing: 6
 
-                // Left teal accent bar
+                // --- Today toggle ---
                 Rectangle {
-                    width: 3
-                    height: parent.height - 2
-                    anchors.left: parent.left
-                    anchors.leftMargin: 1
-                    anchors.verticalCenter: parent.verticalCenter
-                    radius: 2
-                    color: root.workColor
-                }
+                    Layout.fillWidth: true
+                    height: 32
+                    radius: 6
+                    color: root.todayOnly
+                        ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2)
+                        : (todayChipMouse.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.1) : Qt.rgba(1, 1, 1, 0.03))
+                    border.width: 1
+                    border.color: root.todayOnly ? root.workColor : Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.3)
 
-                Row {
-                    id: todayChipRow
-                    anchors.centerIn: parent
-                    spacing: 6
-
-                    Text {
-                        text: "📅"
-                        font.pixelSize: 12
+                    // Left teal accent bar
+                    Rectangle {
+                        width: 3
+                        height: parent.height - 2
+                        anchors.left: parent.left
+                        anchors.leftMargin: 1
                         anchors.verticalCenter: parent.verticalCenter
+                        radius: 2
+                        color: root.workColor
                     }
 
-                    Text {
-                        text: "Today"
-                        font.pixelSize: 12
-                        font.bold: true
-                        color: root.todayOnly ? root.workColor : root.textColor
-                        anchors.verticalCenter: parent.verticalCenter
+                    Row {
+                        id: todayChipRow
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        Text {
+                            text: "📅"
+                            font.pixelSize: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Text {
+                            text: "Today"
+                            font.pixelSize: 12
+                            font.bold: true
+                            color: root.todayOnly ? root.workColor : root.textColor
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: todayChipMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.todayOnly = !root.todayOnly
+                            root.fetchTasks()
+                        }
                     }
                 }
 
-                MouseArea {
-                    id: todayChipMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        root.todayOnly = !root.todayOnly
-                        root.fetchTasks()
+                // --- Nanny toggle ---
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 32
+                    radius: 6
+                    visible: root.isAuthenticated
+                    color: plasmoid.configuration.nannyEnabled
+                        ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2)
+                        : (nannyToggleMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(1, 1, 1, 0.03))
+                    border.width: 1
+                    border.color: plasmoid.configuration.nannyEnabled
+                        ? root.workColor
+                        : Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.3)
+
+                    Rectangle {
+                        width: 3
+                        height: parent.height - 2
+                        anchors.left: parent.left
+                        anchors.leftMargin: 1
+                        anchors.verticalCenter: parent.verticalCenter
+                        radius: 2
+                        color: plasmoid.configuration.nannyEnabled ? root.workColor : root.mutedColor
+                    }
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 6
+                        Text {
+                            text: plasmoid.configuration.nannyEnabled ? "\uD83D\uDD14" : "\uD83D\uDD15"
+                            font.pixelSize: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: plasmoid.configuration.nannyEnabled
+                                ? (root.nannyQuietToday ? "Nanny (paused today)" : "Nanny")
+                                : "Nanny (off)"
+                            font.pixelSize: 12
+                            font.bold: true
+                            color: plasmoid.configuration.nannyEnabled ? root.workColor : root.mutedColor
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: nannyToggleMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            plasmoid.configuration.nannyEnabled = !plasmoid.configuration.nannyEnabled
+                            console.log("[NANNY] Toggled:", plasmoid.configuration.nannyEnabled)
+                        }
                     }
                 }
             }
@@ -3032,6 +3234,7 @@ PlasmoidItem {
     // Does a one-time check to see if the session completed naturally vs was manually stopped
     function checkSessionCompletion(sessionId, wasWork) {
         if (!root.isAuthenticated || !sessionId) return
+        root.checkingCompletion = true
 
         if (root.debugLogging) console.log("[SYNC] Checking if session completed naturally:", sessionId)
 
@@ -3060,6 +3263,7 @@ PlasmoidItem {
                         console.log("[SYNC] Session completed by another device - triggering notification")
                         root.isWorkSession = wasWork
                         onSessionComplete()
+                        root.checkingCompletion = false
                     } else {
                         // Session was manually stopped - clear silently
                         console.log("[SYNC] Session was manually stopped - clearing silently")
@@ -3070,6 +3274,7 @@ PlasmoidItem {
                         root.isDeviceLeader = false
                         root.nannyLastSessionEndTime = Date.now()  // TASK-1424
                         root.writeActiveTaskFile()
+                        root.checkingCompletion = false
                     }
                 } else {
                     // Session not found at all - clear silently
@@ -3081,6 +3286,7 @@ PlasmoidItem {
                     root.isDeviceLeader = false
                     root.nannyLastSessionEndTime = Date.now()  // TASK-1424
                     root.writeActiveTaskFile()
+                    root.checkingCompletion = false
                 }
             } else if (xhr.readyState === XMLHttpRequest.DONE) {
                 console.warn("[SYNC] Session check failed:", xhr.status)
@@ -3091,6 +3297,7 @@ PlasmoidItem {
                 root.isRunning = false
                 root.isDeviceLeader = false
                 root.writeActiveTaskFile()
+                root.checkingCompletion = false
             }
         }
         xhr.send()
@@ -3197,7 +3404,7 @@ PlasmoidItem {
                 // BUG-1292: Don't clear state during transition - notify.sh curl may still be in flight
                 if (root.sessionJustCompleted || root.isInTransition) {
                     if (root.debugLogging) console.log("[SYNC] No session during transition - waiting for new session")
-                } else if (root.hasActiveSession && root.isRunning && root.currentSessionId) {
+                } else if (root.hasActiveSession && root.isRunning && root.currentSessionId && !root.checkingCompletion) {
                     // BUG: Follower completion detection
                     // We had a running session but polling found nothing active
                     // Check if it completed naturally (another device finished it) vs manual stop
@@ -3374,6 +3581,12 @@ PlasmoidItem {
     }
 
     function onSessionComplete() {
+        // Guard: prevent duplicate notifications (barrage fix)
+        // sessionJustCompleted is set to true below, cleared on user action or new session
+        if (root.sessionJustCompleted) {
+            console.log("[TIMER] Duplicate onSessionComplete call - ignoring")
+            return
+        }
         root.isRunning = false
         root.completedSessions++
         // Reset pre-end warning so next session can show it
@@ -3730,7 +3943,12 @@ PlasmoidItem {
             updated_at: now
         }
 
-        console.log("[TASKS] Creating task:", title)
+        // TASK-1447: Attach due date from quick-add dropdown
+        if (root.quickAddDueDate && root.quickAddDueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            payload.due_date = root.quickAddDueDate + "T00:00:00"
+        }
+
+        console.log("[TASKS] Creating task:", title, "due:", root.quickAddDueDate || "none")
 
         var xhr = new XMLHttpRequest()
         xhr.open("POST", root.supabaseUrl + "/rest/v1/tasks", true)

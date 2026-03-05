@@ -1,5 +1,7 @@
 # Contributing to FlowState
 
+> **License**: FlowState is source-available under [Polyform Shield 1.0.0](LICENSE), not open-source. See [License](#license) section below.
+
 Thanks for your interest in contributing to FlowState! This document covers everything you need to get started.
 
 ## Development Setup
@@ -231,6 +233,15 @@ If your change requires a database migration:
 2. Include RLS policies for any new tables
 3. Test with `supabase db reset` to verify the migration applies cleanly
 4. Never run destructive commands (`DROP TABLE`, `TRUNCATE`) without explicit approval
+
+## License
+
+FlowState is licensed under [Polyform Shield 1.0.0](https://polyformproject.org/licenses/shield/1.0.0/) — a source-available license. By submitting a pull request, you agree that your contributions will be licensed under the same terms.
+
+Key points:
+- You may view the source, self-host, and submit contributions
+- You may NOT use contributions to compete with FlowState or redistribute as a separate product
+- See the root [LICENSE](LICENSE) file for full terms
 
 ## Questions?
 

@@ -27,7 +27,7 @@ PlasmoidItem {
     property real progress: 0.0
 
     readonly property color accentColor: isWork ? workColor : breakColor
-    readonly property bool showPill: isActive && taskName !== ""
+    readonly property bool showPill: isActive
 
     // ===== SHELL DATASOURCE (reads temp file) =====
     Plasma5Support.DataSource {
@@ -109,8 +109,8 @@ PlasmoidItem {
                 // Task name
                 Text {
                     id: taskLabel
-                    text: root.taskName
-                    color: root.textColor
+                    text: root.taskName !== "" ? root.taskName : "משימה לא נבחרה"
+                    color: root.taskName !== "" ? root.textColor : root.textSecondary
                     font.pixelSize: 11
                     font.weight: Font.Medium
                     elide: Text.ElideRight
@@ -157,7 +157,7 @@ PlasmoidItem {
             }
 
             Text {
-                text: root.isActive && root.taskName !== "" ? root.taskName : "No active task"
+                text: root.isActive ? (root.taskName !== "" ? root.taskName : "משימה לא נבחרה") : "אין משימה פעילה"
                 color: root.isActive ? root.textColor : root.mutedColor
                 font.pixelSize: 13
                 font.weight: root.isActive ? Font.DemiBold : Font.Normal

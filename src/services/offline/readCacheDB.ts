@@ -18,6 +18,7 @@
  * (writeQueueDB.ts) handles durable offline writes.
  */
 
+import { toRaw } from 'vue'
 import Dexie, { type Table } from 'dexie'
 import type { Task, Project } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
@@ -77,7 +78,7 @@ export async function cacheTasks(tasks: Task[]): Promise<void> {
     await database.transaction('rw', database.tasks, database.meta, async () => {
       await database.tasks.clear()
       if (tasks.length > 0) {
-        await database.tasks.bulkPut(tasks)
+        await database.tasks.bulkPut(tasks.map(t => toRaw(t)))
       }
       await database.meta.put({
         key: 'tasks',
@@ -125,7 +126,7 @@ export async function cacheGroups(groups: CanvasGroup[]): Promise<void> {
     await database.transaction('rw', database.groups, database.meta, async () => {
       await database.groups.clear()
       if (groups.length > 0) {
-        await database.groups.bulkPut(groups)
+        await database.groups.bulkPut(groups.map(g => toRaw(g)))
       }
       await database.meta.put({
         key: 'groups',
@@ -173,7 +174,7 @@ export async function cacheProjects(projects: Project[]): Promise<void> {
     await database.transaction('rw', database.projects, database.meta, async () => {
       await database.projects.clear()
       if (projects.length > 0) {
-        await database.projects.bulkPut(projects)
+        await database.projects.bulkPut(projects.map(p => toRaw(p)))
       }
       await database.meta.put({
         key: 'projects',

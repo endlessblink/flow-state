@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase, consumePendingProviderTokens, type User, type Session, type AuthError } from '@/services/auth/supabase'
-import { clearGuestData } from '@/utils/guestModeStorage'
+import { clearGuestData, getOrCreateGuestSessionId, clearGuestSessionId } from '@/utils/guestModeStorage'
 import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
 import { invalidateCache } from '@/composables/useSupabaseDatabase'
 import type { Task } from '@/types/tasks'
@@ -531,6 +531,12 @@ export const useAuthStore = defineStore('auth', () => {
 
       console.log(`[AUTH] Migrating ${allGuestTasks.length} guest tasks...`)
 
+      // BUG-1137: Log guest session ID for audit trail
+      const guestSessionId = localStorage.getItem('flowstate-guest-session-id')
+      if (guestSessionId) {
+        console.log(`[AUTH] Guest session ID: ${guestSessionId} → migrating to user ${user.value.id}`)
+      }
+
       // 2. Fetch existing user tasks for deduplication
       if (!supabase) {
         console.error('[AUTH] Supabase not available for migration')
@@ -604,6 +610,9 @@ export const useAuthStore = defineStore('auth', () => {
 
       // 6. Mark migration complete
       localStorage.setItem(migrationKey, new Date().toISOString())
+
+      // BUG-1137: Clear guest session ID after successful migration
+      clearGuestSessionId()
 
       // 7. BUG-339 FIX: Reload tasks and groups from database to replace in-memory guest data
       // Without this, _rawTasks would have BOTH old guest tasks AND new migrated tasks
@@ -689,6 +698,12 @@ export const useAuthStore = defineStore('auth', () => {
         if (data.session.expires_at) {
           scheduleTokenRefresh(data.session.expires_at)
         }
+      }
+
+      // BUG-1137: Log guest session link
+      const guestSessionId = localStorage.getItem('flowstate-guest-session-id')
+      if (guestSessionId) {
+        console.log(`[AUTH] Linking guest session ${guestSessionId} to user ${data.user?.id}`)
       }
 
       // 2. Migrate Data
@@ -872,11 +887,18 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = true
       error.value = null
 
+      // BUG-1137: Include guest session ID in signup metadata for migration tracking
+      const guestSessionId = localStorage.getItem('flowstate-guest-session-id')
+      const signUpMetadata = {
+        ...metadata,
+        ...(guestSessionId ? { guest_session_id: guestSessionId } : {})
+      }
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: metadata
+          data: signUpMetadata
         }
       })
 

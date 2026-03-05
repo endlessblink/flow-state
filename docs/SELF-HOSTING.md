@@ -21,6 +21,7 @@ FlowState is a Vue 3 productivity app with task management (Board, Calendar, Can
 - [Troubleshooting](#troubleshooting)
 - [Updating](#updating)
 - [Architecture Overview](#architecture-overview)
+- [Doppler](#doppler)
 
 ---
 
@@ -245,6 +246,8 @@ supabase db reset
 ```
 
 This applies all migrations from `supabase/migrations/`.
+
+> **Note:** Gamification profiles are auto-created by the app on first login. No database trigger needed.
 
 ### 6. Start the Dev Server
 
@@ -572,7 +575,7 @@ FlowState works out of the box with just Supabase. The features below can be ena
 
 ### Setting Up Google Features
 
-See [Google Cloud Setup Guide](GOOGLE-CLOUD-SETUP.md) for a complete walkthrough.
+See [Google Cloud Setup Guide](./GOOGLE-CLOUD-SETUP.md) for a complete walkthrough.
 
 ### Setting Up Push Notifications
 
@@ -892,7 +895,7 @@ npx tauri build
 - Desktop: Tauri 2.x (Rust + WebView)
 - AI: Ollama (local) / Groq (cloud)
 
-For detailed architecture documentation, see [architecture.md](claude-md-extension/architecture.md).
+For detailed architecture documentation, see [architecture.md](./claude-md-extension/architecture.md).
 
 ---
 

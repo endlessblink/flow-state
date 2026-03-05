@@ -1,4 +1,5 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTimerStore } from '@/stores/timer'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
@@ -10,7 +11,7 @@ import { useGamificationStore } from '@/stores/gamification'
 import { useSupabaseDatabase, invalidateCache } from '@/composables/useSupabaseDatabase'
 import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
-import { clearGuestData, clearStaleGuestTasks } from '@/utils/guestModeStorage'
+import { clearGuestData, clearStaleGuestTasks, getOrCreateGuestSessionId } from '@/utils/guestModeStorage'
 // BUG-FIX: Import mappers to properly convert realtime data
 import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, type SupabaseTask, type SupabaseProject, type SupabaseGroup } from '@/utils/supabaseMappers'
 // FEATURE-1118: Gamification hooks
@@ -28,6 +29,7 @@ import { getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPend
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
 
 export function useAppInitialization() {
+    const router = useRouter()
     const timerStore = useTimerStore()
     const taskStore = useTaskStore()
     const projectStore = useProjectStore()
@@ -58,6 +60,8 @@ export function useAppInitialization() {
         if (!authStore.isAuthenticated) {
             // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
             clearGuestData()
+            // BUG-1137: Ensure guest session ID exists for future migration tracking
+            getOrCreateGuestSessionId()
         } else {
             // BUG-339: Clear ALL stale guest localStorage (including legacy keys)
             // This fixes race condition and historical key naming issues
@@ -126,6 +130,25 @@ export function useAppInitialization() {
         // Mark data as ready — UI can render with cached data (or empty state)
         authStore.markAppInitLoadComplete()
         isDataReady.value = true
+
+        // FEATURE-1443: Auto-redirect to Morning Dashboard once per calendar day
+        try {
+          const lastMorningVisit = localStorage.getItem('flowstate-last-morning')
+          const today = new Date().toISOString().slice(0, 10)
+          if (lastMorningVisit !== today) {
+            // Only redirect if landing on root route (not deep links)
+            const currentHash = window.location.hash
+            if (!currentHash || currentHash === '#/' || currentHash === '#') {
+              localStorage.setItem('flowstate-last-morning', today)
+              // Delay slightly to let the app finish rendering
+              setTimeout(() => {
+                router.push('/morning')
+              }, 100)
+            }
+          }
+        } catch {
+          // localStorage unavailable — skip redirect
+        }
 
         // Phase B (non-blocking): Background sync from Supabase
         // Skip entirely when offline — no point in fetching, just wait for 'online' event

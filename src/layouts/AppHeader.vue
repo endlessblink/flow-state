@@ -182,6 +182,9 @@
     <!-- VIEW TABS AND CONTROLS -->
     <div class="content-header">
       <div class="view-tabs">
+        <router-link to="/morning" class="view-tab" active-class="active">
+          Morning
+        </router-link>
         <router-link to="/" class="view-tab" active-class="active">
           {{ $t('views.canvas') }}
         </router-link>

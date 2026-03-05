@@ -95,6 +95,7 @@ export function clearStaleGuestTasks(): void {
   const keysToCheck = [
     'flowstate-guest-tasks',
     'pomoflow-guest-tasks',  // Legacy key
+    'flowstate-guest-session-id',  // BUG-1137
   ]
 
   for (const key of keysToCheck) {
@@ -116,4 +117,27 @@ export function clearStaleGuestTasks(): void {
  */
 export function getGuestEphemeralKeys(): readonly string[] {
   return GUEST_EPHEMERAL_KEYS
+}
+
+const GUEST_SESSION_ID_KEY = 'flowstate-guest-session-id'
+
+/**
+ * BUG-1137: Get or create a unique guest session ID.
+ * Generated once on first guest-mode app boot, persists in localStorage.
+ * Used to explicitly link guest data to the user account on sign-up.
+ */
+export function getOrCreateGuestSessionId(): string {
+  let sessionId = localStorage.getItem(GUEST_SESSION_ID_KEY)
+  if (!sessionId) {
+    sessionId = crypto.randomUUID()
+    localStorage.setItem(GUEST_SESSION_ID_KEY, sessionId)
+  }
+  return sessionId
+}
+
+/**
+ * BUG-1137: Clear the guest session ID after successful migration.
+ */
+export function clearGuestSessionId(): void {
+  localStorage.removeItem(GUEST_SESSION_ID_KEY)
 }

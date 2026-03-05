@@ -4,7 +4,7 @@ import { useTaskStore } from '@/stores/tasks'
 
 /**
  * Calendar modals composable
- * Manages TaskEditModal and ConfirmationModal (deletion) states
+ * Manages TaskEditModal and ConfirmationModal (deletion/unschedule) states
  */
 export function useCalendarModals() {
     const taskStore = useTaskStore()
@@ -16,6 +16,10 @@ export function useCalendarModals() {
     // Delete confirmation modal state
     const showConfirmModal = ref(false)
     const taskToDelete = ref<string | null>(null)
+
+    // Unschedule confirmation modal state
+    const showUnscheduleModal = ref(false)
+    const eventsToUnschedule = ref<Array<{ taskId: string; instanceId?: string }>>([])
 
     /**
      * Open edit modal for a specific task
@@ -67,6 +71,37 @@ export function useCalendarModals() {
         showConfirmModal.value = false
     }
 
+    /**
+     * Open unschedule confirmation modal
+     */
+    const handleConfirmUnschedule = (events: Array<{ taskId: string; instanceId?: string }>) => {
+        eventsToUnschedule.value = events
+        showUnscheduleModal.value = true
+    }
+
+    /**
+     * Finalize unschedule (remove from calendar, return to inbox)
+     */
+    const confirmUnscheduleTask = async () => {
+        for (const event of eventsToUnschedule.value) {
+            if (event.instanceId) {
+                taskStore.deleteTaskInstanceWithUndo(event.taskId, event.instanceId)
+            } else {
+                taskStore.unscheduleTaskWithUndo(event.taskId)
+            }
+        }
+        eventsToUnschedule.value = []
+        showUnscheduleModal.value = false
+    }
+
+    /**
+     * Cancel unschedule
+     */
+    const cancelUnscheduleTask = () => {
+        eventsToUnschedule.value = []
+        showUnscheduleModal.value = false
+    }
+
     return {
         isEditModalOpen,
         selectedTask,
@@ -76,6 +111,10 @@ export function useCalendarModals() {
         closeEditModal,
         handleConfirmDelete,
         confirmDeleteTask,
-        cancelDeleteTask
+        cancelDeleteTask,
+        showUnscheduleModal,
+        handleConfirmUnschedule,
+        confirmUnscheduleTask,
+        cancelUnscheduleTask
     }
 }

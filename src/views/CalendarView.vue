@@ -52,6 +52,16 @@
       @cancel="cancelDeleteTask"
     />
 
+    <!-- Unschedule Confirmation Modal -->
+    <ConfirmationModal
+      :is-open="showUnscheduleModal"
+      title="Remove from Calendar"
+      message="This will remove the task from the calendar. The task will return to your inbox."
+      confirm-text="Remove"
+      @confirm="confirmUnscheduleTask"
+      @cancel="cancelUnscheduleTask"
+    />
+
     <!-- Calendar Main Area -->
     <div class="calendar-main scroll-container">
       <!-- Calendar Header -->
@@ -263,7 +273,11 @@ const {
   closeEditModal,
   handleConfirmDelete,
   confirmDeleteTask,
-  cancelDeleteTask
+  cancelDeleteTask,
+  showUnscheduleModal,
+  handleConfirmUnschedule,
+  confirmUnscheduleTask,
+  cancelUnscheduleTask
 } = useCalendarModals()
 
 // Use global status filter directly from store (maintains reactivity)
@@ -424,6 +438,7 @@ const {
   viewMode,
   handleEditTask,
   handleConfirmDelete,
+  handleConfirmUnschedule,
   monthDayClickHandler
 )
 

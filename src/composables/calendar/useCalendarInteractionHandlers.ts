@@ -15,6 +15,7 @@ export function useCalendarInteractionHandlers(
     viewMode: Ref<'day' | 'week' | 'month'>,
     handleEditTask: (taskId: string) => void,
     handleConfirmDelete: (taskId: string) => void,
+    handleConfirmUnschedule: (events: Array<{ taskId: string; instanceId?: string }>) => void,
     monthDayClickHandler: (dateString: string, viewMode: Ref<'day' | 'week' | 'month'>) => void
 ) {
     const taskStore = useTaskStore()
@@ -151,16 +152,12 @@ export function useCalendarInteractionHandlers(
                 handleConfirmDelete(calendarEvent.taskId)
             })
         } else {
-            // Delete: remove calendar instance(s), return task to inbox
-            selectedCalendarEvents.value.forEach(calendarEvent => {
-                if (calendarEvent.instanceId) {
-                    // Remove specific calendar instance — task keeps its dueDate
-                    taskStore.deleteTaskInstanceWithUndo(calendarEvent.taskId, calendarEvent.instanceId)
-                } else {
-                    // Fallback: fully unschedule if no specific instance
-                    taskStore.unscheduleTaskWithUndo(calendarEvent.taskId)
-                }
-            })
+            // Delete: show confirmation, then remove calendar instance(s)
+            const events = selectedCalendarEvents.value.map(calendarEvent => ({
+                taskId: calendarEvent.taskId,
+                instanceId: calendarEvent.instanceId
+            }))
+            handleConfirmUnschedule(events)
         }
 
         // Clear selection

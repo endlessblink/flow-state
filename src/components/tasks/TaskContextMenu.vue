@@ -722,7 +722,7 @@ const closeSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'proj
         showMoreSubmenu.value = false
       }
     }
-  }, 150)
+  }, 300)
   submenuTimeouts.value.set(type, timeout)
 }
 
@@ -800,7 +800,7 @@ onUnmounted(() => {
   max-width: 280px;
   max-height: calc(100vh - 16px);
   overflow-y: auto;
-  z-index: 9999;
+  z-index: var(--z-context-menu, 9999);
   animation: menuSlideIn 150ms ease-out;
 }
 
@@ -898,5 +898,18 @@ onUnmounted(() => {
 
 /* Submenu */
 .has-submenu { position: relative; }
+
+/* TASK-1445: Invisible hover bridge extending toward submenu panel.
+   Prevents submenu from closing when cursor moves diagonally from
+   the trigger item toward the submenu. */
+.has-submenu::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -30px;
+  width: 30px;
+  height: 100%;
+}
+
 .submenu-arrow { color: var(--text-muted); margin-inline-start: auto; }
 </style>

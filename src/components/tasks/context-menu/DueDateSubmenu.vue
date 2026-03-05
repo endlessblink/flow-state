@@ -53,7 +53,7 @@
         v-model:show="showDatePicker"
         trigger="click"
         placement="right-start"
-        :z-index="10002"
+        :z-index="10003"
         :show-arrow="false"
         raw
         @click.stop
@@ -178,7 +178,7 @@ const emitMonthOffset = (months: number) => {
   min-width: 160px;
   max-height: calc(100vh - 16px);
   overflow-y: auto;
-  z-index: 10001;
+  z-index: var(--z-submenu, 10001);
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
 }
 

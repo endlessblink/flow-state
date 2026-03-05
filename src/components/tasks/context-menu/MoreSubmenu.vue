@@ -124,7 +124,7 @@ defineEmits<{
   min-width: 130px;
   max-height: calc(100vh - 16px);
   overflow-y: auto;
-  z-index: 10001;
+  z-index: var(--z-submenu, 10001);
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
 }
 
@@ -155,6 +155,17 @@ defineEmits<{
 .menu-icon { flex-shrink: 0; opacity: 0.8; }
 
 .has-submenu { position: relative; }
+
+/* TASK-1445: Hover bridge for nested submenu triggers */
+.has-submenu::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -30px;
+  width: 30px;
+  height: 100%;
+}
+
 .submenu-arrow { color: var(--text-muted); margin-inline-start: auto; }
 .submenu-divider { height: 1px; background: var(--glass-bg-heavy); margin: var(--space-1) 0; }
 .menu-item--danger { color: var(--danger-text); }

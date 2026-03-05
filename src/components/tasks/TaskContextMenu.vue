@@ -312,6 +312,11 @@ const canvasGroupSubmenuPosition = ref({ x: 0, y: 0 })
 // TASK-1445: Safe polygon hover intent for submenu navigation
 const safePolygon = useSubmenuSafePolygon()
 
+// TASK-1445: Submenu type and delayed switching state
+type SubmenuType = 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup'
+const submenuSwitchTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+const pendingSubmenuType = ref<SubmenuType | null>(null)
+
 // Computed properties for display
 const showInboxHeader = computed(() => {
   return (props.selectedCount && props.selectedCount > 0) || props.contextTask
@@ -646,8 +651,40 @@ const clearAllSubmenuTimeouts = () => {
   submenuTimeouts.value.clear()
 }
 
-const openSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup', event: MouseEvent) => {
-  console.log('[MENU] openSubmenu:', type, '→ closing all others')
+// TASK-1445: Cancel any pending submenu switch timer
+const cancelPendingSwitch = () => {
+  if (submenuSwitchTimer.value) {
+    clearTimeout(submenuSwitchTimer.value)
+    submenuSwitchTimer.value = null
+    pendingSubmenuType.value = null
+  }
+}
+
+// TASK-1445: Check which submenu is currently open
+const getCurrentOpenSubmenu = (): SubmenuType | null => {
+  if (showDueDateSubmenu.value) return 'dueDate'
+  if (showPrioritySubmenu.value) return 'priority'
+  if (showProjectSubmenu.value) return 'project'
+  if (showMoreSubmenu.value) return 'more'
+  if (showDurationSubmenu.value) return 'duration'
+  if (showCanvasGroupSubmenu.value) return 'canvasGroup'
+  return null
+}
+
+const isSubmenuOpen = (type: SubmenuType): boolean => {
+  switch (type) {
+    case 'dueDate': return showDueDateSubmenu.value
+    case 'priority': return showPrioritySubmenu.value
+    case 'duration': return showDurationSubmenu.value
+    case 'more': return showMoreSubmenu.value
+    case 'project': return showProjectSubmenu.value
+    case 'canvasGroup': return showCanvasGroupSubmenu.value
+  }
+}
+
+// TASK-1445: Perform the actual submenu open (positioning + visibility).
+// Extracted so openSubmenu() can delay the call when switching between submenus.
+const performSubmenuOpen = (type: SubmenuType, triggerRect: DOMRect) => {
   clearAllSubmenuTimeouts()
   safePolygon.stopTracking()
 
@@ -659,8 +696,6 @@ const openSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'proje
   showProjectSubmenu.value = false
   showCanvasGroupSubmenu.value = false
 
-  const target = event.currentTarget as HTMLElement
-  const triggerRect = target.getBoundingClientRect()
   const menuRect = menuRef.value?.getBoundingClientRect()
   const submenuWidth = (type === 'project' || type === 'canvasGroup') ? 200 : (type === 'dueDate') ? 180 : 150
 
@@ -700,14 +735,42 @@ const openSubmenu = (type: 'dueDate' | 'priority' | 'duration' | 'more' | 'proje
   }
 }
 
+// TASK-1445: Open a submenu. When switching between submenus, delay 80ms
+// so the cursor can pass through adjacent triggers (diagonal movement)
+// without immediately closing the current submenu.
+const openSubmenu = (type: SubmenuType, event: MouseEvent) => {
+  const currentlyOpen = getCurrentOpenSubmenu()
+  // Already showing the same submenu — nothing to do
+  if (currentlyOpen === type) return
+
+  cancelPendingSwitch()
+
+  // Capture trigger rect now (event.currentTarget becomes null after handler)
+  const triggerRect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+
+  if (currentlyOpen) {
+    // Another submenu is already open — delay the switch so diagonal cursor
+    // movement toward the current submenu isn't interrupted.
+    pendingSubmenuType.value = type
+    submenuSwitchTimer.value = setTimeout(() => {
+      submenuSwitchTimer.value = null
+      pendingSubmenuType.value = null
+      performSubmenuOpen(type, triggerRect)
+    }, 80)
+    return
+  }
+
+  // No submenu open yet — open immediately
+  performSubmenuOpen(type, triggerRect)
+}
+
 const keepSubmenuOpen = () => {
+  cancelPendingSwitch()
   clearAllSubmenuTimeouts()
   safePolygon.stopTracking()
 }
 
 // TASK-1445: Get the known rect of a submenu by type (position + estimated size)
-type SubmenuType = 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup'
-
 const getSubmenuRect = (type: SubmenuType) => {
   const posMap: Record<SubmenuType, { value: { x: number; y: number } }> = {
     dueDate: dueDateSubmenuPosition,
@@ -752,22 +815,26 @@ const actuallyCloseSubmenu = (type: SubmenuType) => {
 }
 
 // TASK-1445: When cursor leaves a TRIGGER item, use safe polygon tracking
-// instead of a blind timeout. The polygon allows diagonal cursor movement
-// toward the submenu without closing it.
+// instead of a blind timeout. Only track if that submenu is actually open.
 const handleTriggerLeave = (type: SubmenuType, event: MouseEvent) => {
-  console.log('[MENU] handleTriggerLeave:', type, { x: event.clientX, y: event.clientY })
+  // Cancel pending switch if cursor left the target trigger before delay elapsed
+  if (pendingSubmenuType.value === type) {
+    cancelPendingSwitch()
+  }
+
+  // Only start polygon tracking if this type's submenu is actually visible
+  if (!isSubmenuOpen(type)) return
+
   clearAllSubmenuTimeouts()
   const rect = getSubmenuRect(type)
-  console.log('[MENU] submenuRect:', rect)
   safePolygon.startTracking(event, rect, () => {
-    console.log('[MENU] safePolygon onClose callback → actuallyCloseSubmenu:', type)
     actuallyCloseSubmenu(type)
   })
 }
 
 // When cursor enters a submenu PANEL, stop polygon tracking — cursor landed
 const handlePanelEnter = () => {
-  console.log('[MENU] handlePanelEnter — cursor on submenu panel')
+  cancelPendingSwitch()
   clearAllSubmenuTimeouts()
   safePolygon.stopTracking()
 }
@@ -798,6 +865,7 @@ const closeSubmenu = (type: SubmenuType) => {
 
 // BUG-1095: Immediately close ALL submenus - no timeout
 const closeAllSubmenusNow = () => {
+  cancelPendingSwitch()
   clearAllSubmenuTimeouts()
   safePolygon.stopTracking()
   showDueDateSubmenu.value = false
@@ -832,7 +900,6 @@ const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
   if (target.closest('.submenu')) return
   if (menuRef.value && !menuRef.value.contains(target)) {
-    console.log('[MENU] handleClickOutside → emit close', { target: target.tagName, classes: target.className })
     emit('close')
   }
 }
@@ -854,6 +921,7 @@ watch(() => props.isVisible, (isVisible) => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  cancelPendingSwitch()
   clearAllSubmenuTimeouts()
   safePolygon.stopTracking()
 })

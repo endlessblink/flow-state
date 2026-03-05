@@ -1,5 +1,6 @@
 <template>
   <Teleport to="body">
+    <!-- TASK-1445: Outer wrapper has no overflow so ::before bridge isn't clipped -->
     <div
       v-if="isVisible && parentVisible"
       class="submenu"
@@ -8,96 +9,98 @@
       @mouseleave="$emit('mouseleave')"
       @wheel.stop
     >
-      <button
-        class="menu-item menu-item--sm"
-        :class="{ active: activeDatePill === 'today' }"
-        @click.stop="$emit('select', 'today')"
-      >
-        <Calendar :size="13" class="date-icon" />
-        <span class="menu-text">Today</span>
-        <Check v-if="activeDatePill === 'today'" :size="12" class="check-icon" />
-      </button>
+      <div class="submenu-scroll">
+        <button
+          class="menu-item menu-item--sm"
+          :class="{ active: activeDatePill === 'today' }"
+          @click.stop="$emit('select', 'today')"
+        >
+          <Calendar :size="13" class="date-icon" />
+          <span class="menu-text">Today</span>
+          <Check v-if="activeDatePill === 'today'" :size="12" class="check-icon" />
+        </button>
 
-      <button
-        class="menu-item menu-item--sm"
-        :class="{ active: activeDatePill === 'tomorrow' }"
-        @click.stop="$emit('select', 'tomorrow')"
-      >
-        <Calendar :size="13" class="date-icon" />
-        <span class="menu-text">Tomorrow</span>
-        <Check v-if="activeDatePill === 'tomorrow'" :size="12" class="check-icon" />
-      </button>
+        <button
+          class="menu-item menu-item--sm"
+          :class="{ active: activeDatePill === 'tomorrow' }"
+          @click.stop="$emit('select', 'tomorrow')"
+        >
+          <Calendar :size="13" class="date-icon" />
+          <span class="menu-text">Tomorrow</span>
+          <Check v-if="activeDatePill === 'tomorrow'" :size="12" class="check-icon" />
+        </button>
 
-      <button
-        class="menu-item menu-item--sm"
-        :class="{ active: activeDatePill === 'weekend' }"
-        @click.stop="$emit('select', 'weekend')"
-      >
-        <Calendar :size="13" class="date-icon" />
-        <span class="menu-text">This Weekend</span>
-        <Check v-if="activeDatePill === 'weekend'" :size="12" class="check-icon" />
-      </button>
+        <button
+          class="menu-item menu-item--sm"
+          :class="{ active: activeDatePill === 'weekend' }"
+          @click.stop="$emit('select', 'weekend')"
+        >
+          <Calendar :size="13" class="date-icon" />
+          <span class="menu-text">This Weekend</span>
+          <Check v-if="activeDatePill === 'weekend'" :size="12" class="check-icon" />
+        </button>
 
-      <button
-        class="menu-item menu-item--sm"
-        :class="{ active: activeDatePill === 'nextweek' }"
-        @click.stop="$emit('select', 'nextweek')"
-      >
-        <Calendar :size="13" class="date-icon" />
-        <span class="menu-text">Next Week</span>
-        <Check v-if="activeDatePill === 'nextweek'" :size="12" class="check-icon" />
-      </button>
+        <button
+          class="menu-item menu-item--sm"
+          :class="{ active: activeDatePill === 'nextweek' }"
+          @click.stop="$emit('select', 'nextweek')"
+        >
+          <Calendar :size="13" class="date-icon" />
+          <span class="menu-text">Next Week</span>
+          <Check v-if="activeDatePill === 'nextweek'" :size="12" class="check-icon" />
+        </button>
 
-      <div class="submenu-divider" />
+        <div class="submenu-divider" />
 
-      <NPopover
-        v-model:show="showDatePicker"
-        trigger="click"
-        placement="right-start"
-        :z-index="10003"
-        :show-arrow="false"
-        raw
-        @click.stop
-      >
-        <template #trigger>
+        <NPopover
+          v-model:show="showDatePicker"
+          trigger="click"
+          placement="right-start"
+          :z-index="10003"
+          :show-arrow="false"
+          raw
+          @click.stop
+        >
+          <template #trigger>
+            <button
+              class="menu-item menu-item--sm"
+              @click.stop="showDatePicker = !showDatePicker"
+            >
+              <CalendarPlus :size="13" class="date-icon" />
+              <span class="menu-text">Pick a date...</span>
+            </button>
+          </template>
+          <div class="date-picker-wrapper" @click.stop>
+            <NDatePicker
+              panel
+              :value="currentDueDateTimestamp"
+              type="date"
+              :actions="[]"
+              @update:value="handleDatePickerSelect"
+            />
+          </div>
+        </NPopover>
+
+        <div class="submenu-divider" />
+
+        <div class="date-footer" @click.stop>
+          <button class="date-footer-btn" @click.stop="emitMonthOffset(1)">+1mo</button>
+          <button class="date-footer-btn" @click.stop="emitMonthOffset(2)">+2mo</button>
+          <button class="date-footer-btn" @click.stop="emitMonthOffset(3)">+3mo</button>
+          <button class="date-footer-btn" @click.stop="emitMonthOffset(6)">+6mo</button>
+        </div>
+
+        <template v-if="currentDueDate">
+          <div class="submenu-divider" />
           <button
-            class="menu-item menu-item--sm"
-            @click.stop="showDatePicker = !showDatePicker"
+            class="menu-item menu-item--sm menu-item--clear"
+            @click.stop="$emit('clearDate')"
           >
-            <CalendarPlus :size="13" class="date-icon" />
-            <span class="menu-text">Pick a date...</span>
+            <X :size="12" class="check-icon" />
+            <span class="menu-text">Clear date</span>
           </button>
         </template>
-        <div class="date-picker-wrapper" @click.stop>
-          <NDatePicker
-            panel
-            :value="currentDueDateTimestamp"
-            type="date"
-            :actions="[]"
-            @update:value="handleDatePickerSelect"
-          />
-        </div>
-      </NPopover>
-
-      <div class="submenu-divider" />
-
-      <div class="date-footer" @click.stop>
-        <button class="date-footer-btn" @click.stop="emitMonthOffset(1)">+1mo</button>
-        <button class="date-footer-btn" @click.stop="emitMonthOffset(2)">+2mo</button>
-        <button class="date-footer-btn" @click.stop="emitMonthOffset(3)">+3mo</button>
-        <button class="date-footer-btn" @click.stop="emitMonthOffset(6)">+6mo</button>
       </div>
-
-      <template v-if="currentDueDate">
-        <div class="submenu-divider" />
-        <button
-          class="menu-item menu-item--sm menu-item--clear"
-          @click.stop="$emit('clearDate')"
-        >
-          <X :size="12" class="check-icon" />
-          <span class="menu-text">Clear date</span>
-        </button>
-      </template>
     </div>
   </Teleport>
 </template>
@@ -168,6 +171,7 @@ const emitMonthOffset = (months: number) => {
 </script>
 
 <style scoped>
+/* TASK-1445: Outer wrapper — no overflow so ::before bridge isn't clipped */
 .submenu {
   position: fixed;
   background: var(--overlay-component-bg);
@@ -175,12 +179,26 @@ const emitMonthOffset = (months: number) => {
   border: var(--overlay-component-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--overlay-component-shadow);
-  padding: var(--space-1) 0;
   min-width: 160px;
-  max-height: calc(100vh - 16px);
-  overflow-y: auto;
   z-index: var(--z-submenu, 10001);
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
+}
+
+/* TASK-1445: Invisible hover bridge toward parent menu */
+.submenu::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: -16px;
+  width: 16px;
+}
+
+/* Inner scroll wrapper handles overflow */
+.submenu-scroll {
+  padding: var(--space-1) 0;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
 }
 
 @keyframes menuSlideIn {

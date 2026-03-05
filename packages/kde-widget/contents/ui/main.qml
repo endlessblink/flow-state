@@ -2248,7 +2248,8 @@ PlasmoidItem {
                                         Kirigami.Icon {
                                             anchors.centerIn: parent
                                             // TASK-1087: Show different icon for active task
-                                            source: taskDelegate.isActiveTask ? "chronometer" : "media-playback-start"
+                                            source: taskDelegate.isActiveTask ? "chronometer"
+                                                : (root.isRunning ? "media-skip-forward" : "media-playback-start")
                                             width: 14
                                             height: 14
                                             color: root.currentAccent
@@ -2259,7 +2260,16 @@ PlasmoidItem {
                                             anchors.fill: parent
                                             hoverEnabled: true
                                             cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.startSessionForTask(modelData.id)
+                                            onClicked: {
+                                                if (root.isRunning && root.currentTaskId !== modelData.id) {
+                                                    // Timer running on different task — switch it
+                                                    root.switchTaskForSession(modelData.id)
+                                                } else if (!root.isRunning) {
+                                                    // No timer running — start new session
+                                                    root.startSessionForTask(modelData.id)
+                                                }
+                                                // If already running on THIS task, do nothing (it's already active)
+                                            }
                                         }
                                     }
 
@@ -2947,9 +2957,10 @@ PlasmoidItem {
     }
 
     // TASK-1373: Pinned tasks refresh (separate from 2s session sync)
+    // BUG-1447: Reduced from 60s to 15s for faster app↔widget pin sync
     Timer {
         id: pinnedTasksRefreshTimer
-        interval: 60000  // 60 seconds
+        interval: 15000  // 15 seconds
         running: root.isAuthenticated
         repeat: true
         onTriggered: root.fetchPinnedTasks()
@@ -3558,6 +3569,13 @@ PlasmoidItem {
         }
 
         xhr.send(JSON.stringify(payload))
+    }
+
+    function switchTaskForSession(newTaskId) {
+        if (!root.currentSessionId || !root.isRunning) return
+        patchSession({ task_id: newTaskId })
+        root.currentTaskId = newTaskId  // optimistic update (poll will confirm)
+        console.log("[TIMER] Switched active session to task:", newTaskId)
     }
 
     function stopSession() {

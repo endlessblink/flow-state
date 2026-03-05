@@ -244,7 +244,8 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
     task: 'tasks',
     group: 'groups',
     project: 'projects',
-    timer_session: 'timer_sessions'
+    timer_session: 'timer_sessions',
+    quick_sort_session: 'quick_sort_sessions'
   }
   const tableName = tableMap[entityType]
 

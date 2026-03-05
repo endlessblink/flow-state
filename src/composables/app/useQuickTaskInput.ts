@@ -3,11 +3,13 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
+import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
 
 export function useQuickTaskInput() {
   const { t } = useI18n()
   const route = useRoute()
   const taskStore = useTaskStore()
+  const { filterDefaults } = useFilterDefaults()
 
   // Refs for template elements
   const quickTaskRef = ref<HTMLInputElement | null>(null)
@@ -44,6 +46,21 @@ export function useQuickTaskInput() {
   // Show metadata row when input is focused, has values set, or a dropdown is open
   const showMetadataRow = computed(() => {
     return quickTaskFocused.value || quickTaskDueDate.value !== null || quickTaskPriority.value !== null || showDatePicker.value || showPriorityPicker.value
+  })
+
+  // TASK-1451: Pre-fill due date from filter defaults so user sees the badge
+  watch(() => filterDefaults.value.dueDate, (defaultDate) => {
+    // Only pre-fill if user hasn't manually set a date
+    if (quickTaskDueDate.value === null && defaultDate) {
+      quickTaskDueDate.value = defaultDate
+    }
+  }, { immediate: true })
+
+  // Also update when smart view changes (e.g. user switches to "Today")
+  watch(() => taskStore.activeSmartView, () => {
+    // Reset to filter default when switching views (unless user manually set a date)
+    const defaultDate = filterDefaults.value.dueDate
+    quickTaskDueDate.value = defaultDate || null
   })
 
   // Auto-focus the textarea when expanding
@@ -87,6 +104,7 @@ export function useQuickTaskInput() {
   }) => {
     try {
       await taskStore.createTaskWithUndo({
+        ...filterDefaults.value,
         title: data.title,
         description: data.description,
         status: data.status as 'todo' | 'done',
@@ -240,6 +258,7 @@ export function useQuickTaskInput() {
     if (route.path === '/canvas') {
       window.dispatchEvent(new CustomEvent('sidebar-quick-task-create', {
         detail: {
+          ...filterDefaults.value,
           title,
           description: '',
           status: 'todo',
@@ -258,10 +277,10 @@ export function useQuickTaskInput() {
     // Default: create inbox task
     try {
       await taskStore.createTaskWithUndo({
+        ...filterDefaults.value,
         title,
         description: '',
         status: 'todo',
-        projectId: undefined,
         ...(quickTaskDueDate.value && { dueDate: quickTaskDueDate.value }),
         ...(quickTaskPriority.value && { priority: quickTaskPriority.value })
       })

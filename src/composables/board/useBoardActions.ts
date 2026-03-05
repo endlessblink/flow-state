@@ -2,6 +2,7 @@ import type { useTaskStore, Task } from '@/stores/tasks'
 import type { TaskAttachment } from '@/types/tasks'
 import type { useTimerStore } from '@/stores/timer'
 import type { BoardViewType } from './useBoardModals'
+import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
 
 interface BoardActionsDependencies {
     taskStore: ReturnType<typeof useTaskStore>
@@ -48,6 +49,7 @@ function getDateFromColumnKey(key: string): string | undefined {
 
 export function useBoardActions(deps: BoardActionsDependencies) {
     const { taskStore, timerStore } = deps
+    const { filterDefaults } = useFilterDefaults()
 
     const handleWithError = async <T>(
         operation: () => Promise<T>,
@@ -72,6 +74,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
     const quickTaskCreate = async (title: string, description: string, status: string, projectId?: string) => {
         return handleWithError(
             () => taskStore.createTaskWithUndo({
+                ...filterDefaults.value,
                 title,
                 description,
                 status: status as 'todo' | 'done',
@@ -96,6 +99,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
         attachments?: TaskAttachment[]  // FEATURE-1414
     ) => {
         const taskData: Partial<Task> = {
+            ...filterDefaults.value,
             title,
             description,
             projectId,

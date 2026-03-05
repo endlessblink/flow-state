@@ -1,6 +1,7 @@
 
 <template>
   <Teleport to="body">
+    <!-- TASK-1445: Outer wrapper has no overflow so ::before bridge isn't clipped -->
     <div
       v-if="isVisible && parentVisible"
       class="submenu"
@@ -9,75 +10,77 @@
       @mouseleave="$emit('mouseleave')"
       @wheel.stop
     >
-      <!-- Done for now - reschedule to tomorrow -->
-      <button class="menu-item menu-item--sm" @click.stop="$emit('doneForNow')">
-        <Clock :size="14" class="menu-icon" />
-        <span class="menu-text">Done for now</span>
-      </button>
+      <div class="submenu-scroll">
+        <!-- Done for now - reschedule to tomorrow -->
+        <button class="menu-item menu-item--sm" @click.stop="$emit('doneForNow')">
+          <Clock :size="14" class="menu-icon" />
+          <span class="menu-text">Done for now</span>
+        </button>
 
-      <button class="menu-item menu-item--sm" @click.stop="$emit('duplicate')">
-        <Copy :size="14" class="menu-icon" />
-        <span class="menu-text">Duplicate</span>
-      </button>
+        <button class="menu-item menu-item--sm" @click.stop="$emit('duplicate')">
+          <Copy :size="14" class="menu-icon" />
+          <span class="menu-text">Duplicate</span>
+        </button>
 
-      <button class="menu-item menu-item--sm" @click.stop="$emit('pinQuickTask')">
-        <Pin :size="14" class="menu-icon" />
-        <span class="menu-text">Pin as Quick Task</span>
-      </button>
+        <button class="menu-item menu-item--sm" @click.stop="$emit('pinQuickTask')">
+          <Pin :size="14" class="menu-icon" />
+          <span class="menu-text">Pin as Quick Task</span>
+        </button>
 
-      <button
-        v-if="!isBatchOperation && taskId"
-        class="menu-item menu-item--sm"
-        @click.stop="$emit('moveToSection', taskId)"
-      >
-        <Layout :size="14" class="menu-icon" />
-        <span class="menu-text">Move to Section</span>
-      </button>
+        <button
+          v-if="!isBatchOperation && taskId"
+          class="menu-item menu-item--sm"
+          @click.stop="$emit('moveToSection', taskId)"
+        >
+          <Layout :size="14" class="menu-icon" />
+          <span class="menu-text">Move to Section</span>
+        </button>
 
-      <div class="submenu-divider" />
+        <div class="submenu-divider" />
 
-      <div
-        v-if="!isBatchOperation"
-        class="menu-item menu-item--sm has-submenu"
-        @mouseenter.stop="$emit('openCanvasGroup', $event)"
-        @mouseleave.stop="$emit('closeCanvasGroup')"
-      >
-        <LayoutGrid :size="14" class="menu-icon" />
-        <span class="menu-text">Canvas Group</span>
-        <ChevronRight :size="12" class="submenu-arrow" />
+        <div
+          v-if="!isBatchOperation"
+          class="menu-item menu-item--sm has-submenu"
+          @mouseenter.stop="$emit('openCanvasGroup', $event)"
+          @mouseleave.stop="$emit('closeCanvasGroup')"
+        >
+          <LayoutGrid :size="14" class="menu-icon" />
+          <span class="menu-text">Canvas Group</span>
+          <ChevronRight :size="12" class="submenu-arrow" />
+        </div>
+
+        <div
+          class="menu-item menu-item--sm has-submenu"
+          @mouseenter.stop="$emit('openDuration', $event)"
+          @mouseleave.stop="$emit('closeDuration')"
+        >
+          <Timer :size="14" class="menu-icon" />
+          <span class="menu-text">Duration</span>
+          <ChevronRight :size="12" class="submenu-arrow" />
+        </div>
+
+        <button v-if="!isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('focusMode')">
+          <Eye :size="14" class="menu-icon" />
+          <span class="menu-text">Focus Mode</span>
+        </button>
+
+        <button v-if="!isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('startNow')">
+          <Play :size="14" class="menu-icon" />
+          <span class="menu-text">Start Now</span>
+        </button>
+
+        <div class="submenu-divider" />
+
+        <button v-if="!isBatchOperation" class="menu-item menu-item--sm menu-item--danger" @click.stop="$emit('permanentDelete')">
+          <Trash2 :size="14" class="menu-icon" />
+          <span class="menu-text">Permanently Delete</span>
+        </button>
+
+        <button v-if="isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('clearSelection')">
+          <X :size="14" class="menu-icon" />
+          <span class="menu-text">Clear Selection</span>
+        </button>
       </div>
-
-      <div
-        class="menu-item menu-item--sm has-submenu"
-        @mouseenter.stop="$emit('openDuration', $event)"
-        @mouseleave.stop="$emit('closeDuration')"
-      >
-        <Timer :size="14" class="menu-icon" />
-        <span class="menu-text">Duration</span>
-        <ChevronRight :size="12" class="submenu-arrow" />
-      </div>
-
-      <button v-if="!isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('focusMode')">
-        <Eye :size="14" class="menu-icon" />
-        <span class="menu-text">Focus Mode</span>
-      </button>
-
-      <button v-if="!isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('startNow')">
-        <Play :size="14" class="menu-icon" />
-        <span class="menu-text">Start Now</span>
-      </button>
-
-      <div class="submenu-divider" />
-
-      <button v-if="!isBatchOperation" class="menu-item menu-item--sm menu-item--danger" @click.stop="$emit('permanentDelete')">
-        <Trash2 :size="14" class="menu-icon" />
-        <span class="menu-text">Permanently Delete</span>
-      </button>
-
-      <button v-if="isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('clearSelection')">
-        <X :size="14" class="menu-icon" />
-        <span class="menu-text">Clear Selection</span>
-      </button>
     </div>
   </Teleport>
 </template>
@@ -113,7 +116,7 @@ defineEmits<{
 </script>
 
 <style scoped>
-/* Styles copied from TaskContextMenu.vue */
+/* TASK-1445: Outer wrapper — no overflow so ::before bridge isn't clipped */
 .submenu {
   position: fixed;
   background: var(--overlay-component-bg);
@@ -121,12 +124,26 @@ defineEmits<{
   border: var(--overlay-component-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--overlay-component-shadow);
-  padding: var(--space-1) 0;
   min-width: 130px;
-  max-height: calc(100vh - 16px);
-  overflow-y: auto;
   z-index: var(--z-submenu, 10001);
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
+}
+
+/* TASK-1445: Invisible hover bridge toward parent menu */
+.submenu::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: -16px;
+  width: 16px;
+}
+
+/* Inner scroll wrapper handles overflow */
+.submenu-scroll {
+  padding: var(--space-1) 0;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
 }
 
 @keyframes menuSlideIn {

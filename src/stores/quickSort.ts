@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useAuthStore } from '@/stores/auth'
+import { enqueueOperation } from '@/services/offline/writeQueueDB'
+import { toSupabaseQuickSortSession } from '@/utils/supabaseMappers'
 
 export interface CategoryAction {
   id: string
@@ -165,39 +167,25 @@ export const useQuickSortStore = defineStore('quickSort', () => {
   const supabaseDb = useSupabaseDatabase()
   const authStore = useAuthStore()
 
-  // TASK-1442: Pending session for retry-on-reconnect
-  const pendingSessionSave = ref<SessionSummary | null>(null)
-
+  // TASK-1450: Save via offline sync queue (survives browser close, auto-retries with backoff)
   async function saveToDatabase(newSession?: SessionSummary) {
     // Always save to localStorage first (fast, reliable)
     saveToLocalStorage()
 
-    // Then try Supabase for cross-device sync (only if authenticated)
+    // Then enqueue for Supabase sync via offline queue (survives browser close, auto-retries)
     if (authStore.user?.id && newSession) {
       try {
-        await supabaseDb.saveQuickSortSession(newSession)
-        pendingSessionSave.value = null
-        console.log('📊 Quick Sort session saved to Supabase')
+        const payload = toSupabaseQuickSortSession(newSession, authStore.user.id)
+        await enqueueOperation({
+          entityType: 'quick_sort_session',
+          operation: 'create',
+          entityId: newSession.id,
+          payload: payload as unknown as Record<string, unknown>,
+          userId: authStore.user.id
+        })
+        console.log('📊 Quick Sort session enqueued for sync')
       } catch (error) {
-        console.warn('[QUICK-SORT] Failed to save session to Supabase, will retry on reconnect:', error)
-        pendingSessionSave.value = newSession
-
-        // TASK-1442: Register one-time online listener for retry
-        if (typeof window !== 'undefined') {
-          const retryOnReconnect = async () => {
-            if (pendingSessionSave.value) {
-              try {
-                await supabaseDb.saveQuickSortSession(pendingSessionSave.value)
-                pendingSessionSave.value = null
-                console.log('[QUICK-SORT] Session saved on reconnect')
-              } catch {
-                // Still offline, re-register
-                window.addEventListener('online', retryOnReconnect, { once: true })
-              }
-            }
-          }
-          window.addEventListener('online', retryOnReconnect, { once: true })
-        }
+        console.warn('[QUICK-SORT] Failed to enqueue session for sync:', error)
       }
     }
   }

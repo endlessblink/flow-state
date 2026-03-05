@@ -61,6 +61,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useCalendarInboxState } from '@/composables/inbox/useCalendarInboxState'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
+import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
 
 // Sub-components
 import CalendarInboxHeader from './calendar/CalendarInboxHeader.vue'
@@ -70,6 +71,7 @@ import CalendarInboxList from './calendar/CalendarInboxList.vue'
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const { createTaskWithUndo, deleteTaskWithUndo } = useUnifiedUndoRedo()
+const { filterDefaults } = useFilterDefaults()
 
 // State Composable
 const {
@@ -104,6 +106,7 @@ const addTask = () => {
   if (!newTaskTitle.value.trim()) return
 
   createTaskWithUndo({
+    ...filterDefaults.value,
     title: newTaskTitle.value.trim(),
     status: 'todo',
     isInInbox: true
@@ -117,6 +120,7 @@ const addTaskWithDescription = (title: string, description: string) => {
   if (!title.trim()) return
 
   createTaskWithUndo({
+    ...filterDefaults.value,
     title: title.trim(),
     description: description.trim(),
     status: 'todo',

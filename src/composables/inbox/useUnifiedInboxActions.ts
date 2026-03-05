@@ -5,6 +5,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useToast } from '@/composables/useToast'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
+import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
 import {
     findMatchingGroupForDueDate,
     calculatePositionInGroup,
@@ -22,6 +23,7 @@ export function useUnifiedInboxActions(
     const { createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
     const { showToast } = useToast()
     const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
+    const { filterDefaults } = useFilterDefaults()
 
     // TASK-1428: Section properties for group inheritance on send-to-canvas
     const { getSectionProperties } = useCanvasSectionProperties({
@@ -44,6 +46,7 @@ export function useUnifiedInboxActions(
         if (!title.trim()) return
 
         createTaskWithUndo({
+            ...filterDefaults.value,
             title: title.trim(),
             status: 'todo',
             isInInbox: true,

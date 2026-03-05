@@ -3860,6 +3860,7 @@ PlasmoidItem {
 
     function fetchTasks() {
         if (!root.isAuthenticated) return
+        taskListRefreshTimer.restart()
 
         root.isLoadingTasks = true
 
@@ -3987,6 +3988,7 @@ PlasmoidItem {
 
     function fetchPinnedTasks() {
         if (!root.isAuthenticated) return
+        pinnedTasksRefreshTimer.restart()
 
         root.isLoadingPinnedTasks = true
 

@@ -596,6 +596,7 @@ onMounted(() => {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   transition: all var(--duration-fast);
 }

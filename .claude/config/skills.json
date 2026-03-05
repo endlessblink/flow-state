@@ -1,7 +1,7 @@
 {
   "project": "FlowState",
   "version": "2.2.0",
-  "last_updated": "2026-02-24",
+  "last_updated": "2026-03-05",
   "skills": {
     "dev-maestro": {
       "name": "Dev Maestro",
@@ -853,6 +853,28 @@
       "last_used": null,
       "related_skills": [],
       "description": "Custom SVG icon design and graphics generation for FlowState's Cyberflow RPG. Encodes cyberpunk icon design principles (sharp angles, circuit motifs, neon-ready), icon categories (achievements, classes, corruption, bosses, shop, stats), Vue inline SVG component patterns, Nano Banana Pro AI graphics generation integration, SVGO optimization, and animated SVG patterns. Use when creating custom game icons or generating visual assets."
+    },
+    "tauri": {
+      "name": "tauri",
+      "category": "implement",
+      "triggers": [
+        "/tauri",
+        "deploy tauri",
+        "tauri build",
+        "tauri update",
+        "update desktop app"
+      ],
+      "keywords": [
+        "tauri",
+        "build,",
+        "sign,",
+        "deploy",
+        "desktop"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Build, sign, and deploy the Tauri desktop app to VPS auto-updater. Handles version bumps, env vars, and full pipeline. Triggers on \"/tauri\", \"deploy tauri\", \"tauri build\", \"tauri update\", \"update desktop app\"."
     }
   },
   "categories": {

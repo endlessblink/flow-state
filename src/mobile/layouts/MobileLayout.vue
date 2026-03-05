@@ -364,6 +364,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   background: var(--glass-bg-medium);
+  -webkit-backdrop-filter: blur(var(--blur-md));
   backdrop-filter: blur(var(--blur-md));
   border-bottom: 1px solid var(--glass-border);
   z-index: 10;

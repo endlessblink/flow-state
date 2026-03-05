@@ -887,6 +887,7 @@ function autoResize(event: Event) {
   font-weight: var(--font-semibold);
   cursor: pointer;
   flex-shrink: 0;
+  -webkit-backdrop-filter: blur(var(--blur-xs));
   backdrop-filter: blur(var(--blur-xs));
 }
 

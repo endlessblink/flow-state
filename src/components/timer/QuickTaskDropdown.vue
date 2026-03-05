@@ -18,8 +18,8 @@
           tabindex="-1"
           @keydown="handleKeydown"
         >
-          <!-- Quick Add Input -->
-          <div class="quick-add-row">
+          <!-- Quick Add Input (authenticated only) -->
+          <div v-if="authStore.isAuthenticated" class="quick-add-row">
             <input
               ref="inputRef"
               v-model="newTaskTitle"
@@ -37,6 +37,10 @@
             >
               <Plus :size="14" />
             </button>
+          </div>
+          <!-- Guest mode notice -->
+          <div v-else class="guest-notice">
+            <span>Sign in to use Quick Tasks</span>
           </div>
 
           <div v-if="pinnedItems.length > 0 || frequentItems.length > 0" class="section-divider" />
@@ -118,8 +122,8 @@
             </div>
           </template>
 
-          <!-- Empty State (only when no input and no items) -->
-          <div v-if="pinnedItems.length === 0 && frequentItems.length === 0 && !newTaskTitle.trim()" class="empty-state">
+          <!-- Empty State (authenticated, no items, no input) -->
+          <div v-if="authStore.isAuthenticated && pinnedItems.length === 0 && frequentItems.length === 0 && !newTaskTitle.trim()" class="empty-state">
             <span>Type above to pin your common tasks</span>
           </div>
         </div>
@@ -141,9 +145,11 @@
 import { ref, computed, nextTick, watch } from 'vue'
 import { Zap, Pin, Play, X, TrendingUp, Plus } from 'lucide-vue-next'
 import { useQuickTasks } from '@/composables/useQuickTasks'
+import { useAuthStore } from '@/stores/auth'
 import type { QuickTaskItem } from '@/types/quickTasks'
 
-const { quickTaskItems, unpinTask, pinTask, selectAndStartTimer } = useQuickTasks()
+const { quickTaskItems, unpinTask, pinTask, selectAndStartTimer, loadPinnedTasks } = useQuickTasks()
+const authStore = useAuthStore()
 
 const isOpen = ref(false)
 const focusedIndex = ref(-1)
@@ -240,6 +246,9 @@ const handleKeydown = (e: KeyboardEvent) => {
 }
 
 watch(isOpen, (open) => {
+    if (open) {
+        loadPinnedTasks() // refresh from DB (picks up KDE widget changes)
+    }
     if (!open) {
         focusedIndex.value = -1
         newTaskTitle.value = ''
@@ -455,6 +464,21 @@ watch(isOpen, (open) => {
     font-size: var(--text-xs);
     text-align: center;
     opacity: 0.7;
+}
+
+.guest-notice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    text-align: center;
+    opacity: 0.7;
+    background: var(--glass-bg-soft);
+    margin: var(--space-1_5) var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
 }
 
 /* Dropdown transition */

@@ -376,7 +376,7 @@ defineExpose({ open, close })
 
 .modal-enter-active .command-palette-modal,
 .modal-leave-active .command-palette-modal {
-  transition: transform var(--duration-normal) var(--var(--ease-out)-out), opacity var(--duration-normal) ease;
+  transition: transform var(--duration-normal) var(--ease-out), opacity var(--duration-normal) ease;
 }
 
 .modal-enter-from .command-palette-modal {

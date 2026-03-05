@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import type { Big3Slot } from '@/composables/useMorningDashboard'
 import { useMorningDashboard } from '@/composables/useMorningDashboard'
-import TaskSuggestionChip from './TaskSuggestionChip.vue'
 
 const props = defineProps<{
   slot: Big3Slot
@@ -23,6 +22,14 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const isEmpty = computed(() => !props.slot.title.trim())
 const isFilled = computed(() => props.slot.title.trim().length > 0 && !props.slot.completed)
 const isCompleted = computed(() => props.slot.completed)
+
+// Filter suggestions by typed input
+const filteredSuggestions = computed(() => {
+  const query = inputValue.value.trim().toLowerCase()
+  const tasks = suggestedTasks.value
+  if (!query) return tasks.slice(0, 8)
+  return tasks.filter(t => t.title.toLowerCase().includes(query)).slice(0, 8)
+})
 
 function startEditing() {
   if (isCompleted.value) return
@@ -88,9 +95,9 @@ function clearSlot() {
           @keydown="handleKeydown"
           @blur="commitEdit"
         />
-        <div v-if="suggestedTasks.length" class="slot-dropdown">
+        <div v-if="filteredSuggestions.length" class="slot-dropdown">
           <button
-            v-for="task in suggestedTasks.slice(0, 6)"
+            v-for="task in filteredSuggestions"
             :key="task.id"
             class="slot-dropdown-item"
             type="button"
@@ -243,14 +250,16 @@ function clearSlot() {
   top: calc(100% + var(--space-2));
   left: 0;
   right: 0;
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border);
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-md);
-  max-height: 200px;
+  max-height: 260px;
   overflow-y: auto;
   z-index: 100;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
+  padding: var(--space-1) 0;
 }
 
 .slot-dropdown-item {
@@ -263,14 +272,21 @@ function clearSlot() {
   color: var(--text-secondary);
   font-size: 0.8rem;
   cursor: pointer;
-  transition: background var(--duration-normal) var(--ease-out);
-  white-space: nowrap;
+  transition: background var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  border-left: 2px solid transparent;
 }
 
 .slot-dropdown-item:hover {
-  background: rgba(78, 205, 196, 0.08);
-  color: var(--text-primary);
+  background: var(--dropdown-item-hover-bg);
+  color: var(--dropdown-selected-color);
+  border-left-color: var(--dropdown-selected-border);
+}
+
+.slot-dropdown-item + .slot-dropdown-item {
+  border-top: 1px solid var(--overlay-component-border-color);
 }
 </style>

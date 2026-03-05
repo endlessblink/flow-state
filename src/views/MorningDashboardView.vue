@@ -1,100 +1,186 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { X } from 'lucide-vue-next'
 import MorningGreeting from '@/components/morning-dashboard/MorningGreeting.vue'
 import MorningScore from '@/components/morning-dashboard/MorningScore.vue'
 import BigThreeCard from '@/components/morning-dashboard/BigThreeCard.vue'
 import MorningMissions from '@/components/morning-dashboard/MorningMissions.vue'
 import MorningNews from '@/components/morning-dashboard/MorningNews.vue'
 import MorningQuickCapture from '@/components/morning-dashboard/MorningQuickCapture.vue'
+
+const router = useRouter()
+const isVisible = ref(false)
+
+function dismiss() {
+  isVisible.value = false
+  setTimeout(() => router.push('/'), 300)
+}
+
+onMounted(() => {
+  // Trigger enter animation
+  requestAnimationFrame(() => { isVisible.value = true })
+})
 </script>
 
 <template>
-  <div class="morning-dashboard">
-    <div class="morning-greeting bento-cell bento-cell--1">
-      <MorningGreeting />
-    </div>
-    <div class="morning-score bento-cell bento-cell--2">
-      <MorningScore />
-    </div>
-    <div class="morning-big3 bento-cell bento-cell--3">
-      <BigThreeCard />
-    </div>
-    <div class="morning-missions bento-cell bento-cell--4">
-      <MorningMissions />
-    </div>
-    <div class="morning-news bento-cell bento-cell--5">
-      <MorningNews />
-    </div>
-    <div class="morning-capture bento-cell bento-cell--6">
-      <MorningQuickCapture />
-    </div>
-  </div>
+  <Teleport to="body">
+    <Transition name="morning-overlay">
+      <div v-if="isVisible" class="morning-overlay" @click.self="dismiss">
+        <!-- Dismiss button -->
+        <button class="morning-dismiss" @click="dismiss" aria-label="Close morning dashboard">
+          <X :size="20" />
+        </button>
+
+        <!-- Centered modal card -->
+        <div class="morning-modal">
+          <div class="morning-header">
+            <MorningGreeting />
+            <MorningScore />
+          </div>
+
+          <BigThreeCard />
+
+          <div class="morning-bottom">
+            <MorningMissions />
+            <MorningNews />
+          </div>
+
+          <MorningQuickCapture />
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
-.morning-dashboard {
+.morning-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-8) var(--space-6);
+  overflow-y: auto;
+
+  /* Blurred glass overlay — app visible behind */
+  background: var(--overlay-component-bg-lighter);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+}
+
+.morning-dismiss {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 1001;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.morning-dismiss:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.morning-modal {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-bottom: var(--space-6);
+}
+
+.morning-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.morning-bottom {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto auto auto;
   gap: var(--space-4);
-  padding: var(--space-6);
-  max-width: 900px;
-  margin: 0 auto;
-  min-height: 100vh;
-  align-content: start;
-  overflow-y: auto;
 }
 
-.morning-greeting { grid-column: 1; }
-.morning-score { grid-column: 2; }
-.morning-big3 { grid-column: 1 / -1; }
-.morning-missions { grid-column: 1; }
-.morning-news { grid-column: 2; }
-.morning-capture { grid-column: 1 / -1; }
+/* Enter/leave transitions */
+.morning-overlay-enter-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-/* Stagger fade-in animation */
-.bento-cell {
+.morning-overlay-leave-active {
+  transition: all 0.3s var(--ease-in);
+}
+
+.morning-overlay-enter-from {
   opacity: 0;
-  animation: bento-fade-in 0.4s ease forwards;
 }
 
-.bento-cell--1 { animation-delay: 0ms; }
-.bento-cell--2 { animation-delay: 50ms; }
-.bento-cell--3 { animation-delay: 100ms; }
-.bento-cell--4 { animation-delay: 150ms; }
-.bento-cell--5 { animation-delay: 200ms; }
-.bento-cell--6 { animation-delay: 250ms; }
+.morning-overlay-enter-from .morning-modal {
+  transform: translateY(20px) scale(0.97);
+  opacity: 0;
+}
 
-@keyframes bento-fade-in {
+.morning-overlay-leave-to {
+  opacity: 0;
+}
+
+.morning-overlay-leave-to .morning-modal {
+  transform: translateY(-10px) scale(0.98);
+  opacity: 0;
+}
+
+/* Modal content animation */
+.morning-modal {
+  animation: modal-slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modal-slide-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(24px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bento-cell {
-    opacity: 1;
+  .morning-modal {
     animation: none;
+  }
+  .morning-overlay-enter-active,
+  .morning-overlay-leave-active {
+    transition: none;
   }
 }
 
-@media (max-width: 1023px) {
-  .morning-dashboard {
-    grid-template-columns: 1fr;
-    padding: var(--space-4);
+@media (max-width: 768px) {
+  .morning-overlay {
+    padding: var(--space-3);
+    align-items: flex-start;
+    padding-top: var(--space-10);
   }
 
-  .morning-greeting,
-  .morning-score,
-  .morning-big3,
-  .morning-missions,
-  .morning-news,
-  .morning-capture {
-    grid-column: 1;
+  .morning-header {
+    flex-direction: column;
+  }
+
+  .morning-bottom {
+    grid-template-columns: 1fr;
   }
 }
 </style>

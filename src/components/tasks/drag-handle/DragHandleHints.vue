@@ -68,7 +68,7 @@ const hintsClasses = computed(() => [
 
 .drag-hints-fade-enter-active,
 .drag-hints-fade-leave-active {
-  transition: opacity var(--duration-normal) var(--var(--ease-out)-out), transform var(--duration-normal) ease;
+  transition: opacity var(--duration-normal) var(--ease-out), transform var(--duration-normal) ease;
 }
 
 .drag-hints-fade-enter-from,

@@ -543,7 +543,7 @@
     background-color: var(--brand-primary) !important;
     opacity: 0 !important;
     /* Hidden by default - only show when selected */
-    transition: opacity var(--duration-normal) var(--var(--ease-out)-out), visibility var(--duration-normal) ease !important;
+    transition: opacity var(--duration-normal) var(--ease-out), visibility var(--duration-normal) ease !important;
 }
 
 /* ====================================================================

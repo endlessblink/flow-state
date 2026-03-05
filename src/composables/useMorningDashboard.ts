@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useGamificationStore } from '@/stores/gamification'
 import { useAuthStore } from '@/stores/auth'
+import { useSmartViews } from '@/composables/useSmartViews'
 import { supabase } from '@/composables/supabase/_infrastructure'
 
 export interface Big3Slot {
@@ -59,6 +60,7 @@ export function useMorningDashboard() {
   const taskStore = useTaskStore()
   const gamificationStore = useGamificationStore()
   const authStore = useAuthStore()
+  const { isTodayTask } = useSmartViews()
 
   // --- Big 3 State ---
   const big3Slots = ref<Big3Slot[]>([
@@ -112,8 +114,8 @@ export function useMorningDashboard() {
   })
 
   // --- Computed: Task Suggestions ---
+  // Uses the app's smart view system for proper date normalization (ISO, instances, scheduled dates)
   const suggestedTasks = computed(() => {
-    const today = getTodayString()
     const assignedIds = new Set(
       big3Slots.value.map((s) => s.taskId).filter(Boolean)
     )
@@ -123,18 +125,36 @@ export function useMorningDashboard() {
       (t) => t.status !== 'done' && !assignedIds.has(t.id)
     )
 
-    const dueToday = notDone.filter((t) => t.dueDate === today)
-    const highPriority = notDone.filter(
-      (t) => t.priority === 'high' && !dueToday.find((d) => d.id === t.id)
-    )
-    const rest = notDone.filter(
-      (t) =>
-        !dueToday.find((d) => d.id === t.id) &&
-        !highPriority.find((h) => h.id === t.id)
-    )
+    // Priority tiers (using app's smart view system for proper date matching):
+    // 1. Tasks with progress (already started = high intent)
+    const inProgress = notDone.filter((t) => t.progress > 0)
+    // 2. Tasks due/scheduled today (uses isTodayTask which handles instances, normalization, etc.)
+    const todayTasks = notDone.filter((t) => t.progress === 0 && isTodayTask(t))
+    // 3. Overdue tasks (dueDate before today)
+    const todayStr = getTodayString()
+    const overdue = notDone.filter((t) => {
+      if (inProgress.find(ip => ip.id === t.id) || todayTasks.find(td => td.id === t.id)) return false
+      if (!t.dueDate) return false
+      return t.dueDate.slice(0, 10) < todayStr
+    })
+    // 4. High priority without date
+    const highPriority = notDone.filter((t) => {
+      if (inProgress.find(ip => ip.id === t.id) || todayTasks.find(td => td.id === t.id) || overdue.find(o => o.id === t.id)) return false
+      return t.priority === 'high'
+    })
+    // 5. Medium priority
+    const medPriority = notDone.filter((t) => {
+      const seenIds = new Set([...inProgress, ...todayTasks, ...overdue, ...highPriority].map(x => x.id))
+      return !seenIds.has(t.id) && t.priority === 'medium'
+    })
+    // 6. Recently created (fallback)
+    const seenAll = new Set([...inProgress, ...todayTasks, ...overdue, ...highPriority, ...medPriority].map(x => x.id))
+    const recent = notDone
+      .filter((t) => !seenAll.has(t.id))
+      .sort((a, b) => (b.createdAt?.getTime?.() ?? 0) - (a.createdAt?.getTime?.() ?? 0))
 
-    const merged = [...dueToday, ...highPriority, ...rest]
-    return merged.slice(0, 10).map((t) => ({ id: t.id, title: t.title }))
+    const merged = [...inProgress, ...todayTasks, ...overdue, ...highPriority, ...medPriority, ...recent]
+    return merged.slice(0, 15).map((t) => ({ id: t.id, title: t.title }))
   })
 
   // --- Persistence helpers ---

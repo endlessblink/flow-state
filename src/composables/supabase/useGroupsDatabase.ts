@@ -154,6 +154,7 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
             console.log(`🪦 [PERMANENT-DELETE-GROUP] Group ${groupId} permanently deleted`)
         } catch (e: unknown) {
             handleError(e, 'permanentlyDeleteGroup')
+            throw e
         } finally {
             isSyncing.value = false
         }

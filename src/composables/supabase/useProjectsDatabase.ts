@@ -151,6 +151,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'permanentlyDeleteProject')
+            throw e
         } finally {
             isSyncing.value = false
         }

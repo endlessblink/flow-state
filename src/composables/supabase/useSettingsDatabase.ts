@@ -27,7 +27,7 @@ export function useSettingsDatabase(ctx: DatabaseContext) {
                 return fromSupabaseUserSettings(data as SupabaseUserSettings)
             }, 'fetchUserSettings')
         } catch (e: unknown) {
-            console.error('Fetch User Settings Error:', e)
+            handleError(e, 'fetchUserSettings')
             return null
         }
     }

@@ -4423,15 +4423,15 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1154: Standardize Error Handling Pattern (📋 PLANNED)
+### ~~TASK-1154~~: Standardize Error Handling Pattern (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-05)
 
 **Problem**: Inconsistent error handling - some functions throw, others return null.
 
-**Solution**: Standardize to Result type pattern or consistent throw behavior.
+**Solution**: Standardized DB layer: write ops re-throw after `handleError()`, read ops return empty/null. Fixed 4 files: `permanentlyDeleteGroup/Project` now re-throw, `fetchUserSettings` uses structured `handleError`, AI sync fire-and-forget calls now have `.catch()` handlers.
 
-**Files**: `src/composables/useSupabaseDatabase.ts`
+**Files**: `src/composables/supabase/useGroupsDatabase.ts`, `useProjectsDatabase.ts`, `useSettingsDatabase.ts`, `src/composables/useAISync.ts`
 
 ---
 

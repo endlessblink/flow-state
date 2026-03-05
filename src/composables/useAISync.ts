@@ -195,7 +195,7 @@ export function useAISync() {
     conversationSyncTimers.set(id, setTimeout(async () => {
       const conv = store.conversations.find(c => c.id === id)
       if (conv) {
-        await db.saveAIConversation(conv)
+        await db.saveAIConversation(conv).catch(e => console.warn('[AI-SYNC] saveAIConversation failed:', e))
       }
       conversationSyncTimers.delete(id)
     }, CONVERSATION_SYNC_DEBOUNCE_MS))
@@ -204,7 +204,7 @@ export function useAISync() {
   function scheduleSaveSettings(settings: { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' }): void {
     if (settingsSyncTimer) clearTimeout(settingsSyncTimer)
     settingsSyncTimer = setTimeout(async () => {
-      await db.saveAISettings(settings)
+      await db.saveAISettings(settings).catch(e => console.warn('[AI-SYNC] saveAISettings failed:', e))
       settingsSyncTimer = null
     }, SETTINGS_SYNC_DEBOUNCE_MS)
   }
@@ -216,7 +216,7 @@ export function useAISync() {
       // Only sync new entries (ones added after last sync)
       const newEntries = entries.slice(lastSyncedUsageCount)
       if (newEntries.length > 0) {
-        await db.syncAIUsageLog(newEntries)
+        await db.syncAIUsageLog(newEntries).catch(e => console.warn('[AI-SYNC] syncAIUsageLog failed:', e))
         lastSyncedUsageCount = entries.length
       }
       usageSyncTimer = null

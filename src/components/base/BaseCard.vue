@@ -11,9 +11,9 @@
     ]"
     :role="hoverable ? 'button' : undefined"
     :tabindex="hoverable ? 0 : undefined"
-    @click="hoverable && $emit('click', $event)"
-    @keydown.enter="hoverable && $emit('click', $event)"
-    @keydown.space.prevent="hoverable && $emit('click', $event)"
+    @click="hoverable && emit('click', $event)"
+    @keydown.enter="handleKeydown"
+    @keydown.space.prevent="handleKeydown"
   >
     <div v-if="$slots.header" class="card-header">
       <slot name="header" />
@@ -37,16 +37,28 @@ interface Props {
   elevated?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   variant: 'default',
   hoverable: false,
   glass: false,
   elevated: false
 })
 
-defineEmits<{
+const emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
+
+const handleKeydown = (_event: KeyboardEvent) => {
+  if (props.hoverable) {
+    // Create a synthetic mouse event to satisfy the emit type signature
+    const mouseEvent = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    })
+    emit('click', mouseEvent)
+  }
+}
 </script>
 
 <style scoped>
@@ -91,9 +103,8 @@ defineEmits<{
 
 /* Focus effect for keyboard accessibility */
 .base-card.has-hover:focus-visible {
-  outline: none;
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1), 0 0 12px rgba(78, 205, 196, 0.05);
+  outline: var(--space-0_5) solid var(--brand-primary);
+  outline-offset: var(--space-0_5);
 }
 
 /* Glass variant - same base look, just adds inset highlight for colorful backgrounds */

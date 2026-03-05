@@ -793,21 +793,17 @@ const getSubmenuRect = (type: SubmenuType) => {
   return { x: pos.x, y: pos.y, width: size.width, height: size.height }
 }
 
-// Actually close a submenu (called by safe polygon or panel leave)
+// Actually close a submenu (called by safe polygon or panel leave).
+// TASK-1445: Nested submenus (canvasGroup, duration) close ONLY themselves.
+// The parent MoreSubmenu closes only via its own handlePanelLeave or closeAllSubmenusNow.
 const actuallyCloseSubmenu = (type: SubmenuType) => {
   if (type === 'dueDate') showDueDateSubmenu.value = false
   else if (type === 'priority') showPrioritySubmenu.value = false
-  else if (type === 'duration') {
-    showDurationSubmenu.value = false
-    if (!showCanvasGroupSubmenu.value) showMoreSubmenu.value = false
-  }
+  else if (type === 'duration') showDurationSubmenu.value = false
   else if (type === 'project') showProjectSubmenu.value = false
-  else if (type === 'canvasGroup') {
-    showCanvasGroupSubmenu.value = false
-    if (!showDurationSubmenu.value) showMoreSubmenu.value = false
-  }
-  else {
-    // Closing 'more' — skip if a nested child submenu is still open
+  else if (type === 'canvasGroup') showCanvasGroupSubmenu.value = false
+  else if (type === 'more') {
+    // Only close 'more' if no nested child submenu is still open
     if (!showCanvasGroupSubmenu.value && !showDurationSubmenu.value) {
       showMoreSubmenu.value = false
     }

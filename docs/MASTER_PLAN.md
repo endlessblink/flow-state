@@ -3840,6 +3840,35 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
+### ~~TASK-1452~~: KDE Widget — Switch Active Timer to Different Task (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-05)
+
+**Task**: When a Pomodoro timer is running on task A and user clicks play on task B, reassign the running timer session to task B instead of creating a new session.
+
+**Implementation**:
+1. Added `switchTaskForSession()` method to KDE widget backend
+2. Implemented 3-state play icon:
+   - Stopped state: play icon
+   - Running on OTHER task: skip-forward icon (indicates timer switch)
+   - Running on THIS task: chronometer icon (indicates timer active)
+3. Smart click handler:
+   - Checks if timer running and on different task
+   - If yes: calls `switchTaskForSession()` to reassign
+   - If no: starts new timer session normally
+
+**Files**: `packages/kde-widget/contents/ui/main.qml`
+
+**Architecture**:
+- Reuses existing session management (`timer_sessions` table)
+- Updates `task_id` on running session instead of creating duplicate
+- Preserves elapsed time, start time, pomodoro count
+- No breaking changes to sync protocol
+
+**Progress (2026-03-05):** Feature implemented and verified. Play icon now shows 3 states correctly. Timer successfully switches to different task when user clicks play. Tested with both timer running and idle states.
+
+---
+
 ### ~~FEATURE-1293~~: Catalog View UX/UI Redesign (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-02-21)
@@ -4488,18 +4517,20 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### FEATURE-1162: Smart Filters / Saved Views (📋 PLANNED)
+### ~~FEATURE-1162~~: Smart Filters / Saved Views (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-05)
 
 **Feature**: Allow users to save filter combinations as named views.
 
 **Implementation**:
-1. Create `saved_filters` Supabase table
-2. Add filter save/load UI
-3. Quick access dropdown
+1. ~~Create `saved_filters` Supabase table~~ → Stored in settings JSONB (syncs via existing pipeline)
+2. ✅ SavedViewsDropdown component with glass-morphism design
+3. ✅ Quick access bookmark dropdown in FilterControls + InboxFilters
+4. ✅ Composable `useSavedViews.ts` for capture/apply/save/delete
+5. ✅ Persists via localStorage + Tauri Store + Supabase user_settings
 
-**Files**: New migration, new components
+**Files**: `src/types/savedViews.ts`, `src/composables/useSavedViews.ts`, `src/components/filters/SavedViewsDropdown.vue`, `src/stores/settings.ts`, `src/components/base/FilterControls.vue`, `src/components/canvas/InboxFilters.vue`
 
 ---
 

@@ -53,16 +53,22 @@ export function useTaskStates() {
     const hideCanvasDoneTasks = ref(true)
     const hideCalendarDoneTasks = ref(false)
 
+    // BUG-1451: Independent board done filter (default false — board shows done tasks)
+    const hideBoardDoneTasks = ref(false)
+
     // TASK-082: Hide overdue tasks on canvas (tasks with due date before today)
     const hideCanvasOverdueTasks = ref(false)
 
     // TASK-1418: Show/hide virtual future recurring events on calendar
     const showFutureRecurring = ref(false)
 
-    // Backward compatibility computed - used by useTaskFiltering and legacy code
+    // BUG-1451: hideDoneTasks now delegates to hideBoardDoneTasks for Board view.
+    // Legacy code that reads hideDoneTasks gets the board flag.
+    // Setting hideDoneTasks sets ALL three view flags for backward compat.
     const hideDoneTasks = computed({
-        get: () => hideCanvasDoneTasks.value || hideCalendarDoneTasks.value,
+        get: () => hideBoardDoneTasks.value,
         set: (val: boolean) => {
+            hideBoardDoneTasks.value = val
             hideCanvasDoneTasks.value = val
             hideCalendarDoneTasks.value = val
         }
@@ -117,6 +123,7 @@ export function useTaskStates() {
         activeStatusFilter,
         activeDurationFilter,
         hideDoneTasks,
+        hideBoardDoneTasks,
         hideCanvasDoneTasks,
         hideCalendarDoneTasks,
         hideCanvasOverdueTasks,

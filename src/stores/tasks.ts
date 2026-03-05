@@ -91,7 +91,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const states = useTaskStates()
   const {
     // SAFETY: tasks is now filteredTasks (safe for dis-
-    _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
+    _rawTasks, hideDoneTasks, hideBoardDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
     showFutureRecurring,
     activeSmartView, activeStatusFilter,
     activeDurationFilter, isLoadingFromDatabase, manualOperationInProgress,
@@ -133,7 +133,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // BUG-057: Pass syncInProgress to prevent saves during sync operations
   // SAFETY: Pass _rawTasks for load/save operations
   const persistence = useTaskPersistence(
-    _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
+    _rawTasks, hideDoneTasks, hideBoardDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
     showFutureRecurring,
     activeSmartView, activeStatusFilter,
     activeDurationFilter, // TASK-1215: Persist duration filter
@@ -148,7 +148,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // SAFETY: Pass _rawTasks for CRUD operations
   const operations = useTaskOperations(
     _rawTasks, states.selectedTaskIds, activeSmartView, activeStatusFilter,
-    activeDurationFilter, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
+    activeDurationFilter, hideDoneTasks, hideBoardDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
     manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, persistFilters, runAllTaskMigrations, addPendingWrite
   )
 
@@ -250,6 +250,9 @@ export const useTaskStore = defineStore('tasks', () => {
           // 1. If we are actively dragging/editing (manualOperationInProgress), ignore sync for now
           // 2. If local task is newer than incoming task (based on updatedAt), ignore sync (Last Write Wins)
           if (manualOperationInProgress.value) {
+            if (import.meta.env.DEV) {
+              console.warn(`[BUG-1451] updateTaskFromSync BLOCKED by manualOperationInProgress for ${taskId.slice(0, 8)}`)
+            }
             return
           }
 
@@ -380,6 +383,10 @@ export const useTaskStore = defineStore('tasks', () => {
               currentTask.dueDate !== normalizedTask.dueDate ||
               currentTask.parentId !== normalizedTask.parentId ||
               JSON.stringify(currentTask.canvasPosition) !== JSON.stringify(normalizedTask.canvasPosition)
+
+            if (import.meta.env.DEV && currentTask.status !== normalizedTask.status) {
+              console.log(`[BUG-1451] updateTaskFromSync: ${taskId.slice(0, 8)} status: ${currentTask.status} → ${normalizedTask.status}`)
+            }
 
             _rawTasks.value[idx] = normalizedTask
 

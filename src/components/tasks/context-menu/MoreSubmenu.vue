@@ -129,15 +129,17 @@ defineEmits<{
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
 }
 
-/* TASK-1445: Invisible hover bridge toward parent menu */
-.submenu::before {
+/* TASK-1445: Invisible hover bridge on both sides (submenu can flip) */
+.submenu::before,
+.submenu::after {
   content: '';
   position: absolute;
   top: -8px;
   bottom: -8px;
-  left: -16px;
   width: 16px;
 }
+.submenu::before { left: -16px; }
+.submenu::after { right: -16px; }
 
 /* Inner scroll wrapper handles overflow */
 .submenu-scroll {

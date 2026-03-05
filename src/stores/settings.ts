@@ -7,6 +7,8 @@ import { DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS } from '@/types/timeBlockNotif
 // TASK-1338: Push notification preferences
 import type { PushNotificationPreferences } from '@/types/pushNotifications'
 import { DEFAULT_PUSH_NOTIFICATION_PREFERENCES } from '@/types/pushNotifications'
+// FEATURE-1162: Saved Views / Smart Filters
+import type { SavedView } from '@/types/savedViews'
 
 // TASK-1317: External calendar (iCal) sync config
 export interface ExternalCalendarConfig {
@@ -95,6 +97,9 @@ export interface AppSettings {
     groqApiKey: string
     aiSetupComplete: boolean
     aiPreferredProvider: 'auto' | 'groq' | 'ollama' | 'openrouter'
+
+    // FEATURE-1162: Saved Views / Smart Filters
+    savedViews: SavedView[]
 
     // Miscellaneous UI State (Persisted)
     sidebarCollapsed?: boolean
@@ -220,6 +225,9 @@ export const useSettingsStore = defineStore('settings', {
         groqApiKey: '',
         aiSetupComplete: false,
         aiPreferredProvider: 'auto' as 'auto' | 'groq' | 'ollama' | 'openrouter',
+
+        // FEATURE-1162: Saved Views defaults
+        savedViews: [],
 
         // Miscellaneous defaults
         sidebarCollapsed: false,
@@ -389,6 +397,10 @@ export const useSettingsStore = defineStore('settings', {
                     if (this.$state.aiPreferredProvider === undefined) {
                         this.$state.aiPreferredProvider = 'auto'
                     }
+                    // FEATURE-1162: Backfill savedViews
+                    if (!this.$state.savedViews) {
+                        this.$state.savedViews = []
+                    }
                 } catch (e) {
                     console.error('Failed to parse settings from storage', e)
                 }
@@ -411,6 +423,32 @@ export const useSettingsStore = defineStore('settings', {
 
         updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
             this.$state[key] = value
+            this.saveToStorage()
+        },
+
+        // FEATURE-1162: Saved Views CRUD
+        addSavedView(view: SavedView) {
+            if (!this.$state.savedViews) this.$state.savedViews = []
+            this.$state.savedViews.push(view)
+            this.saveToStorage()
+        },
+
+        updateSavedView(id: string, updates: Partial<SavedView>) {
+            if (!this.$state.savedViews) return
+            const idx = this.$state.savedViews.findIndex(v => v.id === id)
+            if (idx !== -1) {
+                this.$state.savedViews[idx] = {
+                    ...this.$state.savedViews[idx],
+                    ...updates,
+                    updatedAt: new Date().toISOString()
+                }
+                this.saveToStorage()
+            }
+        },
+
+        deleteSavedView(id: string) {
+            if (!this.$state.savedViews) return
+            this.$state.savedViews = this.$state.savedViews.filter(v => v.id !== id)
             this.saveToStorage()
         }
     }

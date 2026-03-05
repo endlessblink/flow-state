@@ -56,6 +56,7 @@ export function useTaskOperations(
     activeStatusFilter: Ref<string | null>,
     activeDurationFilter: Ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>,
     hideDoneTasks: Ref<boolean>,
+    hideBoardDoneTasks: Ref<boolean>,
     hideCanvasDoneTasks: Ref<boolean>,
     hideCalendarDoneTasks: Ref<boolean>,
     hideCanvasOverdueTasks: Ref<boolean>,
@@ -559,6 +560,10 @@ export function useTaskOperations(
                 syncedUpdates.dueDate = normalizeDueDate(syncedUpdates.dueDate)
             }
 
+            if (import.meta.env.DEV && syncedUpdates.status !== undefined) {
+                console.log(`[BUG-1451] updateTask: ${taskId.slice(0, 8)} status: ${task.status} → ${syncedUpdates.status}`)
+            }
+
             _rawTasks.value[index] = {
                 ...task,
                 ...syncedUpdates,
@@ -739,6 +744,9 @@ export function useTaskOperations(
         addPendingWrite(taskId)
 
         // TASK-1159: Optimistic delete — splice from local state immediately for instant UI
+        if (import.meta.env.DEV) {
+            console.log(`[BUG-1451] deleteTask: ${taskId.slice(0, 8)} "${deletedTask.title?.slice(0, 20)}" spliced from _rawTasks`)
+        }
         _rawTasks.value.splice(index, 1)
 
         // Save to localStorage immediately (for guest mode persistence)
@@ -1140,8 +1148,9 @@ export function useTaskOperations(
         persistFilters()
     }
 
+    // BUG-1451: toggleHideDoneTasks now only toggles the board flag (used by BoardView)
     const toggleHideDoneTasks = () => {
-        hideDoneTasks.value = !hideDoneTasks.value
+        hideBoardDoneTasks.value = !hideBoardDoneTasks.value
         persistFilters()
     }
 

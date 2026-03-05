@@ -5,11 +5,18 @@ import { useGamificationStore } from '@/stores/gamification'
 import { useAuthStore } from '@/stores/auth'
 import { useSmartViews } from '@/composables/useSmartViews'
 import { supabase } from '@/composables/supabase/_infrastructure'
+import type { Task } from '@/types/tasks'
 
 export interface Big3Slot {
   taskId: string | null
   title: string
   completed: boolean
+}
+
+export interface TaskPoolGroup {
+  label: string
+  color: string
+  tasks: { id: string; title: string; priority: Task['priority']; dueDate: string; projectId: string }[]
 }
 
 export interface NewsItem {
@@ -155,6 +162,115 @@ export function useMorningDashboard() {
 
     const merged = [...inProgress, ...todayTasks, ...overdue, ...highPriority, ...medPriority, ...recent]
     return merged.slice(0, 15).map((t) => ({ id: t.id, title: t.title }))
+  })
+
+  // --- Computed: Grouped Task Pool ---
+  const groupedTasks = computed((): Record<string, TaskPoolGroup> => {
+    const assignedIds = new Set(
+      big3Slots.value.map((s) => s.taskId).filter(Boolean)
+    )
+
+    const tasks = taskStore.tasks ?? []
+    const todayStr = getTodayString()
+
+    function toPoolTask(t: Task) {
+      return {
+        id: t.id,
+        title: t.title,
+        priority: t.priority,
+        dueDate: t.dueDate ?? '',
+        projectId: t.projectId ?? '',
+      }
+    }
+
+    function dueDateSort(a: Task, b: Task): number {
+      const aDate = a.dueDate ? a.dueDate.slice(0, 10) : '9999-99-99'
+      const bDate = b.dueDate ? b.dueDate.slice(0, 10) : '9999-99-99'
+      if (aDate !== bDate) return aDate < bDate ? -1 : 1
+      const aUp = a.updatedAt instanceof Date ? a.updatedAt.getTime() : 0
+      const bUp = b.updatedAt instanceof Date ? b.updatedAt.getTime() : 0
+      return bUp - aUp
+    }
+
+    const seen = new Set<string>(assignedIds as Set<string>)
+
+    // 1. Overdue
+    const overdueList = tasks
+      .filter((t) => {
+        if (seen.has(t.id) || t.status === 'done') return false
+        if (!t.dueDate) return false
+        return t.dueDate.slice(0, 10) < todayStr
+      })
+      .sort(dueDateSort)
+      .slice(0, 5)
+    overdueList.forEach((t) => seen.add(t.id))
+
+    // 2. Today
+    const todayList = tasks
+      .filter((t) => {
+        if (seen.has(t.id) || t.status === 'done') return false
+        return isTodayTask(t)
+      })
+      .sort(dueDateSort)
+      .slice(0, 5)
+    todayList.forEach((t) => seen.add(t.id))
+
+    // 3. In progress
+    const inProgressList = tasks
+      .filter((t) => {
+        if (seen.has(t.id) || t.status === 'done') return false
+        return t.progress > 0
+      })
+      .sort(dueDateSort)
+      .slice(0, 3)
+    inProgressList.forEach((t) => seen.add(t.id))
+
+    // 4. High priority
+    const highPriorityList = tasks
+      .filter((t) => {
+        if (seen.has(t.id) || t.status === 'done') return false
+        return t.priority === 'high'
+      })
+      .sort(dueDateSort)
+      .slice(0, 5)
+    highPriorityList.forEach((t) => seen.add(t.id))
+
+    // 5. Other (remaining non-done)
+    const otherList = tasks
+      .filter((t) => {
+        if (seen.has(t.id) || t.status === 'done') return false
+        return true
+      })
+      .sort(dueDateSort)
+      .slice(0, 5)
+
+    return {
+      overdue: {
+        label: 'Overdue',
+        color: 'var(--color-danger)',
+        tasks: overdueList.map(toPoolTask),
+      },
+      today: {
+        label: 'Today',
+        color: 'var(--brand-primary)',
+        tasks: todayList.map(toPoolTask),
+      },
+      inProgress: {
+        label: 'In Progress',
+        color: 'var(--color-warning)',
+        tasks: inProgressList.map(toPoolTask),
+      },
+      highPriority: {
+        label: 'High Priority',
+        color: 'var(--text-primary)',
+        tasks: highPriorityList.map(toPoolTask),
+      },
+      other: {
+        label: 'Other',
+        color: '',
+        tasks: otherList.map(toPoolTask),
+      },
+    }
   })
 
   // --- Persistence helpers ---
@@ -356,6 +472,7 @@ export function useMorningDashboard() {
 
     // Suggestions
     suggestedTasks,
+    groupedTasks,
 
     // News
     newsItems,

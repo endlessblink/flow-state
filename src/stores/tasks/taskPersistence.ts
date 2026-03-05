@@ -13,6 +13,7 @@ export function useTaskPersistence(
     // SAFETY: Named _rawTasks to indicate this is the raw array for load/save operations
     _rawTasks: Ref<Task[]>,
     hideDoneTasks: Ref<boolean>,
+    hideBoardDoneTasks: Ref<boolean>,
     hideCanvasDoneTasks: Ref<boolean>,
     hideCalendarDoneTasks: Ref<boolean>,
     hideCanvasOverdueTasks: Ref<boolean>,
@@ -41,6 +42,7 @@ export function useTaskPersistence(
         activeStatusFilter: string | null
         // TASK-1215: Added missing duration filter persistence
         activeDurationFilter?: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
+        hideBoardDoneTasks?: boolean
         hideCanvasDoneTasks?: boolean
         hideCalendarDoneTasks?: boolean
         hideCanvasOverdueTasks?: boolean
@@ -454,6 +456,7 @@ export function useTaskPersistence(
         activeStatusFilter.value = state.activeStatusFilter
         // TASK-1215: Restore duration filter
         activeDurationFilter.value = state.activeDurationFilter ?? null
+        hideBoardDoneTasks.value = state.hideBoardDoneTasks ?? false
         hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? true
         hideCalendarDoneTasks.value = state.hideCalendarDoneTasks ?? false
         hideCanvasOverdueTasks.value = state.hideCanvasOverdueTasks ?? false
@@ -521,6 +524,7 @@ export function useTaskPersistence(
                 activeStatusFilter: activeStatusFilter.value,
                 // TASK-1215: Persist duration filter
                 activeDurationFilter: activeDurationFilter.value,
+                hideBoardDoneTasks: hideBoardDoneTasks.value,
                 hideCanvasDoneTasks: hideCanvasDoneTasks.value,
                 hideCalendarDoneTasks: hideCalendarDoneTasks.value,
                 hideCanvasOverdueTasks: hideCanvasOverdueTasks.value,

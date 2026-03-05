@@ -1,128 +1,64 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import type { Big3Slot } from '@/composables/useMorningDashboard'
-import { useMorningDashboard } from '@/composables/useMorningDashboard'
 
 const props = defineProps<{
   slot: Big3Slot
   index: number
+  isDragover?: boolean
 }>()
 
 const emit = defineEmits<{
-  assign: [index: number, taskId: string | null, title: string]
   clear: [index: number]
 }>()
-
-const { suggestedTasks } = useMorningDashboard()
-
-const isEditing = ref(false)
-const inputValue = ref('')
-const inputRef = ref<HTMLInputElement | null>(null)
 
 const isEmpty = computed(() => !props.slot.title.trim())
 const isFilled = computed(() => props.slot.title.trim().length > 0 && !props.slot.completed)
 const isCompleted = computed(() => props.slot.completed)
 
-// Filter suggestions by typed input
-const filteredSuggestions = computed(() => {
-  const query = inputValue.value.trim().toLowerCase()
-  const tasks = suggestedTasks.value
-  if (!query) return tasks.slice(0, 8)
-  return tasks.filter(t => t.title.toLowerCase().includes(query)).slice(0, 8)
-})
-
-function startEditing() {
-  if (isCompleted.value) return
-  isEditing.value = true
-  inputValue.value = props.slot.title
-  setTimeout(() => inputRef.value?.focus(), 0)
-}
-
-function commitEdit() {
-  const trimmed = inputValue.value.trim()
-  if (trimmed) {
-    emit('assign', props.index, props.slot.taskId, trimmed)
-  }
-  isEditing.value = false
-  inputValue.value = ''
-}
-
-function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter') commitEdit()
-  if (e.key === 'Escape') {
-    isEditing.value = false
-    inputValue.value = ''
-  }
-}
-
-function selectSuggestion(taskId: string, title: string) {
-  emit('assign', props.index, taskId, title)
-  isEditing.value = false
-  inputValue.value = ''
-}
-
-function clearSlot() {
-  emit('clear', props.index)
-}
+const placeholderTexts = [
+  'Drop your top priority',
+  'Drop your second focus',
+  'Drop one more thing',
+]
 </script>
 
 <template>
   <div
-    class="big-three-slot"
+    class="drop-zone"
     :class="{
-      'slot--empty': isEmpty && !isEditing,
-      'slot--editing': isEditing,
-      'slot--filled': isFilled,
-      'slot--completed': isCompleted,
+      'drop-zone--empty': isEmpty && !isDragover,
+      'drop-zone--dragover': isDragover,
+      'drop-zone--filled': isFilled,
+      'drop-zone--completed': isCompleted,
     }"
-    @click="isEmpty && !isEditing ? startEditing() : undefined"
   >
     <!-- Empty state -->
-    <template v-if="isEmpty && !isEditing">
-      <span class="slot-number">{{ index + 1 }}</span>
-      <span class="slot-placeholder">Pick or type your focus...</span>
+    <template v-if="isEmpty && !isDragover">
+      <span class="zone-number">{{ index + 1 }}.</span>
+      <span class="zone-placeholder">{{ placeholderTexts[index] }}</span>
     </template>
 
-    <!-- Editing state -->
-    <template v-else-if="isEditing">
-      <span class="slot-number">{{ index + 1 }}</span>
-      <div class="slot-input-wrapper">
-        <input
-          ref="inputRef"
-          v-model="inputValue"
-          class="slot-input"
-          placeholder="Type a task or pick below..."
-          @keydown="handleKeydown"
-          @blur="commitEdit"
-        />
-        <div v-if="filteredSuggestions.length" class="slot-dropdown">
-          <button
-            v-for="task in filteredSuggestions"
-            :key="task.id"
-            class="slot-dropdown-item"
-            type="button"
-            @mousedown.prevent="selectSuggestion(task.id, task.title)"
-          >
-            {{ task.title }}
-          </button>
-        </div>
-      </div>
+    <!-- Dragover state -->
+    <template v-else-if="isDragover && isEmpty">
+      <span class="zone-number">{{ index + 1 }}.</span>
+      <span class="zone-drop-hint">Drop here</span>
     </template>
 
     <!-- Filled state -->
     <template v-else-if="isFilled">
-      <span class="slot-number">{{ index + 1 }}</span>
-      <span class="slot-title" @click="startEditing">{{ slot.title }}</span>
-      <button class="slot-clear" type="button" @click.stop="clearSlot" aria-label="Clear slot">
+      <span class="zone-number">{{ index + 1 }}.</span>
+      <span class="zone-title">{{ slot.title }}</span>
+      <button class="zone-clear" type="button" @click.stop="emit('clear', index)" aria-label="Clear slot">
         &times;
       </button>
     </template>
 
     <!-- Completed state -->
     <template v-else-if="isCompleted">
-      <span class="slot-number">{{ index + 1 }}</span>
-      <span class="slot-title slot-title--done">{{ slot.title }}</span>
-      <svg class="slot-check" width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <span class="zone-number">{{ index + 1 }}.</span>
+      <span class="zone-title zone-title--done">{{ slot.title }}</span>
+      <svg class="zone-check" width="16" height="16" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="8" r="7" stroke="var(--brand-primary)" stroke-width="1.5" />
         <path d="M5 8l2 2 4-4" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
@@ -131,46 +67,37 @@ function clearSlot() {
 </template>
 
 <style scoped>
-.big-three-slot {
+.drop-zone {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  transition:
-    background var(--duration-normal) var(--ease-out),
-    border-color var(--duration-normal) var(--ease-out);
   min-height: 48px;
-  position: relative;
+  transition: all 0.2s ease;
 }
 
-.slot--empty {
+.drop-zone--empty {
   border: 2px dashed var(--glass-border);
-  cursor: pointer;
 }
 
-.slot--empty:hover {
-  border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.04);
-}
-
-.slot--editing {
+.drop-zone--dragover {
   border: 2px solid var(--brand-primary);
-  background: var(--glass-bg-soft);
-  align-items: flex-start;
-  flex-direction: row;
+  background: rgba(78, 205, 196, 0.06);
+  transform: scale(1.02);
+  box-shadow: 0 0 16px rgba(78, 205, 196, 0.15);
 }
 
-.slot--filled {
-  background: var(--glass-bg-soft);
+.drop-zone--filled {
+  background: var(--surface-primary);
   border-left: 3px solid var(--brand-primary);
   border-top: 1px solid var(--glass-border);
   border-right: 1px solid var(--glass-border);
   border-bottom: 1px solid var(--glass-border);
 }
 
-.slot--completed {
-  background: var(--glass-bg-soft);
+.drop-zone--completed {
+  background: var(--surface-primary);
   border-left: 3px solid var(--brand-primary);
   border-top: 1px solid var(--glass-border);
   border-right: 1px solid var(--glass-border);
@@ -178,115 +105,58 @@ function clearSlot() {
   opacity: 0.6;
 }
 
-.slot-number {
-  font-size: 0.7rem;
+.zone-number {
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--brand-primary);
-  min-width: 16px;
+  min-width: 18px;
   flex-shrink: 0;
 }
 
-.slot-placeholder {
-  font-size: 0.875rem;
+.zone-placeholder {
+  font-size: 0.8rem;
   color: var(--text-muted);
   flex: 1;
 }
 
-.slot-title {
-  font-size: 0.875rem;
+.zone-drop-hint {
+  font-size: 0.8rem;
+  color: var(--brand-primary);
+  font-weight: 500;
+  flex: 1;
+}
+
+.zone-title {
+  font-size: 0.85rem;
   color: var(--text-primary);
   flex: 1;
-  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.slot-title--done {
+.zone-title--done {
   text-decoration: line-through;
   color: var(--text-muted);
-  cursor: default;
 }
 
-.slot-clear {
+.zone-clear {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 1rem;
+  font-size: 1.1rem;
   cursor: pointer;
   padding: 0 var(--space-1);
   line-height: 1;
   flex-shrink: 0;
-  transition: color var(--duration-normal) var(--ease-out);
+  transition: color 0.15s ease;
 }
 
-.slot-clear:hover {
+.zone-clear:hover {
   color: var(--text-primary);
 }
 
-.slot-check {
+.zone-check {
   flex-shrink: 0;
-}
-
-.slot-input-wrapper {
-  flex: 1;
-  position: relative;
-}
-
-.slot-input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-primary);
-  font-size: 0.875rem;
-  padding: 0;
-  caret-color: var(--brand-primary);
-}
-
-.slot-input::placeholder {
-  color: var(--text-muted);
-}
-
-.slot-dropdown {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  left: 0;
-  right: 0;
-  background: var(--overlay-component-bg);
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
-  border: var(--overlay-component-border);
-  border-radius: var(--radius-md);
-  max-height: 260px;
-  overflow-y: auto;
-  z-index: 100;
-  box-shadow: var(--overlay-component-shadow);
-  padding: var(--space-1) 0;
-}
-
-.slot-dropdown-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: var(--space-2) var(--space-3);
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: background var(--duration-normal) var(--ease-out),
-              color var(--duration-normal) var(--ease-out);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border-left: 2px solid transparent;
-}
-
-.slot-dropdown-item:hover {
-  background: var(--dropdown-item-hover-bg);
-  color: var(--dropdown-selected-color);
-  border-left-color: var(--dropdown-selected-border);
-}
-
-.slot-dropdown-item + .slot-dropdown-item {
-  border-top: 1px solid var(--overlay-component-border-color);
 }
 </style>

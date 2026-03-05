@@ -223,6 +223,9 @@
         </div>
       </div>
 
+      <!-- FEATURE-1162: Saved Views -->
+      <SavedViewsDropdown />
+
       <!-- Clear All Filters -->
       <button
         v-if="hasActiveFilters"
@@ -240,6 +243,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays, Check, LayoutGrid, ArrowUpNarrowWide, ArrowDownNarrowWide } from 'lucide-vue-next'
+import SavedViewsDropdown from '@/components/filters/SavedViewsDropdown.vue'
 import type { Task, Project } from '@/stores/tasks'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 // TASK-144: Use centralized duration categories

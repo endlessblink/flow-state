@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
@@ -102,15 +102,28 @@ const draggingTaskId = ref<string | null>(null)
 
 // --- Actions (kept inline for simplicity as they are mostly wrappers) ---
 
+// TASK-1451: Compute local calendar inbox defaults (showTodayOnly is local, not in global store)
+const calendarLocalDefaults = computed(() => {
+  const defaults: Record<string, unknown> = {}
+  if (showTodayOnly.value) {
+    const d = new Date()
+    defaults.dueDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  return defaults
+})
+
 const addTask = () => {
   if (!newTaskTitle.value.trim()) return
 
-  createTaskWithUndo({
+  const taskData = {
     ...filterDefaults.value,
+    ...calendarLocalDefaults.value,
     title: newTaskTitle.value.trim(),
-    status: 'todo',
+    status: 'todo' as const,
     isInInbox: true
-  })
+  }
+  console.log('[TASK-1451] Calendar addTask:', { showTodayOnly: showTodayOnly.value, filterDefaults: filterDefaults.value, calendarLocalDefaults: calendarLocalDefaults.value, taskData })
+  createTaskWithUndo(taskData)
 
   newTaskTitle.value = ''
 }
@@ -121,6 +134,7 @@ const addTaskWithDescription = (title: string, description: string) => {
 
   createTaskWithUndo({
     ...filterDefaults.value,
+    ...calendarLocalDefaults.value,
     title: title.trim(),
     description: description.trim(),
     status: 'todo',

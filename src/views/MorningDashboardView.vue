@@ -95,7 +95,7 @@ onMounted(() => {
 
 .morning-modal {
   width: 100%;
-  max-width: 640px;
+  max-width: 860px;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

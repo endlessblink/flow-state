@@ -32,6 +32,9 @@
 
     <!-- TASK-243: Hide Done checkbox removed - use icon toggle in view header instead -->
 
+    <!-- FEATURE-1162: Saved Views -->
+    <SavedViewsDropdown />
+
     <!-- Clear Filters -->
     <button
       class="clear-filters-btn"
@@ -47,6 +50,7 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import SavedViewsDropdown from '@/components/filters/SavedViewsDropdown.vue'
 
 const taskStore = useTaskStore()
 const { projects, activeProjectId, activeSmartView, activeStatusFilter } = storeToRefs(taskStore)

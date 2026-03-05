@@ -32,7 +32,8 @@ export function useMobileQuickSortLogic() {
     saveTask,
     markTaskDone,
     markDoneAndDeleteTask,
-    skipTask
+    skipTask,
+    tryResumeSession
   } = useQuickSort()
 
   // AI Command (TASK-1221)
@@ -419,8 +420,12 @@ export function useMobileQuickSortLogic() {
     }
   })
 
+  // TASK-1450: Resume interrupted session or start fresh
   onMounted(() => {
-    startSession()
+    const resumed = tryResumeSession()
+    if (!resumed) {
+      startSession()
+    }
   })
 
   onUnmounted(() => {

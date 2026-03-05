@@ -441,7 +441,8 @@ const {
   markTaskDone,
   markDoneAndDeleteTask,
   skipTask,
-  undoLastCategorization
+  undoLastCategorization,
+  tryResumeSession
 } = useQuickSort()
 
 const quickSortAI = useQuickSortAI()
@@ -455,9 +456,12 @@ const {
   suggestedProjectName
 } = quickSortAI
 
-// Start session on mount
+// TASK-1450: Resume interrupted session or start fresh
 onMounted(() => {
-  startSession()
+  const resumed = tryResumeSession()
+  if (!resumed) {
+    startSession()
+  }
   window.addEventListener('keydown', handleGlobalKeydown)
 })
 

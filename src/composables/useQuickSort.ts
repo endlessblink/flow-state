@@ -99,16 +99,26 @@ export function useQuickSort() {
     return "All done! 🎉"
   })
 
+  // TASK-1450: Persist active session state to localStorage for crash recovery
+  function persistSession() {
+    quickSortStore.saveActiveSession({
+      currentTaskId: currentTaskId.value,
+      processedTaskIds: processedTaskIds.value
+    })
+  }
+
   // Navigation helpers
   function advanceToNextTask() {
     const tasks = uncategorizedTasks.value
     if (tasks.length === 0) {
       currentTaskId.value = null
+      persistSession()
       return
     }
     // Pick the first available task from the queue
     currentTaskId.value = tasks[0].id
     snapshotCurrentTask()
+    persistSession()
   }
 
   // Actions
@@ -123,6 +133,32 @@ export function useQuickSort() {
     } else {
       currentTaskId.value = null
     }
+    persistSession()
+  }
+
+  // TASK-1450: Resume an interrupted session
+  function tryResumeSession(): boolean {
+    const data = quickSortStore.resumeSession()
+    if (!data) return false
+
+    processedTaskIds.value = new Set(data.processedTaskIds)
+    currentTaskId.value = data.currentTaskId
+
+    // Verify the current task still exists
+    if (currentTaskId.value) {
+      const task = taskStore.rawTasks.find(t => t.id === currentTaskId.value)
+      if (!task || task._soft_deleted) {
+        // Task was deleted while offline — advance
+        advanceToNextTask()
+      } else {
+        snapshotCurrentTask()
+      }
+    } else {
+      advanceToNextTask()
+    }
+
+    persistSession()
+    return true
   }
 
   function endSession() {
@@ -179,6 +215,7 @@ export function useQuickSort() {
     // Record action
     quickSortStore.recordAction(action)
     // NO handleTaskProcessed() - task stays visible for further edits
+    persistSession()
   }
 
   function skipTask() {
@@ -198,6 +235,7 @@ export function useQuickSort() {
 
     currentTaskId.value = tasks[nextIdx].id
     snapshotCurrentTask()
+    persistSession()
   }
 
   async function markTaskDone(taskId: string) {
@@ -265,6 +303,7 @@ export function useQuickSort() {
       currentTaskId.value = action.taskId
       snapshotCurrentTask()
     }
+    persistSession()
   }
 
   async function redoLastCategorization() {
@@ -292,6 +331,7 @@ export function useQuickSort() {
       processedTaskIds.value.add(action.taskId)
       advanceToNextTask()
     }
+    persistSession()
   }
 
   function cancelSession() {
@@ -322,7 +362,7 @@ export function useQuickSort() {
   onUnmounted(() => {
     // Save any pending session data if active
     if (quickSortStore.isActive) {
-      quickSortStore.saveToLocalStorage()
+      persistSession()
     }
   })
 
@@ -352,6 +392,7 @@ export function useQuickSort() {
     skipTask,
     undoLastCategorization,
     redoLastCategorization,
-    cancelSession
+    cancelSession,
+    tryResumeSession
   }
 }

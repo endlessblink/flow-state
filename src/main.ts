@@ -16,7 +16,6 @@ import App from './App.vue'
 import i18n from './i18n'
 
   // Early Tauri & PWA detection - must run BEFORE CSS import for proper fallback application
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ; (() => {
     const w = window as unknown as Record<string, unknown>
     const isTauri = ('isTauri' in w && w.isTauri) || ('__TAURI__' in w) || ('__TAURI_INTERNALS__' in w)
@@ -70,7 +69,6 @@ async function initializeApp() {
   // Detect Tauri environment and apply class for CSS optimizations
   // WebKitGTK on Linux has limited backdrop-filter support, so we need fallbacks
   // Tauri v2 uses window.isTauri, older versions use __TAURI__ or __TAURI_INTERNALS__
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const win = window as unknown as Record<string, unknown>
   const isTauriEnv = ('isTauri' in win && win.isTauri) ||
     ('__TAURI__' in win) ||

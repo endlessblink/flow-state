@@ -3948,6 +3948,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1441**~~ | **P2** | ✅ **Graceful offline UX for non-cacheable features — AI chat, file uploads, Drive show informative messages instead of failing silently** (✅ DONE 2026-03-03) |
 | ~~**BUG-1442**~~ | **P1** | ✅ **timer_sessions.position_version column does not exist — DB schema mismatch** (✅ DONE 2026-03-04 — code already guards correctly, no path queries this column) |
 | ~~**TASK-1443**~~ | **P2** | ✅ **Calendar Delete key shows confirmation dialog before unscheduling event (instead of silent action)** (✅ DONE 2026-03-04) |
+| **BUG-1447** | **P2** | 📋 **Pin task disappears on Enter + no common tasks shown in pin dropdown** (📋 PLANNED 2026-03-05) |
 | **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |
 | **TASK-1445** | **P2** | 📋 **Fix focus mode dropdown closing on hover + overlapping menus — UX research & redesign** (📋 PLANNED 2026-03-04) |
 | **TASK-1444** | **P1** | 🔄 **Tauri desktop app design parity — investigate and fix visual discrepancies vs web/Storybook** (🔄 IN PROGRESS 2026-03-04) |
@@ -4345,9 +4346,9 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1152: Fix 40 eslint-disable/@ts-ignore Suppressions (📋 PLANNED)
+### ~~TASK-1152~~: Fix 40 eslint-disable/@ts-ignore Suppressions (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-05)
 
 **Problem**: 40 eslint-disable and @ts-ignore comments indicate tech debt.
 

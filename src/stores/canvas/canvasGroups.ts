@@ -209,13 +209,11 @@ export const useCanvasGroups = (
 
     const taskCountByGroupId = computed(() => {
         const counts = new Map<string, number>()
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const _version = taskParentVersion.value
 
         if (!taskStoreRef.value || !taskStoreRef.value.tasks) return counts
 
         const tasks = taskStoreRef.value.tasks
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const _taskCountTotal = tasks.length
 
         for (const task of tasks) {
@@ -230,7 +228,6 @@ export const useCanvasGroups = (
     const aggregatedTaskCountByGroupId = computed(() => {
         const aggregatedCounts = new Map<string, number>()
         const groups = _rawGroups.value
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const _version = taskParentVersion.value
 
         if (!taskStoreRef.value || !taskStoreRef.value.tasks) return aggregatedCounts
@@ -268,7 +265,7 @@ export const useCanvasGroups = (
     }
 
     // Flag to prevent auto-save after sync updates (breaks circular loop)
-    let syncUpdateInProgress = false
+    let _syncUpdateInProgress = false
 
     // BUG-1207 Fix 4.1: Pending group writes tracking (mirrors task pattern)
     const pendingGroupWrites = new Set<string>()
@@ -297,7 +294,7 @@ export const useCanvasGroups = (
         }
 
         // Set flag to prevent watcher from triggering auto-save
-        syncUpdateInProgress = true
+        _syncUpdateInProgress = true
 
         try {
             const index = _rawGroups.value.findIndex(g => g.id === groupId)
@@ -362,7 +359,7 @@ export const useCanvasGroups = (
         } finally {
             // Reset flag after Vue's next tick to ensure watcher sees it
             setTimeout(() => {
-                syncUpdateInProgress = false
+                _syncUpdateInProgress = false
             }, 100)
         }
     }

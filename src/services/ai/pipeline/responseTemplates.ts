@@ -120,7 +120,6 @@ export function hasTemplate(key: string): key is TemplateKey {
 export function getTemplate(
   key: TemplateKey,
   language: TemplateLanguage,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...args: unknown[]
 ): string {
   const template = TEMPLATES[key]

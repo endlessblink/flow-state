@@ -77,10 +77,9 @@ function handleChipSelect(taskId: string, title: string) {
   flex-direction: column;
   gap: var(--space-4);
   padding: var(--space-6);
-  background: var(--glass-bg-medium);
+  background: var(--surface-primary);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(12px);
 }
 
 .card-header {

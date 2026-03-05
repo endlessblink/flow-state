@@ -36,10 +36,9 @@ const hasChallenges = computed(
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--glass-bg-soft);
+  background: var(--surface-primary);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(12px);
 }
 
 .card-header {

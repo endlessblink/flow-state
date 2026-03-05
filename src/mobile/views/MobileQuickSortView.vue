@@ -823,8 +823,8 @@ function handleSortWithoutProject() {
   if (!currentTask.value) return
 
   // Mark as sorted by setting a flag or moving to next without project assignment
-  // We use null/undefined projectId to indicate "sorted but no project"
-  categorizeTask(currentTask.value.id, undefined)
+  // We use empty string to indicate "sorted but no project" to match store
+  categorizeTask(currentTask.value.id, '')
   showProjectSheet.value = false
   projectSearch.value = '' // Reset search
 

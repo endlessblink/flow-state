@@ -83,10 +83,12 @@
           <!-- Modals -->
           <AchievementsModal
             v-if="showAchievementsModal"
+            :open="showAchievementsModal"
             @close="showAchievementsModal = false"
           />
           <ShopModal
             v-if="showShopModal"
+            :open="showShopModal"
             @close="showShopModal = false"
           />
         </template>

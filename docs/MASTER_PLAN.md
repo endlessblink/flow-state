@@ -3187,9 +3187,19 @@ WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supab
 - [x] `supabase/postgres:17.2.0` image tag doesn't exist — updated to `17.6.1.095`
 - [x] Created `scripts/test-self-host.sh` with 6 E2E tests + `--keep` flag for browser testing
 
-**Remaining**:
-- [ ] Run `./scripts/test-self-host.sh --keep` and confirm all 6 tests pass
-- [ ] Open `http://localhost:13050` in browser and verify app loads, signup works, task CRUD works
+**Remaining — NEXT SESSION START HERE**:
+- [ ] Run `./scripts/test-self-host.sh --keep` — this builds the full Docker stack and runs 6 E2E tests, then keeps it up for browser testing
+- [ ] Once tests pass, open `http://localhost:13050` in browser and verify: app loads, signup works, create a task, check it persists
+- [ ] If tests fail, check logs with: `docker compose -p flowstate-test -f docker-compose.self-host.yml --env-file .env.self-host.test logs --tail=50`
+- [ ] To tear down after testing: `docker compose -p flowstate-test -f docker-compose.self-host.yml --env-file .env.self-host.test down -v`
+
+**Test script details** (`scripts/test-self-host.sh --keep`):
+- Generates fresh secrets (JWT, Postgres password, anon/service_role keys)
+- Uses isolated ports: frontend `:13050`, Kong API `:18000`, Postgres `:15432`
+- Project name: `flowstate-test` (won't conflict with any running stack)
+- 6 tests: frontend HTML, /health, Kong reachable, signup, sign-in, REST API tasks query
+- `--keep` flag keeps stack running after tests pass so you can test in browser
+- Previous run failed due to root disk full (0 bytes). Freed 6.7GB via `docker system prune`. Docker data-root is already on `/media/endlessblink/docker` (341GB free) so the build context issue was transient.
 
 **Files**: `.gitignore`, `docker-compose.self-host.yml`, `docker/self-host/init-db.sh`, `scripts/test-self-host.sh`
 

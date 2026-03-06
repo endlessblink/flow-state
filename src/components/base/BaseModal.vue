@@ -18,21 +18,21 @@
         :class="[`size-${size}`, `variant-${variant}`, { 'modal-closing': isClosing }]"
         @click.stop
       >
-      <!-- Modal Header -->
-      <header v-if="showHeader" class="modal-header">
-        <div class="header-content--modal">
-          <h2
-            :id="titleId"
-            class="modal-title"
-            :class="titleClass"
-          >
-            <slot name="title">
-              {{ title }}
-            </slot>
-          </h2>
+        <!-- Modal Header -->
+        <header v-if="showHeader" class="modal-header">
+          <div class="header-content--modal">
+            <h2
+              :id="titleId"
+              class="modal-title"
+              :class="titleClass"
+            >
+              <slot name="title">
+                {{ title }}
+              </slot>
+            </h2>
 
-          <p
-            v-if="description || $slots.description"
+            <p
+              v-if="description || $slots.description"
             :id="descriptionId"
             class="modal-description"
             :class="descriptionClass"

@@ -127,7 +127,8 @@ export function useMorningDashboard() {
       big3Slots.value.map((s) => s.taskId).filter(Boolean)
     )
 
-    const tasks = taskStore.tasks ?? []
+    // Use _rawTasks to bypass active view filters — morning dashboard needs ALL tasks
+    const tasks = taskStore._rawTasks ?? []
     const notDone = tasks.filter(
       (t) => t.status !== 'done' && !assignedIds.has(t.id)
     )
@@ -170,7 +171,8 @@ export function useMorningDashboard() {
       big3Slots.value.map((s) => s.taskId).filter(Boolean)
     )
 
-    const tasks = taskStore.tasks ?? []
+    // Use _rawTasks to bypass active view filters — morning dashboard needs ALL tasks
+    const tasks = taskStore._rawTasks ?? []
     const todayStr = getTodayString()
 
     function toPoolTask(t: Task) {

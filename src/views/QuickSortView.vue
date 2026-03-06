@@ -131,101 +131,23 @@
               <span>Skip</span>
             </div>
 
-            <!-- Quick Edit Controls (below card, like mobile) -->
-            <div class="quick-controls">
-              <!-- Priority pills -->
-              <div class="control-row">
-                <span class="control-label">Priority</span>
-                <div class="pill-group">
-                  <button class="pill" :class="{ active: currentTask.priority === 'low' }" @click="handleTaskUpdate({ priority: 'low' })">Low</button>
-                  <button class="pill" :class="{ active: currentTask.priority === 'medium' }" @click="handleTaskUpdate({ priority: 'medium' })">Med</button>
-                  <button class="pill" :class="{ active: currentTask.priority === 'high' }" @click="handleTaskUpdate({ priority: 'high' })">High</button>
-                </div>
-              </div>
-
-              <!-- Date pills -->
-              <div class="control-row">
-                <span class="control-label">Due</span>
-                <div class="pill-group pill-scroll">
-                  <button class="pill" :class="{ active: isDueToday }" @click="setQuickDate('today')">Today</button>
-                  <button class="pill" :class="{ active: isDueTomorrow }" @click="setQuickDate('tomorrow')">+1</button>
-                  <button class="pill" @click="setQuickDate('nextweek')">+7</button>
-                  <button class="pill clear" :class="{ active: !currentTask.dueDate }" @click="setQuickDate('clear')">
-                    <X :size="14" />
-                  </button>
-                </div>
-              </div>
-
-              <!-- AI row -->
-              <div class="control-row ai-row">
-                <span class="control-label">AI</span>
-                <div class="pill-group">
-                  <button
-                    class="pill ai-pill"
-                    :class="{ 'is-loading': aiAction === 'suggest' }"
-                    :disabled="isAIBusy"
-                    @click="handleAISuggest"
-                  >
-                    <Loader2 v-if="aiAction === 'suggest'" :size="12" class="spin" />
-                    <Sparkles v-else :size="12" />
-                    Suggest
-                    <kbd>A</kbd>
-                  </button>
-                  <button v-if="isAIBusy" class="pill" @click="handleAICancel">
-                    <X :size="12" /> Cancel
-                  </button>
-                </div>
-              </div>
-
-              <!-- AI Results (inline) -->
-              <div v-if="aiState === 'preview'" class="ai-results">
-                <div v-for="suggestion in currentSuggestions" :key="suggestion.field" class="ai-suggestion">
-                  <span class="ai-field">{{ suggestion.field }}</span>
-                  <span class="ai-old">{{ suggestion.currentValue || 'none' }}</span>
-                  <span class="ai-arrow">&rarr;</span>
-                  <span class="ai-new">{{ suggestion.suggestedValue }}</span>
-                </div>
-                <div v-if="suggestedProjectId" class="ai-suggestion">
-                  <span class="ai-field">project</span>
-                  <span class="ai-old">{{ currentTaskProject?.name || 'none' }}</span>
-                  <span class="ai-arrow">&rarr;</span>
-                  <span class="ai-new">{{ suggestedProjectName || suggestedProjectId }}</span>
-                </div>
-                <div class="ai-actions">
-                  <button class="pill ai-pill" @click="handleApplySuggestions">Apply All</button>
-                  <button class="pill" @click="quickSortAI.dismiss()">Dismiss</button>
-                </div>
-              </div>
-              <div v-if="aiState === 'error'" class="ai-error">
-                <span dir="auto">{{ aiError }}</span>
-                <button class="pill" @click="handleAIRetry">Retry</button>
-              </div>
-
-              <!-- Action buttons row -->
-              <div class="action-row">
-                <button class="action-btn done" @click="handleMarkDone">
-                  <CheckCircle :size="18" />
-                  <span>Done</span>
-                  <kbd>D</kbd>
-                </button>
-                <button class="action-btn save" @click="handleSave">
-                  <Save :size="18" />
-                  <span>Save</span>
-                  <span v-if="isTaskDirty" class="dirty-dot" />
-                  <kbd>S</kbd>
-                </button>
-                <button v-if="canUndo" class="action-btn undo" @click="handleUndo">
-                  <Undo2 :size="16" />
-                  <span>Undo</span>
-                </button>
-              </div>
-
-              <!-- Project Selector -->
-              <CategorySelector
-                @select="handleCategorize"
-                @skip="handleSkip"
-                @create-new="showProjectModal = true"
-              />
+            <!-- Compact action bar -->
+            <div class="compact-actions">
+              <button class="action-btn done" @click="handleMarkDone">
+                <CheckCircle :size="18" />
+                <span>Done</span>
+                <kbd>D</kbd>
+              </button>
+              <button class="action-btn save" @click="handleSave">
+                <Save :size="18" />
+                <span>Save</span>
+                <span v-if="isTaskDirty" class="dirty-dot" />
+                <kbd>S</kbd>
+              </button>
+              <button v-if="canUndo" class="action-btn undo" @click="handleUndo">
+                <Undo2 :size="16" />
+                <span>Undo</span>
+              </button>
             </div>
 
             <!-- Keyboard hint -->
@@ -278,6 +200,98 @@
     <Transition name="fade">
       <div v-if="actionFeedback" class="feedback-overlay" :class="actionFeedback.type">
         <span class="feedback-text">{{ actionFeedback.text }}</span>
+      </div>
+    </Transition>
+
+    <!-- Quick Edit Panel (slide-up, inside main content area) -->
+    <Transition name="panel-slide">
+      <div v-if="showEditPanel && currentTask" class="edit-panel-overlay" @click.self="showEditPanel = false">
+        <div class="edit-panel">
+          <div class="edit-panel-handle" @click="showEditPanel = false" />
+
+          <h3 class="edit-panel-title" dir="auto">{{ currentTask.title }}</h3>
+
+          <!-- Priority pills -->
+          <div class="control-row">
+            <span class="control-label">Priority</span>
+            <div class="pill-group">
+              <button class="pill" :class="{ active: currentTask.priority === 'low' }" @click="handleTaskUpdate({ priority: 'low' })">Low</button>
+              <button class="pill" :class="{ active: currentTask.priority === 'medium' }" @click="handleTaskUpdate({ priority: 'medium' })">Med</button>
+              <button class="pill" :class="{ active: currentTask.priority === 'high' }" @click="handleTaskUpdate({ priority: 'high' })">High</button>
+            </div>
+          </div>
+
+          <!-- Date pills -->
+          <div class="control-row">
+            <span class="control-label">Due</span>
+            <div class="pill-group pill-scroll">
+              <button class="pill" :class="{ active: isDueToday }" @click="setQuickDate('today')">Today</button>
+              <button class="pill" :class="{ active: isDueTomorrow }" @click="setQuickDate('tomorrow')">+1</button>
+              <button class="pill" @click="setQuickDate('nextweek')">+7</button>
+              <button class="pill clear" :class="{ active: !currentTask.dueDate }" @click="setQuickDate('clear')">
+                <X :size="14" />
+              </button>
+            </div>
+          </div>
+
+          <!-- AI row -->
+          <div class="control-row ai-row">
+            <span class="control-label">AI</span>
+            <div class="pill-group">
+              <button
+                class="pill ai-pill"
+                :class="{ 'is-loading': aiAction === 'suggest' }"
+                :disabled="isAIBusy"
+                @click="handleAISuggest"
+              >
+                <Loader2 v-if="aiAction === 'suggest'" :size="12" class="spin" />
+                <Sparkles v-else :size="12" />
+                Suggest
+                <kbd>A</kbd>
+              </button>
+              <button v-if="isAIBusy" class="pill" @click="handleAICancel">
+                <X :size="12" /> Cancel
+              </button>
+            </div>
+          </div>
+
+          <!-- AI Results -->
+          <div v-if="aiState === 'preview'" class="ai-results">
+            <div v-for="suggestion in currentSuggestions" :key="suggestion.field" class="ai-suggestion">
+              <span class="ai-field">{{ suggestion.field }}</span>
+              <span class="ai-old">{{ suggestion.currentValue || 'none' }}</span>
+              <span class="ai-arrow">&rarr;</span>
+              <span class="ai-new">{{ suggestion.suggestedValue }}</span>
+            </div>
+            <div v-if="suggestedProjectId" class="ai-suggestion">
+              <span class="ai-field">project</span>
+              <span class="ai-old">{{ currentTaskProject?.name || 'none' }}</span>
+              <span class="ai-arrow">&rarr;</span>
+              <span class="ai-new">{{ suggestedProjectName || suggestedProjectId }}</span>
+            </div>
+            <div class="ai-actions">
+              <button class="pill ai-pill" @click="handleApplySuggestions">Apply All</button>
+              <button class="pill" @click="quickSortAI.dismiss()">Dismiss</button>
+            </div>
+          </div>
+          <div v-if="aiState === 'error'" class="ai-error">
+            <span dir="auto">{{ aiError }}</span>
+            <button class="pill" @click="handleAIRetry">Retry</button>
+          </div>
+
+          <!-- Project Selector -->
+          <CategorySelector
+            @select="handleCategorize"
+            @skip="handleSkip"
+            @create-new="showProjectModal = true"
+          />
+
+          <!-- Full edit button -->
+          <button class="pill full-edit-pill" @click="openFullEdit">
+            <Pencil :size="14" />
+            Full Edit
+          </button>
+        </div>
       </div>
     </Transition>
 
@@ -344,6 +358,7 @@ const pendingCount = computed(() => quickCapture.pendingTasks.value.length)
 
 const showProjectModal = ref(false)
 const showEditModal = ref(false)
+const showEditPanel = ref(false)
 const showDeleteConfirm = ref(false)
 const actionFeedback = ref<{ text: string; type: 'success' | 'info' | 'danger' | 'warning' } | null>(null)
 const sessionSummary = ref<SessionSummary | null>(null)
@@ -441,6 +456,12 @@ function confirmDelete() {
 
 function handleEditTask() {
   if (!currentTask.value) return
+  showEditPanel.value = true
+}
+
+function openFullEdit() {
+  if (!currentTask.value) return
+  showEditPanel.value = false
   taskToEdit.value = currentTask.value
   showEditModal.value = true
 }
@@ -512,7 +533,11 @@ function shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
 
 function handleGlobalKeydown(event: KeyboardEvent) {
   if (shouldIgnoreKeyEvent(event)) return
-  if (event.key === 'Escape') { event.preventDefault(); handleExit() }
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    if (showEditPanel.value) { showEditPanel.value = false; return }
+    handleExit()
+  }
   if ((event.ctrlKey || event.metaKey) && event.key === 'z') { event.preventDefault(); handleUndo() }
   if (activeTab.value !== 'sort') return
 
@@ -919,14 +944,84 @@ const currentTaskProject = computed(() => {
 }
 
 /* ================================
-   QUICK CONTROLS (below card)
+   COMPACT ACTIONS (below card)
    ================================ */
-.quick-controls {
+.compact-actions {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   width: 100%;
 }
+
+/* ================================
+   EDIT PANEL (slide-up overlay)
+   ================================ */
+.edit-panel-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.edit-panel {
+  width: calc(100% - var(--space-8));
+  max-width: 520px;
+  max-height: 75vh;
+  overflow-y: auto;
+  background: var(--overlay-component-bg);
+  border: 1px solid var(--glass-border);
+  border-bottom: none;
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  padding: var(--space-4) var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-2xl);
+}
+
+.edit-panel-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--glass-border-hover);
+  border-radius: var(--radius-full);
+  margin: 0 auto var(--space-2);
+  cursor: pointer;
+}
+
+.edit-panel-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin: 0;
+  text-align: start;
+  unicode-bidi: plaintext;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.full-edit-pill {
+  align-self: center;
+  border-color: var(--glass-border-hover);
+  color: var(--text-secondary);
+}
+
+.full-edit-pill:hover {
+  border-color: var(--color-info);
+  color: var(--color-info);
+}
+
+/* Panel slide transition */
+.panel-slide-enter-active { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.panel-slide-leave-active { transition: all 0.2s ease; }
+.panel-slide-enter-from { opacity: 0; }
+.panel-slide-leave-to { opacity: 0; }
+.panel-slide-enter-from .edit-panel { transform: translateY(100%); }
+.panel-slide-leave-to .edit-panel { transform: translateY(100%); }
 
 .control-row {
   display: flex;

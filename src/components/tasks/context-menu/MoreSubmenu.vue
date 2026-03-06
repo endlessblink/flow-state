@@ -71,11 +71,6 @@
 
         <div class="submenu-divider" />
 
-        <button v-if="!isBatchOperation" class="menu-item menu-item--sm menu-item--danger" @click.stop="$emit('permanentDelete')">
-          <Trash2 :size="14" class="menu-icon" />
-          <span class="menu-text">Permanently Delete</span>
-        </button>
-
         <button v-if="isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('clearSelection')">
           <X :size="14" class="menu-icon" />
           <span class="menu-text">Clear Selection</span>
@@ -86,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { Copy, Layout, X, Clock, Pin, LayoutGrid, ChevronRight, Eye, Play, Trash2, Timer } from 'lucide-vue-next'
+import { Copy, Layout, X, Clock, Pin, LayoutGrid, ChevronRight, Eye, Play, Timer } from 'lucide-vue-next'
 import type { CSSProperties } from 'vue'
 
 defineProps<{
@@ -111,7 +106,6 @@ defineEmits<{
   closeDuration: []
   focusMode: []
   startNow: []
-  permanentDelete: []
 }>()
 </script>
 

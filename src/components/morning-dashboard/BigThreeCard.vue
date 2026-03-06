@@ -8,6 +8,7 @@ import { useMorningDashboard, type TaskPoolGroup } from '@/composables/useMornin
 import BigThreeSlot from './BigThreeSlot.vue'
 import TaskPoolCard from './TaskPoolCard.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
+import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import type { Task } from '@/types/tasks'
 
@@ -58,7 +59,8 @@ const searchResults = computed(() => {
     big3Slots.value.map((s) => s.taskId).filter(Boolean)
   )
 
-  const tasks = taskStore.tasks ?? []
+  // Use _rawTasks to bypass active view filters
+  const tasks = taskStore._rawTasks ?? []
   return tasks
     .filter((t) => {
       if (t.status === 'done') return false
@@ -143,6 +145,50 @@ function handleContextMenu(taskId: string, event: MouseEvent) {
 function closeContextMenu() {
   showContextMenu.value = false
   contextMenuTask.value = null
+}
+
+// --- Confirmation modal (delete / permanent delete) ---
+const showConfirmModal = ref(false)
+const confirmTitle = ref('Delete Task')
+const confirmMessage = ref('Are you sure you want to delete this task? You can press Ctrl+Z to undo.')
+const confirmText = ref('Delete')
+const confirmActionFn = ref<(() => void | Promise<void>) | null>(null)
+
+function handleConfirmDelete(taskId: string) {
+  confirmTitle.value = 'Delete Task'
+  confirmMessage.value = 'Are you sure you want to delete this task? You can press Ctrl+Z to undo.'
+  confirmText.value = 'Delete'
+  confirmActionFn.value = () => {
+    taskStore.deleteTask(taskId)
+  }
+  showConfirmModal.value = true
+}
+
+async function handleConfirmPermanentDelete(taskId: string) {
+  const task = taskStore.tasks.find(t => t.id === taskId)
+  if (!task) return
+  confirmTitle.value = 'Permanently Delete Task'
+  confirmMessage.value = `Permanently delete "${task.title}"? This performs a hard delete from storage.`
+  confirmText.value = 'Permanently Delete'
+  confirmActionFn.value = async () => {
+    const { getUndoSystem } = await import('@/composables/undoSingleton')
+    await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
+  }
+  showConfirmModal.value = true
+}
+
+async function executeConfirmAction() {
+  const action = confirmActionFn.value
+  showConfirmModal.value = false
+  confirmActionFn.value = null
+  if (action) {
+    await action()
+  }
+}
+
+function cancelConfirmAction() {
+  showConfirmModal.value = false
+  confirmActionFn.value = null
 }
 
 async function handleCreateTask() {
@@ -319,6 +365,18 @@ watch(big3Slots, () => {
       :y="contextMenuY"
       :task="contextMenuTask"
       @close="closeContextMenu"
+      @confirm-delete="handleConfirmDelete"
+      @confirm-permanent-delete="handleConfirmPermanentDelete"
+    />
+
+    <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :is-open="showConfirmModal"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-text="confirmText"
+      @confirm="executeConfirmAction"
+      @cancel="cancelConfirmAction"
     />
   </div>
 </template>

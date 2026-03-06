@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# TASK-1457: Run Playwright E2E tests with auto-fetched Supabase keys
+# Usage: ./scripts/run-e2e.sh [playwright args...]
+# Example: ./scripts/run-e2e.sh --grep "Morning Dashboard"
+
+set -euo pipefail
+
+# Auto-fetch keys from local Supabase if not already set
+if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+  SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env 2>/dev/null | grep '^SERVICE_ROLE_KEY=' | sed 's/^SERVICE_ROLE_KEY="//' | sed 's/"$//')
+fi
+
+if [ -z "${VITE_SUPABASE_ANON_KEY:-}" ]; then
+  VITE_SUPABASE_ANON_KEY=$(supabase status -o env 2>/dev/null | grep '^ANON_KEY=' | sed 's/^ANON_KEY="//' | sed 's/"$//')
+fi
+
+if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ] || [ -z "${VITE_SUPABASE_ANON_KEY:-}" ]; then
+  echo "ERROR: Could not fetch Supabase keys. Is local Supabase running? (supabase start)"
+  exit 1
+fi
+
+export SUPABASE_SERVICE_ROLE_KEY
+export VITE_SUPABASE_ANON_KEY
+export SUPABASE_URL="${SUPABASE_URL:-http://127.0.0.1:54321}"
+# Override VITE_SUPABASE_URL so the Vite dev server connects to local Supabase
+# (not production from .env.local). Env vars take precedence over .env files in Vite.
+export VITE_SUPABASE_URL="${SUPABASE_URL}"
+
+exec npx playwright test "$@"

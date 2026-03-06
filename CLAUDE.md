@@ -53,7 +53,8 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 npm run dev          # Start dev server (port 5546) - validates JWT keys first
 npm run kill         # Kill all FlowState processes (CRITICAL - DO NOT REMOVE)
 npm run build        # Production build
-npm run test         # Run tests
+npm run test         # Run unit tests (Vitest)
+npm run test:e2e     # Run E2E tests (Playwright) - auto-fetches Supabase keys
 npm run lint         # Lint code
 npm run storybook    # Component docs (port 6006)
 npm run generate:keys  # Regenerate Supabase JWT keys if they drift
@@ -130,9 +131,55 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 
 Both **VPS (web PWA)** and **Tauri (desktop)** distributions are active and production-ready.
 
+## Playwright E2E Testing (TASK-1457) — MANDATORY FOR ALL UI DEBUGGING
+
+**CRITICAL: When using Playwright (debugging, screenshots, testing), you MUST use this infrastructure. Do NOT launch raw Playwright browsers — they will have no auth, no data, and you will waste time.**
+
+**Run:** `npm run test:e2e` or `./scripts/run-e2e.sh` (auto-fetches Supabase keys from local instance)
+
+**Run specific tests:** `npm run test:e2e -- --grep "Morning Dashboard"`
+
+**Quick Playwright debug session** (authenticated, with seeded data):
+```bash
+# First ensure global-setup has run (creates test user + seeds data):
+npm run test:e2e -- --grep "NEVER_MATCH" 2>/dev/null
+
+# Then use the saved auth state in any Playwright script:
+# storageState: 'tests/.auth/user.json' gives you an authenticated browser
+```
+
+**What you get:** An authenticated `playwright@test.flowstate` user with 2 projects (Work + Personal), 8 tasks (mixed statuses/priorities), 2 canvas groups, and user settings. All seeded automatically by `tests/global-setup.ts`.
+
+**Test fixtures:**
+- `tests/fixtures/auth.ts` — test user credentials, re-exports `test`/`expect`
+- `tests/fixtures/test-ids.ts` — fixed UUIDs for all seeded data (projects, tasks, groups)
+
+**Writing tests or debug scripts:**
+```typescript
+import { test, expect } from '../fixtures/auth'
+import { TEST_TASKS, TEST_PROJECTS } from '../fixtures/test-ids'
+
+test('tasks are visible', async ({ page }) => {
+  // page is already authenticated — storageState is auto-loaded by playwright.config.ts
+  await page.goto('/#/tasks')
+  await expect(page.getByText(TEST_TASKS.designLandingPage.title)).toBeVisible()
+})
+```
+
+**How it works internally:**
+1. `global-setup.ts` creates/reuses the test user via Supabase Admin API (like any real user)
+2. Wipes and re-seeds its data each run (clean slate)
+3. Signs in via Supabase REST API, injects session into browser localStorage
+4. Saves `storageState` to `tests/.auth/user.json` (gitignored)
+5. `playwright.config.ts` auto-loads this storageState for all tests
+
+**Required env vars** (auto-set by `npm run test:e2e`):
+- `SUPABASE_SERVICE_ROLE_KEY` — for user creation and data seeding (bypasses RLS)
+- `VITE_SUPABASE_ANON_KEY` — for browser auth
+
 ## Key Development Rules
 
-1. **Test with Playwright First** - Visual confirmation mandatory before claiming features work
+1. **Test with Playwright First** - Use `npm run test:e2e` with the seeded test user. NEVER launch unauthenticated Playwright browsers.
 2. **Preserve npm kill script** - NEVER remove from package.json
 3. **Use Design Tokens** - Never hardcode colors/spacing (see `docs/claude-md-extension/design-system.md`)
 4. **Type Safety** - All new code must have proper TypeScript types

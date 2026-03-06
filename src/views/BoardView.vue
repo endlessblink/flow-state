@@ -139,14 +139,15 @@
       @close="closeContextMenu"
       @edit="handleEditTask"
       @confirm-delete="handleConfirmDelete"
+      @confirm-permanent-delete="handleConfirmPermanentDelete"
     />
 
     <!-- CONFIRMATION MODAL -->
     <ConfirmationModal
       :is-open="showConfirmModal"
-      :title="$t('task.delete_confirm_title')"
-      :message="$t('task.delete_confirm_message')"
-      :confirm-text="$t('common.delete')"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-text="confirmText"
       @confirm="confirmDeleteTask"
       @cancel="cancelDeleteTask"
     />
@@ -154,7 +155,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
@@ -213,6 +214,12 @@ const {
   openConfirmModal,
   closeConfirmModal
 } = useBoardModals()
+
+// Dynamic confirmation modal state (supports both soft-delete and permanent delete)
+const confirmTitle = ref(t('task.delete_confirm_title'))
+const confirmMessage = ref(t('task.delete_confirm_message'))
+const confirmText = ref(t('common.delete'))
+const confirmActionFn = ref<(() => void | Promise<void>) | null>(null)
 
 const {
   showContextMenu,
@@ -354,18 +361,46 @@ const handleQuickTaskCreate = async (data: {
 }
 
 const handleConfirmDelete = (taskId: string) => {
-  openConfirmModal(taskId)
+  taskToDelete.value = taskId
+  confirmTitle.value = t('task.delete_confirm_title')
+  confirmMessage.value = t('task.delete_confirm_message')
+  confirmText.value = t('common.delete')
+  confirmActionFn.value = async () => {
+    if (taskToDelete.value) {
+      await doDeleteTask(taskToDelete.value)
+      taskToDelete.value = null
+    }
+  }
+  showConfirmModal.value = true
+}
+
+const handleConfirmPermanentDelete = (taskId: string) => {
+  const task = taskStore.tasks.find(t => t.id === taskId)
+  if (!task) return
+  confirmTitle.value = 'Permanently Delete Task'
+  confirmMessage.value = `Permanently delete "${task.title}"? This performs a hard delete from storage.`
+  confirmText.value = 'Permanently Delete'
+  confirmActionFn.value = async () => {
+    const { getUndoSystem } = await import('@/composables/undoSingleton')
+    await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
+  }
+  showConfirmModal.value = true
 }
 
 const confirmDeleteTask = async () => {
-  if (taskToDelete.value) {
-    await doDeleteTask(taskToDelete.value)
-    closeConfirmModal()
+  const action = confirmActionFn.value
+  showConfirmModal.value = false
+  confirmActionFn.value = null
+  taskToDelete.value = null
+  if (action) {
+    await action()
   }
 }
 
 const cancelDeleteTask = () => {
-  closeConfirmModal()
+  showConfirmModal.value = false
+  confirmActionFn.value = null
+  taskToDelete.value = null
 }
 
 

@@ -1,103 +1,211 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import DragHandleGhost from '@/components/tasks/drag-handle/DragHandleGhost.vue'
+import { ref } from 'vue'
 
+/**
+ * **DragHandleGhost** is the floating 6-dot indicator that follows the cursor
+ * when dragging a task row to reorder it.
+ *
+ * The real component uses `<Teleport to="body">` + `position: fixed`, which
+ * breaks inside Storybook's iframe. These stories use inline replicas of the
+ * ghost styling so you can see exactly what it looks like in context.
+ *
+ * **How it works in the app:**
+ * 1. User grabs a task row's drag handle (⠿ dots on the left)
+ * 2. DragHandleGhost appears at the cursor
+ * 3. Ghost follows the mouse via reactive `position` prop
+ * 4. On drop, `isDragging` → false and the ghost disappears
+ */
 const meta = {
   title: '📝 Task Management/DragHandleGhost',
-  component: DragHandleGhost,
-  tags: ['autodocs', 'new'],
+  tags: ['autodocs'],
   parameters: {
-    layout: 'fullscreen'
+    layout: 'fullscreen',
+    docs: {
+      description: {
+        component: 'The floating 6-dot drag indicator that follows the cursor during task reordering. Uses `<Teleport>` + `position: fixed` in production — stories show inline replicas for correct Storybook rendering.'
+      }
+    }
   },
-  argTypes: {
-    isDragging: { control: 'boolean' },
-    isVisible: { control: 'boolean' },
-    position: { control: 'object' }
-  }
-} satisfies Meta<typeof DragHandleGhost>
+} satisfies Meta
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const CenterPosition: Story = {
-  args: {
-    isDragging: true,
-    isVisible: true,
-    position: { x: 300, y: 250 }
-  },
-  render: (args) => ({
-    components: { DragHandleGhost },
+const ghostBoxStyle = `
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  opacity: 0.85;
+  transform: scale(1.1);
+`
+
+const dotGridStyle = `
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px;
+`
+
+const dotStyle = `
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.9);
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.4);
+`
+
+const taskRowStyle = `
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+`
+
+const handleDotsStyle = `
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  cursor: grab;
+  opacity: 0.35;
+  padding: var(--space-1);
+`
+
+const handleDotStyle = `
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+`
+
+/**
+ * Shows the ghost next to a simulated task list so you can see
+ * what the drag experience looks like. The ghost appears when a
+ * user grabs any task row's drag handle.
+ */
+export const InContext: Story = {
+  name: 'Ghost in Context',
+  render: () => ({
     setup() {
-      return { args }
+      const tasks = [
+        'Review pull requests',
+        'Update documentation',
+        'Fix login bug',
+        'Design new dashboard',
+        'Write unit tests',
+      ]
+      return { tasks }
     },
     template: `
       <div style="
-        min-height: 500px;
-        background: var(--glass-bg-soft);
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        min-height: 100vh;
+        background: var(--app-background-gradient);
+        padding: var(--space-10) var(--space-6);
       ">
-        <DragHandleGhost v-bind="args" />
-        <div style="
-          text-align: center;
-          color: var(--text-tertiary);
-          font-size: var(--text-sm);
-        ">
-          Ghost appears at x: {{ args.position.x }}px, y: {{ args.position.y }}px
-        </div>
-      </div>
-    `
-  })
-}
+        <div style="max-width: 700px; margin: 0 auto;">
+          <div style="
+            color: var(--text-primary);
+            font-size: var(--text-lg);
+            font-weight: 600;
+            margin-bottom: var(--space-2);
+          ">Task Reordering</div>
+          <div style="
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            margin-bottom: var(--space-6);
+            line-height: 1.5;
+          ">When a user grabs the ⠿ drag handle, the blue ghost appears at the cursor and follows it until drop.</div>
 
-export const FollowingMouse: Story = {
-  args: {
-    isDragging: true,
-    isVisible: true,
-    position: { x: 200, y: 200 }
-  },
-  render: (args) => ({
-    components: { DragHandleGhost },
-    setup() {
-      const position = { x: args.position.x, y: args.position.y }
+          <div style="display: flex; gap: var(--space-8); align-items: flex-start;">
+            <!-- Task list -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: var(--space-2);">
+              <div v-for="(task, i) in tasks" :key="i" style="${taskRowStyle}; position: relative;"
+                :style="i === 2 ? 'border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.05);' : ''"
+              >
+                <div style="${handleDotsStyle}"
+                  :style="i === 2 ? 'opacity: 0.8; cursor: grabbing;' : ''"
+                >
+                  <div v-for="d in 6" :key="d" style="${handleDotStyle}"
+                    :style="i === 2 ? 'background: rgba(59, 130, 246, 0.7);' : ''"
+                  ></div>
+                </div>
+                <div style="
+                  width: 16px; height: 16px;
+                  border-radius: var(--radius-sm);
+                  border: 1.5px solid var(--text-quaternary);
+                  flex-shrink: 0;
+                "></div>
+                <span style="color: var(--text-primary); font-size: var(--text-sm);">{{ task }}</span>
 
-      const handleMouseMove = (event: MouseEvent) => {
-        position.x = event.clientX
-        position.y = event.clientY
-      }
+                <!-- Arrow pointing to ghost on the dragged row -->
+                <div v-if="i === 2" style="
+                  position: absolute;
+                  right: -40px;
+                  top: 50%;
+                  transform: translateY(-50%);
+                  color: rgba(59, 130, 246, 0.6);
+                  font-size: var(--text-lg);
+                ">→</div>
+              </div>
+            </div>
 
-      return { args, position, handleMouseMove }
-    },
-    template: `
-      <div
-        @mousemove="handleMouseMove"
-        style="
-          min-height: 500px;
-          background: var(--glass-bg-soft);
-          position: relative;
-          cursor: grabbing;
-        "
-      >
-        <DragHandleGhost
-          :is-dragging="args.isDragging"
-          :is-visible="args.isVisible"
-          :position="position"
-        />
-        <div style="
-          position: absolute;
-          top: var(--space-4);
-          left: var(--space-4);
-          color: var(--text-tertiary);
-          font-size: var(--text-sm);
-          background: var(--glass-bg-medium);
-          padding: var(--space-3);
-          border-radius: var(--radius-md);
-          border: 1px solid var(--glass-border);
-        ">
-          Move your mouse to see the ghost follow
-          <div style="margin-top: var(--space-2);">
-            Position: {{ position.x }}px, {{ position.y }}px
+            <!-- Ghost replica (inline, not teleported) -->
+            <div style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: var(--space-3);
+              padding-top: 88px;
+            ">
+              <div style="${ghostBoxStyle}">
+                <div style="${dotGridStyle}">
+                  <div v-for="n in 6" :key="n" style="${dotStyle}"></div>
+                </div>
+              </div>
+              <div style="
+                color: rgba(59, 130, 246, 0.6);
+                font-size: var(--text-xs);
+                text-align: center;
+                max-width: 80px;
+                line-height: 1.3;
+              ">Ghost at cursor</div>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div style="
+            margin-top: var(--space-8);
+            padding: var(--space-4);
+            background: var(--glass-bg-soft);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            display: flex;
+            gap: var(--space-6);
+            flex-wrap: wrap;
+          ">
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+              <div style="width: 12px; height: 12px; border-radius: 2px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4);"></div>
+              <span style="color: var(--text-secondary); font-size: var(--text-xs);">Active drag source</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+              <div style="${ghostBoxStyle}; width: 16px; height: 16px; transform: none; opacity: 1;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;">
+                  <div v-for="n in 6" :key="n" style="width: 2px; height: 2px; border-radius: 50%; background: rgba(59, 130, 246, 0.9);"></div>
+                </div>
+              </div>
+              <span style="color: var(--text-secondary); font-size: var(--text-xs);">Floating ghost (follows cursor)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+              <div style="width: 12px; height: 12px; border-radius: 2px; background: var(--glass-bg-soft); border: 1px solid var(--glass-border);"></div>
+              <span style="color: var(--text-secondary); font-size: var(--text-xs);">Normal task row</span>
+            </div>
           </div>
         </div>
       </div>
@@ -105,137 +213,154 @@ export const FollowingMouse: Story = {
   })
 }
 
-export const NotDragging: Story = {
-  args: {
-    isDragging: false,
-    isVisible: true,
-    position: { x: 300, y: 250 }
-  },
-  render: (args) => ({
-    components: { DragHandleGhost },
-    setup() {
-      return { args }
-    },
-    template: `
-      <div style="
-        min-height: 500px;
-        background: var(--glass-bg-soft);
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <DragHandleGhost v-bind="args" />
-        <div style="
-          text-align: center;
-          color: var(--text-tertiary);
-          font-size: var(--text-sm);
-        ">
-          Ghost is hidden when not dragging
-        </div>
-      </div>
-    `
-  })
-}
-
-export const MultipleGhosts: Story = {
+/**
+ * Shows all the visual states of the ghost element:
+ * visible (dragging), scaled up, and the dot pattern close-up.
+ */
+export const GhostAnatomy: Story = {
+  name: 'Ghost Anatomy',
   render: () => ({
-    components: { DragHandleGhost },
-    setup() {
-      const ghosts = [
-        { isDragging: true, isVisible: true, position: { x: 150, y: 150 } },
-        { isDragging: true, isVisible: true, position: { x: 300, y: 250 } },
-        { isDragging: true, isVisible: true, position: { x: 450, y: 350 } }
-      ]
-
-      return { ghosts }
-    },
     template: `
       <div style="
-        min-height: 500px;
-        background: var(--glass-bg-soft);
-        position: relative;
+        min-height: 100vh;
+        background: var(--app-background-gradient);
+        padding: var(--space-10) var(--space-6);
       ">
-        <DragHandleGhost
-          v-for="(ghost, index) in ghosts"
-          :key="index"
-          :is-dragging="ghost.isDragging"
-          :is-visible="ghost.isVisible"
-          :position="ghost.position"
-        />
-        <div style="
-          position: absolute;
-          top: var(--space-4);
-          left: var(--space-4);
-          color: var(--text-tertiary);
-          font-size: var(--text-sm);
-          background: var(--glass-bg-medium);
-          padding: var(--space-3);
-          border-radius: var(--radius-md);
-          border: 1px solid var(--glass-border);
-        ">
-          Multiple drag ghosts shown at once
-        </div>
-      </div>
-    `
-  })
-}
+        <div style="max-width: 600px; margin: 0 auto;">
+          <div style="
+            color: var(--text-primary);
+            font-size: var(--text-lg);
+            font-weight: 600;
+            margin-bottom: var(--space-2);
+          ">Ghost Anatomy</div>
+          <div style="
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            margin-bottom: var(--space-8);
+            line-height: 1.5;
+          ">The ghost is a 48×48px blue-tinted square with 6 dots, rendered at 110% scale and 85% opacity.</div>
 
-export const AnimationDemo: Story = {
-  args: {
-    isDragging: true,
-    isVisible: true,
-    position: { x: 100, y: 250 }
-  },
-  render: (args) => ({
-    components: { DragHandleGhost },
-    setup() {
-      const position = { x: args.position.x, y: args.position.y }
-      let animationId: number
+          <div style="
+            display: flex;
+            gap: var(--space-10);
+            align-items: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
+          ">
+            <!-- Normal size -->
+            <div style="text-align: center;">
+              <div style="
+                color: var(--text-tertiary);
+                font-size: var(--text-xs);
+                margin-bottom: var(--space-3);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+              ">Default (1×)</div>
+              <div style="
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 48px;
+                height: 48px;
+                background: rgba(59, 130, 246, 0.15);
+                border: 1px solid rgba(59, 130, 246, 0.4);
+                border-radius: var(--radius-md);
+                box-shadow: var(--shadow-md);
+              ">
+                <div style="${dotGridStyle}">
+                  <div v-for="n in 6" :key="n" style="${dotStyle}"></div>
+                </div>
+              </div>
+              <div style="color: var(--text-quaternary); font-size: 10px; margin-top: var(--space-2);">48 × 48px</div>
+            </div>
 
-      const animate = () => {
-        position.x += 2
-        if (position.x > 500) {
-          position.x = 100
-        }
-        animationId = requestAnimationFrame(animate)
-      }
+            <!-- Scaled (as rendered during drag) -->
+            <div style="text-align: center;">
+              <div style="
+                color: var(--text-tertiary);
+                font-size: var(--text-xs);
+                margin-bottom: var(--space-3);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+              ">During drag (1.1×)</div>
+              <div style="${ghostBoxStyle}">
+                <div style="${dotGridStyle}">
+                  <div v-for="n in 6" :key="n" style="${dotStyle}"></div>
+                </div>
+              </div>
+              <div style="color: var(--text-quaternary); font-size: 10px; margin-top: var(--space-2);">scale(1.1), opacity 0.85</div>
+            </div>
 
-      // Start animation
-      animate()
+            <!-- Large close-up -->
+            <div style="text-align: center;">
+              <div style="
+                color: var(--text-tertiary);
+                font-size: var(--text-xs);
+                margin-bottom: var(--space-3);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+              ">Close-up (3×)</div>
+              <div style="
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 144px;
+                height: 144px;
+                background: rgba(59, 130, 246, 0.15);
+                border: 1px solid rgba(59, 130, 246, 0.4);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow-md);
+              ">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px;">
+                  <div v-for="n in 6" :key="n" style="
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: rgba(59, 130, 246, 0.9);
+                    box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+                  "></div>
+                </div>
+              </div>
+              <div style="color: var(--text-quaternary); font-size: 10px; margin-top: var(--space-2);">6-dot grid pattern</div>
+            </div>
+          </div>
 
-      // Clean up on unmount
-      const cleanup = () => {
-        if (animationId) {
-          cancelAnimationFrame(animationId)
-        }
-      }
-
-      return { args, position, cleanup }
-    },
-    template: `
-      <div style="
-        min-height: 500px;
-        background: var(--glass-bg-soft);
-        position: relative;
-      ">
-        <DragHandleGhost
-          :is-dragging="args.isDragging"
-          :is-visible="args.isVisible"
-          :position="position"
-        />
-        <div style="
-          position: absolute;
-          top: var(--space-4);
-          left: var(--space-4);
-          color: var(--text-tertiary);
-          font-size: var(--text-sm);
-          background: var(--glass-bg-medium);
-          padding: var(--space-3);
-          border-radius: var(--radius-md);
-          border: 1px solid var(--glass-border);
-        ">
-          Animated ghost moving horizontally
+          <!-- CSS specs -->
+          <div style="
+            margin-top: var(--space-10);
+            padding: var(--space-4);
+            background: var(--glass-bg-soft);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+          ">
+            <div style="
+              color: var(--text-tertiary);
+              font-size: var(--text-xs);
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              margin-bottom: var(--space-3);
+            ">CSS Properties</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);">
+              <div style="color: var(--text-secondary); font-size: var(--text-xs);">
+                <code style="color: var(--brand-primary);">position</code> fixed (teleported to body)
+              </div>
+              <div style="color: var(--text-secondary); font-size: var(--text-xs);">
+                <code style="color: var(--brand-primary);">pointer-events</code> none
+              </div>
+              <div style="color: var(--text-secondary); font-size: var(--text-xs);">
+                <code style="color: var(--brand-primary);">z-index</code> 9999
+              </div>
+              <div style="color: var(--text-secondary); font-size: var(--text-xs);">
+                <code style="color: var(--brand-primary);">transform</code> translate(-50%, -50%) scale(1.1)
+              </div>
+              <div style="color: var(--text-secondary); font-size: var(--text-xs);">
+                <code style="color: var(--brand-primary);">background</code> --blue-bg-light (15% alpha)
+              </div>
+              <div style="color: var(--text-secondary); font-size: var(--text-xs);">
+                <code style="color: var(--brand-primary);">border</code> --blue-border-medium
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `

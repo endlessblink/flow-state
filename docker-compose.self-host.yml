@@ -22,7 +22,7 @@ services:
   # PostgreSQL Database
   # ---------------------------------------------------------------------------
   db:
-    image: supabase/postgres:17.2.0
+    image: supabase/postgres:17.6.1.095
     restart: unless-stopped
     ports:
       - "${POSTGRES_PORT:-5432}:5432"

@@ -110,7 +110,6 @@
       @close-duration="closeSubmenu('duration')"
       @focus-mode="enterFocus"
       @start-now="() => { closeAllSubmenusNow(); startTaskNow(); emit('close') }"
-      @permanent-delete="permanentlyDeleteTask"
     />
 
     <!-- DueDateSubmenu -->

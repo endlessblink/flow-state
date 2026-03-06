@@ -323,7 +323,14 @@ const handleBoardKeydown = (event: KeyboardEvent) => {
 
 // Task management methods (wrappers for composables to match template emitters)
 const handleAddTask = (payload: { columnKey: string, projectId: string, viewType: 'priority' | 'date' | 'category' | 'list' }) => {
-  openQuickTaskCreate(payload.columnKey, payload.projectId, payload.viewType)
+  // Map 'list' to 'status' or just cast, since BoardViewType doesn't have 'list'
+  const viewTypeMap: Record<string, import('@/composables/board/useBoardModals').BoardViewType> = {
+    'priority': 'priority',
+    'date': 'date',
+    'category': 'category',
+    'list': 'status' // fallback
+  }
+  openQuickTaskCreate(payload.columnKey, payload.projectId, viewTypeMap[payload.viewType] || 'status')
 }
 
 const handleEditTask = (taskId: string) => {

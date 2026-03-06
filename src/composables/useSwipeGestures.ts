@@ -1,12 +1,13 @@
 /**
  * useSwipeGestures.ts
  *
- * A composable for handling swipe gestures on mobile devices.
+ * A composable for handling swipe/drag gestures on both mobile and desktop.
  * Features:
  * - Velocity-based swipe detection
  * - Configurable thresholds
  * - Spring-like visual feedback
  * - Haptic feedback integration
+ * - Mouse drag support for desktop
  */
 
 import { ref, computed, onMounted, onUnmounted, type Ref } from 'vue'
@@ -23,6 +24,8 @@ export interface SwipeGestureOptions {
   lockVertical?: boolean
   /** Enable 4-direction mode (prevents page scroll during vertical swipes on the target) */
   fourDirectional?: boolean
+  /** Enable mouse drag (for desktop) */
+  mouse?: boolean
   /** Callbacks */
   onSwipeLeft?: () => void
   onSwipeRight?: () => void
@@ -53,6 +56,7 @@ export function useSwipeGestures(
     haptics = true,
     lockVertical = true,
     fourDirectional = false,
+    mouse = false,
     onSwipeLeft,
     onSwipeRight,
     onSwipeUp,
@@ -129,60 +133,31 @@ export function useSwipeGestures(
     baseTriggerHaptic(type)
   }
 
-  // Touch handlers
-  const handleTouchStart = (e: TouchEvent) => {
-    const touch = e.touches[0]
-
+  // Shared start/move/end logic
+  function beginSwipe(clientX: number, clientY: number) {
     isSwiping.value = true
     isLocked.value = false
-    startX.value = touch.clientX
-    startY.value = touch.clientY
-    currentX.value = touch.clientX
-    currentY.value = touch.clientY
-    lastX.value = touch.clientX
-    lastY.value = touch.clientY
+    startX.value = clientX
+    startY.value = clientY
+    currentX.value = clientX
+    currentY.value = clientY
+    lastX.value = clientX
+    lastY.value = clientY
     startTime.value = Date.now()
     lastMoveTime.value = Date.now()
-
-    // In 4-directional mode, prevent default on touchstart to stop
-    // the browser from claiming the touch for scrolling
-    if (fourDirectional) {
-      e.preventDefault()
-    }
-
     onSwipeStart?.()
     triggerHaptic('light')
   }
 
-  const handleTouchMove = (e: TouchEvent) => {
+  function moveSwipe(clientX: number, clientY: number) {
     if (!isSwiping.value) return
-
-    const touch = e.touches[0]
-    currentX.value = touch.clientX
-    currentY.value = touch.clientY
+    currentX.value = clientX
+    currentY.value = clientY
     lastMoveTime.value = Date.now()
 
+    // Mark as locked once direction is determined
     const absX = Math.abs(deltaX.value)
     const absY = Math.abs(deltaY.value)
-
-    // In 4-directional mode, always prevent default to stop browser scroll
-    if (fourDirectional) {
-      e.preventDefault()
-    } else {
-      // Lock direction once determined
-      if (!isLocked.value && (absX > 10 || absY > 10)) {
-        isLocked.value = true
-        if (lockVertical && absX > absY) {
-          e.preventDefault()
-        }
-      }
-      // Continue preventing default once locked
-      if (isLocked.value && absX > absY && lockVertical) {
-        e.preventDefault()
-      }
-    }
-
-    // Mark as locked once direction is determined
     if (!isLocked.value && (absX > 10 || absY > 10)) {
       isLocked.value = true
     }
@@ -196,13 +171,12 @@ export function useSwipeGestures(
       }
     }
 
-    lastX.value = touch.clientX
-    lastY.value = touch.clientY
-
+    lastX.value = clientX
+    lastY.value = clientY
     onSwipeMove?.(deltaX.value, deltaY.value, velocity.value)
   }
 
-  const handleTouchEnd = () => {
+  function endSwipe() {
     if (!isSwiping.value) return
 
     const absX = Math.abs(deltaX.value)
@@ -242,13 +216,66 @@ export function useSwipeGestures(
     currentY.value = startY.value
   }
 
-  const handleTouchCancel = () => {
+  function cancelSwipe() {
     isSwiping.value = false
     isLocked.value = false
-    // Reset position values to ensure deltaX/deltaY return to 0
     currentX.value = startX.value
     currentY.value = startY.value
     onSwipeCancel?.()
+  }
+
+  // Touch handlers
+  const handleTouchStart = (e: TouchEvent) => {
+    const touch = e.touches[0]
+    if (fourDirectional) e.preventDefault()
+    beginSwipe(touch.clientX, touch.clientY)
+  }
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isSwiping.value) return
+    const touch = e.touches[0]
+
+    if (fourDirectional) {
+      e.preventDefault()
+    } else {
+      const absX = Math.abs(deltaX.value)
+      const absY = Math.abs(deltaY.value)
+      if (!isLocked.value && (absX > 10 || absY > 10)) {
+        isLocked.value = true
+        if (lockVertical && absX > absY) e.preventDefault()
+      }
+      if (isLocked.value && absX > absY && lockVertical) e.preventDefault()
+    }
+
+    moveSwipe(touch.clientX, touch.clientY)
+  }
+
+  const handleTouchEnd = () => endSwipe()
+  const handleTouchCancel = () => cancelSwipe()
+
+  // Mouse handlers (for desktop drag)
+  const handleMouseDown = (e: MouseEvent) => {
+    // Don't start drag from interactive elements
+    const target = e.target as HTMLElement
+    if (target?.closest('button, input, select, a, .n-date-picker, .n-popover')) return
+
+    e.preventDefault()
+    beginSwipe(e.clientX, e.clientY)
+
+    // Attach move/up to document for reliable tracking
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
+
+  const handleMouseMove = (e: MouseEvent) => {
+    e.preventDefault()
+    moveSwipe(e.clientX, e.clientY)
+  }
+
+  const handleMouseUp = () => {
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    endSwipe()
   }
 
   // Setup and cleanup
@@ -260,6 +287,10 @@ export function useSwipeGestures(
     el.addEventListener('touchmove', handleTouchMove, { passive: false })
     el.addEventListener('touchend', handleTouchEnd, { passive: true })
     el.addEventListener('touchcancel', handleTouchCancel, { passive: true })
+
+    if (mouse) {
+      el.addEventListener('mousedown', handleMouseDown)
+    }
   })
 
   onUnmounted(() => {
@@ -270,6 +301,12 @@ export function useSwipeGestures(
     el.removeEventListener('touchmove', handleTouchMove)
     el.removeEventListener('touchend', handleTouchEnd)
     el.removeEventListener('touchcancel', handleTouchCancel)
+
+    if (mouse) {
+      el.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
   })
 
   // Manual reset

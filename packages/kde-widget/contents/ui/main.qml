@@ -69,8 +69,12 @@ PlasmoidItem {
     property var pinnedTasks: []
     property bool isLoadingPinnedTasks: false
 
+    // ===== PROJECT STATE (TASK-1454) =====
+    property var projects: ({})          // Map of project_id -> {name, color, colorType}
+    property bool isLoadingProjects: false
+
     // ===== TASK SORT/FILTER STATE =====
-    // Sort options: "created_desc", "created_asc", "title_asc", "priority_desc", "canvas_order"
+    // Sort options: "created_desc", "created_asc", "title_asc", "priority_desc", "canvas_order", "project"
     property string taskSortBy: "created_desc"
     // Filter options: "all", "todo", "in_progress", "today", "on_canvas"
     property string taskFilter: "all"
@@ -170,6 +174,7 @@ PlasmoidItem {
                             root.fetchCurrentSession()
                             root.fetchTasks()
                             root.fetchPinnedTasks()
+                            root.fetchProjects()
                         }
                         console.log("[OAUTH] Google sign-in successful")
                     } else if (result.error) {
@@ -2085,13 +2090,14 @@ PlasmoidItem {
                     PlasmaComponents.ComboBox {
                         id: sortCombo
                         Layout.preferredWidth: 85
-                        model: ["Newest", "Oldest", "A-Z", "Priority", "Canvas"]
+                        model: ["Newest", "Oldest", "A-Z", "Priority", "Canvas", "Project"]
                         currentIndex: root.taskSortBy === "created_desc" ? 0 :
                                       root.taskSortBy === "created_asc" ? 1 :
                                       root.taskSortBy === "title_asc" ? 2 :
-                                      root.taskSortBy === "priority_desc" ? 3 : 4
+                                      root.taskSortBy === "priority_desc" ? 3 :
+                                      root.taskSortBy === "canvas_order" ? 4 : 5
                         onActivated: function(index) {
-                            var values = ["created_desc", "created_asc", "title_asc", "priority_desc", "canvas_order"]
+                            var values = ["created_desc", "created_asc", "title_asc", "priority_desc", "canvas_order", "project"]
                             root.taskSortBy = values[index]
                             root.fetchTasks()
                         }
@@ -2154,42 +2160,103 @@ PlasmoidItem {
                         clip: true
                         spacing: 6  // TASK-1087: Increased spacing for better readability
 
-                        delegate: Rectangle {
-                            id: taskDelegate
+                        delegate: Item {
+                            id: delegateRoot
                             width: taskListView.width
-                            // TASK-1429: Dynamic height - expands when edit panel is open
-                            readonly property real taskRowHeight: Math.max(44, Math.min(64, taskText.implicitHeight + 16))
-                            readonly property bool isEditing: root.editingTaskId === modelData.id
-                            height: isEditing
-                                ? taskRowHeight + editPanel.height + 8
-                                : taskRowHeight
-                            Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-                            radius: 6
-                            clip: true
+                            // TASK-1454: Headers are compact, task rows use dynamic height
+                            height: modelData.isHeader ? projectHeader.height : taskDelegate.height
 
-                            // TASK-1087: Check if this task is the active timer task
-                            readonly property bool isActiveTask: root.currentTaskId !== "" &&
-                                                                  root.currentTaskId !== "general" &&
-                                                                  modelData.id === root.currentTaskId &&
-                                                                  root.isRunning
+                            // ===== TASK-1454: Project Section Header =====
+                            Rectangle {
+                                id: projectHeader
+                                visible: modelData.isHeader === true
+                                width: parent.width
+                                height: 28
+                                color: "transparent"
 
-                            // TASK-1087: Highlight active task with accent glow
-                            // TASK-1429: Also highlight when editing
-                            color: isActiveTask ? Qt.rgba(root.currentAccent.r, root.currentAccent.g, root.currentAccent.b, 0.15)
-                                 : isEditing ? Qt.rgba(0.18, 0.16, 0.27, 0.5)
-                                 : Qt.rgba(0.18, 0.16, 0.27, 0.3)  // Purple-tinted task bg
-                            border.width: isActiveTask ? 2 : (isEditing ? 1 : 0)
-                            border.color: isActiveTask ? root.currentAccent
-                                        : isEditing ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.3)
-                                        : "transparent"
+                                Row {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 8
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 8
+                                    spacing: 6
 
-                            // TASK-1087: Subtle pulse animation for active task
-                            SequentialAnimation on opacity {
-                                running: taskDelegate.isActiveTask
-                                loops: Animation.Infinite
-                                NumberAnimation { to: 0.85; duration: 1000; easing.type: Easing.InOutSine }
-                                NumberAnimation { to: 1.0; duration: 1000; easing.type: Easing.InOutSine }
+                                    // Project color dot
+                                    Rectangle {
+                                        width: 8
+                                        height: 8
+                                        radius: 4
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: {
+                                            var c = modelData.projectColor || ""
+                                            if (c && c.charAt(0) === '#') return c
+                                            if (c) return "#" + c
+                                            return root.mutedColor
+                                        }
+                                    }
+
+                                    Text {
+                                        text: modelData.projectName || ""
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: root.textColor
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+
+                                    // Subtle separator line
+                                    Item {
+                                        width: projectHeader.width - parent.children[0].width - parent.children[1].implicitWidth - parent.spacing * 2 - 16
+                                        height: 1
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        Rectangle {
+                                            width: parent.width
+                                            height: 1
+                                            color: Qt.rgba(1, 1, 1, 0.08)
+                                        }
+                                    }
+                                }
                             }
+
+                            // ===== Task Row (existing delegate) =====
+                            Rectangle {
+                                id: taskDelegate
+                                visible: modelData.isHeader !== true
+                                width: parent.width
+                                // TASK-1429: Dynamic height - expands when edit panel is open
+                                readonly property real taskRowHeight: Math.max(44, Math.min(64, taskText.implicitHeight + 16))
+                                readonly property bool isEditing: !modelData.isHeader && root.editingTaskId === modelData.id
+                                height: modelData.isHeader ? 0 : (isEditing
+                                    ? taskRowHeight + editPanel.height + 8
+                                    : taskRowHeight)
+                                Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                                radius: 6
+                                clip: true
+
+                                // TASK-1087: Check if this task is the active timer task
+                                readonly property bool isActiveTask: !modelData.isHeader &&
+                                                                      root.currentTaskId !== "" &&
+                                                                      root.currentTaskId !== "general" &&
+                                                                      modelData.id === root.currentTaskId &&
+                                                                      root.isRunning
+
+                                // TASK-1087: Highlight active task with accent glow
+                                // TASK-1429: Also highlight when editing
+                                color: isActiveTask ? Qt.rgba(root.currentAccent.r, root.currentAccent.g, root.currentAccent.b, 0.15)
+                                     : isEditing ? Qt.rgba(0.18, 0.16, 0.27, 0.5)
+                                     : Qt.rgba(0.18, 0.16, 0.27, 0.3)  // Purple-tinted task bg
+                                border.width: isActiveTask ? 2 : (isEditing ? 1 : 0)
+                                border.color: isActiveTask ? root.currentAccent
+                                            : isEditing ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.3)
+                                            : "transparent"
+
+                                // TASK-1087: Subtle pulse animation for active task
+                                SequentialAnimation on opacity {
+                                    running: taskDelegate.isActiveTask
+                                    loops: Animation.Infinite
+                                    NumberAnimation { to: 0.85; duration: 1000; easing.type: Easing.InOutSine }
+                                    NumberAnimation { to: 1.0; duration: 1000; easing.type: Easing.InOutSine }
+                                }
 
                             // TASK-1429: Outer Column to stack task row + edit panel
                             Column {
@@ -2232,7 +2299,7 @@ PlasmoidItem {
                                             anchors.fill: parent
                                             hoverEnabled: true
                                             cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.markTaskDone(modelData.id)
+                                            onClicked: { if (modelData.isHeader) return; root.markTaskDone(modelData.id) }
                                         }
                                     }
 
@@ -2261,6 +2328,7 @@ PlasmoidItem {
                                             hoverEnabled: true
                                             cursorShape: Qt.PointingHandCursor
                                             onClicked: {
+                                                if (modelData.isHeader) return
                                                 if (root.isRunning && root.currentTaskId !== modelData.id) {
                                                     // Timer running on different task — switch it
                                                     root.switchTaskForSession(modelData.id)
@@ -2293,7 +2361,7 @@ PlasmoidItem {
                                             anchors.fill: parent
                                             hoverEnabled: true
                                             cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.pinTask(modelData.title)
+                                            onClicked: { if (modelData.isHeader) return; root.pinTask(modelData.title) }
                                         }
                                     }
 
@@ -2328,6 +2396,7 @@ PlasmoidItem {
                                             hoverEnabled: true
                                             cursorShape: Qt.PointingHandCursor
                                             onClicked: {
+                                                if (modelData.isHeader) return
                                                 if (root.editingTaskId === modelData.id) {
                                                     root.editingTaskId = ""
                                                 } else {
@@ -2855,11 +2924,19 @@ PlasmoidItem {
                                     Item { width: 1; height: 4 }
                                 }
                             }
-                        }
+                        } // end Rectangle (taskDelegate)
+                        } // end Item (delegateRoot)
 
                         Text {
                             anchors.centerIn: parent
-                            visible: root.tasks.length === 0
+                            visible: {
+                                // TASK-1454: Filter out header items when checking empty
+                                if (root.tasks.length === 0) return true
+                                for (var i = 0; i < root.tasks.length; i++) {
+                                    if (!root.tasks[i].isHeader) return false
+                                }
+                                return true
+                            }
                             text: "No tasks found"
                             color: root.mutedColor
                             font.pixelSize: 12
@@ -2888,7 +2965,7 @@ PlasmoidItem {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: { root.fetchCurrentSession(); root.fetchTasks(); root.fetchPinnedTasks() }
+                        onClicked: { root.fetchCurrentSession(); root.fetchTasks(); root.fetchPinnedTasks(); root.fetchProjects() }
                         enabled: !root.isLoadingTasks
                     }
                 }
@@ -3095,6 +3172,7 @@ PlasmoidItem {
                         root.fetchCurrentSession()
                         Qt.callLater(root.fetchTasks)
                         Qt.callLater(root.fetchPinnedTasks)
+                        Qt.callLater(root.fetchProjects)
                         // TASK-1424: Initialize nanny timestamp on sign-in
                         root.nannyLastSessionEndTime = Date.now()
                         if (root.debugLogging) console.log("[AUTH] Sign in successful, userId:", root.userId)
@@ -3149,6 +3227,7 @@ PlasmoidItem {
                     root.fetchCurrentSession()
                     Qt.callLater(root.fetchTasks)
                     Qt.callLater(root.fetchPinnedTasks)
+                    Qt.callLater(root.fetchProjects)
                 } else if (xhr.status === 401 || xhr.status === 400) {
                     console.log("[AUTH] Refresh failed, signing out")
                     root.authError = "Session expired. Please sign in again."
@@ -3855,15 +3934,17 @@ PlasmoidItem {
         var xhr = new XMLHttpRequest()
         var url = root.supabaseUrl + "/rest/v1/tasks?id=eq." + taskId
 
-        xhr.open("DELETE", url, true)
+        // Soft-delete to match web app behavior (is_deleted + deleted_at)
+        xhr.open("PATCH", url, true)
         xhr.setRequestHeader("apikey", root.supabaseKey)
         xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+        xhr.setRequestHeader("Content-Type", "application/json")
 
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 root.isSavingEdit = false
                 if (xhr.status === 200 || xhr.status === 204) {
-                    console.log("[TASKS] Task deleted permanently")
+                    console.log("[TASKS] Task soft-deleted successfully")
                     root.fetchTasks()
                 } else {
                     console.log("[TASKS] Error deleting task:", xhr.status, xhr.responseText)
@@ -3874,7 +3955,7 @@ PlasmoidItem {
             }
         }
 
-        xhr.send()
+        xhr.send(JSON.stringify({ is_deleted: true, deleted_at: new Date().toISOString() }))
     }
 
     function fetchTasks() {
@@ -3886,7 +3967,7 @@ PlasmoidItem {
         var xhr = new XMLHttpRequest()
 
         // Build dynamic URL based on sort/filter options
-        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,position,parent_id"
+        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,position,parent_id,project_id"
 
         // Apply filter
         if (root.taskFilter === "all") {
@@ -3930,10 +4011,13 @@ PlasmoidItem {
         } else if (root.taskSortBy === "canvas_order") {
             // Sort by parent_id (group) first, then by position x-coordinate (left to right)
             url += "&order=parent_id.asc.nullslast,created_at.desc"
+        } else if (root.taskSortBy === "project") {
+            // TASK-1454: Group by project — server sorts by project_id, client injects headers
+            url += "&order=project_id.asc.nullslast,created_at.desc"
         }
 
-        // Limit results
-        url += "&limit=20"
+        // Limit results (TASK-1454: bumped from 20 to 100)
+        url += "&limit=100"
 
         if (root.debugLogging) console.log("[TASKS] Fetching with URL:", url)
 
@@ -3947,6 +4031,10 @@ PlasmoidItem {
                 if (xhr.status === 200) {
                     root.tasks = JSON.parse(xhr.responseText)
                     if (root.debugLogging) console.log("[TASKS] Loaded", root.tasks.length, "tasks")
+                    // TASK-1454: Inject project group headers if project sort is active
+                    if (root.taskSortBy === "project" && Object.keys(root.projects).length > 0) {
+                        root.groupTasksByProject()
+                    }
                     root.writeActiveTaskFile()
                 } else {
                     console.log("[TASKS] Error:", xhr.status, xhr.responseText)
@@ -3954,6 +4042,110 @@ PlasmoidItem {
             }
         }
         xhr.send()
+    }
+
+    // ===== TASK-1454: PROJECT FETCHING & GROUPING =====
+
+    function fetchProjects() {
+        if (!root.isAuthenticated || !root.userId) return
+
+        root.isLoadingProjects = true
+        var xhr = new XMLHttpRequest()
+        var url = root.supabaseUrl + "/rest/v1/projects?select=id,name,color,color_type&is_deleted=eq.false&user_id=eq." + root.userId
+        xhr.open("GET", url, true)
+        xhr.setRequestHeader("apikey", root.supabaseKey)
+        xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                root.isLoadingProjects = false
+                if (xhr.status === 200) {
+                    var list = JSON.parse(xhr.responseText)
+                    var map = {}
+                    for (var i = 0; i < list.length; i++) {
+                        map[list[i].id] = {
+                            name: list[i].name || "Unnamed",
+                            color: list[i].color || "",
+                            colorType: list[i].color_type || "preset"
+                        }
+                    }
+                    root.projects = map
+                    if (root.debugLogging) console.log("[PROJECTS] Loaded", list.length, "projects")
+                    // If tasks already loaded and sort is project, trigger grouping
+                    if (root.tasks.length > 0 && root.taskSortBy === "project") {
+                        root.groupTasksByProject()
+                    }
+                } else {
+                    console.log("[PROJECTS] Error:", xhr.status, xhr.responseText)
+                }
+            }
+        }
+        xhr.send()
+    }
+
+    function groupTasksByProject() {
+        if (root.taskSortBy !== "project") return
+
+        // Filter out any existing headers (re-grouping scenario)
+        var realTasks = []
+        for (var i = 0; i < root.tasks.length; i++) {
+            if (!root.tasks[i].isHeader) realTasks.push(root.tasks[i])
+        }
+
+        // Build project buckets
+        var buckets = {}  // projectId -> [tasks]
+        var ungrouped = []
+        for (var j = 0; j < realTasks.length; j++) {
+            var t = realTasks[j]
+            var pid = t.project_id
+            if (pid && root.projects[pid]) {
+                if (!buckets[pid]) buckets[pid] = []
+                buckets[pid].push(t)
+            } else {
+                ungrouped.push(t)
+            }
+        }
+
+        // Sort project IDs by project name
+        var projectIds = Object.keys(buckets)
+        projectIds.sort(function(a, b) {
+            var nameA = (root.projects[a]?.name || "").toLowerCase()
+            var nameB = (root.projects[b]?.name || "").toLowerCase()
+            return nameA < nameB ? -1 : nameA > nameB ? 1 : 0
+        })
+
+        // Build final list with headers
+        var result = []
+        for (var k = 0; k < projectIds.length; k++) {
+            var projId = projectIds[k]
+            var proj = root.projects[projId]
+            result.push({
+                isHeader: true,
+                projectName: proj.name,
+                projectColor: proj.color,
+                projectColorType: proj.colorType
+            })
+            var tasks = buckets[projId]
+            for (var l = 0; l < tasks.length; l++) {
+                result.push(tasks[l])
+            }
+        }
+
+        // Ungrouped at the end
+        if (ungrouped.length > 0) {
+            result.push({
+                isHeader: true,
+                projectName: "Ungrouped",
+                projectColor: "",
+                projectColorType: ""
+            })
+            for (var m = 0; m < ungrouped.length; m++) {
+                result.push(ungrouped[m])
+            }
+        }
+
+        root.tasks = result
+        if (root.debugLogging) console.log("[PROJECTS] Grouped tasks into", projectIds.length + (ungrouped.length > 0 ? 1 : 0), "sections")
     }
 
     // ===== QUICK TASK CREATION =====

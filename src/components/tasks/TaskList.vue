@@ -47,19 +47,15 @@
       v-for="group in groups"
       :key="group.key"
       class="task-group"
-      :class="{ 'task-group--indented': (group.indent || 0) > 0, 'task-group--drop-active': dropTargetGroup === group.key }"
+      :class="{ 'task-group--indented': (group.indent || 0) > 0 }"
       :data-group-key="group.key"
     >
       <!-- Sticky Group Header -->
       <div
         v-if="groupBy !== 'none'"
         class="group-header"
-        :class="{ 'group-header--drop-target': dropTargetGroup === group.key }"
         :style="(group.indent || 0) > 0 ? { paddingLeft: `${12 + (group.indent || 0) * 24}px` } : undefined"
         @click="toggleGroupExpand(group.key)"
-        @dragover.prevent="handleGroupDragOver($event, group)"
-        @dragleave="handleGroupDragLeave"
-        @drop.prevent="handleGroupDrop($event, group)"
       >
         <label class="group-select-checkbox" @click.stop>
           <input
@@ -97,14 +93,55 @@
         </span>
       </div>
 
-      <!-- BUG-1415: Group Tasks — wrapped in drop zone when grouped, so dropping
-           anywhere in the group area transfers the task between groups -->
-      <div
-        v-if="groupBy === 'none' || expandedGroups.has(group.key)"
+      <!-- TASK-1455: Group Tasks — vuedraggable for smooth cross-group transfer -->
+      <draggable
+        v-if="groupBy !== 'none' && expandedGroups.has(group.key)"
+        :model-value="group.parentTasks"
+        item-key="id"
+        :group="{ name: 'catalog-tasks' }"
+        :animation="200"
+        :force-fallback="true"
+        :delay-on-touch-only="true"
+        :scroll="scrollContainer"
+        :scroll-sensitivity="80"
+        :scroll-speed="16"
+        :force-auto-scroll-fallback="true"
+        :bubble-scroll="true"
+        ghost-class="sortable-ghost"
+        chosen-class=""
+        drag-class=""
         class="group-tasks-area"
-        @dragover.capture.prevent="onTaskAreaDragOver($event, group)"
-        @dragleave.capture="onTaskAreaDragLeave"
-        @drop.capture.prevent="onTaskAreaDrop($event, group)"
+        :data-group-key="group.key"
+        @end="handleSortableEnd"
+      >
+        <template #item="{ element: task }">
+          <HierarchicalTaskRow
+            :key="task.id"
+            :task="task"
+            :indent-level="0"
+            :selected="selectedTaskIds.includes(task.id)"
+            :selection-mode="selectionMode"
+            :checked="selectedTaskIds.includes(task.id)"
+            :expanded-tasks="expandedTasks"
+            :disable-native-drag="true"
+            :data-task-id="task.id"
+            @select="handleSelect"
+            @check="toggleTaskSelect"
+            @toggle-complete="$emit('toggleComplete', $event)"
+            @ai-suggest="handleAISuggest"
+            @start-timer="$emit('startTimer', $event)"
+            @edit="$emit('edit', $event)"
+            @context-menu="handleContextMenu"
+            @toggle-expand="toggleTaskExpand"
+            @move-task="handleMoveTask"
+            @update-task="(taskId: string, updates: Partial<Task>) => $emit('updateTask', taskId, updates)"
+          />
+        </template>
+      </draggable>
+      <!-- Ungrouped mode: no vuedraggable, native DnD for subtask nesting -->
+      <div
+        v-else-if="groupBy === 'none'"
+        class="group-tasks-area"
       >
         <HierarchicalTaskRow
           v-for="task in group.parentTasks"
@@ -159,6 +196,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Task, TaskGroup } from '@/types/tasks'
+import draggable from 'vuedraggable'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
@@ -233,6 +271,13 @@ const handleContextMenu = (event: MouseEvent, task: Task) => {
   emit('contextMenu', event, task)
 }
 
+// TASK-1455: Scroll container ref for vuedraggable auto-scroll
+const scrollContainer = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  scrollContainer.value = document.querySelector('.tasks-container') as HTMLElement | null
+})
+
 // --- Drag to Group Header ---
 const { endDrag } = useDragAndDrop()
 
@@ -300,57 +345,26 @@ const applyGroupTransfer = (taskId: string, group: TaskGroup) => {
     }
   }
 }
-const dropTargetGroup = ref<string | null>(null)
+// TASK-1455: SortableJS @end handler for cross-group transfers.
+// When a task is dragged to a different group, revert the DOM change (SortableJS moved the element)
+// and apply the transfer through the store so Vue reactivity handles the re-render.
+const handleSortableEnd = (evt: { from: HTMLElement; to: HTMLElement; item: HTMLElement; oldIndex: number; newIndex: number }) => {
+  if (evt.from === evt.to) return // Same group reorder — ignore (we don't persist order)
 
-const handleGroupDragOver = (event: DragEvent, group: TaskGroup) => {
-  event.dataTransfer!.dropEffect = 'move'
-  dropTargetGroup.value = group.key
-}
+  // Revert SortableJS DOM manipulation — let Vue re-render from store
+  evt.from.insertBefore(evt.item, evt.from.children[evt.oldIndex] || null)
 
-const handleGroupDragLeave = () => {
-  dropTargetGroup.value = null
-}
+  // Find the task and target group
+  // evt.item is the root of the #item slot — data-task-id falls through as $attrs
+  const taskId = (evt.item as HTMLElement).dataset?.taskId
+    || (evt.item.querySelector('[data-task-id]') as HTMLElement | null)?.dataset?.taskId
+  const toGroupKey = evt.to.dataset?.groupKey
+  if (!taskId || !toGroupKey) return
 
-const handleGroupDrop = (event: DragEvent, group: TaskGroup) => {
-  dropTargetGroup.value = null
-  const raw = event.dataTransfer?.getData('application/json')
-  console.log('[DND-GROUP] handleGroupDrop', { groupKey: group.key, groupBy: props.groupBy, hasData: !!raw })
-  if (!raw) return
-  let taskId: string
-  try {
-    const data = JSON.parse(raw)
-    taskId = data.taskId
-  } catch { return }
-  if (!taskId) return
-
-  // Delegate to unified applyGroupTransfer
-  applyGroupTransfer(taskId, group)
-
-  // Clean up drag ghost — the original task row may be destroyed by Vue re-render
-  // before dragend fires, so we must clean up here
-  endDrag()
-}
-
-// BUG-1415: Capture-phase handlers for the task rows area.
-// When grouped, intercept drops on task rows so they transfer the task between groups
-// (updating dueDate/status/priority/project) instead of making subtasks.
-// When ungrouped (groupBy === 'none'), let events pass through to task-row handlers.
-const onTaskAreaDragOver = (event: DragEvent, group: TaskGroup) => {
-  if (props.groupBy === 'none') return
-  event.stopPropagation()
-  handleGroupDragOver(event, group)
-}
-
-const onTaskAreaDragLeave = () => {
-  if (props.groupBy === 'none') return
-  handleGroupDragLeave()
-}
-
-const onTaskAreaDrop = (event: DragEvent, group: TaskGroup) => {
-  console.log('[BUG-1415] onTaskAreaDrop fired', { groupBy: props.groupBy, groupKey: group.key })
-  if (props.groupBy === 'none') return
-  event.stopPropagation()
-  handleGroupDrop(event, group)
+  const targetGroup = props.groups.find(g => g.key === toGroupKey)
+  if (targetGroup) {
+    applyGroupTransfer(taskId, targetGroup)
+  }
 }
 
 // --- AI Smart Suggest Popover ---

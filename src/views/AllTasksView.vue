@@ -135,6 +135,7 @@ import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 
+import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import type { Task, GroupByType, TaskGroup } from '@/types/tasks'
 
 // Mobile Detection
@@ -238,7 +239,8 @@ const groupedTasks = computed((): TaskGroup[] => {
     // Group by project with nested hierarchy
     const projectMap = new Map<string, Task[]>()
     tasks.forEach(task => {
-      const key = task.projectId || ''
+      // TASK-1455: Normalize all uncategorized projectId variants to '' bucket
+      const key = (!task.projectId || task.projectId === UNCATEGORIZED_PROJECT_ID || task.projectId === '1') ? '' : task.projectId
       if (!projectMap.has(key)) projectMap.set(key, [])
       projectMap.get(key)!.push(task)
     })
@@ -276,10 +278,10 @@ const groupedTasks = computed((): TaskGroup[] => {
       }
     })
 
-    // Uncategorized tasks last
+    // TASK-1455: Uncategorized tasks at the top so user can categorize them
     const uncategorized = projectMap.get('')
     if (uncategorized && uncategorized.length > 0) {
-      groups.push({
+      groups.unshift({
         key: 'uncategorized',
         title: 'Uncategorized',
         tasks: uncategorized,

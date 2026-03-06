@@ -88,6 +88,8 @@
 .drag-area {
     overflow: visible !important;
     /* BUG-207: prevent sortable-wrapper clipping */
+    min-height: 80px;
+    /* Ensure empty columns have a drop target area */
 }
 
 /* Custom Scrollbar */
@@ -164,25 +166,25 @@
 
 /* BUG-1335: Drag classes - preserve all existing behavior, update radius only */
 .ghost-card {
-    opacity: 0.4;
-    background: var(--blue-bg-light) !important;
-    border: 2px dashed var(--blue-border-medium) !important;
+    opacity: 0.15;
+    background: transparent !important;
+    border: 1px dashed var(--glass-border) !important;
     border-radius: var(--radius-lg) !important;
 }
 
 .chosen-card {
     opacity: 1;
-    background: var(--glass-border) !important;
     transform: scale(1.02);
     z-index: 1000;
     border-radius: var(--radius-lg) !important;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .drag-card {
     opacity: 1;
-    background: var(--canvas-task-bg) !important;
-    border: 1px solid var(--border-hover) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--brand-primary) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     cursor: grabbing;
     border-radius: var(--radius-lg) !important;
 }
@@ -193,20 +195,28 @@
     position: fixed !important;
     z-index: 9999 !important;
     pointer-events: none !important;
-    opacity: 1 !important;
-    background: var(--canvas-task-bg) !important;
+    background: rgba(35, 32, 55, 0.95) !important;
     border: 1px solid var(--brand-primary, #4ECDC4) !important;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px var(--brand-bg-dim) !important;
-    border-radius: var(--radius-lg) !important;
-    transform: rotate(1deg) scale(1.03) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(78, 205, 196, 0.2) !important;
+    border-radius: 8px !important;
+    transform: scale(1.02) !important;
+    animation: card-lift 0.2s cubic-bezier(0.2, 0, 0, 1) forwards !important;
 }
 
-/* TASK-1336: Hide SortableJS clone when our custom drag ghost is active.
-   Must come AFTER .sortable-fallback and use higher specificity to override opacity: 1 */
-body.dragging-active .sortable-fallback.sortable-fallback {
-    opacity: 0 !important;
-    box-shadow: none !important;
+@keyframes card-lift {
+    0% {
+        opacity: 0;
+        transform: scale(0.95);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1.02);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(78, 205, 196, 0.2);
+    }
 }
+
+/* TASK-1336: Previously hid fallback clone — removed to let card follow cursor */
 
 /* TASK-1160: Show more footer for progressive rendering */
 .show-more-footer {

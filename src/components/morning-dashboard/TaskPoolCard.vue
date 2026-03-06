@@ -12,6 +12,10 @@ const props = defineProps<{
   }
 }>()
 
+const emit = defineEmits<{
+  contextmenu: [taskId: string, event: MouseEvent]
+}>()
+
 const taskStore = useTaskStore()
 
 const projectName = computed(() => {
@@ -60,7 +64,7 @@ const isOverdue = computed(() => {
 </script>
 
 <template>
-  <div class="pool-card">
+  <div class="pool-card" :data-task-id="task.id" :data-task-title="task.title" @contextmenu.prevent="emit('contextmenu', task.id, $event)">
     <span
       class="priority-dot"
       :style="{ backgroundColor: priorityColor }"

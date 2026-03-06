@@ -21,6 +21,7 @@
       :project-visual="state.projectVisual.value"
       :project-display-name="taskStore.getProjectDisplayName(task.projectId)"
       :status-options="statusOptions"
+      :disable-native-drag="disableNativeDrag"
       @dragstart="actions.handleDragStart"
       @dragend="actions.handleDragEnd"
       @dragover="actions.handleDragOver"
@@ -94,6 +95,7 @@ interface Props {
   checked?: boolean
   expandedTasks?: Set<string>
   visitedIds?: Set<string>
+  disableNativeDrag?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -102,7 +104,8 @@ const props = withDefaults(defineProps<Props>(), {
   selectionMode: false,
   checked: false,
   expandedTasks: () => new Set(),
-  visitedIds: () => new Set()
+  visitedIds: () => new Set(),
+  disableNativeDrag: false
 })
 
 const emit = defineEmits<{

@@ -14,6 +14,7 @@
     box-sizing: border-box;
 }
 
+/* Hover handled by global-overrides.css with !important */
 .task-card:hover {
     border-color: var(--glass-border);
 }

@@ -1,0 +1,30 @@
+# Gitleaks configuration for FlowState
+# Allowlist for known false positives
+
+[allowlist]
+  description = "FlowState known false positives"
+
+  # Supabase demo JWT keys (public, ship with every Supabase installation)
+  # These are NOT secrets — they are the well-known demo keys
+  regexes = [
+    '''supabase-demo''',
+    '''eyJpc3MiOiJzdXBhYmFzZS1kZW1vIi''',
+  ]
+
+  # Placeholder strings used in documentation
+  paths = [
+    '''\.claude/skills/.*''',
+    '''docs/sop/.*''',
+  ]
+
+  # Commits containing only documentation/example code
+  commits = []
+
+[[rules]]
+  id = "allowlist-placeholders"
+  description = "Placeholder API keys in documentation"
+  regex = '''YOUR_ANON_KEY|YOUR_TOKEN|YOUR_ANON_KEY_HERE|ABC123XYZ456'''
+  [rules.allowlist]
+    description = "These are literal placeholder text, not real secrets"
+    regexTarget = "match"
+    regexes = ['''.*''']

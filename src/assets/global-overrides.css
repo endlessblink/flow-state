@@ -183,7 +183,14 @@ button svg {
     transform: none !important;
     box-shadow: none !important;
     border-color: var(--glass-border) !important;
-    background: rgba(35, 32, 55, 0.5) !important;
+    background: rgba(45, 42, 72, 0.6) !important;
+}
+
+/* Selected card hover — enhance the teal selection glow */
+.task-card.selected:hover {
+    border-color: var(--brand-primary) !important;
+    background: rgba(78, 205, 196, 0.08) !important;
+    box-shadow: 0 0 0 2px var(--brand-primary), 0 0 12px rgba(78, 205, 196, 0.15) !important;
 }
 
 .task-card:active {
@@ -885,4 +892,22 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
     background: var(--overlay-component-bg) !important;
     backdrop-filter: var(--overlay-component-backdrop);
     -webkit-backdrop-filter: var(--overlay-component-backdrop);
+}
+
+/* TASK-1455: SortableJS ghost — thin drop indicator line */
+.sortable-ghost {
+    height: 3px !important;
+    max-height: 3px !important;
+    background: var(--brand-primary) !important;
+    border-radius: 2px !important;
+    opacity: 1 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 2px 0 !important;
+    border: none !important;
+    box-shadow: 0 0 6px var(--brand-primary) !important;
+}
+
+.sortable-ghost * {
+    display: none !important;
 }

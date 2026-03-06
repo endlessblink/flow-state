@@ -3995,6 +3995,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1450**~~ | **P2** | ✅ **Integrate Quick Sort sessions into offline sync queue for full PWA offline support** (✅ DONE 2026-03-05) |
 | ~~**TASK-1451**~~ | **P2** | ✅ **Auto-inherit filter context when creating tasks — useFilterDefaults composable** (✅ DONE 2026-03-05) |
 | ~~**TASK-1452**~~ | **P2** | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05) |
+| **TASK-1456** | **P0** | 📋 **Add permanent delete button to right-click context menu** (📋 PLANNED 2026-03-06) |
+| **TASK-1455** | **P2** | 📋 **Catalog view: show uncategorized tasks so they can be categorized in-place** (📋 PLANNED 2026-03-06) |
+| **TASK-1454** | **P2** | 📋 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (📋 PLANNED 2026-03-06) |
 | **BUG-1453** | **P0** | 🔄 **Production CSS preload failure — missing SITE_URL breaks CF cache purge** (🔄 IN PROGRESS 2026-03-05) |
 | **BUG-1447** | **P2** | 👀 **Pin task disappears on Enter + task search + widget sync** (👀 REVIEW 2026-03-05) |
 | **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |
@@ -4510,9 +4513,9 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1161: Create Shared Domain Layer for Mobile (📋 PLANNED)
+### TASK-1161: Create Shared Domain Layer for Mobile (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
 
 **Problem**: Mobile views duplicate logic from desktop views.
 

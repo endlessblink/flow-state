@@ -19,12 +19,12 @@
       paddingLeft: `${indentLevel * 20 + 40}px`,
       '--indent-level': indentLevel
     }"
-    draggable="true"
-    @dragstart="$emit('dragstart', $event)"
-    @dragend="$emit('dragend', $event)"
-    @dragover.prevent="$emit('dragover', $event)"
-    @drop.prevent="$emit('drop', $event)"
-    @dragleave="$emit('dragleave', $event)"
+    :draggable="disableNativeDrag ? 'false' : 'true'"
+    @dragstart="!disableNativeDrag && $emit('dragstart', $event)"
+    @dragend="!disableNativeDrag && $emit('dragend', $event)"
+    @dragover.prevent="!disableNativeDrag && $emit('dragover', $event)"
+    @drop.prevent="!disableNativeDrag && $emit('drop', $event)"
+    @dragleave="!disableNativeDrag && $emit('dragleave', $event)"
     @click="$emit('rowClick', $event)"
     @dblclick.stop="$emit('edit')"
     @contextmenu.prevent="$emit('contextMenu', $event)"
@@ -154,12 +154,14 @@ interface Props {
   projectVisual: unknown
   projectDisplayName: string
   statusOptions: Array<{ label: string, value: string }>
+  disableNativeDrag?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selectionMode: false,
   checked: false,
-  isExpanded: false
+  isExpanded: false,
+  disableNativeDrag: false
 })
 
 defineEmits<{

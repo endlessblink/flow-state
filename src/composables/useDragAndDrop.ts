@@ -44,6 +44,28 @@ let safetyDropHandler: ((e: Event) => void) | null = null
 let safetyDragEndHandler: (() => void) | null = null
 let safetyTimeout: ReturnType<typeof setTimeout> | null = null
 
+// TASK-1455: Store native title attributes stripped during drag to prevent stuck tooltips.
+let storedTitles: Array<{ el: HTMLElement; title: string }> = []
+
+// TASK-1455: Auto-scroll animation state.
+let autoScrollAnimId: number | null = null
+
+function startAutoScroll(container: HTMLElement, direction: 'up' | 'down', speed: number) {
+  stopAutoScroll()
+  const step = () => {
+    container.scrollTop += direction === 'down' ? speed : -speed
+    autoScrollAnimId = requestAnimationFrame(step)
+  }
+  autoScrollAnimId = requestAnimationFrame(step)
+}
+
+function stopAutoScroll() {
+  if (autoScrollAnimId !== null) {
+    cancelAnimationFrame(autoScrollAnimId)
+    autoScrollAnimId = null
+  }
+}
+
 // Shared CSS for the unified ghost pill
 const GHOST_CSS = `position:fixed;padding:8px 16px;max-width:220px;background:#1e1e23;color:#e0e0e0;border:1px solid rgba(78,205,196,0.4);border-radius:8px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:99999;`
 
@@ -156,6 +178,17 @@ export function useDragAndDrop() {
     document.body.classList.add('dragging-active')
 
     const title = data.title || 'Task'
+
+    // TASK-1455: Strip native title attributes to prevent stuck tooltips during drag.
+    // MUST be deferred — DOM mutations during dragstart cancel the drag in some browsers.
+    requestAnimationFrame(() => {
+      storedTitles = []
+      document.querySelectorAll('[title]').forEach(el => {
+        const htmlEl = el as HTMLElement
+        storedTitles.push({ el: htmlEl, title: htmlEl.getAttribute('title')! })
+        htmlEl.removeAttribute('title')
+      })
+    })
     const ghostMode = data.ghostMode || 'sidebar-only'
 
     // BUG-1370: In Tauri/WebKitGTK, DOM mutations during dragstart cancel the drag.
@@ -199,6 +232,24 @@ export function useDragAndDrop() {
         dragState.value.dropTarget = found
       }
 
+      // TASK-1455: Auto-scroll when dragging near edges of scroll container
+      const scrollContainer = document.querySelector('.tasks-container') as HTMLElement | null
+      if (scrollContainer) {
+        const rect = scrollContainer.getBoundingClientRect()
+        const EDGE_SIZE = 60 // pixels from edge to trigger scroll
+        const MAX_SPEED = 12
+
+        if (y < rect.top + EDGE_SIZE && y > rect.top) {
+          const proximity = 1 - (y - rect.top) / EDGE_SIZE
+          startAutoScroll(scrollContainer, 'up', Math.ceil(proximity * MAX_SPEED))
+        } else if (y > rect.bottom - EDGE_SIZE && y < rect.bottom) {
+          const proximity = 1 - (rect.bottom - y) / EDGE_SIZE
+          startAutoScroll(scrollContainer, 'down', Math.ceil(proximity * MAX_SPEED))
+        } else {
+          stopAutoScroll()
+        }
+      }
+
       // BUG-1361: Ghost pill visibility based on ghostMode
       if (ghostEl) {
         if (ghostMode === 'sidebar-only' && !found) {
@@ -227,6 +278,15 @@ export function useDragAndDrop() {
   }
 
   const endDrag = () => {
+    // TASK-1455: Stop auto-scroll immediately on drag end
+    stopAutoScroll()
+
+    // TASK-1455: Restore native title attributes
+    for (const { el, title } of storedTitles) {
+      if (el.isConnected) el.setAttribute('title', title)
+    }
+    storedTitles = []
+
     // BUG-1361: Remove safety net first to prevent re-entrant calls
     removeSafetyNet()
 

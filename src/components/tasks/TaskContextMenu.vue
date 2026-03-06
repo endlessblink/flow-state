@@ -173,10 +173,16 @@
 
     <div class="menu-divider" />
 
-    <!-- Delete -->
+    <!-- Delete (soft - moves to trash) -->
     <button class="menu-item danger" @click="deleteTask">
       <Trash2 :size="16" class="menu-icon" />
       <span class="menu-text">{{ deleteText }}</span>
+    </button>
+
+    <!-- Permanent Delete (hard delete, bypasses trash) -->
+    <button v-if="!isBatchOperation" class="menu-item danger permanent-delete" @click="permanentlyDeleteTask">
+      <Trash2 :size="16" class="menu-icon" />
+      <span class="menu-text">Permanently Delete</span>
     </button>
 
     <!-- AI Assist Popover -->
@@ -1041,4 +1047,12 @@ onUnmounted(() => {
 .has-submenu { position: relative; }
 
 .submenu-arrow { color: var(--text-muted); margin-inline-start: auto; }
+
+/* Permanent delete - slightly more dangerous appearance */
+.menu-item.permanent-delete {
+  opacity: 0.7;
+}
+.menu-item.permanent-delete:hover {
+  opacity: 1;
+}
 </style>

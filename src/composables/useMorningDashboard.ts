@@ -432,8 +432,21 @@ export function useMorningDashboard() {
   // --- Start My Day ---
   async function startMyDay() {
     if (!allSlotsAssigned.value) return
+
+    // Set dueDate = today on each Big 3 task so they appear in Today views
+    const todayStr = getTodayString()
+    for (const slot of big3Slots.value) {
+      if (slot.taskId) {
+        try {
+          await taskStore.updateTask(slot.taskId, { dueDate: todayStr })
+        } catch {
+          // task may have been deleted — not fatal
+        }
+      }
+    }
+
     await gamificationStore.awardXp(25, 'morning_commitment')
-    router.push('/today-flow')
+    router.push('/')
   }
 
   // --- Initialization ---

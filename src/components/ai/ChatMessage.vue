@@ -794,13 +794,13 @@ async function saveSchedule() {
                 </div>
               </button>
               <button
-                v-if="result.data.dueTodayTasks.length > MAX_VISIBLE_TASKS"
+                v-if="(result.data?.dueTodayTasks?.length ?? 0) > MAX_VISIBLE_TASKS"
                 class="show-more-btn"
                 @click="toggleSection('duetoday-' + result.tool)"
               >
                 {{ expandedSections.has('duetoday-' + result.tool)
                   ? 'Show less'
-                  : `Show all ${result.data.dueTodayTasks.length} tasks` }}
+                  : `Show all ${result.data?.dueTodayTasks?.length ?? 0} tasks` }}
               </button>
             </div>
           </div>
@@ -831,7 +831,7 @@ async function saveSchedule() {
                 <span class="gam-stat-label">Streak</span>
               </div>
               <div class="gam-stat">
-                <Shield :size="14" class="gam-stat-icon gam-corruption-icon" :class="{ 'gam-corruption-high': result.data.corruptionLevel > 60 }" />
+                <Shield :size="14" class="gam-stat-icon gam-corruption-icon" :class="{ 'gam-corruption-high': (result.data?.corruptionLevel ?? 0) > 60 }" />
                 <span class="gam-stat-value">{{ result.data.corruptionLevel }}%</span>
                 <span class="gam-stat-label">Corruption</span>
               </div>
@@ -853,12 +853,12 @@ async function saveSchedule() {
               <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
             <!-- Daily Challenges -->
-            <div v-if="result.data.dailies.length > 0" class="challenge-section">
+            <div v-if="(result.data?.dailies?.length ?? 0) > 0" class="challenge-section">
               <div class="summary-section-label">
                 Daily Missions
               </div>
               <div
-                v-for="ch in result.data.dailies"
+                v-for="ch in result.data?.dailies ?? []"
                 :key="ch.id"
                 class="challenge-item"
               >
@@ -873,8 +873,8 @@ async function saveSchedule() {
                   <div class="challenge-progress-bar-wrapper">
                     <div
                       class="challenge-progress-bar"
-                      :style="{ width: ch.progressPercent + '%' }"
-                      :class="{ 'bar-complete': ch.progressPercent >= 100 }"
+                      :style="{ width: (ch?.progressPercent ?? 0) + '%' }"
+                      :class="{ 'bar-complete': (ch?.progressPercent ?? 0) >= 100 }"
                     />
                   </div>
                   <span class="challenge-progress-text">{{ ch.objectiveCurrent }}/{{ ch.objectiveTarget }}</span>
@@ -909,11 +909,11 @@ async function saveSchedule() {
                 </div>
                 <div class="challenge-meta">
                   <span class="challenge-reward boss-reward">+{{ result.data.boss.rewardXp }} XP</span>
-                  <span class="challenge-time">{{ formatTimeRemaining(result.data.boss.timeRemaining) }}</span>
+                  <span class="challenge-time">{{ formatTimeRemaining(result.data.boss?.timeRemaining as number | undefined) }}</span>
                 </div>
               </div>
             </div>
-            <div v-if="result.data.dailies.length === 0 && !result.data.boss" class="gam-empty" dir="auto">
+            <div v-if="(result.data?.dailies?.length ?? 0) === 0 && !result.data?.boss" class="gam-empty" dir="auto">
               No active challenges. New dailies generate each morning.
             </div>
           </div>
@@ -969,7 +969,7 @@ async function saveSchedule() {
                 <span class="summary-stat-label">Total Tasks</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.overdueCount > 0 }">{{ result.data.overdueCount }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': (result.data?.overdueCount ?? 0) > 0 }">{{ result.data.overdueCount }}</span>
                 <span class="summary-stat-label">Overdue</span>
               </div>
               <div class="summary-stat">
@@ -1080,11 +1080,11 @@ async function saveSchedule() {
             </div>
             <!-- Challenge info if available -->
             <div v-if="result.data.challenges" class="gam-footer-row">
-              <span v-if="result.data.challenges.completedToday > 0" class="gam-footer-badge gam-badge-success">
-                {{ result.data.challenges.completedToday }} challenges done today
+              <span v-if="(result.data?.challenges?.completedToday ?? 0) > 0" class="gam-footer-badge gam-badge-success">
+                {{ result.data.challenges?.completedToday }} challenges done today
               </span>
-              <span v-if="result.data.challenges.corruptionLevel > 0" class="gam-footer-badge gam-badge-corruption">
-                Corruption: {{ result.data.challenges.corruptionLevel }}%
+              <span v-if="(result.data?.challenges?.corruptionLevel ?? 0) > 0" class="gam-footer-badge gam-badge-corruption">
+                Corruption: {{ result.data.challenges?.corruptionLevel }}%
               </span>
             </div>
           </div>
@@ -1105,12 +1105,12 @@ async function saveSchedule() {
                 <span class="summary-stat-label">Days Used</span>
               </div>
               <div class="summary-stat">
-                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.unscheduled?.length > 0 }">{{ result.data.unscheduled?.length || 0 }}</span>
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': (result.data.unscheduled?.length ?? 0) > 0 }">{{ result.data.unscheduled?.length ?? 0 }}</span>
                 <span class="summary-stat-label">Unscheduled</span>
               </div>
             </div>
             <template v-for="(dayKey) in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']" :key="dayKey">
-              <div v-if="result.data.plan?.[dayKey]?.length > 0" class="task-list">
+              <div v-if="(result.data.plan?.[dayKey]?.length ?? 0) > 0" class="task-list">
                 <div class="summary-section-label">
                   {{ PLAN_DAY_LABELS[dayKey] }}
                   <span class="section-count">({{ result.data.plan?.[dayKey]?.length }})</span>
@@ -1158,13 +1158,13 @@ async function saveSchedule() {
                 </button>
               </div>
             </template>
-            <div v-if="result.data.unscheduled?.length > 0" class="task-list">
+            <div v-if="(result.data.unscheduled?.length ?? 0) > 0" class="task-list">
               <div class="summary-section-label">
                 Unscheduled
-                <span class="section-count">({{ result.data.unscheduled.length }})</span>
+                <span class="section-count">({{ result.data.unscheduled?.length ?? 0 }})</span>
               </div>
               <button
-                v-for="task in liveTasks(result.data.unscheduled)"
+                v-for="task in liveTasks(result.data.unscheduled ?? [])"
                 :key="task.id"
                 class="task-list-item task-unscheduled"
                 @click="openQuickEdit(task, $event)"

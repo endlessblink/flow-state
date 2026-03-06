@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
@@ -146,13 +146,8 @@ const hasMore = computed(() => !isExpanded.value && allTasks.value.length > COLU
 const hiddenCount = computed(() => Math.max(0, allTasks.value.length - COLUMN_RENDER_LIMIT))
 
 // BUG-1335: Use a shared drag group across all swimlanes so tasks can be dragged
-// between projects. When dropped in a different swimlane, the project is updated.
-// (Reverts BUG-1193 per-swimlane scoping which prevented cross-swimlane drag)
-const dragGroup = computed(() => ({
-  name: 'tasks',
-  pull: true,
-  put: true
-}))
+// between projects. Static string avoids SortableJS re-init on reactive changes.
+const dragGroup = 'tasks'
 
 // FEATURE-1336b: Bridge vuedraggable drag to global useDragAndDrop for sidebar drops
 const { startDrag, endDrag: endGlobalDrag } = useDragAndDrop()
@@ -195,10 +190,8 @@ const onDragEnd = (evt: DragEvent) => {
   }
 
   endGlobalDrag()
-  // Sync allTasks with store state after drag completes
-  nextTick(() => {
-    allTasks.value = [...props.tasks]
-  })
+  // Broadcast drag-end so ALL columns resync (not just this source column)
+  window.dispatchEvent(new CustomEvent('kanban:drag-end'))
 }
 
 const taskCount = computed(() => allTasks.value.length)
@@ -290,4 +283,25 @@ const handleDragChange = async (event: { added?: { element: Task }; removed?: { 
     persistOrderForColumn()
   }
 }
+
+// Listen for drag-end broadcast from ANY column to resync DOM with Vue's vdom.
+// SortableJS physically moves DOM elements between groups, causing Vue desync.
+// Double-flush (clear → repopulate) forces Vue to re-render with proper bindings.
+const handleDragEndBroadcast = () => {
+  nextTick(() => {
+    const current = [...props.tasks]
+    allTasks.value = []
+    nextTick(() => {
+      allTasks.value = current
+    })
+  })
+}
+
+onMounted(() => {
+  window.addEventListener('kanban:drag-end', handleDragEndBroadcast)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('kanban:drag-end', handleDragEndBroadcast)
+})
 </script>

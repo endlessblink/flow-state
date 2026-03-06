@@ -43,6 +43,8 @@ firebase-debug.log
 .env.local
 .env.production
 .env.*.local
+.env.self-host
+.env.self-host.test
 
 # Private planning documents (keep local only, do not push to GitHub)
 /plan.md

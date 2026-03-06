@@ -54,10 +54,10 @@ run_migrations() {
     # Ordered migration files - these must run in sequence
     local migrations=(
         "20260105000000_initial_schema.sql"
+        "20260106000000_fix_id_types.sql"
         "20260109000000_enable_rls_security.sql"
         "20260111000000_add_position_versions.sql"
         "20260112000000_position_versioning_triggers.sql"
-        "fix_id_types.sql"
         "20260120000000_add_groups_deleted_at.sql"
         "20260120000001_create_tombstones.sql"
         "20260120000002_immutable_task_ids.sql"
@@ -65,6 +65,18 @@ run_migrations() {
         "20260126000000_add_done_for_now_column.sql"
         "20260131000000_gamification.sql"
         "20260206163002_challenges.sql"
+        "20260208151150_quick_tasks.sql"
+        "20260212000000_arena.sql"
+        "20260214000000_create_ai_work_profiles.sql"
+        "20260214100000_add_memory_graph_to_ai_work_profiles.sql"
+        "20260217000000_push_subscriptions.sql"
+        "20260218000000_ai_sync.sql"
+        "20260219000000_task_reminders.sql"
+        "20260221000000_add_personal_context_to_work_profiles.sql"
+        "20260222000001_recurrence_rule.sql"
+        "20260223000000_add_task_attachments.sql"
+        "20260304000000_tombstone_rls_update_policy.sql"
+        "20260305000000_add_whatsapp_conversations.sql"
     )
 
     local total=${#migrations[@]}

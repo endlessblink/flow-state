@@ -12,91 +12,91 @@
       @mousedown.self="handleOverlayClick"
       @keydown="handleEscapeKey"
     >
-    <div
-      ref="modalRef"
-      class="modal-container"
-      :class="[`size-${size}`, `variant-${variant}`, { 'modal-closing': isClosing }]"
-      @click.stop
-    >
-      <!-- Modal Header -->
-      <header v-if="showHeader" class="modal-header">
-        <div class="header-content--modal">
-          <h2
-            :id="titleId"
-            class="modal-title"
-            :class="titleClass"
-          >
-            <slot name="title">
-              {{ title }}
-            </slot>
-          </h2>
-
-          <p
-            v-if="description || $slots.description"
-            :id="descriptionId"
-            class="modal-description"
-            :class="descriptionClass"
-          >
-            <slot name="description">
-              {{ description }}
-            </slot>
-          </p>
-        </div>
-
-        <!-- Close Button -->
-        <button
-          v-if="showCloseButton"
-          ref="closeBtnRef"
-          class="modal-close-btn"
-          :aria-label="finalCloseAriaLabel"
-          type="button"
-          @click="handleClose"
-        >
-          <X :size="16" />
-        </button>
-      </header>
-
-      <!-- Modal Body -->
-      <main class="modal-body scroll-container" :class="bodyClass">
-        <slot />
-      </main>
-
-      <!-- Modal Footer -->
-      <footer v-if="showFooter || $slots.footer" class="modal-footer" :class="footerClass">
-        <slot name="footer">
-          <!-- Default footer actions -->
-          <div class="default-actions">
-            <BaseButton
-              v-if="showCancelButton"
-              variant="secondary"
-              :disabled="loading"
-              @click="handleCancel"
-            >
-              {{ finalCancelText }}
-            </BaseButton>
-
-            <BaseButton
-              v-if="showConfirmButton"
-              variant="primary"
-              :loading="loading"
-              :disabled="confirmDisabled"
-              @click="handleConfirm"
-            >
-              {{ finalConfirmText }}
-            </BaseButton>
-          </div>
-        </slot>
-      </footer>
-
-      <!-- Focus Trap Indicator -->
       <div
-        ref="focusTrapRef"
-        class="focus-trap"
-        tabindex="0"
-        aria-hidden="true"
-      />
+        ref="modalRef"
+        class="modal-container"
+        :class="[`size-${size}`, `variant-${variant}`, { 'modal-closing': isClosing }]"
+        @click.stop
+      >
+        <!-- Modal Header -->
+        <header v-if="showHeader" class="modal-header">
+          <div class="header-content--modal">
+            <h2
+              :id="titleId"
+              class="modal-title"
+              :class="titleClass"
+            >
+              <slot name="title">
+                {{ title }}
+              </slot>
+            </h2>
+
+            <p
+              v-if="description || $slots.description"
+              :id="descriptionId"
+              class="modal-description"
+              :class="descriptionClass"
+            >
+              <slot name="description">
+                {{ description }}
+              </slot>
+            </p>
+          </div>
+
+          <!-- Close Button -->
+          <button
+            v-if="showCloseButton"
+            ref="closeBtnRef"
+            class="modal-close-btn"
+            :aria-label="finalCloseAriaLabel"
+            type="button"
+            @click="handleClose"
+          >
+            <X :size="16" />
+          </button>
+        </header>
+
+        <!-- Modal Body -->
+        <main class="modal-body scroll-container" :class="bodyClass">
+          <slot />
+        </main>
+
+        <!-- Modal Footer -->
+        <footer v-if="showFooter || $slots.footer" class="modal-footer" :class="footerClass">
+          <slot name="footer">
+            <!-- Default footer actions -->
+            <div class="default-actions">
+              <BaseButton
+                v-if="showCancelButton"
+                variant="secondary"
+                :disabled="loading"
+                @click="handleCancel"
+              >
+                {{ finalCancelText }}
+              </BaseButton>
+
+              <BaseButton
+                v-if="showConfirmButton"
+                variant="primary"
+                :loading="loading"
+                :disabled="confirmDisabled"
+                @click="handleConfirm"
+              >
+                {{ finalConfirmText }}
+              </BaseButton>
+            </div>
+          </slot>
+        </footer>
+
+        <!-- Focus Trap Indicator -->
+        <div
+          ref="focusTrapRef"
+          class="focus-trap"
+          tabindex="0"
+          aria-hidden="true"
+        />
+      </div>
     </div>
-  </div>
   </Teleport>
 </template>
 
@@ -158,13 +158,6 @@ const props = withDefaults(defineProps<Props>(), {
   trapFocus: true
 })
 
-const { t } = useI18n()
-
-// I18n defaults (if props not provided)
-const finalCancelText = computed(() => props.cancelText || t('common.cancel'))
-const finalConfirmText = computed(() => props.confirmText || t('common.confirm'))
-const finalCloseAriaLabel = computed(() => props.closeAriaLabel || t('common.close'))
-
 const emit = defineEmits<{
   close: []
   cancel: []
@@ -173,6 +166,13 @@ const emit = defineEmits<{
   afterOpen: []
   afterClose: []
 }>()
+
+const { t } = useI18n()
+
+// I18n defaults (if props not provided)
+const finalCancelText = computed(() => props.cancelText || t('common.cancel'))
+const finalConfirmText = computed(() => props.confirmText || t('common.confirm'))
+const finalCloseAriaLabel = computed(() => props.closeAriaLabel || t('common.close'))
 
 // RTL support
 // Logical properties handle direction automatically, so manual isRTL check removed

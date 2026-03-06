@@ -142,13 +142,13 @@ interface Props {
   task: Task
 }
 
-const { t } = useI18n()
 const props = defineProps<Props>()
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]
   swipeSave: []
   swipeDelete: []
 }>()
+const { t: _t } = useI18n()
 
 // Date picker state
 const showDatePicker = ref(false)

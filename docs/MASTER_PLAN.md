@@ -3133,7 +3133,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 **Architecture**:
 ```
-WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot (Node.js)
+WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supabase Edge Function
                                                                           ↓
                                                                    Groq API (free)
                                                                           ↓
@@ -3146,10 +3146,31 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 - [x] ~~Build webhook handler (Node.js/TypeScript)~~ ✅
 - [x] ~~Integrate Groq for message parsing~~ ✅
 - [x] ~~Connect to FlowState Supabase via REST API~~ ✅
-- [ ] Set up Oracle Cloud free tier VM
-- [ ] Deploy WAHA Docker container with `docker compose up`
-- [ ] Link dedicated WhatsApp number via WAHA dashboard
+- [x] ~~Deploy WAHA Docker container on Contabo VPS~~ ✅ (port 3050, Doppler secrets)
+- [x] ~~Set up Doppler integration for WAHA secrets~~ ✅ (restart script at `/opt/waha/restart-waha.sh`)
+- [ ] Buy dedicated SIM card for WhatsApp number
+- [ ] Link WhatsApp number via WAHA dashboard (scan QR)
 - [ ] Test end-to-end flow
+
+---
+
+### TASK-1458: WhatsApp Bot — Link Number & E2E Test (⏸️ PAUSED)
+
+**Priority**: P2 | **Status**: ⏸️ PAUSED (2026-03-06) — waiting for user to buy a SIM card
+
+**Blocked on**: Dedicated phone number (SIM card purchase)
+
+**What's done**:
+- WAHA container deployed on VPS (port 3050, `supabase_default` network)
+- Doppler secrets configured (`WAHA_API_KEY`, `WAHA_DASHBOARD_USERNAME/PASSWORD`, `GROQ_API_KEY`)
+- Restart script at `/opt/waha/restart-waha.sh` pulls fresh secrets from Doppler
+- Dashboard accessible at `http://84.46.253.137:3050/dashboard`
+
+**Remaining**:
+- [ ] Buy dedicated SIM card
+- [ ] Start session in WAHA dashboard, scan QR with new number
+- [ ] Test: send WhatsApp message → verify task appears in FlowState inbox
+- [ ] Configure chat ID allowlist for the new number
 
 ---
 
@@ -3996,7 +4017,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1451**~~ | **P2** | ✅ **Auto-inherit filter context when creating tasks — useFilterDefaults composable** (✅ DONE 2026-03-05) |
 | ~~**TASK-1452**~~ | **P2** | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05) |
 | **TASK-1457** | **P2** | 📋 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (📋 PLANNED 2026-03-06) |
-| **TASK-1456** | **P0** | 📋 **Add permanent delete button to right-click context menu** (📋 PLANNED 2026-03-06) |
+| ~~**TASK-1456**~~ | **P0** | ✅ **Fix permanent delete in context menu — BoardView & BigThreeCard missing event handler** (👀 REVIEW 2026-03-06) |
 | **TASK-1455** | **P2** | 📋 **Catalog view: show uncategorized tasks so they can be categorized in-place** (📋 PLANNED 2026-03-06) |
 | **TASK-1454** | **P2** | 📋 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (📋 PLANNED 2026-03-06) |
 | **BUG-1453** | **P0** | 🔄 **Production CSS preload failure — missing SITE_URL breaks CF cache purge** (🔄 IN PROGRESS 2026-03-05) |

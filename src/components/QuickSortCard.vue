@@ -9,12 +9,13 @@
       <!-- Delete button (top-right corner) -->
       <button
         class="card-delete-btn"
-        aria-label="Delete task"
+        aria-label="Permanently delete task"
         @click.stop="emit('swipeDelete')"
         @mousedown.stop
         @touchstart.stop
       >
-        <Trash2 :size="16" />
+        <Trash2 :size="14" />
+        <span class="delete-label">{{ $t('quick_sort.delete_label', 'Delete') }}</span>
       </button>
 
       <!-- Task Title -->
@@ -299,18 +300,38 @@ function handleTouchStart(event: TouchEvent) {
   isSwiping.value = true
   swipeStartX.value = event.touches[0].clientX
   swipeCurrentX.value = event.touches[0].clientX
+  const startY = event.touches[0].clientY
+  let directionLocked = false
+  let isHorizontal = false
 
   const handleTouchMove = (e: TouchEvent) => {
-    swipeCurrentX.value = e.touches[0].clientX
+    const currentX = e.touches[0].clientX
+    const currentY = e.touches[0].clientY
+    swipeCurrentX.value = currentX
+
+    // Lock direction after 10px of movement
+    if (!directionLocked) {
+      const dx = Math.abs(currentX - swipeStartX.value)
+      const dy = Math.abs(currentY - startY)
+      if (dx > 10 || dy > 10) {
+        directionLocked = true
+        isHorizontal = dx > dy
+      }
+    }
+
+    // Prevent scroll when swiping horizontally
+    if (isHorizontal) {
+      e.preventDefault()
+    }
   }
 
   const handleTouchEnd = () => {
-    document.removeEventListener('touchmove', handleTouchMove)
+    document.removeEventListener('touchmove', handleTouchMove, { capture: true } as EventListenerOptions)
     document.removeEventListener('touchend', handleTouchEnd)
     handleSwipeEnd()
   }
 
-  document.addEventListener('touchmove', handleTouchMove)
+  document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
   document.addEventListener('touchend', handleTouchEnd)
 }
 
@@ -345,6 +366,7 @@ function handleSwipeEnd() {
   cursor: grab;
   user-select: none;
   overflow: hidden; /* Prevent any content from escaping card bounds */
+  touch-action: pan-y; /* Allow vertical scroll, let JS handle horizontal swipe */
 }
 
 .quick-sort-card:hover {
@@ -370,15 +392,21 @@ function handleSwipeEnd() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   color: var(--text-muted);
+  font-size: var(--text-xs);
   cursor: pointer;
   opacity: 0;
   transition: all var(--duration-normal);
+}
+
+.delete-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
 }
 
 .quick-sort-card:hover .card-delete-btn {

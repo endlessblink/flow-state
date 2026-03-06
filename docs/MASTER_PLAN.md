@@ -3174,6 +3174,27 @@ WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supab
 
 ---
 
+### TASK-1462: Docker Self-Host E2E Test (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-06)
+
+**Goal**: Verify a fresh self-hosted installation works end-to-end before sharing repo publicly.
+
+**Bugs found & fixed (committed)**:
+- [x] Kong `rate-limiting` plugin not declared in `KONG_PLUGINS` — added
+- [x] `init-db.sh` had wrong filename (`fix_id_types.sql` → `20260106000000_fix_id_types.sql`) and was missing 12 of 24 migrations — fixed
+- [x] `.env.self-host` / `.env.self-host.test` not gitignored — added
+- [x] `supabase/postgres:17.2.0` image tag doesn't exist — updated to `17.6.1.095`
+- [x] Created `scripts/test-self-host.sh` with 6 E2E tests + `--keep` flag for browser testing
+
+**Remaining**:
+- [ ] Run `./scripts/test-self-host.sh --keep` and confirm all 6 tests pass
+- [ ] Open `http://localhost:13050` in browser and verify app loads, signup works, task CRUD works
+
+**Files**: `.gitignore`, `docker-compose.self-host.yml`, `docker/self-host/init-db.sh`, `scripts/test-self-host.sh`
+
+---
+
 ### ~~FEATURE-1248~~: Quick Tasks - Pinned & Frequent Task Shortcuts (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-02-21)
@@ -4018,7 +4039,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1452**~~ | **P2** | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05) |
 | ~~**TASK-1460**~~ | **P2** | ✅ **KDE Widget — Bump task limit to 100 + group by project** (✅ DONE 2026-03-06) |
 | ~~**BUG-1461**~~ | **P1** | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06) |
-| **TASK-1457** | **P2** | 📋 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (📋 PLANNED 2026-03-06) |
+| **TASK-1457** | **P2** | 🔄 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (🔄 IN PROGRESS 2026-03-06) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
 | **TASK-1455** | **P2** | 📋 **Catalog view: show uncategorized tasks so they can be categorized in-place** (📋 PLANNED 2026-03-06) |
 | **TASK-1454** | **P2** | 📋 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (📋 PLANNED 2026-03-06) |
@@ -5262,6 +5283,24 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 **Marker**: All wrapped calls tagged with `[OFFLINE-SAFE]` comment for traceability.
 
 **Files**: `src/stores/gamification.ts`
+
+---
+
+### TASK-1462: Dev-Maestro TUI — Multi-Project Support (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: `maestro tui` currently only works with FlowState because it's the only project with `.beads/` initialized. Running from another project directory shows 0 tasks since `bd list` requires a beads database.
+
+**Goal**: Make `maestro tui` work with any project that has a `MASTER_PLAN.md`, even without beads initialized.
+
+**Approach**:
+1. Verify `~/.bashrc` alias (`~/.local/bin/maestro` wrapper) propagates `MAESTRO_CWD` after PC restart
+2. Add fallback task parser: when no `.beads/` found, parse tasks directly from MASTER_PLAN.md headers (`### TASK-XXX: Title (STATUS)`)
+3. Map MASTER_PLAN.md statuses to TUI columns (PLANNED→backlog, IN PROGRESS→wip, REVIEW→review, DONE→done)
+4. Support `bd init` + `npm run mp:sync` flow for projects that want full beads features
+
+**Files**: `~/.dev-maestro/tui/src/lib/bd-client.js`, `~/.dev-maestro/tui/src/lib/masterplan-parser.js`, `~/.dev-maestro/tui/src/hooks/use-board-data.js`
 
 ---
 

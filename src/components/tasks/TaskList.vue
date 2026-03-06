@@ -93,52 +93,44 @@
         </span>
       </div>
 
-      <!-- TASK-1455: Group Tasks — vuedraggable for smooth cross-group transfer -->
-      <draggable
+      <!-- TASK-1455: Group Tasks with native DnD for cross-group transfer -->
+      <div
         v-if="groupBy !== 'none' && expandedGroups.has(group.key)"
-        :model-value="group.parentTasks"
-        item-key="id"
-        :group="{ name: 'catalog-tasks' }"
-        :animation="200"
-        :force-fallback="true"
-        :delay-on-touch-only="true"
-        :scroll="scrollContainer"
-        :scroll-sensitivity="80"
-        :scroll-speed="16"
-        :force-auto-scroll-fallback="true"
-        :bubble-scroll="true"
-        ghost-class="sortable-ghost"
-        chosen-class=""
-        drag-class=""
         class="group-tasks-area"
         :data-group-key="group.key"
-        @end="handleSortableEnd"
+        @dragover.prevent.capture="onGroupDragOver($event, group)"
+        @dragleave.capture="onGroupDragLeave($event)"
+        @drop.prevent.capture="onGroupDrop($event, group)"
       >
-        <template #item="{ element: task }">
-          <HierarchicalTaskRow
-            :key="task.id"
-            :task="task"
-            :indent-level="0"
-            :selected="selectedTaskIds.includes(task.id)"
-            :selection-mode="selectionMode"
-            :checked="selectedTaskIds.includes(task.id)"
-            :expanded-tasks="expandedTasks"
-            :disable-native-drag="true"
-            :data-task-id="task.id"
-            @select="handleSelect"
-            @check="toggleTaskSelect"
-            @toggle-complete="$emit('toggleComplete', $event)"
-            @ai-suggest="handleAISuggest"
-            @start-timer="$emit('startTimer', $event)"
-            @edit="$emit('edit', $event)"
-            @context-menu="handleContextMenu"
-            @toggle-expand="toggleTaskExpand"
-            @move-task="handleMoveTask"
-            @update-task="(taskId: string, updates: Partial<Task>) => $emit('updateTask', taskId, updates)"
-          />
-        </template>
-      </draggable>
-      <!-- Ungrouped mode: no vuedraggable, native DnD for subtask nesting -->
+        <!-- Drop indicator line -->
+        <div
+          v-if="dropIndicator.groupKey === group.key"
+          class="drop-indicator-line"
+          :style="{ top: dropIndicator.y + 'px' }"
+        />
+        <HierarchicalTaskRow
+          v-for="task in group.parentTasks"
+          :key="task.id"
+          :task="task"
+          :indent-level="0"
+          :selected="selectedTaskIds.includes(task.id)"
+          :selection-mode="selectionMode"
+          :checked="selectedTaskIds.includes(task.id)"
+          :expanded-tasks="expandedTasks"
+          :data-task-id="task.id"
+          @select="handleSelect"
+          @check="toggleTaskSelect"
+          @toggle-complete="$emit('toggleComplete', $event)"
+          @ai-suggest="handleAISuggest"
+          @start-timer="$emit('startTimer', $event)"
+          @edit="$emit('edit', $event)"
+          @context-menu="handleContextMenu"
+          @toggle-expand="toggleTaskExpand"
+          @move-task="handleMoveTask"
+          @update-task="(taskId: string, updates: Partial<Task>) => $emit('updateTask', taskId, updates)"
+        />
+      </div>
+      <!-- Ungrouped mode: native DnD for subtask nesting -->
       <div
         v-else-if="groupBy === 'none'"
         class="group-tasks-area"
@@ -196,11 +188,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Task, TaskGroup } from '@/types/tasks'
-import draggable from 'vuedraggable'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
+import { useTaskStore } from '@/stores/tasks'
 import { Inbox, ChevronRight, Pencil, Trash2, X, Zap, ArrowDownToLine, Plus } from 'lucide-vue-next'
 
 interface Props {
@@ -223,6 +215,7 @@ const emit = defineEmits<{
   batchEdit: [taskIds: string[]]
   deleteSelected: [taskIds: string[]]
   addTaskToGroup: [groupKey: string, groupBy: string]
+  reorder: []
 }>()
 
 // Expand/collapse state
@@ -271,15 +264,14 @@ const handleContextMenu = (event: MouseEvent, task: Task) => {
   emit('contextMenu', event, task)
 }
 
-// TASK-1455: Scroll container ref for vuedraggable auto-scroll
-const scrollContainer = ref<HTMLElement | null>(null)
-
-onMounted(() => {
-  scrollContainer.value = document.querySelector('.tasks-container') as HTMLElement | null
+// TASK-1455: Drop indicator state for native DnD cross-group transfer
+const dropIndicator = ref<{ groupKey: string | null; y: number; insertIndex: number }>({
+  groupKey: null, y: 0, insertIndex: 0
 })
 
 // --- Drag to Group Header ---
-const { endDrag } = useDragAndDrop()
+const { isDragging, dragData, endDrag } = useDragAndDrop()
+const taskStore = useTaskStore()
 
 // BUG-1415: When grouped, dropping a task on another task should transfer it
 // to the target's group (updating dueDate/status/priority/project) instead of
@@ -345,26 +337,72 @@ const applyGroupTransfer = (taskId: string, group: TaskGroup) => {
     }
   }
 }
-// TASK-1455: SortableJS @end handler for cross-group transfers.
-// When a task is dragged to a different group, revert the DOM change (SortableJS moved the element)
-// and apply the transfer through the store so Vue reactivity handles the re-render.
-const handleSortableEnd = (evt: { from: HTMLElement; to: HTMLElement; item: HTMLElement; oldIndex: number; newIndex: number }) => {
-  if (evt.from === evt.to) return // Same group reorder — ignore (we don't persist order)
+// TASK-1455: Native DnD handlers for cross-group transfer with drop indicator
 
-  // Revert SortableJS DOM manipulation — let Vue re-render from store
-  evt.from.insertBefore(evt.item, evt.from.children[evt.oldIndex] || null)
+const onGroupDragOver = (event: DragEvent, group: TaskGroup) => {
+  if (!isDragging.value) return
 
-  // Find the task and target group
-  // evt.item is the root of the #item slot — data-task-id falls through as $attrs
-  const taskId = (evt.item as HTMLElement).dataset?.taskId
-    || (evt.item.querySelector('[data-task-id]') as HTMLElement | null)?.dataset?.taskId
-  const toGroupKey = evt.to.dataset?.groupKey
-  if (!taskId || !toGroupKey) return
+  const container = event.currentTarget as HTMLElement
+  const containerRect = container.getBoundingClientRect()
+  const mouseY = event.clientY
 
-  const targetGroup = props.groups.find(g => g.key === toGroupKey)
-  if (targetGroup) {
-    applyGroupTransfer(taskId, targetGroup)
+  // Find the insert position by checking each task row
+  const rows = Array.from(container.querySelectorAll('[data-task-id]')) as HTMLElement[]
+  let insertIndex = rows.length // default: end
+  let indicatorY = containerRect.height // relative to container
+
+  for (let i = 0; i < rows.length; i++) {
+    const rowRect = rows[i].getBoundingClientRect()
+    const rowMidY = rowRect.top + rowRect.height / 2
+    if (mouseY < rowMidY) {
+      insertIndex = i
+      indicatorY = rowRect.top - containerRect.top
+      break
+    }
   }
+
+  // If past all rows, place indicator at the bottom of last row
+  if (insertIndex === rows.length && rows.length > 0) {
+    const lastRect = rows[rows.length - 1].getBoundingClientRect()
+    indicatorY = lastRect.bottom - containerRect.top
+  }
+
+  dropIndicator.value = { groupKey: group.key, y: indicatorY, insertIndex }
+}
+
+const onGroupDragLeave = (event: DragEvent) => {
+  // Only clear if actually leaving the container (not entering a child)
+  const related = event.relatedTarget as HTMLElement | null
+  const container = event.currentTarget as HTMLElement
+  if (!related || !container.contains(related)) {
+    dropIndicator.value = { groupKey: null, y: 0, insertIndex: 0 }
+  }
+}
+
+const onGroupDrop = (event: DragEvent, group: TaskGroup) => {
+  const taskId = dragData.value?.taskId
+  const insertIdx = dropIndicator.value.insertIndex
+
+  // Clear indicator immediately
+  dropIndicator.value = { groupKey: null, y: 0, insertIndex: 0 }
+
+  if (!taskId) return
+
+  // Prevent the row-level drop handler from also firing (it would make a subtask)
+  event.stopPropagation()
+
+  // Apply group transfer (changes project/status/priority/dueDate)
+  applyGroupTransfer(taskId, group)
+
+  // Persist order: place the dropped task at the insert position
+  const groupTasks = [...group.parentTasks.filter(t => t.id !== taskId)]
+  groupTasks.splice(insertIdx, 0, { id: taskId } as Task)
+  groupTasks.forEach((t, i) => {
+    taskStore.updateTask(t.id, { order: i })
+  })
+
+  emit('reorder')
+  endDrag()
 }
 
 // --- AI Smart Suggest Popover ---
@@ -855,5 +893,22 @@ defineExpose({
 @keyframes pulse-hint {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 0.8; }
+}
+
+/* TASK-1455: Native DnD drop indicator */
+.group-tasks-area {
+  position: relative;
+}
+
+.drop-indicator-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--brand-primary);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 10;
+  transition: top 0.1s ease;
 }
 </style>

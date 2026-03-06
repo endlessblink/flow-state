@@ -7,7 +7,13 @@
 # then tears everything down.
 #
 # Usage:
-#   ./scripts/test-self-host.sh
+#   ./scripts/test-self-host.sh          # Run tests, then tear down
+#   ./scripts/test-self-host.sh --keep   # Run tests, keep stack running for manual testing
+#
+# With --keep the stack stays up after tests pass so you can open
+# http://localhost:13050 in your browser. Tear it down manually with:
+#   docker compose -p flowstate-test -f docker-compose.self-host.yml \
+#     --env-file .env.self-host.test down -v
 #
 # Requirements: docker, docker compose, openssl, node, curl
 # ============================================================================
@@ -29,6 +35,7 @@ TEST_POSTGRES_PORT=15432
 
 HEALTH_TIMEOUT=180   # seconds to wait for stack to be healthy
 HEALTH_INTERVAL=5
+KEEP_RUNNING=false   # --keep flag: skip cleanup after tests pass
 
 # ---------------------------------------------------------------------------
 # Colors & helpers
@@ -46,9 +53,38 @@ fail()    { echo -e "${RED}[FAIL]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${NC} $*"; }
 
 # ---------------------------------------------------------------------------
-# Cleanup trap — always tears down the stack, even on error
+# Parse arguments
 # ---------------------------------------------------------------------------
+for arg in "$@"; do
+    case "$arg" in
+        --keep) KEEP_RUNNING=true ;;
+        --help|-h)
+            echo "Usage: $0 [--keep]"
+            echo "  --keep  Keep the stack running after tests pass for manual browser testing"
+            exit 0
+            ;;
+        *) warn "Unknown argument: $arg" ;;
+    esac
+done
+
+# ---------------------------------------------------------------------------
+# Cleanup trap — always tears down the stack on error; skips if --keep + pass
+# ---------------------------------------------------------------------------
+TEST_PASSED=false
+
 cleanup() {
+    if [ "$KEEP_RUNNING" = true ] && [ "$TEST_PASSED" = true ]; then
+        echo ""
+        success "Stack kept running (--keep flag)"
+        echo ""
+        echo -e "  ${BOLD}App:${NC}  http://localhost:${TEST_FLOWSTATE_PORT}"
+        echo -e "  ${BOLD}API:${NC}  http://localhost:${TEST_KONG_PORT}"
+        echo ""
+        echo "  To tear down:"
+        echo "    docker compose -p ${PROJECT_NAME} -f ${COMPOSE_FILE} --env-file ${ENV_FILE} down -v"
+        echo ""
+        return
+    fi
     echo ""
     info "Cleaning up test stack..."
     docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v --remove-orphans 2>/dev/null || true
@@ -294,6 +330,7 @@ if [ $PASS -eq $TOTAL ]; then
     echo -e "${BOLD}${GREEN}  All ${TOTAL} tests passed${NC}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
+    TEST_PASSED=true
     exit 0
 else
     FAILED=$((TOTAL - PASS))

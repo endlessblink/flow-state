@@ -197,6 +197,51 @@ button svg {
     transform: scale(0.99) !important;
 }
 
+/* BUG-1455: Drag classes — MUST be in global-overrides to win cascade over .task-card rules.
+   The sortable-fallback element gets .task-card class from SortableJS clone, so these
+   need higher specificity (.task-card.sortable-fallback) to override .task-card styles. */
+.task-card.ghost-card {
+    opacity: 0.4 !important;
+    background: transparent !important;
+    border: 1px dashed var(--glass-border) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+.task-card.chosen-card {
+    opacity: 1 !important;
+    transform: scale(1.02) !important;
+    z-index: 1000 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+.task-card.sortable-fallback {
+    position: fixed !important;
+    z-index: 9999 !important;
+    pointer-events: none !important;
+    opacity: 1 !important;
+    background: rgba(45, 42, 68, 0.92) !important;
+    border: 1px solid var(--brand-primary, #4ECDC4) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(78, 205, 196, 0.25) !important;
+    border-radius: 8px !important;
+    transform: scale(1.02) !important;
+    backdrop-filter: blur(12px) !important;
+    /* BUG-1455: Prevent .task-item transition: all from animating position/opacity on clone */
+    transition: none !important;
+}
+.task-card.drag-card {
+    opacity: 1 !important;
+    border: 1px solid var(--brand-primary) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    cursor: grabbing !important;
+}
+/* Prevent hover/active styles during drag */
+.task-card.chosen-card:hover,
+.task-card.sortable-fallback:hover,
+.task-card.ghost-card:hover {
+    background: inherit !important;
+    transform: inherit !important;
+    box-shadow: inherit !important;
+}
+
 /* Title — 14px/600, bright, clear hierarchy over description */
 .task-card .task-title {
     font-size: 14px !important;
@@ -894,20 +939,3 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
     -webkit-backdrop-filter: var(--overlay-component-backdrop);
 }
 
-/* TASK-1455: SortableJS ghost — thin drop indicator line */
-.sortable-ghost {
-    height: 3px !important;
-    max-height: 3px !important;
-    background: var(--brand-primary) !important;
-    border-radius: 2px !important;
-    opacity: 1 !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-    margin: 2px 0 !important;
-    border: none !important;
-    box-shadow: 0 0 6px var(--brand-primary) !important;
-}
-
-.sortable-ghost * {
-    display: none !important;
-}

@@ -492,7 +492,7 @@ watch(big3Slots, () => {
 
 /* Ghost classes for drag feedback */
 .ghost-card {
-  opacity: 0.4;
+  opacity: 0.5;
   background: rgba(78, 205, 196, 0.08) !important;
   border: 2px dashed var(--brand-primary) !important;
   border-radius: var(--radius-md) !important;

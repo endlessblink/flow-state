@@ -104,7 +104,8 @@ const sortOptions = computed(() => [
   { label: t('filters.sort_due_date'), value: 'dueDate' },
   { label: t('filters.sort_priority'), value: 'priority' },
   { label: t('filters.sort_title'), value: 'title' },
-  { label: t('filters.sort_created'), value: 'created' }
+  { label: t('filters.sort_created'), value: 'created' },
+  { label: 'Manual', value: 'manual' }
 ])
 
 const groupByOptions = computed(() => [

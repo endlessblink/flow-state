@@ -322,7 +322,7 @@ onUnmounted(() => {
   transition: none !important;
   animation: none !important;
   /* BUG-1216: scale() conflicts with Vue Flow translate() positioning - removed */
-  opacity: 0.8 !important;
+  opacity: 1 !important;
   /* Ensure clean visual state during drag */
   box-shadow: var(--shadow-dark-lg) !important;
   z-index: 1000 !important;

@@ -223,7 +223,9 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
                 if (dueDate) {
                     if (isSameDay(dueDate, today)) {
                         result.today.push(task)
-                    } else if (isSameDay(dueDate, tomorrow) && !(dueDate >= weekendStart && dueDate <= weekendEnd)) {
+                    } else if (isSameDay(dueDate, tomorrow)) {
+                        // BUG-1455: Always show tomorrow's tasks in Tomorrow column,
+                        // even when tomorrow falls on a weekend day
                         result.tomorrow.push(task)
                     } else if ((dueDate >= weekendStart && dueDate <= weekendEnd) || (dueDate >= nextWeekStart && dueDate <= nextWeekEnd)) {
                         result.thisWeek.push(task)
@@ -257,7 +259,8 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
                 result.overdue.push(task)
             } else if (isSameDay(instanceDate, today)) {
                 result.today.push(task)
-            } else if (isSameDay(instanceDate, tomorrow) && !(instanceDate >= weekendStart && instanceDate <= weekendEnd)) {
+            } else if (isSameDay(instanceDate, tomorrow)) {
+                // BUG-1455: Always show tomorrow's tasks in Tomorrow column
                 result.tomorrow.push(task)
             } else if ((instanceDate >= weekendStart && instanceDate <= weekendEnd) || (instanceDate >= nextWeekStart && instanceDate <= nextWeekEnd)) {
                 result.thisWeek.push(task)

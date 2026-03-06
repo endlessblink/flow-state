@@ -482,7 +482,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 }
 
 .week-event.dragging {
-  opacity: 0.35 !important;
+  opacity: 1 !important;
   transform: scale(0.95);
   cursor: grabbing;
 }

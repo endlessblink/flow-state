@@ -3995,6 +3995,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1450**~~ | **P2** | ✅ **Integrate Quick Sort sessions into offline sync queue for full PWA offline support** (✅ DONE 2026-03-05) |
 | ~~**TASK-1451**~~ | **P2** | ✅ **Auto-inherit filter context when creating tasks — useFilterDefaults composable** (✅ DONE 2026-03-05) |
 | ~~**TASK-1452**~~ | **P2** | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05) |
+| **TASK-1457** | **P2** | 📋 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (📋 PLANNED 2026-03-06) |
 | **TASK-1456** | **P0** | 📋 **Add permanent delete button to right-click context menu** (📋 PLANNED 2026-03-06) |
 | **TASK-1455** | **P2** | 📋 **Catalog view: show uncategorized tasks so they can be categorized in-place** (📋 PLANNED 2026-03-06) |
 | **TASK-1454** | **P2** | 📋 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (📋 PLANNED 2026-03-06) |

@@ -168,7 +168,7 @@
 
 /* Drag and drop states */
 .task-row--dragging {
-    opacity: 0.5;
+    opacity: 1;
 }
 
 .task-row--drop-target {

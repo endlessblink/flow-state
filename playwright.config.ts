@@ -1,9 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
+import fs from 'node:fs';
+
+const authFile = 'tests/.auth/user.json';
+const hasAuth = fs.existsSync(authFile);
 
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
+  // TASK-1457: Global setup resets test data and authenticates dev user
+  globalSetup: './tests/global-setup.ts',
   testDir: './tests',
   testMatch: '**/*.spec.ts',
   /* Run tests in files in parallel */
@@ -35,7 +41,11 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // TASK-1457: Use saved auth state if available (from global-setup)
+        ...(hasAuth ? { storageState: authFile } : {}),
+      },
     },
 
     // {

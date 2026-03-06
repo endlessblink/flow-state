@@ -59,6 +59,7 @@
           @batch-edit="handleBatchEdit"
           @delete-selected="handleDeleteSelected"
           @add-task-to-group="handleAddTaskToGroup"
+          @reorder="sortBy = 'manual'"
         />
 
         <!-- Table Mode -->
@@ -213,6 +214,8 @@ const sortedTasks = computed(() => {
       return tasks.sort((a, b) => {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       })
+    case 'manual':
+      return tasks.sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
     default:
       return tasks
   }

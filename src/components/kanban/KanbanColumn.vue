@@ -27,6 +27,7 @@
         chosen-class="chosen-card"
         drag-class="drag-card"
         :force-fallback="true"
+        :fallback-on-body="true"
         fallback-class="sortable-fallback"
         :fallback-tolerance="3"
         :scroll-sensitivity="100"

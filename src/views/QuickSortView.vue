@@ -77,24 +77,19 @@
               </div>
             </div>
 
-            <!-- Card Stack with Direction Hints -->
-            <div class="card-area">
-              <!-- Direction hints around the card -->
-              <div class="direction-hint hint-left">
+            <!-- Edit hint (above card) -->
+            <div class="direction-hint hint-vertical">
+              <Pencil :size="14" />
+              <span>Edit</span>
+              <span class="hint-arrow">&darr;</span>
+            </div>
+
+            <!-- Card row: left hint + card stack + right hint -->
+            <div class="card-row">
+              <div class="direction-hint hint-side">
+                <span class="hint-arrow">&larr;</span>
                 <Trash2 :size="14" />
                 <span>Delete</span>
-              </div>
-              <div class="direction-hint hint-right">
-                <Save :size="14" />
-                <span>Save</span>
-              </div>
-              <div class="direction-hint hint-up">
-                <Pencil :size="14" />
-                <span>Edit</span>
-              </div>
-              <div class="direction-hint hint-down">
-                <SkipForward :size="14" />
-                <span>Skip</span>
               </div>
 
               <div class="card-stack">
@@ -121,6 +116,19 @@
                   />
                 </Transition>
               </div>
+
+              <div class="direction-hint hint-side">
+                <span>Save</span>
+                <Save :size="14" />
+                <span class="hint-arrow">&rarr;</span>
+              </div>
+            </div>
+
+            <!-- Skip hint (below card) -->
+            <div class="direction-hint hint-vertical">
+              <span class="hint-arrow">&darr;</span>
+              <SkipForward :size="14" />
+              <span>Skip</span>
             </div>
 
             <!-- Quick Edit Controls (below card, like mobile) -->
@@ -460,8 +468,7 @@ function setQuickDate(preset: string) {
   if (preset === 'today') { /* already today */ }
   else if (preset === 'tomorrow') d.setDate(d.getDate() + 1)
   else if (preset === 'nextweek') {
-    const dow = d.getDay()
-    d.setDate(d.getDate() + (dow === 0 ? 1 : 8 - dow))
+    d.setDate(d.getDate() + 7)
   }
   else if (preset === 'clear') {
     handleTaskUpdate({ dueDate: '' })
@@ -753,7 +760,7 @@ const currentTaskProject = computed(() => {
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
-  max-width: 560px;
+  max-width: 640px;
   margin: 0 auto;
   width: 100%;
 }
@@ -823,19 +830,12 @@ const currentTaskProject = computed(() => {
 .capitalize { text-transform: capitalize; }
 
 /* ================================
-   CARD AREA (card + direction hints)
+   DIRECTION HINTS + CARD LAYOUT
    ================================ */
-.card-area {
-  position: relative;
-  width: 100%;
-  padding: var(--space-8) var(--space-10);
-}
-
 .direction-hint {
-  position: absolute;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-1_5);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   text-transform: uppercase;
@@ -845,39 +845,47 @@ const currentTaskProject = computed(() => {
   transition: opacity var(--duration-normal) ease;
 }
 
-.card-area:hover .direction-hint {
+.sort-center:hover .direction-hint {
   opacity: 0.55;
 }
 
-.hint-left {
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-danger);
+.hint-arrow {
+  font-size: var(--text-base);
+  line-height: 1;
 }
 
-.hint-right {
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  flex-direction: row-reverse;
-  color: var(--brand-primary);
+/* Top/bottom hints (Edit / Skip) */
+.hint-vertical {
+  justify-content: center;
 }
 
-.hint-up {
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  flex-direction: column;
+.hint-vertical:first-of-type {
   color: var(--color-info);
 }
 
-.hint-down {
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  flex-direction: column;
+.hint-vertical:last-of-type {
   color: var(--text-muted);
+}
+
+/* Card row: [left hint] [card] [right hint] */
+.card-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.hint-side {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.hint-side:first-child {
+  color: var(--color-danger);
+}
+
+.hint-side:last-child {
+  color: var(--brand-primary);
 }
 
 /* ================================
@@ -885,7 +893,8 @@ const currentTaskProject = computed(() => {
    ================================ */
 .card-stack {
   position: relative;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;

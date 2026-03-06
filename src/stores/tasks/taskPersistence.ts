@@ -362,6 +362,24 @@ export function useTaskPersistence(
                     // New behavior: ALWAYS preserve local tasks and queue for sync retry.
                     // The offline-first sync system (useSyncOrchestrator) handles retries.
 
+                    // BUG-1457: Skip soft-deleted local tasks — they were deleted (e.g., from
+                    // KDE widget or another device) and the DB correctly excluded them.
+                    // Preserving them would resurrect deleted tasks via the CREATE sync retry.
+                    if (localTask._soft_deleted) {
+                        console.log(`🗑️ [SMART-MERGE] Dropping soft-deleted local-only task "${localTask.title?.slice(0, 15)}" - already deleted`)
+                        continue
+                    }
+
+                    // BUG-1457: If DB returned tasks (we're online) and this task has no
+                    // pending sync queue entry, it was likely deleted externally (KDE widget,
+                    // another device). Only preserve truly new local tasks (created recently).
+                    const localCreatedAt = localTask.createdAt ? new Date(localTask.createdAt).getTime() : 0
+                    const isRecentlyCreated = (Date.now() - localCreatedAt) < 120_000 // 2 minutes
+                    if (loadedTasks.length > 0 && !isRecentlyCreated) {
+                        console.log(`🗑️ [SMART-MERGE] Dropping stale local-only task "${localTask.title?.slice(0, 15)}" - not in DB and not recently created`)
+                        continue
+                    }
+
                     console.log(`🛡️ [SMART-MERGE] Preserving local-only task "${localTask.title?.slice(0, 15)}" - will sync when online`)
                     mergedTasks.push(localTask)
 

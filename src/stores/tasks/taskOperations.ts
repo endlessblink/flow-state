@@ -1090,7 +1090,6 @@ export function useTaskOperations(
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
         const today = new Date(); today.setHours(0, 0, 0, 0)
-        const todayStr = formatDateKey(today)
 
         // BUG-1189: Handle 'inbox' and 'noDate' columns
         if (dateColumn === 'inbox') {
@@ -1113,10 +1112,6 @@ export function useTaskOperations(
             case 'later': target = new Date(today); target.setDate(today.getDate() + 30); break
         }
 
-        // BUG-1189: Also clear/update dueDate to prevent task from staying in Overdue
-        // If task has a past dueDate, clear it so it doesn't stay stuck in Overdue column
-        const hasOverdueDueDate = task.dueDate && task.dueDate < todayStr
-
         const updates: Partial<Task> = { instances: [] }
         if (target) {
             const targetDateStr = formatDateKey(target)
@@ -1128,10 +1123,9 @@ export function useTaskOperations(
                 isLater: dateColumn === 'later'
             }]
 
-            // If dueDate was causing overdue status, update it to the target date
-            if (hasOverdueDueDate) {
-                updates.dueDate = targetDateStr
-            }
+            // BUG-1455: ALWAYS update dueDate when dragging between date columns.
+            // groupTasksByDate() groups by dueDate, not instances[].scheduledDate.
+            updates.dueDate = targetDateStr
         }
         await updateTask(taskId, updates)
     }

@@ -166,7 +166,7 @@
 
 /* BUG-1335: Drag classes - preserve all existing behavior, update radius only */
 .ghost-card {
-    opacity: 0.15;
+    opacity: 0.4;
     background: transparent !important;
     border: 1px dashed var(--glass-border) !important;
     border-radius: var(--radius-lg) !important;
@@ -190,30 +190,20 @@
 }
 
 /* BUG-050 FIX: Sortable fallback ghost - fixed positioning for consistent appearance across scroll */
-/* BUG-1335: Dragged card should NOT be darker than other cards */
+/* BUG-1455: Dragged card must NOT be darker than other cards, and must be visible immediately */
+/* Note: fallback-on-body appends clone to <body>, so this rule is a safety net.
+   The authoritative rule is .task-card.sortable-fallback in global-overrides.css */
 .sortable-fallback {
     position: fixed !important;
     z-index: 9999 !important;
     pointer-events: none !important;
-    background: rgba(35, 32, 55, 0.95) !important;
+    opacity: 1 !important;
+    background: rgba(45, 42, 68, 0.92) !important;
     border: 1px solid var(--brand-primary, #4ECDC4) !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(78, 205, 196, 0.2) !important;
     border-radius: 8px !important;
     transform: scale(1.02) !important;
-    animation: card-lift 0.2s cubic-bezier(0.2, 0, 0, 1) forwards !important;
-}
-
-@keyframes card-lift {
-    0% {
-        opacity: 0;
-        transform: scale(0.95);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1.02);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(78, 205, 196, 0.2);
-    }
+    transition: none !important;
 }
 
 /* TASK-1336: Previously hid fallback clone — removed to let card follow cursor */

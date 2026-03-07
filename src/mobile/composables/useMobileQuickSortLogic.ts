@@ -52,6 +52,7 @@ export function useMobileQuickSortLogic() {
   const sessionSummary = ref<SessionSummary | null>(null)
   const showDeleteConfirm = ref(false)
   const showQuickEditPanel = ref(false)
+  const showEditSheet = ref(false)
   const showAISheet = ref(false)
 
   // Timer cleanup tracking
@@ -201,9 +202,13 @@ export function useMobileQuickSortLogic() {
 
   function handleEditTask() {
     if (!currentTask.value) return
-    window.dispatchEvent(new CustomEvent('open-task-edit', {
-      detail: { taskId: currentTask.value.id }
-    }))
+    showEditSheet.value = true
+    triggerHaptic('medium')
+  }
+
+  async function handleEditSheetSave(taskId: string, updates: Partial<Task>) {
+    await taskStore.updateTask(taskId, updates)
+    showEditSheet.value = false
     triggerHaptic('medium')
   }
 
@@ -472,6 +477,8 @@ export function useMobileQuickSortLogic() {
     handleAssignProject,
     handleSortWithoutProject,
     handleEditTask,
+    handleEditSheetSave,
+    showEditSheet,
     handleSkip,
     handleSave,
     handleMarkDone,

@@ -220,6 +220,14 @@
       </Transition>
     </Teleport>
 
+    <!-- Task Edit Bottom Sheet (swipe-up) -->
+    <TaskEditBottomSheet
+      :is-open="showEditSheet"
+      :task="currentTask"
+      @close="showEditSheet = false"
+      @save="handleEditSheetSave"
+    />
+
     <!-- Quick Edit Panel -->
     <Teleport to="body">
       <Transition name="sheet">
@@ -297,6 +305,7 @@ import MobileQuickSortFilters from '../components/MobileQuickSortFilters.vue'
 import MobileQuickSortProjectSheet from '../components/MobileQuickSortProjectSheet.vue'
 import MobileQuickSortCapture from '../components/MobileQuickSortCapture.vue'
 import MobileQuickSortComplete from '../components/MobileQuickSortComplete.vue'
+import TaskEditBottomSheet from '../components/TaskEditBottomSheet.vue'
 import { useMobileQuickSortLogic } from '../composables/useMobileQuickSortLogic'
 
 const {
@@ -336,6 +345,8 @@ const {
   handleAssignProject,
   handleSortWithoutProject,
   handleEditTask,
+  handleEditSheetSave,
+  showEditSheet,
   handleSkip,
   handleSave,
   handleMarkDone,

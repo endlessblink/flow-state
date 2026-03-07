@@ -67,17 +67,6 @@ const KEYWORD_MAPPINGS: KeywordMapping[] = [
     reason: 'User is asking about overdue tasks',
   },
 
-  // --- Weekly planning ---
-  {
-    keywords: [
-      'plan my week', 'weekly plan', 'plan the week', 'help me plan',
-      'תכנון שבועי', 'לתכנן את השבוע', 'תכנן לי את השבוע', 'לתכנן שבוע',
-      'תכנן לי שבוע', 'תתכנן לי', 'לתכנן את', 'תכנון השבוע', 'לתכנן', 'תכנן לי',
-    ],
-    tool: 'generate_weekly_plan',
-    reason: 'User wants a weekly plan',
-  },
-
   // --- Task suggestion ---
   {
     keywords: [

@@ -35,7 +35,7 @@ export type AIEventType =
 export interface AIEvent {
   id: string
   type: AIEventType
-  feature: 'chat' | 'task_assist' | 'weekly_plan' | 'quick_sort' | 'insights'
+  feature: 'chat' | 'task_assist' | 'quick_sort'
   sessionId?: string
   metadata?: Record<string, unknown>
   timestamp: string

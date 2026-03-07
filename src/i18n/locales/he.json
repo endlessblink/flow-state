@@ -258,8 +258,6 @@
   },
   "ai_chat": {
     "chat_tab": "צ׳אט",
-    "weekly_plan_tab": "תוכנית שבועית",
-    "insights_tab": "תובנות",
     "new_chat": "צ׳אט חדש",
     "back": "חזרה",
     "ask_placeholder": "שאל AI... (נסה /help או /skills)",
@@ -386,13 +384,6 @@
       "checkEmail": "בדוק את האימייל שלך לקבלת הקישור",
       "didntReceive": "לא קיבלת את האימייל?",
       "resend": "שלח שוב"
-    }
-  },
-  "weeklyPlan": {
-    "modelSelector": {
-      "provider": "ספק",
-      "model": "מודל",
-      "aiModel": "מודל AI"
     }
   }
 }

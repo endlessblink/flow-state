@@ -499,15 +499,6 @@ export function useAIChat() {
     parts.push('- Suggesting how to organize tasks into groups')
     parts.push('- Managing timers and Pomodoro sessions')
     parts.push('- Analyzing task data to identify patterns and bottlenecks')
-    parts.push('')
-    parts.push('## Planning Behavior')
-    parts.push('When the user asks to plan their week, schedule tasks, or organize upcoming work:')
-    parts.push('- Use the generate_weekly_plan tool to create an AI-powered weekly plan')
-    parts.push('- After the tool returns, give a BRIEF summary (2-3 sentences): highlight the top priorities, flag any overloaded days, and note overdue items that need immediate attention')
-    parts.push('- The plan renders as interactive day-by-day cards — do NOT repeat the full task list in your text')
-    parts.push('- Be encouraging and practical, not generic')
-    parts.push('- IMPORTANT: ALL text must be in the user\'s language — including acknowledgments during tool execution')
-
     // Reinforce language at END of prompt (recency bias — models attend more to the end)
     parts.push('')
     parts.push('## REMINDER (READ LAST):')
@@ -539,15 +530,9 @@ export function useAIChat() {
           '- `/help` Show slash command help',
           '- `/skills` List available AI skills/tools',
           '- `/skills <keyword>` Filter skills by name/description/category',
-          '- `/plan` Run the weekly planning chain',
         ].join('\n'),
         { metadata: { forceDirection: 'ltr' } }
       )
-      return true
-    }
-
-    if (cmd === '/plan') {
-      await executeAgentChain('plan_my_week')
       return true
     }
 
@@ -603,7 +588,6 @@ export function useAIChat() {
           '',
           'Tips:',
           '- Use `/skills timer`, `/skills overdue`, or `/skills project` to filter.',
-          '- Use `/plan` to run weekly planning now.',
         ].join('\n'),
         { metadata: { forceDirection: 'ltr' } }
       )
@@ -1225,7 +1209,6 @@ export function useAIChat() {
               .map(r => {
                 const base = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
                 if (r.data) {
-                  // For weekly plan, include the full reasoning but cap data
                   const dataStr = JSON.stringify(r.data)
                   return `${base}\nData: ${dataStr.slice(0, 2000)}`
                 }

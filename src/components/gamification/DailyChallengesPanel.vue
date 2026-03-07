@@ -3,10 +3,8 @@
  * DailyChallengesPanel Component
  * FEATURE-1132: Display 3 daily missions with generation trigger
  */
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref } from 'vue'
 import { useChallengesStore } from '@/stores/challenges'
-import { createAIRouter } from '@/services/ai/router'
-import type { ChatMessage } from '@/services/ai/types'
 import type { Challenge } from '@/types/challenges'
 import { storeToRefs } from 'pinia'
 import ChallengeCard from './ChallengeCard.vue'
@@ -33,37 +31,6 @@ const {
   pickedChallengeId,
   pickedChallenge,
 } = storeToRefs(challengesStore)
-
-// AI Router for challenge generation
-let router: ReturnType<typeof createAIRouter> | null = null
-const aiAvailable = ref(false)
-
-// Initialize router and check availability
-onMounted(async () => {
-  try {
-    router = createAIRouter({ debug: false })
-    await router.initialize()
-    const provider = await router.getActiveProvider()
-    aiAvailable.value = !!provider
-  } catch (e) {
-    console.warn('[DailyChallenges] AI router init failed:', e)
-    aiAvailable.value = false
-  }
-})
-
-// Chat wrapper for gamemaster
-async function chatWithAI(messages: ChatMessage[], options?: { taskType?: string }): Promise<{ content: string }> {
-  if (!router) {
-    return { content: '' }
-  }
-  try {
-    const response = await router.chat(messages, { taskType: options?.taskType as 'planning' })
-    return { content: response.content }
-  } catch (e) {
-    console.warn('[DailyChallenges] AI chat failed:', e)
-    return { content: '' }
-  }
-}
 
 // Local state
 const showGenerateConfirm = ref(false)
@@ -92,10 +59,7 @@ async function generateChallenges() {
   generationError.value = null
 
   try {
-    await challengesStore.generateDailyChallengesAction({
-      aiAvailable: aiAvailable.value,
-      chat: chatWithAI,
-    })
+    await challengesStore.generateDailyChallengesAction()
     showGenerateConfirm.value = false
   } catch (error) {
     generationError.value = error instanceof Error ? error.message : 'Failed to generate challenges'

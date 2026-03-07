@@ -169,12 +169,9 @@
           :is-today="isToday"
           :is-tomorrow="isTomorrow"
           :is-weekend="isWeekend"
-          :ai-action="aiAction"
-          :is-a-i-busy="isAIBusy"
           :is-task-dirty="isTaskDirty"
           @set-priority="setPriority"
           @set-date="setDueDate"
-          @ai-suggest="handleAISuggest"
           @mark-done="handleMarkDone"
           @save="handleSave"
           @assign="openProjectSheet"
@@ -278,20 +275,6 @@
       </Transition>
     </Teleport>
 
-    <!-- AI Sheet -->
-    <MobileQuickSortAISheet
-      :show="showAISheet"
-      :ai-state="aiState"
-      :ai-action="aiAction"
-      :ai-error="aiError"
-      :current-suggestions="currentSuggestions"
-      :suggested-project-id="suggestedProjectId"
-      :suggested-project-name="suggestedProjectName"
-      :current-task-project-name="currentTaskProject?.name || null"
-      @close="closeAISheet"
-      @apply-suggestions="handleApplySuggestions"
-    />
-
     <!-- Celebration Overlay -->
     <Transition name="celebration">
       <div v-if="showCelebration" class="mini-celebration">
@@ -312,7 +295,6 @@ import {
 import MobileQuickSortCard from '../components/MobileQuickSortCard.vue'
 import MobileQuickSortFilters from '../components/MobileQuickSortFilters.vue'
 import MobileQuickSortProjectSheet from '../components/MobileQuickSortProjectSheet.vue'
-import MobileQuickSortAISheet from '../components/MobileQuickSortAISheet.vue'
 import MobileQuickSortCapture from '../components/MobileQuickSortCapture.vue'
 import MobileQuickSortComplete from '../components/MobileQuickSortComplete.vue'
 import { useMobileQuickSortLogic } from '../composables/useMobileQuickSortLogic'
@@ -326,7 +308,6 @@ const {
   sessionSummary,
   showDeleteConfirm,
   showQuickEditPanel,
-  showAISheet,
   newTaskTitle,
   newTaskPriority,
   newTaskDue,
@@ -340,13 +321,6 @@ const {
   progress,
   isComplete,
   isTaskDirty,
-  aiState,
-  aiAction,
-  aiError,
-  isAIBusy,
-  currentSuggestions,
-  suggestedProjectId,
-  suggestedProjectName,
   projectsWithDepth,
   recentProjects,
   filteredProjects,
@@ -367,9 +341,6 @@ const {
   handleMarkDone,
   setPriority,
   setDueDate,
-  handleAISuggest,
-  closeAISheet,
-  handleApplySuggestions,
   cancelDelete,
   confirmDelete,
   setPriorityAndClose,

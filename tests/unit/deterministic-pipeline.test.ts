@@ -211,20 +211,6 @@ describe('intentRouter — routeIntentByKeywords()', () => {
     expect(result.tools.some(t => t.tool === 'mark_task_done')).toBe(true)
   })
 
-  // ── Planning ──────────────────────────────────────────────────────────────
-
-  it('routes "plan my week" to planning with generate_weekly_plan', () => {
-    const result = routeIntentByKeywords('plan my week', mockTasks, entityMemory)
-    expect(result.type).toBe('planning')
-    expect(result.tools.some(t => t.tool === 'generate_weekly_plan')).toBe(true)
-  })
-
-  it('routes Hebrew "תכנון שבועי" to planning with generate_weekly_plan', () => {
-    const result = routeIntentByKeywords('תכנון שבועי', mockTasks, entityMemory)
-    expect(result.type).toBe('planning')
-    expect(result.tools.some(t => t.tool === 'generate_weekly_plan')).toBe(true)
-  })
-
   // ── Stats ─────────────────────────────────────────────────────────────────
 
   it('routes "how am I doing" to stats with get_productivity_stats', () => {
@@ -363,8 +349,8 @@ describe('parseClassification()', () => {
   })
 
   it('extracts JSON from chatty response', () => {
-    const result = parseClassification('Based on the message, I classify this as: {"tool":"generate_weekly_plan","params":{},"confidence":"medium"} because...')
-    expect(result.tool).toBe('generate_weekly_plan')
+    const result = parseClassification('Based on the message, I classify this as: {"tool":"get_productivity_stats","params":{},"confidence":"medium"} because...')
+    expect(result.tool).toBe('get_productivity_stats')
     expect(result.confidence).toBe('medium')
   })
 
@@ -700,20 +686,6 @@ describe('reasoningDirective — buildReasoningDirective()', () => {
     const result = buildReasoningDirective('list_tasks', null, 'en')
     expect(result.length).toBeGreaterThan(0)
     expect(result).not.toContain('MANDATORY REASONING POINTS')
-  })
-
-  it('returns directive with scheduling facts for weekly plan results', () => {
-    const weeklyPlanResult = {
-      plan: { monday: [{ title: 'Task A' }] },
-      reasoning: 'Focus on high priority',
-      totalScheduled: 5,
-      daysUsed: 3,
-    }
-    const result = buildReasoningDirective('generate_weekly_plan', weeklyPlanResult, 'en')
-    expect(result).toContain('MANDATORY REASONING POINTS')
-    expect(result).toContain('Weekly Plan')
-    expect(result).toContain('5 tasks distributed across 3 days')
-    expect(result).toContain('Focus on high priority')
   })
 
   it('skips tasks with no interesting facts', () => {

@@ -3,10 +3,8 @@
  * BossFightPanel Component
  * FEATURE-1132: Weekly boss fight display with HP bar and timer
  */
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref } from 'vue'
 import { useChallengesStore } from '@/stores/challenges'
-import { createAIRouter } from '@/services/ai/router'
-import type { ChatMessage } from '@/services/ai/types'
 import { storeToRefs } from 'pinia'
 import ARIAMessage from './ARIAMessage.vue'
 import { Skull, Swords, Clock, Zap, Trophy, RefreshCw, Sparkles } from 'lucide-vue-next'
@@ -19,37 +17,6 @@ defineProps<{
 // Store
 const challengesStore = useChallengesStore()
 const { activeBoss, isGenerating, lastWeeklyGeneration: _lastWeeklyGeneration } = storeToRefs(challengesStore)
-
-// AI Router for boss generation
-let router: ReturnType<typeof createAIRouter> | null = null
-const aiAvailable = ref(false)
-
-// Initialize router and check availability
-onMounted(async () => {
-  try {
-    router = createAIRouter({ debug: false })
-    await router.initialize()
-    const provider = await router.getActiveProvider()
-    aiAvailable.value = !!provider
-  } catch (e) {
-    console.warn('[BossFight] AI router init failed:', e)
-    aiAvailable.value = false
-  }
-})
-
-// Chat wrapper for gamemaster
-async function chatWithAI(messages: ChatMessage[], options?: { taskType?: string }): Promise<{ content: string }> {
-  if (!router) {
-    return { content: '' }
-  }
-  try {
-    const response = await router.chat(messages, { taskType: options?.taskType as 'planning' })
-    return { content: response.content }
-  } catch (e) {
-    console.warn('[BossFight] AI chat failed:', e)
-    return { content: '' }
-  }
-}
 
 // Local state
 const generationError = ref<string | null>(null)
@@ -133,10 +100,7 @@ async function generateBoss() {
   generationError.value = null
 
   try {
-    await challengesStore.generateWeeklyBossAction({
-      aiAvailable: aiAvailable.value,
-      chat: chatWithAI,
-    })
+    await challengesStore.generateWeeklyBossAction()
   } catch (error) {
     generationError.value = error instanceof Error ? error.message : 'Failed to generate boss'
     console.error('[BossFight] Generation failed:', error)

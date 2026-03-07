@@ -6,45 +6,13 @@
  * Clean, game-quality layout. Click missions to activate (make it your focus).
  * Fits in viewport - no scrolling needed.
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useChallengesStore } from '@/stores/challenges'
-import { createAIRouter } from '@/services/ai/router'
-import type { ChatMessage } from '@/services/ai/types'
 import CyberMissionCard from './CyberMissionCard.vue'
 import { Crosshair, Loader2 } from 'lucide-vue-next'
 
 const challengesStore = useChallengesStore()
-
-// AI Router for challenge generation
-let router: ReturnType<typeof createAIRouter> | null = null
-const aiAvailable = ref(false)
-
-onMounted(async () => {
-  try {
-    router = createAIRouter({ debug: false })
-    await router.initialize()
-    const provider = await router.getActiveProvider()
-    aiAvailable.value = !!provider
-  } catch (e) {
-    console.warn('[CyberMissionBriefing] AI router init failed:', e)
-    aiAvailable.value = false
-  }
-})
-
-async function chatWithAI(
-  messages: ChatMessage[],
-  options?: { taskType?: string }
-): Promise<{ content: string }> {
-  if (!router) return { content: '' }
-  try {
-    const response = await router.chat(messages, { taskType: options?.taskType as 'planning' })
-    return { content: response.content }
-  } catch (e) {
-    console.warn('[CyberMissionBriefing] AI chat failed:', e)
-    return { content: '' }
-  }
-}
 
 const {
   activeDailies,
@@ -71,10 +39,7 @@ const generateError = ref<string | null>(null)
 async function handleGenerate() {
   generateError.value = null
   try {
-    await challengesStore.generateDailyChallengesAction({
-      chat: chatWithAI,
-      aiAvailable: aiAvailable.value,
-    })
+    await challengesStore.generateDailyChallengesAction()
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
     generateError.value = msg

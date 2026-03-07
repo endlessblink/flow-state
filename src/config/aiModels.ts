@@ -107,15 +107,6 @@ export const DEFAULT_MODELS = {
 } as const
 
 /**
- * Smart defaults for Weekly Plan AI — cost-optimized for batch generation.
- * These override the chat defaults when no model is explicitly chosen in Settings.
- */
-export const WEEKLY_PLAN_DEFAULTS = {
-  groq: 'moonshotai/kimi-k2-instruct-0905',          // Best reasoning on Groq — MoE 262K context
-  openrouter: 'openrouter/free',                      // Auto-picks best available free model
-} as const
-
-/**
  * Provider options for selector UI
  */
 // TASK-1350: Updated descriptions for BYOK model

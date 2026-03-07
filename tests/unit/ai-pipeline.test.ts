@@ -349,11 +349,6 @@ describe('toolHints', () => {
       expect(hints.some(h => h.tool === 'get_overdue_tasks')).toBe(true)
     })
 
-    it('returns hint with tool "generate_weekly_plan" for "plan my week"', () => {
-      const hints = getToolHints('plan my week')
-      expect(hints.some(h => h.tool === 'generate_weekly_plan')).toBe(true)
-    })
-
     it('returns hint with tool "start_timer" for "start timer" (NOT get_timer_status)', () => {
       const hints = getToolHints('start timer')
       expect(hints.some(h => h.tool === 'start_timer')).toBe(true)

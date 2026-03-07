@@ -20,7 +20,6 @@ const TOOL_NAMES = [
   'get_achievements_near_completion', 'list_projects', 'list_groups',
   'create_task', 'update_task', 'delete_task', 'mark_task_done',
   'start_timer', 'stop_timer', 'bulk_update_tasks', 'bulk_delete_tasks',
-  'generate_weekly_plan',
 ]
 
 /** UUID v4 pattern (partial — enough to detect task IDs) */

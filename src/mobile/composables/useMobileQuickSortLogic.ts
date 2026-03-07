@@ -2,7 +2,6 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import { useQuickSort } from '@/composables/useQuickSort'
-import { useQuickSortAI } from '@/composables/useQuickSortAI'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import { useHaptics } from '@/composables/useHaptics'
@@ -36,17 +35,14 @@ export function useMobileQuickSortLogic() {
     tryResumeSession
   } = useQuickSort()
 
-  // AI Command (TASK-1221)
-  const quickSortAI = useQuickSortAI()
-  const {
-    aiState,
-    aiAction,
-    aiError,
-    isAIBusy,
-    currentSuggestions,
-    suggestedProjectId,
-    suggestedProjectName
-  } = quickSortAI
+  // AI Command stubs (QuickSort AI removed in TASK-1465)
+  const aiState = ref<'idle'>('idle')
+  const aiAction = ref('')
+  const aiError = ref<string | null>(null)
+  const isAIBusy = ref(false)
+  const currentSuggestions = ref<Array<{ field: string; suggestedValue: unknown }>>([])
+  const suggestedProjectId = ref<string | null>(null)
+  const suggestedProjectName = ref<string | null>(null)
 
   // UI State
   const activePhase = ref<'sort' | 'capture'>('sort')
@@ -299,13 +295,11 @@ export function useMobileQuickSortLogic() {
   }
 
   function handleAISuggest() {
-    if (!currentTask.value || isAIBusy.value) return
-    quickSortAI.autoSuggest(currentTask.value)
+    // QuickSort AI removed (TASK-1465) — no-op
   }
 
   function closeAISheet() {
     showAISheet.value = false
-    quickSortAI.dismiss()
   }
 
   function handleApplySuggestions() {

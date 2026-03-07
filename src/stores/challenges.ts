@@ -33,7 +33,6 @@ import {
   generateDailyChallenges,
   generateWeeklyBoss,
   buildGenerationContext,
-  type GameMasterOptions,
 } from '@/services/ai/gamemaster'
 import {
   getCompletionNarrative,
@@ -231,9 +230,7 @@ export const useChallengesStore = defineStore('challenges', () => {
   // Challenge Generation
   // ===========================================================================
 
-  async function generateDailyChallengesAction(
-    aiOptions: GameMasterOptions
-  ): Promise<Challenge[]> {
+  async function generateDailyChallengesAction(): Promise<Challenge[]> {
     if (!authStore.user?.id) throw new Error('Not authenticated')
     if (isGenerating.value) throw new Error('Generation already in progress')
 
@@ -245,8 +242,8 @@ export const useChallengesStore = defineStore('challenges', () => {
       // Build context from current state
       const context = await buildContextFromState()
 
-      // Generate challenges via AI or templates
-      const generated = await generateDailyChallenges(context, aiOptions)
+      // Generate challenges via templates
+      const generated = await generateDailyChallenges(context)
 
       // Calculate expiry (midnight tonight)
       const expiresAt = new Date()
@@ -306,9 +303,7 @@ export const useChallengesStore = defineStore('challenges', () => {
     }
   }
 
-  async function generateWeeklyBossAction(
-    aiOptions: GameMasterOptions
-  ): Promise<Challenge> {
+  async function generateWeeklyBossAction(): Promise<Challenge> {
     if (!authStore.user?.id) throw new Error('Not authenticated')
     if (isGenerating.value) throw new Error('Generation already in progress')
 
@@ -320,8 +315,8 @@ export const useChallengesStore = defineStore('challenges', () => {
       // Build context from current state
       const context = await buildContextFromState()
 
-      // Generate boss via AI or templates
-      const generated = await generateWeeklyBoss(context, aiOptions)
+      // Generate boss via templates
+      const generated = await generateWeeklyBoss(context)
 
       // Calculate expiry (end of week - Sunday 23:59:59)
       const expiresAt = new Date()

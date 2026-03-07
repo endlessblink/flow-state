@@ -26,7 +26,6 @@ import { useAIChat } from '@/composables/useAIChat'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTimerStore } from '@/stores/timer'
 import { createAIRouter } from '@/services/ai/router'
-import { useAIProactiveNudges } from '@/composables/useAIProactiveNudges'
 import ChatMessage from './ChatMessage.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import { GROQ_MODELS, OPENROUTER_MODELS, asValueLabel, getDisplayName, filterFreeModels } from '@/config/aiModels'
@@ -81,7 +80,6 @@ const isGridHandler = computed(() => aiPersonality.value === 'grid_handler')
 
 const store = useAIChatStore()
 const timerStore = useTimerStore()
-const nudges = useAIProactiveNudges()
 
 // ============================================================================
 // Refs
@@ -533,31 +531,17 @@ function selectProviderOption(provider: 'auto' | 'groq' | 'openrouter' | 'ollama
 // Lifecycle
 // ============================================================================
 
-// Handle nudge send events
-function handleNudgeSend(event: Event) {
-  const detail = (event as CustomEvent).detail
-  // TASK-1441: Suppress nudge messages when offline — AI requires network
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return
-  if (detail?.content) {
-    sendMessage(detail.content)
-  }
-}
-
 onMounted(() => {
   initialize()
-  nudges.start()
   document.addEventListener('keydown', handleKeyboardShortcut)
   document.addEventListener('keydown', handleEscapeKey)
   document.addEventListener('keydown', handlePanelModeShortcut)
-  window.addEventListener('ai-nudge-send', handleNudgeSend)
 })
 
 onUnmounted(() => {
-  nudges.stop()
   document.removeEventListener('keydown', handleKeyboardShortcut)
   document.removeEventListener('keydown', handleEscapeKey)
   document.removeEventListener('keydown', handlePanelModeShortcut)
-  window.removeEventListener('ai-nudge-send', handleNudgeSend)
 })
 </script>
 

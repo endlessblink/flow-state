@@ -2,7 +2,7 @@
  * Shared AI Router Factory (TASK-1350)
  *
  * Provides a single shared AIRouter instance across all AI composables
- * (useAIChat, useQuickSortAI, useAITaskAssist). The router is configured
+ * (useAIChat, useAITaskAssist). The router is configured
  * from the user's settings (Groq API key, preferred provider).
  *
  * Phase 2: Returns a ContextAwareRouter that auto-injects user context

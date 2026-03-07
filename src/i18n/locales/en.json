@@ -258,8 +258,6 @@
   },
   "ai_chat": {
     "chat_tab": "Chat",
-    "weekly_plan_tab": "Weekly Plan",
-    "insights_tab": "Insights",
     "new_chat": "New Chat",
     "back": "Back",
     "ask_placeholder": "Ask AI... (try /help or /skills)",
@@ -386,13 +384,6 @@
       "checkEmail": "Check your email for the reset link",
       "didntReceive": "Didn't receive the email?",
       "resend": "Resend"
-    }
-  },
-  "weeklyPlan": {
-    "modelSelector": {
-      "provider": "Provider",
-      "model": "Model",
-      "aiModel": "AI Model"
     }
   }
 }

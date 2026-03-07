@@ -96,11 +96,6 @@ const router = createRouter({
       component: () => import('@/views/AIHubView.vue'),
       meta: { requiresAuth: false }
     },
-    // FEATURE-1317: Redirects for old bookmarks
-    {
-      path: '/weekly-plan',
-      redirect: '/ai?tab=plan'
-    },
     {
       path: '/mobile-quick-sort',
       name: 'mobile-quick-sort',
@@ -140,10 +135,9 @@ const router = createRouter({
         component: () => import('@/components/debug/KeyboardDeletionTest.vue')
       }
     ] : []),
-    // FEATURE-1317: Redirect old AI chat route
     {
       path: '/ai-chat',
-      redirect: '/ai?tab=chat'
+      redirect: '/ai'
     },
     {
       path: '/performance',

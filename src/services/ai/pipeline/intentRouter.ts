@@ -33,7 +33,6 @@ export type IntentType =
   | 'task_query'
   | 'task_action'
   | 'timer'
-  | 'planning'
   | 'stats'
   | 'greeting'
   | 'freeform'
@@ -192,9 +191,6 @@ const TOOL_TO_INTENT: Record<string, IntentType> = {
   set_task_due_date: 'task_action',
   create_subtasks: 'task_action',
 
-  // Planning
-  generate_weekly_plan: 'planning',
-
   // Stats
   get_productivity_stats: 'stats',
   get_daily_summary: 'stats',
@@ -213,8 +209,6 @@ const FORMAT_DIRECTIVES: Record<IntentType, string> = {
     'Format these task results with reasoning about priorities, deadlines, and progress. Use bullet points.',
   task_action: 'Confirm the action briefly in the user\'s language.',
   timer: 'Confirm the timer action briefly.',
-  planning:
-    'Summarize the weekly plan briefly — highlight top priorities and overloaded days.',
   stats:
     'Summarize these productivity statistics with insights about trends.',
   greeting: 'Respond with a short, friendly greeting.',
@@ -271,7 +265,6 @@ TOOLS:
 - start_timer: Start timer/pomodoro/focus session
 - stop_timer: Stop timer
 - get_timer_status: Timer status/how much time left
-- generate_weekly_plan: Plan the week/schedule tasks
 - get_productivity_stats: Statistics/progress/how am I doing
 - get_daily_summary: Today's summary
 - get_weekly_summary: Week summary
@@ -524,10 +517,6 @@ export function routeIntentByKeywords(
 
     case 'suggest_next_task':
       toolCall = { tool: 'suggest_next_task', parameters: {} }
-      break
-
-    case 'generate_weekly_plan':
-      toolCall = { tool: 'generate_weekly_plan', parameters: {} }
       break
 
     case 'get_productivity_stats':

@@ -214,13 +214,6 @@ describe('Group 1: Context Construction', () => {
     expect(context).not.toContain('quicksort')
   })
 
-  it('should return weeklyplan-specific framing for weeklyplan feature', async () => {
-    const context = await getAIUserContext('weeklyplan')
-    expect(context).toContain('Use this context to create a realistic weekly plan')
-    expect(context).toContain('matches the user\'s actual capacity and patterns')
-    expect(context).not.toContain('AI assistant in their task management app')
-    expect(context).not.toContain('quicksort')
-  })
 
   it('should place feature framing BEFORE workload data (instruction-before-data)', async () => {
     const context = await getAIUserContext('quicksort')
@@ -509,27 +502,6 @@ describe('Group 3: Flow-Specific Prompt Structure', () => {
     expect(streamSpy).toHaveBeenCalled()
   })
 
-  it('Weekly Plan uses getSharedRouter with contextFeature "weeklyplan"', async () => {
-    const router = await getSharedRouter()
-
-    const chatSpy = vi.fn().mockResolvedValue({ content: '{}' })
-    // @ts-expect-error - accessing private property for testing
-    router.chat = chatSpy
-
-    // Simulate Weekly Plan flow
-    await router.chat(
-      [
-        { role: 'system', content: 'You distribute tasks across a work week.' },
-        { role: 'user', content: 'Tasks: [...]' },
-      ],
-      { taskType: 'planning', contextFeature: 'weeklyplan', temperature: 0.3 }
-    )
-
-    expect(chatSpy).toHaveBeenCalledWith(
-      expect.any(Array),
-      expect.objectContaining({ contextFeature: 'weeklyplan' })
-    )
-  })
 })
 
 // ============================================================================
@@ -580,30 +552,9 @@ describe('Group 4: Regression Guards', () => {
     ).toEqual([])
   })
 
-  it('should ensure useWeeklyPlanAI imports getSharedRouter (not createAIRouter)', () => {
-    const weeklyPlanPath = join(projectRoot, 'src', 'composables', 'useWeeklyPlanAI.ts')
-    const content = readFileSync(weeklyPlanPath, 'utf-8')
-
-    expect(content).toContain("from '@/services/ai/routerFactory'")
-    expect(content).toContain('getSharedRouter()')
-    expect(content).not.toContain('createAIRouter()')
-  })
-
-  it('should ensure formatHebrewDate handles empty/invalid dates without crashing', () => {
-    const weeklyPlanPath = join(projectRoot, 'src', 'composables', 'useWeeklyPlanAI.ts')
-    const content = readFileSync(weeklyPlanPath, 'utf-8')
-
-    // Check that formatHebrewDate has guards
-    expect(content).toContain('function formatHebrewDate')
-    expect(content).toMatch(/if\s*\(!dateStr.*\)\s*return/)
-    expect(content).toMatch(/isNaN\(d\.getTime\(\)\)/)
-  })
-
   it('should ensure all AI composables pass contextFeature to router', () => {
     const composableFiles = [
-      'src/composables/useQuickSortAI.ts',
       'src/composables/useAITaskAssist.ts',
-      'src/composables/useWeeklyPlanAI.ts',
       'src/composables/useAIChat.ts',
     ]
 
@@ -621,10 +572,8 @@ describe('Group 4: Regression Guards', () => {
 
   it('should verify contextFeature values match expected features', () => {
     const expectations = [
-      { file: 'src/composables/useQuickSortAI.ts', feature: 'quicksort' },
       { file: 'src/composables/useAITaskAssist.ts', feature: 'taskassist' },
       { file: 'src/composables/useAIChat.ts', feature: 'chat' },
-      { file: 'src/composables/useWeeklyPlanAI.ts', feature: 'weeklyplan' },
     ]
 
     for (const { file, feature } of expectations) {

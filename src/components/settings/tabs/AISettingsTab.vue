@@ -228,73 +228,14 @@ const summaryStats = computed(() => [
   { label: 'Est. Cost', value: formatCost(currentUsage.value.totalCostUSD), icon: DollarSign }
 ])
 
-// ── Weekly Plan Settings ──
-const isSaving = ref(false)
+// ── Work Profile Settings ──
 const isRecalculating = ref(false)
 const isResetting = ref(false)
-const saveMessage = ref('')
 const isClearingMemories = ref(false)
 
-const form = ref({
-  workDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] as string[],
-  daysOff: [] as string[],
-  heavyMeetingDays: [] as string[],
-  maxTasksPerDay: 6,
-  preferredWorkStyle: 'balanced' as 'frontload' | 'balanced' | 'backload',
-})
-
-const dayOptions = [
-  { key: 'monday', label: 'Mon' },
-  { key: 'tuesday', label: 'Tue' },
-  { key: 'wednesday', label: 'Wed' },
-  { key: 'thursday', label: 'Thu' },
-  { key: 'friday', label: 'Fri' },
-  { key: 'saturday', label: 'Sat' },
-  { key: 'sunday', label: 'Sun' },
-]
-
-const workStyleOptions = [
-  { key: 'frontload' as const, label: 'Front-load', desc: 'Heavy Mon-Tue, lighter Thu-Fri' },
-  { key: 'balanced' as const, label: 'Balanced', desc: 'Even distribution across days' },
-  { key: 'backload' as const, label: 'Back-load', desc: 'Lighter Mon-Tue, heavier Thu-Fri' },
-]
-
 onMounted(async () => {
-  const p = await loadProfile()
-  if (p) {
-    form.value.workDays = [...p.workDays]
-    form.value.daysOff = [...p.daysOff]
-    form.value.heavyMeetingDays = [...p.heavyMeetingDays]
-    form.value.maxTasksPerDay = p.maxTasksPerDay
-    form.value.preferredWorkStyle = p.preferredWorkStyle
-  }
+  await loadProfile()
 })
-
-function toggleDay(list: string[], key: string) {
-  const idx = list.indexOf(key)
-  if (idx === -1) list.push(key)
-  else list.splice(idx, 1)
-}
-
-async function onSave() {
-  isSaving.value = true
-  saveMessage.value = ''
-  try {
-    await savePreferences({
-      workDays: [...form.value.workDays],
-      daysOff: [...form.value.daysOff],
-      heavyMeetingDays: [...form.value.heavyMeetingDays],
-      maxTasksPerDay: form.value.maxTasksPerDay,
-      preferredWorkStyle: form.value.preferredWorkStyle,
-    })
-    saveMessage.value = 'Preferences saved!'
-    setTimeout(() => { saveMessage.value = '' }, 3000)
-  } catch {
-    saveMessage.value = 'Failed to save'
-  } finally {
-    isSaving.value = false
-  }
-}
 
 async function onRecalculate() {
   isRecalculating.value = true
@@ -655,7 +596,6 @@ async function onClearMemories() {
       </div>
     </SettingsSection>
 
-    <!-- Weekly Plan Settings (merged from WeeklyPlanSettingsTab) -->
     <SettingsSection title="AI Learning">
       <SettingsToggle
         label="Enable AI work profile learning"
@@ -663,93 +603,8 @@ async function onClearMemories() {
         @update="(v: boolean) => settingsStore.updateSetting('aiLearningEnabled', v)"
       />
       <p class="learning-hint">
-        When enabled, FlowState tracks your work patterns to make weekly plans smarter over time.
+        When enabled, FlowState tracks your work patterns to improve AI suggestions over time.
       </p>
-    </SettingsSection>
-
-    <SettingsSection title="Planning Preferences">
-      <div class="wp-setting-row">
-        <label class="wp-setting-label">Work days</label>
-        <div class="day-chips">
-          <button
-            v-for="d in dayOptions"
-            :key="d.key"
-            class="day-chip"
-            :class="{ active: form.workDays.includes(d.key) }"
-            @click="toggleDay(form.workDays, d.key)"
-          >
-            {{ d.label }}
-          </button>
-        </div>
-      </div>
-
-      <div class="wp-setting-row">
-        <label class="wp-setting-label">Days off</label>
-        <div class="day-chips">
-          <button
-            v-for="d in dayOptions"
-            :key="d.key"
-            class="day-chip off"
-            :class="{ active: form.daysOff.includes(d.key) }"
-            @click="toggleDay(form.daysOff, d.key)"
-          >
-            {{ d.label }}
-          </button>
-        </div>
-      </div>
-
-      <div class="wp-setting-row">
-        <label class="wp-setting-label">Heavy meeting days</label>
-        <div class="day-chips">
-          <button
-            v-for="d in dayOptions"
-            :key="d.key"
-            class="day-chip meeting"
-            :class="{ active: form.heavyMeetingDays.includes(d.key) }"
-            @click="toggleDay(form.heavyMeetingDays, d.key)"
-          >
-            {{ d.label }}
-          </button>
-        </div>
-      </div>
-
-      <div class="wp-setting-row">
-        <label class="wp-setting-label">Max tasks per day</label>
-        <div class="number-chips">
-          <button
-            v-for="n in [3, 5, 6, 8, 10]"
-            :key="n"
-            class="number-chip"
-            :class="{ active: form.maxTasksPerDay === n }"
-            @click="form.maxTasksPerDay = n"
-          >
-            {{ n }}
-          </button>
-        </div>
-      </div>
-
-      <div class="wp-setting-row">
-        <label class="wp-setting-label">Work style</label>
-        <div class="style-chips">
-          <button
-            v-for="ws in workStyleOptions"
-            :key="ws.key"
-            class="style-chip"
-            :class="{ active: form.preferredWorkStyle === ws.key }"
-            @click="form.preferredWorkStyle = ws.key"
-          >
-            <span class="style-label">{{ ws.label }}</span>
-            <span class="style-desc">{{ ws.desc }}</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="save-row">
-        <button class="save-btn" :disabled="isSaving" @click="onSave">
-          {{ isSaving ? 'Saving...' : 'Save Preferences' }}
-        </button>
-        <span v-if="saveMessage" class="save-message">{{ saveMessage }}</span>
-      </div>
     </SettingsSection>
 
     <SettingsSection title="Learned Patterns">

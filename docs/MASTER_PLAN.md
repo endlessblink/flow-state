@@ -1479,6 +1479,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
 | **TASK-1455** | **P2** | 📋 **Catalog view: show uncategorized tasks so they can be categorized in-place** (📋 PLANNED 2026-03-06) |
 | **TASK-1454** | **P2** | 📋 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (📋 PLANNED 2026-03-06) |
+| ~~**BUG-1472**~~ | **P1** | ✅ **Canvas and Calendar inbox filters synced — persistence keys not context-scoped** (✅ DONE 2026-03-07) |
 | **BUG-1453** | **P0** | 🔄 **Production CSS preload + mobile Quick Sort swipe broken** (🔄 IN PROGRESS 2026-03-06) |
 | **BUG-1447** | **P2** | 👀 **Pin task disappears on Enter + task search + widget sync** (👀 REVIEW 2026-03-05) |
 | **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |

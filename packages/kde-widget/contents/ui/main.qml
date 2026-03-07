@@ -1551,9 +1551,34 @@ PlasmoidItem {
                     }
                 }
 
+                // TASK-1466: Reset button — restart countdown without changing task
+                Rectangle {
+                    width: 62
+                    height: 32
+                    radius: 6
+                    color: "transparent"
+                    border.width: 1
+                    border.color: root.mutedColor
+                    opacity: root.hasActiveSession ? 1.0 : 0.4
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 4
+                        Kirigami.Icon { source: "view-refresh"; width: 14; height: 14; color: root.textColor }
+                        Text { text: "Reset"; font.pixelSize: 12; color: root.textColor; anchors.verticalCenter: parent.verticalCenter }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        enabled: root.hasActiveSession
+                        onClicked: root.resetSession()
+                    }
+                }
+
                 // Stop button
                 Rectangle {
-                    width: 70
+                    width: 62
                     height: 32
                     radius: 6
                     color: "transparent"
@@ -3687,6 +3712,27 @@ PlasmoidItem {
         startNewSession(root.isWorkSession)
     }
 
+    // TASK-1466: Reset timer — restart countdown for current task without changing task
+    function resetSession() {
+        if (!root.hasActiveSession) return
+
+        var taskId = root.currentTaskId || "general"
+        var isBreak = !root.isWorkSession
+
+        // End current session
+        patchSession({
+            is_active: false,
+            completed_at: new Date().toISOString()
+        })
+
+        // Start fresh session for the same task
+        if (taskId !== "general") {
+            startSessionForTask(taskId)
+        } else {
+            startNewSession(isBreak)
+        }
+    }
+
     function onSessionComplete() {
         // Guard: prevent duplicate notifications (barrage fix)
         // sessionJustCompleted is set to true below, cleared on user action or new session
@@ -4187,7 +4233,12 @@ PlasmoidItem {
                     console.log("[TASKS] Task created:", taskId)
                     root.fetchTasks()
                     if (startTimer) {
-                        root.startSessionForTask(taskId)
+                        // TASK-1466: If timer running, switch task without reset
+                        if (root.hasActiveSession && root.isRunning) {
+                            root.switchTaskForSession(taskId)
+                        } else {
+                            root.startSessionForTask(taskId)
+                        }
                     }
                 } else {
                     console.error("[TASKS] Failed to create task:", xhr.status, xhr.responseText)
@@ -4258,7 +4309,15 @@ PlasmoidItem {
 
         if (matchId) {
             console.log("[PINS] Found matching task:", matchId)
-            root.startSessionForTask(matchId)
+            // TASK-1466: If timer running, switch task without reset
+            if (root.hasActiveSession && root.isRunning) {
+                if (root.currentTaskId !== matchId) {
+                    root.switchTaskForSession(matchId)
+                }
+                // Same task — do nothing (don't reset)
+            } else {
+                root.startSessionForTask(matchId)
+            }
         } else {
             console.log("[PINS] No match, creating new task:", pin.title)
             root.createTask(pin.title, true)

@@ -1589,6 +1589,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1467**~~ | **P2** | ~~**Tasks auto-appear on calendar at 9:00 AM when dragged to Board date columns — moveTaskToDate created calendar instances instead of only setting dueDate**~~ (✅ DONE 2026-03-07) |
 | **TASK-1473** | **P0** | **KDE Widget: Add task search/filter — search box to find tasks without scrolling through long lists** |
 | **TASK-1475** | **P1** | **KDE Widget: Nanny popup show recent tasks — show commonly used tasks alongside pinned tasks, not only pinned** |
+| **TASK-1476** | **P2** | **Catalog: drag tasks to collapsed project groups — allow dropping on closed categories, remove darkening overlay during drag** |
 
 ---
 
@@ -2313,9 +2314,9 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### TASK-1463: Clean Up Project Root — Remove/Consolidate Temp Files (🔄 IN PROGRESS)
+### ~~TASK-1463~~: Clean Up Project Root — Remove/Consolidate Temp Files (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-07)
 
 **Problem**: Project root has 141 debug PNG screenshots, tracked temp reports/scripts, stale lockfiles, and other clutter that doesn't belong at the root level.
 

@@ -900,6 +900,14 @@ const permanentlyDeleteTask = () => {
   emit('close')
 }
 
+// Escape key handler
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    closeAllSubmenusNow()
+    emit('close')
+  }
+}
+
 // Click outside handler
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
@@ -912,8 +920,10 @@ const handleClickOutside = (event: MouseEvent) => {
 watch(() => props.isVisible, (isVisible) => {
   if (isVisible) {
     setTimeout(() => document.addEventListener('click', handleClickOutside), 0)
+    document.addEventListener('keydown', handleKeyDown)
   } else {
     document.removeEventListener('click', handleClickOutside)
+    document.removeEventListener('keydown', handleKeyDown)
     showDueDateSubmenu.value = false
     showPrioritySubmenu.value = false
     showDurationSubmenu.value = false
@@ -926,6 +936,7 @@ watch(() => props.isVisible, (isVisible) => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleKeyDown)
   cancelPendingSwitch()
   clearAllSubmenuTimeouts()
   safePolygon.stopTracking()

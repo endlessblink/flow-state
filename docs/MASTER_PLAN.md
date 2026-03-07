@@ -938,31 +938,29 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ## Planned Tasks (NEXT/BACKLOG)
 
-### TASK-1473: Add calendar view to mobile PWA (📋 PLANNED)
+### ~~TASK-1473~~: Add calendar view to mobile PWA (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-07)
 
 **Goal**: Add a mobile-optimized calendar view to the PWA bottom navigation. Replace the AI Chat tab with Calendar in the nav bar; move AI Chat into the Menu overlay instead.
 
-**Subtasks**:
-- Create `MobileCalendarView.vue` — day view with time grid, task cards, date navigation
-- Add mobile route `/mobile-calendar` in router
-- Replace AI nav tab with Calendar tab in `MobileNav.vue` (Calendar icon)
-- Add AI Chat as a menu item in `MobileNav.vue` menu overlay (Sparkles icon + "AI Chat" label)
-- Reuse existing calendar composables/stores where possible
-- Design reference: Storybook `📱 PWA Concepts > Calendar`
+**Implementation**:
+- Created `MobileCalendarView.vue` — day view with time grid (6AM-11PM), task cards color-coded by priority, date navigation, current time indicator, unscheduled tasks section, RTL support
+- Added mobile route `/mobile-calendar` in router with desktop redirect to `/calendar`
+- Replaced AI nav tab with Calendar tab in `MobileNav.vue` (Calendar icon)
+- Added AI Chat as a menu item in `MobileNav.vue` menu overlay (Sparkles icon + "AI Chat" label)
 
 ---
 
-### TASK-1474: Move AI Chat from mobile nav bar to menu overlay (📋 PLANNED)
+### ~~TASK-1474~~: Move AI Chat from mobile nav bar to menu overlay (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-07)
 
 **Goal**: Remove AI Chat from the mobile bottom navigation bar (currently 4th tab) and add it as an item in the hamburger Menu overlay instead. This frees the nav slot for Calendar.
 
 **Changes**:
-- `MobileNav.vue`: Remove AI `router-link`, add menu item with Sparkles icon that navigates to `/mobile-ai-chat`
-- Verify AI Chat view still works when accessed from menu
+- `MobileNav.vue`: Removed AI `router-link`, added menu item with Sparkles icon that navigates to `/mobile-ai-chat`
+- AI Chat view works when accessed from menu
 
 ---
 

@@ -1,7 +1,7 @@
 ---
-name: dev-implement-ui-ux
-emoji: "🎨"
-description: Comprehensive UI/UX design and implementation skill covering visual design principles, color theory, typography, spacing systems, layout composition, accessibility (WCAG 2.2), animation, and systematic implementation workflows
+name: flowstate-ui-ux
+emoji: "🎯"
+description: FlowState-specific UI/UX design and implementation skill covering visual design principles, color theory, typography, spacing systems, layout composition, accessibility (WCAG 2.2), animation, web standards compliance, and systematic implementation workflows. Use for FlowState app work only — for other projects use frontend-ux-ui-design.
 ---
 
 # UI/UX Design & Implementation
@@ -1287,8 +1287,183 @@ cards[1].getBoundingClientRect().top - cards[0].getBoundingClientRect().bottom
 
 ---
 
-**Skill Keywords:** UI design, UX, color theory, typography, spacing, layout, grid, accessibility, WCAG 2.2, animation, design tokens, visual hierarchy, Gestalt, app icons, ImageMagick, Tauri
+# PART 13: WEB STANDARDS & CODE QUALITY
 
-**Standards:** WCAG 2.2 (June 2024), Material Design 3, Apple HIG
+Rules adapted from Vercel Web Interface Guidelines for Vue 3 / FlowState.
+
+## 13.1 Forms Best Practices
+
+| Rule | Vue Implementation |
+|------|-------------------|
+| Add `autocomplete` to inputs | `<BaseInput autocomplete="email" type="email" />` |
+| Use correct `type` and `inputmode` | `type="email"` for email, `inputmode="numeric"` for codes |
+| NEVER block paste | No `@paste.prevent` anywhere |
+| Disable spellcheck on codes/emails | `:spellcheck="false"` |
+| Labels clickable via wrapping or `for` | `<label :for="inputId">` or wrap `<label><input></label>` |
+| Submit button enabled until request | Show spinner during request, don't pre-disable |
+| Errors inline next to fields | Focus first error on submit with `el.focus()` |
+| Warn before nav with unsaved changes | `onBeforeRouteLeave` guard or `beforeunload` |
+| No dead zones in checkbox/radio | Label + control share single hit target |
+
+```vue
+<!-- CORRECT form pattern -->
+<BaseInput
+  v-model="email"
+  type="email"
+  autocomplete="email"
+  :spellcheck="false"
+  name="user-email"
+  label="Email"
+/>
+```
+
+## 13.2 Performance Rules
+
+| Rule | When | Implementation |
+|------|------|---------------|
+| Virtualize large lists | >50 items | Use `content-visibility: auto` or virtual scroll |
+| No layout reads in render | Always | Never `getBoundingClientRect()` in `computed`/`watch` |
+| Batch DOM reads/writes | When measuring | Read all, then write all — never interleave |
+| Uncontrolled inputs preferred | High-frequency typing | Use `defaultValue` / `@change` over `v-model` for search |
+| Preconnect CDN domains | Always | `<link rel="preconnect" href="https://cdn.example.com">` |
+| Preload critical fonts | Above fold | `<link rel="preload" as="font" crossorigin>` with `font-display: swap` |
+| Images need width/height | Always | Prevents CLS (Cumulative Layout Shift) |
+| Below-fold images lazy | Always | `loading="lazy"` |
+| Above-fold images priority | Hero/banner | `fetchpriority="high"` |
+
+## 13.3 Touch & Interaction
+
+```css
+/* Prevent 300ms tap delay on ALL touch targets */
+* { touch-action: manipulation; }
+
+/* Set webkit tap highlight intentionally */
+button, a { -webkit-tap-highlight-color: rgba(78, 205, 196, 0.1); }
+
+/* Contain scroll in modals/drawers/overlays */
+.modal-overlay, .drawer, .bottom-sheet {
+  overscroll-behavior: contain;
+}
+
+/* During drag: disable text selection */
+.dragging {
+  user-select: none;
+  -webkit-user-select: none;
+}
+```
+
+- `autoFocus` sparingly — desktop only, single primary input; avoid on mobile
+- Full-bleed layouts need `env(safe-area-inset-*)` for notched devices
+
+## 13.4 Content Handling
+
+```css
+/* Text containers MUST handle overflow */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Multi-line clamp */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* CRITICAL: flex children need min-width: 0 for truncation */
+.flex-child { min-width: 0; }
+```
+
+- ALWAYS handle empty states — show helpful message, not broken UI
+- User-generated content: anticipate short, average, and very long inputs
+- Use `break-words` or `overflow-wrap: break-word` for URLs/long strings
+
+## 13.5 Navigation & URL State
+
+- URL MUST reflect state — filters, tabs, pagination, sort order in query params
+- Links use `<RouterLink>` (supports Cmd+click, middle-click, right-click)
+- Deep-link all stateful UI — if it uses `ref()`, consider URL sync via `useRouteQuery`
+- Destructive actions (delete, discard) need `ConfirmationModal` — NEVER immediate
+- Back button must work correctly with all view states
+
+## 13.6 Typography Micro-Rules
+
+| Rule | Example |
+|------|---------|
+| Use ellipsis character `...` not three dots | `Loading...` not `Loading...` |
+| Use curly quotes in UI copy | `"Welcome back"` not `"Welcome back"` |
+| Non-breaking spaces in units | `10&nbsp;MB`, `Cmd&nbsp;K` |
+| `font-variant-numeric: tabular-nums` | Number columns, prices, timers, stats |
+| `text-wrap: balance` on headings | Prevents widows/orphans |
+| Active voice in UI copy | "Save changes" not "Changes will be saved" |
+| Specific button labels | "Save API Key" not "Continue" or "Submit" |
+| Error messages include next step | "File too large. Max size is 10 MB." not just "Error" |
+
+## 13.7 Dark Mode & Theming (FlowState-Specific)
+
+```css
+/* Already set in FlowState — verify these exist */
+html { color-scheme: dark; }
+
+/* Native <select>: explicit bg and color (Windows dark mode fix) */
+select {
+  background-color: var(--surface-component);
+  color: var(--text-primary);
+}
+
+/* theme-color should match page background */
+<meta name="theme-color" content="var(--bg-primary)">
+```
+
+## 13.8 Code Anti-Patterns (ALWAYS FLAG)
+
+When reviewing or writing code, flag these immediately:
+
+| Anti-Pattern | Fix |
+|-------------|-----|
+| `user-scalable=no` or `maximum-scale=1` | Remove — don't disable zoom |
+| `@paste.prevent` | Remove — never block paste |
+| `transition: all` | List properties explicitly |
+| `outline: none` without `:focus-visible` | Add focus-visible replacement |
+| `<div @click>` or `<span @click>` | Use `<button>` or `<BaseButton>` |
+| `<img>` without `width`/`height` | Add dimensions to prevent CLS |
+| `.map()` on 50+ items without virtualization | Add virtual scroll |
+| `<input>` without `<label>` or `aria-label` | Add accessible label |
+| Icon button without `aria-label` | `<BaseIconButton aria-label="...">` |
+| Hardcoded date formats (`MM/DD/YYYY`) | Use `Intl.DateTimeFormat` |
+| Hardcoded number formats (`$${n}`) | Use `Intl.NumberFormat` |
+| `v-html` with user content | Sanitize first or use `MarkdownRenderer` |
+
+---
+
+# PART 14: CODE AUDIT MODE
+
+When asked to "review UI", "audit design", or "check accessibility", output findings in terse `file:line` format:
+
+```
+src/components/TaskCard.vue:42 — icon button missing aria-label
+src/components/Modal.vue:18 — outline:none without focus-visible replacement
+src/views/BoardView.vue:95 — <div @click> should be <button>
+src/components/SearchBar.vue:12 — transition: all, list properties explicitly
+```
+
+### Audit Checklist
+
+1. **Accessibility**: aria-labels, semantic HTML, focus states, heading hierarchy, target sizes
+2. **Performance**: CLS (image dimensions), virtualization, transition:all, layout reads
+3. **Forms**: autocomplete, input types, labels, paste blocking, spellcheck
+4. **Touch**: touch-action, overscroll-behavior, safe areas, tap highlight
+5. **Content**: overflow handling, empty states, long content, min-w-0 on flex children
+6. **Design tokens**: hardcoded colors, spacing, radii (should use CSS vars)
+7. **Anti-patterns**: div-as-button, disabled zoom, hardcoded formats, v-html
+
+---
+
+**Skill Keywords:** UI design, UX, color theory, typography, spacing, layout, grid, accessibility, WCAG 2.2, animation, design tokens, visual hierarchy, Gestalt, app icons, ImageMagick, Tauri, web standards, forms, performance, touch, code audit
+
+**Standards:** WCAG 2.2 (June 2024), Vercel Web Interface Guidelines, Material Design 3, Apple HIG
 
 **Last Updated:** March 2026

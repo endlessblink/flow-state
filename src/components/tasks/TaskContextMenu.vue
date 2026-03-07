@@ -903,6 +903,8 @@ const permanentlyDeleteTask = () => {
 // Escape key handler
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
     closeAllSubmenusNow()
     emit('close')
   }

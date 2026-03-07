@@ -113,6 +113,7 @@ const {
   velocityThreshold: 0.4,
   haptics: true,
   fourDirectional: true,
+  mouse: true, // BUG-1453: enable mouse drag for desktop browsers in mobile viewport
   onSwipeRight: () => emit('swipe-right'),
   onSwipeLeft: () => emit('swipe-left'),
   onSwipeUp: () => emit('swipe-up'),

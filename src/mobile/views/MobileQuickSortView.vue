@@ -765,6 +765,7 @@ const {
   background: var(--glass-bg-subtle);
   border: 1px solid var(--glass-border-light);
   border-radius: var(--radius-2xl);
+  pointer-events: none; /* BUG-1453: decorative only, must not intercept mouse/touch from active card */
 }
 
 /* ================================

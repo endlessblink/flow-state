@@ -1578,7 +1578,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | TASK-1120 | P2 | 🔄 Deep UX/UI analysis and enhancement of catalog views |
 | **FEATURE-1443** | **P0** | **Morning Dashboard — futuristic news headline page with playful task setting** |
 | **TASK-1464** | **P1** | **Break Timer On-Screen Overlay — full-screen pomodoro overlay during break with countdown, minimize/stop/+5min controls, glass morphism** |
-| **TASK-1465** | **P2** | 🔄 **AI Features Audit — review all AI features, decide what to keep vs ditch (broken/no value)** |
+| ~~**TASK-1465**~~ | **P2** | ✅ ~~**AI Features Audit — review all AI features, decide what to keep vs ditch (broken/no value)**~~ |
 | ~~**TASK-1466**~~ | **P2** | ✅ **Start task without resetting timer — allow switching active task while timer runs (web + pinned), add reset option to KDE widget** |
 | **BUG-1462** | **P1** | **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** |
 | **TASK-1468** | **P2** | **Clean ARIA Game Master AI rebuild — rebuild challenge generation with small steps, template fallback preserved, AI adds personalization on top** |
@@ -2324,7 +2324,7 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### TASK-1465: AI Features Audit — Review and Clean Up All AI Features (🔄 IN PROGRESS)
+### ~~TASK-1465~~: AI Features Audit — Review and Clean Up All AI Features (✅ DONE)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS
 

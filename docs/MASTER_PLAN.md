@@ -1320,9 +1320,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### BUG-1453: Production CSS Preload + Mobile Quick Sort Swipe Broken (🔄 IN PROGRESS)
+### ~~BUG-1453~~: Production CSS Preload + Mobile Quick Sort Swipe Broken (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-06)
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-07)
 
 **Two issues reported:**
 1. Production CSS preload failure (`MorningDashboardView-7ECQeecR.css`)
@@ -1338,45 +1338,21 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 - Fixed 6 pre-existing CI type/lint errors in ChatMessage.vue, BaseModal.vue, AIQualityDashboard.vue, QuickSortCard.vue
 - Deploy pipeline now fully green (all steps pass including chunk integrity verification)
 
-#### Sub-issue 2: Mobile Quick Sort Swipe — STILL BROKEN
+#### Sub-issue 2: Mobile Quick Sort Swipe — RESOLVED
 
-**Critical discovery: TWO separate Quick Sort implementations exist:**
-- **Desktop**: `src/views/QuickSortView.vue` + `src/components/QuickSortCard.vue` (route: `/quick-sort`)
-- **Mobile**: `src/mobile/views/MobileQuickSortView.vue` + `src/mobile/components/MobileQuickSortCard.vue` (route: `#/mobile-quick-sort`)
-- Mobile card CSS class is `.task-card` (not `.quick-sort-card`)
-- User is on mobile PWA hitting the MOBILE implementation
+**Three layers of root cause fixed:**
 
-**What was verified:**
-- `MobileQuickSortCard.vue` uses `useSwipeGestures` composable with `fourDirectional: true`
-- Card has `touch-action: none` in CSS (correct)
-- **Playwright touch simulation on localhost WORKS** — synthetic TouchEvents dispatched on `.task-card` triggered swipe-right (Save) correctly and advanced to next task
-- So the JS swipe logic itself is functional
+1. **Touch event regression** (commit `072eea6c`): `preventDefault()` in `touchstart` before direction known — Android Chrome drops entire touch sequence. Fixed: `touchstart` always `{ passive: true }`, `preventDefault()` deferred to `touchmove` after 10px lock threshold.
 
-**What changed in `useSwipeGestures.ts` (commit `072eea6c`):**
-- Refactored from inline touch handlers to shared `beginSwipe/moveSwipe/endSwipe` functions
-- Added mouse drag support (`mouse` option) for desktop
-- Old (working, commit `3a149cb6`): `touchstart: { passive: true }`, `touchmove: { passive: false }`
-- New: `touchstart: { passive: false }` when fourDirectional, `touchmove: { passive: false }`
-- Old had `preventDefault()` only in `touchmove`, new also calls it in `touchstart`
+2. **CSS `!important` overrides killing transform**: `global-overrides.css` had `.task-card:hover { transform: none !important }` and `.task-card:active { transform: scale(0.99) !important }` — both override the inline `translateX` during drag. Fixed: added `:not(.swiping)` to both selectors.
 
-**Hypotheses to investigate (ordered by likelihood):**
-1. **Service Worker caching old code on user's device** — SW uses `skipWaiting()` only on explicit `SKIP_WAITING` message (line 146 of `src/sw.ts`), not automatically. User's phone may still serve pre-deploy JS.
-2. **Parent scroll container intercepting touches** — `MobileQuickSortView` has scrollable containers (`overflow-y: auto`) that may steal touch events before the card handler fires. Need to audit `touch-action` CSS chain from `.task-card` up through all parent elements.
-3. **useSwipeGestures refactor broke subtle behavior** — The `touchstart` passive change or `preventDefault()` in touchstart (vs only in touchmove before) may cause different browser behavior on real Android Chrome PWA.
-4. **MobileQuickSortView sub-component split** (commit `939ce6a5`) may have changed the DOM structure affecting touch event propagation.
+3. **Overflow clipping on mobile**: Ancestor containers (`.mobile-content`, `.sort-phase`, `.qs-main`) had `overflow: hidden/auto` which clips the card's `translateX` displacement. CSS doesn't allow `overflow-x: visible` with `overflow-y: auto` (browsers force both to `auto`). **Fix: Card switches to `position: fixed` during swipe**, capturing `getBoundingClientRect()` on swipe start and pinning to viewport coordinates. This escapes ALL ancestor overflow clipping. Also removed `perspective: 1000px` from `.card-stack` (CSS spec: perspective creates containing block for fixed descendants).
 
-**Next steps:**
-1. Ask user to test in incognito/private tab (bypasses SW) to rule out caching
-2. If still broken in incognito: revert `useSwipeGestures.ts` to commit `3a149cb6` version and test
-3. Audit parent element CSS chain for `touch-action`/`overflow` conflicts in mobile view
-4. Consider adding unconditional `self.skipWaiting()` in SW install handler for faster updates
-
-**Key files:**
-- `src/composables/useSwipeGestures.ts` — swipe composable (recently refactored)
-- `src/mobile/components/MobileQuickSortCard.vue` — mobile card
-- `src/mobile/views/MobileQuickSortView.vue` — mobile view with scroll containers
-- `src/mobile/composables/useMobileQuickSortLogic.ts` — mobile-specific logic
-- `src/sw.ts` — service worker (skipWaiting behavior)
+**Additional improvements:**
+- Mobile-friendly edit bottom sheet with toggle pills, project picker with emoji icons
+- Overlay dead zone (50px before showing, max 0.7 opacity)
+- Velocity-based swipe minimum distance (40% threshold) to prevent accidental triggers
+- SOP: `docs/sop/SOP-063-mobile-swipe-gestures.md`
 - `.github/workflows/deploy.yml` — deploy pipeline (fixed)
 
 **Relevant commits:**
@@ -1506,7 +1482,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1455** | **P2** | 📋 **Catalog view: show uncategorized tasks so they can be categorized in-place** (📋 PLANNED 2026-03-06) |
 | **TASK-1454** | **P2** | 📋 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (📋 PLANNED 2026-03-06) |
 | ~~**BUG-1472**~~ | **P1** | ✅ **Canvas and Calendar inbox filters synced — persistence keys not context-scoped** (✅ DONE 2026-03-07) |
-| **BUG-1453** | **P0** | 🔄 **Production CSS preload + mobile Quick Sort swipe broken** (🔄 IN PROGRESS 2026-03-06) |
+| ~~**BUG-1453**~~ | **P0** | ✅ **Production CSS preload + mobile Quick Sort swipe broken** (✅ DONE 2026-03-07) |
 | **BUG-1447** | **P2** | 👀 **Pin task disappears on Enter + task search + widget sync** (👀 REVIEW 2026-03-05) |
 | **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |
 | ~~**TASK-1445**~~ | **P2** | ✅ **Fix focus mode dropdown closing on hover + overlapping menus — UX research & redesign** (✅ DONE 2026-03-05) |

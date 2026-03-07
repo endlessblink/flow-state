@@ -6,7 +6,7 @@
       class="submenu"
       :style="style"
       @mouseenter="$emit('mouseenter')"
-      @mouseleave="$emit('mouseleave')"
+      @mouseleave="onMouseleave"
       @wheel.stop
     >
       <div class="submenu-scroll">
@@ -106,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { CSSProperties } from 'vue'
 import { Calendar, CalendarPlus, Check, X } from 'lucide-vue-next'
 import { NPopover, NDatePicker } from 'naive-ui'
@@ -127,6 +127,9 @@ const emit = defineEmits<{
 }>()
 
 const showDatePicker = ref(false)
+
+// Reset date picker when submenu hides
+watch(() => props.isVisible, (v) => { if (!v) showDatePicker.value = false })
 
 const activeDatePill = computed(() => {
   if (!props.currentDueDate) return null
@@ -160,6 +163,14 @@ const handleDatePickerSelect = (timestamp: number | null) => {
   if (!timestamp) return
   showDatePicker.value = false
   emit('pickDate', timestamp)
+}
+
+// Suppress mouseleave when the date picker popover is open —
+// NPopover renders outside the submenu div so cursor movement to it triggers mouseleave
+const onMouseleave = () => {
+  if (!showDatePicker.value) {
+    emit('mouseleave')
+  }
 }
 
 const emitMonthOffset = (months: number) => {
@@ -259,21 +270,20 @@ const emitMonthOffset = (months: number) => {
 
 .date-footer-btn {
   flex: 1;
-  background: var(--glass-bg-soft);
+  background: transparent;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: var(--text-xs);
-  padding: var(--space-1) 0;
+  padding: var(--space-1) var(--space-1);
   cursor: pointer;
   text-align: center;
   transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast);
-  backdrop-filter: blur(8px);
 }
 
 .date-footer-btn:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--glass-border-hover);
+  background: rgba(78, 205, 196, 0.1);
+  border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
 

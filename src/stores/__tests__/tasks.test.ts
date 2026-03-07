@@ -555,29 +555,29 @@ describe('TaskStore', () => {
   })
 
   describe('Date Movement', () => {
-    it('moves task to today', async () => {
+    it('moves task to today — sets dueDate only, no calendar instances', async () => {
       const store = useTaskStore()
       const task = await store.createTask({ title: 'Task' })
-      // BUG-1325: Use local date (not UTC) to match moveTaskToDate behavior
+      // BUG-1467: moveTaskToDate only sets dueDate, does NOT create calendar instances
       const _now = new Date()
       const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
 
       store.moveTaskToDate(task.id, 'today')
 
       const updatedTask = store.tasks.find(t => t.id === task.id)
-      expect(updatedTask?.instances?.length).toBe(1)
-      expect(updatedTask?.instances?.[0].scheduledDate).toBe(today)
+      expect(updatedTask?.dueDate).toBe(today)
+      expect(updatedTask?.instances?.length ?? 0).toBe(0)
     })
 
-    it('moves task to later', async () => {
+    it('moves task to later — sets dueDate only, no calendar instances', async () => {
       const store = useTaskStore()
       const task = await store.createTask({ title: 'Task' })
 
       store.moveTaskToDate(task.id, 'later')
 
       const updatedTask = store.tasks.find(t => t.id === task.id)
-      expect(updatedTask?.instances?.length).toBe(1)
-      expect(updatedTask?.instances?.[0].isLater).toBe(true)
+      expect(updatedTask?.dueDate).toBeDefined()
+      expect(updatedTask?.instances?.length ?? 0).toBe(0)
     })
 
     it('clears all instances when moved to no date', async () => {

@@ -1112,19 +1112,12 @@ export function useTaskOperations(
             case 'later': target = new Date(today); target.setDate(today.getDate() + 30); break
         }
 
-        const updates: Partial<Task> = { instances: [] }
+        const updates: Partial<Task> = {}
         if (target) {
             const targetDateStr = formatDateKey(target)
-            updates.instances = [{
-                id: `instance-${taskId}-${Date.now()}`,
-                scheduledDate: targetDateStr,
-                scheduledTime: '09:00',
-                duration: task.estimatedDuration || 60,
-                isLater: dateColumn === 'later'
-            }]
-
-            // BUG-1455: ALWAYS update dueDate when dragging between date columns.
-            // groupTasksByDate() groups by dueDate, not instances[].scheduledDate.
+            // BUG-1467: Only update dueDate — do NOT create calendar instances.
+            // Board date-column drag sets a deadline, not a calendar time slot.
+            // Calendar scheduling requires explicit user action (drag to calendar, "Start Now", or edit modal).
             updates.dueDate = targetDateStr
         }
         await updateTask(taskId, updates)

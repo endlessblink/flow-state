@@ -4221,6 +4221,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1465** | **P2** | **AI Features Audit — review all AI features, decide what to keep vs ditch (broken/no value)** |
 | **TASK-1466** | **P2** | **Start task without resetting timer — allow switching active task while timer runs (web + pinned), add reset option to KDE widget** |
 | **BUG-1462** | **P1** | **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** |
+| ~~**BUG-1467**~~ | **P2** | ~~**Tasks auto-appear on calendar at 9:00 AM when dragged to Board date columns — moveTaskToDate created calendar instances instead of only setting dueDate**~~ (✅ DONE 2026-03-07) |
 
 ---
 

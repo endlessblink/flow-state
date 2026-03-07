@@ -152,35 +152,46 @@ const cardStyle = computed(() => {
 })
 
 // Overlay opacities - all 4 directions
+// Dead zone: overlay only appears after 50px of movement so the card
+// visibly moves first. Max opacity 0.7 so card content stays visible.
+const OVERLAY_DEAD_ZONE = 50
+const OVERLAY_MAX = 0.7
+
+function overlayOpacity(distance: number): number {
+  if (distance <= OVERLAY_DEAD_ZONE) return 0
+  const range = 120 - OVERLAY_DEAD_ZONE
+  return Math.min((distance - OVERLAY_DEAD_ZONE) / range, 1) * OVERLAY_MAX
+}
+
 const leftOverlayOpacity = computed(() => {
   if (deltaX.value >= 0 || Math.abs(deltaY.value) > Math.abs(deltaX.value)) return 0
-  return Math.min(Math.abs(deltaX.value) / 120, 1) * 0.9
+  return overlayOpacity(Math.abs(deltaX.value))
 })
 
 const rightOverlayOpacity = computed(() => {
   if (deltaX.value <= 0 || Math.abs(deltaY.value) > Math.abs(deltaX.value)) return 0
-  return Math.min(deltaX.value / 120, 1) * 0.9
+  return overlayOpacity(deltaX.value)
 })
 
 const upOverlayOpacity = computed(() => {
   if (deltaY.value >= 0 || Math.abs(deltaX.value) > Math.abs(deltaY.value)) return 0
-  return Math.min(Math.abs(deltaY.value) / 120, 1) * 0.9
+  return overlayOpacity(Math.abs(deltaY.value))
 })
 
 const downOverlayOpacity = computed(() => {
   if (deltaY.value <= 0 || Math.abs(deltaX.value) > Math.abs(deltaY.value)) return 0
-  return Math.min(deltaY.value / 120, 1) * 0.9
+  return overlayOpacity(deltaY.value)
 })
 
-// Content blur effect when swiping (any direction)
+// Content blur - delayed to match overlay dead zone so you see the card move first
 const contentBlurStyle = computed(() => {
   const dominant = Math.max(Math.abs(deltaX.value), Math.abs(deltaY.value))
-  const progress = Math.min(dominant / 100, 1)
-  if (progress < 0.1) {
+  if (dominant < OVERLAY_DEAD_ZONE) {
     return { filter: 'none', opacity: 1 }
   }
-  const blurAmount = progress * 6 // Max 6px blur
-  const dimAmount = 1 - (progress * 0.4) // Dim to 60%
+  const progress = Math.min((dominant - OVERLAY_DEAD_ZONE) / (120 - OVERLAY_DEAD_ZONE), 1)
+  const blurAmount = progress * 4 // Max 4px blur (lighter)
+  const dimAmount = 1 - (progress * 0.3) // Dim to 70% (lighter)
   return {
     filter: `blur(${blurAmount}px)`,
     opacity: dimAmount,

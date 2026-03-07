@@ -179,7 +179,7 @@ button svg {
     margin-bottom: 0 !important;
 }
 
-.task-card:hover {
+.task-card:hover:not(.swiping) {
     transform: none !important;
     box-shadow: none !important;
     border-color: var(--glass-border) !important;
@@ -193,7 +193,7 @@ button svg {
     box-shadow: 0 0 0 2px var(--brand-primary), 0 0 12px rgba(78, 205, 196, 0.15) !important;
 }
 
-.task-card:active {
+.task-card:active:not(.swiping) {
     transform: scale(0.99) !important;
 }
 

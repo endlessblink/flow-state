@@ -375,8 +375,14 @@ const {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  overflow: hidden;
+  overflow: clip; /* BUG-1453: clip vertically (header/footer) but allow horizontal card escape during swipe */
+  overflow-x: visible;
+  scrollbar-width: none; /* BUG-1453: hide scrollbar from overflow-x during card drag */
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.mobile-quick-sort::-webkit-scrollbar {
+  display: none; /* BUG-1453: hide scrollbar for Safari/Chrome */
 }
 
 /* Grain texture overlay */
@@ -636,7 +642,8 @@ const {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: clip; /* Clip vertically but allow card to visually escape during swipe */
+  overflow-x: visible;
   z-index: var(--z-base);
 }
 
@@ -651,9 +658,14 @@ const {
   padding: var(--space-3) var(--space-4);
   padding-bottom: 0;
   overflow-y: auto; /* BUG-1406: Allow scroll to reach action buttons behind nav bar */
-  overflow-x: hidden;
+  overflow-x: visible; /* BUG-1453: Card must visually escape bounds during swipe drag */
+  scrollbar-width: none; /* BUG-1453: hide horizontal scrollbar during card drag */
   min-height: 0; /* Allow flex shrinking */
   touch-action: pan-y; /* BUG-1453: Prevent Android compositor from hijacking horizontal card swipes */
+}
+
+.sort-phase::-webkit-scrollbar {
+  display: none;
 }
 
 /* Process Flow Indicator - Shows sorting hierarchy */

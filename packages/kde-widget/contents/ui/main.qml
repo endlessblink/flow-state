@@ -575,8 +575,20 @@ PlasmoidItem {
         visible: false
 
         width: 500
-        // Dynamic height: base (title+subtitle+buttons+dismiss+margins=250) + per task (52+4=56)
-        height: 250 + Math.min(root.nannyTaskList.length, 5) * 56
+        // Dynamic height: base (title+subtitle+buttons+dismiss+margins=250) + task/header rows
+        height: 250 + nannyListHeight()
+
+        function nannyListHeight() {
+            var headers = 0
+            var tasks = 0
+            for (var i = 0; i < root.nannyTaskList.length; i++) {
+                if (root.nannyTaskList[i].isHeader) headers++
+                else tasks++
+                // Cap at ~5 visible task rows (headers don't count toward cap)
+                if (tasks >= 5) break
+            }
+            return headers * 32 + tasks * 56
+        }
         // x/y set programmatically in sendNannyNotification() to target widget's screen
 
         property string nannyMessage: ""
@@ -666,14 +678,72 @@ PlasmoidItem {
                         Repeater {
                             model: root.nannyTaskList.length
 
-                            delegate: Rectangle {
-                                id: nannyTaskRow
+                            delegate: Item {
                                 width: parent ? parent.width : 0
-                                height: 52
-                                radius: 10
-                                color: nannyTaskMouse.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.15) : "transparent"
+                                height: root.nannyTaskList[index] && root.nannyTaskList[index].isHeader ? nannyProjectHeader.height : nannyTaskRow.height
 
-                                property var taskData: root.nannyTaskList[index]
+                                property var itemData: root.nannyTaskList[index]
+
+                                // ===== Project Section Header =====
+                                Rectangle {
+                                    id: nannyProjectHeader
+                                    visible: itemData && itemData.isHeader === true
+                                    width: parent.width
+                                    height: 28
+                                    color: "transparent"
+
+                                    Row {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        anchors.left: parent.left
+                                        anchors.leftMargin: 8
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: 8
+                                        spacing: 6
+
+                                        Rectangle {
+                                            width: 8
+                                            height: 8
+                                            radius: 4
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            color: {
+                                                var c = (itemData && itemData.projectColor) ? itemData.projectColor : ""
+                                                if (c && c.charAt(0) === '#') return c
+                                                if (c) return "#" + c
+                                                return root.mutedColor
+                                            }
+                                        }
+
+                                        Text {
+                                            text: (itemData && itemData.projectName) ? itemData.projectName : ""
+                                            font.pixelSize: 11
+                                            font.bold: true
+                                            color: root.textColor
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+
+                                        Item {
+                                            width: nannyProjectHeader.width - parent.children[0].width - parent.children[1].implicitWidth - parent.spacing * 2 - 16
+                                            height: 1
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            Rectangle {
+                                                width: parent.width
+                                                height: 1
+                                                color: Qt.rgba(1, 1, 1, 0.08)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // ===== Task Row =====
+                                Rectangle {
+                                    id: nannyTaskRow
+                                    visible: !itemData || itemData.isHeader !== true
+                                    width: parent.width
+                                    height: 52
+                                    radius: 10
+                                    color: nannyTaskMouse.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.15) : "transparent"
+
+                                    property var taskData: itemData
 
                                 // X button to hide for today (visible on hover) — anchored to LEFT (RTL layout)
                                 Rectangle {
@@ -738,33 +808,12 @@ PlasmoidItem {
                                         horizontalAlignment: Text.AlignRight
                                     }
 
-                                    // Details row: project dot + name | priority | due date — right-aligned
+                                    // Details row: priority | due date — right-aligned (project shown in header now)
                                     Row {
                                         anchors.right: parent.right
                                         spacing: 8
                                         layoutDirection: Qt.RightToLeft
-                                        visible: nannyTaskRow.taskData && (nannyTaskRow.taskData.projectName !== "" || nannyTaskRow.taskData.priorityLabel !== "" || nannyTaskRow.taskData.dueDate !== "")
-
-                                        // Project dot + name
-                                        Row {
-                                            spacing: 4
-                                            visible: nannyTaskRow.taskData && nannyTaskRow.taskData.projectName !== ""
-                                            layoutDirection: Qt.RightToLeft
-
-                                            Rectangle {
-                                                width: 7
-                                                height: 7
-                                                radius: 3.5
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                color: (nannyTaskRow.taskData && nannyTaskRow.taskData.projectColor) ? nannyTaskRow.taskData.projectColor : root.workColor
-                                            }
-
-                                            Text {
-                                                text: (nannyTaskRow.taskData && nannyTaskRow.taskData.projectName) ? nannyTaskRow.taskData.projectName : ""
-                                                font.pixelSize: 11
-                                                color: root.mutedColor
-                                            }
-                                        }
+                                        visible: nannyTaskRow.taskData && (nannyTaskRow.taskData.priorityLabel !== "" || nannyTaskRow.taskData.dueDate !== "")
 
                                         Text {
                                             text: (nannyTaskRow.taskData && nannyTaskRow.taskData.priorityLabel) ? nannyTaskRow.taskData.priorityLabel : ""
@@ -824,6 +873,7 @@ PlasmoidItem {
                                         }
                                         nannyPopup.visible = false
                                     }
+                                }
                                 }
                             }
                         }
@@ -4736,8 +4786,39 @@ PlasmoidItem {
             }
         }
 
-        root.nannyTaskList = combined
-        if (root.debugLogging) console.log("[NANNY-LIST] Built", combined.length, "items:", combined.length - Object.keys(pinnedTitles).length, "recent +", Object.keys(pinnedTitles).length, "pinned")
+        // 3. Group by project and inject header items
+        // Sort tasks by projectName (keep relative order within each project)
+        combined.sort(function(a, b) {
+            var pA = a.projectName || ""
+            var pB = b.projectName || ""
+            // "No Project" (empty) goes last
+            if (pA === "" && pB !== "") return 1
+            if (pA !== "" && pB === "") return -1
+            if (pA < pB) return -1
+            if (pA > pB) return 1
+            return 0
+        })
+
+        // Inject header items before each project group
+        var grouped = []
+        var lastProject = null
+        for (var g = 0; g < combined.length; g++) {
+            var projName = combined[g].projectName || ""
+            var projColor = combined[g].projectColor || ""
+            var groupKey = projName || "__no_project__"
+            if (groupKey !== lastProject) {
+                grouped.push({
+                    isHeader: true,
+                    projectName: projName || "No Project",
+                    projectColor: projColor
+                })
+                lastProject = groupKey
+            }
+            grouped.push(combined[g])
+        }
+
+        root.nannyTaskList = grouped
+        if (root.debugLogging) console.log("[NANNY-LIST] Built", combined.length, "tasks +", (grouped.length - combined.length), "headers =", grouped.length, "items")
     }
 
     function hideNannyTask(itemId) {

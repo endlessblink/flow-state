@@ -453,13 +453,39 @@ PlasmoidItem {
                     anchors.centerIn: parent
                     spacing: 28
 
-                    // Icon
-                    Kirigami.Icon {
-                        source: root.lastCompletedWasWork ? "preferences-desktop-screensaver" : "chronometer"
+                    // Icon — styled emoji container (matches Storybook FullScreenOverlay)
+                    Rectangle {
                         Layout.preferredWidth: 72
                         Layout.preferredHeight: 72
                         Layout.alignment: Qt.AlignHCenter
-                        color: root.lastCompletedWasWork ? root.breakColor : root.workColor
+                        radius: 16
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Qt.rgba(
+                                root.lastCompletedWasWork ? root.breakColor.r : root.workColor.r,
+                                root.lastCompletedWasWork ? root.breakColor.g : root.workColor.g,
+                                root.lastCompletedWasWork ? root.breakColor.b : root.workColor.b,
+                                0.27
+                            ) }
+                            GradientStop { position: 1.0; color: Qt.rgba(
+                                root.lastCompletedWasWork ? root.breakColor.r : root.workColor.r,
+                                root.lastCompletedWasWork ? root.breakColor.g : root.workColor.g,
+                                root.lastCompletedWasWork ? root.breakColor.b : root.workColor.b,
+                                0.13
+                            ) }
+                        }
+                        border.width: 2
+                        border.color: Qt.rgba(
+                            root.lastCompletedWasWork ? root.breakColor.r : root.workColor.r,
+                            root.lastCompletedWasWork ? root.breakColor.g : root.workColor.g,
+                            root.lastCompletedWasWork ? root.breakColor.b : root.workColor.b,
+                            0.4
+                        )
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.lastCompletedWasWork ? "🛌" : "⏱"
+                            font.pixelSize: 36
+                        }
                     }
 
                     // Title
@@ -2256,13 +2282,13 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     spacing: 6
 
-                    // Filter dropdown - BUG-1121: PlasmaComponents for popup + custom styling
+                    // Filter dropdown - glass morphism popup (QQC2)
                     Text {
                         text: "Filter:"
                         font.pixelSize: 9
                         color: root.mutedColor
                     }
-                    PlasmaComponents.ComboBox {
+                    QQC2.ComboBox {
                         id: filterCombo
                         Layout.preferredWidth: 85
                         model: ["All", "Todo", "Progress", "On Canvas"]
@@ -2275,7 +2301,6 @@ PlasmoidItem {
                             root.fetchTasks()
                         }
 
-                        // Glass morphism background
                         background: Rectangle {
                             implicitWidth: 85
                             implicitHeight: 26
@@ -2302,15 +2327,59 @@ PlasmoidItem {
                             font.pixelSize: 10
                             color: root.mutedColor
                         }
+
+                        popup: QQC2.Popup {
+                            y: filterCombo.height
+                            width: filterCombo.width
+                            padding: 2
+                            background: Rectangle {
+                                color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                border.width: 1
+                                border.color: Qt.rgba(1, 1, 1, 0.12)
+                                radius: 4
+                            }
+                            contentItem: Column {
+                                Repeater {
+                                    model: filterCombo.model
+                                    Rectangle {
+                                        width: filterCombo.width - 4
+                                        height: 28
+                                        radius: 2
+                                        color: fOptMA.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2) : "transparent"
+
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 8
+                                            text: modelData
+                                            font.pixelSize: 11
+                                            color: fOptMA.containsMouse ? "#FFFFFF" : root.textColor
+                                        }
+
+                                        MouseArea {
+                                            id: fOptMA
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                filterCombo.currentIndex = index
+                                                filterCombo.activated(index)
+                                                filterCombo.popup.close()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    // Sort dropdown - BUG-1121: PlasmaComponents for popup + custom styling
+                    // Sort dropdown - glass morphism popup (QQC2)
                     Text {
                         text: "Sort:"
                         font.pixelSize: 9
                         color: root.mutedColor
                     }
-                    PlasmaComponents.ComboBox {
+                    QQC2.ComboBox {
                         id: sortCombo
                         Layout.preferredWidth: 85
                         model: ["Newest", "Oldest", "A-Z", "Priority", "Canvas", "Project"]
@@ -2325,7 +2394,6 @@ PlasmoidItem {
                             root.fetchTasks()
                         }
 
-                        // Glass morphism background
                         background: Rectangle {
                             implicitWidth: 85
                             implicitHeight: 26
@@ -2351,6 +2419,50 @@ PlasmoidItem {
                             text: "▾"
                             font.pixelSize: 10
                             color: root.mutedColor
+                        }
+
+                        popup: QQC2.Popup {
+                            y: sortCombo.height
+                            width: sortCombo.width
+                            padding: 2
+                            background: Rectangle {
+                                color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                border.width: 1
+                                border.color: Qt.rgba(1, 1, 1, 0.12)
+                                radius: 4
+                            }
+                            contentItem: Column {
+                                Repeater {
+                                    model: sortCombo.model
+                                    Rectangle {
+                                        width: sortCombo.width - 4
+                                        height: 28
+                                        radius: 2
+                                        color: soOptMA.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2) : "transparent"
+
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 8
+                                            text: modelData
+                                            font.pixelSize: 11
+                                            color: soOptMA.containsMouse ? "#FFFFFF" : root.textColor
+                                        }
+
+                                        MouseArea {
+                                            id: soOptMA
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                sortCombo.currentIndex = index
+                                                sortCombo.activated(index)
+                                                sortCombo.popup.close()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 

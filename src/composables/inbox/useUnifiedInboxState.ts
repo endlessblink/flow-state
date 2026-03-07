@@ -127,11 +127,11 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             }
 
             // 3. isInInbox gate — both inboxes only show tasks flagged as inbox
-            // TASK-1412: When calendar inbox uses canvasOrder sort, also include tasks
-            // that are on the canvas (have canvasPosition + parentId) even if not flagged
-            // as inbox. This lets the sort reflect actual canvas layout.
-            const isOnCanvas = !!task.canvasPosition && !!task.parentId
-            if (!task.isInInbox && !(props.context === 'calendar' && sortBy.value === 'canvasOrder' && isOnCanvas)) {
+            // BUG-1481: Calendar inbox should show canvas tasks regardless of sort order,
+            // not just when canvasOrder sort is active. Tasks on the canvas are real tasks
+            // that belong in the calendar inbox (unless scheduled on the calendar grid).
+            const isOnCanvas = !!task.canvasPosition
+            if (!task.isInInbox && !(props.context === 'calendar' && isOnCanvas)) {
                 return false
             }
 

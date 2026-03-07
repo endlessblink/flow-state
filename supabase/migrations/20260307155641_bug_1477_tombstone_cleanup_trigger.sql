@@ -11,7 +11,12 @@ CREATE OR REPLACE FUNCTION on_tombstone_cleanup_task()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.entity_type = 'task' THEN
-        DELETE FROM tasks WHERE id = NEW.entity_id::uuid;
+        BEGIN
+            DELETE FROM tasks WHERE id = NEW.entity_id::uuid;
+        EXCEPTION WHEN OTHERS THEN
+            -- Row already deleted by the app in same transaction — safe to ignore
+            NULL;
+        END;
     END IF;
     RETURN NEW;
 END;

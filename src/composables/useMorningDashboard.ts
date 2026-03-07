@@ -78,6 +78,19 @@ export function useMorningDashboard() {
   // --- Stage ---
   const stage = ref<MorningStage>('pick')
 
+  // --- Expanded groups (for "Show more" in task pool) ---
+  const expandedGroups = ref<Set<string>>(new Set())
+
+  function toggleGroupExpanded(key: string) {
+    const next = new Set(expandedGroups.value)
+    if (next.has(key)) {
+      next.delete(key)
+    } else {
+      next.add(key)
+    }
+    expandedGroups.value = next
+  }
+
   // --- Big 3 State ---
   const big3Slots = ref<Big3Slot[]>([
     { taskId: null, title: '', completed: false },
@@ -220,7 +233,6 @@ export function useMorningDashboard() {
         return t.dueDate.slice(0, 10) < todayStr
       })
       .sort(dueDateSort)
-      .slice(0, 5)
     overdueList.forEach((t) => seen.add(t.id))
 
     // 2. Today
@@ -230,7 +242,6 @@ export function useMorningDashboard() {
         return isTodayTask(t)
       })
       .sort(dueDateSort)
-      .slice(0, 5)
     todayList.forEach((t) => seen.add(t.id))
 
     // 3. In progress
@@ -240,7 +251,6 @@ export function useMorningDashboard() {
         return t.progress > 0
       })
       .sort(dueDateSort)
-      .slice(0, 3)
     inProgressList.forEach((t) => seen.add(t.id))
 
     // 4. High priority
@@ -250,7 +260,6 @@ export function useMorningDashboard() {
         return t.priority === 'high'
       })
       .sort(dueDateSort)
-      .slice(0, 5)
     highPriorityList.forEach((t) => seen.add(t.id))
 
     // 5. Other (remaining non-done)
@@ -260,7 +269,6 @@ export function useMorningDashboard() {
         return true
       })
       .sort(dueDateSort)
-      .slice(0, 5)
 
     return {
       overdue: {
@@ -499,6 +507,8 @@ export function useMorningDashboard() {
     // Suggestions
     suggestedTasks,
     groupedTasks,
+    expandedGroups,
+    toggleGroupExpanded,
 
     // News
     newsItems,

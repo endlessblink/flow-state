@@ -1,5 +1,5 @@
 <template>
-  <div class="app-layout" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }" :dir="direction">
+  <div class="app-layout" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }" :dir="direction" @dragover.prevent @dragenter.prevent>
     <!-- LEFT SIDEBAR NAVIGATION -->
     <AppSidebar ref="appSidebar" class="sidebar" />
 

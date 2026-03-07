@@ -1,5 +1,5 @@
 <template>
-  <div class="all-tasks-view">
+  <div class="all-tasks-view" @dragover.prevent @dragenter.prevent>
     <!-- Mobile View -->
     <MobileInboxView v-if="isMobile" />
 
@@ -40,7 +40,7 @@
       </div>
 
       <!-- Content Area -->
-      <div class="tasks-container">
+      <div class="tasks-container" @dragover.prevent>
         <!-- List Mode -->
         <TaskList
           v-if="catalogViewMode === 'list'"
@@ -571,12 +571,16 @@ const handleBatchEditApplied = () => {
   taskListRef.value?.clearSelection()
 }
 
-const handleDeleteSelected = async (taskIds: string[]) => {
+const handleDeleteSelected = (taskIds: string[]) => {
   const count = taskIds.length
-  if (confirm(`Delete ${count} selected task${count !== 1 ? 's' : ''}? You can press Ctrl+Z to undo.`)) {
+  confirmTitle.value = 'Delete Selected Tasks'
+  confirmMessage.value = `Delete ${count} selected task${count !== 1 ? 's' : ''}? You can press Ctrl+Z to undo.`
+  confirmText.value = 'Delete'
+  confirmActionFn.value = async () => {
     await bulkDeleteTasksWithUndo(taskIds)
     taskListRef.value?.clearSelection()
   }
+  showConfirmModal.value = true
 }
 
 // Debug function to test toggle functionality

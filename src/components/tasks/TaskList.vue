@@ -1,5 +1,5 @@
 <template>
-  <div class="task-list">
+  <div class="task-list" @dragover.prevent>
     <!-- Column Headers / Bulk Actions Bar -->
     <div class="column-headers" :class="{ 'column-headers--selection': selectionMode }">
       <!-- Select-all checkbox always visible -->
@@ -54,8 +54,12 @@
       <div
         v-if="groupBy !== 'none'"
         class="group-header"
+        :class="{ 'group-header--drop-target': isDragging && headerDropTarget === group.key }"
         :style="(group.indent || 0) > 0 ? { paddingLeft: `${12 + (group.indent || 0) * 24}px` } : undefined"
         @click="toggleGroupExpand(group.key)"
+        @dragover.prevent="onHeaderDragOver($event, group)"
+        @dragleave="onHeaderDragLeave($event)"
+        @drop.prevent="onHeaderDrop($event, group)"
       >
         <label class="group-select-checkbox" @click.stop>
           <input
@@ -88,7 +92,7 @@
         >
           <Zap :size="14" />
         </button>
-        <span class="group-drop-hint">
+        <span v-if="isDragging" class="group-drop-hint">
           <ArrowDownToLine :size="14" />
         </span>
       </div>
@@ -272,6 +276,36 @@ const dropIndicator = ref<{ groupKey: string | null; y: number; insertIndex: num
 // --- Drag to Group Header ---
 const { isDragging, dragData, endDrag } = useDragAndDrop()
 const taskStore = useTaskStore()
+
+// TASK-1476: Allow dropping on collapsed group headers
+const headerDropTarget = ref<string | null>(null)
+
+const onHeaderDragOver = (event: DragEvent, group: TaskGroup) => {
+  if (!isDragging.value) return
+  headerDropTarget.value = group.key
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+const onHeaderDragLeave = (event: DragEvent) => {
+  const related = event.relatedTarget as HTMLElement | null
+  const container = event.currentTarget as HTMLElement
+  if (!related || !container.contains(related)) {
+    headerDropTarget.value = null
+  }
+}
+
+const onHeaderDrop = (event: DragEvent, group: TaskGroup) => {
+  event.stopPropagation()
+  headerDropTarget.value = null
+
+  const taskId = dragData.value?.taskId
+  if (!taskId) return
+
+  applyGroupTransfer(taskId, group)
+  endDrag()
+}
 
 // BUG-1415: When grouped, dropping a task on another task should transfer it
 // to the target's group (updating dueDate/status/priority/project) instead of
@@ -876,23 +910,12 @@ defineExpose({
   border-color: var(--text-muted);
 }
 
-/* Drop hint icon — visible only during active drag */
+/* Drop hint icon — visible only during active drag (controlled by v-if) */
 .group-drop-hint {
-  display: none;
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-:global(body.dragging-active) .group-drop-hint {
   display: flex;
   align-items: center;
-  animation: pulse-hint 1.5s ease-in-out infinite;
-}
-
-
-@keyframes pulse-hint {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.8; }
+  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
 /* TASK-1455: Native DnD drop indicator */

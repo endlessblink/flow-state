@@ -83,6 +83,9 @@ create_session() {
     return 1
 }
 
+# BUG-1462: Kill any previous notify-send still waiting for user action
+pkill -f 'notify-send.*FlowState' 2>/dev/null || true
+
 # Show notification and handle button clicks in background
 (
     # notify-send --action blocks until user clicks, returns action name
@@ -95,19 +98,17 @@ create_session() {
         "action1")
             # Start Break or Work depending on context
             if [ "$IS_WORK" = "true" ]; then
-                # Was work, start break
                 create_session "true" "$BREAK_DURATION"
             else
-                # Was break, start work
                 create_session "false" "$WORK_DURATION"
             fi
             ;;
         "action2")
             # +5 min - continue same type
             if [ "$IS_WORK" = "true" ]; then
-                create_session "false" "300"  # 5 more min of work
+                create_session "false" "300"
             else
-                create_session "true" "300"   # 5 more min of break
+                create_session "true" "300"
             fi
             ;;
     esac

@@ -227,7 +227,10 @@
             <div class="pill-group pill-scroll">
               <button class="pill" :class="{ active: isDueToday }" @click="setQuickDate('today')">Today</button>
               <button class="pill" :class="{ active: isDueTomorrow }" @click="setQuickDate('tomorrow')">+1</button>
-              <button class="pill" @click="setQuickDate('nextweek')">+7</button>
+              <button class="pill" @click="setQuickDate('in3days')">+3</button>
+              <button class="pill" :class="{ active: isDueNextWeek }" @click="setQuickDate('nextweek')">+7</button>
+              <button class="pill" @click="setQuickDate('in2weeks')">+14</button>
+              <button class="pill" @click="setQuickDate('in30days')">+30</button>
               <button class="pill clear" :class="{ active: !currentTask.dueDate }" @click="setQuickDate('clear')">
                 <X :size="14" />
               </button>
@@ -236,6 +239,7 @@
 
           <!-- Project Selector -->
           <CategorySelector
+            :compact="true"
             @select="handleCategorize"
             @skip="handleSkip"
             @create-new="showProjectModal = true"
@@ -436,13 +440,22 @@ const isDueTomorrow = computed(() => {
   return d.getTime() === tomorrow.getTime()
 })
 
+const isDueNextWeek = computed(() => {
+  if (!currentTask.value?.dueDate) return false
+  const d = new Date(currentTask.value.dueDate)
+  const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7)
+  nextWeek.setHours(0,0,0,0); d.setHours(0,0,0,0)
+  return d.getTime() === nextWeek.getTime()
+})
+
 function setQuickDate(preset: string) {
   const d = new Date(); d.setHours(0,0,0,0)
   if (preset === 'today') { /* already today */ }
   else if (preset === 'tomorrow') d.setDate(d.getDate() + 1)
-  else if (preset === 'nextweek') {
-    d.setDate(d.getDate() + 7)
-  }
+  else if (preset === 'in3days') d.setDate(d.getDate() + 3)
+  else if (preset === 'nextweek') d.setDate(d.getDate() + 7)
+  else if (preset === 'in2weeks') d.setDate(d.getDate() + 14)
+  else if (preset === 'in30days') d.setDate(d.getDate() + 30)
   else if (preset === 'clear') {
     handleTaskUpdate({ dueDate: '' })
     return
@@ -478,7 +491,6 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   if (event.key === 'ArrowLeft') { event.preventDefault(); requestDelete() }
   if (event.key === 'ArrowUp') { event.preventDefault(); handleEditTask() }
   if (event.key === 'ArrowDown') { event.preventDefault(); handleSkip() }
-  if (!isAIBusy.value && (event.key === 'a' || event.key === 'A')) { event.preventDefault(); handleAISuggest() }
 }
 
 function formatTime(ms: number): string {
@@ -537,7 +549,7 @@ const currentTaskProject = computed(() => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--glass-border-light);
   flex-shrink: 0;
 }
@@ -610,6 +622,7 @@ const currentTaskProject = computed(() => {
   height: var(--space-0_5);
   background: var(--glass-bg-weak);
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .glow-progress-fill {
@@ -637,7 +650,8 @@ const currentTaskProject = computed(() => {
 .tab-navigation {
   display: flex;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-4) var(--space-6);
+  padding-left: var(--space-8);
   flex-shrink: 0;
 }
 
@@ -711,8 +725,8 @@ const currentTaskProject = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-8);
   max-width: 640px;
   margin: 0 auto;
   width: 100%;
@@ -724,7 +738,7 @@ const currentTaskProject = computed(() => {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-1_5);
-  padding: var(--space-2_5) var(--space-4);
+  padding: var(--space-3) var(--space-5);
   background: var(--glass-bg-subtle);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -824,7 +838,7 @@ const currentTaskProject = computed(() => {
 .card-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-6);
   width: 100%;
 }
 
@@ -876,7 +890,7 @@ const currentTaskProject = computed(() => {
    ================================ */
 .compact-actions {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-3);
   width: 100%;
 }
 
@@ -1098,7 +1112,7 @@ const currentTaskProject = computed(() => {
   align-items: center;
   justify-content: center;
   gap: var(--space-1_5);
-  padding: var(--space-2_5) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--glass-bg-subtle);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);

@@ -176,9 +176,9 @@ async function handleSubmit() {
     // Clear form
     email.value = ''
     password.value = ''
-  } catch (_error: unknown) {
-    // Error message is already set by auth store
-    errorMessage.value = authStore.errorMessage || 'Sign in failed. Please try again.'
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    errorMessage.value = msg || authStore.errorMessage || 'Sign in failed. Please try again.'
   } finally {
     isLoading.value = false
   }

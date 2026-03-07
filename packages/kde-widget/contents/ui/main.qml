@@ -72,6 +72,8 @@ PlasmoidItem {
     // ===== NANNY POPUP TASK LIST (TASK-1475) =====
     // Combined list: pinned tasks first, then recent non-pinned tasks (up to 5 total)
     property var nannyTaskList: []
+    property var nannyHiddenToday: ({})   // taskId -> true, reset daily
+    property int nannyHiddenDate: 0       // day-of-year when hidden list was set
 
     // ===== PROJECT STATE (TASK-1454) =====
     property var projects: ({})          // Map of project_id -> {name, color, colorType}
@@ -206,6 +208,13 @@ PlasmoidItem {
     // BUG-1112: KDE system notification with FUNCTIONAL action buttons + sound
     // THIS IS THE ONLY NOTIFICATION - no in-widget popup, no overlay
     // Buttons call Supabase API to start next session
+    // BUG-1462: Dismiss any pending system notification (notify-send) to prevent duplicate actions
+    function dismissSystemNotification() {
+        var cmd = "pkill -f 'notify-send.*FlowState' 2>/dev/null; true"
+        executableDataSource.connectSource(cmd)
+        console.log("[NOTIFY] Dismissed pending system notifications")
+    }
+
     function showTimerNotification(wasWorkSession) {
         var title = wasWorkSession ? "Work session complete!" : "Break is over!"
         var body = wasWorkSession ? "Ready for a break?" : "Ready to focus?"
@@ -400,6 +409,7 @@ PlasmoidItem {
                 onClicked: {
                     fullScreenOverlay.visible = false
                     root.sessionJustCompleted = false
+                    root.dismissSystemNotification()
                 }
             }
 
@@ -435,6 +445,7 @@ PlasmoidItem {
                     onClicked: {
                         fullScreenOverlay.visible = false
                         root.sessionJustCompleted = false
+                        root.dismissSystemNotification()
                     }
                 }
 
@@ -508,6 +519,7 @@ PlasmoidItem {
                                 onClicked: {
                                     fullScreenOverlay.visible = false
                                     root.sessionJustCompleted = false
+                                    root.dismissSystemNotification()
                                     root.startNewSession(root.lastCompletedWasWork)
                                 }
                             }
@@ -535,6 +547,7 @@ PlasmoidItem {
                                 onClicked: {
                                     fullScreenOverlay.visible = false
                                     root.sessionJustCompleted = false
+                                    root.dismissSystemNotification()
                                     root.postponeTimer(5 * 60)
                                 }
                             }
@@ -562,7 +575,8 @@ PlasmoidItem {
         visible: false
 
         width: 500
-        height: 380
+        // Dynamic height: base (title+subtitle+buttons+dismiss+margins=250) + per task (52+4=56)
+        height: 250 + Math.min(root.nannyTaskList.length, 5) * 56
         // x/y set programmatically in sendNannyNotification() to target widget's screen
 
         property string nannyMessage: ""
@@ -634,10 +648,19 @@ PlasmoidItem {
                         Layout.fillWidth: true
                     }
 
-                    // Task list — TASK-1475: pinned + recent tasks combined
-                    Column {
+                    // Task list — TASK-1475: pinned + recent tasks combined with details
+                    // Flickable makes the list scrollable when tasks exceed available space
+                    Flickable {
                         visible: root.nannyTaskList.length > 0
                         Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        contentHeight: nannyTaskColumn.height
+                        clip: true
+                        flickableDirection: Flickable.VerticalFlick
+
+                    Column {
+                        id: nannyTaskColumn
+                        width: parent.width
                         spacing: 4
 
                         Repeater {
@@ -646,33 +669,136 @@ PlasmoidItem {
                             delegate: Rectangle {
                                 id: nannyTaskRow
                                 width: parent ? parent.width : 0
-                                height: 44
+                                height: 52
                                 radius: 10
                                 color: nannyTaskMouse.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.15) : "transparent"
 
                                 property var taskData: root.nannyTaskList[index]
 
-                                Row {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 12
-                                    anchors.rightMargin: 12
-                                    spacing: 8
+                                // X button to hide for today (visible on hover) — anchored to LEFT (RTL layout)
+                                Rectangle {
+                                    id: hideBtn
+                                    width: 22
+                                    height: 22
+                                    radius: 11
+                                    z: 2
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 6
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: nannyTaskMouse.containsMouse
+                                    color: hideBtnMouse.containsMouse ? Qt.rgba(1, 0.4, 0.4, 0.3) : Qt.rgba(1, 1, 1, 0.1)
 
                                     Text {
-                                        text: ((nannyTaskRow.taskData && nannyTaskRow.taskData.isPinned) ? "\uD83D\uDCCC " : "\uD83C\uDF45 ") + ((nannyTaskRow.taskData && nannyTaskRow.taskData.title) ? nannyTaskRow.taskData.title.substring(0, 30) : "")
-                                        font.pixelSize: 14
-                                        color: root.textColor
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        elide: Text.ElideRight
-                                        width: parent.width - playIcon.width - parent.spacing - parent.anchors.leftMargin - parent.anchors.rightMargin
+                                        anchors.centerIn: parent
+                                        text: "\u2715"
+                                        font.pixelSize: 11
+                                        color: hideBtnMouse.containsMouse ? "#FF6B6B" : root.mutedColor
                                     }
 
+                                    MouseArea {
+                                        id: hideBtnMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            var item = root.nannyTaskList[index]
+                                            root.hideNannyTask(item.isPinned ? item.pinId : item.taskId)
+                                        }
+                                    }
+                                }
+
+                                // Play button — anchored to LEFT after X button area
+                                Text {
+                                    id: playIcon
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 32
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    font.pixelSize: 16
+                                    text: "\u25B6"
+                                    color: root.workColor
+                                }
+
+                                // Title + details — anchored to RIGHT (RTL natural reading)
+                                Column {
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 12
+                                    anchors.left: playIcon.right
+                                    anchors.leftMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 2
+
+                                    // Title with pin/tomato icon — right-aligned, clipped
                                     Text {
-                                        id: playIcon
-                                        font.pixelSize: 16
-                                        text: "\u25B6"
-                                        color: root.workColor
-                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: ((nannyTaskRow.taskData && nannyTaskRow.taskData.title) ? nannyTaskRow.taskData.title : "") + ((nannyTaskRow.taskData && nannyTaskRow.taskData.isPinned) ? " \uD83D\uDCCC" : " \uD83C\uDF45")
+                                        font.pixelSize: 13
+                                        color: root.textColor
+                                        elide: Text.ElideLeft
+                                        clip: true
+                                        width: parent.width
+                                        horizontalAlignment: Text.AlignRight
+                                    }
+
+                                    // Details row: project dot + name | priority | due date — right-aligned
+                                    Row {
+                                        anchors.right: parent.right
+                                        spacing: 8
+                                        layoutDirection: Qt.RightToLeft
+                                        visible: nannyTaskRow.taskData && (nannyTaskRow.taskData.projectName !== "" || nannyTaskRow.taskData.priorityLabel !== "" || nannyTaskRow.taskData.dueDate !== "")
+
+                                        // Project dot + name
+                                        Row {
+                                            spacing: 4
+                                            visible: nannyTaskRow.taskData && nannyTaskRow.taskData.projectName !== ""
+                                            layoutDirection: Qt.RightToLeft
+
+                                            Rectangle {
+                                                width: 7
+                                                height: 7
+                                                radius: 3.5
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                color: (nannyTaskRow.taskData && nannyTaskRow.taskData.projectColor) ? nannyTaskRow.taskData.projectColor : root.workColor
+                                            }
+
+                                            Text {
+                                                text: (nannyTaskRow.taskData && nannyTaskRow.taskData.projectName) ? nannyTaskRow.taskData.projectName : ""
+                                                font.pixelSize: 11
+                                                color: root.mutedColor
+                                            }
+                                        }
+
+                                        Text {
+                                            text: (nannyTaskRow.taskData && nannyTaskRow.taskData.priorityLabel) ? nannyTaskRow.taskData.priorityLabel : ""
+                                            font.pixelSize: 10
+                                            font.bold: true
+                                            color: (nannyTaskRow.taskData && nannyTaskRow.taskData.priorityColor) ? nannyTaskRow.taskData.priorityColor : root.mutedColor
+                                            visible: text !== ""
+                                        }
+
+                                        Text {
+                                            text: {
+                                                if (!nannyTaskRow.taskData || !nannyTaskRow.taskData.dueDate) return ""
+                                                var d = new Date(nannyTaskRow.taskData.dueDate)
+                                                if (isNaN(d.getTime())) return ""
+                                                var now = new Date()
+                                                var isToday = d.toDateString() === now.toDateString()
+                                                var tomorrow = new Date(now)
+                                                tomorrow.setDate(tomorrow.getDate() + 1)
+                                                var isTomorrow = d.toDateString() === tomorrow.toDateString()
+                                                if (isToday) return "Today \uD83D\uDCC5"
+                                                if (isTomorrow) return "Tomorrow \uD83D\uDCC5"
+                                                return (d.getDate()) + "/" + (d.getMonth() + 1) + " \uD83D\uDCC5"
+                                            }
+                                            font.pixelSize: 10
+                                            color: {
+                                                if (!nannyTaskRow.taskData || !nannyTaskRow.taskData.dueDate) return root.mutedColor
+                                                var d = new Date(nannyTaskRow.taskData.dueDate)
+                                                var now = new Date()
+                                                if (d < now && d.toDateString() !== now.toDateString()) return "#FF6B6B"
+                                                if (d.toDateString() === now.toDateString()) return root.workColor
+                                                return root.mutedColor
+                                            }
+                                            visible: text !== ""
+                                        }
                                     }
                                 }
 
@@ -682,11 +808,12 @@ PlasmoidItem {
                                     cursorShape: Qt.PointingHandCursor
                                     hoverEnabled: true
                                     onClicked: {
+                                        // Don't fire if X button was clicked
+                                        if (hideBtnMouse.containsMouse) return
                                         var item = root.nannyTaskList[index]
                                         if (item.isPinned) {
                                             root.selectPinnedTask(item)
                                         } else {
-                                            // Direct task — start session directly
                                             if (root.hasActiveSession && root.isRunning) {
                                                 if (root.currentTaskId !== item.taskId) {
                                                     root.switchTaskForSession(item.taskId)
@@ -700,9 +827,10 @@ PlasmoidItem {
                                 }
                             }
                         }
-                    }
+                    } // Column
+                    } // Flickable
 
-                    // Spacer
+                    // Push buttons to bottom
                     Item { Layout.fillHeight: true }
 
                     // Bottom buttons
@@ -3561,6 +3689,13 @@ PlasmoidItem {
                 root.hasActiveSession = true
                 root.sessionJustCompleted = false  // Clear completion state when active session found
 
+                // BUG-1462: Auto-dismiss overlay + notification when new session detected (e.g. from notify.sh button)
+                if (fullScreenOverlay.visible) {
+                    fullScreenOverlay.visible = false
+                    root.dismissSystemNotification()
+                    console.log("[SYNC] Auto-dismissed overlay — new session detected")
+                }
+
                 // BUG-1122: Check for stale leadership and take over if needed
                 var widgetIsLeader = s.device_leader_id === "kde-widget"
                 var leaderIsStale = false
@@ -4503,18 +4638,73 @@ PlasmoidItem {
     // ===== NANNY TASK LIST BUILDER (TASK-1475) =====
 
     function buildNannyTaskList() {
+        // Reset hidden list if day changed
+        var today = new Date()
+        var dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000)
+        if (dayOfYear !== root.nannyHiddenDate) {
+            root.nannyHiddenToday = ({})
+            root.nannyHiddenDate = dayOfYear
+        }
+
         var combined = []
         var pinnedTitles = {}
         var maxItems = 5
 
-        // 1. Add pinned tasks first (with isPinned flag)
+        // Helper: look up task details from root.tasks by title match
+        function findTaskByTitle(title) {
+            for (var k = 0; k < root.tasks.length; k++) {
+                if (root.tasks[k].title && root.tasks[k].title.toLowerCase() === title.toLowerCase()) {
+                    return root.tasks[k]
+                }
+            }
+            return null
+        }
+
+        // Helper: get project info
+        function getProjectInfo(projectId) {
+            if (!projectId || !root.projects[projectId]) return { name: "", color: "" }
+            var p = root.projects[projectId]
+            return { name: p.name || "", color: p.color || "" }
+        }
+
+        // Helper: format priority
+        function priorityLabel(p) {
+            if (p === "high") return "P1"
+            if (p === "medium") return "P2"
+            if (p === "low") return "P3"
+            return ""
+        }
+
+        function priorityColor(p) {
+            if (p === "high") return "#FF6B6B"
+            if (p === "medium") return "#FFD93D"
+            if (p === "low") return "#6BCB77"
+            return root.mutedColor
+        }
+
+        // 1. Add pinned tasks first (with details from matching task)
         for (var i = 0; i < root.pinnedTasks.length && combined.length < maxItems; i++) {
             var pin = root.pinnedTasks[i]
+            // Skip if hidden today
+            if (root.nannyHiddenToday[pin.id]) continue
+
+            var matchedTask = findTaskByTitle(pin.title)
+            var proj = getProjectInfo(pin.project_id || (matchedTask ? matchedTask.project_id : ""))
+            var prio = matchedTask ? matchedTask.priority : ""
+            var dueDate = matchedTask ? matchedTask.due_date : ""
+
             combined.push({
                 title: pin.title,
-                taskId: pin.id,
+                taskId: matchedTask ? matchedTask.id : pin.id,
+                pinId: pin.id,
                 isPinned: true,
-                source: "pinned"
+                source: "pinned",
+                projectName: proj.name,
+                projectColor: proj.color,
+                priority: prio,
+                priorityLabel: priorityLabel(prio),
+                priorityColor: priorityColor(prio),
+                dueDate: dueDate
             })
             pinnedTitles[pin.title.toLowerCase()] = true
         }
@@ -4526,18 +4716,36 @@ PlasmoidItem {
                 if (!task || !task.title) continue
                 if (pinnedTitles[task.title.toLowerCase()]) continue
                 if (task.status === "done") continue
+                if (root.nannyHiddenToday[task.id]) continue
+
+                var tProj = getProjectInfo(task.project_id)
 
                 combined.push({
                     title: task.title,
                     taskId: task.id,
+                    pinId: "",
                     isPinned: false,
-                    source: "recent"
+                    source: "recent",
+                    projectName: tProj.name,
+                    projectColor: tProj.color,
+                    priority: task.priority || "",
+                    priorityLabel: priorityLabel(task.priority),
+                    priorityColor: priorityColor(task.priority),
+                    dueDate: task.due_date || ""
                 })
             }
         }
 
         root.nannyTaskList = combined
         if (root.debugLogging) console.log("[NANNY-LIST] Built", combined.length, "items:", combined.length - Object.keys(pinnedTitles).length, "recent +", Object.keys(pinnedTitles).length, "pinned")
+    }
+
+    function hideNannyTask(itemId) {
+        var hidden = root.nannyHiddenToday
+        hidden[itemId] = true
+        root.nannyHiddenToday = hidden
+        root.buildNannyTaskList()
+        console.log("[NANNY-LIST] Hidden task for today:", itemId)
     }
 
     // ===== HELPERS =====

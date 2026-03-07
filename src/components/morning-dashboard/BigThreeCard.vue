@@ -21,11 +21,33 @@ const {
   big3Slots,
   allSlotsAssigned,
   groupedTasks,
+  expandedGroups,
+  toggleGroupExpanded,
   timeBlocks,
   assignSlot,
   clearSlot,
   startMyDay,
 } = useMorningDashboard()
+
+const GROUP_LIMITS: Record<string, number> = {
+  overdue: 5,
+  today: 5,
+  inProgress: 3,
+  highPriority: 5,
+  other: 5,
+}
+
+function getVisibleTasks(key: string, tasks: PoolTask[]) {
+  if (expandedGroups.value.has(key)) return tasks
+  const limit = GROUP_LIMITS[key] ?? 5
+  return tasks.slice(0, limit)
+}
+
+function getHiddenCount(key: string, tasks: PoolTask[]): number {
+  if (expandedGroups.value.has(key)) return 0
+  const limit = GROUP_LIMITS[key] ?? 5
+  return Math.max(0, tasks.length - limit)
+}
 
 // --- Search ---
 const searchQuery = ref('')
@@ -145,7 +167,7 @@ function clickAssign(task: PoolTask) {
 // --- Assign animation ---
 function triggerAssignAnimation(index: number) {
   justAssigned.value = index
-  setTimeout(() => { justAssigned.value = null }, 500)
+  setTimeout(() => { justAssigned.value = null }, 900)
 }
 
 // --- Time block update ---
@@ -312,7 +334,7 @@ async function handleCreateTask() {
                 </div>
 
                 <draggable
-                  :model-value="group.tasks"
+                  :model-value="getVisibleTasks(key, group.tasks)"
                   :group="{ name: 'big3', pull: 'clone', put: false }"
                   :sort="false"
                   item-key="id"
@@ -337,6 +359,23 @@ async function handleCreateTask() {
                     />
                   </template>
                 </draggable>
+
+                <button
+                  v-if="getHiddenCount(key, group.tasks) > 0"
+                  class="show-more-btn"
+                  type="button"
+                  @click="toggleGroupExpanded(key)"
+                >
+                  Show {{ getHiddenCount(key, group.tasks) }} more
+                </button>
+                <button
+                  v-else-if="expandedGroups.has(key) && group.tasks.length > (GROUP_LIMITS[key] ?? 5)"
+                  class="show-more-btn"
+                  type="button"
+                  @click="toggleGroupExpanded(key)"
+                >
+                  Show less
+                </button>
               </div>
             </template>
 
@@ -465,14 +504,19 @@ async function handleCreateTask() {
   </div>
 </template>
 
-<!-- Global styles for SortableJS fallback (appended to body, outside scoped CSS) -->
+<!-- Global styles (unscoped — @property is a global at-rule, SortableJS appends to body) -->
 <style>
+@property --glow-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 .sortable-fallback {
   opacity: 0.95 !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
   cursor: grabbing !important;
   z-index: 10000 !important;
-  /* CRITICAL: Kill inherited transitions — they cause the clone to lag behind the cursor */
   transition: none !important;
   animation: none !important;
 }
@@ -593,6 +637,22 @@ async function handleCreateTask() {
   gap: var(--space-1);
 }
 
+.show-more-btn {
+  background: none;
+  border: none;
+  color: var(--brand-primary);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: var(--space-1) 0;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+}
+
+.show-more-btn:hover {
+  opacity: 1;
+}
+
 .pool-empty {
   display: flex;
   align-items: center;
@@ -651,16 +711,83 @@ async function handleCreateTask() {
 
 .zone-wrapper {
   min-height: 48px;
+  position: relative;
 }
 
 .zone-wrapper--pop {
-  animation: slot-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: slot-engage 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes slot-pop {
-  0% { transform: scale(0.92); opacity: 0.6; }
-  50% { transform: scale(1.05); }
+/* Sweeping border glow — rotating energy beam around the slot */
+.zone-wrapper--pop::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: var(--radius-md);
+  background: conic-gradient(
+    from var(--glow-angle, 0deg),
+    transparent 0%,
+    rgba(78, 205, 196, 0.8) 10%,
+    rgba(78, 205, 196, 0) 40%
+  );
+  animation: border-sweep 0.6s linear forwards;
+  z-index: -1;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  padding: 2px;
+}
+
+/* Expanding glow burst */
+.zone-wrapper--pop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 0 12px rgba(78, 205, 196, 0.6),
+    0 0 24px rgba(78, 205, 196, 0.3),
+    inset 0 0 12px rgba(78, 205, 196, 0.1);
+  animation: glow-burst 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes slot-engage {
+  0% { transform: scale(0.9); opacity: 0.5; }
+  30% { transform: scale(1.06); }
+  50% { transform: scale(0.98); }
+  70% { transform: scale(1.02); }
   100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes border-sweep {
+  0% { --glow-angle: 0deg; opacity: 1; }
+  80% { opacity: 1; }
+  100% { --glow-angle: 360deg; opacity: 0; }
+}
+
+@keyframes glow-burst {
+  0% {
+    box-shadow:
+      0 0 0 rgba(78, 205, 196, 0),
+      0 0 0 rgba(78, 205, 196, 0),
+      inset 0 0 0 rgba(78, 205, 196, 0);
+    opacity: 0;
+  }
+  20% {
+    box-shadow:
+      0 0 16px rgba(78, 205, 196, 0.7),
+      0 0 32px rgba(78, 205, 196, 0.4),
+      inset 0 0 16px rgba(78, 205, 196, 0.15);
+    opacity: 1;
+  }
+  100% {
+    box-shadow:
+      0 0 2px rgba(78, 205, 196, 0.1),
+      0 0 4px rgba(78, 205, 196, 0.05),
+      inset 0 0 0 rgba(78, 205, 196, 0);
+    opacity: 0;
+  }
 }
 
 .zone-drop-target {

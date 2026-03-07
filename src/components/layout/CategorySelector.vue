@@ -1,5 +1,5 @@
 <template>
-  <div class="category-selector">
+  <div class="category-selector" :class="{ 'category-selector--compact': compact }">
     <div class="category-grid">
       <button
         v-for="(node, index) in availableProjects"
@@ -62,10 +62,12 @@ import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 interface Props {
   maxShortcuts?: number
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  maxShortcuts: 9
+  maxShortcuts: 9,
+  compact: false
 })
 
 const emit = defineEmits<{
@@ -336,6 +338,63 @@ kbd {
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
+}
+
+/* Compact mode — pill-style inline buttons */
+.category-selector--compact .category-grid {
+  gap: var(--space-1_5) !important;
+  padding: 0 !important;
+  margin-bottom: var(--space-2) !important;
+  max-height: 180px;
+}
+
+.category-selector--compact .category-button {
+  padding: var(--space-1) var(--space-2_5) !important;
+  min-height: 32px !important;
+  min-width: unset !important;
+  font-size: var(--text-sm) !important;
+  gap: var(--space-1_5) !important;
+  border-width: 1px !important;
+  border-radius: var(--radius-md) !important;
+  align-items: center !important;
+}
+
+.category-selector--compact .category-button.is-nested {
+  padding-left: var(--space-2_5) !important;
+  border-left-width: 2px !important;
+}
+
+.category-selector--compact .category-button:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.category-selector--compact .shortcut-badge {
+  position: static !important;
+  width: 16px !important;
+  height: 16px !important;
+  font-size: 0.6rem !important;
+  flex-shrink: 0;
+}
+
+.category-selector--compact .nesting-indicator {
+  display: none !important;
+}
+
+.category-selector--compact .project-emoji {
+  font-size: var(--text-sm) !important;
+}
+
+.category-selector--compact .color-dot {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.category-selector--compact .project-name {
+  font-size: var(--text-sm) !important;
+  -webkit-line-clamp: 1 !important;
+  white-space: nowrap !important;
+  max-width: 120px !important;
 }
 
 /* Reduce motion for accessibility */

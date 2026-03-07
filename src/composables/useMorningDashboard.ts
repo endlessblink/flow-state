@@ -1,10 +1,9 @@
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useGamificationStore } from '@/stores/gamification'
 import { useAuthStore } from '@/stores/auth'
 import { useSmartViews } from '@/composables/useSmartViews'
-import { supabase } from '@/composables/supabase/_infrastructure'
 import type { Task } from '@/types/tasks'
 
 export interface Big3Slot {
@@ -306,55 +305,6 @@ export function useMorningDashboard() {
     return false
   }
 
-  async function saveToSupabase() {
-    const client = supabase
-    if (!authStore.isAuthenticated || !client) return
-    try {
-      const payload = {
-        date: getTodayString(),
-        slots: big3Slots.value,
-      }
-      await client.from('user_settings').upsert(
-        {
-          user_id: authStore.user?.id,
-          key: 'morning_big3',
-          value: JSON.stringify(payload),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,key' }
-      )
-    } catch {
-      // graceful degradation
-    }
-  }
-
-  async function loadFromSupabase() {
-    const client = supabase
-    if (!authStore.isAuthenticated || !client) return
-    try {
-      const { data } = await client
-        .from('user_settings')
-        .select('value')
-        .eq('user_id', authStore.user?.id)
-        .eq('key', 'morning_big3')
-        .single()
-
-      if (!data?.value) return
-      const parsed = JSON.parse(data.value)
-      // Only apply if it's today's data
-      if (
-        parsed?.date === getTodayString() &&
-        Array.isArray(parsed?.slots) &&
-        parsed.slots.length === 3
-      ) {
-        big3Slots.value = parsed.slots
-        saveToLocalStorage()
-      }
-    } catch {
-      // graceful degradation
-    }
-  }
-
   // --- Big 3 Actions ---
   function assignSlot(index: number, taskId: string | null, title: string) {
     if (index < 0 || index > 2) return
@@ -447,17 +397,17 @@ export function useMorningDashboard() {
       }
     }
 
+    // Clear any smart view / duration filters so canvas shows all tasks
+    taskStore.setSmartView(null)
+    taskStore.setActiveDurationFilter(null)
+
     await gamificationStore.awardXp(25, 'morning_commitment')
     router.push('/')
   }
 
   // --- Initialization ---
   async function initMorningDashboard() {
-    // Load Big 3: localStorage first (instant), then sync from Supabase
     loadFromLocalStorage()
-    // Background Supabase sync — may overwrite if fresher data
-    loadFromSupabase()
-    // Fetch news
     fetchNews()
   }
 
@@ -466,15 +416,18 @@ export function useMorningDashboard() {
     big3Slots,
     () => {
       saveToLocalStorage()
-      saveToSupabase()
     },
     { deep: true }
   )
 
-  // Auto-initialize on composable creation
-  onMounted(() => {
+  // Auto-initialize on composable creation (guard for calls outside setup)
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      initMorningDashboard()
+    })
+  } else {
     initMorningDashboard()
-  })
+  }
 
   return {
     // Big 3

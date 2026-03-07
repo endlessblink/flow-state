@@ -255,7 +255,7 @@ interface Props {
   tasks: Task[]
   projects: Project[]
   unscheduledOnly: boolean
-  onCanvasOnly: boolean
+  onCanvasOnly?: boolean
   selectedPriorities: Set<string>
   selectedProjects: Set<string>
   selectedDurations: Set<DurationCategory>

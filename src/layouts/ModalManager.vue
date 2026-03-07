@@ -10,7 +10,6 @@
     <!-- AUTH MODAL -->
     <AuthModal
       :is-open="uiStore.authModalOpen"
-      :initial-view="uiStore.authModalView"
       @close="uiStore.closeAuthModal()"
     />
 

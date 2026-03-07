@@ -1614,6 +1614,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1470** | **P2** | **Task Assist UX resurface — make AI Task Assist discoverable: inline suggestions, keyboard shortcut (Ctrl+/), visible button in task edit modal** |
 | ~~**BUG-1467**~~ | **P2** | ~~**Tasks auto-appear on calendar at 9:00 AM when dragged to Board date columns — moveTaskToDate created calendar instances instead of only setting dueDate**~~ (✅ DONE 2026-03-07) |
 | **TASK-1473** | **P0** | **KDE Widget: Add task search/filter — search box to find tasks without scrolling through long lists** |
+| **TASK-1475** | **P1** | **KDE Widget: Nanny popup show recent tasks — show commonly used tasks alongside pinned tasks, not only pinned** |
 
 ---
 

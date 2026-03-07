@@ -69,6 +69,10 @@ PlasmoidItem {
     property var pinnedTasks: []
     property bool isLoadingPinnedTasks: false
 
+    // ===== NANNY POPUP TASK LIST (TASK-1475) =====
+    // Combined list: pinned tasks first, then recent non-pinned tasks (up to 5 total)
+    property var nannyTaskList: []
+
     // ===== PROJECT STATE (TASK-1454) =====
     property var projects: ({})          // Map of project_id -> {name, color, colorType}
     property bool isLoadingProjects: false
@@ -79,6 +83,10 @@ PlasmoidItem {
     // Filter options: "all", "todo", "in_progress", "today", "on_canvas"
     property string taskFilter: "all"
     property bool todayOnly: false
+    property string taskSearchQuery: ""
+    property var displayTasks: []
+
+    onTaskSearchQueryChanged: updateDisplayTasks()
 
     // ===== QUICK-ADD DUE DATE (TASK-1447) =====
     property string quickAddDueDate: ""
@@ -225,7 +233,8 @@ PlasmoidItem {
         var messages = tone === "direct" ? root.nannyDirectMessages : root.nannyGentleMessages
         var msg = messages[Math.floor(Math.random() * messages.length)]
 
-        console.log("[NANNY] Showing popup:", msg, "with", Math.min(root.pinnedTasks.length, 5), "pinned tasks")
+        root.buildNannyTaskList()
+        console.log("[NANNY] Showing popup:", msg, "with", root.nannyTaskList.length, "tasks (pinned + recent)")
 
         // Position on the same screen as the widget
         var sg = root.getWidgetScreenGeometry()
@@ -619,20 +628,20 @@ PlasmoidItem {
 
                     // Subtitle
                     Text {
-                        text: root.pinnedTasks.length > 0 ? "Pick a task to start" : "Start a Pomodoro to get in the zone"
+                        text: root.nannyTaskList.length > 0 ? "Pick a task to start" : "Start a Pomodoro to get in the zone"
                         font.pixelSize: 14
                         color: root.mutedColor
                         Layout.fillWidth: true
                     }
 
-                    // Task list (only if pinned tasks exist)
+                    // Task list — TASK-1475: pinned + recent tasks combined
                     Column {
-                        visible: root.pinnedTasks.length > 0
+                        visible: root.nannyTaskList.length > 0
                         Layout.fillWidth: true
                         spacing: 4
 
                         Repeater {
-                            model: Math.min(root.pinnedTasks.length, 5)
+                            model: root.nannyTaskList.length
 
                             delegate: Rectangle {
                                 id: nannyTaskRow
@@ -641,7 +650,7 @@ PlasmoidItem {
                                 radius: 10
                                 color: nannyTaskMouse.containsMouse ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.15) : "transparent"
 
-                                property var taskData: root.pinnedTasks[index]
+                                property var taskData: root.nannyTaskList[index]
 
                                 Row {
                                     anchors.fill: parent
@@ -650,7 +659,7 @@ PlasmoidItem {
                                     spacing: 8
 
                                     Text {
-                                        text: "\uD83C\uDF45 " + ((nannyTaskRow.taskData && nannyTaskRow.taskData.title) ? nannyTaskRow.taskData.title.substring(0, 30) : "")
+                                        text: ((nannyTaskRow.taskData && nannyTaskRow.taskData.isPinned) ? "\uD83D\uDCCC " : "\uD83C\uDF45 ") + ((nannyTaskRow.taskData && nannyTaskRow.taskData.title) ? nannyTaskRow.taskData.title.substring(0, 30) : "")
                                         font.pixelSize: 14
                                         color: root.textColor
                                         anchors.verticalCenter: parent.verticalCenter
@@ -673,8 +682,19 @@ PlasmoidItem {
                                     cursorShape: Qt.PointingHandCursor
                                     hoverEnabled: true
                                     onClicked: {
-                                        var task = root.pinnedTasks[index]
-                                        root.selectPinnedTask(task)
+                                        var item = root.nannyTaskList[index]
+                                        if (item.isPinned) {
+                                            root.selectPinnedTask(item)
+                                        } else {
+                                            // Direct task — start session directly
+                                            if (root.hasActiveSession && root.isRunning) {
+                                                if (root.currentTaskId !== item.taskId) {
+                                                    root.switchTaskForSession(item.taskId)
+                                                }
+                                            } else {
+                                                root.startSessionForTask(item.taskId)
+                                            }
+                                        }
                                         nannyPopup.visible = false
                                     }
                                 }
@@ -2160,10 +2180,77 @@ PlasmoidItem {
 
                     // Task count badge
                     Text {
-                        text: root.tasks.length + " tasks"
+                        text: root.taskSearchQuery ? root.displayTasks.length + "/" + root.tasks.length : root.tasks.length + " tasks"
                         font.pixelSize: 10
                         color: root.mutedColor
                         visible: !root.isLoadingTasks
+                    }
+                }
+
+                // ===== TASK-1473: SEARCH BOX =====
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 30
+                    radius: 6
+                    color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                    border.width: 1
+                    border.color: searchInput.activeFocus ? root.accentColor : Qt.rgba(1, 1, 1, 0.10)
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 6
+
+                        Text {
+                            text: "🔍"
+                            font.pixelSize: 12
+                            color: root.mutedColor
+                        }
+
+                        TextInput {
+                            id: searchInput
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            verticalAlignment: TextInput.AlignVCenter
+                            font.pixelSize: 11
+                            color: root.textColor
+                            clip: true
+                            selectByMouse: true
+                            onTextChanged: root.taskSearchQuery = text
+                            Keys.onEscapePressed: {
+                                text = ""
+                                focus = false
+                            }
+
+                            Text {
+                                anchors.fill: parent
+                                verticalAlignment: Text.AlignVCenter
+                                text: "Search tasks..."
+                                font.pixelSize: 11
+                                color: Qt.rgba(1, 1, 1, 0.3)
+                                visible: !searchInput.text && !searchInput.activeFocus
+                            }
+                        }
+
+                        Text {
+                            text: "✕"
+                            font.pixelSize: 10
+                            color: clearArea.containsMouse ? root.textColor : root.mutedColor
+                            visible: searchInput.text.length > 0
+
+                            MouseArea {
+                                id: clearArea
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    searchInput.text = ""
+                                    searchInput.focus = false
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -2181,7 +2268,7 @@ PlasmoidItem {
                         id: taskListView
                         anchors.fill: parent
                         visible: !root.isLoadingTasks
-                        model: root.tasks
+                        model: root.displayTasks
                         clip: true
                         spacing: 6  // TASK-1087: Increased spacing for better readability
 
@@ -4004,6 +4091,33 @@ PlasmoidItem {
         xhr.send(JSON.stringify({ is_deleted: true, deleted_at: new Date().toISOString() }))
     }
 
+    // ===== TASK-1473: SEARCH FILTER =====
+    function updateDisplayTasks() {
+        if (!root.taskSearchQuery) {
+            root.displayTasks = root.tasks
+            return
+        }
+        var query = root.taskSearchQuery.toLowerCase()
+        var result = []
+        for (var i = 0; i < root.tasks.length; i++) {
+            var task = root.tasks[i]
+            if (task.isHeader) {
+                var hasMatch = false
+                for (var j = i + 1; j < root.tasks.length; j++) {
+                    if (root.tasks[j].isHeader) break
+                    if (root.tasks[j].title && root.tasks[j].title.toLowerCase().indexOf(query) !== -1) {
+                        hasMatch = true
+                        break
+                    }
+                }
+                if (hasMatch) result.push(task)
+            } else if (task.title && task.title.toLowerCase().indexOf(query) !== -1) {
+                result.push(task)
+            }
+        }
+        root.displayTasks = result
+    }
+
     function fetchTasks() {
         if (!root.isAuthenticated) return
         taskListRefreshTimer.restart()
@@ -4081,7 +4195,9 @@ PlasmoidItem {
                     if (root.taskSortBy === "project" && Object.keys(root.projects).length > 0) {
                         root.groupTasksByProject()
                     }
+                    root.updateDisplayTasks()
                     root.writeActiveTaskFile()
+                    root.buildNannyTaskList()
                 } else {
                     console.log("[TASKS] Error:", xhr.status, xhr.responseText)
                 }
@@ -4120,6 +4236,7 @@ PlasmoidItem {
                     // If tasks already loaded and sort is project, trigger grouping
                     if (root.tasks.length > 0 && root.taskSortBy === "project") {
                         root.groupTasksByProject()
+                        root.updateDisplayTasks()
                     }
                 } else {
                     console.log("[PROJECTS] Error:", xhr.status, xhr.responseText)
@@ -4286,6 +4403,7 @@ PlasmoidItem {
                         root.pinnedTasks = allPins
                         if (root.debugLogging) console.log("[PINS] Loaded", allPins.length, "pinned tasks")
                     }
+                    root.buildNannyTaskList()
                 } else {
                     console.error("[PINS] Error:", xhr.status, xhr.responseText)
                 }
@@ -4380,6 +4498,46 @@ PlasmoidItem {
         }
 
         xhr.send()
+    }
+
+    // ===== NANNY TASK LIST BUILDER (TASK-1475) =====
+
+    function buildNannyTaskList() {
+        var combined = []
+        var pinnedTitles = {}
+        var maxItems = 5
+
+        // 1. Add pinned tasks first (with isPinned flag)
+        for (var i = 0; i < root.pinnedTasks.length && combined.length < maxItems; i++) {
+            var pin = root.pinnedTasks[i]
+            combined.push({
+                title: pin.title,
+                taskId: pin.id,
+                isPinned: true,
+                source: "pinned"
+            })
+            pinnedTitles[pin.title.toLowerCase()] = true
+        }
+
+        // 2. Fill remaining slots with recent non-pinned, non-done tasks
+        if (combined.length < maxItems && root.tasks.length > 0) {
+            for (var j = 0; j < root.tasks.length && combined.length < maxItems; j++) {
+                var task = root.tasks[j]
+                if (!task || !task.title) continue
+                if (pinnedTitles[task.title.toLowerCase()]) continue
+                if (task.status === "done") continue
+
+                combined.push({
+                    title: task.title,
+                    taskId: task.id,
+                    isPinned: false,
+                    source: "recent"
+                })
+            }
+        }
+
+        root.nannyTaskList = combined
+        if (root.debugLogging) console.log("[NANNY-LIST] Built", combined.length, "items:", combined.length - Object.keys(pinnedTitles).length, "recent +", Object.keys(pinnedTitles).length, "pinned")
     }
 
     // ===== HELPERS =====

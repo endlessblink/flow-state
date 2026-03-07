@@ -184,8 +184,12 @@ export function useSwipeGestures(
     const isHorizontal = absX > absY
 
     // Check if swipe was completed (threshold or velocity)
-    const thresholdMet = absX >= threshold || absY >= threshold
-    const velocityMet = velocity.value >= velocityThreshold
+    // Minimum 40% of threshold distance required even for velocity-based swipes
+    // so releasing near the center never triggers an action
+    const minDistance = threshold * 0.4
+    const dominant = isHorizontal ? absX : absY
+    const thresholdMet = dominant >= threshold
+    const velocityMet = velocity.value >= velocityThreshold && dominant >= minDistance
 
     if (isHorizontal && (thresholdMet || velocityMet)) {
       if (deltaX.value > 0) {

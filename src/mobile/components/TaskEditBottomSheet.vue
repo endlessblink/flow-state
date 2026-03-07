@@ -5,150 +5,163 @@
         v-if="isOpen"
         class="sheet-overlay"
         @click="handleCancel"
-        @touchmove.prevent
       >
         <div
           class="task-edit-sheet"
-          :class="{ 'sheet-active': isOpen }"
           @click.stop
           @touchmove.stop
         >
-          <!-- Sheet Handle -->
-          <div class="sheet-handle" />
-
-          <!-- Header with Cancel/Save -->
-          <div class="sheet-header">
-            <button class="header-btn cancel-btn" @click="handleCancel">
-              Cancel
-            </button>
-            <h3 class="sheet-title">
-              Edit Task
-            </h3>
-            <button
-              class="header-btn save-btn"
-              :disabled="!hasChanges || !editedTitle.trim()"
-              @click="handleSave"
-            >
-              Save
-            </button>
+          <!-- Sheet Handle (drag to dismiss) -->
+          <div class="sheet-handle-area" @click="handleCancel">
+            <div class="sheet-handle" />
           </div>
 
-          <!-- Edit Form -->
+          <!-- Scrollable Form -->
           <div class="edit-form">
-            <!-- Title -->
-            <div class="form-field">
-              <label class="field-label">Title</label>
-              <input
-                ref="titleInputRef"
-                v-model="editedTitle"
-                :dir="titleDirection"
-                type="text"
-                class="field-input"
-                placeholder="Task title"
-                @keydown.enter="handleSave"
-              >
-            </div>
+            <!-- Title Input — large, prominent -->
+            <input
+              ref="titleInputRef"
+              v-model="editedTitle"
+              :dir="titleDirection"
+              type="text"
+              class="title-input"
+              placeholder="Task title"
+              @keydown.enter.prevent="handleSave"
+            >
 
-            <!-- Description -->
-            <div class="form-field">
-              <label class="field-label">Description</label>
-              <textarea
-                v-model="editedDescription"
-                :dir="descriptionDirection"
-                class="field-textarea"
-                placeholder="Add details..."
-                rows="3"
-              />
-            </div>
+            <!-- Description — auto-expanding -->
+            <textarea
+              v-model="editedDescription"
+              :dir="descriptionDirection"
+              class="desc-input"
+              placeholder="Add notes..."
+              rows="2"
+            />
 
-            <!-- Priority -->
-            <div class="form-field">
-              <label class="field-label">Priority</label>
-              <div class="priority-options">
+            <!-- Priority — large pill row -->
+            <div class="field-section">
+              <span class="section-label">Priority</span>
+              <div class="pill-row">
                 <button
                   v-for="option in priorityOptions"
                   :key="option.value"
-                  class="priority-pill"
-                  :class="[`priority-${option.value}`, { active: editedPriority === option.value }]"
-                  @click="editedPriority = option.value"
+                  class="pill"
+                  :class="[`pill-${option.value}`, { active: editedPriority === option.value }]"
+                  @click="editedPriority = editedPriority === option.value ? null : option.value"
                 >
-                  <Flag :size="14" />
+                  <Flag :size="16" />
                   {{ option.label }}
-                </button>
-                <button
-                  class="priority-pill priority-none"
-                  :class="[{ active: editedPriority === null }]"
-                  @click="editedPriority = null"
-                >
-                  None
                 </button>
               </div>
             </div>
 
-            <!-- Due Date -->
-            <div class="form-field">
-              <label class="field-label">Due Date</label>
-              <div class="date-options">
+            <!-- Due Date — quick presets -->
+            <div class="field-section">
+              <span class="section-label">Due Date</span>
+              <div class="pill-row">
                 <button
-                  class="date-pill"
-                  :class="[{ active: isDueToday }]"
-                  @click="setDueDate('today')"
+                  class="pill"
+                  :class="{ active: isDueToday }"
+                  @click="toggleDueDate('today')"
                 >
-                  <Calendar :size="14" />
                   Today
                 </button>
                 <button
-                  class="date-pill"
-                  :class="[{ active: isDueTomorrow }]"
-                  @click="setDueDate('tomorrow')"
+                  class="pill"
+                  :class="{ active: isDueTomorrow }"
+                  @click="toggleDueDate('tomorrow')"
                 >
-                  <CalendarPlus :size="14" />
                   Tomorrow
                 </button>
                 <button
-                  class="date-pill"
-                  :class="[{ active: hasDueDate && !isDueToday && !isDueTomorrow }]"
+                  class="pill"
+                  :class="{ active: isDueIn3Days }"
+                  @click="toggleDueDate('in3days')"
+                >
+                  +3 days
+                </button>
+                <button
+                  class="pill"
+                  :class="{ active: isDueNextWeek }"
+                  @click="toggleDueDate('nextweek')"
+                >
+                  Next week
+                </button>
+              </div>
+              <div class="pill-row" style="margin-top: var(--space-2)">
+                <button
+                  class="pill pill-pick-date"
+                  :class="{ active: hasCustomDate }"
                   @click="showDatePicker = true"
                 >
-                  <CalendarDays :size="14" />
-                  {{ hasDueDate && !isDueToday && !isDueTomorrow ? formatDate(editedDueDate!) : 'Pick' }}
+                  <CalendarDays :size="16" />
+                  {{ hasCustomDate ? formatDate(editedDueDate!) : 'Pick date' }}
                 </button>
                 <button
                   v-if="hasDueDate"
-                  class="date-pill clear-date"
+                  class="pill pill-clear"
                   @click="clearDueDate"
                 >
-                  <X :size="14" />
+                  <X :size="16" />
+                  Clear
                 </button>
               </div>
-              <!-- Native date picker (hidden but functional) -->
+              <!-- Native date picker (shown inline when activated) -->
               <input
-                v-show="showDatePicker"
+                v-if="showDatePicker"
                 ref="datePickerRef"
                 v-model="editedDueDateInput"
                 type="date"
                 class="native-date-picker"
                 @change="handleDatePickerChange"
-                @blur="showDatePicker = false"
               >
             </div>
 
-            <!-- Status -->
-            <div class="form-field">
-              <label class="field-label">Status</label>
-              <div class="status-options">
+            <!-- Status — simple toggle -->
+            <div class="field-section">
+              <span class="section-label">Status</span>
+              <div class="pill-row">
                 <button
-                  v-for="option in statusOptions"
-                  :key="option.value"
-                  class="status-pill"
-                  :class="[{ active: editedStatus === option.value }]"
-                  @click="editedStatus = option.value"
+                  class="pill"
+                  :class="{ active: editedStatus === 'todo' }"
+                  @click="editedStatus = 'todo'"
                 >
-                  <component :is="option.icon" :size="14" />
-                  {{ option.label }}
+                  <Circle :size="16" />
+                  To Do
+                </button>
+                <button
+                  class="pill"
+                  :class="{ active: editedStatus === 'in-progress' }"
+                  @click="editedStatus = 'in-progress'"
+                >
+                  <Clock :size="16" />
+                  In Progress
+                </button>
+                <button
+                  class="pill"
+                  :class="{ active: editedStatus === 'done' }"
+                  @click="editedStatus = 'done'"
+                >
+                  <CheckCircle2 :size="16" />
+                  Done
                 </button>
               </div>
             </div>
+          </div>
+
+          <!-- Bottom Action Bar — thumb zone -->
+          <div class="action-bar">
+            <button class="action-btn cancel-btn" @click="handleCancel">
+              Cancel
+            </button>
+            <button
+              class="action-btn save-btn"
+              :disabled="!editedTitle.trim()"
+              @click="handleSave"
+            >
+              <Check :size="18" />
+              Save Changes
+            </button>
           </div>
         </div>
       </div>
@@ -159,8 +172,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import {
-  Flag, Calendar, CalendarPlus, CalendarDays, X,
-  Circle, CheckCircle2
+  Flag, CalendarDays, X, Check,
+  Circle, CheckCircle2, Clock
 } from 'lucide-vue-next'
 import type { Task } from '@/types/tasks'
 
@@ -192,65 +205,49 @@ const datePickerRef = ref<HTMLInputElement | null>(null)
 // Options
 const priorityOptions = [
   { value: 'high' as const, label: 'High' },
-  { value: 'medium' as const, label: 'Medium' },
+  { value: 'medium' as const, label: 'Med' },
   { value: 'low' as const, label: 'Low' }
 ]
 
-const statusOptions = [
-  { value: 'todo' as const, label: 'To Do', icon: Circle },
-  { value: 'done' as const, label: 'Done', icon: CheckCircle2 }
-]
-
-// Computed
-const hasChanges = computed(() => {
-  if (!props.task) return false
-
-  return (
-    editedTitle.value !== props.task.title ||
-    editedDescription.value !== props.task.description ||
-    editedPriority.value !== props.task.priority ||
-    editedDueDate.value !== props.task.dueDate ||
-    editedStatus.value !== props.task.status
-  )
-})
-
-const hasDueDate = computed(() => !!editedDueDate.value)
-
-// BUG-1108: RTL detection for title and description (Hebrew, Arabic, Persian, Urdu)
+// RTL detection
 const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
 
 const titleDirection = computed(() => {
   if (!editedTitle.value.trim()) return 'auto'
-  const firstChar = editedTitle.value.trim()[0]
-  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
+  return rtlRegex.test(editedTitle.value.trim()[0]) ? 'rtl' : 'ltr'
 })
 
 const descriptionDirection = computed(() => {
   if (!editedDescription.value.trim()) return 'auto'
-  const firstChar = editedDescription.value.trim()[0]
-  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
+  return rtlRegex.test(editedDescription.value.trim()[0]) ? 'rtl' : 'ltr'
 })
 
-const isDueToday = computed(() => {
-  if (!editedDueDate.value) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const dueDate = new Date(editedDueDate.value)
-  dueDate.setHours(0, 0, 0, 0)
-  return dueDate.getTime() === today.getTime()
-})
+// Date computeds
+const hasDueDate = computed(() => !!editedDueDate.value)
 
-const isDueTomorrow = computed(() => {
-  if (!editedDueDate.value) return false
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  tomorrow.setHours(0, 0, 0, 0)
-  const dueDate = new Date(editedDueDate.value)
-  dueDate.setHours(0, 0, 0, 0)
-  return dueDate.getTime() === tomorrow.getTime()
-})
+function getDateString(offset: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  d.setHours(0, 0, 0, 0)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
-// Watch for task changes to populate form
+function getNextMondayString(): string {
+  const d = new Date()
+  const day = d.getDay()
+  const daysUntilMonday = day === 0 ? 1 : 8 - day
+  d.setDate(d.getDate() + daysUntilMonday)
+  d.setHours(0, 0, 0, 0)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const isDueToday = computed(() => editedDueDate.value === getDateString(0))
+const isDueTomorrow = computed(() => editedDueDate.value === getDateString(1))
+const isDueIn3Days = computed(() => editedDueDate.value === getDateString(3))
+const isDueNextWeek = computed(() => editedDueDate.value === getNextMondayString())
+const hasCustomDate = computed(() => hasDueDate.value && !isDueToday.value && !isDueTomorrow.value && !isDueIn3Days.value && !isDueNextWeek.value)
+
+// Watch for task changes
 watch(() => props.task, (task) => {
   if (task) {
     editedTitle.value = task.title
@@ -258,8 +255,7 @@ watch(() => props.task, (task) => {
     editedPriority.value = task.priority
     editedDueDate.value = task.dueDate || undefined
     editedStatus.value = task.status
-
-    // Set date input for native picker
+    showDatePicker.value = false
     if (task.dueDate) {
       editedDueDateInput.value = new Date(task.dueDate).toISOString().split('T')[0]
     } else {
@@ -268,31 +264,40 @@ watch(() => props.task, (task) => {
   }
 }, { immediate: true })
 
-// Focus title input when opened
+// Focus title when opened
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen) {
     await nextTick()
     titleInputRef.value?.focus()
-    titleInputRef.value?.select()
   }
 })
 
 // Actions
-function setDueDate(preset: 'today' | 'tomorrow') {
-  const date = new Date()
-  if (preset === 'tomorrow') {
-    date.setDate(date.getDate() + 1)
+function toggleDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'nextweek') {
+  const dateMap: Record<string, string> = {
+    today: getDateString(0),
+    tomorrow: getDateString(1),
+    in3days: getDateString(3),
+    nextweek: getNextMondayString()
   }
-  date.setHours(0, 0, 0, 0)
-  editedDueDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  editedDueDateInput.value = date.toISOString().split('T')[0]
-  triggerHaptic(10)
+  const target = dateMap[preset]
+  // Toggle off if already selected
+  if (editedDueDate.value === target) {
+    editedDueDate.value = undefined
+    editedDueDateInput.value = ''
+  } else {
+    editedDueDate.value = target
+    editedDueDateInput.value = new Date(target + 'T00:00:00').toISOString().split('T')[0]
+  }
+  showDatePicker.value = false
+  triggerHaptic()
 }
 
 function clearDueDate() {
   editedDueDate.value = undefined
   editedDueDateInput.value = ''
-  triggerHaptic(10)
+  showDatePicker.value = false
+  triggerHaptic()
 }
 
 function handleDatePickerChange() {
@@ -304,12 +309,12 @@ function handleDatePickerChange() {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
+  const date = new Date(dateStr + 'T00:00:00')
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function handleCancel() {
-  triggerHaptic(10)
+  triggerHaptic()
   emit('close')
 }
 
@@ -318,21 +323,11 @@ function handleSave() {
 
   const updates: Partial<Task> = {}
 
-  if (editedTitle.value !== props.task.title) {
-    updates.title = editedTitle.value.trim()
-  }
-  if (editedDescription.value !== props.task.description) {
-    updates.description = editedDescription.value
-  }
-  if (editedPriority.value !== props.task.priority) {
-    updates.priority = editedPriority.value
-  }
-  if (editedDueDate.value !== props.task.dueDate) {
-    updates.dueDate = editedDueDate.value || ''
-  }
-  if (editedStatus.value !== props.task.status) {
-    updates.status = editedStatus.value
-  }
+  if (editedTitle.value.trim() !== props.task.title) updates.title = editedTitle.value.trim()
+  if (editedDescription.value !== (props.task.description || '')) updates.description = editedDescription.value
+  if (editedPriority.value !== props.task.priority) updates.priority = editedPriority.value
+  if (editedDueDate.value !== props.task.dueDate) updates.dueDate = editedDueDate.value || ''
+  if (editedStatus.value !== props.task.status) updates.status = editedStatus.value
 
   if (Object.keys(updates).length > 0) {
     triggerHaptic(30)
@@ -344,19 +339,15 @@ function handleSave() {
 
 function triggerHaptic(duration: number = 10) {
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-    try {
-      navigator.vibrate(duration)
-    } catch {
-      // Vibration API not supported
-    }
+    try { navigator.vibrate(duration) } catch { /* noop */ }
   }
 }
 </script>
 
 <style scoped>
 /* ================================
-   TASK EDIT BOTTOM SHEET
-   Mobile-optimized with explicit Save/Cancel
+   TASK EDIT BOTTOM SHEET v2
+   Thumb-zone optimized, large touch targets
    ================================ */
 
 .sheet-overlay {
@@ -372,277 +363,247 @@ function triggerHaptic(duration: number = 10) {
 
 .task-edit-sheet {
   width: 100%;
-  max-height: 85vh;
+  max-height: 90vh;
   background: var(--surface-primary);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
+  border-top-left-radius: var(--radius-2xl);
+  border-top-right-radius: var(--radius-2xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: var(--shadow-dark-xl);
+  box-shadow:
+    0 -4px 24px rgba(0, 0, 0, 0.3),
+    0 -1px 0 var(--glass-border);
 }
 
-/* Sheet Handle */
-.sheet-handle {
-  width: var(--space-10);
-  height: var(--space-1);
-  background: var(--border-hover);
-  border-radius: var(--radius-xs);
-  margin: var(--space-3) auto 0;
-  flex-shrink: 0;
-}
-
-/* Header */
-.sheet-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  border-bottom: 1px solid var(--glass-border-light);
-  flex-shrink: 0;
-}
-
-.sheet-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.header-btn {
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
+/* Sheet Handle — tappable area */
+.sheet-handle-area {
+  padding: var(--space-3) 0 var(--space-1);
   cursor: pointer;
-  transition: all var(--duration-normal) ease;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.cancel-btn {
-  background: transparent;
-  color: var(--text-secondary);
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border-hover);
+  border-radius: var(--radius-full);
 }
 
-.cancel-btn:active {
-  background: var(--glass-bg-weak);
-}
-
-.save-btn {
-  background: var(--glass-bg-soft);
-  color: var(--brand-primary);
-  border: 1px solid var(--brand-primary);
-  backdrop-filter: blur(8px);
-}
-
-.save-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.save-btn:not(:disabled):active {
-  transform: scale(0.96);
-}
-
-/* Edit Form */
+/* Scrollable Form */
 .edit-form {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-5) var(--space-4);
-  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-2) var(--space-5) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-5);
 }
 
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.field-label {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.field-input {
-  padding: var(--space-3_5) var(--space-4);
-  background: var(--glass-bg-weak);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+/* Title — large, no label needed */
+.title-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-1);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--glass-border);
   color: var(--text-primary);
-  font-size: var(--text-base);
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
   outline: none;
-  transition: all var(--duration-normal) ease;
+  transition: border-color var(--duration-normal) ease;
 }
 
-.field-input:focus {
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 var(--space-0_5) var(--state-active-bg);
+.title-input:focus {
+  border-bottom-color: var(--brand-primary);
 }
 
-.field-input::placeholder {
+.title-input::placeholder {
   color: var(--text-muted);
+  font-weight: var(--font-normal);
 }
 
-.field-textarea {
-  padding: var(--space-3_5) var(--space-4);
-  background: var(--glass-bg-weak);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  color: var(--text-primary);
+/* Description — subtle */
+.desc-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-1);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--glass-border-light);
+  color: var(--text-secondary);
   font-size: var(--text-base);
   outline: none;
   resize: none;
   font-family: inherit;
-  transition: all var(--duration-normal) ease;
+  line-height: var(--leading-relaxed);
+  transition: border-color var(--duration-normal) ease;
 }
 
-.field-textarea:focus {
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 var(--space-0_5) var(--state-active-bg);
+.desc-input:focus {
+  border-bottom-color: var(--brand-primary);
 }
 
-.field-textarea::placeholder {
+.desc-input::placeholder {
   color: var(--text-muted);
 }
 
-/* Priority Options */
-.priority-options {
+/* Field Sections */
+.field-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2_5);
+}
+
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Pill Buttons — 48px min height for touch */
+.pill-row {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-.priority-pill {
+.pill {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1_5);
-  padding: var(--space-2_5) var(--space-3_5);
+  min-height: 44px;
+  padding: var(--space-2_5) var(--space-4);
   background: var(--glass-bg-weak);
-  border: 1px solid var(--glass-border);
+  border: 1.5px solid var(--glass-border);
   border-radius: var(--radius-xl);
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all var(--duration-normal) ease;
+  transition: all var(--duration-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+  flex: 1;
+  min-width: 0;
 }
 
-.priority-pill:active {
+.pill:active {
   transform: scale(0.95);
 }
 
-.priority-pill.priority-high.active {
-  background: var(--priority-high-bg);
-  border-color: var(--priority-high-border);
-  color: var(--color-priority-high);
-}
-
-.priority-pill.priority-medium.active {
-  background: var(--priority-medium-bg);
-  border-color: var(--priority-medium-border);
-  color: var(--color-priority-medium);
-}
-
-.priority-pill.priority-low.active {
-  background: var(--priority-low-bg);
-  border-color: var(--priority-low-border);
-  color: var(--color-priority-low);
-}
-
-.priority-pill.priority-none.active {
-  background: var(--glass-bg-tint);
-  border-color: var(--border-hover);
-  color: var(--text-primary);
-}
-
-/* Date Options */
-.date-options {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.date-pill {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1_5);
-  padding: var(--space-2_5) var(--space-3_5);
-  background: var(--glass-bg-weak);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: all var(--duration-normal) ease;
-}
-
-.date-pill:active {
-  transform: scale(0.95);
-}
-
-.date-pill.active {
+/* Active state — generic */
+.pill.active {
   background: var(--state-active-bg);
-  border-color: var(--state-active-border);
+  border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
 
-.date-pill.clear-date {
-  padding: var(--space-2_5);
+/* Priority-specific active colors */
+.pill.pill-high.active {
+  background: var(--priority-high-bg);
+  border-color: var(--color-priority-high);
+  color: var(--color-priority-high);
+}
+
+.pill.pill-medium.active {
+  background: var(--priority-medium-bg);
+  border-color: var(--color-priority-medium);
+  color: var(--color-priority-medium);
+}
+
+.pill.pill-low.active {
+  background: var(--priority-low-bg);
+  border-color: var(--color-priority-low);
+  color: var(--color-priority-low);
+}
+
+/* Date-specific pills */
+.pill-pick-date {
+  flex: unset;
+}
+
+.pill-clear {
+  flex: unset;
   color: var(--text-muted);
 }
 
+.pill-clear:active {
+  color: var(--color-danger);
+}
+
+/* Native date picker */
 .native-date-picker {
   margin-top: var(--space-2);
   padding: var(--space-3);
   background: var(--glass-bg-weak);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: var(--text-base);
   color-scheme: dark;
+  width: 100%;
 }
 
-/* Status Options */
-.status-options {
+/* Bottom Action Bar — sticky in thumb zone */
+.action-bar {
   display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--glass-border-light);
+  background: var(--surface-primary);
+  flex-shrink: 0;
 }
 
-.status-pill {
+.action-btn {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: var(--space-1_5);
-  padding: var(--space-2_5) var(--space-3_5);
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  border-radius: var(--radius-xl);
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action-btn:active {
+  transform: scale(0.97);
+}
+
+.cancel-btn {
   background: var(--glass-bg-weak);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: all var(--duration-normal) ease;
+  flex: 0.4;
 }
 
-.status-pill:active {
-  transform: scale(0.95);
-}
-
-.status-pill.active {
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
+.save-btn {
+  background: var(--glass-bg-soft);
+  border: 1.5px solid var(--brand-primary);
   color: var(--brand-primary);
+  backdrop-filter: blur(8px);
+  flex: 0.6;
+}
+
+.save-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.save-btn:not(:disabled):active {
+  background: var(--brand-primary);
+  color: var(--surface-primary);
 }
 
 /* ================================
-   SHEET TRANSITIONS
+   TRANSITIONS
    ================================ */
 
 .sheet-enter-active,
@@ -661,7 +622,7 @@ function triggerHaptic(duration: number = 10) {
 }
 
 /* ================================
-   ACCESSIBILITY - REDUCED MOTION
+   REDUCED MOTION
    ================================ */
 
 @media (prefers-reduced-motion: reduce) {
@@ -676,33 +637,28 @@ function triggerHaptic(duration: number = 10) {
   }
 }
 
-/* RTL Support */
-[dir="rtl"] .sheet-header {
+/* ================================
+   RTL SUPPORT
+   ================================ */
+
+[dir="rtl"] .edit-form {
+  text-align: right;
+}
+
+.title-input[dir="rtl"],
+.desc-input[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .pill-row {
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .form-field {
-  text-align: right;
-}
-
-/* RTL support - attribute on the element itself */
-.field-input[dir="rtl"],
-.field-textarea[dir="rtl"] {
-  text-align: right;
-}
-
-.field-input[dir="rtl"]::placeholder,
-.field-textarea[dir="rtl"]::placeholder {
-  text-align: right;
-}
-
-[dir="rtl"] .priority-options,
-[dir="rtl"] .date-options {
+[dir="rtl"] .pill {
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .priority-pill,
-[dir="rtl"] .date-pill {
+[dir="rtl"] .action-bar {
   flex-direction: row-reverse;
 }
 </style>

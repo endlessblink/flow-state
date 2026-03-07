@@ -1510,7 +1510,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1447** | **P2** | 👀 **Pin task disappears on Enter + task search + widget sync** (👀 REVIEW 2026-03-05) |
 | **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |
 | ~~**TASK-1445**~~ | **P2** | ✅ **Fix focus mode dropdown closing on hover + overlapping menus — UX research & redesign** (✅ DONE 2026-03-05) |
-| **TASK-1459** | **P2** | 🔄 **Storybook story quality pass — fix broken/unclear stories for Teleport components and PWA Screens** (🔄 IN PROGRESS 2026-03-06) |
+| ~~**TASK-1459**~~ | **P2** | ✅ **Storybook story quality pass — fix broken/unclear stories for Teleport components and PWA Screens** (✅ DONE 2026-03-07) |
 | **TASK-1444** | **P1** | 🔄 **Tauri desktop app design parity — investigate and fix visual discrepancies vs web/Storybook** (🔄 IN PROGRESS 2026-03-04) |
 | **INQUIRY-1438** | **P0** | 🔄 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (🔄 IN PROGRESS 2026-03-03) |
 | ~~**BUG-1451**~~ | **P1** | ✅ **Task done/deleted state inconsistent across views — Board hideDoneTasks coupled to Canvas/Calendar** (✅ DONE 2026-03-05) |
@@ -1606,7 +1606,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1464** | **P1** | **Break Timer On-Screen Overlay — full-screen pomodoro overlay during break with countdown, minimize/stop/+5min controls, glass morphism** |
 | ~~**TASK-1465**~~ | **P2** | ✅ ~~**AI Features Audit — review all AI features, decide what to keep vs ditch (broken/no value)**~~ |
 | ~~**TASK-1466**~~ | **P2** | ✅ **Start task without resetting timer — allow switching active task while timer runs (web + pinned), add reset option to KDE widget** |
-| **BUG-1462** | **P1** | **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** |
+| **BUG-1462** | **P1** | **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** (👀 REVIEW) |
 | **TASK-1468** | **P2** | **Clean ARIA Game Master AI rebuild — rebuild challenge generation with small steps, template fallback preserved, AI adds personalization on top** |
 | **TASK-1469** | **P2** | **AI Chat anti-spam fix — fix ReAct loop spam, limit tool calls per turn, rewrite system prompt to be concise, add output truncation** |
 | **TASK-1470** | **P2** | **Task Assist UX resurface — make AI Task Assist discoverable: inline suggestions, keyboard shortcut (Ctrl+/), visible button in task edit modal** |

@@ -773,7 +773,9 @@ const {
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 1000px;
+  /* BUG-1453: perspective removed — it creates a containing block for position:fixed,
+     trapping the card inside this container during swipe drag. Stack cards only use
+     2D transforms (scale + translateY) so perspective had no visual effect. */
   min-height: var(--kanban-column-min-height);
   margin-bottom: var(--space-3);
 }
@@ -1115,3 +1117,4 @@ const {
   flex-direction: row-reverse;
 }
 </style>
+

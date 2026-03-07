@@ -114,15 +114,35 @@ const {
   haptics: true,
   fourDirectional: true,
   mouse: true, // BUG-1453: enable mouse drag for desktop browsers in mobile viewport
+  onSwipeStart: () => onSwipeStartCapture(),
+  onSwipeEnd: () => onSwipeEndCapture(),
+  onSwipeCancel: () => onSwipeEndCapture(),
   onSwipeRight: () => emit('swipe-right'),
   onSwipeLeft: () => emit('swipe-left'),
   onSwipeUp: () => emit('swipe-up'),
   onSwipeDown: () => emit('swipe-down')
 })
 
+// BUG-1453: Capture card's viewport position when swipe starts so we can
+// switch to position:fixed (escapes ALL ancestor overflow clipping).
+const fixedOrigin = ref<{ top: number; left: number; width: number; height: number } | null>(null)
+
+// Watch for swipe start/end to capture/release fixed positioning
+const onSwipeStartCapture = () => {
+  const el = cardRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  fixedOrigin.value = { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+}
+
+const onSwipeEndCapture = () => {
+  fixedOrigin.value = null
+}
+
 // Card transform style - supports both horizontal and vertical movement
+// BUG-1453: When swiping, card uses position:fixed to escape overflow:hidden ancestors
 const cardStyle = computed(() => {
-  if (!swipeState.value.isSwiping) {
+  if (!swipeState.value.isSwiping || !fixedOrigin.value) {
     return {
       transform: 'translateX(0) translateY(0) rotate(0deg)',
       transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
@@ -133,20 +153,29 @@ const cardStyle = computed(() => {
   const absY = Math.abs(deltaY.value)
   const isHorizontal = absX > absY
 
+  // Fixed positioning to escape all overflow clipping
+  const base = {
+    position: 'fixed' as const,
+    top: `${fixedOrigin.value.top}px`,
+    left: `${fixedOrigin.value.left}px`,
+    width: `${fixedOrigin.value.width}px`,
+    height: `${fixedOrigin.value.height}px`,
+    zIndex: 9999,
+    transition: 'none'
+  }
+
   if (isHorizontal) {
-    // Horizontal swipe: translate X + rotate
     const rotate = deltaX.value * 0.05
     const maxRotate = 15
     const clampedRotate = Math.max(-maxRotate, Math.min(maxRotate, rotate))
     return {
-      transform: `translateX(${deltaX.value}px) rotate(${clampedRotate}deg)`,
-      transition: 'none'
+      ...base,
+      transform: `translateX(${deltaX.value}px) rotate(${clampedRotate}deg)`
     }
   } else {
-    // Vertical swipe: translate Y only (no rotate)
     return {
-      transform: `translateY(${deltaY.value}px)`,
-      transition: 'none'
+      ...base,
+      transform: `translateY(${deltaY.value}px)`
     }
   }
 })

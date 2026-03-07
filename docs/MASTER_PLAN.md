@@ -3913,6 +3913,73 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
    - If yes: calls `switchTaskForSession()` to reassign
    - If no: starts new timer session normally
 
+---
+
+### BUG-1453: Production CSS Preload + Mobile Quick Sort Swipe Broken (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-06)
+
+**Two issues reported:**
+1. Production CSS preload failure (`MorningDashboardView-7ECQeecR.css`)
+2. Mobile PWA Quick Sort card swipe/drag not working (user says "used to work")
+
+#### Sub-issue 1: CSS Preload Failure — RESOLVED
+
+**Root cause**: `SITE_URL` and `API_URL` GitHub Actions repository variables were deleted (between Mar 3-4). This broke the Cloudflare cache purge step in `.github/workflows/deploy.yml`, causing 18 consecutive deploy failures. VPS got new assets via rsync but Cloudflare CDN served stale `index.html` referencing old CSS/JS hashes that no longer existed on VPS.
+
+**Fixes applied (3 commits pushed):**
+- Restored `SITE_URL` (`https://in-theflow.com`) and `API_URL` (`https://api.in-theflow.com`) via `gh variable set`
+- Made CF purge step resilient: guards against empty SITE_URL with graceful skip instead of `exit 1`
+- Fixed 6 pre-existing CI type/lint errors in ChatMessage.vue, BaseModal.vue, AIQualityDashboard.vue, QuickSortCard.vue
+- Deploy pipeline now fully green (all steps pass including chunk integrity verification)
+
+#### Sub-issue 2: Mobile Quick Sort Swipe — STILL BROKEN
+
+**Critical discovery: TWO separate Quick Sort implementations exist:**
+- **Desktop**: `src/views/QuickSortView.vue` + `src/components/QuickSortCard.vue` (route: `/quick-sort`)
+- **Mobile**: `src/mobile/views/MobileQuickSortView.vue` + `src/mobile/components/MobileQuickSortCard.vue` (route: `#/mobile-quick-sort`)
+- Mobile card CSS class is `.task-card` (not `.quick-sort-card`)
+- User is on mobile PWA hitting the MOBILE implementation
+
+**What was verified:**
+- `MobileQuickSortCard.vue` uses `useSwipeGestures` composable with `fourDirectional: true`
+- Card has `touch-action: none` in CSS (correct)
+- **Playwright touch simulation on localhost WORKS** — synthetic TouchEvents dispatched on `.task-card` triggered swipe-right (Save) correctly and advanced to next task
+- So the JS swipe logic itself is functional
+
+**What changed in `useSwipeGestures.ts` (commit `072eea6c`):**
+- Refactored from inline touch handlers to shared `beginSwipe/moveSwipe/endSwipe` functions
+- Added mouse drag support (`mouse` option) for desktop
+- Old (working, commit `3a149cb6`): `touchstart: { passive: true }`, `touchmove: { passive: false }`
+- New: `touchstart: { passive: false }` when fourDirectional, `touchmove: { passive: false }`
+- Old had `preventDefault()` only in `touchmove`, new also calls it in `touchstart`
+
+**Hypotheses to investigate (ordered by likelihood):**
+1. **Service Worker caching old code on user's device** — SW uses `skipWaiting()` only on explicit `SKIP_WAITING` message (line 146 of `src/sw.ts`), not automatically. User's phone may still serve pre-deploy JS.
+2. **Parent scroll container intercepting touches** — `MobileQuickSortView` has scrollable containers (`overflow-y: auto`) that may steal touch events before the card handler fires. Need to audit `touch-action` CSS chain from `.task-card` up through all parent elements.
+3. **useSwipeGestures refactor broke subtle behavior** — The `touchstart` passive change or `preventDefault()` in touchstart (vs only in touchmove before) may cause different browser behavior on real Android Chrome PWA.
+4. **MobileQuickSortView sub-component split** (commit `939ce6a5`) may have changed the DOM structure affecting touch event propagation.
+
+**Next steps:**
+1. Ask user to test in incognito/private tab (bypasses SW) to rule out caching
+2. If still broken in incognito: revert `useSwipeGestures.ts` to commit `3a149cb6` version and test
+3. Audit parent element CSS chain for `touch-action`/`overflow` conflicts in mobile view
+4. Consider adding unconditional `self.skipWaiting()` in SW install handler for faster updates
+
+**Key files:**
+- `src/composables/useSwipeGestures.ts` — swipe composable (recently refactored)
+- `src/mobile/components/MobileQuickSortCard.vue` — mobile card
+- `src/mobile/views/MobileQuickSortView.vue` — mobile view with scroll containers
+- `src/mobile/composables/useMobileQuickSortLogic.ts` — mobile-specific logic
+- `src/sw.ts` — service worker (skipWaiting behavior)
+- `.github/workflows/deploy.yml` — deploy pipeline (fixed)
+
+**Relevant commits:**
+- `072eea6c` — batch update (useSwipeGestures refactor + user's QuickSortCard rewrite)
+- `3a149cb6` — last known working version of useSwipeGestures
+- `af3a63b7` — mobile QuickSort visual fixes
+- `939ce6a5` — split MobileQuickSortView into sub-components
+
 **Files**: `packages/kde-widget/contents/ui/main.qml`
 
 **Architecture**:
@@ -4053,7 +4120,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
 | **TASK-1455** | **P2** | 📋 **Catalog view: show uncategorized tasks so they can be categorized in-place** (📋 PLANNED 2026-03-06) |
 | **TASK-1454** | **P2** | 📋 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (📋 PLANNED 2026-03-06) |
-| **BUG-1453** | **P0** | 🔄 **Production CSS preload failure — missing SITE_URL breaks CF cache purge** (🔄 IN PROGRESS 2026-03-05) |
+| **BUG-1453** | **P0** | 🔄 **Production CSS preload + mobile Quick Sort swipe broken** (🔄 IN PROGRESS 2026-03-06) |
 | **BUG-1447** | **P2** | 👀 **Pin task disappears on Enter + task search + widget sync** (👀 REVIEW 2026-03-05) |
 | **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |
 | ~~**TASK-1445**~~ | **P2** | ✅ **Fix focus mode dropdown closing on hover + overlapping menus — UX research & redesign** (✅ DONE 2026-03-05) |
@@ -5311,6 +5378,21 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 4. Support `bd init` + `npm run mp:sync` flow for projects that want full beads features
 
 **Files**: `~/.dev-maestro/tui/src/lib/bd-client.js`, `~/.dev-maestro/tui/src/lib/masterplan-parser.js`, `~/.dev-maestro/tui/src/hooks/use-board-data.js`
+
+---
+
+### TASK-1463: Clean Up Project Root — Remove/Consolidate Temp Files (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Project root has 141 debug PNG screenshots, tracked temp reports/scripts, stale lockfiles, and other clutter that doesn't belong at the root level.
+
+**Cleanup plan**:
+1. Delete 141 debug PNG screenshots from root (all untracked)
+2. Remove tracked temp files: `full_report.txt`, `lint_report.txt`, `ts_errors.txt`, `unused_vars_report.txt`, `console-task-1348.txt`, `current-state.md`, `snapshot-*.md`, `bulk_replace*.js`, `components_lint_report.json`, `lint_report.json`, `lint_output.log`, `test_output.log`, `typecheck_output.txt`, `any_files.txt`
+3. Remove stale `pnpm-lock.yaml` (project uses npm), `.cursorrules`
+4. Remove `stats.html` (2.9MB build artifact)
+5. Add `*.png` and temp patterns to `.gitignore` to prevent recurrence
 
 ---
 

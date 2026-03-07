@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useId } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
 import BasePopover from './BasePopover.vue'
 import type { Component } from 'vue'
@@ -103,6 +103,8 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[]]
 }>()
+
+const listboxId = useId()
 
 const triggerElement = ref<HTMLElement>()
 const isOpen = ref(false)

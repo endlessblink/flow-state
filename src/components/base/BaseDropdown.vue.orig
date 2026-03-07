@@ -5,6 +5,9 @@
       class="dropdown-trigger"
       :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
       :disabled="disabled"
+      aria-haspopup="listbox"
+      :aria-expanded="isOpen"
+      :aria-controls="listboxId"
       @click="toggleDropdown"
       @keydown.down.prevent="openAndFocusFirst"
       @keydown.up.prevent="openAndFocusLast"
@@ -28,6 +31,7 @@
       @close="closeDropdown"
     >
       <ul
+        :id="listboxId"
         class="dropdown-list"
         role="listbox"
         @keydown.down.prevent="focusNext"

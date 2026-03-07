@@ -1,37 +1,19 @@
--- BUG-1477: Safety net — when a tombstone is created for a task, hard-delete
--- the task row in the same transaction. Prevents zombie tasks that have a
--- tombstone but is_deleted=false (the exact bug that caused tasks to keep
--- reappearing after deletion).
+-- BUG-1477: Zombie task cleanup
 --
--- This trigger fires AFTER INSERT on tombstones so the tombstone is committed
--- first, then the task row is removed. If the DELETE fails (e.g. row already
--- gone), it's a no-op — no error raised.
+-- The tasks table already has `trg_task_tombstone` (BEFORE DELETE) that
+-- auto-creates tombstones. An additional AFTER INSERT trigger on tombstones
+-- caused PostgreSQL error 27000 (same-command tuple modification conflict).
+--
+-- This migration:
+-- 1. Drops the conflicting trigger+function if they exist
+-- 2. Cleans up zombie tasks (rows with tombstones that were never deleted)
 
-CREATE OR REPLACE FUNCTION on_tombstone_cleanup_task()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.entity_type = 'task' THEN
-        BEGIN
-            DELETE FROM tasks WHERE id = NEW.entity_id::uuid;
-        EXCEPTION WHEN OTHERS THEN
-            -- Row already deleted by the app in same transaction — safe to ignore
-            NULL;
-        END;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Drop if exists to make migration idempotent
+-- Drop the conflicting trigger and function (created earlier in this session)
 DROP TRIGGER IF EXISTS trg_tombstone_cleanup_task ON tombstones;
+DROP FUNCTION IF EXISTS on_tombstone_cleanup_task();
 
-CREATE TRIGGER trg_tombstone_cleanup_task
-    AFTER INSERT ON tombstones
-    FOR EACH ROW
-    EXECUTE FUNCTION on_tombstone_cleanup_task();
-
--- Also clean up any existing zombie tasks: rows that have a tombstone but
--- were never properly deleted. One-time retroactive fix.
+-- Retroactive cleanup: remove any task rows that have tombstones
+-- (these are zombies from the old bug where delete failed but tombstone succeeded)
 DELETE FROM tasks t
 USING tombstones ts
 WHERE ts.entity_type = 'task'

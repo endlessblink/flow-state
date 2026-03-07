@@ -227,7 +227,9 @@ export function useSwipeGestures(
   // Touch handlers
   const handleTouchStart = (e: TouchEvent) => {
     const touch = e.touches[0]
-    if (fourDirectional) e.preventDefault()
+    // BUG-1453: Never preventDefault in touchstart — direction is unknown at this point.
+    // On real Android Chrome, this poisons the gesture and the compositor drops subsequent
+    // touchmove events. Scroll blocking is deferred to touchmove where direction is known.
     beginSwipe(touch.clientX, touch.clientY)
   }
 
@@ -235,19 +237,23 @@ export function useSwipeGestures(
     if (!isSwiping.value) return
     const touch = e.touches[0]
 
+    // BUG-1453: Update position FIRST so deltaX/deltaY reflect current movement
+    // before we check thresholds (matches old working behavior from 3a149cb6)
+    moveSwipe(touch.clientX, touch.clientY)
+
+    const absX = Math.abs(deltaX.value)
+    const absY = Math.abs(deltaY.value)
+
+    // Only block scroll AFTER 10px lock threshold — giving the browser's compositor
+    // time to recognize the gesture. Calling preventDefault before this threshold
+    // causes Android Chrome to drop touch events.
+    if (!isLocked.value) return
+
     if (fourDirectional) {
       e.preventDefault()
-    } else {
-      const absX = Math.abs(deltaX.value)
-      const absY = Math.abs(deltaY.value)
-      if (!isLocked.value && (absX > 10 || absY > 10)) {
-        isLocked.value = true
-        if (lockVertical && absX > absY) e.preventDefault()
-      }
-      if (isLocked.value && absX > absY && lockVertical) e.preventDefault()
+    } else if (absX > absY && lockVertical) {
+      e.preventDefault()
     }
-
-    moveSwipe(touch.clientX, touch.clientY)
   }
 
   const handleTouchEnd = () => endSwipe()
@@ -283,7 +289,9 @@ export function useSwipeGestures(
     const el = targetRef.value
     if (!el) return
 
-    el.addEventListener('touchstart', handleTouchStart, { passive: !fourDirectional })
+    // BUG-1453: touchstart must always be passive — calling preventDefault before direction
+    // is known causes Android Chrome to drop the touch sequence. Scroll blocking is in touchmove.
+    el.addEventListener('touchstart', handleTouchStart, { passive: true })
     el.addEventListener('touchmove', handleTouchMove, { passive: false })
     el.addEventListener('touchend', handleTouchEnd, { passive: true })
     el.addEventListener('touchcancel', handleTouchCancel, { passive: true })

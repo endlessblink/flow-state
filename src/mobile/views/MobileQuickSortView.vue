@@ -673,7 +673,7 @@ const {
   overflow-y: auto; /* BUG-1406: Allow scroll to reach action buttons behind nav bar */
   overflow-x: hidden;
   min-height: 0; /* Allow flex shrinking */
-  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; /* BUG-1453: Prevent Android compositor from hijacking horizontal card swipes */
 }
 
 /* Process Flow Indicator - Shows sorting hierarchy */

@@ -1,7 +1,0 @@
-flowstate.84.46.253.137.sslip.io {
-    reverse_proxy app:80
-}
-
-supabase.84.46.253.137.sslip.io {
-    reverse_proxy 84.46.253.137:8000
-}

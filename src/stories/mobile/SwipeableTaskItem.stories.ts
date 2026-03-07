@@ -11,7 +11,7 @@ const S = {
   contentSwiped: 'position:relative;background:var(--surface-primary);padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:1;transform:translateX(80px);filter:blur(1px);transition:transform 0.3s',
   contentSwipedLeft: 'position:relative;background:var(--surface-primary);padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:1;transform:translateX(-80px);filter:blur(1px);transition:transform 0.3s',
   checkbox: 'width:20px;height:20px;border-radius:50%;border:2px solid var(--border-subtle);flex-shrink:0',
-  checkboxDone: 'width:20px;height:20px;border-radius:50%;border:2px solid var(--brand-primary);background:var(--brand-primary);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:white',
+  checkboxDone: 'width:20px;height:20px;border-radius:50%;border:2px solid var(--brand-primary);background:rgba(78,205,196,0.15);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--brand-primary)',
   title: 'color:var(--text-primary);font-size:14px',
   titleDone: 'color:var(--text-tertiary);font-size:14px;text-decoration:line-through',
   meta: 'font-size:11px;color:var(--text-tertiary);display:flex;align-items:center;gap:8px;margin-top:2px',

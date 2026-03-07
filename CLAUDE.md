@@ -287,7 +287,7 @@ ALWAYS break broad requests into atomic steps (<2 min each, single success condi
 
 Device leadership model: one device leads countdown, others follow. Vue App (WebSocket) = leader-capable, KDE Widget (REST polling 2s) = follower. Leader heartbeat every 10s, 30s timeout for leadership claim. User actions take precedence.
 
-**CRITICAL:** Timer store MUST wait for auth before loading session (auth-aware init pattern, see [SOP-032](docs/sop/SOP-032-store-auth-initialization.md)). Key file: `src/stores/timer.ts`. Full SOP: [TIMER-sync-architecture](docs/sop/active/TIMER-sync-architecture.md).
+**CRITICAL:** Timer store MUST wait for auth before loading session (auth-aware init pattern, see [SOP-050](docs/sop/SOP-050-store-auth-initialization.md)). Key file: `src/stores/timer.ts`. Full SOP: [TIMER-sync-architecture](docs/sop/active/TIMER-sync-architecture.md).
 
 ## Timer Active Task Highlighting
 
@@ -339,7 +339,16 @@ Full SOP: [CANVAS-POSITION-SYSTEM](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md)
 
 AI orchestration dashboard at `http://localhost:6010`. Start: `./maestro.sh`. Check: `curl -s localhost:6010/api/status`. Skill: `dev-maestro`.
 
-**MASTER_PLAN.md Parsing:** Task headers use `### TASK-XXX: Title (STATUS)`. Completed: `### ~~TASK-XXX~~: Title (✅ DONE)`. Status keywords: `DONE`/`✅`, `IN PROGRESS`/`🔄`, `PAUSED`/`⏸️`, `REVIEW`/`👀`. Completed tasks need BOTH `~~strikethrough~~` AND `✅ DONE`. Full SOP: [SOP-031](docs/sop/SOP-031-dev-maestro-parser.md).
+**MASTER_PLAN.md Parsing:** Task headers use `### TASK-XXX: Title (STATUS)`. Completed: `### ~~TASK-XXX~~: Title (✅ DONE)`. Status keywords: `DONE`/`✅`, `IN PROGRESS`/`🔄`, `PAUSED`/`⏸️`, `REVIEW`/`👀`. Completed tasks need BOTH `~~strikethrough~~` AND `✅ DONE`. Full SOP: [SOP-049](docs/sop/SOP-049-dev-maestro-parser.md).
+
+**Maestro CLI** (installed at `~/.local/bin/maestro`, works from any project directory):
+
+| Command | Purpose |
+|---------|---------|
+| `maestro tui` | Terminal kanban board |
+| `maestro archive` | Archive DONE tasks >14 days old to `MASTER_PLAN_ARCHIVE.md` |
+| `maestro archive --dry-run` | Preview archive without writing |
+| `maestro archive --days=30` | Custom age threshold |
 
 ## UI Component Standards (MANDATORY)
 
@@ -399,6 +408,7 @@ MASTER_PLAN.md auto-syncs to beads. **Never create beads manually** — the sync
 | Command | Purpose |
 |---------|---------|
 | `npm run mp:sync` | Full sync (also: `:dry`, `:force`) |
+| `npm run mp:archive` | Archive DONE tasks >14 days to `MASTER_PLAN_ARCHIVE.md` (also: `:dry`) |
 | `bd ready` | Find unblocked tasks |
 | `bd update <id> --status=in_progress` | Claim a task |
 | `bd blocked` | See dependency blockers |

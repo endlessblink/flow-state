@@ -15,9 +15,9 @@
       <span>Timer</span>
     </router-link>
 
-    <router-link to="/mobile-ai-chat" class="nav-item" active-class="active">
-      <Sparkles />
-      <span>AI</span>
+    <router-link to="/mobile-calendar" class="nav-item" active-class="active">
+      <CalendarIcon />
+      <span>Calendar</span>
     </router-link>
 
     <div class="nav-item" @click="toggleMenu">
@@ -48,6 +48,12 @@
                 <span>Sign Out ({{ authStore.user?.email }})</span>
               </div>
 
+              <!-- AI Chat -->
+              <div class="menu-item" @click="handleAIChat">
+                <Sparkles :size="20" />
+                <span>AI Chat</span>
+              </div>
+
               <!-- Other Actions -->
               <div class="menu-item" @click="handleSettings">
                 <Settings :size="20" />
@@ -69,9 +75,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Inbox as InboxIcon, Sparkles, Menu as MenuIcon, LogIn, LogOut, Settings, X, Timer as TimerIcon, Zap, RefreshCw } from 'lucide-vue-next'
+import { Inbox as InboxIcon, Sparkles, Menu as MenuIcon, LogIn, LogOut, Settings, X, Timer as TimerIcon, Zap, RefreshCw, Calendar as CalendarIcon } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+
+const router = useRouter()
 
 const uiStore = useUIStore()
 const authStore = useAuthStore()
@@ -94,6 +103,11 @@ const handleSignIn = () => {
 const handleSignOut = async () => {
   closeMenu()
   await authStore.signOut()
+}
+
+const handleAIChat = () => {
+  closeMenu()
+  router.push('/mobile-ai-chat')
 }
 
 const handleSettings = () => {

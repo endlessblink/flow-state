@@ -1,4 +1,4 @@
-# SOP-033: Data Persistence Patterns
+# SOP-052: Data Persistence Patterns
 
 **Created**: 2026-01-25
 **Related Task**: TASK-1064 (was BUG-1051)

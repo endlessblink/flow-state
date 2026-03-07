@@ -647,14 +647,15 @@ onMounted(() => {
   width: var(--space-12);
   height: var(--space-12);
   border-radius: var(--radius-full);
-  border: none;
-  background: var(--brand-primary);
-  color: white;
+  border: 2px solid var(--brand-primary);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  backdrop-filter: blur(8px);
   box-shadow: var(--brand-primary-glow);
   transition: all var(--duration-fast);
 }

@@ -212,19 +212,22 @@ const handleEventDblClick = (event: VueCalEvent, _e: MouseEvent) => {
 }
 
 .back-btn {
-  background: var(--color-navigation);
-  border: none;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
   color: var(--state-active-text);
   padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
+  backdrop-filter: blur(8px);
   transition: all var(--transition-fast);
 }
 
 .back-btn:hover {
-  background: var(--brand-primary);
+  background: rgba(78, 205, 196, 0.12);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .custom-vuecal {

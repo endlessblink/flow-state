@@ -582,11 +582,11 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 
 /* Enhanced primary button states */
 .btn-primary.btn-action:not(:disabled):hover {
-  background: var(--brand-primary);
-  color: white;
+  background: rgba(78, 205, 196, 0.12);
+  color: var(--brand-primary);
   border-color: var(--brand-primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(var(--brand-primary-rgb, 78, 205, 196), 0.3);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.25);
 }
 
 .btn-primary.btn-action:not(:disabled):active {

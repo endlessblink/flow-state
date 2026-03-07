@@ -521,9 +521,10 @@ onMounted(() => {
 }
 
 .send-btn {
-  background: var(--brand-primary);
-  border-color: transparent;
-  color: white;
+  background: var(--glass-bg-soft);
+  border: 2px solid var(--brand-primary);
+  color: var(--brand-primary);
+  backdrop-filter: blur(8px);
 }
 
 .recording-label {

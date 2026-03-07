@@ -1,4 +1,4 @@
-# SOP-036: Whisper Voice Transcription via Supabase Edge Function
+# SOP-055: Whisper Voice Transcription via Supabase Edge Function
 
 **Created**: 2026-01-25
 **Related Task**: BUG-1070

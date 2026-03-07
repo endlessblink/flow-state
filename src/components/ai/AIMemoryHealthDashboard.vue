@@ -353,8 +353,8 @@ function handleClearHistory() {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--brand-primary);
-  color: var(--surface-primary);
+  background: rgba(78, 205, 196, 0.12);
+  color: var(--brand-primary);
 }
 
 .btn-primary:disabled {

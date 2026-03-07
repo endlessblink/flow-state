@@ -6,10 +6,17 @@ import { useAuthStore } from '@/stores/auth'
 import { useSmartViews } from '@/composables/useSmartViews'
 import type { Task } from '@/types/tasks'
 
+export type MorningStage = 'pick' | 'timeblock'
+
 export interface Big3Slot {
   taskId: string | null
   title: string
   completed: boolean
+}
+
+export interface TimeBlock {
+  startTime: string // HH:MM
+  duration: number  // minutes
 }
 
 export interface TaskPoolGroup {
@@ -68,11 +75,21 @@ export function useMorningDashboard() {
   const authStore = useAuthStore()
   const { isTodayTask } = useSmartViews()
 
+  // --- Stage ---
+  const stage = ref<MorningStage>('pick')
+
   // --- Big 3 State ---
   const big3Slots = ref<Big3Slot[]>([
     { taskId: null, title: '', completed: false },
     { taskId: null, title: '', completed: false },
     { taskId: null, title: '', completed: false },
+  ])
+
+  // --- Time Blocks ---
+  const timeBlocks = ref<TimeBlock[]>([
+    { startTime: '09:00', duration: 60 },
+    { startTime: '10:30', duration: 60 },
+    { startTime: '13:00', duration: 60 },
   ])
 
   // --- News State ---
@@ -381,19 +398,52 @@ export function useMorningDashboard() {
     }
   }
 
+  // --- Stage Navigation ---
+  function goToTimeBlock() {
+    if (!allSlotsAssigned.value) return
+    // Pre-fill time blocks with task durations if available
+    big3Slots.value.forEach((slot, i) => {
+      if (slot.taskId) {
+        const task = (taskStore._rawTasks ?? []).find(t => t.id === slot.taskId)
+        if (task?.estimatedDuration) {
+          timeBlocks.value[i] = { ...timeBlocks.value[i], duration: task.estimatedDuration }
+        }
+      }
+    })
+    stage.value = 'timeblock'
+  }
+
+  function goBackToPick() {
+    stage.value = 'pick'
+  }
+
   // --- Start My Day ---
   async function startMyDay() {
     if (!allSlotsAssigned.value) return
 
-    // Set dueDate = today on each Big 3 task so they appear in Today views
     const todayStr = getTodayString()
-    for (const slot of big3Slots.value) {
-      if (slot.taskId) {
-        try {
-          await taskStore.updateTask(slot.taskId, { dueDate: todayStr })
-        } catch {
-          // task may have been deleted — not fatal
+
+    for (let i = 0; i < big3Slots.value.length; i++) {
+      const slot = big3Slots.value[i]
+      if (!slot.taskId) continue
+
+      try {
+        // Set dueDate = today
+        await taskStore.updateTask(slot.taskId, { dueDate: todayStr })
+
+        // Create calendar time block instance
+        const block = timeBlocks.value[i]
+        if (block.startTime) {
+          await taskStore.createTaskInstance(slot.taskId, {
+            scheduledDate: todayStr,
+            scheduledTime: block.startTime,
+            duration: block.duration,
+            status: 'scheduled',
+            isRecurring: false,
+          })
         }
+      } catch {
+        // task may have been deleted — not fatal
       }
     }
 
@@ -430,6 +480,11 @@ export function useMorningDashboard() {
   }
 
   return {
+    // Stage
+    stage,
+    goToTimeBlock,
+    goBackToPick,
+
     // Big 3
     big3Slots,
     allSlotsAssigned,
@@ -437,6 +492,9 @@ export function useMorningDashboard() {
     assignSlot,
     clearSlot,
     completeSlot,
+
+    // Time Blocks
+    timeBlocks,
 
     // Suggestions
     suggestedTasks,

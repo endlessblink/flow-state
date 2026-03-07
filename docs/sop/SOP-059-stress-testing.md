@@ -1,4 +1,4 @@
-# SOP-022: Stress Testing System
+# SOP-059: Stress Testing System
 
 **Created**: 2026-01-23
 **Status**: Active

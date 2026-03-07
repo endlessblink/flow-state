@@ -230,13 +230,14 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 .btn-primary {
-  background: var(--brand-primary);
-  border-color: var(--brand-primary);
-  color: var(--bg-primary);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
 }
 
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.9;
+  background: rgba(78, 205, 196, 0.12);
   transform: translateY(-1px);
 }
 

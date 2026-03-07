@@ -663,12 +663,14 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .confirm-btn {
-  background: var(--brand-primary);
-  color: var(--surface-primary);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
 }
 
 .confirm-btn:hover:not(:disabled) {
-  filter: brightness(1.1);
+  background: rgba(78, 205, 196, 0.12);
 }
 
 .confirm-btn:disabled {

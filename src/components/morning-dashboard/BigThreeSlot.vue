@@ -17,9 +17,9 @@ const isFilled = computed(() => props.slot.title.trim().length > 0 && !props.slo
 const isCompleted = computed(() => props.slot.completed)
 
 const placeholderTexts = [
-  'Drop your top priority',
-  'Drop your second focus',
-  'Drop one more thing',
+  'Top priority',
+  'Second focus',
+  'One more thing',
 ]
 </script>
 
@@ -70,10 +70,10 @@ const placeholderTexts = [
 .drop-zone {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  min-height: 48px;
+  min-height: 40px;
   transition: all 0.2s ease;
 }
 

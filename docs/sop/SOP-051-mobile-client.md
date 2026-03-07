@@ -1,4 +1,4 @@
-# SOP-032: Self-Hosted Mobile Client for Claude Code + Dev-Maestro
+# SOP-051: Self-Hosted Mobile Client for Claude Code + Dev-Maestro
 
 **Created:** 2026-01-29
 **Status:** Active

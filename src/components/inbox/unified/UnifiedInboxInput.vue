@@ -325,8 +325,10 @@ const handleAddTask = () => {
 }
 
 .mic-btn.processing {
-  background: var(--brand-primary);
-  color: white;
+  background: rgba(78, 205, 196, 0.15);
+  color: var(--brand-primary);
+  border: 2px solid var(--brand-primary);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.25);
 }
 
 .spin {

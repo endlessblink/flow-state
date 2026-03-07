@@ -1,4 +1,4 @@
-# SOP-026: Mobile Route Guards
+# SOP-048: Mobile Route Guards
 
 **Created**: 2026-01-23
 **Related**: BUG-1014, ROAD-004, TASK-346

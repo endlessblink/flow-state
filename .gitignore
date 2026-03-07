@@ -142,16 +142,11 @@ typecheck_output.txt
 !src/**/*.png
 !packages/**/*.png
 
-# Temp reports and scripts
-*_report.txt
-*_report.json
-*_output.txt
-*_output.log
-snapshot-*.md
-bulk_replace*.js
-any_files.txt
-console-*.txt
-current-state.md
+# Test coverage output
+coverage/
+
+# Debug screenshots directory
+screenshots/
 
 # Stale lockfiles
 pnpm-lock.yaml

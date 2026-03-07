@@ -1,4 +1,4 @@
-# SOP-041: Route Error Boundary for Dynamic Import Failures
+# SOP-062: Route Error Boundary for Dynamic Import Failures
 
 **Created**: 2026-01-29
 **Related Task**: BUG-1101, TASK-1060

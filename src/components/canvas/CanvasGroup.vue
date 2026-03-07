@@ -538,15 +538,17 @@ onUnmounted(() => {
 }
 
 .collect-btn.has-matches {
-  background: var(--brand-primary);
-  color: white;
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
 }
 
 .collect-badge {
   font-size: var(--text-xs);
   font-weight: var(--font-bold);
-  background: white;
-  color: var(--brand-primary);
+  background: var(--brand-primary);
+  color: white;
   padding: 0 var(--space-1);
   border-radius: var(--radius-full);
   min-width: var(--space-3_5);

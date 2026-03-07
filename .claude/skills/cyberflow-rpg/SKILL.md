@@ -245,5 +245,5 @@ npm run test:e2e -- --grep "corruption"
 ## Related Documentation
 
 - `docs/MASTER_PLAN.md` - FEATURE-1132 tracking
-- `docs/sop/SOP-032-store-auth-initialization.md` - Store initialization patterns
+- `docs/sop/SOP-050-store-auth-initialization.md` - Store initialization patterns
 - `docs/claude-md-extension/design-system.md` - Design tokens for corruption CSS

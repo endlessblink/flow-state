@@ -1,4 +1,4 @@
-# SOP-032: Store Auth-Wait Initialization Pattern
+# SOP-050: Store Auth-Wait Initialization Pattern
 
 **Created**: 2026-01-24
 **Related Tasks**: BUG-1045, BUG-339

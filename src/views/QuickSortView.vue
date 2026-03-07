@@ -152,7 +152,7 @@
 
             <!-- Keyboard hint -->
             <div class="key-hint">
-              Drag card or use arrow keys &bull; D done &bull; A suggest &bull; 1-9 assign
+              Drag card or use arrow keys &bull; D done &bull; 1-9 assign
             </div>
           </div>
 
@@ -234,51 +234,6 @@
             </div>
           </div>
 
-          <!-- AI row -->
-          <div class="control-row ai-row">
-            <span class="control-label">AI</span>
-            <div class="pill-group">
-              <button
-                class="pill ai-pill"
-                :class="{ 'is-loading': aiAction === 'suggest' }"
-                :disabled="isAIBusy"
-                @click="handleAISuggest"
-              >
-                <Loader2 v-if="aiAction === 'suggest'" :size="12" class="spin" />
-                <Sparkles v-else :size="12" />
-                Suggest
-                <kbd>A</kbd>
-              </button>
-              <button v-if="isAIBusy" class="pill" @click="handleAICancel">
-                <X :size="12" /> Cancel
-              </button>
-            </div>
-          </div>
-
-          <!-- AI Results -->
-          <div v-if="aiState === 'preview'" class="ai-results">
-            <div v-for="suggestion in currentSuggestions" :key="suggestion.field" class="ai-suggestion">
-              <span class="ai-field">{{ suggestion.field }}</span>
-              <span class="ai-old">{{ suggestion.currentValue || 'none' }}</span>
-              <span class="ai-arrow">&rarr;</span>
-              <span class="ai-new">{{ suggestion.suggestedValue }}</span>
-            </div>
-            <div v-if="suggestedProjectId" class="ai-suggestion">
-              <span class="ai-field">project</span>
-              <span class="ai-old">{{ currentTaskProject?.name || 'none' }}</span>
-              <span class="ai-arrow">&rarr;</span>
-              <span class="ai-new">{{ suggestedProjectName || suggestedProjectId }}</span>
-            </div>
-            <div class="ai-actions">
-              <button class="pill ai-pill" @click="handleApplySuggestions">Apply All</button>
-              <button class="pill" @click="quickSortAI.dismiss()">Dismiss</button>
-            </div>
-          </div>
-          <div v-if="aiState === 'error'" class="ai-error">
-            <span dir="auto">{{ aiError }}</span>
-            <button class="pill" @click="handleAIRetry">Retry</button>
-          </div>
-
           <!-- Project Selector -->
           <CategorySelector
             @select="handleCategorize"
@@ -327,10 +282,9 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   Zap, X, CheckCircle, Undo2, Plus, Save, Trash2, Pencil, SkipForward,
-  Sparkles, Loader2, CalendarDays, FolderOpen
+  CalendarDays, FolderOpen
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
-import { useQuickSortAI } from '@/composables/useQuickSortAI'
 import { useQuickCapture } from '@/composables/useQuickCapture'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
@@ -398,8 +352,6 @@ const {
   markTaskDone, markDoneAndDeleteTask, skipTask, undoLastCategorization, tryResumeSession
 } = useQuickSort()
 
-const quickSortAI = useQuickSortAI()
-const { aiState, aiAction, aiError, isAIBusy, currentSuggestions, suggestedProjectId, suggestedProjectName } = quickSortAI
 
 onMounted(() => {
   const resumed = tryResumeSession()
@@ -496,30 +448,6 @@ function setQuickDate(preset: string) {
     return
   }
   handleTaskUpdate({ dueDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })
-}
-
-// AI handlers
-function handleAISuggest() {
-  if (!currentTask.value || isAIBusy.value) return
-  quickSortAI.autoSuggest(currentTask.value)
-}
-function handleAICancel() { quickSortAI.abort() }
-let lastAIAction: (() => void) | null = null
-function handleAIRetry() { quickSortAI.dismiss(); if (lastAIAction) lastAIAction() }
-
-async function handleApplySuggestions() {
-  if (!currentTask.value) return
-  const updates: Record<string, unknown> = {}
-  for (const s of currentSuggestions.value) {
-    if (s.field === 'priority') updates.priority = s.suggestedValue
-    else if (s.field === 'dueDate') updates.dueDate = s.suggestedValue
-    else if (s.field === 'status') updates.status = s.suggestedValue
-    else if (s.field === 'estimatedDuration') updates.estimatedDuration = s.suggestedValue
-  }
-  if (suggestedProjectId.value) updates.projectId = suggestedProjectId.value
-  if (Object.keys(updates).length > 0) await taskStore.updateTask(currentTask.value.id, updates)
-  quickSortAI.dismiss()
-  showFeedback('AI suggestions applied!', 'success')
 }
 
 // Keyboard shortcuts

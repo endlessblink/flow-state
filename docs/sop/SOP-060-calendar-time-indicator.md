@@ -1,4 +1,4 @@
-# SOP-040: Calendar Current Time Indicator
+# SOP-060: Calendar Current Time Indicator
 
 **Created**: 2026-01-29
 **Related Task**: BUG-1095

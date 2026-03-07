@@ -429,8 +429,10 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .save-btn {
-  background: var(--brand-primary);
-  color: var(--text-primary);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
 }
 
 .save-btn:disabled {

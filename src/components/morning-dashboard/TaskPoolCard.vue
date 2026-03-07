@@ -104,7 +104,6 @@ const isOverdue = computed(() => {
 }
 
 .pool-card:hover {
-  transform: translateY(-1px);
   border-color: var(--border-hover);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }

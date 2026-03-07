@@ -1079,14 +1079,17 @@ const handleChangePassword = async () => {
 }
 
 .update-btn.primary {
-  background: linear-gradient(135deg, var(--brand-primary), var(--brand-active));
-  color: white;
-  box-shadow: 0 4px 12px var(--shadow-strong);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
+  box-shadow: none;
 }
 
 .update-btn.primary:hover {
+  background: rgba(78, 205, 196, 0.12);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px var(--shadow-xl);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.25);
 }
 
 .update-btn.primary:active {
@@ -1382,18 +1385,19 @@ const handleChangePassword = async () => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  background: var(--brand-primary);
-  color: white;
-  border: none;
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
+  backdrop-filter: blur(8px);
   transition: all var(--duration-fast);
 }
 
 .add-btn:hover {
-  filter: brightness(1.1);
+  background: rgba(78, 205, 196, 0.12);
   transform: translateY(-1px);
 }
 

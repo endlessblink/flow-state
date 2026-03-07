@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { X } from 'lucide-vue-next'
+import { useTaskStore } from '@/stores/tasks'
 import MorningGreeting from '@/components/morning-dashboard/MorningGreeting.vue'
 import MorningScore from '@/components/morning-dashboard/MorningScore.vue'
 import BigThreeCard from '@/components/morning-dashboard/BigThreeCard.vue'
@@ -9,6 +10,14 @@ import MorningNews from '@/components/morning-dashboard/MorningNews.vue'
 import MorningQuickCapture from '@/components/morning-dashboard/MorningQuickCapture.vue'
 
 const router = useRouter()
+const taskStore = useTaskStore()
+
+// Clear filters on ANY exit from morning dashboard (dismiss, sidebar click, back button, etc.)
+// This prevents smart view / duration filters from leaking into other views
+onBeforeRouteLeave(() => {
+  taskStore.setSmartView(null)
+  taskStore.setActiveDurationFilter(null)
+})
 
 function dismiss() {
   router.push('/')
@@ -49,7 +58,7 @@ function dismiss() {
 
 .morning-content {
   width: 100%;
-  max-width: 860px;
+  max-width: 1080px;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

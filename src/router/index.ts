@@ -18,6 +18,7 @@ const mobileToDesktopRedirects: Record<string, string> = {
   'mobile-today': 'canvas',
   'mobile-timer': 'canvas',
   'mobile-ai-chat': 'ai',
+  'mobile-calendar': 'calendar',
 }
 
 const router = createRouter({
@@ -106,6 +107,12 @@ const router = createRouter({
       path: '/mobile-ai-chat',
       name: 'mobile-ai-chat',
       component: () => import('@/mobile/views/MobileAIChatView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/mobile-calendar',
+      name: 'mobile-calendar',
+      component: () => import('@/mobile/views/MobileCalendarView.vue'),
       meta: { requiresAuth: false }
     },
     {

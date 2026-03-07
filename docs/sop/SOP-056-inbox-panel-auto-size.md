@@ -1,4 +1,4 @@
-# SOP-037: Inbox Panel Auto-Size Width
+# SOP-056: Inbox Panel Auto-Size Width
 
 **Created**: January 25, 2026
 **Related Task**: BUG-1079

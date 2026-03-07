@@ -629,9 +629,9 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### TASK-1436: Active Task Glass Pill next to Pomodoro Timer (🔄 IN PROGRESS)
+### ~~TASK-1436~~: Active Task Glass Pill next to Pomodoro Timer (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-03)
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-07)
 
 **Problem**: The Pomodoro timer shows the task name as a small muted text inside the timer display. This lacks visual prominence and doesn't match the glass morphism design system.
 
@@ -937,6 +937,34 @@ Wave 3 (dep Wave 2):  TASK-1398
 ---
 
 ## Planned Tasks (NEXT/BACKLOG)
+
+### TASK-1473: Add calendar view to mobile PWA (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Add a mobile-optimized calendar view to the PWA bottom navigation. Replace the AI Chat tab with Calendar in the nav bar; move AI Chat into the Menu overlay instead.
+
+**Subtasks**:
+- Create `MobileCalendarView.vue` — day view with time grid, task cards, date navigation
+- Add mobile route `/mobile-calendar` in router
+- Replace AI nav tab with Calendar tab in `MobileNav.vue` (Calendar icon)
+- Add AI Chat as a menu item in `MobileNav.vue` menu overlay (Sparkles icon + "AI Chat" label)
+- Reuse existing calendar composables/stores where possible
+- Design reference: Storybook `📱 PWA Concepts > Calendar`
+
+---
+
+### TASK-1474: Move AI Chat from mobile nav bar to menu overlay (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Remove AI Chat from the mobile bottom navigation bar (currently 4th tab) and add it as an item in the hamburger Menu overlay instead. This frees the nav slot for Calendar.
+
+**Changes**:
+- `MobileNav.vue`: Remove AI `router-link`, add menu item with Sparkles icon that navigates to `/mobile-ai-chat`
+- Verify AI Chat view still works when accessed from menu
+
+---
 
 ### INQUIRY-1413: Evaluate open-source readiness for community sharing (🔄 IN PROGRESS)
 
@@ -1585,6 +1613,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1469** | **P2** | **AI Chat anti-spam fix — fix ReAct loop spam, limit tool calls per turn, rewrite system prompt to be concise, add output truncation** |
 | **TASK-1470** | **P2** | **Task Assist UX resurface — make AI Task Assist discoverable: inline suggestions, keyboard shortcut (Ctrl+/), visible button in task edit modal** |
 | ~~**BUG-1467**~~ | **P2** | ~~**Tasks auto-appear on calendar at 9:00 AM when dragged to Board date columns — moveTaskToDate created calendar instances instead of only setting dueDate**~~ (✅ DONE 2026-03-07) |
+| **TASK-1473** | **P0** | **KDE Widget: Add task search/filter — search box to find tasks without scrolling through long lists** |
 
 ---
 

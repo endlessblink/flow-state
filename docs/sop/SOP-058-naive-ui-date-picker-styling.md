@@ -1,4 +1,4 @@
-# SOP-018: Naive UI Date Picker Styling
+# SOP-058: Naive UI Date Picker Styling
 
 **Created**: 2026-01-23
 **Task**: TASK-1011

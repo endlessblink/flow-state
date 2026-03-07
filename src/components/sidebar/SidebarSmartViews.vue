@@ -118,7 +118,7 @@ const selectSmartView = (view: string) => {
   }
 
   // BUG-1430: Only navigate to /tasks if current view doesn't support smart view filters
-  const filterableViews = ['/', '/board', '/calendar', '/tasks', '/catalog']
+  const filterableViews = ['/', '/board', '/calendar', '/tasks', '/catalog', '/morning']
   if (!filterableViews.includes(route.path)) {
     router.push('/tasks')
   }
@@ -157,21 +157,20 @@ const handleStartQuickSort = () => {
   width: calc(100% - 32px);
   margin: 0 16px var(--space-4) 16px;
   padding: var(--space-2);
-  background: var(--brand-primary);
-  color: var(--text-primary);
-  border: none;
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   cursor: pointer;
   transition: all var(--duration-normal);
-  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
 }
 
 .quick-sort-button-full:hover {
+  background: rgba(78, 205, 196, 0.12);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  filter: brightness(1.1);
 }
 
 .fade-enter-active,

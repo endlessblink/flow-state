@@ -480,8 +480,8 @@ td {
   transition: all var(--duration-normal);
 }
 
-.btn-primary { background: var(--brand-primary); color: white; }
-.btn-primary:hover { background: var(--brand-primary-hover); }
+.btn-primary { background: var(--glass-bg-soft); color: var(--brand-primary); border: 1px solid var(--brand-primary); backdrop-filter: blur(8px); }
+.btn-primary:hover { background: rgba(78, 205, 196, 0.12); }
 .btn-secondary { background: var(--white-alpha-10); color: white; }
 .btn-secondary:hover { background: var(--white-alpha-15); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }

@@ -43,17 +43,17 @@ type Story = StoryObj
 
 // All styles as single-line strings — multiline breaks Storybook rendering
 const S = {
-  root: 'min-height:100vh; background:var(--surface-primary); display:flex; justify-content:flex-end; padding:var(--space-4);',
-  rootInteractive: 'min-height:100vh; background:var(--surface-primary); padding:var(--space-4); display:flex; flex-direction:column; align-items:flex-end;',
-  toolbar: 'display:flex; flex-direction:column; align-items:center; gap:var(--space-1); padding:var(--space-1_5); border-radius:var(--radius-md); background:var(--overlay-component-bg-strong); backdrop-filter:blur(var(--blur-sm)); border:1px solid var(--glass-border); box-shadow:var(--shadow-md);',
-  group: 'display:flex; flex-direction:column; align-items:center; gap:var(--space-0_5);',
-  separator: 'width:var(--space-4); height:1px; background:var(--glass-border); margin:var(--space-0_5) 0;',
-  btn: 'display:flex; align-items:center; justify-content:center; width:var(--space-6); height:var(--space-6); border-radius:var(--radius-sm); color:var(--text-secondary); background:transparent; border:1px solid transparent; cursor:pointer;',
-  btnPrimary: 'display:flex; align-items:center; justify-content:center; width:var(--space-6); height:var(--space-6); border-radius:var(--radius-sm); background:var(--color-indigo-bg-heavy); color:var(--color-indigo-light); border:1px solid var(--color-indigo-border); cursor:pointer;',
-  btnActiveOverdue: 'display:flex; align-items:center; justify-content:center; width:var(--space-6); height:var(--space-6); border-radius:var(--radius-sm); color:var(--color-orange); background:var(--orange-bg-soft); border:1px solid var(--orange-border); cursor:pointer;',
-  eventLog: 'margin-top:var(--space-6); padding:var(--space-4); background:var(--surface-secondary); border-radius:var(--radius-lg); width:300px;',
-  logTitle: 'color:var(--text-primary); margin:0 0 var(--space-2) 0;',
-  logEntry: 'color:var(--text-secondary); font-size:var(--text-sm); padding:var(--space-1) 0;',
+  root: 'min-height:100vh; background:var(--surface-primary); display:flex; justify-content:flex-end; padding:16px;',
+  rootInteractive: 'min-height:100vh; background:var(--surface-primary); padding:16px; display:flex; flex-direction:column; align-items:flex-end;',
+  toolbar: 'display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px; border-radius:var(--radius-md); background:rgba(28,25,45,0.9); backdrop-filter:blur(12px); border:1px solid var(--glass-border); box-shadow:0 4px 12px rgba(0,0,0,0.3);',
+  group: 'display:flex; flex-direction:column; align-items:center; gap:2px;',
+  separator: 'width:24px; height:1px; background:var(--glass-border); margin:2px 0;',
+  btn: 'display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--radius-sm); color:var(--text-secondary); background:transparent; border:1px solid transparent; cursor:pointer;',
+  btnPrimary: 'display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--radius-sm); background:rgba(99,102,241,0.2); color:#818cf8; border:1px solid rgba(99,102,241,0.4); cursor:pointer;',
+  btnActiveOverdue: 'display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--radius-sm); color:#fb923c; background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); cursor:pointer;',
+  eventLog: 'margin-top:24px; padding:16px; background:var(--surface-secondary); border-radius:var(--radius-lg); width:300px;',
+  logTitle: 'color:var(--text-primary); margin:0 0 8px 0;',
+  logEntry: 'color:var(--text-secondary); font-size:var(--text-sm); padding:4px 0;',
 }
 
 /**

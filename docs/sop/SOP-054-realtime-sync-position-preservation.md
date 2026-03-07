@@ -1,4 +1,4 @@
-# SOP-035: Realtime Sync Position Preservation
+# SOP-054: Realtime Sync Position Preservation
 
 **Created**: 2026-01-25
 **Related Task**: BUG-1074
@@ -79,4 +79,4 @@ if (currentTask.canvasPosition && !normalizedTask.canvasPosition) {
 ## Related SOPs
 
 - [CANVAS-POSITION-SYSTEM.md](canvas/CANVAS-POSITION-SYSTEM.md) - Canvas geometry invariants
-- [SOP-032-store-auth-initialization.md](SOP-032-store-auth-initialization.md) - Auth-aware store initialization
+- [SOP-050-store-auth-initialization.md](SOP-050-store-auth-initialization.md) - Auth-aware store initialization

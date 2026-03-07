@@ -1,4 +1,4 @@
-# SOP-031: Dev-Maestro MASTER_PLAN.md Parser Rules
+# SOP-049: Dev-Maestro MASTER_PLAN.md Parser Rules
 
 ## Parser Location
 `~/.dev-maestro/kanban/index.html` - `parseMasterPlan()` function (line ~5955)

@@ -304,8 +304,8 @@ const formatDueDateLabel = (dueDate: string) => {
 }
 
 .action-btn:hover {
-  background: var(--brand-primary);
-  color: white;
+  background: rgba(78, 205, 196, 0.12);
+  color: var(--brand-primary);
 }
 
 .not-on-canvas-badge {

@@ -1,4 +1,4 @@
-# SOP-041: Mobile PWA Network Resilience
+# SOP-061: Mobile PWA Network Resilience
 
 **Created**: 2026-01-30
 **Related**: BUG-1107, BUG-352

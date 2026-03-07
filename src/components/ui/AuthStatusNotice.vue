@@ -180,8 +180,10 @@ h3 {
 }
 
 .primary-btn {
-  background: var(--brand-primary);
-  color: white;
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  backdrop-filter: blur(8px);
   font-weight: var(--font-medium);
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-md);
@@ -189,7 +191,7 @@ h3 {
 }
 
 .primary-btn:hover {
-  background: var(--brand-hover);
+  background: rgba(78, 205, 196, 0.12);
   transform: translateY(-1px);
 }
 

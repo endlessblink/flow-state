@@ -27,18 +27,20 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // --- Core Filter State ---
     // TASK-1215: Persist inbox open/closed per context (canvas vs calendar)
     const isCollapsed = usePersistentRef<boolean>(`flowstate:inbox-collapsed-${props.context}`, false)
+    // BUG-1468: All filter keys are context-scoped so canvas/calendar inboxes are independent
+    const ctx = props.context
     // BUG-1051: Persist filter (TASK-1215: upgraded to Tauri-aware persistence)
-    const activeTimeFilter = usePersistentRef<TimeFilterType>('flowstate:inbox-time-filter', 'all', 'canvas-inbox-time-filter')
+    const activeTimeFilter = usePersistentRef<TimeFilterType>(`flowstate:inbox-time-filter-${ctx}`, 'all', `${ctx}-inbox-time-filter`)
 
     // --- Advanced Filter State (TASK-1215: Persist across restarts via Tauri store + localStorage) ---
-    const showAdvancedFilters = usePersistentRef<boolean>('flowstate:inbox-advanced-filters', false)
-    const unscheduledOnly = usePersistentRef<boolean>('flowstate:inbox-unscheduled-only', false)
-    const onCanvasOnly = usePersistentRef<boolean>('flowstate:inbox-on-canvas-only', false)
+    const showAdvancedFilters = usePersistentRef<boolean>(`flowstate:inbox-advanced-filters-${ctx}`, false)
+    const unscheduledOnly = usePersistentRef<boolean>(`flowstate:inbox-unscheduled-only-${ctx}`, false)
+    const onCanvasOnly = usePersistentRef<boolean>(`flowstate:inbox-on-canvas-only-${ctx}`, false)
 
     // TASK-1246: Multi-select filters (array-backed for JSON-safe persistence, Set API via computed)
-    const _selectedPriorities = usePersistentRef<string[]>('flowstate:inbox-priority-filters', [])
-    const _selectedProjects = usePersistentRef<string[]>('flowstate:inbox-project-filters', [])
-    const _selectedDurations = usePersistentRef<string[]>('flowstate:inbox-duration-filters', [])
+    const _selectedPriorities = usePersistentRef<string[]>(`flowstate:inbox-priority-filters-${ctx}`, [])
+    const _selectedProjects = usePersistentRef<string[]>(`flowstate:inbox-project-filters-${ctx}`, [])
+    const _selectedDurations = usePersistentRef<string[]>(`flowstate:inbox-duration-filters-${ctx}`, [])
 
     const selectedPriorities = computed({
         get: () => new Set(_selectedPriorities.value),
@@ -54,9 +56,9 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     })
 
     // TASK-1073: Sort state (TASK-1215: upgraded to Tauri-aware persistence)
-    const sortBy = usePersistentRef<SortByType>('flowstate:inbox-sort-by', 'newest', 'inbox-sort-by')
+    const sortBy = usePersistentRef<SortByType>(`flowstate:inbox-sort-by-${ctx}`, 'newest', `${ctx}-inbox-sort-by`)
     // TASK-1412: Sort direction state
-    const sortDirection = usePersistentRef<SortDirection>('flowstate:inbox-sort-direction', 'asc', 'inbox-sort-direction')
+    const sortDirection = usePersistentRef<SortDirection>(`flowstate:inbox-sort-direction-${ctx}`, 'asc', `${ctx}-inbox-sort-direction`)
 
     // TASK-1075: Search query
     const searchQuery = ref('')
@@ -67,7 +69,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // --- Done Tasks Filter ---
     // showDoneOnly = false: Show active tasks (non-done)
     // showDoneOnly = true: Show ONLY done tasks
-    const showDoneOnly = usePersistentRef<boolean>('flowstate:inbox-show-done', false)
+    const showDoneOnly = usePersistentRef<boolean>(`flowstate:inbox-show-done-${ctx}`, false)
     // For backwards compatibility with prop name
     const currentHideDoneTasks = computed(() => !showDoneOnly.value)
     const toggleHideDoneTasks = () => {
@@ -240,15 +242,17 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             )
         }
 
-        // 2. Time Filter
-        if (activeTimeFilter.value === 'today') {
-            tasks = tasks.filter(task => isTodayTask(task))
-        } else if (activeTimeFilter.value === 'next3days') {
-            tasks = tasks.filter(task => isNext3DaysTask(task))
-        } else if (activeTimeFilter.value === 'week') {
-            tasks = tasks.filter(task => isWeekTask(task))
-        } else if (activeTimeFilter.value === 'month') {
-            tasks = tasks.filter(task => isThisMonthTask(task))
+        // 2. Time Filter (skip when Unscheduled is active — dateless tasks can't match date ranges)
+        if (!unscheduledOnly.value) {
+            if (activeTimeFilter.value === 'today') {
+                tasks = tasks.filter(task => isTodayTask(task))
+            } else if (activeTimeFilter.value === 'next3days') {
+                tasks = tasks.filter(task => isNext3DaysTask(task))
+            } else if (activeTimeFilter.value === 'week') {
+                tasks = tasks.filter(task => isWeekTask(task))
+            } else if (activeTimeFilter.value === 'month') {
+                tasks = tasks.filter(task => isThisMonthTask(task))
+            }
         }
 
         // 3. Unscheduled Filter

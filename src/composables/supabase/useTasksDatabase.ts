@@ -242,9 +242,10 @@ export function useTasksDatabase(ctx: DatabaseContext) {
     const permanentlyDeleteTask = async (taskId: string): Promise<void> => {
         try {
             isSyncing.value = true
-            // TASK-317: Record tombstone before permanent deletion
-            await recordTombstone('task', taskId)
-            // BUG-352: Wrap in withRetry for mobile network resilience
+            // BUG-1477: Hard-delete FIRST, tombstone SECOND.
+            // Old order (tombstone → delete) left zombie rows when delete failed.
+            // The DB trigger `on_tombstone_cleanup_task` is a safety net, but
+            // correct ordering prevents the inconsistency in the first place.
             await withRetry(async () => {
                 const { error } = await supabase
                     .from('tasks')
@@ -252,6 +253,8 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     .eq('id', taskId)
                 if (error) throw error
             }, 'permanentlyDeleteTask')
+            // Task row is gone — now record tombstone to prevent resurrection
+            await recordTombstone('task', taskId)
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'permanentlyDeleteTask')

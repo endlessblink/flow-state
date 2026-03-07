@@ -6,6 +6,7 @@ import { useMorningDashboard, type TaskPoolGroup, type TimeBlock } from '@/compo
 import BigThreeSlot from './BigThreeSlot.vue'
 import TaskPoolCard from './TaskPoolCard.vue'
 import TimeBlockPicker from './TimeBlockPicker.vue'
+import MorningTimeBlockCalendar from './MorningTimeBlockCalendar.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
@@ -462,10 +463,10 @@ async function handleCreateTask() {
       </div>
     </template>
 
-    <!-- Stage 2: Time Block -->
+    <!-- Stage 2: Time Block (Calendar View) -->
     <template v-else-if="stage === 'timeblock'">
-      <TimeBlockPicker
-        :slots="big3Slots"
+      <MorningTimeBlockCalendar
+        :big3-slots="big3Slots"
         :time-blocks="timeBlocks"
         @update:time-block="updateTimeBlock"
         @back="goBackToPick"
@@ -865,11 +866,15 @@ async function handleCreateTask() {
   .start-day-button--ready { animation: none; }
 }
 
-/* Mobile: stack vertically */
+/* Mobile: stack vertically, drop zones first */
 @media (max-width: 768px) {
   .big-three-layout {
     grid-template-columns: 1fr;
     gap: var(--space-3);
+  }
+
+  .drop-zones {
+    order: -1;
   }
 
   .task-pool {

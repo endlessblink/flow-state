@@ -48,6 +48,12 @@
                 <span>Sign Out ({{ authStore.user?.email }})</span>
               </div>
 
+              <!-- Morning Dashboard -->
+              <div class="menu-item" @click="handleMorning">
+                <Sunrise :size="20" />
+                <span>Morning Dashboard</span>
+              </div>
+
               <!-- AI Chat -->
               <div class="menu-item" @click="handleAIChat">
                 <Sparkles :size="20" />
@@ -75,7 +81,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Inbox as InboxIcon, Sparkles, Menu as MenuIcon, LogIn, LogOut, Settings, X, Timer as TimerIcon, Zap, RefreshCw, Calendar as CalendarIcon } from 'lucide-vue-next'
+import { Inbox as InboxIcon, Sparkles, Menu as MenuIcon, LogIn, LogOut, Settings, X, Timer as TimerIcon, Zap, RefreshCw, Calendar as CalendarIcon, Sunrise } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
@@ -103,6 +109,11 @@ const handleSignIn = () => {
 const handleSignOut = async () => {
   closeMenu()
   await authStore.signOut()
+}
+
+const handleMorning = () => {
+  closeMenu()
+  router.push('/morning')
 }
 
 const handleAIChat = () => {

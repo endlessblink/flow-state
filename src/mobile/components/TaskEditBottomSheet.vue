@@ -147,6 +147,35 @@
                 </button>
               </div>
             </div>
+
+            <!-- Project Picker -->
+            <div class="field-section">
+              <span class="section-label">Project</span>
+              <div class="project-list">
+                <button
+                  class="project-item"
+                  :class="{ active: !editedProjectId }"
+                  @click="editedProjectId = null"
+                >
+                  <span class="project-icon no-project">
+                    <Inbox :size="16" />
+                  </span>
+                  <span>No Project</span>
+                </button>
+                <button
+                  v-for="project in projects"
+                  :key="project.id"
+                  class="project-item"
+                  :class="{ active: editedProjectId === project.id }"
+                  @click="editedProjectId = project.id"
+                >
+                  <span class="project-icon" :style="projectIconStyle(project)">
+                    {{ project.emoji || '📁' }}
+                  </span>
+                  <span class="project-name">{{ project.name }}</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Bottom Action Bar — thumb zone -->
@@ -173,9 +202,10 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import {
   Flag, CalendarDays, X, Check,
-  Circle, CheckCircle2, Clock
+  Circle, CheckCircle2, Clock, Inbox
 } from 'lucide-vue-next'
-import type { Task } from '@/types/tasks'
+import { useProjectStore } from '@/stores/projects'
+import type { Task, Project } from '@/types/tasks'
 
 interface Props {
   isOpen: boolean
@@ -189,6 +219,9 @@ const emit = defineEmits<{
   save: [taskId: string, updates: Partial<Task>]
 }>()
 
+const projectStore = useProjectStore()
+const projects = computed(() => projectStore.projects)
+
 // Form state
 const editedTitle = ref('')
 const editedDescription = ref('')
@@ -196,6 +229,7 @@ const editedPriority = ref<'low' | 'medium' | 'high' | null>(null)
 const editedDueDate = ref<string | undefined>(undefined)
 const editedDueDateInput = ref('')
 const editedStatus = ref<Task['status']>('todo')
+const editedProjectId = ref<string | null>(null)
 const showDatePicker = ref(false)
 
 // Refs
@@ -255,6 +289,7 @@ watch(() => props.task, (task) => {
     editedPriority.value = task.priority
     editedDueDate.value = task.dueDate || undefined
     editedStatus.value = task.status
+    editedProjectId.value = task.projectId || null
     showDatePicker.value = false
     if (task.dueDate) {
       editedDueDateInput.value = new Date(task.dueDate).toISOString().split('T')[0]
@@ -328,6 +363,7 @@ function handleSave() {
   if (editedPriority.value !== props.task.priority) updates.priority = editedPriority.value
   if (editedDueDate.value !== props.task.dueDate) updates.dueDate = editedDueDate.value || ''
   if (editedStatus.value !== props.task.status) updates.status = editedStatus.value
+  if (editedProjectId.value !== (props.task.projectId || null)) updates.projectId = editedProjectId.value || ''
 
   if (Object.keys(updates).length > 0) {
     triggerHaptic(30)
@@ -335,6 +371,12 @@ function handleSave() {
   }
 
   emit('close')
+}
+
+function projectIconStyle(project: Project) {
+  if (project.emoji) return {}
+  const color = Array.isArray(project.color) ? project.color[0] : project.color
+  return { background: color || 'var(--glass-bg-soft)' }
 }
 
 function triggerHaptic(duration: number = 10) {
@@ -600,6 +642,64 @@ function triggerHaptic(duration: number = 10) {
 .save-btn:not(:disabled):active {
   background: var(--brand-primary);
   color: var(--surface-primary);
+}
+
+/* Project Picker */
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.project-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2_5) var(--space-3);
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+  text-align: left;
+}
+
+.project-item:active {
+  transform: scale(0.98);
+}
+
+.project-item.active {
+  background: var(--state-active-bg);
+  border-color: var(--brand-primary);
+  color: var(--text-primary);
+}
+
+.project-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.project-icon.no-project {
+  color: var(--text-muted);
+}
+
+.project-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ================================

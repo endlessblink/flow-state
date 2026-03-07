@@ -163,15 +163,13 @@
           />
         </div>
 
-        <!-- Quick Edit Actions (Thumb Zone) -->
+        <!-- Action Buttons (right under card) -->
         <MobileQuickSortFilters
           :current-task="currentTask"
           :is-today="isToday"
           :is-tomorrow="isTomorrow"
           :is-weekend="isWeekend"
           :is-task-dirty="isTaskDirty"
-          @set-priority="setPriority"
-          @set-date="setDueDate"
           @mark-done="handleMarkDone"
           @save="handleSave"
           @assign="openProjectSheet"

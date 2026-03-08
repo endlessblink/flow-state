@@ -263,6 +263,23 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
+### ~~TASK-1488~~: Fix Search Modal Z-Index — Confirmation Dialog Hidden Behind Overlay (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-08)
+
+**Problem**: When deleting a task from search results via right-click context menu, the ConfirmationModal opens BEHIND the SearchModal overlay and is invisible. Additionally, search results would close unexpectedly after certain context menu actions.
+
+**Root Cause**: Z-index layering issue. SearchModal used `--z-modal: 1300` and ConfirmationModal (BaseModal) also used `--z-modal: 1300`. Since both have the same z-index in ModalManager, and ConfirmationModal is rendered first in the DOM (line 65-73 before SearchModal at 76-81), the SearchModal appeared on top, blocking the confirmation dialog.
+
+**Fix**:
+1. `ConfirmationModal.vue`: Added `class="confirmation-modal-override"` to BaseModal wrapper
+2. Added CSS rule `:deep(.confirmation-modal-override .modal-overlay) { z-index: var(--z-toast); }` to elevate ConfirmationModal to `--z-toast: 1450` (above SearchModal's 1300)
+3. Result: Confirmation dialogs now always appear on top of search modals, and users can interact with them properly
+
+**Files Changed**: `src/components/common/ConfirmationModal.vue`
+
+---
+
 ### BUG-1320: Production console log spam — WakeLock, LWW echo, legacy IDs, Realtime drops (👀 REVIEW)
 
 **Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-14)
@@ -1486,6 +1503,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1460**~~ | **P2** | ✅ **KDE Widget — Bump task limit to 100 + group by project** (✅ DONE 2026-03-06) |
 | ~~**BUG-1461**~~ | **P1** | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06) |
 | ~~**TASK-1484**~~ | **P3** | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08) |
+| **TASK-1487** | **P2** | 🔄 **Search modal: delete does nothing + search closes after context menu actions** (🔄 IN PROGRESS 2026-03-08) |
+| **TASK-1486** | **P2** | 📋 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (📋 PLANNED 2026-03-08) |
+| **TASK-1485** | **P2** | 🔄 **Move AI Assist to More submenu + teal Mark Done line** (🔄 IN PROGRESS 2026-03-08) |
 | **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |
 | **TASK-1457** | **P2** | 🔄 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (🔄 IN PROGRESS 2026-03-06) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
@@ -2401,9 +2421,9 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### TASK-1470: Task Assist UX Resurface (📋 PLANNED)
+### TASK-1470: Task Assist UX Resurface (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-03-08)
 
 **Problem**: AI Task Assist is functional but buried in a context menu popover. Most users never discover it. It provides real value (AI suggestions for task breakdown, priority, time estimates) but zero discoverability.
 

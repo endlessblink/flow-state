@@ -9,6 +9,7 @@
     close-on-overlay-click
     close-on-escape
     submit-on-enter
+    class="confirmation-modal-override"
     @close="$emit('cancel')"
     @confirm="$emit('confirm')"
     @after-open="handleAfterOpen"
@@ -88,6 +89,11 @@ const handleAfterOpen = () => {
 
 <style scoped>
 /* Confirmation Modal Specific Styles */
+
+/* Ensure confirmation modals always appear above other modals (like search) */
+:deep(.confirmation-modal-override .modal-overlay) {
+  z-index: var(--z-toast);
+}
 
 .icon-wrapper {
   display: flex;

@@ -27,6 +27,9 @@ test-*.cjs
 test-*.spec.ts
 check-*.mjs
 
+# Debug screenshots (Claude Code + Playwright debug captures)
+.dev/screenshots/
+
 # Backup files
 *-backup-*.md
 *.bak
@@ -72,7 +75,6 @@ dev-dist/
 
 # External tools and agent directories
 .agent-worktrees/
-Claude-Code-Beads-Orchestration/
 Claude-Subagent-Editor/
 eslint_current_report.txt
 

@@ -1,11 +1,11 @@
 ---
 name: master-plan-auditor
-description: Audit task status across MASTER_PLAN.md and beads. Finds stale tasks, status mismatches, likely-done tasks, and beads sync issues. NEVER auto-marks tasks - only recommends. User confirmation is the only valid evidence of completion.
+description: Audit task status in MASTER_PLAN.md. Finds stale tasks, status mismatches, and likely-done tasks. NEVER auto-marks tasks - only recommends. User confirmation is the only valid evidence of completion.
 ---
 
 # Master Plan Auditor
 
-Read-only analysis of MASTER_PLAN.md and beads issues. Provides recommendations with confidence scores.
+Read-only analysis of MASTER_PLAN.md. Provides recommendations with confidence scores.
 
 **Philosophy**: User confirmation = done. Tests passing and commits existing are *evidence*, not *proof*.
 
@@ -22,7 +22,6 @@ Read-only analysis of MASTER_PLAN.md and beads issues. Provides recommendations 
 | **IN_PROGRESS Analysis** | Parse all IN_PROGRESS tasks, gather git/test evidence, calculate confidence score |
 | **Status Sync Checker** | Verify all 3 MASTER_PLAN.md locations match (table, header, status line) |
 | **Stale Task Detector** | Flag tasks with no git activity for 7+ days |
-| **Beads Cross-Reference** | Compare MASTER_PLAN.md vs beads issues, find mismatches |
 | **Orphan Finder** | Task IDs in git/code but not in MASTER_PLAN.md |
 
 ---
@@ -106,7 +105,6 @@ grep -r "TASK-XXX\|$(echo 'Feature keywords')" tests/ src/ --include="*.spec.ts"
 |----------|--------|
 | Commit message contains "fix/implement/complete/done" | +30 |
 | 3+ commits mentioning task | +20 |
-| Related beads issue is closed | +25 |
 | Related tests exist | +15 |
 | Activity within last 2 days | +10 |
 
@@ -144,30 +142,7 @@ if [ $days_ago -gt 7 ]; then
 fi
 ```
 
-### Step 6: Cross-Reference Beads
-
-```bash
-# List all open beads issues
-bd list --status=open 2>/dev/null || echo "Beads not available"
-
-# List closed beads issues
-bd list --status=closed 2>/dev/null || echo "Beads not available"
-
-# Compare with MASTER_PLAN status
-```
-
-**Mismatch Types:**
-- Beads OPEN + MASTER_PLAN DONE = "Beads issue should be closed"
-- Beads CLOSED + MASTER_PLAN IN_PROGRESS = "Task may be done"
-
-**Graceful Degradation:**
-If beads returns an error (repo ID mismatch, not initialized), output:
-```
-⚠️ Beads unavailable: [error message]
-Skipping beads cross-reference. Other checks continue.
-```
-
-### Step 7: Find Orphan Task IDs
+### Step 6: Find Orphan Task IDs
 
 Task IDs mentioned in git but not in MASTER_PLAN.md:
 
@@ -191,7 +166,6 @@ comm -23 /tmp/git-tasks.txt /tmp/plan-tasks.txt
 
 **Generated**: [timestamp]
 **MASTER_PLAN.md**: docs/MASTER_PLAN.md
-**Beads Status**: [Available/Unavailable]
 
 ## Summary
 
@@ -201,7 +175,6 @@ comm -23 /tmp/git-tasks.txt /tmp/plan-tasks.txt
 | Still In Progress | X |
 | Stale (>7 days) | X |
 | Status Inconsistencies | X |
-| Beads Mismatches | X |
 | Orphan IDs | X |
 
 ---
@@ -217,22 +190,16 @@ These tasks have strong evidence of completion. **User verification required.**
 | Confidence | 85/100 |
 | Last Activity | 2 days ago |
 | Commits | 5 |
-| Beads | Closed |
 
 **Evidence:**
 - Commit `abc123`: "fix: implement TASK-XXX feature complete"
 - Tests exist: `tests/feature.spec.ts`
-- Beads issue #42 closed on 2026-01-23
-
 **To mark done:**
 ```bash
 # Update all 3 locations in MASTER_PLAN.md:
 # 1. Table: | ~~**TASK-XXX**~~ | ✅ **DONE** ... |
 # 2. Bullet: - ~~TASK-XXX~~: ✅ ...
 # 3. Header: #### ~~TASK-XXX~~: ... (✅ DONE)
-
-# Then close beads (if open):
-bd close [beads-id]
 ```
 
 ---
@@ -284,17 +251,6 @@ These tasks have different statuses in different locations.
 
 ---
 
-## Beads Mismatches
-
-MASTER_PLAN.md and beads show different statuses.
-
-| Task | MASTER_PLAN | Beads | Resolution |
-|------|-------------|-------|------------|
-| TASK-BBB | ✅ DONE | OPEN | `bd close [id]` |
-| TASK-CCC | 🔄 IN PROGRESS | CLOSED | Verify if done |
-
----
-
 ## Orphan Task IDs
 
 Found in git history but not in MASTER_PLAN.md.
@@ -309,8 +265,7 @@ Found in git history but not in MASTER_PLAN.md.
 
 1. **Verify likely-done tasks** with user, then run `/done TASK-XXX`
 2. **Fix inconsistencies** by updating all 3 locations
-3. **Sync beads** with `bd close` commands shown above
-4. **Resume or close stale tasks** based on project priorities
+3. **Resume or close stale tasks** based on project priorities
 ```
 
 ---
@@ -320,7 +275,6 @@ Found in git history but not in MASTER_PLAN.md.
 1. **NEVER auto-mark tasks as done** - Only provide recommendations
 2. **User confirmation is required** - Tests/commits are evidence, not proof
 3. **Check all 3 locations** - Table, bullets, detailed headers
-4. **Graceful degradation** - If beads fails, continue with other checks
 5. **Confidence scores guide priority** - High confidence = verify first
 
 ---
@@ -347,14 +301,6 @@ The stale threshold can be mentioned in the audit request:
 ---
 
 ## Troubleshooting
-
-### Beads Error: "repo ID mismatch"
-
-```
-⚠️ Beads unavailable: Repository ID mismatch
-```
-
-This means the beads database was created for a different repo. The auditor will skip beads cross-reference and continue with other checks.
 
 ### No Git History for Task
 

@@ -20,7 +20,20 @@
         <kbd class="shortcut-esc">Esc</kbd>
       </div>
 
-      <div v-if="searchQuery.trim()" class="search-results">
+      <!-- Filter Row -->
+      <div class="filter-row">
+        <button
+          v-for="filter in filters"
+          :key="filter.key"
+          class="filter-pill"
+          :class="{ active: activeFilters[filter.key] }"
+          @click="toggleFilter(filter.key)"
+        >
+          {{ filter.label }}
+        </button>
+      </div>
+
+      <div v-if="searchQuery.trim() || hasActiveFilters" class="search-results">
         <!-- Tasks Section -->
         <div v-if="filteredTasks.length > 0" class="result-section">
           <div class="section-header">
@@ -79,13 +92,14 @@
         <!-- No Results -->
         <div v-if="filteredTasks.length === 0 && filteredProjects.length === 0" class="no-results">
           <Search :size="32" />
-          <p>No results found for "{{ searchQuery }}"</p>
+          <p v-if="searchQuery.trim()">No results found for "{{ searchQuery }}"</p>
+          <p v-else>No tasks match the active filters</p>
         </div>
       </div>
 
       <!-- Initial State - Minimal -->
       <div v-else class="search-empty">
-        <span class="empty-hint">Type to search tasks and projects</span>
+        <span class="empty-hint">{{ hasActiveFilters ? 'Use filters above or type to search' : 'Type to search tasks and projects' }}</span>
       </div>
     </div>
   </div>
@@ -114,19 +128,70 @@ const searchInput = ref<HTMLInputElement>()
 const searchQuery = ref('')
 const selectedIndex = ref(0)
 
+// Filter state
+const filters = [
+  { key: 'today', label: 'Today' },
+  { key: 'hideDone', label: 'Hide Done' },
+  { key: 'highPriority', label: 'High Priority' },
+  { key: 'noDate', label: 'No Date' },
+] as const
+
+type FilterKey = typeof filters[number]['key']
+
+const activeFilters = ref<Record<FilterKey, boolean>>({
+  today: false,
+  hideDone: true, // ON by default
+  highPriority: false,
+  noDate: false,
+})
+
+const hasActiveFilters = computed(() =>
+  Object.values(activeFilters.value).some(Boolean)
+)
+
+const toggleFilter = (key: FilterKey) => {
+  activeFilters.value[key] = !activeFilters.value[key]
+}
+
 // Computed properties for search results
+// TASK-1487: Use rawTasks to search ALL tasks, not just filtered-by-view ones
 const filteredTasks = computed(() => {
-  if (!searchQuery.value.trim() || !taskStore?.tasks) return []
-  
-  const query = searchQuery.value.toLowerCase()
-  return (taskStore.tasks || []).filter(task => {
-    const titleMatch = task.title.toLowerCase().includes(query)
-    const projectMatch = (task.projectId && taskStore.projects) ? 
-      taskStore.projects.find(p => p.id === task.projectId)?.name.toLowerCase().includes(query) : 
-      false
-    const statusMatch = task.status?.toLowerCase().includes(query)
-    
-    return titleMatch || projectMatch || statusMatch
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  if (!allTasks) return []
+
+  const query = searchQuery.value.toLowerCase().trim()
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+  // Must have either a search query or an active filter to show anything
+  if (!query && !hasActiveFilters.value) return []
+
+  return (allTasks || []).filter(task => {
+    // Text search (skip if no query)
+    if (query) {
+      const titleMatch = task.title.toLowerCase().includes(query)
+      const projectMatch = (task.projectId && taskStore.projects) ?
+        taskStore.projects.find(p => p.id === task.projectId)?.name.toLowerCase().includes(query) :
+        false
+      const statusMatch = task.status?.toLowerCase().includes(query)
+      if (!titleMatch && !projectMatch && !statusMatch) return false
+    }
+
+    // Filter: Hide Done
+    if (activeFilters.value.hideDone && task.status === 'done') return false
+
+    // Filter: Today
+    if (activeFilters.value.today) {
+      if (!task.dueDate || task.dueDate !== todayStr) return false
+    }
+
+    // Filter: High Priority
+    if (activeFilters.value.highPriority && task.priority !== 'high') return false
+
+    // Filter: No Date
+    if (activeFilters.value.noDate && task.dueDate) return false
+
+    return true
   }).map(task => ({
     ...task,
     projectName: (task.projectId && taskStore.projects) ? taskStore.projects.find(p => p.id === task.projectId)?.name : undefined
@@ -134,10 +199,11 @@ const filteredTasks = computed(() => {
 })
 
 const filteredProjects = computed(() => {
+  // Projects section only shown when there's a text query (filters don't apply to projects)
   if (!searchQuery.value.trim() || !taskStore?.projects) return []
-  
+
   const query = searchQuery.value.toLowerCase()
-  return taskStore.projects.filter(project => 
+  return taskStore.projects.filter(project =>
     project.name.toLowerCase().includes(query)
   ).slice(0, 5) // Limit results
 })
@@ -252,7 +318,7 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: center;
   padding-top: 15vh;
-  z-index: var(--z-popover);
+  z-index: var(--z-modal);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   animation: fadeIn var(--duration-normal) var(--spring-smooth);
@@ -272,7 +338,7 @@ onMounted(() => {
   box-shadow: var(--overlay-component-shadow);
 
   width: 90%;
-  max-width: 600px;
+  max-width: 680px;
   max-height: 70vh;
   overflow: hidden;
   animation: scaleIn var(--duration-normal) var(--spring-bounce);
@@ -356,6 +422,41 @@ onMounted(() => {
   font-family: var(--font-mono);
   color: var(--text-subtle);
   flex-shrink: 0;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--overlay-light);
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-soft);
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--spring-smooth);
+  white-space: nowrap;
+}
+
+.filter-pill:hover {
+  border-color: var(--border-hover);
+  color: var(--text-secondary);
+}
+
+.filter-pill.active {
+  background: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary-alpha-50);
 }
 
 .search-results {

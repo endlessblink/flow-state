@@ -239,7 +239,7 @@ The file is currently locked by session ${LOCKED_BY:0:8}... (since $LOCKED_AT).
 Your edit has been saved to the deferred queue.
 
 NEXT STEPS:
-1. Work on other available tasks: \`bd ready\`
+1. Work on other available tasks (check MASTER_PLAN.md or use /next)
 2. You'll be notified when $TASK_ID completes
 3. Then retry your edit to $FILENAME
 

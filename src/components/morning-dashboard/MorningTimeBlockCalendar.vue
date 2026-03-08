@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
+import { useWindowSize } from '@vueuse/core'
 import { ChevronLeft } from 'lucide-vue-next'
 import CalendarDayView from '@/components/calendar/CalendarDayView.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useGoogleCalendar } from '@/composables/calendar/useGoogleCalendar'
@@ -46,8 +48,76 @@ const {
 const googleCalendar = useGoogleCalendar()
 const externalCalendar = useExternalCalendar()
 
+// --- Mobile detection ---
+const { width: windowWidth } = useWindowSize()
+const isMobile = computed(() => windowWidth.value < 768)
+
 // --- Big 3 accent colors ---
 const BIG3_COLORS = ['#4ECDC4', '#FFC300', '#9382DC'] as const
+
+// --- Mobile time-picker options ---
+const timeOptions = computed(() => {
+  const options: { label: string; value: string }[] = []
+  for (let h = 6; h <= 22; h++) {
+    for (const m of [0, 15, 30, 45]) {
+      const hh = h.toString().padStart(2, '0')
+      const mm = m.toString().padStart(2, '0')
+      const ampm = h < 12 ? 'AM' : 'PM'
+      const displayH = h === 0 ? 12 : h > 12 ? h - 12 : h
+      options.push({ label: `${displayH}:${mm} ${ampm}`, value: `${hh}:${mm}` })
+    }
+  }
+  return options
+})
+
+const durationSelectOptions = [
+  { label: '25 min', value: 25 },
+  { label: '30 min', value: 30 },
+  { label: '45 min', value: 45 },
+  { label: '1 hour', value: 60 },
+  { label: '1.5 hours', value: 90 },
+  { label: '2 hours', value: 120 },
+]
+
+function updateStartTime(index: number, value: string | number | null) {
+  if (typeof value === 'string') {
+    emit('update:timeBlock', index, { ...props.timeBlocks[index], startTime: value })
+  }
+}
+
+function updateDuration(index: number, value: string | number | null) {
+  if (value != null) {
+    emit('update:timeBlock', index, { ...props.timeBlocks[index], duration: Number(value) })
+  }
+}
+
+function mobileEndTime(block: TimeBlock): string {
+  if (!block.startTime) return ''
+  const [h, m] = block.startTime.split(':').map(Number)
+  if (isNaN(h) || isNaN(m)) return ''
+  const totalMin = h * 60 + m + block.duration
+  const endH = Math.floor(totalMin / 60) % 24
+  const endM = totalMin % 60
+  const ampm = endH < 12 ? 'AM' : 'PM'
+  const displayH = endH === 0 ? 12 : endH > 12 ? endH - 12 : endH
+  return `${displayH}:${endM.toString().padStart(2, '0')} ${ampm}`
+}
+
+const hasOverlap = computed(() => {
+  const placed = props.timeBlocks.filter(b => b.startTime)
+  if (placed.length < 2) return false
+  const ranges = placed.map(b => {
+    const [h, m] = b.startTime.split(':').map(Number)
+    const start = h * 60 + m
+    return { start, end: start + b.duration }
+  })
+  for (let i = 0; i < ranges.length; i++) {
+    for (let j = i + 1; j < ranges.length; j++) {
+      if (ranges[i].start < ranges[j].end && ranges[j].start < ranges[i].end) return true
+    }
+  }
+  return false
+})
 
 // --- Duration cycling ---
 const durationOptions = [25, 30, 45, 60, 90, 120] as const
@@ -264,91 +334,169 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="morning-calendar-layout">
-    <!-- Big 3 Sidebar -->
-    <div class="big3-sidebar">
-      <h4 class="sidebar-title">Your Big 3</h4>
-      <div
-        v-for="(slot, i) in big3Slots"
-        :key="i"
-        class="big3-task-card"
-        :class="{
-          'big3-task-card--placed': timeBlocks[i].startTime,
-          'big3-task-card--selected': selectedBig3Index === i,
-          [`big3-task-card--${i}`]: true,
-        }"
-        draggable="true"
-        @dragstart="onBig3DragStart($event, i)"
-        @click="selectBig3ForPlacement(i)"
-      >
-        <span class="big3-number">{{ i + 1 }}</span>
-        <div class="big3-info">
-          <span class="big3-title">{{ slot.title || 'Empty slot' }}</span>
-          <span v-if="timeBlocks[i].startTime" class="big3-time">
-            {{ formatTime12h(timeBlocks[i].startTime) }}
-            <button
-              class="big3-duration-btn"
-              title="Click to cycle duration"
-              @click.stop="cycleDuration(i)"
-            >
-              {{ timeBlocks[i].duration }}min
-            </button>
-            <button
-              class="big3-unplace-btn"
-              title="Remove from calendar"
-              @click.stop="unplaceTask(i)"
-            >
-              &times;
-            </button>
-          </span>
-          <span v-else class="big3-hint">Drag or tap, then tap a slot</span>
+  <div :class="isMobile ? 'mobile-timeblock' : 'morning-calendar-layout'">
+    <!-- ==================== MOBILE VIEW ==================== -->
+    <template v-if="isMobile">
+      <div class="mobile-tb-header">
+        <button class="footer-btn footer-btn--back" type="button" @click="emit('back')">
+          <ChevronLeft :size="16" /> Back
+        </button>
+        <h3 class="mobile-tb-title">Time Block Your Big 3</h3>
+        <span class="mobile-tb-subtitle">When will you work on each task?</span>
+      </div>
+
+      <div class="mobile-tb-cards">
+        <div
+          v-for="(slot, i) in big3Slots"
+          :key="i"
+          class="mobile-tb-card"
+          :class="`mobile-tb-card--${i}`"
+        >
+          <div class="mobile-tb-task-info">
+            <span class="mobile-tb-number">{{ i + 1 }}</span>
+            <span class="mobile-tb-task-title">{{ slot.title || 'Empty slot' }}</span>
+          </div>
+          <div class="mobile-tb-controls">
+            <CustomSelect
+              :model-value="timeBlocks[i].startTime"
+              :options="timeOptions"
+              placeholder="Start time"
+              :compact="true"
+              @update:model-value="updateStartTime(i, $event)"
+            />
+            <CustomSelect
+              :model-value="timeBlocks[i].duration"
+              :options="durationSelectOptions"
+              placeholder="Duration"
+              :compact="true"
+              @update:model-value="updateDuration(i, $event)"
+            />
+            <span v-if="timeBlocks[i].startTime" class="mobile-tb-end">
+              until {{ mobileEndTime(timeBlocks[i]) }}
+            </span>
+          </div>
         </div>
       </div>
-      <p class="sidebar-hint">Tap a task, then tap a time slot to place it</p>
-    </div>
 
-    <!-- Calendar -->
-    <div class="calendar-wrapper">
-      <CalendarDayView
-        :time-slots="dayView.timeSlots.value"
-        :hours="dayView.hours"
-        :is-viewing-today="true"
-        :time-indicator-position="timeIndicatorPosition"
-        :drag-ghost="dayView.dragGhost.value"
-        :active-drop-slot="dayView.activeDropSlot.value"
-        :is-dragging="dayView.isDragging.value"
-        :dragged-event-id="dayView.draggedEventId.value"
-        :hovered-event-id="null"
-        :external-events="todayExternalEvents"
-        @drop="handleCalendarDrop"
-        @dragover="handleDragOver"
-        @dragenter="handleDragEnter"
-        @dragleave="handleDragLeave"
-        @slot-mouse-down="handleSlotClick"
-        @event-mouse-enter="() => {}"
-        @event-mouse-leave="() => {}"
-        @event-drag-start="() => {}"
-        @event-drag-end="() => {}"
-        @event-click="() => {}"
-        @event-dbl-click="() => {}"
-        @event-context-menu="() => {}"
-        @cycle-status="() => {}"
-        @remove-from-calendar="() => {}"
-        @start-timer="() => {}"
-        @start-resize="() => {}"
-      />
-    </div>
+      <div v-if="hasOverlap" class="mobile-tb-warning">
+        Time blocks overlap — consider adjusting
+      </div>
 
-    <!-- Footer -->
-    <div class="morning-footer">
-      <button class="footer-btn footer-btn--back" @click="emit('back')">
-        <ChevronLeft :size="16" />
-        Back
-      </button>
-      <button class="footer-btn footer-btn--start" @click="emit('start')">
+      <!-- Mini timeline preview -->
+      <div class="mobile-tb-timeline">
+        <div class="mobile-tb-timeline-track">
+          <div
+            v-for="(block, i) in timeBlocks"
+            :key="i"
+            class="mobile-tb-timeline-block"
+            :class="`mobile-tb-timeline-block--${i}`"
+            :style="block.startTime ? {
+              left: `${((parseInt(block.startTime.split(':')[0]) * 60 + parseInt(block.startTime.split(':')[1])) - 360) / 600 * 100}%`,
+              width: `${block.duration / 600 * 100}%`,
+            } : { display: 'none' }"
+          >
+            <span class="mobile-tb-timeline-label">{{ i + 1 }}</span>
+          </div>
+        </div>
+        <div class="mobile-tb-timeline-hours">
+          <span v-for="h in [6, 8, 10, 12, 14, 16, 18, 20, 22]" :key="h">
+            {{ h > 12 ? h - 12 : h }}{{ h < 12 ? 'a' : 'p' }}
+          </span>
+        </div>
+      </div>
+
+      <button class="footer-btn footer-btn--start mobile-tb-start" type="button" @click="emit('start')">
         Start My Day
       </button>
-    </div>
+    </template>
+
+    <!-- ==================== DESKTOP VIEW ==================== -->
+    <template v-else>
+      <!-- Big 3 Sidebar -->
+      <div class="big3-sidebar">
+        <h4 class="sidebar-title">Your Big 3</h4>
+        <div
+          v-for="(slot, i) in big3Slots"
+          :key="i"
+          class="big3-task-card"
+          :class="{
+            'big3-task-card--placed': timeBlocks[i].startTime,
+            'big3-task-card--selected': selectedBig3Index === i,
+            [`big3-task-card--${i}`]: true,
+          }"
+          draggable="true"
+          @dragstart="onBig3DragStart($event, i)"
+          @click="selectBig3ForPlacement(i)"
+        >
+          <span class="big3-number">{{ i + 1 }}</span>
+          <div class="big3-info">
+            <span class="big3-title">{{ slot.title || 'Empty slot' }}</span>
+            <span v-if="timeBlocks[i].startTime" class="big3-time">
+              {{ formatTime12h(timeBlocks[i].startTime) }}
+              <button
+                class="big3-duration-btn"
+                title="Click to cycle duration"
+                @click.stop="cycleDuration(i)"
+              >
+                {{ timeBlocks[i].duration }}min
+              </button>
+              <button
+                class="big3-unplace-btn"
+                title="Remove from calendar"
+                @click.stop="unplaceTask(i)"
+              >
+                &times;
+              </button>
+            </span>
+            <span v-else class="big3-hint">Drag or tap, then tap a slot</span>
+          </div>
+        </div>
+        <p class="sidebar-hint">Tap a task, then tap a time slot to place it</p>
+      </div>
+
+      <!-- Calendar -->
+      <div class="calendar-wrapper">
+        <CalendarDayView
+          :time-slots="dayView.timeSlots.value"
+          :hours="dayView.hours"
+          :is-viewing-today="true"
+          :time-indicator-position="timeIndicatorPosition"
+          :drag-ghost="dayView.dragGhost.value"
+          :active-drop-slot="dayView.activeDropSlot.value"
+          :is-dragging="dayView.isDragging.value"
+          :dragged-event-id="dayView.draggedEventId.value"
+          :hovered-event-id="null"
+          :external-events="todayExternalEvents"
+          @drop="handleCalendarDrop"
+          @dragover="handleDragOver"
+          @dragenter="handleDragEnter"
+          @dragleave="handleDragLeave"
+          @slot-mouse-down="handleSlotClick"
+          @event-mouse-enter="() => {}"
+          @event-mouse-leave="() => {}"
+          @event-drag-start="() => {}"
+          @event-drag-end="() => {}"
+          @event-click="() => {}"
+          @event-dbl-click="() => {}"
+          @event-context-menu="() => {}"
+          @cycle-status="() => {}"
+          @remove-from-calendar="() => {}"
+          @start-timer="() => {}"
+          @start-resize="() => {}"
+        />
+      </div>
+
+      <!-- Footer -->
+      <div class="morning-footer">
+        <button class="footer-btn footer-btn--back" @click="emit('back')">
+          <ChevronLeft :size="16" />
+          Back
+        </button>
+        <button class="footer-btn footer-btn--start" @click="emit('start')">
+          Start My Day
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -575,37 +723,170 @@ onUnmounted(() => {
   color: var(--brand-primary-hover);
 }
 
-/* --- Mobile --- */
-@media (max-width: 768px) {
-  .morning-calendar-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto;
-  }
+/* ==================== MOBILE TIME-BLOCK VIEW ==================== */
+.mobile-timeblock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  height: 100%;
+}
 
-  .big3-sidebar {
-    flex-direction: row;
-    overflow-x: auto;
-    gap: var(--space-2);
-    padding: var(--space-2);
-    scrollbar-width: none;
-  }
+.mobile-tb-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
 
-  .big3-sidebar::-webkit-scrollbar {
-    display: none;
-  }
+.mobile-tb-title {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
 
-  .big3-sidebar .sidebar-title,
-  .big3-sidebar .sidebar-hint {
-    display: none;
-  }
+.mobile-tb-subtitle {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
 
-  .big3-task-card {
-    min-width: 140px;
-    flex-shrink: 0;
-  }
+.mobile-tb-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
 
-  .morning-footer {
-    padding: var(--space-2) 0;
-  }
+.mobile-tb-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--glass-border-light);
+  border-radius: var(--radius-md);
+}
+
+.mobile-tb-card--0 { border-left: 3px solid #4ECDC4; }
+.mobile-tb-card--1 { border-left: 3px solid #FFC300; }
+.mobile-tb-card--2 { border-left: 3px solid #9382DC; }
+
+.mobile-tb-task-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mobile-tb-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--glass-bg-heavy);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  flex-shrink: 0;
+}
+
+.mobile-tb-task-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.mobile-tb-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.mobile-tb-end {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mobile-tb-warning {
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+  padding: var(--space-1) var(--space-2);
+  background: rgba(255, 195, 0, 0.06);
+  border-radius: var(--radius-sm);
+}
+
+/* Mini timeline */
+.mobile-tb-timeline {
+  padding: var(--space-2) 0;
+}
+
+.mobile-tb-timeline-track {
+  position: relative;
+  height: 24px;
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  overflow: hidden;
+}
+
+.mobile-tb-timeline-block {
+  position: absolute;
+  top: 2px;
+  height: 20px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+}
+
+.mobile-tb-timeline-block--0 {
+  background: rgba(78, 205, 196, 0.3);
+  border: 1px solid var(--brand-primary);
+}
+
+.mobile-tb-timeline-block--1 {
+  background: rgba(255, 195, 0, 0.25);
+  border: 1px solid var(--color-warning);
+}
+
+.mobile-tb-timeline-block--2 {
+  background: rgba(147, 130, 220, 0.25);
+  border: 1px solid #9382dc;
+}
+
+.mobile-tb-timeline-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mobile-tb-timeline-hours {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-1) 0 0;
+  font-size: 0.55rem;
+  color: var(--text-muted);
+}
+
+.mobile-tb-start {
+  width: 100%;
+  justify-content: center;
+  animation: pulse-teal 2s ease-in-out infinite;
+}
+
+@keyframes pulse-teal {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.4); }
+  50% { box-shadow: 0 0 20px 4px rgba(78, 205, 196, 0.2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-tb-start { animation: none; }
 }
 </style>

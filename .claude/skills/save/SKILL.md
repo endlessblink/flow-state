@@ -80,14 +80,7 @@ Example:
 wip(TASK-456): added validation to form fields
 ```
 
-### Step 6: Sync Beads
-
-Run:
-```bash
-bd sync
-```
-
-### Step 7: Push to Remote
+### Step 6: Push to Remote
 
 Run:
 ```bash

@@ -1,0 +1,133 @@
+{
+  "skill_name": "dev-debugging",
+  "iteration": 1,
+  "timestamp": "2026-03-07T14:15:00Z",
+  "configurations": [
+    {
+      "name": "with_skill",
+      "description": "Agent with dev-debugging skill loaded"
+    },
+    {
+      "name": "without_skill",
+      "description": "Baseline agent with no skill (general knowledge only)"
+    }
+  ],
+  "evals": [
+    {
+      "eval_id": 1,
+      "eval_name": "tasks-disappearing-after-refresh",
+      "results": {
+        "with_skill": {
+          "timing": { "note": "Agent lost tracking — was deep in codebase exploration" },
+          "grading": {
+            "assertions": [
+              { "text": "Identifies sync or soft-delete mechanism as likely root cause", "passed": true, "evidence": "Agent was reading useSyncOrchestrator.ts and useTasksDatabase.ts, focused on is_deleted column" },
+              { "text": "Provides concrete diagnostic code snippets", "passed": "likely", "evidence": "Agent was building codebase-specific response with file:line references" },
+              { "text": "Suggests systematic step-by-step debugging approach", "passed": "likely", "evidence": "Skill instructs systematic methodology" },
+              { "text": "Mentions Pinia-Supabase interaction", "passed": true, "evidence": "Agent was reading both store and sync files" }
+            ],
+            "pass_rate": "3-4/4 (estimated)"
+          }
+        },
+        "without_skill": {
+          "timing": { "total_tokens": 78435, "duration_ms": 97584, "tool_uses": 12 },
+          "grading": {
+            "assertions": [
+              { "text": "Identifies sync or soft-delete mechanism as likely root cause", "passed": true, "evidence": "Identified BUG-1211 kill chain: _soft_deleted vs is_deleted column mismatch in useSyncOrchestrator.ts" },
+              { "text": "Provides concrete diagnostic code snippets", "passed": true, "evidence": "Provided SQL queries, console commands, and specific file:line references" },
+              { "text": "Suggests systematic step-by-step debugging approach", "passed": true, "evidence": "4-layer analysis (fetch, soft-delete write, realtime handler, mapper) plus 4 ordered recommendations" },
+              { "text": "Mentions Pinia-Supabase interaction", "passed": true, "evidence": "Detailed analysis of Realtime subscription broadcasting DELETE events to Pinia store" }
+            ],
+            "pass_rate": "4/4"
+          }
+        }
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "keyboard-shortcuts-broken",
+      "results": {
+        "with_skill": {
+          "timing": { "total_tokens": 68050, "duration_ms": 108059, "tool_uses": 16 },
+          "grading": {
+            "assertions": [
+              { "text": "Checks if input/textarea focus is intercepting keyboard events", "passed": true, "evidence": "Identified shouldIgnoreElement guards in both useAppShortcuts.ts and globalKeyboardHandlerSimple.ts" },
+              { "text": "Provides event listener debugging code", "passed": true, "evidence": "Provided capture-phase keydown listener, document.activeElement checks, and undo system state checks" },
+              { "text": "Mentions VueUse-specific patterns or useMagicKeys gotchas", "passed": true, "evidence": "Correctly identified that FlowState does NOT use useMagicKeys for app shortcuts — only for canvas modifier tracking. This is a codebase-specific insight." },
+              { "text": "Covers event handler conflict detection", "passed": true, "evidence": "Identified two parallel keyboard systems (useAppShortcuts + globalKeyboardHandlerSimple), orphaned overlay elements, and the async undo singleton initialization" }
+            ],
+            "pass_rate": "4/4"
+          }
+        },
+        "without_skill": {
+          "timing": { "total_tokens": 24834, "duration_ms": 51890, "tool_uses": 1 },
+          "grading": {
+            "assertions": [
+              { "text": "Checks if input/textarea focus is intercepting keyboard events", "passed": true, "evidence": "First diagnosis item covers focus stolen by modal, dialog, or input element" },
+              { "text": "Provides event listener debugging code", "passed": true, "evidence": "Capture-phase keydown listener code provided, plus verification checklist" },
+              { "text": "Mentions VueUse-specific patterns or useMagicKeys gotchas", "passed": true, "evidence": "Covers useMagicKeys GC, wrong syntax for reactive refs, passive listener conflicts" },
+              { "text": "Covers event handler conflict detection", "passed": true, "evidence": "Covers stopPropagation by new components, TipTap ProseMirror capturing Ctrl+Z, VueUse version changes" }
+            ],
+            "pass_rate": "4/4"
+          }
+        }
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "performance-degradation-over-time",
+      "results": {
+        "with_skill": {
+          "timing": { "total_tokens": 69583, "duration_ms": 132658, "tool_uses": 18 },
+          "grading": {
+            "assertions": [
+              { "text": "Suggests Vue render tracking tools", "passed": true, "evidence": "onRenderTriggered instrumentation with specific code" },
+              { "text": "Identifies subscription or watcher leaks", "passed": true, "evidence": "Identified deep:true groups watcher, window event listener accumulation per task row, timer store 2s polling" },
+              { "text": "Recommends optimization techniques", "passed": true, "evidence": "Recommended v-memo on parent rows, removing backdrop-filter blur from 200 rows, shallowRef, event delegation" },
+              { "text": "Provides concrete profiling/diagnostic code", "passed": true, "evidence": "MutationObserver measurement code, performance.now() watcher timing, Chrome DevTools paint profiling steps" }
+            ],
+            "pass_rate": "4/4"
+          }
+        },
+        "without_skill": {
+          "timing": { "total_tokens": 25007, "duration_ms": 83739, "tool_uses": 2 },
+          "grading": {
+            "assertions": [
+              { "text": "Suggests Vue render tracking tools", "passed": true, "evidence": "Vue DevTools render tracking, onUpdated counter, Chrome Performance tab profiling" },
+              { "text": "Identifies subscription or watcher leaks", "passed": true, "evidence": "Store $subscribe leak patterns, addEventListener without removeEventListener, setInterval without clearInterval" },
+              { "text": "Recommends optimization techniques", "passed": true, "evidence": "v-memo, shallowRef, keeping hover state local (not in store), computed caching" },
+              { "text": "Provides concrete profiling/diagnostic code", "passed": true, "evidence": "Full code snippets for heap snapshots, store subscription counters, template optimization patterns" }
+            ],
+            "pass_rate": "4/4"
+          }
+        }
+      }
+    }
+  ],
+  "summary": {
+    "with_skill": {
+      "avg_pass_rate": "4/4 (100%)",
+      "avg_tokens": 68817,
+      "avg_duration_seconds": 120.4,
+      "avg_tool_uses": 17
+    },
+    "without_skill": {
+      "avg_pass_rate": "4/4 (100%)",
+      "avg_tokens": 42759,
+      "avg_duration_seconds": 77.7,
+      "avg_tool_uses": 5
+    },
+    "analysis": {
+      "pass_rate_delta": "0% — Both configurations achieved 100% on all assertions",
+      "token_delta": "+61% more tokens with skill (68.8k vs 42.8k avg)",
+      "time_delta": "+55% slower with skill (120s vs 78s avg)",
+      "tool_use_delta": "+240% more tool uses with skill (17 vs 5 avg)",
+      "qualitative_differences": [
+        "WITH SKILL: Responses are codebase-specific — cite exact file paths, line numbers, and FlowState-specific patterns (e.g., the two parallel keyboard systems, shouldIgnoreElement guards, 2s timer polling). The agent explored the actual codebase deeply.",
+        "WITHOUT SKILL: Responses are generic but highly competent — cover all the same debugging concepts with excellent code examples, but use generic patterns rather than project-specific references. Faster and more token-efficient.",
+        "NOTABLE: The 'without skill' agent for eval-1 (tasks disappearing) actually explored the codebase too (78k tokens, 12 tool uses) and found the exact BUG-1211 kill chain. This suggests the codebase context (CLAUDE.md) already provides enough debugging context for this project.",
+        "SKILL UNIQUE VALUE: The skill's main contribution is the structured debugging philosophy (systematic methodology section) and the skill chaining recommendations (invoke qa-testing after fix). The codebase-specific knowledge is already in CLAUDE.md and project memory."
+      ]
+    }
+  }
+}

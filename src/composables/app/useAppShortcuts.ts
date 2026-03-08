@@ -99,6 +99,20 @@ export function useAppShortcuts() {
             event.preventDefault()
             window.dispatchEvent(new CustomEvent('open-shortcuts-panel'))
         }
+
+        // Ctrl+. (or Cmd+.) to open AI Assist for the selected task (TASK-1470)
+        // Follows VS Code convention for quick actions/suggestions. Ctrl+/ is taken by AI Chat toggle.
+        if ((event.ctrlKey || event.metaKey) && event.key === '.') {
+            event.preventDefault()
+            if (taskStore.selectedTaskIds.length === 1) {
+                window.dispatchEvent(new CustomEvent('open-ai-assist', {
+                    detail: { taskId: taskStore.selectedTaskIds[0] }
+                }))
+            } else if (taskStore.selectedTaskIds.length === 0) {
+                // No selection — open with no specific task (will show command palette hint instead)
+                window.dispatchEvent(new CustomEvent('open-ai-assist', { detail: { taskId: null } }))
+            }
+        }
     }
 
     return {

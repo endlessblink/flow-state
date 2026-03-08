@@ -1,0 +1,23 @@
+{
+  "skill_name": "dev-debugging",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "My tasks keep disappearing from the board view after I refresh the page. I can see them briefly and then they vanish. The console shows something about 'is_deleted' but I never deleted anything. What's going on?",
+      "expected_output": "Should investigate Pinia-Supabase sync, check soft-delete vs hard-delete logic, examine useSyncOrchestrator.ts for the is_deleted/_soft_deleted column mismatch (BUG-1211), and check tombstone propagation. Should provide systematic debugging steps.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Keyboard shortcuts stopped working in my Vue app. Ctrl+Z for undo doesn't do anything, and my custom Ctrl+K shortcut for search also doesn't fire. It was working yesterday. I'm using VueUse's useMagicKeys.",
+      "expected_output": "Should check if an input/textarea has focus (shortcuts disabled during input), look for event handler conflicts, verify useMagicKeys setup, check for multiple keydown listeners, and provide diagnostic code snippets.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "The app is getting really slow after about 30 minutes of use. The task list re-renders every time I hover over anything, and scrolling is janky. I have about 200 tasks. How do I debug this performance issue?",
+      "expected_output": "Should suggest using Vue devtools onRenderTracked/onRenderTriggered, checking for missing v-memo or shallowRef usage, looking for subscription leaks, using Performance API measurements, and checking computed property caching issues. Should provide concrete diagnostic code.",
+      "files": []
+    }
+  ]
+}

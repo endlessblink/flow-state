@@ -155,6 +155,7 @@ export interface SupabaseTask {
 
     // "Done for now" feature - tracks when task was rescheduled via this feature
     done_for_now_until?: string | null
+    is_pinned?: boolean
 }
 
 export interface SupabaseGroup {
@@ -553,6 +554,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
 
         // "Done for now" feature
         done_for_now_until: sanitizeTimestamp(task.doneForNowUntil),
+        is_pinned: task.isPinned ?? false,
 
         created_at: sanitizeTimestamp(task.createdAt) || now,
         updated_at: now,
@@ -630,7 +632,8 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         deletedAt: record.deleted_at ? new Date(record.deleted_at) : undefined,
 
         // "Done for now" feature
-        doneForNowUntil: record.done_for_now_until || undefined
+        doneForNowUntil: record.done_for_now_until || undefined,
+        isPinned: record.is_pinned ?? false,
     }
 }
 

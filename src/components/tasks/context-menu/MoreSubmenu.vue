@@ -71,6 +71,14 @@
 
         <div class="submenu-divider" />
 
+        <!-- AI Assist (TASK-1485: moved from main menu) -->
+        <button v-if="!isBatchOperation" class="menu-item menu-item--sm menu-item--ai" @click.stop="$emit('aiAssist', $event)">
+          <Sparkles :size="14" class="menu-icon menu-icon--ai" />
+          <span class="menu-text">AI Assist</span>
+        </button>
+
+        <div v-if="!isBatchOperation" class="submenu-divider" />
+
         <button v-if="isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('clearSelection')">
           <X :size="14" class="menu-icon" />
           <span class="menu-text">Clear Selection</span>
@@ -81,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { Copy, Layout, X, Clock, Pin, LayoutGrid, ChevronRight, Eye, Play, Timer } from 'lucide-vue-next'
+import { Copy, Layout, X, Clock, Pin, LayoutGrid, ChevronRight, Eye, Play, Timer, Sparkles } from 'lucide-vue-next'
 import type { CSSProperties } from 'vue'
 
 defineProps<{
@@ -106,6 +114,7 @@ defineEmits<{
   closeDuration: []
   focusMode: []
   startNow: []
+  aiAssist: [event: MouseEvent]
 }>()
 </script>
 
@@ -174,4 +183,9 @@ defineEmits<{
 .submenu-divider { height: 1px; background: var(--glass-bg-heavy); margin: var(--space-1) 0; }
 .menu-item--danger { color: var(--danger-text); }
 .menu-item--danger:hover { background: var(--danger-bg-subtle); }
+
+/* AI Assist (TASK-1485) */
+.menu-item--ai { color: var(--brand-primary); }
+.menu-item--ai:hover { background: var(--brand-bg-subtle); }
+.menu-icon--ai { color: var(--brand-primary); opacity: 1; }
 </style>

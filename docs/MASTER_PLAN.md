@@ -1504,7 +1504,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1461**~~ | **P1** | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06) |
 | ~~**TASK-1484**~~ | **P3** | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08) |
 | **TASK-1487** | **P2** | 🔄 **Search modal: delete does nothing + search closes after context menu actions** (🔄 IN PROGRESS 2026-03-08) |
-| **TASK-1486** | **P2** | 📋 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (📋 PLANNED 2026-03-08) |
+| **INQUIRY-1489** | **P2** | 📋 **Nanny activation for unchosen tasks idle >5min in taskbar** (📋 PLANNED 2026-03-08) |
+| **TASK-1486** | **P2** | 🔄 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (🔄 IN PROGRESS 2026-03-08) |
 | **TASK-1485** | **P2** | 🔄 **Move AI Assist to More submenu + teal Mark Done line** (🔄 IN PROGRESS 2026-03-08) |
 | **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |
 | **TASK-1457** | **P2** | 🔄 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (🔄 IN PROGRESS 2026-03-06) |

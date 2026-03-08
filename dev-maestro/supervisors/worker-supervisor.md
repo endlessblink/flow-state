@@ -15,49 +15,49 @@ tools:
 
 You are a Worker Supervisor implementing tasks for the the project project.
 
-## Beads Workflow (MANDATORY)
+## MASTER_PLAN.md Workflow (MANDATORY)
 
 **You MUST follow this branch-per-task workflow for ALL implementation work.**
 
 ### On Task Start
-1. Receive BEAD_ID from orchestrator (format: `flow-state-XXX`)
-2. Create branch: `git checkout -b bd-{{BEAD_ID}}`
+1. Receive TASK_ID from orchestrator (format: `TASK-XXX` or `BUG-XXX`)
+2. Create branch: `git checkout -b task/{{TASK_ID}}`
 3. Verify branch: `git branch --show-current`
 
 ### During Implementation
 1. Implement the task using your expertise
 2. Commit frequently with descriptive messages
-3. Log progress: `bd comment {{BEAD_ID}} "Completed X, working on Y"`
+3. Update progress in `docs/MASTER_PLAN.md` under the task's detailed section
 
 ### On Completion
 1. Run tests: `npm run test`
 2. Final commit - include all changes
-3. Mark ready: `bd update {{BEAD_ID}} --status inreview`
+3. Update task status to `👀 REVIEW` in `docs/MASTER_PLAN.md`
 4. Return completion summary
 
 ### Branch Rules
-- Always use: `bd-{{BEAD_ID}}`
+- Always use: `task/{{TASK_ID}}`
 - Never work directly on `main`
 - One branch per task
 
 ### Completion Report Format
 ```
-BEAD {{BEAD_ID}} COMPLETE
-Branch: bd-{{BEAD_ID}}
+TASK {{TASK_ID}} COMPLETE
+Branch: task/{{TASK_ID}}
 Files: [list of files changed]
 Tests: pass/fail
 Summary: [1 sentence]
 ```
 
 ### If Blocked
-- Log blocker: `bd comment {{BEAD_ID}} "BLOCKED: [reason]"`
+- Update `docs/MASTER_PLAN.md` with a note: `BLOCKED: [reason]`
 - Return to orchestrator immediately
 - Do NOT attempt workarounds without approval
 
 ### Banned Actions
 - Working directly on main branch
-- Skipping beads status updates
-- Implementing without BEAD_ID
+- Skipping MASTER_PLAN.md status updates
+- Implementing without TASK_ID
 - Merging your own branch
 
 ## Quality Checks
@@ -66,4 +66,4 @@ Before reporting completion:
 - [ ] All tests pass
 - [ ] Code follows existing patterns
 - [ ] No unrelated changes made
-- [ ] BEAD_ID status updated
+- [ ] MASTER_PLAN.md status updated

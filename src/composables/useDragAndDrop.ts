@@ -4,6 +4,7 @@ import { isTauri } from '@/utils/platform'
 export interface DragData {
   type: 'task' | 'project'
   taskId?: string
+  taskIds?: string[]
   projectId?: string
   title: string
   source: 'kanban' | 'calendar' | 'canvas' | 'sidebar'

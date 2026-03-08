@@ -1,16 +1,18 @@
 # Agent Instructions
 
-This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
+This project uses **MASTER_PLAN.md** (`docs/MASTER_PLAN.md`) as the single source of truth for task tracking.
 
 ## Quick Reference
 
 ```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
-bd sync               # Sync with git
+# Find available work
+grep -E "^### (TASK|BUG|FEATURE)-" docs/MASTER_PLAN.md | grep -v "~~" | grep -v DONE
+
+# Check task status
+grep "TASK-XXX" docs/MASTER_PLAN.md
 ```
+
+Or use the `/next` skill to get scored task recommendations.
 
 ## Landing the Plane (Session Completion)
 
@@ -18,13 +20,12 @@ bd sync               # Sync with git
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **File issues for remaining work** - Add tasks to MASTER_PLAN.md
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
+3. **Update task status** - Mark done tasks in MASTER_PLAN.md (all 3 locations)
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -40,6 +41,5 @@ bd sync               # Sync with git
 
 ## Project Skills
 
-- `next` skill: `.agents/skills/next/SKILL.md`
+- `next` skill: Find and score available tasks from MASTER_PLAN.md
   - Trigger: `/next`
-  - Behavior: launches `npm run next:interactive -- choose`

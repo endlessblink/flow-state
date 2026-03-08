@@ -2,7 +2,7 @@
   <div class="task-row__actions">
     <button
       class="task-row__action-btn task-row__action-btn--ai"
-      title="Smart Suggest (AI)"
+      title="AI Smart Suggest (Ctrl+.)"
       aria-label="AI smart suggest"
       @click.stop="$emit('aiSuggest', $event)"
     >

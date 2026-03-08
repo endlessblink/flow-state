@@ -79,7 +79,11 @@ export function useTaskRowActions(
 
     // --- User Interactions ---
 
-    const handleRowClick = () => {
+    const handleRowClick = (event?: MouseEvent) => {
+        if (event && (event.ctrlKey || event.metaKey)) {
+            emit('check', props.task.id)
+            return
+        }
         emit('select', props.task.id)
     }
 

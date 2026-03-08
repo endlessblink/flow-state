@@ -13,14 +13,6 @@
             "command": ".claude/hooks/skill-announcer.sh"
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node scripts/cleanup-stale-beads.cjs --quiet"
-          }
-        ]
       }
     ],
     "SessionEnd": [],

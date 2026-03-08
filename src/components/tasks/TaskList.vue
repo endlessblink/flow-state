@@ -1,5 +1,5 @@
 <template>
-  <div class="task-list" @dragover.prevent>
+  <div class="task-list" @dragover.prevent @dragstart.capture="augmentDragWithSelection">
     <!-- Column Headers / Bulk Actions Bar -->
     <div class="column-headers" :class="{ 'column-headers--selection': selectionMode }">
       <!-- Select-all checkbox always visible -->
@@ -190,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import type { Task, TaskGroup } from '@/types/tasks'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
@@ -280,6 +280,19 @@ const taskStore = useTaskStore()
 // TASK-1476: Allow dropping on collapsed group headers
 const headerDropTarget = ref<string | null>(null)
 
+// Multi-drag: when dragging a selected task, augment shared dragData with all selected IDs
+const augmentDragWithSelection = () => {
+  if (selectedTaskIds.value.length < 2) return
+  // The child's handleDragStart runs first (capture phase, but child fires synchronously).
+  // After it sets dragData, we augment it with the full selection.
+  requestAnimationFrame(() => {
+    if (dragData.value?.taskId && selectedTaskIds.value.includes(dragData.value.taskId)) {
+      dragData.value.taskIds = [...selectedTaskIds.value]
+      dragData.value.title = `${selectedTaskIds.value.length} tasks`
+    }
+  })
+}
+
 const onHeaderDragOver = (event: DragEvent, group: TaskGroup) => {
   if (!isDragging.value) return
   headerDropTarget.value = group.key
@@ -300,10 +313,12 @@ const onHeaderDrop = (event: DragEvent, group: TaskGroup) => {
   event.stopPropagation()
   headerDropTarget.value = null
 
-  const taskId = dragData.value?.taskId
-  if (!taskId) return
+  const taskIds = dragData.value?.taskIds ?? (dragData.value?.taskId ? [dragData.value.taskId] : [])
+  if (taskIds.length === 0) return
 
-  applyGroupTransfer(taskId, group)
+  for (const id of taskIds) {
+    applyGroupTransfer(id, group)
+  }
   endDrag()
 }
 
@@ -311,7 +326,10 @@ const onHeaderDrop = (event: DragEvent, group: TaskGroup) => {
 // to the target's group (updating dueDate/status/priority/project) instead of
 // making it a subtask. Only make subtasks when ungrouped (groupBy === 'none').
 const handleMoveTask = (taskId: string, targetProjectId: string | null, targetParentId: string | null) => {
-  console.log('[DND-GROUP] handleMoveTask', { taskId, targetProjectId, targetParentId, groupBy: props.groupBy })
+  // Multi-drag: move all selected tasks if the dragged task is part of a selection
+  const taskIds = dragData.value?.taskIds?.includes(taskId) ? dragData.value.taskIds : [taskId]
+  console.log('[DND-GROUP] handleMoveTask', { taskIds, targetProjectId, targetParentId, groupBy: props.groupBy })
+
   if (props.groupBy !== 'none' && targetParentId) {
     // Find which group the drop-target task belongs to
     const targetGroup = props.groups.find(g =>
@@ -319,13 +337,17 @@ const handleMoveTask = (taskId: string, targetProjectId: string | null, targetPa
     )
     if (targetGroup) {
       console.log('[DND-GROUP] Transferring to group:', { groupKey: targetGroup.key, groupTitle: targetGroup.title })
-      applyGroupTransfer(taskId, targetGroup)
+      for (const id of taskIds) {
+        if (id !== targetParentId) applyGroupTransfer(id, targetGroup)
+      }
       endDrag()
       return
     }
     console.warn('[DND-GROUP] Could not find target group for parentId:', targetParentId)
   }
-  emit('moveTask', taskId, targetProjectId, targetParentId)
+  for (const id of taskIds) {
+    emit('moveTask', id, targetProjectId, targetParentId)
+  }
 }
 
 // Format a local Date to YYYY-MM-DD string using LOCAL timezone (not UTC)
@@ -414,23 +436,27 @@ const onGroupDragLeave = (event: DragEvent) => {
 }
 
 const onGroupDrop = (event: DragEvent, group: TaskGroup) => {
-  const taskId = dragData.value?.taskId
+  const taskIds = dragData.value?.taskIds ?? (dragData.value?.taskId ? [dragData.value.taskId] : [])
   const insertIdx = dropIndicator.value.insertIndex
 
   // Clear indicator immediately
   dropIndicator.value = { groupKey: null, y: 0, insertIndex: 0 }
 
-  if (!taskId) return
+  if (taskIds.length === 0) return
 
   // Prevent the row-level drop handler from also firing (it would make a subtask)
   event.stopPropagation()
 
-  // Apply group transfer (changes project/status/priority/dueDate)
-  applyGroupTransfer(taskId, group)
+  // Apply group transfer for all dragged tasks
+  const draggedSet = new Set(taskIds)
+  for (const id of taskIds) {
+    applyGroupTransfer(id, group)
+  }
 
-  // Persist order: place the dropped task at the insert position
-  const groupTasks = [...group.parentTasks.filter(t => t.id !== taskId)]
-  groupTasks.splice(insertIdx, 0, { id: taskId } as Task)
+  // Persist order: place the dropped tasks at the insert position
+  const groupTasks = [...group.parentTasks.filter(t => !draggedSet.has(t.id))]
+  const draggedTasks = taskIds.map(id => ({ id } as Task))
+  groupTasks.splice(insertIdx, 0, ...draggedTasks)
   groupTasks.forEach((t, i) => {
     taskStore.updateTask(t.id, { order: i })
   })
@@ -586,12 +612,40 @@ const handleKeyDown = (event: KeyboardEvent) => {
   }
 }
 
+// TASK-1470: Global Ctrl+/ shortcut → open AI Assist popover for the targeted task
+const handleOpenAIAssist = (event: Event) => {
+  const taskId = (event as CustomEvent<{ taskId: string | null }>).detail?.taskId
+  if (!taskId) return
+  // Find the task across all groups
+  const task = props.tasks.find(t => t.id === taskId)
+  if (!task) return
+  // Try to find the row element for positioning
+  nextTick(() => {
+    const rowEl = document.querySelector<HTMLElement>(`[data-task-id="${taskId}"] .task-row__action-btn--ai`)
+    if (rowEl) {
+      const rect = rowEl.getBoundingClientRect()
+      aiPopoverX.value = rect.right + 4
+      aiPopoverY.value = rect.top
+    } else {
+      // Fallback: center of viewport
+      aiPopoverX.value = window.innerWidth / 2 - 160
+      aiPopoverY.value = window.innerHeight / 2 - 200
+    }
+    aiPopoverTask.value = task
+    aiPopoverAutoTrigger.value = 'smartSuggest'
+    aiPopoverGroupTaskIds.value = []
+    showAIPopover.value = true
+  })
+}
+
 onMounted(() => {
   document.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('open-ai-assist', handleOpenAIAssist)
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('open-ai-assist', handleOpenAIAssist)
 })
 
 // Initialize with all groups expanded by default
@@ -611,7 +665,8 @@ watch(() => props.groups, (newGroups, oldGroups) => {
 defineExpose({
   expandAll,
   collapseAll,
-  clearSelection
+  clearSelection,
+  selectedTaskIds
 })
 </script>
 
@@ -715,10 +770,50 @@ defineExpose({
 }
 
 .group-select-checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
   width: 14px;
   height: 14px;
-  accent-color: var(--brand-primary);
+  border-radius: 3px;
+  border: 1.5px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  background: transparent;
   cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.group-select-checkbox input[type="checkbox"]:checked {
+  border-color: var(--brand-primary);
+  background: rgba(78, 205, 196, 0.13);
+}
+
+.group-select-checkbox input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--brand-primary);
+}
+
+.group-select-checkbox input[type="checkbox"]:indeterminate {
+  border-color: var(--brand-primary);
+  background: rgba(78, 205, 196, 0.13);
+}
+
+.group-select-checkbox input[type="checkbox"]:indeterminate::after {
+  content: '—';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--brand-primary);
 }
 
 .group-ai-btn {
@@ -838,10 +933,50 @@ defineExpose({
 }
 
 .select-all-checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  accent-color: var(--brand-primary);
+  border-radius: 3px;
+  border: 1.5px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  background: transparent;
   cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.select-all-checkbox input[type="checkbox"]:checked {
+  border-color: var(--brand-primary);
+  background: rgba(78, 205, 196, 0.13);
+}
+
+.select-all-checkbox input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--brand-primary);
+}
+
+.select-all-checkbox input[type="checkbox"]:indeterminate {
+  border-color: var(--brand-primary);
+  background: rgba(78, 205, 196, 0.13);
+}
+
+.select-all-checkbox input[type="checkbox"]:indeterminate::after {
+  content: '—';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--brand-primary);
 }
 
 .task-total-count {

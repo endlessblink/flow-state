@@ -358,10 +358,24 @@ export function useMobileInboxLogic() {
     }
 
     const groupedTasks = computed((): TaskGroup[] => {
-        if (groupBy.value === 'none') return []
+        if (groupBy.value === 'none' && viewMode.value !== 'today') return []
 
         const tasks = filteredTasks.value
         const groups: Map<string, TaskGroup> = new Map()
+
+        if (viewMode.value === 'today' && (groupBy.value === 'none' || groupBy.value === 'date')) {
+            const overdueTasks = tasks.filter(t => isTaskOverdue(t.dueDate))
+            const todayTasks = tasks.filter(t => !isTaskOverdue(t.dueDate))
+            console.log('[BUG-1483] Today grouping:', { viewMode: viewMode.value, groupBy: groupBy.value, total: tasks.length, overdue: overdueTasks.length, today: todayTasks.length })
+
+            if (overdueTasks.length > 0) {
+                groups.set('overdue', { key: 'overdue', title: 'Overdue', color: 'var(--color-priority-high)', tasks: overdueTasks })
+            }
+            if (todayTasks.length > 0) {
+                groups.set('today', { key: 'today', title: 'Today', color: 'var(--color-success)', tasks: todayTasks })
+            }
+            return Array.from(groups.values())
+        }
 
         tasks.forEach(task => {
             let key: string

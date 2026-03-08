@@ -1,6 +1,6 @@
 # Dev Maestro
 
-AI agent orchestration platform with Kanban board, Health scanning, Skills visualization, multi-agent workflows, and Beads integration.
+AI agent orchestration platform with Kanban board, Health scanning, Skills visualization, and multi-agent workflows.
 
 ## Installation (Standalone)
 
@@ -78,12 +78,10 @@ MASTER_PLAN_PATH=/path/to/your/project/docs/MASTER_PLAN.md
 | **Timeline** | Development timeline with locks and dependencies |
 | **Stats** | Project metrics and statistics |
 | **Orchestrator** | Multi-agent workflow UI |
-| **Beads** | Task execution with git worktree isolation |
 
 ## Features
 
 - **Multi-phase agent orchestration** - Requirements → Questions → Planning → Execution → Review
-- **Beads integration** - Git worktree-based task execution with isolated branches
 - **5 supervisor templates** - Worker, Backend, Frontend, DevOps, QA
 - **40+ REST endpoints** + 4 SSE channels for real-time updates
 - **Live sync** - Changes to MASTER_PLAN.md auto-refresh the UI

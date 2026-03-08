@@ -738,6 +738,56 @@ onUnmounted(() => {
   justify-content: center;
 }
 
+.checkbox-cell input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-xs, 3px);
+  border: 1.5px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.checkbox-cell input[type="checkbox"]:checked {
+  border-color: var(--brand-primary);
+  background: rgba(78, 205, 196, 0.13);
+}
+
+.checkbox-cell input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--brand-primary);
+  line-height: 1;
+}
+
+.checkbox-cell input[type="checkbox"]:indeterminate {
+  border-color: var(--brand-primary);
+  background: rgba(78, 205, 196, 0.13);
+}
+
+.checkbox-cell input[type="checkbox"]:indeterminate::after {
+  content: '—';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--brand-primary);
+  line-height: 1;
+}
+
 .title-cell {
   font-weight: var(--font-medium);
   color: var(--text-primary);

@@ -1,0 +1,23 @@
+{
+  "eval_id": 1,
+  "eval_name": "tasks-disappearing-after-refresh",
+  "prompt": "My tasks keep disappearing from the board view after I refresh the page. I can see them briefly and then they vanish. The console shows something about 'is_deleted' but I never deleted anything. What's going on?",
+  "assertions": [
+    {
+      "text": "Identifies sync or soft-delete mechanism as likely root cause",
+      "type": "qualitative"
+    },
+    {
+      "text": "Provides concrete diagnostic code snippets (not just prose)",
+      "type": "qualitative"
+    },
+    {
+      "text": "Suggests systematic step-by-step debugging approach",
+      "type": "qualitative"
+    },
+    {
+      "text": "Mentions Pinia-Supabase interaction or store subscription debugging",
+      "type": "qualitative"
+    }
+  ]
+}

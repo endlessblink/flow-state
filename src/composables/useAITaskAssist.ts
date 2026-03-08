@@ -334,7 +334,25 @@ export function useAITaskAssist() {
       const messages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: 'Rewrite this vague task title to be specific and actionable. Keep it concise (under 60 chars). Return ONLY valid JSON: { "title": "..." }' + langHint
+          content: `You improve task titles. Your job:
+1. Fix typos and grammar mistakes
+2. Make vague titles specific and actionable (start with a verb)
+3. Keep it concise — under 60 characters
+4. PRESERVE the original language. If the input is in Hebrew, output in Hebrew. If mixed Hebrew+English, keep the mix but fix errors.
+5. Do NOT translate, summarize, or remove meaning — only clarify and fix
+
+Examples:
+- "stuff for meeting" → "Prepare agenda for Monday standup"
+- "detaild canvas סרטון לפרסם" → "לפרסם סרטון detailed canvas"
+- "fix bug" → "Fix bug" (already clear enough — return as-is with minimal changes)
+- "עיצוב" → "עיצוב" (too little context to improve — return as-is)
+- "do the thing john asked" → "Complete task requested by John"
+- "לסדר את הבאגים בדף הבית" → "לתקן באגים בדף הבית"
+
+If the title is already clear and actionable, return it as-is (with typo fixes only).
+If the title is too short/vague to improve meaningfully (1-2 generic words), return it unchanged.
+
+Return ONLY valid JSON: { "title": "..." }` + langHint
         },
         {
           role: 'user',

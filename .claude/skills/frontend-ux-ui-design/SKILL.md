@@ -13,7 +13,7 @@ description: Create distinctive, production-grade frontend interfaces with high 
 
 Comprehensive design skill for building distinctive, production-grade frontend interfaces across ANY project. Combines design system generation, industry-specific reasoning, web standards compliance, and creative direction into a single workflow.
 
-**Use this skill for:** New projects, landing pages, dashboards, client work, side projects — anything that isn't FlowState-specific (use `dev-implement-ui-ux` for FlowState).
+**Use this skill for:** New projects, landing pages, dashboards, client work, side projects — anything that isn't FlowState-specific (use `flowstate-ui-ux` for FlowState).
 
 ## When to Activate
 
@@ -22,6 +22,45 @@ Comprehensive design skill for building distinctive, production-grade frontend i
 - User says "build me a...", "design a...", "create a landing page for..."
 - Choosing a visual direction for a new product
 - Reviewing UI code for web standards compliance
+
+## Workflow: Four Steps
+
+1. **Identify Components** — Read the request and determine which UI components are needed. Read `references/components.md` for best practices per component.
+2. **Apply Best Practices** — Follow each component's rules from the reference (layout, interaction, states).
+3. **Choose Design Direction** — Select a style from the Style Library (Section 2.2) or design presets below.
+4. **Generate Code** — Production-ready code following all standards in this skill.
+
+## Design Presets (Quick Selection)
+
+| Preset | When to Use | Key Traits |
+|--------|-------------|------------|
+| **Modern SaaS** (default) | Most web apps, dashboards | Neutral palette, one accent, 8px grid, generous whitespace |
+| **Apple-level Minimal** | Premium products, portfolios | Near-monochrome, large type hierarchy, micro-interactions |
+| **Enterprise** | B2B, admin panels, data-heavy | Information-dense, compact spacing, fully keyboard-navigable |
+| **Creative / Portfolio** | Agencies, artists, bold brands | Asymmetric layouts, dramatic scale, vivid accents |
+| **Data Dashboard** | Analytics, metrics, monitoring | Data-dense, consistent alignment, KPI > trend > detail hierarchy |
+
+## 15 Most Common Components
+
+| Component | Key Rule | Reference |
+|-----------|----------|-----------|
+| **Button** | Verb-first labels; one primary per section | `references/components.md` |
+| **Card** | Media > title > meta > action; shadow OR border | `references/components.md` |
+| **Modal** | Trap focus; X + Cancel + Escape to close | `references/components.md` |
+| **Navigation** | 5-7 items max; clear active state | `references/components.md` |
+| **Table** | Sticky header; right-align numbers; sortable | `references/components.md` |
+| **Tabs** | 2-7 tabs; active indicator; accordion on mobile | `references/components.md` |
+| **Form** | Single column; labels above; inline validation on blur | `references/components.md` |
+| **Toast** | Auto-dismiss 4-6s; undo for destructive ops | `references/components.md` |
+| **Alert** | Semantic colors + icon; max 2 sentences | `references/components.md` |
+| **Drawer** | Right for detail, left for nav; 320-480px | `references/components.md` |
+| **Search** | Cmd/Ctrl+K shortcut; debounce 200-300ms | `references/components.md` |
+| **Empty State** | Illustration + headline + CTA; positive framing | `references/components.md` |
+| **Skeleton** | Match layout shape; shimmer; show after 300ms | `references/components.md` |
+| **Badge** | 1-2 words; pill shape; limited color palette | `references/components.md` |
+| **Dropdown** | 7+/-2 items; destructive last in red | `references/components.md` |
+
+For detailed patterns on all 60+ components, read `references/components.md`.
 
 ---
 
@@ -316,6 +355,20 @@ select { background-color: var(--surface); color: var(--text); }
 - Cookie-cutter card grids with identical shadows
 - Generic hero with "Welcome to [Product]" headline
 - Stock photo of diverse team in modern office
+
+### Component Anti-Patterns (NEVER)
+- Rainbow badges — every status a different bright color with no semantic meaning
+- Modal inside modal — use a page or drawer for complex flows
+- Disabled submit with no explanation — always indicate what's missing
+- Spinner for predictable layouts — use skeleton screens instead
+- "Click here" links — link text must describe the destination
+- Hamburger menu on desktop — use visible navigation when space allows
+- Auto-advancing carousels — let users control navigation
+- Placeholder-only form fields — always use visible labels
+- Equal-weight buttons — establish primary/secondary/tertiary hierarchy
+- Tiny text (< 12px) — body text minimum 14px, prefer 16px
+- Tooltips containing essential information — use inline text or popovers
+- Color-only status indication — always add icon or text alongside
 
 ### Code Anti-Patterns (ALWAYS FLAG)
 - `user-scalable=no` or `maximum-scale=1` (disabling zoom)

@@ -1,0 +1,23 @@
+{
+  "eval_id": 3,
+  "eval_name": "performance-degradation-over-time",
+  "prompt": "The app is getting really slow after about 30 minutes of use. The task list re-renders every time I hover over anything, and scrolling is janky. I have about 200 tasks. How do I debug this performance issue?",
+  "assertions": [
+    {
+      "text": "Suggests Vue render tracking tools (onRenderTracked/onRenderTriggered or devtools)",
+      "type": "qualitative"
+    },
+    {
+      "text": "Identifies subscription or watcher leaks as potential cause of degradation over time",
+      "type": "qualitative"
+    },
+    {
+      "text": "Recommends optimization techniques like shallowRef, v-memo, or virtual scrolling",
+      "type": "qualitative"
+    },
+    {
+      "text": "Provides concrete profiling/diagnostic code snippets",
+      "type": "qualitative"
+    }
+  ]
+}

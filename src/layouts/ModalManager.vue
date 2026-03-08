@@ -61,17 +61,6 @@
       @close="showProjectContextMenu = false"
     />
 
-    <!-- CONFIRMATION MODAL -->
-    <ConfirmationModal
-      :is-open="showConfirmModal"
-      title="Confirm Action"
-      :message="confirmMessage"
-      :details="confirmDetails"
-      confirm-text="Delete"
-      @confirm="executeConfirmAction"
-      @cancel="cancelConfirmAction"
-    />
-
     <!-- SEARCH MODAL -->
     <SearchModal
       :is-open="showSearchModal"
@@ -103,6 +92,17 @@
     <KeyboardShortcutsPanel
       :is-open="uiStore.shortcutsPanelOpen"
       @close="uiStore.closeShortcutsPanel()"
+    />
+
+    <!-- CONFIRMATION MODAL — rendered LAST so it always appears on top of search/other modals -->
+    <ConfirmationModal
+      :is-open="showConfirmModal"
+      title="Confirm Action"
+      :message="confirmMessage"
+      :details="confirmDetails"
+      confirm-text="Delete"
+      @confirm="executeConfirmAction"
+      @cancel="cancelConfirmAction"
     />
   </div>
 </template>
@@ -240,9 +240,12 @@ const confirmDeleteTask = async (task: Task) => {
 }
 
 const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendarEvent?: boolean) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
+  // TASK-1487: Use rawTasks so delete works from search (which shows unfiltered tasks)
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const task = allTasks.find(t => t.id === taskId)
 
   if (!task) {
+    console.warn('[ModalManager] handleContextMenuDelete: task not found', taskId)
     return
   }
 

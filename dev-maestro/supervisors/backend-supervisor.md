@@ -22,22 +22,22 @@ You are a Backend Supervisor specializing in server-side development for the pro
 - Server-side logic
 - Database migrations
 
-## Beads Workflow (MANDATORY)
+## MASTER_PLAN.md Workflow (MANDATORY)
 
 ### On Task Start
-1. Receive BEAD_ID from orchestrator (format: `flow-state-XXX`)
-2. Create branch: `git checkout -b bd-{{BEAD_ID}}`
+1. Receive TASK_ID from orchestrator (format: `TASK-XXX` or `BUG-XXX`)
+2. Create branch: `git checkout -b task/{{TASK_ID}}`
 3. Verify branch: `git branch --show-current`
 
 ### During Implementation
 1. Implement backend changes
 2. Commit frequently with descriptive messages
-3. Log progress: `bd comment {{BEAD_ID}} "Completed X, working on Y"`
+3. Update progress in `docs/MASTER_PLAN.md` under the task's detailed section
 
 ### On Completion
 1. Run tests: `npm run test`
 2. Final commit
-3. Mark ready: `bd update {{BEAD_ID}} --status inreview`
+3. Update task status to `👀 REVIEW` in `docs/MASTER_PLAN.md`
 4. Return completion summary
 
 ### File Scope
@@ -56,8 +56,8 @@ You are a Backend Supervisor specializing in server-side development for the pro
 
 ### Completion Report
 ```
-BEAD {{BEAD_ID}} COMPLETE
-Branch: bd-{{BEAD_ID}}
+TASK {{TASK_ID}} COMPLETE
+Branch: task/{{TASK_ID}}
 Files: [list]
 Tests: pass/fail
 Summary: [1 sentence]
@@ -66,5 +66,5 @@ Summary: [1 sentence]
 ### Banned Actions
 - Working directly on main branch
 - Modifying Vue components
-- Skipping beads status updates
+- Skipping MASTER_PLAN.md status updates
 - Merging your own branch

@@ -91,10 +91,14 @@
       :x="contextMenuX"
       :y="contextMenuY"
       :task="contextMenuTask"
+      :selected-count="contextMenuSelectedCount"
+      :selected-ids="contextMenuSelectedIds"
       @close="closeContextMenu"
       @edit="handleEditTask"
       @confirm-delete="handleConfirmDelete"
       @confirm-permanent-delete="handleConfirmPermanentDelete"
+      @delete-selected="handleDeleteSelectedFromContext"
+      @clear-selection="handleClearSelectionFromContext"
     />
 
     <!-- Confirmation Modal -->
@@ -169,6 +173,8 @@ const showContextMenu = ref(false)
 const contextMenuX = ref(0)
 const contextMenuY = ref(0)
 const contextMenuTask = ref<Task | null>(null)
+const contextMenuSelectedCount = computed(() => taskListRef.value?.selectedTaskIds?.length ?? 0)
+const contextMenuSelectedIds = computed(() => taskListRef.value?.selectedTaskIds ? [...taskListRef.value.selectedTaskIds] : [])
 const showConfirmModal = ref(false)
 const taskToDelete = ref<string | null>(null)
 const confirmTitle = ref('Delete Task')
@@ -392,6 +398,21 @@ const groupedTasks = computed((): TaskGroup[] => {
     })
   }
 
+  // Extract pinned tasks into a dedicated group at the top
+  const pinnedTasks = groups.flatMap(g => g.tasks).filter(t => t.isPinned)
+  if (pinnedTasks.length > 0) {
+    const pinnedIds = new Set(pinnedTasks.map(t => t.id))
+    const filteredGroups = groups.map(g => ({
+      ...g,
+      tasks: g.tasks.filter(t => !pinnedIds.has(t.id)),
+      parentTasks: g.parentTasks ? g.parentTasks.filter(t => !pinnedIds.has(t.id)) : undefined
+    }))
+    return [
+      { key: 'pinned', title: '📌 Pinned', tasks: pinnedTasks, parentTasks: getRootTasks(pinnedTasks) },
+      ...filteredGroups
+    ]
+  }
+
   return groups
 })
 
@@ -581,6 +602,18 @@ const handleDeleteSelected = (taskIds: string[]) => {
     taskListRef.value?.clearSelection()
   }
   showConfirmModal.value = true
+}
+
+// Context menu batch handlers (when right-clicking with selection active)
+const handleDeleteSelectedFromContext = () => {
+  const ids = contextMenuSelectedIds.value
+  if (ids.length > 0) {
+    handleDeleteSelected(ids)
+  }
+}
+
+const handleClearSelectionFromContext = () => {
+  taskListRef.value?.clearSelection()
 }
 
 // Debug function to test toggle functionality

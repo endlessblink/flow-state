@@ -10,10 +10,7 @@
 
 ## Global Hooks (registered in ~/.claude/settings.json)
 
-| Event | Command | Purpose |
-|-------|---------|---------|
-| SessionStart | `bd prime` | Initialize beads task tracking |
-| PreCompact | `bd prime` | Re-prime beads after context compaction |
+No active global hooks.
 
 ## Hook Behavior
 

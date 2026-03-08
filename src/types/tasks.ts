@@ -120,6 +120,7 @@ export interface Task {
   // "Done for now" tracking - shows badge when task was rescheduled via this feature
   // Resets when dueDate changes to something other than this value
   doneForNowUntil?: string // YYYY-MM-DD format
+  isPinned?: boolean
 }
 
 export interface Project {

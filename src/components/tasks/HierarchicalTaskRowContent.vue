@@ -36,9 +36,16 @@
     @touchstart="$emit('touchstart', $event)"
     @touchend="$emit('touchend', $event)"
   >
-    <!-- Selection Checkbox column -->
-    <div class="task-row__done-toggle" @click.stop>
-      <label class="task-row__select-checkbox">
+    <!-- Done Toggle / Selection Checkbox column -->
+    <div class="task-row__done-toggle" @click.stop="handleCheckboxClick($event)">
+      <DoneToggle
+        v-if="!selectionMode"
+        :completed="task.status === 'done'"
+        size="sm"
+        variant="simple"
+        @toggle="$emit('toggleComplete')"
+      />
+      <label v-else class="task-row__select-checkbox">
         <input
           type="checkbox"
           :checked="checked"
@@ -46,6 +53,9 @@
         >
       </label>
     </div>
+
+    <!-- Pin indicator -->
+    <Pin v-if="task.isPinned" :size="14" class="pin-indicator" />
 
     <!-- Title Cell -->
     <TaskRowTitle
@@ -123,9 +133,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Pin } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import TaskRowTitle from './row/TaskRowTitle.vue'
 import TaskRowProject from './row/TaskRowProject.vue'
 import TaskRowPriority from './row/TaskRowPriority.vue'
@@ -164,7 +176,7 @@ const props = withDefaults(defineProps<Props>(), {
   disableNativeDrag: false
 })
 
-defineEmits<{
+const emit = defineEmits<{
   dragstart: [event: DragEvent]
   dragend: [event: DragEvent]
   dragover: [event: DragEvent]
@@ -196,6 +208,14 @@ defineEmits<{
 
 const timerStore = useTimerStore()
 
+// Ctrl+Click on checkbox area enters multi-select instead of toggling done
+const handleCheckboxClick = (event: MouseEvent) => {
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault()
+    emit('check')
+  }
+}
+
 // Timer active state
 const isTimerActive = computed(() => {
   return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
@@ -203,3 +223,11 @@ const isTimerActive = computed(() => {
 
 
 </script>
+
+<style scoped>
+.pin-indicator {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+</style>

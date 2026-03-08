@@ -1,0 +1,23 @@
+{
+  "eval_id": 2,
+  "eval_name": "keyboard-shortcuts-broken",
+  "prompt": "Keyboard shortcuts stopped working in my Vue app. Ctrl+Z for undo doesn't do anything, and my custom Ctrl+K shortcut for search also doesn't fire. It was working yesterday. I'm using VueUse's useMagicKeys.",
+  "assertions": [
+    {
+      "text": "Checks if input/textarea focus is intercepting keyboard events",
+      "type": "qualitative"
+    },
+    {
+      "text": "Provides event listener debugging code",
+      "type": "qualitative"
+    },
+    {
+      "text": "Mentions VueUse-specific patterns or useMagicKeys gotchas",
+      "type": "qualitative"
+    },
+    {
+      "text": "Covers event handler conflict detection between multiple listeners",
+      "type": "qualitative"
+    }
+  ]
+}

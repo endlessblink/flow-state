@@ -26,6 +26,14 @@ Invoke this skill when:
 - Avoiding AI-generic design patterns
 - Matching reference designs
 
+## Component Best Practices
+
+For component-level interaction patterns, anti-patterns, and FlowState component mapping, read `references/component-patterns.md`. It covers:
+- Quick rules for 12 common components (buttons, modals, toasts, forms, etc.)
+- Focus management, loading states, validation, destructive actions
+- Anti-pattern checklist (rainbow badges, modal-in-modal, disabled submit, etc.)
+- Generic-to-FlowState component mapping table
+
 ---
 
 # PART 1: COLOR THEORY & PALETTE GENERATION

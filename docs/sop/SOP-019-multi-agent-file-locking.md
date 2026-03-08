@@ -75,7 +75,7 @@ When multiple Claude Code agents work on the same project simultaneously:
 Instead of blocking/waiting, the system now **defers edits** and lets agents work on other tasks:
 
 1. **When blocked**: Edit is saved to `.claude/deferred-queue/{session_id}.json`
-2. **Agent continues**: Can work on other tasks via `bd ready`
+2. **Agent continues**: Can work on other tasks (check MASTER_PLAN.md or use /next)
 3. **Lock released**: `deferred-reminder.sh` hook notifies agent on next prompt
 4. **Retry available**: Agent can re-attempt the edit
 
@@ -173,7 +173,7 @@ The file is currently locked by session abc123... (since 2026-01-22 21:00:00).
 Your edit has been saved to the deferred queue.
 
 NEXT STEPS:
-1. Work on other available tasks: `bd ready`
+1. Work on other available tasks (check MASTER_PLAN.md or use /next)
 2. You'll be notified when TASK-123 completes
 3. Then retry your edit to file.vue
 ```
@@ -204,18 +204,9 @@ rm .claude/locks/TASK-123.lock
 find .claude/locks -name "*.lock" -mmin +240 -delete
 ```
 
-### Coordination with Beads
+### Task Coordination
 
-```bash
-# Before starting work, claim the task
-bd update TASK-123 --status=in_progress
-
-# Check what's available (not blocked)
-bd ready
-
-# When done, close the task (lock auto-releases on session end)
-bd close TASK-123
-```
+Task status is tracked in `docs/MASTER_PLAN.md`. Use `/next` to find available tasks, `/start-dev TASK-XXX` to claim one, and `/done TASK-XXX` when finished. File locks auto-release on session end.
 
 ---
 

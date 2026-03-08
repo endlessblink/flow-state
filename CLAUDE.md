@@ -192,6 +192,7 @@ test('tasks are visible', async ({ page }) => {
 11. **Version Bump Protocol** - When releasing: update 3 files (package.json, src-tauri/tauri.conf.json, src-tauri/Cargo.toml) + create git tag
 12. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS run `./scripts/deploy-tauri-update.sh --notes "TASK-XXX: description"` to build, sign, and deploy to VPS so the user receives the update via Tauri's in-app auto-updater. Never just offer `npm run dev` or local `dpkg -i` as the final delivery. See SOP-037 for details.
 13. **No Client-Side API Keys (BUG-1131)** - NEVER use `VITE_` prefix for API keys/secrets. Cloud API keys go through Supabase Edge Function proxies. A build-time guard (`scripts/check-vite-secrets.cjs`) blocks builds with non-allowlisted VITE_ vars. To add a new safe VITE_ var, add it to the allowlist in that script.
+14. **No Images in Project Root** - NEVER save screenshots, PNGs, or any image files to the project root. Save all debug/test screenshots to `.dev/screenshots/` instead. A PreToolUse hook enforces this automatically.
 
 ## Completion Protocol (MANDATORY)
 
@@ -401,18 +402,11 @@ This project has automatic task locking via `task-lock-enforcer.sh` hook to prev
 **Lock files**: `.claude/locks/TASK-XXX.lock`
 **Lock expiry**: 4 hours (stale locks auto-cleaned)
 
-## Beads Agent Coordination
-
-MASTER_PLAN.md auto-syncs to beads. **Never create beads manually** — the sync script manages them.
+## Task Archival
 
 | Command | Purpose |
 |---------|---------|
-| `npm run mp:sync` | Full sync (also: `:dry`, `:force`) |
 | `npm run mp:archive` | Archive DONE tasks >14 days to `MASTER_PLAN_ARCHIVE.md` (also: `:dry`) |
-| `bd ready` | Find unblocked tasks |
-| `bd update <id> --status=in_progress` | Claim a task |
-| `bd blocked` | See dependency blockers |
-| `bd close <id>` | Mark complete |
 
 ## Extended Documentation
 

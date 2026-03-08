@@ -25,6 +25,19 @@
                 v-model="editedTask"
               />
 
+              <!-- TASK-1470: Inline AI suggestion prompt — visible when task has a title and AI hasn't been used yet this session -->
+              <Transition name="ai-hint-fade">
+                <button
+                  v-if="showAIHint"
+                  class="ai-inline-hint"
+                  type="button"
+                  @click="triggerInlineAIAssist"
+                >
+                  <Sparkles :size="13" class="ai-hint-icon" />
+                  <span>Get AI suggestions for this task</span>
+                </button>
+              </Transition>
+
               <TaskEditMetadata
                 v-model="editedTask"
                 :current-section-id="currentSectionId"
@@ -132,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { X, Sparkles } from 'lucide-vue-next'
 import { type Task, useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
@@ -205,6 +218,19 @@ const {
   isFormDirty
 })
 
+// TASK-1470: Inline AI hint — shown when task has a title and AI hasn't been triggered this session
+const aiUsedThisSession = ref(false)
+const showAIHint = computed(() =>
+  !aiUsedThisSession.value &&
+  !!editedTask.value.title?.trim() &&
+  !showAIAssist.value
+)
+
+// Reset aiUsedThisSession when the modal opens with a new task
+watch(() => props.task?.id, () => {
+  aiUsedThisSession.value = false
+})
+
 // --- Computed Props ---
 
 // Child tasks (tasks where parentTaskId = this task's id)
@@ -257,6 +283,19 @@ const handleKeyDown = (event: KeyboardEvent) => {
 // --- AI Assist Handlers ---
 
 function openAIAssist() {
+  const btn = aiAssistBtnRef.value
+  if (btn) {
+    const rect = btn.getBoundingClientRect()
+    aiAssistPosition.value = { x: rect.left, y: rect.top - 8 }
+  }
+  aiUsedThisSession.value = true
+  showAIAssist.value = true
+}
+
+// TASK-1470: Triggered from inline hint button — positions near the hint element itself
+function triggerInlineAIAssist() {
+  aiUsedThisSession.value = true
+  // Position the popover at the footer AI Assist button for consistency
   const btn = aiAssistBtnRef.value
   if (btn) {
     const rect = btn.getBoundingClientRect()
@@ -615,6 +654,56 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 
 .spacer {
   flex: 1;
+}
+
+/* TASK-1470: Inline AI suggestion hint */
+.ai-inline-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--brand-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  transition: background var(--duration-fast), border-color var(--duration-fast), opacity var(--duration-fast);
+  text-align: start;
+}
+
+.ai-inline-hint:hover {
+  background: color-mix(in srgb, var(--brand-primary) 10%, var(--glass-bg-soft));
+  border-color: color-mix(in srgb, var(--brand-primary) 55%, transparent);
+}
+
+.ai-hint-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* Fade transition for the inline hint */
+.ai-hint-fade-enter-active {
+  transition: opacity var(--duration-normal), transform var(--duration-normal) var(--spring-smooth);
+}
+
+.ai-hint-fade-leave-active {
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+}
+
+.ai-hint-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.ai-hint-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-2px);
 }
 
 /* Mobile responsiveness for sticky buttons */

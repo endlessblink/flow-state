@@ -14,7 +14,7 @@
     </div>
 
     <!-- Grouped Task Display -->
-    <template v-if="groupBy !== 'none' && filteredTasks.length > 0">
+    <template v-if="(groupBy !== 'none' || viewMode === 'today') && filteredTasks.length > 0">
       <div v-for="group in groupedTasks" :key="group.key" class="task-group">
         <div class="group-header">
           <span v-if="group.color" class="group-color-dot" :style="{ backgroundColor: group.color }" />

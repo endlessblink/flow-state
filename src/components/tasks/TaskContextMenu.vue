@@ -20,9 +20,15 @@
     </button>
 
     <!-- Mark as Done / Mark as To Do -->
-    <button class="menu-item" @click="toggleDone">
+    <button class="menu-item menu-item--done" @click="toggleDone">
       <CheckCircle :size="16" class="menu-icon" :class="{ 'icon-done': currentTask?.status === 'done' }" />
       <span class="menu-text">{{ doneToggleLabel }}</span>
+    </button>
+
+    <!-- Pin to Top / Unpin -->
+    <button v-if="!isBatchOperation" class="menu-item" @click="togglePin">
+      <component :is="currentTask?.isPinned ? PinOff : Pin" :size="16" class="menu-icon" />
+      <span class="menu-text">{{ currentTask?.isPinned ? 'Unpin' : 'Pin to Top' }}</span>
     </button>
 
     <div class="menu-divider" />
@@ -71,14 +77,6 @@
       <span class="menu-text">Start Timer</span>
     </button>
 
-    <!-- AI Assist -->
-    <button class="menu-item menu-item--ai" @click="openAIAssist">
-      <Sparkles :size="16" class="menu-icon menu-icon--ai" />
-      <span class="menu-text">AI Assist</span>
-    </button>
-
-    <div class="menu-divider" />
-
     <!-- More submenu -->
     <div
       class="menu-item has-submenu"
@@ -110,6 +108,7 @@
       @close-duration="closeSubmenu('duration')"
       @focus-mode="enterFocus"
       @start-now="() => { closeAllSubmenusNow(); startTaskNow(); emit('close') }"
+      @ai-assist="(event: MouseEvent) => { closeAllSubmenusNow(); openAIAssist(event) }"
     />
 
     <!-- DueDateSubmenu -->
@@ -215,7 +214,9 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
-  Sparkles
+  Sparkles,
+  Pin,
+  PinOff
 } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
@@ -496,6 +497,13 @@ const pinAsQuickTask = async () => {
         console.error('Error pinning quick task:', error)
         showToast('Failed to pin task', 'error')
     }
+}
+
+// Toggle pin to top
+const togglePin = async () => {
+  if (!currentTask.value) return
+  await taskStore.updateTask(currentTask.value.id, { isPinned: !currentTask.value.isPinned })
+  emit('close')
 }
 
 // TASK-1429: Handle Canvas Group selection — calls composable directly (no emit chain)
@@ -1037,6 +1045,11 @@ onUnmounted(() => {
 .priority-dot-sm.medium { background: var(--color-priority-medium); }
 .priority-dot-sm.low { background: var(--color-priority-low); }
 .priority-dot-sm.none { background: var(--text-muted); opacity: 0.4; }
+
+/* TASK-1485: Mark Done line is teal */
+.menu-item--done { color: var(--brand-primary); }
+.menu-item--done:hover { background: var(--brand-bg-subtle); }
+.menu-item--done .menu-icon { color: var(--brand-primary); opacity: 1; }
 
 /* Done checkmark teal color */
 .icon-done { color: var(--brand-primary); opacity: 1; }

@@ -30,6 +30,7 @@ PlasmoidItem {
     property int tokenExpiresIn: 3600
     property bool isAuthenticating: false
     property bool isRefreshingToken: false  // Prevent multiple refresh attempts
+    property real refreshTokenStartTime: 0  // Epoch ms when refresh started (for stuck detection)
     property string authError: ""
     readonly property bool isAuthenticated: accessToken !== ""
 
@@ -3598,11 +3599,18 @@ PlasmoidItem {
     function refreshAccessToken() {
         if (root.supabaseUrl === "" || root.refreshToken === "") return
         if (root.isRefreshingToken) {
-            if (root.debugLogging) console.log("[AUTH] Already refreshing token, skipping...")
-            return
+            // Safety: if stuck for >30s, force reset and proceed
+            if (Date.now() - root.refreshTokenStartTime > 30000) {
+                console.log("[AUTH] Refresh stuck for >30s, forcing reset")
+                root.isRefreshingToken = false
+            } else {
+                if (root.debugLogging) console.log("[AUTH] Already refreshing token, skipping...")
+                return
+            }
         }
 
         root.isRefreshingToken = true
+        root.refreshTokenStartTime = Date.now()
         if (root.debugLogging) console.log("[AUTH] Starting token refresh...")
 
         var xhr = new XMLHttpRequest()
@@ -3623,6 +3631,7 @@ PlasmoidItem {
                     root.userId = response.user?.id || root.userId  // Also update userId
                     root.tokenExpiresIn = response.expires_in || 3600
                     root.saveAuthTokens(plasmoid.configuration.storageEmail)
+                    tokenRefreshTimer.interval = Math.max((root.tokenExpiresIn - 300) * 1000, 60000)
                     tokenRefreshTimer.restart()
                     if (root.debugLogging) console.log("[AUTH] Token refreshed successfully, new expiry:", root.tokenExpiresIn)
                     // BUG-1347: Stagger fetches to avoid concurrent JSON.parse blocking UI thread
@@ -3634,6 +3643,11 @@ PlasmoidItem {
                     console.log("[AUTH] Refresh failed, signing out")
                     root.authError = "Session expired. Please sign in again."
                     root.signOut()
+                } else {
+                    // Network error or unexpected status — retry token refresh in 60 seconds
+                    console.log("[AUTH] Refresh failed with status:", xhr.status, "— will retry in 60s")
+                    tokenRefreshTimer.interval = 60000
+                    tokenRefreshTimer.restart()
                 }
             }
         }
@@ -4495,6 +4509,9 @@ PlasmoidItem {
                     root.updateDisplayTasks()
                     root.writeActiveTaskFile()
                     root.buildNannyTaskList()
+                } else if (xhr.status === 401) {
+                    console.log("[TASKS] Token expired, refreshing...")
+                    root.refreshAccessToken()
                 } else {
                     console.log("[TASKS] Error:", xhr.status, xhr.responseText)
                 }
@@ -4535,6 +4552,9 @@ PlasmoidItem {
                         root.groupTasksByProject()
                         root.updateDisplayTasks()
                     }
+                } else if (xhr.status === 401) {
+                    console.log("[PROJECTS] Token expired, refreshing...")
+                    root.refreshAccessToken()
                 } else {
                     console.log("[PROJECTS] Error:", xhr.status, xhr.responseText)
                 }
@@ -4701,6 +4721,9 @@ PlasmoidItem {
                         if (root.debugLogging) console.log("[PINS] Loaded", allPins.length, "pinned tasks")
                     }
                     root.buildNannyTaskList()
+                } else if (xhr.status === 401) {
+                    console.log("[PINS] Token expired, refreshing...")
+                    root.refreshAccessToken()
                 } else {
                     console.error("[PINS] Error:", xhr.status, xhr.responseText)
                 }

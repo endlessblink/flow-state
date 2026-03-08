@@ -78,7 +78,7 @@ export async function cacheTasks(tasks: Task[]): Promise<void> {
     await database.transaction('rw', database.tasks, database.meta, async () => {
       await database.tasks.clear()
       if (tasks.length > 0) {
-        await database.tasks.bulkPut(tasks.map(t => toRaw(t)))
+        await database.tasks.bulkPut(tasks.map(t => JSON.parse(JSON.stringify(toRaw(t)))))
       }
       await database.meta.put({
         key: 'tasks',
@@ -126,7 +126,7 @@ export async function cacheGroups(groups: CanvasGroup[]): Promise<void> {
     await database.transaction('rw', database.groups, database.meta, async () => {
       await database.groups.clear()
       if (groups.length > 0) {
-        await database.groups.bulkPut(groups.map(g => toRaw(g)))
+        await database.groups.bulkPut(groups.map(g => JSON.parse(JSON.stringify(toRaw(g)))))
       }
       await database.meta.put({
         key: 'groups',
@@ -174,7 +174,7 @@ export async function cacheProjects(projects: Project[]): Promise<void> {
     await database.transaction('rw', database.projects, database.meta, async () => {
       await database.projects.clear()
       if (projects.length > 0) {
-        await database.projects.bulkPut(projects.map(p => toRaw(p)))
+        await database.projects.bulkPut(projects.map(p => JSON.parse(JSON.stringify(toRaw(p)))))
       }
       await database.meta.put({
         key: 'projects',

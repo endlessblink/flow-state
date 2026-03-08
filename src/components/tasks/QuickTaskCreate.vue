@@ -312,6 +312,8 @@ const isTomorrow = computed(() => {
 
 const isWeekend = computed(() => {
   if (!localDate.value) return false
+  // Don't highlight Weekend if Today or Tomorrow is already active
+  if (isToday.value || isTomorrow.value) return false
   const selected = new Date(localDate.value)
   const day = selected.getDay()
   return day === 0 || day === 6 // Sunday or Saturday

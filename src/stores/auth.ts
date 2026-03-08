@@ -642,7 +642,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { homeDir } = await import('@tauri-apps/api/path')
 
       const home = await homeDir()
-      const configDir = `${home}.config/flowstate`
+      const configDir = `${home}/.config/flowstate`
       const sessionPath = `${configDir}/session.json`
 
       // Ensure directory exists

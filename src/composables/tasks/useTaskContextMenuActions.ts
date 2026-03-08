@@ -339,6 +339,11 @@ export function useTaskContextMenuActions(
             status: currentTask.value.status,
             priority: currentTask.value.priority,
             estimatedDuration: currentTask.value.estimatedDuration,
+            canvasPosition: currentTask.value.canvasPosition
+                ? { x: currentTask.value.canvasPosition.x + 30, y: currentTask.value.canvasPosition.y + 30 }
+                : undefined,
+            parentId: currentTask.value.parentId,
+            projectId: currentTask.value.projectId,
             instanceId: (currentTask.value as Task & { instanceId?: string }).instanceId,
             isCalendarEvent: Boolean((currentTask.value as Task & { isCalendarEvent?: boolean }).isCalendarEvent),
             instances: currentTask.value.instances ? [...currentTask.value.instances] : []
@@ -374,6 +379,9 @@ export function useTaskContextMenuActions(
                     status: taskData.status,
                     priority: taskData.priority,
                     estimatedDuration: taskData.estimatedDuration,
+                    canvasPosition: taskData.canvasPosition,
+                    parentId: taskData.parentId,
+                    projectId: taskData.projectId,
                     instances: duplicatedInstances
                 })
             } catch (error) {

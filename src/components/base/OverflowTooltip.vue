@@ -10,8 +10,10 @@
       class="overflow-text"
       :class="{
         'is-overflowing': isOverflowing,
-        'show-tooltip': showTooltip
+        'show-tooltip': showTooltip,
+        'multiline': multiline
       }"
+      :style="multiline ? { '--line-clamp': lineClamp } : {}"
     >
       <slot />
     </div>
@@ -44,12 +46,16 @@ interface Props {
   text?: string
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right'
   tooltipDelay?: number
+  multiline?: boolean
+  lineClamp?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   text: '',
   tooltipPosition: 'top',
-  tooltipDelay: 0
+  tooltipDelay: 300,
+  multiline: false,
+  lineClamp: 2
 })
 
 const elementRef = ref<HTMLElement | null>(null)
@@ -61,7 +67,7 @@ const {
   showTooltip,
   handleMouseEnter,
   handleMouseLeave
-} = useTextOverflow(elementRef, textRef)
+} = useTextOverflow(elementRef, textRef, props.tooltipDelay || 300)
 
 // Watch for text prop changes
 watch(() => props.text, (newText) => {
@@ -72,11 +78,23 @@ watch(() => props.text, (newText) => {
 <style scoped>
 .overflow-tooltip-container {
   position: relative;
-  display: contents;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .overflow-text {
   width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overflow-text.multiline {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--line-clamp, 2);
 }
 
 .overflow-tooltip {

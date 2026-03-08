@@ -20,6 +20,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { onClickOutside } from '@vueuse/core'
 import { X, Send, Sparkles, Loader2, Trash2, Settings, RotateCcw, AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2, Zap, History, Plus, PanelRight } from 'lucide-vue-next'
 import { useAIChat } from '@/composables/useAIChat'
@@ -569,9 +570,7 @@ onUnmounted(() => {
           <Zap v-if="isGridHandler" class="header-icon grid-handler-icon" :size="18" />
           <Sparkles v-else class="header-icon" :size="18" />
           <span>{{ isGridHandler ? 'Grid Handler' : 'AI Assistant' }}</span>
-          <span v-if="headerBadgeText" class="provider-badge" :class="'provider-' + activeProvider">
-            {{ headerBadgeText }}
-          </span>
+          <OverflowTooltip v-if="headerBadgeText" class="provider-badge" :class="'provider-' + activeProvider" :text="headerBadgeText">{{ headerBadgeText }}</OverflowTooltip>
         </div>
         <div class="header-actions">
           <!-- Settings dropdown -->
@@ -821,7 +820,7 @@ onUnmounted(() => {
                     @click="handleSwitchChat(conv.id)"
                     @keydown.enter="handleSwitchChat(conv.id)"
                   >
-                    <span class="chat-history-title">{{ conv.title }}</span>
+                    <OverflowTooltip class="chat-history-title" :text="conv.title" style="flex: 1; min-width: 0">{{ conv.title }}</OverflowTooltip>
                     <span class="chat-history-date">{{ formatRelativeDate(conv.updatedAt) }}</span>
                     <button
                       class="chat-history-delete"
@@ -1056,9 +1055,6 @@ onUnmounted(() => {
   background: var(--surface-hover);
   color: var(--text-tertiary);
   max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .provider-ollama {
@@ -1347,9 +1343,6 @@ onUnmounted(() => {
 
 .chat-history-title {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .chat-history-date {

@@ -21,9 +21,9 @@
 
     <!-- Task Content -->
     <div class="task-content--calendar-inbox">
-      <div class="task-title" dir="auto" :title="task.title">
+      <OverflowTooltip class="task-title" :text="task.title" multiline :line-clamp="2" dir="auto">
         {{ truncateUrlsInText(task.title) }}
-      </div>
+      </OverflowTooltip>
 
       <!-- Metadata Badges -->
       <div class="task-metadata">
@@ -110,6 +110,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { type Task } from '@/stores/tasks'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { Play, Edit2, Timer, Calendar, Clock, ListChecks } from 'lucide-vue-next'
 import { NTag } from 'naive-ui'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
@@ -230,10 +231,6 @@ const formatDueDateLabel = (dueDate: string) => {
   margin-bottom: var(--space-1);
   word-break: break-word;
   overflow-wrap: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .task-metadata {

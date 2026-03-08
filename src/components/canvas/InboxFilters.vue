@@ -66,7 +66,7 @@
         @click="clearAllFilters"
       >
         <List :size="14" />
-        <span class="chip-label">{{ $t('filters.all') }}</span>
+        <OverflowTooltip class="chip-label" :text="$t('filters.all')">{{ $t('filters.all') }}</OverflowTooltip>
       </button>
 
       <!-- TASK-076: Hide Done Toggle -->
@@ -78,7 +78,7 @@
         @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
       >
         <CheckCircle2 :size="14" />
-        <span class="chip-label">{{ hideDoneTasks ? $t('filters.hiding_done') : $t('filters.show_done') }}</span>
+        <OverflowTooltip class="chip-label" :text="hideDoneTasks ? $t('filters.hiding_done') : $t('filters.show_done')">{{ hideDoneTasks ? $t('filters.hiding_done') : $t('filters.show_done') }}</OverflowTooltip>
       </button>
 
       <!-- Unscheduled Toggle -->
@@ -89,7 +89,7 @@
         @click="$emit('update:unscheduledOnly', !unscheduledOnly)"
       >
         <CalendarOff :size="14" />
-        <span class="chip-label">{{ $t('filters.unscheduled') }}</span>
+        <OverflowTooltip class="chip-label" :text="$t('filters.unscheduled')">{{ $t('filters.unscheduled') }}</OverflowTooltip>
         <span v-if="unscheduledCount > 0" class="chip-count">{{ unscheduledCount }}</span>
       </button>
 
@@ -102,7 +102,7 @@
         @click="$emit('update:onCanvasOnly', !onCanvasOnly)"
       >
         <LayoutGrid :size="14" />
-        <span class="chip-label">{{ $t('filters.on_canvas') }}</span>
+        <OverflowTooltip class="chip-label" :text="$t('filters.on_canvas')">{{ $t('filters.on_canvas') }}</OverflowTooltip>
         <span v-if="onCanvasCount > 0" class="chip-count">{{ onCanvasCount }}</span>
       </button>
 
@@ -114,7 +114,7 @@
           @click="showPriorityDropdown = !showPriorityDropdown"
         >
           <Flag :size="14" />
-          <span class="chip-label">{{ priorityLabel }}</span>
+          <OverflowTooltip class="chip-label" :text="priorityLabel">{{ priorityLabel }}</OverflowTooltip>
           <ChevronDown :size="12" class="chevron" :class="{ rotated: showPriorityDropdown }" />
         </button>
         <div v-if="showPriorityDropdown" class="dropdown-menu">
@@ -149,7 +149,7 @@
           @click="showDurationDropdown = !showDurationDropdown"
         >
           <Clock :size="14" />
-          <span class="chip-label">{{ durationLabel }}</span>
+          <OverflowTooltip class="chip-label" :text="durationLabel">{{ durationLabel }}</OverflowTooltip>
           <ChevronDown :size="12" class="chevron" :class="{ rotated: showDurationDropdown }" />
         </button>
         <div v-if="showDurationDropdown" class="dropdown-menu">
@@ -184,7 +184,7 @@
           @click="showProjectDropdown = !showProjectDropdown"
         >
           <FolderOpen :size="14" />
-          <span class="chip-label">{{ projectLabel }}</span>
+          <OverflowTooltip class="chip-label" :text="projectLabel">{{ projectLabel }}</OverflowTooltip>
           <ChevronDown :size="12" class="chevron" :class="{ rotated: showProjectDropdown }" />
         </button>
         <div v-if="showProjectDropdown" class="dropdown-menu">
@@ -242,6 +242,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays, Check, LayoutGrid, ArrowUpNarrowWide, ArrowDownNarrowWide } from 'lucide-vue-next'
 import SavedViewsDropdown from '@/components/filters/SavedViewsDropdown.vue'
 import type { Task, Project } from '@/stores/tasks'
@@ -539,8 +540,6 @@ onBeforeUnmount(() => {
 
 .chip-label {
   max-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .chip-count {

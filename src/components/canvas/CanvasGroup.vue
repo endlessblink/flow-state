@@ -117,9 +117,9 @@
           @dragover.prevent
         >
           <div v-if="slot.task" class="slot-task-preview">
-            <div class="slot-task-title">
+            <OverflowTooltip :text="slot.task.title" class="slot-task-title" style="min-width: 0; max-width: 100%">
               {{ slot.task.title }}
-            </div>
+            </OverflowTooltip>
             <div class="slot-task-meta">
               <span class="priority-badge" :class="slot.task.priority">{{ slot.task.priority }}</span>
               <span 
@@ -159,6 +159,7 @@ import { ChevronDown, ChevronRight, Eye, Maximize2, Archive, Zap, Magnet, Timer,
 import type { CanvasSection } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'
 
 interface Props {
@@ -697,9 +698,6 @@ onUnmounted(() => {
   font-weight: var(--font-medium);
   color: var(--text-primary);
   line-height: var(--leading-tight);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .slot-task-meta {

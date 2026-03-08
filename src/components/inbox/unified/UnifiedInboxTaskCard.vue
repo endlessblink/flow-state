@@ -28,9 +28,9 @@
 
     <!-- Task Content -->
     <div class="task-content--inbox">
-      <div class="task-title" dir="auto" :title="task.title">
+      <OverflowTooltip :text="task.title" class="task-title" multiline :line-clamp="2" dir="auto">
         {{ truncateUrlsInText(task.title) }}
-      </div>
+      </OverflowTooltip>
 
       <!-- ADHD-friendly: Minimal metadata - show only essentials -->
       <div class="task-metadata">
@@ -107,6 +107,7 @@ import { Timer, Calendar, Clock, Play, Edit2, CheckCircle2, Layout } from 'lucid
 import type { Task } from '@/types/tasks'
 import { truncateUrlsInText } from '@/utils/urlTruncate'
 import { useTaskStore } from '@/stores/tasks'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useTimerStore } from '@/stores/timer'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
@@ -273,13 +274,7 @@ const dueStatus = computed(() => {
   color: var(--text-primary);
   margin-bottom: var(--space-2);
   line-height: 1.4;
-  word-break: break-word;
-  overflow-wrap: break-word;
   max-width: 100%;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .task-metadata {

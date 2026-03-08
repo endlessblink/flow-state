@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Big3Slot } from '@/composables/useMorningDashboard'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 const props = defineProps<{
   slot: Big3Slot
@@ -48,7 +49,7 @@ const placeholderTexts = [
     <!-- Filled state -->
     <template v-else-if="isFilled">
       <span class="zone-number">{{ index + 1 }}.</span>
-      <span class="zone-title">{{ slot.title }}</span>
+      <OverflowTooltip :text="slot.title" class="zone-title" style="flex: 1; min-width: 0">{{ slot.title }}</OverflowTooltip>
       <button class="zone-clear" type="button" @click.stop="emit('clear', index)" aria-label="Clear slot">
         &times;
       </button>
@@ -57,7 +58,7 @@ const placeholderTexts = [
     <!-- Completed state -->
     <template v-else-if="isCompleted">
       <span class="zone-number">{{ index + 1 }}.</span>
-      <span class="zone-title zone-title--done">{{ slot.title }}</span>
+      <OverflowTooltip :text="slot.title" class="zone-title zone-title--done" style="flex: 1; min-width: 0">{{ slot.title }}</OverflowTooltip>
       <svg class="zone-check" width="16" height="16" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="8" r="7" stroke="var(--brand-primary)" stroke-width="1.5" />
         <path d="M5 8l2 2 4-4" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -129,10 +130,6 @@ const placeholderTexts = [
 .zone-title {
   font-size: 0.85rem;
   color: var(--text-primary);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .zone-title--done {

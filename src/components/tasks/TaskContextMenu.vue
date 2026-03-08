@@ -9,7 +9,7 @@
     >
     <!-- Header for inbox/batch operations -->
     <div v-if="showInboxHeader" class="context-menu-header">
-      {{ displayHeaderText }}
+      <OverflowTooltip :text="displayHeaderText" tooltip-position="bottom">{{ displayHeaderText }}</OverflowTooltip>
     </div>
 
     <!-- Edit Task (single only) -->
@@ -41,7 +41,7 @@
     >
       <Calendar :size="16" class="menu-icon" />
       <span class="menu-text">Due Date</span>
-      <span class="menu-item-value">{{ currentDueDateLabel }}</span>
+      <OverflowTooltip :text="currentDueDateLabel" class="menu-item-value" tooltip-position="bottom">{{ currentDueDateLabel }}</OverflowTooltip>
       <ChevronRight :size="14" class="submenu-arrow" />
     </div>
 
@@ -53,7 +53,7 @@
     >
       <span class="priority-dot-sm" :class="currentTask?.priority || 'none'" />
       <span class="menu-text">Priority</span>
-      <span class="menu-item-value">{{ currentPriorityLabel }}</span>
+      <OverflowTooltip :text="currentPriorityLabel" class="menu-item-value" tooltip-position="bottom">{{ currentPriorityLabel }}</OverflowTooltip>
       <ChevronRight :size="14" class="submenu-arrow" />
     </div>
 
@@ -65,7 +65,7 @@
     >
       <FolderOpen :size="16" class="menu-icon" />
       <span class="menu-text">Project</span>
-      <span class="menu-item-value">{{ currentProjectLabel }}</span>
+      <OverflowTooltip :text="currentProjectLabel" class="menu-item-value" tooltip-position="bottom">{{ currentProjectLabel }}</OverflowTooltip>
       <ChevronRight :size="14" class="submenu-arrow" />
     </div>
 
@@ -232,6 +232,7 @@ import DurationSubmenu from './context-menu/DurationSubmenu.vue'
 import MoreSubmenu from './context-menu/MoreSubmenu.vue'
 import ProjectSubmenu from './context-menu/ProjectSubmenu.vue'
 import CanvasGroupSubmenu from './context-menu/CanvasGroupSubmenu.vue'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import { useSubmenuSafePolygon } from '@/composables/useSubmenuSafePolygon'
@@ -986,9 +987,7 @@ onUnmounted(() => {
   margin-bottom: var(--space-1);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Menu Items */
@@ -1028,10 +1027,7 @@ onUnmounted(() => {
   font-size: var(--text-xs);
   margin-inline-start: auto;
   margin-inline-end: var(--space-1);
-  white-space: nowrap;
   max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Small priority dot for the priority trigger item */

@@ -104,9 +104,9 @@
                 @keydown.enter="saveEdit(task.id, 'title', $event)"
                 @keydown.esc="cancelEdit"
               >
-              <span v-else :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
+              <OverflowTooltip v-else :text="task.title" style="flex: 1; min-width: 0" :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
                 {{ task.title }}
-              </span>
+              </OverflowTooltip>
             </div>
 
             <div class="table-cell project-cell">
@@ -185,7 +185,7 @@
         <template v-for="group in groups" :key="group.key">
           <!-- TASK-1334: Group Header Row -->
           <div
-            v-if="groupBy !== 'none'"
+            v-if="groupBy !== 'none' || group.key === 'pinned'"
             class="table-group-header"
             @click="toggleTableGroupExpand(group.key)"
           >
@@ -202,7 +202,7 @@
           <!-- Task Rows (grouped or flat) -->
           <template v-if="groupBy === 'none' || expandedTableGroups.has(group.key)">
             <div
-              v-for="task in (groupBy === 'none' ? tasks : group.tasks)"
+              v-for="task in (groupBy === 'none' && group.key !== 'pinned' ? tasks : group.tasks)"
               :key="task.id"
               class="table-row"
               :class="{
@@ -238,9 +238,9 @@
                   @keydown.enter="saveEdit(task.id, 'title', $event)"
                   @keydown.esc="cancelEdit"
                 >
-                <span v-else :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
+                <OverflowTooltip v-else :text="task.title" style="flex: 1; min-width: 0" :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
                   {{ task.title }}
-                </span>
+                </OverflowTooltip>
               </div>
 
               <div class="table-cell project-cell">
@@ -330,6 +330,7 @@ import { useI18n } from 'vue-i18n'
 import { useVirtualList } from '@vueuse/core'
 import type { Task, TaskGroup } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { Play, Edit, Calendar, Inbox, Trash2, X, ChevronRight } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 type DensityType = 'compact' | 'comfortable' | 'spacious'
@@ -792,9 +793,8 @@ onUnmounted(() => {
   font-weight: var(--font-medium);
   color: var(--text-primary);
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
 }
 
 .project-cell {

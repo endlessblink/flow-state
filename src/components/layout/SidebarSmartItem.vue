@@ -24,9 +24,9 @@
     </div>
 
     <!-- Label -->
-    <span class="item-label">
+    <OverflowTooltip class="item-label" style="flex: 1; min-width: 0">
       <slot />
-    </span>
+    </OverflowTooltip>
 
     <!-- Count badge -->
     <BaseBadge
@@ -51,6 +51,7 @@
 import { ref, computed } from 'vue'
 import { Calendar, Clock } from 'lucide-vue-next'
 import BaseBadge from '@/components/base/BaseBadge.vue'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useTaskStore } from '@/stores/tasks'
 
@@ -308,10 +309,6 @@ const calculateTargetDate = (): string => {
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   transition: color var(--duration-fast);
 }
 

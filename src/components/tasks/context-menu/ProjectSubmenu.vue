@@ -40,7 +40,7 @@
               :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : project.color }"
             />
           </span>
-          <span class="menu-text">{{ project.name }}</span>
+          <OverflowTooltip :text="project.name" class="menu-text" tooltip-position="bottom">{{ project.name }}</OverflowTooltip>
           <Check v-if="currentProjectId === project.id" :size="12" class="check-icon" />
         </button>
       </div>
@@ -53,6 +53,7 @@ import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { Check } from 'lucide-vue-next'
 import { useProjectStore } from '@/stores/projects'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 defineProps<{
   isVisible: boolean

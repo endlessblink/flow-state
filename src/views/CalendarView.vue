@@ -762,17 +762,20 @@ watch(currentDate, (newDate, _oldDate) => {
   display: flex;
   flex: 1;
   background: var(--app-background-gradient);
-  overflow: clip;
+  overflow: hidden;
   min-height: 0;
   position: relative;
   z-index: 1;
   border-radius: var(--radius-lg) 0 0 0;
 }
 
-/* Uses .scroll-container utility for flex:1, overflow-y:auto, min-height:0 */
+/* Explicit flex properties — .scroll-container utility can lose to scoped specificity in WebKitGTK */
 .calendar-main {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
   position: relative;
   z-index: 1;
 }

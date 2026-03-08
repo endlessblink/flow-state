@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, inject, computed } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useTaskStore } from '@/stores/tasks'
 import type { CalendarEvent } from '@/types/tasks'
@@ -205,14 +206,16 @@ const getEventTooltip = (event: CalendarEvent) => {
               :title="`Priority: ${getPriorityLabel(event)}`"
             />
             <span v-if="formatEventTime(event)" class="event-time">{{ formatEventTime(event) }}</span>
-            <span
+            <OverflowTooltip
               class="event-title-short"
+              :text="event.title"
+              multiline
+              :line-clamp="2"
               dir="auto"
-              :title="event.title"
               @click.stop="$emit('cycleStatus', $event, event)"
             >
               {{ getStatusIcon(getTaskStatus(event)) }} {{ truncateUrlsInText(event.title) }}
-            </span>
+            </OverflowTooltip>
           </div>
 
           <!-- TASK-1317: External calendar events (read-only pills) -->
@@ -224,7 +227,7 @@ const getEventTooltip = (event: CalendarEvent) => {
             :title="`${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
           >
             <div class="external-dot" :style="{ backgroundColor: ext.color }" />
-            <span class="event-title-short" dir="auto">{{ ext.title }}</span>
+            <OverflowTooltip class="event-title-short" :text="ext.title" multiline :line-clamp="2" dir="auto">{{ ext.title }}</OverflowTooltip>
           </div>
         </div>
       </div>
@@ -384,10 +387,6 @@ const getEventTooltip = (event: CalendarEvent) => {
 }
 
 .event-title-short {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   word-break: break-word;
 }
 

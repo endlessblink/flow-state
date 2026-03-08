@@ -29,10 +29,10 @@
           <div class="dropdown-header">
             <div class="user-info">
               <div class="user-name">
-                {{ displayName }}
+                <OverflowTooltip :text="displayName">{{ displayName }}</OverflowTooltip>
               </div>
               <div class="user-email">
-                {{ authStore.user?.email }}
+                <OverflowTooltip :text="authStore.user?.email ?? ''">{{ authStore.user?.email }}</OverflowTooltip>
               </div>
             </div>
           </div>
@@ -69,6 +69,7 @@ import { ref, computed, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useUIStore } from '@/stores/ui'
 import { Settings, LogOut } from 'lucide-vue-next'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 // ===== Stores =====
 const authStore = useAuthStore()
@@ -289,17 +290,13 @@ onUnmounted(() => {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .user-email {
   font-size: var(--text-xs);
   color: var(--text-muted);
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Divider */

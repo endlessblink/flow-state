@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
 import { useWindowSize } from '@vueuse/core'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { ChevronLeft } from 'lucide-vue-next'
 import CalendarDayView from '@/components/calendar/CalendarDayView.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -430,7 +431,7 @@ onUnmounted(() => {
         >
           <span class="big3-number">{{ i + 1 }}</span>
           <div class="big3-info">
-            <span class="big3-title">{{ slot.title || 'Empty slot' }}</span>
+            <OverflowTooltip class="big3-title" :text="slot.title || 'Empty slot'" style="flex: 1; min-width: 0">{{ slot.title || 'Empty slot' }}</OverflowTooltip>
             <span v-if="timeBlocks[i].startTime" class="big3-time">
               {{ formatTime12h(timeBlocks[i].startTime) }}
               <button
@@ -521,6 +522,10 @@ onUnmounted(() => {
   border-radius: var(--radius-lg);
   backdrop-filter: blur(8px);
   overflow-y: auto;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
 }
 
 .sidebar-title {
@@ -602,9 +607,6 @@ onUnmounted(() => {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .big3-time {

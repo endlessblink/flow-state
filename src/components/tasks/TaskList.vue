@@ -52,7 +52,7 @@
     >
       <!-- Sticky Group Header -->
       <div
-        v-if="groupBy !== 'none'"
+        v-if="groupBy !== 'none' || group.key === 'pinned'"
         class="group-header"
         :class="{ 'group-header--drop-target': isDragging && headerDropTarget === group.key }"
         :style="(group.indent || 0) > 0 ? { paddingLeft: `${12 + (group.indent || 0) * 24}px` } : undefined"

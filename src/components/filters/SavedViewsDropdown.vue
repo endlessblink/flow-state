@@ -10,7 +10,7 @@
       @click="toggleDropdown"
     >
       <Bookmark :size="14" />
-      <span v-if="activeViewId" class="trigger-label">{{ activeViewName }}</span>
+      <OverflowTooltip v-if="activeViewId" :text="activeViewName" class="trigger-label" style="flex: 1; min-width: 0">{{ activeViewName }}</OverflowTooltip>
     </button>
 
     <!-- Dropdown Panel (Teleported) -->
@@ -41,7 +41,7 @@
                 class="view-color-dot"
                 :style="{ background: view.color || 'var(--brand-primary)' }"
               />
-              <span class="view-name">{{ view.name }}</span>
+              <OverflowTooltip :text="view.name" class="view-name">{{ view.name }}</OverflowTooltip>
               <button
                 class="view-delete-btn"
                 title="Delete saved view"
@@ -106,6 +106,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { Bookmark, X, Plus, Check } from 'lucide-vue-next'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useSavedViews } from '@/composables/useSavedViews'
 import type { SavedView } from '@/types/savedViews'
 
@@ -306,8 +307,6 @@ onBeforeUnmount(() => {
 
 .trigger-label {
   max-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ============================================
@@ -401,9 +400,6 @@ onBeforeUnmount(() => {
 
 .view-name {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .view-delete-btn {

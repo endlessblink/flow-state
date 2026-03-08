@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { LogOut, Key, Eye, EyeOff, Check, AlertCircle, Loader2, CheckCircle, Download, RefreshCw, ExternalLink, Info, Plus, Trash2, Calendar } from 'lucide-vue-next'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
@@ -258,9 +259,9 @@ const handleChangePassword = async () => {
       <template v-if="isAuthReady">
         <div class="account-info">
           <div class="user-details">
-            <div class="user-email">
+            <OverflowTooltip class="user-email" :text="authStore.user?.email || ''" style="flex: 1; min-width: 0">
               {{ authStore.user?.email }}
-            </div>
+            </OverflowTooltip>
             <div class="user-status">
               Logged in via Supabase
             </div>
@@ -709,9 +710,6 @@ const handleChangePassword = async () => {
   font-weight: var(--font-semibold);
   color: var(--text-primary);
   margin-bottom: var(--space-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .user-status {

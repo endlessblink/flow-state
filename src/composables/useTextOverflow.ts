@@ -7,7 +7,7 @@
 
 import { ref, computed, watch, nextTick, type Ref } from 'vue'
 
-export function useTextOverflow(elementRef?: Ref<HTMLElement | null>, _textRef?: Ref<string>) {
+export function useTextOverflow(elementRef?: Ref<HTMLElement | null>, _textRef?: Ref<string>, delay: number = 300) {
   const isOverflowing = ref(false)
   const showTooltip = ref(false)
   let tooltipTimeout: number | null = null
@@ -31,8 +31,11 @@ export function useTextOverflow(elementRef?: Ref<HTMLElement | null>, _textRef?:
   /**
    * Handle mouse enter - show tooltip after delay if overflowing
    */
-  const handleMouseEnter = () => {
-    checkOverflow()
+  const handleMouseEnter = async () => {
+    // Don't show tooltips on touch devices
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return
+
+    await checkOverflow()
 
     if (isOverflowing.value) {
       // Clear any existing timeout
@@ -40,10 +43,10 @@ export function useTextOverflow(elementRef?: Ref<HTMLElement | null>, _textRef?:
         clearTimeout(tooltipTimeout)
       }
 
-      // Show tooltip after a short delay
+      // Show tooltip after a configurable delay
       tooltipTimeout = setTimeout(() => {
         showTooltip.value = true
-      }, 300) as unknown as number
+      }, delay) as unknown as number
     }
   }
 

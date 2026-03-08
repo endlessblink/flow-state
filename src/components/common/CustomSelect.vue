@@ -12,7 +12,7 @@
       @keydown.space.prevent="toggleDropdown"
       @keydown.esc="closeDropdown"
     >
-      <span class="select-value">{{ displayValue }}</span>
+      <OverflowTooltip :text="displayValue" class="select-value" style="flex: 1; min-width: 0">{{ displayValue }}</OverflowTooltip>
       <ChevronDown :size="compact ? 12 : 14" class="select-icon" :class="{ 'is-open': isOpen }" />
     </button>
 
@@ -54,6 +54,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 interface SelectOption {
   label: string
@@ -281,9 +282,6 @@ watch(isOpen, (newVal) => {
 
 .select-value {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .select-icon {

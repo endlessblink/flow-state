@@ -100,9 +100,9 @@ export function useMorningDashboard() {
 
   // --- Time Blocks ---
   const timeBlocks = ref<TimeBlock[]>([
-    { startTime: '09:00', duration: 60 },
-    { startTime: '10:30', duration: 60 },
-    { startTime: '13:00', duration: 60 },
+    { startTime: '', duration: 60 },
+    { startTime: '', duration: 60 },
+    { startTime: '', duration: 60 },
   ])
 
   // --- News State ---

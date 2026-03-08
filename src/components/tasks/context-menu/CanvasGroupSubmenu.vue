@@ -34,7 +34,7 @@
             class="group-dot"
             :style="{ backgroundColor: group.color }"
           />
-          <span class="menu-text">{{ group.name }}</span>
+          <OverflowTooltip :text="group.name" class="menu-text" tooltip-position="bottom">{{ group.name }}</OverflowTooltip>
           <Check v-if="currentGroupId === group.id" :size="12" class="check-icon" />
         </button>
       </div>
@@ -52,6 +52,7 @@ import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { Check } from 'lucide-vue-next'
 import { useCanvasStore } from '@/stores/canvas'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 defineProps<{
   isVisible: boolean

@@ -13,6 +13,7 @@
 
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import {
   ArrowLeft,
   Plus,
@@ -382,7 +383,7 @@ onUnmounted(() => {
               >
             </template>
             <template v-else>
-              <span class="conv-title" dir="auto">{{ conv.title }}</span>
+              <OverflowTooltip class="conv-title" :text="conv.title" dir="auto" style="flex: 1; min-width: 0">{{ conv.title }}</OverflowTooltip>
               <span class="conv-date">{{ formatRelativeDate(conv.updatedAt) }}</span>
             </template>
           </div>
@@ -431,7 +432,7 @@ onUnmounted(() => {
           <div class="header-title-area">
             <Zap v-if="isGridHandler" class="header-icon grid-handler-icon" :size="18" />
             <Sparkles v-else class="header-icon" :size="18" />
-            <span class="header-title" dir="auto">{{ activeConversationTitle }}</span>
+            <OverflowTooltip class="header-title" :text="activeConversationTitle" dir="auto" style="flex: 1; min-width: 0">{{ activeConversationTitle }}</OverflowTooltip>
             <span v-if="headerBadgeText" class="provider-badge" :class="'provider-' + activeProvider">
               {{ headerBadgeText }}
             </span>
@@ -800,9 +801,6 @@ onUnmounted(() => {
 .conv-title {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .conv-date {
@@ -954,9 +952,6 @@ onUnmounted(() => {
   font-size: var(--text-base);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .header-icon {

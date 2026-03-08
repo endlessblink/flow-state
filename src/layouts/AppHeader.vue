@@ -173,7 +173,7 @@
               <template v-if="activeTaskProject.type === 'emoji'">{{ activeTaskProject.content }}</template>
             </span>
             <span v-else class="active-task-dot" />
-            <span class="active-task-name" dir="auto">{{ timerStore.currentTaskName }}</span>
+            <OverflowTooltip :text="timerStore.currentTaskName" class="active-task-name" style="flex: 1; min-width: 0">{{ timerStore.currentTaskName }}</OverflowTooltip>
           </div>
         </Transition>
       </div>
@@ -214,6 +214,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTaskStore, type Project } from '@/stores/tasks'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useSettingsStore } from '@/stores/settings'
@@ -880,9 +881,6 @@ const startLongBreak = async () => {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   unicode-bidi: plaintext;
   text-align: start;
 }

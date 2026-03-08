@@ -24,7 +24,7 @@
         <ListTodo :size="16" />
       </div>
 
-      <span class="filter-label">{{ getTriggerLabel() }}</span>
+      <OverflowTooltip :text="getTriggerLabel()" class="filter-label" style="flex: 1; min-width: 0">{{ getTriggerLabel() }}</OverflowTooltip>
       <ChevronDown
         :size="14"
         class="dropdown-chevron"
@@ -45,7 +45,7 @@
             <div class="all-projects-icon">
               <ListTodo :size="16" />
             </div>
-            <span class="project-name">All Projects</span>
+            <OverflowTooltip text="All Projects" class="project-name">All Projects</OverflowTooltip>
             <div v-if="!activeProjectId" class="active-indicator">
               <Check :size="14" />
             </div>
@@ -76,7 +76,7 @@
               />
             </div>
 
-            <span class="project-name">{{ getNestedName(project) }}</span>
+            <OverflowTooltip :text="getNestedName(project)" class="project-name">{{ getNestedName(project) }}</OverflowTooltip>
 
             <div class="task-count">
               {{ getProjectTaskCount(project.id) }}
@@ -104,6 +104,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import { ChevronDown, ListTodo, Check } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 const taskStore = useTaskStore()
 const isOpen = ref(false)
@@ -279,9 +280,6 @@ onUnmounted(() => {
 .filter-label {
   flex: 1;
   text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .dropdown-chevron {
@@ -362,9 +360,6 @@ onUnmounted(() => {
 
 .project-name {
   flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   line-height: 1.3;
 }
 

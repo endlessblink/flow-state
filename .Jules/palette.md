@@ -1,0 +1,3 @@
+## 2024-05-18 - BaseDropdown Missing Accessibility Attributes
+**Learning:** `BaseDropdown` implementation lacked full screen reader accessibility for dropdown elements (`aria-haspopup`, `aria-expanded`, `aria-controls`, `aria-activedescendant`). These are crucial for a fully accessible interactive element that changes display state and navigates via keyboard.
+**Action:** When creating a dropdown component, always include full ARIA relationships: `aria-haspopup` and `aria-expanded` on the trigger, `aria-controls` referencing the dropdown container's ID, and `aria-activedescendant` referencing the currently focused item's ID. Vue 3.5's `useId()` should be used to generate IDs consistently without SSR hydration mismatches.

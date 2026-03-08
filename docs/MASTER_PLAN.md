@@ -938,6 +938,14 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ## Planned Tasks (NEXT/BACKLOG)
 
+### ~~TASK-1484~~: Escape key closes TaskContextMenu (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-03-08)
+
+**Problem**: TaskContextMenu had no Escape key handler. Pressing Escape did nothing while the context menu was open.
+
+**Fix**: Added `handleKeyDown` listener on `document` when context menu becomes visible, calls `closeAllSubmenusNow()` + `emit('close')` on Escape. Includes `stopPropagation` to prevent other global Escape handlers from interfering. All other context menus (ContextMenu.vue, EdgeContextMenu.vue, useContextMenu.ts) already had Escape handling.
+
 ### ~~TASK-1473~~: Add calendar view to mobile PWA (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-07)
@@ -1477,6 +1485,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1452**~~ | **P2** | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05) |
 | ~~**TASK-1460**~~ | **P2** | ✅ **KDE Widget — Bump task limit to 100 + group by project** (✅ DONE 2026-03-06) |
 | ~~**BUG-1461**~~ | **P1** | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06) |
+| ~~**TASK-1484**~~ | **P3** | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08) |
+| **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |
 | **TASK-1457** | **P2** | 🔄 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (🔄 IN PROGRESS 2026-03-06) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
 | **TASK-1455** | **P2** | 📋 **Catalog view: show uncategorized tasks so they can be categorized in-place** (📋 PLANNED 2026-03-06) |
@@ -1593,8 +1603,10 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1475**~~ | **P1** | ~~**KDE Widget: Nanny popup show recent tasks — show commonly used tasks alongside pinned tasks, not only pinned**~~ (✅ DONE 2026-03-07) |
 | **TASK-1476** | **P2** | **Catalog: drag tasks to collapsed project groups — allow dropping on closed categories, remove darkening overlay during drag** |
 | ~~**TASK-1478**~~ | **P1** | ~~**KDE Widget: Unify dropdown & overlay styling — replace PlasmaComponents.ComboBox with QQC2 glass morphism popups for Sort/Filter; replace Kirigami.Icon with styled emoji in fullscreen overlay**~~ (✅ DONE 2026-03-07) |
-| **BUG-1481** | **P2** | **Calendar inbox hides canvas tasks with non-canvasOrder sorts — isInInbox gate too restrictive** (🔄 IN PROGRESS) |
+| ~~**BUG-1481**~~ | **P2** | ~~**Calendar inbox hides canvas tasks with non-canvasOrder sorts — isInInbox gate too restrictive**~~ (✅ DONE 2026-03-07) |
 | **TASK-1480** | **P2** | **Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs** |
+| **BUG-1483** | **P2** | **PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section** |
+| **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---
 
@@ -2305,15 +2317,15 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 **Priority**: P2 | **Status**: 📋 PLANNED
 
-**Problem**: `maestro tui` currently only works with FlowState because it's the only project with `.beads/` initialized. Running from another project directory shows 0 tasks since `bd list` requires a beads database.
+**Problem**: `maestro tui` currently only works with FlowState. Running from another project directory shows 0 tasks.
 
-**Goal**: Make `maestro tui` work with any project that has a `MASTER_PLAN.md`, even without beads initialized.
+**Goal**: Make `maestro tui` work with any project that has a `MASTER_PLAN.md` by parsing it directly.
 
 **Approach**:
 1. Verify `~/.bashrc` alias (`~/.local/bin/maestro` wrapper) propagates `MAESTRO_CWD` after PC restart
-2. Add fallback task parser: when no `.beads/` found, parse tasks directly from MASTER_PLAN.md headers (`### TASK-XXX: Title (STATUS)`)
+2. Parse tasks directly from MASTER_PLAN.md headers (`### TASK-XXX: Title (STATUS)`)
 3. Map MASTER_PLAN.md statuses to TUI columns (PLANNED→backlog, IN PROGRESS→wip, REVIEW→review, DONE→done)
-4. Support `bd init` + `npm run mp:sync` flow for projects that want full beads features
+4. Remove dead beads code from dev-maestro server.js and kanban/index.html
 
 **Files**: `~/.dev-maestro/tui/src/lib/bd-client.js`, `~/.dev-maestro/tui/src/lib/masterplan-parser.js`, `~/.dev-maestro/tui/src/hooks/use-board-data.js`
 

@@ -1715,7 +1715,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1476** | **P2** | **Catalog: drag tasks to collapsed project groups — allow dropping on closed categories, remove darkening overlay during drag** |
 | ~~**TASK-1478**~~ | **P1** | ~~**KDE Widget: Unify dropdown & overlay styling — replace PlasmaComponents.ComboBox with QQC2 glass morphism popups for Sort/Filter; replace Kirigami.Icon with styled emoji in fullscreen overlay**~~ (✅ DONE 2026-03-07) |
 | ~~**BUG-1481**~~ | **P2** | ~~**Calendar inbox hides canvas tasks with non-canvasOrder sorts — isInInbox gate too restrictive**~~ (✅ DONE 2026-03-07) |
-| **TASK-1480** | **P2** | **Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs** |
+| ~~**TASK-1480**~~ | **P2** | ~~**Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs**~~ (✅ DONE 2026-03-09) |
 | **BUG-1483** | **P2** | **PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section** |
 | **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** |
 | **BUG-1493** | **P2** | **Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression** (🔄 IN PROGRESS 2026-03-09) |

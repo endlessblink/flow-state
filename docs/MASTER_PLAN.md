@@ -1594,7 +1594,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1487**~~ | **P2** | ✅ **Search modal: delete fix + filter pills (Today, Hide Done, High Priority, No Date)** (✅ DONE 2026-03-08) |
 | **BUG-1490** | **P2** | 👀 **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (👀 REVIEW 2026-03-08) |
 | **BUG-1491** | **P0** | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09) |
-| **INQUIRY-1489** | **P2** | 📋 **Nanny activation for unchosen tasks idle >5min in taskbar** (📋 PLANNED 2026-03-08) |
+| ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
 | **TASK-1486** | **P2** | 🔄 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (🔄 IN PROGRESS 2026-03-08) |
 | ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
 | **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |

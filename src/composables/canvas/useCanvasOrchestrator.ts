@@ -186,12 +186,15 @@ export function useCanvasOrchestrator() {
 
     // OPTIMIZATION: True batching (only runs once per tick)
     let isSyncScheduled = false
-    const batchedSyncNodes = (_priority?: string) => {
+    let pendingForce = false
+    const batchedSyncNodes = (_priority?: string, options?: { force?: boolean }) => {
+        if (options?.force) pendingForce = true
         if (isSyncScheduled) return
         isSyncScheduled = true
         nextTick(() => {
-            syncNodes()
+            syncNodes(undefined, pendingForce ? { force: true } : undefined)
             isSyncScheduled = false
+            pendingForce = false
         })
     }
 
@@ -590,15 +593,16 @@ export function useCanvasOrchestrator() {
     })
 
     // REACTIVITY FIX: Watch for manual sync requests from context menus
+    // User-initiated syncs bypass the drag-settling guard (force: true)
     watch(() => canvasStore.syncTrigger, () => {
         if (!isInitialized.value) return
-        batchedSyncNodes()
-        batchedSyncEdges()
+        batchedSyncNodes(undefined, { force: true })
+        batchedSyncEdges({ force: true })
     })
 
     watch(() => canvasUiStore.syncTrigger, () => {
         if (!isInitialized.value) return
-        batchedSyncNodes()
+        batchedSyncNodes(undefined, { force: true })
     })
 
     // TASK-1158: Watch bridge refs for cross-store sync (breaks circular dependency)

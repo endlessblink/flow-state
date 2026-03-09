@@ -1,1 +1,0 @@
-import './useSupabaseDatabase.spec'

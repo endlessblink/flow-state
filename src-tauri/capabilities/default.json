@@ -130,18 +130,22 @@
       "identifier": "fs:allow-write-text-file",
       "allow": [
         { "path": "$DOWNLOAD/**" },
+        { "path": "$HOME/.config/flowstate" },
         { "path": "$HOME/.config/flowstate/**" }
       ]
     },
     {
       "identifier": "fs:allow-mkdir",
       "allow": [
+        { "path": "$HOME/.config" },
+        { "path": "$HOME/.config/flowstate" },
         { "path": "$HOME/.config/flowstate/**" }
       ]
     },
     {
       "identifier": "fs:allow-exists",
       "allow": [
+        { "path": "$HOME/.config/flowstate" },
         { "path": "$HOME/.config/flowstate/**" }
       ]
     }

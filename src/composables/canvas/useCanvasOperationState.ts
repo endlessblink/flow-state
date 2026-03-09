@@ -48,6 +48,10 @@ export function useCanvasOperationState() {
             if ('settleTimeout' in state.value) {
                 window.clearTimeout(state.value.settleTimeout as number)
             }
+            // BUG-1492: Clear pending updates from the cancelled settle.
+            // Without this, stale position closures from drag A execute after
+            // drag B's settle timeout, overwriting B's final positions.
+            pendingUpdates.value = []
             state.value = { type: 'dragging', nodeIds }
             return true
         }

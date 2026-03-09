@@ -836,13 +836,16 @@ export function useCanvasInteractions(deps?: {
             // BUG-1209: Set isDragging=false AFTER all async saves complete,
             // so realtime handlers don't overwrite positions mid-save.
             canvasStore.isDragging = false
+            // BUG-1492: Transition to 'drag-settling' BEFORE releasing locks.
+            // This closes a micro-tick gap where PositionManager accepts stale
+            // remote-sync updates between lock release and settling state.
+            endDrag(involvedNodes.map(n => n.id))
             // TASK-213: Release Locks
             // FIX: Use raw ID (not Vue Flow node ID) to match the ID used during acquire
             involvedNodes.forEach(node => {
                 const { id: rawId } = CanvasIds.parseNodeId(node.id)
                 lockManager.release(rawId, 'user-drag')
             })
-            endDrag(involvedNodes.map(n => n.id))
         }
     }
 

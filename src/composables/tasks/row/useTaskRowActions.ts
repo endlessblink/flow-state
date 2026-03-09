@@ -14,7 +14,7 @@ export function useTaskRowActions(
         touchFeedbackStyle?: Ref<unknown>
     }
 ) {
-    const { startDrag, endDrag } = useDragAndDrop()
+    const { startDrag, endDrag, dragData: activeDragData } = useDragAndDrop()
 
     // --- Drag and Drop ---
 
@@ -62,18 +62,21 @@ export function useTaskRowActions(
         event.preventDefault()
         state.isDropTarget.value = false
 
-        const dataString = event.dataTransfer?.getData('application/json')
-        console.log('[DND-GROUP] handleDrop on row', { targetTaskId: props.task.id, targetTitle: props.task.title, hasData: !!dataString })
-        if (!dataString) return
-
-        try {
-            const dragData = JSON.parse(dataString) as DragData
-            if (dragData.type === 'task' && dragData.taskId && dragData.taskId !== props.task.id) {
-                console.log('[DND-GROUP] emitting moveTask', { draggedId: dragData.taskId, targetParentId: props.task.id })
-                emit('moveTask', dragData.taskId, props.task.projectId || null, props.task.id)
+        // Use dragData singleton first (WebKitGTK/Tauri returns empty from dataTransfer.getData)
+        let dragData: DragData | null = activeDragData.value
+        if (!dragData) {
+            const dataString = event.dataTransfer?.getData('application/json')
+            if (dataString) {
+                try { dragData = JSON.parse(dataString) as DragData } catch { /* ignore */ }
             }
-        } catch (error) {
-            console.error('Failed to parse drag data:', error)
+        }
+
+        console.log('[DND-GROUP] handleDrop on row', { targetTaskId: props.task.id, targetTitle: props.task.title, hasData: !!dragData })
+        if (!dragData) return
+
+        if (dragData.type === 'task' && dragData.taskId && dragData.taskId !== props.task.id) {
+            console.log('[DND-GROUP] emitting moveTask', { draggedId: dragData.taskId, targetParentId: props.task.id })
+            emit('moveTask', dragData.taskId, props.task.projectId || null, props.task.id)
         }
     }
 

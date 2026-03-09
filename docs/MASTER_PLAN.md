@@ -300,6 +300,21 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
+### BUG-1493: Catalog view — collapsed state resets, expand/collapse broken, cross-group drag regression (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-03-09)
+
+**Problems**:
+1. `expandedGroups` in `TaskList.vue` is a plain `ref<Set>` — resets to all-expanded on every remount (navigation away and back).
+2. `expandAll()`/`collapseAll()` work momentarily but reset on next reactive update or remount.
+3. Cross-group drag in Catalog view (e.g., Overdue → Today with dueDate grouping) may be broken.
+
+**Fix**: Persist collapsed group keys in localStorage via `usePersistentRef`, key `flowstate:catalog-collapsed-groups`. Update `toggleGroupExpand`, `expandAll`, `collapseAll`, initialization, and the new-group watcher to respect persisted state. Investigate drag regression.
+
+**Files**: `src/components/tasks/TaskList.vue`
+
+---
+
 ### BUG-1320: Production console log spam — WakeLock, LWW echo, legacy IDs, Realtime drops (👀 REVIEW)
 
 **Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-14)
@@ -1525,6 +1540,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1484**~~ | **P3** | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08) |
 | ~~**TASK-1487**~~ | **P2** | ✅ **Search modal: delete fix + filter pills (Today, Hide Done, High Priority, No Date)** (✅ DONE 2026-03-08) |
 | **BUG-1490** | **P2** | 👀 **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (👀 REVIEW 2026-03-08) |
+| **BUG-1491** | **P0** | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09) |
 | **INQUIRY-1489** | **P2** | 📋 **Nanny activation for unchosen tasks idle >5min in taskbar** (📋 PLANNED 2026-03-08) |
 | **TASK-1486** | **P2** | 🔄 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (🔄 IN PROGRESS 2026-03-08) |
 | **TASK-1485** | **P2** | 🔄 **Move AI Assist to More submenu + teal Mark Done line** (🔄 IN PROGRESS 2026-03-08) |
@@ -1648,6 +1664,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1481**~~ | **P2** | ~~**Calendar inbox hides canvas tasks with non-canvasOrder sorts — isInInbox gate too restrictive**~~ (✅ DONE 2026-03-07) |
 | **TASK-1480** | **P2** | **Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs** |
 | **BUG-1483** | **P2** | **PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section** |
+| **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** |
+| **BUG-1493** | **P2** | **Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression** (🔄 IN PROGRESS 2026-03-09) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---
@@ -2367,7 +2385,7 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 1. Verify `~/.bashrc` alias (`~/.local/bin/maestro` wrapper) propagates `MAESTRO_CWD` after PC restart
 2. Parse tasks directly from MASTER_PLAN.md headers (`### TASK-XXX: Title (STATUS)`)
 3. Map MASTER_PLAN.md statuses to TUI columns (PLANNED→backlog, IN PROGRESS→wip, REVIEW→review, DONE→done)
-4. Remove dead beads code from dev-maestro server.js and kanban/index.html
+4. ~~Remove dead beads code from dev-maestro server.js and kanban/index.html~~ (done via TASK-1480)
 
 **Files**: `~/.dev-maestro/tui/src/lib/bd-client.js`, `~/.dev-maestro/tui/src/lib/masterplan-parser.js`, `~/.dev-maestro/tui/src/hooks/use-board-data.js`
 

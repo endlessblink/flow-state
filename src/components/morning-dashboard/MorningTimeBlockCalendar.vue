@@ -306,6 +306,72 @@ function unplaceTask(index: number) {
   emit('update:timeBlock', index, { ...props.timeBlocks[index], startTime: '' })
 }
 
+// --- Resize time blocks on calendar ---
+const resizePreview = ref<{
+  isResizing: boolean
+  taskId: string | null
+  previewDuration: number
+  direction: 'top' | 'bottom'
+} | null>(null)
+
+let resizeBig3Index = -1
+let resizeStartY = 0
+let resizeStartDuration = 0
+
+function handleStartResize(event: MouseEvent, calEvent: CalendarEvent, direction: 'top' | 'bottom') {
+  // Only handle Big 3 events, only bottom resize (duration change)
+  if (!calEvent.id.startsWith('big3-') || direction !== 'bottom') return
+
+  // Cancel any in-progress resize before starting a new one
+  if (resizeBig3Index >= 0) onResizeEnd()
+
+  const idx = parseInt(calEvent.id.replace('big3-', ''), 10)
+  if (isNaN(idx) || idx < 0 || idx >= props.timeBlocks.length) return
+
+  resizeBig3Index = idx
+  resizeStartY = event.clientY
+  resizeStartDuration = props.timeBlocks[idx].duration
+
+  resizePreview.value = {
+    isResizing: true,
+    taskId: calEvent.taskId,
+    previewDuration: resizeStartDuration,
+    direction: 'bottom',
+  }
+
+  document.addEventListener('mousemove', onResizeMove)
+  document.addEventListener('mouseup', onResizeEnd)
+  event.preventDefault()
+}
+
+function onResizeMove(event: MouseEvent) {
+  if (resizeBig3Index < 0) return
+  // Each 30px = 30 minutes (matches calendar slot height)
+  const deltaY = event.clientY - resizeStartY
+  const deltaMinutes = Math.round(deltaY / 30) * 15 // snap to 15-min increments
+  const newDuration = Math.max(15, Math.min(240, resizeStartDuration + deltaMinutes))
+
+  if (resizePreview.value) {
+    resizePreview.value.previewDuration = newDuration
+  }
+}
+
+function onResizeEnd() {
+  document.removeEventListener('mousemove', onResizeMove)
+  document.removeEventListener('mouseup', onResizeEnd)
+
+  if (resizeBig3Index >= 0 && resizePreview.value) {
+    const newDuration = resizePreview.value.previewDuration
+    emit('update:timeBlock', resizeBig3Index, {
+      ...props.timeBlocks[resizeBig3Index],
+      duration: newDuration,
+    })
+  }
+
+  resizePreview.value = null
+  resizeBig3Index = -1
+}
+
 // --- Helper: format time for display ---
 function formatTime12h(time: string): string {
   if (!time) return ''
@@ -331,6 +397,9 @@ onUnmounted(() => {
     clearInterval(timeUpdateInterval)
     timeUpdateInterval = null
   }
+  // Clean up any in-progress resize
+  document.removeEventListener('mousemove', onResizeMove)
+  document.removeEventListener('mouseup', onResizeEnd)
 })
 </script>
 
@@ -483,7 +552,8 @@ onUnmounted(() => {
           @cycle-status="() => {}"
           @remove-from-calendar="() => {}"
           @start-timer="() => {}"
-          @start-resize="() => {}"
+          :resize-preview="resizePreview"
+          @start-resize="handleStartResize"
         />
       </div>
 

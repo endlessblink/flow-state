@@ -195,7 +195,8 @@ import type { Task, TaskGroup } from '@/types/tasks'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
-import { useDragAndDrop } from '@/composables/useDragAndDrop'
+import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
+import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
 import { Inbox, ChevronRight, Pencil, Trash2, X, Zap, ArrowDownToLine, Plus } from 'lucide-vue-next'
 
@@ -227,6 +228,16 @@ const expandedTasks = ref<Set<string>>(new Set())
 const expandedGroups = ref<Set<string>>(new Set())
 const selectedTaskIds = ref<string[]>([])
 
+// BUG-1493: Persist collapsed group keys so state survives navigation.
+// We store the COLLAPSED keys (smaller set since groups are expanded by default).
+const collapsedGroupKeys = usePersistentRef<string[]>('flowstate:catalog-collapsed-groups', [])
+
+// Sync current expanded state → persisted collapsed list
+const persistCollapsedState = () => {
+  const allKeys = props.groups.map(g => g.key)
+  collapsedGroupKeys.value = allKeys.filter(k => !expandedGroups.value.has(k))
+}
+
 const toggleTaskExpand = (taskId: string) => {
   if (expandedTasks.value.has(taskId)) {
     expandedTasks.value.delete(taskId)
@@ -241,6 +252,7 @@ const toggleGroupExpand = (groupKey: string) => {
   } else {
     expandedGroups.value.add(groupKey)
   }
+  persistCollapsedState()
 }
 
 // Expand/collapse all functionality
@@ -249,6 +261,8 @@ const expandAll = () => {
   props.groups.forEach(group => {
     expandedGroups.value.add(group.key)
   })
+  // Persist: no groups are collapsed
+  collapsedGroupKeys.value = []
 
   // Expand all tasks with subtasks
   props.tasks.forEach(task => {
@@ -261,6 +275,8 @@ const expandAll = () => {
 const collapseAll = () => {
   expandedTasks.value.clear()
   expandedGroups.value.clear()
+  // Persist: all current groups are collapsed
+  collapsedGroupKeys.value = props.groups.map(g => g.key)
 }
 
 // Context menu handler
@@ -309,11 +325,24 @@ const onHeaderDragLeave = (event: DragEvent) => {
   }
 }
 
+// BUG-1493: Resolve drag data from composable state, falling back to dataTransfer
+// payload in case the singleton was cleared before the drop event fired.
+const resolveDragTaskIds = (event: DragEvent): string[] => {
+  let data: DragData | null = dragData.value
+  if (!data && event.dataTransfer) {
+    try {
+      const raw = event.dataTransfer.getData('application/json')
+      if (raw) data = JSON.parse(raw) as DragData
+    } catch { /* ignore */ }
+  }
+  return data?.taskIds ?? (data?.taskId ? [data.taskId] : [])
+}
+
 const onHeaderDrop = (event: DragEvent, group: TaskGroup) => {
   event.stopPropagation()
   headerDropTarget.value = null
 
-  const taskIds = dragData.value?.taskIds ?? (dragData.value?.taskId ? [dragData.value.taskId] : [])
+  const taskIds = resolveDragTaskIds(event)
   if (taskIds.length === 0) return
 
   for (const id of taskIds) {
@@ -436,7 +465,7 @@ const onGroupDragLeave = (event: DragEvent) => {
 }
 
 const onGroupDrop = (event: DragEvent, group: TaskGroup) => {
-  const taskIds = dragData.value?.taskIds ?? (dragData.value?.taskId ? [dragData.value.taskId] : [])
+  const taskIds = resolveDragTaskIds(event)
   const insertIdx = dropIndicator.value.insertIndex
 
   // Clear indicator immediately
@@ -648,14 +677,17 @@ onUnmounted(() => {
   window.removeEventListener('open-ai-assist', handleOpenAIAssist)
 })
 
-// Initialize with all groups expanded by default
-expandedGroups.value = new Set(props.groups.map(g => g.key))
+// BUG-1493: Initialize respecting persisted collapsed state.
+// Groups not in the collapsed set are expanded (default: all expanded).
+const initialCollapsedSet = new Set(collapsedGroupKeys.value)
+expandedGroups.value = new Set(props.groups.filter(g => !initialCollapsedSet.has(g.key)).map(g => g.key))
 
-// Auto-expand new groups when they appear
+// Auto-expand new groups when they appear, unless they were explicitly collapsed
 watch(() => props.groups, (newGroups, oldGroups) => {
   const oldKeys = new Set(oldGroups?.map(g => g.key) || [])
+  const persistedCollapsed = new Set(collapsedGroupKeys.value)
   newGroups.forEach(group => {
-    if (!oldKeys.has(group.key)) {
+    if (!oldKeys.has(group.key) && !persistedCollapsed.has(group.key)) {
       expandedGroups.value.add(group.key)
     }
   })

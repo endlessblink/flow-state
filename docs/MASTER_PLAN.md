@@ -1559,7 +1559,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1491** | **P0** | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09) |
 | **INQUIRY-1489** | **P2** | 📋 **Nanny activation for unchosen tasks idle >5min in taskbar** (📋 PLANNED 2026-03-08) |
 | **TASK-1486** | **P2** | 🔄 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (🔄 IN PROGRESS 2026-03-08) |
-| **TASK-1485** | **P2** | 🔄 **Move AI Assist to More submenu + teal Mark Done line** (🔄 IN PROGRESS 2026-03-08) |
+| ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
 | **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |
 | **TASK-1457** | **P2** | 🔄 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (🔄 IN PROGRESS 2026-03-06) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |

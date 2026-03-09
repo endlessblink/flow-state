@@ -339,5 +339,5 @@ If debugging procedures don't resolve the issue:
 ## Related Documentation
 
 - [Architecture: Canvas System](../claude-md-extension/architecture.md)
-- [Plan: Position System Refactor](../../plans/canvas-position-system-refactor.md)
-- [Previous Stabilization Work](../../plans/canvas-view-stabilization-eliminate-resets.md)
+- Position System Refactor plan (file removed during cleanup)
+- Canvas View Stabilization plan (file removed during cleanup)

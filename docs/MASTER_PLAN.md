@@ -1004,6 +1004,43 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ---
 
+### TASK-1495: Morning Dashboard Redesign — Opt-in Ritual + State Machine (👀 REVIEW)
+
+**Priority**: Medium | **Status**: 👀 REVIEW (2026-03-09)
+
+**Problem/Opportunity**: Morning dashboard was a forced full-page takeover that interrupted users during onboarding. Users need an opt-in ritual that fits into their morning workflow — suggested during the "golden window" (06:00-11:00) but always dismissible.
+
+**Solution**: Redesigned as a lightweight, non-blocking ritual with two-step flow:
+1. **Step 1**: Pick focus tasks (up to 3) from prioritized candidates (overdue, high-priority, active)
+2. **Step 2**: Schedule them via auto-placement or manual time-blocking
+3. **Summary chip**: Shows completion status throughout the day
+
+**Architecture**:
+- **`useMorningRitual.ts`**: State machine (idle → picking → scheduling → done/dismissed) + time window gating (06:00-11:00) + one-time-per-day enforcement via localStorage
+- **UI Components**:
+  - `MorningBanner.vue`: Dismissible banner with call-to-action, only shows during golden window
+  - `MorningRitualPanel.vue`: Bottom sheet with step indicator + action buttons (Skip/Start)
+  - `MorningCandidateCard.vue`: Compact task preview (title, priority badge, duration estimate)
+  - `MorningSummaryChip.vue`: Shows "3/3 tasks scheduled" or "Ritual dismissed" after completion
+- **Reuse**: CustomSelect (time picker), TaskContextMenu (priority/due date quick edits), TaskEditModal (full edit), BaseBadge (priority indicators)
+
+**Integration**:
+- `App.vue`: Mount banner + panel + summary chip globally (always available)
+- `MorningDashboardView.vue`: Auto-open ritual on `/morning` route, show summary chip in header
+
+**New Files**:
+- `src/composables/useMorningRitual.ts`
+- `src/components/morning-dashboard/MorningBanner.vue`
+- `src/components/morning-dashboard/MorningRitualPanel.vue`
+- `src/components/morning-dashboard/MorningCandidateCard.vue`
+- `src/components/morning-dashboard/MorningSummaryChip.vue`
+
+**Modified Files**:
+- `src/App.vue`
+- `src/views/MorningDashboardView.vue`
+
+---
+
 ## Planned Tasks (NEXT/BACKLOG)
 
 ### ~~TASK-1484~~: Escape key closes TaskContextMenu (✅ DONE)

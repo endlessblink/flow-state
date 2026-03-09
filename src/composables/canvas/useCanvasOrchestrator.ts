@@ -125,7 +125,7 @@ export function useCanvasOrchestrator() {
     const persistence = useCanvasSync()
 
     // Unified Interactions (Drag & Resize)
-    const { canAcceptRemoteUpdate } = useCanvasOperationState()
+    const { canAcceptRemoteUpdate, currentType: opCurrentType, state: opState, getDebugInfo: getOpDebugInfo } = useCanvasOperationState()
 
     const interactions = useCanvasInteractions({
         nodes,
@@ -166,7 +166,14 @@ export function useCanvasOrchestrator() {
         // Block READ-PATH syncs if user is interacting (dragging/resizing)
         // unless forced by explicit user action (e.g., inbox drop)
         if (!options?.force && !canAcceptRemoteUpdate.value) {
+            if (import.meta.env.DEV) {
+                console.log(`[BUG-1492:ORCH] syncNodes BLOCKED`, { canAcceptRemoteUpdate: canAcceptRemoteUpdate.value, opState: opCurrentType.value })
+            }
             return
+        }
+
+        if (import.meta.env.DEV) {
+            console.log(`[BUG-1492:ORCH] syncNodes ALLOWED`, { force: options?.force, canAcceptRemoteUpdate: canAcceptRemoteUpdate.value, opState: opCurrentType.value })
         }
 
         try {
@@ -789,7 +796,7 @@ export function useCanvasOrchestrator() {
         handleKeyDown,
 
         // TASK-241: State Machine Debug
-        operationState: useCanvasOperationState().state,
-        getOperationDebug: useCanvasOperationState().getDebugInfo
+        operationState: opState,
+        getOperationDebug: getOpDebugInfo
     }
 }

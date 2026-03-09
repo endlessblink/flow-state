@@ -5,7 +5,9 @@ description: Build, sign, and deploy the Tauri desktop app to VPS auto-updater. 
 
 # Tauri Build & Deploy Skill
 
-Full pipeline: version bump → build → sign → deploy to VPS auto-updater.
+Full pipeline: version bump → **tauri parity tests** → build → sign → deploy to VPS auto-updater.
+
+**Pre-deploy gate**: `npm run test:tauri-parity` runs automatically before build. Catches WebKitGTK regressions (overflow:clip, dataTransfer fallback, structured clone, CSS traps). Blocks deploy on failure.
 
 ## Environment Variables (hardcoded for this project)
 

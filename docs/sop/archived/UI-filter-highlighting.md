@@ -10,7 +10,7 @@ This folder contains comprehensive documentation for the Toggle-able Filter Visu
 
 ### 📋 Available Documents
 
-1. **[implementation-guide.md](./implementation-guide.md)** - Complete technical implementation SOP
+1. **implementation-guide.md** (file no longer exists) - Complete technical implementation SOP
    - Problem analysis and user requirements
    - Technical architecture and component changes
    - Step-by-step implementation timeline

@@ -101,6 +101,19 @@ echo -e "  Deploy:  ${GREEN}$(if $SKIP_DEPLOY; then echo 'skip'; else echo "$VPS
 echo -e "  Notes:   ${GREEN}${NOTES:-"FlowState v$VERSION"}${NC}"
 echo ""
 
+# Tauri parity tests gate — catch WebKitGTK regressions before building
+if [[ "$DRY_RUN" == false ]]; then
+  echo -e "  Running Tauri parity tests..."
+  if npm run test:tauri-parity --silent 2>/dev/null; then
+    echo -e "  ${GREEN}Tauri parity tests passed${NC}"
+  else
+    echo -e "${RED}ERROR: Tauri parity tests failed! Fix issues before deploying.${NC}"
+    echo -e "  Run: npm run test:tauri-parity"
+    exit 1
+  fi
+fi
+echo ""
+
 # Guard: Check for placeholder values in env files that would break the build
 for envfile in "$PROJECT_DIR/.env.production" "$PROJECT_DIR/.env" "$PROJECT_DIR/.env.local"; do
   if [[ -f "$envfile" ]] && grep -q "example\.com\|your-.*-key-here\|your-.*-url-here" "$envfile" 2>/dev/null; then

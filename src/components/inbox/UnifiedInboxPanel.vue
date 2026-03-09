@@ -91,6 +91,24 @@
       @add-task="addTask"
     />
 
+    <!-- TASK-1486: Pinned Tasks Section -->
+    <PinnedTasksSection
+      v-if="!isCollapsed && pinnedTasks.length > 0"
+      :tasks="pinnedTasks"
+      :is-collapsed="pinnedSectionCollapsed"
+      :selected-task-ids="selectedTaskIds"
+      :show-canvas-badge="sortBy === 'canvasOrder'"
+      @toggle-collapse="pinnedSectionCollapsed = !pinnedSectionCollapsed"
+      @drag-start="onDragStart"
+      @drag-end="onDragEnd"
+      @task-click="handleTaskClick"
+      @task-dblclick="handleTaskDoubleClick"
+      @task-contextmenu="handleTaskContextMenu"
+      @task-keydown="handleTaskKeydown"
+      @start-timer="handleStartTimer"
+      @send-to-canvas="handleSendToCanvas"
+    />
+
     <!-- 3. Task List -->
     <UnifiedInboxList
       v-if="!isCollapsed"
@@ -130,6 +148,7 @@ import { useUnifiedInboxActions } from '@/composables/inbox/useUnifiedInboxActio
 import UnifiedInboxHeader from './unified/UnifiedInboxHeader.vue'
 import UnifiedInboxInput from './unified/UnifiedInboxInput.vue'
 import UnifiedInboxList from './unified/UnifiedInboxList.vue'
+import PinnedTasksSection from './unified/PinnedTasksSection.vue'
 
 // Props
 interface Props {
@@ -181,7 +200,9 @@ const {
   doneTaskCount,
   toggleHideDoneTasks,
   clearAllFilters,
-  registerNewTask
+  registerNewTask,
+  pinnedTasks,
+  pinnedSectionCollapsed
 } = useUnifiedInboxState(props)
 
 // Action Logic

@@ -52,6 +52,8 @@
     "test:e2e": "./scripts/run-e2e.sh",
     "test:all": "npm run test:unit && npm run test:storybook",
     "test:safety": "vitest run tests/safety/",
+    "test:tauri-parity": "vitest run tests/unit/tauri-parity/ tests/safety/css-syntax.test.ts --reporter=verbose",
+    "test:tauri-e2e": "./scripts/run-e2e.sh --project=tauri-simulation",
     "type-check": "vue-tsc --noEmit -p tsconfig.json --composite false",
     "watch:ts": "nodemon --watch src --ext ts,vue --exec \"npx tsc --noEmit --skipLibCheck\"",
     "lint": "eslint src || true",

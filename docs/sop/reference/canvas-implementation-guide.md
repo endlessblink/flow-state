@@ -822,7 +822,7 @@ After implementing these fixes, verify:
 
 **CRITICAL - Read Before Modifying CanvasView.vue:**
 
-- **[Canvas Development Safety Guidelines](../canvas-development-safety-2025-12-04/README.md)** - Anti-patterns to avoid, safe patterns, and pre-flight checklist
+- **[Canvas Position System](../canvas/CANVAS-POSITION-SYSTEM.md)** - Anti-patterns to avoid, safe patterns, and geometry invariants
 
 ---
 

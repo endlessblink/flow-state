@@ -605,7 +605,7 @@ Before deploying changes to weekly plan:
 
 ## Related SOPs & Documentation
 
-- **[SOP-032](SOP-050-store-auth-initialization.md)** — Auth-aware store initialization (work profile loads with auth)
+- **[SOP-050](SOP-050-store-auth-initialization.md)** — Auth-aware store initialization (work profile loads with auth)
 - **[SOP-036](SOP-036-supabase-jwt-key-regeneration.md)** — JWT key management (if profile load fails)
 - **[CANVAS-POSITION-SYSTEM.md](canvas/CANVAS-POSITION-SYSTEM.md)** — Geometry invariants (plan respects position locks)
 - **[design-system.md](../../claude-md-extension/design-system.md)** — Design token usage (all colors/spacing via tokens)

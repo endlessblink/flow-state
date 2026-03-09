@@ -40,6 +40,40 @@
       /* Transitions */
       --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
       --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+      /* Action colors */
+      --color-merge: #16a34a;
+      --color-merge-hover: #15803d;
+      --color-discard: #dc2626;
+      --color-discard-hover: #b91c1c;
+      --color-paused: #fca5a5;
+      --color-paused-text: #7f1d1d;
+      --color-review: #8b5cf6;
+      --text-on-brand: #000000;
+
+      /* Terminal/output colors */
+      --terminal-error: #f85149;
+      --terminal-info: #58a6ff;
+      --terminal-success: #3fb950;
+      --terminal-purple: #a371f7;
+
+      /* Border radius scale */
+      --radius-xs: 3px;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --radius-full: 9999px;
+
+      /* Font size scale */
+      --font-xs: 11px;
+      --font-sm: 12px;
+      --font-md: 13px;
+      --font-base: 14px;
+      --font-lg: 16px;
+      --font-xl: 18px;
+      --font-2xl: 24px;
+      --font-3xl: 32px;
     }
 
     /* SVG Icon System - Stroke-based icons */
@@ -147,7 +181,7 @@
       margin-top: 24px;
       margin-bottom: 12px;
       padding-top: 16px;
-      border-top: 1px solid var(--border-color);
+      border-top: 1px solid var(--border-medium);
       color: var(--text-muted);
       display: flex;
       align-items: center;
@@ -386,7 +420,7 @@
       gap: 8px;
       padding: 6px 12px;
       background: var(--surface-secondary);
-      border: 1px solid var(--border-default);
+      border: 1px solid var(--border-medium);
       border-radius: 6px;
       cursor: pointer;
       transition: all var(--transition-fast);
@@ -399,7 +433,7 @@
 
     .toggle-container.active {
       background: rgba(139, 92, 246, 0.15);
-      border-color: var(--accent-primary);
+      border-color: var(--brand-primary);
     }
 
     .toggle-switch {
@@ -412,7 +446,7 @@
     }
 
     .toggle-container.active .toggle-switch {
-      background: var(--accent-primary);
+      background: var(--brand-primary);
     }
 
     .toggle-switch::after {
@@ -439,7 +473,7 @@
     }
 
     .toggle-container.active .toggle-label {
-      color: var(--accent-primary);
+      color: var(--brand-primary);
     }
 
     .done-column-hidden {
@@ -643,91 +677,23 @@
     }
 
     .column-header.todo {
-      border-color: #ef4444;
+      border-color: var(--color-danger);
     }
 
     .column-header.in-progress {
-      border-color: #f59e0b;
+      border-color: var(--color-warning);
     }
 
     .column-header.review {
-      border-color: #3b82f6;
+      border-color: var(--color-info);
     }
 
     .column-header.done {
-      border-color: #10b981;
+      border-color: var(--color-success);
     }
 
     .column-header.paused {
-      border-color: #fca5a5;
-    }
-
-    /* Ideas view columns */
-    .column-header.raw {
-      border-color: #4a5568;
-    }
-
-    .column-header.developing {
-      border-color: #3182ce;
-    }
-
-    .column-header.ready {
-      border-color: #805ad5;
-    }
-
-    .column-header.promoted {
-      border-color: #2f855a;
-    }
-
-    /* Roadmap view columns */
-    .column-header.current {
-      border-color: #2c5282;
-    }
-
-    .column-header.next {
-      border-color: #3182ce;
-    }
-
-    .column-header.future {
-      border-color: #4a5568;
-    }
-
-    .column-header.completed {
-      border-color: #2f855a;
-    }
-
-    /* Archive view columns */
-    .column-header.recent {
-      border-color: #2d3748;
-    }
-
-    .column-header.features {
-      border-color: #2c5282;
-    }
-
-    .column-header.bugs {
-      border-color: #c53030;
-    }
-
-    .column-header.old {
-      border-color: #4a5568;
-    }
-
-    /* Status view columns */
-    .column-header.critical {
-      border-color: #c53030;
-    }
-
-    .column-header.warning {
-      border-color: #d69e2e;
-    }
-
-    .column-header.info {
-      border-color: #3182ce;
-    }
-
-    .column-header.success {
-      border-color: #2f855a;
+      border-color: var(--color-paused);
     }
 
     .column-content {
@@ -883,17 +849,17 @@
     }
 
     .task-priority.high {
-      background: #dc2626;
+      background: var(--color-discard);
       color: white;
     }
 
     .task-priority.medium {
-      background: #f59e0b;
+      background: var(--color-warning);
       color: white;
     }
 
     .task-priority.low {
-      background: #10b981;
+      background: var(--color-success);
       color: white;
     }
 
@@ -908,17 +874,17 @@
     }
 
     .task-complexity.simple {
-      background: #10b981;
+      background: var(--color-success);
       color: white;
     }
 
     .task-complexity.medium {
-      background: #f59e0b;
+      background: var(--color-warning);
       color: white;
     }
 
     .task-complexity.complex {
-      background: #dc2626;
+      background: var(--color-discard);
       color: white;
     }
 
@@ -965,22 +931,22 @@
     }
 
     .task-status.in-progress {
-      background: #3b82f6;
+      background: var(--color-info);
       color: white;
     }
 
     .task-status.paused {
-      background: #fca5a5;
-      color: #7f1d1d;
+      background: var(--color-paused);
+      color: var(--color-paused-text);
     }
 
     .task-status.review {
-      background: #8b5cf6;
+      background: var(--color-review);
       color: white;
     }
 
     .task-status.done {
-      background: #10b981;
+      background: var(--color-success);
       color: white;
     }
 
@@ -1055,7 +1021,7 @@
     }
 
     .priority-dot.medium {
-      background: #f59e0b;
+      background: var(--color-warning);
     }
 
     .priority-dot.low {
@@ -1063,7 +1029,7 @@
     }
 
     .priority-dot.info {
-      background: #3b82f6;
+      background: var(--color-info);
     }
 
     /* Complexity dots for dropdown options */
@@ -2543,7 +2509,7 @@
     .plan-task-expand {
       width: 20px;
       height: 20px;
-      color: var(--text-tertiary);
+      color: var(--text-muted);
       transition: transform 0.2s ease, color 0.2s ease;
       flex-shrink: 0;
       margin-top: 4px;
@@ -2724,8 +2690,8 @@
     }
 
     .task-chat-message.error {
-      color: var(--color-error);
-      border-left-color: var(--color-error);
+      color: var(--color-danger);
+      border-left-color: var(--color-danger);
     }
 
     /* Auto-copy on selection (Zellij style) */
@@ -3015,8 +2981,8 @@
     .task-review-branch {
       font-size: 11px;
       font-family: monospace;
-      color: var(--accent-primary);
-      background: var(--accent-primary)15;
+      color: var(--brand-primary);
+      background: var(--brand-primary)15;
       padding: 2px 8px;
       border-radius: 4px;
     }
@@ -3332,8 +3298,8 @@
     .review-branch-name {
       font-size: 11px;
       font-family: monospace;
-      color: var(--accent-primary);
-      background: var(--accent-primary)15;
+      color: var(--brand-primary);
+      background: var(--brand-primary)15;
       padding: 2px 8px;
       border-radius: 4px;
       display: inline-block;
@@ -3472,7 +3438,7 @@
     .command-code {
       font-family: monospace;
       font-size: 12px;
-      color: var(--accent-primary);
+      color: var(--brand-primary);
       background: var(--surface-primary);
       padding: 4px 8px;
       border-radius: 4px;
@@ -3483,7 +3449,7 @@
     }
 
     .command-code:hover {
-      background: var(--accent-primary)20;
+      background: var(--brand-primary)20;
     }
 
     /* Feedback Section */
@@ -3610,7 +3576,7 @@
 
     .orch-history-item.active {
       border-color: var(--brand-primary);
-      background: var(--brand-primary-10);
+      background: rgba(78, 205, 196, 0.1);
     }
 
     .orch-history-content {
@@ -3862,37 +3828,6 @@
             </svg></span>
           Status Board
         </button>
-        <button class="nav-tab" data-view="ideas">
-          <span class="icon"><svg viewBox="0 0 24 24">
-              <path
-                d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z" />
-              <line x1="9" y1="21" x2="15" y2="21" />
-            </svg></span>
-          Ideas
-        </button>
-        <button class="nav-tab" data-view="roadmap">
-          <span class="icon"><svg viewBox="0 0 24 24">
-              <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
-              <line x1="9" y1="3" x2="9" y2="18" />
-              <line x1="15" y1="6" x2="15" y2="21" />
-            </svg></span>
-          Roadmap
-        </button>
-        <button class="nav-tab" data-view="archive">
-          <span class="icon"><svg viewBox="0 0 24 24">
-              <polyline points="21 8 21 21 3 21 3 8" />
-              <rect x="1" y="3" width="22" height="5" />
-              <line x1="10" y1="12" x2="14" y2="12" />
-            </svg></span>
-          Archive
-        </button>
-        <button class="nav-tab" data-view="status">
-          <span class="icon"><svg viewBox="0 0 24 24">
-              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-              <line x1="4" y1="22" x2="4" y2="15" />
-            </svg></span>
-          Priority Board
-        </button>
       </div>
     </div>
 
@@ -4035,157 +3970,6 @@
               <button class="collapse-toggle" onclick="toggleDoneColumn()" title="Collapse/Expand">▼</button>
             </div>
             <div class="column-content" id="column-done"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- IDEAS VIEW -->
-      <div class="view-container" id="ideas-view">
-        <div class="kanban-board" id="ideas-board">
-          <div class="kanban-column">
-            <div class="column-header raw"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path
-                    d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z" />
-                  <line x1="9" y1="21" x2="15" y2="21" />
-                </svg></span> Raw Ideas</div>
-            <div class="column-content" id="ideas-column-raw"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header developing"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg></span> In Development</div>
-            <div class="column-content" id="ideas-column-developing"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header ready"><span class="icon"><svg viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="9" />
-                  <circle cx="12" cy="12" r="5" />
-                  <circle cx="12" cy="12" r="1" />
-                </svg></span> Ready for Review</div>
-            <div class="column-content" id="ideas-column-ready"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header promoted"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg></span> Promoted</div>
-            <div class="column-content" id="ideas-column-promoted"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ROADMAP VIEW -->
-      <div class="view-container" id="roadmap-view">
-        <div class="kanban-board" id="roadmap-board">
-          <div class="kanban-column">
-            <div class="column-header current"><span class="icon"><svg viewBox="0 0 24 24">
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg></span> Current</div>
-            <div class="column-content" id="roadmap-column-current"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header next"><span class="icon"><svg viewBox="0 0 24 24">
-                  <polygon points="5 4 15 12 5 20 5 4" />
-                  <line x1="19" y1="5" x2="19" y2="19" />
-                </svg></span> Next</div>
-            <div class="column-content" id="roadmap-column-next"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header future"><span class="icon"><svg viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="2" y1="12" x2="22" y2="12" />
-                  <path
-                    d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                </svg></span> Future</div>
-            <div class="column-content" id="roadmap-column-future"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header completed"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg></span> Completed</div>
-            <div class="column-content" id="roadmap-column-completed"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ARCHIVE VIEW -->
-      <div class="view-container" id="archive-view">
-        <div class="kanban-board" id="archive-board">
-          <div class="kanban-column">
-            <div class="column-header recent"><span class="icon"><svg viewBox="0 0 24 24">
-                  <rect x="3" y="4" width="18" height="18" rx="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg></span> Recent</div>
-            <div class="column-content" id="archive-column-recent"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header features"><span class="icon"><svg viewBox="0 0 24 24">
-                  <polygon
-                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg></span> Features</div>
-            <div class="column-content" id="archive-column-features"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header bugs"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3 3 0 1 1 6 0v1" />
-                  <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6z" />
-                  <path d="M12 20v-9" />
-                  <path d="M6.53 9C4.6 8.8 3 7.1 3 5" />
-                  <path d="M6 13H2" />
-                  <path d="M3 17c0-2.1 1.6-3.8 3.53-4" />
-                  <path d="M17.47 9c1.93-.2 3.53-1.9 3.53-4" />
-                  <path d="M18 13h4" />
-                  <path d="M21 17c0-2.1-1.6-3.8-3.53-4" />
-                </svg></span> Bug Fixes</div>
-            <div class="column-content" id="archive-column-bugs"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header old"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="12" y1="18" x2="12" y2="12" />
-                  <line x1="9" y1="15" x2="15" y2="15" />
-                </svg></span> Old</div>
-            <div class="column-content" id="archive-column-old"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- STATUS VIEW -->
-      <div class="view-container" id="status-view">
-        <div class="kanban-board" id="status-board">
-          <div class="kanban-column">
-            <div class="column-header critical"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                  <line x1="4" y1="22" x2="4" y2="15" />
-                </svg></span> P1 - HIGH</div>
-            <div class="column-content" id="status-column-critical"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header warning"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                  <line x1="4" y1="22" x2="4" y2="15" />
-                </svg></span> P2 - MEDIUM</div>
-            <div class="column-content" id="status-column-warning"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header info"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                  <line x1="4" y1="22" x2="4" y2="15" />
-                </svg></span> P3 - LOW</div>
-            <div class="column-content" id="status-column-info"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header success"><span class="icon"><svg viewBox="0 0 24 24">
-                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                  <line x1="4" y1="22" x2="4" y2="15" />
-                </svg></span> UNASSIGNED</div>
-            <div class="column-content" id="status-column-success"></div>
           </div>
         </div>
       </div>
@@ -4609,7 +4393,6 @@
       done: '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
       calendar: '<svg class="inline-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
       sync: '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
-      idea: '<svg class="inline-icon empty-icon" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/></svg>',
       check: '<svg class="inline-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'
     };
 
@@ -4706,12 +4489,9 @@
         }
 
         const data = {
-          ideas: [],
-          roadmap: { nearTerm: [], later: [] },
           activeWork: [],
           bugs: [],
-          issues: [],
-          archive: []
+          issues: []
         };
 
         const lines = content.split('\n');
@@ -4726,16 +4506,6 @@
           const trimmed = line.trim();
 
           // Detect main sections
-          if (trimmed.startsWith('## Ideas')) {
-            currentSection = 'ideas';
-            currentSubSection = '';
-            continue;
-          }
-          if (trimmed.startsWith('## Roadmap')) {
-            currentSection = 'roadmap';
-            currentSubSection = '';
-            continue;
-          }
           if (trimmed.startsWith('## Current Status')) {
             currentSection = 'activeWork'; // Map Current Status to Active Work so tasks get picked up
             currentSubSection = '';
@@ -4763,22 +4533,12 @@
             continue;
           }
           if (trimmed.startsWith('## Archive') || trimmed.startsWith('## Technical Debt')) {
-            currentSection = 'archive';
+            currentSection = 'skip';
             currentSubSection = '';
             continue;
           }
 
           // Detect subsections
-          if (trimmed.startsWith('### Near-term')) {
-            currentSubSection = 'nearTerm';
-            inTable = false;
-            continue;
-          }
-          if (trimmed.startsWith('### Later')) {
-            currentSubSection = 'later';
-            inTable = false;
-            continue;
-          }
           if (trimmed.startsWith('### Smart Group Bugs') || trimmed.startsWith('### Calendar Issues')) {
             currentSubSection = 'bugs';
             currentSection = 'bugs';
@@ -4988,21 +4748,6 @@
             }
           }
 
-          // Parse Ideas list items
-          if (currentSection === 'ideas' && trimmed.match(/^- (IDEA-\d+):/)) {
-            const match = trimmed.match(/^- (IDEA-\d+):\s*(.+)$/);
-            if (match) {
-              data.ideas.push({
-                id: match[1],
-                title: match[2].trim(),
-                status: 'raw',
-                priority: '',
-                section: 'ideas'
-              });
-            }
-            continue;
-          }
-
           // Parse table headers
           if (trimmed.startsWith('| ID ') || trimmed.startsWith('|----')) {
             if (trimmed.startsWith('| ID ')) {
@@ -5054,10 +4799,8 @@
 
               // Route to correct array based on ID prefix (with deduplication)
               if (id.startsWith('ROAD-')) {
-                if (currentSubSection === 'later') {
-                  data.roadmap.later.push(item);
-                } else {
-                  data.roadmap.nearTerm.push(item);
+                if (!data.activeWork.find(t => t.id === id)) {
+                  data.activeWork.push(item);
                 }
               } else if (id.startsWith('BUG-')) {
                 // Check for existing bug in activeWork (parsed from ### BUG-XXX: sections)
@@ -5151,12 +4894,9 @@
       } catch (error) {
         console.error('Error loading MASTER_PLAN.md:', error);
         return {
-          ideas: [],
-          roadmap: { nearTerm: [], later: [] },
           activeWork: [],
           bugs: [],
-          issues: [],
-          archive: []
+          issues: []
         };
       }
     }
@@ -5264,7 +5004,6 @@
         }
 
         // Combine active tasks into kanban columns (with deduplication)
-        // (Roadmap items have their own dedicated Roadmap tab)
         // Prefer items from activeWork (detailed sections) over table-parsed items
         const seenIds = new Set();
         const allItems = [];
@@ -5496,693 +5235,15 @@
       }
     }
 
-    // Ideas Kanban Renderer - Uses MASTER_PLAN.md ideas section
-    async function renderIdeasKanban() {
-      const columns = {
-        raw: document.getElementById('ideas-column-raw'),
-        developing: document.getElementById('ideas-column-developing'),
-        ready: document.getElementById('ideas-column-ready'),
-        promoted: document.getElementById('ideas-column-promoted')
-      };
-
-      // Clear columns
-      Object.values(columns).forEach(col => col.innerHTML = '');
-
-      try {
-        const data = MASTER_PLAN_DATA || await parseMasterPlan();
-        const ideas = data.ideas || [];
-
-        // All ideas from MASTER_PLAN go to 'raw' column by default
-        // (Future: add status field to ideas in MASTER_PLAN to categorize them)
-        const categorized = {
-          raw: ideas.filter(i => i.status === 'raw' || !i.status),
-          developing: ideas.filter(i => i.status === 'developing'),
-          ready: ideas.filter(i => i.status === 'ready'),
-          promoted: ideas.filter(i => i.status === 'promoted' || i.status === 'done')
-        };
-
-        for (const [column, ideaList] of Object.entries(categorized)) {
-          if (ideaList.length === 0) {
-            columns[column].innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.idea}</div><div>No ideas</div></div>`;
-          } else {
-            ideaList.forEach(idea => {
-              const card = document.createElement('div');
-              card.className = 'task-card';
-
-              // Priority badge
-              const priority = idea.priority || '';
-              const priorityClass = priority.toLowerCase().includes('p1') || priority.toLowerCase().includes('high') ? 'high' :
-                priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' :
-                  priority.toLowerCase().includes('p3') || priority.toLowerCase().includes('low') ? 'low' : '';
-
-              // Complexity badge
-              const complexity = idea.complexity || '';
-              const complexityClass = complexity.toLowerCase() === 'simple' ? 'simple' :
-                complexity.toLowerCase() === 'medium' ? 'medium' :
-                  complexity.toLowerCase() === 'complex' ? 'complex' : 'unknown';
-
-              card.innerHTML = `
-                <div class="task-header">
-                  <div class="task-id">${idea.id}</div>
-                  <div class="task-priority ${priorityClass}">${idea.priority || 'UNASSIGNED'}</div>
-                  <div class="task-complexity ${complexityClass}">${complexity || 'Unknown'}</div>
-                </div>
-                <div class="task-title">${idea.title}</div>
-                ${idea.description ? `<div class="task-description">${idea.description}</div>` : ''}
-                <div class="task-footer">
-                  <div class="task-meta">
-                    <span class="task-tags">💡 Idea</span>
-                  </div>
-                </div>
-              `;
-              card.addEventListener('click', () => showTaskModal(idea));
-              columns[column].appendChild(card);
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error loading ideas:', error);
-        Object.values(columns).forEach(col => {
-          col.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.inbox}</div><div>Error loading ideas</div></div>`;
-        });
-      }
-    }
-
-    function parseIdeasMarkdown(content) {
-      const ideas = { raw: [], developing: [], ready: [], promoted: [] };
-      const lines = content.split('\n');
-      let currentSection = '';
-      let currentIdea = null;
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-
-        // Section headers
-        if (trimmed.startsWith('## Raw Ideas')) currentSection = 'raw';
-        else if (trimmed.startsWith('## In Development')) currentSection = 'developing';
-        else if (trimmed.startsWith('## Ready for Review')) currentSection = 'ready';
-        else if (trimmed.startsWith('## Promoted')) currentSection = 'promoted';
-
-        // Idea headers (### IDEA-XXX | Title)
-        else if (trimmed.startsWith('### ') && currentSection) {
-          if (currentIdea) {
-            ideas[currentIdea.section].push(currentIdea);
-          }
-          const match = trimmed.match(/### (IDEA-\d+) \| (.+)/);
-          if (match) {
-            currentIdea = {
-              id: match[1],
-              title: match[2],
-              section: currentSection,
-              description: '',
-              priority: '',
-              tags: '',
-              captured: ''
-            };
-          }
-        }
-
-        // Metadata
-        else if (currentIdea && trimmed.startsWith('**Priority**:')) {
-          currentIdea.priority = trimmed.replace('**Priority**:', '').trim();
-        }
-        else if (currentIdea && trimmed.startsWith('**Tags**:')) {
-          currentIdea.tags = trimmed.replace('**Tags**:', '').trim();
-        }
-        else if (currentIdea && trimmed.startsWith('**Captured**:')) {
-          currentIdea.captured = trimmed.replace('**Captured**:', '').trim();
-        }
-
-        // Description (non-metadata lines after idea header)
-        else if (currentIdea && trimmed && !trimmed.startsWith('**') && !trimmed.startsWith('#')) {
-          if (currentIdea.description) currentIdea.description += ' ';
-          currentIdea.description += trimmed;
-        }
-      }
-
-      // Don't forget the last idea
-      if (currentIdea) {
-        ideas[currentIdea.section].push(currentIdea);
-      }
-
-      return ideas;
-    }
-
-    // Roadmap Kanban Renderer - Uses MASTER_PLAN.md roadmap section
-    async function renderRoadmapKanban() {
-      const columns = {
-        current: document.getElementById('roadmap-column-current'),
-        next: document.getElementById('roadmap-column-next'),
-        future: document.getElementById('roadmap-column-future'),
-        completed: document.getElementById('roadmap-column-completed')
-      };
-
-      // Clear columns
-      Object.values(columns).forEach(col => col.innerHTML = '');
-
-      try {
-        const data = MASTER_PLAN_DATA || await parseMasterPlan();
-        const nearTerm = data.roadmap?.nearTerm || [];
-        const later = data.roadmap?.later || [];
-
-        // Categorize roadmap items
-        const roadmap = {
-          current: nearTerm.filter(i => i.status !== 'done' && (i.priority?.includes('P1') || i.priority?.includes('HIGH'))),
-          next: nearTerm.filter(i => i.status !== 'done' && (i.priority?.includes('P2') || i.priority?.includes('MEDIUM'))),
-          future: later.filter(i => i.status !== 'done'),
-          completed: [...nearTerm, ...later].filter(i => i.status === 'done')
-        };
-
-        for (const [column, items] of Object.entries(roadmap)) {
-          if (items.length === 0) {
-            columns[column].innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.roadmap}</div><div>Nothing planned</div></div>`;
-          } else {
-            items.forEach(item => {
-              const card = document.createElement('div');
-              card.className = 'task-card';
-              const priorityClass = item.priority?.includes('P1') || item.priority?.includes('HIGH') ? 'high' :
-                item.priority?.includes('P2') || item.priority?.includes('MEDIUM') ? 'medium' :
-                  item.priority?.includes('P3') || item.priority?.includes('LOW') ? 'low' : '';
-
-              const complexityClass = (item.complexity || '').toLowerCase() === 'simple' ? 'simple' :
-                (item.complexity || '').toLowerCase() === 'medium' ? 'medium' :
-                  (item.complexity || '').toLowerCase() === 'complex' ? 'complex' : 'unknown';
-
-              card.innerHTML = `
-                <div class="task-header">
-                  <div class="task-id">${item.id}</div>
-                  <div class="task-priority ${priorityClass}">${item.priority || 'UNASSIGNED'}</div>
-                  <div class="task-complexity ${complexityClass}">${item.complexity || 'Unknown'}</div>
-                </div>
-                <div class="task-title">${item.title}</div>
-                ${item.notes ? `<div class="task-description">${item.notes}</div>` : ''}
-                <div class="task-footer">
-                  <div class="task-meta">
-                    <span class="task-tags">${ICONS.roadmap}Roadmap</span>
-                  </div>
-                </div>
-              `;
-              card.addEventListener('click', () => showTaskModal(item));
-              columns[column].appendChild(card);
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error loading roadmap:', error);
-        Object.values(columns).forEach(col => {
-          col.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.inbox}</div><div>Error loading roadmap</div></div>`;
-        });
-      }
-    }
-
-    function parseRoadmapMarkdown(content) {
-      const roadmap = { current: [], next: [], future: [], completed: [] };
-      const lines = content.split('\n');
-      let currentSection = '';
-      let currentItem = null;
-      let parentVersion = '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-
-        // Section headers
-        if (trimmed.startsWith('## Current Sprint')) { currentSection = 'current'; parentVersion = trimmed.match(/\((.*?)\)/)?.[1] || 'Current'; }
-        else if (trimmed.startsWith('## Next Sprint')) { currentSection = 'next'; parentVersion = trimmed.match(/\((.*?)\)/)?.[1] || 'Next'; }
-        else if (trimmed.startsWith('## Future')) { currentSection = 'future'; parentVersion = trimmed.match(/\((.*?)\)/)?.[1] || 'Future'; }
-        else if (trimmed.startsWith('## Completed')) { currentSection = 'completed'; parentVersion = trimmed.match(/\((.*?)\)/)?.[1] || 'Done'; }
-
-        // Item headers (### Title)
-        else if (trimmed.startsWith('### ') && currentSection) {
-          if (currentItem) {
-            roadmap[currentItem.section].push(currentItem);
-          }
-          currentItem = {
-            title: trimmed.replace('### ', ''),
-            section: currentSection,
-            version: parentVersion,
-            description: '',
-            priority: '',
-            status: '',
-            target: ''
-          };
-        }
-
-        // Metadata
-        else if (currentItem && trimmed.startsWith('**Priority**:')) {
-          currentItem.priority = trimmed.replace('**Priority**:', '').trim();
-        }
-        else if (currentItem && trimmed.startsWith('**Status**:')) {
-          currentItem.status = trimmed.replace('**Status**:', '').trim();
-        }
-        else if (currentItem && trimmed.startsWith('**Target**:')) {
-          currentItem.target = trimmed.replace('**Target**:', '').trim();
-        }
-        else if (currentItem && trimmed.startsWith('**Completed**:')) {
-          currentItem.target = '✅ ' + trimmed.replace('**Completed**:', '').trim();
-        }
-
-        // Description
-        else if (currentItem && trimmed && !trimmed.startsWith('**') && !trimmed.startsWith('#')) {
-          if (currentItem.description) currentItem.description += ' ';
-          currentItem.description += trimmed;
-        }
-      }
-
-      // Don't forget the last item
-      if (currentItem) {
-        roadmap[currentItem.section].push(currentItem);
-      }
-
-      return roadmap;
-    }
-
-    // Archive Kanban Renderer - Shows completed items from MASTER_PLAN.md
-    async function renderArchiveKanban() {
-      const data = MASTER_PLAN_DATA || await parseMasterPlan();
-
-      // Collect all completed items
-      const completedTasks = [
-        ...data.activeWork.filter(i => i.status === 'done'),
-        ...data.bugs.filter(i => i.status === 'done'),
-        ...data.issues.filter(i => i.status === 'done'),
-        ...data.roadmap.nearTerm.filter(i => i.status === 'done'),
-        ...data.roadmap.later.filter(i => i.status === 'done')
-      ];
-
-      const columns = {
-        recent: document.getElementById('archive-column-recent'),
-        features: document.getElementById('archive-column-features'),
-        bugs: document.getElementById('archive-column-bugs'),
-        old: document.getElementById('archive-column-old')
-      };
-
-      // Clear columns
-      Object.values(columns).forEach(col => col.innerHTML = '');
-
-      // Sort completed tasks into categories based on ID prefix
-      const categorized = {
-        recent: [],
-        features: [],
-        bugs: [],
-        old: []
-      };
-
-      completedTasks.forEach(task => {
-        if (task.id.startsWith('BUG-')) {
-          categorized.bugs.push(task);
-        } else if (task.id.startsWith('TASK-') || task.id.startsWith('ROAD-')) {
-          categorized.features.push(task);
-        } else {
-          categorized.recent.push(task);
-        }
-      });
-
-      // Render each category
-      for (const [column, taskList] of Object.entries(categorized)) {
-        if (taskList.length === 0) {
-          columns[column].innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.inbox}</div><div>No tasks</div></div>`;
-        } else {
-          taskList.forEach(task => {
-            const card = document.createElement('div');
-            card.className = 'task-card';
-
-            const priority = task.priority || '';
-            const priorityClass = priority.toLowerCase().includes('p1') || priority.toLowerCase().includes('high') ? 'high' :
-              priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' :
-                priority.toLowerCase().includes('p3') || priority.toLowerCase().includes('low') ? 'low' : '';
-
-            // Complexity badge
-            const complexity = task.complexity || '';
-            const complexityClass = complexity.toLowerCase() === 'simple' ? 'simple' :
-              complexity.toLowerCase() === 'medium' ? 'medium' :
-                complexity.toLowerCase() === 'complex' ? 'complex' : 'unknown';
-
-            // Get type badge based on ID prefix
-            const typeLabel = task.id.startsWith('BUG-') ? `${ICONS.bug}Bug Fixed` :
-              task.id.startsWith('ROAD-') ? `${ICONS.roadmap}Roadmap` :
-                task.id.startsWith('TASK-') ? `${ICONS.done}Task` : `${ICONS.done}Done`;
-
-            card.innerHTML = `
-              <div class="task-header">
-                <div class="task-id">${task.id}</div>
-                <div class="task-priority ${priorityClass}">${task.priority || 'UNASSIGNED'}</div>
-                <div class="task-complexity ${complexityClass}">${complexity || 'Unknown'}</div>
-              </div>
-              <div class="task-title">${task.title}</div>
-              ${task.notes ? `<div class="task-description">${task.notes}</div>` : ''}
-              <div class="task-footer">
-                <div class="task-meta">
-                  <span class="task-tags">${typeLabel}</span>
-                </div>
-              </div>
-            `;
-            card.addEventListener('click', () => showTaskModal(task));
-            columns[column].appendChild(card);
-          });
-        }
-      }
-    }
-
-    // Status Kanban Renderer - Groups tasks by priority from MASTER_PLAN.md
-    async function renderPriorityKanban() {
-      const data = MASTER_PLAN_DATA || await parseMasterPlan();
-
-      // Combine ALL items for priority view
-      const allTasks = [
-        ...data.activeWork,
-        ...data.bugs,
-        ...data.issues,
-        ...data.roadmap.nearTerm
-      ];
-
-      const columns = {
-        critical: document.getElementById('status-column-critical'),
-        warning: document.getElementById('status-column-warning'),
-        info: document.getElementById('status-column-info'),
-        success: document.getElementById('status-column-success')
-      };
-
-      // Clear columns
-      Object.values(columns).forEach(col => col.innerHTML = '');
-
-      // Sort tasks by priority
-      const byPriority = {
-        critical: [],
-        warning: [],
-        info: [],
-        success: []
-      };
-
-      allTasks.forEach(task => {
-        const priority = (task.priority || '').toLowerCase();
-
-        if (priority.includes('p1') || priority.includes('high')) {
-          byPriority.critical.push(task);
-        } else if (priority.includes('p2') || priority.includes('medium')) {
-          byPriority.warning.push(task);
-        } else if (priority.includes('p3') || priority.includes('low')) {
-          byPriority.info.push(task);
-        } else {
-          byPriority.success.push(task);
-        }
-      });
-
-      // Render each priority level
-      for (const [column, taskList] of Object.entries(byPriority)) {
-        if (taskList.length === 0) {
-          columns[column].innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.inbox}</div><div>No tasks</div></div>`;
-        } else {
-          // Sort by progress desc within priority columns
-          taskList.sort((a, b) => (b.progress || 0) - (a.progress || 0));
-
-          taskList.forEach(task => {
-            const card = document.createElement('div');
-            const hasSubtasks = task.subtasks && task.subtasks.length > 0;
-            const hasExpandableContent = task.description || hasSubtasks;
-            card.className = `task-card${hasExpandableContent ? ' has-subtasks' : ''}`;
-
-            // Get type badge based on ID prefix
-            const typeLabel = task.id.startsWith('BUG-') ? `${ICONS.bug}Bug` :
-              task.id.startsWith('ISSUE-') ? `${ICONS.issue}Issue` :
-                task.id.startsWith('TASK-') ? `${ICONS.task}Task` :
-                  task.id.startsWith('ROAD-') ? `${ICONS.roadmap}Roadmap` : '';
-
-            // Priority badge stuff
-            const priority = task.priority || 'UNASSIGNED';
-            const priorityClass = priority.toLowerCase().includes('p1') || priority.toLowerCase().includes('high') ? 'high' :
-              priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' :
-                priority.toLowerCase().includes('p3') || priority.toLowerCase().includes('low') ? 'low' : '';
-
-            // Complexity badge
-            const complexity = task.complexity || '';
-            const complexityClass = complexity.toLowerCase() === 'simple' ? 'simple' :
-              complexity.toLowerCase() === 'medium' ? 'medium' :
-                complexity.toLowerCase() === 'complex' ? 'complex' : 'unknown';
-
-            // Use direct progress
-            const progress = task.progress !== undefined ? task.progress :
-              (task.status === 'done' ? 100 : task.status === 'in-progress' ? 50 : 0);
-            const progressClass = getProgressClass(progress);
-
-            // Expansion state
-            const isExpanded = getExpandState(task.id);
-            const expandedHtml = hasExpandableContent ? `
-              <div class="task-expanded" style="display: ${isExpanded ? 'block' : 'none'}">
-                ${buildExpandedContentHtml(task)}
-              </div>
-            ` : '';
-
-            card.innerHTML = `
-              <div class="task-header">
-                <button class="expand-toggle" onclick="toggleExpand('${task.id}', event)">${isExpanded ? '▼' : '▶'}</button>
-                <div class="task-id">${task.id}</div>
-                <div class="task-priority ${priorityClass}">${priority}</div>
-                <div class="task-complexity ${complexityClass}">${complexity || 'Unknown'}</div>
-              </div>
-              <div class="task-title">${task.title}</div>
-              ${expandedHtml}
-              <div class="task-footer">
-                <div class="task-meta">
-                  <span class="task-tags">${typeLabel}</span>
-                  <span class="task-status ${task.status === 'done' ? 'done' : 'todo'}" style="font-size: 10px; opacity: 0.7;">${task.status.toUpperCase()}</span>
-                </div>
-                <div class="task-progress">
-                  <div class="progress-bar"><div class="task-progress-bar ${progressClass}" style="width: ${progress}%"></div></div>
-                </div>
-              </div>
-            `;
-            card.addEventListener('click', () => showTaskModal(task));
-            columns[column].appendChild(card);
-          });
-        }
-      }
-    }
-
-    // Parser functions
-    function parseIdeasFile(content) {
-      const ideas = { raw: [], developing: [], ready: [], promoted: [] };
-      const lines = content.split('\n');
-      let currentSection = '';
-      let currentIdea = null;
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
-        if (line.startsWith('## 💭 Raw Ideas')) currentSection = 'raw';
-        else if (line.startsWith('## 📝 In Development')) currentSection = 'developing';
-        else if (line.startsWith('## 🎯 Ready for Review')) currentSection = 'ready';
-        else if (line.startsWith('## ✅ Promoted')) currentSection = 'promoted';
-        else if (line.startsWith('### IDEA-') && currentSection) {
-          const match = line.match(/### (IDEA-[\w-]+) \| (.+)/);
-          if (match) {
-            currentIdea = {
-              id: match[1],
-              title: match[2],
-              section: currentSection,
-              description: '',
-              meta: ''
-            };
-          }
-        } else if (currentIdea && currentSection) {
-          if (line.startsWith('**') || line.startsWith('Captured:') || line.startsWith('Priority:') || line.startsWith('Tags:')) {
-            currentIdea.meta += line + '\n';
-          } else if (line.trim() && !line.startsWith('###')) {
-            currentIdea.description += line + '\n';
-          }
-        }
-
-        if (currentIdea && (line.startsWith('### ') || line.startsWith('## ') || i === lines.length - 1)) {
-          if (currentIdea.description || currentIdea.meta) {
-            ideas[currentSection].push(currentIdea);
-            currentIdea = null;
-          }
-        }
-      }
-
-      if (currentIdea && (currentIdea.description || currentIdea.meta)) {
-        ideas[currentSection].push(currentIdea);
-      }
-
-      return ideas;
-    }
-
-    function parseRoadmapFile(content) {
-      const roadmap = { current: [], next: [], future: [], completed: [] };
-      const lines = content.split('\n');
-      let currentSection = '';
-      let currentVersion = null;
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
-        if (line.includes('Current Development')) currentSection = 'current';
-        else if (line.includes('Next') || line.includes('Upcoming')) currentSection = 'next';
-        else if (line.includes('Future') || line.includes('Later')) currentSection = 'future';
-        else if (line.includes('Completed') || line.includes('Done')) currentSection = 'completed';
-        else if (line.startsWith('## ') && currentSection) {
-          currentVersion = {
-            title: line.replace('##', '').trim(),
-            section: currentSection,
-            description: '',
-            meta: ''
-          };
-        } else if (currentVersion && currentSection) {
-          if (line.trim() && !line.startsWith('##')) {
-            currentVersion.description += line + '\n';
-          }
-        }
-
-        if (currentVersion && (line.startsWith('## ') || i === lines.length - 1)) {
-          if (currentVersion.description) {
-            roadmap[currentSection].push(currentVersion);
-            currentVersion = null;
-          }
-        }
-      }
-
-      if (currentVersion && currentVersion.description) {
-        roadmap[currentSection].push(currentVersion);
-      }
-
-      return roadmap;
-    }
-
-    function parseArchiveFile(content) {
-      return parseKanbanFile(content); // Same format as kanban
-    }
-
-    function parseStatusFile(content) {
-      const status = { critical: [], warning: [], info: [], success: [] };
-      const lines = content.split('\n');
-      let currentItem = null;
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
-        if (line.includes('🔴') || line.includes('Critical') || line.includes('Emergency')) {
-          currentItem = { id: `CRITICAL-${i}`, title: line, section: 'critical', description: '', type: 'critical' };
-        } else if (line.includes('🟡') || line.includes('Warning') || line.includes('At Risk')) {
-          currentItem = { id: `WARNING-${i}`, title: line, section: 'warning', description: '', type: 'warning' };
-        } else if (line.includes('🔵') || line.includes('Info') || line.includes('Note')) {
-          currentItem = { id: `INFO-${i}`, title: line, section: 'info', description: '', type: 'info' };
-        } else if (line.includes('🟢') || line.includes('Success') || line.includes('Complete')) {
-          currentItem = { id: `SUCCESS-${i}`, title: line, section: 'success', description: '', type: 'success' };
-        } else if (currentItem && line.trim()) {
-          currentItem.description += line + '\n';
-        }
-
-        if (currentItem && (line.includes('🔴') || line.includes('🟡') || line.includes('🔵') || line.includes('🟢') || i === lines.length - 1)) {
-          if (currentItem.description || currentItem.title) {
-            status[currentItem.section].push(currentItem);
-            currentItem = null;
-          }
-        }
-      }
-
-      if (currentItem && (currentItem.description || currentItem.title)) {
-        status[currentItem.section].push(currentItem);
-      }
-
-      return status;
-    }
-
-    // Card creation functions
-    function createIdeaCard(idea) {
-      const card = document.createElement('div');
-      card.className = 'task-card';
-      card.draggable = true;
-
-      const priorityMatch = idea.meta.match(/\*\*Priority\*\*: (.+?)(?:\s|$)/);
-      const tagsMatch = idea.meta.match(/\*\*Tags\*\*: (.+)/);
-      const capturedMatch = idea.meta.match(/\*\*Captured\*\*: (.+?)(?:\s|$)/);
-
-      const priority = priorityMatch ? priorityMatch[1] : '';
-      const tags = tagsMatch ? tagsMatch[1] : '';
-      const captured = capturedMatch ? capturedMatch[1] : new Date().toLocaleDateString();
-
-      const progress = getTaskProgress(idea.section);
-      const progressClass = getProgressClass(progress);
-
-      card.innerHTML = `
-        <div class="task-id">${idea.id} ${priority}</div>
-        <div class="task-title">${idea.title}</div>
-        <div class="task-meta">
-          <span>${ICONS.calendar}${captured}</span>
-          <span>${tags}</span>
-        </div>
-        <div class="task-progress">
-          <div class="task-progress-bar ${progressClass}" style="width: ${progress}%"></div>
-        </div>
-      `;
-
-      card.addEventListener('click', () => showTaskModal(idea));
-      return card;
-    }
-
-    function createVersionCard(version) {
-      const card = document.createElement('div');
-      card.className = 'task-card';
-      card.draggable = true;
-
-      const progress = getTaskProgress(version.section);
-      const progressClass = getProgressClass(progress);
-
-      card.innerHTML = `
-        <div class="task-id">VERSION</div>
-        <div class="task-title">${version.title}</div>
-        <div class="task-meta">
-          <span>${ICONS.task}${version.section}</span>
-        </div>
-        <div class="task-progress">
-          <div class="task-progress-bar ${progressClass}" style="width: ${progress}%"></div>
-        </div>
-      `;
-
-      card.addEventListener('click', () => showTaskModal(version));
-      return card;
-    }
-
-    function createStatusCard(item) {
-      const card = document.createElement('div');
-      card.className = 'task-card';
-      card.draggable = true;
-
-      const dotClass = item.type === 'critical' ? 'high' : item.type === 'warning' ? 'medium' : item.type === 'info' ? 'info' : 'low';
-
-      const progress = getTaskProgress(item.section);
-      const progressClass = getProgressClass(progress);
-
-      card.innerHTML = `
-        <div class="task-id">${item.id}</div>
-        <div class="task-title"><span class="priority-dot ${dotClass}"></span>${item.title}</div>
-        <div class="task-meta">
-          <span>Status: ${item.section}</span>
-        </div>
-        <div class="task-progress">
-          <div class="task-progress-bar ${progressClass}" style="width: ${progress}%"></div>
-        </div>
-      `;
-
-      card.addEventListener('click', () => showTaskModal(item));
-      return card;
-    }
 
     // Progress and Modal Helper Functions
     function getTaskProgress(column) {
       const progressMap = {
         'todo': 0,
-        'raw': 10,
-        'developing': 35,
-        'current': 40,
-        'next': 60,
-        'future': 75,
         'in-progress': 75,
         'review': 85,
-        'ready': 90,
-        'recent': 90,
         'done': 100,
-        'completed': 100,
-        'promoted': 100
+        'completed': 100
       };
       return progressMap[column] || 50;
     }
@@ -6659,19 +5720,7 @@
         'paused': 'Paused',
         'review': 'Review',
         'done': 'Completed',
-        'raw': 'Raw Idea',
-        'developing': 'In Development',
-        'ready': 'Ready for Review',
-        'promoted': 'Promoted',
-        'current': 'Current',
-        'next': 'Next',
-        'future': 'Future',
-        'completed': 'Completed',
-        'recent': 'Recent',
-        'critical': 'Critical Issue',
-        'warning': 'Warning',
-        'info': 'Information',
-        'success': 'Success'
+        'completed': 'Completed'
       };
       return statusMap[status] || status;
     }
@@ -6736,24 +5785,9 @@
         // Update header
         const titles = {
           kanban: 'Status Board',
-          ideas: 'Ideas',
-          roadmap: 'Roadmap',
-          archive: 'Archive',
-          status: 'Priority Board',
           orchestrator: 'AI Orchestrator'
         };
-        document.getElementById('view-title').textContent = titles[view];
-
-        // Load kanban content
-        if (view === 'ideas') {
-          await renderIdeasKanban();
-        } else if (view === 'roadmap') {
-          await renderRoadmapKanban();
-        } else if (view === 'archive') {
-          await renderArchiveKanban();
-        } else if (view === 'status') {
-          await renderPriorityKanban();
-        }
+        document.getElementById('view-title').textContent = titles[view] || view;
       });
     });
 
@@ -7436,19 +6470,6 @@
 
     function refreshData() {
       renderKanban();
-
-      // Also refresh the current kanban view if active
-      const activeView = document.querySelector('.nav-tab.active').dataset.view;
-      if (activeView === 'ideas') {
-        renderIdeasKanban();
-      } else if (activeView === 'roadmap') {
-        renderRoadmapKanban();
-      } else if (activeView === 'archive') {
-        renderArchiveKanban();
-      } else if (activeView === 'status') {
-        renderPriorityKanban();
-      }
-
       showStatus('Refreshed!');
     }
 

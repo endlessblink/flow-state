@@ -366,7 +366,6 @@ export function useMobileInboxLogic() {
         if (viewMode.value === 'today' && (groupBy.value === 'none' || groupBy.value === 'date')) {
             const overdueTasks = tasks.filter(t => isTaskOverdue(t.dueDate))
             const todayTasks = tasks.filter(t => !isTaskOverdue(t.dueDate))
-            console.log('[BUG-1483] Today grouping:', { viewMode: viewMode.value, groupBy: groupBy.value, total: tasks.length, overdue: overdueTasks.length, today: todayTasks.length })
 
             if (overdueTasks.length > 0) {
                 groups.set('overdue', { key: 'overdue', title: 'Overdue', color: 'var(--color-priority-high)', tasks: overdueTasks })

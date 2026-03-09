@@ -130,7 +130,7 @@ parent_group_id UUID REFERENCES groups(id) NULL
 ## Related Documentation
 
 - [CANVAS-POSITION-SYSTEM.md](./canvas/CANVAS-POSITION-SYSTEM.md) - Position/coordinate system
-- [SOP-002-canvas-geometry-invariants.md](./SOP-002-canvas-geometry-invariants.md) - Geometry write policy
+- [CANVAS-POSITION-SYSTEM.md](./canvas/CANVAS-POSITION-SYSTEM.md) - Geometry write policy
 - vue-flow-debug skill - Expert knowledge for Vue Flow parent-child debugging
 
 ## Changelog

@@ -95,7 +95,7 @@ const validId = isValidUUID(data.id) ? data.id : crypto.randomUUID()
 ## Related SOPs
 
 - [SYNC-supabase-circular-loop-fix.md](./SYNC-supabase-circular-loop-fix.md) - UUID validation for projects/tasks
-- [TASKS-raw-safety-pattern.md](./TASKS-raw-safety-pattern.md) - Store safety patterns
+- [TASKS-raw-safety-pattern.md](../active/TASKS-raw-safety-pattern.md) - Store safety patterns
 
 ---
 

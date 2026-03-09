@@ -226,8 +226,12 @@ const isTimerActive = computed(() => {
 
 <style scoped>
 .pin-indicator {
+  grid-area: done;
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
   color: var(--text-muted);
-  flex-shrink: 0;
-  margin-right: 4px;
+  opacity: 0.6;
+  pointer-events: none;
 }
 </style>

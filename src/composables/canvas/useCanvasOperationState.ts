@@ -39,6 +39,9 @@ export function useCanvasOperationState() {
     // --- Transitions ---
 
     const startDrag = (nodeIds: string[]) => {
+        if (import.meta.env.DEV) {
+            console.log(`[BUG-1492:STATE] startDrag from="${state.value.type}"`, { nodeIds: nodeIds.map(id => id.slice(0, 8)) })
+        }
         // BUG-1328: Allow starting a new drag from 'drag-settling' state.
         // Without this, rapid consecutive drags (within 3s settling window) leave
         // canvasStore.isDragging=false, so realtime events bypass all guards and
@@ -61,6 +64,9 @@ export function useCanvasOperationState() {
     }
 
     const endDrag = (nodeIds: string[]) => {
+        if (import.meta.env.DEV) {
+            console.log(`[BUG-1492:STATE] endDrag from="${state.value.type}"`, { nodeIds: nodeIds.map(id => id.slice(0, 8)) })
+        }
         if (state.value.type !== 'dragging') return
 
         // Clear previous timeout if any
@@ -77,6 +83,11 @@ export function useCanvasOperationState() {
         // the pendingWrite guard. The previous 800ms left a 2.2s gap where realtime
         // echo could trigger syncStoreToCanvas with stale positions.
         const settleTimeout = window.setTimeout(() => {
+            if (import.meta.env.DEV) {
+                console.log(`[BUG-1492:STATE] settle-timeout fired, current="${state.value.type}"`, {
+                    pendingUpdatesCount: pendingUpdates.value.length
+                })
+            }
             if (state.value.type === 'drag-settling') {
                 state.value = { type: 'idle' }
                 // BUG-1209: Clear settling flag when returning to idle

@@ -27,6 +27,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // --- Core Filter State ---
     // TASK-1215: Persist inbox open/closed per context (canvas vs calendar)
     const isCollapsed = usePersistentRef<boolean>(`flowstate:inbox-collapsed-${props.context}`, false)
+    // TASK-1486: Pinned section collapse state
+    const pinnedSectionCollapsed = usePersistentRef<boolean>(`flowstate:inbox-pinned-collapsed-${props.context}`, false)
     // BUG-1468: All filter keys are context-scoped so canvas/calendar inboxes are independent
     const ctx = props.context
     // BUG-1051: Persist filter (TASK-1215: upgraded to Tauri-aware persistence)
@@ -162,6 +164,13 @@ export function useUnifiedInboxState(props: InboxContextProps) {
                 return !task.canvasPosition
             }
         })
+    })
+
+    // TASK-1486: Pinned tasks — always visible regardless of inbox filters
+    const pinnedTasks = computed(() => {
+        return taskStore._rawTasks.filter(task =>
+            task.isPinned && task.status !== 'done' && !task._soft_deleted
+        )
     })
 
     const todayCount = computed(() => {
@@ -399,6 +408,9 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             })
         }
 
+        // TASK-1486: Exclude pinned tasks from regular inbox (they show in PinnedTasksSection)
+        tasks = tasks.filter(t => !t.isPinned)
+
         return tasks
     })
 
@@ -452,6 +464,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         canvasGroupOptions,
         baseInboxTasks,
         inboxTasks,
+        pinnedTasks,
+        pinnedSectionCollapsed,
         todayCount,
         next3DaysCount,
         weekCount,

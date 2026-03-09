@@ -33,6 +33,21 @@
         <OnboardingWizard />
         <!-- TASK-1350: AI Setup Wizard (first-time AI provider setup) -->
         <AISetupWizard ref="aiSetupWizard" />
+        <!-- TASK-1495: Morning Ritual — opt-in banner, bottom sheet panel, summary chip -->
+        <MorningBanner
+          :show="morningRitual.showBanner.value"
+          @open="morningRitual.openRitual()"
+          @dismiss="morningRitual.dismissBanner()"
+        />
+        <MorningRitualPanel
+          :show="morningRitual.isRitualActive.value"
+          @close="morningRitual.closeRitual()"
+        />
+        <MorningSummaryChip
+          :show="morningRitual.isRitualCompleted.value"
+          :task-count="morningRitual.ritualSummary.value?.taskCount ?? 0"
+          :total-minutes="morningRitual.ritualSummary.value?.totalMinutes ?? 0"
+        />
       </template>
     </NMessageProvider>
   </NConfigProvider>
@@ -78,6 +93,11 @@ import RouteErrorBoundary from '@/components/error/RouteErrorBoundary.vue'
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard.vue'
 // TASK-1350: AI Setup Wizard (first-time BYOK Groq setup)
 import AISetupWizard from '@/components/ai/AISetupWizard.vue'
+// TASK-1495: Morning Ritual (opt-in banner + panel + summary chip)
+import MorningBanner from '@/components/morning-dashboard/MorningBanner.vue'
+import MorningRitualPanel from '@/components/morning-dashboard/MorningRitualPanel.vue'
+import MorningSummaryChip from '@/components/morning-dashboard/MorningSummaryChip.vue'
+import { useMorningRitual } from '@/composables/useMorningRitual'
 import { destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { useMobileDetection } from '@/composables/useMobileDetection'
 import { initializeBraveProtection } from '@/utils/braveProtection'
@@ -98,6 +118,9 @@ const aiSetupWizard = ref<InstanceType<typeof AISetupWizard> | null>(null)
 const { isMobile } = useMobileDetection()
 const { handleKeydown } = useAppShortcuts()
 const appRouter = useRouter()
+
+// TASK-1495: Morning Ritual
+const morningRitual = useMorningRitual()
 
 // Startup state - check Tauri/Capacitor AFTER mount to ensure globals are injected
 const startupComplete = ref(false)

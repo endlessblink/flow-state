@@ -398,21 +398,6 @@ const groupedTasks = computed((): TaskGroup[] => {
     })
   }
 
-  // Extract pinned tasks into a dedicated group at the top
-  const pinnedTasks = groups.flatMap(g => g.tasks).filter(t => t.isPinned)
-  if (pinnedTasks.length > 0) {
-    const pinnedIds = new Set(pinnedTasks.map(t => t.id))
-    const filteredGroups = groups.map(g => ({
-      ...g,
-      tasks: g.tasks.filter(t => !pinnedIds.has(t.id)),
-      parentTasks: g.parentTasks ? g.parentTasks.filter(t => !pinnedIds.has(t.id)) : undefined
-    }))
-    return [
-      { key: 'pinned', title: '📌 Pinned', tasks: pinnedTasks, parentTasks: getRootTasks(pinnedTasks) },
-      ...filteredGroups
-    ]
-  }
-
   return groups
 })
 

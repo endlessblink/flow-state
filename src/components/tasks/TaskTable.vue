@@ -185,7 +185,7 @@
         <template v-for="group in groups" :key="group.key">
           <!-- TASK-1334: Group Header Row -->
           <div
-            v-if="groupBy !== 'none' || group.key === 'pinned'"
+            v-if="groupBy !== 'none'"
             class="table-group-header"
             @click="toggleTableGroupExpand(group.key)"
           >

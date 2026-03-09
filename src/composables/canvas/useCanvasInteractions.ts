@@ -358,7 +358,7 @@ export function useCanvasInteractions(deps?: {
     const taskStore = useTaskStore()
     const { nodeVersionMap } = storeToRefs(canvasStore)
     const { updateSectionTaskCounts } = useCanvasGroups()
-    const { startDrag, endDrag, startResize, endResize } = useCanvasOperationState()
+    const { startDrag, endDrag, startResize, endResize, state: opState } = useCanvasOperationState()
     const { setNodeState } = useNodeStateManager()
 
     // Smart Section Properties
@@ -751,6 +751,15 @@ export function useCanvasInteractions(deps?: {
                         positionFormat: 'absolute'
                     }
 
+                    if (import.meta.env.DEV) {
+                        console.log(`[BUG-1492:DRAG-SAVE] callId=${callId} task=${task.id.slice(0, 8)} "${task.title?.slice(0, 20)}"`, {
+                            absolutePos: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
+                            vfNodePos: { x: Math.round(node.position.x), y: Math.round(node.position.y) },
+                            parentId: newParentId?.slice(0, 8) ?? 'root',
+                            storePosBefore: task.canvasPosition ? { x: Math.round(task.canvasPosition.x), y: Math.round(task.canvasPosition.y) } : null
+                        })
+                    }
+
                     // 6. Collect Smart Section Properties (Today, Tomorrow, Priorities, etc.)
                     // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
                     // TASK-1177: Pass allGroups to enable parent chain property inheritance
@@ -835,6 +844,12 @@ export function useCanvasInteractions(deps?: {
         } finally {
             // BUG-1209: Set isDragging=false AFTER all async saves complete,
             // so realtime handlers don't overwrite positions mid-save.
+            if (import.meta.env.DEV) {
+                console.log(`[BUG-1492:DRAG-FINALLY] callId=${callId}`, {
+                    involvedNodes: involvedNodes.map(n => n.id.slice(0, 12)),
+                    opState: opState.value.type
+                })
+            }
             canvasStore.isDragging = false
             // BUG-1492: Transition to 'drag-settling' BEFORE releasing locks.
             // This closes a micro-tick gap where PositionManager accepts stale

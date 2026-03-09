@@ -114,5 +114,5 @@ Scoped CSS in Vue components (`:deep()`) targets `.section-node` which is INSIDE
 
 ## Related
 
-- [SOP-002: Canvas Geometry Invariants](./SOP-002-canvas-geometry-invariants.md)
+- [Canvas Position System](./canvas/CANVAS-POSITION-SYSTEM.md)
 - [SOP-004: CSS Shadow Overflow Clipping](./SOP-004-css-shadow-overflow-clipping.md)

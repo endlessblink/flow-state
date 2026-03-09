@@ -375,7 +375,7 @@ const {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  overflow: clip; /* BUG-1453: clip vertically (header/footer) but allow horizontal card escape during swipe */
+  overflow: clip; /* WebKitGTK-safe: BUG-1453: clip vertically (header/footer) but allow horizontal card escape during swipe */
   overflow-x: visible;
   scrollbar-width: none; /* BUG-1453: hide scrollbar from overflow-x during card drag */
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -642,7 +642,7 @@ const {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: clip; /* Clip vertically but allow card to visually escape during swipe */
+  overflow: clip; /* WebKitGTK-safe: BUG-1453: clip vertically, card escapes via position:fixed during swipe */
   overflow-x: visible;
   z-index: var(--z-base);
 }

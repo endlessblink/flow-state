@@ -563,8 +563,18 @@ export function useCanvasSync() {
 
             if (isDifferent(newNodes, currentNodes)) {
                 if (import.meta.env.DEV) {
+                    const taskNodesNew = newNodes.filter((n: any) => n.type === 'taskNode')
+                    console.log(`[BUG-1492:SYNC-SETNODES] About to setNodes`, {
+                        taskCount: taskNodesNew.length,
+                        sample: taskNodesNew.slice(0, 5).map((n: any) => ({
+                            id: n.id.slice(0, 8),
+                            pos: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
+                            parent: n.parentNode?.slice(0, 12) ?? 'root',
+                            storePos: n.data?.task?.canvasPosition ? { x: Math.round(n.data.task.canvasPosition.x), y: Math.round(n.data.task.canvasPosition.y) } : null
+                        }))
+                    })
+
                     const taskNodesOld = currentNodes.filter(n => n.type === 'taskNode')
-                    const taskNodesNew = newNodes.filter((n: unknown) => n.type === 'taskNode')
 
                     for (const newNode of taskNodesNew) {
                         const oldNode = taskNodesOld.find((o: unknown) => o.id === newNode.id)

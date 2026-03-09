@@ -332,28 +332,35 @@ export function useTaskContextMenuActions(
     }
 
     const duplicateTask = async () => {
-        // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
-        const taskData = currentTask.value ? {
-            title: currentTask.value.title,
-            description: currentTask.value.description,
-            status: currentTask.value.status,
-            priority: currentTask.value.priority,
-            estimatedDuration: currentTask.value.estimatedDuration,
-            canvasPosition: currentTask.value.canvasPosition
-                ? { x: currentTask.value.canvasPosition.x + 30, y: currentTask.value.canvasPosition.y + 30 }
+        // BUG-1491: Capture ALL task fields BEFORE closing menu (same pattern as BUG-1090)
+        // The duplicate must behave as a fully independent task identical to the original
+        const source = currentTask.value
+        if (!source) return
+
+        const taskData = {
+            title: source.title,
+            description: source.description,
+            status: source.status,
+            priority: source.priority,
+            estimatedDuration: source.estimatedDuration,
+            dueDate: source.dueDate,
+            tags: source.tags ? [...source.tags] : undefined,
+            canvasPosition: source.canvasPosition
+                ? { x: source.canvasPosition.x + 30, y: source.canvasPosition.y + 30 }
                 : undefined,
-            parentId: currentTask.value.parentId,
-            projectId: currentTask.value.projectId,
-            instanceId: (currentTask.value as Task & { instanceId?: string }).instanceId,
-            isCalendarEvent: Boolean((currentTask.value as Task & { isCalendarEvent?: boolean }).isCalendarEvent),
-            instances: currentTask.value.instances ? [...currentTask.value.instances] : []
-        } : null
+            parentId: source.parentId,
+            projectId: source.projectId,
+            isInInbox: source.isInInbox,
+            instanceId: (source as Task & { instanceId?: string }).instanceId,
+            isCalendarEvent: Boolean((source as Task & { isCalendarEvent?: boolean }).isCalendarEvent),
+            instances: source.instances ? [...source.instances] : []
+        }
         const isBatch = isBatchOperation.value
 
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
 
-        if (taskData && !isBatch) {
+        if (!isBatch) {
             try {
                 let duplicatedInstances: Task['instances']
 
@@ -373,19 +380,28 @@ export function useTaskContextMenuActions(
                     }
                 }
 
-                await taskStore.createTaskWithUndo({
+                const newTask = await taskStore.createTaskWithUndo({
                     title: taskData.title + ' (Copy)',
                     description: taskData.description,
                     status: taskData.status,
                     priority: taskData.priority,
                     estimatedDuration: taskData.estimatedDuration,
+                    dueDate: taskData.dueDate,
+                    tags: taskData.tags,
                     canvasPosition: taskData.canvasPosition,
                     parentId: taskData.parentId,
                     projectId: taskData.projectId,
+                    isInInbox: taskData.isInInbox,
                     instances: duplicatedInstances
                 })
+                console.log(`[BUG-1491] Duplicated task "${taskData.title}" → "${newTask?.id?.slice(0, 8)}"`, {
+                    hasCanvasPos: !!taskData.canvasPosition,
+                    parentId: taskData.parentId?.slice(0, 12),
+                    projectId: taskData.projectId?.slice(0, 8),
+                    isInInbox: taskData.isInInbox
+                })
             } catch (error) {
-                console.error('Error duplicating task:', error)
+                console.error('[BUG-1491] Error duplicating task:', error)
             }
         }
     }

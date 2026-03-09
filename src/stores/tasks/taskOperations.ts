@@ -241,8 +241,9 @@ export function useTaskOperations(
             // it's already in _rawTasks + sync queue + read cache.
             try {
                 await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
+                console.log(`[BUG-1491] Direct save succeeded for task ${taskId.slice(0, 8)} "${newTask.title?.slice(0, 25)}"`)
             } catch (directSaveError) {
-                console.warn(`[TASK] Direct save failed for new task ${taskId.slice(0, 8)}, sync queue will retry:`, directSaveError)
+                console.error(`[BUG-1491] Direct save FAILED for task ${taskId.slice(0, 8)} "${newTask.title?.slice(0, 25)}":`, directSaveError)
             }
 
             // Trigger canvas sync for Tauri reactivity

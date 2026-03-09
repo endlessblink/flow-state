@@ -13,16 +13,111 @@
       </p>
     </div>
 
-    <!-- Grouped Task Display -->
-    <template v-if="(groupBy !== 'none' || viewMode === 'today') && filteredTasks.length > 0">
-      <div v-for="group in groupedTasks" :key="group.key" class="task-group">
-        <div class="group-header">
-          <span v-if="group.color" class="group-color-dot" :style="{ backgroundColor: group.color }" />
-          <span class="group-title">{{ group.title }}</span>
-          <span class="group-count">{{ group.tasks.length }}</span>
+    <!-- BUG-1483: Today mode with overdue/today separation -->
+    <template v-if="viewMode === 'today' && groupBy === 'none' && filteredTasks.length > 0">
+      <!-- Overdue Section -->
+      <div v-if="overdueTasks.length > 0" class="task-group">
+        <div class="group-header overdue-header">
+          <AlertCircle :size="14" class="overdue-icon" />
+          <span class="group-title overdue-title">Overdue</span>
+          <span class="group-count">{{ overdueTasks.length }}</span>
         </div>
         <SwipeableTaskItem
-          v-for="task in group.tasks"
+          v-for="task in overdueTasks"
+          :key="task.id"
+          :task-id="task.id"
+          @edit="$emit('editTask', task)"
+          @delete="$emit('deleteTask', task)"
+        >
+          <div
+            class="mobile-task-item"
+            :class="[{ 'timer-active': isTimerActive(task.id) }]"
+            @click="$emit('clickTask', task)"
+          >
+            <div class="task-checkbox" @click.stop="$emit('toggleTask', task)">
+              <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
+                <Check v-if="task.status === 'done'" :size="14" />
+              </div>
+            </div>
+            <div class="task-content">
+              <div class="task-title-row">
+                <span class="task-title" dir="auto" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
+                <span v-if="task.priority" class="priority-badge-inline" :class="[task.priority]">
+                  {{ priorityLabel(task.priority || 'none') }}
+                </span>
+              </div>
+              <div class="task-meta">
+                <span v-if="task.dueDate" class="due-date overdue">
+                  <Calendar :size="12" />
+                  {{ formatDueDate(task.dueDate) }}
+                </span>
+                <span v-if="getProjectName(task.projectId)" class="project-badge">
+                  {{ getProjectName(task.projectId) }}
+                </span>
+              </div>
+            </div>
+            <button class="timer-btn" @click.stop="$emit('startTimer', task)">
+              <Play :size="16" />
+            </button>
+          </div>
+        </SwipeableTaskItem>
+      </div>
+
+      <!-- Today Section -->
+      <div v-if="todayOnlyTasks.length > 0" class="task-group">
+        <div class="group-header today-header">
+          <CalendarCheck :size="14" class="today-icon" />
+          <span class="group-title">Today</span>
+          <span class="group-count">{{ todayOnlyTasks.length }}</span>
+        </div>
+        <SwipeableTaskItem
+          v-for="task in todayOnlyTasks"
+          :key="task.id"
+          :task-id="task.id"
+          @edit="$emit('editTask', task)"
+          @delete="$emit('deleteTask', task)"
+        >
+          <div
+            class="mobile-task-item"
+            :class="[{ 'timer-active': isTimerActive(task.id) }]"
+            @click="$emit('clickTask', task)"
+          >
+            <div class="task-checkbox" @click.stop="$emit('toggleTask', task)">
+              <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
+                <Check v-if="task.status === 'done'" :size="14" />
+              </div>
+            </div>
+            <div class="task-content">
+              <div class="task-title-row">
+                <span class="task-title" dir="auto" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
+                <span v-if="task.priority" class="priority-badge-inline" :class="[task.priority]">
+                  {{ priorityLabel(task.priority || 'none') }}
+                </span>
+              </div>
+              <div class="task-meta">
+                <span v-if="getProjectName(task.projectId)" class="project-badge">
+                  {{ getProjectName(task.projectId) }}
+                </span>
+              </div>
+            </div>
+            <button class="timer-btn" @click.stop="$emit('startTimer', task)">
+              <Play :size="16" />
+            </button>
+          </div>
+        </SwipeableTaskItem>
+      </div>
+    </template>
+
+    <!-- Grouped Task Display -->
+    <template v-else-if="groupBy !== 'none' && filteredTasks.length > 0">
+      <div v-for="group in groupedTasks" :key="(group as any).key" class="task-group">
+        <div class="group-header">
+          <span v-if="(group as any).color" class="group-color-dot" :style="{ backgroundColor: (group as any).color }" />
+          <span class="group-title">{{ (group as any).title }}</span>
+          <span class="group-count">{{ (group as any).tasks.length }}</span>
+        </div>
+        <SwipeableTaskItem
+          v-for="task in (group as any).tasks"
           :key="task.id"
           :task-id="task.id"
           @edit="$emit('editTask', task)"
@@ -113,27 +208,32 @@
 </template>
 
 <script setup lang="ts">
-import { Inbox, Check, Play, Calendar } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { Inbox, Check, Play, Calendar, AlertCircle, CalendarCheck } from 'lucide-vue-next'
 import SwipeableTaskItem from '@/mobile/components/SwipeableTaskItem.vue'
 import { formatDueDate as formatDueDateUtil } from '@/utils/dateUtils'
 import type { Task } from '@/stores/tasks'
 import type { ViewMode, TimeFilterType } from '@/mobile/composables/useMobileInboxLogic'
 import type { GroupByType } from '@/composables/mobile/useMobileFilters'
 
-defineProps<{
+const props = defineProps<{
   filteredTasks: Task[]
   groupedTasks: unknown[]
   viewMode: ViewMode
   activeTimeFilter: TimeFilterType
   groupBy: GroupByType
   timeFilterLabel: string
-  
+
   // Helpers
   isTimerActive: (taskId: string) => boolean
   priorityLabel: (priority: string) => string
   isOverdue: (dueDate: string | Date | undefined) => boolean
   getProjectName: (projectId: string | null | undefined) => string | null
 }>()
+
+// BUG-1483: Split today tasks into overdue vs today
+const overdueTasks = computed(() => props.filteredTasks.filter(t => props.isOverdue(t.dueDate)))
+const todayOnlyTasks = computed(() => props.filteredTasks.filter(t => !props.isOverdue(t.dueDate)))
 
 defineEmits<{
   (e: 'editTask', task: Task): void
@@ -383,6 +483,23 @@ const formatDueDate = (date: string | Date) => {
 
 [dir="rtl"] .task-title-row {
   flex-direction: row-reverse;
+}
+
+/* BUG-1483: Overdue section header */
+.overdue-header {
+  border-bottom-color: var(--color-danger);
+}
+
+.overdue-icon {
+  color: var(--color-danger);
+}
+
+.overdue-title {
+  color: var(--color-danger);
+}
+
+.today-icon {
+  color: var(--color-success);
 }
 
 [dir="rtl"] .group-header {

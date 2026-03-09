@@ -1716,7 +1716,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1478**~~ | **P1** | ~~**KDE Widget: Unify dropdown & overlay styling — replace PlasmaComponents.ComboBox with QQC2 glass morphism popups for Sort/Filter; replace Kirigami.Icon with styled emoji in fullscreen overlay**~~ (✅ DONE 2026-03-07) |
 | ~~**BUG-1481**~~ | **P2** | ~~**Calendar inbox hides canvas tasks with non-canvasOrder sorts — isInInbox gate too restrictive**~~ (✅ DONE 2026-03-07) |
 | ~~**TASK-1480**~~ | **P2** | ~~**Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs**~~ (✅ DONE 2026-03-09) |
-| **BUG-1483** | **P2** | **PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section** (👀 REVIEW 2026-03-09) |
+| ~~**BUG-1483**~~ | **P2** | ~~**PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section**~~ (✅ DONE 2026-03-09) |
 | **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** |
 | **BUG-1493** | **P2** | **Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression** (🔄 IN PROGRESS 2026-03-09) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |

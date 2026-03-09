@@ -23,6 +23,8 @@ Without retry logic, these cause `TypeError: Failed to fetch` errors that crash 
 ### Location
 `src/composables/useSupabaseDatabase.ts`
 
+> **Note:** `withRetry()` was moved from `useSupabaseDatabase.ts` to `src/composables/supabase/useTasksDatabase.ts`
+
 ### The withRetry() Function
 
 ```typescript

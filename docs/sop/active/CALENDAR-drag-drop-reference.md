@@ -22,7 +22,7 @@ Comprehensive reference for calendar drag-and-drop functionality including exter
 | `src/views/CalendarView.vue` | Main calendar component |
 | `src/composables/calendar/useCalendarDayView.ts` | Day view drag handlers |
 | `src/composables/calendar/useCalendarDrag.ts` | Unified drag system |
-| `src/composables/calendar/useCalendarDragCreate.ts` | Task creation via drag |
+| `src/composables/useCalendarDragCreate.ts` | Task creation via drag (actual location) |
 
 ### Data Flow
 

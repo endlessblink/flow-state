@@ -291,7 +291,7 @@ npx tauri signer generate -w ~/.tauri/flowstate.key
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/endlessblink/flow-state/releases/latest/download/latest.json"
+        "https://in-theflow.com/updates/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6..."
     }
@@ -394,6 +394,15 @@ cp /usr/share/applications/FlowState.desktop ~/Desktop/
 
 ### Update Version
 
+Version must be bumped in **all 3 files** (they must match):
+
+Edit `package.json`:
+```json
+{
+  "version": "0.2.0"
+}
+```
+
 Edit `src-tauri/tauri.conf.json`:
 ```json
 {
@@ -401,7 +410,7 @@ Edit `src-tauri/tauri.conf.json`:
 }
 ```
 
-Also update `src-tauri/Cargo.toml`:
+Edit `src-tauri/Cargo.toml`:
 ```toml
 [package]
 version = "0.2.0"

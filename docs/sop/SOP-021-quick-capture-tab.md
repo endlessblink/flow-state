@@ -52,7 +52,7 @@ The Quick Capture Tab is a feature integrated into the QuickSort view that enabl
 
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl+Shift+T` | Opens QuickSort view with Capture tab active |
+| `Ctrl+Shift+T` | Opens QuickSort view with Capture tab active (Note: shortcut may not be active — verify in `useAppShortcuts.ts`) |
 
 ## Architecture
 
@@ -153,7 +153,7 @@ if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'T') {
 
 ## Testing Checklist
 
-- [ ] `Ctrl+Shift+T` navigates to QuickSort with Capture tab active
+- [ ] `Ctrl+Shift+T` navigates to QuickSort with Capture tab active (verify shortcut is registered in `useAppShortcuts.ts`)
 - [ ] Can enter title, description, priority, and due date
 - [ ] "Add Task" adds task to pending list with metadata displayed
 - [ ] Pending list shows all task metadata without truncation

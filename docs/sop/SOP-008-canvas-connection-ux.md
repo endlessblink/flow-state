@@ -43,7 +43,7 @@ Dragging a connection from a task's source handle and dropping it on empty canva
 
 ### File: `src/assets/canvas-view-overrides.css`
 
-**Handle Hover Glow** (~line 280):
+**Handle Hover Glow** (~line 280, approximate):
 ```css
 .vue-flow__handle:hover {
     width: 16px !important;
@@ -54,7 +54,7 @@ Dragging a connection from a task's source handle and dropping it on empty canva
 }
 ```
 
-**Connection Line While Dragging** (~line 605):
+**Connection Line While Dragging** (~line 605, approximate):
 ```css
 .vue-flow__connection-path {
     stroke: var(--color-navigation) !important;
@@ -66,7 +66,7 @@ Dragging a connection from a task's source handle and dropping it on empty canva
 }
 ```
 
-**Permanent Edge Glow** (~line 140):
+**Permanent Edge Glow** (~line 140, approximate):
 ```css
 .vue-flow__edge-path {
     stroke: var(--color-navigation);

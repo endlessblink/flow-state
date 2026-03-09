@@ -31,9 +31,9 @@
 
 ```
 docs/sop/
-├── *.md           # Numbered SOPs (SOP-001 to SOP-025)
-├── active/        # Category-prefixed active SOPs (12 files)
-├── canvas/        # Canvas system documentation (4 files)
+├── *.md           # Numbered SOPs (SOP-001 to SOP-064)
+├── active/        # Category-prefixed active SOPs (13 files)
+├── canvas/        # Canvas system documentation (7 files)
 ├── reference/     # Implementation guides (3 files)
 ├── deployment/    # PWA/VPS deployment guides (2 files)
 └── archived/      # Historical fixes (45 files)
@@ -43,7 +43,7 @@ docs/sop/
 
 ## Active SOPs by Location
 
-### Root Directory (17 files)
+### Root Directory (56 files)
 
 | File | Description |
 |------|-------------|
@@ -65,9 +65,45 @@ docs/sop/
 | `SOP-025-tauri-vue-flow-reactivity.md` | Tauri Vue Flow reactivity |
 | `SOP-026-custom-domain-deployment.md` | Custom domain (in-theflow.com) setup |
 | `SOP-027-mobile-testing-workflow.md` | Mobile testing via Playwright viewport |
+| `SOP-028-dev-maestro-task-sync.md` | Dev Maestro task status sync issues |
+| `SOP-029-ai-verification-hooks.md` | AI "done" claim verification system |
+| `SOP-030-doppler-secrets-management.md` | Doppler secrets management |
+| `SOP-031-cors-configuration.md` | CORS configuration for self-hosted Supabase |
+| `SOP-032-cloudflare-cache-mime-prevention.md` | Cloudflare cache MIME type prevention |
+| `SOP-033-cloudflare-ci-cd-auto-purge.md` | Cloudflare CI/CD automatic cache purge |
+| `SOP-034-tauri-linux-microphone.md` | Tauri Linux microphone limitation |
+| `SOP-035-auth-initialization-race-fix.md` | Auth initialization race condition fix |
+| `SOP-036-supabase-jwt-key-regeneration.md` | Supabase JWT key regeneration |
+| `SOP-037-tauri-updater-signing.md` | **Tauri in-app auto-updater & signing** |
+| `SOP-038-kde-widget-supabase-config.md` | KDE widget Supabase configuration |
+| `SOP-039-timer-active-highlight-calendar.md` | Timer-active highlight for calendar events |
+| `SOP-040-cross-device-position-sync.md` | Cross-device position sync |
+| `SOP-041-kde-widget-combobox-popup.md` | KDE Plasma 6 widget ComboBox popup handling |
+| `SOP-042-rtl-support-pattern.md` | RTL support pattern for text inputs |
+| `SOP-043-kde-plasma6-notifications.md` | KDE Plasma 6 widget notifications |
+| `SOP-044-vps-dns-oauth-troubleshooting.md` | VPS DNS & OAuth redirect troubleshooting |
+| `SOP-045-tauri-appimage-update-workflow.md` | Tauri AppImage update workflow |
+| `SOP-046-weekly-plan-ai-pipeline.md` | Weekly plan AI pipeline |
+| `SOP-047-tauri-webkit-drag-drop.md` | Tauri WebKitGTK drag-and-drop fix |
+| `SOP-048-mobile-route-guards.md` | Mobile route guards |
+| `SOP-049-dev-maestro-parser.md` | Dev-Maestro MASTER_PLAN.md parser rules |
+| `SOP-050-store-auth-initialization.md` | Store auth-wait initialization pattern |
+| `SOP-051-mobile-client.md` | Self-hosted mobile client for Claude Code + Dev-Maestro |
+| `SOP-052-data-persistence-patterns.md` | Data persistence patterns |
+| `SOP-053-tauri-linux-css-limitations.md` | Tauri Linux CSS limitations (WebKitGTK) |
+| `SOP-054-realtime-sync-position-preservation.md` | Realtime sync position preservation |
+| `SOP-055-whisper-edge-function.md` | Whisper voice transcription via Supabase Edge Function |
+| `SOP-056-inbox-panel-auto-size.md` | Inbox panel auto-size width |
 | `SOP-057-google-drive-attachments.md` | **Google Drive Attachments** (self-hosted setup guide) |
+| `SOP-058-naive-ui-date-picker-styling.md` | Naive UI date picker styling |
+| `SOP-059-stress-testing.md` | Stress testing system |
+| `SOP-060-calendar-time-indicator.md` | Calendar current time indicator |
+| `SOP-061-mobile-pwa-network-resilience.md` | Mobile PWA network resilience |
+| `SOP-062-route-error-boundary.md` | Route error boundary for dynamic import failures |
+| `SOP-063-mobile-swipe-gestures.md` | Mobile swipe gesture implementation |
+| `SOP-064-task-permanent-delete.md` | Task permanent delete architecture |
 
-### Active Directory (12 files)
+### Active Directory (13 files)
 
 | File | Description |
 |------|-------------|
@@ -76,6 +112,7 @@ docs/sop/
 | `SOP-016-guest-mode-auth-flow.md` | Guest mode authentication |
 | `SOP-022-skills-config-sync.md` | Skills configuration auto-sync |
 | `SOP-AUTH-reliability.md` | Auth reliability patterns |
+| `SOP-DATE-FIELD-SYNC.md` | Unified task property sync system (BUG-1321) |
 | `STYLING-glassmorphism-guide.md` | Glassmorphism CSS guide |
 | `SYNC-conflict-resolution.md` | Conflict detection/resolution |
 | `SYNC-system-consolidation.md` | Sync system consolidation |
@@ -84,7 +121,7 @@ docs/sop/
 | `TIMER-sync-architecture.md` | Cross-device timer sync |
 | `UNDO-system-architecture.md` | Undo/redo architecture |
 
-### Canvas Directory (4 files)
+### Canvas Directory (7 files)
 
 | File | Description |
 |------|-------------|
@@ -92,6 +129,9 @@ docs/sop/
 | `CANVAS-POSITION-SYSTEM.md` | Position/coordinate system |
 | `CANVAS-DRAG-DROP.md` | Drag, drop, selection |
 | `CANVAS-DEBUGGING.md` | Debugging tools |
+| `CANVAS-DUPLICATE-DETECTION.md` | Duplicate node detection |
+| `CANVAS-NODE-EXTENT.md` | Node extent/boundary system |
+| `PENDING-WRITE-REGISTRY.md` | Pending write registry pattern |
 
 ### Reference Directory (3 files)
 

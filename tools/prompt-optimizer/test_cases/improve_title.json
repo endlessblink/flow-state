@@ -1,0 +1,127 @@
+[
+  {
+    "input": "fix the thing",
+    "context": "Web app project",
+    "expected": "Fix broken checkout redirect on confirmation page"
+  },
+  {
+    "input": "detaild canvas סרטון לפרסם",
+    "context": "Content creation",
+    "expected": "לפרסם סרטון detailed canvas"
+  },
+  {
+    "input": "stuff for meeting",
+    "context": "Team management",
+    "expected": "Prepare agenda for Monday standup meeting"
+  },
+  {
+    "input": "עיצוב",
+    "context": "Design project",
+    "expected": "עיצוב"
+  },
+  {
+    "input": "do the thing john asked",
+    "context": "General tasks",
+    "expected": "Complete task requested by John"
+  },
+  {
+    "input": "לסדר את הבאגים בדף הבית",
+    "context": "Web development",
+    "expected": "לתקן באגים בדף הבית"
+  },
+  {
+    "input": "fix bug",
+    "context": "Software development",
+    "expected": "Fix bug"
+  },
+  {
+    "input": "update teh readme",
+    "context": "Documentation",
+    "expected": "Update the README with setup instructions"
+  },
+  {
+    "input": "css stuff",
+    "context": "Frontend development",
+    "expected": "Fix CSS layout issues on dashboard page"
+  },
+  {
+    "input": "לבדוק את הדבר של יוסי",
+    "context": "Team tasks",
+    "expected": "לבדוק את המשימה של יוסי"
+  },
+  {
+    "input": "emails",
+    "context": "Communication",
+    "expected": "Reply to pending client emails"
+  },
+  {
+    "input": "refactr the auth modul",
+    "context": "Backend development",
+    "expected": "Refactor the auth module for token refresh"
+  },
+  {
+    "input": "make it work on mobile",
+    "context": "Responsive design",
+    "expected": "Fix mobile viewport layout on task list page"
+  },
+  {
+    "input": "לכתוב טסטים",
+    "context": "Testing",
+    "expected": "לכתוב טסטים ליחידת האימות"
+  },
+  {
+    "input": "Deploy the new version to production",
+    "context": "DevOps",
+    "expected": "Deploy the new version to production"
+  },
+  {
+    "input": "look into perf",
+    "context": "Performance optimization",
+    "expected": "Investigate performance bottleneck in task loading"
+  },
+  {
+    "input": "api thing",
+    "context": "Backend development",
+    "expected": "Implement REST API endpoint for task creation"
+  },
+  {
+    "input": "הדבר עם הכפתורים",
+    "context": "UI development",
+    "expected": "לתקן עיצוב הכפתורים בממשק"
+  },
+  {
+    "input": "write tests for teh new feature",
+    "context": "Testing",
+    "expected": "Write tests for the new feature"
+  },
+  {
+    "input": "cleanup",
+    "context": "Code maintenance",
+    "expected": "Clean up unused imports and dead code"
+  },
+  {
+    "input": "לעדכן את המסמך של הפרויקט",
+    "context": "Documentation",
+    "expected": "לעדכן את תיעוד הפרויקט"
+  },
+  {
+    "input": "that drag n drop issue",
+    "context": "Canvas feature",
+    "expected": "Fix drag and drop not working on canvas tasks"
+  },
+  {
+    "input": "review pr",
+    "context": "Code review",
+    "expected": "Review pull request for auth module changes"
+  },
+  {
+    "input": "לסיים את הפיצ'ר של הטיימר",
+    "context": "Timer feature",
+    "expected": "לסיים פיצ'ר הטיימר"
+  },
+  {
+    "input": "somthing about the navbar",
+    "context": "Navigation UI",
+    "expected": "Fix something in the navbar component"
+  }
+]

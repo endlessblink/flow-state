@@ -24,6 +24,13 @@
       {{ title }}
     </span>
     <span
+      v-if="isPinned"
+      class="pin-badge"
+      title="Pinned"
+    >
+      <Pin :size="10" />
+    </span>
+    <span
       v-if="hasSubtasks"
       class="subtask-count"
       :class="{
@@ -37,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronRight, Pin } from 'lucide-vue-next'
 
 defineProps<{
   title: string
@@ -50,6 +57,7 @@ defineProps<{
   totalSubtasks: number
   isAllSubtasksCompleted: boolean
   isExpanded?: boolean
+  isPinned?: boolean
 }>()
 
 defineEmits<{
@@ -79,6 +87,23 @@ defineEmits<{
 .task-row__title-text--completed {
   text-decoration: line-through;
   color: var(--text-tertiary);
+}
+
+/* Pin badge — inline after title text */
+.pin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-soft);
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 35%, transparent);
+  color: var(--brand-primary);
+  backdrop-filter: blur(8px);
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 /* Subtask count */

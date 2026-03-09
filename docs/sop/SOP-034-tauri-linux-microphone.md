@@ -77,9 +77,9 @@ FlowState handles this gracefully:
 
 ### Relevant Code
 
-- `src/layouts/AppSidebar.vue` - Voice mode toggle UI
+- `src/layouts/MainLayout.vue` - Voice mode toggle UI
 - `src/composables/useWhisperSpeech.ts` - Whisper transcription
-- `src/composables/useBrowserVoice.ts` - Browser Speech API
+- `src/composables/useBrowserVoice.ts` - Browser Speech API (may have been removed or renamed)
 
 ## References
 

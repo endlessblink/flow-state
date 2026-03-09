@@ -5,6 +5,17 @@ import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
+import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
+
+export interface PositionedExternalEvent extends ExternalCalendarEvent {
+  top: number        // startMinutes from midnight
+  height: number     // durationMinutes
+  formattedTime: string
+  column: number
+  totalColumns: number
+  leftPercent: number
+  widthPercent: number
+}
 
 export interface TimeSlot {
   id: string
@@ -43,7 +54,7 @@ function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: 
   return { hour: snappedHour, minute: snappedMinute }
 }
 
-export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>, timerGrowthMap?: Ref<Map<string, number>>) {
+export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>, timerGrowthMap?: Ref<Map<string, number>>, externalEvents?: Ref<ExternalCalendarEvent[]>) {
   const taskStore = useTaskStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
   const { isDragging: globalIsDragging, startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
@@ -291,6 +302,109 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       // Return empty array to prevent template rendering failure
       return []
     }
+  })
+
+  // TASK-1496: Unified overlap calculation — merges local + external events side-by-side
+  const positionedExternalEvents = computed<PositionedExternalEvent[]>(() => {
+    const extEvents = externalEvents?.value ?? []
+    const dateStr = getDateString(currentDate.value)
+
+    // Filter to non-allDay events for current date
+    const todayExternals = extEvents.filter(ext => {
+      if (ext.isAllDay) return false
+      const d = ext.startTime
+      const eventDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      return eventDate === dateStr
+    })
+
+    if (todayExternals.length === 0) return []
+
+    // Convert external events to slot format for overlap calculation
+    interface MergedSlotItem {
+      id: string
+      startSlot: number
+      slotSpan: number
+      column?: number
+      totalColumns?: number
+      isExternal: boolean
+      extRef?: ExternalCalendarEvent
+    }
+
+    const localItems: MergedSlotItem[] = calendarEvents.value.map(ev => ({
+      id: ev.id,
+      startSlot: ev.startSlot,
+      slotSpan: ev.slotSpan,
+      column: ev.column,
+      totalColumns: ev.totalColumns,
+      isExternal: false,
+    }))
+
+    const externalItems: MergedSlotItem[] = todayExternals.map(ext => {
+      const hour = ext.startTime.getHours()
+      const minute = ext.startTime.getMinutes()
+      const startSlot = hour * 2 + (minute >= 30 ? 1 : 0)
+      const durationMinutes = Math.max(15, (ext.endTime.getTime() - ext.startTime.getTime()) / 60000)
+      const slotSpan = Math.max(1, Math.ceil(durationMinutes / 30))
+      return {
+        id: `ext-${ext.id}`,
+        startSlot,
+        slotSpan,
+        isExternal: true,
+        extRef: ext,
+      }
+    })
+
+    const merged = [...localItems, ...externalItems]
+    const positioned = calculateOverlappingPositions(merged)
+
+    // Propagate updated column/totalColumns back to local CalendarEvents so getSlotTaskStyle renders correctly
+    for (const item of positioned) {
+      if (!item.isExternal) {
+        const localEvent = calendarEvents.value.find(ev => ev.id === item.id)
+        if (localEvent) {
+          localEvent.column = item.column ?? 0
+          localEvent.totalColumns = item.totalColumns ?? 1
+        }
+      }
+    }
+
+    // Build positioned external events with left/width percentages
+    const results: PositionedExternalEvent[] = []
+    for (const item of positioned) {
+      if (!item.isExternal || !item.extRef) continue
+      const ext = item.extRef
+      const column = item.column ?? 0
+      const totalColumns = item.totalColumns ?? 1
+      const startMinutes = ext.startTime.getHours() * 60 + ext.startTime.getMinutes()
+      const durationMinutes = Math.max(15, (ext.endTime.getTime() - ext.startTime.getTime()) / 60000)
+
+      let leftPercent: number
+      let widthPercent: number
+
+      if (totalColumns <= 1) {
+        leftPercent = 0
+        widthPercent = 100
+      } else {
+        const gapPercent = 1
+        const totalGaps = totalColumns - 1
+        const availableWidth = 100 - (totalGaps * gapPercent)
+        widthPercent = availableWidth / totalColumns
+        leftPercent = (widthPercent + gapPercent) * column
+      }
+
+      results.push({
+        ...ext,
+        top: startMinutes,
+        height: durationMinutes,
+        formattedTime: `${ext.startTime.getHours().toString().padStart(2, '0')}:${ext.startTime.getMinutes().toString().padStart(2, '0')}`,
+        column,
+        totalColumns,
+        leftPercent,
+        widthPercent,
+      })
+    }
+
+    return results
   })
 
   /**
@@ -870,6 +984,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     hours,
     timeSlots,
     calendarEvents,
+    positionedExternalEvents,
     dragGhost,
     dragMode,
 

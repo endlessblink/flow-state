@@ -1,7 +1,7 @@
 <template>
   <div
     class="task-card"
-    :class="[{ selected: isSelected, 'is-done': isDone }]"
+    :class="[{ selected: isSelected, 'is-done': isDone, compact }]"
     :data-priority="task.priority || 'none'"
     :data-status="task.status"
     draggable="true"
@@ -116,6 +116,7 @@ const props = defineProps<{
   task: Task
   isSelected: boolean
   showCanvasBadge?: boolean
+  compact?: boolean
 }>()
 
 defineEmits<{
@@ -377,6 +378,24 @@ const dueStatus = computed(() => {
 
 .task-card.is-done .task-content--inbox {
   padding-inline-start: var(--space-5);
+}
+
+/* Compact mode for pinned tasks */
+.task-card.compact {
+  padding: var(--space-2);
+}
+
+.task-card.compact .task-content--inbox {
+  padding-inline-start: var(--space-1);
+}
+
+.task-card.compact .task-title {
+  -webkit-line-clamp: 1;
+  margin-bottom: 0;
+}
+
+.task-card.compact .task-metadata {
+  display: none;
 }
 
 .not-on-canvas-badge {

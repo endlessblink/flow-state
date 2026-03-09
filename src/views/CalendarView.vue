@@ -100,7 +100,6 @@
         :hovered-event-id="hoveredEventId"
         :selected-event-ids="selectedEventIds"
         :resize-preview="resizePreview"
-        :external-events="getMergedEventsForDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`)"
         :is-slot-in-create-range="dragCreate.isSlotInCreateRange"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
@@ -341,10 +340,6 @@ const calendarScroll = useCalendarScroll()
 const timerIntegration = useCalendarTimerIntegration(currentDate)
 const { timerGrowthMap, startTimerOnCalendarEvent } = timerIntegration
 
-const dayView = useCalendarDayView(currentDate, statusFilter, timerGrowthMap)
-const weekView = useCalendarWeekView(currentDate, statusFilter, timerGrowthMap)
-const monthView = useCalendarMonthView(currentDate, statusFilter)
-
 // TASK-1317: External calendar sync
 const externalCalendar = useExternalCalendar()
 const googleCalendar = useGoogleCalendar()
@@ -363,12 +358,23 @@ function getMergedEventsForDate(dateString: string) {
   })
 }
 
+// TASK-1496: Pass current date's external events into dayView for unified overlap calculation
+const currentDateExternalEvents = computed(() => {
+  const d = currentDate.value
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return getMergedEventsForDate(dateStr)
+})
+
+const dayView = useCalendarDayView(currentDate, statusFilter, timerGrowthMap, currentDateExternalEvents)
+const weekView = useCalendarWeekView(currentDate, statusFilter, timerGrowthMap)
+const monthView = useCalendarMonthView(currentDate, statusFilter)
+
 // Reactive current time for time indicator
 const currentTime = ref(new Date())
 
 
 // Destructure commonly used items from composables
-const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart: _rawEventDragStart, handleEventDragEnd: _rawEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
+const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart: _rawEventDragStart, handleEventDragEnd: _rawEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle, positionedExternalEvents } = dayView
 
 
 const { workingHours, weekDays, weekEvents, getWeekEventStyle, isCurrentWeekTimeCell, startWeekResize, resizePreview: weekResizePreview } = weekView
@@ -473,7 +479,8 @@ provide('calendar-helpers', {
   handleRemoveFromCalendar,
   getWeekEventStyle,
   isCurrentWeekTimeCell,
-  getExternalEventsForDate: getMergedEventsForDate
+  getExternalEventsForDate: getMergedEventsForDate,
+  positionedExternalEvents
 })
 
 // Positioning and sizing for slot tasks are handled by getSlotTaskStyle from useCalendarDayView

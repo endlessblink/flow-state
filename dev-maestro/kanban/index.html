@@ -476,7 +476,8 @@
       color: var(--brand-primary);
     }
 
-    .done-column-hidden {
+    .done-column-hidden,
+    .monitored-column.done-column-hidden {
       display: none !important;
     }
 
@@ -498,11 +499,13 @@
       color: var(--text-secondary);
     }
 
-    .column-content.collapsed {
+    .column-content.collapsed,
+    .monitored-column-content.collapsed {
       display: none !important;
     }
 
-    .column-header.collapsed .collapse-toggle {
+    .column-header.collapsed .collapse-toggle,
+    .monitored-column-header.collapsed .collapse-toggle {
       transform: rotate(-90deg);
     }
 
@@ -592,7 +595,9 @@
       transform: rotate(2deg);
     }
 
-    .column-content.drag-over {
+    .column-content.drag-over,
+    .monitored-column-content.drag-over,
+    .section-cards.drag-over {
       background: var(--brand-subtle);
       border: 2px dashed var(--brand-primary);
       border-radius: var(--radius-md);
@@ -643,27 +648,167 @@
       overflow: hidden;
     }
 
-    /* KANBAN BOARD */
-    .kanban-board {
+    /* KANBAN BOARD - Vertical two-section layout */
+    .kanban-vertical {
       display: flex;
-      gap: 20px;
+      flex-direction: column;
       padding: 20px;
       flex: 1;
-      overflow-x: auto;
-      overflow-y: hidden;
-      align-items: stretch;
+      overflow-y: auto;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .kanban-section {
+      background: var(--surface-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .kanban-section-top {
+      flex-shrink: 0;
+      max-height: 40vh;
+    }
+
+    .kanban-section-bottom {
+      flex: 1;
+      min-height: 200px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      font-weight: 600;
+      font-size: var(--font-base);
+      text-transform: uppercase;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      border-bottom: 2px solid var(--border-medium);
+    }
+
+    .section-header.in-progress {
+      border-bottom-color: var(--color-warning);
+    }
+
+    .section-header.monitored {
+      border-bottom-color: var(--brand-primary);
+    }
+
+    .section-header .icon svg {
+      stroke: currentColor;
+    }
+
+    .section-title {
+      flex: 1;
+    }
+
+    .section-count {
+      background: var(--surface-tertiary);
+      color: var(--text-muted);
+      padding: 2px 10px;
+      border-radius: var(--radius-full);
+      font-size: var(--font-sm);
+      font-weight: normal;
+    }
+
+    .section-content {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .section-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .section-cards:empty::after {
+      content: 'No tasks';
+      display: block;
+      text-align: center;
+      padding: 24px;
+      color: var(--text-subtle);
+      grid-column: 1 / -1;
+    }
+
+    /* Monitored sub-columns */
+    .monitored-columns {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 0;
+      height: 100%;
+    }
+
+    .monitored-column {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border-subtle);
+      min-height: 0;
+    }
+
+    .monitored-column:last-child {
+      border-right: none;
+    }
+
+    .monitored-column-header {
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: var(--font-sm);
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border-medium);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .monitored-column-header.todo {
+      border-bottom-color: var(--color-danger);
+    }
+
+    .monitored-column-header.paused {
+      border-bottom-color: var(--color-paused);
+    }
+
+    .monitored-column-header.review {
+      border-bottom-color: var(--color-review);
+    }
+
+    .monitored-column-header.done {
+      border-bottom-color: var(--color-success);
+    }
+
+    .monitored-column-content {
+      flex: 1;
+      padding: 12px;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      min-height: 80px;
+    }
+
+    /* Legacy classes kept for JS compatibility */
+    .kanban-board {
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+      gap: 16px;
     }
 
     .kanban-column {
-      flex: 0 0 300px;
-      width: 300px;
-      background: var(--surface-secondary);
-      border-radius: var(--radius-lg);
-      display: flex;
-      flex-direction: column;
-      max-height: 100%;
-      overflow: hidden;
-      border: 1px solid var(--border-subtle);
+      display: none;
     }
 
     .column-header {
@@ -3929,47 +4074,55 @@
 
       <!-- KANBAN VIEW -->
       <div class="view-container active" id="kanban-view">
-        <div class="kanban-board" id="kanban-board">
-          <div class="kanban-column">
-            <div class="column-header todo"><span class="icon"><svg viewBox="0 0 24 24">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <line x1="9" y1="9" x2="15" y2="9" />
-                  <line x1="9" y1="13" x2="15" y2="13" />
-                  <line x1="9" y1="17" x2="12" y2="17" />
-                </svg></span> Planned</div>
-            <div class="column-content" id="column-todo"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header in-progress"><span class="icon"><svg viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg></span> In Progress</div>
-            <div class="column-content" id="column-in-progress"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header paused"><span class="icon"><svg viewBox="0 0 24 24">
-                  <rect x="6" y="4" width="4" height="16" />
-                  <rect x="14" y="4" width="4" height="16" />
-                </svg></span> Paused</div>
-            <div class="column-content" id="column-paused"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header review"><span class="icon"><svg viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7z" />
-                </svg></span> Review</div>
-            <div class="column-content" id="column-review"></div>
-          </div>
-          <div class="kanban-column">
-            <div class="column-header done" id="done-header">
-              <span class="column-header-text"><span class="icon"><svg viewBox="0 0 24 24">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                  </svg></span> Done</span>
-              <span class="collapse-count" id="done-count">0</span>
-              <button class="collapse-toggle" onclick="toggleDoneColumn()" title="Collapse/Expand">▼</button>
+        <div class="kanban-vertical" id="kanban-board">
+          <!-- IN PROGRESS section - pinned at top -->
+          <div class="kanban-section kanban-section-top">
+            <div class="section-header in-progress">
+              <span class="icon"><svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg></span>
+              <span class="section-title">In Progress</span>
+              <span class="section-count" id="section-count-inprogress">0</span>
             </div>
-            <div class="column-content" id="column-done"></div>
+            <div class="section-content" id="section-in-progress">
+              <div class="section-cards" id="column-in-progress"></div>
+            </div>
+          </div>
+          <!-- MONITORED section - fills remaining space -->
+          <div class="kanban-section kanban-section-bottom">
+            <div class="section-header monitored">
+              <span class="icon"><svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7z" />
+              </svg></span>
+              <span class="section-title">Monitored</span>
+              <span class="section-count" id="section-count-monitored">0</span>
+            </div>
+            <div class="section-content" id="section-monitored">
+              <div class="monitored-columns">
+                <div class="monitored-column">
+                  <div class="monitored-column-header todo">Planned</div>
+                  <div class="monitored-column-content" id="column-todo"></div>
+                </div>
+                <div class="monitored-column">
+                  <div class="monitored-column-header paused">Paused</div>
+                  <div class="monitored-column-content" id="column-paused"></div>
+                </div>
+                <div class="monitored-column">
+                  <div class="monitored-column-header review">Review</div>
+                  <div class="monitored-column-content" id="column-review"></div>
+                </div>
+                <div class="monitored-column">
+                  <div class="monitored-column-header done" id="done-header">
+                    <span>Done</span>
+                    <span class="collapse-count" id="done-count">0</span>
+                    <button class="collapse-toggle" onclick="toggleDoneColumn()" title="Collapse/Expand">&#9660;</button>
+                  </div>
+                  <div class="monitored-column-content" id="column-done"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -5199,6 +5352,12 @@
           }
         }
 
+        // Update section counts for vertical layout
+        const inProgressCountEl = document.getElementById('section-count-inprogress');
+        if (inProgressCountEl) inProgressCountEl.textContent = tasks.inProgress.length;
+        const monitoredCountEl = document.getElementById('section-count-monitored');
+        if (monitoredCountEl) monitoredCountEl.textContent = tasks.todo.length + tasks.paused.length + tasks.review.length + tasks.done.length;
+
         // Initialize features after render
         loadSavedFilters();
         applyFilters();
@@ -5213,10 +5372,10 @@
         const board = document.getElementById('kanban-board');
         if (board) {
           board.innerHTML = `
-          <div style="text-align: center; padding: 40px; color: #ef4444;">
+          <div style="text-align: center; padding: 40px; color: var(--color-danger);">
             <h3>${ICONS.issue}Error Loading Kanban Board</h3>
             <p>Failed to load tasks: ${error.message}</p>
-            <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Reload</button>
+            <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: var(--color-info); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Reload</button>
           </div>
         `;
         }
@@ -5933,7 +6092,7 @@
     function applyHideDone(hide) {
       // Find the Done column (the kanban-column containing column-done)
       const doneContent = document.getElementById('column-done');
-      const doneColumn = doneContent?.closest('.kanban-column');
+      const doneColumn = doneContent?.closest('.monitored-column');
       if (doneColumn) {
         if (hide) {
           doneColumn.classList.add('done-column-hidden');
@@ -6125,13 +6284,12 @@
         else if (taskId.startsWith('BUG-')) bugs++;
         else if (taskId.startsWith('ISSUE-')) issues++;
 
-        // Get column to determine status
-        const column = card.closest('.kanban-column');
-        const header = column?.querySelector('.column-header');
-        if (header) {
-          if (header.classList.contains('todo')) todo++;
-          else if (header.classList.contains('in-progress')) inProgress++;
-          else if (header.classList.contains('done')) done++;
+        // Get column to determine status by checking parent container ID
+        const parent = card.closest('[id^="column-"]');
+        if (parent) {
+          if (parent.id === 'column-todo') todo++;
+          else if (parent.id === 'column-in-progress') inProgress++;
+          else if (parent.id === 'column-done') done++;
         }
       });
 
@@ -6191,7 +6349,7 @@
     // DRAG AND DROP FUNCTIONALITY
     function initDragAndDrop() {
       const cards = document.querySelectorAll('.task-card');
-      const columns = document.querySelectorAll('.column-content');
+      const columns = document.querySelectorAll('.monitored-column-content, .section-cards');
 
       cards.forEach(card => {
         card.addEventListener('dragstart', (e) => {
@@ -6480,9 +6638,9 @@
         position: fixed;
         top: 20px;
         right: 20px;
-        background: #1a1a1a;
-        color: #10b981;
-        border: 1px solid #10b981;
+        background: var(--border-subtle); /* #1a1a1a */
+        color: var(--color-success); /* #10b981 */
+        border: 1px solid var(--color-success); /* #10b981 */
         padding: 12px 20px;
         border-radius: var(--radius-sm);
         z-index: 1000;

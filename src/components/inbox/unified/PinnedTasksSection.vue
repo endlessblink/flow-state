@@ -20,6 +20,7 @@
         :task="task"
         :is-selected="selectedTaskIds.has(task.id)"
         :show-canvas-badge="showCanvasBadge"
+        :compact="true"
         @drag-start="$emit('dragStart', $event, task)"
         @drag-end="$emit('dragEnd')"
         @task-click="$emit('taskClick', $event, task)"

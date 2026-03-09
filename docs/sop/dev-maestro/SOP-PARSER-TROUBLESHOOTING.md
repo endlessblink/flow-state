@@ -4,6 +4,8 @@
 **Last Updated**: January 23, 2026
 **Related Bug**: TASK-323 parsing fix
 
+> **Note (March 2026):** Dev-Maestro TUI was rewritten in React/Ink 5. The parser also lives at `~/.dev-maestro/tui/src/lib/masterplan-parser.js`. The file references below still describe the original `dev-maestro/kanban/index.html` parser (web Kanban), which remains in use alongside the TUI.
+
 ## Overview
 
 Dev Maestro parses `docs/MASTER_PLAN.md` to display tasks in the Kanban view. When tasks show incorrect status (e.g., "PLANNED" instead of "DONE"), the issue is usually in the parser logic in `dev-maestro/kanban/index.html`.

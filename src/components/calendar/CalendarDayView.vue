@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { inject, computed } from 'vue'
+import { inject } from 'vue'
 import { Play } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
-import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
-import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
+import type { TimeSlot, PositionedExternalEvent } from '@/composables/calendar/useCalendarDayView'
+import type { ComputedRef } from 'vue'
 
 const props = defineProps<{
   timeSlots: TimeSlot[]
@@ -24,7 +24,6 @@ const props = defineProps<{
     previewDuration: number
     direction: 'top' | 'bottom'
   } | null
-  externalEvents?: ExternalCalendarEvent[]
   isSlotInCreateRange?: (slot: TimeSlot) => boolean
 }>()
 
@@ -46,22 +45,6 @@ defineEmits<{
   (e: 'startTimer', calEvent: CalendarEvent): void
   (e: 'startResize', event: MouseEvent, calEvent: CalendarEvent, direction: 'top' | 'bottom'): void
 }>()
-// Compute positioned external events for time grid
-const positionedExternalEvents = computed(() => {
-  if (!props.externalEvents?.length) return []
-  return props.externalEvents
-    .filter(e => !e.isAllDay)
-    .map(e => {
-      const startMinutes = e.startTime.getHours() * 60 + e.startTime.getMinutes()
-      const durationMinutes = Math.max(15, (e.endTime.getTime() - e.startTime.getTime()) / 60000)
-      return {
-        ...e,
-        top: startMinutes,
-        height: durationMinutes,
-        formattedTime: `${e.startTime.getHours().toString().padStart(2, '0')}:${e.startTime.getMinutes().toString().padStart(2, '0')}`
-      }
-    })
-})
 // Inject helpers from parent CalendarView
 interface CalendarHelpers {
   formatHour: (hour: number) => string
@@ -78,6 +61,7 @@ interface CalendarHelpers {
   getTaskStatus: (event: CalendarEvent) => string
   getStatusLabel: (event: CalendarEvent) => string
   getStatusIcon: (status: string) => string
+  positionedExternalEvents: ComputedRef<PositionedExternalEvent[]>
 }
 const {
   formatHour,
@@ -93,7 +77,8 @@ const {
   getPriorityLabel,
   getTaskStatus,
   getStatusLabel,
-  getStatusIcon
+  getStatusIcon,
+  positionedExternalEvents
 } = inject('calendar-helpers') as CalendarHelpers
 
 </script>
@@ -277,7 +262,7 @@ const {
         </div>
       </div>
 
-      <!-- TASK-1317: External calendar events (read-only overlays) -->
+      <!-- TASK-1317 + TASK-1496: External calendar events — side-by-side with local events via unified overlap calc -->
       <div
         v-for="ext in positionedExternalEvents"
         :key="`ext-${ext.id}`"
@@ -289,8 +274,11 @@ const {
         :style="{
           top: `${ext.top}px`,
           height: `${ext.height}px`,
+          left: `${ext.leftPercent}%`,
+          width: `calc(${ext.widthPercent}% - 4px)`,
           backgroundColor: ext.color + '20',
-          borderColor: ext.color
+          borderColor: ext.color,
+          zIndex: 10 + ext.column
         }"
         :title="`${ext.formattedTime} — ${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
       >
@@ -856,17 +844,15 @@ const {
   opacity: 0.7;
 }
 
-/* TASK-1317 + TASK-1283: External calendar events (read-only overlays) */
+/* TASK-1317 + TASK-1283 + TASK-1496: External calendar events (read-only overlays, side-by-side positioning) */
+/* left/width/z-index are set via inline style from positionedExternalEvents */
 .external-event {
   position: absolute;
-  left: 55%;
-  right: 4px;
   min-height: 18px;
   border-radius: var(--radius-sm);
   padding: 2px var(--space-1_5);
   color: var(--text-primary);
   pointer-events: auto;
-  z-index: 3;
   overflow: hidden;
   border-style: solid;
   border-width: 1px 1px 1px 3px;

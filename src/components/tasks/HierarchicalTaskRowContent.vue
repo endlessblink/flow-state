@@ -54,9 +54,6 @@
       </label>
     </div>
 
-    <!-- Pin indicator -->
-    <Pin v-if="task.isPinned" :size="14" class="pin-indicator" />
-
     <!-- Title Cell -->
     <TaskRowTitle
       :title="task.title"
@@ -69,6 +66,7 @@
       :total-subtasks="totalSubtasks"
       :is-all-subtasks-completed="isAllSubtasksCompleted"
       :is-expanded="isExpanded"
+      :is-pinned="task.isPinned"
       @toggle-expand="$emit('toggleExpand')"
     />
 
@@ -133,7 +131,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Pin } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -225,13 +222,4 @@ const isTimerActive = computed(() => {
 </script>
 
 <style scoped>
-.pin-indicator {
-  grid-area: done;
-  position: absolute;
-  top: 2px;
-  inset-inline-start: 2px;
-  color: var(--text-muted);
-  opacity: 0.6;
-  pointer-events: none;
-}
 </style>

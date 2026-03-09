@@ -390,9 +390,16 @@ export function useCanvasInteractions(deps?: {
     let dragDiagStartPos: { x: number; y: number } | null = null
     let dragDiagFrameCount = 0
 
+    // BUG-1492: Drag sequence counter to detect stale concurrent onNodeDragStop handlers.
+    // Incremented on each new drag start. If the sequence advances while an async
+    // onNodeDragStop is saving, the older handler aborts — its positions are stale.
+    let dragSequence = 0
+
     const onNodeDragStart = (event: NodeDragEvent) => {
         const { nodes: involvedNodes } = event
 
+        // BUG-1492: Bump sequence so any in-flight onNodeDragStop aborts its saves.
+        dragSequence++
 
         // Guard: Only proceed if we can start a new drag (state is idle or drag-settling)
         // BUG-1328: startDrag() now also accepts 'drag-settling' state to prevent
@@ -511,11 +518,32 @@ export function useCanvasInteractions(deps?: {
         // handlers see "not dragging" while async save is still in progress.
         // Moved to the finally block below, after all saves complete.
 
+        // BUG-1492: Capture current sequence at entry. If a new drag starts while
+        // this async handler is saving, dragSequence will advance and we abort.
+        const mySequence = dragSequence
+
         const callId = import.meta.env.DEV ? Math.random().toString(36).slice(2, 8) : ''
         if (import.meta.env.DEV) {
-            console.log(`[CANVAS:INTERACT] Drag stop - callId=${callId}, involvedNodes=${involvedNodes.length}`,
+            console.log(`[CANVAS:INTERACT] Drag stop - callId=${callId}, seq=${mySequence}, involvedNodes=${involvedNodes.length}`,
                 involvedNodes.map(n => `${n.id.slice(0, 12)}(${n.type})`))
         }
+
+        // BUG-1492 FIX: Snapshot ALL node positions BEFORE any async work.
+        // Vue Flow's event.nodes are REACTIVE references, not snapshots.
+        // Each `await updateTask()` triggers a sync store update that can mutate
+        // other nodes' positions via reactivity. Without this snapshot, task #5's
+        // position may be corrupted by the store updates from tasks #1-4.
+        const allGroups = canvasStore._rawGroups || canvasStore.groups || []
+        const positionSnapshot = new Map<string, { x: number; y: number }>(
+            involvedNodes.map(node => {
+                const rawAbsolutePos = computeNodeAbsolutePosition(node, allGroups)
+                const snapped = {
+                    x: Math.round(rawAbsolutePos.x / 16) * 16,
+                    y: Math.round(rawAbsolutePos.y / 16) * 16
+                }
+                return [node.id, snapped]
+            })
+        )
 
         try {
 
@@ -529,10 +557,11 @@ export function useCanvasInteractions(deps?: {
                     const group = allGroups.find(g => g.id === groupId)
                     if (!group) continue
 
-                    // Compute absolute position for the group
-                    // BUG-1209/TASK-1289: Snap to 16px grid to prevent cumulative micro-drift
-                    const rawAbsolutePos = computeNodeAbsolutePosition(node, allGroups)
-                    const absolutePos = { x: Math.round(rawAbsolutePos.x / 16) * 16, y: Math.round(rawAbsolutePos.y / 16) * 16 }
+                    // BUG-1492: Use snapshotted position to prevent reactivity drift
+                    const absolutePos = positionSnapshot.get(node.id) ?? (() => {
+                        const raw = computeNodeAbsolutePosition(node, allGroups)
+                        return { x: Math.round(raw.x / 16) * 16, y: Math.round(raw.y / 16) * 16 }
+                    })()
                     const groupWidth = group.position.width
                     const groupHeight = group.position.height
 
@@ -566,6 +595,12 @@ export function useCanvasInteractions(deps?: {
 
                     // TASK-213: Update PositionManager
                     positionManager.updatePosition(groupId, absolutePos, 'user-drag', parentResult.newParentId)
+
+                    // BUG-1492: Abort if a newer drag has started
+                    if (mySequence !== dragSequence) {
+                        if (import.meta.env.DEV) console.log(`[BUG-1492] Stale drag stop (seq ${mySequence} vs ${dragSequence}), aborting group saves`)
+                        break
+                    }
 
                     // Sync group to DB (persists parent_group_id)
                     // Re-fetch allGroups after store update to ensure we have latest data
@@ -649,12 +684,13 @@ export function useCanvasInteractions(deps?: {
                     }
 
                     // 1. Compute ABSOLUTE position for containment check
-                    // When node has parentNode, node.position is RELATIVE, not absolute
-                    // computedPosition is preferred; fallback calculates from parent's absolute
-                    const rawAbsolutePos = computeNodeAbsolutePosition(node, taskAllGroups)
-                    // BUG-1209/TASK-1289: Snap to 16px grid to prevent cumulative micro-drift
-                    // (CanvasView uses 16px grid — store should always save grid-aligned values)
-                    const absolutePos = { x: Math.round(rawAbsolutePos.x / 16) * 16, y: Math.round(rawAbsolutePos.y / 16) * 16 }
+                    // BUG-1492: Use snapshotted position (captured before any async work)
+                    // to prevent reactivity-induced drift from earlier tasks' saves.
+                    const absolutePos = positionSnapshot.get(node.id) ?? (() => {
+                        // Fallback: compute live (should rarely happen)
+                        const raw = computeNodeAbsolutePosition(node, taskAllGroups)
+                        return { x: Math.round(raw.x / 16) * 16, y: Math.round(raw.y / 16) * 16 }
+                    })()
 
                     // 2. Build spatial task with explicit dimensions for center-based containment
                     const spatialTask = {
@@ -686,6 +722,11 @@ export function useCanvasInteractions(deps?: {
                                     Math.abs(absolutePos.x - task.canvasPosition.x) > 1 ||
                                     Math.abs(absolutePos.y - task.canvasPosition.y) > 1
                                 if (posChanged) {
+                                    // BUG-1492: Abort if a newer drag has started
+                                    if (mySequence !== dragSequence) {
+                                        if (import.meta.env.DEV) console.log(`[BUG-1492] Stale drag stop (seq ${mySequence} vs ${dragSequence}), aborting saves`)
+                                        break
+                                    }
                                     // High Severity Issue #7: Mark task as pending write
                                     taskStore.addPendingWrite(task.id)
                                     try {
@@ -817,6 +858,12 @@ export function useCanvasInteractions(deps?: {
                     // TASK-213: Update PositionManager (before store write for consistency)
                     positionManager.updatePosition(task.id, absolutePos, 'user-drag', newParentId ?? null)
 
+                    // BUG-1492: Abort if a newer drag has started — our positions are stale
+                    if (mySequence !== dragSequence) {
+                        if (import.meta.env.DEV) console.log(`[BUG-1492] Stale drag stop (seq ${mySequence} vs ${dragSequence}), aborting saves`)
+                        break
+                    }
+
                     // High Severity Issue #7: Mark task as pending write before save
                     taskStore.addPendingWrite(task.id)
 
@@ -842,6 +889,11 @@ export function useCanvasInteractions(deps?: {
             }
 
         } finally {
+            // BUG-1492: If a newer drag has started, do NOT touch state — it belongs to the new drag.
+            if (mySequence !== dragSequence) {
+                if (import.meta.env.DEV) console.log(`[BUG-1492:DRAG-FINALLY] Stale handler (seq ${mySequence} vs ${dragSequence}), skipping cleanup`)
+                return
+            }
             // BUG-1209: Set isDragging=false AFTER all async saves complete,
             // so realtime handlers don't overwrite positions mid-save.
             if (import.meta.env.DEV) {

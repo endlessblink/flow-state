@@ -66,7 +66,7 @@ Both filters also include:
 |------|---------|
 | `src/composables/useSmartViews.ts` | Core filter logic |
 | `src/composables/inbox/useUnifiedInboxState.ts` | Applies filters to inbox |
-| `src/components/inbox/unified/UnifiedInboxHeader.vue` | Displays filter counts |
+| `src/components/inbox/UnifiedInboxPanel.vue` | Displays filter counts |
 
 ## Testing
 

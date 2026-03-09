@@ -4,6 +4,8 @@
 **Status**: Active
 **Related Task**: TASK-1003
 
+> **Note (March 2026):** This SOP predates the Playwright E2E infrastructure (TASK-1457). For authenticated testing with seeded data, use `npm run test:e2e` with storageState from `tests/.auth/user.json`. See CLAUDE.md "Playwright E2E Testing" section.
+
 ## Overview
 
 This SOP documents how Claude Code tests the FlowState mobile PWA using Playwright viewport resize against the production site.

@@ -17,8 +17,8 @@ FlowState includes a comprehensive stress testing system designed for VPS deploy
 | Test Suite | Command | Tests | Focus |
 |------------|---------|-------|-------|
 | **All Tests** | `npm run test:all-stress` | 50 | Complete suite |
-| Backup System | `npm run test:backup` | 14 | Shadow DB, JSON, checksums |
-| Restore Verification | `npm run test:restore` | 14 | Actual restore functionality |
+| Backup System | `npm run test:backup` (verify this script exists in package.json) | 14 | Shadow DB, JSON, checksums |
+| Restore Verification | `npm run test:restore` (verify this script exists in package.json) | 14 | Actual restore functionality |
 | Container Stability | `npm run test:container` | 11 | Docker, Supabase health |
 | Sync Conflicts | `npm run test:sync` | 3 | Race conditions, RLS |
 | Auth Edge Cases | `npm run test:auth` | 5 | Token validation, security |
@@ -51,7 +51,7 @@ npm run test:container:quick && npm run test:auth:quick
 
 ## Test Details
 
-### 1. Backup System Tests (`npm run test:backup`)
+### 1. Backup System Tests (`npm run test:backup` — verify this script exists in package.json)
 
 **Purpose**: Verify backup files exist, are valid, and have correct structure.
 
@@ -69,7 +69,7 @@ npm run test:container:quick && npm run test:auth:quick
 ❌ Failed: 0
 ```
 
-### 2. Restore Verification (`npm run test:restore`)
+### 2. Restore Verification (`npm run test:restore` — verify this script exists in package.json)
 
 **Purpose**: Verify backup can actually be restored (not just that files exist).
 
@@ -267,8 +267,8 @@ This is **correct behavior** when running without authentication. To test actual
 
 | File | Purpose |
 |------|---------|
-| `scripts/verify-backup-system.cjs` | Backup system tests |
-| `scripts/verify-restore.cjs` | Restore verification tests |
+| `scripts/verify-backup-system.cjs` | Backup system tests (file may have been removed — verify before use) |
+| `scripts/verify-restore.cjs` | Restore verification tests (file may have been removed — verify before use) |
 | `scripts/stress-container.cjs` | Container stability tests |
 | `scripts/stress-sync.cjs` | Sync conflict tests |
 | `scripts/stress-auth.cjs` | Auth edge case tests |

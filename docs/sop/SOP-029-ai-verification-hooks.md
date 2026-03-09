@@ -14,10 +14,10 @@ Prevent Claude from claiming tasks are "done" without proper verification. This 
 
 | Layer | Purpose | Implementation |
 |-------|---------|----------------|
-| **1. Artifact Check** | Show test status on every prompt | `skill-router-hook.sh` |
-| **2. Auto-Test** | Run tests after code edits | `auto-test-after-edit.sh` |
+| **1. Artifact Check** | Show test status on every prompt | `user-prompt-handler.sh` |
+| **2. Auto-Test** | Run tests after code edits | `auto-test-after-edit.sh` (not currently deployed — PostToolUse array is empty) |
 | **3. Falsifiability** | Define success/failure upfront | CLAUDE.md protocol |
-| **4. User Confirmation** | Completion protocol reminders | `skill-router-hook.sh` |
+| **4. User Confirmation** | Completion protocol reminders | `user-prompt-handler.sh` |
 | **5. Judge Agent** | Independent evaluation | Dev-Maestro API |
 
 ### Key Finding
@@ -61,9 +61,9 @@ This is a **blocker**, not informational noise.
 ```
 .claude/
 ├── hooks/
-│   ├── skill-router-hook.sh      # Layer 1 + 4 + skills (unified)
-│   ├── auto-test-after-edit.sh   # Layer 2 (PostToolUse)
-│   └── user-prompt-handler.sh    # Backup unified handler
+│   ├── user-prompt-handler.sh    # Layer 1 + 4 + skills (unified)
+│   ├── auto-test-after-edit.sh   # Layer 2 (PostToolUse) — not currently deployed (PostToolUse array is empty)
+│   └── skill-router-hook.sh      # Legacy name — superseded by user-prompt-handler.sh
 ├── last-test-results.json        # Test results storage
 └── settings.json                 # Hook registration
 
@@ -73,7 +73,7 @@ dev-maestro/
 
 ## Hook Details
 
-### skill-router-hook.sh (UserPromptSubmit)
+### user-prompt-handler.sh (UserPromptSubmit)
 
 **Runs**: On every user message
 **Reads**: `.claude/last-test-results.json`
@@ -143,7 +143,7 @@ curl -X POST http://localhost:6010/api/judge/evaluate?mode=fast \
 ### Hook not firing
 1. Check `.claude/settings.json` has hook registered
 2. Restart Claude Code (settings load at session start)
-3. Verify hook is executable: `chmod +x .claude/hooks/skill-router-hook.sh`
+3. Verify hook is executable: `chmod +x .claude/hooks/user-prompt-handler.sh`
 
 ### Wrong warning showing
 1. Check `.claude/last-test-results.json` timestamp

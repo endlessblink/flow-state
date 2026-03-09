@@ -212,7 +212,7 @@ const startTimer = async () => {
 
 ### KDE Plasma Widget (Follower)
 
-**File**: `kde-widget/package/contents/ui/main.qml`
+**File**: `packages/kde-widget/contents/ui/main.qml`
 
 #### Polling Every 2 Seconds
 
@@ -397,7 +397,7 @@ const startTimer = async () => {
 |------|---------|
 | `src/stores/timer.ts` | Main timer store with leadership logic |
 | `src/composables/useSupabaseDatabase.ts` | Database operations including timer sessions |
-| `kde-widget/package/contents/ui/main.qml` | KDE widget implementation |
+| `packages/kde-widget/contents/ui/main.qml` | KDE widget implementation |
 | `src/stores/auth.ts` | Authentication state |
 
 ---

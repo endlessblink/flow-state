@@ -53,7 +53,7 @@ The parser determines status from:
 Priority order: `**Status**:` line > header parentheses > table row
 
 ## Key Files
-- Parser: `~/.dev-maestro/kanban/index.html` (lines 5700-5800)
+- Parser: `~/.dev-maestro/tui/src/lib/masterplan-parser.js` (React/Ink TUI — current) and `~/.dev-maestro/kanban/index.html` (legacy browser kanban)
 - API: `~/.dev-maestro/server.js`
 - Data source: `docs/MASTER_PLAN.md`
 

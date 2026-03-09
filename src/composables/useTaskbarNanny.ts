@@ -17,8 +17,12 @@ function isRealTaskId(taskId: string | null | undefined): boolean {
 }
 
 export function useTaskbarNanny(options: TaskbarNannyOptions = {}) {
+  // Allow E2E test override via window property
+  const testOverride = typeof window !== 'undefined'
+    ? (window as Record<string, unknown>).__NANNY_THRESHOLD_MINUTES as number | undefined
+    : undefined
   const {
-    thresholdMinutes = 5,
+    thresholdMinutes = testOverride ?? 5,
     cooldownMinutes = 15,
     enabled = true,
   } = options

@@ -10,7 +10,7 @@
     <!-- Swimlane Header - TASK-157: Simplified Todoist-style -->
     <!-- FEATURE-1336: Hide header in category view (single swimlane, no project grouping) -->
     <div
-      v-if="currentViewType !== 'category'"
+      v-if="currentViewType !== 'category' && currentViewType !== 'date'"
       class="swimlane-header swimlane-header--minimal"
       @click="toggleCollapse"
       @contextmenu.prevent="handleGroupContextMenu"

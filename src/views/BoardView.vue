@@ -91,7 +91,26 @@
           />
         </template>
 
-        <!-- Standard views: per-project swimlanes -->
+        <!-- TASK-1492: Due Date view: flat single swimlane (no per-project rows) -->
+        <template v-else-if="currentViewType === 'date'">
+          <KanbanSwimlane
+            :project="{ id: '__date__', name: 'All Tasks', color: '#6B7280', colorType: 'hex', viewType: 'status', createdAt: new Date(), updatedAt: new Date() }"
+            :tasks="allFilteredTasks"
+            :current-filter="taskStore.activeSmartView || 'none'"
+            :density="currentDensity"
+            :show-done-column="!hideDoneTasks"
+            view-type="date"
+            @select-task="handleSelectTask"
+            @start-timer="handleStartTimer"
+            @edit-task="handleEditTask"
+            @delete-task="handleDeleteTask"
+            @move-task="handleMoveTask"
+            @add-task="handleAddTask"
+            @context-menu="handleContextMenu"
+          />
+        </template>
+
+        <!-- Standard views (priority): per-project swimlanes -->
         <template v-else>
           <KanbanSwimlane
             v-for="project in projectsWithTasks"

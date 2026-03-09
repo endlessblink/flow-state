@@ -1718,6 +1718,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1483**~~ | **P2** | ~~**PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section**~~ (✅ DONE 2026-03-09) |
 | **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** |
 | ~~**BUG-1493**~~ | **P2** | ~~**Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression**~~ (✅ DONE 2026-03-09) |
+| ~~**TASK-1492**~~ | **P2** | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---

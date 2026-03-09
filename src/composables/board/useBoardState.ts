@@ -189,29 +189,27 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
 
     tasks.forEach(task => {
         const instances = getTaskInstances(task)
-        const taskCreatedDate = new Date(task.createdAt)
-        taskCreatedDate.setHours(0, 0, 0, 0)
-        const oneDayAgo = new Date(today)
-        oneDayAgo.setDate(oneDayAgo.getDate() - 1)
 
         // TASK-1348: Normalize dueDate from ISO format ("2026-02-22T00:00:00+00:00") to "YYYY-MM-DD"
         // Supabase returns full ISO timestamps but parseDateKey/formatDateKey use "YYYY-MM-DD"
         const dueDateKey = task.dueDate ? task.dueDate.slice(0, 10) : null
 
-        const isCreatedToday = taskCreatedDate.getTime() === today.getTime()
-        const isDueToday = dueDateKey === todayStr
-        const isInProgress = task.status !== 'done'
+        // TASK-1492: Tasks with no due date and no instances → "No Date" immediately
+        if (!dueDateKey && instances.length === 0) {
+            if (hideDoneTasks && task.status === 'done') return
+            result.noDate.push(task)
+            return
+        }
+
         const isOverdueByDate = dueDateKey && dueDateKey < todayStr
 
         const hasPastInstance = instances.length > 0 && instances.some((instance: Record<string, unknown>) => {
             const instanceDate = parseDateKey(instance.scheduledDate)
             return instanceDate && instanceDate < today
         })
-        const isOldAndUnscheduled = taskCreatedDate < oneDayAgo && instances.length === 0 &&
-            !dueDateKey
 
         // Overdue check
-        if (task.status !== 'done' && (isOverdueByDate || hasPastInstance || isOldAndUnscheduled)) {
+        if (task.status !== 'done' && (isOverdueByDate || hasPastInstance)) {
             result.overdue.push(task)
             return
         }
@@ -238,9 +236,8 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
                 } else {
                     result.noDate.push(task)
                 }
-            } else if (isCreatedToday || isDueToday || isInProgress) {
-                result.today.push(task)
             } else {
+                // Edge case fallback (dateless tasks already returned early above)
                 result.noDate.push(task)
             }
             return
@@ -269,14 +266,6 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
             }
         })
     })
-
-    if (!hideDoneTasks) {
-        tasks.forEach(task => {
-            if (task.status === 'done' && !result.noDate.includes(task)) {
-                result.noDate.push(task)
-            }
-        })
-    }
 
     for (const key of Object.keys(result)) {
         sortByOrder(result[key])

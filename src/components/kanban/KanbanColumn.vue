@@ -262,7 +262,7 @@ const handleDragChange = async (event: { added?: { element: Task }; removed?: { 
 
       // BUG-1335: When task is dropped in a different swimlane (project),
       // also update the task's projectId to match the target swimlane
-      if (props.columnType !== 'category' && props.swimlaneId !== 'default') {
+      if (props.columnType !== 'category' && props.swimlaneId !== 'default' && props.swimlaneId !== '__date__' && props.swimlaneId !== '__category__') {
         const currentProjectId = task.projectId || ''
         if (currentProjectId !== props.swimlaneId) {
           taskStore.moveTaskToProject(taskId, props.swimlaneId)

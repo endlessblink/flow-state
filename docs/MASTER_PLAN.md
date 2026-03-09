@@ -988,6 +988,22 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ---
 
+### TASK-1494: Tauri Parity Testing Suite (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-09)
+
+**Problem**: Zero Tauri-specific test coverage. Recurring production bugs caused by WebKitGTK differences (overflow:clip, dataTransfer empty, DataCloneError, path bugs, coordinate scaling). All E2E runs Chromium only.
+
+**Plan**: 6-phase comprehensive parity suite:
+- Phase 1: Enable WebKit in Playwright + fix failures
+- Phase 2: Unit tests for all `isTauri()` code paths
+- Phase 3: CSS safety scanner (overflow:clip, perspective traps)
+- Phase 4: Tauri simulation E2E (inject `__TAURI_INTERNALS__`)
+- Phase 5: Pre-deploy gate in `/tauri` skill
+- Phase 6: Maintenance tooling (SOP, checklist, CLAUDE.md rule)
+
+---
+
 ## Planned Tasks (NEXT/BACKLOG)
 
 ### ~~TASK-1484~~: Escape key closes TaskContextMenu (✅ DONE)
@@ -1547,7 +1563,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |
 | **TASK-1457** | **P2** | 🔄 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (🔄 IN PROGRESS 2026-03-06) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
-| **TASK-1455** | **P2** | 📋 **Catalog view: show uncategorized tasks so they can be categorized in-place** (📋 PLANNED 2026-03-06) |
+| ~~**TASK-1455**~~ | **P2** | ✅ **Catalog view: show uncategorized tasks so they can be categorized in-place** (✅ DONE 2026-03-09) |
 | **TASK-1454** | **P2** | 📋 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (📋 PLANNED 2026-03-06) |
 | ~~**BUG-1472**~~ | **P1** | ✅ **Canvas and Calendar inbox filters synced — persistence keys not context-scoped** (✅ DONE 2026-03-07) |
 | ~~**BUG-1453**~~ | **P0** | ✅ **Production CSS preload + mobile Quick Sort swipe broken** (✅ DONE 2026-03-07) |

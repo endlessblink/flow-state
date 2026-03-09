@@ -300,9 +300,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### BUG-1493: Catalog view — collapsed state resets, expand/collapse broken, cross-group drag regression (🔄 IN PROGRESS)
+### ~~BUG-1493~~: Catalog view — collapsed state resets, expand/collapse broken, cross-group drag regression (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-03-09)
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-09)
 
 **Problems**:
 1. `expandedGroups` in `TaskList.vue` is a plain `ref<Set>` — resets to all-expanded on every remount (navigation away and back).
@@ -1601,7 +1601,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1457** | **P2** | 🔄 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (🔄 IN PROGRESS 2026-03-06) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
 | ~~**TASK-1455**~~ | **P2** | ✅ **Catalog view: show uncategorized tasks so they can be categorized in-place** (✅ DONE 2026-03-09) |
-| **TASK-1454** | **P2** | 📋 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (📋 PLANNED 2026-03-06) |
+| **TASK-1454** | **P2** | 🔄 **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (🔄 IN PROGRESS 2026-03-09) |
 | ~~**BUG-1472**~~ | **P1** | ✅ **Canvas and Calendar inbox filters synced — persistence keys not context-scoped** (✅ DONE 2026-03-07) |
 | ~~**BUG-1453**~~ | **P0** | ✅ **Production CSS preload + mobile Quick Sort swipe broken** (✅ DONE 2026-03-07) |
 | ~~**BUG-1477**~~ | **P1** | ✅ **Zombie tasks reappear after permanent delete — tombstone/delete ordering + DB trigger conflict** (✅ DONE 2026-03-07) |
@@ -1718,7 +1718,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1480**~~ | **P2** | ~~**Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs**~~ (✅ DONE 2026-03-09) |
 | ~~**BUG-1483**~~ | **P2** | ~~**PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section**~~ (✅ DONE 2026-03-09) |
 | **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** |
-| **BUG-1493** | **P2** | **Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression** (🔄 IN PROGRESS 2026-03-09) |
+| ~~**BUG-1493**~~ | **P2** | ~~**Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression**~~ (✅ DONE 2026-03-09) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---

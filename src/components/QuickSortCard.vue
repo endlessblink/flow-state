@@ -85,10 +85,10 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'swipeRight'): void
-  (e: 'swipeLeft'): void
-  (e: 'swipeUp'): void
-  (e: 'swipeDown'): void
+  (e: 'swipe-right'): void
+  (e: 'swipe-left'): void
+  (e: 'swipe-up'): void
+  (e: 'swipe-down'): void
 }>()
 
 const cardRef = ref<HTMLElement | null>(null)
@@ -105,10 +105,10 @@ const {
   haptics: true,
   fourDirectional: true,
   mouse: true,
-  onSwipeRight: () => emit('swipeRight'),
-  onSwipeLeft: () => emit('swipeLeft'),
-  onSwipeUp: () => emit('swipeUp'),
-  onSwipeDown: () => emit('swipeDown')
+  onSwipeRight: () => emit('swipe-right'),
+  onSwipeLeft: () => emit('swipe-left'),
+  onSwipeUp: () => emit('swipe-up'),
+  onSwipeDown: () => emit('swipe-down')
 })
 
 // Card transform style - supports both horizontal and vertical movement

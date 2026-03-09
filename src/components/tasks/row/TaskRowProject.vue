@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onBeforeUnmount, triggerRef } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { Check } from 'lucide-vue-next'
 import { useProjectStore } from '@/stores/projects'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'

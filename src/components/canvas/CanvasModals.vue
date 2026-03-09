@@ -37,8 +37,8 @@
     :group="modals.selectedGroup"
     :position="modals.groupModalPosition"
     @close="modals.closeGroupModal"
-    @created="group => $emit('handleGroupCreated', group as Record<string, any>)"
-    @updated="group => $emit('handleGroupUpdated', group as Record<string, any>)"
+    @created="(group) => $emit('handleGroupCreated', group)"
+    @updated="(group) => $emit('handleGroupUpdated', group)"
   />
 
   <!-- Group Edit Modal -->
@@ -46,7 +46,7 @@
     :section="modals.selectedSectionForEdit"
     :is-visible="modals.isGroupEditModalOpen"
     @close="modals.closeGroupEditModal"
-    @save="updatedSection => $emit('handleGroupEditSave', updatedSection as Record<string, any>)"
+    @save="(updatedSection) => $emit('handleGroupEditSave', updatedSection)"
   />
 
   <!-- Group Delete Confirmation Modal -->
@@ -97,10 +97,10 @@ interface QuickTaskData {
 const emit = defineEmits<{
   (e: 'handleQuickTaskCreate', data: QuickTaskData): void
   (e: 'handleBatchEditApplied'): void
-  (e: 'handleSectionSettingsSave', settings: Record<string, any>): void
-  (e: 'handleGroupCreated', group: Record<string, any>): void
-  (e: 'handleGroupUpdated', group: Record<string, any>): void
-  (e: 'handleGroupEditSave', updatedSection: Record<string, any>): void
+  (e: 'handleSectionSettingsSave', settings: Record<string, unknown>): void
+  (e: 'handleGroupCreated', group: Record<string, unknown>): void
+  (e: 'handleGroupUpdated', group: Record<string, unknown>): void
+  (e: 'handleGroupEditSave', updatedSection: Record<string, unknown>): void
   (e: 'confirmDeleteGroup'): void
   (e: 'confirmBulkDelete'): void
 }>()

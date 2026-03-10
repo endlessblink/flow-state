@@ -314,6 +314,18 @@ export const useTaskStore = defineStore('tasks', () => {
                   remoteUpdated: new Date(remoteUpdated).toISOString(),
                   action: 'accepting newer remote'
                 })
+                // BUG-1492: Log position delta to see if echo overwrites with stale position
+                const lp = currentTask.canvasPosition
+                const rp = normalizedTask.canvasPosition
+                if (lp && rp && (Math.abs(lp.x - rp.x) > 1 || Math.abs(lp.y - rp.y) > 1)) {
+                  console.warn(`[BUG-1492:ECHO-DRIFT] "${currentTask.title?.slice(0, 20)}" pos CHANGED by echo`, {
+                    local: { x: Math.round(lp.x), y: Math.round(lp.y) },
+                    remote: { x: Math.round(rp.x), y: Math.round(rp.y) },
+                    delta: { x: Math.round(rp.x - lp.x), y: Math.round(rp.y - lp.y) },
+                    localParentId: currentTask.parentId?.slice(0, 8) ?? 'null',
+                    remoteParentId: normalizedTask.parentId?.slice(0, 8) ?? 'null'
+                  })
+                }
               }
               // Keep normalizedTask position as-is (remote wins)
             } else {

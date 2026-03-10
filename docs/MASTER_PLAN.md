@@ -300,6 +300,24 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
+### BUG-1492: Canvas Position Drift — Consecutive Drags Cause parentId Flip-Flopping (👀 REVIEW)
+
+**Priority**: P2 | **Status**: 👀 REVIEW (2026-03-10)
+
+**Problem**: Dragging canvas tasks in quick succession causes visible position drift. Tasks alternately get assigned to a group and then back to root on each drag.
+
+**Root Cause A — BUG-1191 handler skips saves**: The stale-parentNode guard in `useCanvasInteractions.ts` detected when Vue Flow's `node.parentNode` diverged from the store's `task.parentId` (valid during rapid consecutive drags before VF syncs). It was restoring the node position from the store (overwriting the user's actual drag position) and calling `continue` to skip saving. This threw away Drag N+1's real position, causing drift.
+
+**Root Cause B — Containment padding gap causes flip-flop**: The "still inside parent" early-exit used `padding=2` while `getDeepestContainingGroup` used `padding=10`. A task with center 2–10px from the group edge failed the early-exit check, fell through, failed containment detection, and was assigned as root. Next drag with 16px grid snap shifted it back in → assigned to group. This cycled on every drag.
+
+**Fix**:
+1. **BUG-1191 handler**: Removed position restoration and `continue`. Now only fixes `node.parentNode` alignment and falls through to the normal path which uses the snapshotted absolute position (always the correct visual position).
+2. **Hysteresis padding**: Changed both containment checks from `padding=2` to `padding=-20`. Negative padding expands the parent boundary outward by 20px — a task only detaches when dragged >20px outside the boundary. The 16px grid snap can never cause a flip-flop across a 20px hysteresis zone.
+
+**Files Changed**: `src/composables/canvas/useCanvasInteractions.ts`
+
+---
+
 ### ~~BUG-1493~~: Catalog view — collapsed state resets, expand/collapse broken, cross-group drag regression (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-09)
@@ -1580,6 +1598,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1490**~~ | **P2** | ✅ **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (✅ DONE 2026-03-09) |
 | **BUG-1491** | **P0** | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09) |
 | ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
+| **TASK-1499** | **P2** | 🔄 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (🔄 IN PROGRESS 2026-03-10) |
 | **TASK-1486** | **P2** | 🔄 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (🔄 IN PROGRESS 2026-03-08) |
 | ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
 | **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |
@@ -1701,7 +1720,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1481**~~ | **P2** | ~~**Calendar inbox hides canvas tasks with non-canvasOrder sorts — isInInbox gate too restrictive**~~ (✅ DONE 2026-03-07) |
 | ~~**TASK-1480**~~ | **P2** | ~~**Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs**~~ (✅ DONE 2026-03-09) |
 | ~~**BUG-1483**~~ | **P2** | ~~**PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section**~~ (✅ DONE 2026-03-09) |
-| **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** |
+| **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** (👀 REVIEW 2026-03-10) |
 | ~~**BUG-1493**~~ | **P2** | ~~**Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression**~~ (✅ DONE 2026-03-09) |
 | ~~**TASK-1492**~~ | **P2** | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |

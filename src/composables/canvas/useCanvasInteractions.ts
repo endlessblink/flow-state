@@ -663,24 +663,14 @@ export function useCanvasInteractions(deps?: {
 
                     if (vfParentGroupId !== storeParentId) {
                         if (import.meta.env.DEV) {
-                            console.warn(`[BUG-1191] Stale parentNode for "${task.title?.slice(0, 25)}": VF=${vfParentGroupId?.slice(0, 8)}, Store=${storeParentId?.slice(0, 8) ?? 'null'}. Restoring position.`)
+                            console.warn(`[BUG-1191] Stale parentNode for "${task.title?.slice(0, 25)}": VF=${vfParentGroupId?.slice(0, 8)}, Store=${storeParentId?.slice(0, 8) ?? 'null'}. Fixing parentNode, proceeding with snapshot position.`)
                         }
-                        // Fix Vue Flow node to match store
+                        // BUG-1492 FIX: Only fix VF parentNode alignment, do NOT restore position
+                        // from store and do NOT skip the save. The position snapshot uses
+                        // computedPosition which is always the correct absolute visual position
+                        // regardless of parentNode state. Restoring from store during rapid
+                        // consecutive drags throws away the user's actual drag position → drift.
                         node.parentNode = storeParentId ? CanvasIds.groupNodeId(storeParentId) : undefined
-                        // Restore position from store (undo the wrong visual move)
-                        if (task.canvasPosition) {
-                            if (storeParentId) {
-                                const correctParentAbsolute = getGroupAbsolutePosition(storeParentId, taskAllGroups)
-                                node.position = {
-                                    x: task.canvasPosition.x - correctParentAbsolute.x,
-                                    y: task.canvasPosition.y - correctParentAbsolute.y
-                                }
-                            } else {
-                                node.position = { x: task.canvasPosition.x, y: task.canvasPosition.y }
-                            }
-                        }
-                        setNodeState(task.id, NodeState.IDLE)
-                        continue
                     }
 
                     // 1. Compute ABSOLUTE position for containment check
@@ -714,8 +704,11 @@ export function useCanvasInteractions(deps?: {
                                 height: currentParent.position.height
                             }
                             // If task center is still inside current parent, skip processing
-                            // BUG-1084 FIX: Reduced padding from 10 to 2 to prevent false "outside" detection
-                            const stillInside = isNodeCompletelyInside(spatialTask, parentBounds, 2)
+                            // BUG-1492 FIX: Use negative padding (-20) for hysteresis.
+                            // This expands the parent boundary by 20px outward, so a task
+                            // stays with its parent unless dragged >20px outside the boundary.
+                            // Prevents parentId flip-flopping caused by 16px grid-snap jitter.
+                            const stillInside = isNodeCompletelyInside(spatialTask, parentBounds, -20)
                             if (stillInside) {
                                 // Task just moved with its group - only sync position, skip parent/Smart Group recalc
                                 const posChanged = !task.canvasPosition ||
@@ -760,8 +753,8 @@ export function useCanvasInteractions(deps?: {
                                 width: currentParent.position.width,
                                 height: currentParent.position.height
                             }
-                            // BUG-1084 FIX: Reduced padding from 10 to 2 (consistent with above)
-                            const stillInCurrentParent = isNodeCompletelyInside(spatialTask, parentBounds, 2)
+                            // BUG-1492: Same hysteresis padding as above
+                            const stillInCurrentParent = isNodeCompletelyInside(spatialTask, parentBounds, -20)
                             if (stillInCurrentParent) {
                                 // Task is inside BOTH current parent and detected group - prefer current
                                 targetGroup = currentParent

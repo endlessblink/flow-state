@@ -380,37 +380,161 @@ const dueStatus = computed(() => {
   padding-inline-start: var(--space-5);
 }
 
-/* Compact mode for pinned tasks */
+/* ─────────────────────────────────────────────────────────────────────────
+   Compact pill mode for pinned tasks
+   ───────────────────────────────────────────────────────────────────────── */
 .task-card.compact {
-  padding: var(--space-1) var(--space-1_5);
-  border-inline-start-width: 3px;
+  /* Pill geometry */
+  display: inline-flex;
+  align-items: center;
+  width: auto;
   min-height: unset;
+  height: auto;
+  padding: var(--space-1) var(--space-2_5);
+  gap: var(--space-1_5);
+  border-radius: var(--radius-full);
+
+  /* Kill the left-border priority stripe — use priority dot instead */
+  border-inline-start-width: 1px;
+  border-inline-start-color: var(--glass-border);
+
+  /* Slightly more opaque glass for pill legibility */
+  background: var(--glass-bg-medium, rgba(255, 255, 255, 0.08));
+
+  /* Contain the hover action tray */
+  overflow: visible;
 }
 
+/* Priority glow tint on the pill border */
+.task-card.compact[data-priority="high"] {
+  border-color: color-mix(in srgb, var(--color-priority-high) 35%, var(--glass-border));
+  border-inline-start-color: color-mix(in srgb, var(--color-priority-high) 35%, var(--glass-border));
+}
+.task-card.compact[data-priority="medium"] {
+  border-color: color-mix(in srgb, var(--color-priority-medium) 25%, var(--glass-border));
+  border-inline-start-color: color-mix(in srgb, var(--color-priority-medium) 25%, var(--glass-border));
+}
+.task-card.compact[data-priority="low"] {
+  border-color: color-mix(in srgb, var(--color-priority-low) 20%, var(--glass-border));
+  border-inline-start-color: color-mix(in srgb, var(--color-priority-low) 20%, var(--glass-border));
+}
+
+/* Hover: soft glow that respects priority color */
+.task-card.compact:hover {
+  border-color: var(--border-hover);
+  border-inline-start-color: var(--border-hover);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--brand-primary) 20%, transparent),
+    var(--shadow-sm);
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.12));
+}
+.task-card.compact[data-priority="high"]:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-priority-high) 30%, transparent),
+    var(--shadow-sm);
+}
+.task-card.compact[data-priority="medium"]:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-priority-medium) 25%, transparent),
+    var(--shadow-sm);
+}
+
+/* Priority dot — repurpose the .priority-stripe div as a 5px circle */
+.task-card.compact .priority-stripe {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted);
+  opacity: 0.5;
+}
+.task-card.compact .priority-stripe.priority-high {
+  background: var(--color-priority-high);
+  opacity: 1;
+  box-shadow: 0 0 4px color-mix(in srgb, var(--color-priority-high) 60%, transparent);
+}
+.task-card.compact .priority-stripe.priority-medium {
+  background: var(--color-priority-medium);
+  opacity: 0.9;
+}
+.task-card.compact .priority-stripe.priority-low {
+  background: var(--color-priority-low);
+  opacity: 0.7;
+}
+
+/* Title */
 .task-card.compact .task-content--inbox {
-  padding-inline-start: var(--space-1);
+  padding-inline-start: 0;
+  width: auto;
+  min-width: 0;
 }
 
 .task-card.compact .task-title {
   font-size: var(--text-xs);
-  line-height: 1.3;
+  line-height: 1.2;
   margin-bottom: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
 }
 
+/* Hide all metadata in pill mode */
 .task-card.compact .task-metadata {
   display: none;
 }
 
-.task-card.compact .task-actions {
-  top: 50%;
-  bottom: auto;
-  transform: translateY(-50%);
-  padding: 0 var(--space-0_5);
+/* Timer indicator — inline, no absolute positioning */
+.task-card.compact .timer-indicator {
+  position: static;
+  flex-shrink: 0;
 }
 
-.task-card.compact .timer-indicator {
-  top: 50%;
-  transform: translateY(-50%);
+/* Done indicator — inline */
+.task-card.compact .done-indicator {
+  position: static;
+  flex-shrink: 0;
+}
+
+/* Action tray — floats above the pill on hover, centered horizontally */
+.task-card.compact .task-actions {
+  position: absolute;
+  /* Sit just above the pill */
+  bottom: calc(100% + var(--space-1));
+  left: 50%;
+  transform: translateX(-50%);
+  right: unset;
+
+  display: flex;
+  gap: var(--space-0_5);
+  padding: var(--space-0_5) var(--space-1);
+  background: var(--surface-1, rgba(20, 20, 24, 0.95));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.4));
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+
+  /* Prevent the tray from wrapping oddly */
+  white-space: nowrap;
+  width: max-content;
+
+  /* Stack above siblings */
+  z-index: 10;
+}
+
+.task-card.compact:hover .task-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Action buttons stay compact */
+.task-card.compact .action-btn {
+  width: 20px;
+  height: 20px;
 }
 
 .not-on-canvas-badge {

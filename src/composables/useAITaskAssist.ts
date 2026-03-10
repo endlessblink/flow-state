@@ -331,29 +331,40 @@ export function useAITaskAssist() {
     resetState('improveTitle')
     try {
       const langHint = detectLanguageInstruction(currentTitle)
+      // Prompt optimized by DSPy MIPROv2 on llama-3.3-70b (tools/prompt-optimizer/) — do not hand-edit, re-run optimizer instead
       const messages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: `You improve task titles. Your job:
-1. Fix typos and grammar mistakes
-2. Make vague titles specific and actionable (start with a verb)
-3. Keep it concise — under 60 characters
-4. PRESERVE the original language. If the input is in Hebrew, output in Hebrew. If mixed Hebrew+English, keep the mix but fix errors.
-5. Do NOT translate, summarize, or remove meaning — only clarify and fix
-
-Examples:
-- "stuff for meeting" → "Prepare agenda for Monday standup"
-- "detaild canvas סרטון לפרסם" → "לפרסם סרטון detailed canvas"
-- "fix bug" → "Fix bug" (already clear enough — return as-is with minimal changes)
-- "עיצוב" → "עיצוב" (too little context to improve — return as-is)
-- "do the thing john asked" → "Complete task requested by John"
-- "לסדר את הבאגים בדף הבית" → "לתקן באגים בדף הבית"
-
-If the title is already clear and actionable, return it as-is (with typo fixes only).
-If the title is too short/vague to improve meaningfully (1-2 generic words), return it unchanged.
+          content: `Improve the given task title by making it more specific, descriptive, and actionable. Ensure the title is concise, under 60 characters, and starts with a verb when possible. Correct any typos or grammatical errors while preserving the original language. If the title is already clear, return it with only typo fixes. If the title is too vague to improve, return it unchanged.
 
 Return ONLY valid JSON: { "title": "..." }` + langHint
         },
+        // Few-shot demos selected by DSPy MIPROv2 optimizer (score: 83.5%)
+        {
+          role: 'user',
+          content: 'fix the thing'
+        },
+        {
+          role: 'assistant',
+          content: '{ "title": "Fix broken checkout redirect on confirmation page" }'
+        },
+        {
+          role: 'user',
+          content: 'detaild canvas סרטון לפרסם'
+        },
+        {
+          role: 'assistant',
+          content: '{ "title": "לפרסם סרטון detailed canvas" }'
+        },
+        {
+          role: 'user',
+          content: 'stuff for meeting'
+        },
+        {
+          role: 'assistant',
+          content: '{ "title": "Prepare agenda for Monday standup meeting" }'
+        },
+        // Actual user input
         {
           role: 'user',
           content: currentTitle

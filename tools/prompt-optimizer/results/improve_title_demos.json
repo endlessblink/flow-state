@@ -1,0 +1,23 @@
+[
+  {
+    "augmented": true,
+    "original_title": "עיצוב",
+    "project_context": "Design project",
+    "improved_title": "ע"
+  },
+  {
+    "original_title": "fix the thing",
+    "project_context": "Web app project",
+    "improved_title": "Fix broken checkout redirect on confirmation page"
+  },
+  {
+    "original_title": "detaild canvas סרטון לפרסם",
+    "project_context": "Content creation",
+    "improved_title": "לפרסם סרטון detailed canvas"
+  },
+  {
+    "original_title": "stuff for meeting",
+    "project_context": "Team management",
+    "improved_title": "Prepare agenda for Monday standup meeting"
+  }
+]

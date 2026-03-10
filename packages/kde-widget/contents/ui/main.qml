@@ -63,6 +63,7 @@ PlasmoidItem {
 
     // ===== TASK STATE =====
     property var tasks: []
+    property var nannyAllTasks: []  // BUG-1498: unfiltered non-done tasks for nanny popup
     property bool isLoadingTasks: false
     property string errorMessage: ""
 
@@ -186,6 +187,7 @@ PlasmoidItem {
                             root.fetchTasks()
                             root.fetchPinnedTasks()
                             root.fetchProjects()
+                            root.fetchNannyTasks()
                         }
                         console.log("[OAUTH] Google sign-in successful")
                     } else if (result.error) {
@@ -243,21 +245,24 @@ PlasmoidItem {
         var messages = tone === "direct" ? root.nannyDirectMessages : root.nannyGentleMessages
         var msg = messages[Math.floor(Math.random() * messages.length)]
 
-        root.buildNannyTaskList()
-        console.log("[NANNY] Showing popup:", msg, "with", root.nannyTaskList.length, "tasks (pinned + recent)")
+        // BUG-1498: Fetch fresh unfiltered tasks, THEN build list and show popup
+        root.fetchNannyTasks(function() {
+            root.buildNannyTaskList()
+            console.log("[NANNY] Showing popup:", msg, "with", root.nannyTaskList.length, "tasks (pinned + recent)")
 
-        // Position on the same screen as the widget
-        var sg = root.getWidgetScreenGeometry()
-        if (sg.screen) nannyPopup.screen = sg.screen
-        nannyPopup.x = sg.x + sg.width - nannyPopup.width - 24
-        nannyPopup.y = sg.y + sg.height - nannyPopup.height - 24
+            // Position on the same screen as the widget
+            var sg = root.getWidgetScreenGeometry()
+            if (sg.screen) nannyPopup.screen = sg.screen
+            nannyPopup.x = sg.x + sg.width - nannyPopup.width - 24
+            nannyPopup.y = sg.y + sg.height - nannyPopup.height - 24
 
-        nannyPopup.nannyMessage = msg
-        nannyPopup.visible = true
-        nannyPopup.raise()
-        nannyPopup.requestActivate()
+            nannyPopup.nannyMessage = msg
+            nannyPopup.visible = true
+            nannyPopup.raise()
+            nannyPopup.requestActivate()
 
-        root.nannyLastNotifyTime = Date.now()
+            root.nannyLastNotifyTime = Date.now()
+        })
     }
 
     // TASK-1424: Start a new work session with a specific task
@@ -3368,7 +3373,7 @@ PlasmoidItem {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: { root.fetchCurrentSession(); root.fetchTasks(); root.fetchPinnedTasks(); root.fetchProjects() }
+                        onClicked: { root.fetchCurrentSession(); root.fetchTasks(); root.fetchPinnedTasks(); root.fetchProjects(); root.fetchNannyTasks() }
                         enabled: !root.isLoadingTasks
                     }
                 }
@@ -3453,7 +3458,7 @@ PlasmoidItem {
         interval: root.hasActiveSession ? 10000 : 30000
         running: root.isAuthenticated
         repeat: true
-        onTriggered: root.fetchTasks()
+        onTriggered: { root.fetchTasks(); root.fetchNannyTasks() }
     }
 
     // BUG-1347: Timer to clear transition state (replaces Date.now() < transitionUntil)
@@ -4480,8 +4485,8 @@ PlasmoidItem {
             // In Supabase, lower number = higher priority, so sort ascending
             url += "&order=priority.asc.nullslast"
         } else if (root.taskSortBy === "canvas_order") {
-            // Sort by parent_id (group) first, then by position x-coordinate (left to right)
-            url += "&order=parent_id.asc.nullslast,created_at.desc"
+            // TASK-1499: Server can't sort by JSONB nested fields properly, use client-side sort
+            url += "&order=created_at.desc"
         } else if (root.taskSortBy === "project") {
             // TASK-1454: Group by project — server sorts by project_id, client injects headers
             url += "&order=project_id.asc.nullslast,created_at.desc"
@@ -4505,6 +4510,10 @@ PlasmoidItem {
                     // TASK-1454: Inject project group headers if project sort is active
                     if (root.taskSortBy === "project" && Object.keys(root.projects).length > 0) {
                         root.groupTasksByProject()
+                    }
+                    // TASK-1499: Client-side canvas order sorting
+                    if (root.taskSortBy === "canvas_order" || root.taskFilter === "on_canvas") {
+                        root.sortTasksByCanvasOrder()
                     }
                     root.updateDisplayTasks()
                     root.writeActiveTaskFile()
@@ -4626,6 +4635,64 @@ PlasmoidItem {
 
         root.tasks = result
         if (root.debugLogging) console.log("[PROJECTS] Grouped tasks into", projectIds.length + (ungrouped.length > 0 ? 1 : 0), "sections")
+    }
+
+    // TASK-1499: Sort canvas tasks by group + Y position (mirrors Vue app canvas sort)
+    function sortTasksByCanvasOrder() {
+        // Filter out any existing headers (not expected here, but defensive)
+        var realTasks = []
+        for (var i = 0; i < root.tasks.length; i++) {
+            if (!root.tasks[i].isHeader) realTasks.push(root.tasks[i])
+        }
+
+        // Build buckets by canvas group (position.parentId inside JSONB)
+        var buckets = {}  // parentId -> [tasks]
+        var ungrouped = []
+        for (var j = 0; j < realTasks.length; j++) {
+            var t = realTasks[j]
+            var groupId = t.position ? t.position.parentId : null
+            if (groupId) {
+                if (!buckets[groupId]) buckets[groupId] = []
+                buckets[groupId].push(t)
+            } else {
+                ungrouped.push(t)
+            }
+        }
+
+        // Sort tasks within each bucket by Y position (top to bottom)
+        var sortByY = function(a, b) {
+            var ay = (a.position && a.position.y !== undefined) ? a.position.y : 99999
+            var by = (b.position && b.position.y !== undefined) ? b.position.y : 99999
+            return ay - by
+        }
+
+        var groupIds = Object.keys(buckets)
+        for (var g = 0; g < groupIds.length; g++) {
+            buckets[groupIds[g]].sort(sortByY)
+        }
+        ungrouped.sort(sortByY)
+
+        // Sort group IDs by first task's X position descending (rightmost group first)
+        groupIds.sort(function(a, b) {
+            var ax = buckets[a][0] && buckets[a][0].position ? buckets[a][0].position.x : 0
+            var bx = buckets[b][0] && buckets[b][0].position ? buckets[b][0].position.x : 0
+            return bx - ax
+        })
+
+        // Build final list: grouped tasks first, then ungrouped
+        var result = []
+        for (var k = 0; k < groupIds.length; k++) {
+            var tasks = buckets[groupIds[k]]
+            for (var l = 0; l < tasks.length; l++) {
+                result.push(tasks[l])
+            }
+        }
+        for (var m = 0; m < ungrouped.length; m++) {
+            result.push(ungrouped[m])
+        }
+
+        root.tasks = result
+        if (root.debugLogging) console.log("[CANVAS] Sorted", realTasks.length, "tasks by canvas order:", groupIds.length, "groups +", ungrouped.length, "ungrouped")
     }
 
     // ===== QUICK TASK CREATION =====
@@ -4822,6 +4889,34 @@ PlasmoidItem {
 
     // ===== NANNY TASK LIST BUILDER (TASK-1475) =====
 
+    // BUG-1498: Fetch ALL non-done tasks for the nanny popup, independent of widget filters.
+    // Optional callback is invoked after the fetch completes.
+    function fetchNannyTasks(callback) {
+        if (!root.isAuthenticated) {
+            if (callback) callback()
+            return
+        }
+
+        var xhr = new XMLHttpRequest()
+        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,project_id&status=neq.done&is_deleted=eq.false&order=priority.asc.nullslast,created_at.desc&limit=50"
+        xhr.open("GET", url, true)
+        xhr.setRequestHeader("apikey", root.supabaseKey)
+        xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    root.nannyAllTasks = JSON.parse(xhr.responseText)
+                    console.log("[NANNY] Fetched", root.nannyAllTasks.length, "unfiltered tasks for nanny popup")
+                } else {
+                    console.log("[NANNY] Unfiltered fetch failed (" + xhr.status + "), keeping cached list")
+                }
+                if (callback) callback()
+            }
+        }
+        xhr.send()
+    }
+
     function buildNannyTaskList() {
         // Reset hidden list if day changed
         var today = new Date()
@@ -4831,15 +4926,21 @@ PlasmoidItem {
             root.nannyHiddenDate = dayOfYear
         }
 
+        // BUG-1498: Use unfiltered task cache; fall back to widget tasks if empty
+        var allTasks = root.nannyAllTasks.length > 0 ? root.nannyAllTasks : root.tasks
+        _buildNannyTaskListFromTasks(allTasks)
+    }
+
+    function _buildNannyTaskListFromTasks(allTasks) {
         var combined = []
         var pinnedTitles = {}
-        var maxItems = 5
+        var maxItems = 10
 
-        // Helper: look up task details from root.tasks by title match
+        // Helper: look up task details from fetched tasks by title match
         function findTaskByTitle(title) {
-            for (var k = 0; k < root.tasks.length; k++) {
-                if (root.tasks[k].title && root.tasks[k].title.toLowerCase() === title.toLowerCase()) {
-                    return root.tasks[k]
+            for (var k = 0; k < allTasks.length; k++) {
+                if (allTasks[k].title && allTasks[k].title.toLowerCase() === title.toLowerCase()) {
+                    return allTasks[k]
                 }
             }
             return null
@@ -4895,9 +4996,9 @@ PlasmoidItem {
         }
 
         // 2. Fill remaining slots with recent non-pinned, non-done tasks
-        if (combined.length < maxItems && root.tasks.length > 0) {
-            for (var j = 0; j < root.tasks.length && combined.length < maxItems; j++) {
-                var task = root.tasks[j]
+        if (combined.length < maxItems && allTasks.length > 0) {
+            for (var j = 0; j < allTasks.length && combined.length < maxItems; j++) {
+                var task = allTasks[j]
                 if (!task || !task.title) continue
                 if (pinnedTitles[task.title.toLowerCase()]) continue
                 if (task.status === "done") continue

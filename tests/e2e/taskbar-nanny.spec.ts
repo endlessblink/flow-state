@@ -26,10 +26,7 @@ test.describe('Taskbar Nanny', () => {
     await page.goto('/#/tasks')
     await page.waitForLoadState('networkidle')
 
-    // Wait for threshold (10s) + force fallback buffer (up to 120s extra)
-    // The toast appears when the user goes idle (3s) after threshold is crossed.
-    // In Playwright with no mouse/keyboard activity, the user is always "idle",
-    // so the toast should fire right at the 10s mark.
+    // Wait for threshold (10s) — toast fires immediately when threshold is crossed.
     // Wait 15s to be safe.
     await page.waitForTimeout(15000)
 

@@ -116,11 +116,15 @@ defineEmits<{
 
 .pinned-tasks {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  max-height: 240px;
+  flex-wrap: wrap;
+  gap: var(--space-1_5);
+  /* Extra top padding so the hover action tray (floats above pill) isn't clipped */
+  padding: var(--space-4) var(--space-1) var(--space-1_5);
+  /* Pills are short — reduce max-height, keep overflow for many items */
+  max-height: 160px;
   overflow-y: auto;
-  padding: var(--space-1) 0;
+  /* Ensure the absolutely-positioned action tray can escape */
+  overflow-x: visible;
 }
 
 /* Subtle scrollbar */

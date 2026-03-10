@@ -66,56 +66,6 @@ describe('Sync Layer Read-Only Contract (TASK-240)', () => {
         });
     });
 
-    describe('Geometry Write Policy documentation', () => {
-        it('should document allowed geometry writers', () => {
-            // This test documents the ONLY allowed geometry write locations
-            const ALLOWED_GEOMETRY_WRITERS = [
-                'useCanvasInteractions.onNodeDragStop() - task drag',
-                'useCanvasInteractions.onNodeDragStop() - group drag',
-                'useCanvasInteractions.onSectionResizeEnd() - group resize',
-                'useCanvasTaskActions.handleQuickTaskCreate() - new task',
-                'useCanvasTaskActions.moveSelectedTasksToInbox() - clear position'
-            ];
-
-            expect(ALLOWED_GEOMETRY_WRITERS.length).toBe(5);
-
-            // All allowed writers are in user-interaction composables
-            ALLOWED_GEOMETRY_WRITERS.forEach(writer => {
-                expect(
-                    writer.includes('Interactions') || writer.includes('TaskActions')
-                ).toBe(true);
-            });
-        });
-
-        it('should document forbidden geometry writers', () => {
-            // This test documents code paths that MUST NOT write geometry
-            const FORBIDDEN_GEOMETRY_WRITERS = [
-                'useCanvasSync.syncStoreToCanvas() - must be read-only',
-                'useNodeSync.syncNodePosition() - writes to DB only, not stores',
-                'useCanvasOverdueCollector.autoCollectOverdueTasks() - disabled via flag',
-                'useMidnightTaskMover.moveTodayTasksToOverdue() - disabled via flag',
-                'useCanvasOrchestrator reconciliation - one-time only'
-            ];
-
-            expect(FORBIDDEN_GEOMETRY_WRITERS.length).toBe(5);
-        });
-    });
-
-    describe('Feature flag guards', () => {
-        it('ENABLE_SMART_GROUP_REPARENTING should be false', () => {
-            // This constant should be false to prevent auto-collection drift
-            // The actual check is in useCanvasOverdueCollector.ts
-            const ENABLE_SMART_GROUP_REPARENTING = false;
-            expect(ENABLE_SMART_GROUP_REPARENTING).toBe(false);
-        });
-
-        it('ENABLE_MIDNIGHT_TASK_MOVER should be false', () => {
-            // This constant should be false to prevent midnight move drift
-            // The actual check is in useMidnightTaskMover.ts
-            const ENABLE_MIDNIGHT_TASK_MOVER = false;
-            expect(ENABLE_MIDNIGHT_TASK_MOVER).toBe(false);
-        });
-    });
 });
 
 describe('Sync Contract Invariants', () => {

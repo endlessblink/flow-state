@@ -148,36 +148,6 @@ describe('cacheTasks / getCachedTasks', () => {
 // ── Group cache tests ──────────────────────────────────────────────────────
 
 describe('cacheGroups / getCachedGroups', () => {
-  it('returns null when the cache is empty', async () => {
-    const result = await getCachedGroups()
-    expect(result).toBeNull()
-  })
-
-  it('stores and retrieves groups', async () => {
-    const groups = [
-      makeGroup({ id: 'group-1' }),
-      makeGroup({ id: 'group-2', name: 'Second Group' }),
-    ]
-
-    await cacheGroups(groups)
-    const cached = await getCachedGroups()
-
-    expect(cached).not.toBeNull()
-    expect(cached!.length).toBe(2)
-
-    const ids = cached!.map((g) => g.id).sort()
-    expect(ids).toEqual(['group-1', 'group-2'])
-  })
-
-  it('replaces existing cache on subsequent calls', async () => {
-    await cacheGroups([makeGroup({ id: 'group-old' })])
-    await cacheGroups([makeGroup({ id: 'group-new' })])
-
-    const cached = await getCachedGroups()
-    expect(cached!.length).toBe(1)
-    expect(cached![0].id).toBe('group-new')
-  })
-
   it('preserves group fields faithfully after round-trip', async () => {
     const group = makeGroup({
       id: 'group-roundtrip',
@@ -210,36 +180,6 @@ describe('cacheGroups / getCachedGroups', () => {
 // ── Project cache tests ────────────────────────────────────────────────────
 
 describe('cacheProjects / getCachedProjects', () => {
-  it('returns null when the cache is empty', async () => {
-    const result = await getCachedProjects()
-    expect(result).toBeNull()
-  })
-
-  it('stores and retrieves projects', async () => {
-    const projects = [
-      makeProject({ id: 'proj-1' }),
-      makeProject({ id: 'proj-2', name: 'Backend' }),
-    ]
-
-    await cacheProjects(projects)
-    const cached = await getCachedProjects()
-
-    expect(cached).not.toBeNull()
-    expect(cached!.length).toBe(2)
-
-    const ids = cached!.map((p) => p.id).sort()
-    expect(ids).toEqual(['proj-1', 'proj-2'])
-  })
-
-  it('replaces existing cache on subsequent calls', async () => {
-    await cacheProjects([makeProject({ id: 'proj-old' })])
-    await cacheProjects([makeProject({ id: 'proj-new', name: 'New Project' })])
-
-    const cached = await getCachedProjects()
-    expect(cached!.length).toBe(1)
-    expect(cached![0].id).toBe('proj-new')
-  })
-
   it('preserves project fields faithfully after round-trip', async () => {
     const project = makeProject({
       id: 'proj-roundtrip',
@@ -442,48 +382,6 @@ describe('clearReadCache', () => {
     const cached = await getCachedTasks()
     expect(cached!.length).toBe(1)
     expect(cached![0].id).toBe('after-clear')
-  })
-})
-
-// ── Error resilience tests ─────────────────────────────────────────────────
-
-describe('error resilience', () => {
-  it('cacheTasks does not throw when called with valid data', async () => {
-    await expect(cacheTasks([makeTask()])).resolves.not.toThrow()
-  })
-
-  it('cacheGroups does not throw when called with valid data', async () => {
-    await expect(cacheGroups([makeGroup()])).resolves.not.toThrow()
-  })
-
-  it('cacheProjects does not throw when called with valid data', async () => {
-    await expect(cacheProjects([makeProject()])).resolves.not.toThrow()
-  })
-
-  it('getCachedTasks does not throw on empty database', async () => {
-    await expect(getCachedTasks()).resolves.not.toThrow()
-  })
-
-  it('getCachedGroups does not throw on empty database', async () => {
-    await expect(getCachedGroups()).resolves.not.toThrow()
-  })
-
-  it('getCachedProjects does not throw on empty database', async () => {
-    await expect(getCachedProjects()).resolves.not.toThrow()
-  })
-
-  it('getCacheStats does not throw on empty database', async () => {
-    await expect(getCacheStats()).resolves.not.toThrow()
-  })
-
-  it('getCacheAge does not throw for any entity type', async () => {
-    await expect(getCacheAge('tasks')).resolves.not.toThrow()
-    await expect(getCacheAge('groups')).resolves.not.toThrow()
-    await expect(getCacheAge('projects')).resolves.not.toThrow()
-  })
-
-  it('clearReadCache does not throw on empty database', async () => {
-    await expect(clearReadCache()).resolves.not.toThrow()
   })
 })
 

@@ -7,9 +7,10 @@
  * - fluffDetector
  * - toolHints
  * - preDigestedReasoning
- * - entityMemory
  * - entityResolver
  * - contextOptimizer
+ *
+ * NOTE: entityMemory tests live in deterministic-pipeline.test.ts
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -40,16 +41,12 @@ describe('languageDetector', () => {
       expect(['en', 'he', 'unknown']).toContain(result)
     })
 
-    it('returns "unknown" for empty string', () => {
-      expect(detectLanguage('')).toBe('unknown')
-    })
-
-    it('returns "unknown" for whitespace-only string', () => {
-      expect(detectLanguage('   ')).toBe('unknown')
-    })
-
-    it('returns "unknown" for numbers-only string', () => {
-      expect(detectLanguage('12345 6789')).toBe('unknown')
+    it.each([
+      ['empty string', ''],
+      ['whitespace-only', '   '],
+      ['numbers-only', '12345 6789'],
+    ])('returns "unknown" for %s', (_label, input) => {
+      expect(detectLanguage(input)).toBe('unknown')
     })
 
     it('returns "en" for a longer English paragraph', () => {
@@ -103,16 +100,12 @@ describe('languageDetector', () => {
   })
 
   describe('getTextDirection()', () => {
-    it('returns "rtl" for Hebrew', () => {
-      expect(getTextDirection('he')).toBe('rtl')
-    })
-
-    it('returns "ltr" for English', () => {
-      expect(getTextDirection('en')).toBe('ltr')
-    })
-
-    it('returns "ltr" for unknown', () => {
-      expect(getTextDirection('unknown')).toBe('ltr')
+    it.each([
+      ['he', 'rtl'],
+      ['en', 'ltr'],
+      ['unknown', 'ltr'],
+    ])('returns "%s" direction for lang "%s"', (lang, expected) => {
+      expect(getTextDirection(lang)).toBe(expected)
     })
   })
 })
@@ -161,13 +154,15 @@ describe('responseValidator — cleanResponse()', () => {
     expect(result).toContain('You have 5 tasks.')
   })
 
-  it('strips standalone tool name references from response', () => {
-    const toolNames = ['list_tasks', 'get_overdue_tasks', 'search_tasks', 'get_daily_summary']
-    for (const toolName of toolNames) {
-      const input = `Using ${toolName} to find your data.`
-      const result = cleanResponse(input)
-      expect(result).not.toContain(toolName)
-    }
+  it.each([
+    'list_tasks',
+    'get_overdue_tasks',
+    'search_tasks',
+    'get_daily_summary',
+  ])('strips standalone tool name reference "%s" from response', (toolName) => {
+    const input = `Using ${toolName} to find your data.`
+    const result = cleanResponse(input)
+    expect(result).not.toContain(toolName)
   })
 
   it('strips UUIDs from response text', () => {
@@ -266,11 +261,9 @@ describe('fluffDetector', () => {
     })
 
     it('rewards response with specific data points (days, counts, percentages)', () => {
-      // Response with specific data should not get the "no specific data" penalty
       const response = 'You have 3 tasks overdue, including one that is 5 days late. You completed 40% of your weekly goal.'
       const result1 = detectFluff(response, [], true)
 
-      // Response without specific data gets penalty
       const vague = 'You have some tasks to work on today.'
       const result2 = detectFluff(vague, [], true)
 
@@ -301,18 +294,12 @@ describe('fluffDetector', () => {
       expect(extractTaskTitlesFromResults(toolResults)).toEqual(['Task A', 'Task B'])
     })
 
-    it('returns empty array when data is null', () => {
-      const toolResults = [{ data: null }]
-      expect(extractTaskTitlesFromResults(toolResults)).toEqual([])
-    })
-
-    it('returns empty array for empty toolResults', () => {
-      expect(extractTaskTitlesFromResults([])).toEqual([])
-    })
-
-    it('returns empty array when data is empty array', () => {
-      const toolResults = [{ data: [] }]
-      expect(extractTaskTitlesFromResults(toolResults)).toEqual([])
+    it.each([
+      ['null data', [{ data: null }]],
+      ['empty toolResults', []],
+      ['empty data array', [{ data: [] }]],
+    ])('returns empty array for %s', (_label, toolResults) => {
+      expect(extractTaskTitlesFromResults(toolResults as Parameters<typeof extractTaskTitlesFromResults>[0])).toEqual([])
     })
 
     it('handles multiple result entries, concatenating titles', () => {
@@ -352,7 +339,6 @@ describe('toolHints', () => {
     it('returns hint with tool "start_timer" for "start timer" (NOT get_timer_status)', () => {
       const hints = getToolHints('start timer')
       expect(hints.some(h => h.tool === 'start_timer')).toBe(true)
-      // The start_timer match should appear before get_timer_status due to specificity
       const startTimerIdx = hints.findIndex(h => h.tool === 'start_timer')
       const timerStatusIdx = hints.findIndex(h => h.tool === 'get_timer_status')
       if (timerStatusIdx !== -1) {
@@ -360,16 +346,12 @@ describe('toolHints', () => {
       }
     })
 
-    it('returns empty array for generic greeting with no keywords', () => {
-      expect(getToolHints('hello')).toEqual([])
-    })
-
-    it('returns empty array for empty string', () => {
-      expect(getToolHints('')).toEqual([])
-    })
-
-    it('returns empty array for whitespace-only string', () => {
-      expect(getToolHints('   ')).toEqual([])
+    it.each([
+      ['generic greeting', 'hello'],
+      ['empty string', ''],
+      ['whitespace-only', '   '],
+    ])('returns empty array for %s', (_label, input) => {
+      expect(getToolHints(input)).toEqual([])
     })
 
     it('matches Hebrew keywords for task listing', () => {
@@ -389,24 +371,14 @@ describe('toolHints', () => {
       expect(tools.length).toBe(uniqueTools.size)
     })
 
-    it('matches "stop timer" to stop_timer tool', () => {
-      const hints = getToolHints('stop timer')
-      expect(hints.some(h => h.tool === 'stop_timer')).toBe(true)
-    })
-
-    it('matches "weekly summary" to get_weekly_summary', () => {
-      const hints = getToolHints('give me a weekly summary')
-      expect(hints.some(h => h.tool === 'get_weekly_summary')).toBe(true)
-    })
-
-    it('matches "statistics" to get_productivity_stats', () => {
-      const hints = getToolHints('show me my statistics')
-      expect(hints.some(h => h.tool === 'get_productivity_stats')).toBe(true)
-    })
-
-    it('matches "create task" to create_task', () => {
-      const hints = getToolHints('create task: buy groceries')
-      expect(hints.some(h => h.tool === 'create_task')).toBe(true)
+    it.each([
+      ['stop timer', 'stop_timer'],
+      ['give me a weekly summary', 'get_weekly_summary'],
+      ['show me my statistics', 'get_productivity_stats'],
+      ['create task: buy groceries', 'create_task'],
+    ])('matches "%s" to %s', (input, expectedTool) => {
+      const hints = getToolHints(input)
+      expect(hints.some(h => h.tool === expectedTool)).toBe(true)
     })
 
     it('is case-insensitive', () => {
@@ -426,14 +398,11 @@ describe('toolHints', () => {
       expect(formatToolHints(hints)).toContain('TOOL HINTS')
     })
 
-    it('includes the tool name in backticks', () => {
+    it('includes the tool name in backticks and the reason text', () => {
       const hints: ToolHint[] = [{ tool: 'list_tasks', reason: 'User wants tasks' }]
-      expect(formatToolHints(hints)).toContain('`list_tasks`')
-    })
-
-    it('includes the reason text', () => {
-      const hints: ToolHint[] = [{ tool: 'list_tasks', reason: 'User wants tasks' }]
-      expect(formatToolHints(hints)).toContain('User wants tasks')
+      const result = formatToolHints(hints)
+      expect(result).toContain('`list_tasks`')
+      expect(result).toContain('User wants tasks')
     })
 
     it('caps output at 3 hints even when more are provided', () => {
@@ -451,13 +420,6 @@ describe('toolHints', () => {
       expect(result).not.toContain('tool_4')
       expect(result).not.toContain('tool_5')
     })
-
-    it('formats a single hint correctly', () => {
-      const hints: ToolHint[] = [{ tool: 'get_overdue_tasks', reason: 'User is asking about overdue tasks' }]
-      const result = formatToolHints(hints)
-      expect(result).toMatch(/TOOL HINTS/)
-      expect(result).toMatch(/`get_overdue_tasks`/)
-    })
   })
 })
 
@@ -468,13 +430,12 @@ describe('toolHints', () => {
 import { digestToolResults } from '@/services/ai/pipeline/preDigestedReasoning'
 
 describe('preDigestedReasoning — digestToolResults()', () => {
-  it('returns the original message when data is null/undefined', () => {
-    expect(digestToolResults('list_tasks', null, 'Found 0 tasks')).toBe('Found 0 tasks')
-    expect(digestToolResults('list_tasks', undefined, 'No data')).toBe('No data')
-  })
-
-  it('returns the original message when data is an empty array', () => {
-    expect(digestToolResults('list_tasks', [], 'Found 0 tasks')).toBe('Found 0 tasks')
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+    ['empty array', []],
+  ])('returns the original message when data is %s', (_label, data) => {
+    expect(digestToolResults('list_tasks', data as Parameters<typeof digestToolResults>[1], 'Found 0 tasks')).toBe('Found 0 tasks')
   })
 
   it('includes PRE-ANALYZED FACTS for task list with overdue task', () => {
@@ -483,36 +444,21 @@ describe('preDigestedReasoning — digestToolResults()', () => {
     expect(result).toContain('PRE-ANALYZED FACTS')
     expect(result).toContain('OVERDUE')
     expect(result).toContain('Fix bug')
-  })
-
-  it('includes task name and days overdue in digested output', () => {
-    const data = [{ title: 'Fix bug', status: 'in_progress', daysOverdue: 3, priority: 'high' }]
-    const result = digestToolResults('list_tasks', data, 'Found 1 task')
-    expect(result).toContain('Fix bug')
     expect(result).toContain('3')
+    expect(result).toContain('RECOMMENDATION')
   })
 
-  it('digests productivity stats with completedToday', () => {
-    const data = { completedToday: 5, pomodorosToday: 3 }
+  it('digests productivity stats with completedToday and pomodorosToday', () => {
+    const data = { completedToday: 5, pomodorosToday: 4 }
     const result = digestToolResults('get_productivity_stats', data, 'Stats')
     expect(result).toContain('Completed today: 5')
-  })
-
-  it('digests productivity stats with pomodorosToday', () => {
-    const data = { completedToday: 2, pomodorosToday: 4 }
-    const result = digestToolResults('get_productivity_stats', data, 'Stats')
     expect(result).toContain('Pomodoros today: 4')
   })
 
-  it('digests weekly summary with completedThisWeek', () => {
-    const data = { completedThisWeek: 8, totalFocusMinutes: 150 }
+  it('digests weekly summary with completedThisWeek and totalFocusMinutes', () => {
+    const data = { completedThisWeek: 8, totalFocusMinutes: 90 }
     const result = digestToolResults('get_weekly_summary', data, 'Week summary')
     expect(result).toContain('Completed this week: 8')
-  })
-
-  it('digests weekly summary with totalFocusMinutes as hours+minutes', () => {
-    const data = { completedThisWeek: 3, totalFocusMinutes: 90 }
-    const result = digestToolResults('get_weekly_summary', data, 'Week summary')
     expect(result).toContain('1h 30m')
   })
 
@@ -535,19 +481,12 @@ describe('preDigestedReasoning — digestToolResults()', () => {
     expect(result).toContain('message')
   })
 
-  it('includes RECOMMENDATION section for task lists', () => {
-    const data = [{ title: 'Fix bug', status: 'in_progress', daysOverdue: 3, priority: 'high' }]
-    const result = digestToolResults('list_tasks', data, 'Found 1 task')
-    expect(result).toContain('RECOMMENDATION')
-  })
-
   it('handles multiple tasks and sorts overdue by days', () => {
     const data = [
       { title: 'Minor task', status: 'planned', daysOverdue: 1, priority: 'low' },
       { title: 'Critical task', status: 'in_progress', daysOverdue: 10, priority: 'high' },
     ]
     const result = digestToolResults('list_tasks', data, 'Found tasks')
-    // Critical (10 days) should be recommended first
     const recIndex = result.indexOf('RECOMMENDATION')
     const criticalIndex = result.indexOf('Critical task', recIndex)
     expect(recIndex).toBeGreaterThan(-1)
@@ -556,142 +495,7 @@ describe('preDigestedReasoning — digestToolResults()', () => {
 })
 
 // ============================================================================
-// 6. Entity Memory
-// ============================================================================
-
-import { EntityMemory, extractEntitiesFromToolResult } from '@/services/ai/pipeline/entityMemory'
-
-describe('entityMemory', () => {
-  describe('EntityMemory class', () => {
-    let memory: EntityMemory
-
-    beforeEach(() => {
-      memory = new EntityMemory()
-    })
-
-    it('starts with empty entity list', () => {
-      expect(memory.getRecent()).toEqual([])
-    })
-
-    it('getLastMentioned() returns null when empty', () => {
-      expect(memory.getLastMentioned()).toBeNull()
-    })
-
-    it('trackFromToolResult() adds entities from array data', () => {
-      memory.trackFromToolResult([{ id: '1', title: 'Task A' }])
-      const last = memory.getLastMentioned()
-      expect(last).not.toBeNull()
-      expect(last?.title).toBe('Task A')
-      expect(last?.id).toBe('1')
-    })
-
-    it('trackFromToolResult() sets source to "tool_result"', () => {
-      memory.trackFromToolResult([{ id: '1', title: 'Task A' }])
-      expect(memory.getLastMentioned()?.source).toBe('tool_result')
-    })
-
-    it('most recently tracked entity is first in getRecent()', () => {
-      memory.trackFromToolResult([{ id: '1', title: 'First Task' }])
-      // Small delay is not possible in sync code; track second immediately
-      memory.trackFromToolResult([{ id: '2', title: 'Second Task' }])
-      const recent = memory.getRecent()
-      expect(recent[0].title).toBe('Second Task')
-    })
-
-    it('deduplicates entities — same ID updates to front', () => {
-      memory.trackFromToolResult([{ id: '1', title: 'Task A' }])
-      memory.trackFromToolResult([{ id: '2', title: 'Task B' }])
-      memory.trackFromToolResult([{ id: '1', title: 'Task A' }]) // re-track
-      const recent = memory.getRecent()
-      // Task A should be first (most recent), Task B second
-      expect(recent[0].title).toBe('Task A')
-      // No duplicates
-      const ids = recent.map(e => e.id)
-      expect(ids.filter(id => id === '1').length).toBe(1)
-    })
-
-    it('getRecent() respects the limit parameter', () => {
-      memory.trackFromToolResult([
-        { id: '1', title: 'Task 1' },
-        { id: '2', title: 'Task 2' },
-        { id: '3', title: 'Task 3' },
-        { id: '4', title: 'Task 4' },
-      ])
-      expect(memory.getRecent(2).length).toBeLessThanOrEqual(2)
-    })
-
-    it('trackActionTarget() adds entity with "action_target" source', () => {
-      memory.trackActionTarget('abc-123', 'Done Task')
-      const last = memory.getLastMentioned()
-      expect(last?.id).toBe('abc-123')
-      expect(last?.title).toBe('Done Task')
-      expect(last?.source).toBe('action_target')
-    })
-
-    it('formatForPrompt() returns empty string when no entities', () => {
-      expect(memory.formatForPrompt()).toBe('')
-    })
-
-    it('formatForPrompt() includes RECENTLY MENTIONED TASKS when entities exist', () => {
-      memory.trackFromToolResult([{ id: '1', title: 'Fix login bug' }])
-      const prompt = memory.formatForPrompt()
-      expect(prompt).toContain('RECENTLY MENTIONED TASKS')
-    })
-
-    it('formatForPrompt() includes task title and ID', () => {
-      memory.trackFromToolResult([{ id: 'abc-999', title: 'Write unit tests' }])
-      const prompt = memory.formatForPrompt()
-      expect(prompt).toContain('Write unit tests')
-      expect(prompt).toContain('abc-999')
-    })
-
-    it('formatForPrompt() labels first entity as (most recent)', () => {
-      memory.trackFromToolResult([{ id: '1', title: 'Most Recent Task' }])
-      const prompt = memory.formatForPrompt()
-      expect(prompt).toContain('(most recent)')
-    })
-
-    it('clear() resets everything', () => {
-      memory.trackFromToolResult([{ id: '1', title: 'Task A' }])
-      memory.clear()
-      expect(memory.getRecent()).toEqual([])
-      expect(memory.getLastMentioned()).toBeNull()
-      expect(memory.formatForPrompt()).toBe('')
-    })
-  })
-
-  describe('extractEntitiesFromToolResult()', () => {
-    it('extracts from array of objects with id+title', () => {
-      const data = [{ id: '1', title: 'Task A' }, { id: '2', title: 'Task B' }]
-      expect(extractEntitiesFromToolResult(data)).toEqual([
-        { id: '1', title: 'Task A' },
-        { id: '2', title: 'Task B' },
-      ])
-    })
-
-    it('extracts from single object with id+title', () => {
-      const data = { id: '42', title: 'Single Task' }
-      expect(extractEntitiesFromToolResult(data)).toEqual([{ id: '42', title: 'Single Task' }])
-    })
-
-    it('returns empty array for null', () => {
-      expect(extractEntitiesFromToolResult(null)).toEqual([])
-    })
-
-    it('returns empty array for undefined', () => {
-      expect(extractEntitiesFromToolResult(undefined)).toEqual([])
-    })
-
-    it('skips array items missing id or title', () => {
-      const data = [{ id: '1' }, { title: 'Only title' }, { id: '3', title: 'Complete' }]
-      const result = extractEntitiesFromToolResult(data)
-      expect(result).toEqual([{ id: '3', title: 'Complete' }])
-    })
-  })
-})
-
-// ============================================================================
-// 7. Entity Resolver
+// 6. Entity Resolver
 // ============================================================================
 
 import { resolveTask, resolveTaskOrThrow } from '@/services/ai/entityResolver'
@@ -718,17 +522,14 @@ describe('entityResolver', () => {
       expect(result).toBeNull()
     })
 
-    it('returns null for TASK-XXX format references (guard prevents fuzzy match)', () => {
-      expect(resolveTask('TASK-123', tasks)).toBeNull()
-      expect(resolveTask('task-456', tasks)).toBeNull()
-    })
-
-    it('returns null for empty string', () => {
-      expect(resolveTask('', tasks)).toBeNull()
-    })
-
-    it('returns null when tasks list is empty', () => {
-      expect(resolveTask('marketing video', [])).toBeNull()
+    it.each([
+      ['TASK-XXX format', 'TASK-123'],
+      ['task- lowercase format', 'task-456'],
+      ['empty string', ''],
+      ['empty task list', 'marketing video'],
+    ])('returns null for %s', (label, ref) => {
+      const taskList = label === 'empty task list' ? [] : tasks
+      expect(resolveTask(ref, taskList)).toBeNull()
     })
 
     it('resolves "marketing video" to the video task by fuzzy title match', () => {
@@ -743,7 +544,7 @@ describe('entityResolver', () => {
       expect(result?.task.title).toContain('Fix login bug')
     })
 
-    it('fuzzy match returns non-null confidence level', () => {
+    it('fuzzy match returns recognized confidence level', () => {
       const result = resolveTask('marketing video', tasks)
       expect(['exact', 'high', 'medium', 'low']).toContain(result?.confidence)
     })
@@ -755,18 +556,17 @@ describe('entityResolver', () => {
       expect(result.title).toBe('My Task')
     })
 
-    it('throws when no match is found', () => {
-      expect(() => resolveTaskOrThrow('nonexistent-query-with-no-match-xyz', [])).toThrow()
-    })
-
-    it('throws for TASK-XXX format', () => {
-      expect(() => resolveTaskOrThrow('TASK-999', tasks)).toThrow()
+    it.each([
+      ['no match in empty list', 'nonexistent-query-with-no-match-xyz', [] as TaskLike[]],
+      ['TASK-XXX format', 'TASK-999', tasks as TaskLike[]],
+    ])('throws for %s', (_label, ref, taskList) => {
+      expect(() => resolveTaskOrThrow(ref, taskList)).toThrow()
     })
   })
 })
 
 // ============================================================================
-// 8. Context Optimizer
+// 7. Context Optimizer
 // ============================================================================
 
 import { optimizeTaskContext, buildTaskStats } from '@/services/ai/pipeline/contextOptimizer'
@@ -790,18 +590,12 @@ describe('contextOptimizer', () => {
   }
 
   describe('optimizeTaskContext()', () => {
-    it('returns empty string when tasks array is empty', () => {
-      expect(optimizeTaskContext([], [], { today: TODAY })).toBe('')
-    })
-
-    it('returns empty string when all tasks are done', () => {
-      const tasks = [makeTask({ id: '1', title: 'Done task', status: 'done' })]
-      expect(optimizeTaskContext(tasks, [], { today: TODAY })).toBe('')
-    })
-
-    it('returns empty string when all tasks are soft-deleted', () => {
-      const tasks = [makeTask({ id: '1', title: 'Deleted task', _soft_deleted: true })]
-      expect(optimizeTaskContext(tasks, [], { today: TODAY })).toBe('')
+    it.each([
+      ['empty tasks array', []],
+      ['all-done tasks', [{ id: '1', title: 'Done task', status: 'done' as const }]],
+      ['all soft-deleted tasks', [{ id: '1', title: 'Deleted task', _soft_deleted: true as const }]],
+    ])('returns empty string for %s', (_label, tasks) => {
+      expect(optimizeTaskContext(tasks.map(t => makeTask(t as Parameters<typeof makeTask>[0])), [], { today: TODAY })).toBe('')
     })
 
     it('returns non-empty string for open tasks', () => {
@@ -810,25 +604,15 @@ describe('contextOptimizer', () => {
       expect(result.length).toBeGreaterThan(0)
     })
 
-    it('places overdue tasks in OVERDUE section', () => {
-      const tasks = [makeTask({ id: '1', title: 'Overdue task', dueDate: YESTERDAY })]
+    it.each([
+      ['overdue', YESTERDAY, 'OVERDUE'],
+      ['due today', TODAY, 'DUE TODAY'],
+      ['due this week', NEXT_WEEK, 'THIS WEEK'],
+    ])('places %s task in correct section', (_label, dueDate, expectedSection) => {
+      const tasks = [makeTask({ id: '1', title: `${_label} task`, dueDate })]
       const result = optimizeTaskContext(tasks, [], { today: TODAY })
-      expect(result).toContain('OVERDUE')
-      expect(result).toContain('Overdue task')
-    })
-
-    it('places due-today tasks in DUE TODAY section', () => {
-      const tasks = [makeTask({ id: '1', title: 'Today task', dueDate: TODAY })]
-      const result = optimizeTaskContext(tasks, [], { today: TODAY })
-      expect(result).toContain('DUE TODAY')
-      expect(result).toContain('Today task')
-    })
-
-    it('places tasks due this week in THIS WEEK section', () => {
-      const tasks = [makeTask({ id: '1', title: 'Week task', dueDate: NEXT_WEEK })]
-      const result = optimizeTaskContext(tasks, [], { today: TODAY })
-      expect(result).toContain('THIS WEEK')
-      expect(result).toContain('Week task')
+      expect(result).toContain(expectedSection)
+      expect(result).toContain(`${_label} task`)
     })
 
     it('places todo tasks in TODO section when no due date', () => {
@@ -844,16 +628,11 @@ describe('contextOptimizer', () => {
       expect(result).toContain('"My Hebrew Task"')
     })
 
-    it('includes project name when projectId matches a project', () => {
+    it('includes project name and header section', () => {
       const tasks = [makeTask({ id: '1', title: 'Proj task', projectId: 'proj-1' })]
       const projects: ProjectLookup[] = [{ id: 'proj-1', name: 'Authentication Service' }]
       const result = optimizeTaskContext(tasks, projects, { today: TODAY })
       expect(result).toContain('Authentication Service')
-    })
-
-    it('includes header section about task data', () => {
-      const tasks = [makeTask({ id: '1', title: 'Test task' })]
-      const result = optimizeTaskContext(tasks, [], { today: TODAY })
       expect(result).toContain('YOUR TASK DATA')
     })
 
@@ -868,14 +647,11 @@ describe('contextOptimizer', () => {
     })
 
     it('respects character budget — truncates with omission notice', () => {
-      // Put one overdue task so OVERDUE section is emitted first, then many "other" tasks
-      // that will push the total over the budget on the next addSection call.
       const overdueTask = makeTask({ id: 'od-0', title: 'Overdue task', dueDate: YESTERDAY })
       const otherTasks: OptimizableTask[] = Array.from({ length: 30 }, (_, i) =>
         makeTask({ id: `t-${i}`, title: `Other task with a fairly long title to consume budget number ${i}` })
       )
       const tasks = [overdueTask, ...otherTasks]
-      // charBudget is set to just above the OVERDUE section size so OTHER overflows
       const result = optimizeTaskContext(tasks, [], { today: TODAY, charBudget: 300 })
       expect(result).toContain('omitted due to space')
     })
@@ -887,24 +663,20 @@ describe('contextOptimizer', () => {
       expect(result).toContain('0')
     })
 
-    it('includes total task count', () => {
+    it('includes total task count, overdue count, and todo count', () => {
       const tasks = [
-        makeTask({ id: '1', title: 'Task 1', status: 'planned' }),
-        makeTask({ id: '2', title: 'Task 2', status: 'in_progress' }),
-        makeTask({ id: '3', title: 'Task 3', status: 'done' }),
+        makeTask({ id: '1', title: 'Planned', status: 'planned' }),
+        makeTask({ id: '2', title: 'In Progress', status: 'in_progress' }),
+        makeTask({ id: '3', title: 'Done', status: 'done' }),
+        makeTask({ id: '4', title: 'Overdue A', dueDate: YESTERDAY, status: 'planned' }),
+        makeTask({ id: '5', title: 'Overdue B', dueDate: YESTERDAY, status: 'in_progress' }),
+        makeTask({ id: '6', title: 'WIP 1', status: 'todo' }),
+        makeTask({ id: '7', title: 'WIP 2', status: 'todo' }),
       ]
       const result = buildTaskStats(tasks, TODAY)
-      expect(result).toContain('3 total')
-    })
-
-    it('counts overdue tasks correctly', () => {
-      const tasks = [
-        makeTask({ id: '1', title: 'Overdue A', dueDate: YESTERDAY, status: 'planned' }),
-        makeTask({ id: '2', title: 'Overdue B', dueDate: YESTERDAY, status: 'in_progress' }),
-        makeTask({ id: '3', title: 'Future task', dueDate: TOMORROW, status: 'planned' }),
-      ]
-      const result = buildTaskStats(tasks, TODAY)
+      expect(result).toContain('7 total')
       expect(result).toContain('2 overdue')
+      expect(result).toContain('2 todo')
     })
 
     it('does not count done tasks as overdue even if past due date', () => {
@@ -913,15 +685,6 @@ describe('contextOptimizer', () => {
       ]
       const result = buildTaskStats(tasks, TODAY)
       expect(result).toContain('0 overdue')
-    })
-
-    it('counts todo tasks', () => {
-      const tasks = [
-        makeTask({ id: '1', title: 'WIP task', status: 'todo' }),
-        makeTask({ id: '2', title: 'WIP task 2', status: 'todo' }),
-      ]
-      const result = buildTaskStats(tasks, TODAY)
-      expect(result).toContain('2 todo')
     })
 
     it('returns string containing "Tasks:"', () => {

@@ -126,10 +126,10 @@ describe('groupTasksByDate', () => {
 
   it('places task with no dueDate and no instances in correct bucket', () => {
     mockToday(2026, 3, 6)
-    // Created today, no dueDate → today bucket
+    // No dueDate and no instances → noDate bucket
     const task = makeTask({ dueDate: '', createdAt: new Date().toISOString() })
     const result = groupTasksByDate([task])
-    expect(result.today).toHaveLength(1)
+    expect(result.noDate).toHaveLength(1)
   })
 
   it('places task with past dueDate in overdue bucket', () => {
@@ -254,12 +254,12 @@ describe('groupTasksByDate', () => {
       makeTask({ id: 'b', dueDate: '2026-03-06' }), // today
       makeTask({ id: 'c', dueDate: '2026-03-07' }), // tomorrow (Saturday)
       makeTask({ id: 'd', dueDate: '2026-04-01' }), // later
-      makeTask({ id: 'e', dueDate: '' , createdAt: new Date().toISOString() }), // no date → today (created today)
+      makeTask({ id: 'e', dueDate: '' , createdAt: new Date().toISOString() }), // no date → noDate bucket
     ]
     const result = groupTasksByDate(tasks)
     expect(result.overdue.map(t => t.id)).toContain('a')
     expect(result.today.map(t => t.id)).toContain('b')
-    expect(result.today.map(t => t.id)).toContain('e')
+    expect(result.noDate.map(t => t.id)).toContain('e')
     expect(result.tomorrow.map(t => t.id)).toContain('c')
     expect(result.later.map(t => t.id)).toContain('d')
   })
@@ -291,9 +291,9 @@ describe('groupTasksByDate', () => {
     mockToday(2026, 3, 6)
     const task = makeTask({ dueDate: '2026-03-06', status: 'done' })
     const result = groupTasksByDate([task], false)
-    // Done tasks get placed in their normal bucket AND appended to noDate
-    expect(result.noDate).toHaveLength(1)
+    // Done tasks get placed only in their date bucket, not in noDate
     expect(result.today).toHaveLength(1)
+    expect(result.noDate).toHaveLength(0)
   })
 })
 

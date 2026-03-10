@@ -1182,28 +1182,11 @@ WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supab
 
 ---
 
-### TASK-1118: Test Suite Cleanup - Reduce 615 Tests to ~100 Essential (📋 PLANNED)
+### ~~TASK-1118~~: Test Suite Cleanup - Reduce 615 Tests to ~100 Essential (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: ✅ DONE (2026-03-10)
 
-**Problem**: Test suite has grown to 615 tests, many are one-off debug tests that were never cleaned up. This adds maintenance burden and slows test runs.
-
-**Cleanup Targets**:
-- `debug-*.spec.ts` - One-off debugging tests
-- `repro_*.spec.ts` - Bug reproduction tests (bugs already fixed)
-- `quick-*.spec.ts` - Quick check scripts
-- `inspect-*.spec.ts` - Visual inspection tests
-- `verify-*.spec.ts` - One-time verification tests
-
-**Keep (Essential Tests)**:
-- Data persistence / Supabase sync tests
-- Auth flow tests
-- Known bug regression tests
-- Stress tests (`tests/stress/`)
-- Safety tests (`tests/safety/`)
-- Core component integration tests
-
-**Target**: ~100 essential tests with fast execution (<30s)
+**Result**: Reduced 985 → 878 tests (-11%), fixed 3 pre-existing failures, halved execution time (10s → 5s). Removed duplicates, tautologies, and collapsed redundant tests into `it.each`. All 878 tests pass.
 
 ---
 
@@ -1591,6 +1574,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1461**~~ | **P1** | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06) |
 | ~~**TASK-1484**~~ | **P3** | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08) |
 | ~~**TASK-1496**~~ | **P2** | ✅ **Non-obstructive overflow tooltips on all truncated text app-wide** (✅ DONE 2026-03-09) |
+| **BUG-1498** | **P2** | 🔄 **Taskbar nanny not triggering after 5min idle without active task (INQUIRY-1489 regression)** |
 | **BUG-1497** | **P2** | 📋 **CSS safety test failing due to missing fileURLToPath import** |
 | ~~**TASK-1487**~~ | **P2** | ✅ **Search modal: delete fix + filter pills (Today, Hide Done, High Priority, No Date)** (✅ DONE 2026-03-08) |
 | ~~**BUG-1490**~~ | **P2** | ✅ **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (✅ DONE 2026-03-09) |

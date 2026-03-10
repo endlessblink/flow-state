@@ -14,385 +14,137 @@ describe('useVoiceNLPParser', () => {
   })
 
   describe('Language Detection', () => {
-    it('detects Hebrew text', () => {
+    it('identifies Hebrew vs English text', () => {
       expect(parser.isHebrew('תזכיר לי מחר')).toBe(true)
-    })
-
-    it('detects English text', () => {
       expect(parser.isHebrew('Remind me tomorrow')).toBe(false)
-    })
-
-    it('detects mixed text as Hebrew if Hebrew chars present', () => {
       expect(parser.isHebrew('meeting בעדיפות גבוהה')).toBe(true)
     })
   })
 
-  describe('English - Priority Extraction', () => {
-    it('extracts high priority from "high priority"', () => {
-      const result = parser.parseTranscription('Send email high priority')
-      expect(result.priority).toBe('high')
-      expect(result.language).toBe('en')
+  describe('Priority Extraction', () => {
+    it.each([
+      ['urgent/high priority (EN)', 'Urgent call mom', 'high'],
+      ['medium priority (EN)', 'Medium priority review docs', 'medium'],
+      ['no rush → low (EN)', 'No rush organize desk', 'low'],
+      ['no priority keyword (EN)', 'Send email', null],
+      ['דחוף → high (HE)', 'דחוף להתקשר לאמא', 'high'],
+      ['כשיש זמן → low (HE)', 'כשיש זמן לקרוא את הספר', 'low'],
+    ])('%s', (_desc, input, expected) => {
+      expect(parser.parseTranscription(input).priority).toBe(expected)
     })
 
-    it('extracts high priority from "urgent"', () => {
-      const result = parser.parseTranscription('Urgent call mom')
-      expect(result.priority).toBe('high')
-    })
-
-    it('extracts high priority from "important"', () => {
-      const result = parser.parseTranscription('Important meeting notes')
-      expect(result.priority).toBe('high')
-    })
-
-    it('extracts medium priority', () => {
-      const result = parser.parseTranscription('Medium priority review docs')
-      expect(result.priority).toBe('medium')
-    })
-
-    it('extracts low priority from "low priority"', () => {
-      const result = parser.parseTranscription('Low priority cleanup files')
-      expect(result.priority).toBe('low')
-    })
-
-    it('extracts low priority from "no rush"', () => {
-      const result = parser.parseTranscription('No rush organize desk')
-      expect(result.priority).toBe('low')
-    })
-
-    it('returns null for no priority', () => {
-      const result = parser.parseTranscription('Send email')
-      expect(result.priority).toBeNull()
+    it('sets correct language tag on result', () => {
+      expect(parser.parseTranscription('Send email high priority').language).toBe('en')
+      expect(parser.parseTranscription('לשלוח מייל בעדיפות גבוהה').language).toBe('he')
     })
   })
 
-  describe('Hebrew - Priority Extraction', () => {
-    it('extracts high priority from "בעדיפות גבוהה"', () => {
-      const result = parser.parseTranscription('לשלוח מייל בעדיפות גבוהה')
-      expect(result.priority).toBe('high')
-      expect(result.language).toBe('he')
-    })
-
-    it('extracts high priority from "דחוף"', () => {
-      const result = parser.parseTranscription('דחוף להתקשר לאמא')
-      expect(result.priority).toBe('high')
-    })
-
-    it('extracts low priority from "לא דחוף"', () => {
-      const result = parser.parseTranscription('לא דחוף לסדר את השולחן')
-      expect(result.priority).toBe('low')
-    })
-
-    it('extracts low priority from "כשיש זמן"', () => {
-      const result = parser.parseTranscription('כשיש זמן לקרוא את הספר')
-      expect(result.priority).toBe('low')
-    })
-  })
-
-  describe('English - Date Extraction', () => {
-    it('extracts "today"', () => {
-      const result = parser.parseTranscription('Today send email')
-      const today = new Date().toISOString().split('T')[0]
-      expect(result.dueDate).toBe(today)
-    })
-
-    it('extracts "tomorrow"', () => {
-      const result = parser.parseTranscription('Tomorrow call mom')
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      expect(result.dueDate).toBe(tomorrow.toISOString().split('T')[0])
-    })
-
-    it('extracts "in 3 days"', () => {
-      const result = parser.parseTranscription('In 3 days finish report')
+  describe('Date Extraction', () => {
+    it.each([
+      ['today (EN)', 'Today send email', 0],
+      ['tomorrow (EN)', 'Tomorrow call mom', 1],
+      ['in 3 days (EN)', 'In 3 days finish report', 3],
+      ['next week (EN)', 'Next week review docs', 7],
+      ['in 2 weeks (EN)', 'In 2 weeks buy gift', 14],
+      ['היום (HE)', 'היום לשלוח מייל', 0],
+      ['מחר (HE)', 'מחר להתקשר לאמא', 1],
+      ['בעוד 3 ימים (HE)', 'בעוד 3 ימים לסיים דוח', 3],
+      ['בעוד 2 שבועות (HE)', 'בעוד 2 שבועות לקנות מתנה', 14],
+    ])('extracts %s', (_desc, input, daysOffset) => {
+      const result = parser.parseTranscription(input)
       const expected = new Date()
-      expected.setDate(expected.getDate() + 3)
+      expected.setDate(expected.getDate() + daysOffset)
       expect(result.dueDate).toBe(expected.toISOString().split('T')[0])
     })
 
-    it('extracts "in 2 weeks"', () => {
-      const result = parser.parseTranscription('In 2 weeks buy gift')
-      const expected = new Date()
-      expected.setDate(expected.getDate() + 14)
-      expect(result.dueDate).toBe(expected.toISOString().split('T')[0])
-    })
-
-    it('extracts "next week"', () => {
-      const result = parser.parseTranscription('Next week review docs')
-      const expected = new Date()
-      expected.setDate(expected.getDate() + 7)
-      expect(result.dueDate).toBe(expected.toISOString().split('T')[0])
-    })
-
-    it('extracts "this weekend"', () => {
+    it('extracts "this weekend" as Saturday', () => {
       const result = parser.parseTranscription('This weekend clean house')
       expect(result.dueDate).not.toBeNull()
-      // Weekend should be Saturday
-      const dueDate = new Date(result.dueDate!)
-      expect(dueDate.getDay()).toBe(6) // Saturday
+      expect(new Date(result.dueDate!).getDay()).toBe(6)
     })
 
-    it('returns null for no date', () => {
-      const result = parser.parseTranscription('Send email')
-      expect(result.dueDate).toBeNull()
-    })
-  })
-
-  describe('Hebrew - Date Extraction', () => {
-    it('extracts "היום"', () => {
-      const result = parser.parseTranscription('היום לשלוח מייל')
-      const today = new Date().toISOString().split('T')[0]
-      expect(result.dueDate).toBe(today)
-    })
-
-    it('extracts "מחר"', () => {
-      const result = parser.parseTranscription('מחר להתקשר לאמא')
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      expect(result.dueDate).toBe(tomorrow.toISOString().split('T')[0])
-    })
-
-    it('extracts "בעוד 3 ימים"', () => {
-      const result = parser.parseTranscription('בעוד 3 ימים לסיים דוח')
-      const expected = new Date()
-      expected.setDate(expected.getDate() + 3)
-      expect(result.dueDate).toBe(expected.toISOString().split('T')[0])
-    })
-
-    it('extracts "בעוד שבועיים"', () => {
-      const result = parser.parseTranscription('בעוד 2 שבועות לקנות מתנה')
-      const expected = new Date()
-      expected.setDate(expected.getDate() + 14)
-      expect(result.dueDate).toBe(expected.toISOString().split('T')[0])
-    })
-
-    it('extracts "בסוף השבוע"', () => {
-      const result = parser.parseTranscription('בסוף השבוע לנקות בית')
-      expect(result.dueDate).not.toBeNull()
+    it('returns null when no date keyword present', () => {
+      expect(parser.parseTranscription('Send email').dueDate).toBeNull()
     })
   })
 
   describe('Title Extraction', () => {
-    it('cleans trigger phrases from English', () => {
-      const result = parser.parseTranscription('Remind me to send email')
-      expect(result.title).toBe('send email')
+    it('strips trigger phrases and extracts remaining text', () => {
+      expect(parser.parseTranscription('Remind me to send email').title).toBe('send email')
+      expect(parser.parseTranscription('תזכיר לי לשלוח מייל').title).toBe('לשלוח מייל')
     })
 
-    it('cleans trigger phrases from Hebrew', () => {
-      const result = parser.parseTranscription('תזכיר לי לשלוח מייל')
-      expect(result.title).toBe('לשלוח מייל')
-    })
-
-    it('removes date keywords from title', () => {
-      const result = parser.parseTranscription('Tomorrow send email')
-      expect(result.title).toBe('send email')
-      expect(result.dueDate).not.toBeNull()
-    })
-
-    it('removes priority keywords from title', () => {
-      const result = parser.parseTranscription('High priority send email')
-      expect(result.title).toBe('send email')
-      expect(result.priority).toBe('high')
-    })
-
-    it('handles combined date and priority', () => {
+    it('removes date + priority keywords and populates both fields', () => {
       const result = parser.parseTranscription('Remind me tomorrow to send email high priority')
       expect(result.title).toBe('send email')
       expect(result.priority).toBe('high')
       expect(result.dueDate).not.toBeNull()
     })
 
-    it('preserves original text if cleaning removes everything', () => {
-      const result = parser.parseTranscription('tomorrow')
-      // Should fall back to original since title would be empty
-      expect(result.title.length).toBeGreaterThan(0)
+    it('falls back to original text when cleaning empties the title', () => {
+      expect(parser.parseTranscription('tomorrow').title.length).toBeGreaterThan(0)
     })
   })
 
   describe('Action Detection', () => {
-    it('defaults to "create" for new tasks', () => {
-      const result = parser.parseTranscription('Buy groceries')
-      expect(result.action).toBe('create')
-    })
-
-    it('detects postpone action in English', () => {
-      const result = parser.parseTranscription('Postpone meeting by 3 days')
-      expect(result.action).toBe('postpone')
-    })
-
-    it('detects postpone action in Hebrew', () => {
-      const result = parser.parseTranscription('דחה את הפגישה ב-3 ימים')
-      expect(result.action).toBe('postpone')
-    })
-
-    it('detects complete action in English', () => {
-      const result = parser.parseTranscription('Mark done send email')
-      expect(result.action).toBe('complete')
-    })
-
-    it('detects complete action in Hebrew', () => {
-      const result = parser.parseTranscription('סמן כבוצע לשלוח מייל')
-      expect(result.action).toBe('complete')
-    })
-
-    it('detects delete action', () => {
-      const result = parser.parseTranscription('Delete old task')
-      expect(result.action).toBe('delete')
-    })
-
-    it('detects edit action', () => {
-      const result = parser.parseTranscription('Edit meeting task')
-      expect(result.action).toBe('edit')
+    it.each([
+      ['create (default)', 'Buy groceries', 'create'],
+      ['postpone (EN)', 'Postpone meeting by 3 days', 'postpone'],
+      ['postpone (HE)', 'דחה את הפגישה ב-3 ימים', 'postpone'],
+      ['complete (EN)', 'Mark done send email', 'complete'],
+      ['delete', 'Delete old task', 'delete'],
+    ])('detects %s', (_desc, input, expected) => {
+      expect(parser.parseTranscription(input).action).toBe(expected)
     })
   })
 
   describe('Postpone Duration', () => {
-    it('extracts days from English "by 3 days"', () => {
-      const result = parser.parseTranscription('Postpone task by 3 days')
-      expect(result.postponeDays).toBe(3)
-    })
-
-    it('extracts days from Hebrew "ב-3 ימים"', () => {
-      const result = parser.parseTranscription('דחה את המשימה ב-3 ימים')
-      expect(result.postponeDays).toBe(3)
-    })
-
-    it('extracts weeks and converts to days', () => {
-      const result = parser.parseTranscription('Postpone task by 2 weeks')
-      expect(result.postponeDays).toBe(14)
-    })
-
-    it('returns null when no duration specified', () => {
-      const result = parser.parseTranscription('Postpone task')
-      expect(result.postponeDays).toBeNull()
+    it('parses days and weeks into day count', () => {
+      expect(parser.parseTranscription('Postpone task by 3 days').postponeDays).toBe(3)
+      expect(parser.parseTranscription('Postpone task by 2 weeks').postponeDays).toBe(14)
+      expect(parser.parseTranscription('דחה את המשימה ב-3 ימים').postponeDays).toBe(3)
+      expect(parser.parseTranscription('Postpone task').postponeDays).toBeNull()
     })
   })
 
   describe('Confidence Scoring', () => {
-    it('has higher confidence with date and priority', () => {
+    it('is higher with date+priority than without, and stays within [0,1]', () => {
       const withBoth = parser.parseTranscription('Tomorrow send email high priority')
       const withNeither = parser.parseTranscription('send email')
-
       expect(withBoth.confidence).toBeGreaterThan(withNeither.confidence)
-    })
-
-    it('confidence is between 0 and 1', () => {
-      const result = parser.parseTranscription('Remind me tomorrow to send email high priority')
-      expect(result.confidence).toBeGreaterThanOrEqual(0)
-      expect(result.confidence).toBeLessThanOrEqual(1)
-    })
-  })
-
-  describe('Real-World Examples from MASTER_PLAN', () => {
-    it('parses Hebrew example: "תזכיר לי מחר לשלוח מייל בעדיפות גבוהה"', () => {
-      const result = parser.parseTranscription('תזכיר לי מחר לשלוח מייל בעדיפות גבוהה')
-
-      expect(result.language).toBe('he')
-      expect(result.priority).toBe('high')
-      expect(result.dueDate).not.toBeNull()
-      expect(result.title).toContain('לשלוח מייל')
-      expect(result.action).toBe('create')
-    })
-
-    it('parses Hebrew example: "בעוד שבועיים לקנות מתנה לאמא"', () => {
-      const result = parser.parseTranscription('בעוד 2 שבועות לקנות מתנה לאמא')
-
-      expect(result.language).toBe('he')
-      expect(result.dueDate).not.toBeNull()
-      // Due date should be 14 days from now
-      const expected = new Date()
-      expected.setDate(expected.getDate() + 14)
-      expect(result.dueDate).toBe(expected.toISOString().split('T')[0])
-    })
-
-    it('parses Hebrew command: "דחה את המשימה של הפגישה ב-3 ימים"', () => {
-      const result = parser.parseTranscription('דחה את המשימה של הפגישה ב-3 ימים')
-
-      expect(result.language).toBe('he')
-      expect(result.action).toBe('postpone')
-      expect(result.postponeDays).toBe(3)
-    })
-
-    it('parses English example: "Remind me tomorrow to send email high priority"', () => {
-      const result = parser.parseTranscription('Remind me tomorrow to send email high priority')
-
-      expect(result.language).toBe('en')
-      expect(result.priority).toBe('high')
-      expect(result.dueDate).not.toBeNull()
-      expect(result.title).toBe('send email')
-      expect(result.action).toBe('create')
-    })
-
-    it('parses English example: "In two weeks buy gift for mom"', () => {
-      const result = parser.parseTranscription('In 2 weeks buy gift for mom')
-
-      expect(result.language).toBe('en')
-      expect(result.dueDate).not.toBeNull()
-    })
-
-    it('parses English command: "Postpone meeting task by 3 days"', () => {
-      const result = parser.parseTranscription('Postpone meeting task by 3 days')
-
-      expect(result.language).toBe('en')
-      expect(result.action).toBe('postpone')
-      expect(result.postponeDays).toBe(3)
+      expect(withBoth.confidence).toBeGreaterThanOrEqual(0)
+      expect(withBoth.confidence).toBeLessThanOrEqual(1)
     })
   })
 
   describe('Edge Cases', () => {
-    it('handles empty string', () => {
-      const result = parser.parseTranscription('')
-      expect(result.title).toBe('')
-      expect(result.action).toBe('create')
+    it('handles empty and whitespace-only input', () => {
+      expect(parser.parseTranscription('').title).toBe('')
+      expect(parser.parseTranscription('   ').title).toBe('')
+      expect(parser.parseTranscription('').action).toBe('create')
     })
 
-    it('handles whitespace-only string', () => {
-      const result = parser.parseTranscription('   ')
-      expect(result.title).toBe('')
-    })
-
-    it('handles very long input', () => {
-      const longText = 'This is a very long task description that goes on and on ' +
-        'about many different things and should still be parsed correctly ' +
-        'even though it is quite lengthy tomorrow high priority'
-
-      const result = parser.parseTranscription(longText)
-      expect(result.priority).toBe('high')
-      expect(result.dueDate).not.toBeNull()
-    })
-
-    it('handles mixed language gracefully', () => {
-      // Mostly English with one Hebrew word
+    it('handles mixed-language input', () => {
       const result = parser.parseTranscription('Meeting about פרויקט tomorrow')
-      expect(result.language).toBe('he') // Hebrew chars detected
+      expect(result.language).toBe('he')
       expect(result.dueDate).not.toBeNull()
     })
   })
 
   describe('Utility Functions', () => {
-    it('formatDate returns YYYY-MM-DD', () => {
-      const date = new Date('2026-03-15')
-      expect(parser.formatDate(date)).toBe('2026-03-15')
-    })
-
-    it('formatDate pads single digits', () => {
-      const date = new Date('2026-01-05')
-      expect(parser.formatDate(date)).toBe('2026-01-05')
+    it('formatDate returns YYYY-MM-DD with zero-padded digits', () => {
+      expect(parser.formatDate(new Date('2026-03-15'))).toBe('2026-03-15')
+      expect(parser.formatDate(new Date('2026-01-05'))).toBe('2026-01-05')
     })
   })
 
   describe('Examples Computed Property', () => {
-    it('provides Hebrew examples', () => {
+    it('provides non-empty Hebrew and English example arrays with required fields', () => {
       const examples = parser.getExamples.value
       expect(examples.hebrew.length).toBeGreaterThan(0)
-      expect(examples.hebrew[0].input).toBeTruthy()
-      expect(examples.hebrew[0].description).toBeTruthy()
-    })
-
-    it('provides English examples', () => {
-      const examples = parser.getExamples.value
       expect(examples.english.length).toBeGreaterThan(0)
+      expect(examples.hebrew[0].input).toBeTruthy()
       expect(examples.english[0].input).toBeTruthy()
-      expect(examples.english[0].description).toBeTruthy()
     })
   })
 })

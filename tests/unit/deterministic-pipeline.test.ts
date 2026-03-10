@@ -2,7 +2,7 @@
  * Deterministic AI Chat Pipeline — Unit Tests
  *
  * Covers:
- * - intentRouter   (routeIntent)
+ * - intentRouter   (routeIntent, routeIntentByKeywords, parseClassification)
  * - responseTemplates (getTemplate, hasTemplate, TEMPLATES)
  * - reasoningDirective (buildReasoningDirective)
  * - entityMemory   (EntityMemory class)
@@ -31,7 +31,7 @@ const mockTasks = [
 ]
 
 // ---------------------------------------------------------------------------
-// 1. intentRouter
+// 1. intentRouter — routeIntentByKeywords
 // ---------------------------------------------------------------------------
 
 describe('intentRouter — routeIntentByKeywords()', () => {
@@ -43,90 +43,54 @@ describe('intentRouter — routeIntentByKeywords()', () => {
 
   // ── Task queries ──────────────────────────────────────────────────────────
 
-  it('routes "show tasks" to task_query with list_tasks tool', () => {
-    const result = routeIntentByKeywords('show tasks', mockTasks, entityMemory)
+  it.each([
+    ['show tasks', 'list_tasks'],
+    ['my tasks', 'list_tasks'],
+    ['המשימות שלי', 'list_tasks'],
+    ['הצג', 'list_tasks'],
+  ])('routes "%s" to task_query with %s tool', (input, expectedTool) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
-    expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
-  })
-
-  it('routes "my tasks" to task_query with list_tasks tool', () => {
-    const result = routeIntentByKeywords('my tasks', mockTasks, entityMemory)
-    expect(result.type).toBe('task_query')
-    expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
-  })
-
-  it('routes Hebrew "המשימות שלי" to task_query with list_tasks tool', () => {
-    const result = routeIntentByKeywords('המשימות שלי', mockTasks, entityMemory)
-    expect(result.type).toBe('task_query')
-    expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
-  })
-
-  it('routes Hebrew "הצג" to task_query with list_tasks tool', () => {
-    const result = routeIntentByKeywords('הצג', mockTasks, entityMemory)
-    expect(result.type).toBe('task_query')
-    expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
+    expect(result.tools.some(t => t.tool === expectedTool)).toBe(true)
   })
 
   // ── Overdue queries ───────────────────────────────────────────────────────
 
-  it('routes "overdue tasks" to task_query with get_overdue_tasks tool', () => {
-    const result = routeIntentByKeywords('overdue tasks', mockTasks, entityMemory)
-    expect(result.type).toBe('task_query')
-    expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
-  })
-
-  it('routes Hebrew "באיחור" to task_query with get_overdue_tasks tool', () => {
-    const result = routeIntentByKeywords('באיחור', mockTasks, entityMemory)
+  it.each([
+    ['overdue tasks'],
+    ['באיחור'],
+  ])('routes "%s" to task_query with get_overdue_tasks tool', (input) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
   })
 
   // ── Suggestion queries ────────────────────────────────────────────────────
 
-  it('routes "what should I do" to task_query with suggest_next_task', () => {
-    const result = routeIntentByKeywords('what should I do', mockTasks, entityMemory)
-    expect(result.type).toBe('task_query')
-    expect(result.tools.some(t => t.tool === 'suggest_next_task')).toBe(true)
-  })
-
-  it('routes Hebrew "מה לעשות" to task_query with suggest_next_task', () => {
-    const result = routeIntentByKeywords('מה לעשות', mockTasks, entityMemory)
+  it.each([
+    ['what should I do'],
+    ['מה לעשות'],
+  ])('routes "%s" to task_query with suggest_next_task', (input) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'suggest_next_task')).toBe(true)
   })
 
   // ── Timer actions ─────────────────────────────────────────────────────────
 
-  it('routes "start timer" to timer with start_timer and skipLLM=true', () => {
-    const result = routeIntentByKeywords('start timer', mockTasks, entityMemory)
+  it.each([
+    ['start timer', 'start_timer'],
+    ['התחל טיימר', 'start_timer'],
+    ['stop timer', 'stop_timer'],
+    ['עצור טיימר', 'stop_timer'],
+  ])('routes "%s" to timer with %s and skipLLM=true', (input, expectedTool) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('timer')
-    expect(result.tools.some(t => t.tool === 'start_timer')).toBe(true)
-    expect(result.skipLLM).toBe(true)
-  })
-
-  it('routes Hebrew "התחל טיימר" to timer with start_timer and skipLLM=true', () => {
-    const result = routeIntentByKeywords('התחל טיימר', mockTasks, entityMemory)
-    expect(result.type).toBe('timer')
-    expect(result.tools.some(t => t.tool === 'start_timer')).toBe(true)
-    expect(result.skipLLM).toBe(true)
-  })
-
-  it('routes "stop timer" to timer with stop_timer and skipLLM=true', () => {
-    const result = routeIntentByKeywords('stop timer', mockTasks, entityMemory)
-    expect(result.type).toBe('timer')
-    expect(result.tools.some(t => t.tool === 'stop_timer')).toBe(true)
-    expect(result.skipLLM).toBe(true)
-  })
-
-  it('routes Hebrew "עצור טיימר" to timer with stop_timer and skipLLM=true', () => {
-    const result = routeIntentByKeywords('עצור טיימר', mockTasks, entityMemory)
-    expect(result.type).toBe('timer')
-    expect(result.tools.some(t => t.tool === 'stop_timer')).toBe(true)
+    expect(result.tools.some(t => t.tool === expectedTool)).toBe(true)
     expect(result.skipLLM).toBe(true)
   })
 
   it('routes generic "timer" to timer with get_timer_status and skipLLM not true', () => {
-    // "timer" alone matches the generic catch-all, not start/stop
     const result = routeIntentByKeywords('timer', mockTasks, entityMemory)
     expect(result.type).toBe('timer')
     expect(result.tools.some(t => t.tool === 'get_timer_status')).toBe(true)
@@ -149,28 +113,22 @@ describe('intentRouter — routeIntentByKeywords()', () => {
 
   // ── Create actions ────────────────────────────────────────────────────────
 
-  it('routes "create task Buy milk" to task_action with create_task and title "Buy milk"', () => {
-    const result = routeIntentByKeywords('create task Buy milk', mockTasks, entityMemory)
+  it.each([
+    ['create task Buy milk', 'Buy milk'],
+    ['add task Review PR', 'Review PR'],
+  ])('routes "%s" to task_action with create_task and correct title', (input, expectedTitle) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'create_task')).toBe(true)
     const createTool = result.tools.find(t => t.tool === 'create_task')
-    expect(createTool?.parameters?.title).toBe('Buy milk')
+    expect(createTool?.parameters?.title).toBe(expectedTitle)
   })
 
-  it('routes "add task Review PR" to task_action with create_task and title "Review PR"', () => {
-    const result = routeIntentByKeywords('add task Review PR', mockTasks, entityMemory)
-    expect(result.type).toBe('task_action')
-    expect(result.tools.some(t => t.tool === 'create_task')).toBe(true)
-    const createTool = result.tools.find(t => t.tool === 'create_task')
-    expect(createTool?.parameters?.title).toBe('Review PR')
-  })
-
-  it('routes Hebrew "צור משימה לקנות חלב" to task_action with create_task', () => {
+  it('routes Hebrew "צור משימה לקנות חלב" to task_action with create_task and extracts title', () => {
     const result = routeIntentByKeywords('צור משימה לקנות חלב', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'create_task')).toBe(true)
     const createTool = result.tools.find(t => t.tool === 'create_task')
-    // Title should be extracted (the part after the prefix)
     expect(createTool?.parameters?.title).toBeTruthy()
   })
 
@@ -184,25 +142,9 @@ describe('intentRouter — routeIntentByKeywords()', () => {
   // ── Done / complete actions ───────────────────────────────────────────────
 
   it('routes "mark done video project" to task_action with mark_task_done via keyword match', () => {
-    // "mark done" is a contiguous phrase that matches
     const result = routeIntentByKeywords('mark done video project', mockTasks, entityMemory)
     expect(result.type).toBe('task_action')
     expect(result.tools.some(t => t.tool === 'mark_task_done')).toBe(true)
-  })
-
-  it('routes "mark video as done" to freeform (keywords not contiguous)', () => {
-    // "mark as done" doesn't appear contiguously in "mark video as done"
-    // The LLM classifier handles this case instead
-    const result = routeIntentByKeywords('mark video as done', mockTasks, entityMemory)
-    expect(result.type).toBe('freeform')
-  })
-
-  it('routes "done" alone to freeform (single-word too broad)', () => {
-    const result = routeIntentByKeywords('done', mockTasks, entityMemory)
-    // Single-word "done" is intentionally NOT matched — too ambiguous
-    // (could mean "what's done?", "how many done?", etc.)
-    expect(result.type).toBe('freeform')
-    expect(result.skipLLM).toBeFalsy()
   })
 
   it('routes Hebrew "סיים video project" to task_action with mark_task_done', () => {
@@ -211,78 +153,60 @@ describe('intentRouter — routeIntentByKeywords()', () => {
     expect(result.tools.some(t => t.tool === 'mark_task_done')).toBe(true)
   })
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
-
-  it('routes "how am I doing" to stats with get_productivity_stats', () => {
-    const result = routeIntentByKeywords('how am I doing', mockTasks, entityMemory)
-    expect(result.type).toBe('stats')
-    expect(result.tools.some(t => t.tool === 'get_productivity_stats')).toBe(true)
+  it.each([
+    ['mark video as done', 'freeform'],
+    ['done', 'freeform'],
+  ])('routes "%s" to freeform (not an exact match)', (input, expectedType) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
+    expect(result.type).toBe(expectedType)
+    expect(result.skipLLM).toBeFalsy()
   })
 
-  it('routes Hebrew "סטטיסטיקות" to stats with get_productivity_stats', () => {
-    const result = routeIntentByKeywords('סטטיסטיקות', mockTasks, entityMemory)
-    expect(result.type).toBe('stats')
-    expect(result.tools.some(t => t.tool === 'get_productivity_stats')).toBe(true)
+  // ── Stats ─────────────────────────────────────────────────────────────────
+
+  it.each([
+    ['how am I doing', 'stats', 'get_productivity_stats'],
+    ['סטטיסטיקות', 'stats', 'get_productivity_stats'],
+    ['this week', 'stats', 'get_weekly_summary'],
+  ])('routes "%s" to %s with %s', (input, expectedType, expectedTool) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
+    expect(result.type).toBe(expectedType)
+    expect(result.tools.some(t => t.tool === expectedTool)).toBe(true)
   })
 
   it('routes "today" alone to freeform (single-word too broad)', () => {
     const result = routeIntentByKeywords('today', mockTasks, entityMemory)
-    // Single-word "today" is intentionally NOT matched — too ambiguous
-    // (could mean "create task for today", "what's today?", etc.)
     expect(result.type).toBe('freeform')
-  })
-
-  it('routes "this week" to stats with get_weekly_summary', () => {
-    const result = routeIntentByKeywords('this week', mockTasks, entityMemory)
-    expect(result.type).toBe('stats')
-    expect(result.tools.some(t => t.tool === 'get_weekly_summary')).toBe(true)
   })
 
   // ── Greetings ─────────────────────────────────────────────────────────────
 
-  it('routes "hi" to greeting with skipLLM=true and no tools', () => {
-    const result = routeIntentByKeywords('hi', mockTasks, entityMemory)
+  it.each([
+    ['hi'],
+    ['hello there'],
+    ['hi can you show my tasks'],
+  ])('routes "%s" to greeting with skipLLM=true', (input) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('greeting')
     expect(result.skipLLM).toBe(true)
     expect(result.tools).toHaveLength(0)
   })
 
-  it('routes Hebrew "שלום" — detected language is Hebrew', () => {
-    // Note: "שלום" is 4 chars and matches /^שלום\b/ in theory, but Hebrew word boundary (\b)
-    // is unreliable in JS regex because \b only works with ASCII word chars. "שלום" alone
-    // does not match the pattern so it falls through to freeform/keyword routing.
-    // The actual greeting support is via "היי" which uses /^היי\b/.
+  it('routes Hebrew "שלום" — detected language is Hebrew, type is freeform', () => {
+    // "שלום" alone has no matching keywords and greeting regex fails due to \b on non-ASCII
     const result = routeIntentByKeywords('שלום', mockTasks, entityMemory)
     expect(result.language).toBe('he')
-    // Type is freeform since "שלום" alone has no matching keywords and greeting regex fails
     expect(result.type).toBe('freeform')
-  })
-
-  it('routes "hello there" to greeting with skipLLM=true', () => {
-    const result = routeIntentByKeywords('hello there', mockTasks, entityMemory)
-    expect(result.type).toBe('greeting')
-    expect(result.skipLLM).toBe(true)
-  })
-
-  it('routes "hi can you show my tasks" as greeting (24 chars, ≤30 threshold, matches /^hi\\b/)', () => {
-    // The greeting guard checks: length <= 30 AND pattern matches.
-    // "hi can you show my tasks" is 24 chars — under the 30-char cutoff — and starts with "hi",
-    // so it IS classified as a greeting. Longer messages with a task keyword after would be
-    // handled by callers adding more context or using explicit task language.
-    const result = routeIntentByKeywords('hi can you show my tasks', mockTasks, entityMemory)
-    expect(result.type).toBe('greeting')
-    expect(result.skipLLM).toBe(true)
   })
 
   // ── Freeform fallback ─────────────────────────────────────────────────────
 
-  it('routes "how do I organize my day?" to freeform', () => {
-    const result = routeIntentByKeywords('how do I organize my day?', mockTasks, entityMemory)
-    expect(result.type).toBe('freeform')
-  })
-
-  it('routes "tell me a joke" to freeform', () => {
-    const result = routeIntentByKeywords('tell me a joke', mockTasks, entityMemory)
+  it.each([
+    ['how do I organize my day?'],
+    ['tell me a joke'],
+    [''],
+  ])('routes "%s" to freeform', (input) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('freeform')
   })
 
@@ -298,12 +222,7 @@ describe('intentRouter — routeIntentByKeywords()', () => {
     expect(result.language).toBe('en')
   })
 
-  // ── Edge cases ────────────────────────────────────────────────────────────
-
-  it('handles empty string → freeform', () => {
-    const result = routeIntentByKeywords('', mockTasks, entityMemory)
-    expect(result.type).toBe('freeform')
-  })
+  // ── formatDirective invariant ─────────────────────────────────────────────
 
   it('every RoutedIntent has a non-empty formatDirective', () => {
     const messages = [
@@ -354,33 +273,22 @@ describe('parseClassification()', () => {
     expect(result.confidence).toBe('medium')
   })
 
-  it('returns NONE/low for garbage input', () => {
-    const result = parseClassification('this is not json at all')
+  it.each([
+    ['garbage text', 'this is not json at all'],
+    ['empty string', ''],
+    ['null input', null as unknown as string],
+  ])('returns NONE/low for %s', (_label, input) => {
+    const result = parseClassification(input)
     expect(result.tool).toBe('NONE')
     expect(result.confidence).toBe('low')
   })
 
-  it('returns NONE/low for empty string', () => {
-    const result = parseClassification('')
-    expect(result.tool).toBe('NONE')
-    expect(result.confidence).toBe('low')
-  })
+  it('defaults confidence to "medium" and params to {} when missing', () => {
+    const noConf = parseClassification('{"tool":"list_tasks","params":{}}')
+    expect(noConf.confidence).toBe('medium')
 
-  it('returns NONE/low for null-ish input', () => {
-    const result = parseClassification(null as unknown as string)
-    expect(result.tool).toBe('NONE')
-    expect(result.confidence).toBe('low')
-  })
-
-  it('defaults confidence to medium when missing', () => {
-    const result = parseClassification('{"tool":"list_tasks","params":{}}')
-    expect(result.tool).toBe('list_tasks')
-    expect(result.confidence).toBe('medium')
-  })
-
-  it('defaults params to empty object when missing', () => {
-    const result = parseClassification('{"tool":"list_tasks","confidence":"high"}')
-    expect(result.params).toEqual({})
+    const noParams = parseClassification('{"tool":"list_tasks","confidence":"high"}')
+    expect(noParams.params).toEqual({})
   })
 })
 
@@ -403,8 +311,6 @@ describe('routeIntent() — async LLM-first router', () => {
   })
 
   it('falls back to keyword matching when LLM is unavailable', async () => {
-    // When no AI provider is configured, getSharedRouter() will throw,
-    // which classifyWithLLM catches and returns null → keyword fallback
     const result = await routeIntent('show tasks', mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
@@ -437,8 +343,6 @@ describe('routeIntent() — async LLM-first router', () => {
 // ---------------------------------------------------------------------------
 
 describe('responseTemplates', () => {
-  // ── Template completeness ──────────────────────────────────────────────────
-
   it('has both en and he variants for every template key', () => {
     for (const [key, template] of Object.entries(TEMPLATES)) {
       expect(typeof template.en).toBe('function', `template "${key}" missing "en" variant`)
@@ -446,17 +350,14 @@ describe('responseTemplates', () => {
     }
   })
 
-  it('hasTemplate returns true for valid keys', () => {
+  it('hasTemplate returns true for valid keys and false for invalid', () => {
     const validKeys: TemplateKey[] = ['timer_started', 'task_created', 'greeting', 'no_tasks']
     for (const key of validKeys) {
       expect(hasTemplate(key)).toBe(true)
     }
-  })
-
-  it('hasTemplate returns false for invalid keys', () => {
     expect(hasTemplate('nonexistent_key')).toBe(false)
     expect(hasTemplate('')).toBe(false)
-    expect(hasTemplate('TIMER_STARTED')).toBe(false)  // case-sensitive
+    expect(hasTemplate('TIMER_STARTED')).toBe(false) // case-sensitive
   })
 
   // ── English templates ──────────────────────────────────────────────────────
@@ -486,10 +387,9 @@ describe('responseTemplates', () => {
     expect(result.toLowerCase()).toContain('done')
   })
 
-  it('greeting EN returns a greeting string', () => {
+  it('greeting EN returns a conversational greeting string', () => {
     const result = getTemplate('greeting', 'en')
     expect(result.length).toBeGreaterThan(0)
-    // Should be conversational / friendly
     expect(result).toMatch(/[Hh]ey|[Hh]i|[Hh]ello|help/i)
   })
 
@@ -497,12 +397,6 @@ describe('responseTemplates', () => {
     const result = getTemplate('no_tasks', 'en')
     expect(result.length).toBeGreaterThan(0)
     expect(result.toLowerCase()).toMatch(/no task|not found/)
-  })
-
-  it('timer_already_running EN returns a string', () => {
-    const result = getTemplate('timer_already_running', 'en')
-    expect(result.length).toBeGreaterThan(0)
-    expect(result.toLowerCase()).toContain('timer')
   })
 
   it('task_not_found EN includes the query in the response', () => {
@@ -534,7 +428,6 @@ describe('responseTemplates', () => {
   it('greeting HE returns a Hebrew greeting string', () => {
     const result = getTemplate('greeting', 'he')
     expect(result.length).toBeGreaterThan(0)
-    // Should contain Hebrew characters
     expect(/[\u0590-\u05FF]/.test(result)).toBe(true)
   })
 
@@ -557,8 +450,6 @@ describe('responseTemplates', () => {
 // ---------------------------------------------------------------------------
 
 describe('reasoningDirective — buildReasoningDirective()', () => {
-  // ── Overdue tasks ──────────────────────────────────────────────────────────
-
   it('includes "X days overdue" fact for overdue task (EN)', () => {
     const tasks = [{ title: 'Late bug fix', daysOverdue: 5 }]
     const result = buildReasoningDirective('list_tasks', tasks, 'en')
@@ -573,71 +464,50 @@ describe('reasoningDirective — buildReasoningDirective()', () => {
     expect(result).toContain('באיחור')
   })
 
-  // ── Priority ───────────────────────────────────────────────────────────────
-
-  it('includes "high priority" fact for high-priority task (EN)', () => {
-    const tasks = [{ title: 'Critical feature', priority: 'high' }]
+  it('includes priority, subtask progress, pomodoros, project for rich task (EN)', () => {
+    const tasks = [{
+      title: 'Complex task',
+      priority: 'high',
+      subtasks: '2/5',
+      pomodorosCompleted: 4,
+      project: 'Authentication Service',
+      daysOverdue: 2,
+    }]
     const result = buildReasoningDirective('list_tasks', tasks, 'en')
+    expect(result).toContain('Complex task')
     expect(result.toLowerCase()).toContain('high priority')
-  })
-
-  it('includes Hebrew "עדיפות גבוהה" for high-priority task (HE)', () => {
-    const tasks = [{ title: 'Critical feature', priority: 'high' }]
-    const result = buildReasoningDirective('list_tasks', tasks, 'he')
-    expect(result).toContain('עדיפות גבוהה')
-  })
-
-  // ── Subtask progress ───────────────────────────────────────────────────────
-
-  it('includes "X/Y subtasks done (Z%)" for tasks with subtasks (EN)', () => {
-    const tasks = [{ title: 'Big project', subtasks: '2/5' }]
-    const result = buildReasoningDirective('list_tasks', tasks, 'en')
     expect(result).toContain('2/5')
-    expect(result.toLowerCase()).toContain('subtasks done')
     expect(result).toContain('40%')
-  })
-
-  // ── Pomodoro count ─────────────────────────────────────────────────────────
-
-  it('includes "X pomodoros invested" for tasks with pomodorosCompleted (EN)', () => {
-    const tasks = [{ title: 'Deep work', pomodorosCompleted: 4 }]
-    const result = buildReasoningDirective('list_tasks', tasks, 'en')
     expect(result).toContain('4')
     expect(result.toLowerCase()).toContain('pomodoro')
-    expect(result.toLowerCase()).toContain('invest')
+    expect(result.toLowerCase()).toContain('project:')
+    expect(result).toContain('Authentication Service')
   })
 
-  // ── Due soon ───────────────────────────────────────────────────────────────
-
-  it('includes "due today" for tasks due today (EN)', () => {
+  it('includes "due today" and "due tomorrow" facts (EN)', () => {
     const today = new Date()
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const tasks = [{ title: 'Due today task', dueDate: todayStr }]
-    const result = buildReasoningDirective('list_tasks', tasks, 'en')
-    expect(result.toLowerCase()).toContain('due today')
-  })
-
-  it('includes "due tomorrow" for tasks due tomorrow (EN)', () => {
     const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
-    const tasks = [{ title: 'Due tomorrow task', dueDate: tomorrowStr }]
-    const result = buildReasoningDirective('list_tasks', tasks, 'en')
-    expect(result.toLowerCase()).toContain('due tomorrow')
+    tomorrow.setDate(today.getDate() + 1)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+    const tomorrowStr = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`
+
+    const todayResult = buildReasoningDirective('list_tasks', [{ title: 'Due today task', dueDate: todayStr }], 'en')
+    expect(todayResult.toLowerCase()).toContain('due today')
+
+    const tomorrowResult = buildReasoningDirective('list_tasks', [{ title: 'Due tomorrow task', dueDate: tomorrowStr }], 'en')
+    expect(tomorrowResult.toLowerCase()).toContain('due tomorrow')
   })
 
-  it('does NOT include "due today" when task is already overdue', () => {
+  it('does NOT include "due today" when task is already flagged as overdue', () => {
     const today = new Date()
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    // daysOverdue > 0 means already flagged as overdue — "due today" should not appear
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
     const tasks = [{ title: 'Overdue task', dueDate: todayStr, daysOverdue: 3 }]
     const result = buildReasoningDirective('list_tasks', tasks, 'en')
-    // Should contain overdue fact, not "due today"
     expect(result.toLowerCase()).toContain('overdue')
     expect(result.toLowerCase()).not.toContain('due today')
   })
-
-  // ── Estimated effort ───────────────────────────────────────────────────────
 
   it('includes "~X min estimated" for tasks with estimatedMinutes (EN)', () => {
     const tasks = [{ title: 'Quick fix', estimatedMinutes: 30 }]
@@ -646,53 +516,18 @@ describe('reasoningDirective — buildReasoningDirective()', () => {
     expect(result.toLowerCase()).toContain('min estimated')
   })
 
-  // ── Project context ────────────────────────────────────────────────────────
-
-  it('includes "project: X" for tasks with a project field (EN)', () => {
-    const tasks = [{ title: 'Auth task', project: 'Authentication Service' }]
-    const result = buildReasoningDirective('list_tasks', tasks, 'en')
-    expect(result.toLowerCase()).toContain('project:')
-    expect(result).toContain('Authentication Service')
-  })
-
-  // ── Multiple facts ─────────────────────────────────────────────────────────
-
-  it('combines overdue + priority + subtasks in a single task entry', () => {
-    const tasks = [
-      {
-        title: 'Complex task',
-        daysOverdue: 2,
-        priority: 'high',
-        subtasks: '1/4',
-      },
-    ]
-    const result = buildReasoningDirective('list_tasks', tasks, 'en')
-    expect(result).toContain('Complex task')
-    expect(result.toLowerCase()).toContain('overdue')
-    expect(result.toLowerCase()).toContain('high priority')
-    expect(result).toContain('1/4')
-  })
-
-  // ── Empty / null / edge cases ──────────────────────────────────────────────
-
-  it('returns noTasks message for empty array', () => {
-    const result = buildReasoningDirective('list_tasks', [], 'en')
-    expect(result.length).toBeGreaterThan(0)
-    // Should not be the full MANDATORY REASONING POINTS block
-    expect(result).not.toContain('MANDATORY REASONING POINTS')
-  })
-
-  it('returns noTasks message for null input', () => {
-    const result = buildReasoningDirective('list_tasks', null, 'en')
+  it.each([
+    ['empty array', [] as unknown[]],
+    ['null input', null],
+  ])('returns noTasks message for %s', (_label, input) => {
+    const result = buildReasoningDirective('list_tasks', input as Parameters<typeof buildReasoningDirective>[1], 'en')
     expect(result.length).toBeGreaterThan(0)
     expect(result).not.toContain('MANDATORY REASONING POINTS')
   })
 
-  it('skips tasks with no interesting facts', () => {
-    // A task with only a title and no overdue/priority/subtasks/etc.
+  it('skips tasks with no interesting facts (title only)', () => {
     const tasks = [{ title: 'Boring task' }]
     const result = buildReasoningDirective('list_tasks', tasks, 'en')
-    // Should not produce a MANDATORY REASONING POINTS block for this task
     expect(result).not.toContain('Boring task')
   })
 
@@ -702,54 +537,38 @@ describe('reasoningDirective — buildReasoningDirective()', () => {
       daysOverdue: i + 1,
     }))
     const result = buildReasoningDirective('list_tasks', tasks, 'en')
-    // Should mention 5 tasks and an overflow count
     expect(result).toContain('MANDATORY REASONING POINTS')
-    // The overflow note should appear (8 - 5 = 3 more)
     expect(result.toLowerCase()).toMatch(/more/)
   })
 
-  // ── Stats objects ──────────────────────────────────────────────────────────
-
-  it('handles productivity stats objects (todayCompleted)', () => {
+  it('handles productivity stats, timer status, and weekly summary objects', () => {
     const stats = { todayCompleted: 3, todayPomodoros: 2 }
-    const result = buildReasoningDirective('get_productivity_stats', stats, 'en')
-    expect(result).toContain('3')
-    expect(result.toLowerCase()).toContain('completed')
-  })
+    const statsResult = buildReasoningDirective('get_productivity_stats', stats, 'en')
+    expect(statsResult).toContain('3')
+    expect(statsResult.toLowerCase()).toContain('completed')
 
-  it('handles timer status objects (isRunning: true)', () => {
-    const timer = { isRunning: true, currentTask: 'Fix login bug', remainingSeconds: 600 }
-    const result = buildReasoningDirective('get_timer_status', timer, 'en')
-    expect(result).toContain('Fix login bug')
-    expect(result.toLowerCase()).toContain('timer')
-  })
+    const timerRunning = { isRunning: true, currentTask: 'Fix login bug', remainingSeconds: 600 }
+    const timerRunningResult = buildReasoningDirective('get_timer_status', timerRunning, 'en')
+    expect(timerRunningResult).toContain('Fix login bug')
+    expect(timerRunningResult.toLowerCase()).toContain('timer')
 
-  it('handles timer status objects (isRunning: false)', () => {
-    const timer = { isRunning: false, completedToday: 2 }
-    const result = buildReasoningDirective('get_timer_status', timer, 'en')
-    expect(result.toLowerCase()).toContain('timer')
-    expect(result).toContain('2')
-  })
+    const timerStopped = { isRunning: false, completedToday: 2 }
+    const timerStoppedResult = buildReasoningDirective('get_timer_status', timerStopped, 'en')
+    expect(timerStoppedResult.toLowerCase()).toContain('timer')
+    expect(timerStoppedResult).toContain('2')
 
-  it('handles weekly summary objects', () => {
     const weekly = { completedThisWeek: 7, totalFocusMinutes: 90 }
-    const result = buildReasoningDirective('get_weekly_summary', weekly, 'en')
-    expect(result).toContain('7')
-    expect(result.toLowerCase()).toContain('week')
+    const weeklyResult = buildReasoningDirective('get_weekly_summary', weekly, 'en')
+    expect(weeklyResult).toContain('7')
+    expect(weeklyResult.toLowerCase()).toContain('week')
   })
 
-  // ── Language parameter in directive ───────────────────────────────────────
+  it('directive contains language instruction matching requested language', () => {
+    const tasksEN = [{ title: 'EN task', daysOverdue: 1 }]
+    expect(buildReasoningDirective('list_tasks', tasksEN, 'en')).toContain('Write in English')
 
-  it('directive contains "Write in English" instruction for en language', () => {
-    const tasks = [{ title: 'EN task', daysOverdue: 1 }]
-    const result = buildReasoningDirective('list_tasks', tasks, 'en')
-    expect(result).toContain('Write in English')
-  })
-
-  it('directive contains Hebrew writing instruction for he language', () => {
-    const tasks = [{ title: 'HE task', daysOverdue: 1 }]
-    const result = buildReasoningDirective('list_tasks', tasks, 'he')
-    expect(result).toContain('כתוב בעברית')
+    const tasksHE = [{ title: 'HE task', daysOverdue: 1 }]
+    expect(buildReasoningDirective('list_tasks', tasksHE, 'he')).toContain('כתוב בעברית')
   })
 })
 
@@ -764,25 +583,18 @@ describe('entityMemory — EntityMemory class', () => {
     memory = new EntityMemory()
   })
 
-  it('starts empty — getRecent() returns []', () => {
+  it('starts empty — getRecent() returns [] and getLastMentioned() returns null', () => {
     expect(memory.getRecent()).toEqual([])
-  })
-
-  it('getLastMentioned() returns null when empty', () => {
     expect(memory.getLastMentioned()).toBeNull()
   })
 
-  it('trackFromToolResult() adds entities from array data', () => {
+  it('trackFromToolResult() adds entities and sets source to "tool_result"', () => {
     memory.trackFromToolResult([{ id: '1', title: 'Task A' }])
     const last = memory.getLastMentioned()
     expect(last).not.toBeNull()
     expect(last?.title).toBe('Task A')
     expect(last?.id).toBe('1')
-  })
-
-  it('trackFromToolResult() sets source to "tool_result"', () => {
-    memory.trackFromToolResult([{ id: '1', title: 'Task A' }])
-    expect(memory.getLastMentioned()?.source).toBe('tool_result')
+    expect(last?.source).toBe('tool_result')
   })
 
   it('most recently tracked entity is first in getRecent()', () => {
@@ -792,13 +604,12 @@ describe('entityMemory — EntityMemory class', () => {
     expect(recent[0].title).toBe('Second Task')
   })
 
-  it('deduplicates entities — same ID updates to front', () => {
+  it('deduplicates entities — same ID re-tracks to front without duplicates', () => {
     memory.trackFromToolResult([{ id: '1', title: 'Task A' }])
     memory.trackFromToolResult([{ id: '2', title: 'Task B' }])
-    memory.trackFromToolResult([{ id: '1', title: 'Task A' }]) // re-track → moves to front
+    memory.trackFromToolResult([{ id: '1', title: 'Task A' }])
     const recent = memory.getRecent()
     expect(recent[0].title).toBe('Task A')
-    // No duplicates
     const ids = recent.map(e => e.id)
     expect(ids.filter(id => id === '1').length).toBe(1)
   })
@@ -825,22 +636,12 @@ describe('entityMemory — EntityMemory class', () => {
     expect(memory.formatForPrompt()).toBe('')
   })
 
-  it('formatForPrompt() includes RECENTLY MENTIONED TASKS section when entities exist', () => {
-    memory.trackFromToolResult([{ id: '1', title: 'Fix login bug' }])
+  it('formatForPrompt() includes RECENTLY MENTIONED TASKS with title, ID, and "(most recent)" label', () => {
+    memory.trackFromToolResult([{ id: 'abc-999', title: 'Fix login bug' }])
     const prompt = memory.formatForPrompt()
     expect(prompt).toContain('RECENTLY MENTIONED TASKS')
-  })
-
-  it('formatForPrompt() includes task title and ID', () => {
-    memory.trackFromToolResult([{ id: 'abc-999', title: 'Write unit tests' }])
-    const prompt = memory.formatForPrompt()
-    expect(prompt).toContain('Write unit tests')
+    expect(prompt).toContain('Fix login bug')
     expect(prompt).toContain('abc-999')
-  })
-
-  it('formatForPrompt() labels first entity as "(most recent)"', () => {
-    memory.trackFromToolResult([{ id: '1', title: 'Most Recent Task' }])
-    const prompt = memory.formatForPrompt()
     expect(prompt).toContain('(most recent)')
   })
 
@@ -864,21 +665,14 @@ describe('deterministic pipeline — integration', () => {
     entityMemory = new EntityMemory()
   })
 
-  // ── Full pipeline paths ────────────────────────────────────────────────────
-
-  it('Hebrew "המשימות שלי" → router classifies task_query with list_tasks tool', () => {
-    // "מה המשימות" alone doesn't match any keyword; use "המשימות שלי" which IS in the keyword list
-    const result = routeIntentByKeywords('המשימות שלי', mockTasks, entityMemory)
-    expect(result.type).toBe('task_query')
-    expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
-    expect(result.language).toBe('he')
-  })
-
-  it('English "show overdue" → router classifies task_query with get_overdue_tasks', () => {
-    const result = routeIntentByKeywords('show overdue', mockTasks, entityMemory)
-    expect(result.type).toBe('task_query')
-    expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
-    expect(result.language).toBe('en')
+  it.each([
+    ['המשימות שלי', 'task_query', 'list_tasks', 'he'],
+    ['show overdue', 'task_query', 'get_overdue_tasks', 'en'],
+  ])('"%s" → router classifies %s with %s (language: %s)', (input, expectedType, expectedTool, expectedLang) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
+    expect(result.type).toBe(expectedType)
+    expect(result.tools.some(t => t.tool === expectedTool)).toBe(true)
+    expect(result.language).toBe(expectedLang)
   })
 
   it('"start timer" → router classifies timer, skipLLM=true', () => {
@@ -900,52 +694,38 @@ describe('deterministic pipeline — integration', () => {
     expect(result.tools).toHaveLength(0)
   })
 
-  // ── Template + router alignment ────────────────────────────────────────────
-
   it('timer_started, task_created, task_done, greeting templates all exist for en + he', () => {
     const skipLLMTemplates: TemplateKey[] = ['timer_started', 'task_created', 'task_done', 'greeting']
     for (const key of skipLLMTemplates) {
       expect(hasTemplate(key)).toBe(true)
-      // Both languages available
       expect(() => getTemplate(key, 'en', 'test', 25)).not.toThrow()
       expect(() => getTemplate(key, 'he', 'test', 25)).not.toThrow()
     }
   })
 
-  it('all IntentTypes have a non-empty formatDirective in router output', () => {
-    const testMessages: Record<string, string> = {
-      task_query: 'show tasks',
-      task_action: 'create task Test item',
-      timer: 'start timer',
-      planning: 'plan my week',
-      stats: 'how am I doing',
-      greeting: 'hi',
-      freeform: 'random thoughts',
-    }
-
-    for (const [expectedType, message] of Object.entries(testMessages)) {
+  it('all IntentTypes produce a non-empty formatDirective', () => {
+    const testMessages = [
+      'show tasks',
+      'create task Test item',
+      'start timer',
+      'plan my week',
+      'how am I doing',
+      'hi',
+      'random thoughts',
+    ]
+    for (const message of testMessages) {
       const result = routeIntentByKeywords(message, mockTasks, entityMemory)
-      // verify type matches expectation (or that a directive exists regardless)
       expect(result.formatDirective.length).toBeGreaterThan(0)
     }
   })
 
-  // ── Entity memory integration ──────────────────────────────────────────────
-
-  it('start timer uses entity from memory when entity is available', () => {
-    // Simulate a prior tool call that listed a task
+  it('start timer uses entity from memory when available, defaults to "general" when not', () => {
     entityMemory.trackFromToolResult([{ id: 'task-99', title: 'Important task' }])
+    const resultWithMemory = routeIntentByKeywords('start timer', mockTasks, entityMemory)
+    expect(resultWithMemory.tools.find(t => t.tool === 'start_timer')?.parameters?.taskId).toBe('task-99')
 
-    const result = routeIntentByKeywords('start timer', mockTasks, entityMemory)
-    expect(result.type).toBe('timer')
-    const startTool = result.tools.find(t => t.tool === 'start_timer')
-    expect(startTool?.parameters?.taskId).toBe('task-99')
-  })
-
-  it('start timer defaults to "general" when no entity in memory', () => {
-    // No entities tracked — fresh memory
-    const result = routeIntentByKeywords('start timer', mockTasks, entityMemory)
-    const startTool = result.tools.find(t => t.tool === 'start_timer')
-    expect(startTool?.parameters?.taskId).toBe('general')
+    const freshMemory = new EntityMemory()
+    const resultNoMemory = routeIntentByKeywords('start timer', mockTasks, freshMemory)
+    expect(resultNoMemory.tools.find(t => t.tool === 'start_timer')?.parameters?.taskId).toBe('general')
   })
 })

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { X } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
@@ -15,13 +14,6 @@ import MorningSummaryChip from '@/components/morning-dashboard/MorningSummaryChi
 const router = useRouter()
 const taskStore = useTaskStore()
 const morningRitual = useMorningRitual()
-
-// If navigated to /morning and ritual hasn't been done yet, auto-open the ritual panel
-onMounted(() => {
-  if (!morningRitual.isRitualCompleted.value) {
-    morningRitual.openRitual()
-  }
-})
 
 // Clear filters on ANY exit from morning dashboard (dismiss, sidebar click, back button, etc.)
 // This prevents smart view / duration filters from leaking into other views

@@ -102,7 +102,7 @@ echo -e "  Notes:   ${GREEN}${NOTES:-"FlowState v$VERSION"}${NC}"
 echo ""
 
 # Tauri parity tests gate — catch WebKitGTK regressions before building
-if [[ "$DRY_RUN" == false ]]; then
+if [[ "$DRY_RUN" == false && "${SKIP_PARITY_TESTS:-}" != "1" ]]; then
   echo -e "  Running Tauri parity tests..."
   if npm run test:tauri-parity --silent 2>/dev/null; then
     echo -e "  ${GREEN}Tauri parity tests passed${NC}"

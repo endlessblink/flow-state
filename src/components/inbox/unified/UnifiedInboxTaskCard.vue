@@ -28,7 +28,7 @@
 
     <!-- Task Content -->
     <div class="task-content--inbox">
-      <OverflowTooltip :text="task.title" class="task-title" multiline :line-clamp="2" dir="auto">
+      <OverflowTooltip :text="task.title" class="task-title" multiline :line-clamp="compact ? 1 : 2" dir="auto">
         {{ truncateUrlsInText(task.title) }}
       </OverflowTooltip>
 
@@ -382,7 +382,9 @@ const dueStatus = computed(() => {
 
 /* Compact mode for pinned tasks */
 .task-card.compact {
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-1_5);
+  border-inline-start-width: 3px;
+  min-height: unset;
 }
 
 .task-card.compact .task-content--inbox {
@@ -390,12 +392,25 @@ const dueStatus = computed(() => {
 }
 
 .task-card.compact .task-title {
-  -webkit-line-clamp: 1;
+  font-size: var(--text-xs);
+  line-height: 1.3;
   margin-bottom: 0;
 }
 
 .task-card.compact .task-metadata {
   display: none;
+}
+
+.task-card.compact .task-actions {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  padding: 0 var(--space-0_5);
+}
+
+.task-card.compact .timer-indicator {
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .not-on-canvas-badge {

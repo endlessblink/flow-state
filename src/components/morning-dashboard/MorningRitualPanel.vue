@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useMessage } from 'naive-ui'
-import { Zap, Clock, X, ChevronLeft } from 'lucide-vue-next'
+import { X } from 'lucide-vue-next'
 import { useMorningRitual } from '@/composables/useMorningRitual'
 import { useProjectStore } from '@/stores/projects'
 import { useTaskStore } from '@/stores/tasks'
 import MorningCandidateCard from './MorningCandidateCard.vue'
-import CustomSelect from '@/components/common/CustomSelect.vue'
+import MorningTimeBlockCalendar from './MorningTimeBlockCalendar.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import type { Task } from '@/types/tasks'
+import type { Big3Slot, TimeBlock } from '@/composables/useMorningDashboard'
 
 defineProps<{
   show: boolean
@@ -29,19 +30,33 @@ const {
   focusLimit,
   focusCount,
   isTimeBlockMode,
-  autoPlaceMode,
   groupedCandidates,
   focusTasks,
-  totalFocusMinutes,
-  hasOverlap,
   timeBlocks,
   toggleFocus,
   goToTimeBlocks,
   goBackToPick,
-  autoPlaceTasks,
   updateTimeBlock,
   startRitual,
 } = useMorningRitual()
+
+// Bridge: convert ritual composable state → MorningTimeBlockCalendar props
+const big3Slots = computed<Big3Slot[]>(() =>
+  focusTasks.value.map(t => ({
+    taskId: t.id,
+    title: t.title,
+    completed: false
+  }))
+)
+
+const indexedTimeBlocks = computed<TimeBlock[]>(() =>
+  focusIds.value.map(id => timeBlocks.value.get(id) ?? { startTime: '', duration: 60 })
+)
+
+function handleTimeBlockUpdate(index: number, block: TimeBlock) {
+  const taskId = focusIds.value[index]
+  if (taskId) updateTimeBlock(taskId, block)
+}
 
 // --- Footer microcopy ---
 const footerText = computed(() => {
@@ -129,63 +144,6 @@ async function executeConfirmAction() {
 function cancelConfirmAction() {
   showConfirmModal.value = false
   confirmActionFn.value = null
-}
-
-// --- Time block scheduling ---
-
-// Time options: 15-min increments from 6:00 to 22:00
-const timeOptions = computed(() => {
-  const options: { label: string; value: string }[] = []
-  for (let h = 6; h <= 22; h++) {
-    for (const m of [0, 15, 30, 45]) {
-      const hh = h.toString().padStart(2, '0')
-      const mm = m.toString().padStart(2, '0')
-      const ampm = h < 12 ? 'AM' : 'PM'
-      const displayH = h === 0 ? 12 : h > 12 ? h - 12 : h
-      options.push({
-        label: `${displayH}:${mm} ${ampm}`,
-        value: `${hh}:${mm}`,
-      })
-    }
-  }
-  return options
-})
-
-const durationOptions = [
-  { label: '25 min', value: 25 },
-  { label: '30 min', value: 30 },
-  { label: '45 min', value: 45 },
-  { label: '1 hour', value: 60 },
-  { label: '1.5 hours', value: 90 },
-  { label: '2 hours', value: 120 },
-]
-
-function endTimeLabel(startTime: string, duration: number): string {
-  const [h, m] = startTime.split(':').map(Number)
-  const totalMin = h * 60 + m + duration
-  const endH = Math.floor(totalMin / 60) % 24
-  const endM = totalMin % 60
-  const ampm = endH < 12 ? 'AM' : 'PM'
-  const displayH = endH === 0 ? 12 : endH > 12 ? endH - 12 : endH
-  return `${displayH}:${endM.toString().padStart(2, '0')} ${ampm}`
-}
-
-function handleUpdateStartTime(taskId: string, value: string | number | null) {
-  if (typeof value !== 'string' || !value) return
-  const existing = timeBlocks.value.get(taskId)
-  if (existing) {
-    updateTimeBlock(taskId, { ...existing, startTime: value })
-  }
-}
-
-function handleUpdateDuration(taskId: string, value: string | number | null) {
-  if (value === null || value === undefined) return
-  const duration = Number(value)
-  if (isNaN(duration)) return
-  const existing = timeBlocks.value.get(taskId)
-  if (existing) {
-    updateTimeBlock(taskId, { ...existing, duration })
-  }
 }
 
 function handleStartMyDay() {
@@ -278,129 +236,13 @@ function handleClose() {
 
           <!-- ===== SCHEDULE STEP ===== -->
           <div v-else class="ritual-step schedule-step">
-            <div class="step-header">
-              <button class="back-button" type="button" @click="goBackToPick()">
-                <ChevronLeft :size="16" />
-                <span>Back to pick</span>
-              </button>
-              <h2 class="step-title">Schedule your blocks</h2>
-              <p class="step-subtitle">Choose how to place {{ focusCount }} tasks in your day</p>
-            </div>
-
-            <!-- Mode selector -->
-            <div class="mode-selector">
-              <button
-                class="mode-option"
-                :class="{ active: autoPlaceMode }"
-                type="button"
-                @click="autoPlaceMode = true"
-              >
-                <Zap :size="16" />
-                <span>Auto-place</span>
-                <small>Fill from now, sequentially</small>
-              </button>
-              <button
-                class="mode-option"
-                :class="{ active: !autoPlaceMode }"
-                type="button"
-                @click="autoPlaceMode = false"
-              >
-                <Clock :size="16" />
-                <span>Manual</span>
-                <small>Pick times yourself</small>
-              </button>
-            </div>
-
-            <!-- Auto-place mode -->
-            <div v-if="autoPlaceMode" class="auto-place-section">
-              <BaseButton
-                variant="secondary"
-                @click="autoPlaceTasks()"
-              >
-                Auto-place from now
-              </BaseButton>
-
-              <!-- Mini timeline preview (replicates TimeBlockPicker pattern) -->
-              <div v-if="focusTasks.length > 0" class="tb-timeline">
-                <div class="tb-timeline-track">
-                  <div
-                    v-for="(task, i) in focusTasks"
-                    :key="task.id"
-                    class="tb-timeline-block"
-                    :class="`tb-timeline-block--${i % 3}`"
-                    :style="{
-                      left: timeBlocks.has(task.id)
-                        ? `${((parseInt(timeBlocks.get(task.id)!.startTime.split(':')[0]) * 60 + parseInt(timeBlocks.get(task.id)!.startTime.split(':')[1])) - 360) / (960 - 360) * 100}%`
-                        : '0%',
-                      width: timeBlocks.has(task.id)
-                        ? `${timeBlocks.get(task.id)!.duration / (960 - 360) * 100}%`
-                        : '0%',
-                    }"
-                  >
-                    <span class="tb-timeline-label">{{ i + 1 }}</span>
-                  </div>
-                </div>
-                <div class="tb-timeline-hours">
-                  <span v-for="h in [6, 8, 10, 12, 14, 16, 18, 20, 22]" :key="h" class="tb-hour-mark">
-                    {{ h > 12 ? h - 12 : h }}{{ h < 12 ? 'a' : 'p' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Manual mode -->
-            <div v-else class="manual-place-section">
-              <div
-                v-for="(task, i) in focusTasks"
-                :key="task.id"
-                class="manual-row"
-              >
-                <div class="manual-task-info">
-                  <span class="manual-slot-number">{{ i + 1 }}.</span>
-                  <span class="manual-task-title">{{ task.title }}</span>
-                </div>
-                <div class="manual-controls">
-                  <CustomSelect
-                    :model-value="timeBlocks.get(task.id)?.startTime ?? '09:00'"
-                    :options="timeOptions"
-                    placeholder="Start"
-                    :compact="true"
-                    @update:model-value="handleUpdateStartTime(task.id, $event)"
-                  />
-                  <CustomSelect
-                    :model-value="timeBlocks.get(task.id)?.duration ?? 30"
-                    :options="durationOptions"
-                    placeholder="Duration"
-                    :compact="true"
-                    @update:model-value="handleUpdateDuration(task.id, $event)"
-                  />
-                  <span class="manual-end-time">
-                    until {{ endTimeLabel(
-                      timeBlocks.get(task.id)?.startTime ?? '09:00',
-                      timeBlocks.get(task.id)?.duration ?? 30
-                    ) }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Overlap warning -->
-            <div v-if="hasOverlap" class="overlap-warning">
-              Time blocks overlap \u2014 consider adjusting
-            </div>
-
-            <!-- Footer -->
-            <div class="schedule-footer">
-              <span v-if="totalFocusMinutes > 0" class="total-time">
-                Total: {{ totalFocusMinutes }} min
-              </span>
-              <BaseButton
-                variant="primary"
-                @click="handleStartMyDay()"
-              >
-                Start My Day
-              </BaseButton>
-            </div>
+            <MorningTimeBlockCalendar
+              :big3-slots="big3Slots"
+              :time-blocks="indexedTimeBlocks"
+              @update:time-block="handleTimeBlockUpdate"
+              @back="goBackToPick()"
+              @start="handleStartMyDay()"
+            />
           </div>
         </div>
 
@@ -459,7 +301,7 @@ function handleClose() {
 
 .ritual-panel {
   position: relative;
-  max-height: 70vh;
+  max-height: 85vh;
   background: var(--overlay-component-bg, var(--surface-primary));
   border-top: 1px solid var(--glass-border);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
@@ -675,217 +517,9 @@ function handleClose() {
 
 /* ===== SCHEDULE STEP ===== */
 
-.back-button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-  padding: 0;
-  align-self: flex-start;
-  transition: color 0.15s ease;
-}
-
-.back-button:hover {
-  color: var(--text-primary);
-}
-
-.mode-selector {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-}
-
-.mode-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-  backdrop-filter: blur(8px);
-}
-
-.mode-option:hover {
-  border-color: var(--border-hover);
-  background: var(--glass-bg-medium);
-}
-
-.mode-option.active {
-  border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.06);
-  color: var(--text-primary);
-}
-
-.mode-option span {
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.mode-option small {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-/* --- Auto place --- */
-
-.auto-place-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: flex-start;
-}
-
-/* --- Mini timeline (ported from TimeBlockPicker) --- */
-
-.tb-timeline {
-  width: 100%;
-  padding: var(--space-2) 0;
-}
-
-.tb-timeline-track {
-  position: relative;
-  height: 24px;
-  background: var(--glass-bg-soft);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
-  overflow: hidden;
-}
-
-.tb-timeline-block {
-  position: absolute;
-  top: 2px;
-  height: 20px;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  transition: left 0.3s ease, width 0.3s ease;
-}
-
-.tb-timeline-block--0 {
-  background: rgba(78, 205, 196, 0.3);
-  border: 1px solid var(--brand-primary);
-}
-
-.tb-timeline-block--1 {
-  background: rgba(255, 195, 0, 0.25);
-  border: 1px solid var(--color-warning);
-}
-
-.tb-timeline-block--2 {
-  background: rgba(147, 130, 220, 0.25);
-  border: 1px solid #9382dc;
-}
-
-.tb-timeline-label {
-  font-size: 0.6rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.tb-timeline-hours {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-1) 0 0;
-}
-
-.tb-hour-mark {
-  font-size: 0.55rem;
-  color: var(--text-muted);
-}
-
-/* --- Manual place --- */
-
-.manual-place-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.manual-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  background: var(--surface-primary);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-}
-
-.manual-task-info {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.schedule-step {
+  min-height: 0;
   flex: 1;
-  min-width: 0;
-}
-
-.manual-slot-number {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--brand-primary);
-  flex-shrink: 0;
-}
-
-.manual-task-title {
-  font-size: 0.8rem;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.manual-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-.manual-end-time {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  min-width: 70px;
-}
-
-/* --- Overlap warning --- */
-
-.overlap-warning {
-  font-size: 0.7rem;
-  color: var(--color-warning);
-  padding: var(--space-1) var(--space-2);
-  background: rgba(255, 195, 0, 0.06);
-  border-radius: var(--radius-sm);
-}
-
-/* --- Schedule footer --- */
-
-.schedule-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--glass-border);
-}
-
-.total-time {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 500;
 }
 
 /* ===== MOBILE ===== */
@@ -909,20 +543,6 @@ function handleClose() {
     max-height: none;
   }
 
-  .mode-selector {
-    grid-template-columns: 1fr;
-  }
-
-  .manual-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-2);
-  }
-
-  .manual-controls {
-    flex-wrap: wrap;
-    width: 100%;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -936,8 +556,5 @@ function handleClose() {
     transition: none;
   }
 
-  .tb-timeline-block {
-    transition: none;
-  }
 }
 </style>

@@ -281,7 +281,7 @@ export function useMorningRitual() {
     if (isDismissedToday.value || isRitualCompleted.value) return false
 
     const hour = new Date().getHours()
-    if (hour < 6 || hour >= 23) return false // TODO: restore to >= 11 after testing
+    if (hour < 6 || hour >= 11) return false
 
     const hasNonDone = (taskStore._rawTasks ?? []).some(
       (t) => t.status !== 'done'

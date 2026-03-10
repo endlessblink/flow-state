@@ -124,9 +124,7 @@ const router = createRouter({
     },
     {
       path: '/morning',
-      name: 'morning',
-      component: () => import('@/views/MorningDashboardView.vue'),
-      meta: { requiresAuth: false }
+      redirect: '/'
     },
     {
       path: '/today-flow',

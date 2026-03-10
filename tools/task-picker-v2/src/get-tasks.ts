@@ -34,6 +34,10 @@ const statusOrder: Record<Status, number> = {
 const priorityOrder: Record<string, number> = { 'P0': 0, 'P1': 1, 'P2': 2, 'P3': 3 };
 
 filtered.sort((a, b) => {
+  // Newest tasks first (higher ID number = newer)
+  const aNum = parseInt(a.id.replace(/\D+/g, ''), 10) || 0;
+  const bNum = parseInt(b.id.replace(/\D+/g, ''), 10) || 0;
+  if (aNum !== bNum) return bNum - aNum;
   const statusDiff = statusOrder[a.status] - statusOrder[b.status];
   if (statusDiff !== 0) return statusDiff;
   const aPri = a.priority ? priorityOrder[a.priority] : 99;

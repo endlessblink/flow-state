@@ -128,11 +128,16 @@ export function useGoogleCalendar() {
 
   // Fetch events from all selected calendars
   async function syncNow() {
-    if (!isConnected.value || selectedCalendars.value.length === 0) return
+    if (!isConnected.value || selectedCalendars.value.length === 0) {
+      console.log(`[GoogleCalendar] syncNow skipped — connected: ${isConnected.value}, calendars: ${selectedCalendars.value.length}`)
+      return
+    }
     if (!settingsStore.googleProviderToken) {
+      console.warn('[GoogleCalendar] syncNow: No access token available — user needs to reconnect')
       error.value = 'Token expired — please reconnect Google Calendar in Settings'
       return
     }
+    console.log(`[GoogleCalendar] syncNow: Fetching events for ${selectedCalendars.value.length} calendar(s)...`)
 
     // If token is expiring soon and we have a refresh token, refresh first
     if (isTokenExpiringSoon() && settingsStore.googleProviderRefreshToken) {
@@ -246,11 +251,14 @@ export function useGoogleCalendar() {
 
   // Watch for connection and calendar changes
   watch([isConnected, selectedCalendars], ([connected, cals]) => {
+    console.log(`[GoogleCalendar] State changed — connected: ${connected}, calendars: ${cals.length}, hasToken: ${!!settingsStore.googleProviderToken}, hasRefreshToken: ${!!settingsStore.googleProviderRefreshToken}`)
     if (connected && cals.length > 0) {
       syncNow()
       setupAutoSync()
       scheduleProactiveRefresh()
     } else {
+      if (!connected) console.log('[GoogleCalendar] Not connected — skipping sync')
+      else if (cals.length === 0) console.log('[GoogleCalendar] No calendars selected — skipping sync')
       googleEvents.value = []
       if (syncInterval) { clearInterval(syncInterval); syncInterval = null }
       if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null }

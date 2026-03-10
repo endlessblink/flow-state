@@ -304,10 +304,12 @@ const {
   flex: 1;
   display: grid;
   grid-template-columns: 80px 1fr;
-  overflow: visible;
-  min-height: 0;
+  overflow: hidden;
   position: relative;
   z-index: 1;
+  /* overflow:hidden (not visible) — WebKitGTK collapses flex:1 + overflow:visible
+     to 0px height. Week/Month views use overflow-y:auto and work fine.
+     No children need to overflow the grid boundary. */
 }
 
 .time-labels {

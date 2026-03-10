@@ -25,12 +25,16 @@ const handleTabClick = (tabId: typeof tabs[number]['id']) => {
 </script>
 
 <template>
-  <nav class="cyber-section-nav">
+  <nav class="cyber-section-nav" role="tablist" aria-label="Cyberflow Sections">
     <button
       v-for="tab in tabs"
       :key="tab.id"
       class="cyber-nav-tab"
       :class="{ 'cyber-nav-tab--active': activeSection === tab.id }"
+      role="tab"
+      :aria-selected="activeSection === tab.id"
+      :id="'tab-' + tab.id"
+      :aria-controls="'panel-' + tab.id"
       @click="handleTabClick(tab.id)"
     >
       <component :is="tab.icon" class="cyber-nav-tab__icon" />
@@ -68,6 +72,11 @@ const handleTabClick = (tabId: typeof tabs[number]['id']) => {
   .cyber-nav-tab {
     transition: none;
   }
+}
+
+.cyber-nav-tab:focus-visible {
+  outline: 2px solid var(--cf-cyan);
+  outline-offset: -2px;
 }
 
 .cyber-nav-tab__icon {

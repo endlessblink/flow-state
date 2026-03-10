@@ -115,16 +115,16 @@ const canvasStore = useCanvasStore()
 
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
-const section = computed(() => (props.data as any)?.section || props.data)
-const isCollapsed = computed(() => !!(props.data as any)?.isCollapsed)
+const section = computed(() => props.data?.section || props.data)
+const isCollapsed = computed(() => !!props.data?.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh
 const groupColor = computed(() => {
-  const groupId = (props.data as any)?.id
-  if (!groupId) return (props.data as any)?.color || '#3b82f6'
+  const groupId = props.data?.id
+  if (!groupId) return props.data?.color || '#3b82f6'
   const storeGroup = canvasStore.groups.find(g => g.id === groupId)
-  return storeGroup?.color || (props.data as any)?.color || '#3b82f6'
+  return storeGroup?.color || props.data?.color || '#3b82f6'
 })
 const taskCount = computed(() => {
   const data = props.data as Record<string, unknown>
@@ -134,8 +134,8 @@ const taskCount = computed(() => {
   // - Root groups (no parent): show aggregated count (includes descendants)
   // - Child groups: show only direct count (tasks in this group only)
   const isRootGroup = !data.parentGroupId || data.parentGroupId === 'NONE'
-  const direct = (data.directTaskCount as number) ?? 0
-  const aggregated = (data.aggregatedTaskCount as number) ?? direct
+  const direct = data.directTaskCount ?? 0
+  const aggregated = data.aggregatedTaskCount ?? direct
 
   return isRootGroup ? aggregated : direct
 })
@@ -224,7 +224,7 @@ const updateName = () => {
 
 const toggleCollapse = () => {
   // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
-  const groupId = (props.data as any)?.id || props.id.replace('section-', '')
+  const groupId = props.data?.id || props.id.replace('section-', '')
   canvasStore.toggleSectionCollapse(groupId)
 }
 

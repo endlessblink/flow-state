@@ -28,7 +28,7 @@
     :section="modals.editingSection"
     :is-visible="modals.isSectionSettingsOpen"
     @close="modals.closeSectionSettings"
-    @save="$emit('handleSectionSettingsSave', $event as any)"
+    @save="(settings) => $emit('handleSectionSettingsSave', settings)"
   />
 
   <!-- Unified Group Modal (create + edit with optional smart settings) -->
@@ -37,8 +37,8 @@
     :group="modals.selectedGroup"
     :position="modals.groupModalPosition"
     @close="modals.closeGroupModal"
-    @created="$emit('handleGroupCreated', $event as any)"
-    @updated="$emit('handleGroupUpdated', $event as any)"
+    @created="(group) => $emit('handleGroupCreated', group)"
+    @updated="(group) => $emit('handleGroupUpdated', group)"
   />
 
   <!-- Group Edit Modal -->
@@ -46,7 +46,7 @@
     :section="modals.selectedSectionForEdit"
     :is-visible="modals.isGroupEditModalOpen"
     @close="modals.closeGroupEditModal"
-    @save="$emit('handleGroupEditSave', $event as any)"
+    @save="(updatedSection) => $emit('handleGroupEditSave', updatedSection)"
   />
 
   <!-- Group Delete Confirmation Modal -->

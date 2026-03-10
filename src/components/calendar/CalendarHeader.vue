@@ -87,7 +87,7 @@ const toggleViewOptions = () => {
         :y="popoverY"
         position="bottom"
         variant="menu"
-        close-on-click-outside
+        :close-on-click-outside="true"
         @close="showViewOptions = false"
       >
         <div class="view-options-menu">

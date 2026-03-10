@@ -570,14 +570,7 @@ onUnmounted(() => {
           <Zap v-if="isGridHandler" class="header-icon grid-handler-icon" :size="18" />
           <Sparkles v-else class="header-icon" :size="18" />
           <span>{{ isGridHandler ? 'Grid Handler' : 'AI Assistant' }}</span>
-          <OverflowTooltip
-            v-if="headerBadgeText"
-            class="provider-badge"
-            :class="'provider-' + activeProvider"
-            :text="headerBadgeText"
-          >
-            {{ headerBadgeText }}
-          </OverflowTooltip>
+          <OverflowTooltip v-if="headerBadgeText" class="provider-badge" :class="'provider-' + activeProvider" :text="headerBadgeText">{{ headerBadgeText }}</OverflowTooltip>
         </div>
         <div class="header-actions">
           <!-- Settings dropdown -->
@@ -827,13 +820,7 @@ onUnmounted(() => {
                     @click="handleSwitchChat(conv.id)"
                     @keydown.enter="handleSwitchChat(conv.id)"
                   >
-                    <OverflowTooltip
-                      class="chat-history-title"
-                      :text="conv.title"
-                      style="flex: 1; min-width: 0"
-                    >
-                      {{ conv.title }}
-                    </OverflowTooltip>
+                    <OverflowTooltip class="chat-history-title" :text="conv.title" style="flex: 1; min-width: 0">{{ conv.title }}</OverflowTooltip>
                     <span class="chat-history-date">{{ formatRelativeDate(conv.updatedAt) }}</span>
                     <button
                       class="chat-history-delete"

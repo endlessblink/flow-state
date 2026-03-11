@@ -36,13 +36,17 @@
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="error-banner glass">{{ error }}</div>
+    <div v-if="error" class="error-banner glass">
+      {{ error }}
+    </div>
 
     <!-- Summary Cards -->
     <div v-if="report" class="summary-cards">
       <div class="card glass score-card" :class="gradeClass">
         <h3>Memory Grade</h3>
-        <div class="grade-display">{{ report.grade }}</div>
+        <div class="grade-display">
+          {{ report.grade }}
+        </div>
         <p>{{ gradeLabel }}</p>
       </div>
 
@@ -56,21 +60,29 @@
 
       <div class="card glass stat-card">
         <h3>Sections</h3>
-        <div class="stat-value">{{ report.sections.length }}</div>
+        <div class="stat-value">
+          {{ report.sections.length }}
+        </div>
         <p>{{ report.mode === 'full' ? 'Full assessment' : 'Quick check' }}</p>
       </div>
 
       <div class="card glass stat-card">
         <h3>Duration</h3>
-        <div class="stat-value stat-value--small">{{ formatDuration(report.durationMs) }}</div>
+        <div class="stat-value stat-value--small">
+          {{ formatDuration(report.durationMs) }}
+        </div>
         <p>{{ formatTime(report.timestamp) }}</p>
       </div>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <p>No assessment results yet.</p>
-      <p class="empty-hint">"Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).</p>
+      <p>
+        No assessment results yet.
+      </p>
+      <p class="empty-hint">
+        "Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).
+      </p>
     </div>
 
     <!-- Sections -->
@@ -115,7 +127,9 @@
               <span class="check-name">{{ check.name }}</span>
               <span class="check-score" :class="scoreColorClass(check.score)">{{ check.score }}%</span>
             </div>
-            <div class="check-value">{{ check.value }}</div>
+            <div class="check-value">
+              {{ check.value }}
+            </div>
             <div v-if="check.recommendation" class="check-recommendation">
               {{ check.recommendation }}
             </div>
@@ -160,7 +174,9 @@
           <span class="history-time">{{ formatTime(h.timestamp) }}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" @click="handleClearHistory">Clear History</button>
+      <button class="btn btn-ghost" @click="handleClearHistory">
+        Clear History
+      </button>
     </div>
   </div>
 </template>

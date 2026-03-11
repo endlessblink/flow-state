@@ -9,7 +9,10 @@
         'is-elevated': elevated
       }
     ]"
+    :role="hoverable ? 'button' : undefined"
+    :tabindex="hoverable ? 0 : undefined"
     @click="hoverable && $emit('click', $event)"
+    @keydown="handleKeydown"
   >
     <div v-if="$slots.header" class="card-header">
       <slot name="header" />
@@ -33,16 +36,24 @@ interface Props {
   elevated?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   variant: 'default',
   hoverable: false,
   glass: false,
   elevated: false
 })
 
-defineEmits<{
+const emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
+
+const handleKeydown = (event: KeyboardEvent) => {
+  if (!props.hoverable) return
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    emit('click', new MouseEvent('click', { bubbles: true, cancelable: true }))
+  }
+}
 </script>
 
 <style scoped>
@@ -74,6 +85,11 @@ defineEmits<{
 /* Hover effect - teal glow for interactive cards */
 .base-card.has-hover {
   cursor: pointer;
+}
+
+.base-card.has-hover:focus-visible {
+  outline: var(--space-0_5) solid var(--brand-primary);
+  outline-offset: var(--space-0_5);
 }
 
 .base-card.has-hover:hover {

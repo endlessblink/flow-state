@@ -37,8 +37,8 @@
     :group="modals.selectedGroup"
     :position="modals.groupModalPosition"
     @close="modals.closeGroupModal"
-    @created="(group) => $emit('handleGroupCreated', group as any)"
-    @updated="(group) => $emit('handleGroupUpdated', group as any)"
+    @created="(group) => $emit('handleGroupCreated', group)"
+    @updated="(group) => $emit('handleGroupUpdated', group)"
   />
 
   <!-- Group Edit Modal -->
@@ -46,7 +46,7 @@
     :section="modals.selectedSectionForEdit"
     :is-visible="modals.isGroupEditModalOpen"
     @close="modals.closeGroupEditModal"
-    @save="(updatedSection) => $emit('handleGroupEditSave', updatedSection as any)"
+    @save="(updatedSection) => $emit('handleGroupEditSave', updatedSection)"
   />
 
   <!-- Group Delete Confirmation Modal -->

@@ -1622,7 +1622,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1491** | **P0** | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09) |
 | ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
 | ~~**TASK-1501**~~ | **P3** | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10) |
-| **BUG-1502** | **P2** | 🔄 **Canvas inbox: left-click multi-selects tasks unexpectedly, can't deselect** (🔄 IN PROGRESS 2026-03-12) |
+| ~~**BUG-1504**~~ | **P2** | ✅ **Canvas inbox: left-click multi-selects tasks unexpectedly, can't deselect** (✅ DONE 2026-03-12) |
 | **TASK-1499** | **P2** | 🔄 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (🔄 IN PROGRESS 2026-03-10) |
 | **TASK-1500** | **P2** | 🔄 **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (🔄 IN PROGRESS 2026-03-10) |
 | **TASK-1486** | **P2** | 🔄 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (🔄 IN PROGRESS 2026-03-08) |
@@ -1749,7 +1749,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** (👀 REVIEW 2026-03-10) |
 | ~~**BUG-1493**~~ | **P2** | ~~**Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression**~~ (✅ DONE 2026-03-09) |
 | ~~**TASK-1492**~~ | **P2** | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09) |
-| **BUG-1502** | **P2** | **Tauri desktop: tasks not updating when adding/deleting on canvas or canvas inbox — changes not persisting in Tauri build** |
+| ~~**BUG-1503**~~ | **P2** | ~~**Tauri desktop: tasks not updating when adding/deleting on canvas or canvas inbox — WebKitGTK dataTransfer.getData() returns empty, needed dragData singleton fallback**~~ (✅ DONE 2026-03-12) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---

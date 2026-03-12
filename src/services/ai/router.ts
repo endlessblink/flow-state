@@ -136,6 +136,9 @@ export interface RouterOptions extends Partial<GenerateOptions> {
 
   /** Skip automatic user context injection (e.g., for health checks) */
   skipUserContext?: boolean
+
+  /** Complexity tier from classifier (determines model routing) */
+  complexityTier?: import('./complexityClassifier').ComplexityTier
 }
 
 // ============================================================================
@@ -667,6 +670,19 @@ export class AIRouter {
       if (provider) return provider
       // Forced provider not available — fall through to auto-routing
       this.log(`Forced provider ${options.forceProvider} not available, falling back to auto-routing`)
+    }
+
+    // TASK-1500: Smart routing — escalate complex queries to OpenRouter premium
+    if (options.complexityTier === 'complex') {
+      const openrouterProvider = this.providers.get('openrouter')
+      if (openrouterProvider) {
+        const health = await this.getProviderHealth('openrouter')
+        if (health.isHealthy) {
+          this.log(`Smart routing: complex query → openrouter`)
+          return openrouterProvider
+        }
+      }
+      // Fall through to normal routing if OpenRouter not available
     }
 
     // Determine provider order based on task type and config

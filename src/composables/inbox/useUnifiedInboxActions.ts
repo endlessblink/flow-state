@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed, type Ref, onMounted, onUnmounted } from 'vue'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
@@ -246,6 +246,22 @@ export function useUnifiedInboxActions(
         document.documentElement.removeAttribute('data-dragging-task-id')
         endGlobalDrag()
     }
+
+    // BUG-1502 FIX: If the dragged task card unmounts during drag (e.g., moved to canvas),
+    // the element-level @dragend never fires. Use a document-level listener as safety net.
+    const handleGlobalDragEnd = () => {
+        if (draggingTaskId.value) {
+            onDragEnd()
+        }
+    }
+
+    onMounted(() => {
+        document.addEventListener('dragend', handleGlobalDragEnd)
+    })
+
+    onUnmounted(() => {
+        document.removeEventListener('dragend', handleGlobalDragEnd)
+    })
 
     // --- Send to Canvas ---
 

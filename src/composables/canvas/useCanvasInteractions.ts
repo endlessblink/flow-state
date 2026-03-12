@@ -547,6 +547,19 @@ export function useCanvasInteractions(deps?: {
 
         try {
 
+            // BUG-1492 FIX: Yield to the event loop BEFORE processing any tasks.
+            // Without this, each handler saves the first task synchronously before
+            // any onNodeDragStart can fire (JS is single-threaded). In rapid consecutive
+            // drags, 13+ handlers each save task #1 with different positions → drift.
+            // setTimeout(0) creates a gap for pending mousedown events (which fire
+            // onNodeDragStart and increment dragSequence). If a new drag is already
+            // queued, the stale check below catches it before any saves happen.
+            await new Promise(resolve => setTimeout(resolve, 0))
+            if (mySequence !== dragSequence) {
+                if (import.meta.env.DEV) console.log(`[BUG-1492] Pre-loop stale check: seq ${mySequence} vs ${dragSequence}, aborting entire handler`)
+                return
+            }
+
             for (const node of involvedNodes) {
                 if (CanvasIds.isGroupNode(node.id)) {
                     // ============================================================
@@ -663,14 +676,15 @@ export function useCanvasInteractions(deps?: {
 
                     if (vfParentGroupId !== storeParentId) {
                         if (import.meta.env.DEV) {
-                            console.warn(`[BUG-1191] Stale parentNode for "${task.title?.slice(0, 25)}": VF=${vfParentGroupId?.slice(0, 8)}, Store=${storeParentId?.slice(0, 8) ?? 'null'}. Fixing parentNode, proceeding with snapshot position.`)
+                            console.warn(`[BUG-1191] Stale parentNode for "${task.title?.slice(0, 25)}": VF=${vfParentGroupId?.slice(0, 8)}, Store=${storeParentId?.slice(0, 8) ?? 'null'}. Using snapshot position (correct regardless of parentNode).`)
                         }
-                        // BUG-1492 FIX: Only fix VF parentNode alignment, do NOT restore position
-                        // from store and do NOT skip the save. The position snapshot uses
-                        // computedPosition which is always the correct absolute visual position
-                        // regardless of parentNode state. Restoring from store during rapid
-                        // consecutive drags throws away the user's actual drag position → drift.
-                        node.parentNode = storeParentId ? CanvasIds.groupNodeId(storeParentId) : undefined
+                        // BUG-1492 FIX: Do NOT change parentNode here.
+                        // Lines 837-849 will set BOTH parentNode AND position together based on
+                        // containment detection. Changing parentNode early without adjusting
+                        // position causes Vue Flow to misinterpret the position as relative to
+                        // the new parent → visual jump → next drag captures wrong position → drift.
+                        // The position snapshot uses computedPosition which is always the correct
+                        // absolute visual position regardless of parentNode state.
                     }
 
                     // 1. Compute ABSOLUTE position for containment check
@@ -823,6 +837,14 @@ export function useCanvasInteractions(deps?: {
                                 dragUpdates[key] = value
                             }
                         }
+                    }
+
+                    // BUG-1492: Check stale BEFORE mutating VF nodes.
+                    // Without this, stale handlers change node.position/parentNode and then
+                    // abort at the save check — leaving VF nodes in a corrupted state.
+                    if (mySequence !== dragSequence) {
+                        if (import.meta.env.DEV) console.log(`[BUG-1492] Stale before VF mutation (seq ${mySequence} vs ${dragSequence}), aborting`)
+                        break
                     }
 
                     // BUG-1209 FIX: Update Vue Flow node and PositionManager BEFORE the store write.

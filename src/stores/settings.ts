@@ -69,6 +69,11 @@ export interface AppSettings {
     // FEATURE-1317: AI Work Profile learning
     aiLearningEnabled: boolean
 
+    // TASK-1500: Smart AI model routing
+    aiSmartRouting: boolean
+    aiPremiumModel: string
+    aiMonthlyBudgetCents: number
+
     // TASK-1219: Time block progress notifications
     timeBlockNotifications: TimeBlockNotificationSettings
 
@@ -194,6 +199,11 @@ export const useSettingsStore = defineStore('settings', {
 
         // FEATURE-1317: AI Work Profile learning (default: on)
         aiLearningEnabled: true,
+
+        // TASK-1500: Smart AI model routing defaults
+        aiSmartRouting: _persisted?.aiSmartRouting ?? false,
+        aiPremiumModel: _persisted?.aiPremiumModel ?? 'anthropic/claude-sonnet-4-6',
+        aiMonthlyBudgetCents: _persisted?.aiMonthlyBudgetCents ?? 500,
 
         // TASK-1219: Time block notification defaults
         timeBlockNotifications: { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS },

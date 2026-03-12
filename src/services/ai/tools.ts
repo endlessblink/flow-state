@@ -503,6 +503,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           success: true,
           message: tm(language, `Created group "${name}"`, `נוצרה קבוצה "${name}"`),
           data: { id: group.id, name: group.name },
+          undoAction: { toolName: 'delete_group', params: { groupId: group.id, confirmed: true } },
         }
       }
 
@@ -696,12 +697,16 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
 
         const updates: Partial<Task> = {}
         const updatedFields: string[] = []
+        // Capture previous values for undo
+        const previousValues: Record<string, unknown> = {}
 
         if (call.parameters.title !== undefined) {
+          previousValues.title = task.title
           updates.title = call.parameters.title as string
           updatedFields.push('title')
         }
         if (call.parameters.description !== undefined) {
+          previousValues.description = task.description
           updates.description = call.parameters.description as string
           updatedFields.push('description')
         }
@@ -710,6 +715,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           if (!VALID_PRIORITIES.includes(p)) {
             return { success: false, message: tm(language, `Invalid priority "${p}". Valid: low, medium, high`, `עדיפות לא תקינה "${p}". אפשרויות: low, medium, high`) }
           }
+          previousValues.priority = task.priority
           updates.priority = p
           updatedFields.push('priority')
         }
@@ -718,6 +724,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           if (!isValidISODate(dd)) {
             return { success: false, message: tm(language, `Invalid date format "${dd}". Use YYYY-MM-DD.`, `פורמט תאריך לא תקין "${dd}". השתמש ב-YYYY-MM-DD.`) }
           }
+          previousValues.dueDate = task.dueDate
           updates.dueDate = dd
           updatedFields.push('dueDate')
         }
@@ -726,10 +733,12 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           if (!VALID_STATUSES.includes(s)) {
             return { success: false, message: tm(language, `Invalid status "${s}". Valid: ${VALID_STATUSES.join(', ')}`, `סטטוס לא תקין "${s}". אפשרויות: ${VALID_STATUSES.join(', ')}`) }
           }
+          previousValues.status = task.status
           updates.status = s
           updatedFields.push('status')
         }
         if (call.parameters.estimatedDuration !== undefined) {
+          previousValues.estimatedDuration = task.estimatedDuration
           updates.estimatedDuration = call.parameters.estimatedDuration as number
           updatedFields.push('estimatedDuration')
         }
@@ -744,6 +753,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           success: true,
           message: tm(language, `Updated task "${task.title}": ${updatedFields.join(', ')}`, `עודכנה משימה "${task.title}": ${updatedFields.join(', ')}`),
           data: { id: taskId, updatedFields },
+          undoAction: { toolName: 'update_task', params: { taskId, ...previousValues } },
         }
       }
 
@@ -1313,14 +1323,13 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         const todayStr = new Date().toISOString().split('T')[0]
         const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
 
-        const byStatus = { planned: 0, in_progress: 0, done: 0, backlog: 0, on_hold: 0 }
+        const byStatus = { todo: 0, done: 0 }
         let overdueCount = 0
         let completedToday = 0
 
         for (const t of allTasks) {
-          if (t.status && t.status in byStatus) {
-            byStatus[t.status as keyof typeof byStatus]++
-          }
+          if (t.status === 'todo') byStatus.todo++
+          else if (t.status === 'done') byStatus.done++
           if (t.dueDate && normDate(t.dueDate) < todayStr && t.status !== 'done') {
             overdueCount++
           }

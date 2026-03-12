@@ -445,6 +445,62 @@ async function onClearMemories() {
       </div>
     </SettingsSection>
 
+    <!-- TASK-1500: Smart Model Routing -->
+    <SettingsSection title="Smart Model Routing">
+      <p class="section-desc">
+        Automatically route complex queries (planning, analysis) to a premium model via OpenRouter,
+        while keeping simple chats on free providers.
+      </p>
+
+      <SettingsToggle
+        label="Enable smart routing"
+        :value="settingsStore.aiSmartRouting"
+        @update="(v: boolean) => settingsStore.updateSetting('aiSmartRouting', v)"
+      />
+
+      <div v-if="settingsStore.aiSmartRouting" class="smart-routing-config">
+        <div class="smart-routing-field">
+          <label class="model-selector-label">Premium model (for complex queries)</label>
+          <div class="model-select-wrapper">
+            <select
+              class="model-select"
+              :value="settingsStore.aiPremiumModel"
+              @change="(e: Event) => settingsStore.updateSetting('aiPremiumModel', (e.target as HTMLSelectElement).value)"
+            >
+              <option
+                v-for="m in openrouterModels"
+                :key="m.id"
+                :value="m.id"
+              >
+                {{ m.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="smart-routing-field">
+          <label class="model-selector-label">Monthly budget</label>
+          <div class="budget-input-row">
+            <span class="budget-currency">$</span>
+            <input
+              class="budget-input"
+              type="number"
+              min="0"
+              step="1"
+              :value="(settingsStore.aiMonthlyBudgetCents / 100).toFixed(0)"
+              @change="(e: Event) => settingsStore.updateSetting('aiMonthlyBudgetCents', Math.round(parseFloat((e.target as HTMLInputElement).value || '0') * 100))"
+            />
+            <span class="budget-hint">/ month (informational)</span>
+          </div>
+        </div>
+
+        <p class="smart-routing-note">
+          Simple queries (greetings, short questions) stay on Groq/Ollama.
+          Complex queries (planning, analysis) escalate to the premium model above.
+        </p>
+      </div>
+    </SettingsSection>
+
     <!-- Your Usage (top) -->
     <SettingsSection title="Your Usage">
       <!-- Period selector -->
@@ -1794,5 +1850,66 @@ async function onClearMemories() {
   font-size: var(--text-xs);
   color: var(--text-muted);
   margin: 0;
+}
+
+/* ── TASK-1500: Smart Model Routing ── */
+.smart-routing-config {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--glass-border);
+}
+
+.smart-routing-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1_5);
+}
+
+.budget-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.budget-currency {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-semibold);
+}
+
+.budget-input {
+  width: 80px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  backdrop-filter: blur(8px);
+  transition: border-color var(--duration-fast);
+}
+
+.budget-input:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+}
+
+.budget-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.smart-routing-note {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0;
+  line-height: var(--leading-relaxed);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
 }
 </style>

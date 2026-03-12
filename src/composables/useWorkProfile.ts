@@ -654,6 +654,37 @@ export function useWorkProfile() {
     return insights.length > 0 ? `Learned work patterns:\n${insights.join('\n')}` : null
   }
 
+  /**
+   * TASK-1500: Auto-refresh observations if stale (>24h old).
+   * Returns true if a refresh was triggered, false if data was fresh or missing.
+   */
+  async function refreshIfStale(): Promise<boolean> {
+    const p = await loadProfile()
+    if (!p) return false
+
+    const observations = p.memoryGraph || []
+    if (observations.length === 0) {
+      console.log('[WorkProfile] No observations found, generating initial set...')
+      await computeCapacityMetrics()
+      return true
+    }
+
+    const mostRecent = observations
+      .map(o => new Date(o.createdAt).getTime())
+      .reduce((max, t) => Math.max(max, t), 0)
+
+    const hoursSinceUpdate = (Date.now() - mostRecent) / (1000 * 60 * 60)
+
+    if (hoursSinceUpdate > 24) {
+      console.log(`[WorkProfile] Observations stale (${Math.round(hoursSinceUpdate)}h old), refreshing...`)
+      await computeCapacityMetrics()
+      return true
+    }
+
+    console.log(`[WorkProfile] Observations fresh (${Math.round(hoursSinceUpdate)}h old)`)
+    return false
+  }
+
   async function resetLearnedData(): Promise<void> {
     await db.saveWorkProfile({
       avgWorkMinutesPerDay: null,
@@ -688,6 +719,7 @@ export function useWorkProfile() {
     generateObservationsFromStats,
     generateObservationsFromWeeklyOutcome,
     getProfileContext,
-    resetLearnedData
+    resetLearnedData,
+    refreshIfStale
   }
 }

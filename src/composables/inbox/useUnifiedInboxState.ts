@@ -251,22 +251,41 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             )
         }
 
-        // 2. Time Filter (skip when Unscheduled is active — dateless tasks can't match date ranges)
-        if (!unscheduledOnly.value) {
-            if (activeTimeFilter.value === 'today') {
-                tasks = tasks.filter(task => isTodayTask(task))
-            } else if (activeTimeFilter.value === 'next3days') {
-                tasks = tasks.filter(task => isNext3DaysTask(task))
-            } else if (activeTimeFilter.value === 'week') {
-                tasks = tasks.filter(task => isWeekTask(task))
-            } else if (activeTimeFilter.value === 'month') {
-                tasks = tasks.filter(task => isThisMonthTask(task))
+        // 2. Time Filter + Unscheduled — BUG-1502
+        // "Unscheduled" = no due date OR overdue (past due date = no longer scheduled)
+        // When combined with a time filter: OR (time range + unscheduled)
+        const todayStr = (() => {
+            const d = new Date(); d.setHours(0,0,0,0)
+            const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0')
+            return `${y}-${m}-${day}`
+        })()
+        const isUnscheduledTask = (task: Task) => {
+            // No due date at all → unscheduled
+            if (!task.dueDate) return true
+            // Overdue → effectively unscheduled (needs rescheduling)
+            const normalized = task.dueDate.trim().substring(0, 10)
+            if (normalized && normalized < todayStr) return true
+            return false
+        }
+        const timeFilter = activeTimeFilter.value
+        const hasTimeFilter = timeFilter !== 'all'
+        const timeCheck = (task: Task) => {
+            switch (timeFilter) {
+                case 'today': return isTodayTask(task)
+                case 'next3days': return isNext3DaysTask(task)
+                case 'week': return isWeekTask(task)
+                case 'month': return isThisMonthTask(task)
+                default: return true
             }
         }
 
-        // 3. Unscheduled Filter
-        if (unscheduledOnly.value) {
-            tasks = tasks.filter(task => !isScheduledOnCalendar(task))
+        if (hasTimeFilter && unscheduledOnly.value) {
+            // OR: matches time range OR is unscheduled (no date / overdue)
+            tasks = tasks.filter(task => timeCheck(task) || isUnscheduledTask(task))
+        } else if (hasTimeFilter) {
+            tasks = tasks.filter(task => timeCheck(task))
+        } else if (unscheduledOnly.value) {
+            tasks = tasks.filter(task => isUnscheduledTask(task))
         }
 
         // On Canvas filter — show only tasks placed on the canvas

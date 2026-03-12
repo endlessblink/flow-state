@@ -17,6 +17,7 @@ import { createAIRouter, type AIRouter, type RouterOptions } from './router'
 import type { ChatMessage } from './types'
 import { useSettingsStore } from '@/stores/settings'
 import { getAIUserContext } from './userContext'
+import { classifyComplexity } from './complexityClassifier'
 
 let sharedRouter: AIRouter | null = null
 let initPromise: Promise<void> | null = null
@@ -90,6 +91,19 @@ function createContextAwareRouter(router: AIRouter): AIRouter {
             return target.chat(messages, options)
           }
 
+          // TASK-1500: Smart routing — classify complexity and pass to router
+          const settingsStore = useSettingsStore()
+          if (settingsStore.aiSmartRouting && !options.complexityTier) {
+            const lastUserMsg = [...messages].reverse().find((m: ChatMessage) => m.role === 'user')
+            if (lastUserMsg) {
+              const complexity = classifyComplexity(lastUserMsg.content)
+              options = { ...options, complexityTier: complexity.tier }
+              if (complexity.tier === 'complex') {
+                console.log(`[Router] Smart routing: complex query (score=${complexity.score}, reasons=${complexity.reasons.join(', ')})`)
+              }
+            }
+          }
+
           const context = await getCachedUserContext(options.contextFeature)
           const enrichedMessages = injectContextIntoMessages(messages, context)
           return target.chat(enrichedMessages, options)
@@ -104,6 +118,19 @@ function createContextAwareRouter(router: AIRouter): AIRouter {
           if (options.skipUserContext) {
             yield* target.chatStream(messages, options)
             return
+          }
+
+          // TASK-1500: Smart routing — classify complexity and pass to router
+          const settingsStore = useSettingsStore()
+          if (settingsStore.aiSmartRouting && !options.complexityTier) {
+            const lastUserMsg = [...messages].reverse().find((m: ChatMessage) => m.role === 'user')
+            if (lastUserMsg) {
+              const complexity = classifyComplexity(lastUserMsg.content)
+              options = { ...options, complexityTier: complexity.tier }
+              if (complexity.tier === 'complex') {
+                console.log(`[Router] Smart routing: complex query (score=${complexity.score}, reasons=${complexity.reasons.join(', ')})`)
+              }
+            }
           }
 
           const context = await getCachedUserContext(options.contextFeature)

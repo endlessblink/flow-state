@@ -401,7 +401,7 @@ export function useAppInitialization() {
             console.warn('[RECURRENCE] Deferred scheduler failed (non-critical):', error)
         }
 
-        // FEATURE-1317: Auto-refresh work profile insights (non-blocking)
+        // TASK-1500: Auto-refresh AI memory observations if stale (>24h) — non-blocking
         if (authStore.isAuthenticated) {
             try {
                 const { useWorkProfile } = await import('@/composables/useWorkProfile')
@@ -409,15 +409,15 @@ export function useAppInitialization() {
                 const settings = getSettings()
                 if (settings.aiLearningEnabled) {
                     const wp = useWorkProfile()
-                    // Fire-and-forget: load profile then recalculate in background
-                    wp.loadProfile().then(() => {
-                        wp.computeCapacityMetrics().then(() => {
-                            console.log('📊 [FEATURE-1317] Work profile insights auto-refreshed')
-                        }).catch(e => console.debug('[FEATURE-1317] Auto-recalculate skipped:', e))
-                    }).catch(() => {})
+                    // Fire-and-forget: only refresh if observations are stale
+                    wp.refreshIfStale().then(refreshed => {
+                        if (refreshed) {
+                            console.log('📊 [TASK-1500] Work profile observations refreshed (were stale)')
+                        }
+                    }).catch(e => console.warn('[TASK-1500] Memory refresh failed:', e))
                 }
             } catch (error) {
-                console.debug('[FEATURE-1317] Work profile auto-refresh failed:', error)
+                console.debug('[TASK-1500] Work profile auto-refresh failed:', error)
             }
         }
 

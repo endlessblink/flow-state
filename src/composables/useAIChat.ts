@@ -47,6 +47,10 @@ import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRou
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
 import { useWorkProfile } from '@/composables/useWorkProfile'
+import { setupAIPipeline } from '@/services/ai/pipeline/setup'
+
+// Initialize pipeline guardrails (idempotent — only configures once)
+setupAIPipeline()
 
 // ============================================================================
 // Types

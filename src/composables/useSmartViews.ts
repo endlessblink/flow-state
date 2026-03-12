@@ -82,7 +82,7 @@ export const useSmartViews = () => {
     today.setHours(0, 0, 0, 0)
     const todayStr = getLocalDateString(today)
 
-    // Check if task is due today (normalize date format before comparison)
+    // Check if task is due today (exact match only — overdue is handled separately)
     if (task.dueDate) {
       const normalizedDueDate = normalizeDateString(task.dueDate)
       if (normalizedDueDate === todayStr) {
@@ -93,8 +93,6 @@ export const useSmartViews = () => {
     // Check if task has instances scheduled for today
     // BUG-1188: If instances exist, ONLY check instance dates (instances are authoritative)
     if (task.instances && task.instances.length > 0) {
-      // Instances exist - check if any are scheduled for today
-      // Skip legacy scheduledDate check since instances override it
       return task.instances.some(inst => {
         if (!inst || !inst.scheduledDate) return false
         const normalizedInstDate = normalizeDateString(inst.scheduledDate)

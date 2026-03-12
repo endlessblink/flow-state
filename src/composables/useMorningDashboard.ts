@@ -436,20 +436,8 @@ export function useMorningDashboard() {
       if (!slot.taskId) continue
 
       try {
-        // Set dueDate = today
+        // Set dueDate = today (instances already created during time-block placement)
         await taskStore.updateTask(slot.taskId, { dueDate: todayStr })
-
-        // Create calendar time block instance
-        const block = timeBlocks.value[i]
-        if (block.startTime) {
-          await taskStore.createTaskInstance(slot.taskId, {
-            scheduledDate: todayStr,
-            scheduledTime: block.startTime,
-            duration: block.duration,
-            status: 'scheduled',
-            isRecurring: false,
-          })
-        }
       } catch {
         // task may have been deleted — not fatal
       }

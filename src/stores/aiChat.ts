@@ -16,6 +16,12 @@ import { ref, computed, shallowRef, watch } from 'vue'
 import type { Task } from '@/types/tasks'
 import { executeTool } from '@/services/ai/tools'
 import type { ToolCall } from '@/services/ai/tools'
+import {
+  loadConversationsFromSupabase,
+  saveConversationToSupabase,
+  deleteConversationFromSupabase,
+} from '@/services/ai/chatPersistence'
+import { startUsageSync } from '@/services/ai/usageSync'
 
 // ============================================================================
 // Types
@@ -179,11 +185,15 @@ export const useAIChatStore = defineStore('aiChat', () => {
   /** Chat text direction override (auto = browser default) */
   const chatDirection = ref<'auto' | 'ltr' | 'rtl'>('auto')
 
+  /** Supabase sync status indicator */
+  const syncStatus = ref<'idle' | 'syncing' | 'synced' | 'error'>('idle')
+
   // ============================================================================
   // Persistence Helpers
   // ============================================================================
 
   let saveTimeout: ReturnType<typeof setTimeout> | null = null
+  let supabaseSaveTimeout: ReturnType<typeof setTimeout> | null = null
 
   /**
    * Serialize messages for storage (strips non-serializable fields like action handlers).
@@ -254,6 +264,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
   /**
    * Save conversations to localStorage (debounced).
+   * Also triggers a debounced Supabase save for the active conversation.
    */
   function debouncedSaveConversations() {
     if (saveTimeout) clearTimeout(saveTimeout)
@@ -263,7 +274,24 @@ export const useAIChatStore = defineStore('aiChat', () => {
       } catch {
         // localStorage full or unavailable - silently ignore
       }
+
+      // Also save active conversation to Supabase (VPS-first architecture)
+      const activeConv = conversations.value.find(c => c.id === activeConversationId.value)
+      if (activeConv) {
+        debouncedSupabaseSave(activeConv)
+      }
     }, SAVE_DEBOUNCE_MS)
+  }
+
+  /**
+   * Save a single conversation to Supabase (debounced 2s).
+   * Silently fails — localStorage remains the fallback.
+   */
+  function debouncedSupabaseSave(conversation: Conversation) {
+    if (supabaseSaveTimeout) clearTimeout(supabaseSaveTimeout)
+    supabaseSaveTimeout = setTimeout(() => {
+      saveConversationToSupabase(conversation).catch(() => {})
+    }, 2000)
   }
 
   /**
@@ -457,6 +485,9 @@ export const useAIChatStore = defineStore('aiChat', () => {
     if (index === -1) return
 
     conversations.value.splice(index, 1)
+
+    // Mirror deletion in Supabase (silently fails if offline)
+    deleteConversationFromSupabase(id).catch(() => {})
 
     // If we deleted the active conversation, switch to the most recent or create new
     if (activeConversationId.value === id) {
@@ -741,9 +772,10 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
   /**
    * Initialize the chat (called on app startup).
-   * Loads conversations from localStorage, migrates old format if needed.
+   * Tries Supabase first (VPS-first architecture), falls back to localStorage.
+   * Migrates old localStorage format if needed.
    */
-  function initialize() {
+  async function initialize() {
     if (isInitialized.value) return
 
     // Load persisted settings
@@ -754,42 +786,64 @@ export const useAIChatStore = defineStore('aiChat', () => {
       chatDirection.value = persistedSettings.value.chatDirection
     }
 
-    // Try to load conversations from new format
-    const persisted = loadPersistedConversations()
-
-    if (persisted.conversations.length > 0) {
-      // New format found
-      conversations.value = persisted.conversations
-      activeConversationId.value = persisted.activeId
-
-      // Validate active conversation ID still exists
+    // --- VPS-first: try Supabase ---
+    const supabaseConversations = await loadConversationsFromSupabase()
+    if (supabaseConversations && supabaseConversations.length > 0) {
+      conversations.value = supabaseConversations
+      // Restore last active conversation (from localStorage, since Supabase doesn't store it)
+      const localPersistedActiveId = (() => {
+        try {
+          const raw = localStorage.getItem(CONVERSATIONS_KEY)
+          if (!raw) return null
+          return (JSON.parse(raw) as { activeConversationId?: string }).activeConversationId || null
+        } catch {
+          return null
+        }
+      })()
+      activeConversationId.value = localPersistedActiveId || supabaseConversations[0].id
+      // Validate active conversation ID still exists in the loaded set
       if (activeConversationId.value && !conversations.value.find(c => c.id === activeConversationId.value)) {
         activeConversationId.value = conversations.value[0]?.id || null
       }
+      console.log(`[AIChat] Loaded ${supabaseConversations.length} conversations from Supabase`)
     } else {
-      // Check for old format migration
-      const oldMessages = loadOldPersistedMessages()
-      if (oldMessages.length > 0) {
-        // Migrate: create a "Previous Chat" conversation from old messages
-        const migratedConv: Conversation = {
-          id: generateConversationId(),
-          title: 'Previous Chat',
-          messages: oldMessages,
-          createdAt: oldMessages[0]?.timestamp || new Date(),
-          updatedAt: oldMessages[oldMessages.length - 1]?.timestamp || new Date(),
-        }
-        conversations.value = [migratedConv]
-        activeConversationId.value = migratedConv.id
+      // --- Fallback: localStorage ---
+      const persisted = loadPersistedConversations()
 
-        // Clean up old format key
-        try {
-          localStorage.removeItem(CHAT_HISTORY_KEY)
-        } catch {
-          // silently ignore
+      if (persisted.conversations.length > 0) {
+        // New localStorage format found
+        conversations.value = persisted.conversations
+        activeConversationId.value = persisted.activeId
+
+        // Validate active conversation ID still exists
+        if (activeConversationId.value && !conversations.value.find(c => c.id === activeConversationId.value)) {
+          activeConversationId.value = conversations.value[0]?.id || null
         }
       } else {
-        // No persisted data at all - create default conversation
-        createConversation()
+        // Check for old format migration
+        const oldMessages = loadOldPersistedMessages()
+        if (oldMessages.length > 0) {
+          // Migrate: create a "Previous Chat" conversation from old messages
+          const migratedConv: Conversation = {
+            id: generateConversationId(),
+            title: 'Previous Chat',
+            messages: oldMessages,
+            createdAt: oldMessages[0]?.timestamp || new Date(),
+            updatedAt: oldMessages[oldMessages.length - 1]?.timestamp || new Date(),
+          }
+          conversations.value = [migratedConv]
+          activeConversationId.value = migratedConv.id
+
+          // Clean up old format key
+          try {
+            localStorage.removeItem(CHAT_HISTORY_KEY)
+          } catch {
+            // silently ignore
+          }
+        } else {
+          // No persisted data at all - create default conversation
+          createConversation()
+        }
       }
     }
 
@@ -810,6 +864,9 @@ export const useAIChatStore = defineStore('aiChat', () => {
       activeConversationId,
       () => debouncedSaveConversations(),
     )
+
+    // Start usage sync to Supabase
+    startUsageSync()
 
     isInitialized.value = true
   }
@@ -934,6 +991,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     isInitialized,
     undoBuffer,
     persistedSettings,
+    syncStatus,
 
     // Getters
     activeConversation,

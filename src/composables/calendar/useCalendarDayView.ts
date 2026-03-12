@@ -253,9 +253,47 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         return true
       })
 
+      // TASK-1496: Merge external events into overlap calculation so local + external share columns
+      const extEvents = externalEvents?.value ?? []
+      const todayExternals = extEvents.filter(ext => {
+        if (ext.isAllDay) return false
+        const d = ext.startTime
+        const ed = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        return ed === dateStr
+      })
+
+      // Create phantom local events for external events so overlap calc sees them
+      const externalPhantoms: CalendarEvent[] = todayExternals.map(ext => {
+        const hour = ext.startTime.getHours()
+        const minute = ext.startTime.getMinutes()
+        const startSlot = hour * 2 + (minute >= 30 ? 1 : 0)
+        const durationMinutes = Math.max(15, (ext.endTime.getTime() - ext.startTime.getTime()) / 60000)
+        const slotSpan = Math.max(1, Math.ceil(durationMinutes / 30))
+        return {
+          id: `ext-${ext.id}`,
+          taskId: `ext-${ext.id}`,
+          instanceId: '',
+          title: ext.title,
+          startTime: ext.startTime,
+          endTime: ext.endTime,
+          duration: durationMinutes,
+          startSlot,
+          slotSpan,
+          color: ext.color,
+          column: 0,
+          totalColumns: 1,
+          isDueDate: false,
+          isExternalPhantom: true,
+        } as CalendarEvent & { isExternalPhantom: boolean }
+      })
+
       // Calculate overlapping positions with error handling
       try {
-        const positionedEvents = calculateOverlappingPositions(dedupedEvents)
+        // Run overlap calc on local + external phantoms together
+        const allForOverlap = [...dedupedEvents, ...externalPhantoms]
+        const allPositioned = calculateOverlappingPositions(allForOverlap)
+        // Filter out the phantoms — only return real local events
+        const positionedEvents = allPositioned.filter(ev => !(ev as CalendarEvent & { isExternalPhantom?: boolean }).isExternalPhantom)
 
         // TASK-1418: Merge virtual recurring events when toggle is ON
         if (taskStore.showFutureRecurring) {
@@ -304,12 +342,11 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     }
   })
 
-  // TASK-1496: Unified overlap calculation — merges local + external events side-by-side
+  // TASK-1496: Position external events using column data from the unified overlap calc in calendarEvents
   const positionedExternalEvents = computed<PositionedExternalEvent[]>(() => {
     const extEvents = externalEvents?.value ?? []
     const dateStr = getDateString(currentDate.value)
 
-    // Filter to non-allDay events for current date
     const todayExternals = extEvents.filter(ext => {
       if (ext.isAllDay) return false
       const d = ext.startTime
@@ -319,60 +356,44 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
     if (todayExternals.length === 0) return []
 
-    // Convert external events to slot format for overlap calculation
-    interface MergedSlotItem {
-      id: string
-      startSlot: number
-      slotSpan: number
-      column?: number
-      totalColumns?: number
-      isExternal: boolean
-      extRef?: ExternalCalendarEvent
-    }
+    // Trigger calendarEvents dependency so we read from already-positioned data
+    const localEvents = calendarEvents.value
 
-    const localItems: MergedSlotItem[] = calendarEvents.value.map(ev => ({
-      id: ev.id,
-      startSlot: ev.startSlot,
-      slotSpan: ev.slotSpan,
-      column: ev.column,
-      totalColumns: ev.totalColumns,
-      isExternal: false,
-    }))
-
-    const externalItems: MergedSlotItem[] = todayExternals.map(ext => {
-      const hour = ext.startTime.getHours()
-      const minute = ext.startTime.getMinutes()
-      const startSlot = hour * 2 + (minute >= 30 ? 1 : 0)
-      const durationMinutes = Math.max(15, (ext.endTime.getTime() - ext.startTime.getTime()) / 60000)
-      const slotSpan = Math.max(1, Math.ceil(durationMinutes / 30))
-      return {
-        id: `ext-${ext.id}`,
-        startSlot,
-        slotSpan,
-        isExternal: true,
-        extRef: ext,
-      }
-    })
-
-    const merged = [...localItems, ...externalItems]
-    const positioned = calculateOverlappingPositions(merged)
-
-    // Propagate updated column/totalColumns back to local CalendarEvents so getSlotTaskStyle renders correctly
-    for (const item of positioned) {
-      if (!item.isExternal) {
-        const localEvent = calendarEvents.value.find(ev => ev.id === item.id)
-        if (localEvent) {
-          localEvent.column = item.column ?? 0
-          localEvent.totalColumns = item.totalColumns ?? 1
+    // Re-run overlap calc with external events to get their column positions
+    // (calendarEvents already ran it for local events — we need the external positions too)
+    const allForOverlap = [
+      ...localEvents.map(ev => ({
+        id: ev.id,
+        startSlot: ev.startSlot,
+        slotSpan: ev.slotSpan,
+        column: undefined as number | undefined,
+        totalColumns: undefined as number | undefined,
+      })),
+      ...todayExternals.map(ext => {
+        const hour = ext.startTime.getHours()
+        const minute = ext.startTime.getMinutes()
+        const startSlot = hour * 2 + (minute >= 30 ? 1 : 0)
+        const durationMinutes = Math.max(15, (ext.endTime.getTime() - ext.startTime.getTime()) / 60000)
+        return {
+          id: `ext-${ext.id}`,
+          startSlot,
+          slotSpan: Math.max(1, Math.ceil(durationMinutes / 30)),
+          column: undefined as number | undefined,
+          totalColumns: undefined as number | undefined,
         }
-      }
-    }
+      })
+    ]
+
+    const positioned = calculateOverlappingPositions(allForOverlap)
 
     // Build positioned external events with left/width percentages
     const results: PositionedExternalEvent[] = []
     for (const item of positioned) {
-      if (!item.isExternal || !item.extRef) continue
-      const ext = item.extRef
+      if (!item.id.startsWith('ext-')) continue
+      const extId = item.id.slice(4) // remove 'ext-' prefix
+      const ext = todayExternals.find(e => e.id === extId)
+      if (!ext) continue
+
       const column = item.column ?? 0
       const totalColumns = item.totalColumns ?? 1
       const startMinutes = ext.startTime.getHours() * 60 + ext.startTime.getMinutes()

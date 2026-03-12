@@ -8,6 +8,16 @@
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1502~~: "Sync external calendars" button doesn't sync Google Calendar (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-12)
+
+**Problem**: Clicking "Sync external calendars" in the calendar header dropdown only triggered iCal sync (`externalCalendar.syncNow`), not Google Calendar sync. Google Calendar events only refreshed on page mount or every 30 minutes via polling interval — manual sync button was ineffective.
+
+**Fix**: Created `syncAllExternalCalendars()` handler in `CalendarView.vue` that calls both `externalCalendar.syncNow()` and `googleCalendar.syncNow()`. Wired it to the `@sync-external-calendar` event.
+
+---
+
 ### ~~BUG-1449~~: KDE widget notification barrage + popup dismiss + nanny task selection (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-05)
@@ -1095,6 +1105,19 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ---
 
+### ~~TASK-1500~~: Memory auto-refresh and verify memory health wired into Settings (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-03-10)
+
+**Goal**: Add `refreshIfStale()` to `useWorkProfile.ts` that only runs `computeCapacityMetrics()` when observations are >24h old (instead of always on startup). Wire into app initialization. Verify AISettingsTab already has memory health UI.
+
+**Changes**:
+- `src/composables/useWorkProfile.ts`: Added `refreshIfStale()` — checks `memoryGraph` timestamps, skips refresh if freshest observation is <24h old, generates initial observations if none exist
+- `src/composables/app/useAppInitialization.ts`: Replaced unconditional `computeCapacityMetrics()` call with `refreshIfStale()` (fire-and-forget, respects `aiLearningEnabled` setting)
+- `AISettingsTab.vue`: Already had full Memory Health section (TASK-1356) — grade badge, section dots, progress, "Run Quick Check" button, hint to full dashboard. No changes needed.
+
+---
+
 ### INQUIRY-1413: Evaluate open-source readiness for community sharing (🔄 IN PROGRESS)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-02-23)
@@ -1598,7 +1621,10 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1490**~~ | **P2** | ✅ **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (✅ DONE 2026-03-09) |
 | **BUG-1491** | **P0** | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09) |
 | ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
+| ~~**TASK-1501**~~ | **P3** | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10) |
+| **BUG-1502** | **P2** | 🔄 **Canvas inbox: left-click multi-selects tasks unexpectedly, can't deselect** (🔄 IN PROGRESS 2026-03-12) |
 | **TASK-1499** | **P2** | 🔄 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (🔄 IN PROGRESS 2026-03-10) |
+| **TASK-1500** | **P2** | 🔄 **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (🔄 IN PROGRESS 2026-03-10) |
 | **TASK-1486** | **P2** | 🔄 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (🔄 IN PROGRESS 2026-03-08) |
 | ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
 | **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |
@@ -1723,6 +1749,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** (👀 REVIEW 2026-03-10) |
 | ~~**BUG-1493**~~ | **P2** | ~~**Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression**~~ (✅ DONE 2026-03-09) |
 | ~~**TASK-1492**~~ | **P2** | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09) |
+| **BUG-1502** | **P2** | **Tauri desktop: tasks not updating when adding/deleting on canvas or canvas inbox — changes not persisting in Tauri build** |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---
@@ -2372,6 +2399,21 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 4. Review ReAct loop termination conditions — ensure it stops when answer is found, not when tool quota is exhausted
 
 **Category**: AI / Chat
+
+---
+
+### TASK-1500: Supabase Chat Persistence + Usage Log Sync (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-10)
+
+**Problem**: AI chat conversations and usage log entries were stored in localStorage only, meaning no cross-device sync.
+
+**Fix**:
+- Created `src/services/ai/chatPersistence.ts` — Supabase CRUD (load/save/delete) for `ai_conversations` table. Uses existing `supabase` client from `@/services/auth/supabase`. Silently fails on error.
+- Created `src/services/ai/usageSync.ts` — 60s interval flush of accumulated usage entries to `ai_usage_log` via `upsert_ai_usage_log` RPC. Aggregates by date/provider/model before upserting.
+- Modified `src/stores/aiChat.ts` — `initialize()` now async; tries Supabase first (VPS-first), falls back to localStorage. Debounced Supabase save wired into `debouncedSaveConversations`. Delete mirrors to Supabase. `startUsageSync()` called on init. Added `syncStatus` ref.
+
+**Category**: AI / Persistence / Sync
 
 ---
 

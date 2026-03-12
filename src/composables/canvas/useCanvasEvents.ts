@@ -11,7 +11,7 @@ import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { force?: boolean }) => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const { endDrag: endGlobalDrag } = useDragAndDrop()
+    const { endDrag: endGlobalDrag, dragData: activeDragData } = useDragAndDrop()
     const { screenToFlowCoordinate, setNodes, getNodes, findNode } = useVueFlow()
 
     // --- Interaction State ---
@@ -151,13 +151,19 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
         // reactive filtering (isInInbox=false) before dragend fires.
         endGlobalDrag()
 
-        const data = event.dataTransfer?.getData('application/json')
-        if (!data) {
+        let parsedData: { taskId?: string } | null = activeDragData.value
+        if (!parsedData) {
+            const dataString = event.dataTransfer?.getData('application/json')
+            if (dataString) {
+                try { parsedData = JSON.parse(dataString) } catch { /* ignore */ }
+            }
+        }
+        if (!parsedData) {
             return
         }
 
         try {
-            const { taskId } = JSON.parse(data)
+            const { taskId } = parsedData
             if (!taskId) return
 
             const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement

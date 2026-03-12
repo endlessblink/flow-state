@@ -615,7 +615,7 @@ export function useCanvasOrchestrator() {
     // canvasUiSyncRequest is incremented by taskOperations.ts after task create/delete
     watch(canvasUiSyncRequest, () => {
         if (!isInitialized.value) return
-        batchedSyncNodes()
+        batchedSyncNodes(undefined, { force: true })
     })
 
     // Global guard to prevent recursive watcher triggers

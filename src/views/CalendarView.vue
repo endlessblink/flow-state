@@ -78,7 +78,7 @@
         @toggle-done-tasks="taskStore.toggleCalendarDoneTasks()"
         @toggle-future-recurring="showFutureRecurring = !showFutureRecurring; taskStore.persistFilters()"
         @update:view-mode="viewMode = $event"
-        @sync-external-calendar="externalCalendar.syncNow"
+        @sync-external-calendar="syncAllExternalCalendars"
         :google-connected="googleCalendar.isConnected.value"
         :show-google-events="googleCalendar.showGoogleEvents.value"
         @toggle-google-events="googleCalendar.showGoogleEvents.value = !googleCalendar.showGoogleEvents.value"
@@ -349,6 +349,11 @@ const mergedExternalEvents = computed(() => [
   ...(googleCalendar.showGoogleEvents.value ? googleCalendar.googleEvents.value : []),
   ...externalCalendar.allEvents.value
 ])
+
+function syncAllExternalCalendars() {
+  externalCalendar.syncNow()
+  googleCalendar.syncNow()
+}
 
 function getMergedEventsForDate(dateString: string) {
   return mergedExternalEvents.value.filter(event => {

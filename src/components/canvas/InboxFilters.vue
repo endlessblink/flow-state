@@ -306,9 +306,15 @@ const isScheduledOnCalendar = (task: Task): boolean => {
   return task.instances.some(inst => inst.scheduledDate)
 }
 
-// Computed: Count of unscheduled tasks
+// Computed: Count of unscheduled tasks (no dueDate OR overdue)
 const unscheduledCount = computed(() => {
-  return props.tasks.filter(task => !isScheduledOnCalendar(task)).length
+  const now = new Date(); now.setHours(0,0,0,0)
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+  return props.tasks.filter(task => {
+    if (!task.dueDate) return true
+    const normalized = task.dueDate.trim().substring(0, 10)
+    return normalized && normalized < todayStr
+  }).length
 })
 
 // Computed: Count of tasks placed on the canvas

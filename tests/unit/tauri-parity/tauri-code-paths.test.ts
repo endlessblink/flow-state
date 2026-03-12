@@ -9,6 +9,7 @@
  *   2. Session File Path construction (src/stores/auth.ts — writeSessionFile)
  *   3. IndexedDB Structured Clone Safety (src/services/offline/readCacheDB.ts)
  *   4. Drag-and-Drop Tauri Fallback (src/composables/tasks/row/useTaskRowActions.ts)
+ *   4b. Drag-and-Drop Tauri Fallback (src/composables/canvas/useCanvasEvents.ts — BUG-1502)
  *   5. Notification Permission Guard (src/utils/notificationDelivery.ts)
  *   6. Context Menu Coordinate Utils (src/utils/contextMenuCoordinates.ts)
  */
@@ -626,6 +627,120 @@ describe('Drag-and-Drop Tauri Fallback (useTaskRowActions.ts — handleDrop)', (
     }
 
     expect(emitMock).not.toHaveBeenCalled()
+  })
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 4b. Drag-and-Drop Tauri Fallback (useCanvasEvents.ts — canvas drop handler)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('Drag-and-Drop Tauri Fallback (useCanvasEvents.ts — canvas handleDrop)', () => {
+  // We test the canvas drop handler fallback logic by reconstructing it inline.
+  // The canvas handler uses { taskId?: string } (not the full DragData interface)
+  // which matches the actual code in useCanvasEvents.ts lines 154-163.
+  //
+  // Key difference from section 4: the canvas handler does NOT use the full
+  // DragData type — it only cares about taskId.
+
+  type CanvasParsedData = { taskId?: string } | null
+
+  type ActiveDragRef = { value: CanvasParsedData }
+
+  /**
+   * Reproduction of canvas drop resolution logic from useCanvasEvents.ts lines 154-163:
+   *
+   *   let parsedData: { taskId?: string } | null = activeDragData.value
+   *   if (!parsedData) {
+   *     const dataString = event.dataTransfer?.getData('application/json')
+   *     if (dataString) {
+   *       try { parsedData = JSON.parse(dataString) } catch { }
+   *     }
+   *   }
+   *   if (!parsedData) { return }
+   *
+   * Returns the resolved data or null (null = drop aborted).
+   */
+  function resolveCanvasDropData(
+    dataTransferResult: string | null | undefined,
+    activeDragData: ActiveDragRef
+  ): CanvasParsedData {
+    let parsedData: CanvasParsedData = activeDragData.value
+    if (!parsedData) {
+      const dataString = dataTransferResult
+      if (dataString) {
+        try {
+          parsedData = JSON.parse(dataString) as { taskId?: string }
+        } catch { /* ignore */ }
+      }
+    }
+    if (!parsedData) {
+      return null
+    }
+    return parsedData
+  }
+
+  it('uses activeDragData singleton when dataTransfer.getData returns empty string (WebKitGTK/Tauri)', () => {
+    const activeDragData: ActiveDragRef = {
+      value: { taskId: 'canvas-task-abc' },
+    }
+
+    // WebKitGTK/Tauri returns "" from getData
+    const result = resolveCanvasDropData('', activeDragData)
+
+    expect(result).not.toBeNull()
+    expect(result!.taskId).toBe('canvas-task-abc')
+  })
+
+  it('uses activeDragData singleton when dataTransfer.getData returns null', () => {
+    const activeDragData: ActiveDragRef = {
+      value: { taskId: 'canvas-task-xyz' },
+    }
+
+    const result = resolveCanvasDropData(null, activeDragData)
+
+    expect(result).not.toBeNull()
+    expect(result!.taskId).toBe('canvas-task-xyz')
+  })
+
+  it('falls back to dataTransfer JSON when activeDragData is null', () => {
+    const activeDragData: ActiveDragRef = { value: null }
+
+    const serialized = JSON.stringify({ taskId: 'canvas-task-from-dt' })
+
+    const result = resolveCanvasDropData(serialized, activeDragData)
+
+    expect(result).not.toBeNull()
+    expect(result!.taskId).toBe('canvas-task-from-dt')
+  })
+
+  it('returns null when both activeDragData and dataTransfer are empty (aborts drop)', () => {
+    const activeDragData: ActiveDragRef = { value: null }
+
+    const result = resolveCanvasDropData('', activeDragData)
+
+    expect(result).toBeNull()
+  })
+
+  it('returns null when dataTransfer JSON is malformed and no singleton', () => {
+    const activeDragData: ActiveDragRef = { value: null }
+
+    const result = resolveCanvasDropData('{invalid json}}', activeDragData)
+
+    expect(result).toBeNull()
+  })
+
+  it('activeDragData singleton takes priority over valid dataTransfer JSON', () => {
+    // Singleton was set at dragstart — dataTransfer may be stale or empty in Tauri
+    const activeDragData: ActiveDragRef = {
+      value: { taskId: 'singleton-canvas-task' },
+    }
+
+    const staleJson = JSON.stringify({ taskId: 'stale-canvas-task' })
+
+    const result = resolveCanvasDropData(staleJson, activeDragData)
+
+    // Singleton wins
+    expect(result!.taskId).toBe('singleton-canvas-task')
   })
 })
 

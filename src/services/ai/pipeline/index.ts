@@ -97,3 +97,5 @@ export function runPostProcess(input: PostProcessInput): PostProcessResult {
 export function getPipelineConfig(): Readonly<PipelineConfig> {
   return activePipeline
 }
+
+export { setupAIPipeline } from './setup'

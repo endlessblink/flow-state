@@ -9,6 +9,7 @@ import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useGoogleCalendar } from '@/composables/calendar/useGoogleCalendar'
 import { useExternalCalendar } from '@/composables/calendar/useExternalCalendar'
+import { useTaskStore } from '@/stores/tasks'
 import type { CalendarEvent } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
 import type { Big3Slot, TimeBlock } from '@/composables/useMorningDashboard'
@@ -28,9 +29,10 @@ const emit = defineEmits<{
 const currentDate = ref(new Date())
 const statusFilter = ref<string | null>(null)
 const currentTime = ref(new Date())
+const taskStore = useTaskStore()
+const sessionInstanceIds = ref<Set<string>>(new Set())
 
 // --- Composables ---
-const dayView = useCalendarDayView(currentDate, statusFilter)
 const {
   formatHour,
   formatEventTime,
@@ -49,12 +51,27 @@ const {
 const googleCalendar = useGoogleCalendar()
 const externalCalendar = useExternalCalendar()
 
+// --- External events (merged Google + iCal) for today ---
+const mergedExternalEvents = computed(() => [
+  ...(googleCalendar.showGoogleEvents.value ? googleCalendar.googleEvents.value : []),
+  ...externalCalendar.allEvents.value,
+])
+
+const todayExternalEvents = computed(() => {
+  const dateStr = getDateString(currentDate.value)
+  return mergedExternalEvents.value.filter(event => {
+    const d = event.startTime
+    const eventDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return eventDate === dateStr
+  })
+})
+
+// --- Composable must come after todayExternalEvents ---
+const dayView = useCalendarDayView(currentDate, statusFilter, undefined, todayExternalEvents)
+
 // --- Mobile detection ---
 const { width: windowWidth } = useWindowSize()
 const isMobile = computed(() => windowWidth.value < 768)
-
-// --- Big 3 accent colors ---
-const BIG3_COLORS = ['#4ECDC4', '#FFC300', '#9382DC'] as const
 
 // --- Mobile time-picker options ---
 const timeOptions = computed(() => {
@@ -137,82 +154,6 @@ function selectBig3ForPlacement(index: number) {
   selectedBig3Index.value = selectedBig3Index.value === index ? null : index
 }
 
-// --- Convert Big3 tasks to CalendarEvents ---
-const big3CalendarEvents = computed<CalendarEvent[]>(() => {
-  const events: CalendarEvent[] = []
-
-  props.big3Slots.forEach((slot, i) => {
-    if (!slot.title.trim() || !props.timeBlocks[i].startTime) return
-
-    const block = props.timeBlocks[i]
-    const [h, m] = block.startTime.split(':').map(Number)
-    if (isNaN(h) || isNaN(m)) return
-
-    const startTime = new Date(currentDate.value)
-    startTime.setHours(h, m, 0, 0)
-    const endTime = new Date(startTime.getTime() + block.duration * 60000)
-
-    const startSlot = h * 2 + (m >= 30 ? 1 : 0)
-    const slotSpan = Math.max(1, Math.ceil(block.duration / 30))
-
-    events.push({
-      id: `big3-${i}`,
-      taskId: slot.taskId ?? `big3-${i}`,
-      instanceId: `big3-instance-${i}`,
-      title: slot.title,
-      startTime,
-      endTime,
-      duration: block.duration,
-      startSlot,
-      slotSpan,
-      color: BIG3_COLORS[i],
-      column: 0,
-      totalColumns: 1,
-      isDueDate: false,
-      projectId: undefined,
-      instanceStatus: 'scheduled',
-      taskStatus: 'todo',
-    })
-  })
-  return events
-})
-
-// --- Override slot helpers to include Big 3 events ---
-function getTasksForSlotWithBig3(slot: TimeSlot): CalendarEvent[] {
-  const regularTasks = dayView.getTasksForSlot(slot)
-  const big3InSlot = big3CalendarEvents.value.filter(ev => {
-    const evEndSlot = ev.startSlot + ev.slotSpan
-    return slot.slotIndex >= ev.startSlot && slot.slotIndex < evEndSlot
-  })
-  return [...regularTasks, ...big3InSlot]
-}
-
-function isTaskPrimarySlotWithBig3(slot: TimeSlot, event: CalendarEvent): boolean {
-  if (event.id.startsWith('big3-')) {
-    return event.startSlot === slot.slotIndex
-  }
-  return dayView.isTaskPrimarySlot(slot, event)
-}
-
-function getSlotTaskStyleWithBig3(task: CalendarEvent): Record<string, string> {
-  if (task.id.startsWith('big3-')) {
-    const baseHeight = (task.slotSpan * 30) - 4
-    return {
-      height: `${baseHeight}px`,
-      minHeight: `${baseHeight}px`,
-      zIndex: '10',
-      '--is-compact': task.duration <= 30 ? '1' : '0',
-    }
-  }
-  // dayView.getSlotTaskStyle returns a style object — cast as needed
-  const style = dayView.getSlotTaskStyle(task)
-  const result: Record<string, string> = {}
-  for (const [key, val] of Object.entries(style)) {
-    result[key] = String(val)
-  }
-  return result
-}
-
 // --- Provide calendar-helpers injection for CalendarDayView ---
 const isCurrentTimeSlot = (slot: TimeSlot) => checkCurrentTimeSlot(slot, currentTime.value)
 
@@ -220,9 +161,9 @@ provide('calendar-helpers', {
   formatHour,
   formatEventTime,
   isCurrentTimeSlot,
-  getTasksForSlot: getTasksForSlotWithBig3,
-  isTaskPrimarySlot: isTaskPrimarySlotWithBig3,
-  getSlotTaskStyle: getSlotTaskStyleWithBig3,
+  getTasksForSlot: dayView.getTasksForSlot,
+  isTaskPrimarySlot: dayView.isTaskPrimarySlot,
+  getSlotTaskStyle: dayView.getSlotTaskStyle,
   getProjectVisual,
   getProjectName,
   getProjectColor,
@@ -231,21 +172,7 @@ provide('calendar-helpers', {
   getTaskStatus,
   getStatusLabel,
   getStatusIcon,
-})
-
-// --- External events (merged Google + iCal) for today ---
-const mergedExternalEvents = computed(() => [
-  ...(googleCalendar.showGoogleEvents.value ? googleCalendar.googleEvents.value : []),
-  ...externalCalendar.allEvents.value,
-])
-
-const todayExternalEvents = computed(() => {
-  const dateStr = getDateString(currentDate.value)
-  return mergedExternalEvents.value.filter(event => {
-    const d = event.startTime
-    const eventDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    return eventDate === dateStr
-  })
+  positionedExternalEvents: dayView.positionedExternalEvents,
 })
 
 // --- Time indicator ---
@@ -263,29 +190,48 @@ function onBig3DragStart(event: DragEvent, index: number) {
   }
 }
 
-function handleDragOver(event: DragEvent, _slot: TimeSlot) {
-  event.preventDefault()
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
+// --- Instance cleanup helper ---
+async function cleanupSlotInstance(index: number) {
+  const slotObj = props.big3Slots[index]
+  const taskId = slotObj?.taskId
+  if (!taskId) return
+  const task = taskStore._rawTasks.find(t => t.id === taskId)
+  if (!task?.instances) return
+  for (const inst of task.instances) {
+    if (inst.id && sessionInstanceIds.value.has(inst.id)) {
+      await taskStore.deleteTaskInstance(taskId, inst.id)
+      sessionInstanceIds.value.delete(inst.id)
+    }
   }
 }
 
-function handleDragEnter(event: DragEvent, _slot: TimeSlot) {
-  event.preventDefault()
-}
-
-function handleDragLeave() {
-  // no-op
-}
-
-function handleCalendarDrop(event: DragEvent, slot: TimeSlot) {
+// --- Big3 sidebar drop handler (creates real TaskInstance) ---
+async function handleCalendarDrop(event: DragEvent, slot: TimeSlot) {
   event.preventDefault()
   const data = event.dataTransfer?.getData('text/plain')
   if (!data) return
   try {
     const parsed = JSON.parse(data)
     if (parsed.type === 'big3' && typeof parsed.index === 'number') {
+      const slotObj = props.big3Slots[parsed.index]
+      const taskId = slotObj?.taskId
+      if (!taskId) return
       const startTime = `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
+      const todayStr = getDateString(currentDate.value)
+
+      // Delete existing session instance for this slot if re-placing
+      await cleanupSlotInstance(parsed.index)
+
+      const instance = await taskStore.createTaskInstance(taskId, {
+        scheduledDate: todayStr,
+        scheduledTime: startTime,
+        duration: props.timeBlocks[parsed.index].duration,
+        status: 'scheduled',
+        isRecurring: false,
+      })
+      if (instance?.id) {
+        sessionInstanceIds.value.add(instance.id)
+      }
       emit('update:timeBlock', parsed.index, { ...props.timeBlocks[parsed.index], startTime })
     }
   } catch {
@@ -293,83 +239,99 @@ function handleCalendarDrop(event: DragEvent, slot: TimeSlot) {
   }
 }
 
-function handleSlotClick(_event: MouseEvent, slot: TimeSlot) {
+// --- Click-to-place handler (creates real TaskInstance) ---
+async function handleSlotClick(_event: MouseEvent, slot: TimeSlot) {
   if (selectedBig3Index.value !== null) {
+    const idx = selectedBig3Index.value
+    const slotObj = props.big3Slots[idx]
+    const taskId = slotObj?.taskId
+    if (!taskId) {
+      selectedBig3Index.value = null
+      return
+    }
     const startTime = `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
-    emit('update:timeBlock', selectedBig3Index.value, { ...props.timeBlocks[selectedBig3Index.value], startTime })
+    const todayStr = getDateString(currentDate.value)
+
+    await cleanupSlotInstance(idx)
+
+    const instance = await taskStore.createTaskInstance(taskId, {
+      scheduledDate: todayStr,
+      scheduledTime: startTime,
+      duration: props.timeBlocks[idx].duration,
+      status: 'scheduled',
+      isRecurring: false,
+    })
+    if (instance?.id) {
+      sessionInstanceIds.value.add(instance.id)
+    }
+    emit('update:timeBlock', idx, { ...props.timeBlocks[idx], startTime })
     selectedBig3Index.value = null
   }
 }
 
-// --- Unplace a Big 3 task from the calendar ---
-function unplaceTask(index: number) {
+// --- Unplace a Big 3 task from the calendar (deletes real instance) ---
+async function unplaceTask(index: number) {
+  await cleanupSlotInstance(index)
   emit('update:timeBlock', index, { ...props.timeBlocks[index], startTime: '' })
 }
 
-// --- Resize time blocks on calendar ---
-const resizePreview = ref<{
-  isResizing: boolean
-  taskId: string | null
-  previewDuration: number
-  direction: 'top' | 'bottom'
-} | null>(null)
-
-let resizeBig3Index = -1
-let resizeStartY = 0
-let resizeStartDuration = 0
-
-function handleStartResize(event: MouseEvent, calEvent: CalendarEvent, direction: 'top' | 'bottom') {
-  // Only handle Big 3 events, only bottom resize (duration change)
-  if (!calEvent.id.startsWith('big3-') || direction !== 'bottom') return
-
-  // Cancel any in-progress resize before starting a new one
-  if (resizeBig3Index >= 0) onResizeEnd()
-
-  const idx = parseInt(calEvent.id.replace('big3-', ''), 10)
-  if (isNaN(idx) || idx < 0 || idx >= props.timeBlocks.length) return
-
-  resizeBig3Index = idx
-  resizeStartY = event.clientY
-  resizeStartDuration = props.timeBlocks[idx].duration
-
-  resizePreview.value = {
-    isResizing: true,
-    taskId: calEvent.taskId,
-    previewDuration: resizeStartDuration,
-    direction: 'bottom',
+// --- Combined handlers for calendar events (Big3 sidebar drags + native event repositioning) ---
+function handleCombinedDrop(event: DragEvent, slot: TimeSlot) {
+  // Check if this is a Big3 sidebar drag
+  const textData = event.dataTransfer?.getData('text/plain')
+  if (textData) {
+    try {
+      const parsed = JSON.parse(textData)
+      if (parsed.type === 'big3') {
+        handleCalendarDrop(event, slot)
+        return
+      }
+    } catch { /* not JSON */ }
   }
+  // Otherwise delegate to native calendar drop handler (event repositioning)
+  dayView.handleDrop(event, slot)
+}
 
-  document.addEventListener('mousemove', onResizeMove)
-  document.addEventListener('mouseup', onResizeEnd)
+function handleCombinedDragOver(event: DragEvent, slot: TimeSlot) {
   event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+  dayView.handleDragOver(event, slot)
 }
 
-function onResizeMove(event: MouseEvent) {
-  if (resizeBig3Index < 0) return
-  // Each 30px = 30 minutes (matches calendar slot height)
-  const deltaY = event.clientY - resizeStartY
-  const deltaMinutes = Math.round(deltaY / 30) * 15 // snap to 15-min increments
-  const newDuration = Math.max(15, Math.min(240, resizeStartDuration + deltaMinutes))
+function handleCombinedDragEnter(event: DragEvent, slot: TimeSlot) {
+  event.preventDefault()
+  dayView.handleDragEnter(event, slot)
+}
 
-  if (resizePreview.value) {
-    resizePreview.value.previewDuration = newDuration
+function handleCombinedDragLeave() {
+  dayView.handleDragLeave()
+}
+
+function handleRemoveFromCalendar(calEvent: CalendarEvent) {
+  // If this was a session instance, clean up tracking
+  if (calEvent.instanceId && sessionInstanceIds.value.has(calEvent.instanceId)) {
+    sessionInstanceIds.value.delete(calEvent.instanceId)
+  }
+  // Find which Big3 slot this belongs to, if any, and clear its time
+  const big3Index = props.big3Slots.findIndex(s => s.taskId === calEvent.taskId)
+  if (big3Index !== -1) {
+    emit('update:timeBlock', big3Index, { ...props.timeBlocks[big3Index], startTime: '' })
+  }
+  // Delete the instance
+  if (calEvent.taskId && calEvent.instanceId) {
+    taskStore.deleteTaskInstance(calEvent.taskId, calEvent.instanceId)
   }
 }
 
-function onResizeEnd() {
-  document.removeEventListener('mousemove', onResizeMove)
-  document.removeEventListener('mouseup', onResizeEnd)
-
-  if (resizeBig3Index >= 0 && resizePreview.value) {
-    const newDuration = resizePreview.value.previewDuration
-    emit('update:timeBlock', resizeBig3Index, {
-      ...props.timeBlocks[resizeBig3Index],
-      duration: newDuration,
-    })
+// --- Back handler (cleans up session instances) ---
+async function handleBack() {
+  for (let i = 0; i < props.big3Slots.length; i++) {
+    await cleanupSlotInstance(i)
   }
-
-  resizePreview.value = null
-  resizeBig3Index = -1
+  sessionInstanceIds.value.clear()
+  emit('back')
 }
 
 // --- Helper: format time for display ---
@@ -397,9 +359,6 @@ onUnmounted(() => {
     clearInterval(timeUpdateInterval)
     timeUpdateInterval = null
   }
-  // Clean up any in-progress resize
-  document.removeEventListener('mousemove', onResizeMove)
-  document.removeEventListener('mouseup', onResizeEnd)
 })
 </script>
 
@@ -408,7 +367,7 @@ onUnmounted(() => {
     <!-- ==================== MOBILE VIEW ==================== -->
     <template v-if="isMobile">
       <div class="mobile-tb-header">
-        <button class="footer-btn footer-btn--back" type="button" @click="emit('back')">
+        <button class="footer-btn footer-btn--back" type="button" @click="handleBack">
           <ChevronLeft :size="16" /> Back
         </button>
         <h3 class="mobile-tb-title">Time Block Your Big 3</h3>
@@ -536,30 +495,29 @@ onUnmounted(() => {
           :is-dragging="dayView.isDragging.value"
           :dragged-event-id="dayView.draggedEventId.value"
           :hovered-event-id="null"
-          :external-events="todayExternalEvents"
-          @drop="handleCalendarDrop"
-          @dragover="handleDragOver"
-          @dragenter="handleDragEnter"
-          @dragleave="handleDragLeave"
+          :resize-preview="dayView.resizePreview.value"
+          @drop="handleCombinedDrop"
+          @dragover="handleCombinedDragOver"
+          @dragenter="handleCombinedDragEnter"
+          @dragleave="handleCombinedDragLeave"
           @slot-mouse-down="handleSlotClick"
           @event-mouse-enter="() => {}"
           @event-mouse-leave="() => {}"
-          @event-drag-start="() => {}"
-          @event-drag-end="() => {}"
+          @event-drag-start="dayView.handleEventDragStart"
+          @event-drag-end="dayView.handleEventDragEnd"
           @event-click="() => {}"
           @event-dbl-click="() => {}"
           @event-context-menu="() => {}"
           @cycle-status="() => {}"
-          @remove-from-calendar="() => {}"
+          @remove-from-calendar="handleRemoveFromCalendar"
           @start-timer="() => {}"
-          :resize-preview="resizePreview"
-          @start-resize="handleStartResize"
+          @start-resize="dayView.startResize"
         />
       </div>
 
       <!-- Footer -->
       <div class="morning-footer">
-        <button class="footer-btn footer-btn--back" @click="emit('back')">
+        <button class="footer-btn footer-btn--back" @click="handleBack">
           <ChevronLeft :size="16" />
           Back
         </button>

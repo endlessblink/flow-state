@@ -486,13 +486,18 @@ export function useMorningRitual() {
 
         const block = timeBlocks.value.get(taskId)
         if (block?.startTime) {
-          await taskStore.createTaskInstance(taskId, {
-            scheduledDate: todayStr,
-            scheduledTime: block.startTime,
-            duration: block.duration,
-            status: 'scheduled',
-            isRecurring: false,
-          })
+          // Guard: skip if an instance already exists for today (e.g., placed via morning dashboard calendar)
+          const task = (taskStore._rawTasks ?? []).find(t => t.id === taskId)
+          const todayInstances = task?.instances?.filter(i => i.scheduledDate === todayStr) ?? []
+          if (todayInstances.length === 0) {
+            await taskStore.createTaskInstance(taskId, {
+              scheduledDate: todayStr,
+              scheduledTime: block.startTime,
+              duration: block.duration,
+              status: 'scheduled',
+              isRecurring: false,
+            })
+          }
           totalMinutes += block.duration
         }
 

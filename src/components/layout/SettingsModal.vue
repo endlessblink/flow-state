@@ -1,23 +1,44 @@
 <template>
   <div v-if="isOpen" class="settings-overlay" @click="$emit('close')">
-    <div class="settings-modal" :class="{ 'wide-mode': activeTab === 'ai-quality' }" :dir="direction" @click.stop>
+    <div
+      class="settings-modal"
+      :class="{ 'wide-mode': activeTab === 'ai-quality' }"
+      :dir="direction"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-title"
+      @click.stop
+    >
       <header class="settings-header">
-        <h2 class="settings-title">
+        <h2 id="settings-title" class="settings-title">
           {{ $t('settings.title') }}
-</h2>
-        <button class="close-btn" @click="$emit('close')">
+        </h2>
+        <button
+          class="close-btn"
+          aria-label="Close settings"
+          @click="$emit('close')"
+        >
           <X :size="16" />
         </button>
       </header>
 
       <div class="settings-layout">
-        <aside class="settings-sidebar">
+        <aside class="settings-sidebar" role="tablist" aria-orientation="vertical">
           <button
             v-for="tab in tabs"
+            :id="`tab-${tab.id}`"
             :key="tab.id"
             class="tab-btn"
             :class="{ active: activeTab === tab.id }"
+            role="tab"
+            :aria-selected="activeTab === tab.id"
+            :aria-controls="`panel-${tab.id}`"
+            :tabindex="activeTab === tab.id ? 0 : -1"
             @click="activeTab = tab.id"
+            @keydown.enter="activeTab = tab.id"
+            @keydown.space.prevent="activeTab = tab.id"
+            @keydown.up.prevent="handleTabKeyup($event, tab.id)"
+            @keydown.down.prevent="handleTabKeydown($event, tab.id)"
           >
             <component :is="tab.icon" :size="18" />
             <span>{{ tab.label }}</span>
@@ -26,11 +47,19 @@
 
         <main class="settings-content">
           <Transition name="tab-fade" mode="out-in">
-            <component
-              :is="currentTab"
+            <div
+              :id="`panel-${activeTab}`"
               :key="activeTab"
-              @close-modal="$emit('close')"
-            />
+              role="tabpanel"
+              :aria-labelledby="`tab-${activeTab}`"
+              tabindex="0"
+              class="tab-panel-container"
+            >
+              <component
+                :is="currentTab"
+                @close-modal="$emit('close')"
+              />
+            </div>
           </Transition>
         </main>
       </div>
@@ -83,6 +112,32 @@ const tabs = computed(() => {
   }
   return base
 })
+
+const handleTabKeyup = (_event: KeyboardEvent, currentId: string) => {
+  const currentIndex = tabs.value.findIndex(t => t.id === currentId)
+  if (currentIndex > 0) {
+    const prevTab = tabs.value[currentIndex - 1]
+    activeTab.value = prevTab.id
+    document.getElementById(`tab-${prevTab.id}`)?.focus()
+  } else {
+    const lastTab = tabs.value[tabs.value.length - 1]
+    activeTab.value = lastTab.id
+    document.getElementById(`tab-${lastTab.id}`)?.focus()
+  }
+}
+
+const handleTabKeydown = (_event: KeyboardEvent, currentId: string) => {
+  const currentIndex = tabs.value.findIndex(t => t.id === currentId)
+  if (currentIndex < tabs.value.length - 1) {
+    const nextTab = tabs.value[currentIndex + 1]
+    activeTab.value = nextTab.id
+    document.getElementById(`tab-${nextTab.id}`)?.focus()
+  } else {
+    const firstTab = tabs.value[0]
+    activeTab.value = firstTab.id
+    document.getElementById(`tab-${firstTab.id}`)?.focus()
+  }
+}
 
 const currentTab = computed(() => {
   return tabs.value.find(t => t.id === activeTab.value)?.component
@@ -166,6 +221,11 @@ const currentTab = computed(() => {
   transform: scale(1.05);
 }
 
+.close-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .settings-layout {
   display: flex;
   flex: 1;
@@ -210,12 +270,27 @@ const currentTab = computed(() => {
   box-shadow: var(--shadow-sm);
 }
 
+.tab-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: -2px;
+}
+
 .settings-content {
   flex: 1;
   padding: var(--space-6);
   overflow-y: auto;
   background: var(--glass-bg-light);
   position: relative;
+}
+
+.tab-panel-container {
+  outline: none;
+}
+
+.tab-panel-container:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
 }
 
 /* Slide-Fade Transition */

@@ -6,20 +6,20 @@
       @click="$emit('close')"
       @keydown="handleKeydown"
     >
-    <div class="modal-content" @click.stop>
-      <div class="modal-header">
-        <h2 class="modal-title">
-          <Group :size="18" />
-          {{ isEditing ? 'Edit Group' : 'Create Group' }}
-        </h2>
-        <button class="close-btn" aria-label="Close modal" @click="$emit('close')">
-          <X :size="16" :stroke-width="1.5" />
-        </button>
-      </div>
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <Group :size="18" />
+            {{ isEditing ? 'Edit Group' : 'Create Group' }}
+          </h2>
+          <button class="close-btn" aria-label="Close modal" @click="$emit('close')">
+            <X :size="16" :stroke-width="1.5" />
+          </button>
+        </div>
 
-      <div class="modal-body">
-        <!-- Required: Name -->
-        <div class="form-group">
+        <div class="modal-body">
+          <!-- Required: Name -->
+          <div class="form-group">
           <label class="form-label">Group Name *</label>
           <BaseInput
             ref="nameInput"
@@ -33,8 +33,8 @@
           </p>
         </div>
 
-        <!-- Required: Color -->
-        <div class="form-group">
+          <!-- Required: Color -->
+          <div class="form-group">
           <label class="form-label">Group Color</label>
 
           <!-- Color Presets -->
@@ -49,7 +49,7 @@
               :title="`Select ${color}`"
               @click="selectColor(color)"
             />
-          </div>
+        </div>
 
           <!-- Custom Color Input -->
           <div class="custom-color-section">
@@ -80,11 +80,11 @@
               />
               <span class="color-value">{{ groupData.color }}</span>
             </div>
-          </div>
+        </div>
         </div>
 
-        <!-- Collapsible: Smart Settings -->
-        <section class="smart-settings-section">
+          <!-- Collapsible: Smart Settings -->
+          <section class="smart-settings-section">
           <button
             type="button"
             class="section-toggle"
@@ -187,11 +187,11 @@
                 Clear all
               </button>
             </div>
-          </div>
+        </div>
         </section>
-      </div>
+        </div>
 
-      <div class="modal-footer">
+        <div class="modal-footer">
         <button class="btn btn-secondary" @click="$emit('close')">
           Cancel
         </button>
@@ -202,7 +202,7 @@
         >
           {{ isEditing ? 'Save Changes' : 'Create Group' }}
         </button>
-      </div>
+        </div>
     </div>
   </div>
   </Teleport>

@@ -6,6 +6,7 @@ import { useTauriUpdater } from '@/composables/useTauriUpdater'
 import { isTauri } from '@/composables/useTauriStartup'
 import { useSettingsStore } from '@/stores/settings'
 import { EXTERNAL_URLS } from '@/config/urls'
+import { openExternal } from '@/utils/openExternal'
 
 declare const __APP_VERSION__: string
 
@@ -27,11 +28,11 @@ const handleRestart = async () => {
 }
 
 const openWebsite = () => {
-  window.open(EXTERNAL_URLS.PRODUCTION_SITE, '_blank')
+  openExternal(EXTERNAL_URLS.PRODUCTION_SITE)
 }
 
 const openGithub = () => {
-  window.open(EXTERNAL_URLS.GITHUB_REPO, '_blank')
+  openExternal(EXTERNAL_URLS.GITHUB_REPO)
 }
 </script>
 

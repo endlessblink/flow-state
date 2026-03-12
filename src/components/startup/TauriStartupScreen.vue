@@ -8,6 +8,7 @@
 
 import { ref, onMounted, watch } from 'vue'
 import { useTauriStartup, isTauri } from '@/composables/useTauriStartup'
+import { openExternal } from '@/utils/openExternal'
 import TauriModeSelector from './TauriModeSelector.vue'
 import AppLogo from '@/components/base/AppLogo.vue'
 
@@ -68,11 +69,11 @@ async function startWithMode(mode: 'cloud' | 'local') {
 }
 
 function openDockerDownload() {
-  window.open('https://docker.com/products/docker-desktop', '_blank')
+  openExternal('https://docker.com/products/docker-desktop')
 }
 
 function openSupabaseInstall() {
-  window.open('https://supabase.com/docs/guides/cli/getting-started', '_blank')
+  openExternal('https://supabase.com/docs/guides/cli/getting-started')
 }
 </script>
 

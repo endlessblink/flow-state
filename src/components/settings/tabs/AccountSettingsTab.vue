@@ -10,6 +10,7 @@ import { useTauriUpdater } from '@/composables/useTauriUpdater'
 import { isTauri } from '@/composables/useTauriStartup'
 import { useSettingsStore, type ExternalCalendarConfig, type GoogleCalendarConfig } from '@/stores/settings'
 import { EXTERNAL_URLS } from '@/config/urls'
+import { openExternal } from '@/utils/openExternal'
 import { useGoogleCalendar } from '@/composables/calendar/useGoogleCalendar'
 import { useI18n } from 'vue-i18n'
 
@@ -85,11 +86,11 @@ const handleRestart = async () => {
 }
 
 const openWebsite = () => {
-  window.open(EXTERNAL_URLS.PRODUCTION_SITE, '_blank')
+  openExternal(EXTERNAL_URLS.PRODUCTION_SITE)
 }
 
 const openGithub = () => {
-  window.open(EXTERNAL_URLS.GITHUB_REPO, '_blank')
+  openExternal(EXTERNAL_URLS.GITHUB_REPO)
 }
 
 // ── Integrations section ──

@@ -73,6 +73,7 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
 
             // Find all groups that contain this point
             const hitGroups = canvasStore.groups.filter(group => {
+                if (!group.position) return false
                 const gx = group.position.x
                 const gy = group.position.y
                 const gw = group.position.width

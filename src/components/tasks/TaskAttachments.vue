@@ -76,6 +76,7 @@ import { ImagePlus, X } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import { uploadImage, deleteImage, getThumbnailUrl, type UploadProgress } from '@/services/drive/googleDriveService'
 import type { TaskAttachment } from '@/types/tasks'
+import { openExternal } from '@/utils/openExternal'
 
 const props = defineProps<{
   attachments: TaskAttachment[]
@@ -115,7 +116,7 @@ function getThumbnailSrc(attachment: TaskAttachment): string {
 
 function openInDrive(attachment: TaskAttachment) {
   const url = `https://drive.google.com/file/d/${attachment.driveFileId}/view`
-  window.open(url, '_blank', 'noopener')
+  openExternal(url)
 }
 
 function openFilePicker() {

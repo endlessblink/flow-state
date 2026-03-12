@@ -616,8 +616,8 @@ PlasmoidItem {
             for (var i = 0; i < root.nannyTaskList.length; i++) {
                 if (root.nannyTaskList[i].isHeader) headers++
                 else tasks++
-                // Cap at ~5 visible task rows (headers don't count toward cap)
-                if (tasks >= 5) break
+                // Cap at ~15 visible task rows (headers don't count toward cap)
+                if (tasks >= 15) break
             }
             return headers * 32 + tasks * 56
         }
@@ -4898,7 +4898,7 @@ PlasmoidItem {
         }
 
         var xhr = new XMLHttpRequest()
-        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,project_id&status=neq.done&is_deleted=eq.false&order=priority.asc.nullslast,created_at.desc&limit=50"
+        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,project_id&status=neq.done&is_deleted=eq.false&order=priority.asc.nullslast,created_at.desc&limit=100"
         xhr.open("GET", url, true)
         xhr.setRequestHeader("apikey", root.supabaseKey)
         xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
@@ -4909,7 +4909,7 @@ PlasmoidItem {
                     root.nannyAllTasks = JSON.parse(xhr.responseText)
                     console.log("[NANNY] Fetched", root.nannyAllTasks.length, "unfiltered tasks for nanny popup")
                 } else {
-                    console.log("[NANNY] Unfiltered fetch failed (" + xhr.status + "), keeping cached list")
+                    console.log("[NANNY] Unfiltered fetch failed (status=" + xhr.status + "), keeping cached list. Response: " + xhr.responseText.substring(0, 200))
                 }
                 if (callback) callback()
             }
@@ -4927,6 +4927,9 @@ PlasmoidItem {
         }
 
         // BUG-1498: Use unfiltered task cache; fall back to widget tasks if empty
+        if (root.nannyAllTasks.length === 0) {
+            console.log("[NANNY] WARNING: nannyAllTasks empty, falling back to widget tasks (" + root.tasks.length + " tasks)")
+        }
         var allTasks = root.nannyAllTasks.length > 0 ? root.nannyAllTasks : root.tasks
         _buildNannyTaskListFromTasks(allTasks)
     }
@@ -4934,7 +4937,7 @@ PlasmoidItem {
     function _buildNannyTaskListFromTasks(allTasks) {
         var combined = []
         var pinnedTitles = {}
-        var maxItems = 10
+        var maxItems = 15
 
         // Helper: look up task details from fetched tasks by title match
         function findTaskByTitle(title) {

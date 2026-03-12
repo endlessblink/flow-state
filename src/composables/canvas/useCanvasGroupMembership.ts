@@ -29,7 +29,7 @@ export function useCanvasGroupMembership() {
     let depth = 0
     while (currentId && depth < 50) {
       const group = groups.find(g => g.id === currentId)
-      if (!group) break
+      if (!group || !group.position) break
 
       x += group.position.x
       y += group.position.y
@@ -51,16 +51,18 @@ export function useCanvasGroupMembership() {
 
     // Convert groups to Rect format using ABSOLUTE positions (fixing nested group detection)
     const groupsRaw = canvasStore.groups
-    const groupRects = groupsRaw.map(group => {
-      const absPos = getGroupAbsolutePosition(group.id, groupsRaw)
-      return {
-        ...group,
-        x: absPos.x,
-        y: absPos.y,
-        width: group.position.width,
-        height: group.position.height
-      }
-    })
+    const groupRects = groupsRaw
+      .filter(group => group.position)
+      .map(group => {
+        const absPos = getGroupAbsolutePosition(group.id, groupsRaw)
+        return {
+          ...group,
+          x: absPos.x,
+          y: absPos.y,
+          width: group.position.width,
+          height: group.position.height
+        }
+      })
 
     const containingGroup = findSmallestContainingRect(x, y, groupRects)
     return containingGroup?.id || null

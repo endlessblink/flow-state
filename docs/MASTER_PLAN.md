@@ -1330,13 +1330,15 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 
 ---
 
-### TASK-353: Design Better Canvas Empty State (📋 BACKLOG)
+### ~~TASK-353~~: Design Better Canvas Empty State (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 BACKLOG
+**Priority**: P3 | **Status**: ✅ DONE (2026-03-13)
 
 Current empty state is minimal. Add visual illustration, feature highlights, guest mode sign-in prompt.
 
 **File**: `src/components/canvas/CanvasEmptyState.vue`
+
+**Resolution**: Redesigned with animated SVG illustration (floating task cards with connecting lines), 4 feature pills, engaging copy ("Your spatial canvas awaits"), glass-morphism action buttons with keyboard hints (N/G), ambient grid dots, sparkle effects, and full prefers-reduced-motion support. Storybook stories updated with 3 variants.
 
 ---
 
@@ -1623,6 +1625,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
 | ~~**TASK-1501**~~ | **P3** | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10) |
 | ~~**BUG-1504**~~ | **P2** | ✅ **Canvas inbox: left-click multi-selects tasks unexpectedly, can't deselect** (✅ DONE 2026-03-12) |
+| **BUG-1505** | **P2** | 🔄 **KDE Widget: Nanny popup only shows ~2 tasks — increase limit and fix fallback** (🔄 IN PROGRESS 2026-03-13) |
 | **TASK-1499** | **P2** | 🔄 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (🔄 IN PROGRESS 2026-03-10) |
 | **TASK-1500** | **P2** | 🔄 **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (🔄 IN PROGRESS 2026-03-10) |
 | **TASK-1486** | **P2** | 🔄 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (🔄 IN PROGRESS 2026-03-08) |
@@ -2066,15 +2069,17 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1172: Update VueUse 10.11 → 14.1 (📋 PLANNED)
+### ~~TASK-1172~~: Update VueUse 10.11 → 14.1 (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE
 
 **Problem**: VueUse is 4 major versions behind.
 
 **Prerequisites**: Requires Vue 3.5+ upgrade first.
 
 **Files**: `package.json`
+
+**Resolution**: Already upgraded to @vueuse/core@14.2.1 with Vue 3.5.26. No action needed.
 
 ---
 

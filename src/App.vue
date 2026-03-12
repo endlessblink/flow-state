@@ -103,6 +103,7 @@ import { useMobileDetection } from '@/composables/useMobileDetection'
 import { initializeBraveProtection } from '@/utils/braveProtection'
 import { useTauriDebug } from '@/composables/useTauriDebug'
 import { isTauri as isTauriFn, isCapacitor as isCapacitorFn } from '@/utils/platform'
+import { openExternal } from '@/utils/openExternal'
 import { useRouter } from 'vue-router'
 // FEATURE-1345: Capacitor Android services
 import { initCapacitorStatusBar } from '@/composables/useCapacitorStatusBar'
@@ -147,6 +148,24 @@ const onStartupReady = () => {
 // Initialize App Logic
 // BUG-1339: Capture isDataReady to gate view rendering until tasks are loaded
 const { isDataReady } = useAppInitialization()
+
+// Intercept external link clicks in Tauri to open in system browser
+const handleExternalLinkClick = (event: MouseEvent) => {
+  if (!isTauriApp.value) return
+  let target = event.target as HTMLElement | null
+  while (target && target.tagName !== 'A') {
+    target = target.parentElement
+  }
+  if (!target) return
+  const href = (target as HTMLAnchorElement).href
+  if (!href) return
+  if (!href.startsWith('http://') && !href.startsWith('https://')) return
+  // Skip same-origin (internal app links) and localhost dev server
+  const url = new URL(href)
+  if (url.origin === window.location.origin) return
+  event.preventDefault()
+  openExternal(href)
+}
 
 // Handle global events that require interaction with MainLayout
 const handleGlobalNewTask = () => {
@@ -196,12 +215,14 @@ onMounted(async () => {
   window.addEventListener('global-new-task', handleGlobalNewTask)
   window.addEventListener('global-rerun-ai-wizard', handleRerunAIWizard)
   window.addEventListener('keydown', handleKeydown)
+  document.addEventListener('click', handleExternalLinkClick)
 })
 
 onUnmounted(() => {
   window.removeEventListener('global-new-task', handleGlobalNewTask)
   window.removeEventListener('global-rerun-ai-wizard', handleRerunAIWizard)
   window.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('click', handleExternalLinkClick)
   destroyGlobalKeyboardShortcuts()
 })
 </script>

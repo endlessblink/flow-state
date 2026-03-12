@@ -245,7 +245,6 @@ interface Props {
   compactMode?: boolean
   selectedCount?: number
   selectedIds?: string[]
-  contextTask?: Task | null
 }
 
 const props = defineProps<Props>()
@@ -326,12 +325,12 @@ const pendingSubmenuType = ref<SubmenuType | null>(null)
 
 // Computed properties for display
 const showInboxHeader = computed(() => {
-  return (props.selectedCount && props.selectedCount > 0) || props.contextTask
+  return (props.selectedCount && props.selectedCount > 0) || props.task
 })
 
 const displayHeaderText = computed(() => {
-  if (props.contextTask) {
-    return props.contextTask.title
+  if (props.task) {
+    return props.task.title
   } else if (props.selectedCount && props.selectedCount > 1) {
     return `${props.selectedCount} selected`
   }

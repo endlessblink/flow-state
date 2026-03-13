@@ -18,9 +18,9 @@
 
 ---
 
-### BUG-1509: Undo deleted task vanishes on next refresh — is_deleted not cleared (🔄 IN PROGRESS)
+### BUG-1509: Undo deleted task vanishes on next refresh — is_deleted not cleared (👀 REVIEW)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS
+**Priority**: P1 | **Status**: 👀 REVIEW
 
 **Problem**: Ctrl+Z after deleting a task re-creates it locally via `createTask` upsert, but the upsert payload never includes `is_deleted: false`. The DB row stays `is_deleted: true`. On next page refresh, `fetchTasks` filters it out and the task silently disappears.
 
@@ -34,33 +34,37 @@
 
 **Problem**: `deleteGroup` in `canvasGroups.ts` removes the group but doesn't clear `parentId` on child tasks. Canvas renderer skips tasks with missing parent. Deferred cleanup has no retry — if it fails, tasks stay invisible.
 
-**Fix**: In `deleteGroup`, before splicing the group, iterate child tasks via `taskStoreRef` and call `taskStore.updateTask(id, { parentId: undefined }, 'GROUP_DELETE')` for each. `canvasPosition` is absolute so no position conversion needed. TypeScript clean.
+**Fix**: Before deleting a group, explicitly clear `parentId` on all child tasks. Positions are already absolute — no conversion needed.
 
 ---
 
-### BUG-1511: Timer dual leadership — no atomic CAS allows two leaders (📋 PLANNED)
+### BUG-1511: Timer dual leadership — no atomic CAS allows two leaders (👀 REVIEW)
 
-**Priority**: P1 | **Status**: 📋 PLANNED
+**Priority**: P1 | **Status**: 👀 REVIEW
 
 **Problem**: Timer leadership is claimed by writing `device_leader_id` without checking if someone else already claimed it. Two devices can both become leader → timer counts at 2x speed → session completes twice → double XP (BUG-1513).
 
-**Fix**: Use Supabase RPC with conditional update: `WHERE device_leader_id = $old AND last_seen < NOW() - 30s`.
+**Fix implemented**:
+- `supabase/migrations/20260313210000_atomic_timer_leadership.sql`: `claim_timer_leadership` RPC with conditional UPDATE
+- `src/composables/supabase/useTimerDatabase.ts`: added `claimLeadership()` wrapper
+- `src/composables/timer/useTimerSync.ts`: all 3 leadership-claim sites + heartbeat now use atomic RPC; heartbeat demotes itself if lease lost
+- `src/stores/timer.ts`: passes `claimLeadership` through to `useTimerSync` deps
 
 ---
 
-### BUG-1512: Timer session expires while app closed — silently discarded (📋 PLANNED)
+### ~~BUG-1512~~: Timer session expires while app closed — silently discarded (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED
+**Priority**: P1 | **Status**: ✅ DONE
 
 **Problem**: When app reopens and recovery detects `remainingTime <= 0`, it marks session inactive but never calls `completeSession()`. No pomodoro count, no XP, no history entry.
 
-**Fix**: Call `completeSession()` in the recovery path when expired session is detected.
+**Fix**: In `useTimerSync.ts` recovery path, set `currentSession.value` with the expired session (remainingTime=0) then call `onCountdownComplete()` instead of the manual DB-only update. This routes through `completeSession()` for full credit.
 
 ---
 
-### BUG-1513: Double XP under dual timer leadership (📋 PLANNED)
+### BUG-1513: Double XP under dual timer leadership (👀 REVIEW)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (blocked by BUG-1511)
+**Priority**: P1 | **Status**: 👀 REVIEW (resolved by BUG-1511 fix)
 
 **Problem**: When two devices are both timer leaders (BUG-1511), both independently call `completeSession()` and award XP. The `isCompleting` lock only protects within a single JS context.
 
@@ -68,29 +72,29 @@
 
 ---
 
-### BUG-1514: Auth refresh fails after offline — pending writes permanently orphaned (📋 PLANNED)
+### ~~BUG-1514~~: Auth refresh fails after offline — pending writes permanently orphaned (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-13)
 
-**Problem**: When token expires offline and refresh fails on reconnect, `auth.ts:235` clears the session unconditionally. Pending sync writes are orphaned with no auth token and permanently fail.
+**Problem**: When token expires offline and refresh fails on reconnect, `auth.ts` cleared the session unconditionally on the first refresh attempt. Pending sync writes were orphaned with no auth token and permanently failed.
 
-**Fix**: Don't clear session on first refresh failure. Retry 2-3 times with backoff. Only clear if user is truly logged out.
+**Fix**: Replaced the single raw `refreshSession()` call in the `window.addEventListener('online', ...)` handler with a retry loop (up to 3 attempts, exponential backoff: 1s, 3s, 9s). Session is only cleared if ALL retries fail. Each attempt is logged. The existing `performTokenRefresh` function (proactive timer refresh) already had retry logic — the online reconnect handler now follows the same pattern.
 
 ---
 
-### BUG-1515: Undo task completion doesn't revert XP or stats (📋 PLANNED)
+### ~~BUG-1515~~: Undo task completion doesn't revert XP or stats (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED
+**Priority**: P1 | **Status**: ✅ DONE
 
 **Problem**: Complete task → earn XP. Ctrl+Z → task goes back to todo. XP stays. No `onTaskUncompleted` hook exists. Exploitable: complete-undo-complete loop for infinite XP.
 
-**Fix**: Add `onTaskUncompleted` hook that deducts XP and decrements `tasksCompleted` stat. Wire into the `wasDone && isNowNotDone` branch.
+**Fix**: Added `deductXp()` and `decrementStat()` to `gamification.ts`. Added `onTaskUncompleted()` to `useGamificationHooks.ts`. Wired into the `wasDone && isNowNotDone` branch in `taskOperations.ts`. Levels are intentionally not decremented (they are permanent). XP deduction is clamped at 0. Negative xp_log entries written for auditability.
 
 ---
 
-### BUG-1516: Multi-device edit overwrites — whole-document LWW loses field-level changes (📋 PLANNED)
+### BUG-1516: Multi-device edit overwrites — whole-document LWW loses field-level changes (👀 REVIEW)
 
-**Priority**: P1 | **Status**: 📋 PLANNED
+**Priority**: P1 | **Status**: 👀 REVIEW
 
 **Problem**: Sync payload includes ALL task fields, not just changed ones. Edit title on phone, edit description on desktop → last save overwrites the other's field. Silent data loss.
 
@@ -98,9 +102,9 @@
 
 ---
 
-### BUG-1517: Auth token expires mid-sync — remaining operations permanently abandoned (📋 PLANNED)
+### BUG-1517: Auth token expires mid-sync — remaining operations permanently abandoned (👀 REVIEW)
 
-**Priority**: P1 | **Status**: 📋 PLANNED
+**Priority**: P1 | **Status**: 👀 REVIEW
 
 **Problem**: 401 during sync is classified as `permanent` error. Retry set to 1 year out. All remaining queued operations also fail and get abandoned. No token refresh attempted.
 
@@ -1856,6 +1860,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1492**~~ | **P2** | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09) |
 | ~~**BUG-1503**~~ | **P2** | ~~**Tauri desktop: tasks not updating when adding/deleting on canvas or canvas inbox — WebKitGTK dataTransfer.getData() returns empty, needed dragData singleton fallback**~~ (✅ DONE 2026-03-12) |
 | **TASK-1507** | **P2** | **Quick Sort swipe UX polish — center approval notification with fun animation + add "nothing set" reminder popup on accidental swipe** |
+| **TASK-1518** | **P2** | 🔄 **Catalogue view: context menu can't dismiss by clicking away + category drag lag** (IN PROGRESS) |
+| ~~**BUG-1519**~~ | **P2** | ~~**Date picker calendar blurry — stacked backdrop-filter blur on context menu + submenu + NDatePicker panel**~~ (✅ DONE 2026-03-13) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---
@@ -2075,15 +2081,17 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1157: Extract Magic Numbers to Named Constants (🔄 IN PROGRESS)
+### ~~TASK-1157~~: Extract Magic Numbers to Named Constants (✅ DONE)
 
-**Priority**: P3-LOW | **Status**: 🔄 IN PROGRESS
+**Priority**: P3-LOW | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Magic numbers scattered throughout code.
 
 **Solution**: Create `src/constants/` directory with named constants.
 
 **Files**: Multiple files
+
+**Resolution**: Extracted ~40 magic numbers across 17 files into named constants. Created `src/constants/calendar.ts` (slot height, snap minutes), `src/constants/breakpoints.ts` (mobile breakpoint). Extended `src/config/timing.ts` (flash, toast, startup delays) and `src/constants/canvas.ts` (navigation animation). Fixed stale raw `30000` in timer.ts. Zero logic changes.
 
 ---
 

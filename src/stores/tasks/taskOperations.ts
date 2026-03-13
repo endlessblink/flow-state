@@ -719,13 +719,16 @@ export function useTaskOperations(
                     payload.subtasks = JSON.parse(JSON.stringify(updatedTask.subtasks))
                 }
                 // TASK-1403: Include new recurrence fields in sync queue
-                if (changedKeys.has('recurrenceRule') && updatedTask.recurrenceRule) {
-                    payload.recurrence_rule = JSON.parse(JSON.stringify(updatedTask.recurrenceRule))
+                // TASK-1520: Handle null explicitly to clear recurrence on stop
+                if (changedKeys.has('recurrenceRule')) {
+                    payload.recurrence_rule = updatedTask.recurrenceRule
+                        ? JSON.parse(JSON.stringify(updatedTask.recurrenceRule))
+                        : null
                 }
                 if (changedKeys.has('recurrenceParentId') && updatedTask.recurrenceParentId) {
                     payload.recurrence_parent_id = updatedTask.recurrenceParentId
                 }
-                if (changedKeys.has('recurrenceCount') && updatedTask.recurrenceCount) {
+                if (changedKeys.has('recurrenceCount') && updatedTask.recurrenceCount !== undefined) {
                     payload.recurrence_count = updatedTask.recurrenceCount
                 }
 

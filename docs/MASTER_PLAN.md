@@ -2196,9 +2196,9 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1175: Fix 349 Linter Errors (📋 PLANNED)
+### TASK-1175: Fix 349 Linter Errors (🔄 IN PROGRESS)
 
-**Priority**: P3-LOW | **Status**: 📋 PLANNED
+**Priority**: P3-LOW | **Status**: 🔄 IN PROGRESS
 
 **Problem**: 349 ESLint errors and 292 warnings.
 

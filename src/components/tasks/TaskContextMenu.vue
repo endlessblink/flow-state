@@ -929,10 +929,10 @@ const handleClickOutside = (event: MouseEvent) => {
 
 watch(() => props.isVisible, (isVisible) => {
   if (isVisible) {
-    setTimeout(() => document.addEventListener('click', handleClickOutside), 0)
+    setTimeout(() => document.addEventListener('click', handleClickOutside, true), 0)
     document.addEventListener('keydown', handleKeyDown)
   } else {
-    document.removeEventListener('click', handleClickOutside)
+    document.removeEventListener('click', handleClickOutside, true)
     document.removeEventListener('keydown', handleKeyDown)
     showDueDateSubmenu.value = false
     showPrioritySubmenu.value = false
@@ -945,7 +945,7 @@ watch(() => props.isVisible, (isVisible) => {
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('click', handleClickOutside, true)
   document.removeEventListener('keydown', handleKeyDown)
   cancelPendingSwitch()
   clearAllSubmenuTimeouts()

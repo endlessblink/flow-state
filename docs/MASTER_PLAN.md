@@ -18,13 +18,15 @@
 
 ---
 
-### BUG-1509: Undo deleted task vanishes on next refresh — is_deleted not cleared (👀 REVIEW)
+### ~~BUG-1509~~: Undo deleted task vanishes on next refresh — is_deleted not cleared (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Ctrl+Z after deleting a task re-creates it locally via `createTask` upsert, but the upsert payload never includes `is_deleted: false`. The DB row stays `is_deleted: true`. On next page refresh, `fetchTasks` filters it out and the task silently disappears.
 
-**Fix**: Add `is_deleted: false, deleted_at: null` to the upsert payload in the undo/createTask path.
+**Root cause**: `createTask` in `taskOperations.ts` spreads `taskDataWithoutPositionAndInstances` which carries `_soft_deleted: true` from undo snapshots (if realtime echo processed before undo). The sync queue payload was patched but the direct Supabase write via `toSupabaseTask` still read `_soft_deleted` → wrote `is_deleted: true`.
+
+**Fix**: Added `_soft_deleted: false, deletedAt: undefined` after the spread in `createTask` (`taskOperations.ts:144-148`) so they always override any stale flags from the undo snapshot.
 
 ---
 
@@ -1860,7 +1862,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1492**~~ | **P2** | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09) |
 | ~~**BUG-1503**~~ | **P2** | ~~**Tauri desktop: tasks not updating when adding/deleting on canvas or canvas inbox — WebKitGTK dataTransfer.getData() returns empty, needed dragData singleton fallback**~~ (✅ DONE 2026-03-12) |
 | **TASK-1507** | **P2** | **Quick Sort swipe UX polish — center approval notification with fun animation + add "nothing set" reminder popup on accidental swipe** |
-| **TASK-1518** | **P2** | 🔄 **Catalogue view: context menu can't dismiss by clicking away + category drag lag** (IN PROGRESS) |
+| ~~**TASK-1518**~~ | **P2** | ✅ **Catalogue view: context menu can't dismiss by clicking away + category drag lag** (✅ DONE 2026-03-13) |
 | ~~**BUG-1519**~~ | **P2** | ~~**Date picker calendar blurry — stacked backdrop-filter blur on context menu + submenu + NDatePicker panel**~~ (✅ DONE 2026-03-13) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 

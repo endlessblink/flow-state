@@ -486,8 +486,12 @@ const onGroupDrop = (event: DragEvent, group: TaskGroup) => {
   const groupTasks = [...group.parentTasks.filter(t => !draggedSet.has(t.id))]
   const draggedTasks = taskIds.map(id => ({ id } as Task))
   groupTasks.splice(insertIdx, 0, ...draggedTasks)
+  const allTasks = props.tasks
   groupTasks.forEach((t, i) => {
-    taskStore.updateTask(t.id, { order: i })
+    const fullTask = allTasks.find(at => at.id === t.id)
+    if (!fullTask || fullTask.order !== i) {
+      taskStore.updateTask(t.id, { order: i })
+    }
   })
 
   emit('reorder')

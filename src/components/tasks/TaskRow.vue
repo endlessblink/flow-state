@@ -104,6 +104,7 @@ import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import TaskRowProject from '@/components/tasks/row/TaskRowProject.vue'
 import TaskRowDueDate from '@/components/tasks/row/TaskRowDueDate.vue'
+import { FLASH_DURATION_MS } from '@/config/timing'
 type DensityType = 'compact' | 'comfortable' | 'spacious'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
@@ -172,7 +173,7 @@ const handleTaskFlash = (event: Event) => {
   const customEvent = event as CustomEvent<{ taskId: string }>
   if (customEvent.detail.taskId === props.task?.id) {
     isFlashing.value = true
-    setTimeout(() => { isFlashing.value = false }, 600)
+    setTimeout(() => { isFlashing.value = false }, FLASH_DURATION_MS)
   }
 }
 onMounted(() => {

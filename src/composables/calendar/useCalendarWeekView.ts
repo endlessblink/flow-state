@@ -4,6 +4,7 @@ import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { WeekEvent } from '@/types/tasks'
 import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
+import { CALENDAR_SLOT_HEIGHT_PX } from '@/constants/calendar'
 
 export interface WeekDay {
   dayName: string
@@ -219,7 +220,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
 
   // Event styling for week grid
   const getWeekEventStyle = (event: WeekEvent): Record<string, string | number> => {
-    const HALF_HOUR_HEIGHT = 30
+    const HALF_HOUR_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
     const dayColumnWidth = 100 / 7
 
     // Calculate column positioning within the day
@@ -245,7 +246,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
 
     const gridRect = weekDaysGrid.getBoundingClientRect()
     const dayColumnWidth = gridRect.width / 7
-    const HALF_HOUR_HEIGHT = 30
+    const HALF_HOUR_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
     const WORKING_HOURS_OFFSET = 6
 
     const eventRect = (event.target as HTMLElement).closest('.week-event')?.getBoundingClientRect()
@@ -353,7 +354,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     weekResizeTaskId.value = calendarEvent.taskId
 
     const startY = event.clientY
-    const HALF_HOUR_HEIGHT = 30
+    const HALF_HOUR_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
     const WORKING_HOURS_OFFSET = 6
     const originalStartSlot = calendarEvent.startSlot
     const originalDuration = calendarEvent.duration

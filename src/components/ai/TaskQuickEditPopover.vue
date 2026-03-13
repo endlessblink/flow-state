@@ -16,6 +16,7 @@ import { executeTool } from '@/services/ai/tools'
 import { useTimerStore } from '@/stores/timer'
 import { useChallengesStore } from '@/stores/challenges'
 import { getTaskContextTips } from '@/composables/useTaskContextTips'
+import { FLASH_DURATION_MS } from '@/config/timing'
 
 // ============================================================================
 // Types
@@ -109,7 +110,7 @@ watch(() => props.task, (task) => {
 
 function showSuccess() {
   successFlash.value = true
-  setTimeout(() => { successFlash.value = false }, 600)
+  setTimeout(() => { successFlash.value = false }, FLASH_DURATION_MS)
 }
 
 async function setPriority(priority: string | null) {

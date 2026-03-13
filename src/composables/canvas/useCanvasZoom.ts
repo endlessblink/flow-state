@@ -93,14 +93,14 @@ export function useCanvasZoom(resourceManager: ResourceManager) {
     }
 
     const fitView = () => {
-        vueFlowFitView({ padding: 0.2, duration: 300 })
+        vueFlowFitView({ padding: 0.2, duration: CANVAS.NAVIGATION_ANIMATION_MS })
     }
 
     const zoomIn = () => {
         if (zoomPerformanceManager.shouldThrottleZoom()) return
 
         zoomPerformanceManager.scheduleOperation(() => {
-            vueFlowZoomIn({ duration: 200 })
+            vueFlowZoomIn({ duration: CANVAS.ANIMATION_DURATION_MS })
         })
     }
 
@@ -118,7 +118,7 @@ export function useCanvasZoom(resourceManager: ResourceManager) {
             }
 
             // Use vueFlowZoomTo instead of vueFlowZoomOut to ensure we respect minZoom
-            vueFlowZoomTo(newZoom, { duration: 200 })
+            vueFlowZoomTo(newZoom, { duration: CANVAS.ANIMATION_DURATION_MS })
 
             // Double-check that zoom was actually applied and enforce if needed - using resourceManager
             const timerId = setTimeout(() => {

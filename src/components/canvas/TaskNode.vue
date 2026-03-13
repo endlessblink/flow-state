@@ -105,6 +105,7 @@ import TaskNodeDescription from './node/TaskNodeDescription.vue'
 import TaskNodeMeta from './node/TaskNodeMeta.vue'
 import TaskNodePriority from './node/TaskNodePriority.vue'
 import TaskNodeSelection from './node/TaskNodeSelection.vue'
+import { FLASH_DURATION_MS } from '@/config/timing'
 
 const props = withDefaults(defineProps<Props>(), {
   isSelected: false,
@@ -204,7 +205,7 @@ const handleTaskFlash = (event: Event) => {
   const customEvent = event as CustomEvent<{ taskId: string }>
   if (customEvent.detail.taskId === props.task?.id) {
     isFlashing.value = true
-    setTimeout(() => { isFlashing.value = false }, 600)
+    setTimeout(() => { isFlashing.value = false }, FLASH_DURATION_MS)
   }
 }
 onMounted(() => {

@@ -1,4 +1,5 @@
 import { ref, onMounted, onUnmounted } from 'vue'
+import { MOBILE_BREAKPOINT_PX } from '@/constants/breakpoints'
 
 // Check mobile immediately (SSR-safe)
 function getInitialMobileState(): boolean {
@@ -6,7 +7,7 @@ function getInitialMobileState(): boolean {
 
     const userAgent = navigator.userAgent || navigator.vendor || window.opera
     const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())
-    const isSmallScreen = window.innerWidth <= 768
+    const isSmallScreen = window.innerWidth <= MOBILE_BREAKPOINT_PX
 
     return isMobileDevice || isSmallScreen
 }
@@ -23,7 +24,7 @@ export function useMobileDetection() {
         const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())
 
         // Check for small screen width (standard tablet/mobile breakpoint)
-        const isSmallScreen = window.matchMedia('(max-width: 768px)').matches
+        const isSmallScreen = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX}px)`).matches
 
         // Check for touch capability (additional signal)
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0

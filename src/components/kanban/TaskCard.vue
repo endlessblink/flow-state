@@ -106,6 +106,7 @@ import { truncateUrlsInText } from '@/utils/urlTruncate'
 import TaskCardStatus from './card/TaskCardStatus.vue'
 import TaskCardBadges from './card/TaskCardBadges.vue'
 import TaskCardActions from './card/TaskCardActions.vue'
+import { FLASH_DURATION_MS } from '@/config/timing'
 
 import './TaskCard.css'
 
@@ -166,7 +167,7 @@ const handleTaskFlash = (event: Event) => {
   const customEvent = event as CustomEvent<{ taskId: string }>
   if (customEvent.detail.taskId === props.task?.id) {
     isFlashing.value = true
-    setTimeout(() => { isFlashing.value = false }, 600)
+    setTimeout(() => { isFlashing.value = false }, FLASH_DURATION_MS)
   }
 }
 onMounted(() => {

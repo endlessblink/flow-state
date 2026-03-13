@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
 import type { useCanvasStore } from '@/stores/canvas'
 import { detectPowerKeyword, SMART_GROUPS } from '@/composables/usePowerKeywords'
+import { CANVAS } from '@/constants/canvas'
 
 export function useCanvasNavigation(canvasStore: ReturnType<typeof useCanvasStore>) {
     const { fitView: vueFlowFitView, getNodes, setCenter } = useVueFlow()
@@ -34,12 +35,12 @@ export function useCanvasNavigation(canvasStore: ReturnType<typeof useCanvasStor
         vueFlowFitView({
             nodes: selectedIds,
             padding: 0.3,
-            duration: 300
+            duration: CANVAS.NAVIGATION_ANIMATION_MS
         })
     }
 
     const fitCanvas = () => {
-        vueFlowFitView({ padding: 0.2, duration: 300 })
+        vueFlowFitView({ padding: 0.2, duration: CANVAS.NAVIGATION_ANIMATION_MS })
     }
 
     /**
@@ -77,7 +78,7 @@ export function useCanvasNavigation(canvasStore: ReturnType<typeof useCanvasStor
             const centerY = todayNode.position.y + nodeHeight / 2
 
             console.log('[NAV] Centering on Today group:', todayNode.id, { centerX, centerY })
-            setCenter(centerX, centerY, { zoom: 1, duration: 300 })
+            setCenter(centerX, centerY, { zoom: 1, duration: CANVAS.NAVIGATION_ANIMATION_MS })
             return true
         }
 
@@ -108,7 +109,7 @@ export function useCanvasNavigation(canvasStore: ReturnType<typeof useCanvasStor
             const centerY = busiestGroup.position.y + nodeHeight / 2
 
             console.log('[NAV] Centering on busiest group:', busiestGroup.id, { centerX, centerY })
-            setCenter(centerX, centerY, { zoom: 1, duration: 300 })
+            setCenter(centerX, centerY, { zoom: 1, duration: CANVAS.NAVIGATION_ANIMATION_MS })
             return true
         }
 
@@ -116,7 +117,7 @@ export function useCanvasNavigation(canvasStore: ReturnType<typeof useCanvasStor
         const firstTask = nodes.find(node => node.type === 'taskNode')
         if (firstTask) {
             console.log('[NAV] Centering on first task:', firstTask.id)
-            setCenter(firstTask.position.x, firstTask.position.y, { zoom: 1, duration: 300 })
+            setCenter(firstTask.position.x, firstTask.position.y, { zoom: 1, duration: CANVAS.NAVIGATION_ANIMATION_MS })
             return true
         }
 

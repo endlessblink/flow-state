@@ -3,13 +3,14 @@ import type { RouteLocationNormalized as _RouteLocationNormalized, NavigationGua
 import { useAuthStore } from '@/stores/auth'
 import { EXTERNAL_URLS } from '@/config/urls'
 import { openExternal } from '@/utils/openExternal'
+import { MOBILE_BREAKPOINT_PX } from '@/constants/breakpoints'
 
 // Mobile detection helper (mirrors useMobileDetection.ts logic)
 function isMobileDevice(): boolean {
   if (typeof window === 'undefined') return false
   const userAgent = navigator.userAgent || navigator.vendor || (window as typeof window & { opera?: string }).opera || ''
   const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())
-  const isSmallScreen = window.matchMedia('(max-width: 768px)').matches
+  const isSmallScreen = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX}px)`).matches
   return isMobileUA || isSmallScreen
 }
 

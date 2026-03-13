@@ -702,6 +702,18 @@ export function useCanvasSync() {
                 }
 
 
+                // BUG-1504: Preserve Vue Flow positions for existing nodes
+                // When sync is triggered by data-only changes (title edit, status change),
+                // the recalculated position from store may be stale. Vue Flow's live position
+                // is authoritative for nodes that are already rendered.
+                const currentNodeMap = new Map(currentNodes.map(n => [n.id, n]))
+                for (const node of newNodes) {
+                    const existing = currentNodeMap.get(node.id)
+                    if (existing && existing.parentNode === node.parentNode) {
+                        node.position = existing.position
+                    }
+                }
+
                 // BUG-1062 FIX: Preserve selection state from canvasStore.selectedNodeIds
                 // When setNodes() replaces all nodes, the `selected` property is lost.
                 // We must restore it from the store before calling setNodes().

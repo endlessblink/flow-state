@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
+import { SUCCESS_FLASH_DURATION_MS } from '@/config/timing'
 
 export function useQuickTaskInput() {
   const { t } = useI18n()
@@ -117,7 +118,7 @@ export function useQuickTaskInput() {
       quickTaskPriority.value = null
       showFullscreenCreator.value = false
       showSuccessFlash.value = true
-      setTimeout(() => { showSuccessFlash.value = false }, 1200)
+      setTimeout(() => { showSuccessFlash.value = false }, SUCCESS_FLASH_DURATION_MS)
     } catch (error) {
       console.error('Error creating task from fullscreen:', error)
     }
@@ -270,7 +271,7 @@ export function useQuickTaskInput() {
       quickTaskDueDate.value = null
       quickTaskPriority.value = null
       showSuccessFlash.value = true
-      setTimeout(() => { showSuccessFlash.value = false }, 1200)
+      setTimeout(() => { showSuccessFlash.value = false }, SUCCESS_FLASH_DURATION_MS)
       return
     }
 
@@ -289,7 +290,7 @@ export function useQuickTaskInput() {
       quickTaskPriority.value = null
       // Visual confirmation flash
       showSuccessFlash.value = true
-      setTimeout(() => { showSuccessFlash.value = false }, 1200)
+      setTimeout(() => { showSuccessFlash.value = false }, SUCCESS_FLASH_DURATION_MS)
     } catch (error) {
       console.error('Error creating quick task:', error)
     }

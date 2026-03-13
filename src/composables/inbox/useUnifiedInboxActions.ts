@@ -13,6 +13,7 @@ import {
 } from '@/composables/canvas/useSmartGroupMatcher'
 import { useCanvasSectionProperties } from '@/composables/canvas/useCanvasSectionProperties'
 import type { CanvasSection } from '@/stores/canvas/types'
+import { TOAST_SUCCESS_DURATION_MS } from '@/config/timing'
 
 export function useUnifiedInboxActions(
     inboxTasks: { value: Task[] },
@@ -356,7 +357,7 @@ export function useUnifiedInboxActions(
         const result = await sendToCanvas(task.id)
 
         if (result?.success) {
-            showToast(`Sent to ${placementLabel}`, 'success', { duration: 2000 })
+            showToast(`Sent to ${placementLabel}`, 'success', { duration: TOAST_SUCCESS_DURATION_MS })
         }
     }
 

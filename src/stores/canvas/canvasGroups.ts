@@ -160,6 +160,23 @@ export const useCanvasGroups = (
     const deleteGroup = async (id: string) => {
         const index = _rawGroups.value.findIndex(g => g.id === id)
         if (index !== -1) {
+            // BUG-1510 FIX: Clear parentId on child tasks BEFORE removing the group.
+            // Canvas renderer skips tasks whose parentId references a non-existent group,
+            // making them invisible. Since canvasPosition is stored in absolute coords,
+            // we only need to clear parentId — no position conversion required.
+            const childTasks = taskStoreRef.value?.tasks.filter(t => t.parentId === id) ?? []
+            if (childTasks.length > 0) {
+                try {
+                    const { useTaskStore } = await import('@/stores/tasks')
+                    const taskStore = useTaskStore()
+                    await Promise.all(
+                        childTasks.map(t => taskStore.updateTask(t.id, { parentId: undefined }, 'GROUP_DELETE' as Parameters<typeof taskStore.updateTask>[2]))
+                    )
+                } catch (err) {
+                    console.error('[BUG-1510] Failed to clear parentId on child tasks before group delete:', err)
+                }
+            }
+
             _rawGroups.value.splice(index, 1)
             if (activeSectionId.value === id) {
                 activeSectionId.value = null

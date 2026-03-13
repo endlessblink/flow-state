@@ -309,13 +309,11 @@ const addQuickPin = async () => {
 
 const handleInputEnter = () => {
     if (isSearching.value) {
-        // If searching and there are results, select first (or focused)
-        const idx = focusedIndex.value >= 0 ? focusedIndex.value : 0
-        const items = allItems.value
-        if (idx < items.length) {
-            handleSearchSelect(items[idx] as QuickTaskItem)
+        // Only auto-select a search result if user explicitly navigated with arrow keys
+        if (focusedIndex.value >= 0 && focusedIndex.value < allItems.value.length) {
+            handleSearchSelect(allItems.value[focusedIndex.value] as QuickTaskItem)
         } else {
-            // "Pin as new" option
+            // No explicit selection — pin the typed text as a new pin
             addQuickPin()
         }
     } else {

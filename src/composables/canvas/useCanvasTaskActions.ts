@@ -8,6 +8,7 @@ import { storeToRefs } from 'pinia'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { CANVAS } from '@/constants/canvas'
 import { useToast } from '@/composables/useToast'
+import { TOAST_SUCCESS_DURATION_MS } from '@/config/timing'
 import { formatDateKey } from '@/utils/dateUtils'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { useCanvasSectionProperties } from './useCanvasSectionProperties'
@@ -298,7 +299,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             const msg = selectedNodeIds.length === 1
                 ? 'Moved to tomorrow'
                 : `${selectedNodeIds.length} tasks moved to tomorrow`
-            showToast(msg, 'success', { duration: 2000 })
+            showToast(msg, 'success', { duration: TOAST_SUCCESS_DURATION_MS })
 
             deps.closeCanvasContextMenu()
         } catch (error) {

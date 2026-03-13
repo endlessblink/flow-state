@@ -2200,7 +2200,7 @@ PlasmoidItem {
             Flow {
                 Layout.fillWidth: true
                 spacing: 6
-                visible: root.pinnedTasks.length > 0
+                visible: root.pinnedTasks.length > 0 && !root.taskSearchQuery
 
                 Repeater {
                     model: root.pinnedTasks
@@ -4066,6 +4066,7 @@ PlasmoidItem {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 201 || xhr.status === 200) {
                     root.currentSessionId = sessionId
+                    root.currentTaskId = taskId  // BUG-1508: track which task the timer is for
                     root.totalSeconds = duration
                     root.secondsRemaining = duration
                     root.isRunning = true
@@ -4754,7 +4755,6 @@ PlasmoidItem {
 
     function fetchPinnedTasks() {
         if (!root.isAuthenticated) return
-        pinnedTasksRefreshTimer.restart()
 
         root.isLoadingPinnedTasks = true
 
@@ -4802,8 +4802,10 @@ PlasmoidItem {
     function selectPinnedTask(pin) {
         if (!root.isAuthenticated) return
 
-        // Search loaded tasks for a title match (case-insensitive, not done, not deleted)
+        // BUG-1508: Search filtered tasks first, then ALL tasks, then API lookup
         var matchId = ""
+
+        // 1. Search currently filtered tasks
         for (var i = 0; i < root.tasks.length; i++) {
             var t = root.tasks[i]
             if (t.title && t.title.toLowerCase() === pin.title.toLowerCase()) {
@@ -4812,20 +4814,60 @@ PlasmoidItem {
             }
         }
 
+        // 2. Search ALL non-done tasks (nanny cache)
+        if (!matchId && root.nannyAllTasks.length > 0) {
+            for (var j = 0; j < root.nannyAllTasks.length; j++) {
+                var nt = root.nannyAllTasks[j]
+                if (nt.title && nt.title.toLowerCase() === pin.title.toLowerCase()) {
+                    matchId = nt.id
+                    console.log("[PINS] Found match in nannyAllTasks:", matchId)
+                    break
+                }
+            }
+        }
+
         if (matchId) {
             console.log("[PINS] Found matching task:", matchId)
-            // TASK-1466: If timer running, switch task without reset
-            if (root.hasActiveSession && root.isRunning) {
-                if (root.currentTaskId !== matchId) {
-                    root.switchTaskForSession(matchId)
-                }
-                // Same task — do nothing (don't reset)
-            } else {
-                root.startSessionForTask(matchId)
-            }
+            root._startOrSwitchForTask(matchId)
         } else {
-            console.log("[PINS] No match, creating new task:", pin.title)
-            root.createTask(pin.title, true)
+            // 3. API lookup — search DB directly (local arrays may not be loaded yet)
+            console.log("[PINS] No local match, querying API for:", pin.title)
+            var xhr = new XMLHttpRequest()
+            var encodedTitle = encodeURIComponent(pin.title)
+            var url = root.supabaseUrl + "/rest/v1/tasks?select=id&title=eq." + encodedTitle + "&is_deleted=eq.false&status=neq.done&user_id=eq." + root.userId + "&limit=1"
+            xhr.open("GET", url, true)
+            xhr.setRequestHeader("apikey", root.supabaseKey)
+            xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        var results = JSON.parse(xhr.responseText)
+                        if (results.length > 0) {
+                            console.log("[PINS] Found task via API:", results[0].id)
+                            root._startOrSwitchForTask(results[0].id)
+                        } else {
+                            console.log("[PINS] No existing task found, creating:", pin.title)
+                            root.createTask(pin.title, true)
+                        }
+                    } else {
+                        console.error("[PINS] API lookup failed:", xhr.status, "- creating task as fallback")
+                        root.createTask(pin.title, true)
+                    }
+                }
+            }
+            xhr.send()
+        }
+    }
+
+    // BUG-1508: shared helper — start timer or switch task
+    function _startOrSwitchForTask(taskId) {
+        if (root.hasActiveSession && root.isRunning) {
+            if (root.currentTaskId !== taskId) {
+                root.switchTaskForSession(taskId)
+            }
+            // Same task — do nothing (don't reset)
+        } else {
+            root.startSessionForTask(taskId)
         }
     }
 

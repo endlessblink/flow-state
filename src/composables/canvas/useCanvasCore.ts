@@ -2,6 +2,7 @@ import { onBeforeUnmount } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { storeToRefs } from 'pinia'
+import { CANVAS } from '@/constants/canvas'
 
 /**
  * useCanvasCore
@@ -103,7 +104,7 @@ export function useCanvasCore() {
     const zoomIn = () => {
         if (zoomPerformanceManager.shouldThrottleZoom()) return
         zoomPerformanceManager.scheduleOperation(() => {
-            vueFlowZoomIn({ duration: 200 })
+            vueFlowZoomIn({ duration: CANVAS.ANIMATION_DURATION_MS })
         })
     }
 
@@ -113,7 +114,7 @@ export function useCanvasCore() {
             // Respect min zoom
             const currentZoom = getViewport().zoom
             const newZoom = Math.max(zoomConfig.value.minZoom, currentZoom - 0.1)
-            vueFlowZoomTo(newZoom, { duration: 200 })
+            vueFlowZoomTo(newZoom, { duration: CANVAS.ANIMATION_DURATION_MS })
         })
     }
 

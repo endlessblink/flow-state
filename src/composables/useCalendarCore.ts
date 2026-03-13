@@ -3,6 +3,7 @@ import type { Task } from '@/stores/tasks'
 import type { CalendarEvent } from '@/types/tasks'
 import { calculateOverlappingPositions as _calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 import { useSettingsStore } from '@/stores/settings'
+import { CALENDAR_SNAP_MINUTES } from '@/constants/calendar'
 
 // Re-export CalendarEvent for consumers that import from this file
 export type { CalendarEvent } from '@/types/tasks'
@@ -194,7 +195,7 @@ export function useCalendarCore() {
     const totalMinutes = hour * 60 + minute
 
     // Round to nearest 15-minute interval
-    const snappedMinutes = Math.round(totalMinutes / 15) * 15
+    const snappedMinutes = Math.round(totalMinutes / CALENDAR_SNAP_MINUTES) * CALENDAR_SNAP_MINUTES
 
     // Convert back to hour and minute
     const snappedHour = Math.floor(snappedMinutes / 60)

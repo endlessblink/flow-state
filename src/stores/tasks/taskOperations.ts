@@ -184,7 +184,13 @@ export function useTaskOperations(
                     is_in_inbox: newTask.isInInbox,
                     position_version: newTask.positionVersion,
                     created_at: newTask.createdAt.toISOString(),
-                    updated_at: newTask.updatedAt.toISOString()
+                    updated_at: newTask.updatedAt.toISOString(),
+                    // BUG-1509: Explicitly clear soft-delete flags on create/undo-restore.
+                    // When undo re-creates a previously soft-deleted task, the DB row still has
+                    // is_deleted=true. The upsert must clear it so fetchTasks (which filters
+                    // .eq('is_deleted', false)) sees the task after the next page refresh.
+                    is_deleted: false,
+                    deleted_at: null
                 }
                 // Only add optional fields if they have values (not undefined/null)
                 if (newTask.dueDate) payload.due_date = newTask.dueDate

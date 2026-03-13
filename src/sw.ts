@@ -188,7 +188,7 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
       body,
       icon: '/icons/pwa-192x192.png',
       badge: '/icons/pwa-64x64.png',
-      tag: `timer-complete-${sessionId}`, // Deduplication - same sessionId won't show twice
+      tag: 'timer-complete', // BUG-1462: Fixed tag so OS auto-replaces previous notifications
       requireInteraction: true, // Stay visible until user interacts
       silent: false, // BUG-1112: Enable system notification sound
       actions,
@@ -216,6 +216,15 @@ self.addEventListener('notificationclick', (event) => {
 
   // Close the notification
   notification.close()
+
+  // BUG-1462: Dismiss all timer-complete notifications to prevent spam
+  event.waitUntil(
+    self.registration.getNotifications().then(notifications => {
+      notifications
+        .filter(n => n.tag && n.tag.startsWith('timer-complete'))
+        .forEach(n => n.close())
+    })
+  )
 
   // Existing timer notification logic (data has sessionId)
   if (data?.sessionId) {

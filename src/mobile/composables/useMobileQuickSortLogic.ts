@@ -54,9 +54,18 @@ export function useMobileQuickSortLogic() {
   const showQuickEditPanel = ref(false)
   const showEditSheet = ref(false)
   const showAISheet = ref(false)
+  const showNothingSetReminder = ref(false)
+  const pendingSaveAfterReminder = ref(false)
 
   // Timer cleanup tracking
   const celebrationTimers: ReturnType<typeof setTimeout>[] = []
+
+  // Randomised celebration labels
+  const celebrationLabels = ['Sorted!', 'Nice!', 'Got it!', 'Done!', 'Sweet!']
+  const celebrationLabel = ref('Sorted!')
+  function pickCelebrationLabel() {
+    celebrationLabel.value = celebrationLabels[Math.floor(Math.random() * celebrationLabels.length)]
+  }
 
   // Capture phase state
   const newTaskTitle = ref('')
@@ -217,7 +226,7 @@ export function useMobileQuickSortLogic() {
     triggerHaptic('light')
   }
 
-  async function handleSave() {
+  async function _doSave() {
     if (!currentTask.value) return
     // Persist any pending local changes (e.g., AI Apply All sets values locally)
     if (isTaskDirty.value) {
@@ -231,11 +240,35 @@ export function useMobileQuickSortLogic() {
       })
     }
     saveTask()
+    pickCelebrationLabel()
     showCelebration.value = true
     celebrationTimers.push(setTimeout(() => {
       showCelebration.value = false
     }, 600))
     triggerHaptic('heavy')
+  }
+
+  async function handleSave() {
+    if (!currentTask.value) return
+    const task = currentTask.value
+    const hasNothing = !task.priority && !task.dueDate && !task.projectId && !isTaskDirty.value
+    if (hasNothing) {
+      pendingSaveAfterReminder.value = true
+      showNothingSetReminder.value = true
+      return
+    }
+    await _doSave()
+  }
+
+  async function confirmSaveAnyway() {
+    showNothingSetReminder.value = false
+    pendingSaveAfterReminder.value = false
+    await _doSave()
+  }
+
+  function cancelSave() {
+    showNothingSetReminder.value = false
+    pendingSaveAfterReminder.value = false
   }
 
   function handleMarkDone() {
@@ -496,6 +529,11 @@ export function useMobileQuickSortLogic() {
     onSwipeRight,
     onSwipeLeft,
     onSwipeUp,
-    onSwipeDown
+    onSwipeDown,
+    showNothingSetReminder,
+    pendingSaveAfterReminder,
+    confirmSaveAnyway,
+    cancelSave,
+    celebrationLabel
   }
 }

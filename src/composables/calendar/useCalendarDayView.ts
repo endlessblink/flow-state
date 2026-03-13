@@ -6,6 +6,7 @@ import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
 import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
+import { CALENDAR_SLOT_HEIGHT_PX, CALENDAR_SNAP_MINUTES } from '@/constants/calendar'
 
 export interface PositionedExternalEvent extends ExternalCalendarEvent {
   top: number        // startMinutes from midnight
@@ -45,7 +46,7 @@ function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: 
   const totalMinutes = hour * 60 + minute
 
   // Round to nearest 15-minute interval
-  const snappedMinutes = Math.round(totalMinutes / 15) * 15
+  const snappedMinutes = Math.round(totalMinutes / CALENDAR_SNAP_MINUTES) * CALENDAR_SNAP_MINUTES
 
   // Convert back to hour and minute
   const snappedHour = Math.floor(snappedMinutes / 60)
@@ -456,7 +457,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
   // Event styling
   const getEventStyle = (event: CalendarEvent) => {
-    const slotHeight = 30
+    const slotHeight = CALENDAR_SLOT_HEIGHT_PX
     const widthPercentage = 100 / event.totalColumns
     const leftPercentage = widthPercentage * event.column
 
@@ -473,7 +474,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
    * Short tasks (<= 30min) get compact class for single-line layout
    */
   const getSlotTaskStyle = (calEvent: CalendarEvent) => {
-    const baseHeight = (calEvent.slotSpan * 30) - 4
+    const baseHeight = (calEvent.slotSpan * CALENDAR_SLOT_HEIGHT_PX) - 4
     // Mark short tasks for compact CSS styling (single horizontal line)
     const isCompact = calEvent.duration <= 30
 
@@ -507,7 +508,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   }
 
   const getGhostStyle = () => {
-    const slotHeight = 30
+    const slotHeight = CALENDAR_SLOT_HEIGHT_PX
     const slotSpan = Math.ceil(dragGhost.value.duration / 30)
 
     return {
@@ -694,7 +695,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     if (!container) return
 
     const rect = container.getBoundingClientRect()
-    const SLOT_HEIGHT = 30
+    const SLOT_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
     const eventElement = (event.target as HTMLElement).closest('.calendar-event') as HTMLElement
     if (!eventElement) return
 
@@ -840,7 +841,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     event.stopPropagation() // Prevent drag events from interfering
 
     const startY = event.clientY
-    const SLOT_HEIGHT = 30
+    const SLOT_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
     const originalStartSlot = calendarEvent.startSlot
     const originalDuration = calendarEvent.duration
     const MIN_DURATION = 15 // 15-minute minimum

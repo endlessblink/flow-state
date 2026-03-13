@@ -20,3 +20,18 @@ export const CROSS_TAB_DEDUP_TIMEOUT_MS = 5_000
 
 /** Resize settle delay after section resize ends. */
 export const RESIZE_SETTLE_TIMEOUT_MS = 1_000
+
+/** Flash duration for task highlight animations (e.g. date set via context menu). */
+export const FLASH_DURATION_MS = 600
+
+/** Success flash duration for longer confirmation animations. */
+export const SUCCESS_FLASH_DURATION_MS = 1200
+
+/** Startup delay before showing the main app after splash/init. */
+export const STARTUP_DELAY_MS = 1500
+
+/** Error notification auto-dismiss timeout. */
+export const ERROR_NOTIFICATION_TIMEOUT_MS = 10000
+
+/** Toast notification duration for success messages. */
+export const TOAST_SUCCESS_DURATION_MS = 2000

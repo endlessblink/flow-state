@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 import type { Task } from '@/types/tasks'
 import { cacheTasks, getCachedTasks } from '@/services/offline/readCacheDB'
 import { useProjectStore } from '../projects'
@@ -326,7 +327,7 @@ export function useTaskPersistence(
                     // Tauri/WebKitGTK fires aggressive visibility changes that trigger loadFromDatabase()
                     // more frequently than browsers. 30s is too narrow — align with PENDING_WRITE_TIMEOUT_MS.
                     const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
-                    const RECENT_THRESHOLD_MS = isTauri ? 120_000 : 30_000
+                    const RECENT_THRESHOLD_MS = isTauri ? PENDING_WRITE_TIMEOUT_MS : 30_000
                     const isVeryRecent = (now - localTime) < RECENT_THRESHOLD_MS
 
                     if (localVer > remoteVer || localTime > remoteTime || isVeryRecent) {
@@ -374,7 +375,7 @@ export function useTaskPersistence(
                     // pending sync queue entry, it was likely deleted externally (KDE widget,
                     // another device). Only preserve truly new local tasks (created recently).
                     const localCreatedAt = localTask.createdAt ? new Date(localTask.createdAt).getTime() : 0
-                    const isRecentlyCreated = (Date.now() - localCreatedAt) < 120_000 // 2 minutes
+                    const isRecentlyCreated = (Date.now() - localCreatedAt) < PENDING_WRITE_TIMEOUT_MS // 2 minutes
                     if (loadedTasks.length > 0 && !isRecentlyCreated) {
                         console.log(`🗑️ [SMART-MERGE] Dropping stale local-only task "${localTask.title?.slice(0, 15)}" - not in DB and not recently created`)
                         continue

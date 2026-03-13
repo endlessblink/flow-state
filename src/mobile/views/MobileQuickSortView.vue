@@ -283,11 +283,34 @@
 
     <!-- Celebration Overlay -->
     <Transition name="celebration">
-      <div v-if="showCelebration" class="mini-celebration">
-        <CheckCircle :size="32" />
-        <span>Sorted!</span>
+      <div v-if="showCelebration" class="mini-celebration" aria-live="assertive" aria-atomic="true">
+        <div class="celebration-ring" />
+        <CheckCircle :size="28" class="celebration-icon" />
+        <span class="celebration-text">{{ celebrationLabel }}</span>
+        <span class="celebration-sparkle" aria-hidden="true">✨</span>
       </div>
     </Transition>
+
+    <!-- Nothing Set Reminder Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showNothingSetReminder" class="confirm-overlay">
+          <div class="confirm-modal reminder-modal">
+            <AlertCircle :size="32" class="reminder-icon" />
+            <h3>No details set</h3>
+            <p>This task has no priority, due date, or project. Save it anyway?</p>
+            <div class="confirm-actions">
+              <button class="reminder-set-btn" @click="cancelSave">
+                Let me set something
+              </button>
+              <button class="reminder-save-btn" @click="confirmSaveAnyway">
+                Save anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -295,7 +318,7 @@
 import {
   Zap, Plus, CheckCircle, CalendarDays,
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  Trash2, FolderOpen
+  Trash2, FolderOpen, AlertCircle
 } from 'lucide-vue-next'
 
 import MobileQuickSortCard from '../components/MobileQuickSortCard.vue'
@@ -359,7 +382,11 @@ const {
   onSwipeRight,
   onSwipeLeft,
   onSwipeUp,
-  onSwipeDown
+  onSwipeDown,
+  showNothingSetReminder,
+  confirmSaveAnyway,
+  cancelSave,
+  celebrationLabel
 } = useMobileQuickSortLogic()
 </script>
 
@@ -805,27 +832,99 @@ const {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-6) var(--space-8);
-  background: var(--success-border-active);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-2xl);
-  color: white;
-  font-size: var(--text-xl);
-  font-weight: var(--font-bold);
   z-index: var(--z-modal);
+  pointer-events: none;
+  /* Particle dots scattered via box-shadow */
+}
+
+.mini-celebration::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  /* 8 particle dots that scatter outward during the enter animation */
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--brand-primary) 70%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--brand-primary) 50%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--brand-primary) 40%, transparent);
+  animation: particleBurst 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   pointer-events: none;
 }
 
+.celebration-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--radius-2xl);
+  border: 2px solid var(--brand-primary);
+  opacity: 0;
+  animation: ringPulse 0.7s ease-out forwards;
+  pointer-events: none;
+}
+
+.celebration-icon {
+  color: var(--brand-primary);
+}
+
+.celebration-text {
+  color: var(--brand-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  letter-spacing: -0.01em;
+}
+
+.celebration-sparkle {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  font-size: var(--text-xl);
+  animation: sparkleSpin 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 .celebration-enter-active {
-  animation: miniCelebrate 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: miniCelebrate 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .celebration-leave-active {
-  animation: miniCelebrate var(--duration-slow) ease reverse;
+  animation: miniCelebrateFade var(--duration-slow) ease forwards;
 }
 
 @keyframes miniCelebrate {
-  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-  50% { transform: translate(-50%, -50%) scale(1.1); }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  0%   { transform: translate(-50%, -50%) scale(0.4) rotate(-4deg); opacity: 0; }
+  60%  { transform: translate(-50%, -50%) scale(1.08) rotate(2deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes miniCelebrateFade {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+}
+
+@keyframes ringPulse {
+  0%   { transform: scale(1); opacity: 0.8; }
+  60%  { transform: scale(1.25); opacity: 0.4; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes particleBurst {
+  0%   { box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--brand-primary) 70%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--brand-primary) 50%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--brand-primary) 40%, transparent); }
+  100% { box-shadow:
+    -24px -24px 0 3px color-mix(in srgb, var(--brand-primary) 0%, transparent),
+     24px -24px 0 3px color-mix(in srgb, var(--brand-primary) 0%, transparent),
+     24px  24px 0 3px color-mix(in srgb, var(--brand-primary) 0%, transparent); }
+}
+
+@keyframes sparkleSpin {
+  0%   { transform: scale(0) rotate(-45deg); opacity: 0; }
+  70%  { transform: scale(1.3) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
 /* ================================
@@ -904,6 +1003,56 @@ const {
 
 .delete-btn:active {
   opacity: 0.9;
+  transform: scale(0.98);
+}
+
+/* Nothing Set Reminder Modal overrides */
+.reminder-modal {
+  border-color: var(--brand-primary);
+}
+
+.reminder-icon {
+  color: var(--brand-primary);
+  margin: 0 auto var(--space-4);
+}
+
+/* "Let me set something" — primary teal glass */
+.reminder-set-btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-normal) ease;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary);
+  color: var(--brand-primary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.reminder-set-btn:active {
+  background: var(--glass-bg-medium);
+  transform: scale(0.98);
+}
+
+/* "Save anyway" — ghost/secondary */
+.reminder-save-btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-normal) ease;
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+
+.reminder-save-btn:active {
+  background: var(--glass-bg-light);
   transform: scale(0.98);
 }
 
@@ -1070,7 +1219,10 @@ const {
 @media (prefers-reduced-motion: reduce) {
   .progress-fill,
   .progress-glow,
-  .mini-celebration {
+  .mini-celebration,
+  .mini-celebration::before,
+  .celebration-ring,
+  .celebration-sparkle {
     animation: none !important;
     transition: none !important;
   }

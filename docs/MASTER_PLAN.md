@@ -8,6 +8,106 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1508: Permanently deleting a recurring task causes infinite recreation loop (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (being fixed in separate instance)
+
+**Problem**: When a recurring task is permanently deleted, the deferred recurrence scheduler (`useRecurrenceScheduler.ts`) finds an older `done` ancestor with `recurrenceRule` still set, sees no active successor (deleted task is gone from `_rawTasks`), and creates a new clone — effectively resurrecting the deleted task. This loops infinitely: delete → scheduler recreates → delete → recreates.
+
+**Fix approach**: When permanently deleting a recurring task, advance the recurrence chain first (bump `recurrenceCount`/`lastRecurrenceDate` on the ancestor) so the scheduler creates the *next* occurrence, not the same one again. This preserves the recurring series while respecting the deletion.
+
+---
+
+### BUG-1509: Undo deleted task vanishes on next refresh — is_deleted not cleared (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Ctrl+Z after deleting a task re-creates it locally via `createTask` upsert, but the upsert payload never includes `is_deleted: false`. The DB row stays `is_deleted: true`. On next page refresh, `fetchTasks` filters it out and the task silently disappears.
+
+**Fix**: Add `is_deleted: false, deleted_at: null` to the upsert payload in the undo/createTask path.
+
+---
+
+### BUG-1510: Delete canvas group orphans child tasks — they vanish (👀 REVIEW)
+
+**Priority**: P1 | **Status**: 👀 REVIEW
+
+**Problem**: `deleteGroup` in `canvasGroups.ts` removes the group but doesn't clear `parentId` on child tasks. Canvas renderer skips tasks with missing parent. Deferred cleanup has no retry — if it fails, tasks stay invisible.
+
+**Fix**: In `deleteGroup`, before splicing the group, iterate child tasks via `taskStoreRef` and call `taskStore.updateTask(id, { parentId: undefined }, 'GROUP_DELETE')` for each. `canvasPosition` is absolute so no position conversion needed. TypeScript clean.
+
+---
+
+### BUG-1511: Timer dual leadership — no atomic CAS allows two leaders (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: Timer leadership is claimed by writing `device_leader_id` without checking if someone else already claimed it. Two devices can both become leader → timer counts at 2x speed → session completes twice → double XP (BUG-1513).
+
+**Fix**: Use Supabase RPC with conditional update: `WHERE device_leader_id = $old AND last_seen < NOW() - 30s`.
+
+---
+
+### BUG-1512: Timer session expires while app closed — silently discarded (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: When app reopens and recovery detects `remainingTime <= 0`, it marks session inactive but never calls `completeSession()`. No pomodoro count, no XP, no history entry.
+
+**Fix**: Call `completeSession()` in the recovery path when expired session is detected.
+
+---
+
+### BUG-1513: Double XP under dual timer leadership (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (blocked by BUG-1511)
+
+**Problem**: When two devices are both timer leaders (BUG-1511), both independently call `completeSession()` and award XP. The `isCompleting` lock only protects within a single JS context.
+
+**Fix**: Resolves automatically when BUG-1511 is fixed (atomic leadership).
+
+---
+
+### BUG-1514: Auth refresh fails after offline — pending writes permanently orphaned (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: When token expires offline and refresh fails on reconnect, `auth.ts:235` clears the session unconditionally. Pending sync writes are orphaned with no auth token and permanently fail.
+
+**Fix**: Don't clear session on first refresh failure. Retry 2-3 times with backoff. Only clear if user is truly logged out.
+
+---
+
+### BUG-1515: Undo task completion doesn't revert XP or stats (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: Complete task → earn XP. Ctrl+Z → task goes back to todo. XP stays. No `onTaskUncompleted` hook exists. Exploitable: complete-undo-complete loop for infinite XP.
+
+**Fix**: Add `onTaskUncompleted` hook that deducts XP and decrements `tasksCompleted` stat. Wire into the `wasDone && isNowNotDone` branch.
+
+---
+
+### BUG-1516: Multi-device edit overwrites — whole-document LWW loses field-level changes (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: Sync payload includes ALL task fields, not just changed ones. Edit title on phone, edit description on desktop → last save overwrites the other's field. Silent data loss.
+
+**Fix**: Track which fields changed in `updateTask`, send only those in the sync payload.
+
+---
+
+### BUG-1517: Auth token expires mid-sync — remaining operations permanently abandoned (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: 401 during sync is classified as `permanent` error. Retry set to 1 year out. All remaining queued operations also fail and get abandoned. No token refresh attempted.
+
+**Fix**: Add `auth` error category in retry strategy. On 401, call `supabase.auth.refreshSession()` before retrying. Only permanent-fail if refresh itself fails.
+
+---
+
 ### ~~BUG-1502~~: "Sync external calendars" button doesn't sync Google Calendar (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-12)
@@ -1625,6 +1725,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
 | ~~**TASK-1501**~~ | **P3** | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10) |
 | ~~**BUG-1504**~~ | **P2** | ✅ **Canvas inbox: left-click multi-selects tasks unexpectedly, can't deselect** (✅ DONE 2026-03-12) |
+| **BUG-1508** | **P2** | 🔄 **KDE Widget: pinned task chip click does nothing — searches only filtered tasks, misses match** (🔄 IN PROGRESS 2026-03-13) |
 | **BUG-1506** | **P0** | 🔄 **Edit Task: description loses bullet points on save — htmlToMarkdown regex truncation** (🔄 IN PROGRESS 2026-03-13) |
 | ~~**BUG-1505**~~ | **P2** | ✅ **KDE Widget: Nanny popup only shows ~2 tasks — increase limit and sort by due date** (✅ DONE 2026-03-13) |
 | **TASK-1499** | **P2** | 🔄 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (🔄 IN PROGRESS 2026-03-10) |
@@ -1754,6 +1855,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1493**~~ | **P2** | ~~**Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression**~~ (✅ DONE 2026-03-09) |
 | ~~**TASK-1492**~~ | **P2** | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09) |
 | ~~**BUG-1503**~~ | **P2** | ~~**Tauri desktop: tasks not updating when adding/deleting on canvas or canvas inbox — WebKitGTK dataTransfer.getData() returns empty, needed dragData singleton fallback**~~ (✅ DONE 2026-03-12) |
+| **TASK-1507** | **P2** | **Quick Sort swipe UX polish — center approval notification with fun animation + add "nothing set" reminder popup on accidental swipe** |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---
@@ -1973,9 +2075,9 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1157: Extract Magic Numbers to Named Constants (📋 PLANNED)
+### TASK-1157: Extract Magic Numbers to Named Constants (🔄 IN PROGRESS)
 
-**Priority**: P3-LOW | **Status**: 📋 PLANNED
+**Priority**: P3-LOW | **Status**: 🔄 IN PROGRESS
 
 **Problem**: Magic numbers scattered throughout code.
 

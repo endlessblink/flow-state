@@ -254,7 +254,11 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
     switch (operation.operation) {
       case 'create': {
-        const insertData = { id: entityId, ...payload }
+        // BUG-1509: Explicitly clear soft-delete flags on CREATE upsert.
+        // When undo re-creates a previously soft-deleted task, the DB row may still have
+        // is_deleted=true. Merging these defaults ensures the upsert always resets the
+        // deletion state, so fetchTasks (.eq('is_deleted', false)) sees the task on refresh.
+        const insertData = { is_deleted: false, deleted_at: null, id: entityId, ...payload }
         // BUG-1212: Use upsert instead of insert to handle duplicate key gracefully.
         // When the direct save (createTask → saveSpecificTasks) succeeds before the
         // sync queue processes, the row already exists. Using upsert makes this

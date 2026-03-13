@@ -14,7 +14,8 @@ import i18n from '@/i18n'
 // TASK-1406: Extracted composables
 import { useTimerAudio } from '@/composables/timer/useTimerAudio'
 import { useTimerNotifications } from '@/composables/timer/useTimerNotifications'
-import { useTimerSync } from '@/composables/timer/useTimerSync'
+import { useTimerSync, DEVICE_LEADER_TIMEOUT_MS } from '@/composables/timer/useTimerSync'
+import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 
 const getT = () => (i18n.global as unknown as { t: (key: string) => string }).t
 
@@ -172,8 +173,7 @@ export const useTimerStore = defineStore('timer', () => {
     const lastSeen = typeof session.deviceLeaderLastSeen === 'number'
       ? session.deviceLeaderLastSeen
       : new Date(session.deviceLeaderLastSeen).getTime()
-    // DEVICE_LEADER_TIMEOUT_MS = 30000 (moved to useTimerSync)
-    return (Date.now() - lastSeen) < 30000
+    return (Date.now() - lastSeen) < DEVICE_LEADER_TIMEOUT_MS
   })
 
   const tabTitleWithTimer = computed(() => {
@@ -355,7 +355,7 @@ export const useTimerStore = defineStore('timer', () => {
       completedSessions.value.push(stoppedSession)
       // BUG-1318: Track stopped session to prevent resurrection
       completedSessionIds.add(stoppedSession.id)
-      setTimeout(() => completedSessionIds.delete(stoppedSession.id), 120_000)
+      setTimeout(() => completedSessionIds.delete(stoppedSession.id), PENDING_WRITE_TIMEOUT_MS)
       currentSession.value = null
       sync.broadcastSession() // For same-browser tabs
       sync.resumeFollowerPoll() // Resume polling to detect new sessions
@@ -380,7 +380,7 @@ export const useTimerStore = defineStore('timer', () => {
       // BUG-1318: Track this session as completed to prevent stale Realtime resurrection
       completedSessionIds.add(session.id)
       // Clean up old entries after 2 minutes (they won't arrive later than that)
-      setTimeout(() => completedSessionIds.delete(session.id), 120_000)
+      setTimeout(() => completedSessionIds.delete(session.id), PENDING_WRITE_TIMEOUT_MS)
 
       // BUG-1185: Save completed state to DB - prevents sync from picking up stale active session
       // Previously only stopTimer() saved to DB, causing completeSession to leave is_active=true in Supabase

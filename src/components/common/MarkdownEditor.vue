@@ -240,7 +240,7 @@ watch(internalValue, updateTextDirection, { immediate: true })
 
 .markdown-editor[dir="rtl"] :deep(.tiptap ul),
 .markdown-editor[dir="rtl"] :deep(.tiptap ol) {
-  padding-inline-start: 0;
+  padding-inline-start: var(--space-4);
   padding-inline-end: var(--space-6);
 }
 

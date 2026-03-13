@@ -6,10 +6,11 @@ import { watch, type Ref } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
 import type { PomodoroSession } from '@/stores/timer'
 import type { getCrossTabSync } from '@/composables/useCrossTabSync'
+import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 
 // Constants for device synchronization (moved from timer.ts)
 const DEVICE_HEARTBEAT_INTERVAL_MS = 10000 // 10 seconds
-const DEVICE_LEADER_TIMEOUT_MS = 30000 // 30 seconds
+export const DEVICE_LEADER_TIMEOUT_MS = 30000 // 30 seconds
 // TASK-1009: Polling fallback for followers (mobile PWA Realtime WebSocket may fail)
 // BUG-1122: Also check for stale leadership and take over if needed
 // Polls every 3 seconds when not the leader to sync timer state
@@ -297,7 +298,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
         }
         // Track as completed to prevent resurrection via stale heartbeat
         completedSessionIds.add(newDoc.id)
-        setTimeout(() => completedSessionIds.delete(newDoc.id), 120_000)
+        setTimeout(() => completedSessionIds.delete(newDoc.id), PENDING_WRITE_TIMEOUT_MS)
         return
       }
 
@@ -432,7 +433,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
             // reload where deviceId changes), bypassing the own-echo guard at line 345.
             // Without this, the echo unconditionally kills the newly-started session.
             completedSessionIds.add(existing.id)
-            setTimeout(() => completedSessionIds.delete(existing.id), 120_000)
+            setTimeout(() => completedSessionIds.delete(existing.id), PENDING_WRITE_TIMEOUT_MS)
           }
         } catch (clearError) {
           console.warn('🍅 [TIMER] Failed to clear existing session:', clearError)

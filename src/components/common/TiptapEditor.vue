@@ -549,13 +549,13 @@ const insertTable = () => {
 }
 
 :deep(.tiptap ul) {
-  padding-left: 1.5em;
+  padding-inline-start: 1.5em;
   margin: 0.5em 0;
   list-style-type: disc;
 }
 
 :deep(.tiptap ol) {
-  padding-left: 1.5em;
+  padding-inline-start: 1.5em;
   margin: 0.5em 0;
   list-style-type: decimal;
 }
@@ -566,7 +566,7 @@ const insertTable = () => {
 
 :deep(.tiptap ul[data-type="taskList"]) {
   list-style: none;
-  padding-left: 0;
+  padding-inline-start: 0;
 }
 
 :deep(.tiptap ul[data-type="taskList"] li) {
@@ -621,9 +621,9 @@ const insertTable = () => {
 }
 
 :deep(.tiptap blockquote) {
-  border-left: 3px solid var(--primary-400);
-  padding-left: 1em;
-  margin-left: 0;
+  border-inline-start: 3px solid var(--primary-400);
+  padding-inline-start: 1em;
+  margin-inline-start: 0;
   color: var(--text-muted);
   font-style: italic;
 }

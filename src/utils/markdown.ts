@@ -236,20 +236,22 @@ export function htmlToMarkdown(html: string): string {
 
   // List items: <li> -> - (task items with data-type="taskItem" already handled at top of function)
   // BUG-276 FIX: Only handle regular list items here, task items are processed earlier
-  markdown = markdown.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n')
+  // BUG-1506: Use [\s\S]*? instead of .*? to match across newlines (TipTap wraps content in <p> inside <li>)
+  markdown = markdown.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1\n')
 
   // Remove list wrappers
   markdown = markdown.replace(/<\/?ul[^>]*>/gi, '')
   markdown = markdown.replace(/<\/?ol[^>]*>/gi, '')
 
   // Paragraphs: <p> -> text with newline
-  markdown = markdown.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n')
+  // BUG-1506: Use [\s\S]*? to match <p> content across newlines
+  markdown = markdown.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n')
 
   // Line breaks
   markdown = markdown.replace(/<br\s*\/?>/gi, '\n')
 
   // Blockquotes
-  markdown = markdown.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '> $1\n')
+  markdown = markdown.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, '> $1\n')
 
   // Remove any remaining HTML tags
   markdown = markdown.replace(/<[^>]+>/g, '')

@@ -6,6 +6,7 @@ import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
 import type { WeekDay } from '@/composables/calendar/useCalendarWeekView'
 import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
 import { truncateUrlsInText } from '@/utils/urlTruncate'
+import { CALENDAR_SLOT_HEIGHT_PX } from '@/constants/calendar'
 
 const props = defineProps<{
   weekDays: WeekDay[]
@@ -147,7 +148,7 @@ const externalEventsByCell = computed(() => {
 
 // Absolute positioning for time-spanning blocks (like Google Calendar)
 // Overlapping events split into side-by-side columns using event.column / event.totalColumns
-const HALF_HOUR_HEIGHT = 30
+const HALF_HOUR_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
 const getWeekEventCellStyle = (event: WeekEvent) => {
   const topOffset = (event.startSlot % 2) * HALF_HOUR_HEIGHT
   const height = event.slotSpan * HALF_HOUR_HEIGHT

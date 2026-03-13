@@ -135,6 +135,7 @@
     "db:backup:tasks": "bash scripts/backup-db.sh --tables tasks,groups",
     "mp:archive": "node scripts/utils/archive-done-tasks.cjs",
     "mp:archive:dry": "node scripts/utils/archive-done-tasks.cjs --dry-run",
+    "cf:purge": "ssh -i ~/.ssh/id_ed25519 root@84.46.253.137 'cd /opt/supabase && bash -s' < scripts/purge-cf-cache.sh",
     "clean:preview": "node scripts/clean-root.js --dry-run",
     "clean:tests": "node scripts/clean-root.js --type=tests",
     "clean:builds": "node scripts/clean-root.js --type=builds",

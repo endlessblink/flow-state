@@ -704,13 +704,14 @@ button svg {
    NAIVE UI DATE PICKER - DARK THEME OVERRIDE (BUG-367/TASK-368)
    ============================================================================= */
 
-/* Date picker panel - opaque dark background matching context menu */
+/* Date picker panel - opaque dark background matching context menu
+   NOTE: No backdrop-filter here — date picker is nested inside context menu
+   and submenu which already have blur. Stacking blur causes the calendar to
+   render blurry (BUG-1519). The 92% opaque bg is sufficient. */
 .n-date-picker-panel,
 .n-date-panel,
 .n-date-panel-calendar {
     background: var(--overlay-component-bg) !important;
-    backdrop-filter: var(--overlay-component-backdrop);
-    -webkit-backdrop-filter: var(--overlay-component-backdrop);
     border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08)) !important;
     border-radius: var(--radius-lg, 12px) !important;
 }
@@ -926,8 +927,6 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
 .n-popover-content,
 .n-popover__content {
     background: var(--overlay-component-bg) !important;
-    backdrop-filter: var(--overlay-component-backdrop);
-    -webkit-backdrop-filter: var(--overlay-component-backdrop);
     border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08)) !important;
     border-radius: var(--radius-lg, 12px) !important;
 }
@@ -935,7 +934,5 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
 /* Popover arrow (caret) matches background */
 .n-popover-arrow-wrapper .n-popover-arrow {
     background: var(--overlay-component-bg) !important;
-    backdrop-filter: var(--overlay-component-backdrop);
-    -webkit-backdrop-filter: var(--overlay-component-backdrop);
 }
 

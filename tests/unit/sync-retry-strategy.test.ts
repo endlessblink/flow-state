@@ -66,7 +66,7 @@ describe('classifyError — existing classifications remain correct', () => {
   })
 
   it('classifies auth errors as permanent', () => {
-    expect(classifyError('401 Unauthorized')).toBe('permanent')
+    expect(classifyError('401 Unauthorized')).toBe('auth')
     expect(classifyError('403 Forbidden')).toBe('permanent')
   })
 

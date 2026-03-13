@@ -218,19 +218,38 @@ export const useAuthStore = defineStore('auth', () => {
                 window.addEventListener('online', async () => {
                   console.log('[AUTH] Back online — attempting session refresh after offline grace period')
                   if (!supabase) return
-                  const { data: onlineData, error: onlineError } = await supabase.auth.refreshSession()
-                  if (!onlineError && onlineData.session) {
-                    console.log('[AUTH] Session refreshed successfully after coming online')
-                    session.value = onlineData.session
-                    user.value = onlineData.session.user
-                    isOfflineGracePeriod.value = false
-                    if (onlineData.session.expires_at) {
-                      scheduleTokenRefresh(onlineData.session.expires_at)
+                  // BUG-1514: Retry up to 3 times with exponential backoff (1s, 3s, 9s)
+                  // before giving up and clearing the session. A single raw refresh attempt
+                  // could fail transiently (server not yet reachable right as the 'online'
+                  // event fires), permanently orphaning any pending sync-queue writes.
+                  const maxAttempts = 3
+                  let lastError: AuthError | null = null
+                  let refreshed = false
+                  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    if (attempt > 1) {
+                      const delay = Math.pow(3, attempt - 1) * 1000 // 1s, 3s, 9s
+                      console.log(`[AUTH] BUG-1514: Retry ${attempt}/${maxAttempts} after ${delay}ms`)
+                      await new Promise(resolve => setTimeout(resolve, delay))
                     }
-                  } else {
-                    console.error('[AUTH] Session refresh failed after coming online:', onlineError)
-                    // Server is reachable but refresh still failed — now it's a real failure
-                    error.value = onlineError
+                    const { data: onlineData, error: onlineError } = await supabase.auth.refreshSession()
+                    if (!onlineError && onlineData.session) {
+                      console.log(`[AUTH] Session refreshed successfully after coming online (attempt ${attempt})`)
+                      session.value = onlineData.session
+                      user.value = onlineData.session.user
+                      isOfflineGracePeriod.value = false
+                      if (onlineData.session.expires_at) {
+                        scheduleTokenRefresh(onlineData.session.expires_at)
+                      }
+                      refreshed = true
+                      break
+                    }
+                    console.warn(`[AUTH] BUG-1514: Session refresh attempt ${attempt}/${maxAttempts} failed:`, onlineError)
+                    lastError = onlineError
+                  }
+                  if (!refreshed) {
+                    console.error('[AUTH] BUG-1514: Session refresh failed after all retries — user must re-authenticate. Pending sync writes are at risk.', lastError)
+                    // Server is reachable but refresh still failed after all retries — real failure
+                    error.value = lastError as AuthError
                     initializationFailed.value = true
                     session.value = null
                     user.value = null

@@ -129,7 +129,8 @@ export function formatTimeUntilRetry(nextRetryAt: number): string {
 export type ErrorClassification =
   | 'transient'   // Network issues, timeouts - retry with backoff
   | 'conflict'    // Version conflict - needs resolution
-  | 'permanent'   // Auth failed, not found - don't retry
+  | 'auth'        // JWT expired/invalid - refresh token and retry
+  | 'permanent'   // Not found, bad request - don't retry
   | 'unknown'     // Unknown error - retry with backoff
 
 /**
@@ -141,6 +142,24 @@ export type ErrorClassification =
 export function classifyError(error: unknown): ErrorClassification {
   const message = error instanceof Error ? error.message : String(error)
   const lowerMessage = message.toLowerCase()
+
+  // BUG-1517: Auth errors — JWT expired or invalid token. Must be checked BEFORE the
+  // permanent block so 401/unauthorized triggers token-refresh retry, not abandonment.
+  // Supabase errors may surface as HTTP status codes in the message string or as a
+  // numeric `status` field on the error object.
+  const httpStatus = (error && typeof error === 'object' && 'status' in error)
+    ? (error as { status: unknown }).status
+    : undefined
+  if (
+    httpStatus === 401 ||
+    lowerMessage.includes('jwt expired') ||
+    lowerMessage.includes('invalid jwt') ||
+    lowerMessage.includes('token is expired') ||
+    lowerMessage.includes('refresh_token_not_found') ||
+    (lowerMessage.includes('401') && (lowerMessage.includes('unauthorized') || lowerMessage.includes('jwt')))
+  ) {
+    return 'auth'
+  }
 
   // Network/transient errors - should retry
   if (
@@ -174,14 +193,13 @@ export function classifyError(error: unknown): ErrorClassification {
     return 'conflict'
   }
 
-  // Permanent errors - don't retry (data validation, auth, not found)
+  // Permanent errors - don't retry (data validation, not found, bad request)
+  // Note: 401/unauthorized handled above as 'auth' — not listed here
   if (
-    lowerMessage.includes('401') ||
     lowerMessage.includes('403') ||
     lowerMessage.includes('404') ||
     lowerMessage.includes('400') ||  // Bad request (validation errors)
     lowerMessage.includes('not found') ||
-    lowerMessage.includes('unauthorized') ||
     lowerMessage.includes('forbidden') ||
     lowerMessage.includes('invalid') ||
     lowerMessage.includes('malformed') ||
@@ -214,6 +232,18 @@ export function getRetryConfigForError(
       // Fewer retries for conflicts (user intervention likely needed)
       return {
         ...DEFAULT_RETRY_CONFIG,
+        maxRetries: 3
+      }
+
+    case 'auth':
+      // BUG-1517: Short retry window for auth errors — refresh token and retry quickly.
+      // After 3 failed refresh attempts the operation is promoted to permanent failure
+      // in processOperation (useSyncOrchestrator.ts), so maxRetries here is just a cap.
+      return {
+        ...DEFAULT_RETRY_CONFIG,
+        initialDelayMs: 1000,
+        maxDelayMs: 5000,
+        backoffMultiplier: 2,
         maxRetries: 3
       }
 

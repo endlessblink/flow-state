@@ -181,6 +181,9 @@ export interface SyncResult {
   /** Whether this was a conflict */
   isConflict?: boolean
 
+  /** Whether this was an auth error (token expired) — triggers refresh + immediate retry */
+  isAuthError?: boolean
+
   /** Whether we should retry */
   shouldRetry?: boolean
 

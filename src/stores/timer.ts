@@ -40,7 +40,8 @@ export const useTimerStore = defineStore('timer', () => {
   // Initialize database composable
   const {
     fetchActiveTimerSession,
-    saveActiveTimerSession
+    saveActiveTimerSession,
+    claimLeadership,
   } = useSupabaseDatabase()
 
   const settingsStore = useSettingsStore()
@@ -104,6 +105,7 @@ export const useTimerStore = defineStore('timer', () => {
     currentSession, completedSessions, isLeader, isDeviceLeader, hasLoadedSession,
     deviceId, completedSessionIds, crossTabSync,
     fetchActiveTimerSession, saveActiveTimerSession,
+    claimLeadership,
     requestWakeLock, releaseWakeLock,
     authStore,
     onCountdownComplete: () => completeSession()

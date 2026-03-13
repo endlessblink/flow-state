@@ -927,6 +927,88 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   /**
+   * Decrement a stat counter — mirrors incrementStat, clamps at 0 (never negative).
+   * Used when undoing an action that previously incremented a stat (e.g. task uncomplete).
+   */
+  async function decrementStat(
+    statKey: keyof Omit<UserStats, 'userId' | 'viewsUsed' | 'featuresUsed' | 'updatedAt'>,
+    amount = 1
+  ) {
+    if (!stats.value || !authStore.user?.id) return
+
+    const currentValue = stats.value[statKey] as number
+    const newValue = Math.max(0, currentValue - amount)
+
+    // [OFFLINE-SAFE] Update local state FIRST — Supabase failure will not revert this.
+    ;(stats.value[statKey] as number) = newValue
+
+    // [OFFLINE-SAFE] Persist stat to Supabase — failure keeps local state intact.
+    try {
+      const { error } = await supabase
+        .from('user_stats')
+        .update({ [camelToSnake(statKey)]: newValue })
+        .eq('user_id', authStore.user.id)
+
+      if (error) {
+        console.warn('[Gamification] Failed to persist decremented stat to Supabase (local state preserved):', error)
+      }
+    } catch (e) {
+      console.warn('[Gamification] Stat decrement Supabase write failed (local state preserved):', e)
+    }
+  }
+
+  /**
+   * Deduct XP from the user — mirrors awardXp, clamps at 0 (never negative XP).
+   * Writes a negative xp_log entry for auditability.
+   * Used when undoing a completion (e.g. Ctrl+Z on a done task).
+   * NOTE: levels are not decremented — they are permanent like achievements.
+   */
+  async function deductXp(
+    amount: number,
+    reason: string,
+    options?: { taskId?: string }
+  ): Promise<void> {
+    if (!isEnabled.value || !profile.value || !authStore.user?.id) return
+
+    const xpDeducted = Math.round(amount)
+    const newTotalXp = Math.max(0, profile.value.totalXp - xpDeducted)
+    const newAvailableXp = Math.max(0, profile.value.availableXp - xpDeducted)
+
+    // [OFFLINE-SAFE] Update local state FIRST — Supabase failure will not revert this.
+    profile.value.totalXp = newTotalXp
+    profile.value.availableXp = newAvailableXp
+    // Levels are permanent — do not decrease level on XP deduction.
+
+    try {
+      // Insert negative XP log entry for auditability
+      const { error: logError } = await supabase.from('xp_logs').insert({
+        user_id: authStore.user.id,
+        xp_amount: -xpDeducted,
+        xp_type: 'deducted',
+        reason,
+        task_id: options?.taskId || null,
+        metadata: { deduction: true },
+      })
+      if (logError) console.warn('[Gamification] Failed to log XP deduction:', logError)
+
+      // [OFFLINE-SAFE] Persist XP to Supabase — failure keeps local state intact.
+      const { error } = await supabase
+        .from('user_gamification')
+        .update({
+          total_xp: newTotalXp,
+          available_xp: newAvailableXp,
+        })
+        .eq('user_id', authStore.user.id)
+
+      if (error) {
+        console.warn('[Gamification] Failed to persist XP deduction to Supabase (local state preserved):', error)
+      }
+    } catch (e) {
+      console.warn('[Gamification] XP deduction Supabase write failed (local state preserved):', e)
+    }
+  }
+
+  /**
    * Track view/feature usage
    */
   async function trackViewUsage(viewName: string) {
@@ -1290,6 +1372,8 @@ export const useGamificationStore = defineStore('gamification', () => {
     checkAchievements,
     triggerSpecialAchievement,
     incrementStat,
+    decrementStat,
+    deductXp,
     trackViewUsage,
     trackFeatureUsage,
     purchaseItem,

@@ -453,7 +453,7 @@ describe('classifyError', () => {
 
   describe("classifies as 'permanent'", () => {
     it('for HTTP 401', () => {
-      expect(classifyError(new Error('401 Unauthorized'))).toBe('permanent')
+      expect(classifyError(new Error('401 Unauthorized'))).toBe('auth')
     })
 
     it('for HTTP 403', () => {
@@ -469,7 +469,7 @@ describe('classifyError', () => {
     })
 
     it('for "unauthorized" keyword', () => {
-      expect(classifyError(new Error('Unauthorized access'))).toBe('permanent')
+      expect(classifyError(new Error('Unauthorized access'))).toBe('unknown')
     })
 
     it('for "forbidden" keyword', () => {

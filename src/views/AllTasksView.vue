@@ -101,6 +101,16 @@
       @clear-selection="handleClearSelectionFromContext"
     />
 
+    <!-- TASK-1520: Recurrence-aware delete modal -->
+    <RecurrenceDeleteModal
+      :is-open="showRecurrenceDeleteModal"
+      :task-title="recurrenceDeleteTaskTitle"
+      :recurrence-rule="recurrenceDeleteTaskRule"
+      @skip="handleRecurrenceSkip"
+      @stop="handleRecurrenceStop"
+      @cancel="showRecurrenceDeleteModal = false"
+    />
+
     <!-- Confirmation Modal -->
     <ConfirmationModal
       :is-open="showConfirmModal"
@@ -136,6 +146,7 @@ import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
+import RecurrenceDeleteModal from '@/components/common/RecurrenceDeleteModal.vue'
 import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
@@ -183,6 +194,12 @@ const confirmText = ref('Delete')
 const confirmActionFn = ref<(() => void | Promise<void>) | null>(null)
 const showBatchEditModal = ref(false)
 const batchEditTaskIds = ref<string[]>([])
+
+// TASK-1520: Recurrence delete modal state
+const showRecurrenceDeleteModal = ref(false)
+const recurrenceDeleteTaskId = ref<string | null>(null)
+const recurrenceDeleteTaskTitle = ref('')
+const recurrenceDeleteTaskRule = ref<import('@/types/tasks').SimpleRecurrenceRule | null>(null)
 
 // Computed Tasks - Access store's computed directly (maintains full reactivity)
 const filteredTasks = computed(() => {
@@ -498,6 +515,17 @@ const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 const handleConfirmDelete = (taskId: string) => {
+  // TASK-1520: Check if task is recurring
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const task = allTasks.find(t => t.id === taskId)
+  if (task?.recurrenceRule) {
+    recurrenceDeleteTaskId.value = taskId
+    recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
+    recurrenceDeleteTaskRule.value = task.recurrenceRule
+    showRecurrenceDeleteModal.value = true
+    return
+  }
+
   taskToDelete.value = taskId
   confirmTitle.value = 'Delete Task'
   confirmMessage.value = 'Are you sure you want to delete this task? You can press Ctrl+Z to undo.'
@@ -512,8 +540,18 @@ const handleConfirmDelete = (taskId: string) => {
 }
 
 const handleConfirmPermanentDelete = async (taskId: string) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const task = allTasks.find(t => t.id === taskId)
   if (!task) return
+
+  // TASK-1520: Check if task is recurring
+  if (task.recurrenceRule) {
+    recurrenceDeleteTaskId.value = taskId
+    recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
+    recurrenceDeleteTaskRule.value = task.recurrenceRule
+    showRecurrenceDeleteModal.value = true
+    return
+  }
 
   confirmTitle.value = 'Permanently Delete Task'
   confirmMessage.value = `Permanently delete "${task.title}"? This performs a hard delete from storage.`
@@ -523,6 +561,31 @@ const handleConfirmPermanentDelete = async (taskId: string) => {
     await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
   }
   showConfirmModal.value = true
+}
+
+// TASK-1520: Recurrence delete handlers
+const handleRecurrenceSkip = async () => {
+  const taskId = recurrenceDeleteTaskId.value
+  showRecurrenceDeleteModal.value = false
+  recurrenceDeleteTaskId.value = null
+  if (!taskId) return
+  try {
+    await taskStore.skipRecurringOccurrence(taskId)
+  } catch (error) {
+    console.error('[AllTasksView] Skip recurring occurrence failed:', error)
+  }
+}
+
+const handleRecurrenceStop = async () => {
+  const taskId = recurrenceDeleteTaskId.value
+  showRecurrenceDeleteModal.value = false
+  recurrenceDeleteTaskId.value = null
+  if (!taskId) return
+  try {
+    await taskStore.stopRecurrence(taskId)
+  } catch (error) {
+    console.error('[AllTasksView] Stop recurrence failed:', error)
+  }
 }
 
 const executeConfirmAction = async () => {

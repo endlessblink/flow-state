@@ -197,9 +197,12 @@
     </div>
 
     <!-- Action Feedback Overlay -->
-    <Transition name="fade">
-      <div v-if="actionFeedback" class="feedback-overlay" :class="actionFeedback.type">
+    <Transition name="celebration">
+      <div v-if="actionFeedback" class="feedback-overlay" :class="actionFeedback.type" aria-live="assertive">
+        <div class="celebration-ring" />
+        <CheckCircle v-if="actionFeedback.type === 'success'" :size="28" class="celebration-icon" />
         <span class="feedback-text">{{ actionFeedback.text }}</span>
+        <span v-if="actionFeedback.type === 'success'" class="celebration-sparkle" aria-hidden="true">✨</span>
       </div>
     </Transition>
 
@@ -277,6 +280,24 @@
         </div>
       </div>
     </BaseModal>
+    <!-- Nothing Set Reminder -->
+    <BaseModal
+      :is-open="showNothingSetReminder"
+      size="sm"
+      :show-footer="false"
+      :show-header="false"
+      @close="cancelSaveReminder"
+    >
+      <div class="nothing-set-content">
+        <AlertCircle :size="32" class="nothing-set-icon" />
+        <h3 class="nothing-set-title">No details set</h3>
+        <p class="nothing-set-desc">This task has no priority, due date, or project. Save it anyway?</p>
+        <div class="nothing-set-actions">
+          <button class="ns-set-btn" @click="cancelSaveReminder">Let me set something</button>
+          <button class="ns-save-btn" @click="confirmSaveAnyway">Save anyway</button>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -286,7 +307,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   Zap, X, CheckCircle, Undo2, Plus, Save, Trash2, Pencil, SkipForward,
-  CalendarDays, FolderOpen
+  CalendarDays, FolderOpen, AlertCircle
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickCapture } from '@/composables/useQuickCapture'
@@ -318,7 +339,13 @@ const showProjectModal = ref(false)
 const showEditModal = ref(false)
 const showEditPanel = ref(false)
 const showDeleteConfirm = ref(false)
+const showNothingSetReminder = ref(false)
 const actionFeedback = ref<{ text: string; type: 'success' | 'info' | 'danger' | 'warning' } | null>(null)
+const celebrationLabels = ['Sorted!', 'Nice!', 'Got it!', 'Done!', 'Sweet!']
+const celebrationLabel = ref('Sorted!')
+function pickCelebrationLabel() {
+  celebrationLabel.value = celebrationLabels[Math.floor(Math.random() * celebrationLabels.length)]
+}
 const sessionSummary = ref<SessionSummary | null>(null)
 const taskToEdit = ref<Task | null>(null)
 
@@ -376,8 +403,29 @@ function handleCategorize(projectId: string) {
 
 function handleSave() {
   if (!currentTask.value) return
-  showFeedback('Saved!', 'success')
+  const task = currentTask.value
+  const hasNothing = !task.priority && !task.dueDate && !task.projectId && !isTaskDirty.value
+  if (hasNothing) {
+    showNothingSetReminder.value = true
+    return
+  }
+  _doSave()
+}
+
+function _doSave() {
+  if (!currentTask.value) return
+  pickCelebrationLabel()
+  showFeedback(celebrationLabel.value, 'success')
   saveTask()
+}
+
+function confirmSaveAnyway() {
+  showNothingSetReminder.value = false
+  _doSave()
+}
+
+function cancelSaveReminder() {
+  showNothingSetReminder.value = false
 }
 
 async function handleTaskUpdate(updates: Partial<Task>) {
@@ -1260,26 +1308,92 @@ const currentTaskProject = computed(() => {
 .primary-button:hover { background: var(--state-hover-bg); }
 
 /* ================================
-   FEEDBACK OVERLAY
+   FEEDBACK OVERLAY (Celebration)
    ================================ */
 .feedback-overlay {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: var(--space-4) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-8);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-2xl);
-  font-size: var(--text-xl);
-  font-weight: var(--font-bold);
-  pointer-events: none;
   z-index: var(--z-modal);
+  pointer-events: none;
 }
 
-.feedback-overlay.success { background: var(--success-border-active); color: white; }
-.feedback-overlay.danger { background: var(--color-danger); color: white; }
-.feedback-overlay.warning { background: var(--color-priority-medium); color: white; }
-.feedback-overlay.info { background: var(--glass-bg-heavy); color: var(--text-primary); }
+.feedback-overlay.success { color: var(--brand-primary); border-color: var(--brand-primary); }
+.feedback-overlay.danger { color: var(--color-danger); border-color: var(--color-danger); }
+.feedback-overlay.warning { color: var(--color-priority-medium); border-color: var(--color-priority-medium); }
+.feedback-overlay.info { color: var(--text-primary); border-color: var(--glass-border); }
 
+.feedback-overlay .celebration-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--radius-2xl);
+  border: 2px solid var(--brand-primary);
+  opacity: 0;
+  animation: ringPulse 0.7s ease-out forwards;
+  pointer-events: none;
+}
+
+.feedback-overlay .celebration-icon {
+  color: var(--brand-primary);
+}
+
+.feedback-text {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  letter-spacing: -0.01em;
+}
+
+.celebration-sparkle {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  font-size: var(--text-xl);
+  animation: sparkleSpin 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.celebration-enter-active {
+  animation: celebrateIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.celebration-leave-active {
+  animation: celebrateOut var(--duration-slow) ease forwards;
+}
+
+@keyframes celebrateIn {
+  0%   { transform: translate(-50%, -50%) scale(0.4) rotate(-4deg); opacity: 0; }
+  60%  { transform: translate(-50%, -50%) scale(1.08) rotate(2deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes celebrateOut {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+}
+
+@keyframes ringPulse {
+  0%   { transform: scale(1); opacity: 0.8; }
+  60%  { transform: scale(1.25); opacity: 0.4; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes sparkleSpin {
+  0%   { transform: scale(0) rotate(-45deg); opacity: 0; }
+  70%  { transform: scale(1.3) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Old fade transition replaced by celebration */
 .fade-enter-active, .fade-leave-active { transition: opacity var(--duration-normal) ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
@@ -1352,6 +1466,72 @@ const currentTaskProject = computed(() => {
 }
 
 .dc-delete-btn:hover { opacity: 0.9; }
+
+/* ================================
+   NOTHING SET REMINDER
+   ================================ */
+.nothing-set-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.nothing-set-icon {
+  color: var(--brand-primary);
+  margin-bottom: var(--space-4);
+}
+
+.nothing-set-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  margin: 0 0 var(--space-2);
+}
+
+.nothing-set-desc {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-6);
+}
+
+.nothing-set-actions {
+  display: flex;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.ns-set-btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-normal) ease;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary);
+  color: var(--brand-primary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.ns-set-btn:hover { background: var(--glass-bg-medium); }
+
+.ns-save-btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-normal) ease;
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+
+.ns-save-btn:hover { background: var(--glass-bg-light); }
 
 /* ================================
    REDUCED MOTION

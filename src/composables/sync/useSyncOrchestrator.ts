@@ -417,6 +417,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       operation,
       error: errorMessage,
       isConflict: classification === 'conflict',
+      isAuthError: classification === 'auth',
       shouldRetry: retryConfig !== null && shouldRetry(operation.retryCount, retryConfig)
     }
   }
@@ -474,6 +475,43 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     await markConflict(operation.id, result.newVersion || 0)
     state.value.lastError = result.error
     console.warn(`⚠️ [SYNC] Conflict: ${operation.entityType}:${operation.entityId.slice(0, 8)}`)
+  } else if (result.isAuthError) {
+    // BUG-1517: JWT expired mid-sync — attempt token refresh and retry immediately.
+    // Supabase's auto-refresh usually handles this, but doesn't fire during active sync.
+    // We cap refresh attempts at 3 to avoid infinite loops; failure promotes to permanent.
+    const AUTH_MAX_REFRESH_ATTEMPTS = 3
+    if (operation.retryCount < AUTH_MAX_REFRESH_ATTEMPTS) {
+      console.warn(`🔑 [SYNC] Auth error for ${operation.entityType}:${operation.entityId.slice(0, 8)} (attempt ${operation.retryCount + 1}/${AUTH_MAX_REFRESH_ATTEMPTS}) — refreshing token`)
+      try {
+        const { error: refreshError } = await supabase.auth.refreshSession()
+        if (refreshError) {
+          // Refresh itself failed — user is truly logged out, give up
+          await markFailed(operation.id, `Auth refresh failed: ${refreshError.message}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
+          state.value.lastError = `Auth refresh failed: ${refreshError.message}`
+          console.error(`❌ [SYNC] Auth refresh failed for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
+          permanentFailureCallbacks.forEach(cb => cb(operation))
+        } else {
+          // Token refreshed — reset to pending with a short delay (1s) so the
+          // next queue cycle picks it up immediately rather than waiting 5s.
+          const nextRetryAt = Date.now() + 1000
+          await markFailed(operation.id, result.error || 'Auth error', nextRetryAt)
+          console.log(`✅ [SYNC] Token refreshed — ${operation.entityType}:${operation.entityId.slice(0, 8)} rescheduled in 1s`)
+        }
+      } catch (refreshException) {
+        // Unexpected error during refresh — treat as permanent
+        const msg = refreshException instanceof Error ? refreshException.message : String(refreshException)
+        await markFailed(operation.id, `Auth refresh exception: ${msg}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
+        state.value.lastError = `Auth refresh exception: ${msg}`
+        console.error(`❌ [SYNC] Auth refresh threw for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
+        permanentFailureCallbacks.forEach(cb => cb(operation))
+      }
+    } else {
+      // Exhausted refresh attempts — user is logged out, mark permanent
+      await markFailed(operation.id, result.error || 'Auth error (max retries)', Date.now() + 365 * 24 * 60 * 60 * 1000)
+      state.value.lastError = result.error
+      console.error(`❌ [SYNC] Auth retries exhausted for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
+      permanentFailureCallbacks.forEach(cb => cb(operation))
+    }
   } else if (result.shouldRetry) {
     // Transient error - schedule retry
     const nextRetryAt = calculateNextRetryTime(operation.retryCount)

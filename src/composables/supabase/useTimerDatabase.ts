@@ -80,9 +80,39 @@ export function useTimerDatabase(ctx: DatabaseContext) {
         }
     }
 
+    /**
+     * BUG-1511: Atomic leadership claim via Supabase RPC.
+     * The RPC performs a conditional UPDATE — it only sets device_leader_id when
+     * the current leader is null, the same device, or the lease has expired.
+     * Returns true if this device was granted leadership, false if another device
+     * holds a fresh lease.
+     */
+    const claimLeadership = async (sessionId: string, deviceId: string): Promise<boolean> => {
+        try {
+            const userId = getUserIdSafe()
+            if (!userId) return false
+
+            const { data, error } = await supabase.rpc('claim_timer_leadership', {
+                p_session_id: sessionId,
+                p_new_leader: deviceId,
+            })
+
+            if (error) {
+                console.error('🍅 [DB] claimLeadership RPC error:', error)
+                return false
+            }
+
+            return data === true
+        } catch (e: unknown) {
+            handleError(e, 'claimLeadership')
+            return false
+        }
+    }
+
     return {
         fetchActiveTimerSession,
         saveActiveTimerSession,
         deleteTimerSession,
+        claimLeadership,
     }
 }

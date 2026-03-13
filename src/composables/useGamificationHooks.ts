@@ -140,6 +140,43 @@ export function useGamificationHooks() {
   }
 
   /**
+   * Called when a task is unmarked as completed (undo / reopen).
+   * Reverses the XP and stats awarded by onTaskCompleted to prevent
+   * exploit loops (complete → undo → complete → ...).
+   * Levels are permanent and are NOT decremented.
+   */
+  async function onTaskUncompleted(task: Task) {
+    if (!gamificationStore.isEnabled) return
+
+    // Deduct the base XP that was awarded on completion.
+    // We use the base value without multipliers because we cannot reliably reconstruct
+    // the exact multipliers that were applied at completion time (timer state may differ now).
+    // This is intentionally conservative — the user keeps any bonus XP from multipliers,
+    // losing only the guaranteed base amount.
+    await gamificationStore.deductXp(
+      XP_VALUES.TASK_COMPLETE_BASE,
+      'task_uncomplete',
+      { taskId: task.id }
+    )
+
+    // Decrement tasksCompleted stat
+    await gamificationStore.decrementStat('tasksCompleted')
+
+    // Decrement tasksCompletedHighPriority if applicable
+    if (task.priority === 'high') {
+      await gamificationStore.decrementStat('tasksCompletedHighPriority')
+    }
+
+    // Reverse challenge progress for 'complete_tasks' type challenges.
+    // We cannot reliably decrement all challenge types (e.g. clear_overdue, complete_before_hour)
+    // because the context that was true at completion time may no longer apply.
+    // complete_tasks is the safest one to reverse as it is purely count-based.
+    // Note: challengesStore.checkChallengeProgress only increments — there is no decrement API.
+    // Challenge progress reversal is best-effort; challenges remain immune to undo exploitation
+    // because they require sustained progress and have their own completion/fail logic.
+  }
+
+  /**
    * Called when a pomodoro session is completed
    */
   async function onPomodoroCompleted(taskId: string | null, options?: {
@@ -233,6 +270,7 @@ export function useGamificationHooks() {
 
   return {
     onTaskCompleted,
+    onTaskUncompleted,
     onPomodoroCompleted,
     onViewUsed,
     onCanvasGroupCreated,

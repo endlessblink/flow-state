@@ -94,6 +94,16 @@
       @close="uiStore.closeShortcutsPanel()"
     />
 
+    <!-- TASK-1520: Recurrence-aware delete modal -->
+    <RecurrenceDeleteModal
+      :is-open="showRecurrenceDeleteModal"
+      :task-title="recurrenceDeleteTaskTitle"
+      :recurrence-rule="recurrenceDeleteTaskRule"
+      @skip="handleRecurrenceSkip"
+      @stop="handleRecurrenceStop"
+      @cancel="showRecurrenceDeleteModal = false"
+    />
+
     <!-- CONFIRMATION MODAL — rendered LAST so it always appears on top of search/other modals -->
     <ConfirmationModal
       :is-open="showConfirmModal"
@@ -125,6 +135,7 @@ import ProjectModal from '@/components/projects/ProjectModal.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
+import RecurrenceDeleteModal from '@/components/common/RecurrenceDeleteModal.vue'
 import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'
 import SearchModal from '@/components/layout/SearchModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
@@ -215,6 +226,14 @@ const showSectionSelectionModal = ref(false)
 const selectedTaskForSection = ref<Task | null>(null)
 const commandPaletteRef = ref<{ open: () => void; close: () => void } | null>(null)
 
+// TASK-1520: Recurrence delete modal state
+const showRecurrenceDeleteModal = ref(false)
+const recurrenceDeleteTaskId = ref<string | null>(null)
+const recurrenceDeleteTaskTitle = ref('')
+const recurrenceDeleteTaskRule = ref<import('@/types/tasks').SimpleRecurrenceRule | null>(null)
+// Track whether the pending action is a permanent delete
+const recurrenceDeleteIsPermanent = ref(false)
+
 // Methods
 const openEditTask = (task: Task) => {
   editingTask.value = task
@@ -257,14 +276,32 @@ const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendar
     }
     confirmDetails.value = ['This will remove the scheduled instance and return the task to the sidebar.']
     showConfirmModal.value = true
+  } else if (task.recurrenceRule) {
+    // TASK-1520: Show recurrence-aware delete dialog
+    recurrenceDeleteTaskId.value = taskId
+    recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
+    recurrenceDeleteTaskRule.value = task.recurrenceRule
+    recurrenceDeleteIsPermanent.value = false
+    showRecurrenceDeleteModal.value = true
   } else {
     confirmDeleteTask(task)
   }
 }
 
 const handleContextMenuPermanentDelete = (taskId: string) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const task = allTasks.find(t => t.id === taskId)
   if (!task) {
+    return
+  }
+
+  if (task.recurrenceRule) {
+    // TASK-1520: Show recurrence-aware delete dialog for permanent delete too
+    recurrenceDeleteTaskId.value = taskId
+    recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
+    recurrenceDeleteTaskRule.value = task.recurrenceRule
+    recurrenceDeleteIsPermanent.value = true
+    showRecurrenceDeleteModal.value = true
     return
   }
 
@@ -279,6 +316,33 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
     showTaskContextMenu.value = false
   }
   showConfirmModal.value = true
+}
+
+// TASK-1520: Recurrence delete handlers
+const handleRecurrenceSkip = async () => {
+  const taskId = recurrenceDeleteTaskId.value
+  showRecurrenceDeleteModal.value = false
+  recurrenceDeleteTaskId.value = null
+  if (!taskId) return
+
+  try {
+    await taskStore.skipRecurringOccurrence(taskId)
+  } catch (error) {
+    console.error('[ModalManager] Skip recurring occurrence failed:', error)
+  }
+}
+
+const handleRecurrenceStop = async () => {
+  const taskId = recurrenceDeleteTaskId.value
+  showRecurrenceDeleteModal.value = false
+  recurrenceDeleteTaskId.value = null
+  if (!taskId) return
+
+  try {
+    await taskStore.stopRecurrence(taskId)
+  } catch (error) {
+    console.error('[ModalManager] Stop recurrence failed:', error)
+  }
 }
 
 const executeConfirmAction = async () => {

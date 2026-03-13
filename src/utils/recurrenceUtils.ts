@@ -717,3 +717,79 @@ export function generateVirtualCalendarEvents(
 
   return virtualEvents
 }
+
+// ============================================================================
+// TASK-1520: Human-readable recurrence rule description
+// ============================================================================
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const NTH_LABELS: Record<number, string> = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', '-1': 'last' }
+
+/**
+ * Returns a human-readable description of a SimpleRecurrenceRule.
+ * Examples:
+ *   "Repeats every day"
+ *   "Repeats every 2 weeks on Monday, Wednesday"
+ *   "Repeats every month on the 15th"
+ *   "Repeats every year, ending after 10 occurrences"
+ */
+export function describeRecurrenceRule(rule: SimpleRecurrenceRule): string {
+  let base = ''
+
+  switch (rule.pattern) {
+    case 'daily':
+      base = rule.interval === 1
+        ? 'Repeats every day'
+        : `Repeats every ${rule.interval} days`
+      break
+
+    case 'weekly': {
+      const intervalPart = rule.interval === 1 ? 'week' : `${rule.interval} weeks`
+      if (rule.weekdays && rule.weekdays.length > 0) {
+        const dayNames = [...rule.weekdays].sort((a, b) => a - b).map(d => DAY_NAMES[d])
+        base = `Repeats every ${intervalPart} on ${dayNames.join(', ')}`
+      } else {
+        base = `Repeats every ${intervalPart}`
+      }
+      break
+    }
+
+    case 'monthly': {
+      const intervalPart = rule.interval === 1 ? 'month' : `${rule.interval} months`
+      if (rule.monthWeekday) {
+        const nth = NTH_LABELS[rule.monthWeekday.nth] || `${rule.monthWeekday.nth}th`
+        const day = DAY_NAMES[rule.monthWeekday.day] || 'day'
+        base = `Repeats every ${intervalPart} on the ${nth} ${day}`
+      } else if (rule.monthDay) {
+        base = `Repeats every ${intervalPart} on the ${ordinal(rule.monthDay)}`
+      } else {
+        base = `Repeats every ${intervalPart}`
+      }
+      break
+    }
+
+    case 'yearly':
+      base = rule.interval === 1
+        ? 'Repeats every year'
+        : `Repeats every ${rule.interval} years`
+      break
+
+    default:
+      base = 'Repeats on a custom schedule'
+  }
+
+  // Append end condition
+  if (rule.endType === 'after_count' && rule.endCount) {
+    base += `, ending after ${rule.endCount} occurrence${rule.endCount !== 1 ? 's' : ''}`
+  } else if (rule.endType === 'on_date' && rule.endDate) {
+    base += `, until ${rule.endDate}`
+  }
+
+  return base
+}
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}

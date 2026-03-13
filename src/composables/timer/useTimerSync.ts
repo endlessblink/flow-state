@@ -47,6 +47,8 @@ export interface TimerSyncDeps {
   crossTabSync: ReturnType<typeof getCrossTabSync>
   fetchActiveTimerSession: () => Promise<PomodoroSession | null>
   saveActiveTimerSession: (session: PomodoroSession, deviceId: string) => Promise<void>
+  // BUG-1511: Atomic leadership claim — returns true if this device was granted leadership
+  claimLeadership: (sessionId: string, deviceId: string) => Promise<boolean>
   requestWakeLock: () => Promise<void>
   releaseWakeLock: () => void
   authStore: { isAuthenticated: boolean } // reactive
@@ -60,6 +62,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
     currentSession, completedSessions, isLeader, isDeviceLeader,
     hasLoadedSession, deviceId, completedSessionIds,
     crossTabSync, fetchActiveTimerSession, saveActiveTimerSession,
+    claimLeadership,
     requestWakeLock, releaseWakeLock, authStore,
     onCountdownComplete
   } = deps
@@ -102,6 +105,19 @@ export function useTimerSync(deps: TimerSyncDeps) {
     }
     isSaving = true
     try {
+      // BUG-1511: Renew leadership lease atomically. If another device has stolen
+      // the lease (race condition at startup), the RPC returns false and we demote.
+      const stillLeader = await claimLeadership(currentSession.value.id, deviceId)
+      if (!stillLeader) {
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Heartbeat: leadership lease lost — demoting to follower')
+        }
+        isDeviceLeader.value = false
+        isLeader.value = false
+        pauseHeartbeat()
+        resumeFollowerPoll()
+        return
+      }
       await saveTimerSessionWithLeadership()
     } finally {
       isSaving = false
@@ -140,10 +156,18 @@ export function useTimerSync(deps: TimerSyncDeps) {
 
       if (leaderIsStale && session.isActive) {
         if (import.meta.env.DEV) {
-          console.log('🍅 [TIMER] Follower poll: Leader heartbeat stale by', Math.floor(timeSinceLeaderSeen / 1000), 'seconds - claiming leadership')
+          console.log('🍅 [TIMER] Follower poll: Leader heartbeat stale by', Math.floor(timeSinceLeaderSeen / 1000), 'seconds - attempting atomic leadership claim')
         }
 
-        // Claim leadership
+        // BUG-1511: Atomic CAS — only become leader if DB confirms the claim
+        const granted = await claimLeadership(session.id, deviceId)
+        if (!granted) {
+          if (import.meta.env.DEV) {
+            console.log('🍅 [TIMER] Follower poll: Leadership claim denied — another device beat us')
+          }
+          return
+        }
+
         isDeviceLeader.value = true
         crossTabSync.claimTimerLeadership()
         isLeader.value = true
@@ -157,9 +181,8 @@ export function useTimerSync(deps: TimerSyncDeps) {
           remainingTime: adjustedTime
         }
 
-        // Start heartbeat to claim in DB
+        // Heartbeat keeps leadership alive (claimLeadership already updated last_seen)
         resumeHeartbeat()
-        await saveTimerSessionWithLeadership()
         pauseFollowerPoll() // Leaders don't poll
 
         if (session.isActive && !session.isPaused) {
@@ -510,26 +533,23 @@ export function useTimerSync(deps: TimerSyncDeps) {
         }
       }
 
-      // If timer already expired while app was closed, silently complete it (no beep)
+      // If timer already expired while app was closed, properly complete it (BUG-1512)
       if (adjustedRemainingTime <= 0) {
-        console.log('🍅 [TIMER] Session already expired on load, silently completing', {
+        console.log('🍅 [TIMER] Session already expired on load, completing with full credit', {
           sessionId: saved.id,
           originalRemaining: saved.remainingTime,
           driftApplied: saved.remainingTime - adjustedRemainingTime
         })
-        // Mark as complete in DB without playing sounds
-        try {
-          const { supabase } = await import('@/services/auth/supabase')
-          if (supabase) {
-            await supabase
-              .from('timer_sessions')
-              .update({ is_active: false, completed_at: new Date().toISOString() })
-              .eq('id', saved.id)
-          }
-        } catch (e) {
-          console.warn('🍅 [TIMER] Failed to mark expired session complete:', e)
+        // Restore the session with remainingTime=0 so completeSession() can find and process it.
+        // This awards XP, increments pomodoro count, and writes pomodoro_history.
+        currentSession.value = {
+          ...saved,
+          startTime: new Date(saved.startTime),
+          remainingTime: 0
         }
-        currentSession.value = null
+        // onCountdownComplete calls completeSession() which handles DB, XP, and history.
+        // completeSession() will set currentSession.value = null when done.
+        onCountdownComplete()
         return // Don't start timer interval for already-expired session
       }
 
@@ -547,21 +567,29 @@ export function useTimerSync(deps: TimerSyncDeps) {
         !saved.deviceLeaderId
 
       if (shouldTakeOverLeadership) {
-        console.log('🍅 [TIMER] Taking over leadership', {
+        console.log('🍅 [TIMER] Attempting atomic leadership claim', {
           reason: saved.deviceLeaderId === deviceId ? 'same device' :
             !saved.deviceLeaderId ? 'no previous leader' :
               `previous leader timed out (${Math.round(timeSinceLeaderSeen / 1000)}s ago)`,
           newLeaderId: deviceId
         })
-        isDeviceLeader.value = true
-        // Claim cross-tab leadership
-        crossTabSync.claimTimerLeadership()
-        isLeader.value = true
-        // Start heartbeat to update DB with our deviceId
-        resumeHeartbeat()
-        // Save immediately to claim leadership in DB
-        await saveTimerSessionWithLeadership()
-        resumeCountdown()
+
+        // BUG-1511: Atomic CAS — only become leader if DB confirms the claim
+        const granted = await claimLeadership(saved.id, deviceId)
+        if (!granted) {
+          console.log('🍅 [TIMER] Leadership claim denied on init — running as follower')
+          isDeviceLeader.value = false
+          resumeCountdown()
+          resumeFollowerPoll()
+        } else {
+          isDeviceLeader.value = true
+          // Claim cross-tab leadership
+          crossTabSync.claimTimerLeadership()
+          isLeader.value = true
+          // Heartbeat keeps the lease alive going forward
+          resumeHeartbeat()
+          resumeCountdown()
+        }
       } else {
         console.log('🍅 [TIMER] Running as follower, leader is still active', {
           leaderId: saved.deviceLeaderId,
@@ -680,10 +708,27 @@ export function useTimerSync(deps: TimerSyncDeps) {
       const leaderIsStale = timeSinceLeaderSeen > DEVICE_LEADER_TIMEOUT_MS
 
       if (leaderIsStale && session.isActive) {
-        // Leader went away while we were backgrounded — claim leadership
+        // Leader went away while we were backgrounded — attempt atomic claim
         if (import.meta.env.DEV) {
-          console.log('🍅 [TIMER] Visibility recovery: Leader stale by', Math.floor(timeSinceLeaderSeen / 1000), 's — claiming leadership')
+          console.log('🍅 [TIMER] Visibility recovery: Leader stale by', Math.floor(timeSinceLeaderSeen / 1000), 's — attempting atomic leadership claim')
         }
+
+        // BUG-1511: Atomic CAS — only become leader if DB confirms the claim
+        const granted = await claimLeadership(session.id, deviceId)
+        if (!granted) {
+          if (import.meta.env.DEV) {
+            console.log('🍅 [TIMER] Visibility recovery: Leadership claim denied — running as follower')
+          }
+          // Another device grabbed leadership — sync as follower
+          currentSession.value = { ...session }
+          isDeviceLeader.value = false
+          if (session.isActive && !session.isPaused) {
+            resumeCountdown()
+            resumeFollowerPoll()
+          }
+          return
+        }
+
         isDeviceLeader.value = true
         crossTabSync.claimTimerLeadership()
         isLeader.value = true
@@ -693,7 +738,6 @@ export function useTimerSync(deps: TimerSyncDeps) {
 
         currentSession.value = { ...session, remainingTime: adjustedTime }
         resumeHeartbeat()
-        await saveTimerSessionWithLeadership()
         pauseFollowerPoll()
 
         if (session.isActive && !session.isPaused) {

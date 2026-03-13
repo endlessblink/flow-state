@@ -142,7 +142,12 @@ const toggleViewOptions = () => {
             :class="{ syncing: externalCalendarLoading }"
             @click="$emit('syncExternalCalendar')"
           >
-            <RefreshCw :size="16" :stroke-width="1.5" class="option-icon" :class="{ spinning: externalCalendarLoading }" />
+            <RefreshCw
+              :size="16"
+              :stroke-width="1.5"
+              class="option-icon"
+              :class="{ spinning: externalCalendarLoading }"
+            />
             <span class="option-label">{{ $t('calendar.sync_external') }}</span>
           </button>
 

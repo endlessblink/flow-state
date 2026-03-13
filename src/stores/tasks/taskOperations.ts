@@ -141,6 +141,12 @@ export function useTaskOperations(
                 ...taskDataWithoutPositionAndInstances,
                 // BUG-1321: instances MUST come AFTER spread to preserve auto-created instances
                 instances,
+                // BUG-1509: Always clear soft-delete on create/undo-restore.
+                // Undo snapshots may carry _soft_deleted: true if a realtime echo
+                // processed before undo fired. Without this, toSupabaseTask maps
+                // _soft_deleted → is_deleted: true and the task vanishes on refresh.
+                _soft_deleted: false,
+                deletedAt: undefined,
             }
 
             _rawTasks.value.push(newTask)
@@ -555,6 +561,16 @@ export function useTaskOperations(
                 else if (wasDone && isNowNotDone) {
                     updates.completedAt = undefined
                     console.log(`🔄 [DONE-ZONE] Task "${task.title?.slice(0, 30)}" reopened, completedAt cleared`)
+
+                    // BUG-1515: Reverse XP and stats awarded on completion to prevent exploit loops
+                    try {
+                        const gamificationHooks = useGamificationHooks()
+                        gamificationHooks.onTaskUncompleted(task)
+                            .catch(e => console.warn('[Gamification] Task uncomplete hook failed:', e))
+                    } catch (e) {
+                        // Gamification is non-critical, don't break task flow
+                        console.warn('[Gamification] Uncomplete hook error:', e)
+                    }
                 }
             }
 
@@ -597,40 +613,73 @@ export function useTaskOperations(
                 const syncOrchestrator = useSyncOrchestrator()
                 // BUGFIX: Filter out undefined values to prevent "null" string errors in Postgres
                 // BUGFIX: Use JSON.parse/stringify to strip Vue reactivity (Proxy objects can't be cloned to IndexedDB)
+
+                // BUG-1516: Field-level sync — only send fields that actually changed.
+                // Whole-document LWW overwrites concurrent edits on other devices.
+                // e.g. phone edits title, desktop edits description → last save wipes the other.
+                // Solution: collect all changed keys from updates (includes derived mutations
+                // like completedAt when status→done, canvasPosition on auto-archive, etc.)
+                // plus syncedUpdates (date field sync may add dueDate derived from instances).
+                // Only include those keys in the DB payload so Supabase only writes changed columns.
+                const changedKeys = new Set([
+                    ...Object.keys(updates),
+                    ...Object.keys(syncedUpdates)
+                ])
+
+                // updated_at is always included (required for LWW comparisons on all devices)
                 const payload: Record<string, unknown> = {
-                    title: updatedTask.title,
-                    description: updatedTask.description,
-                    status: toDbStatus(updatedTask.status), // TASK-1418: Map 'todo'→'planned' for DB
-                    priority: updatedTask.priority,
-                    progress: updatedTask.progress,
-                    completed_pomodoros: updatedTask.completedPomodoros,
-                    is_in_inbox: updatedTask.isInInbox,
-                    position_version: updatedTask.positionVersion,
                     updated_at: updatedTask.updatedAt.toISOString()
                 }
-                // Only add optional fields if they have values (not undefined/null)
-                // Use explicit null for fields that need to be cleared
+
+                // Core fields — only included when they were in the update
+                if (changedKeys.has('title')) {
+                    payload.title = updatedTask.title
+                }
+                if (changedKeys.has('description')) {
+                    payload.description = updatedTask.description
+                }
+                if (changedKeys.has('status')) {
+                    payload.status = toDbStatus(updatedTask.status) // TASK-1418: Map 'todo'→'planned' for DB
+                }
+                if (changedKeys.has('priority')) {
+                    payload.priority = updatedTask.priority
+                }
+                if (changedKeys.has('progress')) {
+                    payload.progress = updatedTask.progress
+                }
+                if (changedKeys.has('completedPomodoros')) {
+                    payload.completed_pomodoros = updatedTask.completedPomodoros
+                }
+                if (changedKeys.has('isInInbox')) {
+                    payload.is_in_inbox = updatedTask.isInInbox
+                }
+                // position_version always included when geometry changed (optimistic locking)
+                if (changedKeys.has('positionVersion') || changedKeys.has('canvasPosition') || changedKeys.has('parentId')) {
+                    payload.position_version = updatedTask.positionVersion
+                }
+
+                // Optional fields — only when in the update
                 // BUGFIX: Check for "null" string which causes Postgres timestamp parse error
-                if (updatedTask.dueDate !== undefined) {
+                if (changedKeys.has('dueDate')) {
                     const dueDate = updatedTask.dueDate
                     payload.due_date = (!dueDate || dueDate === 'null' || dueDate === 'undefined') ? null : dueDate
                 }
                 // BUG-1184: Only set project_id for valid UUIDs - 'uncategorized' is NOT a valid UUID
-                if (updatedTask.projectId !== undefined) {
+                if (changedKeys.has('projectId') && updatedTask.projectId !== undefined) {
                     payload.project_id = isValidUUID(updatedTask.projectId) ? updatedTask.projectId : null
                 }
                 // BUG-1184: Only set parent_id for valid UUIDs (sub-tasks)
                 // Group IDs like "group-xxx" are NOT valid UUIDs and cause Postgres errors
                 // Canvas group association is stored in position.parentId (JSONB), not parent_id (UUID)
                 // BUG-1365: Also check 'parentId' in updates for auto-archive clearing
-                if (updatedTask.parentId !== undefined || 'parentId' in updates) {
+                if (changedKeys.has('parentId')) {
                     payload.parent_id = isValidUUID(updatedTask.parentId) ? updatedTask.parentId : null
                 }
                 // BUG-1365: Also check if canvasPosition was explicitly set in the updates object.
                 // During auto-archive (line ~458), canvasPosition is set to undefined to clear it.
                 // Without 'canvasPosition' in updates check, the sync queue never sends position: null
                 // to the DB, so after refresh the task reappears on canvas with its old position.
-                if (updatedTask.canvasPosition !== undefined || 'canvasPosition' in updates) {
+                if (changedKeys.has('canvasPosition')) {
                     // Use 'position' column (not 'canvas_position') - format as DB expects
                     payload.position = updatedTask.canvasPosition
                         ? {
@@ -641,7 +690,7 @@ export function useTaskOperations(
                         }
                         : null
                 }
-                if (updatedTask.completedAt !== undefined) {
+                if (changedKeys.has('completedAt')) {
                     const completedAt = updatedTask.completedAt
                     if (completedAt instanceof Date) {
                         payload.completed_at = completedAt.toISOString()
@@ -651,33 +700,32 @@ export function useTaskOperations(
                 }
                 // BUG-1187: Include doneForNowUntil in sync payload
                 // Without this, the "Done for now" badge resets on page refresh
-                if (updatedTask.doneForNowUntil !== undefined) {
+                if (changedKeys.has('doneForNowUntil')) {
                     const doneForNowUntil = updatedTask.doneForNowUntil
                     payload.done_for_now_until = (!doneForNowUntil || doneForNowUntil === 'null' || doneForNowUntil === 'undefined') ? null : doneForNowUntil
                 }
                 // BUG-1302: Include instances in sync queue payload
                 // Without this, calendar time blocks aren't backed up by the sync queue
-                if (updatedTask.instances !== undefined) {
+                if (changedKeys.has('instances') && updatedTask.instances !== undefined) {
                     payload.instances = JSON.parse(JSON.stringify(updatedTask.instances))
                 }
                 // BUG-1338: Include recurringInstances in sync queue payload
-                if (updatedTask.recurringInstances !== undefined) {
+                if (changedKeys.has('recurringInstances') && updatedTask.recurringInstances !== undefined) {
                     payload.recurring_instances = JSON.parse(JSON.stringify(updatedTask.recurringInstances))
                 }
                 // BUG-1321: Include subtasks in sync queue payload
                 // Without this, offline subtask changes are silently dropped
-                if (updatedTask.subtasks !== undefined) {
+                if (changedKeys.has('subtasks') && updatedTask.subtasks !== undefined) {
                     payload.subtasks = JSON.parse(JSON.stringify(updatedTask.subtasks))
                 }
                 // TASK-1403: Include new recurrence fields in sync queue
-                // Only send when task actually has a recurrence rule (avoid sending on every task update)
-                if (updatedTask.recurrenceRule) {
+                if (changedKeys.has('recurrenceRule') && updatedTask.recurrenceRule) {
                     payload.recurrence_rule = JSON.parse(JSON.stringify(updatedTask.recurrenceRule))
                 }
-                if (updatedTask.recurrenceParentId) {
+                if (changedKeys.has('recurrenceParentId') && updatedTask.recurrenceParentId) {
                     payload.recurrence_parent_id = updatedTask.recurrenceParentId
                 }
-                if (updatedTask.recurrenceCount) {
+                if (changedKeys.has('recurrenceCount') && updatedTask.recurrenceCount) {
                     payload.recurrence_count = updatedTask.recurrenceCount
                 }
 
@@ -833,6 +881,75 @@ export function useTaskOperations(
         } finally {
             manualOperationInProgress.value = false
         }
+    }
+
+    // ================================================================
+    // TASK-1520: Recurrence-aware delete operations
+    // ================================================================
+
+    /**
+     * Skip this recurring occurrence: advance the chain so the scheduler
+     * creates the NEXT occurrence, then delete the current task.
+     */
+    const skipRecurringOccurrence = async (taskId: string) => {
+        const task = _rawTasks.value.find(t => t.id === taskId)
+        if (!task || !task.recurrenceRule) {
+            // Not recurring — fall through to normal delete
+            await deleteTask(taskId)
+            return
+        }
+
+        const chainId = task.recurrenceParentId || task.id
+        const chainTasks = _rawTasks.value.filter(t =>
+            t.id === chainId || t.recurrenceParentId === chainId
+        )
+
+        // Find the latest done ancestor (highest recurrenceCount with status 'done')
+        const doneAncestors = chainTasks
+            .filter(t => t.status === 'done' && t.id !== taskId)
+            .sort((a, b) => (b.recurrenceCount || 0) - (a.recurrenceCount || 0))
+
+        const latestDoneAncestor = doneAncestors[0]
+
+        if (latestDoneAncestor) {
+            // Advance the ancestor's recurrenceCount so the scheduler computes
+            // count+1 → next occurrence (skipping the deleted one)
+            const targetCount = task.recurrenceCount || 0
+            if ((latestDoneAncestor.recurrenceCount || 0) < targetCount) {
+                await updateTask(latestDoneAncestor.id, { recurrenceCount: targetCount })
+            }
+        }
+
+        // Delete the current occurrence — the recurrence scheduler will create
+        // the next one on app load (useRecurrenceScheduler)
+        await deleteTask(taskId)
+    }
+
+    /**
+     * Stop all future occurrences: clear recurrenceRule on every task in the
+     * chain, then delete the current task.
+     */
+    const stopRecurrence = async (taskId: string) => {
+        const task = _rawTasks.value.find(t => t.id === taskId)
+        if (!task || !task.recurrenceRule) {
+            await deleteTask(taskId)
+            return
+        }
+
+        const chainId = task.recurrenceParentId || task.id
+        const chainTasks = _rawTasks.value.filter(t =>
+            (t.id === chainId || t.recurrenceParentId === chainId) && t.id !== taskId
+        )
+
+        // Clear recurrenceRule on all chain members (except the one being deleted)
+        for (const chainTask of chainTasks) {
+            if (chainTask.recurrenceRule) {
+                await updateTask(chainTask.id, { recurrenceRule: null as unknown as undefined })
+            }
+        }
+
+        // Delete the current task
+        await deleteTask(taskId)
     }
 
     // BUG-025 FIX: Atomic bulk delete using Supabase .in() operator
@@ -1221,6 +1338,8 @@ export function useTaskOperations(
         updateTask,
         deleteTask,
         permanentlyDeleteTask,
+        skipRecurringOccurrence,
+        stopRecurrence,
         bulkDeleteTasks,
         moveTask,
         selectTask,

@@ -4898,7 +4898,7 @@ PlasmoidItem {
         }
 
         var xhr = new XMLHttpRequest()
-        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,project_id&status=neq.done&is_deleted=eq.false&order=priority.asc.nullslast,created_at.desc&limit=100"
+        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,project_id&status=neq.done&is_deleted=eq.false&order=due_date.asc.nullslast,created_at.desc&limit=100"
         xhr.open("GET", url, true)
         xhr.setRequestHeader("apikey", root.supabaseKey)
         xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)

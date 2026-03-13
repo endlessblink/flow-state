@@ -85,9 +85,9 @@
 
 ---
 
-### BUG-1410: Done tasks still appear on canvas after marking as done (👀 REVIEW)
+### ~~BUG-1410~~: Done tasks still appear on canvas after marking as done (✅ DONE)
 
-**Priority**: P0 | **Status**: 👀 REVIEW (2026-02-23)
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: When marking a task as done, it remains visible on the canvas instead of being removed/hidden.
 
@@ -212,9 +212,9 @@
 
 ---
 
-### TASK-1405: Replace LLM Distribution with Deterministic Algorithm in Weekly Plan (👀 REVIEW)
+### ~~TASK-1405~~: Replace LLM Distribution with Deterministic Algorithm in Weekly Plan (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW (2026-02-22)
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Weekly Plan AI used LLM (Llama 3.3 70B via Groq) to assign tasks to days. Even with detailed MANDATORY RULES prompts, the LLM ignored routine preferences, misplaced tasks, and produced generic reasoning.
 
@@ -310,9 +310,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### BUG-1492: Canvas Position Drift — Consecutive Drags Cause parentId Flip-Flopping (👀 REVIEW)
+### ~~BUG-1492~~: Canvas Position Drift — Consecutive Drags Cause parentId Flip-Flopping (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW (2026-03-10)
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Dragging canvas tasks in quick succession causes visible position drift. Tasks alternately get assigned to a group and then back to root on each drag.
 
@@ -343,9 +343,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### BUG-1320: Production console log spam — WakeLock, LWW echo, legacy IDs, Realtime drops (👀 REVIEW)
+### ~~BUG-1320~~: Production console log spam — WakeLock, LWW echo, legacy IDs, Realtime drops (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-14)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Production console (in-theflow.com) flooded with 5 categories of noise:
 1. Hundreds of `[WakeLock] Failed to request wake lock: DOMException` when tab is hidden
@@ -404,9 +404,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### BUG-1290: Week View Not Loading (👀 REVIEW)
+### ~~BUG-1290~~: Week View Not Loading (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-09)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Calendar week view doesn't render at all. Switching to week mode shows blank content.
 
@@ -420,9 +420,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### BUG-1218: RTL Missing in Calendar Task Create Dialog and Timer Task Name (👀 REVIEW)
+### ~~BUG-1218~~: RTL Missing in Calendar Task Create Dialog and Timer Task Name (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-07)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: The Calendar-specific QuickTaskCreate dialog and the header timer task name don't support RTL/Hebrew text, while the rest of the app does. Hebrew text in the calendar task title input shows LTR cursor position. Timer task name in the header bar doesn't auto-detect Hebrew direction.
 
@@ -432,9 +432,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### TASK-1220: Quick Sort Pull-Down Capture Panel (👀 REVIEW)
+### ~~TASK-1220~~: Quick Sort Pull-Down Capture Panel (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-08)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-03-13)
 
 **Goal**: When user drags the screen down in any mobile view, reveal a command center panel with:
 - Search existing tasks
@@ -448,9 +448,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### BUG-1286: PWA Today View Shows 2:00 AM on All Tasks Due to UTC Timezone Parsing (👀 REVIEW)
+### ~~BUG-1286~~: PWA Today View Shows 2:00 AM on All Tasks Due to UTC Timezone Parsing (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-08)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Tasks in the Mobile Today View all showed "2:00 AM" even though the user never set any due time. Additionally, the time-based grouping broke — all untimed tasks landed in "Evening" instead of "Anytime Today".
 
@@ -470,9 +470,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### BUG-1204: Challenges Table 404 / Initialization Failure (👀 REVIEW)
+### ~~BUG-1204~~: Challenges Table 404 / Initialization Failure (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-07)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Console errors show `user_challenges` table returning 404 and `[Challenges] Initialization failed`. The challenges migration existed locally but was never applied to the VPS database.
 
@@ -612,7 +612,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 
 ---
 
-### BUG-1182: saveTasks Fails After Realtime Disconnect (👀 REVIEW)
+### ~~BUG-1182~~: saveTasks Fails After Realtime Disconnect (✅ DONE)
 
 **Root Cause**: After sleep/wake, the JWT token expires but `withRetry()` retries 401 errors with the same stale token (all 3 attempts fail). The save failure was silently swallowed in `saveTasksToStorage()`, causing data loss.
 
@@ -621,7 +621,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 2. Proactive token refresh on visibility change / wake-up (`useSupabaseDatabase.ts`)
 3. Surface save failures when authenticated — re-throw instead of silently swallowing (`taskPersistence.ts`)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-02)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: After realtime connection drops (BUG-1179), task save operations fail:
 ```
@@ -631,9 +631,9 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### TASK-1128: Add "Create Group From Selection" Context Menu Option (👀 REVIEW)
+### ~~TASK-1128~~: Add "Create Group From Selection" Context Menu Option (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-04)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-13)
 
 **Feature**: When multiple tasks are selected on canvas, right-click should show "Add to New Group" option that:
 1. Creates a new group at the bounding box location of selected tasks
@@ -679,9 +679,9 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### BUG-347: FK Constraint Violation on parent_task_id (👀 REVIEW)
+### ~~BUG-347~~: FK Constraint Violation on parent_task_id (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW (2026-01-21)
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-13)
 
 **Root Cause**: Tasks saved with `parent_task_id` refs to deleted tasks, no existence validation, race conditions in batch upserts.
 
@@ -689,9 +689,9 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### BUG-309: Ctrl+Z Keyboard Shortcut Not Triggering Undo (👀 REVIEW)
+### ~~BUG-309~~: Ctrl+Z Keyboard Shortcut Not Triggering Undo (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-01-17)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-03-13)
 
 **Fix Applied**: Added `executeUndo()`, `executeRedo()`, `executeNewTask()` calls + `shouldIgnoreElement()` check in `src/utils/globalKeyboardHandlerSimple.ts`.
 
@@ -1032,9 +1032,9 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ---
 
-### TASK-1495: Morning Dashboard Redesign — Opt-in Ritual + State Machine (👀 REVIEW)
+### ~~TASK-1495~~: Morning Dashboard Redesign — Opt-in Ritual + State Machine (✅ DONE)
 
-**Priority**: Medium | **Status**: 👀 REVIEW (2026-03-09)
+**Priority**: Medium | **Status**: ✅ DONE (2026-03-13)
 
 **Problem/Opportunity**: Morning dashboard was a forced full-page takeover that interrupted users during onboarding. Users need an opt-in ritual that fits into their morning workflow — suggested during the "golden window" (06:00-11:00) but always dismissible.
 
@@ -1257,9 +1257,9 @@ WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supab
 
 ---
 
-### TASK-359: Quick Add + Sort Feature (👀 REVIEW)
+### ~~TASK-359~~: Quick Add + Sort Feature (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-13)
 
 Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab to sort phase, 1-9 assigns project.
 
@@ -1267,9 +1267,9 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 
 ---
 
-### TASK-1119: Remove Web Speech API - Use Whisper Only (👀 REVIEW)
+### ~~TASK-1119~~: Remove Web Speech API - Use Whisper Only (✅ DONE)
 
-**Priority**: P3-LOW | **Status**: 👀 REVIEW
+**Priority**: P3-LOW | **Status**: ✅ DONE (2026-03-13)
 
 **Rationale**: Web Speech API has poor quality compared to Whisper:
 - Browser-dependent (different results on Chrome/Firefox/Safari)
@@ -1295,9 +1295,9 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 
 ---
 
-### TASK-1131: Offline Voice Queue - Save & Retry When Online (👀 REVIEW)
+### ~~TASK-1131~~: Offline Voice Queue - Save & Retry When Online (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: With Whisper-only voice input (TASK-1119), offline recording fails silently.
 
@@ -1353,9 +1353,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### BUG-1199: Canvas Inbox Right-Click Acts as Ctrl+Click (👀 REVIEW)
+### ~~BUG-1199~~: Canvas Inbox Right-Click Acts as Ctrl+Click (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-06)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Right-clicking on a task in the canvas inbox behaves as if Ctrl+Click was pressed (multi-select behavior) instead of opening a context menu or doing nothing.
 
@@ -1392,9 +1392,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### FEATURE-1201: Intro/Onboarding Page for Guest and Signed-In Users (👀 REVIEW)
+### ~~FEATURE-1201~~: Intro/Onboarding Page for Guest and Signed-In Users (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW (2026-02-17)
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-13)
 
 **Feature**: Single-screen welcome modal replacing the old WelcomeModal. Same flow for guest and signed-in users.
 
@@ -1519,18 +1519,18 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
 | ~~**FEATURE-1293**~~ | **P2** | ✅ **Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
-| BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
+| ~~BUG-1199~~ | P1 | ✅ Canvas inbox right-click acts as Ctrl+Click |
 | ~~BUG-1206~~ | P0 | ✅ Task details not saved when pressing Save in canvas (3-layer fix: pending write guard + extended isVeryRecent + modal-aware recovery) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | ~~BUG-1212~~ | P0 | ✅ Sync queue CREATE retry causes "duplicate key" corruption |
-| BUG-1286 | P2 | 👀 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
+| ~~BUG-1286~~ | P2 | ✅ PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
 | ~~**BUG-1291**~~ | **P0** | ✅ **Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
 | ~~**BUG-1292**~~ | **P1** | ✅ **KDE Widget intermittently fails to start break timer (30s polling gap after session complete)** |
 | ~~**TASK-1292**~~ | **P0** | ✅ **Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (monorepo)** |
 | ~~**BUG-1293**~~ | **P1** | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements** |
 | ~~**BUG-1294**~~ | **P1** | ✅ **Calendar play button shouldn't reset timer or create new instances when timer is already running for that task** |
 | ~~**BUG-1296**~~ | **P1** | ✅ **Time block notifications never fire — _rawTasks → rawTasks property name mismatch** |
-| **BUG-1302** | **P1** | **👀 Time block notifications still not firing — milestones silently missed despite BUG-1296 fix** |
+| ~~**BUG-1302**~~ | **P1** | **✅ Time block notifications still not firing — milestones silently missed despite BUG-1296 fix** |
 | ~~**BUG-1303**~~ | **P2** | ✅ **Mark Done doesn't stop active timer running on that task** (✅ DONE — fix in taskOperations.ts:431) |
 | ~~**BUG-1304**~~ | **P2** | ✅ **Done tasks in calendar view have no visual done indicator** (✅ DONE — visual indicator in all 3 calendar views) |
 | ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
@@ -1625,13 +1625,14 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
 | ~~**TASK-1501**~~ | **P3** | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10) |
 | ~~**BUG-1504**~~ | **P2** | ✅ **Canvas inbox: left-click multi-selects tasks unexpectedly, can't deselect** (✅ DONE 2026-03-12) |
-| **BUG-1505** | **P2** | 🔄 **KDE Widget: Nanny popup only shows ~2 tasks — increase limit and fix fallback** (🔄 IN PROGRESS 2026-03-13) |
+| **BUG-1506** | **P0** | 🔄 **Edit Task: description loses bullet points on save — htmlToMarkdown regex truncation** (🔄 IN PROGRESS 2026-03-13) |
+| ~~**BUG-1505**~~ | **P2** | ✅ **KDE Widget: Nanny popup only shows ~2 tasks — increase limit and sort by due date** (✅ DONE 2026-03-13) |
 | **TASK-1499** | **P2** | 🔄 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (🔄 IN PROGRESS 2026-03-10) |
-| **TASK-1500** | **P2** | 🔄 **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (🔄 IN PROGRESS 2026-03-10) |
-| **TASK-1486** | **P2** | 🔄 **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (🔄 IN PROGRESS 2026-03-08) |
+| ~~**TASK-1500**~~ | **P2** | ✅ **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (✅ DONE 2026-03-13) |
+| ~~**TASK-1486**~~ | **P2** | ✅ **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (✅ DONE 2026-03-13) |
 | ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
 | **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |
-| **TASK-1457** | **P2** | 🔄 **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (🔄 IN PROGRESS 2026-03-06) |
+| ~~**TASK-1457**~~ | **P2** | ✅ **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (✅ DONE 2026-03-13) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
 | ~~**TASK-1455**~~ | **P2** | ✅ **Catalog view: show uncategorized tasks so they can be categorized in-place** (✅ DONE 2026-03-09) |
 | ~~**TASK-1454**~~ | **P2** | ✅ **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (✅ DONE 2026-03-09) |
@@ -1655,13 +1656,13 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1425**~~ | **P0** | ✅ **Offline: fast startup — skip Supabase when navigator.onLine=false** (✅ DONE 2026-03-04) |
 | **TASK-1422** | **P0** | 🔄 **Full offline mobile support — PWA works E2E without network** (🔄 IN PROGRESS 2026-03-02) |
 | ~~**TASK-1421**~~ | **P0** | ✅ **Investigate & fix sluggish localhost performance** (✅ DONE 2026-03-02) |
-| **BUG-1416** | **P0** | 🔄 **Calendar inbox "today" filter shows wrong tasks — dueDate format mismatch (ISO vs YYYY-MM-DD)** (🔄 IN PROGRESS 2026-02-25) |
+| ~~**BUG-1416**~~ | **P0** | ✅ **Calendar inbox "today" filter shows wrong tasks — dueDate format mismatch (ISO vs YYYY-MM-DD)** (✅ DONE 2026-03-13) |
 | ~~**BUG-1415**~~ | **P0** | ✅ **Catalog drag doesn't move task to target group — drops on task rows make subtasks instead of transferring between groups** (✅ DONE 2026-02-25) |
-| **TASK-1405** | **P1** | 👀 **Replace LLM Distribution with Deterministic Algorithm in Weekly Plan** (👀 REVIEW 2026-02-22) |
+| ~~**TASK-1405**~~ | **P1** | ✅ **Replace LLM Distribution with Deterministic Algorithm in Weekly Plan** (✅ DONE 2026-03-13) |
 | ~~**TASK-1403**~~ | **P2** | ✅ **Recurring Tasks — Clone-on-Complete with recurrence_rule column** (✅ DONE 2026-02-22) |
 | ~~**TASK-1402**~~ | **P1** | ✅ **Decouple canvas/calendar inbox filtering — isInInbox now user-controlled, placement uses position-based filtering** (✅ DONE 2026-02-22) |
 | ~~**TASK-1387**~~ | **P1** | **✅ Centralize all AI model references to single source of truth** (✅ DONE 2026-02-21) |
-| **TASK-1372** | **P1** | **🔄 Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** (🔄 IN PROGRESS 2026-03-04) |
+| ~~**TASK-1372**~~ | **P1** | **✅ Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** (✅ DONE 2026-03-13) |
 | ~~**BUG-1371**~~ | **P0** | ✅ **Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** (✅ DONE 2026-02-20) |
 | ~~**BUG-1370**~~ | **P0** | ✅ **Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** (✅ DONE 2026-02-20) |
 | ~~**BUG-1369**~~ | **P0** | ✅ **Canvas tasks persist after marked done — completed tasks remain visible on canvas instead of being removed** (✅ DONE 2026-02-21) |
@@ -1718,7 +1719,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1281~~ | P3 | ✅ Adopt build-time console.log stripping (esbuild pure config) |
 | ~~TASK-1282~~ | P3 | ✅ Stop filtering console.error/warn in consoleFilter.ts |
 | ~~FEATURE-1200~~ | P2 | ✅ Quick Add full RTL support + auto-expand for long tasks (✅ DONE 2026-02-27) |
-| FEATURE-1201 | P2 | 👀 Single-screen welcome modal — research-backed, auth-aware, replaces WelcomeModal |
+| ~~FEATURE-1201~~ | P2 | ✅ Single-screen welcome modal — research-backed, auth-aware, replaces WelcomeModal |
 | ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
 | ~~TASK-1283~~ | P1 | ✅ Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
 | ~~**TASK-1284**~~ | **P0** | ✅ **Add quick task creation to KDE Plasma widget (monorepo)** |
@@ -1749,7 +1750,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1481**~~ | **P2** | ~~**Calendar inbox hides canvas tasks with non-canvasOrder sorts — isInInbox gate too restrictive**~~ (✅ DONE 2026-03-07) |
 | ~~**TASK-1480**~~ | **P2** | ~~**Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs**~~ (✅ DONE 2026-03-09) |
 | ~~**BUG-1483**~~ | **P2** | ~~**PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section**~~ (✅ DONE 2026-03-09) |
-| **BUG-1492** | **P2** | **Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** (👀 REVIEW 2026-03-10) |
+| ~~**BUG-1492**~~ | **P2** | **✅ Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** (✅ DONE 2026-03-13) |
 | ~~**BUG-1493**~~ | **P2** | ~~**Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression**~~ (✅ DONE 2026-03-09) |
 | ~~**TASK-1492**~~ | **P2** | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09) |
 | ~~**BUG-1503**~~ | **P2** | ~~**Tauri desktop: tasks not updating when adding/deleting on canvas or canvas inbox — WebKitGTK dataTransfer.getData() returns empty, needed dragData singleton fallback**~~ (✅ DONE 2026-03-12) |
@@ -1813,9 +1814,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### BUG-1143: Add onUnmounted Cleanup to MobileQuickSortView (👀 REVIEW)
+### ~~BUG-1143~~: Add onUnmounted Cleanup to MobileQuickSortView (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Memory leak - MobileQuickSortView creates setTimeout timers but never cleans them up on unmount.
 
@@ -2218,9 +2219,9 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
-### BUG-1302: Time Block Notifications Still Not Firing (👀 REVIEW)
+### ~~BUG-1302~~: Time Block Notifications Still Not Firing (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-12)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Despite BUG-1296 fix (`_rawTasks` → `rawTasks`), time block notifications are still not firing. User has a 120-min calendar block scheduled and received no milestone alerts (halfway, 1-min-before, ended).
 
@@ -2246,9 +2247,9 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
-### BUG-1307: Week View Events Render as Thin Slivers on Thu-Sun Columns (👀 REVIEW)
+### ~~BUG-1307~~: Week View Events Render as Thin Slivers on Thu-Sun Columns (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-14)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: In the calendar week view, events on Monday and Tuesday render correctly with proper width, title, time, and duration. However, events on Thursday through Sunday appear as nearly invisible thin vertical lines/slivers instead of proper event blocks.
 
@@ -2264,9 +2265,9 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
-### BUG-1308: Month View Shows Only 2 Columns Instead of 7 (👀 REVIEW)
+### ~~BUG-1308~~: Month View Shows Only 2 Columns Instead of 7 (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-14)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: The calendar month view grid was missing day-of-week header row (MON-SUN).
 

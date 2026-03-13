@@ -589,7 +589,12 @@ const handleChangePassword = async () => {
               :value="cal.enabled"
               @update="toggleCalendar(cal.id)"
             />
-            <button class="icon-btn danger" title="Remove calendar" @click="removeCalendar(cal.id)">
+            <button
+              class="icon-btn danger"
+              title="Remove calendar"
+              aria-label="Remove calendar"
+              @click="removeCalendar(cal.id)"
+            >
               <Trash2 :size="14" />
             </button>
           </div>

@@ -100,6 +100,13 @@ defineEmits<{
   height: var(--space-10);
 }
 
+/* Focus state with visible indicator */
+.base-icon-button:focus-visible {
+  outline: var(--space-0_5) solid var(--color-work);
+  outline-offset: var(--space-0_5);
+  box-shadow: 0 0 0 var(--space-1) rgba(var(--color-success), 0.1);
+}
+
 /* Active State - Teal stroke */
 .base-icon-button.is-active {
   background: var(--glass-bg-medium);

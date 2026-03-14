@@ -30,20 +30,30 @@ export function useRecurrenceScheduler() {
             !t._soft_deleted
         )
 
+        // Track chains we've already created a clone for in THIS run
+        // (prevents multiple done tasks in the same chain each spawning a clone)
+        const processedChains = new Set<string>()
+
         for (const task of doneTasks) {
             try {
-                // Check if a non-done successor already exists in this chain
                 const chainId = task.recurrenceParentId || task.id
+
+                // Skip if we already created a clone for this chain in this run
+                if (processedChains.has(chainId)) continue
+
+                // Check if ANY non-done task already exists in this chain
+                // (regardless of recurrenceCount — just look for an active sibling)
                 const hasActiveSuccessor = taskStore._rawTasks.some(t =>
                     !t._soft_deleted &&
                     t.status !== 'done' &&
-                    (t.recurrenceParentId === chainId || t.id === chainId) &&
-                    t.recurrenceCount !== undefined &&
-                    task.recurrenceCount !== undefined &&
-                    t.recurrenceCount > task.recurrenceCount
+                    t.id !== task.id &&
+                    (t.recurrenceParentId === chainId || t.id === chainId)
                 )
 
-                if (hasActiveSuccessor) continue
+                if (hasActiveSuccessor) {
+                    processedChains.add(chainId)
+                    continue
+                }
 
                 // Guard: check if a clone for today's date already exists in this chain
                 // (prevents creating duplicates on every page load)
@@ -53,7 +63,10 @@ export function useRecurrenceScheduler() {
                     t.id !== task.id &&
                     t.dueDate?.substring(0, 10) === today
                 )
-                if (hasTodayClone) continue
+                if (hasTodayClone) {
+                    processedChains.add(chainId)
+                    continue
+                }
 
                 // Compute next due date with skip-to-present
                 const rule = task.recurrenceRule as SimpleRecurrenceRule
@@ -91,6 +104,7 @@ export function useRecurrenceScheduler() {
                         isInInbox: true,
                     })
                     cloneCount++
+                    processedChains.add(chainId)
                     console.log(`[RECURRENCE-SCHEDULER] Created deferred clone: "${task.title?.slice(0, 30)}" -> due: ${nextDate} (occurrence #${count})`)
                 }
             } catch (e) {

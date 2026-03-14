@@ -18,6 +18,16 @@
 
 ---
 
+### ~~BUG-1526~~: Push notification click actions dead — no client-side SW message handler (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-14)
+
+**Problem**: `src/sw.ts` sends `NAVIGATE_TO_TASK`, `NAVIGATE_TO`, and `SNOOZE_NOTIFICATION` messages to open clients after a push notification click. No handler existed on the client to act on these messages — clicks had zero effect.
+
+**Fix**: Added a `navigator.serviceWorker` `message` event listener in `useAppInitialization.ts` (lines 864–905). Handles all three message types: routes to `/focus/:taskId`, pushes arbitrary URLs via router, and snoozes the matching notification via `notificationStore.snoozeNotification()`. Listener is registered at composable setup time and cleaned up in `onUnmounted`.
+
+---
+
 ### BUG-1508: Permanently deleting a recurring task causes infinite recreation loop (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (being fixed in separate instance)
@@ -1956,6 +1966,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1523** | **P1** | **Undo/sync race fix — cancel stale sync queue ops when undo/redo restores task create/delete** (✅ DONE 2026-03-14) |
 | **~~TASK-1524~~** | **P1** | **Migrate old `recurrence` field to new `recurrenceRule` format on app init** (✅ DONE) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
+| ~~**BUG-1526**~~ | **P1** | ~~**Push notification click actions dead — SW posts NAVIGATE_TO_TASK/NAVIGATE_TO/SNOOZE_NOTIFICATION but no client handler existed; added SW message listener in useAppInitialization.ts**~~ (✅ DONE 2026-03-14) |
 
 ---
 
@@ -2287,15 +2298,17 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1175: Fix 349 Linter Errors (🔄 IN PROGRESS)
+### ~~TASK-1175~~: Fix 349 Linter Errors (✅ DONE)
 
-**Priority**: P3-LOW | **Status**: 🔄 IN PROGRESS
+**Priority**: P3-LOW | **Status**: ✅ DONE (2026-03-14)
 
 **Problem**: 349 ESLint errors and 292 warnings.
 
 **Solution**: Run `npm run lint --fix` and manually fix remaining issues.
 
 **Files**: Multiple files
+
+**Resolution**: Reduced from 349 errors to 12 (all intentionally skipped). Fixed: unused vars/imports (29), extra semicolons, useless v-binds, boolean shorthand, define-macros-order, max-attributes-per-line. Remaining 12: 11 `vue/custom-event-name-casing` (kebab-case events can't be renamed without breaking parents) + 1 `no-unsafe-finally` (logic issue, not lint fix).
 
 ---
 

@@ -283,7 +283,12 @@
 
     <!-- Celebration Overlay -->
     <Transition name="celebration">
-      <div v-if="showCelebration" class="mini-celebration" aria-live="assertive" aria-atomic="true">
+      <div
+        v-if="showCelebration"
+        class="mini-celebration"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
         <div class="celebration-ring" />
         <CheckCircle :size="28" class="celebration-icon" />
         <span class="celebration-text">{{ celebrationLabel }}</span>

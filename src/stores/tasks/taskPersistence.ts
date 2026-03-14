@@ -343,7 +343,7 @@ export function useTaskPersistence(
                         const merged = { ...remoteTask } as Task
                         for (const key of Object.keys(localTask) as (keyof Task)[]) {
                             if (localTask[key] !== undefined && !DB_AUTHORITATIVE_FIELDS.has(key)) {
-                                ;(merged as any)[key] = localTask[key]
+                                (merged as any)[key] = localTask[key]
                             }
                         }
                         merged.updatedAt = new Date(Math.max(localTime, remoteTime))

@@ -231,10 +231,6 @@ const props = defineProps<{
   getProjectName: (projectId: string | null | undefined) => string | null
 }>()
 
-// BUG-1483: Split today tasks into overdue vs today
-const overdueTasks = computed(() => props.filteredTasks.filter(t => props.isOverdue(t.dueDate)))
-const todayOnlyTasks = computed(() => props.filteredTasks.filter(t => !props.isOverdue(t.dueDate)))
-
 defineEmits<{
   (e: 'editTask', task: Task): void
   (e: 'deleteTask', task: Task): void
@@ -242,6 +238,10 @@ defineEmits<{
   (e: 'toggleTask', task: Task): void
   (e: 'startTimer', task: Task): void
 }>()
+
+// BUG-1483: Split today tasks into overdue vs today
+const overdueTasks = computed(() => props.filteredTasks.filter(t => props.isOverdue(t.dueDate)))
+const todayOnlyTasks = computed(() => props.filteredTasks.filter(t => !props.isOverdue(t.dueDate)))
 
 const formatDueDate = (date: string | Date) => {
     return formatDueDateUtil(new Date(date))

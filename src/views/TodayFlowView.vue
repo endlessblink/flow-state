@@ -28,7 +28,7 @@
               :key="'active-' + i"
               :task-id="slot.taskId || `manual-${i}`"
               :title="slot.title"
-              :state="'active'"
+              state="active"
               :index="i"
               @start="handleStart(i)"
               @pause="handlePause"

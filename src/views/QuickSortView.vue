@@ -198,7 +198,12 @@
 
     <!-- Action Feedback Overlay -->
     <Transition name="celebration">
-      <div v-if="actionFeedback" class="feedback-overlay" :class="actionFeedback.type" aria-live="assertive">
+      <div
+        v-if="actionFeedback"
+        class="feedback-overlay"
+        :class="actionFeedback.type"
+        aria-live="assertive"
+      >
         <div class="celebration-ring" />
         <CheckCircle v-if="actionFeedback.type === 'success'" :size="28" class="celebration-icon" />
         <span class="feedback-text">{{ actionFeedback.text }}</span>
@@ -242,7 +247,7 @@
 
           <!-- Project Selector -->
           <CategorySelector
-            :compact="true"
+            compact
             @select="handleCategorize"
             @skip="handleSkip"
             @create-new="showProjectModal = true"

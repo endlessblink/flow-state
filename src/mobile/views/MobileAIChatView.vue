@@ -8,10 +8,20 @@
         <span v-if="headerBadgeText" class="provider-badge">{{ headerBadgeText }}</span>
       </div>
       <div class="header-actions">
-        <button v-if="visibleMessages.length > 1" class="header-btn" title="Clear chat" @click="clearMessages">
+        <button
+          v-if="visibleMessages.length > 1"
+          class="header-btn"
+          title="Clear chat"
+          @click="clearMessages"
+        >
           <Trash2 :size="18" />
         </button>
-        <button class="header-btn" :class="{ active: showSettings }" title="Settings" @click="showSettings = !showSettings">
+        <button
+          class="header-btn"
+          :class="{ active: showSettings }"
+          title="Settings"
+          @click="showSettings = !showSettings"
+        >
           <Settings :size="18" />
         </button>
       </div>

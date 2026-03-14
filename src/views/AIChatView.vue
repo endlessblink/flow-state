@@ -381,7 +381,14 @@ onUnmounted(() => {
               >
             </template>
             <template v-else>
-              <OverflowTooltip class="conv-title" :text="conv.title" dir="auto" style="flex: 1; min-width: 0">{{ conv.title }}</OverflowTooltip>
+              <OverflowTooltip
+                class="conv-title"
+                :text="conv.title"
+                dir="auto"
+                style="flex: 1; min-width: 0"
+              >
+                {{ conv.title }}
+              </OverflowTooltip>
               <span class="conv-date">{{ formatRelativeDate(conv.updatedAt) }}</span>
             </template>
           </div>
@@ -430,7 +437,14 @@ onUnmounted(() => {
           <div class="header-title-area">
             <Zap v-if="isGridHandler" class="header-icon grid-handler-icon" :size="18" />
             <Sparkles v-else class="header-icon" :size="18" />
-            <OverflowTooltip class="header-title" :text="activeConversationTitle" dir="auto" style="flex: 1; min-width: 0">{{ activeConversationTitle }}</OverflowTooltip>
+            <OverflowTooltip
+              class="header-title"
+              :text="activeConversationTitle"
+              dir="auto"
+              style="flex: 1; min-width: 0"
+            >
+              {{ activeConversationTitle }}
+            </OverflowTooltip>
             <span v-if="headerBadgeText" class="provider-badge" :class="'provider-' + activeProvider">
               {{ headerBadgeText }}
             </span>

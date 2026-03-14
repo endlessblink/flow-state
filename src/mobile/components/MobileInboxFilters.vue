@@ -66,23 +66,6 @@ import {
 import type { TimeFilterType, ViewMode } from '@/mobile/composables/useMobileInboxLogic'
 import type { GroupByType } from '@/composables/mobile/useMobileFilters'
 
-// Because the original file used icons in the returned arrays but composables 
-// shouldn't hold Vue components, we map them here locally based on value:
-const timeFilterIcons = {
-  all: Inbox,
-  today: Calendar,
-  week: CalendarClock,
-  overdue: AlertCircle
-} as const
-
-const groupByIcons: Record<GroupByType, Component> = {
-  none: ListFilter,
-  date: Calendar,
-  project: FolderOpen,
-  priority: Flag,
-  time: CalendarClock
-}
-
 defineProps<{
   viewMode: ViewMode
   activeTimeFilter: TimeFilterType
@@ -104,6 +87,23 @@ defineEmits<{
   (e: 'toggleSort'): void
   (e: 'update:hideDoneTasks', hide: boolean): void
 }>()
+
+// Because the original file used icons in the returned arrays but composables
+// shouldn't hold Vue components, we map them here locally based on value:
+const timeFilterIcons = {
+  all: Inbox,
+  today: Calendar,
+  week: CalendarClock,
+  overdue: AlertCircle
+} as const
+
+const groupByIcons: Record<GroupByType, Component> = {
+  none: ListFilter,
+  date: Calendar,
+  project: FolderOpen,
+  priority: Flag,
+  time: CalendarClock
+}
 </script>
 
 <style scoped>

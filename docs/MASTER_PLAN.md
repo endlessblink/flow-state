@@ -8,6 +8,16 @@
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1523~~: iCal parser skips ALL recurring events — RRULE expansion missing (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-14)
+
+**Problem**: `useExternalCalendar.ts` lines 96-98 explicitly `continue` on any event with `RRULE:` that lacks a `RECURRENCE-ID`. This means every recurring event (weekly standups, daily check-ins, monthly 1:1s) is silently dropped. Only one-off events appear in the calendar.
+
+**Fix**: Implement lightweight RRULE expansion (DAILY/WEEKLY/MONTHLY/YEARLY, INTERVAL, COUNT, UNTIL, BYDAY) generating instances in a -30/+90 day window. Cap at 500 instances. Replace the `continue` with expansion logic. Keep `RECURRENCE-ID` override detection.
+
+---
+
 ### BUG-1508: Permanently deleting a recurring task causes infinite recreation loop (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (being fixed in separate instance)
@@ -803,6 +813,25 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
+### ~~TASK-1524~~: Migrate old `recurrence` field to new `recurrenceRule` on app init (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-03-14)
+
+**Problem**: Tasks created before TASK-1403 use `recurrence: TaskRecurrence` (old format) but not `recurrenceRule: SimpleRecurrenceRule` (new format). Recurring badge, delete dialog, and scheduler all depend on `recurrenceRule`, so old tasks appeared non-recurring.
+
+**Solution**: Created `src/composables/useRecurrenceMigration.ts` with:
+- `convertOldToNew(oldRecurrence)` — converts `TaskRecurrence` → `SimpleRecurrenceRule` for patterns `daily`/`weekly`/`monthly`/`yearly` (skips `none` and `custom`)
+- `migrateIfNeeded()` — iterates `taskStore._rawTasks`, skips tasks that already have `recurrenceRule`, updates via `taskStore.updateTask()` (hits Supabase), marks done in localStorage key `flowstate-recurrence-migration-v1`
+- Migration is idempotent, runs once per device, preserves old `recurrence` field
+
+Wired into `src/composables/app/useAppInitialization.ts` — runs after tasks load (Phase B background refresh), before recurrence scheduler (`useRecurrenceScheduler`).
+
+**Files changed**:
+- `src/composables/useRecurrenceMigration.ts` (new)
+- `src/composables/app/useAppInitialization.ts` (added migration call)
+
+---
+
 ### TASK-1521: Calendar day/week drag deferred to mouseup (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
@@ -834,6 +863,28 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 - `src/components/canvas/node/TaskNodeMeta.vue` — recurring badge with "Recurring" text label + new `recurrenceRule` prop
 - `src/components/canvas/TaskNode.vue` — passes `task?.recurrenceRule` to `TaskNodeMeta`
 - `src/components/tasks/HierarchicalTaskRowContent.vue` — recurring icon between due date and progress bar
+
+---
+
+### ~~TASK-1525~~: Recurring task delete dialog — Skip/Stop/Cancel (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-14)
+
+**What**: Phase 1 of recurring task management. When deleting a recurring task, shows a dialog with three options:
+- **Skip this occurrence** — advances recurrence chain to next date (calls `skipRecurringOccurrence()`)
+- **Stop all future occurrences** — clears `recurrenceRule` chain-wide (calls `stopRecurrence()`)
+- **Cancel** — do nothing
+
+All 11 delete paths in the app now route through the recurrence-aware dialog globally via CustomEvent pattern.
+
+**Files changed**:
+- `src/components/modals/RecurrenceDeleteModal.vue` — modal dialog with Skip/Stop/Cancel buttons, shows recurrence preview
+- `src/composables/useRecurrenceAwareDelete.ts` — composable that intercepts all delete operations, shows dialog if task is recurring
+- `src/stores/tasks/taskOperations.ts` — `skipRecurringOccurrence()` and `stopRecurrence()` operations
+- `src/services/modals/ModalManager.ts` — updated to emit custom delete events that composable listens to
+- Multiple delete paths updated: Kanban context menu, Canvas context menu, Quick Sort, Calendar drag, Board, etc. (all 11 entry points)
+
+**Key insight**: Instead of updating 11 delete call sites individually, created a global composable that listens for CustomEvent "delete-task" emissions from ModalManager. All delete paths emit the event, composable intercepts and shows dialog if needed.
 
 ---
 
@@ -1899,7 +1950,11 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1518**~~ | **P2** | ✅ **Catalogue view: context menu can't dismiss by clicking away + category drag lag** (✅ DONE 2026-03-13) |
 | ~~**BUG-1519**~~ | **P2** | ~~**Date picker calendar blurry — stacked backdrop-filter blur on context menu + submenu + NDatePicker panel**~~ (✅ DONE 2026-03-13) |
 | **TASK-1520** | **P2** | **Add recurring indicator badge to task cards (Kanban, Canvas, Table views)** (✅ DONE 2026-03-14) |
+| **~~TASK-1525~~** | **P1** | **Recurring task delete dialog — Skip/Stop/Cancel with global recurrence-aware delete** (✅ DONE 2026-03-14) |
 | **TASK-1521** | **P1** | **Calendar day/week view drag deferred to mouseup — preview-then-commit pattern, adds undo support** (🔄 IN PROGRESS) |
+| ~~**TASK-1522**~~ | **P2** | ~~**Blank screen on refresh — add loading animation to index.html**~~ (✅ DONE 2026-03-14) |
+| **TASK-1523** | **P1** | **Undo/sync race fix — cancel stale sync queue ops when undo/redo restores task create/delete** (✅ DONE 2026-03-14) |
+| **~~TASK-1524~~** | **P1** | **Migrate old `recurrence` field to new `recurrenceRule` format on app init** (✅ DONE) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---

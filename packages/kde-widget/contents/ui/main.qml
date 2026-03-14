@@ -4066,7 +4066,7 @@ PlasmoidItem {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 201 || xhr.status === 200) {
                     root.currentSessionId = sessionId
-                    root.currentTaskId = taskId  // BUG-1508: track which task the timer is for
+                    root.currentTaskId = taskId  // BUG-1521: track which task the timer is for
                     root.totalSeconds = duration
                     root.secondsRemaining = duration
                     root.isRunning = true
@@ -4802,7 +4802,7 @@ PlasmoidItem {
     function selectPinnedTask(pin) {
         if (!root.isAuthenticated) return
 
-        // BUG-1508: Search filtered tasks first, then ALL tasks, then API lookup
+        // BUG-1521: Search filtered tasks first, then ALL tasks, then API lookup
         var matchId = ""
 
         // 1. Search currently filtered tasks
@@ -4859,7 +4859,7 @@ PlasmoidItem {
         }
     }
 
-    // BUG-1508: shared helper — start timer or switch task
+    // BUG-1521: shared helper — start timer or switch task
     function _startOrSwitchForTask(taskId) {
         if (root.hasActiveSession && root.isRunning) {
             if (root.currentTaskId !== taskId) {

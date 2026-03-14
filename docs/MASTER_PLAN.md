@@ -803,6 +803,40 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
+### TASK-1521: Calendar day/week drag deferred to mouseup (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
+
+**Problem**: The `_startEventDrag` (day view) and `_startWeekDrag` (week view) handlers called `taskStore.updateTask()` inside the mousemove handler on every slot change. This caused excessive DB writes and had no undo support.
+
+**Fix**: Applied preview-then-commit pattern (mirrors the existing resize handler):
+- Added `dragPreview` ref in `useCalendarDayView.ts` and `weekDragPreview` ref in `useCalendarWeekView.ts`
+- `getEventStyle` / `getWeekEventStyle` use the preview slot/dayIndex during drag for visual feedback
+- `mousemove` only updates the local preview refs — zero store writes
+- `mouseup` calls `taskStore.updateTaskWithUndo()` once (supports Ctrl+Z)
+- `Escape` key cancels the drag with no persistence
+- Duplicate-mode (Alt+drag) still creates a task on mouseup only
+
+**Files changed**:
+- `src/composables/calendar/useCalendarDayView.ts`
+- `src/composables/calendar/useCalendarWeekView.ts`
+
+---
+
+### ~~TASK-1520~~: Add recurring indicator badge to task cards (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-14)
+
+**What**: Added a small `Repeat` icon badge (teal, `var(--brand-primary)`) to task cards in all views when `task.recurrenceRule` is set. Tooltip shows `describeRecurrenceRule()` output (e.g., "Repeats every day").
+
+**Files changed**:
+- `src/components/kanban/card/TaskCardBadges.vue` — recurring badge after attachments badge
+- `src/components/canvas/node/TaskNodeMeta.vue` — recurring badge with "Recurring" text label + new `recurrenceRule` prop
+- `src/components/canvas/TaskNode.vue` — passes `task?.recurrenceRule` to `TaskNodeMeta`
+- `src/components/tasks/HierarchicalTaskRowContent.vue` — recurring icon between due date and progress bar
+
+---
+
 ## Active Tasks (IN PROGRESS)
 
 ### ~~BUG-1437~~: Task doesn't inherit group properties on move (✅ DONE)
@@ -1731,7 +1765,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
 | ~~**TASK-1501**~~ | **P3** | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10) |
 | ~~**BUG-1504**~~ | **P2** | ✅ **Canvas inbox: left-click multi-selects tasks unexpectedly, can't deselect** (✅ DONE 2026-03-12) |
-| **BUG-1508** | **P2** | 🔄 **KDE Widget: pinned task chip click does nothing — searches only filtered tasks, misses match** (🔄 IN PROGRESS 2026-03-13) |
+| ~~**BUG-1521**~~ | **P2** | ✅ **KDE Widget: pinned task chip click does nothing — searches only filtered tasks, misses match** (✅ DONE 2026-03-14) |
 | **BUG-1506** | **P0** | 🔄 **Edit Task: description loses bullet points on save — htmlToMarkdown regex truncation** (🔄 IN PROGRESS 2026-03-13) |
 | ~~**BUG-1505**~~ | **P2** | ✅ **KDE Widget: Nanny popup only shows ~2 tasks — increase limit and sort by due date** (✅ DONE 2026-03-13) |
 | **TASK-1499** | **P2** | 🔄 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (🔄 IN PROGRESS 2026-03-10) |
@@ -1864,6 +1898,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1507** | **P2** | **Quick Sort swipe UX polish — center approval notification with fun animation + add "nothing set" reminder popup on accidental swipe** |
 | ~~**TASK-1518**~~ | **P2** | ✅ **Catalogue view: context menu can't dismiss by clicking away + category drag lag** (✅ DONE 2026-03-13) |
 | ~~**BUG-1519**~~ | **P2** | ~~**Date picker calendar blurry — stacked backdrop-filter blur on context menu + submenu + NDatePicker panel**~~ (✅ DONE 2026-03-13) |
+| **TASK-1520** | **P2** | **Add recurring indicator badge to task cards (Kanban, Canvas, Table views)** (✅ DONE 2026-03-14) |
+| **TASK-1521** | **P1** | **Calendar day/week view drag deferred to mouseup — preview-then-commit pattern, adds undo support** (🔄 IN PROGRESS) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 
 ---

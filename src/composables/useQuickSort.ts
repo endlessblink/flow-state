@@ -1,4 +1,4 @@
-import { ref, computed, onUnmounted, watch } from 'vue'
+import { ref, shallowRef, triggerRef, computed, onUnmounted, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useQuickSortStore } from '@/stores/quickSort'
 import { useSmartViews } from '@/composables/useSmartViews'
@@ -14,7 +14,18 @@ export function useQuickSort() {
   const currentTaskId = ref<string | null>(null)
 
   // Session-scoped set of processed task IDs (saved/done/deleted)
-  const processedTaskIds = ref<Set<string>>(new Set())
+  // Use shallowRef + triggerRef to ensure Set mutations trigger reactivity
+  const processedTaskIds = shallowRef<Set<string>>(new Set())
+
+  function addProcessedId(id: string) {
+    processedTaskIds.value.add(id)
+    triggerRef(processedTaskIds)
+  }
+
+  function clearProcessedIds() {
+    processedTaskIds.value.clear()
+    triggerRef(processedTaskIds)
+  }
 
   // Dirty state tracking for save/undo
   interface TaskSnapshot {
@@ -124,7 +135,7 @@ export function useQuickSort() {
   // Actions
   function startSession() {
     quickSortStore.startSession()
-    processedTaskIds.value.clear()
+    clearProcessedIds()
     // Pin to first task
     const tasks = uncategorizedTasks.value
     if (tasks.length > 0) {
@@ -164,7 +175,7 @@ export function useQuickSort() {
   function endSession() {
     const summary = quickSortStore.endSession()
     currentTaskId.value = null
-    processedTaskIds.value.clear()
+    clearProcessedIds()
     taskSnapshot.value = null
     return summary
   }
@@ -190,12 +201,12 @@ export function useQuickSort() {
     }
 
     quickSortStore.recordAction(action)
-    processedTaskIds.value.add(task.id)
+    addProcessedId(task.id)
     advanceToNextTask()
   }
 
   async function categorizeTask(taskId: string, projectId: string) {
-    const task = taskStore.tasks.find((t) => t.id === taskId)
+    const task = taskStore.rawTasks.find((t) => t.id === taskId)
     if (!task) return
 
     const oldProjectId = task.projectId || null
@@ -252,22 +263,29 @@ export function useQuickSort() {
     }
 
     quickSortStore.recordAction(action)
-    processedTaskIds.value.add(taskId)
+    addProcessedId(taskId)
     advanceToNextTask()
   }
 
   async function markDoneAndDeleteTask(taskId: string) {
+    // Capture full task data before deletion so undo can recreate it
+    const taskToDelete = taskStore._rawTasks.find(t => t.id === taskId)
+
     const action: CategoryAction = {
       id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: 'MARK_DONE_AND_DELETE',
       taskId,
       oldProjectId: undefined,
       newProjectId: undefined,
+      deletedTask: taskToDelete ? { ...taskToDelete } : undefined,
       timestamp: Date.now()
     }
 
     quickSortStore.recordAction(action)
-    processedTaskIds.value.add(taskId)
+    addProcessedId(taskId)
+    // Trigger recurrence clone-on-complete BEFORE deleting (Bug 3: recurrence system
+    // only fires inside updateTask on a status transition to 'done')
+    await taskStore.updateTask(taskId, { status: 'done' })
     // Delete the task - MUST await so task is removed before advancing
     await taskStore.deleteTask(taskId)
     advanceToNextTask()
@@ -290,16 +308,30 @@ export function useQuickSort() {
 
       // Remove from processedTaskIds so it reappears
       processedTaskIds.value.delete(action.taskId)
+      triggerRef(processedTaskIds)
       // Re-pin to this task
       currentTaskId.value = action.taskId
       snapshotCurrentTask()
     } else if (action.type === 'CATEGORIZE_TASK') {
       // Revert project assignment - AWAIT to ensure persistence (BUG-1051)
       await taskStore.updateTask(action.taskId, { projectId: action.oldProjectId || undefined })
-    } else {
-      // MARK_DONE or MARK_DONE_AND_DELETE - revert status
-      await taskStore.updateTask(action.taskId, { projectId: action.oldProjectId || undefined })
+    } else if (action.type === 'MARK_DONE') {
+      // Revert status back to todo
+      await taskStore.updateTask(action.taskId, {
+        status: action.oldStatus ?? 'todo',
+        projectId: action.oldProjectId || undefined
+      })
       processedTaskIds.value.delete(action.taskId)
+      triggerRef(processedTaskIds)
+      currentTaskId.value = action.taskId
+      snapshotCurrentTask()
+    } else {
+      // MARK_DONE_AND_DELETE - task was deleted; recreate it from stored snapshot
+      if (action.deletedTask) {
+        await taskStore.createTask({ ...action.deletedTask, status: action.oldStatus ?? 'todo' })
+      }
+      processedTaskIds.value.delete(action.taskId)
+      triggerRef(processedTaskIds)
       currentTaskId.value = action.taskId
       snapshotCurrentTask()
     }
@@ -320,7 +352,7 @@ export function useQuickSort() {
       if (Object.keys(updates).length > 0) {
         await taskStore.updateTask(action.taskId, updates)
       }
-      processedTaskIds.value.add(action.taskId)
+      addProcessedId(action.taskId)
       advanceToNextTask()
     } else if (action.type === 'CATEGORIZE_TASK') {
       // Reapply project assignment - AWAIT to ensure persistence (BUG-1051)
@@ -328,7 +360,7 @@ export function useQuickSort() {
     } else {
       // MARK_DONE or MARK_DONE_AND_DELETE
       await taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
-      processedTaskIds.value.add(action.taskId)
+      addProcessedId(action.taskId)
       advanceToNextTask()
     }
     persistSession()
@@ -337,7 +369,7 @@ export function useQuickSort() {
   function cancelSession() {
     quickSortStore.cancelSession()
     currentTaskId.value = null
-    processedTaskIds.value.clear()
+    clearProcessedIds()
     taskSnapshot.value = null
   }
 

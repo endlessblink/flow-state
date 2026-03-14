@@ -39,7 +39,7 @@
       <div class="quick-date-pills">
         <button
           type="button"
-          class="pill-btn pill-btn--primary"
+          class="pill-btn"
           :class="{ active: activeDatePill === 'today' }"
           @click="setQuickDate('today')"
         >
@@ -501,11 +501,6 @@ const statusIconClass = computed(() => {
   cursor: pointer;
   transition: all var(--duration-fast);
   white-space: nowrap;
-}
-
-.pill-btn--primary {
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
 }
 
 .pill-btn:hover {

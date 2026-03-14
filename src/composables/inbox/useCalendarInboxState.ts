@@ -84,6 +84,7 @@ export function useCalendarInboxState() {
     const baseInboxTasks = computed(() => {
         return taskStore.calendarFilteredTasks.filter(task => {
             if (hideCalendarDoneTasks.value && task.status === 'done') return false
+            if (task.isPinned) return false
             return !isScheduledOnCalendar(task)
         })
     })

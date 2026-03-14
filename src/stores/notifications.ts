@@ -242,7 +242,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     const readyNotifications = _rawNotifications.value.filter(n =>
       !n.isShown &&
       !n.isDismissed &&
-      !n.snoozedUntil &&
+      (!n.snoozedUntil || new Date(n.snoozedUntil) <= now) &&
       n.scheduledTime <= now
     )
 
@@ -263,8 +263,8 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const checkCustomReminders = async () => {
     const now = new Date()
-    const tasks = Array.isArray(taskStore.tasks)
-      ? taskStore.tasks.filter(t => t.reminders && t.reminders.length > 0)
+    const tasks = Array.isArray(taskStore._rawTasks)
+      ? taskStore._rawTasks.filter(t => !t._soft_deleted && t.reminders && t.reminders.length > 0)
       : []
 
     console.log(`[REMIND] Checking custom reminders... (${tasks.length} tasks with reminders)`)
@@ -404,9 +404,9 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Schedule notifications for recurring task instances
    */
   const scheduleRecurringTaskNotifications = async (taskId: string) => {
-    // CRITICAL FIX: Ensure taskStore.tasks is an array before calling .find()
-    const task = Array.isArray(taskStore.tasks)
-      ? taskStore.tasks.find(t => t.id === taskId)
+    // CRITICAL FIX: Ensure taskStore._rawTasks is an array before calling .find()
+    const task = Array.isArray(taskStore._rawTasks)
+      ? taskStore._rawTasks.find(t => !t._soft_deleted && t.id === taskId)
       : undefined
     if (!task?.recurrence?.isEnabled || !task.notificationPreferences?.isEnabled) return
 
@@ -491,9 +491,10 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Check and schedule notifications for all tasks
    */
   const checkAndScheduleTaskNotifications = async () => {
-    // CRITICAL FIX: Ensure taskStore.tasks is an array before calling .filter()
-    const tasks = Array.isArray(taskStore.tasks)
-      ? taskStore.tasks.filter(t =>
+    // CRITICAL FIX: Ensure taskStore._rawTasks is an array before calling .filter()
+    const tasks = Array.isArray(taskStore._rawTasks)
+      ? taskStore._rawTasks.filter(t =>
+        !t._soft_deleted &&
         t.dueDate &&
         t.notificationPreferences?.isEnabled &&
         new Date(t.dueDate) > new Date()

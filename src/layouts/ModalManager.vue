@@ -523,7 +523,24 @@ const handleBatchDeleteSelected = () => {
   const selectedIds = [...contextMenuSelectedIds.value]
   if (selectedIds.length === 0) return
 
-  const selectedTasks = taskStore.tasks.filter(task => selectedIds.includes(task.id))
+  // TASK-1520: Check if any selected task is recurring — handle one-by-one
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const selectedTasks = allTasks.filter(task => selectedIds.includes(task.id))
+  const recurringTasks = selectedTasks.filter(t => t.recurrenceRule)
+  const normalIds = selectedIds.filter(id => !recurringTasks.some(t => t.id === id))
+
+  // If there are recurring tasks, show recurrence dialog for the first one
+  // (user handles them one at a time)
+  if (recurringTasks.length > 0) {
+    const first = recurringTasks[0]
+    recurrenceDeleteTaskId.value = first.id
+    recurrenceDeleteTaskTitle.value = first.title || 'Untitled Task'
+    recurrenceDeleteTaskRule.value = first.recurrenceRule ?? null
+    recurrenceDeleteIsPermanent.value = false
+    showRecurrenceDeleteModal.value = true
+    return
+  }
+
   confirmMessage.value = `Delete ${selectedTasks.length} selected tasks?`
   confirmDetails.value = [
     'This will remove the following tasks:',
@@ -532,7 +549,7 @@ const handleBatchDeleteSelected = () => {
   confirmAction.value = async () => {
     const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
     const undoRedoActions = useUnifiedUndoRedo()
-    for (const taskId of selectedIds) {
+    for (const taskId of normalIds) {
       await undoRedoActions.deleteTaskWithUndo(taskId)
     }
   }
@@ -574,7 +591,7 @@ const duplicateProject = async (project: Project) => {
 
 const confirmDeleteProject = (project: Project) => {
   if (!project || !project.id) return
-  const taskCount = taskStore.tasks.filter(t => t.projectId === project.id).length
+  const taskCount = (taskStore._rawTasks || []).filter(t => !t._soft_deleted && t.projectId === project.id).length
   const childCount = taskStore.projects.filter(p => p.parentId === project.id).length
   const details: string[] = []
   if (taskCount > 0) details.push(`${taskCount} task${taskCount > 1 ? 's' : ''} will become uncategorized`)
@@ -593,7 +610,32 @@ const handleConfirmDeleteSelected = () => {
   const selectedTaskIds = [...taskStore.selectedTaskIds]
   if (selectedTaskIds.length === 0) return
 
-  const selectedTasks = taskStore.tasks.filter(task => selectedTaskIds.includes(task.id))
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const selectedTasks = allTasks.filter(task => selectedTaskIds.includes(task.id))
+
+  // TASK-1520: If a single recurring task, show recurrence dialog
+  if (selectedTasks.length === 1 && selectedTasks[0].recurrenceRule) {
+    const task = selectedTasks[0]
+    recurrenceDeleteTaskId.value = task.id
+    recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
+    recurrenceDeleteTaskRule.value = task.recurrenceRule ?? null
+    recurrenceDeleteIsPermanent.value = false
+    showRecurrenceDeleteModal.value = true
+    return
+  }
+
+  // If batch has recurring tasks, handle first recurring one
+  const recurringTasks = selectedTasks.filter(t => t.recurrenceRule)
+  if (recurringTasks.length > 0) {
+    const first = recurringTasks[0]
+    recurrenceDeleteTaskId.value = first.id
+    recurrenceDeleteTaskTitle.value = first.title || 'Untitled Task'
+    recurrenceDeleteTaskRule.value = first.recurrenceRule ?? null
+    recurrenceDeleteIsPermanent.value = false
+    showRecurrenceDeleteModal.value = true
+    return
+  }
+
   let message = ''
   let details: string[] = []
 
@@ -667,6 +709,20 @@ const handleProjectContextMenu = (event: Event) => {
   showProjectContextMenu.value = true
 }
 
+// TASK-1520 follow-up: Global listener for recurrence-aware deletes from any component
+const handleRecurrenceDeleteEvent = (e: Event) => {
+  const { taskId, permanent } = (e as CustomEvent).detail
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const task = allTasks.find(t => t.id === taskId)
+  if (!task) return
+
+  recurrenceDeleteTaskId.value = taskId
+  recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
+  recurrenceDeleteTaskRule.value = task.recurrenceRule ?? null
+  recurrenceDeleteIsPermanent.value = permanent ?? false
+  showRecurrenceDeleteModal.value = true
+}
+
 onMounted(() => {
   window.addEventListener('open-task-edit', handleOpenTaskEdit)
   window.addEventListener('task-context-menu', handleTaskContextMenu as unknown as EventListener)
@@ -676,6 +732,7 @@ onMounted(() => {
   window.addEventListener('open-quick-task-create', () => { showQuickTaskCreate.value = true })
   window.addEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
   window.addEventListener('open-shortcuts-panel', () => { uiStore.toggleShortcutsPanel() })
+  window.addEventListener('recurrence-delete-requested', handleRecurrenceDeleteEvent)
 })
 
 onUnmounted(() => {
@@ -687,6 +744,7 @@ onUnmounted(() => {
   window.removeEventListener('open-quick-task-create', () => { showQuickTaskCreate.value = true })
   window.removeEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
   window.removeEventListener('open-shortcuts-panel', () => { uiStore.toggleShortcutsPanel() })
+  window.removeEventListener('recurrence-delete-requested', handleRecurrenceDeleteEvent)
 })
 
 // Expose methods for App.vue or parent triggers

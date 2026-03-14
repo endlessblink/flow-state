@@ -570,7 +570,14 @@ onUnmounted(() => {
           <Zap v-if="isGridHandler" class="header-icon grid-handler-icon" :size="18" />
           <Sparkles v-else class="header-icon" :size="18" />
           <span>{{ isGridHandler ? 'Grid Handler' : 'AI Assistant' }}</span>
-          <OverflowTooltip v-if="headerBadgeText" class="provider-badge" :class="'provider-' + activeProvider" :text="headerBadgeText">{{ headerBadgeText }}</OverflowTooltip>
+          <OverflowTooltip
+            v-if="headerBadgeText"
+            class="provider-badge"
+            :class="'provider-' + activeProvider"
+            :text="headerBadgeText"
+          >
+            {{ headerBadgeText }}
+          </OverflowTooltip>
         </div>
         <div class="header-actions">
           <!-- Settings dropdown -->

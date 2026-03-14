@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="isOpen" class="command-palette-overlay" @click="handleBackdropClick">
+      <div v-if="isOpen" class="command-palette-overlay" role="dialog" @click="handleBackdropClick">
         <div class="command-palette-modal" @click.stop>
           <!-- Quick Add Input (Primary Focus) -->
           <div class="quick-add-section">

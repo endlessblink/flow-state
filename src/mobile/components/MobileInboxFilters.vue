@@ -83,7 +83,7 @@ const groupByIcons: Record<GroupByType, Component> = {
   time: CalendarClock
 }
 
-const props = defineProps<{
+defineProps<{
   viewMode: ViewMode
   activeTimeFilter: TimeFilterType
   groupBy: GroupByType

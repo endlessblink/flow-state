@@ -61,6 +61,7 @@ vi.mock('@/composables/useTauriStartup', () => ({
 // Mock Stores
 const mockTaskStore = {
   tasks: [] as any[],
+  get _rawTasks() { return this.tasks },
   loadFromDatabase: vi.fn(),
 }
 const mockProjectStore = {

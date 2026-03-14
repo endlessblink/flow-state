@@ -2,6 +2,8 @@ import type { Task } from '@/types/tasks'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 import { getLogger } from '@/utils/productionLogger'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useTaskStore } from '@/stores/tasks'
+import { deleteOperationsForEntity } from '@/services/offline/writeQueueDB'
 
 export class TrashService {
     private logger = getLogger()
@@ -27,10 +29,30 @@ export class TrashService {
      */
     public async restoreTask(taskId: string): Promise<void> {
         try {
-            await this.db.restoreTask(taskId)
+            const restoredTask = await this.db.restoreTask(taskId)
             console.log(`♻️ [TRASH] Restored task ${taskId}`)
 
-            // Trigger store reload or event
+            // Re-inject task into Pinia store so it reappears without a page reload
+            if (restoredTask) {
+                const taskStore = useTaskStore()
+                const existing = taskStore._rawTasks.findIndex((t: Task) => t.id === taskId)
+                if (existing === -1) {
+                    taskStore._rawTasks.push(restoredTask)
+                } else {
+                    // Already present (e.g. from a realtime event) — ensure is_deleted flag is cleared
+                    taskStore._rawTasks[existing] = restoredTask
+                }
+                console.log(`✅ [TRASH] Task ${taskId} re-injected into store`)
+            }
+
+            // Cancel any pending DELETE operations in the sync queue so a
+            // cross-device queued delete cannot re-soft-delete this task after restore
+            const cancelledOps = await deleteOperationsForEntity('task', taskId)
+            if (cancelledOps > 0) {
+                console.log(`🧹 [TRASH] Cancelled ${cancelledOps} pending queue operation(s) for task ${taskId} to prevent re-deletion`)
+            }
+
+            // Keep the event for any legacy listeners
             window.dispatchEvent(new CustomEvent('flowstate-task-restored', { detail: { taskId } }))
 
         } catch (error) {

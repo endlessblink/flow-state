@@ -136,7 +136,7 @@ watch(internalValue, updateTextDirection, { immediate: true })
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  border: 1.5px solid var(--glass-border-heavy);
+  border: 1.5px solid var(--glass-border-strong);
   border-radius: var(--radius-sm);
   background: var(--glass-bg-soft);
   cursor: pointer;

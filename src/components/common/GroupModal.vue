@@ -6,104 +6,104 @@
       @click="$emit('close')"
       @keydown="handleKeydown"
     >
-    <div class="modal-content" @click.stop>
-      <div class="modal-header">
-        <h2 class="modal-title">
-          {{ isEditing ? 'Edit Group' : 'Create Custom Group' }}
-        </h2>
-        <button class="close-btn" @click="$emit('close')">
-          <X :size="16" :stroke-width="1.5" />
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Group Name</label>
-          <BaseInput
-            ref="nameInput"
-            v-model="groupData.name"
-            placeholder="Enter group name..."
-          />
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2 class="modal-title">
+            {{ isEditing ? 'Edit Group' : 'Create Custom Group' }}
+          </h2>
+          <button class="close-btn" @click="$emit('close')">
+            <X :size="16" :stroke-width="1.5" />
+          </button>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Group Color</label>
-
-          <!-- Color Presets -->
-          <div class="color-presets">
-            <button
-              v-for="color in colorPresets"
-              :key="color"
-              class="color-preset"
-              :class="[{ active: groupData.color === color }]"
-              :style="{ backgroundColor: color }"
-              type="button"
-              :title="`Select ${color}`"
-              @click="selectColor(color)"
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Group Name</label>
+            <BaseInput
+              ref="nameInput"
+              v-model="groupData.name"
+              placeholder="Enter group name..."
             />
           </div>
 
-          <!-- Custom Color Input -->
-          <div class="custom-color-section">
-            <div class="custom-color-input">
-              <label class="color-label">Custom Color</label>
-              <div class="color-input-wrapper">
-                <input
-                  v-model="customColor"
-                  type="text"
-                  placeholder="#3b82f6"
-                  class="color-text-input"
-                  @input="handleCustomColorInput"
-                >
-                <input
-                  v-model="customColor"
-                  type="color"
-                  class="color-picker-input"
-                  @input="handleColorPickerChange"
-                >
-              </div>
+          <div class="form-group">
+            <label class="form-label">Group Color</label>
+
+            <!-- Color Presets -->
+            <div class="color-presets">
+              <button
+                v-for="color in colorPresets"
+                :key="color"
+                class="color-preset"
+                :class="[{ active: groupData.color === color }]"
+                :style="{ backgroundColor: color }"
+                type="button"
+                :title="`Select ${color}`"
+                @click="selectColor(color)"
+              />
             </div>
 
-            <!-- Color Preview -->
-            <div class="color-preview">
-              <div
-                class="preview-box"
-                :style="{ backgroundColor: groupData.color }"
-              />
-              <span class="color-value">{{ groupData.color }}</span>
+            <!-- Custom Color Input -->
+            <div class="custom-color-section">
+              <div class="custom-color-input">
+                <label class="color-label">Custom Color</label>
+                <div class="color-input-wrapper">
+                  <input
+                    v-model="customColor"
+                    type="text"
+                    placeholder="#3b82f6"
+                    class="color-text-input"
+                    @input="handleCustomColorInput"
+                  >
+                  <input
+                    v-model="customColor"
+                    type="color"
+                    class="color-picker-input"
+                    @input="handleColorPickerChange"
+                  >
+                </div>
+              </div>
+
+              <!-- Color Preview -->
+              <div class="color-preview">
+                <div
+                  class="preview-box"
+                  :style="{ backgroundColor: groupData.color }"
+                />
+                <span class="color-value">{{ groupData.color }}</span>
+              </div>
             </div>
+          </div>
+
+          <!-- TASK-072: Parent Group Selector for Nested Groups -->
+          <div class="form-group">
+            <label class="form-label">Parent Group (Optional)</label>
+            <CustomSelect
+              :model-value="groupData.parentGroupId || ''"
+              :options="parentGroupOptions"
+              placeholder="Select parent group..."
+              @update:model-value="(val) => groupData.parentGroupId = val === '' ? null : String(val)"
+            />
+            <p class="form-hint">
+              Nest this group inside another group for better organization.
+            </p>
           </div>
         </div>
 
-        <!-- TASK-072: Parent Group Selector for Nested Groups -->
-        <div class="form-group">
-          <label class="form-label">Parent Group (Optional)</label>
-          <CustomSelect
-            :model-value="groupData.parentGroupId || ''"
-            :options="parentGroupOptions"
-            placeholder="Select parent group..."
-            @update:model-value="(val) => groupData.parentGroupId = val === '' ? null : String(val)"
-          />
-          <p class="form-hint">
-            Nest this group inside another group for better organization.
-          </p>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="$emit('close')">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="!groupData.name.trim()"
+            @click="saveGroup"
+          >
+            {{ isEditing ? 'Save Changes' : 'Create Group' }}
+          </button>
         </div>
       </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-secondary" @click="$emit('close')">
-          Cancel
-        </button>
-        <button
-          class="btn btn-primary"
-          :disabled="!groupData.name.trim()"
-          @click="saveGroup"
-        >
-          {{ isEditing ? 'Save Changes' : 'Create Group' }}
-        </button>
-      </div>
     </div>
-  </div>
   </Teleport>
 </template>
 

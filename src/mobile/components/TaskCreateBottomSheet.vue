@@ -189,7 +189,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import {
-  Flag, Calendar, CalendarPlus, CalendarDays, X, Square, Mic, Globe
+  Flag, Calendar, X, Square, Mic, Globe
 } from 'lucide-vue-next'
 import { useVoiceNLPParser } from '@/composables/useVoiceNLPParser'
 import { useUrlScraping } from '@/composables/useUrlScraping'

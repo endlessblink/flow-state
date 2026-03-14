@@ -187,6 +187,7 @@
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 import { useMobileFilters, type GroupByType } from '@/composables/mobile/useMobileFilters'
 import TaskEditBottomSheet from '@/mobile/components/TaskEditBottomSheet.vue'
 import SwipeableTaskItem from '@/mobile/components/SwipeableTaskItem.vue'
@@ -197,6 +198,7 @@ import {
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
 // Shared mobile filter state (persists across view navigation)
 const {
@@ -529,9 +531,9 @@ const handleEditTask = (task: Task) => {
   isEditSheetOpen.value = true
 }
 
-// Delete task (triggered by swipe left + confirm)
+// Delete task (triggered by swipe left + confirm) — TASK-1520: recurrence-aware
 const handleDeleteTask = (task: Task) => {
-  taskStore.deleteTask(task.id)
+  recurrenceAwareDelete(task.id)
 }
 
 // Close edit bottom sheet

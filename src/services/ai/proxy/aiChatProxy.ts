@@ -429,7 +429,7 @@ async function* parseSSEStream(
             usage: chunk.usage ? finalUsage : undefined,
             finishReason: undefined,
           }
-        } catch (parseError) {
+        } catch (_parseError) {
           // Log but continue processing other chunks
           console.warn('[AIProxy] Failed to parse SSE chunk:', line)
         }
@@ -447,7 +447,7 @@ async function* parseSSEStream(
  * @param provider - Provider to check
  * @returns Promise resolving to availability status
  */
-export async function isProxyAvailable(provider: ProxyProvider): Promise<boolean> {
+export async function isProxyAvailable(_provider: ProxyProvider): Promise<boolean> {
   try {
     const proxyUrl = getProxyUrl()
 

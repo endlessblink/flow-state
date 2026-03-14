@@ -263,6 +263,7 @@ const handleSearchEscape = () => {
 const handleEscape = (event: KeyboardEvent) => {
   if (event.key === 'Escape' && !searchQuery.value) {
     emit('close')
+    event.stopPropagation()
   }
 }
 

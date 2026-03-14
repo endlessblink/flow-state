@@ -59,6 +59,7 @@ import { ref, computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 import { useCalendarInboxState } from '@/composables/inbox/useCalendarInboxState'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
@@ -71,6 +72,7 @@ import CalendarInboxList from './calendar/CalendarInboxList.vue'
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const { createTaskWithUndo, deleteTaskWithUndo } = useUnifiedUndoRedo()
+const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 const { filterDefaults } = useFilterDefaults()
 
 // State Composable
@@ -192,7 +194,7 @@ const handleTaskKeydown = (event: KeyboardEvent, task: Task) => {
     event.preventDefault()
     event.stopPropagation()
     console.log('🗑️ Delete key pressed on calendar inbox task:', task.id)
-    deleteTaskWithUndo(task.id)
+    recurrenceAwareDelete(task.id)
   }
 }
 

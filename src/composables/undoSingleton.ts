@@ -123,8 +123,9 @@ function initializeRefHistory() {
       const canvasStore = useCanvasStore()
 
       // Now safely populate the state - stores should be fully initialized
-      if (unifiedState && taskStore.tasks && Array.isArray(taskStore.tasks)) {
-        unifiedState.value.tasks = [...taskStore.tasks]
+      // Use _rawTasks (all tasks) not tasks (filtered) to avoid losing hidden tasks
+      if (unifiedState && taskStore._rawTasks && Array.isArray(taskStore._rawTasks)) {
+        unifiedState.value.tasks = [...taskStore._rawTasks]
       }
       if (unifiedState && canvasStore.groups && Array.isArray(canvasStore.groups)) {
         unifiedState.value.groups = [...canvasStore.groups]
@@ -194,7 +195,7 @@ function initializeRefHistory() {
  * Only restores entities that were actually affected by the operation
  */
 const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promise<boolean> => {
-  const { operation, snapshotBefore } = operationSnapshot
+  const { operation, snapshotBefore, snapshotAfter } = operationSnapshot
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
   const canvasStore = useCanvasStore()
@@ -210,6 +211,13 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       if (taskId) {
         console.log(`🔄 [UNDO] Removing created task: ${taskId}`)
         await taskStore.deleteTask(taskId)
+        // Cancel only pending CREATEs — keep the DELETE we just enqueued
+        try {
+          const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
+          await deleteOperationsByType('task', taskId, 'create')
+        } catch (e) {
+          console.warn('[UNDO] Failed to cancel pending sync ops:', e)
+        }
       }
       break
     }
@@ -224,6 +232,13 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
         console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
         await taskStore.createTask(deletedTask)
         console.log('🔴 [UNDO] createTask completed')
+        // Cancel only pending DELETEs — keep the CREATE we just enqueued
+        try {
+          const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
+          await deleteOperationsByType('task', taskId, 'delete')
+        } catch (e) {
+          console.warn('[UNDO] Failed to cancel pending sync ops:', e)
+        }
       } else {
         console.error('❌ [UNDO] Could not find task in snapshot:', taskId)
       }
@@ -237,6 +252,13 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
         if (deletedTask) {
           console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
           await taskStore.createTask(deletedTask)
+          // Cancel only pending DELETEs — keep the CREATE we just enqueued
+          try {
+            const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
+            await deleteOperationsByType('task', taskId, 'delete')
+          } catch (e) {
+            console.warn('[UNDO] Failed to cancel pending sync ops:', e)
+          }
         }
       }
       break
@@ -244,20 +266,27 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
 
     case 'task-update':
     case 'task-move': {
-      // Undo update/move = restore previous state of affected tasks only
+      // Undo update/move = restore only the fields that actually changed in the original operation
+      // This prevents overwriting concurrent remote edits to fields not touched by this operation
       for (const taskId of operation.affectedIds) {
         const previousTask = snapshotBefore.tasks.find(t => t.id === taskId)
-        if (previousTask) {
+        const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
+        if (previousTask && afterTask) {
           console.log(`🔄 [UNDO] Restoring task state: ${previousTask.title}`)
-          // Use updateTask to restore all properties including position
-          // Use 'USER' as the source since this is a user-initiated undo
-          await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
-            ...previousTask,
-            // Ensure position fields are included
-            canvasPosition: previousTask.canvasPosition,
-            parentId: previousTask.parentId,
-            positionFormat: previousTask.positionFormat
-          }, 'USER')
+          // Only restore the fields that actually differed between before and after
+          const changedFields: Record<string, unknown> = {}
+          for (const key of Object.keys(afterTask) as Array<keyof typeof afterTask>) {
+            if (JSON.stringify(afterTask[key]) !== JSON.stringify((previousTask as typeof afterTask)[key])) {
+              changedFields[key] = (previousTask as typeof afterTask)[key]
+            }
+          }
+          if (Object.keys(changedFields).length > 0) {
+            await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'USER') // BUG-1051: AWAIT to ensure persistence
+          }
+        } else if (previousTask) {
+          // afterTask missing (shouldn't happen for update/move) — fall back to full restore
+          console.log(`🔄 [UNDO] Fallback: restoring full task state: ${previousTask.title}`)
+          await taskStore.updateTask(taskId, { ...previousTask }, 'USER')
         }
       }
       break
@@ -325,7 +354,7 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
  * Perform selective redo based on operation type
  */
 const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promise<boolean> => {
-  const { operation, snapshotAfter } = operationSnapshot
+  const { operation, snapshotBefore, snapshotAfter } = operationSnapshot
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
   const canvasStore = useCanvasStore()
@@ -342,6 +371,13 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       if (createdTask) {
         console.log(`🔁 [REDO] Re-creating task: ${createdTask.title}`)
         await taskStore.createTask(createdTask)
+        // Cancel only pending DELETEs — keep the CREATE we just enqueued
+        try {
+          const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
+          await deleteOperationsByType('task', taskId, 'delete')
+        } catch (e) {
+          console.warn('[REDO] Failed to cancel pending sync ops:', e)
+        }
       }
       break
     }
@@ -351,6 +387,13 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       const taskId = operation.affectedIds[0]
       console.log(`🔁 [REDO] Re-deleting task: ${taskId}`)
       await taskStore.deleteTask(taskId)
+        // Cancel only pending CREATEs — keep the DELETE we just enqueued
+        try {
+          const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
+          await deleteOperationsByType('task', taskId, 'create')
+        } catch (e) {
+          console.warn('[REDO] Failed to cancel pending sync ops:', e)
+        }
       break
     }
 
@@ -359,24 +402,40 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       for (const taskId of operation.affectedIds) {
         console.log(`🔁 [REDO] Re-deleting task: ${taskId}`)
         await taskStore.deleteTask(taskId)
+        // Cancel only pending CREATEs — keep the DELETE we just enqueued
+        try {
+          const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
+          await deleteOperationsByType('task', taskId, 'create')
+        } catch (e) {
+          console.warn('[REDO] Failed to cancel pending sync ops:', e)
+        }
       }
       break
     }
 
     case 'task-update':
     case 'task-move': {
-      // Redo update/move = apply the after state to affected tasks
+      // Redo update/move = apply only the fields that actually changed in the original operation
+      // This prevents overwriting concurrent remote edits to fields not touched by this operation
       for (const taskId of operation.affectedIds) {
+        const beforeTask = snapshotBefore.tasks.find(t => t.id === taskId)
         const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
-        if (afterTask) {
+        if (afterTask && beforeTask) {
           console.log(`🔁 [REDO] Re-applying task state: ${afterTask.title}`)
-          // Use 'USER' as the source since this is a user-initiated redo
-          await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
-            ...afterTask,
-            canvasPosition: afterTask.canvasPosition,
-            parentId: afterTask.parentId,
-            positionFormat: afterTask.positionFormat
-          }, 'USER')
+          // Only re-apply the fields that actually differed between before and after
+          const changedFields: Record<string, unknown> = {}
+          for (const key of Object.keys(afterTask) as Array<keyof typeof afterTask>) {
+            if (JSON.stringify(afterTask[key]) !== JSON.stringify((beforeTask as typeof afterTask)[key])) {
+              changedFields[key] = afterTask[key]
+            }
+          }
+          if (Object.keys(changedFields).length > 0) {
+            await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'USER') // BUG-1051: AWAIT to ensure persistence
+          }
+        } else if (afterTask) {
+          // beforeTask missing (shouldn't happen for update/move) — fall back to full apply
+          console.log(`🔁 [REDO] Fallback: re-applying full task state: ${afterTask.title}`)
+          await taskStore.updateTask(taskId, { ...afterTask }, 'USER')
         }
       }
       break
@@ -624,7 +683,8 @@ const captureCurrentState = async (): Promise<UnifiedUndoState> => {
   }
 
   return {
-    tasks: safeClone(taskStore.tasks ?? [], []),
+    // Use _rawTasks (all tasks) not tasks (filtered) to avoid snapshotting only visible tasks
+    tasks: safeClone(taskStore._rawTasks ?? [], []),
     groups: safeClone(canvasStore.groups ?? [], [])
   }
 }
@@ -714,9 +774,10 @@ const saveState = async (_description?: string, _operation?: Omit<UndoOperation,
     const canvasStore = useCanvasStore()
 
     // Save combined state (tasks + groups)
+    // Use _rawTasks (all tasks) not tasks (filtered) to avoid saving only visible tasks
     if (unifiedState) {
       unifiedState.value = {
-        tasks: [...taskStore.tasks],
+        tasks: [...taskStore._rawTasks],
         groups: [...canvasStore.groups]
       }
     }

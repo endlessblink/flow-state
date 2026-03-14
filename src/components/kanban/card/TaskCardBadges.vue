@@ -45,16 +45,25 @@
         <Paperclip :size="12" />
         <span class="badge-text">{{ task.attachments.length }}</span>
       </span>
-    </div>
 
+      <!-- Recurring -->
+      <span
+        v-if="task.recurrenceRule"
+        class="badge-item badge-recurring"
+        :title="recurrenceDescription"
+      >
+        <Repeat :size="12" />
+      </span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Task } from '@/stores/tasks'
-import { Calendar, CheckSquare, Timer, Paperclip } from 'lucide-vue-next'
+import { Calendar, CheckSquare, Timer, Paperclip, Repeat } from 'lucide-vue-next'
 import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
+import { describeRecurrenceRule } from '@/utils/recurrenceUtils'
 
 const props = defineProps<{
   task: Task
@@ -69,6 +78,11 @@ const props = defineProps<{
 
 // BUG-1191: Ensure date timer is running for reactive overdue detection
 ensureDateTimer()
+
+const recurrenceDescription = computed(() => {
+  if (!props.task.recurrenceRule) return ''
+  return describeRecurrenceRule(props.task.recurrenceRule)
+})
 
 // BUG-1191: Highlight overdue or today's tasks (reactive to date changes)
 const dueDateClass = computed(() => {
@@ -135,5 +149,10 @@ const dueDateClass = computed(() => {
 /* Pomodoro badge */
 .badge-pomodoro {
   color: rgba(239, 68, 68, 0.6);
+}
+
+/* Recurring badge */
+.badge-recurring {
+  color: var(--brand-primary);
 }
 </style>

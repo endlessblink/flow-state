@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { Flag, Calendar, CalendarPlus, Plus, CheckCircle } from 'lucide-vue-next'
 import type { Task } from '@/types/tasks'
 
-const props = defineProps<{
+defineProps<{
   title: string
   priority: 'low' | 'medium' | 'high' | undefined
   due: 'today' | 'tomorrow' | undefined

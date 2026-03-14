@@ -325,7 +325,12 @@ async function onClearMemories() {
     <SettingsSection title="Groq API Key">
       <p class="section-desc">
         Provide your own Groq API key for direct access. Free tier available at
-        <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" class="settings-link">console.groq.com</a>.
+        <a
+          href="https://console.groq.com/keys"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="settings-link"
+        >console.groq.com</a>.
       </p>
 
       <div class="groq-key-row">

@@ -15,7 +15,7 @@ export interface RestoreOperations {
 export function createRestoreOperations(
   ctx: BackupContext,
   coreOps: CoreOperations,
-  goldenOps: GoldenOperations
+  _goldenOps: GoldenOperations
 ): RestoreOperations {
   /**
    * TASK-344: Analyze a backup before restore (dry-run mode)

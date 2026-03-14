@@ -79,7 +79,7 @@ export function resolveTask(idOrTitle: string, tasks: TaskLike[]): ResolvedTask 
   const uf = new uFuzzy({ intraMode: 1, intraIns: 1 })
   const haystack = tasks.map((t) => t.title)
 
-  const [idxs, info, order] = uf.search(haystack, query)
+  const [idxs, _info, order] = uf.search(haystack, query)
 
   // No matches at all
   if (!idxs || idxs.length === 0) return null

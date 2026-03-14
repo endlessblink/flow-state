@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import { useTaskStore } from '@/stores/tasks'
+import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 import { useMorningDashboard, type TaskPoolGroup, type TimeBlock } from '@/composables/useMorningDashboard'
 import BigThreeSlot from './BigThreeSlot.vue'
 import TaskPoolCard from './TaskPoolCard.vue'
@@ -14,6 +15,7 @@ import BaseInput from '@/components/base/BaseInput.vue'
 import type { Task } from '@/types/tasks'
 
 const taskStore = useTaskStore()
+const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
 const {
   stage,
@@ -214,24 +216,33 @@ const confirmMessage = ref('Are you sure you want to delete this task? You can p
 const confirmText = ref('Delete')
 const confirmActionFn = ref<(() => void | Promise<void>) | null>(null)
 
+// TASK-1520: recurrence-aware delete via composable
 function handleConfirmDelete(taskId: string) {
+  const allTasks = taskStore._rawTasks ?? taskStore.tasks
+  const task = allTasks.find(t => t.id === taskId)
+  if (task?.recurrenceRule) {
+    recurrenceAwareDelete(taskId)
+    return
+  }
   confirmTitle.value = 'Delete Task'
   confirmMessage.value = 'Are you sure you want to delete this task? You can press Ctrl+Z to undo.'
   confirmText.value = 'Delete'
-  confirmActionFn.value = () => { taskStore.deleteTask(taskId) }
+  confirmActionFn.value = () => recurrenceAwareDelete(taskId)
   showConfirmModal.value = true
 }
 
-async function handleConfirmPermanentDelete(taskId: string) {
-  const task = taskStore.tasks.find(t => t.id === taskId)
+function handleConfirmPermanentDelete(taskId: string) {
+  const allTasks = taskStore._rawTasks ?? taskStore.tasks
+  const task = allTasks.find(t => t.id === taskId)
   if (!task) return
+  if (task.recurrenceRule) {
+    recurrenceAwareDelete(taskId, { permanent: true })
+    return
+  }
   confirmTitle.value = 'Permanently Delete Task'
   confirmMessage.value = `Permanently delete "${task.title}"? This performs a hard delete from storage.`
   confirmText.value = 'Permanently Delete'
-  confirmActionFn.value = async () => {
-    const { getUndoSystem } = await import('@/composables/undoSingleton')
-    await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
-  }
+  confirmActionFn.value = () => recurrenceAwareDelete(taskId, { permanent: true })
   showConfirmModal.value = true
 }
 

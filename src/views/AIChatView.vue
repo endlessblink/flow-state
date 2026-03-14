@@ -117,8 +117,6 @@ const {
   retryLastMessage,
   handleQuickAction,
   quickActions,
-  providerLabel,
-  displayModelName,
   headerBadgeText,
   showCloudModelSelector,
   cloudModelOptions,

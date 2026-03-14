@@ -29,10 +29,8 @@ const isValidUUID = (str: string | null | undefined): boolean => {
 const warnedInvalidUUIDs = new Set<string>()
 
 const sanitizeUUID = (value: string | null | undefined): string | null => {
-    // Handle null/undefined
-    if (value === null || value === undefined) return null
-    // Handle string literals that should be null
-    if (value === 'undefined' || value === 'null' || value === '') return null
+    // Handle null/undefined/empty string - catches all falsy values
+    if (!value || value === 'undefined' || value === 'null') return null
     // Handle non-UUID placeholder values
     if (value === UNCATEGORIZED_PROJECT_ID || value === '1') return null
     // Validate UUID format

@@ -191,6 +191,7 @@ import { useBoardModals } from '@/composables/board/useBoardModals'
 import { useBoardContextMenu } from '@/composables/board/useBoardContextMenu'
 import { useBoardActions } from '@/composables/board/useBoardActions'
 import { useBoardState } from '@/composables/board/useBoardState'
+import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 
 import './BoardView.css'
 
@@ -231,7 +232,6 @@ const {
   openQuickTaskCreate,
   closeQuickTaskCreate,
   openConfirmModal,
-  closeConfirmModal
 } = useBoardModals()
 
 // Dynamic confirmation modal state (supports both soft-delete and permanent delete)
@@ -239,6 +239,8 @@ const confirmTitle = ref(t('task.delete_confirm_title'))
 const confirmMessage = ref(t('task.delete_confirm_message'))
 const confirmText = ref(t('common.delete'))
 const confirmActionFn = ref<(() => void | Promise<void>) | null>(null)
+
+const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
 const {
   showContextMenu,
@@ -379,7 +381,15 @@ const handleQuickTaskCreate = async (data: {
   }
 }
 
+// TASK-1520: recurrence-aware delete via global composable
 const handleConfirmDelete = (taskId: string) => {
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const task = allTasks.find(t => t.id === taskId)
+  if (task?.recurrenceRule) {
+    recurrenceAwareDelete(taskId)
+    return
+  }
+
   taskToDelete.value = taskId
   confirmTitle.value = t('task.delete_confirm_title')
   confirmMessage.value = t('task.delete_confirm_message')
@@ -394,8 +404,15 @@ const handleConfirmDelete = (taskId: string) => {
 }
 
 const handleConfirmPermanentDelete = (taskId: string) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const task = allTasks.find(t => t.id === taskId)
   if (!task) return
+
+  if (task.recurrenceRule) {
+    recurrenceAwareDelete(taskId, { permanent: true })
+    return
+  }
+
   confirmTitle.value = 'Permanently Delete Task'
   confirmMessage.value = `Permanently delete "${task.title}"? This performs a hard delete from storage.`
   confirmText.value = 'Permanently Delete'

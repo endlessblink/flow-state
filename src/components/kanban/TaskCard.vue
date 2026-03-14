@@ -48,7 +48,6 @@
         >
           {{ truncateUrlsInText(task.title) }}
         </h3>
-
       </div>
 
       <!-- Action Buttons -->

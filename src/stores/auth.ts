@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase, consumePendingProviderTokens, type User, type Session, type AuthError } from '@/services/auth/supabase'
-import { clearGuestData, getOrCreateGuestSessionId, clearGuestSessionId } from '@/utils/guestModeStorage'
+import { clearGuestData, clearGuestSessionId } from '@/utils/guestModeStorage'
 import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
 import { invalidateCache } from '@/composables/useSupabaseDatabase'
 import type { Task } from '@/types/tasks'
@@ -792,7 +792,7 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         localStorage.removeItem('flowstate-supabase-auth')
         localStorage.removeItem('flowstate-supabase-auth-code-verifier')
-      } catch (e) {
+      } catch (_e) {
         // localStorage might not be available in some edge cases
       }
 
@@ -823,14 +823,14 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const { clearReadCache } = await import('@/services/offline/readCacheDB')
         await clearReadCache()
-      } catch (e) {
+      } catch (_e) {
         // Non-critical — cache will be overwritten on next sign-in anyway
       }
 
       // BUG-1352: Disconnect realtime to prevent stale authenticated connections
       try {
         supabase?.realtime.disconnect()
-      } catch (e) {
+      } catch (_e) {
         // Not critical if this fails
       }
 

@@ -42,6 +42,18 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     isResizing: boolean
   } | null>(null)
 
+  // TASK-1521: Drag preview state — tracks pending position during mousemove drag.
+  // The store is NOT updated until mouseup (preview-then-commit pattern, mirrors resize).
+  const weekDragPreview = ref<{
+    taskId: string
+    instanceId: string
+    previewSlot: number
+    previewDayIndex: number
+    previewDate: string
+    previewTime: string
+    isDragging: boolean
+  } | null>(null)
+
   const cleanupListeners = () => {
     if (currentMouseMoveHandler) {
       document.removeEventListener('mousemove', currentMouseMoveHandler)
@@ -223,13 +235,18 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const HALF_HOUR_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
     const dayColumnWidth = 100 / 7
 
+    // TASK-1521: Override position with drag preview while dragging (preview-then-commit)
+    const isBeingDragged = weekDragPreview.value?.taskId === event.taskId && weekDragPreview.value?.isDragging
+    const previewSlot = isBeingDragged ? weekDragPreview.value!.previewSlot : event.startSlot
+    const previewDayIndex = isBeingDragged ? weekDragPreview.value!.previewDayIndex : event.dayIndex
+
     // Calculate column positioning within the day
     const eventWidthWithinDay = dayColumnWidth / event.totalColumns
-    const eventLeftOffset = (dayColumnWidth * event.dayIndex) + (eventWidthWithinDay * event.column)
+    const eventLeftOffset = (dayColumnWidth * previewDayIndex) + (eventWidthWithinDay * event.column)
 
     return {
       position: 'absolute',
-      top: `${event.startSlot * HALF_HOUR_HEIGHT}px`,
+      top: `${previewSlot * HALF_HOUR_HEIGHT}px`,
       height: `${event.slotSpan * HALF_HOUR_HEIGHT}px`,
       left: `calc(${eventLeftOffset}% + 2px)`,
       width: `calc(${eventWidthWithinDay}% - 4px)`
@@ -255,13 +272,38 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const clickOffsetY = event.clientY - eventRect.top
 
     const isDuplicateMode = event.altKey
-    const _duplicateInstanceId: string | null = null
 
-    let lastUpdatedDayIndex = calendarEvent.dayIndex
-    let lastUpdatedSlot = calendarEvent.startSlot
+    const initialSlot = calendarEvent.startSlot
+    const initialDayIndex = calendarEvent.dayIndex
+    let lastSeenSlot = initialSlot
+    let lastSeenDayIndex = initialDayIndex
 
-    const handleMouseMove = async (e: MouseEvent) => {
-      requestAnimationFrame(async () => {
+    // TASK-1521: Track final pending values to commit on mouseup (preview-then-commit pattern)
+    const instanceId = calendarEvent.instanceId || `instance-${calendarEvent.taskId}-${Date.now()}`
+    let finalSlot = initialSlot
+    let finalDayIndex = initialDayIndex
+    let finalDate = weekDays.value[initialDayIndex]?.dateString ?? ''
+    let finalTime = (() => {
+      const h = Math.floor(initialSlot / 2) + WORKING_HOURS_OFFSET
+      const m = (initialSlot % 2) * 30
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+    })()
+
+    // Initialise preview state so visual position tracks mouse immediately
+    if (!isDuplicateMode) {
+      weekDragPreview.value = {
+        taskId: calendarEvent.taskId,
+        instanceId,
+        previewSlot: initialSlot,
+        previewDayIndex: initialDayIndex,
+        previewDate: finalDate,
+        previewTime: finalTime,
+        isDragging: true
+      }
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      requestAnimationFrame(() => {
         const scrollTop = weekDaysGrid.scrollTop || 0
 
         // Calculate day column
@@ -273,64 +315,97 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
         const eventTopInGrid = mouseYInGrid - clickOffsetY
         const slotFromTop = Math.max(0, Math.min(33, Math.round(eventTopInGrid / HALF_HOUR_HEIGHT)))
 
-        if (slotFromTop !== lastUpdatedSlot || newDayIndex !== lastUpdatedDayIndex) {
-          lastUpdatedSlot = slotFromTop
-          lastUpdatedDayIndex = newDayIndex
+        if (slotFromTop !== lastSeenSlot || newDayIndex !== lastSeenDayIndex) {
+          lastSeenSlot = slotFromTop
+          lastSeenDayIndex = newDayIndex
 
           const newHour = Math.floor(slotFromTop / 2) + WORKING_HOURS_OFFSET
           const newMinute = (slotFromTop % 2) * 30
           const newDate = weekDays.value[newDayIndex].dateString
           const newTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`
 
-          if (isDuplicateMode) {
-            // In duplicate mode, create a copy of the task with new schedule
-            const originalTask = taskStore.getTask(calendarEvent.taskId)
-            if (originalTask) {
-              taskStore.createTask({
-                title: originalTask.title,
-                description: originalTask.description,
-                instances: [{
-                  id: `instance-dup-${Date.now()}`,
-                  scheduledDate: newDate,
-                  scheduledTime: newTime,
-                  duration: calendarEvent.duration || 60
-                }],
-                estimatedDuration: calendarEvent.duration,
-                projectId: originalTask.projectId,
-                priority: originalTask.priority,
-                status: originalTask.status
-              })
-            }
-          } else {
-            // BUG-1325: Update instances[] instead of legacy scheduledDate/scheduledTime
-            const task = taskStore.getTask(calendarEvent.taskId)
-            if (task) {
-              const instanceId = calendarEvent.instanceId || `instance-${calendarEvent.taskId}-${Date.now()}`
-              await taskStore.updateTask(calendarEvent.taskId, {
-                instances: [{
-                  id: instanceId,
-                  scheduledDate: newDate,
-                  scheduledTime: newTime,
-                  duration: calendarEvent.duration || task.estimatedDuration || 60
-                }]
-              })
-            }
+          finalSlot = slotFromTop
+          finalDayIndex = newDayIndex
+          finalDate = newDate
+          finalTime = newTime
+
+          if (!isDuplicateMode && weekDragPreview.value) {
+            // TASK-1521: Update visual preview only — no store writes during mousemove
+            weekDragPreview.value.previewSlot = slotFromTop
+            weekDragPreview.value.previewDayIndex = newDayIndex
+            weekDragPreview.value.previewDate = newDate
+            weekDragPreview.value.previewTime = newTime
           }
         }
       })
     }
 
+    const commitWeekDrag = async () => {
+      // TASK-1521: Clear preview FIRST so the event snaps to its new store position cleanly
+      weekDragPreview.value = null
+
+      if (isDuplicateMode) {
+        // Duplicate mode: create a copy with the final schedule
+        const originalTask = taskStore.getTask(calendarEvent.taskId)
+        if (originalTask) {
+          taskStore.createTask({
+            title: originalTask.title,
+            description: originalTask.description,
+            instances: [{
+              id: `instance-dup-${Date.now()}`,
+              scheduledDate: finalDate,
+              scheduledTime: finalTime,
+              duration: calendarEvent.duration || 60
+            }],
+            estimatedDuration: calendarEvent.duration,
+            projectId: originalTask.projectId,
+            priority: originalTask.priority,
+            status: originalTask.status
+          })
+        }
+      } else if (finalSlot !== initialSlot || finalDayIndex !== initialDayIndex) {
+        // BUG-1325: Update instances[] instead of legacy scheduledDate/scheduledTime
+        // TASK-1521: Use updateTaskWithUndo so Ctrl+Z reverts the drag
+        const task = taskStore.getTask(calendarEvent.taskId)
+        if (task) {
+          await taskStore.updateTaskWithUndo(calendarEvent.taskId, {
+            instances: [{
+              id: instanceId,
+              scheduledDate: finalDate,
+              scheduledTime: finalTime,
+              duration: calendarEvent.duration || task.estimatedDuration || 60
+            }]
+          })
+        }
+      }
+    }
+
+    const cancelWeekDrag = () => {
+      // TASK-1521: Escape cancels the drag — discard pending changes
+      weekDragPreview.value = null
+      cleanupListeners()
+    }
+
     const handleMouseUp = () => {
       cleanupListeners()
+      commitWeekDrag()
+    }
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        cancelWeekDrag()
+      }
     }
 
     // Use registry for cleanup
     cleanupListeners()
     currentMouseMoveHandler = handleMouseMove
     currentMouseUpHandler = handleMouseUp
+    currentKeydownHandler = handleKeydown
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('keydown', handleKeydown)
   }
 
   const handleWeekEventMouseDown = (event: MouseEvent, _calendarEvent: WeekEvent) => {
@@ -404,15 +479,32 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
         await taskStore.updateTask(calendarEvent.taskId, {
           estimatedDuration: finalDuration
         })
+
+        // Update instance duration if present
+        if (calendarEvent.instanceId) {
+          taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
+            duration: finalDuration
+          })
+        }
       } else {
         const newHour = Math.floor(finalStartSlot / 2) + WORKING_HOURS_OFFSET
         const newMinute = (finalStartSlot % 2) * 30
 
         if (newHour >= WORKING_HOURS_OFFSET && newHour < 23) {
-          await taskStore.updateTask(calendarEvent.taskId, {
-            scheduledTime: `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`,
-            estimatedDuration: finalDuration
-          })
+          const newScheduledTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`
+
+          // Update instance if present (instance-based tasks); fall back to legacy task fields
+          if (calendarEvent.instanceId) {
+            await taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
+              scheduledTime: newScheduledTime,
+              duration: finalDuration
+            })
+          } else {
+            await taskStore.updateTask(calendarEvent.taskId, {
+              scheduledTime: newScheduledTime,
+              estimatedDuration: finalDuration
+            })
+          }
         }
       }
     }
@@ -508,6 +600,9 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     weekResizeTaskId,
     resizePreview,
     cancelWeekResize: cleanupAllListeners, // Allow external cancellation
+
+    // TASK-1521: Drag preview (preview-then-commit)
+    weekDragPreview,
 
     // Utilities
     isCurrentWeekTimeCell

@@ -447,6 +447,18 @@ export function useMorningDashboard() {
     taskStore.setSmartView(null)
     taskStore.setActiveDurationFilter(null)
 
+    // Mark morning ritual as completed so the banner hides
+    const placedCount = big3Slots.value.filter(s => s.taskId).length
+    const totalMin = timeBlocks.value.reduce((sum, b) => sum + (b.startTime ? b.duration : 0), 0)
+    try {
+      localStorage.setItem(
+        `flowstate-morning-ritual-${todayStr}`,
+        JSON.stringify({ taskCount: placedCount, totalMinutes: totalMin })
+      )
+    } catch {
+      // storage unavailable — silent
+    }
+
     await gamificationStore.awardXp(25, 'morning_commitment')
     router.push('/')
   }

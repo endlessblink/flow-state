@@ -73,6 +73,84 @@ function unescapeIcal(str: string): string {
     .replace(/\\\\/g, '\\')
 }
 
+// BUG-1523: RRULE expansion — supports DAILY/WEEKLY/MONTHLY/YEARLY with INTERVAL, COUNT, UNTIL
+const MAX_RRULE_INSTANCES = 500
+
+function parseByday(byday: string): number[] {
+  const dayMap: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 }
+  return byday.split(',').map(d => dayMap[d.trim().replace(/^[+-]?\d+/, '')]).filter(n => n !== undefined)
+}
+
+function expandRRule(dtstart: Date, rruleText: string, rangeStart: Date, rangeEnd: Date): Date[] {
+  const dates: Date[] = []
+  const parts: Record<string, string> = {}
+  rruleText.replace('RRULE:', '').split(';').forEach(p => {
+    const [k, v] = p.split('=')
+    if (k && v !== undefined) parts[k.trim()] = v.trim()
+  })
+
+  const freq = parts.FREQ
+  if (!freq) return dates
+
+  const interval = parseInt(parts.INTERVAL || '1', 10) || 1
+  const until = parts.UNTIL ? parseICalDate(parts.UNTIL) : rangeEnd
+  const effectiveEnd = until < rangeEnd ? until : rangeEnd
+  const countLimit = parts.COUNT ? parseInt(parts.COUNT, 10) : MAX_RRULE_INSTANCES
+  const bydayNums = parts.BYDAY ? parseByday(parts.BYDAY) : null
+
+  let current = new Date(dtstart)
+  let generated = 0
+
+  while (current <= effectiveEnd && generated < countLimit && generated < MAX_RRULE_INSTANCES) {
+    if (current >= rangeStart) {
+      // For WEEKLY with BYDAY, check if current day-of-week is in the list
+      if (freq === 'WEEKLY' && bydayNums && bydayNums.length > 0) {
+        if (bydayNums.includes(current.getDay())) {
+          dates.push(new Date(current))
+        }
+      } else {
+        dates.push(new Date(current))
+      }
+    }
+    generated++
+
+    // Advance to next candidate
+    const prev = new Date(current)
+    switch (freq) {
+      case 'DAILY':
+        current = new Date(current)
+        current.setDate(current.getDate() + interval)
+        break
+      case 'WEEKLY':
+        if (bydayNums && bydayNums.length > 1) {
+          // Advance one day at a time; the BYDAY filter above handles which days count
+          current = new Date(current)
+          current.setDate(current.getDate() + 1)
+          // When we've gone a full week past a BYDAY hit without another hit, jump ahead
+          // (simple: just advance day by day, filter handles it, safety via generated < MAX)
+        } else {
+          current = new Date(current)
+          current.setDate(current.getDate() + 7 * interval)
+        }
+        break
+      case 'MONTHLY':
+        current = new Date(current)
+        current.setMonth(current.getMonth() + interval)
+        break
+      case 'YEARLY':
+        current = new Date(current)
+        current.setFullYear(current.getFullYear() + interval)
+        break
+      default:
+        return dates // unknown freq — bail
+    }
+    // Safety: if date didn't advance (e.g. setMonth overflow), force break
+    if (current.getTime() === prev.getTime()) break
+  }
+
+  return dates
+}
+
 function parseICalText(icsText: string, calendarId: string, color: string): ExternalCalendarEvent[] {
   const events: ExternalCalendarEvent[] = []
   const blocks = icsText.split('BEGIN:VEVENT')
@@ -91,29 +169,57 @@ function parseICalText(icsText: string, calendarId: string, color: string): Exte
 
     if (!summary.value || !dtstart.value) continue
 
-    // Skip recurring event templates (RRULE) — individual occurrences have RECURRENCE-ID
-    // For MVP, we only show non-recurring events and expanded occurrences
     const hasRRule = eventText.includes('RRULE:')
+    // RECURRENCE-ID marks an exception override for a specific occurrence — keep as-is
     const hasRecurrenceId = eventText.includes('RECURRENCE-ID')
-    if (hasRRule && !hasRecurrenceId) continue
 
     const isAllDay = !dtstart.value.includes('T')
     const startTime = parseICalDate(dtstart.value)
-    const endTime = dtend.value
-      ? parseICalDate(dtend.value)
-      : new Date(startTime.getTime() + (isAllDay ? 86400000 : 3600000))
+    const durationMs = dtend.value
+      ? parseICalDate(dtend.value).getTime() - startTime.getTime()
+      : isAllDay ? 86400000 : 3600000
 
-    events.push({
-      id: uid.value || `${calendarId}-${i}`,
+    const eventBase = {
       title: unescapeIcal(summary.value),
-      startTime,
-      endTime,
       isAllDay,
       location: location.value ? unescapeIcal(location.value) : undefined,
       description: description.value ? unescapeIcal(description.value) : undefined,
       calendarId,
       color
-    })
+    }
+
+    if (hasRRule && !hasRecurrenceId) {
+      // BUG-1523: Expand recurring event into individual instances within visible window
+      const rruleLine = eventText.split(/\r?\n/).find(l => l.startsWith('RRULE:'))
+      if (!rruleLine) continue
+
+      const now = new Date()
+      const rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30)
+      const rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 90)
+
+      const occurrences = expandRRule(startTime, rruleLine.trim(), rangeStart, rangeEnd)
+      const baseUid = uid.value || `${calendarId}-${i}`
+
+      for (let j = 0; j < occurrences.length; j++) {
+        const occStart = occurrences[j]
+        const occEnd = new Date(occStart.getTime() + durationMs)
+        events.push({
+          ...eventBase,
+          id: `${baseUid}-occ${j}`,
+          startTime: occStart,
+          endTime: occEnd
+        })
+      }
+    } else {
+      // Non-recurring event or RECURRENCE-ID exception instance — add directly
+      const endTime = new Date(startTime.getTime() + durationMs)
+      events.push({
+        ...eventBase,
+        id: uid.value || `${calendarId}-${i}`,
+        startTime,
+        endTime
+      })
+    }
   }
 
   return events

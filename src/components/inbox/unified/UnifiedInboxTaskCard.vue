@@ -28,7 +28,13 @@
 
     <!-- Task Content -->
     <div class="task-content--inbox">
-      <OverflowTooltip :text="task.title" class="task-title" multiline :line-clamp="compact ? 1 : 2" dir="auto">
+      <OverflowTooltip
+        :text="task.title"
+        class="task-title"
+        multiline
+        :line-clamp="compact ? 1 : 2"
+        dir="auto"
+      >
         {{ truncateUrlsInText(task.title) }}
       </OverflowTooltip>
 

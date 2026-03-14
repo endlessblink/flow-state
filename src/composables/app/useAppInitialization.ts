@@ -96,7 +96,14 @@ export function useAppInitialization() {
 
             if (hasCache) {
                 if (cachedTasks && cachedTasks.length > 0) {
-                    taskStore._rawTasks = cachedTasks
+                    // Dedup safety: ensure no duplicate IDs from stale cache
+                    const seen = new Set<string>()
+                    const dedupedCache = cachedTasks.filter(t => {
+                        if (seen.has(t.id)) return false
+                        seen.add(t.id)
+                        return true
+                    })
+                    taskStore._rawTasks = dedupedCache
                     console.log(`📦 [CACHE-FIRST] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
                 }
                 if (cachedGroups && cachedGroups.length > 0) {
@@ -126,6 +133,15 @@ export function useAppInitialization() {
 
         // Load persisted filters (applies regardless of cache hit)
         await taskStore.loadPersistedFilters()
+
+        // DEBUG: Check for duplicates after cache load
+        {
+          const ids = new Map<string, number>()
+          for (const t of taskStore._rawTasks) ids.set(t.id, (ids.get(t.id) || 0) + 1)
+          const dupes = [...ids.entries()].filter(([,c]) => c > 1)
+          if (dupes.length > 0) console.error('🔴 [DEDUP] Duplicates after cache load:', dupes.length, dupes.map(([id]) => id.slice(0,8)))
+          else console.log('✅ [DEDUP] No duplicates after cache load. Total:', taskStore._rawTasks.length)
+        }
 
         // Mark data as ready — UI can render with cached data (or empty state)
         authStore.markAppInitLoadComplete()
@@ -292,6 +308,15 @@ export function useAppInitialization() {
 
                     console.log('✅ [CACHE-FIRST] Background refresh complete')
 
+                    // DEBUG: Check for duplicates after background refresh
+                    {
+                      const ids = new Map<string, number>()
+                      for (const t of taskStore._rawTasks) ids.set(t.id, (ids.get(t.id) || 0) + 1)
+                      const dupes = [...ids.entries()].filter(([,c]) => c > 1)
+                      if (dupes.length > 0) console.error('🔴 [DEDUP] Duplicates after background refresh:', dupes.length, dupes.map(([id]) => id.slice(0,8)))
+                      else console.log('✅ [DEDUP] No duplicates after refresh. Total:', taskStore._rawTasks.length)
+                    }
+
                     // BUG-1339: If authenticated but got 0 tasks, schedule delayed retry
                     if (authStore.isAuthenticated && taskStore._rawTasks.length === 0) {
                         console.warn('⚠️ [BUG-1339] Authenticated but 0 tasks after refresh — scheduling delayed retry (2s)')
@@ -386,6 +411,16 @@ export function useAppInitialization() {
             console.log('🎯 [CHALLENGES] Initialized successfully')
         } catch (error) {
             console.warn('⚠️ Challenge system initialization failed:', error)
+        }
+
+        // TASK-1524: Migrate old `recurrence` field to new `recurrenceRule` format
+        // Must run before the recurrence scheduler so migrated tasks are processed
+        try {
+            const { useRecurrenceMigration } = await import('@/composables/useRecurrenceMigration')
+            const migration = useRecurrenceMigration()
+            await migration.migrateIfNeeded()
+        } catch (error) {
+            console.warn('[RECURRENCE-MIGRATION] Migration failed (non-critical):', error)
         }
 
         // TASK-1418: Process deferred recurring task clones

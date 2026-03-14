@@ -331,8 +331,24 @@ export function useTaskPersistence(
                     const isVeryRecent = (now - localTime) < RECENT_THRESHOLD_MS
 
                     if (localVer > remoteVer || localTime > remoteTime || isVeryRecent) {
-                        console.log(`🛡️ [SMART-MERGE] Preserving local task "${localTask.title?.slice(0, 15)}" (Local v${localVer} > Remote v${remoteVer} || Local newer)`)
-                        mergedTasks.push(localTask)
+                        // BUG-1516 FIX (READ path): Field-level merge instead of whole-task LWW.
+                        // Start with remote as base so remote-only field changes are preserved,
+                        // then overlay local content fields on top (local wins for edited content).
+                        // DB-authoritative fields (isPinned, is_deleted, etc.) always come from remote
+                        // to prevent stale local state from overriding server truth.
+                        const DB_AUTHORITATIVE_FIELDS = new Set([
+                            'isPinned', '_soft_deleted', 'deletedAt',
+                            'positionVersion', 'createdAt',
+                        ])
+                        const merged = { ...remoteTask } as Task
+                        for (const key of Object.keys(localTask) as (keyof Task)[]) {
+                            if (localTask[key] !== undefined && !DB_AUTHORITATIVE_FIELDS.has(key)) {
+                                ;(merged as any)[key] = localTask[key]
+                            }
+                        }
+                        merged.updatedAt = new Date(Math.max(localTime, remoteTime))
+                        console.log(`🛡️ [SMART-MERGE] Field-merging local task "${localTask.title?.slice(0, 15)}" onto remote base (Local v${localVer} > Remote v${remoteVer} || Local newer)`)
+                        mergedTasks.push(merged)
                     } else {
                         // Remote is newer or equal -> Accept remote
                         // BUG-1206 DEBUG: Log when remote description overwrites local
@@ -432,6 +448,16 @@ export function useTaskPersistence(
             // Add any new tasks from merged result that weren't already in the array
             for (const [, newTask] of mergedMap) {
                 _rawTasks.value.push(newTask)
+            }
+
+            // Safety dedup: ensure no duplicate task IDs in _rawTasks
+            const seenIds = new Set<string>()
+            for (let i = _rawTasks.value.length - 1; i >= 0; i--) {
+                if (seenIds.has(_rawTasks.value[i].id)) {
+                    _rawTasks.value.splice(i, 1)
+                } else {
+                    seenIds.add(_rawTasks.value[i].id)
+                }
             }
 
             console.log(`✅ [SMART-MERGE] Complete. Local: ${localTasksMap.size} -> Merged: ${mergedTasks.length} (Fetched: ${loadedTasks.length})`)

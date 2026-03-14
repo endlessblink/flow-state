@@ -280,24 +280,20 @@
         </div>
       </div>
     </BaseModal>
-    <!-- Nothing Set Reminder -->
-    <BaseModal
-      :is-open="showNothingSetReminder"
-      size="sm"
-      :show-footer="false"
-      :show-header="false"
-      @close="cancelSaveReminder"
-    >
-      <div class="nothing-set-content">
-        <AlertCircle :size="32" class="nothing-set-icon" />
-        <h3 class="nothing-set-title">No details set</h3>
-        <p class="nothing-set-desc">This task has no priority, due date, or project. Save it anyway?</p>
-        <div class="nothing-set-actions">
-          <button class="ns-set-btn" @click="cancelSaveReminder">Let me set something</button>
-          <button class="ns-save-btn" @click="confirmSaveAnyway">Save anyway</button>
+    <!-- Nothing Set Reminder (positioned inside panel, not viewport) -->
+    <Transition name="fade">
+      <div v-if="showNothingSetReminder" class="nothing-set-overlay" @click.self="cancelSaveReminder">
+        <div class="nothing-set-modal">
+          <span class="nothing-set-emoji" aria-hidden="true">🤔</span>
+          <h3 class="nothing-set-title">Whoops, nothing changed!</h3>
+          <p class="nothing-set-desc">You swiped without setting anything. Go back and triage, or save as-is.</p>
+          <div class="nothing-set-actions">
+            <button class="ns-set-btn" @click="cancelSaveReminder">Go back</button>
+            <button class="ns-save-btn" @click="confirmSaveAnyway">Save as-is</button>
+          </div>
         </div>
       </div>
-    </BaseModal>
+    </Transition>
   </div>
 </template>
 
@@ -307,7 +303,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   Zap, X, CheckCircle, Undo2, Plus, Save, Trash2, Pencil, SkipForward,
-  CalendarDays, FolderOpen, AlertCircle
+  CalendarDays, FolderOpen
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickCapture } from '@/composables/useQuickCapture'
@@ -348,6 +344,7 @@ function pickCelebrationLabel() {
 }
 const sessionSummary = ref<SessionSummary | null>(null)
 const taskToEdit = ref<Task | null>(null)
+const userTouchedCard = ref(false)
 
 const stackPreview = computed(() => {
   if (!currentTask.value) return []
@@ -383,6 +380,8 @@ const {
   markTaskDone, markDoneAndDeleteTask, skipTask, undoLastCategorization, tryResumeSession
 } = useQuickSort()
 
+// Reset touch tracking when task changes
+watch(currentTaskId, () => { userTouchedCard.value = false })
 
 onMounted(() => {
   const resumed = tryResumeSession()
@@ -398,14 +397,13 @@ watch(isComplete, (completed) => {
 
 function handleCategorize(projectId: string) {
   if (!currentTask.value) return
+  userTouchedCard.value = true
   categorizeTask(currentTask.value.id, projectId)
 }
 
 function handleSave() {
   if (!currentTask.value) return
-  const task = currentTask.value
-  const hasNothing = !task.priority && !task.dueDate && !task.projectId && !isTaskDirty.value
-  if (hasNothing) {
+  if (!userTouchedCard.value) {
     showNothingSetReminder.value = true
     return
   }
@@ -430,6 +428,7 @@ function cancelSaveReminder() {
 
 async function handleTaskUpdate(updates: Partial<Task>) {
   if (!currentTask.value) return
+  userTouchedCard.value = true
   await taskStore.updateTask(currentTask.value.id, updates)
 }
 
@@ -527,7 +526,7 @@ function handleGlobalKeydown(event: KeyboardEvent) {
     if (showEditPanel.value) { showEditPanel.value = false; return }
     handleExit()
   }
-  if ((event.ctrlKey || event.metaKey) && event.key === 'z') { event.preventDefault(); handleUndo() }
+  if ((event.ctrlKey || event.metaKey) && event.key === 'z') { event.preventDefault(); event.stopImmediatePropagation(); handleUndo() }
   if (activeTab.value !== 'sort') return
 
   if (event.key === 'd' || event.key === 'D') { event.preventDefault(); handleMarkDone() }
@@ -1311,7 +1310,7 @@ const currentTaskProject = computed(() => {
    FEEDBACK OVERLAY (Celebration)
    ================================ */
 .feedback-overlay {
-  position: fixed;
+  position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -1470,17 +1469,43 @@ const currentTaskProject = computed(() => {
 /* ================================
    NOTHING SET REMINDER
    ================================ */
-.nothing-set-content {
+.nothing-set-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+
+.nothing-set-modal {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-6);
+  padding: var(--space-8) var(--space-10);
   text-align: center;
+  background: var(--overlay-component-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
+  max-width: 380px;
+  width: 90%;
+  margin: var(--space-4);
 }
 
-.nothing-set-icon {
-  color: var(--brand-primary);
-  margin-bottom: var(--space-4);
+.nothing-set-emoji {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-3);
+  animation: emojiWobble 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes emojiWobble {
+  0%   { transform: scale(0) rotate(-15deg); }
+  50%  { transform: scale(1.2) rotate(8deg); }
+  75%  { transform: scale(0.95) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 
 .nothing-set-title {
@@ -1501,14 +1526,18 @@ const currentTaskProject = computed(() => {
   width: 100%;
 }
 
-.ns-set-btn {
+.ns-set-btn, .ns-save-btn {
   flex: 1;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-lg);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   cursor: pointer;
+  white-space: nowrap;
   transition: all var(--duration-normal) ease;
+}
+
+.ns-set-btn {
   background: var(--glass-bg-soft);
   border: 1px solid var(--brand-primary);
   color: var(--brand-primary);
@@ -1519,13 +1548,6 @@ const currentTaskProject = computed(() => {
 .ns-set-btn:hover { background: var(--glass-bg-medium); }
 
 .ns-save-btn {
-  flex: 1;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  cursor: pointer;
-  transition: all var(--duration-normal) ease;
   background: var(--glass-bg-weak);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);

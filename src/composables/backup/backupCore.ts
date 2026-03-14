@@ -99,8 +99,9 @@ export function createCoreOperations(
     try {
       console.log(`[Backup] Creating ${type} backup...`)
 
-      // Get tasks from store
-      let tasks = [...(ctx.taskStore.tasks || [])]
+      // Get tasks from store — use _rawTasks to capture ALL tasks regardless of view filters,
+      // then exclude soft-deleted so backups only contain live data
+      let tasks = [...(ctx.taskStore._rawTasks || [])].filter(t => !t._soft_deleted)
 
       // Filter mock tasks if enabled
       if (ctx.config.value.filterMockTasks && tasks.length > 0) {

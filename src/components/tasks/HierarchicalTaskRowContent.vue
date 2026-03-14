@@ -100,6 +100,11 @@
       @update:due-date="(val) => $emit('updateDueDate', val)"
     />
 
+    <!-- Recurring Indicator -->
+    <div v-if="task.recurrenceRule" class="task-row__recurring" :title="recurrenceDescription">
+      <Repeat :size="14" />
+    </div>
+
     <!-- Progress Bar -->
     <div class="task-row__progress">
       <template v-if="task.progress && task.progress > 0">
@@ -133,6 +138,7 @@
 import { computed } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { Repeat } from 'lucide-vue-next'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import TaskRowTitle from './row/TaskRowTitle.vue'
@@ -141,6 +147,7 @@ import TaskRowPriority from './row/TaskRowPriority.vue'
 import TaskRowDueDate from './row/TaskRowDueDate.vue'
 import TaskRowEstimate from './row/TaskRowEstimate.vue'
 import TaskRowActions from './row/TaskRowActions.vue'
+import { describeRecurrenceRule } from '@/utils/recurrenceUtils'
 
 interface Props {
   task: Task
@@ -205,6 +212,11 @@ const emit = defineEmits<{
 
 const timerStore = useTimerStore()
 
+const recurrenceDescription = computed(() => {
+  if (!props.task.recurrenceRule) return ''
+  return describeRecurrenceRule(props.task.recurrenceRule)
+})
+
 // Ctrl+Click on checkbox area enters multi-select instead of toggling done
 const handleCheckboxClick = (event: MouseEvent) => {
   if (event.ctrlKey || event.metaKey) {
@@ -222,4 +234,12 @@ const isTimerActive = computed(() => {
 </script>
 
 <style scoped>
+.task-row__recurring {
+  display: flex;
+  align-items: center;
+  color: var(--brand-primary);
+  opacity: 0.7;
+  padding: 0 var(--space-1);
+  flex-shrink: 0;
+}
 </style>

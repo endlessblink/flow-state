@@ -8,11 +8,8 @@ import {
     supabase, swrCache, invalidateCache,
     type DatabaseContext, type SafeCreateTaskResult, type TaskIdAvailability
 } from './_infrastructure'
-import { useTombstoneDatabase } from './_tombstone'
-
 export function useTasksDatabase(ctx: DatabaseContext) {
     const { authStore, isSyncing, lastSyncError, getUserIdSafe, withRetry, handleError } = ctx
-    const { recordTombstone } = useTombstoneDatabase(ctx)
 
     const fetchTasks = async (): Promise<Task[]> => {
         // TASK-1060: Ensure auth is initialized before fetching to avoid stale guest data
@@ -220,20 +217,26 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         }
     }
 
-    const restoreTask = async (taskId: string): Promise<void> => {
+    const restoreTask = async (taskId: string): Promise<Task | null> => {
         try {
             isSyncing.value = true
             // BUG-352: Wrap in withRetry for mobile network resilience
+            let restoredTask: Task | null = null
             await withRetry(async () => {
-                const { error } = await supabase
+                const { data, error } = await supabase
                     .from('tasks')
                     .update({ is_deleted: false, deleted_at: null })
                     .eq('id', taskId)
+                    .select('*')
+                    .single()
                 if (error) throw error
+                if (data) restoredTask = fromSupabaseTask(data as SupabaseTask)
             }, 'restoreTask')
             lastSyncError.value = null
+            return restoredTask
         } catch (e: unknown) {
             handleError(e, 'restoreTask')
+            throw e  // Re-throw so caller knows it failed (matches permanentlyDeleteTask pattern)
         } finally {
             isSyncing.value = false
         }

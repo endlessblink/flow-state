@@ -54,6 +54,16 @@
       {{ completedSubtaskCount }}/{{ subtaskCount }}
     </span>
 
+    <!-- Recurring -->
+    <span
+      v-if="recurrenceRule"
+      class="recurring-badge"
+      :title="recurrenceDescription"
+    >
+      <Repeat :size="12" />
+      Recurring
+    </span>
+
     <!-- Done Indicator -->
     <span v-if="isDone" class="done-badge" title="Completed">
       <Check :size="12" />
@@ -64,8 +74,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Calendar, Check, Clock, ListChecks } from 'lucide-vue-next'
+import { Calendar, Check, Clock, ListChecks, Repeat } from 'lucide-vue-next'
 import OverdueBadge from './OverdueBadge.vue'
+import { describeRecurrenceRule } from '@/utils/recurrenceUtils'
+import type { SimpleRecurrenceRule } from '@/types/tasks'
 
 const props = defineProps<{
   showStatus: boolean
@@ -84,6 +96,7 @@ const props = defineProps<{
   doneForNowUntil?: string | null
   subtaskCount?: number
   completedSubtaskCount?: number
+  recurrenceRule?: SimpleRecurrenceRule | null
 }>()
 
 defineEmits<{
@@ -95,6 +108,11 @@ defineEmits<{
 // Badge only clears when user explicitly clicks it (clearDoneForNow event)
 const isDoneForNow = computed(() => {
   return !!props.doneForNowUntil
+})
+
+const recurrenceDescription = computed(() => {
+  if (!props.recurrenceRule) return ''
+  return describeRecurrenceRule(props.recurrenceRule)
 })
 
 </script>
@@ -159,5 +177,18 @@ const isDoneForNow = computed(() => {
   color: var(--color-success);
   background: var(--green-bg-soft);
   border: 1px solid var(--green-border);
+}
+
+/* Recurring Badge */
+.recurring-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  color: var(--brand-primary);
 }
 </style>

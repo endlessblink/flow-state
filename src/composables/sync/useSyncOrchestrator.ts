@@ -365,11 +365,25 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         // The sync orchestrator bypasses supabaseMappers, so we must use DB column names directly.
         // Previously used `_soft_deleted` which ALWAYS failed, causing fallback to hard DELETE
         // which created permanent tombstones and broadcast realtime DELETE to all devices.
-        result = await supabase
-          .from(tableName)
-          .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-          .eq('id', entityId)
-          .select()
+        //
+        // Tables with soft-delete support (have is_deleted + deleted_at columns).
+        // timer_sessions and quick_sort_sessions do NOT have these columns — hard DELETE instead.
+        const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project']
+
+        if (softDeleteTables.includes(entityType)) {
+          result = await supabase
+            .from(tableName)
+            .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+            .eq('id', entityId)
+            .select()
+        } else {
+          // timer_session, quick_sort_session: no is_deleted/deleted_at columns
+          result = await supabase
+            .from(tableName)
+            .delete()
+            .eq('id', entityId)
+            .select()
+        }
 
         // BUG-1211 FIX: Removed hard-delete fallback. If soft-delete fails, let the retry
         // mechanism handle it. Hard deletes create permanent tombstones and are unrecoverable.

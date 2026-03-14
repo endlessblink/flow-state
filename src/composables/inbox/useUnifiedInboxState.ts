@@ -128,6 +128,14 @@ export function useUnifiedInboxState(props: InboxContextProps) {
                 return false
             }
 
+            // 2b. Pinned tasks are shown in PinnedTasksSection, not in the main list.
+            // Guard here early to avoid computed-ordering race where pinnedTasks
+            // (sourced from _rawTasks) and inboxTasks (sourced from filteredTasks)
+            // can briefly disagree on isPinned state during a reactive tick.
+            if (task.isPinned) {
+                return false
+            }
+
             // 3. isInInbox gate — both inboxes only show tasks flagged as inbox
             // BUG-1481: Calendar inbox should show canvas tasks regardless of sort order,
             // not just when canvasOrder sort is active. Tasks on the canvas are real tasks
@@ -216,7 +224,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         }).length
     })
 
-    const isScheduledOnCalendar = (task: Task): boolean => {
+    const _isScheduledOnCalendar = (task: Task): boolean => {
         if (!task.instances || task.instances.length === 0) return false
         return task.instances.some(inst => inst.scheduledDate)
     }

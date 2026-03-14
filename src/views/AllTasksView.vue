@@ -101,16 +101,6 @@
       @clear-selection="handleClearSelectionFromContext"
     />
 
-    <!-- TASK-1520: Recurrence-aware delete modal -->
-    <RecurrenceDeleteModal
-      :is-open="showRecurrenceDeleteModal"
-      :task-title="recurrenceDeleteTaskTitle"
-      :recurrence-rule="recurrenceDeleteTaskRule"
-      @skip="handleRecurrenceSkip"
-      @stop="handleRecurrenceStop"
-      @cancel="showRecurrenceDeleteModal = false"
-    />
-
     <!-- Confirmation Modal -->
     <ConfirmationModal
       :is-open="showConfirmModal"
@@ -146,10 +136,10 @@ import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import RecurrenceDeleteModal from '@/components/common/RecurrenceDeleteModal.vue'
 import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import type { Task, GroupByType, TaskGroup } from '@/types/tasks'
@@ -161,6 +151,7 @@ const { isMobile } = useMobileDetection()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const { bulkDeleteTasksWithUndo } = useUnifiedUndoRedo()
+const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
 // Extract only reactive state refs, not computed properties
 // Computed properties stay on the store to maintain full reactivity chain
@@ -195,11 +186,6 @@ const confirmActionFn = ref<(() => void | Promise<void>) | null>(null)
 const showBatchEditModal = ref(false)
 const batchEditTaskIds = ref<string[]>([])
 
-// TASK-1520: Recurrence delete modal state
-const showRecurrenceDeleteModal = ref(false)
-const recurrenceDeleteTaskId = ref<string | null>(null)
-const recurrenceDeleteTaskTitle = ref('')
-const recurrenceDeleteTaskRule = ref<import('@/types/tasks').SimpleRecurrenceRule | null>(null)
 
 // Computed Tasks - Access store's computed directly (maintains full reactivity)
 const filteredTasks = computed(() => {
@@ -514,15 +500,12 @@ const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
   await taskStore.updateTask(taskId, updates)
 }
 
+// TASK-1520: recurrence-aware delete via global composable
 const handleConfirmDelete = (taskId: string) => {
-  // TASK-1520: Check if task is recurring
   const allTasks = taskStore.rawTasks || taskStore.tasks
   const task = allTasks.find(t => t.id === taskId)
   if (task?.recurrenceRule) {
-    recurrenceDeleteTaskId.value = taskId
-    recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
-    recurrenceDeleteTaskRule.value = task.recurrenceRule
-    showRecurrenceDeleteModal.value = true
+    recurrenceAwareDelete(taskId)
     return
   }
 
@@ -530,62 +513,25 @@ const handleConfirmDelete = (taskId: string) => {
   confirmTitle.value = 'Delete Task'
   confirmMessage.value = 'Are you sure you want to delete this task? You can press Ctrl+Z to undo.'
   confirmText.value = 'Delete'
-  confirmActionFn.value = () => {
-    if (taskToDelete.value) {
-      taskStore.deleteTask(taskToDelete.value)
-      taskToDelete.value = null
-    }
-  }
+  confirmActionFn.value = () => recurrenceAwareDelete(taskId)
   showConfirmModal.value = true
 }
 
-const handleConfirmPermanentDelete = async (taskId: string) => {
+const handleConfirmPermanentDelete = (taskId: string) => {
   const allTasks = taskStore.rawTasks || taskStore.tasks
   const task = allTasks.find(t => t.id === taskId)
   if (!task) return
 
-  // TASK-1520: Check if task is recurring
   if (task.recurrenceRule) {
-    recurrenceDeleteTaskId.value = taskId
-    recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
-    recurrenceDeleteTaskRule.value = task.recurrenceRule
-    showRecurrenceDeleteModal.value = true
+    recurrenceAwareDelete(taskId, { permanent: true })
     return
   }
 
   confirmTitle.value = 'Permanently Delete Task'
   confirmMessage.value = `Permanently delete "${task.title}"? This performs a hard delete from storage.`
   confirmText.value = 'Permanently Delete'
-  confirmActionFn.value = async () => {
-    const { getUndoSystem } = await import('@/composables/undoSingleton')
-    await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
-  }
+  confirmActionFn.value = () => recurrenceAwareDelete(taskId, { permanent: true })
   showConfirmModal.value = true
-}
-
-// TASK-1520: Recurrence delete handlers
-const handleRecurrenceSkip = async () => {
-  const taskId = recurrenceDeleteTaskId.value
-  showRecurrenceDeleteModal.value = false
-  recurrenceDeleteTaskId.value = null
-  if (!taskId) return
-  try {
-    await taskStore.skipRecurringOccurrence(taskId)
-  } catch (error) {
-    console.error('[AllTasksView] Skip recurring occurrence failed:', error)
-  }
-}
-
-const handleRecurrenceStop = async () => {
-  const taskId = recurrenceDeleteTaskId.value
-  showRecurrenceDeleteModal.value = false
-  recurrenceDeleteTaskId.value = null
-  if (!taskId) return
-  try {
-    await taskStore.stopRecurrence(taskId)
-  } catch (error) {
-    console.error('[AllTasksView] Stop recurrence failed:', error)
-  }
 }
 
 const executeConfirmAction = async () => {

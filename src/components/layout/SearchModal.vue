@@ -156,8 +156,7 @@ const toggleFilter = (key: FilterKey) => {
 // Computed properties for search results
 // TASK-1487: Use rawTasks to search ALL tasks, not just filtered-by-view ones
 const filteredTasks = computed(() => {
-  const allTasks = taskStore.rawTasks || taskStore.tasks
-  if (!allTasks) return []
+  const allTasks = (taskStore._rawTasks || taskStore.tasks || []).filter(t => !t._soft_deleted)
 
   const query = searchQuery.value.toLowerCase().trim()
   const today = new Date()
@@ -166,7 +165,7 @@ const filteredTasks = computed(() => {
   // Must have either a search query or an active filter to show anything
   if (!query && !hasActiveFilters.value) return []
 
-  return (allTasks || []).filter(task => {
+  return allTasks.filter(task => {
     // Text search (skip if no query)
     if (query) {
       const titleMatch = task.title.toLowerCase().includes(query)

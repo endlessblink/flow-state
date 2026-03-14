@@ -208,6 +208,14 @@
 
 /* TASK-1336: Previously hid fallback clone — removed to let card follow cursor */
 
+/* Inbox → Kanban native drop feedback */
+.tasks-container.inbox-drag-over {
+    background: var(--glass-bg-soft);
+    border-radius: var(--radius-lg);
+    outline: 2px dashed var(--brand-primary);
+    outline-offset: -2px;
+}
+
 /* TASK-1160: Show more footer for progressive rendering */
 .show-more-footer {
     padding: var(--space-2) var(--space-3);

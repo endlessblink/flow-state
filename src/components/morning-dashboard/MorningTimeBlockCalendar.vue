@@ -275,6 +275,30 @@ async function unplaceTask(index: number) {
   emit('update:timeBlock', index, { ...props.timeBlocks[index], startTime: '' })
 }
 
+// --- Move a placed calendar event to a new time slot ---
+async function handleCalendarEventMove(taskId: string, instanceId: string | undefined, slot: TimeSlot) {
+  const snappedHour = slot.hour
+  const snappedMinute = slot.minute < 15 ? 0 : slot.minute < 30 ? 15 : slot.minute < 45 ? 30 : 45
+  const timeStr = `${snappedHour.toString().padStart(2, '0')}:${snappedMinute.toString().padStart(2, '0')}`
+  const todayStr = getDateString(currentDate.value)
+
+  // Use _rawTasks to find the task (bypasses project/smart view filters)
+  const task = taskStore._rawTasks.find(t => t.id === taskId)
+  const resolvedInstanceId = instanceId || task?.instances?.find(i => i.id)?.id
+
+  await taskStore.updateTaskWithSchedule(taskId, {
+    scheduledDate: todayStr,
+    scheduledTime: timeStr,
+    instanceId: resolvedInstanceId,
+  })
+
+  // Sync sidebar state if this was a Big3 task
+  const big3Index = props.big3Slots.findIndex(s => s.taskId === taskId)
+  if (big3Index !== -1) {
+    emit('update:timeBlock', big3Index, { ...props.timeBlocks[big3Index], startTime: timeStr })
+  }
+}
+
 // --- Combined handlers for calendar events (Big3 sidebar drags + native event repositioning) ---
 function handleCombinedDrop(event: DragEvent, slot: TimeSlot) {
   // Check if this is a Big3 sidebar drag
@@ -288,7 +312,21 @@ function handleCombinedDrop(event: DragEvent, slot: TimeSlot) {
       }
     } catch { /* not JSON */ }
   }
-  // Otherwise delegate to native calendar drop handler (event repositioning)
+
+  // Check for calendar-event repositioning (application/json data)
+  const jsonData = event.dataTransfer?.getData('application/json')
+  if (jsonData) {
+    try {
+      const parsed = JSON.parse(jsonData)
+      if (parsed.source === 'calendar-event' && parsed.taskId) {
+        event.preventDefault()
+        handleCalendarEventMove(parsed.taskId, parsed.instanceId, slot)
+        return
+      }
+    } catch { /* not JSON */ }
+  }
+
+  // Fallback to native handler
   dayView.handleDrop(event, slot)
 }
 

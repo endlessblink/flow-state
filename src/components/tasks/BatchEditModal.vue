@@ -237,6 +237,7 @@
 import { ref, computed, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
+import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 import {
   X, CheckSquare, CheckCircle, Zap, Trash2, ChevronDown
 } from 'lucide-vue-next'
@@ -269,6 +270,7 @@ interface Props {
 }
 
 const taskStore = useTaskStore()
+const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
 // Field changes state
 const fieldChanges = ref({
@@ -324,11 +326,11 @@ const applyQuickAction = async (action: 'markDone' | 'highPriority' | 'deleteAll
     emit('applied')
     emit('close')
   } else if (action === 'deleteAll') {
-    // Confirm before deleting
+    // Confirm before deleting — TASK-1520: recurrence-aware
     if (confirm(`Delete ${props.taskIds.length} selected tasks? This cannot be undone.`)) {
-      props.taskIds.forEach(taskId => {
-        taskStore.deleteTask(taskId)
-      })
+      for (const taskId of props.taskIds) {
+        await recurrenceAwareDelete(taskId)
+      }
       emit('applied')
       emit('close')
     }

@@ -171,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted } from 'vue'
 import { Sparkles, Send, Loader2, Trash2, Settings, AlertTriangle } from 'lucide-vue-next'
 import { useAIChat } from '@/composables/useAIChat'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
@@ -191,8 +191,6 @@ const {
   activeProvider,
   selectedProvider,
   selectedModel,
-  availableOllamaModels,
-  isLoadingModels,
   setProvider,
   setModel,
   sendMessage,

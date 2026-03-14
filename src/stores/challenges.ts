@@ -473,7 +473,7 @@ export const useChallengesStore = defineStore('challenges', () => {
     if (!authStore.user?.id) return
 
     const now = new Date()
-    const userId = authStore.user.id
+    const _userId = authStore.user.id
 
     // Update challenge status in DB
     const { error: updateError } = await supabase
@@ -642,13 +642,13 @@ export const useChallengesStore = defineStore('challenges', () => {
   // History and Stats
   // ===========================================================================
 
-  async function archiveToHistory(
+  async function _archiveToHistory(
     challenge: Challenge,
     status: 'completed' | 'failed' | 'expired'
   ): Promise<void> {
     if (!authStore.user?.id) return
 
-    const completionRate = challenge.objectiveCurrent / challenge.objectiveTarget
+    const _completionRate = challenge.objectiveCurrent / challenge.objectiveTarget
     const now = new Date()
 
     const { error } = await supabase.from('challenge_history').insert({
@@ -713,7 +713,7 @@ export const useChallengesStore = defineStore('challenges', () => {
 
   async function buildContextFromState() {
     const stats = gamificationStore.stats
-    const profile = gamificationStore.profile
+    const _profile = gamificationStore.profile
     const streakInfo = gamificationStore.streakInfo
 
     // Get recent challenge history for difficulty calculation

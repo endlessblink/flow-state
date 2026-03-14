@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { supabase } from '@/services/auth/supabase'
-import { useAuthStore } from '@/stores/auth'
+import type { useAuthStore } from '@/stores/auth'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 // Re-export for domain composables

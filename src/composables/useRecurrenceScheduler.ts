@@ -45,6 +45,16 @@ export function useRecurrenceScheduler() {
 
                 if (hasActiveSuccessor) continue
 
+                // Guard: check if a clone for today's date already exists in this chain
+                // (prevents creating duplicates on every page load)
+                const hasTodayClone = taskStore._rawTasks.some(t =>
+                    !t._soft_deleted &&
+                    (t.recurrenceParentId === chainId || t.id === chainId) &&
+                    t.id !== task.id &&
+                    t.dueDate?.substring(0, 10) === today
+                )
+                if (hasTodayClone) continue
+
                 // Compute next due date with skip-to-present
                 const rule = task.recurrenceRule as SimpleRecurrenceRule
                 const currentDueDate = task.dueDate || today
@@ -69,6 +79,10 @@ export function useRecurrenceScheduler() {
                         estimatedDuration: task.estimatedDuration,
                         estimatedPomodoros: task.estimatedPomodoros,
                         tags: task.tags ? [...task.tags] : undefined,
+                        subtasks: task.subtasks?.map(st => ({
+                            ...st,
+                            isCompleted: false,
+                        })) || [],
                         recurrenceRule: { ...rule },
                         recurrenceParentId: task.recurrenceParentId || task.id,
                         recurrenceCount: count,

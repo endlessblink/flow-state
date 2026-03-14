@@ -259,6 +259,26 @@ export async function deleteOperationsForEntity(
 }
 
 /**
+ * Delete operations for a specific entity filtered by operation type.
+ *
+ * Used by undo to cancel only the conflicting operation (e.g., cancel pending
+ * DELETEs when restoring a task, without cancelling the CREATE just enqueued).
+ */
+export async function deleteOperationsByType(
+  entityType: SyncEntityType,
+  entityId: string,
+  operationType: 'create' | 'update' | 'delete'
+): Promise<number> {
+  const operations = await getOperationsForEntity(entityType, entityId)
+  const matching = operations.filter(op => op.operation === operationType)
+  if (matching.length > 0) {
+    const db = getWriteQueueDB()
+    await db.operations.bulkDelete(matching.map(op => op.id!))
+  }
+  return matching.length
+}
+
+/**
  * Get count of pending operations
  */
 export async function getPendingCount(): Promise<number> {

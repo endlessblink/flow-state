@@ -89,10 +89,9 @@ import {
 import { useSwipeGestures } from '@/composables/useSwipeGestures'
 import type { Task } from '@/types/tasks'
 
-const props = defineProps<{
+defineProps<{
   task: Task | null
 }>()
-
 const emit = defineEmits<{
   (e: 'swipe-right'): void
   (e: 'swipe-left'): void

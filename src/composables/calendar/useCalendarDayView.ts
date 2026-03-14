@@ -138,6 +138,17 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     isResizing: boolean
   } | null>(null)
 
+  // TASK-1521: Drag preview state — tracks pending position during mousemove drag.
+  // The store is NOT updated until mouseup (preview-then-commit pattern, mirrors resize).
+  const dragPreview = ref<{
+    taskId: string
+    instanceId: string
+    previewSlot: number
+    previewDate: string
+    previewTime: string
+    isDragging: boolean
+  } | null>(null)
+
   // Generate time slots for current day
   const timeSlots = computed<TimeSlot[]>(() => {
     const slots: TimeSlot[] = []
@@ -188,59 +199,64 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
           // Create calendar events only for tasks with explicit instances
           if (hasInstanceForToday) {
-            // Use instance-specific schedule
-            const todayInstance = task.instances?.find(instance => instance && instance.scheduledDate === dateStr)
-            if (!todayInstance || !todayInstance.scheduledTime) return
+            // Use instance-specific schedule — filter (not find) so multi-instance tasks show all slots
+            const todayInstances = task.instances?.filter(instance => instance && instance.scheduledDate === dateStr) ?? []
+            todayInstances.forEach(todayInstance => {
+              if (!todayInstance || !todayInstance.scheduledTime) return
 
-            const [hour, minute] = todayInstance.scheduledTime.split(':').map(Number)
-            if (isNaN(hour) || isNaN(minute)) return
+              const [hour, minute] = todayInstance.scheduledTime.split(':').map(Number)
+              if (isNaN(hour) || isNaN(minute)) return
 
-            const startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
-            const duration = todayInstance.duration || task.estimatedDuration || 30
-            const instanceId = todayInstance.id
+              const startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
+              const duration = todayInstance.duration || task.estimatedDuration || 30
+              const instanceId = todayInstance.id
 
-            // Validate startTime
-            if (isNaN(startTime.getTime())) return
+              // Validate startTime
+              if (isNaN(startTime.getTime())) return
 
-            // TASK-1285: Apply timer growth if active
-            const growthMinutes = (instanceId && timerGrowthMap?.value?.get(instanceId)) || 0
-            const visualDuration = duration + growthMinutes
+              // TASK-1285: Apply timer growth if active
+              const growthMinutes = (instanceId && timerGrowthMap?.value?.get(instanceId)) || 0
+              const visualDuration = duration + growthMinutes
 
-            const endTime = new Date(startTime.getTime() + visualDuration * 60000)
-            const startSlot = (startTime.getHours() * 2) + (startTime.getMinutes() >= 30 ? 1 : 0)
-            const slotSpan = Math.max(1, Math.ceil(visualDuration / 30))
+              const endTime = new Date(startTime.getTime() + visualDuration * 60000)
+              const startSlot = (startTime.getHours() * 2) + (startTime.getMinutes() >= 30 ? 1 : 0)
+              const slotSpan = Math.max(1, Math.ceil(visualDuration / 30))
 
-            // TASK-1285: Instance status for completion tracking (reuses todayInstance from above)
-            const event = {
-              id: instanceId || task.id,
-              taskId: task.id,
-              instanceId: instanceId || '',
-              title: task.title || 'Untitled Task',
-              startTime,
-              endTime,
-              duration: visualDuration,
-              startSlot,
-              slotSpan,
-              color: getPriorityColor(task.priority),
-              column: 0,
-              totalColumns: 1,
-              isDueDate: false,
-              instanceStatus: todayInstance?.status,
-              taskStatus: task.status
-            }
+              // TASK-1285: Instance status for completion tracking (reuses todayInstance from above)
+              const event = {
+                id: instanceId || task.id,
+                taskId: task.id,
+                instanceId: instanceId || '',
+                title: task.title || 'Untitled Task',
+                startTime,
+                endTime,
+                duration: visualDuration,
+                startSlot,
+                slotSpan,
+                color: getPriorityColor(task.priority),
+                column: 0,
+                totalColumns: 1,
+                isDueDate: false,
+                instanceStatus: todayInstance?.status,
+                taskStatus: task.status
+              }
 
-            events.push(event)
+              events.push(event)
+            })
           }
         } catch (_taskError) {
           // Continue with other tasks
         }
       })
 
-      // BUG-1354: Dedup guard — remove duplicate events for the same task
-      // Race conditions in Realtime sync can briefly cause _rawTasks to have duplicates
-      const seenTaskIds = new Set<string>()
+      // BUG-1354: Dedup guard — remove duplicate events.
+      // Use taskId + startSlot as composite key: this dedupes true duplicates (same task,
+      // same time slot from sync race) while preserving legitimate multi-instance tasks
+      // (same task scheduled at different times on the same day).
+      const seenInstanceKeys = new Set<string>()
       const dedupedEvents = events.filter(event => {
-        if (seenTaskIds.has(event.taskId)) {
+        const dedupeKey = `${event.taskId}:${event.startSlot}`
+        if (seenInstanceKeys.has(dedupeKey)) {
           if (import.meta.env.DEV) {
             console.warn('[BUG-1354:CALENDAR] Duplicate event detected and removed:', {
               taskId: event.taskId,
@@ -250,7 +266,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
           }
           return false
         }
-        seenTaskIds.add(event.taskId)
+        seenInstanceKeys.add(dedupeKey)
         return true
       })
 
@@ -304,7 +320,12 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
             dateStr
           )
 
+          // Collect taskIds that already have explicit instances to avoid duplicates
+          const explicitTaskIds = new Set(dedupedEvents.map(e => e.taskId))
+
           for (const virtual of virtualEvents) {
+            // Skip if this task already has an explicit instance for today
+            if (explicitTaskIds.has(virtual.taskId)) continue
             if (virtual.scheduledDate === dateStr) {
               const [hour, minute] = (virtual.scheduledTime || '09:00').split(':').map(Number)
               const startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
@@ -461,8 +482,13 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     const widthPercentage = 100 / event.totalColumns
     const leftPercentage = widthPercentage * event.column
 
+    // TASK-1521: Override startSlot with drag preview position while dragging
+    const previewSlot = (dragPreview.value?.taskId === event.taskId && dragPreview.value?.isDragging)
+      ? dragPreview.value.previewSlot
+      : event.startSlot
+
     return {
-      top: `${event.startSlot * slotHeight}px`,
+      top: `${previewSlot * slotHeight}px`,
       height: `${event.slotSpan * slotHeight}px`,
       left: `${leftPercentage}%`,
       width: `${widthPercentage}%`
@@ -541,7 +567,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         document.querySelector('[data-dragging-task-id]')?.getAttribute('data-dragging-task-id')
 
       if (draggingTaskId) {
-        const task = taskStore.tasks.find(t => t.id === draggingTaskId)
+        const task = taskStore._rawTasks.find(t => t.id === draggingTaskId)
         if (task) {
 
           parsedData = {
@@ -572,7 +598,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
     // Use the parsedData we already created above
     const { title, taskId } = parsedData
-    const task = taskStore.tasks.find(t => t.id === taskId)
+    const task = taskStore._rawTasks.find(t => t.id === taskId)
 
     if (!task) {
       return
@@ -650,7 +676,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       const snappedTime = snapTo15Minutes(slot.hour, slot.minute)
       const timeStr = `${snappedTime.hour.toString().padStart(2, '0')}:${snappedTime.minute.toString().padStart(2, '0')}`
 
-      const task = taskStore.tasks.find(t => t.id === taskId)
+      const task = taskStore._rawTasks.find(t => t.id === taskId)
 
 
 
@@ -705,71 +731,124 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     const isDuplicateMode = event.altKey
 
     const initialSlot = calendarEvent.startSlot
-    let lastUpdatedSlot = initialSlot
+    let lastSeenSlot = initialSlot
 
-    const handleMouseMove = async (e: MouseEvent) => {
-      requestAnimationFrame(async () => {
+    // TASK-1521: Track final pending values to commit on mouseup (preview-then-commit pattern)
+    const instanceId = calendarEvent.instanceId || `instance-${calendarEvent.taskId}-${Date.now()}`
+    let finalSlot = initialSlot
+    let finalDate = currentDate.value.toISOString().split('T')[0]
+    let finalTime = (() => {
+      const h = Math.floor((initialSlot * 30) / 60)
+      const m = (initialSlot * 30) % 60
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} `
+    })()
+
+    // Initialise preview state so visual position tracks mouse immediately
+    if (!isDuplicateMode) {
+      dragPreview.value = {
+        taskId: calendarEvent.taskId,
+        instanceId,
+        previewSlot: initialSlot,
+        previewDate: finalDate,
+        previewTime: finalTime,
+        isDragging: true
+      }
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      requestAnimationFrame(() => {
         const containerScrollTop = container.scrollTop || 0
         const targetY = e.clientY - rect.top + containerScrollTop - clickOffsetY
         const targetSlot = Math.max(0, Math.min(47, Math.floor(targetY / SLOT_HEIGHT)))
 
-        if (targetSlot !== lastUpdatedSlot) {
-          lastUpdatedSlot = targetSlot
+        if (targetSlot !== lastSeenSlot) {
+          lastSeenSlot = targetSlot
 
           const newHour = Math.floor((targetSlot * 30) / 60)
           const newMinute = (targetSlot * 30) % 60
           const newTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')} `
           const newDate = currentDate.value.toISOString().split('T')[0]
 
-          if (isDuplicateMode) {
-            // In duplicate mode, create a copy of the task with new schedule
-            const originalTask = taskStore.getTask(calendarEvent.taskId)
-            if (originalTask) {
-              taskStore.createTask({
-                title: originalTask.title,
-                description: originalTask.description,
-                instances: [{
-                  id: `instance-dup-${Date.now()}`,
-                  scheduledDate: newDate,
-                  scheduledTime: newTime,
-                  duration: calendarEvent.duration || 60
-                }],
-                estimatedDuration: calendarEvent.duration,
-                projectId: originalTask.projectId,
-                priority: originalTask.priority,
-                status: originalTask.status
-              })
-            }
-          } else {
-            // BUG-1325: Update instances[] instead of legacy scheduledDate/scheduledTime
-            const task = taskStore.getTask(calendarEvent.taskId)
-            if (task) {
-              const instanceId = calendarEvent.instanceId || `instance-${calendarEvent.taskId}-${Date.now()}`
-              await taskStore.updateTask(calendarEvent.taskId, {
-                instances: [{
-                  id: instanceId,
-                  scheduledDate: newDate,
-                  scheduledTime: newTime,
-                  duration: calendarEvent.duration || task.estimatedDuration || 60
-                }]
-              })
-            }
+          finalSlot = targetSlot
+          finalDate = newDate
+          finalTime = newTime
+
+          if (!isDuplicateMode && dragPreview.value) {
+            // TASK-1521: Update visual preview only — no store writes during mousemove
+            dragPreview.value.previewSlot = targetSlot
+            dragPreview.value.previewDate = newDate
+            dragPreview.value.previewTime = newTime
           }
         }
       })
     }
 
+    const commitDrag = async () => {
+      // TASK-1521: Clear preview FIRST so the event snaps to its new store position cleanly
+      dragPreview.value = null
+
+      if (isDuplicateMode) {
+        // Duplicate mode: create a copy of the task with the final schedule
+        const originalTask = taskStore.getTask(calendarEvent.taskId)
+        if (originalTask) {
+          taskStore.createTask({
+            title: originalTask.title,
+            description: originalTask.description,
+            instances: [{
+              id: `instance-dup-${Date.now()}`,
+              scheduledDate: finalDate,
+              scheduledTime: finalTime,
+              duration: calendarEvent.duration || 60
+            }],
+            estimatedDuration: calendarEvent.duration,
+            projectId: originalTask.projectId,
+            priority: originalTask.priority,
+            status: originalTask.status
+          })
+        }
+      } else if (finalSlot !== initialSlot) {
+        // BUG-1325: Update instances[] instead of legacy scheduledDate/scheduledTime
+        // TASK-1521: Use updateTaskWithUndo so Ctrl+Z reverts the drag
+        const task = taskStore.getTask(calendarEvent.taskId)
+        if (task) {
+          await taskStore.updateTaskWithUndo(calendarEvent.taskId, {
+            instances: [{
+              id: instanceId,
+              scheduledDate: finalDate,
+              scheduledTime: finalTime,
+              duration: calendarEvent.duration || task.estimatedDuration || 60
+            }]
+          })
+        }
+      }
+    }
+
+    const cancelDrag = () => {
+      // TASK-1521: Escape cancels the drag — discard pending changes
+      dragPreview.value = null
+      cleanupListeners()
+    }
+
     const handleMouseUp = () => {
       cleanupListeners()
+      commitDrag()
+    }
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        cancelDrag()
+      }
     }
 
     // Use registry for cleanup
     cleanupListeners()
     currentMouseMoveHandler = handleMouseMove
     currentMouseUpHandler = handleMouseUp
+    currentKeydownHandler = handleKeydown
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('keydown', handleKeydown)
   }
 
   const handleEventMouseDown = (event: MouseEvent, _calendarEvent: CalendarEvent) => {
@@ -934,7 +1013,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         })
 
         // Update instance if present
-        const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
+        const task = taskStore._rawTasks.find(t => t.id === calendarEvent.taskId)
         if (task?.instances && task.instances.length > 0) {
           const todayInstance = task.instances.find(instance =>
             instance && instance.scheduledDate === currentDate.value.toISOString().split('T')[0]
@@ -953,7 +1032,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         })
 
         // Update instance if present
-        const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
+        const task = taskStore._rawTasks.find(t => t.id === calendarEvent.taskId)
         if (task?.instances && task.instances.length > 0) {
           const todayInstance = task.instances.find(instance =>
             instance && instance.scheduledDate === currentDate.value.toISOString().split('T')[0]
@@ -1035,6 +1114,9 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
     // Resize handlers
     startResize,
-    resizePreview
+    resizePreview,
+
+    // TASK-1521: Drag preview (preview-then-commit)
+    dragPreview
   }
 }

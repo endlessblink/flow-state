@@ -1188,7 +1188,7 @@ export const useGamificationStore = defineStore('gamification', () => {
   // Toast/Notification System
   // =============================================================================
 
-  function showXpToast(amount: number, reason: string, multipliers: XpMultiplier[]) {
+  function showXpToast(amount: number, reason: string, _multipliers: XpMultiplier[]) {
     const toast: GamificationToast = {
       id: `xp-${Date.now()}`,
       type: 'xp',

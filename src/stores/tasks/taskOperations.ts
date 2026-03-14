@@ -500,6 +500,10 @@ export function useTaskOperations(
                                     estimatedDuration: task.estimatedDuration,
                                     estimatedPomodoros: task.estimatedPomodoros,
                                     tags: task.tags ? [...task.tags] : undefined,
+                                    subtasks: task.subtasks?.map(st => ({
+                                        ...st,
+                                        isCompleted: false,
+                                    })) || [],
                                     recurrenceRule: { ...task.recurrenceRule },
                                     recurrenceParentId: task.recurrenceParentId || task.id,
                                     recurrenceCount: count,

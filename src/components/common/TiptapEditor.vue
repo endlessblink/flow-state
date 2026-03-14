@@ -260,6 +260,7 @@
 import { ref, watch, onBeforeUnmount, nextTick } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
+import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
@@ -346,6 +347,33 @@ const debouncedEmit = useDebounceFn((markdown: string) => {
   })
 }, 150)
 
+// BUG-1506: Shift+Enter exits list → plain paragraph. Only acts inside lists.
+// Falls through to default HardBreak (soft line break) outside lists.
+const ShiftEnterExitList = Extension.create({
+  name: 'shiftEnterExitList',
+  priority: 1000, // Higher than HardBreak to intercept first
+  addKeyboardShortcuts() {
+    return {
+      'Shift-Enter': ({ editor }) => {
+        const isInList = editor.isActive('bulletList') || editor.isActive('orderedList') || editor.isActive('taskList')
+        if (!isInList) return false // Let HardBreak handle it
+
+        // Split at cursor, then clear the new node's list formatting → becomes paragraph
+        const isTask = editor.isActive('taskItem')
+        const itemType = isTask ? 'taskItem' : 'listItem'
+
+        const didSplit = editor.chain().splitListItem(itemType).run()
+        if (didSplit) {
+          // Now cursor is in the new empty list item — clear it to paragraph
+          editor.chain().clearNodes().run()
+          return true
+        }
+        return false
+      },
+    }
+  },
+})
+
 // Create editor with NO auto-conversion input rules
 // StarterKit includes input rules by default, so we disable them
 // BUG-013 FIX: Convert markdown to HTML for Tiptap, then HTML back to markdown on emit
@@ -388,6 +416,7 @@ const editor = useEditor({
     TableRow,
     TableCell,
     TableHeader,
+    ShiftEnterExitList,
   ],
   // Disable input rules globally - no auto-conversion on typing
   enableInputRules: false,
@@ -424,6 +453,17 @@ watch(() => props.modelValue, (newValue) => {
 
 // Cleanup
 onBeforeUnmount(() => {
+  // Flush any pending debounced content before destroying the editor
+  // This ensures that fast-typing followed by immediate save/unmount doesn't lose the last 150ms of content
+  if (editor.value) {
+    const html = editor.value.getHTML()
+    const markdown = htmlToMarkdown(html)
+    if (markdown !== lastEmittedMarkdown.value) {
+      isInternalUpdate.value = true
+      lastEmittedMarkdown.value = markdown
+      emit('update:modelValue', markdown)
+    }
+  }
   editor.value?.destroy()
 })
 

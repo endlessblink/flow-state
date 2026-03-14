@@ -408,8 +408,8 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('install', () => {
   console.log('[SW] Timer notification service worker installed')
-  // Skip waiting to activate immediately (user opted for auto-update)
-  self.skipWaiting()
+  // Removed: self.skipWaiting() — SW waits for user consent via ReloadPrompt.
+  // The SKIP_WAITING message handler (above) triggers skip when user clicks "Reload".
 })
 
 self.addEventListener('activate', (event) => {

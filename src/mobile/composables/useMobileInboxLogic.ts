@@ -332,15 +332,6 @@ export function useMobileInboxLogic() {
         }
     })
 
-    const setTimeFilter = (filter: TimeFilterType) => {
-        activeTimeFilter.value = filter
-    }
-
-    const toggleSort = () => {
-        const sortOptions: Array<'newest' | 'priority' | 'dueDate' | 'canvasOrder'> = ['canvasOrder', 'newest', 'priority', 'dueDate']
-        const currentIndex = sortOptions.indexOf(sortBy.value)
-        sortBy.value = sortOptions[(currentIndex + 1) % sortOptions.length]
-    }
 
     const todayDateLabel = computed(() => {
         const now = new Date()

@@ -15,8 +15,6 @@ import type {
   PostProcessInput,
   PostProcessResult,
   PipelineConfig,
-  PreGuardrail,
-  PostGuardrail,
 } from './types'
 
 // Re-export types for convenience

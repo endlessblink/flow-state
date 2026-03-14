@@ -172,15 +172,6 @@ import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
 import type { TimeFilterType, SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
-const { t } = useI18n()
-
-interface GroupOption {
-  label: string
-  value: string
-  color?: string
-  count?: number
-}
-
 const props = defineProps<{
   isCollapsed: boolean
   taskCount: number
@@ -224,6 +215,16 @@ const emit = defineEmits<{
   (e: 'update:searchQuery', value: string): void // TASK-1075
   (e: 'clearAll'): void
 }>()
+
+const { t } = useI18n()
+
+interface GroupOption {
+  label: string
+  value: string
+  color?: string
+  count?: number
+}
+
 // TASK-1075: Search state
 const isSearchExpanded = ref(false)
 const searchInputRef = ref<HTMLInputElement | null>(null)

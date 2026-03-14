@@ -250,9 +250,8 @@ export function useMobileQuickSortLogic() {
 
   async function handleSave() {
     if (!currentTask.value) return
-    const task = currentTask.value
-    const hasNothing = !task.priority && !task.dueDate && !task.projectId && !isTaskDirty.value
-    if (hasNothing) {
+    const _task = currentTask.value
+    if (!isTaskDirty.value) {
       pendingSaveAfterReminder.value = true
       showNothingSetReminder.value = true
       return

@@ -367,7 +367,7 @@ export class OllamaProvider implements AIProvider {
               if (chunk.done) {
                 return
               }
-            } catch (parseError) {
+            } catch (_parseError) {
               console.warn('[Ollama] Failed to parse chunk:', line)
             }
           }
@@ -516,7 +516,7 @@ export class OllamaProvider implements AIProvider {
           this.emitEvent({ type: 'connected', provider: 'ollama' })
           return true
         }
-      } catch (error) {
+      } catch (_error) {
         console.log(
           `[Ollama] Detection attempt ${attempt + 1}/${this.config.maxRetries} failed`
         )

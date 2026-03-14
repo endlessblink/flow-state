@@ -336,6 +336,7 @@ import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 type DensityType = 'compact' | 'comfortable' | 'spacious'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 
@@ -503,19 +504,20 @@ const updateTaskStatus = (taskId: string, status: Task['status']) => {
   emit('updateTask', taskId, { status })
 }
 
-// Bulk delete functionality
+// Bulk delete functionality — TASK-1520: recurrence-aware
 const { deleteTaskWithUndo } = useUnifiedUndoRedo()
+const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
 const handleDeleteSelected = () => {
   if (selectedTasks.value.length === 0) return
 
   const count = selectedTasks.value.length
-  const confirmMessage = `Delete ${count} selected task${count !== 1 ? 's' : ''}? This action can be undone.`
+  const confirmMsg = `Delete ${count} selected task${count !== 1 ? 's' : ''}? This action can be undone.`
 
-  if (confirm(confirmMessage)) {
-    // Delete tasks one by one to maintain undo functionality
+  if (confirm(confirmMsg)) {
+    // Delete tasks one by one — recurrenceAwareDelete handles recurring tasks
     selectedTasks.value.forEach(taskId => {
-      deleteTaskWithUndo(taskId)
+      recurrenceAwareDelete(taskId)
     })
     clearSelection()
   }

@@ -67,6 +67,34 @@ npm run tauri:update-manifest  # Generate latest.json for auto-updater
 # Manual deploy: npm run build && rsync -avz dist/ ${VPS_USER:-root}@${VPS_HOST}:/var/www/flowstate/
 ```
 
+## Direct Database Operations (for data actions, cleanup, queries)
+
+**Execute SQL** against local Supabase (no app needed):
+```bash
+# Single query
+docker exec supabase_db_flow-state psql -U postgres -c "SQL_HERE"
+
+# Multi-line
+docker exec supabase_db_flow-state psql -U postgres <<'SQL'
+SELECT * FROM tasks WHERE is_deleted = false LIMIT 5;
+SQL
+```
+
+**User ID**: `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11`
+
+**Key tables**: `tasks` (main), `projects`, `groups` (canvas), `timer_sessions`, `tombstones`, `pinned_tasks`, `notifications`, `user_gamification`, `user_settings`, `user_challenges`
+
+**Task columns (most used)**: `id` (uuid), `title`, `status` (planned/in_progress/done/backlog/on_hold), `priority` (low/medium/high/NULL), `project_id` (uuid FK), `due_date` (timestamptz), `is_deleted` (bool), `deleted_at`, `is_in_inbox` (bool), `parent_id` (text, canvas group), `order` (int), `tags` (text[]), `subtasks` (jsonb), `created_at`, `updated_at`
+
+**Safety protocol**:
+1. ALWAYS run SELECT first to preview affected rows
+2. Prefer soft-delete: `SET is_deleted = true, deleted_at = now()` over DELETE
+3. On hard delete: also insert tombstone: `INSERT INTO tombstones (user_id, entity_type, entity_id) VALUES ('a0eebc99-...', 'task', 'TASK_UUID')`
+4. ALWAYS set `updated_at = now()` on updates to trigger sync
+5. Production DB queries need explicit user approval
+
+**Full cookbook** (duplicates, orphans, bulk ops, stats): [`docs/claude-md-extension/database-operations.md`](docs/claude-md-extension/database-operations.md)
+
 ## Development Server
 
 **With Doppler (production Supabase):** `doppler run -- npm run dev`
@@ -411,7 +439,7 @@ This project has automatic task locking via `task-lock-enforcer.sh` hook to prev
 
 ## Extended Documentation
 
-**`docs/claude-md-extension/`:** architecture.md, code-patterns.md, testing.md, backup-system.md, design-system.md, troubleshooting.md
+**`docs/claude-md-extension/`:** architecture.md, code-patterns.md, testing.md, backup-system.md, design-system.md, troubleshooting.md, **database-operations.md** (DB queries, bulk actions, cleanup recipes)
 
 **SOPs (20+ procedures):** `docs/sop/` — see `docs/sop/README.md` for full index. Key SOPs referenced inline throughout this file.
 

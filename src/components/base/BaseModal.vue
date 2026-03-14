@@ -315,6 +315,10 @@ watch(() => props.isOpen, (isOpen) => {
     nextTick(() => {
       setInitialFocus()
       emit('afterOpen')
+      // Attach focus trap listener when modal opens (handles dynamically opened modals)
+      if (props.trapFocus) {
+        overlayRef.value?.addEventListener('keydown', handleFocusTrap)
+      }
     })
   } else {
     isClosing.value = false
@@ -322,6 +326,9 @@ watch(() => props.isOpen, (isOpen) => {
 
     // Restore body scroll
     document.body.style.overflow = ''
+
+    // Remove focus trap listener when modal closes
+    overlayRef.value?.removeEventListener('keydown', handleFocusTrap)
   }
 })
 
@@ -331,7 +338,7 @@ onUnmounted(() => {
   restoreFocus()
 })
 
-// Handle focus trap when modal is open
+// Handle focus trap when modal is already open on mount (rare static case)
 onMounted(() => {
   if (props.trapFocus && props.isOpen) {
     nextTick(() => {

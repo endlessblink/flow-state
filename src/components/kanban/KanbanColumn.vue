@@ -15,7 +15,13 @@
       </button>
     </div>
 
-    <div class="tasks-container">
+    <div
+      class="tasks-container"
+      :class="{ 'inbox-drag-over': isDragOver }"
+      @dragover.prevent="handleNativeDragOver"
+      @dragleave="handleNativeDragLeave"
+      @drop="handleNativeDrop"
+    >
       <!-- eslint-disable vue/prefer-true-attribute-shorthand -- BUG-1335: vuedraggable requires explicit :attr="true" bindings, shorthand breaks drag -->
       <draggable
         v-model="localTasks"
@@ -196,6 +202,61 @@ const onDragEnd = (evt: DragEvent) => {
 }
 
 const taskCount = computed(() => allTasks.value.length)
+
+// --- Inbox → Kanban native HTML5 drop support ---
+// SortableJS only accepts drops from other SortableJS instances, so inbox drags
+// (which use native HTML5 drag) need a separate native drop handler on the column.
+const isDragOver = ref(false)
+
+const handleNativeDragOver = (event: DragEvent) => {
+  // Only show highlight for inbox drags (they set application/json with fromInbox: true).
+  // We can't read the data content during dragover (browser security), but we can
+  // check that application/json is at least present in the types list.
+  if (event.dataTransfer?.types.includes('application/json')) {
+    isDragOver.value = true
+  }
+}
+
+const handleNativeDragLeave = (event: DragEvent) => {
+  // Only clear when truly leaving the column (not entering a child element)
+  const related = event.relatedTarget as Node | null
+  const column = (event.currentTarget as HTMLElement)
+  if (!related || !column.contains(related)) {
+    isDragOver.value = false
+  }
+}
+
+const handleNativeDrop = async (event: DragEvent) => {
+  isDragOver.value = false
+  event.preventDefault()
+
+  const jsonData = event.dataTransfer?.getData('application/json')
+  if (!jsonData) return
+
+  try {
+    const data = JSON.parse(jsonData) as {
+      taskId?: string
+      taskIds?: string[]
+      fromInbox?: boolean
+    }
+
+    // Only handle inbox drags; SortableJS handles its own internal drops
+    if (!data.fromInbox) return
+
+    const ids = data.taskIds?.length ? data.taskIds : data.taskId ? [data.taskId] : []
+    if (ids.length === 0) return
+
+    for (const taskId of ids) {
+      if (props.columnType === 'status') {
+        await taskStore.moveTaskWithUndo(taskId, props.status)
+      }
+      // Clear inbox flag regardless of column type so task leaves the inbox
+      await taskStore.updateTask(taskId, { isInInbox: false })
+    }
+  } catch (e) {
+    console.error('[KanbanColumn] Native drop from inbox failed:', e)
+  }
+}
 
 // Column color indicator (priority dot or project color)
 const columnIndicatorColor = computed(() => {

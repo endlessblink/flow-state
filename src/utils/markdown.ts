@@ -234,9 +234,13 @@ export function htmlToMarkdown(html: string): string {
   markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n')
   markdown = markdown.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n')
 
+  // BUG-1506: Flatten <p> inside <li> BEFORE processing list items
+  // TipTap wraps bullet text in <p> inside <li>, creating multi-line HTML like:
+  // <li>\n<p>text</p>\n</li> — if we don't flatten first, the dash and text end up on different lines
+  markdown = markdown.replace(/<li([^>]*)>\s*<p[^>]*>([\s\S]*?)<\/p>\s*<\/li>/gi, '<li$1>$2</li>')
+
   // List items: <li> -> - (task items with data-type="taskItem" already handled at top of function)
   // BUG-276 FIX: Only handle regular list items here, task items are processed earlier
-  // BUG-1506: Use [\s\S]*? instead of .*? to match across newlines (TipTap wraps content in <p> inside <li>)
   markdown = markdown.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1\n')
 
   // Remove list wrappers

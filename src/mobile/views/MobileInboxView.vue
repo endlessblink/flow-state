@@ -121,6 +121,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useTimerStore } from '@/stores/timer'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useMobileFilters } from '@/composables/mobile/useMobileFilters'
+import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 import { useMobileInboxLogic } from '@/mobile/composables/useMobileInboxLogic'
 
 import MobileInboxHeader from '@/mobile/components/MobileInboxHeader.vue'
@@ -135,6 +136,7 @@ const authStore = useAuthStore()
 const timerStore = useTimerStore()
 const { lastSyncError } = useSupabaseDatabase()
 const { priorityLabel } = useMobileFilters()
+const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
 // Import the extracted logic and state
 const logicOptions = useMobileInboxLogic()
@@ -296,8 +298,9 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   await taskStore.updateTask(taskId, updates)
 }
 
+// TASK-1520: recurrence-aware delete
 const handleDeleteTask = (task: Task) => {
-  taskStore.deleteTask(task.id)
+  recurrenceAwareDelete(task.id)
 }
 
 const openTaskCreateSheet = () => {

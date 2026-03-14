@@ -253,13 +253,22 @@ export const useProjectStore = defineStore('projects', () => {
                 }
                 const taskStore = useTaskStore() as unknown as TaskStoreLoophole
                 // SAFETY: Use _rawTasks to include soft-deleted tasks in project reassignment
-                for (const task of taskStore._rawTasks) {
-                    if (task.projectId === projectId) {
-                        await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
-                            projectId: null, // TASK-1183: Must be null (valid UUID) not 'uncategorized' string
-                            isUncategorized: true
-                        })
-                    }
+                // BUG-P1: Replaced O(n) sequential await with parallel batches to prevent partial orphans
+                const tasksToReassign = taskStore._rawTasks.filter(t => t.projectId === projectId)
+                // Update all in memory first so UI reflects change immediately
+                for (const task of tasksToReassign) {
+                    task.projectId = null as unknown as string
+                    ;(task as unknown as { isUncategorized: boolean }).isUncategorized = true
+                }
+                // Persist in parallel batches of 10 to avoid overwhelming the server
+                const BATCH_SIZE = 10
+                for (let i = 0; i < tasksToReassign.length; i += BATCH_SIZE) {
+                    const batch = tasksToReassign.slice(i, i + BATCH_SIZE)
+                    await Promise.all(batch.map(t =>
+                        taskStore.updateTask(t.id, { projectId: null, isUncategorized: true }).catch(err =>
+                            console.error(`[DELETE-PROJECT] Failed to reassign task ${t.id}:`, err)
+                        )
+                    ))
                 }
 
                 // SAFETY: Use _rawProjects for mutation
@@ -270,6 +279,11 @@ export const useProjectStore = defineStore('projects', () => {
                 })
 
                 _rawProjects.value.splice(projectIndex, 1)
+
+                // P0: Reset active project if the deleted project was active
+                if (activeProjectId.value === projectId) {
+                    setActiveProject(null)
+                }
 
                 // TASK-1428: Update IndexedDB read cache after delete
                 cacheProjects([..._rawProjects.value])
@@ -358,6 +372,20 @@ export const useProjectStore = defineStore('projects', () => {
 
             // Remove all deleted projects
             _rawProjects.value = _rawProjects.value.filter(p => !projectIdSet.has(p.id))
+
+            // P0: Reset active project if any deleted project was active
+            if (activeProjectId.value && projectIdSet.has(activeProjectId.value)) {
+                setActiveProject(null)
+            }
+
+            // BUG-P1: Mirror singular deleteProject — update IndexedDB read cache after bulk removal
+            cacheProjects([..._rawProjects.value])
+
+            // BUG-P1: Guest mode — persist updated list to localStorage immediately
+            const { useAuthStore: getAuth } = await import('@/stores/auth')
+            if (!getAuth().isAuthenticated) {
+                saveProjectsToLocalStorage()
+            }
 
             // Supabase Bulk Delete
             for (const id of projectIds) {

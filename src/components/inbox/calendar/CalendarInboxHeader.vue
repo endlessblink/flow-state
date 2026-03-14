@@ -155,8 +155,6 @@ import { type Task } from '@/stores/tasks'
 import { type DurationCategory } from '@/utils/durationCategories'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
-const { t } = useI18n()
-
 defineProps<{
   isCollapsed: boolean
   inboxCount: number
@@ -194,6 +192,9 @@ const emit = defineEmits<{
   (e: 'toggleHideDoneTasks'): void
   (e: 'clearAllFilters'): void
 }>()
+
+const { t } = useI18n()
+
 // TASK-1075: Search state
 const isSearchExpanded = ref(false)
 const searchInputRef = ref<HTMLInputElement | null>(null)

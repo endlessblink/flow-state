@@ -168,7 +168,7 @@ import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, CheckCircle2, Search, X, Layers } from 'lucide-vue-next'
 import { NBadge, NDropdown, NPopover } from 'naive-ui'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
-import type { Task } from '@/types/tasks'
+import type { Task, Project } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
 import type { TimeFilterType, SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
@@ -201,7 +201,7 @@ const props = defineProps<{
   hideDoneTasks: boolean
   doneTaskCount: number
   baseTasks: Task[]
-  rootProjects: unknown[]
+  rootProjects: Project[]
   context: string
   sortBy: SortByType // TASK-1073
   sortDirection: SortDirection // TASK-1412

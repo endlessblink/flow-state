@@ -154,7 +154,7 @@ const {
         <div class="slot-tasks-container">
           <div
             v-for="calEvent in getTasksForSlot(slot as any)"
-            v-show="isTaskPrimarySlot(slot as any, calEvent)"
+            v-show="isTaskPrimarySlot(calEvent as any, slot as any)"
             :key="`${calEvent.id}-${slot.slotIndex}`"
             class="slot-task is-primary"
             :class="{
@@ -168,7 +168,7 @@ const {
               'status-active': getTaskStatus(calEvent) === 'todo',
               'slot-task--virtual': calEvent.isVirtual
             }"
-            :style="getSlotTaskStyle(calEvent as any)"
+            :style="getSlotTaskStyle(calEvent as any, slot as any)"
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
             :draggable="!calEvent.isVirtual"
             @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"

@@ -49,9 +49,9 @@
 
       <!-- TASK-068: All actions moved to context menu for cleaner header -->
 
-      <div class="section-count" :class="{ 'has-tasks': taskCount > 0 }">
+      <div class="section-count" :class="{ 'has-tasks': (taskCount as number) > 0 }">
         {{ taskCount }}
-        <span v-if="isCollapsed && taskCount > 0" class="hidden-indicator" :title="`${taskCount} hidden tasks`">📦</span>
+        <span v-if="isCollapsed && (taskCount as number) > 0" class="hidden-indicator" :title="`${taskCount} hidden tasks`">📦</span>
       </div>
     </div>
 

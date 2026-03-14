@@ -9,9 +9,9 @@
       <div class="actions">
         <button
           class="btn btn-ghost"
+          title="Quick check with 1 run per test"
           :disabled="isRunning"
           @click="handleRunTests(1)"
-          title="Quick check with 1 run per test"
         >
           Quick (1x)
         </button>
@@ -45,7 +45,9 @@
     <div v-if="report" class="summary-cards">
       <div class="card glass score-card" :class="gradeClass">
         <h3>Overall Grade</h3>
-        <div class="grade-display">{{ report.grade }}</div>
+        <div class="grade-display">
+          {{ report.grade }}
+        </div>
         <p>{{ gradeLabel }}</p>
       </div>
 

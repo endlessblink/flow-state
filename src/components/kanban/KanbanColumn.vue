@@ -153,7 +153,7 @@ const dragGroup = 'tasks'
 // FEATURE-1336b: Bridge vuedraggable drag to global useDragAndDrop for sidebar drops
 const { startDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
-const onDragStart = (evt: DragEvent) => {
+const onDragStart = (evt: any) => {
   isDragActive.value = true
 
   // Bridge to global drag state so sidebar can receive drops
@@ -169,7 +169,7 @@ const onDragStart = (evt: DragEvent) => {
   }
 }
 
-const onDragEnd = (evt: DragEvent) => {
+const onDragEnd = (evt: any) => {
   isDragActive.value = false
 
   // Check if dropped on a sidebar project (SortableJS forceFallback doesn't fire

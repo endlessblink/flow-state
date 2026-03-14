@@ -6,8 +6,6 @@ import { canvasUiSyncRequest } from '../canvasTaskBridge'
 // TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool)
 import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey, normalizeDueDate } from '@/utils/dateUtils'
-// FEATURE-1118: Gamification hooks for task completion
-import { useGamificationHooks } from '@/composables/useGamificationHooks'
 // BUG-1303: Stop timer when task marked done
 import { useTimerStore } from '@/stores/timer'
 // TASK-1177: Offline-first sync queue integration
@@ -409,19 +407,6 @@ export function useTaskOperations(
                     updates.completedAt = new Date()
                     console.log(`✅ [DONE-ZONE] Task "${task.title?.slice(0, 30)}" marked done, completedAt set`)
 
-                    // FEATURE-1118: Award XP for task completion
-                    try {
-                        const gamificationHooks = useGamificationHooks()
-                        const isOverdue = !!(task.dueDate && new Date(task.dueDate) < new Date())
-                        gamificationHooks.onTaskCompleted(task, {
-                            wasOverdue: isOverdue,
-                            createdAt: task.createdAt
-                        }).catch(e => console.warn('[Gamification] Task completion hook failed:', e))
-                    } catch (e) {
-                        // Gamification is non-critical, don't break task flow
-                        console.warn('[Gamification] Hook error:', e)
-                    }
-
                     // BUG-1303: Stop timer if it's running on the completed task
                     try {
                         const timerStore = useTimerStore()
@@ -528,15 +513,6 @@ export function useTaskOperations(
                     updates.completedAt = undefined
                     console.log(`🔄 [DONE-ZONE] Task "${task.title?.slice(0, 30)}" reopened, completedAt cleared`)
 
-                    // BUG-1515: Reverse XP and stats awarded on completion to prevent exploit loops
-                    try {
-                        const gamificationHooks = useGamificationHooks()
-                        gamificationHooks.onTaskUncompleted(task)
-                            .catch(e => console.warn('[Gamification] Task uncomplete hook failed:', e))
-                    } catch (e) {
-                        // Gamification is non-critical, don't break task flow
-                        console.warn('[Gamification] Uncomplete hook error:', e)
-                    }
                 }
             }
 

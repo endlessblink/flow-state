@@ -112,10 +112,13 @@ export function cleanResponse(text: string): string {
   cleaned = cleaned.replace(/\b\d{1,3}%\s*(confident|confidence|sure|certain)\b/gi, '')
   cleaned = cleaned.replace(/\b(confidence|certainty)\s*[:=]\s*\d{1,3}%/gi, '')
 
-  // 9. Clean up extra blank lines left behind
+  // 9. Strip step indicators that may have leaked into content
+  cleaned = cleaned.replace(/\n*---\n\*Step \d+:.*?\*\n*/g, '')
+
+  // 10. Clean up extra blank lines left behind
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim()
 
-  // 10. Enforce structured format on wall-of-text responses
+  // 11. Enforce structured format on wall-of-text responses
   cleaned = enforceStructuredFormat(cleaned)
 
   return cleaned

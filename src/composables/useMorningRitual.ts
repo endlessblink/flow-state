@@ -1,6 +1,5 @@
 import { ref, computed, onMounted, getCurrentInstance } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
-import { useGamificationStore } from '@/stores/gamification'
 import { useSmartViews } from '@/composables/useSmartViews'
 import type { Task } from '@/types/tasks'
 import type { TimeBlock } from '@/composables/useMorningDashboard'
@@ -73,7 +72,6 @@ export interface RitualSummary {
 
 export function useMorningRitual() {
   const taskStore = useTaskStore()
-  const gamificationStore = useGamificationStore()
   const { isTodayTask } = useSmartViews()
 
   // --- Core state ---
@@ -506,9 +504,6 @@ export function useMorningRitual() {
         // Task may have been deleted concurrently — not fatal, continue with others
       }
     }
-
-    // Award XP for committing to the morning ritual
-    await gamificationStore.awardXp(25, 'morning_commitment')
 
     // Persist completion
     const summary: RitualSummary = {

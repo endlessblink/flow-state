@@ -138,9 +138,9 @@ function chatUI(lang: 'he' | 'en', key: string): string {
 
 function buildToolFeedbackMessage(toolResultsSummary: string, lang: 'he' | 'en'): string {
   if (lang === 'he') {
-    return `תוצאות כלים:\n${toolResultsSummary}\n\nנתח את הנתונים והסבר מה דחוף ולמה. רשימה ממוספרת, בעברית בלבד.`
+    return `תוצאות כלים:\n${toolResultsSummary}\n\nיש לך את כל הנתונים הדרושים. ענה ישירות לשאלת המשתמש ב-1-3 משפטים. אל תקרא לעוד כלים אלא אם חסר לך מידע שטרם אחזרת. תמצת, אל תספר.`
   }
-  return `Tool results:\n${toolResultsSummary}\n\nAnalyze the data. Explain what's urgent and why. Numbered list format.`
+  return `Tool results:\n${toolResultsSummary}\n\nIMPORTANT: You now have all the data you need. Respond directly to the user's question in 1-3 sentences. Do NOT call more tools unless the user asked for something you haven't retrieved yet. Synthesize, don't narrate.`
 }
 
 function formatUserFriendlyError(rawError: string): string {
@@ -188,7 +188,7 @@ function formatUserFriendlyError(rawError: string): string {
 // ============================================================================
 
 /** Maximum reasoning steps before the circuit breaker stops the ReAct loop */
-const MAX_REACT_STEPS = 5
+const MAX_REACT_STEPS = 3
 
 /** AbortController for cancelling an in-progress ReAct loop */
 const reactAbortController = ref<AbortController | null>(null)
@@ -432,6 +432,10 @@ export function useAIChat() {
       '6. NEVER show JSON, UUIDs, task IDs, or technical details.',
       '7. No generic productivity advice — be specific about THEIR tasks or say nothing.',
       '8. COUNTING vs LISTING: For COUNTING questions ("how many", "כמה"), answer from context. For ANYTHING asking to see/show/give tasks — ALWAYS call tools.',
+      '9. NEVER narrate your reasoning process. Do NOT say "Let me check...", "I\'ll look that up...", or "I\'m going to...". Just act.',
+      '10. After using tools, synthesize results into a direct answer. 1-3 sentences for simple queries. If you have the data, respond immediately.',
+      '11. Tool results are YOUR internal context — not the user\'s output. The user sees rich cards for data. Your text should ADD insight, not repeat raw data.',
+      '12. If you have the data from tools, DO NOT call more tools "just to be thorough." One tool call per question unless clearly insufficient.',
       '',
       buildNativeToolsBehaviorPrompt(),
       ''
@@ -1157,10 +1161,12 @@ export function useAIChat() {
             content: buildToolFeedbackMessage(toolResultsSummary, lang),
           })
 
-          // Add step indicator to streaming content
-          store.appendStreamingContent(
-            `\n\n---\n*Step ${stepCount}: executed ${toolResults.length} tool(s)*\n\n`
-          )
+          // Store step info in metadata only (not visible to user)
+          const lastMsgStep = store.messages[store.messages.length - 1]
+          if (lastMsgStep && lastMsgStep.metadata) {
+            ;(lastMsgStep.metadata as Record<string, unknown>).steps = ((lastMsgStep.metadata as Record<string, unknown>).steps as number || 0) + 1
+            ;(lastMsgStep.metadata as Record<string, unknown>).totalToolCalls = ((lastMsgStep.metadata as Record<string, unknown>).totalToolCalls as number || 0) + toolResults.length
+          }
 
         } else {
           // No native tool calls — try text-based fallback
@@ -1258,7 +1264,12 @@ export function useAIChat() {
               store.streamingContent = lastMsgClean.content
             }
 
-            store.appendStreamingContent(`\n\n---\n*Step ${stepCount}: executed ${toolResults.length} tool(s)*\n\n`)
+            // Store step info in metadata only (not visible to user)
+            const lastMsgStepText = store.messages[store.messages.length - 1]
+            if (lastMsgStepText && lastMsgStepText.metadata) {
+              ;(lastMsgStepText.metadata as Record<string, unknown>).steps = ((lastMsgStepText.metadata as Record<string, unknown>).steps as number || 0) + 1
+              ;(lastMsgStepText.metadata as Record<string, unknown>).totalToolCalls = ((lastMsgStepText.metadata as Record<string, unknown>).totalToolCalls as number || 0) + toolResults.length
+            }
           } else {
             // Truly no tool calls = final answer, exit loop
             continueLoop = false

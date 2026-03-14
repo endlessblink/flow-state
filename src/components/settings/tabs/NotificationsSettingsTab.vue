@@ -178,11 +178,6 @@ const categories = [
     key: 'overdueAlerts' as const,
     label: 'Overdue Alerts',
     description: 'Be reminded about tasks past their due date'
-  },
-  {
-    key: 'achievements' as const,
-    label: 'Achievement Alerts',
-    description: 'Celebrate when you earn XP or unlock achievements'
   }
 ]
 

@@ -268,7 +268,6 @@
     "@vue-flow/core": "^1.47.0",
     "@vue-flow/node-resizer": "^1.5.0",
     "@vueuse/core": "^14.2.1",
-    "augmented-ui": "^2.0.0",
     "better-sqlite3": "^12.6.0",
     "dexie": "^4.2.1",
     "dompurify": "^3.3.1",

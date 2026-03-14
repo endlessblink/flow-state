@@ -7,17 +7,12 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notifications'
 import { useAuthStore } from '@/stores/auth'
-import { useGamificationStore } from '@/stores/gamification'
 import { useSupabaseDatabase, invalidateCache } from '@/composables/useSupabaseDatabase'
 import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { clearGuestData, clearStaleGuestTasks, getOrCreateGuestSessionId } from '@/utils/guestModeStorage'
 // BUG-FIX: Import mappers to properly convert realtime data
 import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, type SupabaseTask, type SupabaseProject, type SupabaseGroup } from '@/utils/supabaseMappers'
-// FEATURE-1118: Gamification hooks
-import { useGamificationHooks } from '@/composables/useGamificationHooks'
-// FEATURE-1132: Challenge system
-import { useChallengesStore } from '@/stores/challenges'
 // TASK-1177: Offline-first sync system
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
@@ -37,8 +32,6 @@ export function useAppInitialization() {
     const uiStore = useUIStore()
     const notificationStore = useNotificationStore()
     const authStore = useAuthStore()
-    const gamificationStore = useGamificationStore()
-    const challengesStore = useChallengesStore()
     const itpProtection = useSafariITPProtection()
     const activeChannel = ref<unknown>(null)
     const realtimeInitialized = ref(false)
@@ -421,25 +414,6 @@ export function useAppInitialization() {
                 }
             }
             window.addEventListener('online', onBackOnline, { once: true })
-        }
-
-        // FEATURE-1118: Initialize gamification system
-        try {
-            await gamificationStore.initialize()
-            // Record daily activity and update streak
-            const gamificationHooks = useGamificationHooks()
-            await gamificationHooks.onAppInitialized()
-            console.log('🎮 [GAMIFICATION] Initialized successfully')
-        } catch (error) {
-            console.warn('⚠️ Gamification system initialization failed:', error)
-        }
-
-        // FEATURE-1132: Initialize challenge system
-        try {
-            await challengesStore.initialize()
-            console.log('🎯 [CHALLENGES] Initialized successfully')
-        } catch (error) {
-            console.warn('⚠️ Challenge system initialization failed:', error)
         }
 
         // TASK-1524: Migrate old `recurrence` field to new `recurrenceRule` format

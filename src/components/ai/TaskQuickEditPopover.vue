@@ -14,7 +14,6 @@ import { Check, Play, ExternalLink, X } from 'lucide-vue-next'
 import BasePopover from '@/components/base/BasePopover.vue'
 import { executeTool } from '@/services/ai/tools'
 import { useTimerStore } from '@/stores/timer'
-import { useChallengesStore } from '@/stores/challenges'
 import { getTaskContextTips } from '@/composables/useTaskContextTips'
 import { FLASH_DURATION_MS } from '@/config/timing'
 
@@ -85,11 +84,7 @@ const STATUS_OPTIONS = [
 
 const contextTips = computed(() => {
   if (!props.task) return []
-  let challengeStore = undefined
-  try {
-    challengeStore = useChallengesStore()
-  } catch { /* not available */ }
-  return getTaskContextTips(props.task, timerStore || undefined, challengeStore)
+  return getTaskContextTips(props.task, timerStore || undefined)
 })
 
 // ============================================================================

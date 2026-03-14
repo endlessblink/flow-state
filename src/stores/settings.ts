@@ -57,12 +57,6 @@ export interface AppSettings {
     // Feedback
     showUndoRedoToasts: boolean
 
-    // FEATURE-1118: Gamification Settings
-    gamificationEnabled: boolean
-    showXpNotifications: boolean
-    showAchievementNotifications: boolean
-    gamificationIntensity: 'minimal' | 'moderate' | 'intense'
-
     // FEATURE-1194: Auto-updater
     autoUpdateEnabled: boolean
 
@@ -187,12 +181,6 @@ export const useSettingsStore = defineStore('settings', {
 
         // Feedback defaults
         showUndoRedoToasts: true,
-
-        // FEATURE-1118: Gamification defaults
-        gamificationEnabled: true,
-        showXpNotifications: true,
-        showAchievementNotifications: true,
-        gamificationIntensity: 'moderate',
 
         // FEATURE-1194: Auto-updater defaults
         autoUpdateEnabled: false,

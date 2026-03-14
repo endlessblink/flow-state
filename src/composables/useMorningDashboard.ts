@@ -1,7 +1,6 @@
 import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
-import { useGamificationStore } from '@/stores/gamification'
 import { useAuthStore } from '@/stores/auth'
 import { useSmartViews } from '@/composables/useSmartViews'
 import type { Task } from '@/types/tasks'
@@ -71,7 +70,6 @@ const HN_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
 export function useMorningDashboard() {
   const router = useRouter()
   const taskStore = useTaskStore()
-  const gamificationStore = useGamificationStore()
   const authStore = useAuthStore()
   const { isTodayTask } = useSmartViews()
 
@@ -459,7 +457,6 @@ export function useMorningDashboard() {
       // storage unavailable — silent
     }
 
-    await gamificationStore.awardXp(25, 'morning_commitment')
     router.push('/')
   }
 

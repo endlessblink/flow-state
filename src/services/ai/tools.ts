@@ -13,8 +13,6 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useProjectStore } from '@/stores/projects'
-import { useGamificationStore } from '@/stores/gamification'
-import { useChallengesStore } from '@/stores/challenges'
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/types/tasks'
 import type { OpenAITool } from './types'
@@ -358,24 +356,6 @@ export const AI_TOOLS: ToolDefinition[] = [
   {
     name: 'get_weekly_summary',
     description: 'Get a weekly productivity summary including tasks done, focus time, streak status, and XP earned',
-    category: 'read',
-    parameters: { type: 'object', properties: {}, required: [] },
-  },
-  {
-    name: 'get_gamification_status',
-    description: 'Get gamification profile: XP, level, streak, corruption, equipped theme, and level progress',
-    category: 'read',
-    parameters: { type: 'object', properties: {}, required: [] },
-  },
-  {
-    name: 'get_active_challenges',
-    description: 'Get active daily challenges and weekly boss with progress, time remaining, and rewards',
-    category: 'read',
-    parameters: { type: 'object', properties: {}, required: [] },
-  },
-  {
-    name: 'get_achievements_near_completion',
-    description: 'Get achievements that are close to being unlocked (>50% progress) with progress details',
     category: 'read',
     parameters: { type: 'object', properties: {}, required: [] },
   },
@@ -1348,22 +1328,6 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           }
         }
 
-        // Gamification stats
-        let gamStats: unknown = null
-        try {
-          const gamStore = useGamificationStore()
-          if (gamStore.isInitialized && gamStore.stats) {
-            gamStats = {
-              tasksCompleted: gamStore.stats.tasksCompleted,
-              pomodorosCompleted: gamStore.stats.pomodorosCompleted,
-              totalFocusMinutes: gamStore.stats.totalFocusMinutes,
-              currentStreak: gamStore.streakInfo.currentStreak,
-              longestStreak: gamStore.streakInfo.longestStreak,
-              isActiveToday: gamStore.streakInfo.isActiveToday,
-            }
-          }
-        } catch { /* gamification not available */ }
-
         // Timer sessions
         let sessionsToday = 0
         try {
@@ -1380,7 +1344,6 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
             overdueCount,
             byStatus,
             pomodorosToday: sessionsToday,
-            ...(gamStats || {}),
           },
         }
       }
@@ -1453,35 +1416,6 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           if (completedDate >= weekAgoStr) completedThisWeek++
         }
 
-        // Gamification weekly data
-        let weeklyGam: unknown = null
-        try {
-          const gamStore = useGamificationStore()
-          if (gamStore.isInitialized) {
-            weeklyGam = {
-              totalXp: gamStore.totalXp,
-              level: gamStore.currentLevel,
-              currentStreak: gamStore.streakInfo.currentStreak,
-              focusMinutes: gamStore.stats?.totalFocusMinutes ?? 0,
-              pomodorosCompleted: gamStore.stats?.pomodorosCompleted ?? 0,
-            }
-          }
-        } catch { /* not available */ }
-
-        // Challenge stats
-        let challengeStats: unknown = null
-        try {
-          const challengeStore = useChallengesStore()
-          if (challengeStore.isInitialized) {
-            challengeStats = {
-              completedToday: challengeStore.completedTodayCount,
-              activeDailies: challengeStore.activeDailies.length,
-              hasBoss: !!challengeStore.activeBoss,
-              corruptionLevel: challengeStore.corruptionLevel,
-            }
-          }
-        } catch { /* not available */ }
-
         return {
           success: true,
           message: tm(language, 'Weekly summary', 'סיכום שבועי'),
@@ -1489,155 +1423,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
             completedThisWeek,
             totalTasks: allTasks.length,
             remainingTasks: allTasks.filter((t: Task) => t.status !== 'done').length,
-            ...(weeklyGam || {}),
-            challenges: challengeStats,
           },
-        }
-      }
-
-      case 'get_gamification_status': {
-        let gamStore: ReturnType<typeof useGamificationStore>
-        try {
-          gamStore = useGamificationStore()
-        } catch {
-          return { success: false, message: tm(language, 'Gamification system not available.', 'מערכת המשחוק לא זמינה.') }
-        }
-
-        if (!gamStore.isInitialized || !gamStore.profile) {
-          return { success: false, message: tm(language, 'Gamification not initialized. Please wait for the app to fully load.', 'מערכת המשחוק לא אותחלה.') }
-        }
-
-        const levelInfo = gamStore.levelInfo
-        const streakInfo = gamStore.streakInfo
-
-        // Corruption from challenges store
-        let corruptionLevel = 0
-        let corruptionTier = 'clean'
-        try {
-          const challengeStore = useChallengesStore()
-          corruptionLevel = challengeStore.corruptionLevel
-          corruptionTier = challengeStore.corruptionTier.tier
-        } catch { /* not available */ }
-
-        return {
-          success: true,
-          message: tm(language, 'Gamification status', 'סטטוס משחוק'),
-          data: {
-            totalXp: gamStore.totalXp,
-            availableXp: gamStore.availableXp,
-            level: gamStore.currentLevel,
-            levelProgress: levelInfo.progressPercent,
-            xpToNextLevel: levelInfo.xpForNextLevel - levelInfo.currentXp,
-            currentStreak: streakInfo.currentStreak,
-            longestStreak: streakInfo.longestStreak,
-            isActiveToday: streakInfo.isActiveToday,
-            streakAtRisk: streakInfo.streakAtRisk,
-            streakFreezes: streakInfo.streakFreezes,
-            corruptionLevel,
-            corruptionTier,
-            equippedTheme: gamStore.equippedTheme,
-            achievementsEarned: gamStore.earnedAchievements.length,
-            achievementsTotal: gamStore.achievements.length,
-          },
-        }
-      }
-
-      case 'get_active_challenges': {
-        let challengeStore: ReturnType<typeof useChallengesStore>
-        try {
-          challengeStore = useChallengesStore()
-        } catch {
-          return { success: false, message: tm(language, 'Challenge system not available.', 'מערכת האתגרים לא זמינה.') }
-        }
-
-        if (!challengeStore.isInitialized) {
-          return { success: false, message: tm(language, 'Challenge system not initialized. Please wait for the app to fully load.', 'מערכת האתגרים לא אותחלה.') }
-        }
-
-        const now = new Date()
-
-        const dailies = challengeStore.activeDailies.map(c => ({
-          id: c.id,
-          title: c.title,
-          description: c.description,
-          objectiveType: c.objectiveType,
-          objectiveCurrent: c.objectiveCurrent,
-          objectiveTarget: c.objectiveTarget,
-          progressPercent: Math.round((c.objectiveCurrent / c.objectiveTarget) * 100),
-          rewardXp: c.rewardXp,
-          penaltyXp: c.penaltyXp,
-          difficulty: c.difficulty,
-          narrativeFlavor: c.narrativeFlavor,
-          timeRemaining: Math.max(0, Math.round((c.expiresAt.getTime() - now.getTime()) / 60000)),
-          status: c.status,
-        }))
-
-        const boss = challengeStore.activeBoss
-        const bossData = boss ? {
-          id: boss.id,
-          title: boss.title,
-          description: boss.description,
-          objectiveType: boss.objectiveType,
-          objectiveCurrent: boss.objectiveCurrent,
-          objectiveTarget: boss.objectiveTarget,
-          progressPercent: Math.round((boss.objectiveCurrent / boss.objectiveTarget) * 100),
-          rewardXp: boss.rewardXp,
-          penaltyXp: boss.penaltyXp,
-          difficulty: boss.difficulty,
-          narrativeFlavor: boss.narrativeFlavor,
-          timeRemaining: Math.max(0, Math.round((boss.expiresAt.getTime() - now.getTime()) / 60000)),
-          status: boss.status,
-        } : null
-
-        return {
-          success: true,
-          message: tm(language, `${dailies.length} active challenges${bossData ? ' + 1 boss' : ''}`, `${dailies.length} אתגרים פעילים${bossData ? ' + בוס אחד' : ''}`),
-          data: {
-            dailies,
-            boss: bossData,
-            completedToday: challengeStore.completedTodayCount,
-            allDailiesComplete: challengeStore.allDailiesComplete,
-            corruptionLevel: challengeStore.corruptionLevel,
-          },
-        }
-      }
-
-      case 'get_achievements_near_completion': {
-        let gamStore: ReturnType<typeof useGamificationStore>
-        try {
-          gamStore = useGamificationStore()
-        } catch {
-          return { success: false, message: tm(language, 'Gamification system not available.', 'מערכת המשחוק לא זמינה.') }
-        }
-
-        if (!gamStore.isInitialized) {
-          return { success: false, message: tm(language, 'Gamification not initialized.', 'מערכת המשחוק לא אותחלה.') }
-        }
-
-        // Get unearned achievements with >50% progress
-        const nearComplete = gamStore.achievementsWithProgress
-          .filter(a => !a.isEarned && a.conditionValue > 0)
-          .map(a => ({
-            id: a.id,
-            name: a.name,
-            description: a.description,
-            icon: a.icon,
-            category: a.category,
-            tier: a.tier,
-            progress: a.progress,
-            target: a.conditionValue,
-            progressPercent: Math.round((a.progress / a.conditionValue) * 100),
-            xpReward: a.xpReward,
-            remaining: a.conditionValue - a.progress,
-          }))
-          .filter(a => a.progressPercent >= 50)
-          .sort((a, b) => b.progressPercent - a.progressPercent)
-          .slice(0, 10)
-
-        return {
-          success: true,
-          message: tm(language, `${nearComplete.length} achievements near completion`, `${nearComplete.length} הישגים קרובים להשלמה`),
-          data: nearComplete,
         }
       }
 

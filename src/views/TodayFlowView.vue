@@ -5,8 +5,6 @@
     ref="containerRef"
     @keydown="handleKeydown"
   >
-    <FlowProgressRibbon />
-
     <div class="flow-content">
       <!-- All done celebration -->
       <Transition name="fade-up" appear>
@@ -64,7 +62,6 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FlowTaskCard from '@/components/today-flow/FlowTaskCard.vue'
-import FlowProgressRibbon from '@/components/today-flow/FlowProgressRibbon.vue'
 import { useMorningDashboard } from '@/composables/useMorningDashboard'
 import { useTimerStore } from '@/stores/timer'
 

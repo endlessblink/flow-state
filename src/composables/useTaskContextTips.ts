@@ -8,7 +8,6 @@
  */
 
 import type { useTimerStore } from '@/stores/timer'
-import type { useChallengesStore } from '@/stores/challenges'
 
 export interface TaskContextTip {
   text: string
@@ -32,7 +31,6 @@ interface TaskLike {
 export function getTaskContextTips(
   task: TaskLike,
   timerStore?: ReturnType<typeof useTimerStore>,
-  challengeStore?: ReturnType<typeof useChallengesStore>
 ): TaskContextTip[] {
   const tips: TaskContextTip[] = []
   const now = new Date()
@@ -104,29 +102,6 @@ export function getTaskContextTips(
       text: 'No due date — when should this be done?',
       icon: '📅',
     })
-  }
-
-  // Challenge match
-  if (challengeStore && tips.length < 2) {
-    try {
-      const dailies = challengeStore.activeDailies || []
-      for (const challenge of dailies) {
-        if (challenge.status !== 'active') continue
-        // Check if completing this task type could count toward challenge
-        if (
-          challenge.objectiveType === 'complete_tasks' ||
-          (challenge.objectiveType === 'focus_time_minutes' && task.status === 'todo')
-        ) {
-          tips.push({
-            text: `Completing this counts toward your "${challenge.title}" challenge!`,
-            icon: '⚔️',
-          })
-          break
-        }
-      }
-    } catch {
-      // challenge store not available, skip
-    }
   }
 
   return tips.slice(0, 2)

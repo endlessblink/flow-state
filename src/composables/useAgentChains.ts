@@ -147,16 +147,10 @@ const chains: AgentChain[] = [
         parameters: {},
       },
       {
-        type: 'tool',
-        tool: 'get_gamification_status',
-        parameters: {},
-      },
-      {
         type: 'prompt',
         promptFn: (results, language) => {
           const stats = results[0]?.data as unknown
           const weekly = results[1]?.data as unknown
-          const gamification = results[2]?.data as unknown
 
           const sections: string[] = []
           sections.push('Write a 3-sentence end-of-day summary. Use the FACTS below — do NOT invent numbers.')
@@ -189,18 +183,9 @@ const chains: AgentChain[] = [
           }
 
           sections.push('')
-
-          // Gamification
-          if (gamification) {
-            const level = gamification.level ?? gamification.currentLevel ?? '?'
-            const xp = gamification.xp ?? gamification.currentXP ?? 0
-            sections.push(`## LEVEL: ${level} (${xp} XP)`)
-          }
-
-          sections.push('')
           sections.push('→ Sentence 1: Summarize what was accomplished today (use specific numbers).')
           sections.push('→ Sentence 2: Note what carries over to tomorrow.')
-          sections.push('→ Sentence 3: Brief motivational close referencing their streak or level.')
+          sections.push('→ Sentence 3: Brief motivational close.')
 
           const langDirective = language === 'he' ? '\n\nIMPORTANT: כתוב את כל התשובה בעברית.' : ''
           return sections.join('\n') + langDirective

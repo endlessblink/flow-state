@@ -335,7 +335,7 @@ self.addEventListener('notificationclose', (event) => {
 // ============================================================================
 
 interface PushPayloadData {
-  type: 'task_reminder' | 'daily_digest' | 'overdue_alert' | 'achievement'
+  type: 'task_reminder' | 'daily_digest' | 'overdue_alert'
   title: string
   body: string
   tag: string
@@ -369,7 +369,7 @@ self.addEventListener('push', (event) => {
     icon: '/icons/pwa-192x192.png',
     badge: '/icons/pwa-64x64.png',
     tag: payload.tag,  // Deduplication — same tag won't show twice
-    requireInteraction: payload.type !== 'achievement',  // Achievements auto-dismiss
+    requireInteraction: true,
     silent: false,
     data: {
       type: payload.type,

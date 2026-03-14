@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
@@ -19,28 +18,7 @@ const boardDensities = [
   { value: 'ultrathin', label: 'Ultrathin' }
 ]
 
-const intensityOptions = [
-  {
-    value: 'minimal' as const,
-    label: 'Minimal',
-    description: 'Level badge only. No notifications or effects.',
-    accent: 'var(--text-muted)'
-  },
-  {
-    value: 'moderate' as const,
-    label: 'Moderate',
-    description: 'XP bar, streak, notifications. Cyberflow page accessible.',
-    accent: 'var(--state-active-border)'
-  },
-  {
-    value: 'intense' as const,
-    label: 'Intense',
-    description: 'Full RPG experience. Glitch effects, corruption overlay, all notifications.',
-    accent: 'rgba(200, 100, 255, 0.7)'
-  }
-]
 
-const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
 </script>
 
 <template>
@@ -72,45 +50,6 @@ const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
       />
     </SettingsSection>
 
-    <SettingsSection title="Gamification">
-      <SettingsToggle
-        label="Enable gamification"
-        description="Earn XP, level up, and track achievements as you complete tasks."
-        :value="settingsStore.gamificationEnabled"
-        @update="val => settingsStore.updateSetting('gamificationEnabled', val)"
-      />
-
-      <div v-if="isGamificationEnabled" class="intensity-selector">
-        <div class="setting-header">
-          <label class="setting-label">Intensity Level</label>
-          <p class="setting-description">
-            Control how much gamification you see across the app.
-          </p>
-        </div>
-
-        <div class="intensity-cards">
-          <button
-            v-for="option in intensityOptions"
-            :key="option.value"
-            class="intensity-card"
-            :class="{ active: settingsStore.gamificationIntensity === option.value }"
-            :style="{ '--card-accent': option.accent }"
-            @click="settingsStore.updateSetting('gamificationIntensity', option.value)"
-          >
-            <div class="intensity-card-header">
-              <span class="intensity-card-title">{{ option.label }}</span>
-              <span
-                v-if="option.value === 'moderate'"
-                class="intensity-default-badge"
-              >default</span>
-            </div>
-            <p class="intensity-card-desc">
-              {{ option.description }}
-            </p>
-          </button>
-        </div>
-      </div>
-    </SettingsSection>
   </div>
 </template>
 
@@ -120,100 +59,4 @@ const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
   flex-direction: column;
 }
 
-/* Intensity selector */
-.intensity-selector {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.setting-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.setting-label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text-secondary);
-}
-
-.setting-description {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin: 0;
-}
-
-.intensity-cards {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.intensity-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  border-left: 3px solid var(--card-accent, var(--glass-border));
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  cursor: pointer;
-  text-align: left;
-  color: var(--text-secondary);
-  transition: all var(--duration-normal) var(--spring-smooth);
-}
-
-.intensity-card:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border-medium);
-  border-left-color: var(--card-accent, var(--glass-border-medium));
-  color: var(--text-primary);
-  transform: translateY(-1px);
-}
-
-.intensity-card.active {
-  background: var(--glass-bg-subtle);
-  border-color: var(--card-accent, var(--state-active-border));
-  border-left-color: var(--card-accent, var(--state-active-border));
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
-}
-
-.intensity-card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.intensity-card-title {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-}
-
-.intensity-default-badge {
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  color: var(--text-muted);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  padding: 1px var(--space-1_5);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.intensity-card-desc {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin: 0;
-}
-
-.intensity-card.active .intensity-card-desc {
-  color: var(--text-secondary);
-}
 </style>

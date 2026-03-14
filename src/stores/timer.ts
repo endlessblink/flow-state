@@ -7,8 +7,6 @@ import { useSettingsStore } from './settings'
 import { formatTime } from '@/utils/timer/formatTime'
 import { getCrossTabSync } from '@/composables/useCrossTabSync'
 import { useWakeLock } from '@/composables/useWakeLock'
-// FEATURE-1118: Gamification hooks for pomodoro completion
-import { useGamificationHooks } from '@/composables/useGamificationHooks'
 import i18n from '@/i18n'
 
 // TASK-1406: Extracted composables
@@ -448,18 +446,6 @@ export const useTimerStore = defineStore('timer', () => {
             progress: Math.min(100, Math.round((newCount / (task.estimatedPomodoros || 1)) * 100))
           })
 
-          // FEATURE-1118: Award XP for pomodoro completion
-          try {
-            const gamificationHooks = useGamificationHooks()
-            const durationMinutes = Math.round(session.duration / 60)
-            gamificationHooks.onPomodoroCompleted(session.taskId, {
-              consecutiveSessions: newCount,
-              durationMinutes
-            }).catch(e => console.warn('[Gamification] Pomodoro completion hook failed:', e))
-          } catch (e) {
-            // Gamification is non-critical, don't break timer flow
-            console.warn('[Gamification] Hook error:', e)
-          }
         }
       }
 

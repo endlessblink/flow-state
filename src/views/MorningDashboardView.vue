@@ -4,9 +4,7 @@ import { X } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import { useMorningRitual } from '@/composables/useMorningRitual'
 import MorningGreeting from '@/components/morning-dashboard/MorningGreeting.vue'
-import MorningScore from '@/components/morning-dashboard/MorningScore.vue'
 import BigThreeCard from '@/components/morning-dashboard/BigThreeCard.vue'
-import MorningMissions from '@/components/morning-dashboard/MorningMissions.vue'
 import MorningNews from '@/components/morning-dashboard/MorningNews.vue'
 import MorningQuickCapture from '@/components/morning-dashboard/MorningQuickCapture.vue'
 import MorningSummaryChip from '@/components/morning-dashboard/MorningSummaryChip.vue'
@@ -32,7 +30,6 @@ function dismiss() {
     <div class="morning-content">
       <div class="morning-header">
         <MorningGreeting />
-        <MorningScore />
         <button class="morning-dismiss" @click="dismiss" aria-label="Close morning dashboard">
           <X :size="20" />
         </button>
@@ -49,7 +46,6 @@ function dismiss() {
       <BigThreeCard />
 
       <div class="morning-bottom">
-        <MorningMissions />
         <MorningNews />
       </div>
 

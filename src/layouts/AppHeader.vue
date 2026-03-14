@@ -45,7 +45,7 @@
         </span>
       </div>
 
-      <!-- INTEGRATED CONTROL PANEL: Gamification + Sync + AI + Clock + Timer -->
+      <!-- INTEGRATED CONTROL PANEL: Sync + AI + Clock + Timer -->
       <div class="control-panel">
         <!-- TASK-1177: Sync Status Indicator -->
         <SyncStatusIndicator />
@@ -786,54 +786,6 @@ const startLongBreak = async () => {
 .help-btn:hover {
   color: var(--brand-primary);
   background: var(--state-hover-bg);
-}
-
-/* GAMIFICATION WIDGETS (FEATURE-1118) */
-.gamification-widgets {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  position: relative;
-}
-
-.gamification-dropdown {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  inset-inline-end: 0;
-  z-index: 100;
-  min-width: 320px;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-  animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.gamification-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 99;
-}
-
-/* Cyberflow intensity: intense glow on Cyberflow nav tab */
-.cyberflow-tab--glow {
-  box-shadow: 0 0 8px var(--neon-magenta, rgba(255, 0, 255, 0.4)),
-              0 0 16px var(--neon-magenta, rgba(255, 0, 255, 0.2));
-  animation: cyberflowPulse 2s ease-in-out infinite;
-}
-
-@keyframes cyberflowPulse {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.15); }
 }
 
 /* TASK-1435: Active Task Glass Pill */

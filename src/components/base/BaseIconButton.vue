@@ -1,6 +1,6 @@
 <template>
   <button
-    class="base-icon-button"
+    class="base-icon-button focus-ring"
     :class="[
       `variant-${variant}`,
       `size-${size}`,
@@ -98,13 +98,6 @@ defineEmits<{
 .base-icon-button.size-lg {
   width: var(--space-10);
   height: var(--space-10);
-}
-
-/* Focus state with visible indicator */
-.base-icon-button:focus-visible {
-  outline: var(--space-0_5) solid var(--color-work);
-  outline-offset: var(--space-0_5);
-  box-shadow: 0 0 0 var(--space-1) rgba(var(--color-success), 0.1);
 }
 
 /* Active State - Teal stroke */

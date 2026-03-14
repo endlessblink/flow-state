@@ -227,15 +227,7 @@ const getEventTooltip = (event: CalendarEvent) => {
             :title="`${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
           >
             <div class="external-dot" :style="{ backgroundColor: ext.color }" />
-            <OverflowTooltip
-              class="event-title-short"
-              :text="ext.title"
-              multiline
-              :line-clamp="2"
-              dir="auto"
-            >
-              {{ ext.title }}
-            </OverflowTooltip>
+            <OverflowTooltip class="event-title-short" :text="ext.title" multiline :line-clamp="2" dir="auto">{{ ext.title }}</OverflowTooltip>
           </div>
         </div>
       </div>

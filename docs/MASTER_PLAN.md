@@ -1967,6 +1967,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **~~TASK-1524~~** | **P1** | **Migrate old `recurrence` field to new `recurrenceRule` format on app init** (✅ DONE) |
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 | ~~**BUG-1526**~~ | **P1** | ~~**Push notification click actions dead — SW posts NAVIGATE_TO_TASK/NAVIGATE_TO/SNOOZE_NOTIFICATION but no client handler existed; added SW message listener in useAppInitialization.ts**~~ (✅ DONE 2026-03-14) |
+| ~~**TASK-1527**~~ | **P2** | ~~**Remove entire gamification system (XP, achievements, challenges, shop, Cyberflow RPG) — ~23,700 lines removed, DB tables left dormant**~~ (✅ DONE 2026-03-14) |
 
 ---
 
@@ -2608,9 +2609,9 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### TASK-1469: AI Chat Anti-Spam Fix (📋 PLANNED)
+### TASK-1469: AI Chat Anti-Spam Fix (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
 
 **Problem**: AI Chat ReAct loop dumps walls of raw tool result data into the conversation instead of answering questions concisely. Users see JSON blobs, long lists, and repeated tool calls before getting an answer.
 
@@ -2652,6 +2653,16 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 4. Consider subtle indicator on tasks that haven't been AI-assisted (optional, evaluate UX impact)
 
 **Category**: AI / UX
+
+---
+
+### ~~TASK-1527~~: Remove Entire Gamification System (✅ DONE)
+
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-14)
+
+Removed the entire gamification system (~23,700 lines): XP, achievements, challenges, shop, boss fights, corruption, Cyberflow RPG view, cyberflow design tokens, and all integration hooks. DB tables left dormant (no migration needed, reversible). Build passes, 883/884 tests pass.
+
+**Category**: Cleanup / Architecture
 
 ---
 

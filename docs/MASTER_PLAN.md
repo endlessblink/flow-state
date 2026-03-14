@@ -2691,11 +2691,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-### BUG-1528: Tiny gray dot appears on today's date in date picker (🔄 IN PROGRESS)
+### ~~BUG-1528~~: Tiny gray dot appears on today's date in date picker (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-14)
 
-**Problem**: A small gray/red dot indicator appears on the current date (today) in the Naive UI date picker. It shouldn't be there.
+**Problem**: Naive UI's built-in `<div class="n-date-panel-date__sup">` rendered a gray dot on today's date, overlapping with our custom `::after` dot indicators.
+
+**Fix**: Hidden the default element with `display: none !important` in `global-overrides.css`. Our custom white/teal dots remain.
 
 **Category**: UI Bug
 

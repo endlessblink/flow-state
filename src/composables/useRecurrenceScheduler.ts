@@ -23,6 +23,24 @@ export function useRecurrenceScheduler() {
         const today = formatDateKey(new Date())
         let cloneCount = 0
 
+        // CRITICAL: Use a localStorage lock to prevent duplicate clones across rapid page refreshes.
+        // The in-memory guards (hasActiveSuccessor, hasTodayClone) fail when:
+        // 1. User refreshes before the previous clone's DB write completes
+        // 2. loadFromDatabase doesn't see the clone yet (race with direct save)
+        // The lock persists across page loads, unlike in-memory state.
+        const LOCK_KEY = `flowstate-recurrence-lock-${today}`
+        const existingLock = localStorage.getItem(LOCK_KEY)
+        if (existingLock) {
+            const lockTime = parseInt(existingLock, 10)
+            // Lock is valid for 60 seconds (covers the DB write + sync time)
+            if (Date.now() - lockTime < 60_000) {
+                console.log('[RECURRENCE-SCHEDULER] Skipping — lock active from recent run')
+                return 0
+            }
+        }
+        // Set lock BEFORE processing
+        localStorage.setItem(LOCK_KEY, String(Date.now()))
+
         // Find done tasks with recurrenceRule that might need deferred clones
         const doneTasks = taskStore._rawTasks.filter(t =>
             t.status === 'done' &&

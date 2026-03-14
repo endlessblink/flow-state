@@ -161,6 +161,10 @@ const isProcessing = ref(false)
 const processIntervalId = ref<ReturnType<typeof setInterval> | null>(null)
 const PROCESS_INTERVAL_MS = 5000 // Check queue every 5 seconds
 
+// BUG-P1: Server-unreachable detection — prevent burning retry budget during outages
+let consecutiveTransientFailures = 0
+const TRANSIENT_PAUSE_THRESHOLD = 5
+
 // TASK-1177: Permanent failure pub/sub (module-level to match singleton state)
 const permanentFailureCallbacks = new Set<(op: WriteOperation) => void>()
 
@@ -453,6 +457,7 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     // Success - mark completed
     await markCompleted(operation.id)
     state.value.lastSyncAt = Date.now()
+    consecutiveTransientFailures = 0  // BUG-P1: reset on any success
 
     // BUG-1321: When LWW "server wins", apply serverData back to Pinia store.
     // Without this, the local store silently diverges from VPS truth.
@@ -531,6 +536,22 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     const nextRetryAt = calculateNextRetryTime(operation.retryCount)
     await markFailed(operation.id, result.error || 'Unknown error', nextRetryAt)
     console.warn(`⚠️ [SYNC] Retry scheduled: ${operation.entityType}:${operation.entityId.slice(0, 8)} in ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
+
+    // BUG-P1: Server-unreachable detection — if consecutive transient failures exceed threshold,
+    // pause the queue for 60s instead of burning the retry budget. Reset when connectivity returns.
+    consecutiveTransientFailures++
+    if (consecutiveTransientFailures >= TRANSIENT_PAUSE_THRESHOLD) {
+      console.warn(`[SYNC] Server appears unreachable (${consecutiveTransientFailures} consecutive transient failures), pausing queue for 60s`)
+      state.value.isOnline = false
+      setTimeout(() => {
+        state.value.isOnline = navigator.onLine
+        consecutiveTransientFailures = 0
+        if (state.value.isOnline) {
+          console.log('[SYNC] Queue pause lifted — resuming sync')
+          processQueue()
+        }
+      }, 60000)
+    }
   } else {
     // Permanent error - mark as failed (won't auto-retry)
     await markFailed(operation.id, result.error || 'Permanent error', Date.now() + 365 * 24 * 60 * 60 * 1000) // Far future = won't auto-retry

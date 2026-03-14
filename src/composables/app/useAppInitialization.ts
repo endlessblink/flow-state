@@ -207,7 +207,9 @@ export function useAppInitialization() {
                                 const task = fromSupabaseTask(op.payload as unknown as SupabaseTask)
                                 taskStore._rawTasks.push(task)
                                 applied++
-                            } catch { /* mapper failed, skip */ }
+                            } catch (e) {
+                                console.error('[CACHE-FIRST] Mapper failed for pending op:', op.entityId, op.operation, e)
+                            }
                         }
                     } else if (op.operation === 'update') {
                         const idx = taskStore._rawTasks.findIndex(t => t.id === op.entityId)
@@ -216,7 +218,9 @@ export function useAppInitialization() {
                                 const mapped = fromSupabaseTask({ ...op.payload, id: op.entityId } as unknown as SupabaseTask)
                                 taskStore._rawTasks[idx] = { ...taskStore._rawTasks[idx], ...mapped }
                                 applied++
-                            } catch { /* mapper failed, skip */ }
+                            } catch (e) {
+                                console.error('[CACHE-FIRST] Mapper failed for pending op:', op.entityId, op.operation, e)
+                            }
                         }
                     }
                 }
@@ -236,7 +240,9 @@ export function useAppInitialization() {
                                 const project = fromSupabaseProject(op.payload as unknown as SupabaseProject)
                                 projectStore._rawProjects.push(project)
                                 applied++
-                            } catch { /* mapper failed, skip */ }
+                            } catch (e) {
+                                console.error('[CACHE-FIRST] Mapper failed for pending op:', op.entityId, op.operation, e)
+                            }
                         }
                     } else if (op.operation === 'update') {
                         const idx = projectStore._rawProjects.findIndex(p => p.id === op.entityId)
@@ -245,7 +251,9 @@ export function useAppInitialization() {
                                 const mapped = fromSupabaseProject({ ...op.payload, id: op.entityId } as unknown as SupabaseProject)
                                 projectStore._rawProjects[idx] = { ...projectStore._rawProjects[idx], ...mapped }
                                 applied++
-                            } catch { /* mapper failed, skip */ }
+                            } catch (e) {
+                                console.error('[CACHE-FIRST] Mapper failed for pending op:', op.entityId, op.operation, e)
+                            }
                         }
                     }
                 }
@@ -267,7 +275,9 @@ export function useAppInitialization() {
                                 const group = fromSupabaseGroup(op.payload as unknown as SupabaseGroup)
                                 rawGroups.push(group)
                                 applied++
-                            } catch { /* mapper failed, skip */ }
+                            } catch (e) {
+                                console.error('[CACHE-FIRST] Mapper failed for pending op:', op.entityId, op.operation, e)
+                            }
                         }
                     } else if (op.operation === 'update') {
                         const rawGroups = canvasStore._rawGroups
@@ -277,7 +287,9 @@ export function useAppInitialization() {
                                 const mapped = fromSupabaseGroup({ ...op.payload, id: op.entityId } as unknown as SupabaseGroup)
                                 rawGroups[idx] = { ...rawGroups[idx], ...mapped }
                                 applied++
-                            } catch { /* mapper failed, skip */ }
+                            } catch (e) {
+                                console.error('[CACHE-FIRST] Mapper failed for pending op:', op.entityId, op.operation, e)
+                            }
                         }
                     }
                 }

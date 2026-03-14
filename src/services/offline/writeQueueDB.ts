@@ -12,6 +12,7 @@
  */
 
 import Dexie, { type Table } from 'dexie'
+import { toRaw } from 'vue'
 import type { WriteOperation, WriteConflict, SyncEntityType } from '@/types/sync'
 
 /**
@@ -82,8 +83,11 @@ export async function enqueueOperation(
     createdAt: now
   }
 
-  const id = await db.operations.add(fullOperation)
-  return { ...fullOperation, id }
+  // WebKitGTK (Tauri) cannot structured-clone Vue reactive proxies.
+  // Deep-clone via toRaw + JSON round-trip before writing to IndexedDB.
+  const cloned = JSON.parse(JSON.stringify(toRaw(fullOperation))) as WriteOperation
+  const id = await db.operations.add(cloned)
+  return { ...cloned, id }
 }
 
 /**

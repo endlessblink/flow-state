@@ -20,6 +20,7 @@ BEGIN
   SET device_leader_id = p_new_leader,
       device_leader_last_seen = NOW()
   WHERE id = p_session_id
+    AND user_id = auth.uid()  -- SECURITY: only own sessions
     AND (
       device_leader_id IS NULL
       OR device_leader_id = p_new_leader

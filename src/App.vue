@@ -21,8 +21,10 @@
 
       <!-- Main App (renders after startup completes AND data is loaded) -->
       <template v-if="appReady">
-        <MobileLayout v-if="isMobile" />
-        <MainLayout v-else ref="mainLayout" />
+        <ErrorBoundary>
+          <MobileLayout v-if="isMobile" />
+          <MainLayout v-else ref="mainLayout" />
+        </ErrorBoundary>
         <ModalManager ref="modalManager" />
         <FaviconManager />
         <!-- PWA Reload Prompt (Browser/PWA Only — not native apps) -->
@@ -90,6 +92,7 @@ import TauriUpdateNotification from '@/components/common/TauriUpdateNotification
 import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
 import BraveBanner from '@/components/ui/BraveBanner.vue'
 import RouteErrorBoundary from '@/components/error/RouteErrorBoundary.vue'
+import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard.vue'
 // TASK-1350: AI Setup Wizard (first-time BYOK Groq setup)
 import AISetupWizard from '@/components/ai/AISetupWizard.vue'

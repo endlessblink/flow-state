@@ -50,9 +50,9 @@
 
 ---
 
-### BUG-1510: Delete canvas group orphans child tasks — they vanish (👀 REVIEW)
+### ~~BUG-1510~~: Delete canvas group orphans child tasks — they vanish (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-14)
 
 **Problem**: `deleteGroup` in `canvasGroups.ts` removes the group but doesn't clear `parentId` on child tasks. Canvas renderer skips tasks with missing parent. Deferred cleanup has no retry — if it fails, tasks stay invisible.
 
@@ -60,9 +60,9 @@
 
 ---
 
-### BUG-1511: Timer dual leadership — no atomic CAS allows two leaders (👀 REVIEW)
+### ~~BUG-1511~~: Timer dual leadership — no atomic CAS allows two leaders (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-14)
 
 **Problem**: Timer leadership is claimed by writing `device_leader_id` without checking if someone else already claimed it. Two devices can both become leader → timer counts at 2x speed → session completes twice → double XP (BUG-1513).
 
@@ -84,9 +84,9 @@
 
 ---
 
-### BUG-1513: Double XP under dual timer leadership (👀 REVIEW)
+### ~~BUG-1513~~: Double XP under dual timer leadership (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW (resolved by BUG-1511 fix)
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-14, resolved by BUG-1511 fix)
 
 **Problem**: When two devices are both timer leaders (BUG-1511), both independently call `completeSession()` and award XP. The `isCompleting` lock only protects within a single JS context.
 
@@ -114,9 +114,9 @@
 
 ---
 
-### BUG-1516: Multi-device edit overwrites — whole-document LWW loses field-level changes (👀 REVIEW)
+### ~~BUG-1516~~: Multi-device edit overwrites — whole-document LWW loses field-level changes (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-14)
 
 **Problem**: Sync payload includes ALL task fields, not just changed ones. Edit title on phone, edit description on desktop → last save overwrites the other's field. Silent data loss.
 
@@ -124,9 +124,9 @@
 
 ---
 
-### BUG-1517: Auth token expires mid-sync — remaining operations permanently abandoned (👀 REVIEW)
+### ~~BUG-1517~~: Auth token expires mid-sync — remaining operations permanently abandoned (✅ DONE)
 
-**Priority**: P1 | **Status**: 👀 REVIEW
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-14)
 
 **Problem**: 401 during sync is classified as `permanent` error. Retry set to 1 year out. All remaining queued operations also fail and get abandoned. No token refresh attempted.
 

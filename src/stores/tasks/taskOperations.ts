@@ -534,7 +534,15 @@ export function useTaskOperations(
                 console.log(`[BUG-1451] updateTask: ${taskId.slice(0, 8)} status: ${task.status} → ${syncedUpdates.status}`)
             }
 
-            _rawTasks.value[index] = {
+            // Re-lookup index: the original `index` from findIndex may be stale
+            // because async operations (timer stop, recurrence clone, sync queue)
+            // between the initial lookup and this write can mutate _rawTasks.
+            const freshIndex = _rawTasks.value.findIndex(t => t.id === taskId)
+            if (freshIndex === -1) {
+                console.warn(`[updateTask] Task ${taskId.slice(0, 8)} disappeared during async operations — skipping write`)
+                return
+            }
+            _rawTasks.value[freshIndex] = {
                 ...task,
                 ...syncedUpdates,
                 // BUG-1410: syncedUpdates.positionVersion takes priority when auto-archive set it
@@ -705,6 +713,9 @@ export function useTaskOperations(
                 }
                 if (changedKeys.has('attachments') && updatedTask.attachments !== undefined) {
                     payload.attachments = JSON.parse(JSON.stringify(updatedTask.attachments))
+                }
+                if (changedKeys.has('isPinned')) {
+                    payload.is_pinned = updatedTask.isPinned ?? false
                 }
 
                 await syncOrchestrator.enqueue({

@@ -139,7 +139,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // 3. isInInbox gate — both inboxes only show tasks flagged as inbox
             // BUG-1481: Calendar inbox should show canvas tasks regardless of sort order,
             // not just when canvasOrder sort is active. Tasks on the canvas are real tasks
-            // that belong in the calendar inbox (unless scheduled on the calendar grid).
+            // that belong in the calendar inbox.
             const isOnCanvas = !!task.canvasPosition
             if (!task.isInInbox && !(props.context === 'calendar' && isOnCanvas)) {
                 return false
@@ -148,21 +148,17 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // 4. Context Specific Rules (cross-context independent)
             // Canvas inbox does NOT filter by calendar scheduling, and vice versa
             if (props.context === 'calendar') {
-                // TASK-1412: When canvasOrder sort is active, include ALL canvas tasks
-                // regardless of calendar scheduling — the inbox should mirror the canvas.
-                if (sortBy.value === 'canvasOrder' && isOnCanvas) {
-                    // BUG-1429: Still exclude tasks scheduled on the calendar
-                    const isScheduled = task.instances &&
-                        task.instances.length > 0 &&
-                        task.instances.some(inst => inst.scheduledDate)
-                    return !isScheduled
+                // BUG-1530: Canvas tasks should ALWAYS appear in the calendar inbox.
+                // Previously, canvas tasks with calendar instances were excluded (isScheduledOnCalendar),
+                // making them invisible in the inbox's Today/Canvas filters even though the user
+                // placed them on the canvas. Canvas tasks are explicitly included in the calendar
+                // inbox so the user can see their canvas content — hiding them because they also
+                // happen to be on the calendar grid defeats that purpose.
+                if (isOnCanvas) {
+                    return true
                 }
 
-                if (import.meta.env.DEV && task.instances?.length) {
-                    console.log(`[INBOX-FILTER] Task "${task.title?.slice(0,25)}" has ${task.instances.length} instances, isScheduled=${task.instances.some(inst => inst.scheduledDate)}`)
-                }
-
-                // CALENDAR INBOX: Hide tasks already scheduled on the calendar grid
+                // CALENDAR INBOX: Hide non-canvas tasks already scheduled on the calendar grid
                 const isScheduledOnCalendar = task.instances &&
                     task.instances.length > 0 &&
                     task.instances.some(inst => inst.scheduledDate)

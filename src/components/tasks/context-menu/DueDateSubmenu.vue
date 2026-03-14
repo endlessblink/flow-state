@@ -54,12 +54,11 @@
 
         <NPopover
           v-model:show="showDatePicker"
-          trigger="click"
+          trigger="manual"
           placement="right-start"
           :z-index="10003"
           :show-arrow="false"
           raw
-          @click.stop
         >
           <template #trigger>
             <button

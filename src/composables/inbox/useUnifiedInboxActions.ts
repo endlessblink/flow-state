@@ -177,10 +177,15 @@ export function useUnifiedInboxActions(
         event.preventDefault()
         event.stopPropagation()
 
-        // Add unselected task to existing selection on right click
-        if (selectedTaskIds.value.size > 0 && !selectedTaskIds.value.has(task.id)) {
+        // Only preserve multi-select on right-click if user explicitly multi-selected (Ctrl/Shift+Click)
+        if (multiSelectActive.value && selectedTaskIds.value.size > 0 && !selectedTaskIds.value.has(task.id)) {
+            // In active multi-select mode: add the right-clicked task to selection
             selectedTaskIds.value.add(task.id)
             selectedTaskIds.value = new Set(selectedTaskIds.value)
+        } else if (!multiSelectActive.value || !selectedTaskIds.value.has(task.id)) {
+            // Normal right-click: reset selection to just this task
+            selectedTaskIds.value = new Set([task.id])
+            multiSelectActive.value = false
         }
 
         const selectedIds = selectedTaskIds.value.size > 0

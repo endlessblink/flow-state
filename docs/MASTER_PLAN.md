@@ -134,6 +134,28 @@
 
 ---
 
+### BUG-1530: Dragging task to Today canvas group doesn't update Calendar inbox (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: When a task is dragged into the "Today" group on the canvas, the due date gets set to today but the task doesn't appear in the Calendar inbox when filtered to "Today". The calendar inbox shows stale data and doesn't reflect the canvas group assignment.
+
+**Fix**: Investigate whether the canvas drop handler properly sets `due_date` and whether the calendar inbox's Today filter watches for reactive due_date changes. Likely a reactivity or sync issue between canvas group membership and the calendar view's task filtering.
+
+---
+
+### BUG-1529: Context menu shows wrong multi-select count (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Right-clicking a single task in the calendar/board view shows "Mark 6 as Done" and "Delete 6" instead of just "Mark as Done" — the selection count is wrong, showing stale/phantom selections. The menu displays an inflated count of selected tasks (6) even when only 1 task is actually selected.
+
+**Root cause**: Context menu selection count not clearing properly between interactions, or multi-select state persisting across view switches/interactions.
+
+**Fix**: Investigate and resolve stale multi-select state in context menu rendering. Ensure selection count matches actual selected tasks on each context menu open.
+
+---
+
 ### ~~BUG-1502~~: "Sync external calendars" button doesn't sync Google Calendar (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-12)
@@ -1822,6 +1844,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1497** | **P2** | 📋 **CSS safety test failing due to missing fileURLToPath import** |
 | ~~**TASK-1487**~~ | **P2** | ✅ **Search modal: delete fix + filter pills (Today, Hide Done, High Priority, No Date)** (✅ DONE 2026-03-08) |
 | ~~**BUG-1490**~~ | **P2** | ✅ **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (✅ DONE 2026-03-09) |
+| **BUG-1530** | **P2** | 📋 **Dragging task to Today canvas group doesn't update Calendar inbox** (📋 PLANNED 2026-03-14) |
 | **BUG-1491** | **P0** | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09) |
 | ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
 | ~~**TASK-1501**~~ | **P3** | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10) |
@@ -2665,6 +2688,16 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 Removed the entire gamification system (~23,700 lines): XP, achievements, challenges, shop, boss fights, corruption, Cyberflow RPG view, cyberflow design tokens, and all integration hooks. DB tables left dormant (no migration needed, reversible). Build passes, 883/884 tests pass.
 
 **Category**: Cleanup / Architecture
+
+---
+
+### BUG-1528: Tiny gray dot appears on today's date in date picker (🔄 IN PROGRESS)
+
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
+
+**Problem**: A small gray/red dot indicator appears on the current date (today) in the Naive UI date picker. It shouldn't be there.
+
+**Category**: UI Bug
 
 ---
 

@@ -1942,7 +1942,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1465**~~ | **P2** | ✅ ~~**AI Features Audit — review all AI features, decide what to keep vs ditch (broken/no value)**~~ |
 | ~~**TASK-1466**~~ | **P2** | ✅ **Start task without resetting timer — allow switching active task while timer runs (web + pinned), add reset option to KDE widget** |
 | **BUG-1462** | **P1** | **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** (👀 REVIEW) |
-| **TASK-1469** | **P2** | **AI Chat anti-spam fix — fix ReAct loop spam, limit tool calls per turn, rewrite system prompt to be concise, add output truncation** |
+| ~~**TASK-1469**~~ | **P2** | ✅ **AI Chat anti-spam fix — fix ReAct loop spam, limit tool calls per turn, rewrite system prompt to be concise, add output truncation** |
 | **TASK-1470** | **P2** | **Task Assist UX resurface — make AI Task Assist discoverable: inline suggestions, keyboard shortcut (Ctrl+/), visible button in task edit modal** |
 | ~~**BUG-1467**~~ | **P2** | ~~**Tasks auto-appear on calendar at 9:00 AM when dragged to Board date columns — moveTaskToDate created calendar instances instead of only setting dueDate**~~ (✅ DONE 2026-03-07) |
 | **TASK-1473** | **P0** | **KDE Widget: Add task search/filter — search box to find tasks without scrolling through long lists** |
@@ -2609,9 +2609,9 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### TASK-1469: AI Chat Anti-Spam Fix (🔄 IN PROGRESS)
+### ~~TASK-1469~~: AI Chat Anti-Spam Fix (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-14)
 
 **Problem**: AI Chat ReAct loop dumps walls of raw tool result data into the conversation instead of answering questions concisely. Users see JSON blobs, long lists, and repeated tool calls before getting an answer.
 
@@ -2622,6 +2622,8 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 4. Review ReAct loop termination conditions — ensure it stops when answer is found, not when tool quota is exhausted
 
 **Category**: AI / Chat
+
+**Resolution**: Hidden step indicators from message content (metadata only), reduced MAX_REACT_STEPS 5→3, added forceful synthesis instruction after tool results, added 4 conciseness rules to system prompt, added step-indicator cleanup regex to cleanResponse(), capped digest length (fallback 1500→800, all paths 2000 max).
 
 ---
 

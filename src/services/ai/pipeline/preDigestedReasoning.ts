@@ -97,6 +97,12 @@ interface ToolResultData {
  *
  * @param language - Target language for section headers and labels ('he' | 'en'). Defaults to 'en'.
  */
+/** Cap a digest string at maxChars, appending a truncation notice if needed. */
+function capDigest(text: string, maxChars = 2000): string {
+  if (text.length <= maxChars) return text
+  return text.slice(0, maxChars) + '\n[...truncated]'
+}
+
 export function digestToolResults(
   toolName: string,
   data: unknown,
@@ -111,7 +117,7 @@ export function digestToolResults(
 
     // Task list tools (list_tasks, search_tasks, get_overdue_tasks, suggest_next_task)
     if (data[0]?.title !== undefined) {
-      return digestTaskList(toolName, data as ToolResultData[], message, language)
+      return capDigest(digestTaskList(toolName, data as ToolResultData[], message, language))
     }
   }
 
@@ -121,24 +127,24 @@ export function digestToolResults(
 
     // Productivity stats
     if ('completedToday' in d || 'byStatus' in d) {
-      return digestProductivityStats(d, message, language)
+      return capDigest(digestProductivityStats(d, message, language))
     }
 
     // Weekly summary
     if ('completedThisWeek' in d || 'totalFocusMinutes' in d) {
-      return digestWeeklySummary(d, message, language)
+      return capDigest(digestWeeklySummary(d, message, language))
     }
 
     // Timer status
     if ('isActive' in d || 'currentTaskName' in d) {
-      return digestTimerStatus(d, message, language)
+      return capDigest(digestTimerStatus(d, message, language))
     }
 
   }
 
-  // Fallback: cap JSON at 1500 chars (down from 2000)
+  // Fallback: cap JSON at 800 chars
   const jsonStr = JSON.stringify(data)
-  return `${message}\nData: ${jsonStr.slice(0, 1500)}`
+  return `${message}\nData: ${jsonStr.slice(0, 800)}`
 }
 
 /**

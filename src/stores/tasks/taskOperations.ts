@@ -459,11 +459,16 @@ export function useTaskOperations(
                                     isInInbox: true,
                                 }
 
-                                createTask(clonedTask).then(() => {
-                                    console.log(`🔄 [RECURRENCE] Cloned recurring task "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (occurrence #${count})`)
-                                }).catch(err => {
-                                    console.error(`❌ [RECURRENCE] Failed to clone recurring task:`, err)
-                                })
+                                await createTask(clonedTask)
+                                console.log(`🔄 [RECURRENCE] Cloned recurring task "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (occurrence #${count})`)
+
+                                // SOP-065: Set the recurrence scheduler lock so the deferred scheduler
+                                // doesn't create a SECOND clone if the user refreshes before the DB write
+                                // from this createTask propagates to Supabase.
+                                try {
+                                    const LOCK_KEY = `flowstate-recurrence-lock-${today}`
+                                    localStorage.setItem(LOCK_KEY, String(Date.now()))
+                                } catch { /* localStorage may be unavailable */ }
                             } else if (nextDueDate) {
                                 console.log(`⏳ [RECURRENCE] Deferred clone for "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (future, will create on app load)`)
                             } else {

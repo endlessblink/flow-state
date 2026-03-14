@@ -157,7 +157,8 @@ const hiddenCount = computed(() => Math.max(0, allTasks.value.length - COLUMN_RE
 const dragGroup = 'tasks'
 
 // FEATURE-1336b: Bridge vuedraggable drag to global useDragAndDrop for sidebar drops
-const { startDrag, endDrag: endGlobalDrag } = useDragAndDrop()
+// BUG-1516c: Also expose dragData so handleNativeDrop can read singleton (WebKitGTK/Tauri fix)
+const { startDrag, endDrag: endGlobalDrag, dragData } = useDragAndDrop()
 
 const onDragStart = (evt: DragEvent) => {
   isDragActive.value = true
@@ -230,16 +231,41 @@ const handleNativeDrop = async (event: DragEvent) => {
   isDragOver.value = false
   event.preventDefault()
 
-  const jsonData = event.dataTransfer?.getData('application/json')
-  if (!jsonData) return
+  // BUG-1516c: Read from dragData singleton FIRST (required for WebKitGTK/Tauri where
+  // dataTransfer.getData() returns empty string). Fall back to dataTransfer for browser.
+  let data: { taskId?: string; taskIds?: string[]; fromInbox?: boolean } | null = null
+  if (dragData.value && dragData.value.source !== 'kanban') {
+    // Singleton has data from a non-SortableJS drag (inbox uses HTML5 native drag)
+    data = {
+      taskId: dragData.value.taskId,
+      taskIds: dragData.value.taskIds,
+      fromInbox: dragData.value.source === 'sidebar' || !!(dragData.value as any).fromInbox
+    }
+    // For inbox drags, check if the drag was specifically from inbox by looking at the
+    // dataTransfer type hint — inbox sets fromInbox in the JSON payload
+    const jsonData = event.dataTransfer?.getData('application/json')
+    if (jsonData) {
+      try {
+        const parsed = JSON.parse(jsonData) as { taskId?: string; taskIds?: string[]; fromInbox?: boolean }
+        // Prefer the explicit fromInbox flag from the JSON payload
+        if (parsed.fromInbox !== undefined) {
+          data.fromInbox = parsed.fromInbox
+        }
+      } catch { /* ignore parse errors */ }
+    }
+  } else {
+    const jsonData = event.dataTransfer?.getData('application/json')
+    if (!jsonData) return
+    try {
+      data = JSON.parse(jsonData) as { taskId?: string; taskIds?: string[]; fromInbox?: boolean }
+    } catch {
+      return
+    }
+  }
+
+  if (!data) return
 
   try {
-    const data = JSON.parse(jsonData) as {
-      taskId?: string
-      taskIds?: string[]
-      fromInbox?: boolean
-    }
-
     // Only handle inbox drags; SortableJS handles its own internal drops
     if (!data.fromInbox) return
 

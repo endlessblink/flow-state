@@ -72,7 +72,7 @@ const toggleTimer = async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  height: 100dvh;
   padding: var(--space-5);
   padding-bottom: var(--space-24); /* Space for nav */
   background: var(--app-background-gradient);

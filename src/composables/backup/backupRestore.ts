@@ -160,6 +160,15 @@ export function createRestoreOperations(
     ctx.state.value.restoreProgress = 0
     ctx.state.value.error = null
 
+    // Bug 1 fix: clear stale sync queue ops before restoring to prevent conflicts
+    try {
+      const { clearAll } = await import('@/services/offline/writeQueueDB')
+      await clearAll()
+      console.log('[Backup] Cleared sync queue before restore')
+    } catch {
+      // Non-critical — proceed even if queue clear fails
+    }
+
     try {
       console.log('[Backup] Starting restore...')
 
@@ -283,6 +292,28 @@ export function createRestoreOperations(
         }
       }
       ctx.state.value.restoreProgress = 80
+
+      // Bug 3 fix: restore settings if present in backup
+      if (backupData.settings && Object.keys(backupData.settings).length > 0) {
+        try {
+          const { useSettingsStore } = await import('@/stores/settings')
+          const settingsStore = useSettingsStore()
+          // Exclude sensitive/session fields that should not be overwritten from backup
+          const SETTINGS_EXCLUDE = new Set([
+            'googleProviderToken', 'googleProviderRefreshToken', 'googleProviderTokenExpiry',
+            'groqApiKey'
+          ])
+          const safe = Object.fromEntries(
+            Object.entries(backupData.settings).filter(([k]) => !SETTINGS_EXCLUDE.has(k))
+          )
+          Object.assign(settingsStore.$state, safe)
+          settingsStore.saveToStorage()
+          console.log('[Backup] Settings restored from backup')
+        } catch {
+          // Non-critical — settings restore failure should not abort the whole restore
+          console.warn('[Backup] Could not restore settings (non-fatal)')
+        }
+      }
 
       // Reload stores from database
       if (ctx.taskStore.loadFromDatabase) await ctx.taskStore.loadFromDatabase()

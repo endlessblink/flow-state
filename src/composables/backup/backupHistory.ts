@@ -22,9 +22,30 @@ export function createHistoryOperations(ctx: BackupContext): HistoryOperations {
         ctx.backupHistory.value = ctx.backupHistory.value.slice(0, ctx.config.value.maxHistorySize)
       }
 
-      // Save to localStorage
-      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(ctx.backupHistory.value))
-      localStorage.setItem(STORAGE_KEYS.LATEST, JSON.stringify(backup))
+      // Save to localStorage — handle quota overflow by trimming oldest entries
+      const serialized = JSON.stringify(ctx.backupHistory.value)
+      try {
+        localStorage.setItem(STORAGE_KEYS.HISTORY, serialized)
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+          console.warn('[Backup] localStorage quota exceeded — trimming oldest backups and retrying')
+          while (ctx.backupHistory.value.length > 1) {
+            ctx.backupHistory.value.shift()
+            try {
+              localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(ctx.backupHistory.value))
+              break
+            } catch { continue }
+          }
+        } else {
+          throw e
+        }
+      }
+
+      try {
+        localStorage.setItem(STORAGE_KEYS.LATEST, JSON.stringify(backup))
+      } catch {
+        // Non-critical if latest can't be saved
+      }
 
       ctx.stats.value.historyCount = ctx.backupHistory.value.length
 

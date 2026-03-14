@@ -15,6 +15,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useProjectStore } from '@/stores/projects'
 import { useGamificationStore } from '@/stores/gamification'
 import { useChallengesStore } from '@/stores/challenges'
+import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/types/tasks'
 import type { OpenAITool } from './types'
 import { resolveTask } from './entityResolver'
@@ -1001,14 +1002,20 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
         }
 
-        const group = canvasStore.groups.find(g => g.id === groupId)
+        // Use _rawGroups (unfiltered) to find the group — consistent with useMoveToCanvasGroup
+        const group = canvasStore._rawGroups.find(g => g.id === groupId)
         if (!group) {
           return { success: false, message: tm(language, `Group with ID "${groupId}" not found`, `קבוצה עם מזהה "${groupId}" לא נמצאה`) }
         }
 
-        // Update task's parentId to move it into the group
+        // Delegate to the dedicated composable which computes a valid canvasPosition
+        // (relative to the group) and calls updateTaskWithUndo — respecting geometry invariants.
         const previousParentId = task.parentId
-        await taskStore.updateTask(taskId, { parentId: groupId })
+        const { moveTaskToGroup } = useMoveToCanvasGroup()
+        const moved = await moveTaskToGroup(taskId, groupId)
+        if (!moved) {
+          return { success: false, message: tm(language, `Failed to move task "${task.title}" to group "${group.name}"`, `העברת משימה "${task.title}" לקבוצה "${group.name}" נכשלה`) }
+        }
 
         return {
           success: true,

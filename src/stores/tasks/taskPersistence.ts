@@ -339,6 +339,7 @@ export function useTaskPersistence(
                         const DB_AUTHORITATIVE_FIELDS = new Set([
                             'isPinned', '_soft_deleted', 'deletedAt',
                             'positionVersion', 'createdAt',
+                            'recurrenceCount', 'recurrenceParentId',  // monotonically increasing, server is source of truth
                         ])
                         const merged = { ...remoteTask } as Task
                         for (const key of Object.keys(localTask) as (keyof Task)[]) {

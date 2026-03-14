@@ -235,6 +235,8 @@ export interface SupabaseUserSettings {
     board_density?: string
     kanban_settings?: Record<string, unknown> | null
     canvas_viewport?: { x: number; y: number; zoom: number } | null
+    // Full settings blob for cross-device sync (BUG-settings-mapper)
+    settings?: Record<string, unknown> | null
     created_at?: string
     updated_at?: string
 }
@@ -640,6 +642,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
 export function toSupabaseUserSettings(settings: AppSettings, userId: string): SupabaseUserSettings {
     return {
         user_id: userId,
+        // Individual columns kept for backwards compatibility
         work_duration: settings.workDuration,
         short_break_duration: settings.shortBreakDuration,
         long_break_duration: settings.longBreakDuration,
@@ -651,30 +654,40 @@ export function toSupabaseUserSettings(settings: AppSettings, userId: string): S
         sidebar_collapsed: (settings as AppSettings & { sidebarCollapsed?: boolean }).sidebarCollapsed || false,
         board_density: settings.boardDensity || 'comfortable',
         kanban_settings: (settings as AppSettings & { kanbanSettings?: Record<string, unknown> }).kanbanSettings || {},
-        canvas_viewport: (settings as AppSettings & { canvasViewport?: { x: number; y: number; zoom: number } }).canvasViewport || null
+        canvas_viewport: (settings as AppSettings & { canvasViewport?: { x: number; y: number; zoom: number } }).canvasViewport || null,
+        // Full settings blob for cross-device sync — stores ALL 23+ fields (BUG-settings-mapper)
+        settings: JSON.parse(JSON.stringify(settings)) as Record<string, unknown>,
+        updated_at: new Date().toISOString()
     }
 }
 
 export function fromSupabaseUserSettings(record: SupabaseUserSettings): AppSettings {
+    // BUG-settings-mapper: Start with full settings blob (contains all 23+ fields),
+    // then overlay individual columns as the authoritative source for legacy fields.
+    const base: Record<string, unknown> = record.settings ? { ...record.settings } : {}
+
     return {
-        workDuration: record.work_duration,
-        shortBreakDuration: record.short_break_duration,
-        longBreakDuration: record.long_break_duration,
-        autoStartBreaks: record.auto_start_breaks,
-        autoStartPomodoros: record.auto_start_pomodoros,
-        playNotificationSounds: record.play_notification_sounds,
-        theme: record.theme,
-        language: record.language,
-        sidebarCollapsed: record.sidebar_collapsed,
-        boardDensity: record.board_density,
-        kanbanSettings: record.kanban_settings,
-        canvasViewport: record.canvas_viewport,
-        // Default values for fields missing in DB but required in AppSettings
-        showDoneColumn: true,
-        powerGroupOverrideMode: 'only_empty',
-        textDirection: 'auto',
-        enableDayGroupSuggestions: true
-    } as unknown as AppSettings // Cast back for store consumption, or we need a bigger interface
+        // Spread full blob first (provides all fields not mapped individually)
+        ...base,
+        // Individual column overrides — these are source of truth for legacy fields
+        workDuration: record.work_duration ?? (base.workDuration as number | undefined),
+        shortBreakDuration: record.short_break_duration ?? (base.shortBreakDuration as number | undefined),
+        longBreakDuration: record.long_break_duration ?? (base.longBreakDuration as number | undefined),
+        autoStartBreaks: record.auto_start_breaks ?? (base.autoStartBreaks as boolean | undefined),
+        autoStartPomodoros: record.auto_start_pomodoros ?? (base.autoStartPomodoros as boolean | undefined),
+        playNotificationSounds: record.play_notification_sounds ?? (base.playNotificationSounds as boolean | undefined),
+        theme: record.theme ?? (base.theme as string | undefined),
+        language: record.language ?? (base.language as string | undefined),
+        sidebarCollapsed: record.sidebar_collapsed ?? (base.sidebarCollapsed as boolean | undefined),
+        boardDensity: record.board_density ?? (base.boardDensity as string | undefined),
+        kanbanSettings: record.kanban_settings ?? (base.kanbanSettings as Record<string, unknown> | undefined),
+        canvasViewport: record.canvas_viewport ?? (base.canvasViewport as { x: number; y: number; zoom: number } | undefined),
+        // Safe defaults for fields absent in both blob and individual columns
+        showDoneColumn: (base.showDoneColumn as boolean | undefined) ?? true,
+        powerGroupOverrideMode: (base.powerGroupOverrideMode as string | undefined) ?? 'only_empty',
+        textDirection: (base.textDirection as string | undefined) ?? 'auto',
+        enableDayGroupSuggestions: (base.enableDayGroupSuggestions as boolean | undefined) ?? true
+    } as unknown as AppSettings
 }
 
 // -- Notification Mappers --

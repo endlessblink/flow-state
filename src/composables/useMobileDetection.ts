@@ -8,8 +8,9 @@ function getInitialMobileState(): boolean {
     const userAgent = navigator.userAgent || navigator.vendor || window.opera
     const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())
     const isSmallScreen = window.innerWidth <= MOBILE_BREAKPOINT_PX
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
-    return isMobileDevice || isSmallScreen
+    return isMobileDevice || (isSmallScreen && isTouch)
 }
 
 export function useMobileDetection() {
@@ -29,9 +30,10 @@ export function useMobileDetection() {
         // Check for touch capability (additional signal)
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
-        // Combine signals - prioritize screen size/agent over touch
-        // RELAXED: If it's small, it's mobile. If it's a mobile UA, it's mobile.
-        isMobile.value = isMobileDevice || isSmallScreen
+        // Combine signals: mobile UA always gets mobile layout; narrow screen only
+        // triggers mobile layout when touch is also present (prevents desktop browsers
+        // resized to 768px from falsely triggering mobile UI).
+        isMobile.value = isMobileDevice || (isSmallScreen && isTouch)
 
         console.log('[MobileDetection] Checked:', {
             isMobile: isMobile.value,

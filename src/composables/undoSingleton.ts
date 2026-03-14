@@ -138,7 +138,7 @@ function initializeRefHistory() {
   // Create the SINGLE useManualRefHistory instance with proper VueUse configuration
   // NOTE: deep: true was intentionally removed for performance reasons (deep watchers issue)
   refHistoryInstance = useManualRefHistory(unifiedState, {
-    capacity: 50,
+    capacity: 30,
     clone: true
   })
 
@@ -664,9 +664,12 @@ const performRedo = async () => {
 // =============================================================================
 
 /**
- * Capture current state as a snapshot (deep clone)
+ * Capture current state as a snapshot (deep clone).
+ * When affectedIds is provided, only the affected tasks are cloned — reducing
+ * memory from O(all tasks × all ops) to O(affected tasks × all ops).
+ * The legacy undo path receives a full snapshot (affectedIds omitted).
  */
-const captureCurrentState = async (): Promise<UnifiedUndoState> => {
+const captureCurrentState = async (affectedIds?: string[]): Promise<UnifiedUndoState> => {
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
   const canvasStore = useCanvasStore()
@@ -682,9 +685,16 @@ const captureCurrentState = async (): Promise<UnifiedUndoState> => {
     }
   }
 
+  const rawTasks = taskStore._rawTasks ?? []
+  // Partial snapshot: only clone affected tasks to keep memory bounded
+  const tasksToSnapshot =
+    affectedIds && affectedIds.length > 0
+      ? rawTasks.filter(t => affectedIds.includes(t.id))
+      : rawTasks
+
   return {
     // Use _rawTasks (all tasks) not tasks (filtered) to avoid snapshotting only visible tasks
-    tasks: safeClone(taskStore._rawTasks ?? [], []),
+    tasks: tasksToSnapshot.map(t => safeClone(t, t)),
     groups: safeClone(canvasStore.groups ?? [], [])
   }
 }
@@ -697,7 +707,8 @@ let pendingOperationBefore: UnifiedUndoState | null = null
 let pendingOperation: UndoOperation | null = null
 
 const beginOperation = async (operation: Omit<UndoOperation, 'timestamp'>) => {
-  pendingOperationBefore = await captureCurrentState()
+  // Pass affectedIds so captureCurrentState only clones the relevant tasks
+  pendingOperationBefore = await captureCurrentState(operation.affectedIds)
   pendingOperation = {
     ...operation,
     timestamp: Date.now()
@@ -714,15 +725,15 @@ const commitOperation = async () => {
     return false
   }
 
-  const snapshotAfter = await captureCurrentState()
+  const snapshotAfter = await captureCurrentState(pendingOperation.affectedIds)
 
-  // Push to operation stack (limit capacity to 50)
+  // Push to operation stack (limit capacity to 30 to bound memory usage)
   operationStack.push({
     operation: pendingOperation,
     snapshotBefore: pendingOperationBefore,
     snapshotAfter
   })
-  if (operationStack.length > 50) {
+  if (operationStack.length > 30) {
     operationStack.shift()
   }
 

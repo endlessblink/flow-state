@@ -155,10 +155,13 @@ export function useAppInitialization() {
             // Only redirect if landing on root route (not deep links)
             const currentHash = window.location.hash
             if (!currentHash || currentHash === '#/' || currentHash === '#') {
-              localStorage.setItem('flowstate-last-morning', today)
               // Delay slightly to let the app finish rendering
               setTimeout(() => {
-                router.push('/morning')
+                router.push('/morning').then(() => {
+                  localStorage.setItem('flowstate-last-morning', today)
+                }).catch(() => {
+                  // Navigation failed — don't burn the key
+                })
               }, 100)
             }
           }
@@ -308,6 +311,20 @@ export function useAppInitialization() {
 
                     console.log('✅ [CACHE-FIRST] Background refresh complete')
 
+                    // TASK-1418: Process deferred recurring task clones AFTER fresh data is loaded
+                    // Must run here (not outside backgroundRefresh) because the fire-and-forget
+                    // pattern means the scheduler would otherwise run on stale cached data.
+                    try {
+                        const { useRecurrenceScheduler } = await import('@/composables/useRecurrenceScheduler')
+                        const sched = useRecurrenceScheduler()
+                        const created = await sched.processDeferred()
+                        if (created > 0) {
+                            console.log(`[RECURRENCE] Created ${created} deferred recurring clone(s)`)
+                        }
+                    } catch (e) {
+                        console.warn('[RECURRENCE] Deferred scheduler failed:', e)
+                    }
+
                     // DEBUG: Check for duplicates after background refresh
                     {
                       const ids = new Map<string, number>()
@@ -423,18 +440,8 @@ export function useAppInitialization() {
             console.warn('[RECURRENCE-MIGRATION] Migration failed (non-critical):', error)
         }
 
-        // TASK-1418: Process deferred recurring task clones
-        // Creates clones for recurring tasks whose next due date has arrived
-        try {
-            const { useRecurrenceScheduler } = await import('@/composables/useRecurrenceScheduler')
-            const scheduler = useRecurrenceScheduler()
-            const created = await scheduler.processDeferred()
-            if (created > 0) {
-                console.log(`[RECURRENCE] Created ${created} deferred recurring clone(s)`)
-            }
-        } catch (error) {
-            console.warn('[RECURRENCE] Deferred scheduler failed (non-critical):', error)
-        }
+        // TASK-1418: Recurrence scheduler moved inside backgroundRefresh() above
+        // to ensure it runs on fresh Supabase data, not stale IndexedDB cache.
 
         // TASK-1500: Auto-refresh AI memory observations if stale (>24h) — non-blocking
         if (authStore.isAuthenticated) {
@@ -857,11 +864,57 @@ export function useAppInitialization() {
         }
     })
 
+    // TASK-1338: Handle SW push notification click actions
+    // SW sends these messages after focusing the window on notification click
+    const _swMessageHandler = (event: MessageEvent) => {
+        const { type, taskId, url, minutes } = (event.data || {}) as {
+            type?: string
+            taskId?: string
+            url?: string
+            minutes?: number
+        }
+
+        switch (type) {
+            case 'NAVIGATE_TO_TASK':
+                if (taskId) {
+                    router.push(`/focus/${taskId}`)
+                }
+                break
+            case 'NAVIGATE_TO':
+                if (url) {
+                    router.push(url)
+                }
+                break
+            case 'SNOOZE_NOTIFICATION': {
+                if (taskId && minutes) {
+                    const notificationStore = useNotificationStore()
+                    // Find the notification for this task and snooze it
+                    const notification = notificationStore.scheduledNotifications?.find(
+                        (n) => n.taskId === taskId
+                    )
+                    if (notification) {
+                        notificationStore.snoozeNotification(notification.id)
+                    } else {
+                        console.warn('[APP-INIT] SNOOZE_NOTIFICATION: no notification found for taskId', taskId)
+                    }
+                }
+                break
+            }
+        }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener('message', _swMessageHandler)
+    }
+
     onUnmounted(() => {
         if (activeChannel.value) {
 
             activeChannel.value.unsubscribe()
             activeChannel.value = null
+        }
+        if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+            navigator.serviceWorker.removeEventListener('message', _swMessageHandler)
         }
     })
 

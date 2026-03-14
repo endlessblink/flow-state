@@ -4,8 +4,10 @@
  */
 
 /** Echo protection timeout for pending writes (sync architecture).
- *  Safety fallback if sync queue hangs or network dies. */
-export const PENDING_WRITE_TIMEOUT_MS = 120_000
+ *  Safety fallback if sync queue hangs or network dies.
+ *  Set to 5 minutes (stopgap) — proper fix requires sync queue to explicitly
+ *  clear pending writes on operation success. */
+export const PENDING_WRITE_TIMEOUT_MS = 300_000
 
 /** Drag settle delay before allowing sync to clear pendingWrite.
  *  Catches Supabase realtime echo arriving 100ms-2s after drag end. */

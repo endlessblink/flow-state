@@ -12,6 +12,8 @@ export interface BackupData {
   tasks: Task[]
   projects: Project[]
   groups: CanvasGroup[]
+  /** App settings snapshot (Bug 3 fix). Sensitive fields excluded at capture time. */
+  settings?: Record<string, unknown>
   timestamp: number
   version: string
   checksum: string

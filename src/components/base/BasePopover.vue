@@ -12,6 +12,8 @@
         class="base-popover"
         :class="[`variant-${variant}`, `position-${computedPosition}`]"
         :style="popoverStyle"
+        role="dialog"
+        aria-modal="true"
         @click.stop
       >
         <slot />

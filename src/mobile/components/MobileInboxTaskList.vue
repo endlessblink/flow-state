@@ -342,7 +342,11 @@ const formatDueDate = (date: string | Date) => {
 }
 
 .task-checkbox {
-  padding: var(--space-1);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -455,8 +459,8 @@ const formatDueDate = (date: string | Date) => {
 }
 
 .timer-btn {
-  width: var(--space-8);
-  height: var(--space-8);
+  min-width: 44px;
+  min-height: 44px;
   border-radius: var(--radius-full);
   background: var(--surface-secondary);
   border: 1px solid var(--border-subtle);

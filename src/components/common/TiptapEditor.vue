@@ -6,6 +6,7 @@
       <button
         class="toolbar-btn"
         title="Undo (Ctrl+Z)"
+        aria-label="Undo (Ctrl+Z)"
         :disabled="!editor?.can().undo()"
         @click="editor?.chain().focus().undo().run()"
       >
@@ -14,6 +15,7 @@
       <button
         class="toolbar-btn"
         title="Redo (Ctrl+Y)"
+        aria-label="Redo (Ctrl+Y)"
         :disabled="!editor?.can().redo()"
         @click="editor?.chain().focus().redo().run()"
       >
@@ -26,6 +28,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('heading', { level: 1 }) }"
         title="Heading 1"
+        aria-label="Heading 1"
         @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
       >
         <Heading1 :size="14" />
@@ -34,6 +37,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('heading', { level: 2 }) }"
         title="Heading 2"
+        aria-label="Heading 2"
         @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
       >
         <Heading2 :size="14" />
@@ -42,6 +46,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('heading', { level: 3 }) }"
         title="Heading 3"
+        aria-label="Heading 3"
         @click="editor?.chain().focus().toggleHeading({ level: 3 }).run()"
       >
         <Heading3 :size="14" />
@@ -53,6 +58,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('bold') }"
         title="Bold (Ctrl+B)"
+        aria-label="Bold (Ctrl+B)"
         @click="editor?.chain().focus().toggleBold().run()"
       >
         <BoldIcon :size="14" />
@@ -61,6 +67,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('italic') }"
         title="Italic (Ctrl+I)"
+        aria-label="Italic (Ctrl+I)"
         @click="editor?.chain().focus().toggleItalic().run()"
       >
         <ItalicIcon :size="14" />
@@ -69,6 +76,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('underline') }"
         title="Underline (Ctrl+U)"
+        aria-label="Underline (Ctrl+U)"
         @click="editor?.chain().focus().toggleUnderline().run()"
       >
         <UnderlineIcon :size="14" />
@@ -77,6 +85,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('strike') }"
         title="Strikethrough"
+        aria-label="Strikethrough"
         @click="editor?.chain().focus().toggleStrike().run()"
       >
         <StrikethroughIcon :size="14" />
@@ -85,6 +94,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('highlight') }"
         title="Highlight"
+        aria-label="Highlight"
         @click="editor?.chain().focus().toggleHighlight().run()"
       >
         <HighlightIcon :size="14" />
@@ -95,6 +105,7 @@
         <button
           class="toolbar-btn"
           title="Text Color"
+          aria-label="Text Color"
           @click="showColorPicker = !showColorPicker"
         >
           <Palette :size="14" />
@@ -125,6 +136,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive({ textAlign: 'left' }) }"
         title="Align Left"
+        aria-label="Align Left"
         @click="editor?.chain().focus().setTextAlign('left').run()"
       >
         <AlignLeft :size="14" />
@@ -133,6 +145,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive({ textAlign: 'center' }) }"
         title="Align Center"
+        aria-label="Align Center"
         @click="editor?.chain().focus().setTextAlign('center').run()"
       >
         <AlignCenter :size="14" />
@@ -141,6 +154,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive({ textAlign: 'right' }) }"
         title="Align Right"
+        aria-label="Align Right"
         @click="editor?.chain().focus().setTextAlign('right').run()"
       >
         <AlignRight :size="14" />
@@ -152,6 +166,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('bulletList') }"
         title="Bullet List"
+        aria-label="Bullet List"
         @click="editor?.chain().focus().toggleBulletList().run()"
       >
         <List :size="14" />
@@ -160,6 +175,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('orderedList') }"
         title="Numbered List"
+        aria-label="Numbered List"
         @click="editor?.chain().focus().toggleOrderedList().run()"
       >
         <ListOrdered :size="14" />
@@ -168,6 +184,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('taskList') }"
         title="Task List"
+        aria-label="Task List"
         @click="editor?.chain().focus().toggleTaskList().run()"
       >
         <CheckSquare :size="14" />
@@ -179,6 +196,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('blockquote') }"
         title="Quote"
+        aria-label="Quote"
         @click="editor?.chain().focus().toggleBlockquote().run()"
       >
         <Quote :size="14" />
@@ -187,6 +205,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('codeBlock') }"
         title="Code Block"
+        aria-label="Code Block"
         @click="editor?.chain().focus().toggleCodeBlock().run()"
       >
         <Code :size="14" />
@@ -194,6 +213,7 @@
       <button
         class="toolbar-btn"
         title="Horizontal Rule"
+        aria-label="Horizontal Rule"
         @click="editor?.chain().focus().setHorizontalRule().run()"
       >
         <HorizontalRuleIcon :size="14" />
@@ -202,6 +222,7 @@
         class="toolbar-btn"
         :class="{ active: editor?.isActive('link') }"
         title="Link (Ctrl+K)"
+        aria-label="Link (Ctrl+K)"
         @click="setLink"
       >
         <LinkIcon :size="14" />
@@ -214,6 +235,7 @@
           class="toolbar-btn"
           :class="{ active: editor?.isActive('table') }"
           title="Table"
+          aria-label="Table"
           @click="showTableMenu = !showTableMenu"
         >
           <TableIcon :size="14" />

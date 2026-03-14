@@ -126,7 +126,8 @@ const router = createRouter({
     },
     {
       path: '/morning',
-      redirect: '/'
+      name: 'morning',
+      component: () => import('@/views/MorningDashboardView.vue'),
     },
     {
       path: '/today-flow',

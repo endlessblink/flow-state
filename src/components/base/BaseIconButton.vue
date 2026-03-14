@@ -79,6 +79,11 @@ defineEmits<{
   transform: scale(0.95);
 }
 
+.base-icon-button:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .base-icon-button:disabled {
   opacity: 0.4;
   cursor: not-allowed;

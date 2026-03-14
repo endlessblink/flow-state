@@ -123,12 +123,29 @@ export function createCoreOperations(
       const projects = [...(ctx.projectStore.projects || [])]
       const groups = [...(ctx.canvasStore.groups || [])]
 
+      // Bug 3 fix: capture settings (exclude sensitive tokens/keys)
+      let settings: Record<string, unknown> = {}
+      try {
+        const { useSettingsStore } = await import('@/stores/settings')
+        const settingsStore = useSettingsStore()
+        const SETTINGS_EXCLUDE = new Set([
+          'googleProviderToken', 'googleProviderRefreshToken', 'googleProviderTokenExpiry',
+          'groqApiKey'
+        ])
+        settings = Object.fromEntries(
+          Object.entries(settingsStore.$state as unknown as Record<string, unknown>).filter(([k]) => !SETTINGS_EXCLUDE.has(k))
+        )
+      } catch {
+        // Settings are optional in backup
+      }
+
       // Create backup object
       const backupData: BackupData = {
         id: generateBackupId(),
         tasks,
         projects,
         groups,
+        settings,
         timestamp: Date.now(),
         version: BACKUP_SCHEMA_VERSION,
         checksum: '',

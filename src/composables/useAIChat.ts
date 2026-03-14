@@ -1008,6 +1008,13 @@ export function useAIChat() {
 
       let stepCount = 0
       let continueLoop = true
+      let totalWriteOps = 0
+      const WRITE_OPS_LIMIT = 5
+      const WRITE_TOOL_NAMES = new Set([
+        'create_task', 'update_task', 'update_task_status', 'set_task_due_date',
+        'move_task_to_group', 'start_timer', 'stop_timer', 'set_task_priority',
+        'move_task_to_project', 'bulk_update_status',
+      ])
 
       while (continueLoop && stepCount < MAX_REACT_STEPS) {
         // Check if aborted
@@ -1069,6 +1076,16 @@ export function useAIChat() {
           const toolResults: ToolResult[] = []
           for (const call of immediateTools) {
             console.log(`[AIChat] ReAct step ${stepCount} - executing tool:`, call.tool, call.parameters)
+            if (WRITE_TOOL_NAMES.has(call.tool)) {
+              totalWriteOps++
+              if (totalWriteOps > WRITE_OPS_LIMIT) {
+                store.appendStreamingContent(
+                  `\n\n---\n*Stopped: reached limit of ${WRITE_OPS_LIMIT} write operations. Please confirm before I continue making changes.*`
+                )
+                continueLoop = false
+                break
+              }
+            }
             trackToolCall(sessionId, call.tool) // TASK-1356
             const result = await executeTool(call, lang)
             toolResults.push(result)
@@ -1160,6 +1177,16 @@ export function useAIChat() {
             const toolResults: ToolResult[] = []
             for (const call of immediateTools) {
               console.log(`[AIChat] ReAct step ${stepCount} - executing text-detected tool:`, call.tool, call.parameters)
+              if (WRITE_TOOL_NAMES.has(call.tool)) {
+                totalWriteOps++
+                if (totalWriteOps > WRITE_OPS_LIMIT) {
+                  store.appendStreamingContent(
+                    `\n\n---\n*Stopped: reached limit of ${WRITE_OPS_LIMIT} write operations. Please confirm before I continue making changes.*`
+                  )
+                  continueLoop = false
+                  break
+                }
+              }
               const result = await executeTool(call, lang)
               toolResults.push(result)
 

@@ -13,7 +13,8 @@ import { useTimerStore } from '@/stores/timer'
 // TASK-1177: Offline-first sync queue integration
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 // TASK-1418: Reverse status mapping for sync queue payloads (bypasses toSupabaseTask)
-import { toDbStatus } from '@/utils/supabaseMappers'
+// BUG-1516b: toSupabaseTask used for complete create payloads (no missing fields)
+import { toDbStatus, toSupabaseTask } from '@/utils/supabaseMappers'
 // TASK-1159: Toast feedback for background save failures
 import { useToast } from '@/composables/useToast'
 // TASK-1428: Keep IndexedDB read cache warm after offline mutations
@@ -176,21 +177,14 @@ export function useTaskOperations(
                     // Skip enqueueing but still attempt direct save below
                     throw new Error('SKIP_QUEUE_NO_AUTH')
                 }
-                // BUGFIX: Filter out undefined values to prevent "null" string errors in Postgres
-                // BUGFIX: Use JSON.parse/stringify to strip Vue reactivity (Proxy objects can't be cloned to IndexedDB)
+                // BUG-1516b: Use toSupabaseTask() to build the full payload so no fields
+                // are accidentally omitted (tags, estimatedDuration, subtasks, reminders, etc.)
+                // toSupabaseTask() handles snake_case conversion, UUID sanitization, null coercion.
+                const mappedPayload = toSupabaseTask(newTask, userId)
                 const payload: Record<string, unknown> = {
-                    id: newTask.id,
-                    user_id: userId, // Required for RLS - MUST be valid UUID
-                    title: newTask.title,
-                    description: newTask.description,
-                    status: toDbStatus(newTask.status), // TASK-1418: Map 'todo'→'planned' for DB
-                    priority: newTask.priority,
-                    progress: newTask.progress,
-                    completed_pomodoros: newTask.completedPomodoros,
-                    is_in_inbox: newTask.isInInbox,
-                    position_version: newTask.positionVersion,
-                    created_at: newTask.createdAt.toISOString(),
-                    updated_at: newTask.updatedAt.toISOString(),
+                    ...mappedPayload,
+                    // Override user_id explicitly (toSupabaseTask already sets it, belt+suspenders)
+                    user_id: userId,
                     // BUG-1509: Explicitly clear soft-delete flags on create/undo-restore.
                     // When undo re-creates a previously soft-deleted task, the DB row still has
                     // is_deleted=true. The upsert must clear it so fetchTasks (which filters
@@ -198,40 +192,8 @@ export function useTaskOperations(
                     is_deleted: false,
                     deleted_at: null
                 }
-                // Only add optional fields if they have values (not undefined/null)
-                if (newTask.dueDate) payload.due_date = newTask.dueDate
-                // BUG-1184: Only set project_id for valid UUIDs - 'uncategorized' is NOT a valid UUID
-                if (newTask.projectId && isValidUUID(newTask.projectId)) {
-                    payload.project_id = newTask.projectId
-                }
-                // BUG-1184: Only set parent_id for valid UUIDs (sub-tasks)
-                // Group IDs like "group-xxx" are NOT valid UUIDs and cause Postgres errors
-                if (newTask.parentId && isValidUUID(newTask.parentId)) {
-                    payload.parent_id = newTask.parentId
-                }
-                // Strip reactivity from complex objects - use 'position' column (not 'canvas_position')
-                if (newTask.canvasPosition) {
-                    payload.position = {
-                        x: newTask.canvasPosition.x,
-                        y: newTask.canvasPosition.y,
-                        parentId: newTask.parentId,
-                        format: 'absolute'
-                    }
-                }
-                // BUG-1187: Include doneForNowUntil in sync payload
-                if (newTask.doneForNowUntil) {
-                    payload.done_for_now_until = newTask.doneForNowUntil
-                }
-                // TASK-1403: Include recurrence fields in create payload
-                if (newTask.recurrenceRule) {
-                    payload.recurrence_rule = JSON.parse(JSON.stringify(newTask.recurrenceRule))
-                }
-                if (newTask.recurrenceParentId) {
-                    payload.recurrence_parent_id = newTask.recurrenceParentId
-                }
-                if (newTask.recurrenceCount) {
-                    payload.recurrence_count = newTask.recurrenceCount
-                }
+                // position_version is managed by DB triggers — do not send on create/upsert
+                delete payload.position_version
 
                 await syncOrchestrator.enqueue({
                     entityType: 'task',
@@ -735,6 +697,34 @@ export function useTaskOperations(
                 if (changedKeys.has('recurrenceCount') && updatedTask.recurrenceCount !== undefined) {
                     payload.recurrence_count = updatedTask.recurrenceCount
                 }
+                // BUG-1516: Missing field handlers — these were never sent to the sync queue
+                if (changedKeys.has('tags')) {
+                    payload.tags = updatedTask.tags || []
+                }
+                if (changedKeys.has('estimatedDuration')) {
+                    payload.estimated_duration = updatedTask.estimatedDuration ?? null
+                }
+                if (changedKeys.has('estimatedPomodoros')) {
+                    payload.estimated_pomodoros = updatedTask.estimatedPomodoros ?? null
+                }
+                if (changedKeys.has('order')) {
+                    payload.order = updatedTask.order ?? 0
+                }
+                if (changedKeys.has('scheduledDate')) {
+                    payload.scheduled_date = updatedTask.scheduledDate || null
+                }
+                if (changedKeys.has('scheduledTime')) {
+                    payload.scheduled_time = updatedTask.scheduledTime || null
+                }
+                if (changedKeys.has('dueTime')) {
+                    payload.due_time = updatedTask.dueTime || null
+                }
+                if (changedKeys.has('reminders') && updatedTask.reminders !== undefined) {
+                    payload.reminders = JSON.parse(JSON.stringify(updatedTask.reminders))
+                }
+                if (changedKeys.has('attachments') && updatedTask.attachments !== undefined) {
+                    payload.attachments = JSON.parse(JSON.stringify(updatedTask.attachments))
+                }
 
                 await syncOrchestrator.enqueue({
                     entityType: 'task',
@@ -983,6 +973,20 @@ export function useTaskOperations(
             })
             manualOperationInProgress.value = false
             throw localSaveError
+        }
+
+        // Enqueue DELETE for each task so offline bulk deletes can retry via sync queue
+        const syncOrchestrator = useSyncOrchestrator()
+        for (const taskId of taskIds) {
+            try {
+                await syncOrchestrator.enqueue({
+                    entityType: 'task',
+                    operation: 'delete',
+                    entityId: taskId,
+                    payload: { id: taskId },
+                    baseVersion: 0
+                })
+            } catch { /* non-critical, direct save is backup */ }
         }
 
         // TASK-1159: Background sync — don't block UI

@@ -676,7 +676,9 @@ const handleStartTaskNow = () => {
 }
 
 onMounted(() => {
-  setupScrollSync()
+  // Delay scroll sync setup — CalendarDayView's DOM (.slots-container) may not exist
+  // yet in WebKitGTK/Tauri when parent's onMounted fires
+  setTimeout(() => setupScrollSync(), 150)
 
   // Update current time every 30 seconds for smoother time indicator movement
   currentTime.value = new Date()
@@ -693,7 +695,9 @@ onMounted(() => {
     router.replace({ path: '/calendar', query: {} })
   } else {
     // Scroll to current time on mount
-    scrollToCurrentTime()
+    // Use setTimeout like the watchers — bare nextTick fires before CalendarDayView's
+    // DOM is ready in WebKitGTK/Tauri, causing querySelector('.slots-container') to return null
+    setTimeout(() => scrollToCurrentTime(), 150)
   }
 
   // Add event listeners

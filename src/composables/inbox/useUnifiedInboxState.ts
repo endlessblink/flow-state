@@ -139,7 +139,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // 3. isInInbox gate — both inboxes only show tasks flagged as inbox
             // BUG-1481: Calendar inbox should show canvas tasks regardless of sort order,
             // not just when canvasOrder sort is active. Tasks on the canvas are real tasks
-            // that belong in the calendar inbox.
+            // that belong in the calendar inbox (unless scheduled on the calendar grid).
             const isOnCanvas = !!task.canvasPosition
             if (!task.isInInbox && !(props.context === 'calendar' && isOnCanvas)) {
                 return false
@@ -148,20 +148,23 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // 4. Context Specific Rules (cross-context independent)
             // Canvas inbox does NOT filter by calendar scheduling, and vice versa
             if (props.context === 'calendar') {
-                // BUG-1530: Canvas tasks should ALWAYS appear in the calendar inbox.
-                // Previously, canvas tasks with calendar instances were excluded (isScheduledOnCalendar),
-                // making them invisible in the inbox's Today/Canvas filters even though the user
-                // placed them on the canvas. Canvas tasks are explicitly included in the calendar
-                // inbox so the user can see their canvas content — hiding them because they also
-                // happen to be on the calendar grid defeats that purpose.
-                if (isOnCanvas) {
-                    return true
-                }
-
-                // CALENDAR INBOX: Hide non-canvas tasks already scheduled on the calendar grid
+                // BUG-1530: Canvas tasks that are also scheduled on the calendar are included
+                // in baseInboxTasks when canvas-related filters are active (Canvas group filter,
+                // Canvas sort, or time filter like "Today"). This lets users see their canvas
+                // tasks via these filters. Without canvas filters, scheduled canvas tasks stay
+                // hidden (they're already on the calendar grid).
                 const isScheduledOnCalendar = task.instances &&
                     task.instances.length > 0 &&
                     task.instances.some(inst => inst.scheduledDate)
+
+                if (isOnCanvas && isScheduledOnCalendar) {
+                    // Include if any canvas-related filter is active
+                    const hasCanvasFilter = selectedCanvasGroups.value.size > 0
+                    const hasCanvasSort = sortBy.value === 'canvasOrder'
+                    const hasTimeFilter = activeTimeFilter.value !== 'all'
+                    return hasCanvasFilter || hasCanvasSort || hasTimeFilter
+                }
+
                 return !isScheduledOnCalendar
             } else {
                 // CANVAS INBOX: Hide tasks already placed on the canvas

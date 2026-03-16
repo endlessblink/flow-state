@@ -23,6 +23,7 @@ const emit = defineEmits<{
   (e: 'update:timeBlock', index: number, block: TimeBlock): void
   (e: 'back'): void
   (e: 'start'): void
+  (e: 'close'): void
 }>()
 
 // --- Core state ---
@@ -390,6 +391,25 @@ onMounted(() => {
   timeUpdateInterval = setInterval(() => {
     currentTime.value = new Date()
   }, 30000)
+
+  // Sync sidebar from pre-existing today instances
+  const todayStr = getDateString(currentDate.value)
+  props.big3Slots.forEach((slot, i) => {
+    if (!slot.taskId) return
+    const task = taskStore._rawTasks.find(t => t.id === slot.taskId)
+    if (!task?.instances) return
+    const todayInstance = task.instances.find(inst => inst.scheduledDate === todayStr)
+    if (todayInstance && !props.timeBlocks[i].startTime) {
+      // Track as session instance so cleanup/move works
+      if (todayInstance.id) sessionInstanceIds.value.add(todayInstance.id)
+      // Sync sidebar state
+      emit('update:timeBlock', i, {
+        ...props.timeBlocks[i],
+        startTime: todayInstance.scheduledTime || '',
+        duration: todayInstance.duration ?? props.timeBlocks[i].duration,
+      })
+    }
+  })
 })
 
 onUnmounted(() => {
@@ -475,6 +495,9 @@ onUnmounted(() => {
       <button class="footer-btn footer-btn--start mobile-tb-start" type="button" @click="emit('start')">
         Start My Day
       </button>
+      <button class="footer-btn footer-btn--skip mobile-tb-skip" type="button" @click="emit('close')">
+        Skip
+      </button>
     </template>
 
     <!-- ==================== DESKTOP VIEW ==================== -->
@@ -519,6 +542,9 @@ onUnmounted(() => {
           </div>
         </div>
         <p class="sidebar-hint">Tap a task, then tap a time slot to place it</p>
+        <button class="sidebar-skip" type="button" @click="emit('close')">
+          Skip morning ritual
+        </button>
       </div>
 
       <!-- Calendar -->
@@ -752,6 +778,11 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-2) 0;
+  background: var(--overlay-component-bg, var(--surface-primary));
+  z-index: 2;
 }
 
 .footer-btn {
@@ -789,6 +820,35 @@ onUnmounted(() => {
   background: var(--brand-primary-subtle, rgba(78, 205, 196, 0.12));
   border-color: var(--brand-primary-hover);
   color: var(--brand-primary-hover);
+}
+
+.footer-btn--skip {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+}
+
+.footer-btn--skip:hover {
+  color: var(--text-secondary);
+  border-color: var(--glass-border);
+}
+
+/* --- Sidebar skip link --- */
+.sidebar-skip {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  padding: var(--space-1) 0;
+  margin-top: auto;
+  transition: color var(--duration-fast);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sidebar-skip:hover {
+  color: var(--text-secondary);
 }
 
 /* ==================== MOBILE TIME-BLOCK VIEW ==================== */
@@ -947,6 +1007,11 @@ onUnmounted(() => {
   width: 100%;
   justify-content: center;
   animation: pulse-teal 2s ease-in-out infinite;
+}
+
+.mobile-tb-skip {
+  width: 100%;
+  justify-content: center;
 }
 
 @keyframes pulse-teal {

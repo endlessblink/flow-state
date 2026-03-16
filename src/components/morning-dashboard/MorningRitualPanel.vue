@@ -253,6 +253,7 @@ function handleClose() {
               @update:time-block="handleTimeBlockUpdate"
               @back="goBackToPick()"
               @start="handleStartMyDay()"
+              @close="handleClose"
             />
           </div>
         </div>
@@ -297,13 +298,13 @@ function handleClose() {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: var(--z-modal);
+  z-index: var(--z-overlay);
 }
 
 .ritual-panel-overlay {
   position: fixed;
   inset: 0;
-  z-index: calc(var(--z-modal) + 1);
+  z-index: calc(var(--z-overlay) + 1);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;

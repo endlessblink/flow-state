@@ -30,6 +30,7 @@ export interface TaskOperation {
   taskData?: unknown
   oldData?: unknown
   timestamp: number
+  workspaceId?: string | null  // Workspace context
 }
 
 export interface UIStateChange {
@@ -79,6 +80,22 @@ export function useCrossTabSync() {
 
   // Message processing logic
   const handleTaskOperation = async (operation: TaskOperation) => {
+    // Workspace guard: ignore operations from a different workspace
+    if (operation.workspaceId !== undefined) {
+      try {
+        const { useWorkspaceStore } = await import('@/stores/workspace')
+        const myWorkspaceId = useWorkspaceStore().activeWorkspaceId ?? null
+        if (operation.workspaceId !== myWorkspaceId) {
+          if (import.meta.env.DEV) {
+            console.log('[CROSS-TAB] Ignoring operation from different workspace')
+          }
+          return
+        }
+      } catch {
+        // Workspace store not available — allow through
+      }
+    }
+
     switch (operation.operation) {
       case 'create':
         if (operation.taskData && operation.taskId) {
@@ -119,9 +136,14 @@ export function useCrossTabSync() {
         }
         break
       case 'delete':
+        // BUG-1535: Was splicing from filtered computed (taskStore.tasks) which is ineffective.
+        // Now splice from _rawTasks and mark as soft-deleted.
         if (operation.taskId) {
-          const index = taskStore.tasks.findIndex(t => t.id === operation.taskId)
-          if (index > -1) taskStore.tasks.splice(index, 1)
+          const rawIndex = taskStore._rawTasks.findIndex(t => t.id === operation.taskId)
+          if (rawIndex > -1) {
+            taskStore._rawTasks[rawIndex]._soft_deleted = true
+            taskStore._rawTasks.splice(rawIndex, 1)
+          }
         }
         break
     }
@@ -197,7 +219,16 @@ export function useCrossTabSync() {
       _onLoseLeadership = callbacks.onLoseLeadership || null
     },
     trackLocalOperation,
-    broadcastTaskOperation: (op: TaskOperation) => broadcast('task_operation', op),
+    broadcastTaskOperation: async (op: TaskOperation) => {
+      let workspaceId: string | null = null
+      try {
+        const { useWorkspaceStore } = await import('@/stores/workspace')
+        workspaceId = useWorkspaceStore().activeWorkspaceId ?? null
+      } catch {
+        // Workspace store not available
+      }
+      broadcast('task_operation', { ...op, workspaceId })
+    },
     broadcastUIStateChange: (change: UIStateChange) => broadcast('ui_state_change', change),
     broadcastCanvasChange: (change: CanvasChange) => broadcast('canvas_change', change)
   }

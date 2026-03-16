@@ -28,6 +28,12 @@
 
 ---
 
+### ~~BUG-1533~~: Task duplication, ghost reappearance, and sync resurrection bugs (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-16)
+
+**12 bugs fixed**: Canvas Delete moved to inbox instead of deleting, sync queue CREATE resurrected deleted tasks (tombstone check added), cross-tab DELETE spliced wrong array, doneForNow double-invocation guard, calendarFilteredTasks missing dedup, createTask pre-push duplicate guard, done tasks staying in inbox, smart merge 5-min resurrection window (→30s), coalescer blind to syncing ops, stale queue 24h purge, recurrence unique DB constraint, stale comment fix. Production DB cleanup: 174 done tasks cleared from inbox.
+
 ### BUG-1508: Permanently deleting a recurring task causes infinite recreation loop (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (being fixed in separate instance)
@@ -1991,6 +1997,111 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
 | ~~**BUG-1526**~~ | **P1** | ~~**Push notification click actions dead — SW posts NAVIGATE_TO_TASK/NAVIGATE_TO/SNOOZE_NOTIFICATION but no client handler existed; added SW message listener in useAppInitialization.ts**~~ (✅ DONE 2026-03-14) |
 | ~~**TASK-1527**~~ | **P2** | ~~**Remove entire gamification system (XP, achievements, challenges, shop, Cyberflow RPG) — ~23,700 lines removed, DB tables left dormant**~~ (✅ DONE 2026-03-14) |
+| ~~**TASK-1531**~~ | **P2** | ~~**KDE dock: show current scheduled calendar block next to pomodoro timer — always-visible context of what's planned now, with toggle in KDE widget settings**~~ (✅ DONE) |
+| **TASK-1532** | **P1** | **"Done for Now" vs "Done Fully" for recurring tasks — Hybrid clone model: "done for now" creates completion record + advances original to next occurrence; "done fully" stops recurrence (current behavior). DoneToggle click = done-for-now for recurring, context menu offers both options.** (🔄 IN PROGRESS) |
+| **TASK-1533** | **P0** | **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (📋 PLANNED) |
+| **TASK-1534** | **P0** | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (📋 PLANNED) |
+| **TASK-1535** | **P0** | **DB migration: Add workspace_id to tasks, projects, groups + assigned_to on tasks** (📋 PLANNED) |
+| **TASK-1536** | **P0** | **DB migration: SECURITY DEFINER function user_workspace_ids() for RLS performance** (📋 PLANNED) |
+| **TASK-1537** | **P0** | **DB migration: Rewrite 32+ RLS policies to be workspace-aware** (📋 PLANNED) |
+| **TASK-1538** | **P0** | **DB migration: Add new tables to supabase_realtime publication** (📋 PLANNED) |
+| **TASK-1539** | **P1** | **Pinia store: workspaces.ts — activeWorkspaceId, CRUD, switchWorkspace** (📋 PLANNED) |
+| **TASK-1540** | **P1** | **Update supabaseMappers.ts with workspace_id** (📋 PLANNED) |
+| **TASK-1541** | **P1** | **Update useTaskFiltering.ts with workspace filter** (📋 PLANNED) |
+| **TASK-1542** | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts for workspace context** (📋 PLANNED) |
+| **TASK-1543** | **P1** | **Update projects.ts store for workspace filtering** (📋 PLANNED) |
+| **TASK-1544** | **P1** | **Update canvas store (groups) for workspace filtering** (📋 PLANNED) |
+| **TASK-1545** | **P1** | **UI: Workspace switcher component in sidebar** (📋 PLANNED) |
+| **TASK-1546** | **P1** | **Update auth.ts: fetch workspaces on login** (📋 PLANNED) |
+| **TASK-1547** | **P0** | **Offline sync queue: inject workspace_id into queued payloads** (📋 PLANNED) |
+| **TASK-1548** | **P0** | **Realtime subscriptions: workspace_id filtering + workspace switch handling** (📋 PLANNED) |
+| **TASK-1549** | **P0** | **Cross-tab sync: add workspaceId to protocol** (📋 PLANNED) |
+| **TASK-1550** | **P1** | **Guest mode isolation for workspace feature** (📋 PLANNED) |
+| **TASK-1551** | **P1** | **Invite flow: generate link, accept via Edge Function, /#/invite/:token route** (📋 PLANNED) |
+| **TASK-1552** | **P1** | **Task assignment UI: assigned_to dropdown, avatar badges, filters** (📋 PLANNED) |
+| **TASK-1553** | **P1** | **Task comments: CRUD + realtime + UI** (📋 PLANNED) |
+| **TASK-1554** | **P2** | **Activity feed: logging + display** (📋 PLANNED) |
+| **TASK-1555** | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (📋 PLANNED) |
+| **TASK-1556** | **P1** | **Hebrew translations for all workspace strings** (📋 PLANNED) |
+| **TASK-1557** | **P2** | **Member management UI** (📋 PLANNED) |
+| **TASK-1558** | **P2** | **Empty states for workspaces** (📋 PLANNED) |
+| **TASK-1559** | **P3** | **Member presence (v2 nice-to-have)** (📋 PLANNED) |
+
+---
+
+## Workspace Collaboration (TASK-1533 Epic)
+
+> **Goal**: Add multi-user workspace collaboration to FlowState. Personal workspace stays as-is (workspace_id IS NULL). Shared workspaces allow 2+ members to share tasks, projects, and canvas.
+> **Priority**: P0 | **Status**: 📋 PLANNED
+> **Brief**: User-provided implementation brief covers DB schema, RLS, stores, UI, and phased rollout.
+> **Architect Assessment**: Feasibility confirmed with 5 HIGH-risk areas identified (RLS migration, offline sync queue, realtime subscriptions, cross-tab sync, invite chicken-and-egg).
+
+### Phase 1: Foundation
+
+| ID | Priority | Description | Status | Depends On |
+|----|----------|-------------|--------|------------|
+| **TASK-1533** | **P0** | **Epic: Workspace Collaboration — tracking parent for all sub-tasks** | 📋 PLANNED | — |
+| **TASK-1534** | **P0** | **DB migration: Create workspaces, workspace_members, workspace_invites, task_comments, workspace_activity tables** | 📋 PLANNED | — |
+| **TASK-1535** | **P0** | **DB migration: Add workspace_id (NULLABLE) to tasks, projects, groups tables + assigned_to on tasks** | 📋 PLANNED | TASK-1534 |
+| **TASK-1536** | **P0** | **DB migration: Create `user_workspace_ids()` SECURITY DEFINER function for RLS performance** | 📋 PLANNED | TASK-1534 |
+| **TASK-1537** | **P0** | **DB migration: Rewrite ALL RLS policies to be workspace-aware (32+ policies across 8+ tables). Must handle workspace_id IS NULL for personal tasks. TEST AGAINST PRODUCTION DATA COPY.** | 📋 PLANNED | TASK-1535, TASK-1536 |
+| **TASK-1538** | **P0** | **DB migration: Add workspace_id to supabase_realtime publication for task_comments and workspace_activity** | 📋 PLANNED | TASK-1534 |
+| **TASK-1539** | **P1** | **Pinia store: Create src/stores/workspaces.ts — activeWorkspaceId, workspaces[], members[], switchWorkspace(), createWorkspace(), inviteMember(), acceptInvite(), removeMember()** | 📋 PLANNED | TASK-1537 |
+| **TASK-1540** | **P1** | **Update supabaseMappers.ts: Add workspace_id to toSupabaseTask(), toSupabaseProject(), toSupabaseGroup() mappers** | 📋 PLANNED | TASK-1535 |
+| **TASK-1541** | **P1** | **Update useTaskFiltering.ts: Add workspace_id filter predicate so board/canvas/calendar/inbox respect active workspace** | 📋 PLANNED | TASK-1539, TASK-1540 |
+| **TASK-1542** | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts: Pass workspace context to fetchTasks, add .eq('workspace_id', ...) filter** | 📋 PLANNED | TASK-1539, TASK-1540 |
+| **TASK-1543** | **P1** | **Update projects.ts store: Filter projects by activeWorkspaceId, same pattern as tasks** | 📋 PLANNED | TASK-1539, TASK-1540 |
+| **TASK-1544** | **P1** | **Update canvas store (groups): Filter groups by activeWorkspaceId, validate workspace match on parentId assignment** | 📋 PLANNED | TASK-1539, TASK-1540 |
+| **TASK-1545** | **P1** | **UI: Workspace switcher component in sidebar — dropdown with "Personal" + shared workspaces + "Create Workspace" action** | 📋 PLANNED | TASK-1539 |
+| **TASK-1546** | **P1** | **Update auth.ts: On login, fetch workspaces via workspace_members join, restore last-used workspace from localStorage** | 📋 PLANNED | TASK-1539 |
+
+### Phase 2: Sync Safety (CRITICAL — must be done before enabling workspaces)
+
+| ID | Priority | Description | Status | Depends On |
+|----|----------|-------------|--------|------------|
+| **TASK-1547** | **P0** | **Offline sync queue: Inject workspace_id into queued payloads in useSyncOrchestrator.ts. Defense-in-depth for ops created before migration (existing IndexedDB queue entries lack workspace_id)** | 📋 PLANNED | TASK-1540 |
+| **TASK-1548** | **P0** | **Realtime subscriptions: Update useRealtimeSubscription.ts to filter by workspace_id instead of user_id. Handle workspace switch (teardown old channel, create new). Add isWorkspaceSwitching flag to prevent reconnect logic from fighting intentional disconnects.** | 📋 PLANNED | TASK-1538, TASK-1539 |
+| **TASK-1549** | **P0** | **Cross-tab sync: Add workspaceId to CrossTabMessage and TaskOperation interfaces in useCrossTabSync.ts. Handler must ignore messages from different workspace. Broadcast workspace switch events.** | 📋 PLANNED | TASK-1539 |
+| **TASK-1550** | **P1** | **Guest mode isolation: Ensure workspace store returns empty/disabled state when !isAuthenticated. Verify migrateGuestData() targets personal workspace (NULL workspace_id) only.** | 📋 PLANNED | TASK-1539 |
+
+### Phase 3: Collaboration Features
+
+| ID | Priority | Description | Status | Depends On |
+|----|----------|-------------|--------|------------|
+| **TASK-1551** | **P1** | **Invite flow: Generate invite link (workspace_invites table), copy/share UI, route /#/invite/:token, accept-invite Edge Function (SECURITY DEFINER — must add user to workspace_members server-side, chicken-and-egg problem)** | 📋 PLANNED | TASK-1539 |
+| **TASK-1552** | **P1** | **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter** | 📋 PLANNED | TASK-1539, TASK-1551 |
+| **TASK-1553** | **P1** | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel** | 📋 PLANNED | TASK-1548 |
+| **TASK-1554** | **P2** | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI** | 📋 PLANNED | TASK-1539 |
+
+### Phase 4: Partner UX & Polish
+
+| ID | Priority | Description | Status | Depends On |
+|----|----------|-------------|--------|------------|
+| **TASK-1555** | **P1** | **Partner-friendly UX: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.** | 📋 PLANNED | TASK-1545, TASK-1551 |
+| **TASK-1556** | **P1** | **Hebrew translations: Add workspaces namespace to he.json — workspace, members, invite, comments, activity feed, all new UI strings** | 📋 PLANNED | TASK-1545 |
+| **TASK-1557** | **P2** | **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)** | 📋 PLANNED | TASK-1539 |
+| **TASK-1558** | **P2** | **Empty states: New workspace welcome, no tasks yet, no members yet, pending invite states** | 📋 PLANNED | TASK-1545 |
+| **TASK-1559** | **P3** | **Member presence: Show who's online in workspace using Supabase Realtime Presence (nice-to-have v2)** | 📋 PLANNED | TASK-1548 |
+
+### Key Architecture Decisions
+
+1. **workspace_id IS NULLABLE** — NULL means "personal workspace". No data migration needed for existing tasks.
+2. **SECURITY DEFINER function** `user_workspace_ids()` for RLS performance — caches per-transaction, avoids correlated subquery per row.
+3. **Invite acceptance via Edge Function** — accepting user can't INSERT into workspace_members (not yet a member → RLS blocks). Server-side function required.
+4. **Realtime per-workspace** — subscribe to active workspace only, teardown/rebuild on switch. No multi-workspace listening.
+5. **Sync queue defense-in-depth** — inject workspace_id into payloads at queue processing time for legacy operations that predate the migration.
+6. **Timer, gamification, AI chat remain personal** — not workspace-scoped.
+
+### Risk Register
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| RLS policy rewrite (32+ policies) — wrong policy = data leakage or lockout | CRITICAL | Test against production data copy. Deploy schema-only first, let sync queue drain. |
+| Offline sync queue — existing IndexedDB ops lack workspace_id | HIGH | workspace_id NULLABLE + inject at processing time |
+| Realtime filter change — breaking for existing subscriptions | HIGH | Workspace switch tears down old channel cleanly |
+| Cross-tab workspace mismatch — Tab A workspace A, Tab B workspace B | MEDIUM | Add workspaceId to cross-tab protocol, ignore mismatches |
+| Invite chicken-and-egg — user can't join workspace they're not in | MEDIUM | Edge Function with service_role key |
+| Canvas parentId cross-workspace — task in workspace B references group in workspace A | LOW | App-level validation in drag handlers |
 
 ---
 
@@ -2579,9 +2690,9 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### TASK-1462: Dev-Maestro TUI — Multi-Project Support (📋 PLANNED)
+### TASK-1462: Dev-Maestro TUI — Multi-Project Support (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
 
 **Problem**: `maestro tui` currently only works with FlowState. Running from another project directory shows 0 tasks.
 
@@ -2700,6 +2811,18 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Fix**: Hidden the default element with `display: none !important` in `global-overrides.css`. Our custom white/teal dots remain.
 
 **Category**: UI Bug
+
+---
+
+### BUG-1531: Duplicated tasks keep being created (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-03-15)
+
+**Problem**: Tasks are being duplicated — the same task appears multiple times in the app, causing massive task inflation (user reports 333,111 tasks). Screenshot shows identical Hebrew tasks appearing twice in calendar view.
+
+**Investigation**: Multi-agent root cause analysis in progress.
+
+**Category**: Data Integrity / Sync
 
 ---
 

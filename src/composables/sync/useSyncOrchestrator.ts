@@ -24,6 +24,18 @@ import type {
 // TASK-1177: Check for IndexedDB availability (not available in Node.js/tests)
 const hasIndexedDB = typeof indexedDB !== 'undefined'
 
+// Workspace collaboration: lazily get active workspace ID at enqueue time
+function getActiveWorkspaceId(): string | null {
+  try {
+    // Use require-style dynamic import to avoid circular dependency
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useWorkspaceStore } = require('@/stores/workspace')
+    return useWorkspaceStore().activeWorkspaceId ?? null
+  } catch {
+    return null
+  }
+}
+
 // Lazy import to prevent IndexedDB errors in test environment
 let writeQueueModule: typeof import('@/services/offline/writeQueueDB') | null = null
 async function getWriteQueueModule() {
@@ -239,9 +251,14 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
   // TASK-1418: Sanitize task status in sync queue payloads.
   // Stale IndexedDB entries from before the status migration may contain 'todo'
   // which the DB constraint rejects. Map to 'planned' for all task writes.
-  const payload = (entityType === 'task' && rawPayload.status === 'todo')
+  let payload = (entityType === 'task' && rawPayload.status === 'todo')
     ? { ...rawPayload, status: 'planned' }
     : rawPayload
+
+  // Workspace collaboration: inject workspace_id into payload if missing from legacy operations
+  if (!payload.workspace_id && operation.workspaceId) {
+    payload = { ...payload, workspace_id: operation.workspaceId as string }
+  }
 
   // Map entity type to Supabase table name
   const tableMap: Record<SyncEntityType, string> = {
@@ -258,6 +275,23 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
     switch (operation.operation) {
       case 'create': {
+        // BUG-1534: Check tombstones before CREATE — prevents resurrecting deleted tasks.
+        // A stale CREATE in the queue (from page reload, retry, or smart merge) could
+        // un-delete a task that was legitimately deleted on another device.
+        if (entityType === 'task') {
+          const { data: tombstone } = await supabase
+            .from('tombstones')
+            .select('id')
+            .eq('entity_type', 'task')
+            .eq('entity_id', entityId)
+            .limit(1)
+            .maybeSingle()
+          if (tombstone) {
+            console.warn(`[SYNC] Skipping CREATE for tombstoned task ${entityId.slice(0, 8)}`)
+            return { success: true, serverData: null }
+          }
+        }
+
         // BUG-1509: Explicitly clear soft-delete flags on CREATE upsert.
         // When undo re-creates a previously soft-deleted task, the DB row may still have
         // is_deleted=true. Merging these defaults ensures the upsert always resets the
@@ -584,6 +618,13 @@ async function processQueue(): Promise<void> {
     // getPendingOperations() only returns 'pending' and 'failed'.
     await recoverStaleSyncing()
 
+    // BUG-6: Purge pending operations older than 24h to prevent stale queue replay
+    // from resurrecting tasks that were deleted days ago on another device.
+    try {
+      const { purgeStaleOperations } = await import('@/services/offline/writeQueueDB')
+      await purgeStaleOperations()
+    } catch { /* writeQueueDB not available */ }
+
     // Get pending operations FIRST before setting status
     const operations = await getPendingOperations()
 
@@ -702,10 +743,33 @@ export function useSyncOrchestrator() {
       // Auth store not available
     }
 
+    // Capture workspace context at enqueue time (null = personal workspace)
+    const workspaceId = getActiveWorkspaceId()
+
+    // BUG-1534: When enqueuing a DELETE, cancel any pending CREATEs for the same entity.
+    // This prevents stale CREATEs from resurrecting deleted tasks after page reload.
+    if (operation.operation === 'delete') {
+      try {
+        const { getOperationsForEntity, deleteOperation: deleteOp } = await import('@/services/offline/writeQueueDB')
+        const pendingOps = await getOperationsForEntity(operation.entityType, operation.entityId)
+        for (const op of pendingOps) {
+          if (op.operation === 'create' && (op.status === 'pending' || op.status === 'failed')) {
+            await deleteOp(op.id)
+            if (import.meta.env.DEV) {
+              console.debug(`🗑️ [SYNC] Cancelled stale CREATE for ${operation.entityType}:${operation.entityId.slice(0, 8)} (DELETE takes precedence)`)
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[SYNC] Failed to cancel pending CREATEs on DELETE:', e)
+      }
+    }
+
     // Enqueue the operation
     const queued = await enqueueOperation({
       ...operation,
-      userId
+      userId,
+      workspaceId
     })
 
     if (import.meta.env.DEV) {

@@ -283,16 +283,22 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         try {
             for (const nodeId of selectedNodeIds) {
                 const task = taskStore.tasks.find(t => t.id === nodeId)
-                // Set dueDate, doneForNowUntil, and scheduledDate (if present) to tomorrow
-                // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
-                const updatePayload: Record<string, string> = {
-                    dueDate: tomorrowStr,
-                    doneForNowUntil: tomorrowStr
+                // TASK-1532: Recurring tasks use doneForNow — creates completion record + advances to next occurrence
+                if (task?.recurrenceRule) {
+                    await taskStore.doneForNow(nodeId)
+                } else {
+                    // Non-recurring: original behavior (reschedule to tomorrow)
+                    // Set dueDate, doneForNowUntil, and scheduledDate (if present) to tomorrow
+                    // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
+                    const updatePayload: Record<string, string> = {
+                        dueDate: tomorrowStr,
+                        doneForNowUntil: tomorrowStr
+                    }
+                    if (task?.scheduledDate) {
+                        updatePayload.scheduledDate = tomorrowStr
+                    }
+                    await undoHistory.updateTaskWithUndo(nodeId, updatePayload)
                 }
-                if (task?.scheduledDate) {
-                    updatePayload.scheduledDate = tomorrowStr
-                }
-                await undoHistory.updateTaskWithUndo(nodeId, updatePayload)
             }
 
             // Show toast notification
@@ -353,13 +359,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 } else if (isPermanent) {
                     await undoHistory.permanentlyDeleteTaskWithUndo(item.id)
                 } else {
-                    await undoHistory.updateTaskWithUndo(item.id, {
-                        canvasPosition: undefined,
-                        isInInbox: true,
-                        instances: [],
-                        scheduledDate: undefined,
-                        scheduledTime: undefined
-                    })
+                    // BUG-1533: Was moving to inbox instead of deleting. Now actually deletes (with undo support).
+                    await undoHistory.deleteTaskWithUndo(item.id)
                 }
             }
 

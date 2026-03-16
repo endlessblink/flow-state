@@ -67,13 +67,19 @@ export async function coalesceOperationsForEntity(
   const mergedIds: number[] = []
   let description = ''
 
-  // Check for create → delete cancellation
-  const hasCreate = pendingOps.some(op => op.operation === 'create')
+  // BUG-7: Also check syncing operations for cancellation detection.
+  // If a CREATE is currently syncing and a DELETE is pending, the pending DELETE
+  // should still win — the CREATE's upsert result will be overridden by the DELETE.
+  const syncingOps = operations.filter(op => op.status === 'syncing')
+
+  // Check for create → delete cancellation (including syncing CREATEs)
+  const hasCreate = pendingOps.some(op => op.operation === 'create') ||
+                    syncingOps.some(op => op.operation === 'create')
   const hasDelete = pendingOps.some(op => op.operation === 'delete')
 
   if (hasCreate && hasDelete) {
     // Create followed by delete = net nothing
-    // Delete all operations
+    // Delete pending operations (don't touch syncing ones — they'll be overridden by the DELETE)
     for (const op of pendingOps) {
       if (op.id) {
         mergedIds.push(op.id)
@@ -83,7 +89,7 @@ export async function coalesceOperationsForEntity(
     return {
       operation: null,
       mergedOperationIds: mergedIds,
-      description: 'Create + Delete cancelled out'
+      description: 'Create + Delete cancelled out' + (syncingOps.length > 0 ? ' (syncing CREATE will be overridden)' : '')
     }
   }
 

@@ -32,8 +32,8 @@ export function useRecurrenceScheduler() {
         const existingLock = localStorage.getItem(LOCK_KEY)
         if (existingLock) {
             const lockTime = parseInt(existingLock, 10)
-            // Lock is valid for 60 seconds (covers the DB write + sync time)
-            if (Date.now() - lockTime < 60_000) {
+            // BUG-1531: Lock valid for 24h (key already rotates daily via ${today}, one run per day is enough)
+            if (Date.now() - lockTime < 86_400_000) {
                 console.log('[RECURRENCE-SCHEDULER] Skipping — lock active from recent run')
                 return 0
             }
@@ -102,28 +102,60 @@ export function useRecurrenceScheduler() {
 
                 // Only create if due today or earlier
                 if (nextDate && nextDate <= today) {
-                    await taskStore.createTask({
-                        title: task.title,
-                        description: task.description,
-                        priority: task.priority,
-                        projectId: task.projectId,
-                        estimatedDuration: task.estimatedDuration,
-                        estimatedPomodoros: task.estimatedPomodoros,
-                        tags: task.tags ? [...task.tags] : undefined,
-                        subtasks: task.subtasks?.map(st => ({
-                            ...st,
-                            isCompleted: false,
-                        })) || [],
-                        recurrenceRule: { ...rule },
-                        recurrenceParentId: task.recurrenceParentId || task.id,
-                        recurrenceCount: count,
-                        dueDate: nextDate,
-                        status: 'todo',
-                        isInInbox: true,
-                    })
-                    cloneCount++
+                    // BUG-1531: DB-level dedup — prevent cross-device duplicate clones
+                    try {
+                        const { supabase } = await import('@/services/auth/supabase')
+                        if (supabase) {
+                            const { data: existingClones } = await supabase
+                                .from('tasks')
+                                .select('id')
+                                .eq('recurrence_parent_id', chainId)
+                                .eq('is_deleted', false)
+                                .neq('status', 'done')
+                                .limit(1)
+
+                            if (existingClones && existingClones.length > 0) {
+                                processedChains.add(chainId)
+                                console.log(`[RECURRENCE-SCHEDULER] BUG-1531: DB dedup — clone already exists for chain ${chainId.slice(0, 8)}`)
+                                continue
+                            }
+                        }
+                    } catch (e) {
+                        // If DB check fails, fall through to create (best effort)
+                        console.warn('[RECURRENCE-SCHEDULER] BUG-1531: DB dedup check failed, proceeding:', e)
+                    }
+
+                    try {
+                        await taskStore.createTask({
+                            title: task.title,
+                            description: task.description,
+                            priority: task.priority,
+                            projectId: task.projectId,
+                            estimatedDuration: task.estimatedDuration,
+                            estimatedPomodoros: task.estimatedPomodoros,
+                            tags: task.tags ? [...task.tags] : undefined,
+                            subtasks: task.subtasks?.map(st => ({
+                                ...st,
+                                isCompleted: false,
+                            })) || [],
+                            recurrenceRule: { ...rule },
+                            recurrenceParentId: task.recurrenceParentId || task.id,
+                            recurrenceCount: count,
+                            dueDate: nextDate,
+                            status: 'todo',
+                            isInInbox: true,
+                        })
+                        cloneCount++
+                        console.log(`[RECURRENCE-SCHEDULER] Created deferred clone: "${task.title?.slice(0, 30)}" -> due: ${nextDate} (occurrence #${count})`)
+                    } catch (cloneError: any) {
+                        // DB unique constraint (idx_unique_recurrence_occurrence) catches cross-device race
+                        if (cloneError?.code === '23505' || cloneError?.message?.includes('duplicate key') || cloneError?.message?.includes('unique')) {
+                            console.log(`[RECURRENCE-SCHEDULER] Clone race resolved by DB constraint for chain ${chainId.slice(0, 8)}`)
+                        } else {
+                            throw cloneError
+                        }
+                    }
                     processedChains.add(chainId)
-                    console.log(`[RECURRENCE-SCHEDULER] Created deferred clone: "${task.title?.slice(0, 30)}" -> due: ${nextDate} (occurrence #${count})`)
                 }
             } catch (e) {
                 console.warn(`[RECURRENCE-SCHEDULER] Failed to process task "${task.title?.slice(0, 30)}":`, e)

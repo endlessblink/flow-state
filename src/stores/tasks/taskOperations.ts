@@ -118,6 +118,10 @@ export function useTaskOperations(
             // BUG-1321: Exclude instances and canvasPosition from spread to prevent overwriting computed values
             const { canvasPosition: explicitCanvasPosition, instances: _taskDataInstances, ...taskDataWithoutPositionAndInstances } = taskData
 
+            // Workspace collaboration: inject active workspace into new tasks
+            const { useWorkspaceStore } = await import('../workspace')
+            const activeWorkspaceId = useWorkspaceStore().activeWorkspaceId
+
             const newTask: Task = {
                 id: taskId,
                 title: taskData.title || 'New Task',
@@ -146,9 +150,19 @@ export function useTaskOperations(
                 // _soft_deleted → is_deleted: true and the task vanishes on refresh.
                 _soft_deleted: false,
                 deletedAt: undefined,
+                // Workspace collaboration: set workspaceId from active workspace (taskData takes precedence)
+                workspaceId: taskData.workspaceId !== undefined ? taskData.workspaceId : activeWorkspaceId,
             }
 
-            _rawTasks.value.push(newTask)
+            // Defensive: prevent duplicate push if task with same ID already exists in _rawTasks
+            // (can happen from realtime echo, cross-tab sync, or undo race conditions)
+            const existingIdx = _rawTasks.value.findIndex(t => t.id === taskId)
+            if (existingIdx !== -1) {
+                console.warn(`[TASKS] createTask: duplicate push prevented for ${taskId.slice(0, 8)}, updating in-place`)
+                _rawTasks.value[existingIdx] = newTask
+            } else {
+                _rawTasks.value.push(newTask)
+            }
 
             // BUG-1329: Register pending write to suppress Realtime echo.
             // Without this, the INSERT event from our own direct save bypasses
@@ -405,7 +419,10 @@ export function useTaskOperations(
                 // Set completedAt when status changes TO 'done'
                 if (wasNotDone && isNowDone) {
                     updates.completedAt = new Date()
-                    console.log(`✅ [DONE-ZONE] Task "${task.title?.slice(0, 30)}" marked done, completedAt set`)
+                    // Clear inbox flag — done tasks should not appear in inbox
+                    // Prevents duplicate-looking entries when recurring parent (done) + clone both show
+                    updates.isInInbox = false
+                    console.log(`✅ [DONE-ZONE] Task "${task.title?.slice(0, 30)}" marked done, completedAt set, inbox cleared`)
 
                     // BUG-1303: Stop timer if it's running on the completed task
                     try {
@@ -459,16 +476,51 @@ export function useTaskOperations(
                                     isInInbox: true,
                                 }
 
-                                await createTask(clonedTask)
-                                console.log(`🔄 [RECURRENCE] Cloned recurring task "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (occurrence #${count})`)
-
-                                // SOP-065: Set the recurrence scheduler lock so the deferred scheduler
-                                // doesn't create a SECOND clone if the user refreshes before the DB write
-                                // from this createTask propagates to Supabase.
+                                // BUG-1531: DB-level dedup — prevent cross-device duplicate clones
+                                let skipClone = false
                                 try {
-                                    const LOCK_KEY = `flowstate-recurrence-lock-${today}`
-                                    localStorage.setItem(LOCK_KEY, String(Date.now()))
-                                } catch { /* localStorage may be unavailable */ }
+                                    const { supabase: sbClient } = await import('@/services/auth/supabase')
+                                    if (sbClient) {
+                                        const dedupChainId = task.recurrenceParentId || task.id
+                                        const { data: existingClones } = await sbClient
+                                            .from('tasks')
+                                            .select('id')
+                                            .eq('recurrence_parent_id', dedupChainId)
+                                            .eq('is_deleted', false)
+                                            .neq('status', 'done')
+                                            .limit(1)
+
+                                        if (existingClones && existingClones.length > 0) {
+                                            console.log(`[RECURRENCE] BUG-1531: Skipping clone — active clone already exists in DB for chain ${dedupChainId.slice(0, 8)}`)
+                                            skipClone = true
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn('[RECURRENCE] BUG-1531: DB dedup check failed, proceeding with clone:', e)
+                                    // Fall through — create the clone anyway if we can't check
+                                }
+
+                                if (!skipClone) {
+                                    try {
+                                        await createTask(clonedTask)
+                                        console.log(`🔄 [RECURRENCE] Cloned recurring task "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (occurrence #${count})`)
+                                    } catch (cloneError: any) {
+                                        // DB unique constraint (idx_unique_recurrence_occurrence) catches cross-device race
+                                        if (cloneError?.code === '23505' || cloneError?.message?.includes('duplicate key') || cloneError?.message?.includes('unique')) {
+                                            console.log(`[RECURRENCE] Clone race resolved by DB constraint for chain ${(task.recurrenceParentId || task.id).slice(0, 8)}`)
+                                        } else {
+                                            throw cloneError
+                                        }
+                                    }
+
+                                    // SOP-065: Set the recurrence scheduler lock so the deferred scheduler
+                                    // doesn't create a SECOND clone if the user refreshes before the DB write
+                                    // from this createTask propagates to Supabase.
+                                    try {
+                                        const LOCK_KEY = `flowstate-recurrence-lock-${today}`
+                                        localStorage.setItem(LOCK_KEY, String(Date.now()))
+                                    } catch { /* localStorage may be unavailable */ }
+                                }
                             } else if (nextDueDate) {
                                 console.log(`⏳ [RECURRENCE] Deferred clone for "${task.title?.slice(0, 30)}" → next due: ${nextDueDate} (future, will create on app load)`)
                             } else {
@@ -659,6 +711,9 @@ export function useTaskOperations(
                     const doneForNowUntil = updatedTask.doneForNowUntil
                     payload.done_for_now_until = (!doneForNowUntil || doneForNowUntil === 'null' || doneForNowUntil === 'undefined') ? null : doneForNowUntil
                 }
+                if (changedKeys.has('isCompletionRecord')) {
+                    payload.is_completion_record = updatedTask.isCompletionRecord ?? false
+                }
                 // BUG-1302: Include instances in sync queue payload
                 // Without this, calendar time blocks aren't backed up by the sync queue
                 if (changedKeys.has('instances') && updatedTask.instances !== undefined) {
@@ -743,7 +798,7 @@ export function useTaskOperations(
             // BUG-1207: Direct save to Supabase (VPS is primary persistence).
             // The sync queue above is a backup for offline/failure scenarios.
             // Direct save ensures changes hit VPS immediately without waiting for queue interval.
-            // Echo protection: pendingWrites (120s, tied to sync completion) prevents
+            // Echo protection: pendingWrites (300s/5min, see PENDING_WRITE_TIMEOUT_MS) prevents
             // the realtime echo from this save from reverting local state.
             try {
                 await saveSpecificTasks([updatedTask], `updateTask-direct-${taskId}`)
@@ -999,6 +1054,117 @@ export function useTaskOperations(
 
     const moveTask = async (taskId: string, newStatus: Task['status']) => {
         await updateTask(taskId, { status: newStatus }) // BUG-1051: AWAIT to ensure persistence
+    }
+
+    // TASK-1532: "Done for Now" — for recurring tasks, creates a completion record and advances
+    // the original task to the next occurrence. For non-recurring tasks, delegates to moveTask.
+    // BUG-1536: In-flight guard prevents double-invocation (double-click creating 2 completion records)
+    const doneForNowInFlight = new Set<string>()
+    const doneForNow = async (taskId: string) => {
+        if (doneForNowInFlight.has(taskId)) {
+            console.warn(`[DONE-FOR-NOW] Already in flight for ${taskId}, skipping`)
+            return
+        }
+
+        const task = _rawTasks.value.find(t => t.id === taskId)
+        if (!task) return
+
+        // Non-recurring: just mark done normally
+        if (!task.recurrenceRule) {
+            await moveTask(taskId, 'done')
+            return
+        }
+
+        doneForNowInFlight.add(taskId)
+        try {
+
+        // 1. Stop timer if running on this task
+        try {
+            const timerStore = useTimerStore()
+            if (timerStore.currentTaskId === taskId && timerStore.isTimerActive) {
+                await timerStore.stopTimer()
+            }
+        } catch (e) {
+            console.warn('[Timer] Auto-stop on done-for-now failed:', e)
+        }
+
+        // 2. Calculate next due date
+        const { computeNextDueDate } = await import('@/utils/recurrenceUtils')
+        const today = formatDateKey(new Date())
+        const currentDueDate = task.dueDate || today
+        const count = (task.recurrenceCount || 0) + 1
+        const nextDueDate = computeNextDueDate(currentDueDate, task.recurrenceRule, count)
+
+        if (!nextDueDate) {
+            console.warn(`[DONE-FOR-NOW] Recurrence ended for "${task.title?.slice(0, 30)}" — no next occurrence. Creating final completion record.`)
+        }
+
+        // 3. Create completion record (calendar history clone, not a living task)
+        const completionRecord: Partial<Task> = {
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            projectId: task.projectId,
+            estimatedDuration: task.estimatedDuration,
+            status: 'done',
+            completedAt: new Date(),
+            dueDate: today,
+            recurrenceParentId: task.recurrenceParentId || task.id,
+            isCompletionRecord: true,
+            instances: task.instances
+                ?.filter(inst => inst.scheduledDate === today)
+                .map(inst => ({
+                    ...inst,
+                    id: `instance-completion-${Date.now()}`,
+                    status: 'completed' as const,
+                })) || [],
+            // No recurrenceRule — snapshot, not a living task
+            // No canvas position — completion records are calendar-only
+            isInInbox: false,
+        }
+        await createTask(completionRecord)
+
+        // 4. Update original task: advance to next occurrence
+        const todayInstance = task.instances?.find(inst => inst.scheduledDate === today)
+        const nextInstances: TaskInstance[] = nextDueDate
+            ? [{
+                id: `instance-${taskId}-${Date.now()}`,
+                taskId: taskId,
+                scheduledDate: nextDueDate,
+                scheduledTime: todayInstance?.scheduledTime,
+                duration: todayInstance?.duration || task.estimatedDuration || 25,
+                status: 'scheduled' as const,
+            }]
+            : []
+
+        // Reset subtasks for next occurrence
+        const resetSubtasks = task.subtasks?.map(st => ({
+            ...st,
+            isCompleted: false,
+            updatedAt: new Date(),
+        })) || []
+
+        await updateTask(taskId, {
+            status: 'todo',
+            completedAt: undefined,
+            dueDate: nextDueDate || currentDueDate,
+            recurrenceCount: count,
+            instances: nextInstances,
+            subtasks: resetSubtasks,
+            // Keep canvasPosition — task stays on canvas
+            // Keep parentId — task stays in its group
+        })
+
+        // Set recurrence lock to prevent deferred scheduler from creating duplicates
+        try {
+            const LOCK_KEY = `flowstate-recurrence-lock-${today}`
+            localStorage.setItem(LOCK_KEY, String(Date.now()))
+        } catch { /* localStorage may be unavailable */ }
+
+        console.log(`[DONE-FOR-NOW] "${task.title?.slice(0, 30)}" completed for today, next: ${nextDueDate}`)
+        } finally {
+            doneForNowInFlight.delete(taskId)
+        }
     }
 
     const selectTask = (taskId: string) => {
@@ -1345,6 +1511,7 @@ export function useTaskOperations(
         stopRecurrence,
         bulkDeleteTasks,
         moveTask,
+        doneForNow,
         selectTask,
         deselectTask,
         clearSelection,

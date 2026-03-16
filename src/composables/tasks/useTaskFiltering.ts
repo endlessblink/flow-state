@@ -87,7 +87,8 @@ export const useTaskFiltering = (
             return []
         }
 
-        let filtered = tasks.value.filter(task => !task._soft_deleted)
+        // TASK-1532: Completion records are calendar-only history — exclude from board/canvas/inbox
+        let filtered = tasks.value.filter(task => !task._soft_deleted && !task.isCompletionRecord)
         // console.debug(`🔍 [FILTER-DEBUG] Starting filter with ${filtered.length} tasks (excluding deleted)`)
 
         // 1. Smart View
@@ -227,7 +228,13 @@ export const useTaskFiltering = (
             filtered = filtered.filter(task => task.status !== 'done')
         }
 
-        return filtered
+        // BUG-FIX: Deduplicate — calendarFilteredTasks lacked dedup unlike filteredTasks.
+        // If _rawTasks has two entries with the same ID (realtime echo race), both would render.
+        const seen = new Map<string, Task>()
+        for (const task of filtered) {
+            if (!seen.has(task.id)) seen.set(task.id, task)
+        }
+        return Array.from(seen.values())
     })
 
     const totalTasks = computed(() => tasks.value.filter(task => task.status !== 'done' && !task._soft_deleted).length)

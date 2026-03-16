@@ -244,7 +244,13 @@ export function useTaskPersistence(
             // BUG-339: Guest localStorage is now cleared in useAppInitialization
             // via clearStaleGuestTasks() BEFORE this function is called
 
-            const loadedTasks = await fetchTasks()
+            // Workspace collaboration: filter tasks by active workspace
+            // Pass undefined (not null) for personal workspace — skips workspace_id filter
+            // so it works before the migration adds the column to VPS
+            const { useWorkspaceStore } = await import('../workspace')
+            const wsStore = useWorkspaceStore()
+            const workspaceId = wsStore.activeWorkspaceId === null ? undefined : wsStore.activeWorkspaceId
+            const loadedTasks = await fetchTasks(workspaceId)
 
             // TASK-142: Position integrity validation - detect invalid canvas positions early
             const tasksWithPositions = loadedTasks.filter(t => t.canvasPosition)
@@ -391,8 +397,10 @@ export function useTaskPersistence(
                     // BUG-1457: If DB returned tasks (we're online) and this task has no
                     // pending sync queue entry, it was likely deleted externally (KDE widget,
                     // another device). Only preserve truly new local tasks (created recently).
+                    // BUG-8: Tightened from PENDING_WRITE_TIMEOUT_MS (300s) to 30s to reduce resurrection window.
+                    const RECENT_CREATE_WINDOW_MS = 30_000
                     const localCreatedAt = localTask.createdAt ? new Date(localTask.createdAt).getTime() : 0
-                    const isRecentlyCreated = (Date.now() - localCreatedAt) < PENDING_WRITE_TIMEOUT_MS // 2 minutes
+                    const isRecentlyCreated = (Date.now() - localCreatedAt) < RECENT_CREATE_WINDOW_MS
                     if (loadedTasks.length > 0 && !isRecentlyCreated) {
                         console.log(`🗑️ [SMART-MERGE] Dropping stale local-only task "${localTask.title?.slice(0, 15)}" - not in DB and not recently created`)
                         continue

@@ -48,6 +48,13 @@ class WriteQueueDatabase extends Dexie {
       // Metadata: key-value store for sync state
       metadata: 'key'
     })
+
+    // Version 2: Add workspace support
+    this.version(2).stores({
+      operations: '++id, status, [entityType+entityId], createdAt, nextRetryAt, userId, workspaceId',
+      conflicts: '++id, [operation.entityType+operation.entityId], detectedAt',
+      metadata: 'key'
+    })
   }
 }
 
@@ -350,6 +357,30 @@ export async function recoverStaleSyncing(maxAgeMs = 60_000): Promise<number> {
       }
     }
     console.warn(`⚠️ [SYNC] BUG-1301: Recovered ${staleOps.length} stale syncing operation(s) back to pending`)
+  }
+
+  return staleOps.length
+}
+
+/**
+ * BUG-6: Purge pending operations older than maxAgeMs.
+ * Stale operations from browser sessions closed mid-sync can resurrect deleted tasks
+ * when replayed days later. 24h max age is safe since the app syncs within seconds when online.
+ */
+export async function purgeStaleOperations(maxAgeMs = 24 * 60 * 60 * 1000): Promise<number> {
+  const db = getWriteQueueDB()
+  const cutoff = Date.now() - maxAgeMs
+
+  const staleOps = await db.operations
+    .where('status')
+    .equals('pending')
+    .filter(op => op.createdAt < cutoff)
+    .toArray()
+
+  if (staleOps.length > 0) {
+    const ids = staleOps.map(op => op.id!).filter(id => id !== undefined)
+    await db.operations.bulkDelete(ids)
+    console.warn(`🗑️ [SYNC] BUG-6: Purged ${staleOps.length} stale pending operation(s) older than ${Math.round(maxAgeMs / 3600000)}h`)
   }
 
   return staleOps.length

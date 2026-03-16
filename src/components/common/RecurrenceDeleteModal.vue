@@ -3,7 +3,6 @@
     :is-open="isOpen"
     title="Delete Recurring Task"
     size="sm"
-    variant="danger"
     close-on-overlay-click
     close-on-escape
     class="recurrence-delete-modal"
@@ -138,7 +137,7 @@ const ruleDescription = computed(() => {
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-4);
   background: var(--glass-bg-soft);
   backdrop-filter: blur(8px);
   border-radius: var(--radius-lg);
@@ -185,14 +184,16 @@ const ruleDescription = computed(() => {
 }
 
 .action-label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
+  line-height: 1.3;
 }
 
 .action-hint {
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .modal-actions {

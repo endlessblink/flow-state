@@ -76,8 +76,6 @@ const {
   getPriorityClass,
   getPriorityLabel,
   getTaskStatus,
-  _getStatusLabel,
-  _getStatusIcon,
   positionedExternalEvents
 } = inject('calendar-helpers') as CalendarHelpers
 

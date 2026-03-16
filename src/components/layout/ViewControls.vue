@@ -28,7 +28,7 @@
   <Transition name="slide-down">
     <div v-if="showFilters" class="filter-bar">
       <!-- Expand/Collapse Controls -->
-      <div class="tree-controls">
+      <div v-if="showTreeControls" class="tree-controls">
         <BaseButton variant="secondary" size="sm" @click="$emit('expandAll')">
           <ChevronsDown :size="16" />
           {{ $t('common.expand') }}
@@ -98,6 +98,7 @@ interface Props {
   groupBy: string
   filterStatus: string
   hideDoneTasks?: boolean
+  showTreeControls?: boolean
 }
 
 const sortOptions = computed(() => [
@@ -219,8 +220,8 @@ const filterOptions = computed(() => [
 
 .filter-toggle.active,
 .done-toggle.active {
-  background: var(--color-indigo-bg-medium);
-  color: var(--color-indigo);
+  background: var(--glass-bg-heavy);
+  color: var(--brand-primary);
 }
 
 .filter-bar {

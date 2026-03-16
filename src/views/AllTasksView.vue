@@ -12,6 +12,7 @@
           v-model:group-by="groupBy"
           :filter-status="filterStatus"
           :hide-done-tasks="hideDoneTasks"
+          :show-tree-controls="catalogViewMode === 'list'"
           @update:filter-status="taskStore.setActiveStatusFilter"
           @update:hide-done-tasks="handleToggleDoneTasksFromControl"
           @expand-all="handleExpandAll"
@@ -489,6 +490,11 @@ const closeContextMenu = () => {
 const handleToggleComplete = async (taskId: string) => {
   const task = taskStore.tasks.find(t => t.id === taskId)
   if (task) {
+    // TASK-1532: Recurring tasks use "done for now" on toggle click
+    if (task.status !== 'done' && task.recurrenceRule) {
+      await taskStore.doneForNow(taskId)
+      return
+    }
     const newStatus = task.status === 'done' ? 'todo' : 'done'
     // BUG-1051: AWAIT to ensure persistence
     await taskStore.updateTask(taskId, { status: newStatus })

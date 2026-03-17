@@ -6,7 +6,7 @@ import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot, PositionedExternalEvent } from '@/composables/calendar/useCalendarDayView'
 import type { ComputedRef } from 'vue'
 
-const _props = defineProps<{
+const props = defineProps<{
   timeSlots: TimeSlot[]
   hours: number[]
   isViewingToday: boolean
@@ -76,8 +76,8 @@ const {
   getPriorityClass,
   getPriorityLabel,
   getTaskStatus,
-  getStatusLabel: _getStatusLabel,
-  getStatusIcon: _getStatusIcon,
+  getStatusLabel,
+  getStatusIcon,
   positionedExternalEvents
 } = inject('calendar-helpers') as CalendarHelpers
 
@@ -162,22 +162,22 @@ const {
               'dragging': isDragging && draggedEventId === calEvent.id,
               'is-hovered': hoveredEventId === calEvent.id,
               'selected': selectedEventIds?.has(calEvent.id),
-              'has-overlap': (calEvent as any).totalColumns > 1,
-              'is-compact': (calEvent as any).duration <= 30,
+              'has-overlap': calEvent.totalColumns > 1,
+              'is-compact': calEvent.duration <= 30,
               'status-done': getTaskStatus(calEvent) === 'done',
               'status-active': getTaskStatus(calEvent) === 'todo',
-              'slot-task--virtual': (calEvent as any).isVirtual
+              'slot-task--virtual': calEvent.isVirtual
             }"
-            :style="getSlotTaskStyle(calEvent, slot)"
-            :title="(calEvent as any).isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
-            :draggable="!(calEvent as any).isVirtual"
-            @mouseenter="!(calEvent as any).isVirtual && $emit('eventMouseEnter', calEvent.id)"
-            @mouseleave="!(calEvent as any).isVirtual && $emit('eventMouseLeave')"
-            @dragstart="!(calEvent as any).isVirtual && $emit('eventDragStart', $event, calEvent)"
-            @dragend="!(calEvent as any).isVirtual && $emit('eventDragEnd', $event, calEvent)"
-            @click="!(calEvent as any).isVirtual && $emit('eventClick', $event, calEvent)"
-            @dblclick="!(calEvent as any).isVirtual && $emit('eventDblClick', calEvent)"
-            @contextmenu.prevent="!(calEvent as any).isVirtual && $emit('eventContextMenu', $event, calEvent)"
+            :style="getSlotTaskStyle(calEvent)"
+            :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
+            :draggable="!calEvent.isVirtual"
+            @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"
+            @mouseleave="!calEvent.isVirtual && $emit('eventMouseLeave')"
+            @dragstart="!calEvent.isVirtual && $emit('eventDragStart', $event, calEvent)"
+            @dragend="!calEvent.isVirtual && $emit('eventDragEnd', $event, calEvent)"
+            @click="!calEvent.isVirtual && $emit('eventClick', $event, calEvent)"
+            @dblclick="!calEvent.isVirtual && $emit('eventDblClick', calEvent)"
+            @contextmenu.prevent="!calEvent.isVirtual && $emit('eventContextMenu', $event, calEvent)"
           >
             <!-- Project Stripe -->
             <div

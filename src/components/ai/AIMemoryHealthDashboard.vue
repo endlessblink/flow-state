@@ -36,17 +36,13 @@
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="error-banner glass">
-      {{ error }}
-    </div>
+    <div v-if="error" class="error-banner glass">{{ error }}</div>
 
     <!-- Summary Cards -->
     <div v-if="report" class="summary-cards">
       <div class="card glass score-card" :class="gradeClass">
         <h3>Memory Grade</h3>
-        <div class="grade-display">
-          {{ report.grade }}
-        </div>
+        <div class="grade-display">{{ report.grade }}</div>
         <p>{{ gradeLabel }}</p>
       </div>
 
@@ -60,17 +56,13 @@
 
       <div class="card glass stat-card">
         <h3>Sections</h3>
-        <div class="stat-value">
-          {{ report.sections.length }}
-        </div>
+        <div class="stat-value">{{ report.sections.length }}</div>
         <p>{{ report.mode === 'full' ? 'Full assessment' : 'Quick check' }}</p>
       </div>
 
       <div class="card glass stat-card">
         <h3>Duration</h3>
-        <div class="stat-value stat-value--small">
-          {{ formatDuration(report.durationMs) }}
-        </div>
+        <div class="stat-value stat-value--small">{{ formatDuration(report.durationMs) }}</div>
         <p>{{ formatTime(report.timestamp) }}</p>
       </div>
     </div>

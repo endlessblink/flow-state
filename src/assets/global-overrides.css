@@ -499,7 +499,7 @@ button svg {
 .filter-bar {
     padding: var(--space-2) var(--space-4) !important;
     border-bottom: 1px solid var(--border-subtle) !important;
-    background: var(--glass-bg-heavy) !important;
+    background: transparent !important;
 }
 
 /* Slide-down transition */

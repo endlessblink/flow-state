@@ -941,3 +941,34 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
     background: var(--overlay-component-bg) !important;
 }
 
+/* Task landed animation — pulse + glow when flying task arrives at sidebar project */
+.base-nav-item.task-landed {
+  animation: task-land-flash 0.8s cubic-bezier(0, 0.55, 0.45, 1) !important;
+}
+
+@keyframes task-land-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.7);
+    background: rgba(78, 205, 196, 0);
+    transform: scale(1);
+  }
+  15% {
+    box-shadow: 0 0 16px 6px rgba(78, 205, 196, 0.5);
+    background: rgba(78, 205, 196, 0.15);
+    transform: scale(1.03);
+  }
+  40% {
+    box-shadow: 0 0 8px 2px rgba(78, 205, 196, 0.3);
+    background: rgba(78, 205, 196, 0.08);
+    transform: scale(0.99);
+  }
+  60% {
+    transform: scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(78, 205, 196, 0);
+    background: rgba(78, 205, 196, 0);
+    transform: scale(1);
+  }
+}
+

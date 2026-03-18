@@ -121,14 +121,25 @@ export function useQuickCapture() {
     }
   }
 
-  function startSorting() {
+  async function startSorting() {
     if (pendingTasks.value.length === 0) return false
 
-    // Start a QuickSort session to track stats
-    quickSortStore.startSession()
+    const capturedTasks = [...pendingTasks.value]
+
+    for (const task of capturedTasks) {
+      await taskStore.createTaskWithUndo({
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        projectId: task.projectId,
+        status: 'todo'
+      })
+    }
 
     phase.value = 'sort'
     currentSortIndex.value = 0
+    pendingTasks.value = []
     sortSummary.value = { total: 0, byProject: new Map() }
     return true
   }

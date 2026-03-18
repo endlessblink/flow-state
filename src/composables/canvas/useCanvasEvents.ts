@@ -7,7 +7,8 @@ import { errorHandler, ErrorCategory } from '@/utils/errorHandler'
 import { useCanvasContextMenus } from './useCanvasContextMenus'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
-import { getDeepestContainingGroup, DEFAULT_TASK_WIDTH, DEFAULT_TASK_HEIGHT } from '@/utils/canvas/spatialContainment'
+import { isPointInBounds } from '@/utils/canvas/spatialContainment'
+import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
 import { useCanvasSectionProperties } from './useCanvasSectionProperties'
 import type { CanvasGroup } from '@/types/canvas'
 
@@ -189,15 +190,37 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
             // If so, set parentId and inherit group properties (dueDate, priority, etc.)
             // so that a task dropped directly into "Today" gets dueDate=today.
             const allGroups = canvasStore._rawGroups as CanvasGroup[]
-            const spatialTask = {
-                position: { x, y },
-                width: DEFAULT_TASK_WIDTH,
-                height: DEFAULT_TASK_HEIGHT
-            }
-            const targetGroup = getDeepestContainingGroup(spatialTask, allGroups)
+            // BUG-1530: Use cursor point directly for hit detection (not task center).
+            // getDeepestContainingGroup checks task CENTER, but for a drop we want
+            // to know if the CURSOR landed inside a group.
+            const hitGroups = allGroups.filter(group => {
+                if (!group.position || group.isVisible === false) return false
+                const absolutePos = getGroupAbsolutePosition(group.id, allGroups)
+                return isPointInBounds(
+                    { x, y },
+                    { position: absolutePos, width: group.position.width, height: group.position.height }
+                )
+            })
+            // Pick smallest (deepest/innermost) group if multiple match (nested groups)
+            const targetGroup = hitGroups.length > 0
+                ? hitGroups.reduce((smallest, cur) =>
+                    cur.position.width * cur.position.height < smallest.position.width * smallest.position.height ? cur : smallest
+                )
+                : null
             const groupProps: Record<string, unknown> = {}
+            if (import.meta.env.DEV) {
+                console.log('[BUG-1530:handleDrop]', {
+                    dropPos: { x: Math.round(x), y: Math.round(y) },
+                    allGroupsCount: allGroups.length,
+                    allGroupNames: allGroups.map(g => ({ name: g.name, id: g.id.slice(0, 8), pos: g.position })),
+                    targetGroup: targetGroup ? { name: targetGroup.name, id: targetGroup.id.slice(0, 8) } : null
+                })
+            }
             if (targetGroup) {
                 const inheritedProps = getSectionProperties(targetGroup as CanvasGroup, allGroups)
+                if (import.meta.env.DEV) {
+                    console.log('[BUG-1530:handleDrop] inheritedProps from', targetGroup.name, inheritedProps)
+                }
                 for (const [key, value] of Object.entries(inheritedProps)) {
                     if (key === 'dueDate' && (!value || value === 'null')) continue
                     groupProps[key] = value

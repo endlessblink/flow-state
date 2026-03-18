@@ -6,6 +6,96 @@
 
 ---
 
+## Active Tasks
+
+### ~~TASK-1560~~: Redesign SidebarWorkspaceSwitcher — always-visible with create workspace flow (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-16)
+
+**Scope**: Redesign `src/components/sidebar/SidebarWorkspaceSwitcher.vue` to always show (remove `v-if="shouldShowSwitcher"`), add inline workspace creation with name input + teal confirm button, add copy-invite-link per shared workspace, and add 5 missing translation keys to both locale files.
+
+---
+
+## Workspace Collaboration — Post-Implementation Bugs
+
+### BUG-1561: Sync queue classifyError fails on Supabase PostgrestError objects (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-17)
+
+**Problem**: `classifyError()` in `retryStrategy.ts` calls `String(error)` on Supabase `PostgrestError` objects (plain objects, NOT `instanceof Error`). This produces `"[object Object]"` — all PostgREST errors fall through to `'unknown'` → retried infinitely → rate limit cascade → app goes offline.
+
+**Root cause**: PostgrestError has `.message` property but is not an `Error` instance. `classifyError` only checks `instanceof Error`.
+
+**Fix**: Extract `.message` from plain objects before classification. Already implemented in `src/services/offline/retryStrategy.ts`.
+
+**Files**: `src/services/offline/retryStrategy.ts`
+
+---
+
+### BUG-1562: taskPersistence smart-merge enqueues raw camelCase payloads to sync queue (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-17)
+
+**Problem**: `taskPersistence.ts:416-420` enqueues raw app-side task objects (with `_soft_deleted`, `projectId`, `isInInbox` etc.) directly to the sync queue, bypassing `toSupabaseTask()`. When the queue processes these, Supabase returns 400 because camelCase fields don't exist as DB columns.
+
+**Root cause**: Smart-merge local-only task preservation used `payload: localTask as unknown as Record<string, unknown>` instead of mapping through `toSupabaseTask()`.
+
+**Fix**: Use `toSupabaseTask()` mapper before enqueueing. Already implemented in `src/stores/tasks/taskPersistence.ts`.
+
+**Files**: `src/stores/tasks/taskPersistence.ts`
+
+---
+
+### BUG-1563: Workspace switch shows personal tasks in shared workspace (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-17)
+
+**Problem**: When switching to a shared workspace, the empty-overwrite protection in `taskPersistence.ts` and `canvas.ts` blocks loading 0 tasks (legitimate for an empty workspace), keeping 216 personal tasks visible.
+
+**Root cause**: BUG-169 safety guard treats "0 loaded, N existing" as data loss — doesn't account for workspace switches where 0 tasks IS correct.
+
+**Fix**: Check `isSwitchingWorkspace` flag from workspace store to bypass protection during switches. Already implemented in `taskPersistence.ts`, `canvas.ts`, `canvasGroups.ts`.
+
+**Files**: `src/stores/tasks/taskPersistence.ts`, `src/stores/canvas.ts`, `src/stores/canvas/canvasGroups.ts`
+
+---
+
+### BUG-1564: loadMembers() PGRST200 — cross-schema JOIN to auth.users fails (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17)
+
+**Problem**: `loadMembers()` in workspace store uses PostgREST JOIN to `auth.users` which is in a different schema. PostgREST can't resolve the FK.
+
+**Fix**: Removed the JOIN, fetch raw member records only. Display names deferred to Phase 3 profiles table.
+
+**Files**: `src/stores/workspace.ts`
+
+---
+
+### BUG-1565: Sync queue processes during workspace switch causing 400s (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17)
+
+**Problem**: When switching workspaces, realtime events for departing tasks trigger sync queue operations that upsert with stale context.
+
+**Fix**: Added `isSwitchingWorkspace` flag to workspace store, sync queue's `processQueue()` checks it before processing.
+
+**Files**: `src/stores/workspace.ts`, `src/composables/sync/useSyncOrchestrator.ts`
+
+---
+
+### BUG-1566: One-time IndexedDB cleanup needed after camelCase payload contamination (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-17)
+
+**Problem**: Stale sync queue ops with camelCase payloads accumulated in IndexedDB before BUG-1562 fix. These ops retry infinitely (due to BUG-1561), causing rate limit cascades that take down the entire app on every page load.
+
+**Fix**: One-time `indexedDB.deleteDatabase()` cleanup at app startup in `main.ts`. Cleanup guard uses localStorage key so it runs only once. Safe because all tasks exist in production DB. Should be removed after cleanup completes.
+
+**Files**: `src/main.ts`
+
+---
+
 ## Active Bugs (P0-P1)
 
 ### ~~BUG-1523~~: iCal parser skips ALL recurring events — RRULE expansion missing (✅ DONE)
@@ -1794,6 +1884,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1347**~~ | **P0** | ✅ **KDE Plasma widget freeze — gated 40+ console.log behind debug flag, staggered concurrent XHR with Qt.callLater(), reactive transition timer, throttled canvas repaints** (✅ DONE 2026-02-19) |
 | ~~**BUG-1365**~~ | **P0** | ✅ **Calendar day view — task disappears after editing and saving (false positive scheduleExplicitlyRemoved for instance-based tasks)** (✅ DONE 2026-02-19) |
 | ~~**BUG-1360**~~ | **P0** | ✅ **Canvas long task cards cut off when zooming — removed LOD content hiding, overflow:hidden chain, title 3-line clamp** (✅ DONE 2026-02-20) |
+| **BUG-1567** | **P2** | 🔄 **Deleted projects still appear in QuickSort CategorySelector — project store `projects` computed doesn't filter soft-deleted projects (is_deleted=true)** (🔄 IN PROGRESS 2026-03-18) |
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
 | **BUG-1346** | **P1** | **🔄 Mobile Inbox tab broken in PWA on mobile — layout/design broken** (🔄 IN PROGRESS 2026-03-04) |

@@ -290,6 +290,17 @@ Apply these rules to ALL implementations. Based on Vercel Web Interface Guidelin
 - ALWAYS handle empty states — never render broken UI for empty data
 - Anticipate short, average, and very long user-generated content
 
+### Flexbox Chips/Pills Overflow Pitfalls
+
+| Pitfall | Fix |
+|---------|-----|
+| `flex: 1` (= `1 1 0%`) starts at 0 width — truncates text even with `overflow: visible` | Use `flex: 0 0 auto` for natural content width |
+| `-webkit-line-clamp` persists through CSS overrides | Must explicitly unset: `-webkit-line-clamp: unset; -webkit-box-orient: unset` |
+| `overflow-x: auto` + `overflow-y: visible` both become `auto` (CSS spec) | Don't mix; use `min-width: 0` on flex parent + `overflow-x: auto` only |
+| `display: inline` inside flex container → blockified (CSS spec) | Use `display: block` instead |
+| Selected chip outline clipped by parent `padding: 0` | Add padding to container for decoration space |
+| Horizontal scroll not working on flex children | Add `min-width: 0` to the flex child that scrolls |
+
 ## 3.7 Images & Performance
 
 | Rule | Implementation |

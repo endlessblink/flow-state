@@ -1,7 +1,7 @@
 # FlowState Standard Operating Procedures (SOPs)
 
-**Last Updated**: March 7, 2026
-**Total Documents**: 39 active, 45 archived (84 total)
+**Last Updated**: March 18, 2026
+**Total Documents**: 40 active, 45 archived (85 total)
 
 ---
 
@@ -31,7 +31,7 @@
 
 ```
 docs/sop/
-├── *.md           # Numbered SOPs (SOP-001 to SOP-064)
+├── *.md           # Numbered SOPs (SOP-001 to SOP-066)
 ├── active/        # Category-prefixed active SOPs (13 files)
 ├── canvas/        # Canvas system documentation (7 files)
 ├── reference/     # Implementation guides (3 files)
@@ -43,7 +43,7 @@ docs/sop/
 
 ## Active SOPs by Location
 
-### Root Directory (56 files)
+### Root Directory (57 files)
 
 | File | Description |
 |------|-------------|
@@ -102,6 +102,8 @@ docs/sop/
 | `SOP-062-route-error-boundary.md` | Route error boundary for dynamic import failures |
 | `SOP-063-mobile-swipe-gestures.md` | Mobile swipe gesture implementation |
 | `SOP-064-task-permanent-delete.md` | Task permanent delete architecture |
+| `SOP-065-recurrence-scheduler-dedup.md` | Recurrence scheduler deduplication |
+| `SOP-066-compact-chip-overflow.md` | Compact chips & pills overflow/clipping fixes |
 
 ### Active Directory (13 files)
 
@@ -169,9 +171,13 @@ Historical fixes in `archived/`. Notable entries:
 | SOP-022 to SOP-027 | Post-consolidation + Addendum SOPs |
 | SOP-028 to SOP-047 | Feature & infrastructure SOPs |
 | SOP-048 to SOP-057 | Renumbered duplicates (March 2026) |
-| SOP-058+ | Future SOPs |
+| SOP-058 to SOP-066 | Post-March 2026 SOPs |
 
 ---
+
+## Updates (March 18, 2026)
+
+- Added SOP-066: Compact Chips & Pills — Overflow and Clipping Fixes (QuickSort and CategorySelector patterns)
 
 ## Updates (March 7, 2026)
 

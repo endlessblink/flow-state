@@ -1389,6 +1389,21 @@ button, a { -webkit-tap-highlight-color: rgba(78, 205, 196, 0.1); }
 - User-generated content: anticipate short, average, and very long inputs
 - Use `break-words` or `overflow-wrap: break-word` for URLs/long strings
 
+### Compact Chips & Pills in Constrained Panels (SOP-066)
+
+When placing chips/pills in bottom sheets or modals with fixed `max-width`:
+
+| Pitfall | Fix |
+|---------|-----|
+| `flex: 1` (= `flex: 1 1 0%`) starts element at 0 width — text truncates even with `overflow: visible` | Use `flex: 0 0 auto` for natural content width |
+| `-webkit-line-clamp` persists through overrides | Must explicitly set `-webkit-line-clamp: unset` AND `-webkit-box-orient: unset` |
+| `overflow-x: auto` + `overflow-y: visible` = both become `auto` (CSS spec) | Don't mix; use `min-width: 0` on flex parent + `overflow-x: auto` only |
+| `display: inline` inside flex container is blockified (CSS spec) | Use `display: block` instead |
+| Selected chip outline/border clipped by parent `padding: 0` | Add `padding: var(--space-1) var(--space-2)` to grid container |
+| Compact focus states too heavy (3px outline + offset) | Override to `outline: none; border-color: var(--brand-primary)` in compact mode |
+
+**Reference:** `docs/sop/SOP-066-compact-chip-overflow.md`
+
 ## 13.5 Navigation & URL State
 
 - URL MUST reflect state — filters, tabs, pagination, sort order in query params

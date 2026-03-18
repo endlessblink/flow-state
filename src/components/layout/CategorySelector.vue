@@ -235,16 +235,16 @@ onUnmounted(() => {
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-normal) var(--ease-out);
-  text-align: left;
+  text-align: start;
   min-width: 140px; /* Minimum button width - increased for longer names */
   min-height: 64px; /* Support 2-line text */
 }
 
 .category-button.is-nested {
-  padding-left: calc(var(--space-5) + (var(--depth, 0) * var(--space-6)));
+  padding-inline-start: calc(var(--space-5) + (var(--depth, 0) * var(--space-6)));
   background: var(--glass-bg-subtle);
-  border-left-width: 3px;
-  border-left-color: var(--glass-border-hover);
+  border-inline-start-width: 3px;
+  border-inline-start-color: var(--glass-border-hover);
 }
 
 .category-button:hover {
@@ -297,7 +297,7 @@ onUnmounted(() => {
   font-size: var(--text-xs);
   color: var(--text-muted);
   font-family: monospace;
-  margin-right: var(--space-1);
+  margin-inline-end: var(--space-1);
   user-select: none;
 }
 
@@ -343,9 +343,9 @@ kbd {
 /* Compact mode — pill-style inline buttons */
 .category-selector--compact .category-grid {
   gap: var(--space-1_5) !important;
-  padding: 0 !important;
+  padding: var(--space-1) var(--space-2) !important;
   margin-bottom: var(--space-2) !important;
-  max-height: 180px;
+  max-height: 220px;
 }
 
 .category-selector--compact .category-button {
@@ -360,13 +360,19 @@ kbd {
 }
 
 .category-selector--compact .category-button.is-nested {
-  padding-left: var(--space-2_5) !important;
-  border-left-width: 2px !important;
+  padding-inline-start: var(--space-2_5) !important;
+  border-inline-start-width: 2px !important;
 }
 
 .category-selector--compact .category-button:hover {
   transform: none !important;
   box-shadow: none !important;
+}
+
+.category-selector--compact .category-button:focus,
+.category-selector--compact .category-button.has-focus {
+  outline: none !important;
+  border-color: var(--brand-primary) !important;
 }
 
 .category-selector--compact .shortcut-badge {
@@ -392,9 +398,14 @@ kbd {
 
 .category-selector--compact .project-name {
   font-size: var(--text-sm) !important;
-  -webkit-line-clamp: 1 !important;
+  display: block !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
   white-space: nowrap !important;
-  max-width: 120px !important;
+  max-width: none !important;
+  flex: 0 0 auto !important; /* Don't shrink — take natural text width */
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
 }
 
 /* Reduce motion for accessibility */

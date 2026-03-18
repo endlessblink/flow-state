@@ -22,7 +22,7 @@
     <!-- Glowing Progress Bar -->
     <div v-if="!isComplete && progress.total > 0 && activeTab === 'sort'" class="glow-progress-track">
       <div class="glow-progress-fill" :style="{ width: `${progressPercentage}%` }" />
-      <div class="glow-progress-glow" :style="{ left: `${progressPercentage}%` }" />
+      <div class="glow-progress-glow" :style="{ insetInlineStart: `${progressPercentage}%` }" />
     </div>
 
     <!-- Tab Navigation -->
@@ -236,6 +236,7 @@
               <button class="pill" :class="{ active: isDueToday }" @click="setQuickDate('today')">Today</button>
               <button class="pill" :class="{ active: isDueTomorrow }" @click="setQuickDate('tomorrow')">+1</button>
               <button class="pill" @click="setQuickDate('in3days')">+3</button>
+              <button class="pill" :class="{ active: isDueWeekend }" @click="setQuickDate('weekend')">Wknd</button>
               <button class="pill" :class="{ active: isDueNextWeek }" @click="setQuickDate('nextweek')">+7</button>
               <button class="pill" @click="setQuickDate('in2weeks')">+14</button>
               <button class="pill" @click="setQuickDate('in30days')">+30</button>
@@ -500,11 +501,29 @@ const isDueNextWeek = computed(() => {
   return d.getTime() === nextWeek.getTime()
 })
 
+const isDueWeekend = computed(() => {
+  if (!currentTask.value?.dueDate) return false
+  const d = new Date(currentTask.value.dueDate)
+  d.setHours(0,0,0,0)
+  const nextSat = getNextSaturday()
+  return d.getTime() === nextSat.getTime()
+})
+
+function getNextSaturday(): Date {
+  const d = new Date()
+  d.setHours(0,0,0,0)
+  const day = d.getDay() // 0=Sun, 6=Sat
+  const daysUntilSat = (6 - day + 7) % 7 || 7  // if today is Saturday, go to next Saturday
+  d.setDate(d.getDate() + daysUntilSat)
+  return d
+}
+
 function setQuickDate(preset: string) {
   const d = new Date(); d.setHours(0,0,0,0)
   if (preset === 'today') { /* already today */ }
   else if (preset === 'tomorrow') d.setDate(d.getDate() + 1)
   else if (preset === 'in3days') d.setDate(d.getDate() + 3)
+  else if (preset === 'weekend') { const sat = getNextSaturday(); d.setTime(sat.getTime()) }
   else if (preset === 'nextweek') d.setDate(d.getDate() + 7)
   else if (preset === 'in2weeks') d.setDate(d.getDate() + 14)
   else if (preset === 'in30days') d.setDate(d.getDate() + 30)
@@ -692,7 +711,7 @@ const currentTaskProject = computed(() => {
   border-radius: var(--radius-full);
   filter: blur(var(--blur-sm));
   transform: translate(-50%, -50%);
-  transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: inset-inline-start 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: none;
 }
 
@@ -703,7 +722,7 @@ const currentTaskProject = computed(() => {
   display: flex;
   gap: var(--space-2);
   padding: var(--space-4) var(--space-6);
-  padding-left: var(--space-8);
+  padding-inline-start: var(--space-8);
   flex-shrink: 0;
 }
 
@@ -952,7 +971,7 @@ const currentTaskProject = computed(() => {
 .edit-panel-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.65);
   z-index: var(--z-sticky);
   display: flex;
   align-items: flex-end;
@@ -964,8 +983,8 @@ const currentTaskProject = computed(() => {
   max-width: 520px;
   max-height: 75vh;
   overflow-y: auto;
-  background: var(--overlay-component-bg);
-  border: 1px solid var(--glass-border);
+  background: var(--surface-primary);
+  border: 1px solid var(--glass-border-hover);
   border-bottom: none;
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   padding: var(--space-4) var(--space-6) var(--space-8);
@@ -974,7 +993,7 @@ const currentTaskProject = computed(() => {
   gap: var(--space-4);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: var(--shadow-2xl);
+  box-shadow: var(--shadow-2xl), 0 0 0 1px rgba(255,255,255,0.06) inset;
 }
 
 .edit-panel-handle {
@@ -1036,14 +1055,22 @@ const currentTaskProject = computed(() => {
   display: flex;
   gap: var(--space-2);
   flex: 1;
+  min-width: 0; /* Allow shrinking below content width for scroll */
 }
 
 .pill-scroll {
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  gap: var(--space-1_5);
+  min-width: 0;
 }
 .pill-scroll::-webkit-scrollbar { display: none; }
+
+.pill-scroll .pill {
+  padding: var(--space-1_5) var(--space-2);
+  font-size: var(--text-xs);
+}
 
 .pill {
   flex: 0 0 auto;
@@ -1361,7 +1388,7 @@ const currentTaskProject = computed(() => {
 .celebration-sparkle {
   position: absolute;
   top: -12px;
-  right: -12px;
+  inset-inline-end: -12px;
   font-size: var(--text-xl);
   animation: sparkleSpin 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }

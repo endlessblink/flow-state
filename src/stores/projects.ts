@@ -47,10 +47,12 @@ export const useProjectStore = defineStore('projects', () => {
 
     // SAFETY: Filtered projects for display
     // - Filters out corrupted projects (missing name, invalid data)
-    // - Future: could filter out _soft_deleted projects if that feature is added
+    // - BUG-1567: Filters out soft-deleted projects (is_deleted=true)
     const projects = computed(() => _rawProjects.value.filter(p => {
         // Must have valid id
         if (!p.id) return false
+        // BUG-1567: Hide soft-deleted projects that slipped through query filter
+        if ((p as Record<string, unknown>).is_deleted === true || (p as Record<string, unknown>).isDeleted === true) return false
         // Must have valid name (not null, undefined, or empty string)
         if (!p.name || typeof p.name !== 'string' || p.name.trim() === '') {
             console.warn(`[PROJECT-FILTER] Hiding project with invalid name:`, p.id)
@@ -113,7 +115,12 @@ export const useProjectStore = defineStore('projects', () => {
                 return
             }
 
-            const loadedProjects = await fetchProjects()
+            // Workspace collaboration: filter projects by active workspace
+            // undefined = no filter (personal/pre-migration safe), string = workspace filter
+            const { useWorkspaceStore } = await import('@/stores/workspace')
+            const wsStore = useWorkspaceStore()
+            const workspaceId = wsStore.activeWorkspaceId === null ? undefined : wsStore.activeWorkspaceId
+            const loadedProjects = await fetchProjects(workspaceId)
             _rawProjects.value = loadedProjects
             console.log(`✅ [SUPABASE] Loaded ${loadedProjects.length} projects`)
 
@@ -138,6 +145,10 @@ export const useProjectStore = defineStore('projects', () => {
     const createProject = async (projectData: Partial<Project>) => {
         manualOperationInProgress.value = true
         try {
+            // Workspace collaboration: inject active workspace into new projects
+            const { useWorkspaceStore } = await import('@/stores/workspace')
+            const activeWorkspaceId = useWorkspaceStore().activeWorkspaceId
+
             const newProject: Project = {
                 id: crypto.randomUUID(), // Use standard UUID
                 name: projectData.name || 'New Project',
@@ -148,7 +159,9 @@ export const useProjectStore = defineStore('projects', () => {
                 parentId: projectData.parentId || null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                ...projectData
+                ...projectData,
+                // Workspace collaboration: set workspaceId from active workspace (projectData takes precedence)
+                workspaceId: projectData.workspaceId !== undefined ? projectData.workspaceId : activeWorkspaceId,
             } as Project
             _rawProjects.value.push(newProject)
 

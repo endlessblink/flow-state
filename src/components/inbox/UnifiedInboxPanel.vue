@@ -36,6 +36,7 @@
       :context="context"
       :sort-by="sortBy"
       :sort-direction="sortDirection"
+      :on-canvas-count="onCanvasCount"
       :search-query="searchQuery"
 
       @toggle-collapse="isCollapsed = !isCollapsed"
@@ -197,6 +198,7 @@ const {
   next3DaysCount,
   weekCount,
   monthCount,
+  onCanvasCount,
   doneTaskCount,
   toggleHideDoneTasks,
   clearAllFilters,

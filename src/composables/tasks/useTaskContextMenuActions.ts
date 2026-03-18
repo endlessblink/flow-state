@@ -200,6 +200,7 @@ export function useTaskContextMenuActions(
         // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
         const taskId = currentTask.value?.id
         const currentStatus = currentTask.value?.status
+        const currentRecurrenceRule = currentTask.value?.recurrenceRule
         const isBatch = isBatchOperation.value
 
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
@@ -208,6 +209,16 @@ export function useTaskContextMenuActions(
         if (isBatch) {
             emit('setStatus', 'done')
         } else if (taskId) {
+            // TASK-1532: Recurring tasks use "done for now" on toggle click
+            if (currentStatus !== 'done' && currentRecurrenceRule) {
+                try {
+                    await taskStore.doneForNow(taskId)
+                    canvasStore.requestSync('user:context-menu')
+                } catch (error) {
+                    console.error('Error in done-for-now:', error)
+                }
+                return
+            }
             const newStatus = currentStatus === 'done' ? 'todo' : 'done'
             try {
                 await taskStore.updateTaskWithUndo(taskId, { status: newStatus })

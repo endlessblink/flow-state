@@ -266,18 +266,23 @@ export function useTaskPersistence(
             // BUG-169 FIX: Safety guard - don't overwrite existing tasks with empty array
             // This prevents data loss from race conditions during auth propagation
             // TASK-1177: Extended from 10 seconds to 60 seconds for better protection
+            // Exception: workspace switches to an empty workspace are legitimate
             if (loadedTasks.length === 0 && _rawTasks.value.length > 0) {
-                const sessionStart = typeof window !== 'undefined' ? (window as unknown as { FlowStateSessionStart?: number }).FlowStateSessionStart || 0 : 0
-                const timeSinceSessionStart = Date.now() - sessionStart
+                if (wsStore.isSwitchingWorkspace) {
+                    console.log(`🔄 [TASK-LOAD] Workspace switch — clearing ${_rawTasks.value.length} tasks for new workspace context`)
+                } else {
+                    const sessionStart = typeof window !== 'undefined' ? (window as unknown as { FlowStateSessionStart?: number }).FlowStateSessionStart || 0 : 0
+                    const timeSinceSessionStart = Date.now() - sessionStart
 
-                // In the first 60 seconds, don't overwrite existing tasks with empty
-                // This gives plenty of time for network issues to resolve
-                if (timeSinceSessionStart < 60000) {
-                    console.warn(`🛡️ [TASK-LOAD] BLOCKED empty overwrite - ${_rawTasks.value.length} existing tasks would be lost (session ${timeSinceSessionStart}ms old)`)
-                    return
+                    // In the first 60 seconds, don't overwrite existing tasks with empty
+                    // This gives plenty of time for network issues to resolve
+                    if (timeSinceSessionStart < 60000) {
+                        console.warn(`🛡️ [TASK-LOAD] BLOCKED empty overwrite - ${_rawTasks.value.length} existing tasks would be lost (session ${timeSinceSessionStart}ms old)`)
+                        return
+                    }
+
+                    console.warn(`⚠️ [TASK-LOAD] Supabase returned 0 tasks but ${_rawTasks.value.length} exist locally - proceeding with empty (session ${timeSinceSessionStart}ms old)`)
                 }
-
-                console.warn(`⚠️ [TASK-LOAD] Supabase returned 0 tasks but ${_rawTasks.value.length} exist locally - proceeding with empty (session ${timeSinceSessionStart}ms old)`)
             }
 
             // ================================================================
@@ -411,13 +416,30 @@ export function useTaskPersistence(
 
                     // Queue the task for sync retry via the offline sync system
                     // This is async and non-blocking - the task stays in memory regardless
-                    import('@/composables/sync/useSyncOrchestrator').then(({ useSyncOrchestrator }) => {
+                    // BUG-1533c: Use toSupabaseTask() to map app-side fields (camelCase, _soft_deleted)
+                    // to DB column names. Previously sent raw localTask which caused PGRST204 errors
+                    // ("Could not find the '_soft_deleted' column").
+                    Promise.all([
+                        import('@/composables/sync/useSyncOrchestrator'),
+                        import('@/utils/supabaseMappers'),
+                        import('@/stores/auth')
+                    ]).then(([{ useSyncOrchestrator }, { toSupabaseTask }, { useAuthStore }]) => {
                         const sync = useSyncOrchestrator()
+                        const userId = useAuthStore().user?.id
+                        if (!userId) return
+                        const mappedPayload = toSupabaseTask(localTask, userId)
+                        // Clear soft-delete flags — this is a local-only task being preserved
+                        const payload: Record<string, unknown> = {
+                            ...mappedPayload,
+                            is_deleted: false,
+                            deleted_at: null
+                        }
+                        delete payload.position_version
                         sync.enqueue({
                             entityType: 'task',
                             operation: 'create',
                             entityId: localTask.id,
-                            payload: localTask as unknown as Record<string, unknown>
+                            payload: JSON.parse(JSON.stringify(payload))
                         }).catch(e => {
                             console.warn(`[SMART-MERGE] Failed to queue sync for "${localTask.title?.slice(0, 15)}":`, e)
                         })

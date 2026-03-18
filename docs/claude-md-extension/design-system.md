@@ -1,10 +1,7 @@
 # Design System
 
-## Overview
-
-FlowState uses a comprehensive design token system to ensure visual consistency across all components. **NEVER hardcode CSS values** - always use design tokens.
-
-**Token file:** `src/assets/design-tokens.css` (1,248 lines)
+> **Last verified**: March 16, 2026 | **Token file**: `src/assets/design-tokens.css` (~1,450 lines)
+> **Read this before any UI work. NEVER hardcode CSS values — always use design tokens.**
 
 ---
 
@@ -24,189 +21,462 @@ FlowState uses a comprehensive design token system to ensure visual consistency 
 
 ---
 
-## Common Token Reference
+## Token Reference (3-Tier System)
 
-### Backgrounds
+### Tier 1 — Base Palette
+
+**Slate scale**: `--slate-950` through `--slate-50` (HSL values)
+**Brand teal**: `--teal-500: 174, 62%, 58%` → `#4ECDC4`
+**Core colors**: `--red-500`, `--green-500`, `--blue-500`
+**Primary scale**: `--color-primary-50` through `--color-primary-900`
+
+### Tier 2 — Semantic Tokens
+
+**Surfaces:**
 ```css
---overlay-component-bg        /* Dark overlay panels */
---glass-bg-light             /* rgba(255,255,255,0.02) */
---glass-bg-medium            /* rgba(255,255,255,0.04) */
---glass-bg-heavy             /* rgba(255,255,255,0.06) */
+--surface-primary          /* Main background */
+--surface-secondary        /* Cards, panels */
+--surface-tertiary         /* Nested elements */
+--surface-elevated         /* Raised elements */
+--surface-hover            /* Hover state */
+--surface-active           /* Active/pressed state */
 ```
 
-### Borders
+**Glass Morphism (purple-tinted, lightest → heaviest):**
 ```css
---glass-border               /* rgba(255,255,255,0.10) */
---glass-border-hover         /* rgba(255,255,255,0.15) */
---overlay-component-border   /* Full border declaration */
+--glass-bg-subtle   (0.02)    --glass-bg-weak    (0.03)
+--glass-bg-light    (0.04)    --glass-bg-tint     (0.05)
+--glass-bg-medium   (0.06)    --glass-bg-soft     (0.10)
+--glass-bg-heavy    (0.25)    --glass-bg-solid    (0.95, Tauri)
+--glass-panel-bg    (0.60, semi-transparent panels)
 ```
 
-### Spacing (8px Grid)
+**Glass Borders:**
 ```css
---space-1 (4px)
---space-1_5 (6px)
---space-2 (8px)
---space-2_5 (10px)
---space-3 (12px)
---space-4 (16px)
---space-5 (20px)
---space-6 (24px)
+--glass-border          (0.10)    --glass-border-hover   (0.15)
+--glass-border-faint    (0.03)    --glass-border-light   (0.06)
+--glass-border-medium   (0.16)    --glass-border-strong  (0.28)
+--glass-border-soft     (0.12)
 ```
 
-### Typography
+**Text Hierarchy:**
 ```css
---text-xs (12px)
---text-sm (14px)
---text-base (16px)
---text-lg (18px)
---text-xl (20px)
+--text-primary   (100%)    --text-secondary  (80%)
+--text-tertiary  (60%)     --text-muted      (45%)
+--text-subtle    (35%)     --text-disabled   (25%)
 ```
 
-### Border Radius
+**Brand:**
 ```css
---radius-sm (6px)
---radius-md (8px)
---radius-lg (16px)
---radius-xl (20px)
---radius-full (9999px)
+--brand-primary           /* #4ECDC4 (teal) — THE action color */
+--brand-hover             /* #3db8af */
+--brand-active            /* #2da39a */
+--brand-primary-subtle    /* Soft teal bg */
+--brand-primary-dim       /* Dimmed teal border */
+--brand-glow-sm           /* Teal glow for hover effects */
+--brand-focus-ring        /* Focus ring */
 ```
 
-### Animation
+**Interactive States:**
 ```css
---duration-fast (150ms)
---duration-normal (200ms)
---duration-slow (300ms)
---ease-out
---ease-in-out
---spring-smooth
+--state-active-border/bg/glass/text
+--state-hover-border/bg/shadow/glow
+--state-selected-bg/border/shadow/glow
 ```
 
-### Priority Colors
+### Tier 3 — Functional/Component Tokens
+
+**Status Colors (task cards):**
 ```css
---color-priority-high        /* Red tones */
---color-priority-medium      /* Yellow/Orange tones */
---color-priority-low         /* Blue tones */
---color-priority-none        /* Gray tones */
+--status-planned-bg/border/text       /* Blue */
+--status-in-progress-bg/border/text   /* Amber */
+--status-done-bg/border/text          /* Green */
+--status-backlog-bg/border/text       /* Gray */
+--status-on-hold-bg/border/text       /* Orange */
+```
+
+**Priority Colors:**
+```css
+--color-priority-high    (#ef4444)    --priority-high-bg/border/text/glow
+--color-priority-medium  (#f59e0b)    --priority-medium-bg/border/text/glow
+--color-priority-low     (#3b82f6)    --priority-low-bg/border/text/glow
+```
+
+**Semantic Status:**
+```css
+--color-success (#10b981)    --color-warning (#f59e0b)
+--color-danger  (#ef4444)    --color-info    (#3b82f6)
+```
+
+**Overlay Components (modals, dropdowns, context menus):**
+```css
+--overlay-component-bg        /* rgba(28,25,45,0.92) */
+--overlay-component-backdrop  /* blur(20px) */
+--overlay-component-border    /* 1px solid rgba(255,255,255,0.15) */
+--overlay-component-shadow    /* Layered dark shadow */
+--dropdown-bg                 /* Dropdown background */
+--dropdown-item-hover-bg      /* Item hover state */
+```
+
+**Timer:**
+```css
+--timer-active-border/glow/glow-strong
+--timer-work-stroke/glow       /* Teal for work */
+--timer-break-stroke/glow      /* Amber for break */
 ```
 
 ---
 
-## Example: Correct vs Incorrect
+## Spacing (8px Grid)
 
 ```css
-/* ❌ WRONG - Hardcoded values */
-.menu {
-  background: rgba(18, 18, 20, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 8px 12px;
-  border-radius: 12px;
-  transition: all 0.15s ease-out;
-}
+--space-0 (0)       --space-px (1px)    --space-0_5 (2px)
+--space-1 (4px)     --space-1_5 (6px)   --space-2 (8px)
+--space-2_5 (10px)  --space-3 (12px)    --space-3_5 (14px)
+--space-4 (16px)    --space-5 (20px)    --space-6 (24px)
+--space-7 (28px)    --space-8 (32px)    --space-9 (36px)
+--space-10 (40px)   --space-12 (48px)   --space-14 (56px)
+--space-16 (64px)   --space-20 (80px)   --space-24 (96px)
+--space-32 (128px)
+```
 
-/* ✅ CORRECT - Design tokens */
-.menu {
-  background: var(--overlay-component-bg);
-  border: var(--overlay-component-border);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-lg);
-  transition: all var(--duration-fast) var(--ease-out);
-}
+Semantic aliases: `--gap-xs/sm/md/lg`, `--padding-xs/sm/md/lg/xl/2xl`, `--margin-xs/sm/md/lg`
+
+---
+
+## Typography
+
+```css
+--text-2xs (10px)   --text-xs (12px)    --text-meta (13px)
+--text-sm (14px)    --text-base (16px)  --text-lg (18px)
+--text-xl (20px)    --text-2xl (24px)   --text-3xl (30px)   --text-4xl (36px)
+
+--font-light (300)  --font-normal (400) --font-medium (500)
+--font-semibold (600) --font-bold (700)
+
+--leading-none (1)  --leading-tight (1.25) --leading-snug (1.375)
+--leading-normal (1.5) --leading-relaxed (1.625) --leading-loose (2)
 ```
 
 ---
 
-## Tailwind Configuration
+## Border Radius
 
-Extensive customization in `tailwind.config.js`:
-- Custom color palette mapped to design tokens
-- Component classes (`.task-base`, `.btn`, etc.)
-- Canvas-specific utilities
-- GPU acceleration helpers
-- RTL support plugin
+```css
+--radius-none (0)    --radius-xs (2px)   --radius-sm (6px)
+--radius-md (8px)    --radius-lg (16px)  --radius-xl (20px)
+--radius-2xl (24px)  --radius-3xl (32px) --radius-full (9999px)
+```
 
 ---
 
-## Glass Morphism Theme
+## Animation
 
-FlowState uses a glass morphism design language:
-- Consistent dark/light mode support
-- Backdrop filters for modern glass effects
-- Smooth transitions between themes
-- CSS custom property integration
-
-### Glass Effect Layers
 ```css
-/* Light glass (subtle) */
-background: var(--glass-bg-light);
+--duration-instant (50-100ms)  --duration-fast (150ms)
+--duration-normal (200ms)      --duration-slow (300ms)
+--duration-slower (500ms)
+
+--ease-linear  --ease-in  --ease-out  --ease-in-out
+--spring-smooth  --spring-bouncy  --spring-swift  --spring-gentle
+```
+
+---
+
+## Z-Index Scale
+
+```css
+--z-base (0)           --z-dropdown (1000)     --z-sticky (1100)
+--z-overlay (1200)     --z-modal (1300)        --z-popover (1400)
+--z-toast (1450)       --z-tooltip (1500)      --z-context-menu (9999)
+--z-submenu (10001+)
+```
+
+---
+
+## Shadows
+
+```css
+--shadow-xs/sm/md/lg/xl/2xl          /* Standard elevation */
+--shadow-dark-sm/md/lg/xl            /* Dark theme variants */
+--shadow-subtle/medium/strong        /* Semantic */
+--shadow-glass/glow                  /* Glass morphism */
+--shadow-card/card-hover/modal/dropdown  /* Component-specific */
+--shadow-primary/success/warning/danger  /* Status shadows */
+```
+
+---
+
+## Button Pattern (CRITICAL)
+
+**ALL buttons MUST use glass morphism. NEVER solid fill.**
+
+```css
+/* ✅ CORRECT */
+background: var(--glass-bg-soft);
+color: var(--brand-primary);
+border: 1px solid var(--brand-primary);
 backdrop-filter: blur(8px);
 
-/* Medium glass (standard) */
-background: var(--glass-bg-medium);
+/* ❌ WRONG */
+background: var(--brand-primary);
+color: white;
+border: none;
+```
+
+**Tailwind classes**: `.btn-primary` (glass+teal), `.btn-secondary` (surface+border), `.btn-ghost` (transparent)
+
+**Solid `var(--brand-primary)` bg is ONLY acceptable for**: checkbox fills, toggle dots, progress bars, status badges — NOT buttons.
+
+---
+
+## Base Components (`src/components/base/`)
+
+### BaseButton
+**Props**: `variant` (primary|secondary|ghost|danger|active), `size` (sm|md|lg), `iconOnly`, `disabled`, `loading`, `pressed`
+**Emits**: click, keydown, focus, blur
+**Note**: All variants are outline/glass. Default variant is `secondary`.
+
+### BaseIconButton
+**Props**: `variant` (default|primary|success|warning|danger), `size` (sm|md|lg), `active`, `disabled`
+**Note**: Always square. `is-active` adds teal stroke.
+
+### BaseModal
+**Props**: `isOpen`, `title`, `size` (sm|md|lg|xl|full), `variant` (default|danger|warning|success), `closeOnOverlayClick`, `closeOnEscape`, `trapFocus`, `loading`, `confirmDisabled`
+**Slots**: default (body), title, description, footer
+**Note**: Teleports to body. Has focus trap + scroll lock.
+
+### BaseBadge
+**Props**: `variant` (default|success|warning|danger|info|count), `size` (sm|md|lg), `rounded`
+
+### BaseCard
+**Props**: `variant` (default|outlined|filled), `hoverable`, `glass`, `elevated`
+**Slots**: header, default, footer
+
+### BaseInput
+**Props**: `modelValue`, `type`, `label`, `placeholder`, `helperText`, `disabled`, `required`
+**Slots**: prefix, suffix
+**Note**: Auto-detects Hebrew text for RTL alignment.
+
+### BasePopover
+**Props**: `isVisible`, `x`, `y`, `position` (auto|top|bottom|left|right), `variant` (menu|tooltip|dropdown)
+**Note**: Teleport-based, auto viewport positioning.
+
+### BaseDropdown
+**Props**: `modelValue`, `options`, `placeholder`, `searchable`, `multiple`
+**Slots**: trigger, option
+
+### OverflowTooltip
+**Props**: `text`, `tooltipPosition`, `lineClamp`
+**Note**: Only shows tooltip when text actually overflows.
+
+### ProjectEmojiIcon
+**Props**: `emoji`, `size` (xs|sm|md|lg|xl), `color`, `variant` (default|plain)
+
+### BaseNavItem
+**Props**: `active`, `selected`, `nested`, `colorDot`, `emoji`, `count`, `projectId`
+**Note**: Supports drag-and-drop for tasks and project nesting.
+
+### FilterControls
+Reads from task store directly. Renders project/status filter dropdowns.
+
+---
+
+## Common Components (`src/components/common/`)
+
+### CustomSelect — THE ONLY dropdown component
+**Import**: `import CustomSelect from '@/components/common/CustomSelect.vue'`
+**Props**: `modelValue: string|number|null`, `options: {label, value}[]`, `placeholder?`, `compact?`
+**Note**: Teleport-based, position-aware. NEVER use native `<select>` or `<NSelect>`.
+
+### ConfirmationModal
+**Props**: `isOpen`, `title?`, `message?`, `details?: string[]`, `confirmText?`
+**Note**: Wraps BaseModal with `variant="danger"`.
+
+### Other Common Components
+- `MarkdownEditor` — TipTap rich text editor
+- `MarkdownRenderer` — Safe markdown display
+- `MultiSelectToggle` — Multi-select UI
+- `EmojiPicker` — Emoji picker panel
+- `RecurrenceDeleteModal` — Recurrence-aware delete
+- `TauriUpdateNotification` — Auto-updater toast
+- `ErrorBoundary` — Vue error boundary
+- `TimeDisplay` — Time utility
+- `ReloadPrompt` — PWA reload prompt
+
+---
+
+## Tailwind Component Classes
+
+| Class | Description |
+|-------|-------------|
+| `.btn` | Base button layout/typography |
+| `.btn-primary` | Glass bg + teal border + teal text + backdrop-filter |
+| `.btn-secondary` | Surface bg + border |
+| `.btn-ghost` | Transparent bg, text only |
+| `.task-base` | Task card with hover/select/drag states |
+| `.timer-widget` | Timer container with active/break states |
+| `.interactive-element` | Ripple effect on click |
+| `.gpu-accelerated` | `translateZ(0)` + `will-change: transform` |
+| `.focus-ring` | Focus-visible outline |
+| `.loading-shimmer` | Animated shimmer |
+
+RTL utilities: `.ms-*`, `.me-*`, `.ps-*`, `.pe-*`, `.start-*`, `.end-*`, `.text-start`, `.text-end`
+
+---
+
+## Glass Morphism Layers
+
+```css
+/* Subtle (barely visible) */
+background: var(--glass-bg-subtle);
+backdrop-filter: blur(8px);
+
+/* Standard (cards, panels) */
+background: var(--glass-bg-soft);
 backdrop-filter: blur(12px);
 
-/* Heavy glass (prominent) */
-background: var(--glass-bg-heavy);
-backdrop-filter: blur(20px);
+/* Heavy (overlays, modals) */
+background: var(--overlay-component-bg);
+backdrop-filter: var(--overlay-component-backdrop);
 ```
 
 ---
 
-## UI Component Standards
+## Feature UI Components
 
-| Component Type | Standard Component | Key Rule |
-|----------------|-------------------|----------|
-| **Dropdowns** | `CustomSelect.vue` | NEVER use native `<select>` |
-| **Context Menus** | `ContextMenu.vue` | NEVER use browser context menus |
-| **Modals** | `BaseModal.vue`, `BasePopover.vue` | Dark glass morphism required |
+### Kanban Board (`src/components/kanban/`)
 
-**When user says "fix dropdowns"** → Replace native `<select>` with `CustomSelect` component
+| Component | Purpose |
+|-----------|---------|
+| `KanbanColumn` | Status column with vuedraggable list, header (title + count + add), progressive render (30 task limit), WIP-limit CSS (`.wip-exceeded`, `.wip-warning`), HTML5 drop for inbox drags |
+| `KanbanSwimlane` | Per-project swimlane wrapping KanbanColumns. 4 view modes: status/date/priority/category. Collapsible header with ProjectEmojiIcon |
+| `TaskCard` | Kanban card: priority dot, title, description preview, tag chips, badges, actions. Density variants, focus/timer-active/flash states, progressive disclosure |
+| `card/TaskCardBadges` | Badge row: due date (overdue/today color), subtask count, pomodoro count, attachments, recurrence icon |
+| `card/TaskCardActions` | Hover action bar: Eye (focus) + Play (timer). Hidden by default, shown on `.task-card:hover` |
+| `card/TaskCardStatus` | 10px priority dot button. Clickable to cycle priority. Color-coded high/medium/low/none |
+
+### Calendar (`src/components/calendar/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `CalendarHeader` | Sticky: prev/next nav, date title, Today button, Day/Week/Month segmented control, View Options popover (project filter, hide-completed, future-recurring, Google Calendar toggle) |
+| `CalendarDayView` | Time grid with positioned event cards, current-time indicator, drag-to-create, resize handles (top/bottom), external calendar events |
+| `CalendarWeekView` | Multi-column day grid, same architecture as DayView, multi-day event layout |
+| `CalendarMonthView` | Month grid with draggable cells, event chips per day, overflow handling, double-click to create |
+| `CalendarStatusOverlays` | Overlay layer: system health alert (gradient banner), operation error alert (retryable/permanent), loading spinner |
+
+### Task Table Row (`src/components/tasks/row/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `TaskRowTitle` | Title cell |
+| `TaskRowDueDate` | Clickable date with overdue coloring → Teleport dropdown with presets (Today, Tomorrow, This Week) + date input |
+| `TaskRowProject` | Clickable project badge (emoji/color) → Teleport project selector |
+| `TaskRowPriority` | Clickable priority badge (color-coded) → Teleport priority dropdown |
+| `TaskRowEstimate` | Clickable time estimate → Teleport duration preset dropdown |
+| `TaskRowActions` | Hover bar: AI-suggest, Focus, Timer, Edit, Duplicate |
+
+**Pattern**: All `TaskRow*` cells use Teleport-to-body dropdowns to escape table `overflow` clipping.
+
+### Task Interaction Components (`src/components/tasks/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `done-toggle/DoneToggleVisuals` | Completion checkbox. Variants: `simple` (minimal square) / `default` / `subtle` / `prominent` / `minimal`. Sizes: sm/md/lg. Features: ripple on click, celebration particle burst, circle-to-check animation, glow layers |
+| `drag-handle/DragHandleVisuals` | Grip button: 2×3 dot grid (sm/md/lg sizes), multi-layer glass morphism, glow/pulse animation, keyboard nav (arrows) |
+| `drag-handle/DragHandleGhost` | Teleported floating ghost while dragging: blue-tinted glass, `position: fixed`, scale(1.1) |
+| `drag-handle/DragHandleHints` | Hover tooltip: "Click → Start drag", "↑↓ → Move", "Esc → Cancel" with `<kbd>` styling |
+| `TaskContextMenu` | Right-click context menu with status, priority, project, due date sub-menus |
+| `SortProgress` | Sort progress indicator |
+
+### Sidebar (`src/components/sidebar/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `SidebarHeader` | Logo + "FlowState" text, Create Project button, hide-sidebar + settings icon buttons |
+| `SidebarSmartViews` | Smart view grid: Today, This Week, All Active chips with drag-drop zones and task counts |
+| `SidebarDurationSection` | Collapsible duration filter chips: Quick/Short/Medium/Long with count badges |
+| `SidebarProjectsSection` | Project list with multi-select bar (Delete + Clear), inline delete confirmation, "Add Project" button |
+| `SidebarQuickTaskInput` | Expandable input + voice recording mic button (pulsing animation), Enter to create |
+| `SidebarUserFooter` | Avatar circle + email + "Online" status (authenticated) OR Login button (guest) |
+| `SidebarWorkspaceSwitcher` | Workspace dropdown: color dot + name + chevron. Lists Personal + shared workspaces. Inline create + invite link generation |
+
+### Settings (`src/components/settings/`)
+
+**Primitives** (reuse these when building settings UI):
+
+| Component | Purpose |
+|-----------|---------|
+| `SettingsSection` | Group wrapper: `title` prop → `<h3>` + `<slot />` |
+| `SettingsToggle` | Label + description + slide toggle checkbox |
+| `SettingsDurationPicker` | Pill button row for minute values (e.g. 15/20/25/30) |
+| `SettingsOptionPicker` | Generic segmented option picker: label, description, pill buttons |
+
+**Tabs** (9 total in `settings/tabs/`):
+
+| Tab | Key Content |
+|-----|-------------|
+| `TimerSettingsTab` | Work/break durations (pill pickers), auto-start toggles |
+| `AppearanceSettingsTab` | Sound effects toggle + test buttons, week start picker, language settings |
+| `NotificationsSettingsTab` | Master enable toggle, reminder-time checkboxes, channels |
+| `WorkflowSettingsTab` | Workflow preferences |
+| `IntegrationsSettingsTab` | External service integrations |
+| `AISettingsTab` | AI model/provider configuration |
+| `StorageSettingsTab` | Backup create/download/restore, golden backup, IndexedDB queue clearing |
+| `AboutSettingsTab` | App version, Tauri auto-updater controls, links |
+| `AccountSettingsTab` | Email display, logout, password change, Google Calendar OAuth |
+
+### Notifications (`src/components/notifications/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `NotificationPreferences` | Master enable toggle, reminder-time checkboxes (minutes-before), notification channels |
+| `ReminderPicker` | Bell icon button (teal when reminders set, badge count) → NPopover with reminder list + quick-add presets + NDatePicker |
+
+### Toast System (`src/composables/useToast.ts`)
+
+**Imperative** — no Vue component. Creates DOM nodes in `#toast-container` on `document.body`.
+
+```typescript
+import { useToast } from '@/composables/useToast'
+const toast = useToast()
+toast.success('Task created')
+toast.error('Failed to save')
+toast.warning('Offline mode')
+toast.info('Syncing...')
+```
+
+Types: success (green left-border), error (red), warning (amber), info (dark glass). 3s default, top-right position, slideIn/slideOut animation.
+
+### Workspace/Collaboration (`src/components/sidebar/SidebarWorkspaceSwitcher.vue`)
+
+- Dropdown in sidebar: Personal workspace + shared workspaces
+- Inline workspace creation
+- Invite flow: email prompt → generates invite link → copies to clipboard
+- Role-based visibility: only owner/admin can invite
+- **Note**: Uses `window.prompt()` for email — should be migrated to `BaseModal` + `BaseInput`
 
 ---
 
-## Button Pattern (MANDATORY)
+## UI Pattern Gaps (No Component Exists Yet)
 
-**NEVER use solid-fill buttons.** All buttons must follow the glass morphism pattern:
-
-```css
-/* ✅ CORRECT — Glass morphism button */
-.my-button {
-  background: var(--glass-bg-soft);
-  color: var(--brand-primary);            /* teal text */
-  border: 1px solid var(--brand-primary); /* teal border */
-  border-radius: var(--radius-md);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.my-button:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--brand-primary-hover);
-}
-```
-
-```css
-/* ❌ WRONG — Solid fill button */
-.my-button {
-  background: var(--brand-primary);  /* solid teal fill */
-  color: white;                       /* white text */
-  border: none;
-}
-```
-
-**Tailwind utility classes available:**
-- `.btn-primary` — Glass bg + teal border + teal text (primary actions)
-- `.btn-secondary` — Surface bg + subtle border (secondary actions)
-- `.btn-ghost` — Transparent bg, text only (tertiary actions)
-
-**When solid `background: var(--brand-primary)` IS acceptable:**
-- Small indicators: checkbox fills, toggle dots, progress bar fills
-- Status badges and pills
-- Active state highlights on non-button elements
+| Pattern | Current Workaround | Recommendation |
+|---------|-------------------|----------------|
+| Skeleton/loading placeholder | `CalendarStatusOverlays` (calendar only), inline spinners elsewhere | Create `BaseSkeleton` in `base/` |
+| Global error banner | Per-component error handling | Consider `BaseAlert` component |
 
 ---
 
-## Shadow & Glow Handling
+## Critical Rules
 
-See [SOP-004: CSS Shadow/Glow Clipping](../sop/SOP-004-css-shadow-overflow-clipping.md) for handling shadows that get clipped by `overflow: hidden`.
-
-**Quick fix:** Add padding equal to shadow spread to parent container.
+1. **NEVER** use native `<select>` — always `CustomSelect.vue`
+2. **NEVER** use solid-fill buttons — always glass morphism pattern
+3. **NEVER** hardcode pixel/rgba values — always CSS custom properties
+4. **Primary action color is TEAL** (`--brand-primary` / #4ECDC4), NOT green
+5. `var(--color-success)` is for status indicators, NOT action buttons
+6. All overlay components use `--overlay-component-*` tokens
+7. Check `src/components/base/` and `src/components/common/` before creating ANY UI element
+8. Use `useToast()` for transient feedback — never build custom notification divs
+9. Settings UIs must use `SettingsSection`/`SettingsToggle`/`SettingsDurationPicker`/`SettingsOptionPicker`
+10. `TaskRow*` inline dropdowns use Teleport-to-body pattern — follow this for any new table cell editors

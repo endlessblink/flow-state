@@ -67,6 +67,11 @@ PlasmoidItem {
     property bool isLoadingTasks: false
     property string errorMessage: ""
 
+    // ===== CURRENT CALENDAR BLOCK STATE (TASK-1531) =====
+    property string currentBlockTitle: ""
+    property string currentBlockEndTime: ""  // e.g., "2:30 PM"
+    readonly property bool hasCurrentBlock: currentBlockTitle !== "" && plasmoid.configuration.showCurrentBlock
+
     // ===== PINNED TASKS STATE =====
     property var pinnedTasks: []
     property bool isLoadingPinnedTasks: false
@@ -607,8 +612,8 @@ PlasmoidItem {
         visible: false
 
         width: 500
-        // Dynamic height: base (title+subtitle+buttons+dismiss+margins=250) + task/header rows
-        height: 250 + nannyListHeight()
+        // Dynamic height: base (title+subtitle+buttons+dismiss+margins=180) + task/header rows
+        height: 180 + nannyListHeight()
 
         function nannyListHeight() {
             var headers = 0
@@ -741,7 +746,8 @@ PlasmoidItem {
                                                 var c = (itemData && itemData.projectColor) ? itemData.projectColor : ""
                                                 if (c && c.charAt(0) === '#') return c
                                                 if (c) return "#" + c
-                                                return root.mutedColor
+                                                // Use workColor (teal) for Quick Tasks, mutedColor otherwise
+                                                return (itemData && itemData.projectName === "⚡ Quick Tasks") ? root.workColor : root.mutedColor
                                             }
                                         }
 
@@ -911,9 +917,6 @@ PlasmoidItem {
                         }
                     } // Column
                     } // Flickable
-
-                    // Push buttons to bottom
-                    Item { Layout.fillHeight: true }
 
                     // Bottom buttons
                     Row {
@@ -1164,9 +1167,15 @@ PlasmoidItem {
     compactRepresentation: MouseArea {
         id: compactRoot
 
-        // Size for circular progress in panel
+        // Size: circle + optional calendar block text (TASK-1531)
         Layout.fillHeight: true
-        Layout.preferredWidth: compactRoot.height > 0 ? compactRoot.height : 36
+        Layout.preferredWidth: {
+            var baseWidth = compactRoot.height > 0 ? compactRoot.height : 36
+            if (root.hasCurrentBlock) {
+                return baseWidth + currentBlockLabel.implicitWidth + 4
+            }
+            return baseWidth
+        }
         Layout.minimumWidth: 36
 
         hoverEnabled: true
@@ -1174,97 +1183,122 @@ PlasmoidItem {
         onPressed: wasExpanded = root.expanded
         onClicked: root.expanded = !wasExpanded
 
-        // Circular progress background
-        Canvas {
-            id: compactCanvas
+        Row {
             anchors.fill: parent
+            spacing: 4
 
-            onPaint: {
-                var ctx = getContext("2d")
-                var centerX = width / 2
-                var centerY = height / 2
-                // 3px inset for glow room, scale stroke with widget size
-                var radius = Math.min(width, height) / 2 - 3
-                var lineWidth = Math.max(2, Math.round(Math.min(width, height) / 12))
+            // Circular progress wrapped in Item so Canvas can anchor.fill
+            Item {
+                id: circleItem
+                width: compactRoot.height > 0 ? compactRoot.height : 36
+                height: parent.height
 
-                ctx.reset()
+                // Circular progress background
+                Canvas {
+                    id: compactCanvas
+                    anchors.fill: parent
 
-                // Background circle
-                ctx.beginPath()
-                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
-                ctx.strokeStyle = root.mutedColor
-                ctx.globalAlpha = 0.3
-                ctx.lineWidth = lineWidth
-                ctx.stroke()
+                    onPaint: {
+                        var ctx = getContext("2d")
+                        var centerX = width / 2
+                        var centerY = height / 2
+                        // 3px inset for glow room, scale stroke with widget size
+                        var radius = Math.min(width, height) / 2 - 3
+                        var lineWidth = Math.max(2, Math.round(Math.min(width, height) / 12))
 
-                // Progress arc with glow
-                if (root.hasActiveSession && root.progress > 0) {
-                    // Glow layer
-                    ctx.beginPath()
-                    ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + (2 * Math.PI * root.progress))
-                    ctx.strokeStyle = root.currentAccent
-                    ctx.globalAlpha = 1.0
-                    ctx.lineWidth = lineWidth
-                    ctx.lineCap = "round"
-                    ctx.shadowColor = root.currentAccent
-                    ctx.shadowBlur = 4
-                    ctx.shadowOffsetX = 0
-                    ctx.shadowOffsetY = 0
-                    ctx.stroke()
+                        ctx.reset()
 
-                    // Bright center stroke (no shadow)
-                    ctx.shadowBlur = 0
-                    ctx.lineWidth = lineWidth - 1
-                    ctx.stroke()
+                        // Background circle
+                        ctx.beginPath()
+                        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+                        ctx.strokeStyle = root.mutedColor
+                        ctx.globalAlpha = 0.3
+                        ctx.lineWidth = lineWidth
+                        ctx.stroke()
+
+                        // Progress arc with glow
+                        if (root.hasActiveSession && root.progress > 0) {
+                            // Glow layer
+                            ctx.beginPath()
+                            ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + (2 * Math.PI * root.progress))
+                            ctx.strokeStyle = root.currentAccent
+                            ctx.globalAlpha = 1.0
+                            ctx.lineWidth = lineWidth
+                            ctx.lineCap = "round"
+                            ctx.shadowColor = root.currentAccent
+                            ctx.shadowBlur = 4
+                            ctx.shadowOffsetX = 0
+                            ctx.shadowOffsetY = 0
+                            ctx.stroke()
+
+                            // Bright center stroke (no shadow)
+                            ctx.shadowBlur = 0
+                            ctx.lineWidth = lineWidth - 1
+                            ctx.stroke()
+                        }
+
+                        // Center fill when active
+                        if (root.hasActiveSession) {
+                            ctx.beginPath()
+                            ctx.arc(centerX, centerY, radius - lineWidth, 0, 2 * Math.PI)
+                            ctx.fillStyle = root.currentAccent
+                            ctx.globalAlpha = 0.15
+                            ctx.fill()
+                        }
+                    }
+
+                    // BUG-1347: Throttled repaint to avoid per-second shadow blur recomputation
+                    Timer {
+                        id: compactRepaintTimer
+                        interval: 250
+                        running: false
+                        repeat: false
+                        onTriggered: compactCanvas.requestPaint()
+                    }
+
+                    Connections {
+                        target: root
+                        function onProgressChanged() { compactRepaintTimer.restart() }
+                        function onIsWorkSessionChanged() { compactCanvas.requestPaint() }
+                        function onHasActiveSessionChanged() { compactCanvas.requestPaint() }
+                    }
+
+                    Component.onCompleted: requestPaint()
                 }
 
-                // Center fill when active
-                if (root.hasActiveSession) {
-                    ctx.beginPath()
-                    ctx.arc(centerX, centerY, radius - lineWidth, 0, 2 * Math.PI)
-                    ctx.fillStyle = root.currentAccent
-                    ctx.globalAlpha = 0.15
-                    ctx.fill()
+                // Center text (minutes remaining)
+                Text {
+                    anchors.centerIn: parent
+                    text: root.hasActiveSession ? root.minutes.toString() : ""
+                    font.pixelSize: Math.max(8, Math.round(parent.height * 0.25))
+                    font.bold: true
+                    color: root.hasActiveSession ? root.currentAccent : Kirigami.Theme.textColor
+                    visible: root.hasActiveSession
+                }
+
+                // Tomato icon when no session
+                Image {
+                    anchors.centerIn: parent
+                    width: parent.width * 0.6
+                    height: parent.height * 0.6
+                    source: "../icons/tomato.svg"
+                    visible: !root.hasActiveSession
+                    smooth: true
                 }
             }
 
-            // BUG-1347: Throttled repaint to avoid per-second shadow blur recomputation
-            Timer {
-                id: compactRepaintTimer
-                interval: 250
-                running: false
-                repeat: false
-                onTriggered: compactCanvas.requestPaint()
+            // TASK-1531: Current calendar block title
+            Text {
+                id: currentBlockLabel
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.currentBlockTitle
+                font.pixelSize: Math.max(8, Math.round(compactRoot.height * 0.35))
+                color: root.textColor
+                visible: root.hasCurrentBlock
+                elide: Text.ElideRight
+                maximumLineCount: 1
+                width: Math.min(implicitWidth, 200)
             }
-
-            Connections {
-                target: root
-                function onProgressChanged() { compactRepaintTimer.restart() }
-                function onIsWorkSessionChanged() { compactCanvas.requestPaint() }
-                function onHasActiveSessionChanged() { compactCanvas.requestPaint() }
-            }
-
-            Component.onCompleted: requestPaint()
-        }
-
-        // Center text (minutes remaining or icon)
-        Text {
-            anchors.centerIn: parent
-            text: root.hasActiveSession ? root.minutes.toString() : ""
-            font.pixelSize: Math.max(8, Math.round(parent.height * 0.25))
-            font.bold: true
-            color: root.hasActiveSession ? root.currentAccent : Kirigami.Theme.textColor
-            visible: root.hasActiveSession
-        }
-
-        // Tomato icon when no session
-        Image {
-            anchors.centerIn: parent
-            width: parent.width * 0.6
-            height: parent.height * 0.6
-            source: "../icons/tomato.svg"
-            visible: !root.hasActiveSession
-            smooth: true
         }
     }
 
@@ -2189,8 +2223,21 @@ PlasmoidItem {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            plasmoid.configuration.nannyEnabled = !plasmoid.configuration.nannyEnabled
-                            console.log("[NANNY] Toggled:", plasmoid.configuration.nannyEnabled)
+                            if (plasmoid.configuration.nannyEnabled) {
+                                // Already enabled — show popup preview
+                                root.sendNannyNotification()
+                                console.log("[NANNY] Manual trigger from toggle bar")
+                            } else {
+                                plasmoid.configuration.nannyEnabled = true
+                                console.log("[NANNY] Enabled")
+                            }
+                        }
+                        onPressAndHold: {
+                            // Long-press to disable
+                            if (plasmoid.configuration.nannyEnabled) {
+                                plasmoid.configuration.nannyEnabled = false
+                                console.log("[NANNY] Disabled via long-press")
+                            }
                         }
                     }
                 }
@@ -3461,6 +3508,15 @@ PlasmoidItem {
         onTriggered: { root.fetchTasks(); root.fetchNannyTasks() }
     }
 
+    // TASK-1531: Recheck current block every 60 seconds (time may cross block boundary)
+    Timer {
+        id: currentBlockTimer
+        interval: 60000
+        running: root.isAuthenticated && plasmoid.configuration.showCurrentBlock
+        repeat: true
+        onTriggered: root.updateCurrentBlock()
+    }
+
     // BUG-1347: Timer to clear transition state (replaces Date.now() < transitionUntil)
     Timer {
         id: transitionTimer
@@ -4444,7 +4500,7 @@ PlasmoidItem {
         var xhr = new XMLHttpRequest()
 
         // Build dynamic URL based on sort/filter options
-        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,position,parent_id,project_id"
+        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,position,parent_id,project_id,instances"
 
         // Apply filter
         if (root.taskFilter === "all") {
@@ -4519,6 +4575,7 @@ PlasmoidItem {
                     root.updateDisplayTasks()
                     root.writeActiveTaskFile()
                     root.buildNannyTaskList()
+                    root.updateCurrentBlock()  // TASK-1531
                 } else if (xhr.status === 401) {
                     console.log("[TASKS] Token expired, refreshing...")
                     root.refreshAccessToken()
@@ -4959,6 +5016,68 @@ PlasmoidItem {
         xhr.send()
     }
 
+    // ===== TASK-1531: CURRENT CALENDAR BLOCK =====
+    function updateCurrentBlock() {
+        if (!plasmoid.configuration.showCurrentBlock) {
+            currentBlockTitle = ""
+            currentBlockEndTime = ""
+            return
+        }
+
+        var now = new Date()
+        var todayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0')
+        var nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+        var bestTitle = ""
+        var bestEnd = ""
+
+        for (var i = 0; i < tasks.length; i++) {
+            var task = tasks[i]
+            if (!task.instances || !Array.isArray(task.instances)) continue
+
+            for (var j = 0; j < task.instances.length; j++) {
+                var inst = task.instances[j]
+                if (inst.scheduledDate !== todayStr) continue
+                if (!inst.scheduledTime) continue
+                if (inst.status === 'completed' || inst.status === 'skipped') continue
+
+                // Parse scheduledTime — handle "HH:MM", "H:MM", "HH:MM AM/PM"
+                var timeStr = inst.scheduledTime
+                var hours, mins
+                var ampmMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
+                if (ampmMatch) {
+                    hours = parseInt(ampmMatch[1])
+                    mins = parseInt(ampmMatch[2])
+                    if (ampmMatch[3].toUpperCase() === 'PM' && hours !== 12) hours += 12
+                    if (ampmMatch[3].toUpperCase() === 'AM' && hours === 12) hours = 0
+                } else {
+                    var parts = timeStr.split(':')
+                    hours = parseInt(parts[0])
+                    mins = parseInt(parts[1]) || 0
+                }
+
+                var startMinutes = hours * 60 + mins
+                var duration = inst.duration || 30  // default 30 min
+                var endMinutes = startMinutes + duration
+
+                if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
+                    bestTitle = task.title || ""
+                    // Format end time
+                    var endH = Math.floor(endMinutes / 60)
+                    var endM = endMinutes % 60
+                    var ampm = endH >= 12 ? "PM" : "AM"
+                    var displayH = endH > 12 ? endH - 12 : (endH === 0 ? 12 : endH)
+                    bestEnd = displayH + ":" + String(endM).padStart(2, '0') + " " + ampm
+                    break
+                }
+            }
+            if (bestTitle) break
+        }
+
+        currentBlockTitle = bestTitle
+        currentBlockEndTime = bestEnd
+    }
+
     function buildNannyTaskList() {
         // Reset hidden list if day changed
         var today = new Date()
@@ -5040,14 +5159,23 @@ PlasmoidItem {
             pinnedTitles[pin.title.toLowerCase()] = true
         }
 
-        // 2. Fill remaining slots with recent non-pinned, non-done tasks
+        // 2. Fill remaining slots with tasks due today or overdue only
         if (combined.length < maxItems && allTasks.length > 0) {
+            var now = new Date()
+            var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+            var todayEnd = new Date(todayStart.getTime() + 86400000) // end of today
+
             for (var j = 0; j < allTasks.length && combined.length < maxItems; j++) {
                 var task = allTasks[j]
                 if (!task || !task.title) continue
                 if (pinnedTitles[task.title.toLowerCase()]) continue
                 if (task.status === "done") continue
                 if (root.nannyHiddenToday[task.id]) continue
+                // Only include tasks due today or overdue
+                if (!task.due_date) continue
+                var taskDue = new Date(task.due_date)
+                if (isNaN(taskDue.getTime())) continue
+                if (taskDue >= todayEnd) continue // skip future tasks
 
                 var tProj = getProjectInfo(task.project_id)
 
@@ -5090,7 +5218,7 @@ PlasmoidItem {
             if (groupKey !== lastProject) {
                 grouped.push({
                     isHeader: true,
-                    projectName: projName || "No Project",
+                    projectName: projName || "⚡ Quick Tasks",
                     projectColor: projColor
                 })
                 lastProject = groupKey

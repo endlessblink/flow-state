@@ -38,7 +38,7 @@ CREATE Vue 3 components with Composition API and TypeScript. Build reactive comp
 - Define custom events with `defineEmits()`
 - Integrate with Pinia stores using `useStore()`
 - Add lifecycle hooks for component initialization
-- Follow established component patterns in Pomo-Flow
+- Follow established component patterns in FlowState
 
 ### Navigation Map
 - [Detailed Implementation](./references/detailed-guide.md)

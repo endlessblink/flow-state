@@ -68,20 +68,35 @@ export function useTaskbarNanny(options: TaskbarNannyOptions = {}) {
   }
 
   // Tick every second — accumulate time without a real task, show toast at threshold
+  if (import.meta.env.DEV) {
+    console.log(`🧹 [NANNY] Initialized — threshold: ${thresholdMinutes}min, cooldown: ${cooldownMinutes}min, enabled: ${enabled}`)
+  }
   tickInterval = setInterval(() => {
     if (!enabled) return
 
     if (shouldAccumulateTime()) {
       unchosenElapsedMs.value += 1000
       unchosenMinutes.value = Math.floor(unchosenElapsedMs.value / 60000)
+      // Debug log every 30s
+      if (import.meta.env.DEV && unchosenElapsedMs.value % 30000 === 0) {
+        console.log(`🧹 [NANNY] Accumulated: ${unchosenElapsedMs.value / 1000}s / ${thresholdMs / 1000}s — taskId: ${timerStore.currentTaskId}`)
+      }
     } else {
       // User picked a real task — reset automatically
-      if (unchosenElapsedMs.value > 0) resetNanny()
+      if (unchosenElapsedMs.value > 0) {
+        if (import.meta.env.DEV) {
+          console.log(`🧹 [NANNY] Reset — real task picked: ${timerStore.currentTaskId}`)
+        }
+        resetNanny()
+      }
       return
     }
 
     // Threshold crossed and cooldown passed — show the reminder immediately
     if (unchosenElapsedMs.value >= thresholdMs && isCooldownPassed()) {
+      if (import.meta.env.DEV) {
+        console.log(`🧹 [NANNY] TRIGGERING TOAST — elapsed: ${unchosenElapsedMs.value / 1000}s`)
+      }
       triggerToast()
     }
   }, 1000)

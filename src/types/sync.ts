@@ -71,6 +71,9 @@ export interface WriteOperation {
 
   /** User ID (for multi-user support) */
   userId?: string
+
+  /** Workspace ID (null = personal workspace) */
+  workspaceId?: string | null
 }
 
 /**

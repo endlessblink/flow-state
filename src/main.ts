@@ -64,6 +64,7 @@ import { useSecurityMonitor as _useSecurityMonitor } from './utils/securityMonit
 // Run pre-check and initialize app
 async function initializeApp() {
   // NOTE: PouchDB migration cleanup removed Jan 2026 - migration complete
+  // NOTE: BUG-1533b IndexedDB cleanup removed Mar 2026 - already ran on all clients
   console.log('🚀 [MAIN] Starting app initialization...')
 
   // Detect Tauri environment and apply class for CSS optimizations

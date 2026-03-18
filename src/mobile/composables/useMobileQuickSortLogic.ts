@@ -374,6 +374,13 @@ export function useMobileQuickSortLogic() {
     showQuickEditPanel.value = false
   }
 
+  async function setDueDateDirect(dateString: string) {
+    if (!currentTask.value || !dateString) return
+    await taskStore.updateTask(currentTask.value.id, { dueDate: dateString })
+    triggerHaptic('light')
+    showQuickEditPanel.value = false
+  }
+
   function openProjectSheet() {
     showQuickEditPanel.value = false
     showProjectSheet.value = true
@@ -523,6 +530,7 @@ export function useMobileQuickSortLogic() {
     confirmDelete,
     setPriorityAndClose,
     setDueDateAndClose,
+    setDueDateDirect,
     openProjectSheet,
     formatDuration,
     onSwipeRight,

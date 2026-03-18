@@ -37,8 +37,8 @@ export const useCanvasGroups = (
         taskParentVersion.value++
     }
 
-    const setGroups = (newGroups: CanvasGroup[]) => {
-        if (newGroups.length === 0 && _rawGroups.value.length > 0) {
+    const setGroups = (newGroups: CanvasGroup[], forceEmpty = false) => {
+        if (newGroups.length === 0 && _rawGroups.value.length > 0 && !forceEmpty) {
             console.error('❌ [CANVAS] Refusing to overwrite existing groups with empty array')
             return
         }

@@ -423,6 +423,9 @@ export const useAuthStore = defineStore('auth', () => {
                   taskStore.loadFromDatabase(),
                   useCanvasStore().loadFromDatabase()
                 ])
+                // Load workspaces after stores are ready
+                const { useWorkspaceStore } = await import('@/stores/workspace')
+                await useWorkspaceStore().loadWorkspaces()
                 console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after delayed auth recovery`)
               } else {
                 console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN: skipping store reload (useAppInitialization already loaded)`)
@@ -447,6 +450,9 @@ export const useAuthStore = defineStore('auth', () => {
                   taskStore.loadFromDatabase(),
                   canvasStore.loadFromDatabase()
                 ])
+                // Load workspaces after stores are ready
+                const { useWorkspaceStore } = await import('@/stores/workspace')
+                await useWorkspaceStore().loadWorkspaces()
                 console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after post-init sign-in`)
               } catch (e) {
                 console.error(`❌ [AUTH:${currentTabId}] Failed to reload stores after sign-in:`, e)
@@ -815,6 +821,11 @@ export const useAuthStore = defineStore('auth', () => {
       const { useCanvasStore } = await import('@/stores/canvas')
       const canvasStore = useCanvasStore()
       canvasStore.clearAll()
+
+      // Clear workspace store
+      const { useWorkspaceStore } = await import('@/stores/workspace')
+      const workspaceStore = useWorkspaceStore()
+      workspaceStore.clearAll()
 
       // Clear guest ephemeral data for fresh guest experience
       clearGuestData()

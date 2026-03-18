@@ -1,10 +1,17 @@
 const { exec } = require('child_process');
 const path = require('path');
 
+function getPositiveInt(name, fallback) {
+    const raw = process.env[name];
+    if (!raw) return fallback;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 // Configuration
 const CONFIG = {
-    INTERVAL_MS: 5 * 60 * 1000,  // 5 minutes (High Frequency)
-    KEEP_BACKUPS: 50,            // Keep last 50 SQL dumps
+    INTERVAL_MS: getPositiveInt('FLOW_STATE_BACKUP_INTERVAL_MINUTES', 30) * 60 * 1000,
+    KEEP_BACKUPS: getPositiveInt('FLOW_STATE_SQL_KEEP_BACKUPS', 10),
     SCRIPT_SQL: 'npm run db:backup',
     SCRIPT_SHADOW: 'node scripts/shadow-mirror.cjs'
 };
@@ -12,6 +19,7 @@ const CONFIG = {
 console.log('🔄 Auto-Backup Daemon Started (Dual Engine)');
 console.log(`   Interval: ${CONFIG.INTERVAL_MS / 60000} minutes`);
 console.log(`   Engines:  SQL Dump + Shadow Mirror (SQLite)`);
+console.log(`   SQL Retention: ${CONFIG.KEEP_BACKUPS} dumps`);
 console.log('----------------------------------------');
 
 // Function to run dual backups

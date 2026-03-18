@@ -255,6 +255,26 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
     ? { ...rawPayload, status: 'planned' }
     : rawPayload
 
+  // BUG-1533b: Sanitize stale task payloads that have camelCase field names.
+  // taskPersistence smart-merge used to enqueue raw app-side objects (camelCase)
+  // instead of running through toSupabaseTask(). Detect and convert on the fly.
+  if (entityType === 'task' && ('projectId' in payload || '_soft_deleted' in payload || 'isInInbox' in payload)) {
+    try {
+      const { toSupabaseTask } = await import('@/utils/supabaseMappers')
+      const { useAuthStore } = await import('@/stores/auth')
+      const userId = useAuthStore().user?.id
+      if (userId) {
+        const mapped = toSupabaseTask(payload as any, userId)
+        payload = { ...mapped, is_deleted: false, deleted_at: null }
+        delete (payload as Record<string, unknown>).position_version
+      }
+    } catch {
+      // Mapper not available — strip known bad fields as fallback
+      const { _soft_deleted, ...rest } = payload as Record<string, unknown>
+      payload = { ...rest, is_deleted: _soft_deleted || false }
+    }
+  }
+
   // Workspace collaboration: inject workspace_id into payload if missing from legacy operations
   if (!payload.workspace_id && operation.workspaceId) {
     payload = { ...payload, workspace_id: operation.workspaceId as string }
@@ -608,6 +628,18 @@ async function processQueue(): Promise<void> {
   if (isProcessing.value || !state.value.isOnline || !supabase) {
     return
   }
+
+  // Skip if workspace switch is in progress (avoid 400s from stale RLS context)
+  try {
+    const { useWorkspaceStore } = await import('@/stores/workspace')
+    const workspaceStore = useWorkspaceStore()
+    if (workspaceStore.isSwitchingWorkspace) {
+      if (import.meta.env.DEV) {
+        console.debug('[SYNC] Skipping queue — workspace switch in progress')
+      }
+      return
+    }
+  } catch { /* workspace store not available */ }
 
   isProcessing.value = true
 

@@ -56,6 +56,32 @@ function formatDuration(minutes: number): string {
   const m = minutes % 60
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
+
+function formatDueDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ''
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(date)
+  target.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays === -1) return 'Yesterday'
+  if (diffDays < -1) return `${Math.abs(diffDays)}d overdue`
+  if (diffDays <= 7) return `in ${diffDays}d`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+const isDueDateOverdue = computed(() => {
+  if (!props.task.dueDate) return false
+  const date = new Date(props.task.dueDate)
+  if (isNaN(date.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return date < today
+})
 </script>
 
 <template>
@@ -86,6 +112,9 @@ function formatDuration(minutes: number): string {
         </BaseBadge>
         <span v-if="task.estimatedDuration" class="meta-duration">
           {{ formatDuration(task.estimatedDuration) }}
+        </span>
+        <span v-if="task.dueDate" class="meta-due" :class="{ overdue: isDueDateOverdue }">
+          {{ formatDueDate(task.dueDate) }}
         </span>
       </div>
     </div>
@@ -193,6 +222,16 @@ function formatDuration(minutes: number): string {
   background: var(--glass-bg-soft);
   border-radius: var(--radius-sm);
   white-space: nowrap;
+}
+
+.meta-due {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.meta-due.overdue {
+  color: var(--color-danger);
 }
 
 @media (prefers-reduced-motion: reduce) {

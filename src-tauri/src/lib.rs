@@ -1,6 +1,138 @@
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 use std::process;
+use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
+
+const DEFAULT_BACKUP_INTERVAL_MINUTES: u32 = 30;
+const DEFAULT_SQL_KEEP_BACKUPS: u32 = 10;
+const DEFAULT_SHADOW_DB_BACKUP_EVERY: u32 = 12;
+const DEFAULT_SHADOW_DB_KEEP_BACKUPS: u32 = 5;
+const DEFAULT_SHADOW_DB_BACKUP_MIN_INTERVAL_MINUTES: u32 = 360;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalBackupPolicy {
+    interval_minutes: u32,
+    sql_keep_backups: u32,
+    shadow_db_backup_every: u32,
+    shadow_db_keep_backups: u32,
+    shadow_db_backup_min_interval_minutes: u32,
+    env_local_path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalBackupPolicyInput {
+    interval_minutes: u32,
+    sql_keep_backups: u32,
+    shadow_db_backup_every: u32,
+    shadow_db_keep_backups: u32,
+    shadow_db_backup_min_interval_minutes: u32,
+}
+
+fn parse_positive_env(content: &str, key: &str, fallback: u32) -> u32 {
+    content
+        .lines()
+        .find_map(|line| {
+            let trimmed = line.trim();
+            if trimmed.starts_with('#') || !trimmed.starts_with(&format!("{key}=")) {
+                return None;
+            }
+            trimmed
+                .split_once('=')
+                .and_then(|(_, value)| value.trim().parse::<u32>().ok())
+        })
+        .filter(|value| *value > 0)
+        .unwrap_or(fallback)
+}
+
+fn find_flow_state_project_root() -> Result<PathBuf, String> {
+    let mut candidates = Vec::new();
+
+    if let Ok(current_dir) = std::env::current_dir() {
+        candidates.push(current_dir);
+    }
+
+    if let Ok(current_exe) = std::env::current_exe() {
+        if let Some(parent) = current_exe.parent() {
+            candidates.push(parent.to_path_buf());
+        }
+    }
+
+    for candidate in candidates {
+        for dir in candidate.ancestors() {
+            let package_json = dir.join("package.json");
+            let backup_script = dir.join("scripts/auto-backup-daemon.cjs");
+            if package_json.exists() && backup_script.exists() {
+                return Ok(dir.to_path_buf());
+            }
+        }
+    }
+
+    Err("Could not locate the FlowState project root. This control is intended for local dev/Tauri runs inside the repo.".to_string())
+}
+
+fn load_local_backup_policy() -> Result<LocalBackupPolicy, String> {
+    let project_root = find_flow_state_project_root()?;
+    let env_local_path = project_root.join(".env.local");
+    let content = std::fs::read_to_string(&env_local_path).unwrap_or_default();
+
+    Ok(LocalBackupPolicy {
+        interval_minutes: parse_positive_env(&content, "FLOW_STATE_BACKUP_INTERVAL_MINUTES", DEFAULT_BACKUP_INTERVAL_MINUTES),
+        sql_keep_backups: parse_positive_env(&content, "FLOW_STATE_SQL_KEEP_BACKUPS", DEFAULT_SQL_KEEP_BACKUPS),
+        shadow_db_backup_every: parse_positive_env(&content, "FLOW_STATE_SHADOW_DB_BACKUP_EVERY", DEFAULT_SHADOW_DB_BACKUP_EVERY),
+        shadow_db_keep_backups: parse_positive_env(&content, "FLOW_STATE_SHADOW_DB_KEEP_BACKUPS", DEFAULT_SHADOW_DB_KEEP_BACKUPS),
+        shadow_db_backup_min_interval_minutes: parse_positive_env(&content, "FLOW_STATE_SHADOW_DB_BACKUP_MIN_INTERVAL_MINUTES", DEFAULT_SHADOW_DB_BACKUP_MIN_INTERVAL_MINUTES),
+        env_local_path: env_local_path.display().to_string(),
+    })
+}
+
+fn upsert_env_line(lines: &mut Vec<String>, key: &str, value: u32) {
+    let new_line = format!("{key}={value}");
+    if let Some(index) = lines.iter().position(|line| line.trim_start().starts_with(&format!("{key}="))) {
+        lines[index] = new_line;
+    } else {
+        lines.push(new_line);
+    }
+}
+
+#[tauri::command]
+fn get_local_backup_policy() -> Result<LocalBackupPolicy, String> {
+    load_local_backup_policy()
+}
+
+#[tauri::command]
+fn set_local_backup_policy(policy: LocalBackupPolicyInput) -> Result<LocalBackupPolicy, String> {
+    let project_root = find_flow_state_project_root()?;
+    let env_local_path = project_root.join(".env.local");
+    let existing = std::fs::read_to_string(&env_local_path).unwrap_or_default();
+    let mut lines = if existing.is_empty() {
+        Vec::new()
+    } else {
+        existing.lines().map(|line| line.to_string()).collect::<Vec<_>>()
+    };
+
+    if !lines.is_empty() && !lines.last().is_some_and(|line| line.is_empty()) {
+        lines.push(String::new());
+    }
+
+    if !existing.contains("FLOW_STATE_BACKUP_INTERVAL_MINUTES=") {
+        lines.push("# Local backup policy".to_string());
+    }
+
+    upsert_env_line(&mut lines, "FLOW_STATE_BACKUP_INTERVAL_MINUTES", policy.interval_minutes);
+    upsert_env_line(&mut lines, "FLOW_STATE_SQL_KEEP_BACKUPS", policy.sql_keep_backups);
+    upsert_env_line(&mut lines, "FLOW_STATE_SHADOW_DB_BACKUP_EVERY", policy.shadow_db_backup_every);
+    upsert_env_line(&mut lines, "FLOW_STATE_SHADOW_DB_KEEP_BACKUPS", policy.shadow_db_keep_backups);
+    upsert_env_line(&mut lines, "FLOW_STATE_SHADOW_DB_BACKUP_MIN_INTERVAL_MINUTES", policy.shadow_db_backup_min_interval_minutes);
+
+    let output = lines.join("\n");
+    std::fs::write(&env_local_path, format!("{output}\n"))
+        .map_err(|e| format!("Failed to write {}: {}", env_local_path.display(), e))?;
+
+    load_local_backup_policy()
+}
 
 /// Get current process memory usage (for SIGTERM debugging - TASK-1060)
 #[tauri::command]
@@ -403,6 +535,8 @@ pub fn run() {
             run_supabase_migrations,
             cleanup_services,
             get_memory_usage,
+            get_local_backup_policy,
+            set_local_backup_policy,
         ])
         .setup(|app| {
             // Enable logging in all builds (debug=Info, release=Error)

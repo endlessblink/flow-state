@@ -338,6 +338,39 @@
       "updated": "{count} קבוצות ימים עודכנו להיום"
     }
   },
+  "workspaces": {
+    "personal": "שלי",
+    "createWorkspace": "צור סביבת עבודה",
+    "switchWorkspace": "החלף סביבת עבודה",
+    "newWorkspacePlaceholder": "שם סביבת עבודה",
+    "create": "צור",
+    "copyInviteLink": "העתק קישור הזמנה",
+    "inviteLinkCopied": "הקישור הועתק!",
+    "inviteEmailPlaceholder": "אימייל לשותף",
+    "members": "חברי צוות",
+    "settings": "הגדרות סביבת עבודה",
+    "invite": {
+      "title": "הוזמנת לסביבת עבודה",
+      "loginRequired": "התחבר כדי להצטרף לסביבת עבודה",
+      "login": "התחברות",
+      "processing": "מעבד הזמנה...",
+      "success": "הצטרפת בהצלחה!",
+      "redirecting": "מעביר אותך לסביבת העבודה...",
+      "failed": "ההזמנה נכשלה",
+      "expired": "ההזמנה פגה",
+      "goHome": "חזרה לדף הבית"
+    },
+    "roles": {
+      "owner": "בעלים",
+      "admin": "מנהל",
+      "member": "חבר",
+      "viewer": "צופה"
+    },
+    "empty": {
+      "noTasks": "אין משימות עדיין",
+      "inviteMembers": "הזמן חברי צוות"
+    }
+  },
   "auth": {
     "displayName": "שם תצוגה",
     "displayNamePlaceholder": "הכנס את שם התצוגה שלך",

@@ -11,10 +11,16 @@
       @wheel.stop
     >
       <div class="submenu-scroll">
-        <!-- Done for now - reschedule to tomorrow -->
-        <button class="menu-item menu-item--sm" @click.stop="$emit('doneForNow')">
+        <!-- Done for now - reschedule to tomorrow (recurring tasks only) -->
+        <button v-if="isRecurring" class="menu-item menu-item--sm" @click.stop="$emit('doneForNow')">
           <Clock :size="14" class="menu-icon" />
           <span class="menu-text">Done for now</span>
+        </button>
+
+        <!-- Done fully (stop recurring) - recurring tasks only -->
+        <button v-if="isRecurring" class="menu-item menu-item--sm" @click.stop="$emit('doneFully')">
+          <CheckCircle :size="14" class="menu-icon" />
+          <span class="menu-text">Done fully (stop recurring)</span>
         </button>
 
         <button class="menu-item menu-item--sm" @click.stop="$emit('duplicate')">
@@ -89,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { Copy, Layout, X, Clock, Pin, LayoutGrid, ChevronRight, Eye, Play, Timer, Sparkles } from 'lucide-vue-next'
+import { Copy, Layout, X, Clock, Pin, LayoutGrid, ChevronRight, Eye, Play, Timer, Sparkles, CheckCircle } from 'lucide-vue-next'
 import type { CSSProperties } from 'vue'
 
 defineProps<{
@@ -98,10 +104,12 @@ defineProps<{
   style: CSSProperties
   isBatchOperation: boolean
   taskId?: string
+  isRecurring?: boolean
 }>()
 
 defineEmits<{
   doneForNow: []
+  doneFully: []
   duplicate: []
   pinQuickTask: []
   moveToSection: [taskId: string]

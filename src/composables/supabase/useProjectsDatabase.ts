@@ -3,7 +3,7 @@ import {
     toSupabaseProject, fromSupabaseProject,
     type SupabaseProject
 } from '@/utils/supabaseMappers'
-import { supabase, swrCache, type DatabaseContext } from './_infrastructure'
+import { supabase, swrCache, invalidateCache, type DatabaseContext } from './_infrastructure'
 import { useTombstoneDatabase } from './_tombstone'
 
 export function useProjectsDatabase(ctx: DatabaseContext) {
@@ -119,6 +119,8 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
                     .eq('id', projectId)
                 if (error) throw error
             }, 'deleteProject')
+            // BUG-1567: Invalidate SWR cache so deleted project isn't served from cache
+            invalidateCache.projects()
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'deleteProject')

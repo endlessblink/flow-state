@@ -196,6 +196,36 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         return baseInboxTasks.value.filter(task => isThisMonthTask(task)).length
     })
 
+    // BUG-1530: Canvas task count that respects active time/group filters
+    // (Used by InboxFilters canvas chip to show accurate count)
+    const onCanvasCount = computed(() => {
+        let tasks = baseInboxTasks.value
+
+        // Apply canvas group filter
+        if (selectedCanvasGroups.value.size > 0) {
+            const groupIds = Array.from(selectedCanvasGroups.value)
+            tasks = tasks.filter(task =>
+                groupIds.some(groupId => filterTasksByGroup([task], groupId).length > 0)
+            )
+        }
+
+        // Apply time filter
+        const timeFilter = activeTimeFilter.value
+        if (timeFilter !== 'all') {
+            tasks = tasks.filter(task => {
+                switch (timeFilter) {
+                    case 'today': return isTodayTask(task)
+                    case 'next3days': return isNext3DaysTask(task)
+                    case 'week': return isWeekTask(task)
+                    case 'month': return isThisMonthTask(task)
+                    default: return true
+                }
+            })
+        }
+
+        return tasks.filter(t => !!t.canvasPosition).length
+    })
+
     // Done task count (for the visible Done toggle badge)
     // Counts tasks in inbox that are done (before the done filter is applied)
     // BUG-1351: Use same source as baseInboxTasks
@@ -496,6 +526,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         next3DaysCount,
         weekCount,
         monthCount,
+        onCanvasCount,
         doneTaskCount,
 
         // Actions (State Mutators)

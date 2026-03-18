@@ -125,11 +125,6 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
-      path: '/morning',
-      name: 'morning',
-      component: () => import('@/views/MorningDashboardView.vue'),
-    },
-    {
       path: '/today-flow',
       name: 'today-flow',
       component: () => import('@/views/TodayFlowView.vue'),
@@ -152,6 +147,12 @@ const router = createRouter({
       name: 'performance',
       component: () => import('@/views/PerformanceView.vue'),
       meta: { requiresAdmin: true }
+    },
+    {
+      path: '/invite/:token',
+      name: 'invite-accept',
+      component: () => import('@/views/InviteAcceptView.vue'),
+      meta: { requiresAuth: false }
     },
     // TODO: Add other views when implemented
     // {
@@ -192,6 +193,22 @@ router.beforeEach(async (to, _from, next) => {
     console.warn('👮 Access denied: Route requires Admin privileges')
     next({ name: 'board' })
     return
+  }
+
+  // Workspace navigation guard: redirect from personal-only routes in shared workspace
+  try {
+    const { useWorkspaceStore } = await import('@/stores/workspace')
+    const workspaceStore = useWorkspaceStore()
+    if (!workspaceStore.isPersonalWorkspace && routeName) {
+      const PERSONAL_ONLY_ROUTES = ['canvas', 'quick-sort', 'today-flow', 'ai', 'focus', 'performance', 'mobile-today', 'mobile-timer', 'mobile-quick-sort', 'mobile-ai-chat']
+      if (PERSONAL_ONLY_ROUTES.includes(routeName)) {
+        console.log(`[WORKSPACE] Redirecting from personal route "${routeName}" to board (shared workspace)`)
+        next({ name: 'board' })
+        return
+      }
+    }
+  } catch {
+    // Workspace store not ready yet — allow navigation
   }
 
   next()

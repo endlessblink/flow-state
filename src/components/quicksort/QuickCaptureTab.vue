@@ -122,15 +122,53 @@
               :class="{ active: isDueDateTomorrow }"
               @click="setDueDate('tomorrow')"
             >
-              Tomorrow
+              +1
+            </button>
+            <button
+              class="date-btn"
+              @click="setDueDate('in3days')"
+            >
+              +3
             </button>
             <button
               class="date-btn"
               :class="{ active: isDueDateWeekend }"
               @click="setDueDate('weekend')"
             >
-              Weekend
+              Wknd
             </button>
+            <button
+              class="date-btn"
+              @click="setDueDate('nextweek')"
+            >
+              +7
+            </button>
+            <button
+              class="date-btn"
+              @click="setDueDate('in2weeks')"
+            >
+              +14
+            </button>
+            <button
+              class="date-btn"
+              @click="setDueDate('in30days')"
+            >
+              +30
+            </button>
+            <button
+              class="date-btn date-picker-trigger"
+              :class="{ active: newTask.dueDate && !isDueDateToday && !isDueDateTomorrow && !isDueDateWeekend }"
+              @click="($refs.captureDatePicker as HTMLInputElement)?.showPicker()"
+            >
+              <Calendar :size="14" />
+            </button>
+            <input
+              ref="captureDatePicker"
+              type="date"
+              class="date-picker-hidden"
+              :value="newTask.dueDate || ''"
+              @input="newTask.dueDate = ($event.target as HTMLInputElement).value || undefined"
+            />
             <button
               v-if="newTask.dueDate"
               class="date-btn clear"
@@ -139,6 +177,35 @@
               <X :size="14" />
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Project Selection -->
+      <div class="metadata-group project-group">
+        <label class="metadata-label">Project:</label>
+        <div class="project-pills">
+          <button
+            v-for="project in topProjects"
+            :key="project.id"
+            class="project-pill"
+            :class="{ active: newTask.projectId === project.id }"
+            @click="newTask.projectId = newTask.projectId === project.id ? undefined : project.id"
+          >
+            <ProjectEmojiIcon
+              v-if="project.colorType === 'emoji' && project.emoji"
+              :emoji="project.emoji"
+              size="xs"
+            />
+            <span v-else class="project-dot" :style="{ background: Array.isArray(project.color) ? project.color[0] : project.color }" />
+            {{ project.name }}
+          </button>
+          <button
+            v-if="newTask.projectId"
+            class="project-pill clear"
+            @click="newTask.projectId = undefined"
+          >
+            <X :size="14" />
+          </button>
         </div>
       </div>
 
@@ -235,12 +302,18 @@ import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useUrlScraping } from '@/composables/useUrlScraping'
 import { useQuickCapture, type PendingTask } from '@/composables/useQuickCapture'
 import { formatDueDate } from '@/utils/dateUtils'
+import { useTaskStore } from '@/stores/tasks'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 const emit = defineEmits<{
   switchToSort: []
 }>()
 
 const quickCapture = useQuickCapture()
+const taskStore = useTaskStore()
+
+// Show first 7 projects for quick selection
+const topProjects = computed(() => taskStore.projects.slice(0, 7))
 
 // Template refs
 const titleInputRef = ref<HTMLInputElement>()
@@ -299,7 +372,8 @@ const newTask = reactive<Omit<PendingTask, 'id'>>({
   title: '',
   description: undefined,
   priority: undefined,
-  dueDate: undefined
+  dueDate: undefined,
+  projectId: undefined
 })
 
 // Computed
@@ -345,7 +419,8 @@ function handleAddTask() {
     title: newTask.title,
     description: newTask.description?.trim() || undefined,
     priority: newTask.priority,
-    dueDate: newTask.dueDate
+    dueDate: newTask.dueDate,
+    projectId: newTask.projectId
   })
 
   // Reset form but keep priority/dueDate for convenience
@@ -390,16 +465,18 @@ function handleDescriptionKeydown(event: KeyboardEvent) {
   }
 }
 
-function setDueDate(preset: 'today' | 'tomorrow' | 'weekend') {
+function setDueDate(preset: string) {
   const date = new Date()
   date.setHours(0, 0, 0, 0)
 
   switch (preset) {
     case 'today':
-      // Already set to today
       break
     case 'tomorrow':
       date.setDate(date.getDate() + 1)
+      break
+    case 'in3days':
+      date.setDate(date.getDate() + 3)
       break
     case 'weekend': {
       const dayOfWeek = date.getDay()
@@ -407,6 +484,15 @@ function setDueDate(preset: 'today' | 'tomorrow' | 'weekend') {
       date.setDate(date.getDate() + daysUntilSaturday)
       break
     }
+    case 'nextweek':
+      date.setDate(date.getDate() + 7)
+      break
+    case 'in2weeks':
+      date.setDate(date.getDate() + 14)
+      break
+    case 'in30days':
+      date.setDate(date.getDate() + 30)
+      break
   }
 
   newTask.dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -746,6 +832,18 @@ defineExpose({
   color: var(--brand-primary);
 }
 
+.date-picker-trigger {
+  padding: var(--space-1_5) var(--space-2);
+}
+
+.date-picker-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .date-btn.clear {
   padding: var(--space-1_5);
   color: var(--danger);
@@ -755,6 +853,55 @@ defineExpose({
 .date-btn.clear:hover {
   background: var(--danger-bg);
   border-color: var(--danger);
+}
+
+/* Project Selection */
+.project-group {
+  width: 100%;
+}
+
+.project-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1_5);
+}
+
+.project-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  padding: var(--space-1_5) var(--space-2_5);
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.project-pill:hover {
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+}
+
+.project-pill.active {
+  background: var(--brand-bg);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.project-pill.clear {
+  padding: var(--space-1_5);
+}
+
+.project-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
 }
 
 /* Action Row */

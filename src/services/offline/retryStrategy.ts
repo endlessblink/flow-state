@@ -140,7 +140,16 @@ export type ErrorClassification =
  * @returns Classification of the error
  */
 export function classifyError(error: unknown): ErrorClassification {
-  const message = error instanceof Error ? error.message : String(error)
+  // Supabase PostgrestError is a plain object with .message, NOT instanceof Error.
+  // String(obj) gives "[object Object]" which loses the actual error message.
+  let message: string
+  if (error instanceof Error) {
+    message = error.message
+  } else if (error && typeof error === 'object' && 'message' in error) {
+    message = String((error as { message: unknown }).message)
+  } else {
+    message = String(error)
+  }
   const lowerMessage = message.toLowerCase()
 
   // BUG-1517: Auth errors — JWT expired or invalid token. Must be checked BEFORE the

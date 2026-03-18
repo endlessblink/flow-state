@@ -338,6 +338,39 @@
       "updated": "{count} day groups updated for today"
     }
   },
+  "workspaces": {
+    "personal": "Personal",
+    "createWorkspace": "Create Workspace",
+    "switchWorkspace": "Switch Workspace",
+    "newWorkspacePlaceholder": "Workspace name",
+    "create": "Create",
+    "copyInviteLink": "Copy invite link",
+    "inviteLinkCopied": "Link copied!",
+    "inviteEmailPlaceholder": "Partner email",
+    "members": "Team Members",
+    "settings": "Workspace Settings",
+    "invite": {
+      "title": "You've been invited to a workspace",
+      "loginRequired": "Sign in to join the workspace",
+      "login": "Sign In",
+      "processing": "Processing invite...",
+      "success": "You've joined successfully!",
+      "redirecting": "Taking you to the workspace...",
+      "failed": "Invite failed",
+      "expired": "Invite expired",
+      "goHome": "Go Home"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member",
+      "viewer": "Viewer"
+    },
+    "empty": {
+      "noTasks": "No tasks yet",
+      "inviteMembers": "Invite team members"
+    }
+  },
   "auth": {
     "displayName": "Display Name",
     "displayNamePlaceholder": "Enter your display name",

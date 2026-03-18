@@ -136,10 +136,19 @@ export function useCalendarCore() {
     const task = taskStore.rawTasks.find(t => t.id === calendarEvent.taskId)
     if (!task) return
 
+    // TASK-1532: Completion records are read-only history — don't cycle their status
+    if (task.isCompletionRecord) return
+
     const statusCycle: Task['status'][] = ['todo', 'done']
     const currentIndex = statusCycle.indexOf(task.status)
     const nextIndex = (currentIndex + 1) % statusCycle.length
     const nextStatus = statusCycle[nextIndex]
+
+    // TASK-1532: For recurring tasks cycling to 'done', use doneForNow
+    if (nextStatus === 'done' && task.recurrenceRule) {
+      await taskStore.doneForNow(task.id)
+      return
+    }
 
     await taskStore.moveTask(task.id, nextStatus) // BUG-1051: AWAIT to ensure persistence
 

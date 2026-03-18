@@ -96,7 +96,12 @@ export const useCanvasStore = defineStore('canvas', () => {
         return
       }
 
-      const loadedGroups = await fetchGroups()
+      // Workspace collaboration: filter groups by active workspace
+      // undefined = no filter (personal/pre-migration safe), string = workspace filter
+      const { useWorkspaceStore } = await import('@/stores/workspace')
+      const wsStore = useWorkspaceStore()
+      const workspaceId = wsStore.activeWorkspaceId === null ? undefined : wsStore.activeWorkspaceId
+      const loadedGroups = await fetchGroups(workspaceId)
 
       if (import.meta.env.DEV) {
         assertNoDuplicateIds(loadedGroups, 'Supabase groups load')
@@ -110,17 +115,22 @@ export const useCanvasStore = defineStore('canvas', () => {
         }
       })
 
-      // BUG-169 Safety
+      // BUG-169 Safety — but allow empty during workspace switches
+      const isWorkspaceSwitch = wsStore.isSwitchingWorkspace
       if (loadedGroups.length === 0 && groupsModule._rawGroups.value.length > 0) {
-        const sessionStart = (window as unknown as Record<string, unknown>).FlowStateSessionStart as number || 0
-        if (Date.now() - sessionStart < 10000) {
-          console.warn('[CANVAS:LOAD] BLOCKED empty overwrite')
-          return
+        if (!isWorkspaceSwitch) {
+          const sessionStart = (window as unknown as Record<string, unknown>).FlowStateSessionStart as number || 0
+          if (Date.now() - sessionStart < 10000) {
+            console.warn('[CANVAS:LOAD] BLOCKED empty overwrite')
+            return
+          }
+        } else {
+          console.log('🔄 [CANVAS:LOAD] Workspace switch — clearing groups for new workspace context')
         }
       }
 
       const cleanedGroups = breakGroupCycles(loadedGroups)
-      groupsModule.setGroups(cleanedGroups)
+      groupsModule.setGroups(cleanedGroups, isWorkspaceSwitch)
 
       // BUG-1411: Cache groups to IndexedDB for offline loading
       cacheGroups(cleanedGroups)

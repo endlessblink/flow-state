@@ -11,7 +11,7 @@ import {
 export function useTasksDatabase(ctx: DatabaseContext) {
     const { authStore, isSyncing, lastSyncError, getUserIdSafe, withRetry, handleError } = ctx
 
-    const fetchTasks = async (): Promise<Task[]> => {
+    const fetchTasks = async (workspaceId?: string | null): Promise<Task[]> => {
         // TASK-1060: Ensure auth is initialized before fetching to avoid stale guest data
         if (!authStore.isInitialized) {
             console.log('🔄 [TASK-1060] Auth not initialized, waiting...')
@@ -21,15 +21,27 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         const userId = getUserIdSafe()
         // BUG-1056: Check if user changed since last fetch - invalidates cache if so
         swrCache.checkUserChange(userId)
-        const cacheKey = `tasks:${userId || 'guest'}`
+        // Workspace-aware cache key so switching workspaces invalidates stale results
+        const wsKey = workspaceId === undefined ? 'all' : (workspaceId ?? 'personal')
+        const cacheKey = `tasks:${userId || 'guest'}:ws:${wsKey}`
 
         return swrCache.getOrFetch(cacheKey, async () => {
             try {
                 return await withRetry(async () => {
-                    const { data, error } = await supabase
+                    let query = supabase
                         .from('tasks')
                         .select('*')
                         .eq('is_deleted', false)
+
+                    // Workspace filter: undefined = legacy (no filter), null = personal, string = workspace
+                    if (workspaceId === null) {
+                        query = query.is('workspace_id', null)
+                    } else if (typeof workspaceId === 'string') {
+                        query = query.eq('workspace_id', workspaceId)
+                    }
+                    // workspaceId === undefined: no filter (legacy/backward-compat)
+
+                    const { data, error } = await query
                         .order('order', { ascending: true })
                         .order('created_at', { ascending: true })
 

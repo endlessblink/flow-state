@@ -95,9 +95,11 @@
       :style="moreSubmenuStyle"
       :is-batch-operation="isBatchOperation"
       :task-id="currentTask?.id"
+      :is-recurring="!!currentTask?.recurrenceRule"
       @mouseenter="handlePanelEnter"
       @mouseleave="handlePanelLeave('more')"
       @done-for-now="() => { closeAllSubmenusNow(); handleDoneForNow() }"
+      @done-fully="() => { closeAllSubmenusNow(); handleDoneFully() }"
       @duplicate="() => { closeAllSubmenusNow(); duplicateTask() }"
       @pin-quick-task="() => { closeAllSubmenusNow(); pinAsQuickTask() }"
       @move-to-section="(taskId: string) => { closeAllSubmenusNow(); $emit('moveToSection', taskId); $emit('close') }"
@@ -442,6 +444,7 @@ const clearPriority = async () => {
 const handleDoneForNow = async () => {
   // BUG-1184: Capture task data BEFORE closing menu
   const taskId = currentTask.value?.id
+  const task = currentTask.value
   const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
   const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
@@ -461,26 +464,49 @@ const handleDoneForNow = async () => {
   const tomorrowStr = `${year}-${month}-${day}`
 
   try {
-    const task = currentTask.value
-    // Set dueDate, doneForNowUntil, and scheduledDate (if present) to tomorrow
-    // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
-    const updatePayload: Record<string, string> = {
-      dueDate: tomorrowStr,
-      doneForNowUntil: tomorrowStr
+    if (task?.recurrenceRule) {
+      // TASK-1532: Recurring tasks use doneForNow — creates completion record + advances to next occurrence
+      await taskStore.doneForNow(taskId)
+      canvasStore.requestSync('user:context-menu')
+      showToast('Completed for today, next occurrence scheduled', 'success', { duration: 2000 })
+    } else {
+      // Non-recurring: original behavior (reschedule to tomorrow)
+      // Set dueDate, doneForNowUntil, and scheduledDate (if present) to tomorrow
+      // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
+      const updatePayload: Record<string, string> = {
+        dueDate: tomorrowStr,
+        doneForNowUntil: tomorrowStr
+      }
+      if (task?.scheduledDate) {
+        updatePayload.scheduledDate = tomorrowStr
+      }
+      await taskStore.updateTaskWithUndo(taskId, updatePayload)
+      // TASK-1362: Also move calendar instance to tomorrow
+      if (isCalendarEvent && calendarInstanceId) {
+        await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: tomorrowStr })
+      }
+      canvasStore.requestSync('user:context-menu')
+      showToast('Moved to tomorrow', 'success', { duration: 2000 })
     }
-    if (task?.scheduledDate) {
-      updatePayload.scheduledDate = tomorrowStr
-    }
-    await taskStore.updateTaskWithUndo(taskId, updatePayload)
-    // TASK-1362: Also move calendar instance to tomorrow
-    if (isCalendarEvent && calendarInstanceId) {
-      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: tomorrowStr })
-    }
-    canvasStore.requestSync('user:context-menu')
-    showToast('Moved to tomorrow', 'success', { duration: 2000 })
   } catch (error) {
-    console.error('Error updating task due date:', error)
-    showToast('Failed to reschedule task', 'error')
+    console.error('Error in done-for-now:', error)
+    showToast('Failed to complete task', 'error')
+  }
+}
+
+// Handle "Done fully (stop recurring)" - permanently complete a recurring task
+const handleDoneFully = async () => {
+  const taskId = currentTask.value?.id
+  emit('close')
+  if (!taskId) return
+  const { showToast } = useToast()
+  try {
+    // Done fully = just mark as done (existing behavior handles recurrence clone + archive)
+    await taskStore.moveTask(taskId, 'done')
+    showToast('Task completed permanently', 'success', { duration: 2000 })
+  } catch (error) {
+    console.error('Error in done-fully:', error)
+    showToast('Failed to complete task', 'error')
   }
 }
 
@@ -922,6 +948,8 @@ const handleKeyDown = (event: KeyboardEvent) => {
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
   if (target.closest('.submenu')) return
+  // NPopover teleports date picker to body — don't close on clicks inside it
+  if (target.closest('.n-date-picker') || target.closest('.n-date-panel') || target.closest('.n-popover')) return
   if (menuRef.value && !menuRef.value.contains(target)) {
     emit('close')
   }

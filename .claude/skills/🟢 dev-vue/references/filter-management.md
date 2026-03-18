@@ -12,7 +12,7 @@ triggers: filter duplication, inconsistent filters, cross-view filter issues, ar
 
 ## Problem Solved
 
-Pomo-Flow has a sophisticated filtering system but suffers from multiple issues:
+FlowState has a sophisticated filtering system but suffers from multiple issues:
 - **Duplicate Filter Controls**: Multiple views implement their own inline filters alongside FilterControls
 - **Inconsistent Implementation**: Mixed patterns across BoardView, CalendarView, and CanvasView
 - **Cross-View Synchronization**: No unified filter state management across views

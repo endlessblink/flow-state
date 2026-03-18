@@ -5,7 +5,7 @@ description: COMPREHENSIVE Vue 3 development with Composition API, TypeScript, a
 
 # Tier 1: Metadata
 
-This skill provides Vue 3 component development with Composition API and TypeScript for the Pomo-Flow productivity application.
+This skill provides Vue 3 component development with Composition API and TypeScript for the FlowState productivity application.
 
 ## Quick Context
 - **Complexity**: medium
@@ -107,12 +107,8 @@ export default {
 ```
 
 ## Navigation Map
-- [Implementation Guide](./IMPLEMENTATION.md)
-- [Code Examples](./examples/)
-- [Troubleshooting](./TROUBLESHOOTING.md)
-- [Vue Development Patterns](./vue-development.md)
-- [Testing Strategies](./testing.md)
-- [Reactivity Debugging](./reactivity-debugging.md)
+- See `src/components/` for component examples
+- See `src/composables/` for composable patterns
 
 ---
 

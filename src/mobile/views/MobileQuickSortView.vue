@@ -268,6 +268,19 @@
                 <button class="pill" @click="setDueDateAndClose('weekend')">
                   Wknd
                 </button>
+                <button class="pill" @click="setDueDateAndClose('nextweek')">
+                  +7
+                </button>
+                <button class="pill date-picker-trigger" @click="($refs.mobileDatePicker as HTMLInputElement)?.showPicker()">
+                  <Calendar :size="14" />
+                </button>
+                <input
+                  ref="mobileDatePicker"
+                  type="date"
+                  class="date-picker-hidden"
+                  :value="currentTask?.dueDate || ''"
+                  @input="setDueDateDirect(($event.target as HTMLInputElement).value)"
+                />
               </div>
             </div>
 
@@ -321,7 +334,7 @@
 
 <script setup lang="ts">
 import {
-  Zap, Plus, CheckCircle, CalendarDays,
+  Zap, Plus, CheckCircle, CalendarDays, Calendar,
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
   Trash2, FolderOpen, AlertCircle
 } from 'lucide-vue-next'
@@ -373,6 +386,7 @@ const {
   confirmDelete,
   setPriorityAndClose,
   setDueDateAndClose,
+  setDueDateDirect,
   openProjectSheet,
   onSwipeRight,
   onSwipeLeft,
@@ -1148,6 +1162,18 @@ const {
 
 .edit-section .pill:active {
   transform: scale(0.98);
+}
+
+.date-picker-trigger {
+  padding: var(--space-1_5) var(--space-2_5);
+}
+
+.date-picker-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .assign-project-btn {

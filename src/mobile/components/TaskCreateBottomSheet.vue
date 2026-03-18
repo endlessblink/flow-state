@@ -643,11 +643,11 @@ function autoResize(event: Event) {
 
 /* RTL support for Hebrew/Arabic text */
 .task-text-block[dir="rtl"] {
-  text-align: right;
+  text-align: end;
 }
 
 .task-text-block[dir="rtl"]::placeholder {
-  text-align: right;
+  text-align: end;
 }
 
 /* Compact options at bottom */
@@ -971,12 +971,12 @@ function autoResize(event: Event) {
 }
 
 [dir="rtl"] .form-field {
-  text-align: right;
+  text-align: end;
 }
 
 [dir="rtl"] .field-input,
 [dir="rtl"] .field-textarea {
-  text-align: right;
+  text-align: end;
   direction: rtl;
 }
 

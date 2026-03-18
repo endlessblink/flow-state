@@ -14,10 +14,11 @@ KCM.SimpleKCM {
     property alias cfg_longBreakDuration: longBreakDurationSpinBox.value
     property alias cfg_sessionsBeforeLongBreak: sessionsSpinBox.value
     property alias cfg_showTaskList: showTaskListCheckBox.checked
+    property alias cfg_showCurrentBlock: showCurrentBlockCheckBox.checked
 
     // Nanny (Focus Reminder) settings
     property alias cfg_nannyEnabled: nannyEnabledCheckBox.checked
-    property string cfg_nannyWorkDays: "1,2,3,4,5"
+    property string cfg_nannyWorkDays: "0,1,2,3,4,5"
     property alias cfg_nannyStartHour: nannyStartHourSpinBox.value
     property alias cfg_nannyEndHour: nannyEndHourSpinBox.value
     property int cfg_nannyIntervalMinutes: 60
@@ -350,6 +351,19 @@ KCM.SimpleKCM {
             id: showTaskListCheckBox
             Kirigami.FormData.label: "Show task list:"
             checked: true
+        }
+
+        QQC2.CheckBox {
+            id: showCurrentBlockCheckBox
+            Kirigami.FormData.label: "Show current block:"
+            checked: true
+        }
+        QQC2.Label {
+            text: "Display the current scheduled calendar block next to the timer in the panel."
+            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+            opacity: 0.5
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
         }
     }
 }

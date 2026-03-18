@@ -139,7 +139,7 @@ git commit -m "$(cat <<'EOF'
 - Key change 1
 - Key change 2
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 EOF
 )"
 
@@ -152,7 +152,7 @@ git push
 git commit -m "$(cat <<'EOF'
 fix: Brief summary from user
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 EOF
 )"
 git push

@@ -9,14 +9,12 @@ description: UNIFIED DEBUGGER - Use when tasks disappear, data is lost, things a
 
 1. **After fixing a bug** → Use `Skill(qa-testing)` to verify the fix with proper tests
 2. **If canvas issues** → Use `Skill(vue-flow-debug)` for specialized Vue Flow debugging
-3. **If timer issues** → Use `Skill(dev-fix-timer)` for Pomodoro-specific debugging
-4. **If Supabase issues** → Use `Skill(supabase-debugger)` for database/auth debugging
+3. **If Supabase issues** → Use `Skill(supabase-debugger)` for database/auth debugging
 
 ## When to Defer to Specialized Skills
 
 | Issue Type | Use This Skill Instead |
 |------------|------------------------|
-| Timer/Pomodoro bugs | `Skill(dev-fix-timer)` |
 | Canvas/Vue Flow issues | `Skill(vue-flow-debug)` |
 | Supabase/Auth problems | `Skill(supabase-debugger)` |
 | Port/server conflicts | `Skill(ops-port-manager)` |
@@ -50,8 +48,8 @@ This is a known and critical pattern. When tasks vanish after deletion or sync:
 ### Keyboard Shortcuts Not Working
 
 FlowState has **two parallel keyboard systems**:
-- `useAppShortcuts.ts` — App-level shortcuts (Ctrl+Z, etc.)
-- `globalKeyboardHandlerSimple.ts` — Global handler
+- `src/composables/app/useAppShortcuts.ts` — App-level shortcuts (Ctrl+Z, etc.)
+- `src/utils/globalKeyboardHandlerSimple.ts` — Global handler
 
 Both have `shouldIgnoreElement` guards that suppress shortcuts when input/textarea is focused. Common causes:
 - An orphaned overlay element stealing focus

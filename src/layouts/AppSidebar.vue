@@ -9,6 +9,7 @@
       :aria-hidden="!uiStore.mainSidebarVisible"
     >
       <SidebarHeader />
+      <SidebarWorkspaceSwitcher />
       <SidebarQuickTaskInput ref="quickTaskInput" />
 
       <div class="task-management-section">
@@ -26,6 +27,7 @@
 import { ref } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import SidebarHeader from '@/components/sidebar/SidebarHeader.vue'
+import SidebarWorkspaceSwitcher from '@/components/sidebar/SidebarWorkspaceSwitcher.vue'
 import SidebarQuickTaskInput from '@/components/sidebar/SidebarQuickTaskInput.vue'
 import SidebarSmartViews from '@/components/sidebar/SidebarSmartViews.vue'
 import SidebarDurationSection from '@/components/sidebar/SidebarDurationSection.vue'

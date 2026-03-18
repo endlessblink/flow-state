@@ -14,11 +14,12 @@ Automatic database backup system with 3 redundant engines that works both locall
 | **Engine B** | Shadow Mirror | `backups/shadow.db` | SQLite replica, disaster recovery |
 | **Engine C** | JSON Hub | `public/shadow-latest.json` | Frontend bridge, cross-device sync |
 
-**Auto-backup interval:** Every 5 minutes via `npm run dev`
+**Auto-backup interval:** Every 30 minutes by default via `npm run dev`
 **Manual trigger:** `npm run backup:watch` or `node scripts/shadow-mirror.cjs`
 **Verification:** `node scripts/verify-shadow-layer.cjs`
 **Recovery UI:** Settings > Storage tab
 **Configuration:** Service Role Key in `.env.local` required for full Shadow access (bypasses RLS)
+**Shadow DB file retention:** Keep 5 `shadow-*.db.backup` copies by default, create them at most once every 6 hours, and only check creation every 12 snapshots
 
 ## Quick Reference
 

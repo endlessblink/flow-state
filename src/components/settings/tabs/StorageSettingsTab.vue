@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import {
   Database,
   Download,
@@ -21,6 +22,7 @@ import SettingsOptionPicker from '../SettingsOptionPicker.vue'
 import { isTauri, getTauriMode, setTauriMode } from '@/composables/useTauriStartup'
 import { EXTERNAL_URLS } from '@/config/urls'
 import { useTaskStore } from '@/stores/tasks'
+import { useAuthStore } from '@/stores/auth'
 import { clearAll as clearAllOperations } from '@/services/offline/writeQueueDB'
 
 const {
@@ -38,8 +40,8 @@ const {
 } = useBackupSystem()
 
 const isRestoring = ref(false)
-const validationInfo = ref<Record<string, unknown> | null>(null)
-const shadowSnapshot = ref<Record<string, unknown> | null>(null)
+const validationInfo = ref<Awaited<ReturnType<typeof getGoldenBackupValidation>> | null>(null)
+const shadowSnapshot = ref<any | null>(null)
 const showValidation = ref(false)
 const isScanningShadow = ref(false)
 const goldenRotation = ref<unknown[]>([])
@@ -47,12 +49,63 @@ const goldenRotation = ref<unknown[]>([])
 // Tauri mode state (only shown in Tauri desktop app)
 const showTauriMode = computed(() => isTauri())
 const currentTauriMode = ref<'cloud' | 'local'>(getTauriMode())
+const authStore = useAuthStore()
+const { isDev } = storeToRefs(authStore)
+
+type LocalBackupPolicy = {
+  intervalMinutes: number
+  sqlKeepBackups: number
+  shadowDbBackupEvery: number
+  shadowDbKeepBackups: number
+  shadowDbBackupMinIntervalMinutes: number
+  envLocalPath: string
+}
+
+const showLocalBackupPolicy = computed(() => showTauriMode.value && isDev.value)
+const isLoadingLocalBackupPolicy = ref(false)
+const isSavingLocalBackupPolicy = ref(false)
+const localBackupPolicy = ref<LocalBackupPolicy | null>(null)
+const localBackupPolicyError = ref<string | null>(null)
+const localBackupPolicyStatus = ref<string | null>(null)
 
 const backupIntervals = [
   { value: 60000, label: '1 min' },
   { value: 300000, label: '5 min' },
   { value: 900000, label: '15 min' },
   { value: 3600000, label: '1 hour' }
+]
+
+const daemonIntervalOptions = [
+  { value: 15, label: '15 min' },
+  { value: 30, label: '30 min' },
+  { value: 60, label: '1 hour' },
+  { value: 180, label: '3 hours' }
+]
+
+const sqlRetentionOptions = [
+  { value: 5, label: '5' },
+  { value: 10, label: '10' },
+  { value: 20, label: '20' },
+  { value: 50, label: '50' }
+]
+
+const shadowBackupEveryOptions = [
+  { value: 6, label: 'Every 6' },
+  { value: 12, label: 'Every 12' },
+  { value: 24, label: 'Every 24' }
+]
+
+const shadowCopyRetentionOptions = [
+  { value: 3, label: '3' },
+  { value: 5, label: '5' },
+  { value: 10, label: '10' }
+]
+
+const shadowCopyMinIntervalOptions = [
+  { value: 60, label: '1 hour' },
+  { value: 180, label: '3 hours' },
+  { value: 360, label: '6 hours' },
+  { value: 720, label: '12 hours' }
 ]
 
 const historySizes = [
@@ -68,6 +121,56 @@ const handleModeChange = (mode: 'cloud' | 'local') => {
 
   // Warn user they need to restart the app
   alert(`Mode changed to ${mode === 'cloud' ? 'Cloud' : 'Local'}. Please restart the app for changes to take effect.`)
+}
+
+const updateLocalBackupPolicy = (key: keyof LocalBackupPolicy, value: number | string) => {
+  if (!localBackupPolicy.value) return
+  localBackupPolicy.value = {
+    ...localBackupPolicy.value,
+    [key]: value
+  } as LocalBackupPolicy
+}
+
+const loadLocalBackupPolicy = async () => {
+  if (!showLocalBackupPolicy.value) return
+
+  isLoadingLocalBackupPolicy.value = true
+  localBackupPolicyError.value = null
+
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    localBackupPolicy.value = await invoke<LocalBackupPolicy>('get_local_backup_policy')
+  } catch (e) {
+    localBackupPolicyError.value = e instanceof Error ? e.message : 'Could not load local backup policy'
+  } finally {
+    isLoadingLocalBackupPolicy.value = false
+  }
+}
+
+const saveLocalBackupPolicy = async () => {
+  if (!localBackupPolicy.value) return
+
+  isSavingLocalBackupPolicy.value = true
+  localBackupPolicyError.value = null
+  localBackupPolicyStatus.value = null
+
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    localBackupPolicy.value = await invoke<LocalBackupPolicy>('set_local_backup_policy', {
+      policy: {
+        intervalMinutes: localBackupPolicy.value.intervalMinutes,
+        sqlKeepBackups: localBackupPolicy.value.sqlKeepBackups,
+        shadowDbBackupEvery: localBackupPolicy.value.shadowDbBackupEvery,
+        shadowDbKeepBackups: localBackupPolicy.value.shadowDbKeepBackups,
+        shadowDbBackupMinIntervalMinutes: localBackupPolicy.value.shadowDbBackupMinIntervalMinutes
+      }
+    })
+    localBackupPolicyStatus.value = 'Saved to .env.local. Restart the dev stack to apply the new policy.'
+  } catch (e) {
+    localBackupPolicyError.value = e instanceof Error ? e.message : 'Could not save local backup policy'
+  } finally {
+    isSavingLocalBackupPolicy.value = false
+  }
 }
 
 const handleCreateBackup = async () => {
@@ -168,6 +271,7 @@ onMounted(async () => {
     validationInfo.value = await getGoldenBackupValidation()
     goldenRotation.value = getGoldenBackups()
     checkShadowHub()
+    await loadLocalBackupPolicy()
 })
 </script>
 
@@ -250,7 +354,7 @@ onMounted(async () => {
         description="How often to perform automatic snapshots."
         :options="backupIntervals"
         :value="config.autoSaveInterval"
-        @update="val => config.autoSaveInterval = val"
+        @update="val => config.autoSaveInterval = Number(val)"
       />
 
       <SettingsOptionPicker
@@ -258,7 +362,7 @@ onMounted(async () => {
         description="Maximum number of historical snapshots to keep."
         :options="historySizes"
         :value="config.maxHistorySize"
-        @update="val => config.maxHistorySize = val"
+        @update="val => config.maxHistorySize = Number(val)"
       />
 
       <SettingsToggle
@@ -267,6 +371,86 @@ onMounted(async () => {
         :value="config.filterMockTasks"
         @update="val => config.filterMockTasks = val"
       />
+    </SettingsSection>
+
+    <SettingsSection v-if="showLocalBackupPolicy" title="🧪 Local Backup Policy">
+      <div class="local-policy-panel">
+        <p class="local-policy-description">
+          Developer-only controls for the Node backup daemon that writes local disk copies in Tauri/dev mode.
+        </p>
+
+        <p v-if="localBackupPolicy?.envLocalPath" class="local-policy-path">
+          Writing to {{ localBackupPolicy.envLocalPath }}
+        </p>
+
+        <p v-if="isLoadingLocalBackupPolicy" class="local-policy-muted">
+          Loading current policy...
+        </p>
+
+        <template v-else-if="localBackupPolicy">
+          <SettingsOptionPicker
+            label="Daemon Interval"
+            description="How often the dev backup daemon runs."
+            :options="daemonIntervalOptions"
+            :value="localBackupPolicy.intervalMinutes"
+            @update="val => updateLocalBackupPolicy('intervalMinutes', Number(val))"
+          />
+
+          <SettingsOptionPicker
+            label="SQL Dump Retention"
+            description="How many SQL dump files to keep."
+            :options="sqlRetentionOptions"
+            :value="localBackupPolicy.sqlKeepBackups"
+            @update="val => updateLocalBackupPolicy('sqlKeepBackups', Number(val))"
+          />
+
+          <SettingsOptionPicker
+            label="Shadow Copy Check"
+            description="Only consider a full SQLite copy after this many snapshots."
+            :options="shadowBackupEveryOptions"
+            :value="localBackupPolicy.shadowDbBackupEvery"
+            @update="val => updateLocalBackupPolicy('shadowDbBackupEvery', Number(val))"
+          />
+
+          <SettingsOptionPicker
+            label="Shadow Copy Retention"
+            description="How many full shadow DB copy files to keep."
+            :options="shadowCopyRetentionOptions"
+            :value="localBackupPolicy.shadowDbKeepBackups"
+            @update="val => updateLocalBackupPolicy('shadowDbKeepBackups', Number(val))"
+          />
+
+          <SettingsOptionPicker
+            label="Shadow Copy Minimum Gap"
+            description="Minimum time between full SQLite copy files."
+            :options="shadowCopyMinIntervalOptions"
+            :value="localBackupPolicy.shadowDbBackupMinIntervalMinutes"
+            @update="val => updateLocalBackupPolicy('shadowDbBackupMinIntervalMinutes', Number(val))"
+          />
+
+          <div class="local-policy-actions">
+            <button class="cleanup-btn" :disabled="isSavingLocalBackupPolicy" @click="saveLocalBackupPolicy">
+              <Database :size="16" />
+              {{ isSavingLocalBackupPolicy ? 'Saving...' : 'Save Local Policy' }}
+            </button>
+            <button class="cleanup-btn secondary" :disabled="isLoadingLocalBackupPolicy" @click="loadLocalBackupPolicy">
+              <RefreshCw :size="16" :class="{ spinning: isLoadingLocalBackupPolicy }" />
+              Reload
+            </button>
+          </div>
+
+          <p class="local-policy-muted">
+            Changes apply to the local machine backup daemon after the dev stack restarts.
+          </p>
+        </template>
+
+        <p v-if="localBackupPolicyStatus" class="cleanup-result success">
+          {{ localBackupPolicyStatus }}
+        </p>
+        <p v-if="localBackupPolicyError" class="cleanup-result">
+          {{ localBackupPolicyError }}
+        </p>
+      </div>
     </SettingsSection>
 
     <SettingsSection title="💾 Manual Actions">
@@ -452,6 +636,33 @@ onMounted(async () => {
   gap: var(--space-4);
 }
 
+.local-policy-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.local-policy-description,
+.local-policy-muted,
+.local-policy-path {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.local-policy-path {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.local-policy-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 /* Tauri Mode Selector */
 .mode-selector-panel {
   display: flex;
@@ -481,7 +692,7 @@ onMounted(async () => {
   border-radius: var(--radius-xl);
   cursor: pointer;
   transition: all var(--duration-normal);
-  text-align: left;
+  text-align: start;
 }
 
 .mode-option:hover {
@@ -585,7 +796,7 @@ onMounted(async () => {
   color: var(--text-primary);
   cursor: pointer;
   transition: all var(--duration-normal);
-  text-align: left;
+  text-align: start;
   width: 100%;
 }
 
@@ -824,7 +1035,7 @@ onMounted(async () => {
 }
 
 .detailed-warnings ul {
-  padding-left: var(--space-4);
+  padding-inline-start: var(--space-4);
   margin: 0;
 }
 

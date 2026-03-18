@@ -7,6 +7,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notifications'
 import { useAuthStore } from '@/stores/auth'
+import { useWorkspaceStore } from '@/stores/workspace'
 import { useSupabaseDatabase, invalidateCache } from '@/composables/useSupabaseDatabase'
 import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
@@ -32,6 +33,7 @@ export function useAppInitialization() {
     const uiStore = useUIStore()
     const notificationStore = useNotificationStore()
     const authStore = useAuthStore()
+    const workspaceStore = useWorkspaceStore()
     const itpProtection = useSafariITPProtection()
     const activeChannel = ref<unknown>(null)
     const realtimeInitialized = ref(false)
@@ -59,6 +61,15 @@ export function useAppInitialization() {
             // BUG-339: Clear ALL stale guest localStorage (including legacy keys)
             // This fixes race condition and historical key naming issues
             clearStaleGuestTasks()
+
+            // BUG-1563: Load workspaces immediately after auth (before store loads)
+            // so workspace-aware queries use the correct workspace context
+            try {
+                const { useWorkspaceStore } = await import('@/stores/workspace')
+                await useWorkspaceStore().loadWorkspaces()
+            } catch (e) {
+                console.warn('[MAIN] Failed to load workspaces:', e)
+            }
         }
 
         // 1. Initial Load from Supabase
@@ -139,28 +150,6 @@ export function useAppInitialization() {
         // Mark data as ready — UI can render with cached data (or empty state)
         authStore.markAppInitLoadComplete()
         isDataReady.value = true
-
-        // FEATURE-1443: Auto-redirect to Morning Dashboard once per calendar day
-        try {
-          const lastMorningVisit = localStorage.getItem('flowstate-last-morning')
-          const today = new Date().toISOString().slice(0, 10)
-          if (lastMorningVisit !== today) {
-            // Only redirect if landing on root route (not deep links)
-            const currentHash = window.location.hash
-            if (!currentHash || currentHash === '#/' || currentHash === '#') {
-              // Delay slightly to let the app finish rendering
-              setTimeout(() => {
-                router.push('/morning').then(() => {
-                  localStorage.setItem('flowstate-last-morning', today)
-                }).catch(() => {
-                  // Navigation failed — don't burn the key
-                })
-              }, 100)
-            }
-          }
-        } catch {
-          // localStorage unavailable — skip redirect
-        }
 
         // Phase B (non-blocking): Background sync from Supabase
         // Skip entirely when offline — no point in fetching, just wait for 'online' event
@@ -731,12 +720,12 @@ export function useAppInitialization() {
             timerStore.resyncFromDatabase()
         }
 
-        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery)
+        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId)
         activeChannel.value = channel
         realtimeInitialized.value = !!channel
 
         if (channel) {
-            console.log('📡 [APP-INIT] Realtime subscription created with project, task, and timer handlers')
+            console.log(`📡 [APP-INIT] Realtime subscription created (workspace: ${workspaceStore.activeWorkspaceId || 'personal'})`)
         } else {
             console.log('📡 [APP-INIT] No realtime subscription (user not authenticated yet)')
         }
@@ -840,13 +829,112 @@ export function useAppInitialization() {
             }
 
             const timerHandler = timerStore.handleRemoteTimerUpdate
-            const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery)
+            const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId)
 
             if (channel) {
                 activeChannel.value = channel
                 realtimeInitialized.value = true
-                console.log('📡 [APP-INIT] Realtime subscription created after sign-in')
+                console.log(`📡 [APP-INIT] Realtime subscription created after sign-in (workspace: ${workspaceStore.activeWorkspaceId || 'personal'})`)
             }
+        }
+    })
+
+    // Workspace switch: re-create realtime subscription with new workspace context
+    // When user switches workspace, the realtime filters must change from
+    // user_id=X to workspace_id=Y (or back to user_id for personal workspace)
+    watch(() => workspaceStore.activeWorkspaceId, async (newWsId, oldWsId) => {
+        if (!realtimeInitialized.value || !authStore.isAuthenticated) return
+        // Skip initial undefined → null transition
+        if (newWsId === oldWsId) return
+
+        console.log(`📡 [APP-INIT] Workspace switched (${oldWsId || 'personal'} → ${newWsId || 'personal'}) - re-creating realtime subscription...`)
+
+        // Tear down existing subscription
+        if (activeChannel.value) {
+            try {
+                await (activeChannel.value as { unsubscribe: () => Promise<void> }).unsubscribe()
+            } catch { /* channel already closed */ }
+            activeChannel.value = null
+        }
+
+        const { initRealtimeSubscription: initRealtime } = useSupabaseDatabase()
+
+        // Re-use the same handler pattern as the auth watcher
+        const onProjectChange = (payload: Record<string, unknown>) => {
+            const canvas = useCanvasStore()
+            const projects = useProjectStore()
+            const tasks = useTaskStore()
+            const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
+                window.__FlowStateIsDragging ||
+                window.__FlowStateIsResizing ||
+                window.__FlowStateIsSettling
+            ))
+            if (isLocked) return
+            const { eventType, new: newDoc, old: oldDoc } = payload
+            if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
+                projects.removeProjectFromSync(newDoc?.id || oldDoc?.id)
+            } else if (newDoc) {
+                const mappedProject = fromSupabaseProject(newDoc as SupabaseProject)
+                projects.updateProjectFromSync(mappedProject.id, mappedProject)
+            }
+        }
+
+        const onTaskChange = (payload: Record<string, unknown>) => {
+            const canvas = useCanvasStore()
+            const tasks = useTaskStore()
+            const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
+                window.__FlowStateIsDragging ||
+                window.__FlowStateIsResizing ||
+                window.__FlowStateIsSettling
+            ))
+            if (isLocked) return
+            const { eventType, new: newDoc, old: oldDoc } = payload
+            const taskId = newDoc?.id || oldDoc?.id
+            if (!taskId) return
+            if (tasks.isPendingWrite(taskId)) return
+            const isHardDelete = eventType === 'DELETE'
+            const isSoftDelete = newDoc && newDoc.is_deleted === true
+            if (isHardDelete || isSoftDelete) {
+                tasks.updateTaskFromSync(taskId, null, true)
+            } else if (newDoc) {
+                const mappedTask = fromSupabaseTask(newDoc as SupabaseTask)
+                tasks.updateTaskFromSync(taskId, mappedTask, false)
+            }
+        }
+
+        const onGroupChange = (payload: Record<string, unknown>) => {
+            const canvas = useCanvasStore()
+            const tasks = useTaskStore()
+            const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
+                window.__FlowStateIsDragging ||
+                window.__FlowStateIsResizing ||
+                window.__FlowStateIsSettling
+            ))
+            if (isLocked) return
+            const { eventType, new: newDoc, old: oldDoc } = payload
+            if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
+                canvas.removeGroupFromSync(newDoc?.id || oldDoc?.id)
+            } else if (newDoc) {
+                const mappedGroup = fromSupabaseGroup(newDoc as SupabaseGroup)
+                canvas.updateGroupFromSync(mappedGroup.id, mappedGroup)
+            }
+        }
+
+        const onRecovery = async () => {
+            console.log('🔄 [APP-INIT] Reloading data after auth recovery (workspace switch)...')
+            await Promise.all([
+                taskStore.loadFromDatabase(),
+                projectStore.loadProjectsFromDatabase(),
+                canvasStore.loadFromDatabase()
+            ])
+        }
+
+        const timerHandler = timerStore.handleRemoteTimerUpdate
+        const channel = initRealtime(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, newWsId)
+
+        if (channel) {
+            activeChannel.value = channel
+            console.log(`📡 [APP-INIT] Realtime subscription re-created for workspace: ${newWsId || 'personal'}`)
         }
     })
 

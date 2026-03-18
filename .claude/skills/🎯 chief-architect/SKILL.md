@@ -21,7 +21,7 @@ The unified architect skill for FlowState personal productivity application deve
 Optimized for single-developer projects serving 10-100 users.
 
 ## Quick Context
-- **Stack**: Vue 3.5+ | Vite 7.3+ | TypeScript 5.9+ | Pinia 2.1+ | Supabase (self-hosted) | Tauri 2.9+
+- **Stack**: Vue 3.5+ | Vite 7.3+ | TypeScript 5.9+ | Pinia 2.1+ | Supabase (self-hosted) | Tauri 2.10+
 - **Production**: in-theflow.com (Contabo VPS, Ubuntu 22.04)
 - **Complexity**: Medium-High (Personal app orchestration + planning)
 - **Duration**: Variable (Project lifecycle)
@@ -41,7 +41,7 @@ Optimized for single-developer projects serving 10-100 users.
 
 **IMPORTANT**: After completing planning/architecture work, automatically invoke these skills:
 
-1. **After plan is approved** → Use appropriate dev skill (`dev-debugging`, `dev-vueuse`, `dev-implement-ui-ux`)
+1. **After plan is approved** → Use appropriate dev skill (`dev-debugging`, `dev-vueuse`, `flowstate-ui-ux`)
 2. **After implementation complete** → Use `Skill(qa-testing)` to verify the implementation
 3. **If documentation needed** → Use `Skill(smart-doc-manager)` for doc updates
 4. **If MASTER_PLAN update needed** → Use `Skill(smart-doc-manager)` (includes master-plan management)
@@ -282,24 +282,23 @@ Present the plan in this structure:
 ### Domain 1: Hybrid Data Architecture (Supabase + Local)
 **Focus Areas:**
 - **Supabase Integration**: `supabase-js` v2.x, PostgreSQL, Realtime subscriptions, Edge Functions
-- **State Persistence**: Pinia + `pinia-shared-state` (Native BroadcastChannel) for cross-tab sync
+- **State Persistence**: Pinia with BroadcastChannel for cross-tab sync
 - **Data Simplicity**: Maintainable schemas for single-developer projects
 - **Personal Data Backup**: JSON/CSV Export & Import strategies (`useBackupSystem.ts`)
 - **Dual-Engine Resilience**: Shadow Backup System (Postgres + SQLite Mirror) running every 5 mins
 - **Performance**: Optimistic UI updates with background sync
-- **SWR Cache Pattern**: Stale-While-Revalidate with `src/composables/useSWRCache.ts`
 
 ### Domain 2: Personal Frontend Architecture (Vue 3 + Tailwind)
 **Focus Areas:**
 - **Core Stack**: Vue 3.5+ (Composition API), Vite 7.3+, TypeScript 5.9+
 - **Component System**: Naive UI + Tailwind CSS 3.4 for rapid styling
-- **State Management**: Pinia 3.0+ with 10 modular stores
+- **State Management**: Pinia 2.1+ with 12 modular stores
 - **Canvas Interaction**: Vue Flow 1.47+ with geometry invariants
 - **Performance Optimization**: Bundle size, lazy loading, static resource caching
 - **Rich Text**: Tiptap 2.x editor integration
 - **Design Tokens**: `src/assets/design-tokens.css` - NEVER hardcode colors/spacing
 
-**Key Stores (10 total):**
+**Key Stores (12 total):**
 | Store | Purpose | File |
 |-------|---------|------|
 | `tasks` | Core task CRUD, filtering | `src/stores/tasks.ts` |
@@ -309,13 +308,15 @@ Present the plan in this structure:
 | `settings` | User preferences | `src/stores/settings.ts` |
 | `ui` | UI state (modals, panels) | `src/stores/ui.ts` |
 | `projects` | Project management | `src/stores/projects.ts` |
-| `theme` | Theme management, CSS variables | `src/stores/theme.ts` |
+| `aiChat` | AI chat state | `src/stores/aiChat.ts` |
+| `canvasTaskBridge` | Canvas-task bridge state | `src/stores/canvasTaskBridge.ts` |
+| `syncStatus` | Sync status tracking | `src/stores/syncStatus.ts` |
 | `notifications` | Scheduled notifications, reminders | `src/stores/notifications.ts` |
 | `quickSort` | QuickSort session state | `src/stores/quickSort.ts` |
 
-### Domain 3: Mobile & Desktop (Tauri 2.9+)
+### Domain 3: Mobile & Desktop (Tauri 2.10+)
 **Focus Areas:**
-- **Desktop Wrapper**: Tauri 2.9+ integration for native desktop experience
+- **Desktop Wrapper**: Tauri 2.10+ integration for native desktop experience
 - **Mobile Preparation**: Responsive design suitable for future mobile port
 - **Touch Interactions**: Mobile gesture support (`@vueuse/gesture`)
 - **Performance**: Battery efficiency and resource optimization
@@ -342,10 +343,10 @@ src/composables/useTauriStartup.ts     # Frontend startup sequence
 **Focus Areas:**
 - **Feature Flag Management**: Development workflow for incremental features
 - **Testing Strategy**: Vitest (Unit) + Playwright (E2E) + Stress Testing
-- **Checkpoint Strategy**: Git-based checkpoint system (`scripts/checkpoint-with-backup.sh`)
+- **Checkpoint Strategy**: Git-based checkpoint system
 - **Quality Assurance**: Automated validation scripts (`validate:comprehensive`)
 - **Documentation**: `MASTER_PLAN.md` as central source of truth
-- **Hooks Architecture**: 14 Claude Code hooks for enforcement
+- **Hooks Architecture**: 4 Claude Code hooks for enforcement
 
 **Testing Infrastructure (615+ tests):**
 | Type | Framework | Count | Location |
@@ -503,7 +504,7 @@ Position drift and "jumping" tasks occur when multiple code paths mutate geometr
 
 These violated geometry invariants and caused position drift. See ADR comments in each file.
 
-**Canvas Composables** (`src/composables/canvas/` - 29 total):
+**Canvas Composables** (`src/composables/canvas/` - 33 total):
 
 | Composable | Purpose |
 |------------|---------|
@@ -534,7 +535,7 @@ These violated geometry invariants and caused position drift. See ADR comments i
 **Smart Groups:**
 - Auto-collect tasks based on rules (due date, status, priority)
 - ONLY modify metadata, NEVER geometry
-- Located in `src/composables/canvas/useSmartGroups.ts`
+- Located in `src/composables/canvas/useSmartGroupMatcher.ts`
 
 ### Domain 9: Backup & Disaster Recovery (4-Layer System)
 **Full SOP:** `docs/claude-md-extension/backup-system.md`
@@ -548,9 +549,7 @@ These violated geometry invariants and caused position drift. See ADR comments i
 | **Layer 4** | SQL Dumps | Manual | `supabase/backups/*.sql` |
 
 **Key Composables:**
-- `src/composables/useBackupSystem.ts` - Main backup orchestration
-- `src/composables/useShadowBackup.ts` - SQLite mirror logic
-- `src/composables/useLocalHistory.ts` - IndexedDB history
+- `src/composables/backup/useBackupSystem.ts` - Main backup orchestration
 
 **Recovery UI:** Settings > Storage tab
 
@@ -561,11 +560,6 @@ Soft delete with `deleted_at` timestamp for recoverability:
 await supabase.from('tasks').update({ deleted_at: new Date() }).eq('id', taskId)
 // Recovery: set deleted_at = null
 ```
-
-**SWR Cache Pattern** (`src/composables/useSWRCache.ts`):
-- Stale-While-Revalidate for optimal UX
-- Returns cached data immediately, revalidates in background
-- Automatic cache invalidation on mutations
 
 ### Domain 10: Timer & Cross-Device Sync
 **Architecture:** Device leadership model where one device "leads" the countdown and others follow.
@@ -645,14 +639,13 @@ To find current skills, check `.claude/skills/` directory:
 | Category | Skills |
 |----------|--------|
 | **Debugging** | `dev-debugging`, `vue-flow-debug`, `supabase-debugger`, `tauri-debugger` |
-| **Development** | `dev-vueuse`, `dev-implement-ui-ux`, `frontend-design`, `tiptap-vue3` |
+| **Development** | `dev-vueuse`, `flowstate-ui-ux`, `frontend-ux-ui-design`, `tiptap-vue3` |
 | **Fixes** | `dev-undo-redo`, `ops-port-manager` |
 | **Quality** | `qa-testing`, `codebase-health-auditor`, `stress-tester` |
 | **Documentation** | `smart-doc-manager`, `dev-storybook`, `task` |
-| **Infrastructure** | `kde-plasma-widget-dev`, `start-dev`, `done` |
+| **Infrastructure** | `kde-plasma-widget-dev`, `start-dev`, `done`, `tauri` |
 | **Analysis** | `master-plan-auditor` |
-| **Meta** | `skill-creator-doctor`, `chief-architect` |
-| **Workflows** | `feature-creator`, `design-system-migrator` |
+| **Meta** | `chief-architect` |
 
 ### Skill Routing Guidance
 
@@ -672,8 +665,8 @@ function routeTask(taskType: string): string {
 
     // Development
     'composable': 'dev-vueuse',
-    'ui-ux': 'dev-implement-ui-ux',
-    'frontend': 'frontend-design',
+    'ui-ux': 'flowstate-ui-ux',
+    'frontend': 'frontend-ux-ui-design',
     'rich-text': 'tiptap-vue3',
 
     // Quality
@@ -703,16 +696,16 @@ function routeTask(taskType: string): string {
 
 ---
 
-## Hooks Architecture (14 Hooks)
+## Hooks Architecture (4 Hooks)
 
 Claude Code hooks enforce project rules automatically:
 
 | Hook | Purpose | Location |
 |------|---------|----------|
-| `destructive-command-blocker.sh` | Block dangerous DB commands | `.claude/hooks/` |
+| `no-root-images.sh` | Prevent images in project root | `.claude/hooks/` |
+| `skill-announcer.sh` | Announce skill activations | `.claude/hooks/` |
 | `task-lock-enforcer.sh` | Multi-instance locking | `.claude/hooks/` |
-| `completion-validator.sh` | Enforce 5-layer completion | `.claude/hooks/` |
-| `atomic-task-enforcer.sh` | Break down broad requests | `.claude/hooks/` |
+| `user-prompt-handler.sh` | Handle user prompt submissions | `.claude/hooks/` |
 
 **Lock files**: `.claude/locks/TASK-XXX.lock`
 **Lock expiry**: 4 hours (stale locks auto-cleaned)

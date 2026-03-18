@@ -2,6 +2,15 @@
 
 # NEVER EVER CLAIM SUCCESS THAT SOMETHING IS READY, DONE, READY FOR PRODUCTION ETC UNTIL THE USER CONFIRMS IT by actually testing or using the feature!!!!
 
+# MANDATORY Pre-Read for Major Work
+
+**Before ANY major feature, refactoring, architecture decision, or multi-file change**, read these documents first:
+
+- **System Architecture**: [`docs/claude-md-extension/system-architecture.md`](docs/claude-md-extension/system-architecture.md) — All views, stores, composables, services, features, data flow, and architectural constraints
+- **Design System**: [`docs/claude-md-extension/design-system.md`](docs/claude-md-extension/design-system.md) — All design tokens, base/common components with props, button patterns, glass morphism rules
+
+These are the source of truth for the app's current state. When delegating to agents, include: "Read docs/claude-md-extension/system-architecture.md and design-system.md first."
+
 # MASTER_PLAN Workflow (MANDATORY)
 
 **IMPORTANT: Follow this workflow for EVERY task:**

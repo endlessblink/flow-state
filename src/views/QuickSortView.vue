@@ -240,6 +240,16 @@
               <button class="pill" :class="{ active: isDueNextWeek }" @click="setQuickDate('nextweek')">+7</button>
               <button class="pill" @click="setQuickDate('in2weeks')">+14</button>
               <button class="pill" @click="setQuickDate('in30days')">+30</button>
+              <button class="pill date-picker-trigger" :class="{ active: currentTask.dueDate && !isDueToday && !isDueTomorrow && !isDueWeekend && !isDueNextWeek }" @click="($refs.dueDatePicker as HTMLInputElement)?.showPicker()">
+                <Calendar :size="14" />
+              </button>
+              <input
+                ref="dueDatePicker"
+                type="date"
+                class="date-picker-hidden"
+                :value="currentTask.dueDate || ''"
+                @input="handleTaskUpdate({ dueDate: ($event.target as HTMLInputElement).value || '' })"
+              />
               <button class="pill clear" :class="{ active: !currentTask.dueDate }" @click="setQuickDate('clear')">
                 <X :size="14" />
               </button>
@@ -309,7 +319,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   Zap, X, CheckCircle, Undo2, Plus, Save, Trash2, Pencil, SkipForward,
-  CalendarDays, FolderOpen
+  CalendarDays, FolderOpen, Calendar
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickCapture } from '@/composables/useQuickCapture'
@@ -1119,6 +1129,18 @@ const currentTaskProject = computed(() => {
 }
 
 .pill:active { transform: scale(0.95); }
+
+.date-picker-trigger {
+  padding: var(--space-1_5) var(--space-2);
+}
+
+.date-picker-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
 
 /* Priority pills expand equally */
 .control-row:first-child .pill-group .pill { flex: 1; justify-content: center; }

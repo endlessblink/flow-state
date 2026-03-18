@@ -668,7 +668,7 @@ function triggerHaptic(duration: number = 10) {
   cursor: pointer;
   transition: all var(--duration-fast) ease;
   -webkit-tap-highlight-color: transparent;
-  text-align: left;
+  text-align: start;
 }
 
 .project-item:active {
@@ -742,12 +742,12 @@ function triggerHaptic(duration: number = 10) {
    ================================ */
 
 [dir="rtl"] .edit-form {
-  text-align: right;
+  text-align: end;
 }
 
 .title-input[dir="rtl"],
 .desc-input[dir="rtl"] {
-  text-align: right;
+  text-align: end;
 }
 
 [dir="rtl"] .pill-row {

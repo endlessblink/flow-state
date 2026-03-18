@@ -36,18 +36,33 @@
     </button>
 
     <!-- Time Filter Dropdown -->
-    <NDropdown
+    <NPopover
       v-if="!isCollapsed"
-      :options="timeFilterOptions"
+      v-model:show="showTimeFilter"
       trigger="click"
-      @select="handleTimeFilterSelect"
+      placement="bottom-start"
+      :show-arrow="false"
+      raw
     >
-      <button class="time-filter-dropdown" :class="{ active: activeTimeFilter !== 'all' }">
-        <CalendarDays :size="14" />
-        <span>{{ timeFilterLabel }}</span>
-        <ChevronDown :size="12" />
-      </button>
-    </NDropdown>
+      <template #trigger>
+        <button class="time-filter-dropdown" :class="{ active: activeTimeFilter !== 'all' }">
+          <CalendarDays :size="14" />
+          <span>{{ timeFilterLabel }}</span>
+          <ChevronDown :size="12" />
+        </button>
+      </template>
+      <div class="time-filter-options">
+        <button
+          v-for="option in timeFilterOptions"
+          :key="option.key"
+          class="time-filter-option"
+          :class="{ active: activeTimeFilter === option.key }"
+          @click="handleTimeFilterSelect(option.key)"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+    </NPopover>
 
     <!-- TASK-1246: Group Filter Dropdown -->
     <NPopover
@@ -101,7 +116,7 @@
     <div v-if="!isCollapsed && isSearchExpanded" class="search-input-row">
       <div class="search-input-wrapper">
         <Search :size="14" class="search-icon" />
-        <input
+        <input dir="auto"
           ref="searchInputRef"
           type="text"
           class="search-input"
@@ -146,6 +161,7 @@
         :hide-done-tasks="hideDoneTasks"
         :sort-by="sortBy"
         :sort-direction="sortDirection"
+        :on-canvas-count="onCanvasCount"
         :tasks="baseTasks"
         :projects="rootProjects"
         @update:unscheduled-only="$emit('update:unscheduled-only', $event)"
@@ -166,7 +182,7 @@
 import { computed, ref, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, CheckCircle2, Search, X, Layers } from 'lucide-vue-next'
-import { NBadge, NDropdown, NPopover } from 'naive-ui'
+import { NBadge, NPopover } from 'naive-ui'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
@@ -197,6 +213,7 @@ const props = defineProps<{
   sortBy: SortByType // TASK-1073
   sortDirection: SortDirection // TASK-1412
   searchQuery: string // TASK-1075
+  onCanvasCount?: number // BUG-1530
 }>()
 
 const emit = defineEmits<{
@@ -224,6 +241,9 @@ interface GroupOption {
   color?: string
   count?: number
 }
+
+// Time filter popover state
+const showTimeFilter = ref(false)
 
 // TASK-1075: Search state
 const isSearchExpanded = ref(false)
@@ -328,6 +348,7 @@ const timeFilterLabel = computed(() => {
 
 const handleTimeFilterSelect = (key: string) => {
   emit('update:activeTimeFilter', key as TimeFilterType)
+  showTimeFilter.value = false
 }
 </script>
 
@@ -522,6 +543,45 @@ const handleTimeFilterSelect = (key: string) => {
   padding-inline-start: var(--space-1);
   border-inline-start: 1px solid currentColor;
   margin-inline-start: var(--space-1);
+}
+
+/* Time Filter Popover Options */
+.time-filter-options {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1);
+  background: var(--surface-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  min-width: 160px;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+}
+
+.time-filter-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-1_5) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: start;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.time-filter-option:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.time-filter-option.active {
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
+  font-weight: var(--font-medium);
 }
 
 /* Advanced Filters Toggle */

@@ -71,10 +71,10 @@
       </SidebarSmartItem>
     </div>
 
-    <!-- Quick Sort Button (shows when uncategorized filter is active) -->
+    <!-- Quick Sort Button (shows when uncategorized filter is active, personal workspace only) -->
     <Transition name="fade">
       <button
-        v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedCount > 0"
+        v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedCount > 0 && isNavItemVisible('quick-sort')"
         class="quick-sort-button-full"
         title="Start Quick Sort to categorize these tasks"
         @click="handleStartQuickSort"
@@ -92,10 +92,12 @@ import { useRouter, useRoute } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { Calendar, List, Inbox, Zap } from 'lucide-vue-next'
 import SidebarSmartItem from '@/components/layout/SidebarSmartItem.vue'
+import { useWorkspaceNavigation } from '@/composables/useWorkspaceNavigation'
 
 const router = useRouter()
 const route = useRoute()
 const taskStore = useTaskStore()
+const { isNavItemVisible } = useWorkspaceNavigation()
 
 // Smart View Counts
 const todayTaskCount = computed(() => taskStore.smartViewTaskCounts.today)
@@ -118,7 +120,7 @@ const selectSmartView = (view: string) => {
   }
 
   // BUG-1430: Only navigate to /tasks if current view doesn't support smart view filters
-  const filterableViews = ['/', '/board', '/calendar', '/tasks', '/catalog', '/morning']
+  const filterableViews = ['/', '/board', '/calendar', '/tasks', '/catalog']
   if (!filterableViews.includes(route.path)) {
     router.push('/tasks')
   }

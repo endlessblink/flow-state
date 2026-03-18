@@ -61,11 +61,11 @@
         <!-- Nanny (Focus Reminder) Settings -->
         <entry name="nannyEnabled" type="Bool">
             <label>Enable focus reminder notifications when idle during work hours</label>
-            <default>false</default>
+            <default>true</default>
         </entry>
         <entry name="nannyWorkDays" type="String">
             <label>Work days for reminders (comma-separated: 0=Sun, 1=Mon, ..., 6=Sat)</label>
-            <default>1,2,3,4,5</default>
+            <default>0,1,2,3,4,5</default>
         </entry>
         <entry name="nannyStartHour" type="Int">
             <label>Work hours start (0-23)</label>
@@ -96,6 +96,10 @@
         <entry name="preEndWarningSeconds" type="Int">
             <label>Seconds before session end to show warning (0 = disabled)</label>
             <default>60</default>
+        </entry>
+        <entry name="showCurrentBlock" type="Bool">
+            <label>Show current calendar block in panel</label>
+            <default>true</default>
         </entry>
 
         <!-- Pinned Tasks Filter (power-user: edit via right-click > Configure) -->

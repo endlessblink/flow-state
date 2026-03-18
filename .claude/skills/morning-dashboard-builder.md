@@ -16,11 +16,16 @@ Build the FlowState Morning Dashboard (FEATURE-1443) -- a calm, focused bento-gr
 src/views/MorningDashboardView.vue          -- Main view, bento CSS Grid layout
 src/components/morning-dashboard/
   MorningGreeting.vue                        -- Greeting + date + motivational quote
-  MorningScore.vue                           -- Wraps LevelBadge, XpBar, StreakCounter (compact)
+  MorningRitualPanel.vue                     -- Main ritual panel with drag-and-drop task selection
+  MorningCandidateCard.vue                   -- Task candidate card for pool selection
+  MorningTimeBlockCalendar.vue               -- Time block calendar for scheduling
+  MorningSummaryChip.vue                     -- Summary chip for selected tasks
+  MorningBanner.vue                          -- Banner/header component
   BigThreeCard.vue                           -- Hero card with 3 commitment slots
   BigThreeSlot.vue                           -- Individual slot (input + display states)
   TaskSuggestionChip.vue                     -- Pill chip for backlog task suggestion
-  MorningMissions.vue                        -- Wraps DailyChallengesPanel (compact mode)
+  TaskPoolCard.vue                           -- Task pool card for drag source
+  TimeBlockPicker.vue                        -- Time block picker for scheduling
   MorningNews.vue                            -- HN top stories list
   NewsCard.vue                               -- Individual news story row
   MorningQuickCapture.vue                    -- Bottom bar inline task creation
@@ -29,16 +34,13 @@ src/composables/useMorningDashboard.ts       -- State management, news fetch, su
 
 ### Existing Components to Reuse (DO NOT recreate)
 
-- `src/components/gamification/StreakCounter.vue` -- Use with `compact` prop
-- `src/components/gamification/XpBar.vue` -- Use with `compact` prop
-- `src/components/gamification/LevelBadge.vue` -- Use with `size="sm"` prop
-- `src/components/gamification/DailyChallengesPanel.vue` -- Use with `compact` prop
+- `src/components/gamification/StreakCounter.vue` -- Use with `compact` prop (Phase 2 - when gamification is built)
+- `src/components/gamification/XpBar.vue` -- Use with `compact` prop (Phase 2 - when gamification is built)
+- `src/components/gamification/LevelBadge.vue` -- Use with `size="sm"` prop (Phase 2 - when gamification is built)
 
 ### Stores to Import
 
 - `useTaskStore` from `@/stores/tasks` -- Task CRUD, task list
-- `useGamificationStore` from `@/stores/gamification` -- XP, level, streak info
-- `useChallengesStore` from `@/stores/challenges` -- Daily challenges
 - `useTimerStore` from `@/stores/timer` -- Active timer state (optional indicator)
 - `useSmartViews` from `@/composables/useSmartViews` -- `isTodayTask()` filter
 
@@ -334,15 +336,11 @@ Each component in `src/components/morning-dashboard/`:
 
 **MorningGreeting.vue** -- Props: `greeting: string`, `dailyQuote: string`. Display user name from auth store if available, else "there". Show formatted date via `Intl.DateTimeFormat`.
 
-**MorningScore.vue** -- No props. Imports `LevelBadge`, `XpBar`, `StreakCounter` from gamification. All in compact mode. Horizontal layout on desktop, stacked on mobile.
-
 **BigThreeCard.vue** -- Props: `slots: BigThreeSlot[]`, `suggestions: Task[]`. Emits: `update:slots`, `start-day`. The hero card. Contains 3 `BigThreeSlot` instances + suggestion chips + CTA button.
 
 **BigThreeSlot.vue** -- Props: `slot: BigThreeSlot`, `index: number`, `suggestions: Task[]`. Emits: `commit`, `clear`. States: empty (dashed border, input), focused (solid teal border, dropdown), filled (glass bg, task title, x button).
 
 **TaskSuggestionChip.vue** -- Props: `task: Task`. Emits: `select`. Glass pill with task title, truncated. Teal border on hover.
-
-**MorningMissions.vue** -- Thin wrapper around `<DailyChallengesPanel compact />`. Adds section header.
 
 **MorningNews.vue** -- Props: `items: NewsItem[]`, `loading: boolean`. Renders list of `NewsCard`. Shows skeleton placeholders while loading. "Show more" link to HN.
 
@@ -451,11 +449,10 @@ Same storage approach as weather key.
 - [ ] All animations disabled with `prefers-reduced-motion: reduce`
 - [ ] Color contrast AA on all text
 
-### Gamification Integration
+### Gamification Integration (Phase 2 - when gamification is built)
 - [ ] StreakCounter shows in compact mode with correct data
 - [ ] XpBar shows progress in compact mode
 - [ ] LevelBadge shows current level
-- [ ] DailyChallengesPanel shows in compact mode
 - [ ] XP reward fires on "Start My Day"
 
 ### Edge Cases

@@ -44,6 +44,17 @@ const env = { ...loadEnv('.env'), ...loadEnv('.env.local') };
 const BACKUP_DIR = path.join(__dirname, '../backups');
 const PUBLIC_DIR = path.join(__dirname, '../public');
 
+function getPositiveInt(name, fallback) {
+    const raw = process.env[name] || env[name];
+    if (!raw) return fallback;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const SHADOW_DB_BACKUP_EVERY_N_SNAPSHOTS = getPositiveInt('FLOW_STATE_SHADOW_DB_BACKUP_EVERY', 12);
+const SHADOW_DB_KEEP_BACKUPS = getPositiveInt('FLOW_STATE_SHADOW_DB_KEEP_BACKUPS', 5);
+const SHADOW_DB_BACKUP_MIN_INTERVAL_MS = getPositiveInt('FLOW_STATE_SHADOW_DB_BACKUP_MIN_INTERVAL_MINUTES', 360) * 60 * 1000;
+
 // Get Supabase URL - handle relative URLs (used for Vite proxy) by falling back to local
 const rawSupabaseUrl = process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL || '';
 const SUPABASE_URL = rawSupabaseUrl.startsWith('http') ? rawSupabaseUrl : 'http://127.0.0.1:54321';
@@ -209,6 +220,62 @@ function pruneWithProtection(keepProtected = 10) {
     }
 }
 
+function listShadowDbBackupFiles() {
+    return fs.readdirSync(BACKUP_DIR)
+        .filter(name => /^shadow-\d+\.db\.backup$/.test(name))
+        .map(name => {
+            const fullPath = path.join(BACKUP_DIR, name);
+            return {
+                name,
+                fullPath,
+                mtimeMs: fs.statSync(fullPath).mtimeMs
+            };
+        })
+        .sort((a, b) => b.mtimeMs - a.mtimeMs);
+}
+
+function pruneShadowDbBackups(keepCount = SHADOW_DB_KEEP_BACKUPS) {
+    try {
+        const files = listShadowDbBackupFiles();
+        const doomed = files.slice(keepCount);
+
+        for (const file of doomed) {
+            fs.unlinkSync(file.fullPath);
+        }
+
+        const keepNames = new Set(files.slice(0, keepCount).map(file => file.name));
+        const journalPattern = /^shadow-\d+\.db\.backup-journal$/;
+
+        for (const name of fs.readdirSync(BACKUP_DIR)) {
+            if (!journalPattern.test(name)) continue;
+            const baseName = name.replace(/-journal$/, '');
+            if (!keepNames.has(baseName)) {
+                fs.unlinkSync(path.join(BACKUP_DIR, name));
+            }
+        }
+
+        if (doomed.length > 0) {
+            console.log(`[Shadow] 🧹 Removed ${doomed.length} old shadow DB copies (kept ${Math.min(files.length, keepCount)})`);
+        }
+    } catch (e) {
+        console.warn('[Shadow] Shadow DB copy prune error:', e.message);
+    }
+}
+
+function shouldCreateShadowDbBackup(snapshotCount) {
+    if (snapshotCount % SHADOW_DB_BACKUP_EVERY_N_SNAPSHOTS !== 0) {
+        return false;
+    }
+
+    const latest = listShadowDbBackupFiles()[0];
+    if (!latest) {
+        return true;
+    }
+
+    const ageMs = Date.now() - latest.mtimeMs;
+    return ageMs >= SHADOW_DB_BACKUP_MIN_INTERVAL_MS;
+}
+
 async function runShadowSync() {
     const timestamp = Date.now();
     console.log(`[Shadow] 🌑 Starting Mirror Sync at ${new Date(timestamp).toLocaleTimeString()}...`);
@@ -366,12 +433,15 @@ async function runShadowSync() {
         // 5. TASK-317: Protected ring buffer pruning
         pruneWithProtection(10);
 
-        // 6. Create SQLite backup periodically (every 10 snapshots)
+        pruneShadowDbBackups();
+
+        // 6. Create SQLite backup periodically with file retention
         const snapshotCount = db.prepare('SELECT count(*) as c FROM snapshots').get().c;
-        if (snapshotCount % 10 === 0) {
+        if (shouldCreateShadowDbBackup(snapshotCount)) {
             const backupPath = path.join(BACKUP_DIR, `shadow-${Date.now()}.db.backup`);
             db.backup(backupPath).then(() => {
                 console.log(`[Shadow] 💾 SQLite backup created: ${path.basename(backupPath)}`);
+                pruneShadowDbBackups();
             }).catch(err => {
                 console.warn('[Shadow] SQLite backup failed:', err.message);
             });

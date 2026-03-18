@@ -9,7 +9,7 @@
       :class="titleAlignmentClasses"
       :style="titleAlignmentStyles"
       placeholder="Task title"
-      dir="auto"
+      :dir="titleDir"
       @keydown.enter.prevent
     >
   </div>
@@ -51,9 +51,10 @@ const description = computed({
 const titleInput = ref<HTMLInputElement | null>(null)
 
 // Hebrew Alignment
-const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
+const { getAlignmentClasses, applyInputAlignment, containsHebrew } = useHebrewAlignment()
 const titleAlignmentClasses = computed(() => getAlignmentClasses(props.modelValue.title))
 const titleAlignmentStyles = computed(() => applyInputAlignment(props.modelValue.title))
+const titleDir = computed(() => containsHebrew(props.modelValue.title ?? '') ? 'rtl' : 'ltr')
 
 defineExpose({
   titleInput

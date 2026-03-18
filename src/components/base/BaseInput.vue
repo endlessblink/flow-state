@@ -8,7 +8,7 @@
     <div class="input-container">
       <slot name="prefix" />
 
-      <input dir="auto"
+      <input :dir="inputDir"
         :id="inputId"
         ref="inputRef"
         v-model="localValue"
@@ -72,7 +72,7 @@ const inputId = computed(() => props.id || `input-${Math.random().toString(36).s
 const slots = useSlots()
 
 // Hebrew alignment support
-const { shouldAlignRight: _shouldAlignRight, getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
+const { shouldAlignRight: _shouldAlignRight, getAlignmentClasses, applyInputAlignment, containsHebrew } = useHebrewAlignment()
 
 const localValue = computed({
   get: () => props.modelValue,
@@ -84,6 +84,7 @@ const inputText = computed(() => String(localValue.value || ''))
 
 const alignmentClasses = computed(() => getAlignmentClasses(inputText.value))
 const alignmentStyles = computed(() => applyInputAlignment(inputText.value))
+const inputDir = computed(() => containsHebrew(inputText.value) ? 'rtl' : 'ltr')
 
 // Dynamic classes for Hebrew alignment
 const inputClasses = computed(() => [
@@ -153,7 +154,6 @@ defineExpose({
 
   /* RTL support */
   text-align: start;
-  direction: inherit;
 
   /* Remove default styles */
   outline: none;

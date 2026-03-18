@@ -73,18 +73,10 @@
       </div>
 
       <!-- Description Input -->
-      <input
+      <MarkdownEditor
         v-model="taskDescription"
-        type="text"
-        placeholder="Description"
-        aria-label="Task description"
-        class="description-input"
-        :class="[descAlignmentClasses]"
-        :style="descAlignmentStyles"
-        dir="auto"
-        @keydown.enter="handleCreateTask"
-        @keydown.esc="$emit('cancel')"
-      >
+        placeholder="Describe what needs to be done..."
+      />
 
       <!-- FEATURE-1414: Image Attachments -->
       <TaskAttachments
@@ -195,6 +187,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { Calendar, Flag, Inbox, CheckCircle, Mic, MicOff, X, Loader2, Globe } from 'lucide-vue-next'
 import BaseModal from '@/components/base/BaseModal.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
@@ -259,8 +252,6 @@ const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
 // Computed properties for Hebrew text alignment
 const titleAlignmentClasses = computed(() => getAlignmentClasses(taskTitle.value))
 const titleAlignmentStyles = computed(() => applyInputAlignment(taskTitle.value))
-const descAlignmentClasses = computed(() => getAlignmentClasses(taskDescription.value))
-const descAlignmentStyles = computed(() => applyInputAlignment(taskDescription.value))
 
 // Voice input with Whisper
 const {
@@ -674,31 +665,29 @@ watch(() => _props.isOpen, (isOpen) => {
   color: var(--text-primary);
 }
 
-/* Description Input - Glass Container */
-.description-input {
-  width: 100%;
-  background: var(--glass-bg-subtle);
+/* Description Editor - Constrained for modal */
+:deep(.markdown-editor) {
+  min-height: 120px;
+  max-height: 200px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  padding: var(--space-3);
-  outline: none;
-  transition: all var(--duration-fast) var(--ease-out);
+  background: var(--glass-bg-subtle);
+  transition: border-color var(--duration-fast) var(--ease-out);
 }
 
-.description-input:hover {
+:deep(.markdown-editor:hover) {
   border-color: var(--border-medium);
 }
 
-.description-input:focus {
+:deep(.markdown-editor:focus-within) {
   border-color: var(--purple-border-medium);
   box-shadow: var(--purple-glow-subtle);
 }
 
-.description-input::placeholder {
-  color: var(--text-tertiary);
-  opacity: 0.8;
+:deep(.markdown-editor .tiptap) {
+  padding: var(--space-3);
+  overflow-y: auto;
+  max-height: 170px;
 }
 
 /* Date & Time Section - NO Container Background */

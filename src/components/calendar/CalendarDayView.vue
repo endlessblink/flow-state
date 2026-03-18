@@ -51,8 +51,8 @@ interface CalendarHelpers {
   formatEventTime: (event: CalendarEvent) => string
   isCurrentTimeSlot: (slot: TimeSlot) => boolean
   getTasksForSlot: (slot: TimeSlot) => CalendarEvent[]
-  isTaskPrimarySlot: (slot: TimeSlot, task: CalendarEvent) => boolean
-  getSlotTaskStyle: (task: CalendarEvent, slot?: TimeSlot) => Record<string, string>
+  isTaskPrimarySlot: (task: CalendarEvent, slot: TimeSlot) => boolean
+  getSlotTaskStyle: (task: CalendarEvent, slot: TimeSlot) => Record<string, string>
   getProjectVisual: (event: { projectId?: string }) => { type: 'color' | 'emoji'; content: string }
   getProjectName: (event: CalendarEvent) => string
   getProjectColor: (event: CalendarEvent) => string
@@ -168,7 +168,7 @@ const {
               'status-active': getTaskStatus(calEvent) === 'todo',
               'slot-task--virtual': calEvent.isVirtual
             }"
-            :style="getSlotTaskStyle(calEvent, slot)"
+            :style="getSlotTaskStyle(calEvent)"
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
             :draggable="!calEvent.isVirtual"
             @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"

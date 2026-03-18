@@ -51,12 +51,10 @@ export function useMoveToCanvasGroup() {
         const allGroups = canvasStore._rawGroups as CanvasGroup[]
         const inheritedProps = getSectionProperties(group, allGroups)
 
-        // BUG-1432: Don't override existing dueDate (prevents overdue tasks from losing their actual date)
-        // Mirrors the guard in useUnifiedInboxActions.ts:302-305
-        const existingTask = taskStore.tasks.find(t => t.id === taskId)
-        if (existingTask?.dueDate && inheritedProps.dueDate) {
-            delete inheritedProps.dueDate
-        }
+        // BUG-1530: Removed BUG-1432 guard that prevented dueDate inheritance.
+        // The guard deleted dueDate from inheritedProps when the task already had one,
+        // which meant "Move to Today group" never updated the date. The drag path
+        // (useCanvasInteractions.ts) already removed this guard via BUG-1437.
 
         const updates: Partial<Task> = {
             parentId: groupId,

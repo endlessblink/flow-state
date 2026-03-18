@@ -268,9 +268,9 @@
 
 ---
 
-### BUG-1530: Dragging task to Today canvas group doesn't update Calendar inbox (📋 PLANNED)
+### ~~BUG-1530~~: Dragging task to Today canvas group doesn't update Calendar inbox (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-18)
 
 **Problem**: When a task is dragged into the "Today" group on the canvas, the due date gets set to today but the task doesn't appear in the Calendar inbox when filtered to "Today". The calendar inbox shows stale data and doesn't reflect the canvas group assignment.
 

@@ -327,10 +327,8 @@ export function useUnifiedInboxActions(
                 const inherited = getSectionProperties(targetGroup as CanvasSection, allGroups)
                 if (Object.keys(inherited).length > 0) {
                     groupProps = { ...inherited }
-                    // Don't override dueDate if the task already has one (it was used to match the group)
-                    if (task.dueDate && inherited.dueDate) {
-                        delete groupProps.dueDate
-                    }
+                    // BUG-1530: Removed guard that prevented dueDate inheritance.
+                    // When sending to "Today" group, the task's dueDate SHOULD be updated to today.
                     if (import.meta.env.DEV) {
                         console.log(`[TASK-1428:sendToCanvas] Applying group "${targetGroup.name}" props:`, groupProps)
                     }

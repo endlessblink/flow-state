@@ -31,6 +31,13 @@
       <Pin :size="10" />
     </span>
     <span
+      v-if="recurrenceDescription"
+      class="recurring-badge"
+      :title="recurrenceDescription"
+    >
+      <Repeat :size="10" />
+    </span>
+    <span
       v-if="hasSubtasks"
       class="subtask-count"
       :class="{
@@ -44,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ChevronRight, Pin } from 'lucide-vue-next'
+import { ChevronRight, Pin, Repeat } from 'lucide-vue-next'
 
 defineProps<{
   title: string
@@ -58,6 +65,7 @@ defineProps<{
   isAllSubtasksCompleted: boolean
   isExpanded?: boolean
   isPinned?: boolean
+  recurrenceDescription?: string
 }>()
 
 defineEmits<{
@@ -91,6 +99,23 @@ defineEmits<{
 
 /* Pin badge — inline after title text */
 .pin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-soft);
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 35%, transparent);
+  color: var(--brand-primary);
+  backdrop-filter: blur(8px);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* Recurring badge — inline after pin badge */
+.recurring-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;

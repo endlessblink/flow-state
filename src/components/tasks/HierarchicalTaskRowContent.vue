@@ -67,6 +67,7 @@
       :is-all-subtasks-completed="isAllSubtasksCompleted"
       :is-expanded="isExpanded"
       :is-pinned="task.isPinned"
+      :recurrence-description="recurrenceDescription"
       @toggle-expand="$emit('toggleExpand')"
     />
 
@@ -99,11 +100,6 @@
       :due-date="task.dueDate"
       @update:due-date="(val) => $emit('updateDueDate', val)"
     />
-
-    <!-- Recurring Indicator -->
-    <div v-if="task.recurrenceRule" class="task-row__recurring" :title="recurrenceDescription">
-      <Repeat :size="14" />
-    </div>
 
     <!-- Progress Bar -->
     <div class="task-row__progress">
@@ -138,7 +134,6 @@
 import { computed } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
-import { Repeat } from 'lucide-vue-next'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import TaskRowTitle from './row/TaskRowTitle.vue'
@@ -233,13 +228,3 @@ const isTimerActive = computed(() => {
 
 </script>
 
-<style scoped>
-.task-row__recurring {
-  display: flex;
-  align-items: center;
-  color: var(--brand-primary);
-  opacity: 0.7;
-  padding: 0 var(--space-1);
-  flex-shrink: 0;
-}
-</style>

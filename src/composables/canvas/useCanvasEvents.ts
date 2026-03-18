@@ -7,12 +7,21 @@ import { errorHandler, ErrorCategory } from '@/utils/errorHandler'
 import { useCanvasContextMenus } from './useCanvasContextMenus'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
+import { getDeepestContainingGroup, DEFAULT_TASK_WIDTH, DEFAULT_TASK_HEIGHT } from '@/utils/canvas/spatialContainment'
+import { useCanvasSectionProperties } from './useCanvasSectionProperties'
+import type { CanvasGroup } from '@/types/canvas'
 
 export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { force?: boolean }) => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
     const { endDrag: endGlobalDrag, dragData: activeDragData } = useDragAndDrop()
     const { screenToFlowCoordinate, setNodes, getNodes, findNode } = useVueFlow()
+
+    // BUG-1530: Section properties for dueDate inheritance when dropping onto a canvas group
+    const { getSectionProperties } = useCanvasSectionProperties({
+        taskStore,
+        getAllContainingSections: () => []
+    })
 
     // --- Interaction State ---
     const isConnecting = ref(false)
@@ -176,10 +185,31 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
             })
             const { x, y } = flowCoords
 
+            // BUG-1530: Detect if the drop position lands inside a canvas group.
+            // If so, set parentId and inherit group properties (dueDate, priority, etc.)
+            // so that a task dropped directly into "Today" gets dueDate=today.
+            const allGroups = canvasStore._rawGroups as CanvasGroup[]
+            const spatialTask = {
+                position: { x, y },
+                width: DEFAULT_TASK_WIDTH,
+                height: DEFAULT_TASK_HEIGHT
+            }
+            const targetGroup = getDeepestContainingGroup(spatialTask, allGroups)
+            const groupProps: Record<string, unknown> = {}
+            if (targetGroup) {
+                const inheritedProps = getSectionProperties(targetGroup as CanvasGroup, allGroups)
+                for (const [key, value] of Object.entries(inheritedProps)) {
+                    if (key === 'dueDate' && (!value || value === 'null')) continue
+                    groupProps[key] = value
+                }
+            }
+
             // AWAIT the task update before calling syncNodes
             // Otherwise syncNodes runs with stale task data
             await taskStore.updateTask(taskId, {
-                canvasPosition: { x, y }
+                canvasPosition: { x, y },
+                ...(targetGroup ? { parentId: targetGroup.id, isInInbox: false } : {}),
+                ...groupProps
             })
 
             // BUG-1361: Pass force:true to bypass the drag-settling guard.

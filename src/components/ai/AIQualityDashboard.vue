@@ -697,7 +697,7 @@ onMounted(() => {
 }
 
 .empty-details {
-  text-align: left;
+  text-align: start;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -841,7 +841,7 @@ onMounted(() => {
 .question-label {
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  margin-right: var(--space-1);
+  margin-inline-end: var(--space-1);
 }
 
 .result-response-preview {
@@ -1038,7 +1038,7 @@ onMounted(() => {
 
 .rule-detail {
   color: var(--text-tertiary);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 /* Run Breakdown */
@@ -1057,7 +1057,7 @@ onMounted(() => {
 
 .run-latency {
   color: var(--text-tertiary);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 /* History */
@@ -1108,7 +1108,7 @@ onMounted(() => {
 }
 
 .history-time {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
 }

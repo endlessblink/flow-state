@@ -131,11 +131,11 @@ watch(() => props.text, (newText) => {
   background: var(--surface-primary);
   border: 1px solid var(--border-medium);
   border-top: none;
-  border-left: none;
+  border-inline-start: none;
   transform: rotate(45deg);
   bottom: -5px;
   left: 50%;
-  margin-left: calc(-1 * var(--space-1));
+  margin-inline-start: calc(-1 * var(--space-1));
 }
 
 /* Position variants */
@@ -148,9 +148,9 @@ watch(() => props.text, (newText) => {
   bottom: auto;
   top: -5px;
   border-top: 1px solid var(--border-medium);
-  border-left: none;
+  border-inline-start: none;
   border-bottom: none;
-  border-right: 1px solid var(--border-medium);
+  border-inline-end: 1px solid var(--border-medium);
 }
 
 .overflow-tooltip.tooltip-position-left {

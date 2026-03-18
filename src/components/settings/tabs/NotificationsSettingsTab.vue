@@ -434,8 +434,8 @@ async function handleSubscribe() {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding-left: var(--space-2);
-  border-left: 2px solid var(--glass-border);
+  padding-inline-start: var(--space-2);
+  border-inline-start: 2px solid var(--glass-border);
 }
 
 .setting-header {
@@ -660,7 +660,7 @@ async function handleSubscribe() {
 .category-channels {
   display: flex;
   gap: var(--space-4);
-  padding-left: var(--space-2);
+  padding-inline-start: var(--space-2);
 }
 
 .channel-checkbox {

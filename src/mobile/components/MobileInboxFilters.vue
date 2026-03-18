@@ -155,7 +155,7 @@ const groupByIcons: Record<GroupByType, Component> = {
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  margin-left: var(--space-0_5);
+  margin-inline-start: var(--space-0_5);
 }
 
 .filter-chip.active .filter-count {
@@ -224,7 +224,7 @@ const groupByIcons: Record<GroupByType, Component> = {
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-fast);
 }

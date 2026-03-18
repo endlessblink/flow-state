@@ -331,7 +331,7 @@ const toggleViewOptions = () => {
   font-size: var(--text-sm);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
-  text-align: left;
+  text-align: start;
   width: 100%;
 }
 

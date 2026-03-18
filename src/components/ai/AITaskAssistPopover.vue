@@ -836,7 +836,7 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 180px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 /* ── Action Buttons ── */
@@ -857,7 +857,7 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
   cursor: pointer;
   border-radius: var(--radius-md);
   transition: background var(--duration-fast);
-  text-align: left;
+  text-align: start;
 }
 
 .assist-action-btn:hover {
@@ -890,7 +890,7 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
 }
 
 .abort-btn {
-  margin-left: auto;
+  margin-inline-start: auto;
   padding: var(--space-1) var(--space-2);
   background: transparent;
   border: 1px solid var(--glass-border);
@@ -923,7 +923,7 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
 }
 
 .retry-btn {
-  margin-left: auto;
+  margin-inline-start: auto;
   padding: var(--space-1) var(--space-2);
   background: transparent;
   border: 1px solid var(--danger-border-subtle);
@@ -1189,7 +1189,7 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
 }
 
 .confidence-bar {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: 0.625rem;
   font-weight: var(--font-semibold);
   padding: 1px var(--space-1_5);
@@ -1215,7 +1215,7 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
   display: flex;
   align-items: center;
   gap: var(--space-1_5);
-  padding-left: calc(16px + var(--space-1_5));
+  padding-inline-start: calc(16px + var(--space-1_5));
 }
 
 .smart-value-current {
@@ -1241,7 +1241,7 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
   color: var(--text-tertiary);
   line-height: var(--leading-normal);
   margin: var(--space-1) 0 0;
-  padding-left: calc(16px + var(--space-1_5));
+  padding-inline-start: calc(16px + var(--space-1_5));
 }
 
 /* ── FEATURE-1342: Suggestion Feedback ── */
@@ -1270,7 +1270,7 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
 }
 
 .feedback-input--full {
-  padding-left: var(--space-2);
+  padding-inline-start: var(--space-2);
 }
 
 .dismiss-feedback-section {

@@ -73,11 +73,11 @@ defineEmits<{
 
 /* RTL Support */
 .task-description.text-right {
-  text-align: right;
+  text-align: end;
   direction: rtl;
 }
 .task-description.text-left {
-  text-align: left;
+  text-align: start;
   direction: ltr;
 }
 

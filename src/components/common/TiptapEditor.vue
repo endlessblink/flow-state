@@ -725,7 +725,7 @@ const insertTable = () => {
   color: var(--text-muted);
   opacity: 0.6;
   pointer-events: none;
-  float: left;
+  float: inline-start;
   height: 0;
 }
 
@@ -756,8 +756,8 @@ const insertTable = () => {
   text-align: center;
 }
 
-:deep(.tiptap [style*="text-align: right"]) {
-  text-align: right;
+:deep(.tiptap [style*="text-align: end"]) {
+  text-align: end;
 }
 
 /* Tables - target all tables in TipTap editor */
@@ -808,7 +808,7 @@ const insertTable = () => {
 }
 
 .dropdown-arrow {
-  margin-left: var(--space-0_5);
+  margin-inline-start: var(--space-0_5);
   opacity: 0.7;
 }
 
@@ -872,7 +872,7 @@ const insertTable = () => {
   display: block;
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  text-align: left;
+  text-align: start;
   border: none;
   background: transparent;
   color: var(--text-primary);

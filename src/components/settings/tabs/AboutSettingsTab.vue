@@ -395,7 +395,7 @@ const openGithub = () => {
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
-  text-align: left;
+  text-align: start;
 }
 
 .link-btn:hover {

@@ -129,7 +129,7 @@ const dismiss = () => {
   width: 16px;
   height: 16px;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border-default);
+  border-inline-end: 1px solid var(--border-default);
   border-bottom: 1px solid var(--border-default);
   rotate: 45deg;
 }

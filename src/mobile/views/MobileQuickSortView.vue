@@ -1237,7 +1237,7 @@ const {
 }
 
 [dir="rtl"] .header-content {
-  text-align: right;
+  text-align: end;
 }
 
 [dir="rtl"] .qs-title {

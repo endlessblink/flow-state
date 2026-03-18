@@ -731,7 +731,7 @@ function handleClearHistory() {
 }
 
 .history-time {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
 }

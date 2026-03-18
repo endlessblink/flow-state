@@ -417,7 +417,7 @@ const statusIconClass = computed(() => {
 .field-label {
   font-weight: var(--font-medium);
   color: var(--text-muted);
-  margin-right: var(--space-1);
+  margin-inline-end: var(--space-1);
 }
 
 .inline-input {

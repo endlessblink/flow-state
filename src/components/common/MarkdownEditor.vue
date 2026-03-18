@@ -240,8 +240,8 @@ watch(internalValue, updateTextDirection, { immediate: true })
 
 .markdown-editor[dir="rtl"] :deep(.tiptap ul),
 .markdown-editor[dir="rtl"] :deep(.tiptap ol) {
-  padding-inline-start: var(--space-4);
-  padding-inline-end: var(--space-6);
+  padding-left: var(--space-4);
+  padding-right: var(--space-6);
 }
 
 /* Placeholder styling when empty */
@@ -249,7 +249,7 @@ watch(internalValue, updateTextDirection, { immediate: true })
   content: attr(data-placeholder);
   color: var(--text-muted);
   pointer-events: none;
-  float: left;
+  float: inline-start;
   height: 0;
   opacity: 0.6;
 }

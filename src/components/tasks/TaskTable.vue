@@ -94,7 +94,7 @@
             </div>
 
             <div class="table-cell title-cell">
-              <input
+              <input dir="auto"
                 v-if="editingTaskId === task.id && editingField === 'title'"
                 type="text"
                 :value="task.title"

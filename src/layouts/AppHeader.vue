@@ -182,7 +182,7 @@
     <!-- VIEW TABS AND CONTROLS -->
     <div class="content-header">
       <div class="view-tabs">
-<router-link to="/" class="view-tab" active-class="active">
+        <router-link v-if="isNavItemVisible('canvas')" to="/" class="view-tab" active-class="active">
           {{ $t('views.canvas') }}
         </router-link>
         <router-link to="/calendar" class="view-tab" active-class="active">
@@ -194,11 +194,11 @@
         <router-link to="/catalog" class="view-tab" active-class="active">
           {{ $t('views.catalog') }}
         </router-link>
-        <router-link to="/quick-sort" class="view-tab" active-class="active">
+        <router-link v-if="isNavItemVisible('quick-sort')" to="/quick-sort" class="view-tab" active-class="active">
           {{ $t('views.quick_sort') }}
           <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
         </router-link>
-        <router-link to="/ai" class="view-tab" active-class="active">
+        <router-link v-if="isNavItemVisible('ai')" to="/ai" class="view-tab" active-class="active">
           {{ $t('views.ai') }}
         </router-link>
       </div>
@@ -211,6 +211,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTaskStore, type Project } from '@/stores/tasks'
+import { useWorkspaceNavigation } from '@/composables/useWorkspaceNavigation'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
@@ -232,6 +233,7 @@ const aiChatStore = useAIChatStore()
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
 const uiStore = useUIStore()
+const { isNavItemVisible } = useWorkspaceNavigation()
 
 // TASK-1435: Active task project visual for glass pill
 const activeTaskProject = computed(() => {

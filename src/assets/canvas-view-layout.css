@@ -41,7 +41,7 @@
 
 .health-icon {
     font-size: var(--text-base);
-    margin-right: var(--space-2);
+    margin-inline-end: var(--space-2);
 }
 
 .health-message {

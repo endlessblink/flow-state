@@ -60,11 +60,11 @@ button svg {
     width: 300px !important;
     flex-shrink: 0 !important;
     /* Subtle left border as column separator */
-    border-left: 1px solid var(--glass-border-light) !important;
+    border-inline-start: 1px solid var(--glass-border-light) !important;
 }
 
 .kanban-column:first-child {
-    border-left: none !important;
+    border-inline-start: none !important;
 }
 
 /* Override Tauri/PWA opaque backgrounds — columns must stay transparent */
@@ -159,7 +159,7 @@ button svg {
 /* WIP indicators - subtle */
 .kanban-column.wip-warning,
 .kanban-column.wip-exceeded {
-    border-left: none !important;
+    border-inline-start: none !important;
     background: transparent !important;
 }
 
@@ -264,7 +264,7 @@ button svg {
 /* Priority dot — minimal spacing */
 .task-card .priority-dot {
     margin-inline-end: 4px !important;
-    margin-right: 4px !important;
+    margin-inline-end: 4px !important;
     flex-shrink: 0 !important;
     margin-top: 3px !important;
 }
@@ -459,7 +459,7 @@ button svg {
     font-size: var(--text-sm) !important;
     color: var(--text-muted) !important;
     font-weight: 400 !important;
-    margin-left: var(--space-2) !important;
+    margin-inline-start: var(--space-2) !important;
 }
 
 .header-controls--minimal {

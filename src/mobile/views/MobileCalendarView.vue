@@ -339,7 +339,7 @@ onUnmounted(() => {
   padding: var(--space-2) var(--space-2) 0 var(--space-3);
   font-size: 11px;
   color: var(--text-tertiary);
-  text-align: right;
+  text-align: end;
 }
 
 .time-slot {
@@ -355,7 +355,7 @@ onUnmounted(() => {
   background: var(--glass-bg-soft);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
-  border-left: 3px solid var(--border-subtle);
+  border-inline-start: 3px solid var(--border-subtle);
   cursor: pointer;
   overflow: hidden;
   transition: background var(--duration-normal);
@@ -366,26 +366,26 @@ onUnmounted(() => {
 }
 
 .task-event.priority-high {
-  border-left-color: var(--color-danger);
+  border-inline-start-color: var(--color-danger);
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.08));
 }
 
 .task-event.priority-medium {
-  border-left-color: var(--color-warning);
+  border-inline-start-color: var(--color-warning);
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08));
 }
 
 .task-event.priority-low {
-  border-left-color: var(--color-info);
+  border-inline-start-color: var(--color-info);
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(37, 99, 235, 0.08));
 }
 
 .task-event.priority-none {
-  border-left-color: var(--text-tertiary);
+  border-inline-start-color: var(--text-tertiary);
 }
 
 .task-event.timer-active {
-  border-left-color: var(--timer-active-border, #f59e0b);
+  border-inline-start-color: var(--timer-active-border, #f59e0b);
   box-shadow: var(--timer-active-glow, 0 0 8px rgba(245, 158, 11, 0.3));
   animation: pulse-subtle 2s ease-in-out infinite;
 }

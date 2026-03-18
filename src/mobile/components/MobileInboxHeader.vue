@@ -86,7 +86,7 @@ defineEmits<{
 .today-subtitle {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
-  padding-left: var(--space-2);
+  padding-inline-start: var(--space-2);
 }
 
 .task-count {

@@ -464,7 +464,7 @@ function truncateDescription(desc: string): string {
 }
 
 [dir="rtl"] .card-content {
-  text-align: right;
+  text-align: end;
 }
 [dir="rtl"] .task-meta {
   flex-direction: row-reverse;

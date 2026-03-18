@@ -870,7 +870,7 @@ watch(() => props.isOpen, async (isOpen) => {
   align-items: center;
   gap: var(--space-2);
   flex: 1;
-  text-align: left;
+  text-align: start;
 }
 
 .settings-badge {

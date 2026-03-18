@@ -518,11 +518,11 @@ function triggerHaptic(duration: number = 10) {
 
 /* RTL text alignment is handled by dir attribute */
 .title-textarea[dir="rtl"] {
-  text-align: right;
+  text-align: end;
 }
 
 .title-textarea[dir="ltr"] {
-  text-align: left;
+  text-align: start;
 }
 
 /* Recording active state (TASK-1110) */

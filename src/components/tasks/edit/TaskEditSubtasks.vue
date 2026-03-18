@@ -188,7 +188,7 @@ const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
   padding: var(--space-0_5) var(--space-2);
   border-radius: var(--radius-full);
   color: var(--text-tertiary);
-  margin-left: var(--space-1);
+  margin-inline-start: var(--space-1);
   font-weight: var(--font-medium);
 }
 

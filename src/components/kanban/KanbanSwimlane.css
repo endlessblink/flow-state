@@ -73,7 +73,7 @@
 .task-count {
     color: var(--text-muted);
     font-size: 13px;
-    margin-left: var(--space-2);
+    margin-inline-start: var(--space-2);
 }
 
 .view-type-dropdown {
@@ -209,7 +209,7 @@
     }
 
     .swimlane-header {
-        margin-left: -50px;
+        margin-inline-start: -50px;
         /* Offset for mobile if needed */
     }
 }

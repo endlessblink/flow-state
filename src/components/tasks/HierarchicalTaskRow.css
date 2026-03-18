@@ -27,7 +27,7 @@
 
 .task-row--selected {
     background-color: rgba(78, 205, 196, 0.05);
-    border-left: 3px solid var(--brand-primary);
+    border-inline-start: 3px solid var(--brand-primary);
     border-bottom-color: var(--brand-primary-bg-heavy);
 }
 
@@ -190,27 +190,27 @@
 
 /* Subtle status indicator - thin left border */
 .task-row {
-    border-left: 2px solid transparent;
+    border-inline-start: 2px solid transparent;
 }
 
 .task-row[data-status="planned"] {
-    border-left-color: var(--status-planned-border);
+    border-inline-start-color: var(--status-planned-border);
 }
 
 .task-row[data-status="in_progress"] {
-    border-left-color: var(--status-in-progress-border);
+    border-inline-start-color: var(--status-in-progress-border);
 }
 
 .task-row[data-status="done"] {
-    border-left-color: var(--status-done-border);
+    border-inline-start-color: var(--status-done-border);
 }
 
 .task-row[data-status="backlog"] {
-    border-left-color: var(--status-backlog-border);
+    border-inline-start-color: var(--status-backlog-border);
 }
 
 .task-row[data-status="on_hold"] {
-    border-left-color: var(--status-on-hold-border);
+    border-inline-start-color: var(--status-on-hold-border);
 }
 
 /* ADHD-friendly: Taller row height for easier scanning (44-52px based on research) */
@@ -232,7 +232,7 @@
 
 /* Timer active state - amber glow */
 .task-row--timer-active {
-    border-left-color: var(--timer-active-border) !important;
+    border-inline-start-color: var(--timer-active-border) !important;
     box-shadow: var(--timer-active-glow), var(--timer-active-shadow);
     animation: pulse-timer-hierarchical 2s ease-in-out infinite;
 }

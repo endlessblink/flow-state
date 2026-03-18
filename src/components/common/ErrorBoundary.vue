@@ -238,7 +238,7 @@ const copyErrorDetails = () => {
 
 .error-details {
   margin-top: var(--space-6);
-  text-align: left;
+  text-align: start;
   background: var(--glass-bg-heavy);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);

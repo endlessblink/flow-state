@@ -190,7 +190,7 @@ const getProjectTaskCount = (projectId: string): number => {
 
 .nested-children {
   /* Dynamic indentation based on nesting level */
-  padding-left: calc(var(--nesting-indent, 20px) + var(--space-2));
+  padding-inline-start: calc(var(--nesting-indent, 20px) + var(--space-2));
   margin-top: var(--space-1);
   display: flex;
   flex-direction: column;

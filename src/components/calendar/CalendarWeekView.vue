@@ -376,7 +376,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 .week-day-header {
   padding: var(--space-3) var(--space-2);
   text-align: center;
-  border-left: 1px solid var(--glass-border-light);
+  border-inline-start: 1px solid var(--glass-border-light);
 }
 
 .week-day-name {
@@ -403,7 +403,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 
 .week-time-labels {
   background: var(--glass-bg-subtle);
-  border-right: 1px solid var(--border-subtle);
+  border-inline-end: 1px solid var(--border-subtle);
 }
 
 .week-time-label {
@@ -411,7 +411,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: var(--space-4);
+  padding-inline-end: var(--space-4);
   color: var(--text-muted);
   font-size: var(--text-xs);
   border-bottom: 1px solid var(--glass-border-light);
@@ -430,7 +430,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 }
 
 .week-day-column {
-  border-left: 1px solid var(--glass-border-light);
+  border-inline-start: 1px solid var(--glass-border-light);
 }
 
 /* Cell — overflow visible so blocks can extend beyond cell boundaries */
@@ -629,7 +629,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 
 /* TASK-1409: Visual indicator for in-progress tasks */
 .week-event.status-active {
-  border-left: 3px solid var(--brand-primary);
+  border-inline-start: 3px solid var(--brand-primary);
   box-shadow: inset 3px 0 8px -3px var(--brand-primary-dim), 0 0 6px var(--brand-primary-subtle);
 }
 
@@ -669,7 +669,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 .week-event--external {
   background: transparent !important;
   border: 1px solid;
-  border-left-width: 3px;
+  border-inline-start-width: 3px;
   border-radius: var(--radius-sm);
   color: var(--text-primary) !important;
   cursor: default;

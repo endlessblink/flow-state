@@ -73,7 +73,7 @@
 
           <!-- Name Input -->
           <div v-else class="name-input-row">
-            <input
+            <input dir="auto"
               ref="nameInputRef"
               v-model="newViewName"
               class="name-input"

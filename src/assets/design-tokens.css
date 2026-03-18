@@ -1386,7 +1386,7 @@
 }
 
 .text-align-right {
-  text-align: right !important;
+  text-align: end !important;
 }
 
 .direction-rtl {
@@ -1394,7 +1394,7 @@
 }
 
 .hebrew-input {
-  text-align: right;
+  text-align: end;
   direction: rtl;
   unicode-bidi: plaintext;
 }

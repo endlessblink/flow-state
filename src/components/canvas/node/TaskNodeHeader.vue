@@ -39,11 +39,11 @@ const displayTitle = computed(() => truncateUrlsInText(props.title) || 'Untitled
 
 /* RTL Support */
 .task-title.text-right {
-  text-align: right;
+  text-align: end;
   direction: rtl;
 }
 .task-title.text-left {
-  text-align: left;
+  text-align: start;
   direction: ltr;
 }
 

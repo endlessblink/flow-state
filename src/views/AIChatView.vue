@@ -372,7 +372,7 @@ onUnmounted(() => {
           <MessageSquare :size="14" class="conv-icon" />
           <div class="conv-info">
             <template v-if="renamingId === conv.id">
-              <input
+              <input dir="auto"
                 v-model="renameInput"
                 class="rename-input"
                 @keydown="handleRenameKeydown"

@@ -450,7 +450,7 @@ onUnmounted(() => {
 }
 
 .category-count {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: var(--text-xs);
   color: var(--text-muted);
   background: var(--glass-bg-soft);
@@ -498,7 +498,7 @@ onUnmounted(() => {
 .shortcut-description {
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  text-align: right;
+  text-align: end;
 }
 
 /* kbd Key Styling (3D Keycap Effect) */

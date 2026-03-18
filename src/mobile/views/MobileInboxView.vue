@@ -358,7 +358,7 @@ const getProjectName = (projectId: string | undefined | null): string | null => 
 .debug-toggle {
   position: fixed;
   top: env(safe-area-inset-top, 10px);
-  right: 10px;
+  inset-inline-end: 10px;
   z-index: 9999;
   width: 30px;
   height: 30px;
@@ -417,7 +417,7 @@ const getProjectName = (projectId: string | undefined | null): string | null => 
 }
 
 .hint-dismiss {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
   padding: var(--space-1_5) var(--space-3);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);

@@ -8,7 +8,7 @@
     <div class="input-container">
       <slot name="prefix" />
 
-      <input
+      <input dir="auto"
         :id="inputId"
         ref="inputRef"
         v-model="localValue"

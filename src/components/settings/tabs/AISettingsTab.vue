@@ -849,7 +849,7 @@ async function onClearMemories() {
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--duration-fast);
-  text-align: left;
+  text-align: start;
 }
 
 .provider-chip:hover {
@@ -989,7 +989,7 @@ async function onClearMemories() {
 }
 
 .pricing-table th {
-  text-align: left;
+  text-align: start;
   padding: var(--space-2) var(--space-3);
   color: var(--text-muted);
   font-weight: var(--font-medium);
@@ -997,7 +997,7 @@ async function onClearMemories() {
 }
 
 .th-rate, .th-ctx {
-  text-align: right;
+  text-align: end;
 }
 
 .pricing-table td {
@@ -1022,7 +1022,7 @@ async function onClearMemories() {
 }
 
 .td-rate, .td-ctx {
-  text-align: right;
+  text-align: end;
   font-family: var(--font-mono, monospace);
 }
 

@@ -598,7 +598,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
   height: 16px;
   border: 2px solid transparent;
   border-top-color: currentColor;
-  border-right-color: currentColor;
+  border-inline-end-color: currentColor;
   border-radius: 50%;
   animation: btn-spin 0.6s linear infinite;
 }

@@ -816,7 +816,7 @@ const handleChangePassword = async () => {
 .form-input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  padding-right: var(--space-10);
+  padding-inline-end: var(--space-10);
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
@@ -1130,7 +1130,7 @@ const handleChangePassword = async () => {
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
-  text-align: left;
+  text-align: start;
 }
 
 .link-btn:hover {
@@ -1479,7 +1479,7 @@ const handleChangePassword = async () => {
 }
 
 .reauth-banner .add-btn {
-  margin-left: auto;
+  margin-inline-start: auto;
   white-space: nowrap;
 }
 

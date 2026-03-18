@@ -256,7 +256,7 @@ const localSearch = computed({
   background: var(--glass-bg-weak);
   padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-sm);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 /* No results message */
@@ -294,7 +294,7 @@ const localSearch = computed({
 
 .hierarchy-line {
   position: absolute;
-  left: var(--space-4);
+  inset-inline-start: var(--space-4);
   top: 50%;
   transform: translateY(-50%);
   height: 100%;
@@ -306,7 +306,7 @@ const localSearch = computed({
   width: var(--space-3);
   height: var(--space-px);
   background: var(--border-subtle);
-  margin-left: auto;
+  margin-inline-start: auto;
   border-radius: var(--radius-none);
 }
 
@@ -327,7 +327,7 @@ const localSearch = computed({
 
 .project-name {
   flex: 1;
-  text-align: left;
+  text-align: start;
 }
 
 /* Inbox option - special styling */
@@ -346,7 +346,7 @@ const localSearch = computed({
   font-size: var(--text-xs);
   color: var(--text-muted);
   margin-top: var(--space-1);
-  padding-left: calc(var(--project-indicator-size-md) + var(--space-3));
+  padding-inline-start: calc(var(--project-indicator-size-md) + var(--space-3));
 }
 
 /* Project divider */
@@ -391,6 +391,6 @@ const localSearch = computed({
 }
 
 [dir="rtl"] .project-name {
-  text-align: right;
+  text-align: end;
 }
 </style>

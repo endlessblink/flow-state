@@ -341,7 +341,7 @@ watch(() => props.initialPreferences, (newPreferences) => {
 }
 
 .toggle-label {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
 }
@@ -401,7 +401,7 @@ watch(() => props.initialPreferences, (newPreferences) => {
 .checkbox-input:checked::after {
   content: '';
   position: absolute;
-  left: 5px;
+  inset-inline-start: 5px;
   top: 2px;
   width: 5px;
   height: 9px;
@@ -416,13 +416,13 @@ watch(() => props.initialPreferences, (newPreferences) => {
 }
 
 .checkbox-label {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
 }
 
 .dnd-times {
-  margin-left: var(--space-6);
+  margin-inline-start: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

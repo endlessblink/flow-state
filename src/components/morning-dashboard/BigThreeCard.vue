@@ -589,7 +589,7 @@ async function handleCreateTask() {
   min-height: 0;
   max-height: 280px;
   overflow-y: auto;
-  padding-right: var(--space-2);
+  padding-inline-end: var(--space-2);
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;
 }

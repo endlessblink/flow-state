@@ -179,7 +179,7 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .project-drop-zone.is-nested {
-  margin-left: var(--space-5);
+  margin-inline-start: var(--space-5);
   border-color: var(--brand-primary);
 }
 
@@ -272,7 +272,7 @@ const handleDrop = (event: DragEvent) => {
   }
 
   .project-drop-zone.is-nested {
-    margin-left: var(--space-4);
+    margin-inline-start: var(--space-4);
   }
 }
 </style>

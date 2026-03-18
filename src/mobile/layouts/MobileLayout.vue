@@ -667,7 +667,7 @@ onMounted(() => {
 .action-badge {
   position: absolute;
   top: var(--space-1_5);
-  right: var(--space-1_5);
+  inset-inline-end: var(--space-1_5);
   min-width: var(--space-4_5);
   height: var(--space-4_5);
   padding: 0 var(--space-1_25);
@@ -720,7 +720,7 @@ onMounted(() => {
 
 /* ─── RTL Layout Adjustments ─── */
 .mobile-layout[dir="rtl"] {
-  text-align: right;
+  text-align: end;
 }
 
 .mobile-layout[dir="rtl"] .mobile-header {

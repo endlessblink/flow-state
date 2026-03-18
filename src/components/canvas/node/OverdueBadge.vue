@@ -178,7 +178,7 @@ watch(isMenuOpen, (open) => {
   background: transparent;
   color: var(--text-primary);
   font-size: var(--text-xs);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
   border-radius: var(--radius-md);

@@ -91,17 +91,17 @@ const placeholderTexts = [
 
 .drop-zone--filled {
   background: var(--surface-primary);
-  border-left: 3px solid var(--brand-primary);
+  border-inline-start: 3px solid var(--brand-primary);
   border-top: 1px solid var(--glass-border);
-  border-right: 1px solid var(--glass-border);
+  border-inline-end: 1px solid var(--glass-border);
   border-bottom: 1px solid var(--glass-border);
 }
 
 .drop-zone--completed {
   background: var(--surface-primary);
-  border-left: 3px solid var(--brand-primary);
+  border-inline-start: 3px solid var(--brand-primary);
   border-top: 1px solid var(--glass-border);
-  border-right: 1px solid var(--glass-border);
+  border-inline-end: 1px solid var(--glass-border);
   border-bottom: 1px solid var(--glass-border);
   opacity: 0.6;
 }

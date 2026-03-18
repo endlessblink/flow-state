@@ -12,7 +12,7 @@
         <ChevronDown v-if="!isCollapsed" :size="14" />
         <ChevronRight v-else :size="14" />
       </button>
-      <input
+      <input dir="auto"
         v-model="sectionName"
         class="section-name-input"
         placeholder="Group name..."
@@ -340,7 +340,7 @@ const handleResizeEnd = (event: unknown) => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  padding-right: var(--space-12_5); /* Make space for count badge */
+  padding-inline-end: var(--space-12_5); /* Make space for count badge */
   border-bottom: var(--space-0_5) solid var(--glass-border-soft);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   min-height: var(--space-10); /* Ensure consistent header height */
@@ -441,7 +441,7 @@ const handleResizeEnd = (event: unknown) => {
   font-weight: var(--font-medium);
   white-space: nowrap;
   flex-shrink: 0;
-  padding-left: var(--space-1);
+  padding-inline-start: var(--space-1);
 }
 
 .section-date-suffix.clickable {
@@ -560,8 +560,8 @@ const handleResizeEnd = (event: unknown) => {
   right: var(--space-2);
   width: 0;
   height: 0;
-  border-left: var(--space-1) solid transparent;
-  border-right: var(--space-1) solid transparent;
+  border-inline-start: var(--space-1) solid transparent;
+  border-inline-end: var(--space-1) solid transparent;
   border-top: var(--space-1) solid var(--text-secondary);
   opacity: 0.3;
 }
@@ -633,7 +633,7 @@ const handleResizeEnd = (event: unknown) => {
   border: none;
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-fast);
 }

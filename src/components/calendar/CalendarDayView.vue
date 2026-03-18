@@ -430,8 +430,8 @@ const {
 }
 
 .slot-task.is-primary {
-  border-left: 4px solid var(--accent-primary);
-  padding-left: calc(var(--space-3) - 2px);
+  border-inline-start: 4px solid var(--accent-primary);
+  padding-inline-start: calc(var(--space-3) - 2px);
 }
 
 .task-content--calendar {
@@ -635,7 +635,7 @@ const {
   background: var(--color-danger);
   box-shadow: 0 0 4px var(--color-danger);
   flex-shrink: 0;
-  margin-left: calc(-1 * var(--space-1));
+  margin-inline-start: calc(-1 * var(--space-1));
 }
 
 .time-indicator-line {
@@ -758,25 +758,25 @@ const {
 .task-title:dir(rtl) {
   direction: rtl;
   unicode-bidi: plaintext;
-  text-align: right;
+  text-align: end;
 }
 
 .task-meta:dir(rtl) {
   direction: rtl;
   unicode-bidi: plaintext;
-  text-align: right;
+  text-align: end;
 }
 
 .task-content--calendar:dir(rtl) {
-  text-align: right;
+  text-align: end;
 }
 
 /* Flip project stripe from left to right in RTL */
 :dir(rtl) .slot-task.is-primary {
-  border-left: 1px solid var(--border-subtle);
-  border-right: 4px solid var(--accent-primary);
-  padding-left: var(--space-3);
-  padding-right: calc(var(--space-3) - 2px);
+  border-inline-start: 1px solid var(--border-subtle);
+  border-inline-end: 4px solid var(--accent-primary);
+  padding-inline-start: var(--space-3);
+  padding-inline-end: calc(var(--space-3) - 2px);
 }
 
 :dir(rtl) .project-stripe {
@@ -811,7 +811,7 @@ const {
 
 /* TASK-1409: Visual indicator for in-progress tasks */
 .slot-task.status-active {
-  border-left: 3px solid var(--brand-primary);
+  border-inline-start: 3px solid var(--brand-primary);
   box-shadow: inset 3px 0 8px -3px var(--brand-primary-dim), 0 0 6px var(--brand-primary-subtle);
 }
 
@@ -909,7 +909,7 @@ const {
 }
 
 .external-event-inline .external-event-time {
-  margin-right: var(--space-1);
+  margin-inline-end: var(--space-1);
   font-size: inherit;
 }
 

@@ -668,9 +668,9 @@ onUnmounted(() => {
 }
 
 /* Color accents via left border */
-.big3-task-card--0 { border-left: 3px solid #4ECDC4; }
-.big3-task-card--1 { border-left: 3px solid #FFC300; }
-.big3-task-card--2 { border-left: 3px solid #9382DC; }
+.big3-task-card--0 { border-inline-start: 3px solid #4ECDC4; }
+.big3-task-card--1 { border-inline-start: 3px solid #FFC300; }
+.big3-task-card--2 { border-inline-start: 3px solid #9382DC; }
 
 .big3-number {
   display: flex;
@@ -894,9 +894,9 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
 }
 
-.mobile-tb-card--0 { border-left: 3px solid #4ECDC4; }
-.mobile-tb-card--1 { border-left: 3px solid #FFC300; }
-.mobile-tb-card--2 { border-left: 3px solid #9382DC; }
+.mobile-tb-card--0 { border-inline-start: 3px solid #4ECDC4; }
+.mobile-tb-card--1 { border-inline-start: 3px solid #FFC300; }
+.mobile-tb-card--2 { border-inline-start: 3px solid #9382DC; }
 
 .mobile-tb-task-info {
   display: flex;

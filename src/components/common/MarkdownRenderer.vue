@@ -144,7 +144,7 @@ const handleClick = (event: MouseEvent) => {
   content: '';
   position: absolute;
   top: 1px;
-  left: var(--space-1);
+  inset-inline-start: var(--space-1);
   width: 5px;
   height: 9px;
   border: solid white;

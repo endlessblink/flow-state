@@ -115,7 +115,7 @@ onBeforeUnmount(() => {
   font-weight: var(--font-normal);
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
-  text-align: left;
+  text-align: start;
   min-height: var(--space-10);
 }
 

@@ -120,7 +120,7 @@ const learnMore = () => {
 
 .icon {
   color: var(--brand-primary);
-  margin-right: var(--space-3);
+  margin-inline-end: var(--space-3);
   display: flex;
 }
 
@@ -163,7 +163,7 @@ h3 {
 }
 
 .feature span {
-  text-align: left;
+  text-align: start;
 }
 
 .actions {

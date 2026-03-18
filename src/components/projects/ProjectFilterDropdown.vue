@@ -279,7 +279,7 @@ onUnmounted(() => {
 
 .filter-label {
   flex: 1;
-  text-align: left;
+  text-align: start;
 }
 
 .dropdown-chevron {
@@ -335,7 +335,7 @@ onUnmounted(() => {
   background-color: transparent !important;
   color: var(--text-primary) !important;
   font-size: var(--text-sm);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-fast) var(--spring-smooth);
   position: relative;

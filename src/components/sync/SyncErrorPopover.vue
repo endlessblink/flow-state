@@ -378,7 +378,7 @@ const formatTime = (timestamp: number): string => {
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   border-radius: var(--radius-sm);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .permanent-error {

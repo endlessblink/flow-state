@@ -4,7 +4,7 @@
       <div class="search-header">
         <div class="search-input-wrapper">
           <Search :size="20" class="search-icon" />
-          <input
+          <input dir="auto"
             ref="searchInput"
             v-model="searchQuery"
             type="text"

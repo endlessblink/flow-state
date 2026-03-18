@@ -584,7 +584,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .hint-dismiss {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
   padding: var(--space-1_5) var(--space-3);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
@@ -672,7 +672,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-fast);
 }
@@ -787,7 +787,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .time-section.overdue {
-  border-left: var(--space-0_5) solid var(--danger-text);
+  border-inline-start: var(--space-0_5) solid var(--danger-text);
 }
 
 .section-header {
@@ -800,7 +800,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .section-header .count {
-  margin-left: auto;
+  margin-inline-start: auto;
   background: var(--surface-secondary);
   padding: var(--space-0_5) var(--space-2);
   border-radius: var(--radius-sm);
@@ -940,7 +940,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 [dir="rtl"] .task-content {
-  text-align: right;
+  text-align: end;
 }
 
 [dir="rtl"] .task-meta {
@@ -963,7 +963,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 
 [dir="rtl"] .dropdown-item {
   flex-direction: row-reverse;
-  text-align: right;
+  text-align: end;
 }
 
 [dir="rtl"] .filter-btn {

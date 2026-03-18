@@ -25,7 +25,7 @@ function handleKeydown(e: KeyboardEvent) {
 <template>
   <div class="morning-quick-capture">
     <Plus :size="16" class="capture-icon" />
-    <input
+    <input dir="auto"
       v-model="inputValue"
       class="capture-input"
       type="text"
@@ -43,8 +43,8 @@ function handleKeydown(e: KeyboardEvent) {
   padding: var(--space-3) var(--space-4);
   background: var(--glass-bg-soft);
   border-top: 1px solid var(--glass-border);
-  border-left: 1px solid var(--glass-border);
-  border-right: 1px solid var(--glass-border);
+  border-inline-start: 1px solid var(--glass-border);
+  border-inline-end: 1px solid var(--glass-border);
   border-bottom: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   backdrop-filter: blur(12px);

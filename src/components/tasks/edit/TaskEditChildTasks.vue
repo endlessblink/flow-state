@@ -119,12 +119,12 @@ const getStatusLabel = (status: string) => {
   padding: 1px var(--space-1_5);
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
-  margin-left: var(--space-1);
+  margin-inline-start: var(--space-1);
 }
 
 .section-content {
   animation: slideDown var(--duration-normal);
-  padding-left: var(--space-2);
+  padding-inline-start: var(--space-2);
 }
 
 @keyframes slideDown {

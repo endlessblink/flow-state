@@ -112,7 +112,7 @@ const {
 
 .brave-banner__instructions {
   margin: 0;
-  padding-left: var(--space-4);
+  padding-inline-start: var(--space-4);
   font-size: var(--text-sm);
   opacity: 0.95;
 }

@@ -586,7 +586,7 @@ const handleArrangeInGrid = () => {
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-sm);
   font-weight: var(--font-normal);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -639,7 +639,7 @@ const handleArrangeInGrid = () => {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .menu-divider {
@@ -704,7 +704,7 @@ const handleArrangeInGrid = () => {
 }
 
 .submenu-arrow {
-  margin-left: auto;
+  margin-inline-start: auto;
   flex-shrink: 0;
 }
 
@@ -791,7 +791,7 @@ const handleArrangeInGrid = () => {
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-sm);
   font-weight: var(--font-normal);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   display: flex;
   align-items: center;

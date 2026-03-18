@@ -342,10 +342,10 @@ const calculateTargetDate = (): string => {
 /* Drop indicator */
 .drop-indicator {
   position: absolute;
-  left: 100%;
+  inset-inline-start: 100%;
   top: 50%;
   transform: translateY(-50%);
-  margin-left: var(--space-3);
+  margin-inline-start: var(--space-3);
   padding: var(--space-2) var(--space-3);
   background: linear-gradient(
     135deg,

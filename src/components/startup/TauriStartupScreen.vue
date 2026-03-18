@@ -375,7 +375,7 @@ function openSupabaseInstall() {
 }
 
 .error-help {
-  text-align: left;
+  text-align: start;
   width: 100%;
   padding: var(--space-3);
   background: var(--surface-subtle);
@@ -390,7 +390,7 @@ function openSupabaseInstall() {
 
 .error-help ol {
   margin: 0;
-  padding-left: var(--space-5);
+  padding-inline-start: var(--space-5);
   font-size: var(--text-sm);
   color: var(--text-muted);
 }

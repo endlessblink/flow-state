@@ -407,7 +407,7 @@ table {
 }
 
 th {
-  text-align: left;
+  text-align: start;
   padding: var(--space-4);
   border-bottom: 1px solid var(--glass-border);
   opacity: 0.6;
@@ -434,7 +434,7 @@ td {
 }
 
 .sidebar ul {
-  padding-left: var(--space-5);
+  padding-inline-start: var(--space-5);
   margin: var(--space-4) 0;
 }
 
@@ -492,7 +492,7 @@ td {
   background: var(--glass-border);
   border-radius: var(--radius-xs);
   display: inline-block;
-  margin-right: var(--space-2);
+  margin-inline-end: var(--space-2);
   vertical-align: middle;
 }
 

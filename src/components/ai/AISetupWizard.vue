@@ -393,7 +393,7 @@ defineExpose({
 .close-btn {
   position: absolute;
   top: var(--space-3);
-  right: var(--space-3);
+  inset-inline-end: var(--space-3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -483,7 +483,7 @@ defineExpose({
   border-radius: var(--radius-lg);
   backdrop-filter: blur(var(--blur-sm));
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   transition: all var(--duration-fast);
 }
 .provider-card:hover {
@@ -497,7 +497,7 @@ defineExpose({
 .provider-badge {
   position: absolute;
   top: var(--space-2);
-  right: var(--space-2);
+  inset-inline-end: var(--space-2);
   font-size: 10px;
   font-weight: var(--font-semibold);
   padding: 2px var(--space-2);
@@ -713,7 +713,7 @@ defineExpose({
   font-size: var(--text-sm);
   color: var(--text-secondary);
   margin: 0;
-  padding-left: var(--space-5);
+  padding-inline-start: var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-1_5);

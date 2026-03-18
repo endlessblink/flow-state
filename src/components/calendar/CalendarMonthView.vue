@@ -314,7 +314,7 @@ const getEventTooltip = (event: CalendarEvent) => {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-muted);
-  text-align: right;
+  text-align: end;
 }
 
 .month-day-cell.today .day-number {
@@ -327,7 +327,7 @@ const getEventTooltip = (event: CalendarEvent) => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .day-events {
@@ -341,7 +341,7 @@ const getEventTooltip = (event: CalendarEvent) => {
 /* TASK-1322: Vertical compact layout — shows more content per event */
 .month-event {
   padding: var(--space-0_5) var(--space-1);
-  padding-left: var(--space-2_5);
+  padding-inline-start: var(--space-2_5);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: white;
@@ -400,7 +400,7 @@ const getEventTooltip = (event: CalendarEvent) => {
 
 /* TASK-1409: Visual indicator for in-progress tasks */
 .month-event.status-active {
-  border-left: 2px solid var(--brand-primary);
+  border-inline-start: 2px solid var(--brand-primary);
   box-shadow: inset 2px 0 6px -2px var(--brand-primary-dim);
 }
 
@@ -442,7 +442,7 @@ const getEventTooltip = (event: CalendarEvent) => {
   border: 1px solid;
   color: var(--text-secondary) !important;
   cursor: default;
-  padding-left: var(--space-1);
+  padding-inline-start: var(--space-1);
 }
 
 .month-event--external:hover {

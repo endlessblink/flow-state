@@ -13,6 +13,7 @@
             :class="{ 'voice-active': isListening }"
             :placeholder="isListening ? 'Listening...' : 'What needs to be done?'"
             maxlength="200"
+            dir="auto"
             @keydown="handleTitleKeydown"
             @paste="handlePaste"
           >
@@ -60,9 +61,10 @@
         <textarea
           v-model="newTask.description"
           class="capture-input description-input"
-          placeholder="Description (optional, supports markdown)..."
-          rows="3"
+          placeholder="Notes (optional)..."
+          rows="1"
           maxlength="2000"
+          dir="auto"
           @keydown="handleDescriptionKeydown"
         />
       </div>
@@ -434,7 +436,6 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  height: 100%;
 }
 
 /* Capture Form */
@@ -446,6 +447,8 @@ defineExpose({
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .input-group {
@@ -656,12 +659,14 @@ defineExpose({
 }
 
 .description-input {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
   font-size: var(--text-sm);
-  resize: vertical;
-  min-height: 80px;
-  max-height: 200px;
+  resize: none;
+  min-height: unset;
+  max-height: 120px;
   line-height: var(--leading-relaxed);
+  overflow-y: auto;
+  field-sizing: content; /* Auto-grow with content (modern browsers) */
 }
 
 /* Metadata Row */

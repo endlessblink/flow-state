@@ -457,7 +457,7 @@ onUnmounted(() => {
   color: var(--text-primary);
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-xs);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: all var(--duration-fast);

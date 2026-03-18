@@ -27,7 +27,7 @@ defineExpose({ inputRef })
   <div class="capture-phase">
     <div class="capture-input-area">
       <div class="capture-card">
-        <input
+        <input dir="auto"
           ref="inputRef"
           :value="title"
           type="text"
@@ -278,7 +278,7 @@ defineExpose({ inputRef })
 }
 
 [dir="rtl"] .capture-input {
-  text-align: right;
+  text-align: end;
   direction: rtl;
 }
 </style>

@@ -342,7 +342,7 @@ function handleClose() {
 .panel-close {
   position: absolute;
   top: var(--space-3);
-  right: var(--space-3);
+  inset-inline-end: var(--space-3);
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
@@ -440,7 +440,7 @@ function handleClose() {
 .counter-label {
   font-size: 0.75rem;
   color: var(--text-muted);
-  margin-left: var(--space-1);
+  margin-inline-start: var(--space-1);
 }
 
 .candidate-list {
@@ -449,7 +449,7 @@ function handleClose() {
   gap: var(--space-3);
   max-height: 40vh;
   overflow-y: auto;
-  padding-right: var(--space-2);
+  padding-inline-end: var(--space-2);
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;
 }

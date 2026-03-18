@@ -607,12 +607,12 @@
 
 /* RTL Text Support - only affects text alignment, not card structure */
 .task-title[dir="rtl"] {
-    text-align: right;
+    text-align: end;
 }
 
 /* Hebrew alignment classes from useHebrewAlignment composable */
 .task-title.text-align-right {
-    text-align: right;
+    text-align: end;
 }
 
 .task-title.direction-rtl {

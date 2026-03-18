@@ -346,7 +346,7 @@ const clearSearch = () => {
 
 .toggle-icon {
   transition: transform var(--duration-normal);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .toggle-icon.rotated {

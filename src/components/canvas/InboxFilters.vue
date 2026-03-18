@@ -264,6 +264,7 @@ interface Props {
   sortBy?: SortByType // TASK-1073: Sort option
   sortDirection?: SortDirection // TASK-1412: Sort direction toggle
   context?: string // Hide canvas sort when inside canvas view
+  onCanvasCount?: number // BUG-1530: Pre-computed count respecting active filters
 }
 
 const { t } = useI18n()
@@ -318,7 +319,9 @@ const unscheduledCount = computed(() => {
 })
 
 // Computed: Count of tasks placed on the canvas
+// BUG-1530: Use pre-computed count from parent when available (respects active time/group filters)
 const onCanvasCount = computed(() => {
+  if (props.onCanvasCount !== undefined) return props.onCanvasCount
   return props.tasks.filter(t => !!t.canvasPosition).length
 })
 
@@ -606,7 +609,7 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--text-xs);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: all var(--duration-fast) var(--spring-smooth);
 }
@@ -664,7 +667,7 @@ onBeforeUnmount(() => {
 }
 
 .item-count {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--text-muted);
   font-size: var(--text-xs);
 }

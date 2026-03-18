@@ -231,7 +231,7 @@ onUnmounted(() => {
 /* Subtasks */
 .focus-subtasks {
   margin-bottom: var(--space-8);
-  text-align: left;
+  text-align: start;
 }
 
 .focus-subtask {

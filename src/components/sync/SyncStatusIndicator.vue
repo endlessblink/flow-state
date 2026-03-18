@@ -198,7 +198,7 @@ const handleClear = async () => {
 .sync-badge {
   position: absolute;
   top: var(--space-0_5);
-  right: var(--space-0_5);
+  inset-inline-end: var(--space-0_5);
   min-width: var(--space-4);
   height: var(--space-4);
   padding: 0 var(--space-1);

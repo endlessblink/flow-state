@@ -269,7 +269,7 @@ function confirm() {
 .mode-features li {
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  padding-left: var(--space-1);
+  padding-inline-start: var(--space-1);
 }
 
 .btn-continue {

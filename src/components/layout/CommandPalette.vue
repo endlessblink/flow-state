@@ -6,7 +6,7 @@
           <!-- Quick Add Input (Primary Focus) -->
           <div class="quick-add-section">
             <Plus :size="20" class="add-icon" />
-            <input
+            <input dir="auto"
               ref="taskInputRef"
               v-model="taskTitle"
               type="text"
@@ -281,7 +281,7 @@ defineExpose({ open, close })
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b949e' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right var(--space-3) center;
-  padding-right: var(--space-8);
+  padding-inline-end: var(--space-8);
 }
 
 .field-select:hover,

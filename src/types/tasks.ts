@@ -1,6 +1,9 @@
 // Task type definitions for Pomo-Flow
 // These types are extracted from src/stores/tasks.ts for centralization and reuse
 
+// BUG-1569: Moved here from taskOperations.ts to break circular dependency
+export const UNCATEGORIZED_PROJECT_ID = 'uncategorized' as const
+
 export interface Subtask {
   id: string
   parentTaskId: string
@@ -120,7 +123,12 @@ export interface Task {
   // "Done for now" tracking - shows badge when task was rescheduled via this feature
   // Resets when dueDate changes to something other than this value
   doneForNowUntil?: string // YYYY-MM-DD format
+  // Marks a task clone created as a calendar history entry for a recurring task completion (read-only record)
+  isCompletionRecord?: boolean
   isPinned?: boolean
+  // Workspace collaboration (Phase 1)
+  workspaceId?: string | null
+  assignedTo?: string | null
 }
 
 export interface Project {
@@ -133,6 +141,8 @@ export interface Project {
   parentId?: string | null // For nested projects
   createdAt: Date
   updatedAt: Date
+  // Workspace collaboration
+  workspaceId?: string | null
 }
 
 // Type aliases and utility types

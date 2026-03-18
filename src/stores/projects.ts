@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-import type { Project } from '@/types/tasks'
-import { UNCATEGORIZED_PROJECT_ID } from './tasks/taskOperations'
+import { type Project, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 import { cacheProjects, getCachedProjects } from '@/services/offline/readCacheDB'
 
 export const useProjectStore = defineStore('projects', () => {

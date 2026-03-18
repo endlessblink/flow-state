@@ -1,13 +1,12 @@
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 import { type Ref, toRaw } from 'vue'
-import type { Task, Subtask, TaskInstance } from '@/types/tasks'
+import { type Task, type Subtask, type TaskInstance, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 // TASK-1158: Canvas sync via shared bridge (breaks circular dependency)
 import { canvasUiSyncRequest } from '../canvasTaskBridge'
 // TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool)
 import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey, normalizeDueDate } from '@/utils/dateUtils'
-// BUG-1303: Stop timer when task marked done
-import { useTimerStore } from '@/stores/timer'
+// BUG-1569: Dynamic import breaks circular dep (timer→tasks→taskStates→projects→taskOperations→timer)
 // TASK-1177: Offline-first sync queue integration
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 // TASK-1418: Reverse status mapping for sync queue payloads (bypasses toSupabaseTask)
@@ -20,8 +19,8 @@ import { cacheTasks } from '@/services/offline/readCacheDB'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
-/** Frontend sentinel for tasks with no project. Sanitized to null before DB writes. */
-export const UNCATEGORIZED_PROJECT_ID = 'uncategorized' as const
+// BUG-1569: Re-export from types/tasks.ts to avoid breaking existing imports
+export { UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 
 // BUG-1184: Helper to check if a string is a valid UUID (for parent_id column)
 // Group IDs like "group-xxx" should NOT be saved to parent_id (UUID column)
@@ -425,7 +424,9 @@ export function useTaskOperations(
                     console.log(`✅ [DONE-ZONE] Task "${task.title?.slice(0, 30)}" marked done, completedAt set, inbox cleared`)
 
                     // BUG-1303: Stop timer if it's running on the completed task
+                    // BUG-1569: Dynamic import to break circular dependency
                     try {
+                        const { useTimerStore } = await import('@/stores/timer')
                         const timerStore = useTimerStore()
                         if (timerStore.currentTaskId === taskId && timerStore.isTimerActive) {
                             await timerStore.stopTimer()
@@ -1079,7 +1080,9 @@ export function useTaskOperations(
         try {
 
         // 1. Stop timer if running on this task
+        // BUG-1569: Dynamic import to break circular dependency
         try {
+            const { useTimerStore } = await import('@/stores/timer')
             const timerStore = useTimerStore()
             if (timerStore.currentTaskId === taskId && timerStore.isTimerActive) {
                 await timerStore.stopTimer()

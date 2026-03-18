@@ -100,7 +100,7 @@ describe('TaskStore', () => {
         isInInbox: false
       })
 
-      store.updateTask(task.id, { status: 'done' })
+      await store.updateTask(task.id, { status: 'done' })
 
       const completedTask = store.tasks.find(t => t.id === task.id)
       expect(completedTask?.status).toBe('done')
@@ -344,18 +344,18 @@ describe('TaskStore', () => {
       expect(store.filteredTasks.map(t => t.id)).toContain(task2.id)
     })
 
-    it('filters tasks by "today" smart view', () => {
+    it('filters tasks by "today" smart view', async () => {
       const store = useTaskStore()
       // BUG-1325: Use local date (not UTC) to match smart view filter behavior
       const _now = new Date()
       const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
 
-      store.createTask({
+      await store.createTask({
         title: 'Today Task',
         scheduledDate: today,
         scheduledTime: '10:00'
       })
-      store.createTask({
+      await store.createTask({
         title: 'Future Task',
         scheduledDate: '2025-12-31',
         scheduledTime: '10:00'

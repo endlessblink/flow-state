@@ -400,7 +400,7 @@ kbd {
   font-size: var(--text-sm) !important;
   display: block !important;
   overflow: visible !important;
-  text-overflow: clip !important;
+  text-overflow: clip !important; /* WebKitGTK-safe */
   white-space: nowrap !important;
   max-width: none !important;
   flex: 0 0 auto !important; /* Don't shrink — take natural text width */

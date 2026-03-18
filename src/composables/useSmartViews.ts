@@ -1,7 +1,6 @@
 // Centralized Smart View System
 // Single source of truth for all smart view filtering logic
-import type { Task } from '@/types/tasks'
-import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
+import { type Task, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 
 export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' |
   'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null

@@ -1,12 +1,11 @@
 
-import type { Task, Project, Subtask, TaskInstance, TaskRecurrence, RecurringTaskInstance, NotificationPreferences } from '../types/tasks'
+import { type Task, type Project, type Subtask, type TaskInstance, type TaskRecurrence, type RecurringTaskInstance, type NotificationPreferences, UNCATEGORIZED_PROJECT_ID } from '../types/tasks'
 import type { ScheduledNotification } from '../types/recurrence'
 import type { CanvasGroup } from '../types/canvas'
 import type { PinnedTask } from '../types/quickTasks'
 import type { AppSettings } from '../stores/settings'
 import type { PomodoroSession } from '../stores/timer'
 import type { SessionSummary } from '../stores/quickSort'
-import { UNCATEGORIZED_PROJECT_ID } from '../stores/tasks/taskOperations'
 
 // -- Validation Helpers --
 
@@ -91,6 +90,8 @@ export interface SupabaseProject {
     deleted_at?: string | null
     created_at?: string
     updated_at?: string
+    // Workspace collaboration
+    workspace_id?: string | null
 }
 
 export interface SupabaseTask {
@@ -154,6 +155,10 @@ export interface SupabaseTask {
     // "Done for now" feature - tracks when task was rescheduled via this feature
     done_for_now_until?: string | null
     is_pinned?: boolean
+    is_completion_record?: boolean
+    // Workspace collaboration
+    workspace_id?: string | null
+    assigned_to?: string | null
 }
 
 export interface SupabaseGroup {
@@ -187,6 +192,8 @@ export interface SupabaseGroup {
     deleted_at?: string | null  // TASK-317: Added for deletion-aware restore
     created_at?: string
     updated_at?: string
+    // Workspace collaboration
+    workspace_id?: string | null
 }
 
 export interface SupabaseNotification {
@@ -367,6 +374,8 @@ export function toSupabaseGroup(group: CanvasGroup, userId: string): SupabaseGro
         // Let the database default handle new groups (default: false)
         // Upsert will only update fields present in the payload
         // position_format removed - column does not exist in DB
+        // Workspace collaboration — only include when set (safe before migration)
+        ...((group as CanvasGroup & { workspaceId?: string | null }).workspaceId ? { workspace_id: (group as CanvasGroup & { workspaceId?: string | null }).workspaceId } : {}),
         updated_at: new Date().toISOString()
     }
 }
@@ -398,7 +407,8 @@ export function fromSupabaseGroup(record: SupabaseGroup): CanvasGroup {
         propertyValue: record.property_value, // Might need parsing if it was stringified object
         positionFormat: 'absolute', // Default to absolute since DB column is missing
 
-        updatedAt: record.updated_at
+        updatedAt: record.updated_at,
+        workspaceId: record.workspace_id || null,
     } as CanvasGroup
 }
 
@@ -440,6 +450,8 @@ export function toSupabaseProject(project: Project, userId: string): SupabasePro
             ? new Date((project as Project & { deletedAt?: string | Date }).deletedAt as string | Date).toISOString()
             : null,
         created_at: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt,
+        // Workspace collaboration — only include when set (safe before migration)
+        ...((project as Project & { workspaceId?: string | null }).workspaceId ? { workspace_id: (project as Project & { workspaceId?: string | null }).workspaceId } : {}),
         updated_at: new Date().toISOString()
     }
 }
@@ -454,7 +466,8 @@ export function fromSupabaseProject(record: SupabaseProject): Project {
         viewType: (record.view_type as Project['viewType']) || 'status',
         parentId: record.parent_id || null,
         createdAt: new Date(record.created_at || Date.now()),
-        updatedAt: new Date(record.updated_at || Date.now())
+        updatedAt: new Date(record.updated_at || Date.now()),
+        workspaceId: record.workspace_id || null,
     }
 }
 
@@ -554,7 +567,12 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
 
         // "Done for now" feature
         done_for_now_until: sanitizeTimestamp(task.doneForNowUntil),
+        is_completion_record: task.isCompletionRecord ?? false,
         is_pinned: task.isPinned ?? false,
+
+        // Workspace collaboration — only include when set (safe before migration adds columns)
+        ...(task.workspaceId ? { workspace_id: task.workspaceId } : {}),
+        ...(task.assignedTo ? { assigned_to: sanitizeUUID(task.assignedTo) } : {}),
 
         created_at: sanitizeTimestamp(task.createdAt) || now,
         updated_at: now,
@@ -633,7 +651,12 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
 
         // "Done for now" feature
         doneForNowUntil: record.done_for_now_until || undefined,
+        isCompletionRecord: record.is_completion_record ?? false,
         isPinned: record.is_pinned ?? false,
+
+        // Workspace collaboration
+        workspaceId: record.workspace_id || null,
+        assignedTo: record.assigned_to || null,
     }
 }
 

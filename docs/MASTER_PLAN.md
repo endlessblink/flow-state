@@ -96,6 +96,44 @@
 
 ---
 
+## Test Failures (P2)
+
+### ~~BUG-1568~~: WebKitGTK CSS safety test fails — text-overflow: clip in CategorySelector (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: `CategorySelector.vue` style block line 198 uses `text-overflow: clip !important` without the required `/* WebKitGTK-safe */` annotation. The `css-syntax.test.ts` safety test catches this as a potential Tauri/WebKitGTK compatibility issue.
+
+**Fix**: Add `/* WebKitGTK-safe */` annotation on the same line, or replace `text-overflow: clip` with a WebKitGTK-compatible alternative.
+
+**Files**: `src/components/layout/CategorySelector.vue`
+
+---
+
+### ~~BUG-1569~~: Circular dependency — timer.ts → tasks.ts → taskStates.ts → projects.ts → taskOperations.ts (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: `dependencies.test.ts` detects a circular import cycle: `timer.ts` → `tasks.ts` → `taskStates.ts` → `projects.ts` → `taskOperations.ts` → back to `timer.ts`. This can cause initialization ordering issues and makes the codebase harder to reason about.
+
+**Fix**: Extract shared types/utilities into a separate module, use dynamic imports, or restructure store dependencies to break the cycle.
+
+**Files**: `src/stores/timer.ts`, `src/stores/tasks.ts`, `src/stores/tasks/taskStates.ts`, `src/stores/projects.ts`, `src/stores/tasks/taskOperations.ts`
+
+---
+
+### ~~BUG-1570~~: Task filtering test fails — "today" smart view returns 0 tasks (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: `tasks.test.ts` "filters tasks by today smart view" expects `filteredTasks.length >= 1` after `setSmartView('today')`, but gets 0. Either the test seed data isn't creating a task with today's date correctly, or the smart view filter logic has a date comparison bug.
+
+**Fix**: Investigate whether the test setup creates tasks with `dueDate` set to today correctly, and whether `setSmartView('today')` filter matches the expected format. Fix the test or the filter logic.
+
+**Files**: `src/stores/__tests__/tasks.test.ts`, `src/stores/tasks/taskStates.ts`
+
+---
+
 ## Active Bugs (P0-P1)
 
 ### ~~BUG-1523~~: iCal parser skips ALL recurring events — RRULE expansion missing (✅ DONE)
@@ -1884,7 +1922,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1347**~~ | **P0** | ✅ **KDE Plasma widget freeze — gated 40+ console.log behind debug flag, staggered concurrent XHR with Qt.callLater(), reactive transition timer, throttled canvas repaints** (✅ DONE 2026-02-19) |
 | ~~**BUG-1365**~~ | **P0** | ✅ **Calendar day view — task disappears after editing and saving (false positive scheduleExplicitlyRemoved for instance-based tasks)** (✅ DONE 2026-02-19) |
 | ~~**BUG-1360**~~ | **P0** | ✅ **Canvas long task cards cut off when zooming — removed LOD content hiding, overflow:hidden chain, title 3-line clamp** (✅ DONE 2026-02-20) |
-| **BUG-1567** | **P2** | 🔄 **Deleted projects still appear in QuickSort CategorySelector — project store `projects` computed doesn't filter soft-deleted projects (is_deleted=true)** (🔄 IN PROGRESS 2026-03-18) |
+| ~~**BUG-1567**~~ | **P2** | ✅ **Deleted projects still appear in QuickSort CategorySelector — project store `projects` computed doesn't filter soft-deleted projects (is_deleted=true)** (✅ DONE 2026-03-18) |
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
 | **BUG-1346** | **P1** | **🔄 Mobile Inbox tab broken in PWA on mobile — layout/design broken** (🔄 IN PROGRESS 2026-03-04) |

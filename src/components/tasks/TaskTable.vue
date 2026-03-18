@@ -234,6 +234,7 @@
                   :value="task.title"
                   class="inline-edit"
                   autofocus
+                  dir="auto"
                   @blur="saveEdit(task.id, 'title', $event)"
                   @keydown.enter="saveEdit(task.id, 'title', $event)"
                   @keydown.esc="cancelEdit"

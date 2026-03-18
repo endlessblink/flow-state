@@ -77,6 +77,7 @@
                 :class="[getAlignmentClasses(subtask.title), { 'completed': subtask.isCompleted }]"
                 :style="applyInputAlignment(subtask.title)"
                 placeholder="Subtask title"
+                dir="auto"
                 @focus="focusedSubtaskId = subtask.id"
                 @blur="focusedSubtaskId = null"
                 @keydown.enter.prevent="$emit('add')"
@@ -99,6 +100,7 @@
               :style="applyInputAlignment(subtask.description)"
               rows="2"
               placeholder="Add description..."
+              dir="auto"
               @focus="focusedSubtaskId = subtask.id"
             />
           </div>

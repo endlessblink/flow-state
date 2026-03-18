@@ -1923,7 +1923,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1365**~~ | **P0** | ✅ **Calendar day view — task disappears after editing and saving (false positive scheduleExplicitlyRemoved for instance-based tasks)** (✅ DONE 2026-02-19) |
 | ~~**BUG-1360**~~ | **P0** | ✅ **Canvas long task cards cut off when zooming — removed LOD content hiding, overflow:hidden chain, title 3-line clamp** (✅ DONE 2026-02-20) |
 | ~~**BUG-1567**~~ | **P2** | ✅ **Deleted projects still appear in QuickSort CategorySelector — project store `projects` computed doesn't filter soft-deleted projects (is_deleted=true)** (✅ DONE 2026-03-18) |
-| **TASK-1571** | **P2** | 📋 **Edit Task modal RTL support — title, description, labels, schedule/properties layout should respect dir="auto" for Hebrew** (📋 PLANNED 2026-03-18) |
+| ~~**TASK-1571**~~ | **P2** | ✅ **Edit Task modal RTL support — added dir="auto" to 7 inputs across TaskEditHeader, QuickTaskCreate, QuickTaskCreateModal, TaskEditSubtasks, TaskTable** (✅ DONE 2026-03-18) |
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
 | **BUG-1346** | **P1** | **🔄 Mobile Inbox tab broken in PWA on mobile — layout/design broken** (🔄 IN PROGRESS 2026-03-04) |

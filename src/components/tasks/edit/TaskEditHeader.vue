@@ -9,6 +9,7 @@
       :class="titleAlignmentClasses"
       :style="titleAlignmentStyles"
       placeholder="Task title"
+      dir="auto"
       @keydown.enter.prevent
     >
   </div>

@@ -24,6 +24,7 @@
           :class="[titleAlignmentClasses]"
           :style="titleAlignmentStyles"
           maxlength="200"
+          dir="auto"
           @keydown.enter="handleCreateTask"
           @keydown.esc="$emit('cancel')"
           @paste="handlePaste"
@@ -80,6 +81,7 @@
         class="description-input"
         :class="[descAlignmentClasses]"
         :style="descAlignmentStyles"
+        dir="auto"
         @keydown.enter="handleCreateTask"
         @keydown.esc="$emit('cancel')"
       >

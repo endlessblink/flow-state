@@ -20,6 +20,7 @@
           class="title-input"
           :class="[titleAlignmentClasses]"
           :style="titleAlignmentStyles"
+          dir="auto"
           @keydown.enter="handleCreate"
           @keydown.esc="$emit('close')"
           @paste="handlePaste"
@@ -53,6 +54,7 @@
         class="description-input"
         :class="[descAlignmentClasses]"
         :style="descAlignmentStyles"
+        dir="auto"
         @keydown.enter="handleCreate"
         @keydown.esc="$emit('close')"
       >

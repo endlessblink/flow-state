@@ -240,16 +240,22 @@
               <button class="pill" :class="{ active: isDueNextWeek }" @click="setQuickDate('nextweek')">+7</button>
               <button class="pill" @click="setQuickDate('in2weeks')">+14</button>
               <button class="pill" @click="setQuickDate('in30days')">+30</button>
-              <button class="pill date-picker-trigger" :class="{ active: currentTask.dueDate && !isDueToday && !isDueTomorrow && !isDueWeekend && !isDueNextWeek }" @click="($refs.dueDatePicker as HTMLInputElement)?.showPicker()">
-                <Calendar :size="14" />
-              </button>
-              <input
-                ref="dueDatePicker"
-                type="date"
-                class="date-picker-hidden"
-                :value="currentTask.dueDate || ''"
-                @input="handleTaskUpdate({ dueDate: ($event.target as HTMLInputElement).value || '' })"
-              />
+              <NPopover trigger="click" placement="bottom" :show-arrow="false">
+                <template #trigger>
+                  <button class="pill date-picker-trigger" :class="{ active: currentTask.dueDate && !isDueToday && !isDueTomorrow && !isDueWeekend && !isDueNextWeek }">
+                    <Calendar :size="14" />
+                  </button>
+                </template>
+                <div @click.stop>
+                  <NDatePicker
+                    panel
+                    :value="currentTask.dueDate ? new Date(currentTask.dueDate + 'T00:00:00').getTime() : null"
+                    type="date"
+                    :actions="[]"
+                    @update:value="handleDatePickerUpdate"
+                  />
+                </div>
+              </NPopover>
               <button class="pill clear" :class="{ active: !currentTask.dueDate }" @click="setQuickDate('clear')">
                 <X :size="14" />
               </button>
@@ -315,6 +321,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { NPopover, NDatePicker } from 'naive-ui'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -541,6 +548,15 @@ function setQuickDate(preset: string) {
     handleTaskUpdate({ dueDate: '' })
     return
   }
+  handleTaskUpdate({ dueDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })
+}
+
+function handleDatePickerUpdate(timestamp: number | null) {
+  if (!timestamp) {
+    handleTaskUpdate({ dueDate: '' })
+    return
+  }
+  const d = new Date(timestamp)
   handleTaskUpdate({ dueDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })
 }
 
@@ -1132,14 +1148,6 @@ const currentTaskProject = computed(() => {
 
 .date-picker-trigger {
   padding: var(--space-1_5) var(--space-2);
-}
-
-.date-picker-hidden {
-  position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* Priority pills expand equally */

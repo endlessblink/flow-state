@@ -155,20 +155,25 @@
             >
               +30
             </button>
-            <button
-              class="date-btn date-picker-trigger"
-              :class="{ active: newTask.dueDate && !isDueDateToday && !isDueDateTomorrow && !isDueDateWeekend }"
-              @click="($refs.captureDatePicker as HTMLInputElement)?.showPicker()"
-            >
-              <Calendar :size="14" />
-            </button>
-            <input
-              ref="captureDatePicker"
-              type="date"
-              class="date-picker-hidden"
-              :value="newTask.dueDate || ''"
-              @input="newTask.dueDate = ($event.target as HTMLInputElement).value || undefined"
-            />
+            <NPopover trigger="click" placement="bottom" :show-arrow="false">
+              <template #trigger>
+                <button
+                  class="date-btn date-picker-trigger"
+                  :class="{ active: newTask.dueDate && !isDueDateToday && !isDueDateTomorrow && !isDueDateWeekend }"
+                >
+                  <Calendar :size="14" />
+                </button>
+              </template>
+              <div @click.stop>
+                <NDatePicker
+                  panel
+                  :value="newTask.dueDate ? new Date(newTask.dueDate + 'T00:00:00').getTime() : null"
+                  type="date"
+                  :actions="[]"
+                  @update:value="handleDatePickerUpdate"
+                />
+              </div>
+            </NPopover>
             <button
               v-if="newTask.dueDate"
               class="date-btn clear"
@@ -297,6 +302,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, reactive } from 'vue'
+import { NPopover, NDatePicker } from 'naive-ui'
 import { X, Plus, Inbox, Flag, Calendar, Zap, Mic, MicOff, Globe } from 'lucide-vue-next'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useUrlScraping } from '@/composables/useUrlScraping'
@@ -496,6 +502,15 @@ function setDueDate(preset: string) {
   }
 
   newTask.dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function handleDatePickerUpdate(timestamp: number | null) {
+  if (!timestamp) {
+    newTask.dueDate = undefined
+    return
+  }
+  const d = new Date(timestamp)
+  newTask.dueDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
 function truncateDescription(desc: string): string {
@@ -834,14 +849,6 @@ defineExpose({
 
 .date-picker-trigger {
   padding: var(--space-1_5) var(--space-2);
-}
-
-.date-picker-hidden {
-  position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .date-btn.clear {

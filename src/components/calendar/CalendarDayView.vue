@@ -6,7 +6,7 @@ import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot, PositionedExternalEvent } from '@/composables/calendar/useCalendarDayView'
 import type { ComputedRef } from 'vue'
 
-const props = defineProps<{
+const _props = defineProps<{
   timeSlots: TimeSlot[]
   hours: number[]
   isViewingToday: boolean
@@ -51,8 +51,8 @@ interface CalendarHelpers {
   formatEventTime: (event: CalendarEvent) => string
   isCurrentTimeSlot: (slot: TimeSlot) => boolean
   getTasksForSlot: (slot: TimeSlot) => CalendarEvent[]
-  isTaskPrimarySlot: (task: CalendarEvent, slot: TimeSlot) => boolean
-  getSlotTaskStyle: (task: CalendarEvent, slot: TimeSlot) => Record<string, string>
+  isTaskPrimarySlot: (slot: TimeSlot, task: CalendarEvent) => boolean
+  getSlotTaskStyle: (task: CalendarEvent, slot?: TimeSlot) => Record<string, string>
   getProjectVisual: (event: { projectId?: string }) => { type: 'color' | 'emoji'; content: string }
   getProjectName: (event: CalendarEvent) => string
   getProjectColor: (event: CalendarEvent) => string
@@ -76,8 +76,8 @@ const {
   getPriorityClass,
   getPriorityLabel,
   getTaskStatus,
-  getStatusLabel,
-  getStatusIcon,
+  getStatusLabel: _getStatusLabel,
+  getStatusIcon: _getStatusIcon,
   positionedExternalEvents
 } = inject('calendar-helpers') as CalendarHelpers
 
@@ -168,7 +168,7 @@ const {
               'status-active': getTaskStatus(calEvent) === 'todo',
               'slot-task--virtual': calEvent.isVirtual
             }"
-            :style="getSlotTaskStyle(calEvent)"
+            :style="getSlotTaskStyle(calEvent, slot)"
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
             :draggable="!calEvent.isVirtual"
             @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"

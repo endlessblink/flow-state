@@ -68,7 +68,7 @@ function stopAutoScroll() {
 }
 
 // Shared CSS for the unified ghost pill
-const GHOST_CSS = `position:fixed;padding:8px 16px;max-width:220px;background:#1e1e23;color:#e0e0e0;border:1px solid rgba(78,205,196,0.4);border-radius:8px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:99999;`
+const GHOST_CSS = `position:fixed;padding:8px 16px;max-width:220px;background:#1e1e23;color:#e0e0e0;border:1px solid var(--state-hover-border, rgba(78,205,196,0.4));border-radius:8px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:99999;`
 
 function createGhostPill(title: string): HTMLElement {
   const el = document.createElement('div')

@@ -128,6 +128,7 @@ import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { useSettingsStore } from '@/stores/settings'
 import { useMobileDetection } from '@/composables/useMobileDetection'
 import { List, Table2 } from 'lucide-vue-next'
 import ViewControls from '@/components/layout/ViewControls.vue'
@@ -151,6 +152,7 @@ const { isMobile } = useMobileDetection()
 // Stores
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+const settingsStore = useSettingsStore()
 const { bulkDeleteTasksWithUndo } = useUnifiedUndoRedo()
 const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
@@ -354,17 +356,45 @@ const groupedTasks = computed((): TaskGroup[] => {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const weekStartsOn = settingsStore.weekStartsOn ?? 0
     const endOfWeek = new Date(today)
-    endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()))
+    if (weekStartsOn === 0) {
+      // Sunday start: week ends Saturday (day 6)
+      const daysUntilEnd = (6 - today.getDay() + 7) % 7
+      endOfWeek.setDate(today.getDate() + daysUntilEnd)
+    } else {
+      // Monday start: week ends Sunday (day 0)
+      const daysUntilEnd = (7 - today.getDay()) % 7
+      endOfWeek.setDate(today.getDate() + daysUntilEnd)
+    }
+
+    // Generate per-day buckets for remaining weekdays (after tomorrow, up to end of week)
+    const dayAfterTomorrow = new Date(tomorrow)
+    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1)
+
+    const locale = settingsStore.language || 'en'
+    const perDayBuckets: { key: string; title: string; date: Date }[] = []
+
+    const cursor = new Date(dayAfterTomorrow)
+    while (cursor <= endOfWeek) {
+      const isoKey = `day-${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
+      const dayName = cursor.toLocaleDateString(locale === 'he' ? 'he-IL' : locale, { weekday: 'long' })
+      const dateStr = `${cursor.getDate()}.${cursor.getMonth() + 1}`
+      const title = `${dayName} ${dateStr}`
+      perDayBuckets.push({ key: isoKey, title: title.charAt(0).toUpperCase() + title.slice(1), date: new Date(cursor) })
+      cursor.setDate(cursor.getDate() + 1)
+    }
 
     const buckets: Record<string, Task[]> = {
       overdue: [],
       today: [],
       tomorrow: [],
-      thisWeek: [],
       later: [],
       noDate: []
     }
+    // Add per-day buckets
+    perDayBuckets.forEach(({ key }) => { buckets[key] = [] })
 
     tasks.forEach(task => {
       if (!task.dueDate) {
@@ -376,7 +406,12 @@ const groupedTasks = computed((): TaskGroup[] => {
       if (dueDate < today) buckets.overdue.push(task)
       else if (dueDate.getTime() === today.getTime()) buckets.today.push(task)
       else if (dueDate.getTime() === tomorrow.getTime()) buckets.tomorrow.push(task)
-      else if (dueDate <= endOfWeek) buckets.thisWeek.push(task)
+      else if (dueDate <= endOfWeek) {
+        // Find matching per-day bucket
+        const dayKey = `day-${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+        if (buckets[dayKey]) buckets[dayKey].push(task)
+        else buckets.later.push(task) // fallback
+      }
       else buckets.later.push(task)
     })
 
@@ -384,7 +419,7 @@ const groupedTasks = computed((): TaskGroup[] => {
       { key: 'overdue', title: 'Overdue' },
       { key: 'today', title: 'Today' },
       { key: 'tomorrow', title: 'Tomorrow' },
-      { key: 'thisWeek', title: 'This Week' },
+      ...perDayBuckets.map(({ key, title }) => ({ key, title })),
       { key: 'later', title: 'Later' },
       { key: 'noDate', title: 'No Date' }
     ]

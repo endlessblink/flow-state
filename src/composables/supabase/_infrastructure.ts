@@ -253,7 +253,7 @@ export function createDatabaseHelpers(
                 // BUG-352: Also catch AbortError (from fetch timeout) and timeout strings
                 // BUG-1311: Firefox/Zen reports "NetworkError" (no space), Chrome reports "Network Error" (space)
                 const lowerMsg = message.toLowerCase()
-                if (message.includes('Failed to fetch') || lowerMsg.includes('networkerror') || message.includes('Network Error') || message.includes('Service Unavailable') || message.includes('AbortError') || lowerMsg.includes('timeout') || message.includes('aborted')) {
+                if (message.includes('Failed to fetch') || lowerMsg.includes('networkerror') || message.includes('Network Error') || message.includes('Service Unavailable') || message.includes('AbortError') || lowerMsg.includes('timeout') || message.includes('aborted') || message.includes('Content-Length')) {
                     console.warn(`🌐 [NETWORK-RETRY] ${context} failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
                     await new Promise(resolve => setTimeout(resolve, delay))
                     continue
@@ -292,7 +292,8 @@ export function createDatabaseHelpers(
             message.includes('Network Error') ||
             message.includes('AbortError') ||
             lowerMsg.includes('timeout') ||
-            message.includes('aborted')
+            message.includes('aborted') ||
+            message.includes('Content-Length')
 
         errorHandler.report({
             error: err,

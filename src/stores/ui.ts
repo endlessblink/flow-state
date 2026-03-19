@@ -3,6 +3,8 @@ import { ref, computed, watch } from 'vue'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 // TASK-1215: Tauri dual-write for UI state persistence
 import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
+// TASK-1574: theme and locale are now the single source of truth in settingsStore
+import { useSettingsStore } from '@/stores/settings'
 
 const UI_STATE_STORAGE_KEY = 'flowstate-ui-state'
 
@@ -23,8 +25,15 @@ function ensureSet(value: unknown): Set<string> {
 export type AuthModalView = 'login' | 'signup' | 'reset-password'
 
 export const useUIStore = defineStore('ui', () => {
-  // Locale and direction — read persisted values so they match vue-i18n on startup
-  const locale = ref(localStorage.getItem('flowstate-app-locale') || 'en')
+  // TASK-1574: locale is derived from settingsStore.language (single source of truth)
+  // The 'flowstate-app-locale' localStorage key is kept in sync for i18n bootstrap reads.
+  const settingsStore = useSettingsStore()
+
+  // locale is a computed that reads from settingsStore.language so it is always in sync
+  // with the persisted settings blob. Components that destructure `{ locale }` via
+  // storeToRefs() will still get a reactive ref-like value because computed() is ref-like.
+  const locale = computed(() => settingsStore.language || 'en')
+
   const savedDir = localStorage.getItem('flowstate-app-direction')
   const directionPreference = ref<'ltr' | 'rtl' | 'auto'>(
     savedDir && ['ltr', 'rtl', 'auto'].includes(savedDir) ? savedDir as 'ltr' | 'rtl' | 'auto' : 'auto'
@@ -57,9 +66,11 @@ export const useUIStore = defineStore('ui', () => {
     }
   }, { immediate: true })
 
-  // Theme and additional UI state
-  const theme = ref<'light' | 'dark' | 'auto'>('dark')
-  const sidebarCollapsed = ref(false)
+  // TASK-1574: theme is derived from settingsStore.theme (single source of truth).
+  // All components that read uiStore.theme automatically get the persisted value.
+  // To change the theme, call settingsStore.updateSetting('theme', value).
+  const theme = computed(() => settingsStore.theme || 'auto')
+
   const activeView = ref<'board' | 'canvas' | 'calendar' | 'all-tasks'>('board')
 
   // Expanded State
@@ -202,7 +213,10 @@ export const useUIStore = defineStore('ui', () => {
 
   // Language and direction actions
   const setLanguage = (languageCode: 'en' | 'he') => {
-    locale.value = languageCode
+    // TASK-1574: Write to settingsStore (single source of truth for language).
+    // locale is now a computed from settingsStore.language, so this auto-updates it.
+    settingsStore.updateSetting('language', languageCode)
+    // Keep flowstate-app-locale in sync so i18n/index.ts can read it on next cold boot.
     localStorage.setItem('flowstate-app-locale', languageCode)
     // TASK-1215: Tauri dual-write for locale
     if (isTauriEnv()) {
@@ -294,7 +308,6 @@ export const useUIStore = defineStore('ui', () => {
     secondarySidebarVisible,
     focusMode,
     theme,
-    sidebarCollapsed,
     activeView,
     authModalOpen,
     authModalView,

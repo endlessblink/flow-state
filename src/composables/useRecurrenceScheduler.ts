@@ -9,6 +9,8 @@
 import { useTaskStore } from '@/stores/tasks'
 import { computeNextDueDate } from '@/utils/recurrenceUtils'
 import { formatDateKey } from '@/utils/dateUtils'
+import { DB_TABLES } from '@/constants/dbTables'
+import { recurrenceLockKey } from '@/constants/storageKeys'
 import type { SimpleRecurrenceRule } from '@/types/tasks'
 
 export function useRecurrenceScheduler() {
@@ -28,7 +30,7 @@ export function useRecurrenceScheduler() {
         // 1. User refreshes before the previous clone's DB write completes
         // 2. loadFromDatabase doesn't see the clone yet (race with direct save)
         // The lock persists across page loads, unlike in-memory state.
-        const LOCK_KEY = `flowstate-recurrence-lock-${today}`
+        const LOCK_KEY = recurrenceLockKey(today)
         const existingLock = localStorage.getItem(LOCK_KEY)
         if (existingLock) {
             const lockTime = parseInt(existingLock, 10)
@@ -107,7 +109,7 @@ export function useRecurrenceScheduler() {
                         const { supabase } = await import('@/services/auth/supabase')
                         if (supabase) {
                             const { data: existingClones } = await supabase
-                                .from('tasks')
+                                .from(DB_TABLES.TASKS)
                                 .select('id')
                                 .eq('recurrence_parent_id', chainId)
                                 .eq('is_deleted', false)

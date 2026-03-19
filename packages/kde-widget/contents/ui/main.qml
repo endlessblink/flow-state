@@ -59,6 +59,9 @@ PlasmoidItem {
     // ===== SESSION COMPLETE STATE =====
     property bool sessionJustCompleted: false      // True when session ends, waiting for user action
     property bool lastCompletedWasWork: true       // Track what type of session just completed
+    property string lastCompletedSessionId: ""         // Track completed session ID for +5min extension
+    property int lastCompletedDuration: 0              // Track original duration for extension
+    property string lastCompletedTaskId: "general"     // Track task ID for extension
     property real transitionUntil: 0               // BUG-1292: Epoch ms - fast-poll until this time (self-expiring)
 
     // ===== TASK STATE =====
@@ -131,6 +134,9 @@ PlasmoidItem {
 
     // ===== DEBUG FLAG =====
     readonly property bool debugLogging: false  // Set true to enable verbose console.log
+
+    // BUG-LEAK: Track last writeActiveTaskFile command so we can disconnect stale sources
+    property string lastWriteCmd: ""
 
     // ===== COMPUTED =====
     readonly property int minutes: Math.floor(secondsRemaining / 60)
@@ -218,7 +224,8 @@ PlasmoidItem {
     // Buttons call Supabase API to start next session
     // BUG-1462: Dismiss any pending system notification (notify-send) to prevent duplicate actions
     function dismissSystemNotification() {
-        var cmd = "pkill -f 'notify-send.*FlowState' 2>/dev/null; true"
+        // BUG-LEAK: append "; echo ok" so stdout fires onNewData → disconnectSource is called
+        var cmd = "pkill -f 'notify-send.*FlowState' 2>/dev/null; echo ok"
         executableDataSource.connectSource(cmd)
         console.log("[NOTIFY] Dismissed pending system notifications")
     }
@@ -239,7 +246,8 @@ PlasmoidItem {
         var cmd = scriptDir + 'notify.sh "' +
             title + '" "' + body + '" "' + btn1 + '" "+5 min" "' + isWork + '" "' +
             root.supabaseUrl + '" "' + root.supabaseKey + '" "' + root.accessToken + '" "' +
-            root.userId + '" "' + workDuration + '" "' + breakDuration + '"'
+            root.userId + '" "' + workDuration + '" "' + breakDuration + '" "' +
+            root.lastCompletedSessionId + '" "' + root.lastCompletedDuration + '"'
         executableDataSource.connectSource(cmd)
         console.log("[NOTIFY] Running notify script:", cmd)
     }
@@ -395,7 +403,13 @@ PlasmoidItem {
         }
         var json = JSON.stringify(obj)
         var escaped = json.replace(/'/g, "'\\''")
-        var cmd = "printf '%s' '" + escaped + "' > /tmp/flowstate-active-task.json"
+        // BUG-LEAK: append "&& echo ok" so stdout fires onNewData → disconnectSource is called.
+        // Also disconnect any previous write command still lingering to prevent connectedSources growth.
+        var cmd = "printf '%s' '" + escaped + "' > /tmp/flowstate-active-task.json && echo ok"
+        if (root.lastWriteCmd) {
+            executableDataSource.disconnectSource(root.lastWriteCmd)
+        }
+        root.lastWriteCmd = cmd
         executableDataSource.connectSource(cmd)
     }
 
@@ -4220,6 +4234,9 @@ PlasmoidItem {
 
         // Track what type of session just completed for action buttons
         root.lastCompletedWasWork = root.isWorkSession
+        root.lastCompletedSessionId = root.currentSessionId
+        root.lastCompletedDuration = root.totalSeconds
+        root.lastCompletedTaskId = root.currentTaskId || "general"
         root.sessionJustCompleted = true
         // BUG-1347: Use reactive timer instead of Date.now() epoch comparison
         root.isInTransition = true
@@ -4242,59 +4259,89 @@ PlasmoidItem {
 
     // TASK-1009: Postpone timer by adding more time
     function postponeTimer(seconds) {
-        console.log("[TIMER] Postponing by", seconds, "seconds")
+        console.log("[TIMER] Postponing by", seconds, "seconds (extending session)")
 
-        // Create a new session with the postpone duration
-        // Maintain the same session type (work or break)
-        var sessionId = generateUUID()
-        var isBreak = !root.isWorkSession  // Was work session, now break (or vice versa)
+        if (!root.lastCompletedSessionId) {
+            console.warn("[TIMER] No recent session to extend, creating new session")
+            // Fallback: create new session like before
+            var sessionId = generateUUID()
+            var payload = {
+                id: sessionId,
+                user_id: root.userId,
+                task_id: "general",
+                start_time: new Date().toISOString(),
+                duration: seconds,
+                remaining_time: seconds,
+                is_active: true,
+                is_paused: false,
+                is_break: !root.isWorkSession,
+                device_leader_id: "kde-widget",
+                device_leader_last_seen: new Date().toISOString()
+            }
 
-        // Actually, for postpone we want to continue the SAME type of session
-        // If user was on a work session and it ended, postpone means +5 min more work
-        // The notification text says "Time for break" but user chose postpone instead
-        isBreak = root.isWorkSession ? false : true  // Postpone continues the CURRENT type
+            var xhr = new XMLHttpRequest()
+            xhr.open("POST", root.supabaseUrl + "/rest/v1/timer_sessions", true)
+            xhr.setRequestHeader("apikey", root.supabaseKey)
+            xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+            xhr.setRequestHeader("Content-Type", "application/json")
+            xhr.setRequestHeader("Prefer", "return=representation")
 
-        var payload = {
-            id: sessionId,
-            user_id: root.userId,
-            task_id: "general",
-            start_time: new Date().toISOString(),
-            duration: seconds,
-            remaining_time: seconds,
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 201 || xhr.status === 200) {
+                        root.currentSessionId = sessionId
+                        root.totalSeconds = seconds
+                        root.secondsRemaining = seconds
+                        root.isRunning = true
+                        root.hasActiveSession = true
+                        root.isDeviceLeader = true
+                        console.log("[TIMER] Fallback postpone session started:", sessionId)
+                    }
+                }
+            }
+            xhr.send(JSON.stringify(payload))
+            return
+        }
+
+        // Extend the just-completed session by PATCHing it back to active
+        var newDuration = root.lastCompletedDuration + seconds
+        var patchPayload = {
             is_active: true,
             is_paused: false,
-            is_break: !root.isWorkSession,  // If was work, postpone is still work (before break)
+            duration: newDuration,
+            remaining_time: seconds,
+            completed_at: null,
             device_leader_id: "kde-widget",
             device_leader_last_seen: new Date().toISOString()
         }
 
-        if (root.debugLogging) console.log("[TIMER] Creating postpone session:", JSON.stringify(payload))
+        if (root.debugLogging) console.log("[TIMER] Extending session:", root.lastCompletedSessionId, JSON.stringify(patchPayload))
 
-        var xhr = new XMLHttpRequest()
-        xhr.open("POST", root.supabaseUrl + "/rest/v1/timer_sessions", true)
-        xhr.setRequestHeader("apikey", root.supabaseKey)
-        xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
-        xhr.setRequestHeader("Content-Type", "application/json")
-        xhr.setRequestHeader("Prefer", "return=representation")
+        var xhr2 = new XMLHttpRequest()
+        xhr2.open("PATCH", root.supabaseUrl + "/rest/v1/timer_sessions?id=eq." + root.lastCompletedSessionId, true)
+        xhr2.setRequestHeader("apikey", root.supabaseKey)
+        xhr2.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+        xhr2.setRequestHeader("Content-Type", "application/json")
 
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (root.debugLogging) console.log("[TIMER] Postpone response:", xhr.status, xhr.responseText)
-                if (xhr.status === 201 || xhr.status === 200) {
-                    root.currentSessionId = sessionId
-                    root.totalSeconds = seconds
+        xhr2.onreadystatechange = function() {
+            if (xhr2.readyState === XMLHttpRequest.DONE) {
+                if (root.debugLogging) console.log("[TIMER] Extend response:", xhr2.status, xhr2.responseText)
+                if (xhr2.status === 200 || xhr2.status === 204) {
+                    root.currentSessionId = root.lastCompletedSessionId
+                    root.totalSeconds = newDuration
                     root.secondsRemaining = seconds
                     root.isRunning = true
-                    // Keep the same session type for postpone
-                    // If was work session (isWorkSession=true), postpone continues work
                     root.hasActiveSession = true
                     root.isDeviceLeader = true
-                    console.log("[TIMER] Postpone session started:", sessionId)
+                    // Keep the same session type
+                    console.log("[TIMER] Session extended:", root.lastCompletedSessionId, "new duration:", newDuration)
+                } else {
+                    console.error("[TIMER] Failed to extend session:", xhr2.status)
                 }
             }
         }
 
-        xhr.send(JSON.stringify(payload))
+        xhr2.send(JSON.stringify(patchPayload))
     }
 
     function patchSession(data) {
@@ -5162,8 +5209,8 @@ PlasmoidItem {
         // 2. Fill remaining slots with tasks due today or overdue only
         if (combined.length < maxItems && allTasks.length > 0) {
             var now = new Date()
-            var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-            var todayEnd = new Date(todayStart.getTime() + 86400000) // end of today
+            // Use date string comparison to avoid timezone issues (YYYY-MM-DD)
+            var todayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0')
 
             for (var j = 0; j < allTasks.length && combined.length < maxItems; j++) {
                 var task = allTasks[j]
@@ -5171,11 +5218,10 @@ PlasmoidItem {
                 if (pinnedTitles[task.title.toLowerCase()]) continue
                 if (task.status === "done") continue
                 if (root.nannyHiddenToday[task.id]) continue
-                // Only include tasks due today or overdue
+                // Only include tasks due exactly today — string compare avoids timezone bugs
                 if (!task.due_date) continue
-                var taskDue = new Date(task.due_date)
-                if (isNaN(taskDue.getTime())) continue
-                if (taskDue >= todayEnd) continue // skip future tasks
+                var dueDateStr = task.due_date.substring(0, 10) // take "YYYY-MM-DD" part
+                if (dueDateStr !== todayStr) continue
 
                 var tProj = getProjectInfo(task.project_id)
 

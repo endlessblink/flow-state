@@ -35,7 +35,6 @@
       <button class="tab-btn" :class="{ active: activeTab === 'capture' }" @click="activeTab = 'capture'">
         <Plus :size="16" />
         Capture
-        <span v-if="pendingCount > 0" class="tab-badge pending">{{ pendingCount }}</span>
       </button>
     </div>
 
@@ -47,7 +46,6 @@
           v-if="activeTab === 'capture'"
           key="capture"
           ref="captureTabRef"
-          @switch-to-sort="handleSwitchToSort"
         />
 
         <!-- SORT TAB -->
@@ -352,7 +350,6 @@ const activeTab = ref<'sort' | 'capture'>('sort')
 const captureTabRef = ref<InstanceType<typeof QuickCaptureTab> | null>(null)
 
 const uncategorizedCount = computed(() => uncategorizedTasks.value.length)
-const pendingCount = computed(() => quickCapture.pendingTasks.value.length)
 
 const showProjectModal = ref(false)
 const showEditModal = ref(false)
@@ -394,7 +391,6 @@ watch(() => quickCapture.defaultTabOnOpen.value, (defaultTab) => {
   if (defaultTab === 'capture' && route.name === 'quick-sort') activeTab.value = 'capture'
 }, { immediate: true })
 
-function handleSwitchToSort() { activeTab.value = 'sort' }
 
 const {
   currentTask, currentTaskId, uncategorizedTasks, progress, isComplete,

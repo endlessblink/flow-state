@@ -6,6 +6,7 @@
  * when navigating to Today view and vice versa.
  */
 import { ref, computed } from 'vue'
+import { usePersistentRef } from '@/composables/usePersistentRef'
 
 // Shared filter types
 export type GroupByType = 'none' | 'time' | 'date' | 'project' | 'priority'
@@ -14,7 +15,7 @@ export type GroupByType = 'none' | 'time' | 'date' | 'project' | 'priority'
 const selectedProject = ref<string | null>(null)
 const selectedPriority = ref<string | null>(null)
 const groupBy = ref<GroupByType>('none')
-const hideDoneTasks = ref(true)
+const hideDoneTasks = usePersistentRef<boolean>('flowstate-mobile-hide-done', true)
 
 // Priority label mapping
 const priorityLabels: Record<string, string> = {

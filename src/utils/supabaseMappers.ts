@@ -672,7 +672,7 @@ export function toSupabaseUserSettings(settings: AppSettings, userId: string): S
         auto_start_breaks: settings.autoStartBreaks,
         auto_start_pomodoros: settings.autoStartPomodoros,
         play_notification_sounds: settings.playNotificationSounds,
-        theme: settings.theme || 'system',
+        theme: settings.theme || 'auto',
         language: settings.language || 'en',
         sidebar_collapsed: (settings as AppSettings & { sidebarCollapsed?: boolean }).sidebarCollapsed || false,
         board_density: settings.boardDensity || 'comfortable',

@@ -140,7 +140,7 @@ type FilterKey = typeof filters[number]['key']
 
 const activeFilters = ref<Record<FilterKey, boolean>>({
   today: false,
-  hideDone: true, // ON by default
+  hideDone: taskStore.hideBoardDoneTasks,
   highPriority: false,
   noDate: false,
 })

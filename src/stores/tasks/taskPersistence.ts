@@ -249,7 +249,8 @@ export function useTaskPersistence(
             // so it works before the migration adds the column to VPS
             const { useWorkspaceStore } = await import('../workspace')
             const wsStore = useWorkspaceStore()
-            const workspaceId = wsStore.activeWorkspaceId === null ? undefined : wsStore.activeWorkspaceId
+            // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq), undefined = legacy (no filter)
+            const workspaceId = wsStore.activeWorkspaceId
             const loadedTasks = await fetchTasks(workspaceId)
 
             // TASK-142: Position integrity validation - detect invalid canvas positions early

@@ -66,6 +66,7 @@ export function useQuickSort() {
   const uncategorizedTasks = computed<Task[]>(() => {
     return taskStore.rawTasks.filter(task =>
       !task._soft_deleted &&
+      !task.isPinned &&
       isUncategorizedTask(task) &&
       !processedTaskIds.value.has(task.id)
     )

@@ -4,6 +4,7 @@ import { supabase, consumePendingProviderTokens, type User, type Session, type A
 import { clearGuestData, clearGuestSessionId } from '@/utils/guestModeStorage'
 import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
 import { invalidateCache } from '@/composables/useSupabaseDatabase'
+import { DB_TABLES } from '@/constants/dbTables'
 import type { Task } from '@/types/tasks'
 export type { User, Session, AuthError }
 
@@ -569,7 +570,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const { data: existingTasks, error: fetchError } = await supabase
-        .from('tasks')
+        .from(DB_TABLES.TASKS)
         .select('title, due_date, status')
         .eq('user_id', user.value.id)
 

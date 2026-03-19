@@ -100,7 +100,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       // undefined = no filter (personal/pre-migration safe), string = workspace filter
       const { useWorkspaceStore } = await import('@/stores/workspace')
       const wsStore = useWorkspaceStore()
-      const workspaceId = wsStore.activeWorkspaceId === null ? undefined : wsStore.activeWorkspaceId
+      // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq)
+      const workspaceId = wsStore.activeWorkspaceId
       const loadedGroups = await fetchGroups(workspaceId)
 
       if (import.meta.env.DEV) {

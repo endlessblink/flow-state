@@ -2,10 +2,14 @@ import { ref } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 // TASK-1215: Tauri dual-write for viewport persistence
 import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 export const useCanvasViewport = (initialViewport = { x: 0, y: 0, zoom: 1 }) => {
     const viewport = ref(initialViewport)
     const zoomConfig = ref({ minZoom: 0.1, maxZoom: 4.0 })
+
+    // TASK-1579: Debounced Supabase write — single source of truth for viewport persistence
+    let _viewportSupabaseSaveTimer: ReturnType<typeof setTimeout> | null = null
 
     const setViewport = (x: number, y: number, zoom: number) => {
         if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(zoom) || zoom <= 0) {
@@ -13,14 +17,28 @@ export const useCanvasViewport = (initialViewport = { x: 0, y: 0, zoom: 1 }) => 
             return
         }
         viewport.value = { x, y, zoom }
-        localStorage.setItem('flowstate-canvas-viewport', JSON.stringify({ x, y, zoom }))
+        localStorage.setItem(STORAGE_KEYS.CANVAS_VIEWPORT, JSON.stringify({ x, y, zoom }))
         // TASK-1215: Tauri dual-write
         if (isTauriEnv()) {
             getTauriStore().then(store => {
                 if (!store) return
-                store.set('flowstate-canvas-viewport', { x, y, zoom }).then(() => scheduleTauriSave('flowstate-canvas-viewport'))
+                store.set(STORAGE_KEYS.CANVAS_VIEWPORT, { x, y, zoom }).then(() => scheduleTauriSave(STORAGE_KEYS.CANVAS_VIEWPORT))
             })
         }
+        // TASK-1579: Debounced Supabase write (2s) — single owner of cloud persistence
+        if (_viewportSupabaseSaveTimer) clearTimeout(_viewportSupabaseSaveTimer)
+        _viewportSupabaseSaveTimer = setTimeout(async () => {
+            try {
+                const { fetchUserSettings, saveUserSettings } = useSupabaseDatabase()
+                const settings = await fetchUserSettings()
+                if (settings) {
+                    await saveUserSettings({ ...settings, canvasViewport: { x, y, zoom } })
+                    console.log('🔭 [canvasViewport] Viewport saved to cloud:', { x, y, zoom })
+                }
+            } catch (error) {
+                console.error('❌ [canvasViewport] Viewport Supabase save failed:', error)
+            }
+        }, 2000)
     }
 
     const loadSavedViewport = async () => {
@@ -34,7 +52,7 @@ export const useCanvasViewport = (initialViewport = { x: 0, y: 0, zoom: 1 }) => 
                 return true
             }
 
-            const local = localStorage.getItem('flowstate-canvas-viewport')
+            const local = localStorage.getItem(STORAGE_KEYS.CANVAS_VIEWPORT)
             if (local) {
                 try {
                     const parsed = JSON.parse(local)

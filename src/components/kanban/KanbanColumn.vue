@@ -288,9 +288,9 @@ const handleNativeDrop = async (event: DragEvent) => {
 const columnIndicatorColor = computed(() => {
   if (props.columnType === 'priority') {
     const priorityColors: Record<string, string> = {
-      'high': 'var(--color-priority-high, #ef4444)',
-      'medium': 'var(--color-priority-medium, #f59e0b)',
-      'low': 'var(--color-priority-low, #3b82f6)',
+      'high': 'var(--color-priority-high)',
+      'medium': 'var(--color-priority-medium)',
+      'low': 'var(--color-priority-low)',
       'no_priority': 'rgba(255, 255, 255, 0.2)'
     }
     return priorityColors[props.status] || null

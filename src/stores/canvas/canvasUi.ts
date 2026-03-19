@@ -1,17 +1,11 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { usePersistentRef, getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 export const useCanvasUiStore = defineStore('canvasUi', () => {
-    const db = useSupabaseDatabase()
-
-    // Viewport state
-    const viewport = ref({
-        x: 0,
-        y: 0,
-        zoom: 1
-    })
+    // Viewport state is owned by canvasViewport.ts / canvas.ts (TASK-1579: single source of truth)
+    // Do NOT add a separate viewport ref here.
 
     // Track if initial viewport fit has been performed this session
     // Persisted to localStorage to survive navigation (but not full page refresh)
@@ -21,7 +15,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
     // Initialize hasInitialFit from localStorage on store creation
     const initHasInitialFit = () => {
         try {
-            const saved = localStorage.getItem('flowstate-canvas-has-initial-fit')
+            const saved = localStorage.getItem(STORAGE_KEYS.CANVAS_HAS_INITIAL_FIT)
             if (saved) {
                 const parsed = JSON.parse(saved)
                 // Only restore if within 5 minutes (session still active)
@@ -106,41 +100,9 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
     const showDurationBadge = usePersistentRef<boolean>('flowstate:canvas-show-duration', true)
     const showScheduleBadge = usePersistentRef<boolean>('flowstate:canvas-show-schedule', true)
 
-    // Zoom configuration
-    const zoomConfig = ref({
-        minZoom: 0.05,
-        maxZoom: 4.0,
-        fitToContentPadding: 0.15,
-        zoomStep: 0.1,
-        wheelSensitivity: 1.0,
-        invertWheel: false,
-        wheelZoomMode: 'zoom' as 'zoom' | 'pan'
-    })
-
-    // Zoom history
-    const zoomHistory = ref<Array<{ zoom: number, timestamp: number }>>([])
-    const maxZoomHistory = 50
-
-    // Actions
-    const setViewport = (x: number, y: number, zoom: number) => {
-        viewport.value = { x, y, zoom }
-    }
-
-    const saveZoomToHistory = (zoom: number) => {
-        const entry = { zoom, timestamp: Date.now() }
-        zoomHistory.value.push(entry)
-        if (zoomHistory.value.length > maxZoomHistory) {
-            zoomHistory.value.shift()
-        }
-    }
-
-    const setViewportWithHistory = (x: number, y: number, zoom: number) => {
-        saveZoomToHistory(zoom)
-        setViewport(x, y, zoom)
-    }
-
-    const updateZoomConfig = (config: Partial<typeof zoomConfig.value>) => {
-        zoomConfig.value = { ...zoomConfig.value, ...config }
+    const updateZoomConfig = (_config: Record<string, unknown>) => {
+        // Zoom config is owned by canvasViewport.ts (TASK-1579)
+        // This stub is kept for backwards-compat if any caller still imports it
     }
 
     const setActiveGroup = (id: string | null) => {
@@ -152,12 +114,12 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         hasInitialFit.value = value
         viewportInitializedAt.value = value ? Date.now() : null
         const fitData = { value, timestamp: Date.now() }
-        localStorage.setItem('flowstate-canvas-has-initial-fit', JSON.stringify(fitData))
+        localStorage.setItem(STORAGE_KEYS.CANVAS_HAS_INITIAL_FIT, JSON.stringify(fitData))
         // TASK-1215: Tauri dual-write
         if (isTauriEnv()) {
             getTauriStore().then(store => {
                 if (!store) return
-                store.set('flowstate-canvas-has-initial-fit', fitData).then(() => scheduleTauriSave('flowstate-canvas-has-initial-fit'))
+                store.set(STORAGE_KEYS.CANVAS_HAS_INITIAL_FIT, fitData).then(() => scheduleTauriSave(STORAGE_KEYS.CANVAS_HAS_INITIAL_FIT))
             })
         }
     }
@@ -166,7 +128,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
     const resetHasInitialFit = () => {
         hasInitialFit.value = false
         viewportInitializedAt.value = null
-        localStorage.removeItem('flowstate-canvas-has-initial-fit')
+        localStorage.removeItem(STORAGE_KEYS.CANVAS_HAS_INITIAL_FIT)
     }
 
     // Display preference toggles
@@ -222,68 +184,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         operationError.value = null
     }
 
-    // Persistence via User Settings in Supabase
-    let viewportSaveTimer: ReturnType<typeof setTimeout> | null = null
-    watch(viewport, (newViewport) => {
-        if (viewportSaveTimer) clearTimeout(viewportSaveTimer)
-        viewportSaveTimer = setTimeout(async () => {
-            try {
-                // Save to local storage for immediate recovery
-                localStorage.setItem('flowstate-canvas-viewport', JSON.stringify(newViewport))
-                // TASK-1215: Tauri dual-write
-                if (isTauriEnv()) {
-                    const store = await getTauriStore()
-                    if (store) {
-                        await store.set('flowstate-canvas-viewport', newViewport)
-                        scheduleTauriSave('flowstate-canvas-viewport')
-                    }
-                }
-
-                // Also save to Supabase User Settings for cloud persistence
-                const settings = await db.fetchUserSettings()
-                if (settings) {
-                    await db.saveUserSettings({
-                        ...settings,
-                        canvasViewport: newViewport
-                    })
-                    console.log('🔭 [canvasUi] Viewport saved to cloud:', newViewport)
-                }
-            } catch (error) {
-                console.error('❌ Viewport save failed:', error)
-            }
-        }, 2000) // Debounce heavily for viewport
-    }, { deep: true })
-
-    const loadSavedViewport = async (): Promise<boolean> => {
-        try {
-            // Try loading from Supabase user settings
-            const settings = await db.fetchUserSettings()
-            const savedViewport = settings?.canvasViewport as { x: number; y: number; zoom: number } | undefined
-
-            if (savedViewport && typeof savedViewport.x === 'number') {
-                viewport.value = savedViewport
-                console.log('🔭 [canvasUi] Viewport restored from cloud:', savedViewport)
-                return true
-            }
-
-            // Fallback to local storage (handled by caller or component mount usually, but here for completeness if needed)
-            const local = localStorage.getItem('flowstate-canvas-viewport')
-            if (local) {
-                const parsed = JSON.parse(local)
-                if (parsed && typeof parsed.x === 'number') {
-                    viewport.value = parsed
-                    console.log('🔭 [canvasUi] Viewport restored from local storage:', parsed)
-                    return true
-                }
-            }
-        } catch (error) {
-            console.warn('⚠️ Failed to load saved viewport:', error)
-        }
-        return false
-    }
-
     return {
-        viewport,
         activeGroupId,
         showGroupGuides,
         snapToGroups,
@@ -292,15 +193,10 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         showStatusBadge,
         showDurationBadge,
         showScheduleBadge,
-        zoomConfig,
-        zoomHistory,
         hasInitialFit,
         viewportInitializedAt,
         requestSync,
         requestSyncLegacy,
-        setViewport,
-        saveZoomToHistory,
-        setViewportWithHistory,
         updateZoomConfig,
         setActiveGroup,
         setHasInitialFit,
@@ -309,7 +205,6 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         toggleStatusBadge,
         toggleDurationBadge,
         toggleScheduleBadge,
-        loadSavedViewport,
         // Operation State
         operationLoading,
         operationError,

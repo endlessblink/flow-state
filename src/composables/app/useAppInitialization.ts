@@ -505,9 +505,14 @@ export function useAppInitialization() {
                             break
                         }
                         case 'POSTPONE_5MIN': {
-                            const postponeTaskId = taskIdFromUrl || 'general'
-                            const isBreak = postponeTaskId === 'break'
-                            timerStore.startTimer(postponeTaskId, 5 * 60, isBreak) // 5 minutes
+                            // Extend the just-completed session instead of creating a new one
+                            if (timerStore.addExtraTime) {
+                              timerStore.addExtraTime(5 * 60)
+                            } else {
+                              const postponeTaskId = taskIdFromUrl || 'general'
+                              const isBreak = postponeTaskId === 'break'
+                              timerStore.startTimer(postponeTaskId, 5 * 60, isBreak)
+                            }
                             break
                         }
                     }

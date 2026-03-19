@@ -20,6 +20,7 @@ import type {
   SyncOperationType,
   SyncResult
 } from '@/types/sync'
+import { DB_TABLES } from '@/constants/dbTables'
 
 // TASK-1177: Check for IndexedDB availability (not available in Node.js/tests)
 const hasIndexedDB = typeof indexedDB !== 'undefined'
@@ -300,7 +301,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         // un-delete a task that was legitimately deleted on another device.
         if (entityType === 'task') {
           const { data: tombstone } = await supabase
-            .from('tombstones')
+            .from(DB_TABLES.TOMBSTONES)
             .select('id')
             .eq('entity_type', 'task')
             .eq('entity_id', entityId)

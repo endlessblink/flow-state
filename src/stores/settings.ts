@@ -49,7 +49,7 @@ export interface AppSettings {
     // Appearance
     language: string
     textDirection: 'auto' | 'ltr' | 'rtl'
-    theme: 'light' | 'dark' | 'system'
+    theme: 'light' | 'dark' | 'auto'
 
     // Suggestions
     enableDayGroupSuggestions: boolean
@@ -104,36 +104,69 @@ export interface AppSettings {
 
 const STORAGE_KEY = 'flowstate-settings-v2'
 
-// FEATURE-1363: Debounced sync of notification settings to Supabase
-// The push service reads user_settings.settings to determine delivery preferences
+// FEATURE-1363 / TASK-1573: Debounced sync of ALL settings to Supabase
+// The push service reads user_settings.settings to determine delivery preferences.
+// TASK-1573: Expanded to write the full AppSettings blob so timer durations,
+// AI preferences, saved views, etc. all reach Supabase on every change.
 let settingsSyncTimer: ReturnType<typeof setTimeout> | null = null
 const SETTINGS_SYNC_DEBOUNCE = 2000 // 2 seconds
 
+// Fields that must NOT be written to Supabase in the auto-sync path.
+// These are OAuth tokens / API keys that are either:
+//   • Per-device credentials (Google OAuth tokens tied to a specific auth flow)
+//   • User secrets that must not leave the device via an unauthenticated write path
+// The explicit saveUserSettings() flow in the settings UI ALSO uses toSupabaseUserSettings()
+// which serialises the full blob — so these fields still reach Supabase when the user
+// explicitly saves, but we skip them here for safety.
+const SENSITIVE_FIELDS_TO_OMIT: (keyof AppSettings)[] = [
+    'googleProviderToken',
+    'googleProviderRefreshToken',
+    'googleProviderTokenExpiry',
+    'groqApiKey',
+]
+
 async function syncSettingsToSupabase(state: AppSettings) {
     try {
-        const { createClient } = await import('@supabase/supabase-js')
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-        if (!supabaseUrl || !supabaseKey) return
-
-        const supabase = createClient(supabaseUrl, supabaseKey)
+        // Lazily import the singleton auth client (same client used by all DB operations)
+        const { supabase } = await import('@/services/auth/supabase')
+        if (!supabase) return
         const { data: { user } } = await supabase.auth.getUser()
         if (!user?.id) return
 
+        // Build a settings blob with sensitive/device-specific fields stripped out
+        const safeSettings: Record<string, unknown> = { ...state }
+        for (const field of SENSITIVE_FIELDS_TO_OMIT) {
+            delete safeSettings[field]
+        }
+
+        // Mirror the shape used by toSupabaseUserSettings() so the full settings
+        // blob lands in the settings JSONB column and individual legacy columns
+        // are kept in sync for backwards-compatibility.
         await supabase
             .from('user_settings')
             .upsert({
                 user_id: user.id,
-                settings: {
-                    pushNotifications: state.pushNotifications,
-                    timeBlockNotifications: state.timeBlockNotifications
-                },
+                // Individual legacy columns
+                work_duration: state.workDuration,
+                short_break_duration: state.shortBreakDuration,
+                long_break_duration: state.longBreakDuration,
+                auto_start_breaks: state.autoStartBreaks,
+                auto_start_pomodoros: state.autoStartPomodoros,
+                play_notification_sounds: state.playNotificationSounds,
+                theme: state.theme || 'auto',
+                language: state.language || 'en',
+                sidebar_collapsed: state.sidebarCollapsed || false,
+                board_density: state.boardDensity || 'comfortable',
+                kanban_settings: state.kanbanSettings || {},
+                canvas_viewport: state.canvasViewport || null,
+                // Full settings blob (sensitive fields omitted)
+                settings: safeSettings,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'user_id' })
 
-        console.log('[SETTINGS] Notification preferences synced to Supabase')
+        console.log('[SETTINGS] Full settings synced to Supabase (sensitive fields omitted)')
     } catch (error) {
-        console.warn('[SETTINGS] Failed to sync notification preferences:', error)
+        console.warn('[SETTINGS] Failed to sync settings to Supabase:', error)
     }
 }
 
@@ -174,7 +207,7 @@ export const useSettingsStore = defineStore('settings', {
         // Appearance defaults
         language: 'en',
         textDirection: 'auto',
-        theme: 'system',
+        theme: 'auto',
 
         // Suggestions defaults
         enableDayGroupSuggestions: true,

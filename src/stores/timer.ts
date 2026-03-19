@@ -49,6 +49,9 @@ export const useTimerStore = defineStore('timer', () => {
   // Track if we've loaded the timer session (to avoid re-loading on every auth change)
   const hasLoadedSession = ref(false)
 
+  // Track if we've loaded today's pomodoro sessions from DB
+  const hasLoadedTodaySessions = ref(false)
+
   // Bridge to settingsStore for backward compatibility
   const settings = reactive({
     get workDuration() { return settingsStore.workDuration },
@@ -92,6 +95,7 @@ export const useTimerStore = defineStore('timer', () => {
 
   const notifications = useTimerNotifications({
     startTimer: (taskId: string, duration: number, isBreak: boolean) => startTimer(taskId, duration, isBreak),
+    addExtraTime: (seconds: number) => addExtraTime(seconds),
     getSettings: () => ({ shortBreakDuration: settings.shortBreakDuration, workDuration: settings.workDuration }),
     findTaskTitle: (taskId: string) => taskStore.tasks.find(t => t.id === taskId)?.title
   })
@@ -183,6 +187,71 @@ export const useTimerStore = defineStore('timer', () => {
     const icon = currentSession.value.isBreak ? '🧎' : '🍅'
     return `${icon} ${time} | ${baseTitle}`
   })
+
+  // ── Database Initialization ──────────────────────────────────────
+
+  /**
+   * TASK-1577: Load today's completed Pomodoro sessions from database.
+   * Only runs when user is authenticated and AI learning is enabled.
+   * Populates completedSessions with sessions from pomodoro_history table.
+   */
+  const loadTodaySessionsFromDB = async (): Promise<void> => {
+    // Guard: only load once per session
+    if (hasLoadedTodaySessions.value) return
+
+    // Guard: require auth and AI learning enabled
+    if (!authStore.user?.id || !settingsStore.aiLearningEnabled) {
+      hasLoadedTodaySessions.value = true
+      return
+    }
+
+    try {
+      const { fetchPomodoroHistory } = useSupabaseDatabase()
+
+      // Query for today's sessions (sinceDaysAgo=0 to get only today)
+      const todaySessions = await fetchPomodoroHistory(0)
+
+      if (!todaySessions || todaySessions.length === 0) {
+        hasLoadedTodaySessions.value = true
+        return
+      }
+
+      // Map DB records to PomodoroSession shape
+      const sessions: PomodoroSession[] = todaySessions.map((record: Record<string, unknown>) => ({
+        id: crypto.randomUUID(), // DB doesn't store session IDs, generate new ones
+        taskId: (record.taskId as string) || 'general',
+        startTime: new Date(record.startedAt as string),
+        duration: record.duration as number,
+        remainingTime: 0, // Completed sessions have no remaining time
+        isActive: false,
+        isPaused: false,
+        isBreak: record.isBreak as boolean,
+        completedAt: new Date(record.completedAt as string)
+      }))
+
+      // Populate completedSessions with loaded records
+      completedSessions.value = [...sessions, ...completedSessions.value]
+
+      if (import.meta.env.DEV) {
+        console.log(`🍅 [TIMER] Loaded ${sessions.length} completed sessions from DB for today`)
+      }
+
+      hasLoadedTodaySessions.value = true
+    } catch (error) {
+      console.warn('🍅 [TIMER] Failed to load today sessions from DB:', error)
+      hasLoadedTodaySessions.value = true
+    }
+  }
+
+  // TASK-1577: Set up watcher to load sessions when auth becomes available
+  const unsubscribeAuth = authStore.$subscribe(
+    (mutation, state) => {
+      if (!hasLoadedTodaySessions.value && state.user?.id && settingsStore.aiLearningEnabled) {
+        loadTodaySessionsFromDB()
+      }
+    },
+    { deep: true, flush: 'post' }
+  )
 
   // ── Timer Control Actions ────────────────────────────────────────
 
@@ -472,6 +541,68 @@ export const useTimerStore = defineStore('timer', () => {
     }
   }
 
+  const addExtraTime = async (seconds: number) => {
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] addExtraTime called:', { seconds })
+    }
+
+    // 1. Find the most recent completed session
+    const lastSession = completedSessions.value[completedSessions.value.length - 1]
+    if (!lastSession) {
+      // Fallback: no session to extend, start fresh
+      console.warn('🍅 [TIMER] addExtraTime: No recent session to extend, falling back to startTimer')
+      await startTimer('general', seconds, false)
+      return
+    }
+
+    // 2. Remove from completed list and tracking set
+    completedSessions.value.pop()
+    completedSessionIds.delete(lastSession.id)
+
+    // 3. Revert pomodoro count if it was a work session with a real task
+    if (!lastSession.isBreak && lastSession.taskId && lastSession.taskId !== 'general') {
+      const task = taskStore._rawTasks.find(t => t.id === lastSession.taskId)
+      if (task && (task.completedPomodoros || 0) > 0) {
+        taskStore.updateTask(lastSession.taskId, {
+          completedPomodoros: (task.completedPomodoros || 1) - 1,
+          progress: Math.min(100, Math.round((((task.completedPomodoros || 1) - 1) / (task.estimatedPomodoros || 1)) * 100))
+        })
+      }
+    }
+
+    // 4. Restore as active session with extra time
+    currentSession.value = {
+      ...lastSession,
+      duration: lastSession.duration + seconds,
+      remainingTime: seconds,
+      isActive: true,
+      isPaused: false,
+      completedAt: undefined,
+      startTime: lastSession.startTime instanceof Date
+        ? lastSession.startTime
+        : new Date(lastSession.startTime)
+    }
+
+    // 5. Claim leadership & resume countdown
+    isDeviceLeader.value = true
+    isLeader.value = true
+    sync.pauseFollowerPoll()
+    sync.resumeHeartbeat()
+    sync.broadcastSession()
+    await sync.saveTimerSessionWithLeadership()
+    sync.resumeCountdown()
+    await requestWakeLock()
+
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] addExtraTime: Session restored', {
+        sessionId: currentSession.value.id,
+        totalDuration: currentSession.value.duration,
+        remainingTime: currentSession.value.remainingTime,
+        taskId: currentSession.value.taskId
+      })
+    }
+  }
+
   // ── Cleanup ──────────────────────────────────────────────────────
   // TASK-1151: Central cleanup function — pauses all intervals and removes event listeners.
   // Registered on BOTH onUnmounted (component lifecycle) and onScopeDispose (Pinia store
@@ -481,6 +612,7 @@ export const useTimerStore = defineStore('timer', () => {
   const cleanupAllListeners = () => {
     sync.cleanup()
     notifications.cleanupServiceWorkerListener()
+    unsubscribeAuth() // TASK-1577: Clean up auth watcher
   }
 
   onUnmounted(cleanupAllListeners)
@@ -492,13 +624,15 @@ export const useTimerStore = defineStore('timer', () => {
     isTimerActive, isPaused, currentTaskId, displayTime, currentTaskName,
     sessionTypeIcon, tabDisplayTime, sessionStatusText,
     timerPercentage, faviconStatus, tabTitleWithTimer,
-    startTimer, switchTimerTask, pauseTimer, resumeTimer, stopTimer, completeSession,
+    startTimer, switchTimerTask, pauseTimer, resumeTimer, stopTimer, completeSession, addExtraTime,
     requestNotificationPermission: notifications.requestNotificationPermission,
     playStartSound: audio.playStartSound,
     playEndSound: audio.playEndSound,
     // TASK-1009: Expose handler for app initialization to use in consolidated Realtime subscription
     handleRemoteTimerUpdate: sync.handleRemoteTimerUpdate,
     // BUG-1357: Expose for useAppInitialization recovery callback
-    resyncFromDatabase: sync.resyncFromDatabase
+    resyncFromDatabase: sync.resyncFromDatabase,
+    // TASK-1577: Expose for manual load if needed
+    loadTodaySessionsFromDB
   }
 })

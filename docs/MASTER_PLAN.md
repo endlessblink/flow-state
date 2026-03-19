@@ -8,6 +8,21 @@
 
 ## Active Tasks
 
+### ~~TASK-1579~~: Consolidate canvas viewport to single source of truth in canvasViewport.ts (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: Canvas viewport `{x, y, zoom}` existed in 3 separate locations with no sync:
+1. `canvasUi.ts` — duplicate `viewport` ref with its own localStorage + Supabase watcher
+2. `canvasViewport.ts` — the actual owner, used by `canvas.ts`
+3. `settings.ts` — `canvasViewport` field in `AppSettings` (data transport vessel for DB mapper)
+
+**Fix**: Removed `viewport` ref, `setViewport`, `setViewportWithHistory`, `saveZoomToHistory`, `zoomHistory`, `loadSavedViewport`, and the viewport watcher from `canvasUi.ts`. Added debounced (2s) Supabase write to `canvasViewport.ts`'s `setViewport`. `settings.ts` `canvasViewport` field kept as the DB transport vessel used by `supabaseMappers.ts`.
+
+**Files**: `src/stores/canvas/canvasUi.ts`, `src/stores/canvas/canvasViewport.ts`
+
+---
+
 ### ~~TASK-1560~~: Redesign SidebarWorkspaceSwitcher — always-visible with create workspace flow (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-16)
@@ -93,6 +108,126 @@
 **Fix**: One-time `indexedDB.deleteDatabase()` cleanup at app startup in `main.ts`. Cleanup guard uses localStorage key so it runs only once. Safe because all tasks exist in production DB. Should be removed after cleanup completes.
 
 **Files**: `src/main.ts`
+
+---
+
+## Data Architecture Debt — Single Source of Truth Fixes
+
+### ~~TASK-1572~~: Consolidate canvas viewport from 3 stores into 1 (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: `viewport: {x, y, zoom}` exists in 3 independent places with NO sync mechanism between them:
+1. `canvasUi.ts → viewport` (in-memory only)
+2. `canvasViewport.ts → viewport` (persisted to localStorage + Supabase `user_settings.canvas_viewport`)
+3. `settings.ts → canvasViewport` (inside settings blob, goes through settings save path)
+
+On a new device, all three can restore to different positions. On pan/zoom, only `canvasViewport.ts` and `canvasUi.ts` update — Supabase only gets the value when a full settings save fires.
+
+**Fix**: Delete `canvasUi.ts → viewport` field. Use `canvasViewport.ts` as the single owner. Remove `settingsStore.canvasViewport` field and replace with a read-on-startup from `canvasViewport` store. Add a debounced watcher that pushes viewport changes to Supabase.
+
+**Files**: `src/stores/canvas/canvasUi.ts`, `src/stores/canvas/canvasViewport.ts`, `src/stores/settings.ts`
+
+---
+
+### ~~TASK-1573~~: Fix settings auto-sync gap — timer/API settings never reach Supabase (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: `syncSettingsToSupabase()` in `settings.ts` only writes `pushNotifications` and `timeBlockNotifications` to Supabase automatically. All other settings (timer durations, Groq API key, Google tokens, saved views) only reach Supabase on explicit full save. On a new/second device, these settings are always stale.
+
+**Fix**: Expand `syncSettingsToSupabase()` to write the full `AppSettings` blob on every debounced change (debounce 2s). This mirrors the pattern already used by `useAISync.ts` for AI conversations.
+
+**Files**: `src/stores/settings.ts`
+
+---
+
+### ~~TASK-1574~~: Unify theme/locale/sidebarCollapsed — remove duplication between ui.ts and settings.ts (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: Three fields are independently maintained in both `ui.ts` and `settings.ts` with NO sync:
+- `theme`: `ui.ts` uses `'auto'`, `settings.ts` uses `'system'` — different type strings, `uiStore.theme` is NOT persisted
+- `locale`/`language`: written to `flowstate-app-locale` by `ui.ts` AND embedded inside `flowstate-settings-v2` by `settings.ts` — two code paths, no reconciliation
+- `sidebarCollapsed`: in `settings.ts` blob but never written (orphaned field)
+
+**Fix**: Make `uiStore.theme` a computed reading from `settingsStore.theme`. Standardize on `'auto'` vs `'system'` (pick one). Remove standalone `flowstate-app-locale` key, drive everything from `settingsStore.language`. Remove orphaned `sidebarCollapsed` from settings schema.
+
+**Files**: `src/stores/ui.ts`, `src/stores/settings.ts`, `src/i18n/useDirection.ts`
+
+---
+
+### ~~TASK-1575~~: Fix hideDoneTasks — 7 independent copies, mobile not persisted (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: The "hide done tasks" concept has 7 independent, unsynchronized copies:
+1. `hideBoardDoneTasks` (task store, persisted)
+2. `hideCanvasDoneTasks` (task store, persisted)
+3. `hideCalendarDoneTasks` (task store, persisted)
+4. `showDoneOnly` canvas inbox (usePersistentRef, separate key)
+5. `showDoneOnly` calendar inbox (usePersistentRef, separate key)
+6. `useMobileFilters.hideDoneTasks` — NOT persisted, defaults `true` on every reload
+7. `SearchModal.activeFilters.hideDone` — resets every time modal opens
+
+**Fix**: Mobile `useMobileFilters.hideDoneTasks` should use `usePersistentRef`. `SearchModal` initial value should read from `taskStore.hideBoardDoneTasks`. Document that the 3 per-view flags in the store are intentionally independent (board/canvas/calendar have separate hide-done states).
+
+**Files**: `src/composables/mobile/useMobileFilters.ts`, `src/components/layout/SearchModal.vue`
+
+---
+
+### ~~TASK-1576~~: Create src/constants/ — storageKeys, taskConstants, dbTables, routes (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: Magic strings scattered throughout the codebase with no single source of truth:
+- Task status strings (`'todo'`, `'done'`) in 120 files — TypeScript type exists but no runtime constant
+- Priority strings (`'high'`, `'medium'`, `'low'`) in 144 files — same
+- ~40 localStorage `flowstate-*` keys — only backup keys have a `STORAGE_KEYS` object; `flowstate-canvas-viewport` written by 2 independent files, `flowstate-recurrence-lock-{date}` generated in 3 places
+- Supabase table names in 40+ `.from()` calls — 3 leak outside the DB composable layer
+- Route paths as string literals in ~15 `router.push()` call sites
+
+**Fix**:
+1. `src/constants/taskConstants.ts` — `TASK_STATUS` and `TASK_PRIORITY` `as const` objects
+2. `src/constants/storageKeys.ts` — all `flowstate-*` keys, extending backup system's pattern
+3. `src/constants/dbTables.ts` — all Supabase table name strings
+4. Export `ROUTES` const from `src/router/index.ts`, replace bare string `router.push()` calls
+
+**Files**: `src/constants/` (new files), `src/types/tasks.ts`, `src/router/index.ts`, `src/utils/guestModeStorage.ts`, `src/stores/tasks/taskOperations.ts`, `src/composables/useRecurrenceScheduler.ts`
+
+---
+
+### ~~TASK-1577~~: Load completedSessions from pomodoro_history on timer init (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: `timerStore.completedSessions` starts empty on every page load. Supabase has `pomodoro_history` table but it's only written to (never read). Code in `ai/tools.ts` reads `completedSessions.length` to count "sessions today" — always returns 0 after reload, giving wrong AI context.
+
+**Fix**: Added `loadTodaySessionsFromDB()` async function to timer store that:
+1. Queries `pomodoro_history` using `fetchPomodoroHistory(0)` from `useWorkProfileDatabase`
+2. Maps DB records to `PomodoroSession` shape (generates UUIDs for session IDs which DB doesn't store)
+3. Populates `completedSessions.value` with loaded records
+4. Only runs when authenticated AND `aiLearningEnabled` is true
+5. Watcher on `authStore` triggers load when auth becomes available
+6. Cleanup unsubscribes watcher on store disposal
+
+**Files**: `src/stores/timer.ts`
+
+---
+
+### ~~TASK-1578~~: Fix hardcoded brand colors in JS — useDragAndDrop.ts and KanbanColumn.vue (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-18)
+
+**Problem**: Design token violations where CSS variables should be used:
+- `useDragAndDrop.ts:71` — ghost element CSS string contains `rgba(78,205,196,0.4)` (brand teal hardcoded in JavaScript, completely outside token system)
+- `KanbanColumn.vue:291-293` — priority color map with `#ef4444`, `#f59e0b`, `#3b82f6` (should use `--color-priority-*` tokens)
+- `FlowTaskCard.vue:281-292` — hardcoded `#f59e0b`, `#4ade80` for status colors
+- `FaviconManager.vue:48-50` — hardcoded `#ef4444`, `#22c55e`, `#6b7280` for timer states
+
+**Fix**: Replace with CSS custom property reads in JS (`getComputedStyle(document.documentElement).getPropertyValue('--brand-primary')`) or inject the ghost element as a class with CSS styles instead of inline string.
+
+**Files**: `src/composables/useDragAndDrop.ts`, `src/components/tasks/KanbanColumn.vue`, `src/components/canvas/FlowTaskCard.vue`, `src/services/FaviconManager.ts`
 
 ---
 

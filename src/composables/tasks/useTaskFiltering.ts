@@ -88,7 +88,8 @@ export const useTaskFiltering = (
         }
 
         // TASK-1532: Completion records are calendar-only history — exclude from board/canvas/inbox
-        let filtered = tasks.value.filter(task => !task._soft_deleted && !task.isCompletionRecord)
+        // Pinned tasks are excluded from main views — they appear in PinnedTasksSection (Inbox)
+        let filtered = tasks.value.filter(task => !task._soft_deleted && !task.isCompletionRecord && !task.isPinned)
         // console.debug(`🔍 [FILTER-DEBUG] Starting filter with ${filtered.length} tasks (excluding deleted)`)
 
         // 1. Smart View

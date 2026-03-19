@@ -6,6 +6,7 @@ import { isTauri } from '@/composables/useTauriStartup'
 
 export interface TimerNotificationsDeps {
   startTimer: (taskId: string, duration: number, isBreak: boolean) => Promise<void>
+  addExtraTime?: (seconds: number) => Promise<void>
   getSettings: () => { shortBreakDuration: number; workDuration: number }
   findTaskTitle: (taskId: string) => string | undefined
 }
@@ -31,11 +32,15 @@ export function useTimerNotifications(deps: TimerNotificationsDeps) {
       }
 
       case 'POSTPONE_5MIN': {
-        // Add 5 minutes and restart timer
-        // Create a new session with 5 minutes
-        const postponeTaskId = data.taskId || 'general'
-        const isBreak = postponeTaskId === 'break'
-        deps.startTimer(postponeTaskId, 5 * 60, isBreak) // 5 minutes
+        // Extend the just-completed session by 5 minutes (not a new session)
+        if (deps.addExtraTime) {
+          deps.addExtraTime(5 * 60)
+        } else {
+          // Fallback: create a new session if addExtraTime not available
+          const postponeTaskId = data.taskId || 'general'
+          const isBreak = postponeTaskId === 'break'
+          deps.startTimer(postponeTaskId, 5 * 60, isBreak)
+        }
         break
       }
     }

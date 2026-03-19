@@ -6,6 +6,15 @@ import { isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 
 /**
+ * Helper: Get color from CSS custom property with fallback.
+ * Resolves CSS variables (e.g., --color-priority-high) at runtime.
+ */
+function getCSSColor(variableName: string, fallback: string): string {
+  const computedValue = getComputedStyle(document.documentElement).getPropertyValue(variableName).trim()
+  return computedValue || fallback
+}
+
+/**
  * DIAGNOSTIC HELPER: Log group ID histogram to detect duplicates (AUTHORITATIVE)
  */
 export const logGroupIdHistogram = (label: string, groups: CanvasGroup[]) => {
@@ -132,7 +141,7 @@ export const applySmartGroupNormalizations = (group: Omit<CanvasGroup, 'id'> | P
 
     if (nameLower === 'overdue') {
         group.name = 'Overdue'
-        group.color = '#ef4444'
+        group.color = getCSSColor('--color-priority-high', '#ef4444')
         return
     }
 
@@ -143,13 +152,13 @@ export const applySmartGroupNormalizations = (group: Omit<CanvasGroup, 'id'> | P
         if (!group.color || group.color === '#6366f1') {
             switch (powerInfo.category) {
                 case 'priority':
-                    if (powerInfo.value === 'high') group.color = '#ef4444'
-                    else if (powerInfo.value === 'medium') group.color = '#f59e0b'
-                    else if (powerInfo.value === 'low') group.color = '#3b82f6'
+                    if (powerInfo.value === 'high') group.color = getCSSColor('--color-priority-high', '#ef4444')
+                    else if (powerInfo.value === 'medium') group.color = getCSSColor('--color-priority-medium', '#f59e0b')
+                    else if (powerInfo.value === 'low') group.color = getCSSColor('--color-priority-low', '#3b82f6')
                     break
                 case 'status':
-                    if (powerInfo.value === 'done') group.color = '#10b981'
-                    else if (powerInfo.value === 'todo') group.color = '#f59e0b'
+                    if (powerInfo.value === 'done') group.color = getCSSColor('--color-success-500', '#10b981')
+                    else if (powerInfo.value === 'todo') group.color = getCSSColor('--color-priority-medium', '#f59e0b')
                     break
                 case 'date':
                     group.color = '#8b5cf6'

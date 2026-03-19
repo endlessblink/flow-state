@@ -13,6 +13,8 @@ ACCESS_TOKEN="$8"      # user's access token
 USER_ID="$9"           # user's ID
 WORK_DURATION="${10}"  # work duration in seconds
 BREAK_DURATION="${11}" # break duration in seconds
+SESSION_ID="${12}"     # just-completed session's ID
+SESSION_DURATION="${13}" # just-completed session's duration in seconds
 
 # Play high-quality bell sound (single play)
 paplay /usr/share/sounds/freedesktop/stereo/bell.oga 2>/dev/null &
@@ -83,6 +85,49 @@ create_session() {
     return 1
 }
 
+# Extend an existing session by PATCHing it back to active with extra time
+extend_session() {
+    local session_id="$1"
+    local original_duration="$2"
+    local extra_seconds="$3"
+    local new_duration=$((original_duration + extra_seconds))
+    local max_retries=2
+    local attempt=0
+
+    while [ $attempt -le $max_retries ]; do
+        local http_code
+        http_code=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "${SUPABASE_URL}/rest/v1/timer_sessions?id=eq.${session_id}" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{
+                \"is_active\": true,
+                \"is_paused\": false,
+                \"duration\": ${new_duration},
+                \"remaining_time\": ${extra_seconds},
+                \"completed_at\": null,
+                \"device_leader_id\": \"kde-widget\",
+                \"device_leader_last_seen\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"
+            }" 2>/dev/null)
+
+        echo "[$(date '+%H:%M:%S')] extend_session: id=${session_id} new_duration=${new_duration} attempt=$((attempt+1)) status=${http_code}" >> "$LOGFILE"
+
+        if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "[$(date '+%H:%M:%S')] Session extended successfully: ${session_id}" >> "$LOGFILE"
+            return 0
+        fi
+
+        attempt=$((attempt + 1))
+        if [ $attempt -le $max_retries ]; then
+            echo "[$(date '+%H:%M:%S')] Retrying in 1s..." >> "$LOGFILE"
+            sleep 1
+        fi
+    done
+
+    echo "[$(date '+%H:%M:%S')] FAILED to extend session, falling back to create" >> "$LOGFILE"
+    return 1
+}
+
 # BUG-1462: Kill any previous notify-send still waiting for user action
 pkill -f 'notify-send.*FlowState' 2>/dev/null || true
 
@@ -104,11 +149,23 @@ pkill -f 'notify-send.*FlowState' 2>/dev/null || true
             fi
             ;;
         "action2")
-            # +5 min - continue same type
-            if [ "$IS_WORK" = "true" ]; then
-                create_session "false" "300"
+            # +5 min - extend the just-completed session
+            if [ -n "$SESSION_ID" ] && [ "$SESSION_ID" != "" ]; then
+                extend_session "$SESSION_ID" "$SESSION_DURATION" "300" || {
+                    # Fallback: create new session if extend fails
+                    if [ "$IS_WORK" = "true" ]; then
+                        create_session "false" "300"
+                    else
+                        create_session "true" "300"
+                    fi
+                }
             else
-                create_session "true" "300"
+                # No session ID available, create new (legacy fallback)
+                if [ "$IS_WORK" = "true" ]; then
+                    create_session "false" "300"
+                else
+                    create_session "true" "300"
+                fi
             fi
             ;;
     esac

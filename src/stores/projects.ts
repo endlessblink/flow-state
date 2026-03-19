@@ -118,7 +118,8 @@ export const useProjectStore = defineStore('projects', () => {
             // undefined = no filter (personal/pre-migration safe), string = workspace filter
             const { useWorkspaceStore } = await import('@/stores/workspace')
             const wsStore = useWorkspaceStore()
-            const workspaceId = wsStore.activeWorkspaceId === null ? undefined : wsStore.activeWorkspaceId
+            // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq)
+            const workspaceId = wsStore.activeWorkspaceId
             const loadedProjects = await fetchProjects(workspaceId)
             _rawProjects.value = loadedProjects
             console.log(`✅ [SUPABASE] Loaded ${loadedProjects.length} projects`)

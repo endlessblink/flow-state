@@ -6,6 +6,7 @@ import { canvasUiSyncRequest } from '../canvasTaskBridge'
 // TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool)
 import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey, normalizeDueDate } from '@/utils/dateUtils'
+import { recurrenceLockKey } from '@/constants/storageKeys'
 // BUG-1569: Dynamic import breaks circular dep (timer→tasks→taskStates→projects→taskOperations→timer)
 // TASK-1177: Offline-first sync queue integration
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
@@ -518,7 +519,7 @@ export function useTaskOperations(
                                     // doesn't create a SECOND clone if the user refreshes before the DB write
                                     // from this createTask propagates to Supabase.
                                     try {
-                                        const LOCK_KEY = `flowstate-recurrence-lock-${today}`
+                                        const LOCK_KEY = recurrenceLockKey(today)
                                         localStorage.setItem(LOCK_KEY, String(Date.now()))
                                     } catch { /* localStorage may be unavailable */ }
                                 }
@@ -1160,7 +1161,7 @@ export function useTaskOperations(
 
         // Set recurrence lock to prevent deferred scheduler from creating duplicates
         try {
-            const LOCK_KEY = `flowstate-recurrence-lock-${today}`
+            const LOCK_KEY = recurrenceLockKey(today)
             localStorage.setItem(LOCK_KEY, String(Date.now()))
         } catch { /* localStorage may be unavailable */ }
 

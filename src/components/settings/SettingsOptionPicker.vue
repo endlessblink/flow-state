@@ -92,6 +92,11 @@ const emit = defineEmits<{
   transform: translateY(-1px);
 }
 
+.option-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .option-btn.active {
   background: var(--state-active-bg);
   border-color: var(--state-active-border);

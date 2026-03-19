@@ -70,7 +70,15 @@ const emit = defineEmits<{
 }
 
 .toggle-interaction input {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-interaction input:focus-visible + .toggle-slider {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
 }
 
 .toggle-slider {

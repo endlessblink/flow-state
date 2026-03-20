@@ -3,14 +3,22 @@
     <!-- Calendar Header -->
     <div class="calendar-header">
       <div class="date-nav">
-        <button class="nav-btn" aria-label="Previous day" @click="previousDay">
+        <button
+          class="nav-btn"
+          aria-label="Previous day"
+          @click="previousDay"
+        >
           <ChevronLeft :size="20" />
         </button>
         <button class="date-label" @click="goToToday">
           <span class="date-text">{{ formattedDate }}</span>
           <span v-if="isToday" class="today-badge">Today</span>
         </button>
-        <button class="nav-btn" aria-label="Next day" @click="nextDay">
+        <button
+          class="nav-btn"
+          aria-label="Next day"
+          @click="nextDay"
+        >
           <ChevronRight :size="20" />
         </button>
       </div>

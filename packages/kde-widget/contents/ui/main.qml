@@ -252,17 +252,24 @@ PlasmoidItem {
         console.log("[NOTIFY] Running notify script:", cmd)
     }
 
-    // ===== NUDGE: System notification when idle (separate from nanny popup) =====
+    // ===== NUDGE: Simple reminder popup (separate from nanny task picker) =====
     function sendNannyNotification() {
         var tone = plasmoid.configuration.nannyTone || "gentle"
         var messages = tone === "direct" ? root.nannyDirectMessages : root.nannyGentleMessages
         var msg = messages[Math.floor(Math.random() * messages.length)]
 
-        // System notification only — no popup
-        var cmd = 'notify-send --app-name=FlowState --icon=dialog-information "🍅 ' + msg + '" "Pick a task and start a Pomodoro to stay on track."'
-        executableDataSource.connectSource(cmd)
-        console.log("[NUDGE] System notification sent:", msg)
+        // Position on same screen as widget
+        var sg = root.getWidgetScreenGeometry()
+        if (sg.screen) nudgePopup.screen = sg.screen
+        nudgePopup.x = sg.x + sg.width - nudgePopup.width - 24
+        nudgePopup.y = sg.y + sg.height - nudgePopup.height - 24
 
+        nudgePopup.nudgeMessage = msg
+        nudgePopup.visible = true
+        nudgePopup.raise()
+        nudgePopup.requestActivate()
+
+        console.log("[NUDGE] Showing nudge popup:", msg)
         root.nannyLastNotifyTime = Date.now()
     }
 
@@ -1043,6 +1050,257 @@ PlasmoidItem {
 
                 // Escape key handler
                 Keys.onEscapePressed: nannyPopup.visible = false
+            }
+        }
+    }
+
+    // ===== NUDGE POPUP (simple reminder with snooze/stop) =====
+    Window {
+        id: nudgePopup
+        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+        color: "transparent"
+        visible: false
+        width: 380
+        height: 200
+
+        property string nudgeMessage: ""
+
+        // Auto-dismiss after 30 seconds
+        Timer {
+            id: nudgeAutoDismiss
+            interval: 30000
+            running: nudgePopup.visible
+            onTriggered: nudgePopup.visible = false
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            MouseArea {
+                anchors.fill: parent
+                onClicked: nudgePopup.visible = false
+            }
+
+            // Glass card
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 10
+                radius: 16
+                color: Qt.rgba(root.bgColor.r, root.bgColor.g, root.bgColor.b, 0.95)
+                border.width: 2
+                border.color: "#F59E0B"  // amber accent
+
+                // Amber left accent bar
+                Rectangle {
+                    width: 4
+                    height: parent.height - 24
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    radius: 2
+                    color: "#F59E0B"
+                }
+
+                // Subtle glow
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -6
+                    radius: 22
+                    color: "transparent"
+                    border.width: 3
+                    border.color: Qt.rgba(0.96, 0.62, 0.04, 0.25)
+                    z: -1
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: nudgePopup.visible = false
+                }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    anchors.leftMargin: 28
+                    spacing: 12
+
+                    // Icon + Title row
+                    Row {
+                        spacing: 10
+                        Layout.fillWidth: true
+
+                        // Amber circle icon
+                        Rectangle {
+                            width: 36
+                            height: 36
+                            radius: 18
+                            color: Qt.rgba(0.96, 0.62, 0.04, 0.15)
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "\u23F1"  // stopwatch
+                                font.pixelSize: 18
+                            }
+                        }
+
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
+
+                            Text {
+                                text: "Time to pick a task!"
+                                font.pixelSize: 16
+                                font.bold: true
+                                color: root.textColor
+                            }
+
+                            Text {
+                                text: nudgePopup.nudgeMessage
+                                font.pixelSize: 12
+                                color: root.mutedColor
+                                wrapMode: Text.WordWrap
+                                width: 260
+                            }
+                        }
+                    }
+
+                    // Separator
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: Qt.rgba(1, 1, 1, 0.08)
+                    }
+
+                    // Action buttons
+                    Row {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        // Snooze 30m
+                        Rectangle {
+                            width: 90
+                            height: 34
+                            radius: 8
+                            color: "transparent"
+                            border.width: 1
+                            border.color: Qt.rgba(1, 1, 1, 0.15)
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "Snooze 30m"
+                                font.pixelSize: 12
+                                color: root.textColor
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    nudgePopup.visible = false
+                                    root.nannyLastNotifyTime = Date.now()
+                                    root.nannyLastSessionEndTime = Date.now() + (30 * 60 * 1000)
+                                    console.log("[NUDGE] Snoozed 30 min")
+                                }
+                            }
+                        }
+
+                        // Snooze 1hr
+                        Rectangle {
+                            width: 90
+                            height: 34
+                            radius: 8
+                            color: "transparent"
+                            border.width: 1
+                            border.color: Qt.rgba(1, 1, 1, 0.15)
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "Snooze 1hr"
+                                font.pixelSize: 12
+                                color: root.textColor
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    nudgePopup.visible = false
+                                    root.nannyLastNotifyTime = Date.now()
+                                    root.nannyLastSessionEndTime = Date.now() + (60 * 60 * 1000)
+                                    console.log("[NUDGE] Snoozed 1 hour")
+                                }
+                            }
+                        }
+
+                        // Spacer
+                        Item { Layout.fillWidth: true; width: 1 }
+
+                        // Stop today
+                        Rectangle {
+                            width: 90
+                            height: 34
+                            radius: 8
+                            color: "transparent"
+
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Text {
+                                    text: "\uD83D\uDD15"  // bell with slash
+                                    font.pixelSize: 10
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Text {
+                                    text: "Stop today"
+                                    font.pixelSize: 12
+                                    color: root.mutedColor
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    nudgePopup.visible = false
+                                    root.nannyQuietToday = true
+                                    var today = new Date()
+                                    root.nannyQuietDate = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000)
+                                    console.log("[NUDGE] Stopped for today")
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Dismiss X
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 11
+                    anchors.top: parent.top
+                    anchors.topMargin: 8
+                    anchors.right: parent.right
+                    anchors.rightMargin: 8
+                    color: nudgeDismissMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\u2715"
+                        font.pixelSize: 11
+                        color: root.mutedColor
+                    }
+
+                    MouseArea {
+                        id: nudgeDismissMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: nudgePopup.visible = false
+                    }
+                }
+
+                Keys.onEscapePressed: nudgePopup.visible = false
             }
         }
     }
@@ -3616,11 +3874,14 @@ PlasmoidItem {
             console.log("[NANNY] Idle check: " + Math.round(idleMs / 1000) + "s idle, need " + Math.round(intervalMs / 1000) + "s")
             if (root.nannyLastSessionEndTime > 0 && idleMs < intervalMs) return
 
-            // Check we haven't notified within the interval
-            if (root.nannyLastNotifyTime > 0 && (now - root.nannyLastNotifyTime) < intervalMs) { console.log("[NANNY] Blocked: already notified recently"); return }
+            // Don't fire if nudge popup is already showing
+            if (nudgePopup.visible) { console.log("[NUDGE] Blocked: popup already visible"); return }
 
-            // All conditions met - send notification
-            console.log("[NANNY] All gates passed — sending notification!")
+            // Check we haven't notified within the interval
+            if (root.nannyLastNotifyTime > 0 && (now - root.nannyLastNotifyTime) < intervalMs) { console.log("[NUDGE] Blocked: already notified recently"); return }
+
+            // All conditions met - send nudge
+            console.log("[NUDGE] All gates passed — showing nudge!")
             root.sendNannyNotification()
         }
     }

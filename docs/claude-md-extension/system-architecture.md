@@ -1,6 +1,6 @@
 # FlowState System Architecture
 
-> **Last verified**: March 16, 2026 | **Version**: 1.3.15
+> **Last verified**: March 21, 2026 | **Version**: 1.3.17
 > **Read this before any major feature work, refactoring, or architectural decisions.**
 
 ---
@@ -38,7 +38,7 @@
 
 ---
 
-## Views (18 total)
+## Views (19 total)
 
 ### Desktop Views (13)
 | Route | View | Purpose |
@@ -51,13 +51,13 @@
 | `/quick-sort` | QuickSortView | Triage uncategorized tasks one-by-one |
 | `/ai` | AIHubView | AI chat entry point |
 | `/focus/:taskId` | FocusView | Single-task focus mode with timer |
-| `/morning` | MorningDashboardView | Morning ritual: pick Big 3, time-block |
+| — (overlay) | MorningDashboardView | Morning ritual overlay launched from App.vue via useMorningRitual() |
 | `/today-flow` | TodayFlowView | Today's tasks flow view |
 | `/performance` | PerformanceView | Gamification stats (admin only) |
 | `/invite/:token` | InviteAcceptView | Workspace invite acceptance |
 | `/design-system` | — | Redirects to Storybook |
 
-### Mobile Views (5)
+### Mobile Views (6)
 | Route | View | Purpose |
 |-------|------|---------|
 | `/timer` | MobileTimerView | Mobile Pomodoro timer |
@@ -65,6 +65,7 @@
 | `/mobile-quick-sort` | MobileQuickSortView | Swipeable quick sort |
 | `/mobile-ai-chat` | MobileAIChatView | Mobile AI chat |
 | `/mobile-calendar` | MobileCalendarView | Mobile calendar |
+| `/mobile-inbox` | MobileInboxView | Mobile unified inbox |
 
 ---
 
@@ -93,7 +94,7 @@
 
 ---
 
-## Composables (~145 files, 17 directories)
+## Composables (~160 files, 17 directories)
 
 | Directory | Count | Purpose |
 |-----------|-------|---------|
@@ -102,29 +103,30 @@
 | `tasks/` | 6 | Edit state/actions, filtering, context menu, migrations, filter defaults |
 | `tasks/card/` | 2 | Task card state/actions |
 | `tasks/row/` | 1 | Task row state |
-| `calendar/` | 5 | Scroll, navigation, modals, interaction, timer integration |
-| `supabase/` | 5 | Notifications DB, quick sort DB, pinned tasks, work profiles, tombstones |
+| `calendar/` | 10 | Scroll, navigation, modals, interaction, timer integration, month/day/week views, Google Calendar, external calendar |
+| `supabase/` | 13 | DB composables for tasks, projects, groups, settings, timer, notifications, quick sort, pinned tasks, work profiles, tombstones, realtime subscriptions, infrastructure |
 | `sync/` | 3 | Broadcast channel, timer leader election, sync orchestrator |
 | `backup/` | 8 | Core, export, restore, history, golden snapshot, types |
 | `inbox/` | 3 | Calendar inbox, unified inbox state/actions |
-| `board/` | 2 | Board context menu, board modals |
-| `timer/` | 3 | Audio, notifications, index |
+| `board/` | 4 | Board context menu, board modals, board actions, board state |
+| `timer/` | 4 | Audio, notifications, timer sync, index |
 | `mobile/` | 1 | Mobile filters |
-| `app/` | 2 | Onboarding wizard, sidebar management |
+| `app/` | 5 | App initialization, onboarding wizard, sidebar management, app shortcuts, quick task input |
 | `ui/` | 3 | Done toggle, drag handle state/interaction |
-| Root | ~75 | All other composables (AI, voice, platform, Tauri, Capacitor, etc.) |
+| Root | ~72 | All other composables (AI, voice, platform, Tauri, Capacitor, taskbar nanny, morning dashboard, etc.) |
 
 ---
 
-## Services (6 directories, ~57 files)
+## Services (8 directories, ~60 files)
 
 | Directory | Files | Purpose |
 |-----------|-------|---------|
 | `ai/` | ~30 | LLM providers (Groq, Ollama, OpenRouter), ReAct pipeline, 20+ AI tools, usage tracking, chat persistence |
 | `ai/providers/` | 6 | Provider implementations |
 | `ai/pipeline/` | 15 | Intent routing, language detection, response validation, entity memory |
+| `ai/proxy/` | 1 | AI chat proxy (`aiChatProxy.ts`) |
 | `auth/` | 1 | Supabase auth service |
-| `canvas/` | 3 | PositionManager, LockManager |
+| `canvas/` | 3 | PositionManager, LockManager, types |
 | `calendar/` | 1 | Google Calendar integration |
 | `drive/` | 1 | Google Drive integration |
 | `offline/` | 5 | IndexedDB write queue (Dexie), read cache, operation coalescing, retry strategy |
@@ -133,26 +135,34 @@
 
 ---
 
-## Components (~250+ files, 30+ directories)
+## Components (~280+ files, 35+ directories)
 
 | Directory | Count | Key Components |
 |-----------|-------|----------------|
-| `base/` | 12 | BaseButton, BaseInput, BaseBadge, BaseCard, BaseModal, BasePopover, BaseIconButton, BaseDropdown, BaseNavItem, FilterControls, OverflowTooltip, ProjectEmojiIcon |
+| `base/` | 13 | BaseButton, BaseInput, BaseBadge, BaseCard, BaseModal, BasePopover, BaseIconButton, BaseDropdown, BaseNavItem, FilterControls, OverflowTooltip, ProjectEmojiIcon, AppLogo |
 | `common/` | 15 | CustomSelect, ConfirmationModal, MarkdownEditor, MarkdownRenderer, EmojiPicker, MultiSelectToggle, RecurrenceDeleteModal, TimeDisplay, TauriUpdateNotification, ErrorBoundary |
-| `canvas/` | ~20 | GroupNodeSimple, CanvasToolbar, CanvasContextMenu, GroupEditModal, ResizeHandle, CanvasModals |
+| `canvas/` | ~22 | GroupNodeSimple, CanvasToolbar, CanvasContextMenu, GroupEditModal, ResizeHandle, CanvasModals |
 | `canvas/node/` | 6 | TaskNodeHeader, TaskNodeDescription, TaskNodePriority |
-| `tasks/` | ~12 | DoneToggle, DragHandle, TaskContextMenu |
-| `tasks/edit/` | 4 | TaskEditHeader, TaskEditSubtasks, TaskEditMetadata |
-| `kanban/` | ~9 | KanbanColumn, KanbanCard + sub-components |
+| `tasks/` | ~14 | DoneToggle, DragHandle, TaskContextMenu |
+| `tasks/edit/` | 5 | TaskEditHeader, TaskEditSubtasks, TaskEditMetadata, TaskEditChildTasks |
+| `tasks/context-menu/` | 7 | Context menu sub-components |
+| `tasks/row/` | 6 | Task row sub-components |
+| `kanban/` | 6 | KanbanColumn, KanbanCard + sub-components |
 | `inbox/` | 11 | UnifiedInboxPanel, UnifiedInboxHeader, PinnedTasksSection |
-| `morning-dashboard/` | 14 | MorningRitualPanel, BigThreeCard, MorningCandidateCard, MorningTimeBlockCalendar, TaskPoolCard |
-| `sidebar/` | 6 | SidebarHeader, SidebarProjectsSection, SidebarQuickTaskInput |
-| `settings/` | ~12 | SettingsModal + tabs (Timer, Appearance, Integrations, etc.) |
-| `ai/` | 3 | AISetupWizard, AITaskAssistPopover |
-| `auth/` | 3 | AuthModal, GoogleSignInButton |
+| `morning-dashboard/` | 14 | MorningRitualPanel, BigThreeCard, MorningCandidateCard, MorningTimeBlockCalendar, TaskPoolCard, MorningQuickCapture |
+| `sidebar/` | 7 | SidebarHeader, SidebarProjectsSection, SidebarQuickTaskInput, SidebarWorkspaceSwitcher, SidebarSmartViews |
+| `settings/` | ~14 | SettingsModal + tabs (Timer, Appearance, Integrations, Storage, etc.) |
+| `ai/` | 7 | AIChatPanel, ChatMessage, AISetupWizard, AITaskAssistPopover, AIQualityDashboard, AIMemoryHealthDashboard, TaskQuickEditPopover |
+| `auth/` | 6 | AuthModal, GoogleSignInButton, LoginForm, SignupForm, UserProfile, ResetPasswordView |
 | `sync/` | 2 | SyncStatusIndicator, SyncErrorPopover |
-| `projects/` | 3 | ProjectModal, ProjectDropZone |
-| `mobile/` | 21 | MobileQuickSortCard, SwipeableTaskItem, TaskCreateBottomSheet, MobileNav, VoiceTaskConfirmation |
+| `projects/` | 4 | ProjectModal, ProjectDropZone, ProjectTreeItem, ProjectFilterDropdown |
+| `notifications/` | 3 | NannyReminder, ReminderPicker, NotificationPreferences |
+| `layout/` | 7 | SettingsModal, CommandPalette, SearchModal, KeyboardShortcutsPanel, ViewControls, CategorySelector, SidebarSmartItem |
+| `ui/` | 4 | LocalModeBanner, WelcomeModal, BraveBanner, AuthStatusNotice |
+| `onboarding/` | 1 | OnboardingWizard |
+| `today-flow/` | 1 | FlowTaskCard |
+| `error/` | 1 | RouteErrorBoundary |
+| `mobile/` | 14 | MobileQuickSortCard, SwipeableTaskItem, TaskCreateBottomSheet, MobileNav, VoiceTaskConfirmation |
 
 ---
 
@@ -215,6 +225,8 @@
 - **Undo buffer**: session-only undo for AI actions
 - **Multilingual**: auto-detect LTR/RTL (Hebrew/English)
 - **Streaming**: progressive content display
+- **Supabase persistence**: AI conversations synced cross-device via `ai_conversations` table
+- **Proxy**: `aiChatProxy.ts` service layer for provider abstraction
 
 ### 7. Morning Dashboard
 - **Big Three**: pick top 3 tasks for the day from task pool
@@ -283,11 +295,48 @@
 ### 15. Desktop (Tauri)
 - Native window with 1200x800 default, 800x600 minimum
 - Auto-updater via signed AppImage (endpoint: `in-theflow.com/updates/latest.json`)
-- 9 plugins: dialog, fs, shell, process, notification, updater, store, http, OAuth
-- 10 Rust commands for Docker/Supabase management
+- 10 active plugins: dialog, fs, shell, process, updater, store, http, log, OAuth, single-instance (notification plugin disabled — BUG-1289: `block_on()` panic on Linux)
 - CSP-secured with IPC bridge
 
-### 16. Workspace Collaboration (NEW — March 2026)
+**Rust IPC Commands** (12 total, registered in `src-tauri/src/lib.rs`):
+| Command | Purpose |
+|---------|---------|
+| `get_memory_usage` | Debug: reads `/proc/self/status` for RSS/VSize (SIGTERM debugging) |
+| `check_docker_installed` | Check if Docker is available |
+| `check_docker_status` | Check Docker daemon status |
+| `start_docker_desktop` | Start Docker Desktop |
+| `check_supabase_installed` | Check Supabase CLI availability |
+| `check_supabase_status` | Check Supabase running state |
+| `start_supabase` | Start local Supabase |
+| `stop_supabase` | Stop local Supabase |
+| `get_supabase_config` | Read Supabase config (URL, keys) |
+| `run_supabase_migrations` | Apply pending DB migrations |
+| `cleanup_services` | Graceful shutdown of all services |
+| `get_local_backup_policy` / `set_local_backup_policy` | Read/write `.env.local` backup settings |
+
+**Platform Detection** (`src/utils/platform.ts`):
+- Single-source-of-truth: detects `tauri` / `capacitor` / `pwa` / `browser`
+- Exports: `isTauri()`, `isCapacitor()`, `isPWA()`, `isBrowser()`, `isNative()`, `isMobileNative()`, `isDesktopNative()`
+- `shouldTrustNavigatorOnline()` — always `false` for Tauri (WebKitGTK `navigator.onLine` is unreliable)
+- `_resetPlatformCache()` for test teardown
+
+**Notification Routing** (`src/utils/notificationDelivery.ts`):
+- Unified `deliverNotification({ title, body, tag })` routes to platform-appropriate channel:
+  - Tauri + Linux → `notify-send` via `@tauri-apps/plugin-shell` (KDE Plasma integration)
+  - Capacitor → Local Notifications plugin
+  - Browser → Notification API fallback
+- Avoids `Notification.requestPermission()` inside Tauri (BUG-1303: WebKitGTK hangs)
+
+### 16. Taskbar Nanny (Productivity Nudge)
+- Tracks idle time when no Pomodoro is running; nudges user after 5 minutes
+- System notification delivery via `deliverNotification()` (platform-aware routing)
+- Snooze (30m / 1hr) and "Stop Today" actions
+- In-app toast UI: `NannyReminder.vue` (emits `snooze`, `stopToday`, `dismiss`)
+- **Debug hook**: `window.__NANNY_THRESHOLD_MINUTES` — set to small value (e.g., `10/60`) for 10-second threshold in tests
+- **Key files**: `src/composables/useTaskbarNanny.ts`, `src/components/notifications/NannyReminder.vue`
+- **E2E test**: `tests/e2e/taskbar-nanny.spec.ts` (auto-injects accelerated threshold)
+
+### 17. Workspace Collaboration (NEW — March 2026)
 - **Multi-workspace model**: personal workspace (default) + shared workspaces
 - **Roles**: owner, admin, member, viewer (`WorkspaceRole` type)
 - **Invite flow**: owner/admin generates invite link with email → recipient opens `/#/invite/<token>` → `InviteAcceptView` accepts via Supabase RPC `accept_workspace_invite()` → auto-switches to workspace
@@ -347,7 +396,7 @@ All stores wait for `authStore.isAuthenticated` before loading data from Supabas
 
 ---
 
-## Database Schema (19+ tables, 31 migrations)
+## Database Schema (24+ tables, 30 migrations)
 
 ### Core Tables (8)
 `tasks`, `groups`, `projects`, `timer_sessions`, `pomodoro_history`, `notifications`, `user_settings`, `quick_sort_sessions`
@@ -356,16 +405,16 @@ All stores wait for `authStore.isAuthenticated` before loading data from Supabas
 `tombstones` (sync deletion tracking), `task_dedup_audit`
 
 ### Gamification (7)
-`user_gamification`, plus achievement/shop/challenge tables
+`user_gamification`, `xp_logs`, `achievements`, `user_achievements`, `shop_items`, `user_purchases`, `user_stats`
 
 ### Challenges (2)
-`user_challenges` + related
+`user_challenges`, `arena_runs` (Daily Cyberpunk Arena)
 
-### Workspace/Collaboration (3 — NEW)
-`workspaces`, `workspace_members`, `workspace_invites`
+### Workspace/Collaboration (5 — NEW)
+`workspaces`, `workspace_members`, `workspace_invites`, `task_comments`, `workspace_activity`
 
 ### Other
-`pinned_tasks`, `ai_work_profiles`, `push_subscriptions`, `whatsapp_conversations`, `arena` tables
+`pinned_tasks`, `ai_work_profiles`, `ai_conversations` (cross-device AI chat sync), `push_subscriptions`, `whatsapp_conversations`
 
 All tables have RLS (Row-Level Security) enabled. Workspace-aware tables (`tasks`, `projects`, `groups`) use dual RLS: personal rows (`workspace_id IS NULL AND user_id = auth.uid()`) + shared rows (`workspace_id = ANY(user_workspace_ids())`).
 
@@ -398,3 +447,35 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 6. **WebKitGTK parity** — No `overflow: clip` without fallback, no `perspective` on fixed parents, always `:force-fallback="true"` on vuedraggable.
 7. **Version bump before every deploy** — 3 files: package.json, tauri.conf.json, Cargo.toml.
 8. **Workspace-aware operations** — Sync orchestrator captures `activeWorkspaceId` per operation. Personal routes are gated in shared workspaces. RLS enforces data isolation.
+9. **Tauri notification plugin DISABLED** — BUG-1289: `block_on()` panic on Linux. Use `notify-send` via shell plugin instead. Do not re-enable without resolving the panic.
+10. **vue-i18n version coupling** — Plugin v11.x must match runtime v11.x. Version mismatch causes `SyntaxError: Unexpected return type in composer`.
+
+---
+
+## Internationalization (i18n)
+
+- **Runtime**: vue-i18n 11.2.8 (Composition API, `legacy: false`)
+- **Plugin**: @intlify/unplugin-vue-i18n 11.0.7 (MUST match runtime generation — plugin v11.x ↔ vue-i18n v11.x)
+- **Locales**: `src/i18n/locales/en.json` (English), `src/i18n/locales/he.json` (Hebrew)
+- **RTL support**: Hebrew locale renders right-to-left; design tokens and CSS handle bidirectional text
+- **Usage**: `$t()` calls in components, `useI18n()` composable in setup functions
+
+---
+
+## Utilities (Key Files)
+
+| File | Purpose |
+|------|---------|
+| `src/utils/platform.ts` | Platform detection (Tauri/Capacitor/PWA/browser) — see Desktop section |
+| `src/utils/notificationDelivery.ts` | Unified notification routing — see Desktop section |
+| `src/utils/supabaseMappers.ts` | Type mappers between DB rows and app models (critical for persistence) |
+| `src/utils/consoleFilter.ts` | Console noise suppression for known warnings |
+| `src/utils/canvas/` | Canvas utilities (7 files): positionCalculator, coordinates, invariants, canvasIds, resourceManager, spatialContainment, storeHelpers |
+| `src/utils/security.ts` + `securityHeaders.ts` + `securityHeaderManager.ts` + `securityMonitor.ts` + `cspManager.ts` | Security layer (5 files): CSP management, header enforcement, security monitoring |
+| `src/utils/recurrenceUtils.ts` | Recurrence rule parsing and generation |
+| `src/utils/dateUtils.ts` | Date formatting and calculation utilities |
+| `src/utils/errorHandler.ts` | Global error handling |
+| `src/utils/guestModeStorage.ts` | localStorage persistence for guest (unauthenticated) mode |
+| `src/utils/globalKeyboardHandlerSimple.ts` | Global keyboard shortcut handler |
+| `src/utils/tauriLogger.ts` | Tauri-specific logging |
+| `src/utils/openExternal.ts` | Platform-aware external URL opening |

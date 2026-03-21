@@ -1209,6 +1209,14 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 
 ---
 
+### ~~TASK-1581~~: Audit and update system-architecture.md (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-03-21)
+
+**Summary**: Comprehensive audit of `docs/claude-md-extension/system-architecture.md` against the actual codebase. Removed stale `architecture.md` (redirected 8 references). Fixed 28 discrepancies: wrong file counts (composables, components, services), missing directories, outdated route info (`/morning` is an overlay not a route), disabled Tauri notification plugin, expanded DB schema from 19→24+ tables, and added new i18n and Utilities sections.
+
+---
+
 ### ~~BUG-1437~~: Task doesn't inherit group properties on move (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-03)

@@ -77,6 +77,12 @@
       <span class="menu-text">Start Timer</span>
     </button>
 
+    <!-- Open Planning Canvas (single task only) -->
+    <button v-if="!isBatchOperation" class="menu-item" @click="handleOpenPlanningCanvas">
+      <LayoutDashboard :size="16" class="menu-icon" />
+      <span class="menu-text">Planning Canvas</span>
+    </button>
+
     <!-- More submenu -->
     <div
       class="menu-item has-submenu"
@@ -98,7 +104,8 @@
       :is-recurring="!!currentTask?.recurrenceRule"
       @mouseenter="handlePanelEnter"
       @mouseleave="handlePanelLeave('more')"
-      @done-for-now="() => { closeAllSubmenusNow(); handleDoneForNow() }"
+      @open-done-for-now="handleMoreDoneForNow"
+      @close-done-for-now="closeSubmenu('doneForNow')"
       @done-fully="() => { closeAllSubmenusNow(); handleDoneFully() }"
       @duplicate="() => { closeAllSubmenusNow(); duplicateTask() }"
       @pin-quick-task="() => { closeAllSubmenusNow(); pinAsQuickTask() }"
@@ -171,6 +178,19 @@
       @select="(d: number | null) => { closeAllSubmenusNow(); setDuration(d) }"
     />
 
+    <!-- DoneForNowSubmenu (triggered from More submenu) -->
+    <DoneForNowSubmenu
+      :is-visible="showDoneForNowSubmenu"
+      :parent-visible="isVisible"
+      :style="doneForNowSubmenuStyle"
+      :is-recurring="!!currentTask?.recurrenceRule"
+      @mouseenter="handlePanelEnter"
+      @mouseleave="handlePanelLeave('doneForNow')"
+      @select-tomorrow="() => { closeAllSubmenusNow(); handleDoneForNowTomorrow() }"
+      @select-next-occurrence="() => { closeAllSubmenusNow(); handleDoneForNowNextOccurrence() }"
+      @pick-date="handleDoneForNowPickDate"
+    />
+
     <div class="menu-divider" />
 
     <!-- Delete (soft - moves to trash) -->
@@ -218,7 +238,8 @@ import {
   MoreHorizontal,
   Sparkles,
   Pin,
-  PinOff
+  PinOff,
+  LayoutDashboard
 } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
@@ -226,6 +247,7 @@ import type { Task } from '@/stores/tasks'
 
 // New Architecture Imports
 import { useTaskContextMenuActions } from '@/composables/tasks/useTaskContextMenuActions'
+import { useCanvasModalsStore } from '@/stores/canvas/modals'
 import { useQuickTasks } from '@/composables/useQuickTasks'
 import { useToast } from '@/composables/useToast'
 import DueDateSubmenu from './context-menu/DueDateSubmenu.vue'
@@ -234,6 +256,7 @@ import DurationSubmenu from './context-menu/DurationSubmenu.vue'
 import MoreSubmenu from './context-menu/MoreSubmenu.vue'
 import ProjectSubmenu from './context-menu/ProjectSubmenu.vue'
 import CanvasGroupSubmenu from './context-menu/CanvasGroupSubmenu.vue'
+import DoneForNowSubmenu from './context-menu/DoneForNowSubmenu.vue'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
@@ -288,6 +311,15 @@ const {
   clearSelection
 } = useTaskContextMenuActions(props, emit as (event: string, ...args: unknown[]) => void)
 
+const canvasModalsStore = useCanvasModalsStore()
+
+const handleOpenPlanningCanvas = () => {
+  if (currentTask.value?.id) {
+    canvasModalsStore.openMiniCanvas(currentTask.value.id)
+    emit('close')
+  }
+}
+
 const focusModeState = inject<FocusModeState | null>(FOCUS_MODE_KEY, null)
 const enterFocusModeFn = focusModeState?.enterFocusMode || null
 
@@ -309,6 +341,7 @@ const showDurationSubmenu = ref(false)
 const showMoreSubmenu = ref(false)
 const showProjectSubmenu = ref(false)
 const showCanvasGroupSubmenu = ref(false)
+const showDoneForNowSubmenu = ref(false)
 const submenuTimeouts = ref(new Map<string, ReturnType<typeof setTimeout>>())
 const dueDateSubmenuPosition = ref({ x: 0, y: 0 })
 const prioritySubmenuPosition = ref({ x: 0, y: 0 })
@@ -316,12 +349,13 @@ const durationSubmenuPosition = ref({ x: 0, y: 0 })
 const moreSubmenuPosition = ref({ x: 0, y: 0 })
 const projectSubmenuPosition = ref({ x: 0, y: 0 })
 const canvasGroupSubmenuPosition = ref({ x: 0, y: 0 })
+const doneForNowSubmenuPosition = ref({ x: 0, y: 0 })
 
 // TASK-1445: Safe polygon hover intent for submenu navigation
 const safePolygon = useSubmenuSafePolygon()
 
 // TASK-1445: Submenu type and delayed switching state
-type SubmenuType = 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup'
+type SubmenuType = 'dueDate' | 'priority' | 'duration' | 'more' | 'project' | 'canvasGroup' | 'doneForNow'
 const submenuSwitchTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 const pendingSubmenuType = ref<SubmenuType | null>(null)
 
@@ -440,15 +474,14 @@ const clearPriority = async () => {
   emit('close')
 }
 
-// Handle "Done for now" - reschedule task to tomorrow with tracking badge
-const handleDoneForNow = async () => {
+// Handle "Done for now" > Tomorrow — reschedule to tomorrow (non-recurring behavior)
+const handleDoneForNowTomorrow = async () => {
   // BUG-1184: Capture task data BEFORE closing menu
   const taskId = currentTask.value?.id
   const task = currentTask.value
   const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
   const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
-  // BUG-1095: Close menu FIRST to prevent "stuck" menu
   emit('close')
 
   if (!taskId) return
@@ -464,33 +497,96 @@ const handleDoneForNow = async () => {
   const tomorrowStr = `${year}-${month}-${day}`
 
   try {
+    // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
+    const updatePayload: Record<string, string> = {
+      dueDate: tomorrowStr,
+      doneForNowUntil: tomorrowStr
+    }
+    if (task?.scheduledDate) {
+      updatePayload.scheduledDate = tomorrowStr
+    }
+    await taskStore.updateTaskWithUndo(taskId, updatePayload)
+    // TASK-1362: Also move calendar instance to tomorrow
+    if (isCalendarEvent && calendarInstanceId) {
+      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: tomorrowStr })
+    }
+    canvasStore.requestSync('user:context-menu')
+    showToast('Moved to tomorrow', 'success', { duration: 2000 })
+  } catch (error) {
+    console.error('Error in done-for-now (tomorrow):', error)
+    showToast('Failed to reschedule task', 'error')
+  }
+}
+
+// Handle "Done for now" > Next occurrence — for recurring tasks
+const handleDoneForNowNextOccurrence = async () => {
+  const taskId = currentTask.value?.id
+
+  emit('close')
+
+  if (!taskId) return
+
+  const { showToast } = useToast()
+
+  try {
+    // TASK-1532: Recurring tasks use doneForNow — creates completion record + advances to next occurrence
+    await taskStore.doneForNow(taskId)
+    canvasStore.requestSync('user:context-menu')
+    showToast('Completed for today, next occurrence scheduled', 'success', { duration: 2000 })
+  } catch (error) {
+    console.error('Error in done-for-now (next occurrence):', error)
+    showToast('Failed to complete task', 'error')
+  }
+}
+
+// Handle "Done for now" > Pick a date — custom date picker
+const handleDoneForNowPickDate = async (timestamp: number) => {
+  const taskId = currentTask.value?.id
+  const task = currentTask.value
+  const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
+  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
+
+  closeAllSubmenusNow()
+  emit('close')
+
+  if (!taskId) return
+
+  const { showToast } = useToast()
+
+  // Format date as YYYY-MM-DD using local date components
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const dateStr = `${year}-${month}-${day}`
+
+  try {
     if (task?.recurrenceRule) {
-      // TASK-1532: Recurring tasks use doneForNow — creates completion record + advances to next occurrence
+      // Recurring: create completion record, then override next due date to picked date
       await taskStore.doneForNow(taskId)
+      // Override the auto-computed next date with the user's pick
+      await taskStore.updateTask(taskId, { dueDate: dateStr })
       canvasStore.requestSync('user:context-menu')
-      showToast('Completed for today, next occurrence scheduled', 'success', { duration: 2000 })
+      showToast(`Completed for today, next on ${dateStr}`, 'success', { duration: 2000 })
     } else {
-      // Non-recurring: original behavior (reschedule to tomorrow)
-      // Set dueDate, doneForNowUntil, and scheduledDate (if present) to tomorrow
-      // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
+      // Non-recurring: same as tomorrow but with custom date
       const updatePayload: Record<string, string> = {
-        dueDate: tomorrowStr,
-        doneForNowUntil: tomorrowStr
+        dueDate: dateStr,
+        doneForNowUntil: dateStr
       }
       if (task?.scheduledDate) {
-        updatePayload.scheduledDate = tomorrowStr
+        updatePayload.scheduledDate = dateStr
       }
       await taskStore.updateTaskWithUndo(taskId, updatePayload)
-      // TASK-1362: Also move calendar instance to tomorrow
       if (isCalendarEvent && calendarInstanceId) {
-        await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: tomorrowStr })
+        await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: dateStr })
       }
       canvasStore.requestSync('user:context-menu')
-      showToast('Moved to tomorrow', 'success', { duration: 2000 })
+      showToast(`Moved to ${dateStr}`, 'success', { duration: 2000 })
     }
   } catch (error) {
-    console.error('Error in done-for-now:', error)
-    showToast('Failed to complete task', 'error')
+    console.error('Error in done-for-now pick date:', error)
+    showToast('Failed to reschedule task', 'error')
   }
 }
 
@@ -577,6 +673,25 @@ const handleMoreDuration = (event: MouseEvent) => {
   }
   durationSubmenuPosition.value = { x, y }
   showDurationSubmenu.value = true
+}
+
+// Handle MoreSubmenu nested DoneForNow submenu positioning
+const handleMoreDoneForNow = (event: MouseEvent) => {
+  showDurationSubmenu.value = false
+  showCanvasGroupSubmenu.value = false
+  const target = event.currentTarget as HTMLElement
+  const triggerRect = target.getBoundingClientRect()
+  const submenuWidth = 180
+  let x = triggerRect.right + 4
+  let y = triggerRect.top
+  if (x + submenuWidth > window.innerWidth - 8) {
+    x = triggerRect.left - submenuWidth - 4
+  }
+  if (y + 200 > window.innerHeight - 8) {
+    y = window.innerHeight - 200 - 8
+  }
+  doneForNowSubmenuPosition.value = { x, y }
+  showDoneForNowSubmenu.value = true
 }
 
 // AI Assist handlers
@@ -688,6 +803,11 @@ const canvasGroupSubmenuStyle = computed(() => ({
   top: canvasGroupSubmenuPosition.value.y + 'px'
 }))
 
+const doneForNowSubmenuStyle = computed(() => ({
+  left: doneForNowSubmenuPosition.value.x + 'px',
+  top: doneForNowSubmenuPosition.value.y + 'px'
+}))
+
 // Submenu handlers
 const clearAllSubmenuTimeouts = () => {
   for (const t of submenuTimeouts.value.values()) clearTimeout(t)
@@ -711,6 +831,7 @@ const getCurrentOpenSubmenu = (): SubmenuType | null => {
   if (showMoreSubmenu.value) return 'more'
   if (showDurationSubmenu.value) return 'duration'
   if (showCanvasGroupSubmenu.value) return 'canvasGroup'
+  if (showDoneForNowSubmenu.value) return 'doneForNow'
   return null
 }
 
@@ -722,6 +843,7 @@ const isSubmenuOpen = (type: SubmenuType): boolean => {
     case 'more': return showMoreSubmenu.value
     case 'project': return showProjectSubmenu.value
     case 'canvasGroup': return showCanvasGroupSubmenu.value
+    case 'doneForNow': return showDoneForNowSubmenu.value
   }
 }
 
@@ -738,6 +860,7 @@ const performSubmenuOpen = (type: SubmenuType, triggerRect: DOMRect) => {
   showMoreSubmenu.value = false
   showProjectSubmenu.value = false
   showCanvasGroupSubmenu.value = false
+  showDoneForNowSubmenu.value = false
 
   const menuRect = menuRef.value?.getBoundingClientRect()
   const submenuWidth = (type === 'project' || type === 'canvasGroup') ? 200 : (type === 'dueDate') ? 180 : 150
@@ -772,6 +895,9 @@ const performSubmenuOpen = (type: SubmenuType, triggerRect: DOMRect) => {
   } else if (type === 'canvasGroup') {
     canvasGroupSubmenuPosition.value = { x, y }
     showCanvasGroupSubmenu.value = true
+  } else if (type === 'doneForNow') {
+    doneForNowSubmenuPosition.value = { x, y }
+    showDoneForNowSubmenu.value = true
   } else {
     moreSubmenuPosition.value = { x, y }
     showMoreSubmenu.value = true
@@ -822,6 +948,7 @@ const getSubmenuRect = (type: SubmenuType) => {
     more: moreSubmenuPosition,
     project: projectSubmenuPosition,
     canvasGroup: canvasGroupSubmenuPosition,
+    doneForNow: doneForNowSubmenuPosition,
   }
   const sizeMap: Record<SubmenuType, { width: number; height: number }> = {
     dueDate: { width: 180, height: 300 },
@@ -830,6 +957,7 @@ const getSubmenuRect = (type: SubmenuType) => {
     more: { width: 180, height: 360 },
     project: { width: 200, height: 250 },
     canvasGroup: { width: 200, height: 250 },
+    doneForNow: { width: 180, height: 200 },
   }
   const pos = posMap[type].value
   const size = sizeMap[type]
@@ -845,9 +973,10 @@ const actuallyCloseSubmenu = (type: SubmenuType) => {
   else if (type === 'duration') showDurationSubmenu.value = false
   else if (type === 'project') showProjectSubmenu.value = false
   else if (type === 'canvasGroup') showCanvasGroupSubmenu.value = false
+  else if (type === 'doneForNow') showDoneForNowSubmenu.value = false
   else if (type === 'more') {
     // Only close 'more' if no nested child submenu is still open
-    if (!showCanvasGroupSubmenu.value && !showDurationSubmenu.value) {
+    if (!showCanvasGroupSubmenu.value && !showDurationSubmenu.value && !showDoneForNowSubmenu.value) {
       showMoreSubmenu.value = false
     }
   }
@@ -913,6 +1042,7 @@ const closeAllSubmenusNow = () => {
   showMoreSubmenu.value = false
   showProjectSubmenu.value = false
   showCanvasGroupSubmenu.value = false
+  showDoneForNowSubmenu.value = false
 }
 
 const enterFocus = () => {
@@ -968,6 +1098,7 @@ watch(() => props.isVisible, (isVisible) => {
     showMoreSubmenu.value = false
     showProjectSubmenu.value = false
     showCanvasGroupSubmenu.value = false
+    showDoneForNowSubmenu.value = false
     showAIAssist.value = false
   }
 })

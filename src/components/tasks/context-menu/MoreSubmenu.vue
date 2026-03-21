@@ -11,11 +11,16 @@
       @wheel.stop
     >
       <div class="submenu-scroll">
-        <!-- Done for now - reschedule to tomorrow (recurring tasks only) -->
-        <button v-if="isRecurring" class="menu-item menu-item--sm" @click.stop="$emit('doneForNow')">
+        <!-- Done for now - shows for ALL tasks, opens submenu -->
+        <div
+          class="menu-item menu-item--sm has-submenu"
+          @mouseenter.stop="$emit('openDoneForNow', $event)"
+          @mouseleave.stop="$emit('closeDoneForNow')"
+        >
           <Clock :size="14" class="menu-icon" />
           <span class="menu-text">Done for now</span>
-        </button>
+          <ChevronRight :size="12" class="submenu-arrow" />
+        </div>
 
         <!-- Done fully (stop recurring) - recurring tasks only -->
         <button v-if="isRecurring" class="menu-item menu-item--sm" @click.stop="$emit('doneFully')">
@@ -108,7 +113,8 @@ defineProps<{
 }>()
 
 defineEmits<{
-  doneForNow: []
+  openDoneForNow: [event: MouseEvent]
+  closeDoneForNow: []
   doneFully: []
   duplicate: []
   pinQuickTask: []

@@ -12,6 +12,12 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
 
+    // Tooltip: show calendar block info when active, otherwise default
+    toolTipMainText: hasCurrentBlock ? currentBlockTitle : "PomoFlow Timer"
+    toolTipSubText: hasCurrentBlock
+        ? "ends " + currentBlockEndTime + " · " + currentBlockMinutesLeft + "m left"
+        : ""
+
     // Note: hideOnWindowDeactivate requires Plasma 6.5.5+
     // For older versions, we rely on the full-screen overlay instead
 
@@ -1430,12 +1436,12 @@ PlasmoidItem {
     compactRepresentation: MouseArea {
         id: compactRoot
 
-        // Size: circle + optional calendar block text (TASK-1531)
+        // Size: circle + optional unified calendar bar
         Layout.fillHeight: true
         Layout.preferredWidth: {
             var baseWidth = compactRoot.height > 0 ? compactRoot.height : 36
             if (root.hasCurrentBlock) {
-                return baseWidth + currentBlockLabel.implicitWidth + 4
+                return baseWidth + 1 + 6 + blockInfoRow.implicitWidth + 8
             }
             return baseWidth
         }
@@ -1446,9 +1452,29 @@ PlasmoidItem {
         onPressed: wasExpanded = root.expanded
         onClicked: root.expanded = !wasExpanded
 
+        // Sync accent color: teal when synced or no timer, amber when mismatched
+        readonly property color blockAccent: {
+            if (!root.isRunning || root.currentTaskId === "") return root.workColor
+            return root.isBlockSynced ? root.workColor : "#F0A030"
+        }
+
+        // Unified bar background — only visible when calendar block is active
+        Rectangle {
+            id: barBg
+            anchors.fill: parent
+            radius: height / 2
+            color: root.hasCurrentBlock
+                ? Qt.rgba(compactRoot.blockAccent.r, compactRoot.blockAccent.g, compactRoot.blockAccent.b, 0.12)
+                : "transparent"
+            border.width: root.hasCurrentBlock ? 1 : 0
+            border.color: root.hasCurrentBlock
+                ? Qt.rgba(compactRoot.blockAccent.r, compactRoot.blockAccent.g, compactRoot.blockAccent.b, 0.3)
+                : "transparent"
+        }
+
         Row {
             anchors.fill: parent
-            spacing: 4
+            spacing: 0
 
             // Circular progress wrapped in Item so Canvas can anchor.fill
             Item {
@@ -1550,27 +1576,64 @@ PlasmoidItem {
                 }
             }
 
-            // TASK-1531: Current calendar block title + time remaining + sync indicator
-            Text {
-                id: currentBlockLabel
-                anchors.verticalCenter: parent.verticalCenter
-                text: {
-                    if (!root.hasCurrentBlock) return ""
-                    var shortTitle = root.currentBlockTitle.length > 12
-                        ? root.currentBlockTitle.substring(0, 12)
-                        : root.currentBlockTitle
-                    return shortTitle + " " + root.currentBlockMinutesLeft + "m"
-                }
-                font.pixelSize: Math.max(8, Math.round(compactRoot.height * 0.35))
-                color: {
-                    if (!root.hasCurrentBlock) return root.textColor
-                    if (!root.isRunning || root.currentTaskId === "") return root.textColor
-                    return root.isBlockSynced ? root.textColor : "#F0A030"
-                }
+            // Thin vertical separator
+            Rectangle {
                 visible: root.hasCurrentBlock
-                elide: Text.ElideRight
-                maximumLineCount: 1
-                width: Math.min(implicitWidth, 200)
+                width: 1
+                height: parent.height * 0.5
+                anchors.verticalCenter: parent.verticalCenter
+                color: Qt.rgba(compactRoot.blockAccent.r, compactRoot.blockAccent.g, compactRoot.blockAccent.b, 0.35)
+            }
+
+            // Spacer
+            Item {
+                visible: root.hasCurrentBlock
+                width: 6
+                height: 1
+            }
+
+            // Calendar block info: title · Xm
+            Row {
+                id: blockInfoRow
+                visible: root.hasCurrentBlock
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: {
+                        if (!root.hasCurrentBlock) return ""
+                        var t = root.currentBlockTitle
+                        return t.length > 12 ? t.substring(0, 12) + "…" : t
+                    }
+                    font.pixelSize: Math.max(9, Math.round(compactRoot.height * 0.3))
+                    color: compactRoot.blockAccent
+                    maximumLineCount: 1
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "·"
+                    font.pixelSize: Math.max(9, Math.round(compactRoot.height * 0.35))
+                    font.bold: true
+                    color: Qt.rgba(compactRoot.blockAccent.r, compactRoot.blockAccent.g, compactRoot.blockAccent.b, 0.6)
+                    visible: root.hasCurrentBlock
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.currentBlockMinutesLeft + "m"
+                    font.pixelSize: Math.max(9, Math.round(compactRoot.height * 0.3))
+                    font.bold: true
+                    color: compactRoot.blockAccent
+                }
+            }
+
+            // Right padding
+            Item {
+                visible: root.hasCurrentBlock
+                width: 4
+                height: 1
             }
         }
     }

@@ -1060,8 +1060,8 @@ PlasmoidItem {
         flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
         color: "transparent"
         visible: false
-        width: 380
-        height: 200
+        width: 420
+        height: 220
 
         property string nudgeMessage: ""
 
@@ -1081,34 +1081,23 @@ PlasmoidItem {
                 onClicked: nudgePopup.visible = false
             }
 
-            // Glass card
+            // Glass card — same style as nanny popup
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: 10
-                radius: 16
+                radius: 20
                 color: Qt.rgba(root.bgColor.r, root.bgColor.g, root.bgColor.b, 0.95)
                 border.width: 2
-                border.color: "#F59E0B"  // amber accent
+                border.color: root.workColor
 
-                // Amber left accent bar
-                Rectangle {
-                    width: 4
-                    height: parent.height - 24
-                    anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    radius: 2
-                    color: "#F59E0B"
-                }
-
-                // Subtle glow
+                // Glow effect — matches nanny popup
                 Rectangle {
                     anchors.fill: parent
-                    anchors.margins: -6
-                    radius: 22
+                    anchors.margins: -8
+                    radius: 28
                     color: "transparent"
-                    border.width: 3
-                    border.color: Qt.rgba(0.96, 0.62, 0.04, 0.25)
+                    border.width: 4
+                    border.color: Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.4)
                     z: -1
                 }
 
@@ -1119,26 +1108,25 @@ PlasmoidItem {
 
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: 20
-                    anchors.leftMargin: 28
-                    spacing: 12
+                    anchors.margins: 24
+                    spacing: 14
 
                     // Icon + Title row
                     Row {
                         spacing: 10
                         Layout.fillWidth: true
 
-                        // Amber circle icon
+                        // Teal circle icon — matches nanny style
                         Rectangle {
                             width: 36
                             height: 36
                             radius: 18
-                            color: Qt.rgba(0.96, 0.62, 0.04, 0.15)
+                            color: Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.2)
                             anchors.verticalCenter: parent.verticalCenter
 
                             Text {
                                 anchors.centerIn: parent
-                                text: "\u23F1"  // stopwatch
+                                text: "\uD83C\uDF45"  // tomato — matches nanny
                                 font.pixelSize: 18
                             }
                         }
@@ -1171,24 +1159,24 @@ PlasmoidItem {
                         color: Qt.rgba(1, 1, 1, 0.08)
                     }
 
-                    // Action buttons
+                    // Action buttons — centered row like nanny popup
                     Row {
-                        Layout.fillWidth: true
-                        spacing: 10
+                        Layout.alignment: Qt.AlignHCenter
+                        spacing: 12
 
                         // Snooze 30m
                         Rectangle {
-                            width: 90
-                            height: 34
-                            radius: 8
+                            width: 110
+                            height: 42
+                            radius: 12
                             color: "transparent"
-                            border.width: 1
-                            border.color: Qt.rgba(1, 1, 1, 0.15)
+                            border.width: 1.5
+                            border.color: root.mutedColor
 
                             Text {
                                 anchors.centerIn: parent
-                                text: "Snooze 30m"
-                                font.pixelSize: 12
+                                text: "\u23F0 Snooze 30m"
+                                font.pixelSize: 14
                                 color: root.textColor
                             }
 
@@ -1206,17 +1194,17 @@ PlasmoidItem {
 
                         // Snooze 1hr
                         Rectangle {
-                            width: 90
-                            height: 34
-                            radius: 8
+                            width: 110
+                            height: 42
+                            radius: 12
                             color: "transparent"
-                            border.width: 1
-                            border.color: Qt.rgba(1, 1, 1, 0.15)
+                            border.width: 1.5
+                            border.color: root.mutedColor
 
                             Text {
                                 anchors.centerIn: parent
-                                text: "Snooze 1hr"
-                                font.pixelSize: 12
+                                text: "\u23F0 Snooze 1hr"
+                                font.pixelSize: 14
                                 color: root.textColor
                             }
 
@@ -1232,30 +1220,20 @@ PlasmoidItem {
                             }
                         }
 
-                        // Spacer
-                        Item { Layout.fillWidth: true; width: 1 }
-
                         // Stop today
                         Rectangle {
-                            width: 90
-                            height: 34
-                            radius: 8
+                            width: 110
+                            height: 42
+                            radius: 12
                             color: "transparent"
+                            border.width: 1.5
+                            border.color: root.mutedColor
 
-                            Row {
+                            Text {
                                 anchors.centerIn: parent
-                                spacing: 4
-                                Text {
-                                    text: "\uD83D\uDD15"  // bell with slash
-                                    font.pixelSize: 10
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                Text {
-                                    text: "Stop today"
-                                    font.pixelSize: 12
-                                    color: root.mutedColor
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
+                                text: "\uD83D\uDD07 Stop today"
+                                font.pixelSize: 14
+                                color: root.textColor
                             }
 
                             MouseArea {
@@ -2506,9 +2484,9 @@ PlasmoidItem {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             if (plasmoid.configuration.nannyEnabled) {
-                                // Already enabled — show task picker popup
-                                root.showNannyPopup()
-                                console.log("[NANNY] Manual trigger from toggle bar")
+                                // Already enabled — show nudge popup
+                                root.sendNannyNotification()
+                                console.log("[NUDGE] Manual trigger from toggle bar")
                             } else {
                                 plasmoid.configuration.nannyEnabled = true
                                 console.log("[NANNY] Enabled")

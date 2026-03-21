@@ -48,6 +48,7 @@
       placement="bottom-start"
       :show-arrow="false"
       raw
+      to="body"
     >
       <template #trigger>
         <button class="time-filter-dropdown" :class="{ active: activeTimeFilter !== 'all' }">
@@ -76,6 +77,7 @@
       placement="bottom-start"
       :show-arrow="false"
       raw
+      to="body"
     >
       <template #trigger>
         <button
@@ -532,6 +534,9 @@ const handleTimeFilterSelect = (key: string) => {
   max-height: 300px;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+  z-index: var(--z-popover);
+  position: relative;
 }
 
 .group-chip {
@@ -584,6 +589,8 @@ const handleTimeFilterSelect = (key: string) => {
   min-width: 160px;
   box-shadow: var(--shadow-lg);
   backdrop-filter: blur(12px);
+  z-index: var(--z-popover);
+  position: relative;
 }
 
 .time-filter-option {

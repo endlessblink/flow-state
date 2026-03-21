@@ -73,6 +73,11 @@ function getDB(): ReadCacheDatabase {
  * Called after every successful Supabase fetch + smart merge.
  */
 export async function cacheTasks(tasks: Task[]): Promise<void> {
+  // GUARD: Never cache impossibly large task arrays (corruption prevention)
+  if (tasks.length > 1000) {
+    console.error(`🔴 [READ-CACHE] Refusing to cache ${tasks.length} tasks — corruption detected`)
+    return
+  }
   try {
     const database = getDB()
     await database.transaction('rw', database.tasks, database.meta, async () => {

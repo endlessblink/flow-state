@@ -100,7 +100,19 @@ export function useAppInitialization() {
                 !!(cachedProjects && cachedProjects.length > 0)
 
             if (hasCache) {
-                if (cachedTasks && cachedTasks.length > 0) {
+                // SELF-HEALING: Detect impossibly large cache (corruption guard)
+                // Production DB has ~500 tasks max. If cache has 1000+, it's corrupted.
+                const MAX_REASONABLE_TASKS = 1000
+                if (cachedTasks && cachedTasks.length > MAX_REASONABLE_TASKS) {
+                    console.error(`🔴 [CACHE-CORRUPTION] IndexedDB cache has ${cachedTasks.length} tasks — clearing corrupted cache`)
+                    try {
+                        const { cacheTasks } = await import('@/services/offline/readCacheDB')
+                        await cacheTasks([]) // Clear the corrupted cache
+                    } catch (e) {
+                        console.warn('[CACHE-CORRUPTION] Failed to clear cache:', e)
+                    }
+                    // Don't load from corrupted cache — will load fresh from Supabase in Phase B
+                } else if (cachedTasks && cachedTasks.length > 0) {
                     // Dedup safety: ensure no duplicate IDs from stale cache
                     const seen = new Set<string>()
                     const dedupedCache = cachedTasks.filter(t => {
@@ -108,8 +120,12 @@ export function useAppInitialization() {
                         seen.add(t.id)
                         return true
                     })
-                    taskStore._rawTasks = dedupedCache
-                    console.log(`📦 [CACHE-FIRST] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
+                    if (dedupedCache.length > MAX_REASONABLE_TASKS) {
+                        console.error(`🔴 [CACHE-CORRUPTION] Even after dedup, ${dedupedCache.length} tasks remain — skipping cache`)
+                    } else {
+                        taskStore._rawTasks = dedupedCache
+                        console.log(`📦 [CACHE-FIRST] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
+                    }
                 }
                 if (cachedGroups && cachedGroups.length > 0) {
                     canvasStore.setGroups(cachedGroups)

@@ -8,6 +8,18 @@
 
 ## Active Tasks
 
+### BUG-1582: IndexedDB cache corruption (444k tasks) + Tauri time-filter dropdown unresponsive (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-21)
+
+**Bug 1 — IndexedDB cache corruption**: Inbox badge showed 444,000 tasks (actual DB: 227). Corrupted IndexedDB cache persisted across restarts. Fixed by adding a self-healing guard in `useAppInitialization.ts` — if cached task count exceeds 1,000, the cache is cleared and skipped (falls through to Phase B Supabase load). Also added a write-side guard in `readCacheDB.ts::cacheTasks()` that refuses to write arrays > 1,000 tasks, preventing re-corruption. The dedup post-check now also enforces the 1,000-task ceiling.
+
+**Bug 2 — Tauri time-filter dropdown unresponsive**: The `NPopover` dropdowns (time filter and group filter) in `UnifiedInboxHeader.vue` used `raw` prop which removes Naive UI's default DOM injection. In Tauri's WebKitGTK, the popover content was clipped by parent `overflow: hidden` containers. Fixed by adding `to="body"` to both `NPopover` components so content teleports out of the clipped container to `<body>`. Added `z-index: var(--z-popover)` and `position: relative` to `.time-filter-options` and `.group-filter-chips` CSS so they stack correctly when teleported.
+
+**Files**: `src/composables/app/useAppInitialization.ts`, `src/services/offline/readCacheDB.ts`, `src/components/inbox/unified/UnifiedInboxHeader.vue`
+
+---
+
 ### ~~TASK-1579~~: Consolidate canvas viewport to single source of truth in canvasViewport.ts (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-18)

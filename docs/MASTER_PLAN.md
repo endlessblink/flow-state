@@ -4427,6 +4427,49 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
+## Bugs Found by E2E Tests (TASK-1671 — TASK-1682)
+
+> **Goal**: Fix all real bugs discovered by the E2E test suite.
+> **Priority**: P0-P1 | **Status**: 📋 PLANNED
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| BUG-1671 | Fix workspace migration — `workspace_id` column missing from tasks/projects/groups, `workspace_members` table missing. Migration exists but fails due to `projects.id` type conflict (uuid vs text). Fix migration or drop FK constraint first. | P0 | 📋 PLANNED |
+| BUG-1672 | Fix sidebar clipping in Tauri — sidebar text cut off, only icons visible. CSS grid `minmax(240px, 340px)` not respected in WebKitGTK. | P1 | 📋 PLANNED |
+| BUG-1673 | Fix Catalog view empty — shows table headers but zero tasks despite data existing. Caused by workspace_id query failing. | P0 | 📋 PLANNED |
+| BUG-1674 | Fix Inbox dropdown behind sidebar — calendar dropdown z-index lower than sidebar stacking context. | P1 | 📋 PLANNED |
+| BUG-1675 | Fix Canvas view empty in E2E — Vue Flow nodes don't render for test user. Workspace query errors prevent task loading. | P0 | 📋 PLANNED |
+| BUG-1676 | Fix Board view empty — kanban columns render but no task cards. Same workspace root cause. | P0 | 📋 PLANNED |
+| BUG-1677 | Fix context menu positioning — right-click menu not appearing or appearing outside viewport bounds. | P2 | 📋 PLANNED |
+| BUG-1678 | Fix tooltip z-index — tooltips render with z-index 'auto' instead of explicit value, may appear behind content. | P2 | 📋 PLANNED |
+| BUG-1679 | Fix PWA manifest not linked in dev mode — `<link rel="manifest">` missing when devOptions.enabled=false. | P2 | 📋 PLANNED |
+| BUG-1680 | Fix card border-radius not rendering — task cards missing rounded corners in some views. | P3 | 📋 PLANNED |
+| BUG-1681 | Fix Inbox panel shows no content — inbox collapsed by default, badge/content not accessible. | P2 | 📋 PLANNED |
+| BUG-1682 | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors. | P0 | 📋 PLANNED |
+
+#### BUG-1671: Workspace Migration Failure (📋 PLANNED)
+- **Priority**: P0-CRITICAL
+- **Root Cause**: `20260317000000_workspace_collaboration.sql` adds `workspace_id` to tasks/projects/groups and creates `workspace_members` table. Migration fails because `20260106000000_fix_id_types.sql` changes `projects.id` from uuid to text, but `pinned_tasks.project_id` FK still expects uuid. The FK constraint must be dropped/recreated first.
+- **Impact**: ALL views fail to load data because every query now includes `.is('workspace_id', null)` which errors on missing column.
+- **Fix**: Either fix the migration chain order, or manually drop the FK constraint before running migrations.
+
+#### BUG-1672: Sidebar Clipping in Tauri (📋 PLANNED)
+- **Priority**: P1-HIGH
+- **Root Cause**: CSS `grid-template-columns: minmax(240px, 340px) 1fr` in MainLayout.vue not respected by WebKitGTK. Sidebar renders at icon-only width.
+- **Files**: `src/layouts/MainLayout.vue`, `src/layouts/AppSidebar.vue`
+
+#### BUG-1673 to BUG-1676: Empty Views (📋 PLANNED)
+- **Priority**: P0-CRITICAL
+- **Root Cause**: All caused by BUG-1671 (workspace migration). Fixing the migration fixes all 4.
+- **Dependency**: BUG-1671
+
+#### BUG-1674: Inbox Dropdown Behind Sidebar (📋 PLANNED)
+- **Priority**: P1-HIGH
+- **Root Cause**: Inbox panel's NDatePicker dropdown renders inside a stacking context trapped by sidebar z-index. Needs `teleport` or `to="body"` on the dropdown.
+- **Files**: `src/components/inbox/unified/UnifiedInboxHeader.vue`
+
+---
+
 ## Formatting Guide
 
 **Task Format**: `### TASK-XXX: Title (STATUS)` with `🔄 IN PROGRESS`, `✅ DONE`, `📋 PLANNED`

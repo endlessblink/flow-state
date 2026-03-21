@@ -25,7 +25,11 @@
       :is-open="showTaskEditModal"
       :task="editingTask"
       @close="showTaskEditModal = false"
+      @permanent-delete="handleContextMenuPermanentDelete"
     />
+
+    <!-- MINI-CANVAS OVERLAY (Planning Canvas) -->
+    <MiniCanvasOverlay />
 
     <!-- TASK CONTEXT MENU -->
     <TaskContextMenu
@@ -134,6 +138,7 @@ import SettingsModal from '@/components/layout/SettingsModal.vue'
 import ProjectModal from '@/components/projects/ProjectModal.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
+import MiniCanvasOverlay from '@/components/mini-canvas/MiniCanvasOverlay.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import RecurrenceDeleteModal from '@/components/common/RecurrenceDeleteModal.vue'
 import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'

@@ -122,6 +122,13 @@
               <Sparkles :size="16" />
               AI Assist
             </button>
+            <button
+              class="btn btn-danger btn-action"
+              @click="handlePermanentDelete"
+            >
+              <Trash2 :size="16" />
+              Delete
+            </button>
             <div class="spacer" />
             <button class="btn btn-secondary btn-action" @click="$emit('close')">
               Cancel
@@ -146,7 +153,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { X, Sparkles } from 'lucide-vue-next'
+import { X, Sparkles, Trash2 } from 'lucide-vue-next'
 import { type Task, useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useNotificationStore } from '@/stores/notifications'
@@ -175,6 +182,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'permanent-delete', taskId: string): void
 }>()
 
 const taskStore = useTaskStore()
@@ -372,6 +380,15 @@ function handleAddAttachment(attachment: TaskAttachment) {
 function handleRemoveAttachment(attachmentId: string) {
   if (!editedTask.value.attachments) return
   editedTask.value.attachments = editedTask.value.attachments.filter(a => a.id !== attachmentId)
+}
+
+// --- Permanent Delete ---
+
+function handlePermanentDelete() {
+  const taskId = editedTask.value.id
+  if (!taskId) return
+  emit('close')
+  emit('permanent-delete', taskId)
 }
 
 onMounted(() => document.addEventListener('keydown', handleKeyDown))
@@ -573,6 +590,8 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   background: var(--overlay-component-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--border-subtle);
   z-index: 10;
   /* Ensure buttons don't overflow - account for scrollbar */
@@ -650,6 +669,17 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 
 .btn-ai:hover {
   background: var(--brand-bg-subtle);
+}
+
+.btn-danger {
+  background: transparent;
+  border: 1px solid var(--danger-border-medium);
+  color: var(--color-priority-high);
+}
+
+.btn-danger:hover {
+  background: var(--danger-bg-subtle);
+  border-color: var(--danger-border-hover);
 }
 
 .spacer {

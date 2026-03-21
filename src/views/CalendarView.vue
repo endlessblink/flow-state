@@ -389,17 +389,17 @@ const { monthDays, handleMonthDragStart: _rawMonthDragStart, handleMonthDrop, ha
 // FEATURE-1336b: Bridge calendar drag events to global useDragAndDrop for sidebar drops
 const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
-const handleEventDragStart = (event: DragEvent, calendarEvent: Record<string, unknown>) => {
+const handleEventDragStart = (event: DragEvent, calendarEvent: any) => {
   _rawEventDragStart(event, calendarEvent)
   // Unified ghost pill — composable now handles startGlobalDrag with event
 }
 
-const handleEventDragEnd = (event: DragEvent, calendarEvent: Record<string, unknown>) => {
+const handleEventDragEnd = (event: DragEvent, calendarEvent: any) => {
   _rawEventDragEnd(event, calendarEvent)
   // endGlobalDrag is called inside the composable's handleEventDragEnd
 }
 
-const handleMonthDragStart = (event: DragEvent, calendarEvent: Record<string, unknown> & { taskId?: string; title?: string }) => {
+const handleMonthDragStart = (event: DragEvent, calendarEvent: any) => {
   _rawMonthDragStart(event, calendarEvent)
   if (calendarEvent.taskId) {
     // Unified ghost pill — pass event for setDragImage

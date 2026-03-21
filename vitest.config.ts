@@ -21,6 +21,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['tests/setup.ts'],
     include: ['tests/**/*.test.{js,ts,jsx,tsx}', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
     exclude: [
       'node_modules',
@@ -28,11 +29,17 @@ export default defineConfig({
       '.idea',
       '.git',
       '.cache',
-      'tests/integration/**',
       'tests/e2e/**',
       'tests/canvas-characterization.test.ts',
       'tests/unit/canvas-resize-test*.test.ts',
     ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary', 'html'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.ts', 'src/**/*.vue'],
+      exclude: ['src/**/*.stories.ts', 'src/**/*.spec.ts', 'src/**/*.test.ts', 'node_modules/**'],
+    },
     // Allow file system access for safety tests
     allowOnly: true,
     // Increase timeout for file system operations

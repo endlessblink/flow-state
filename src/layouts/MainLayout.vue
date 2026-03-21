@@ -39,12 +39,19 @@
     <!-- AI CHAT PANEL (TASK-1120) -->
     <AIChatPanel />
 
-    <!-- Nanny uses system notifications (deliverNotification) -->
+    <!-- Nanny reminder toast (web app) -->
+    <NannyReminder
+      v-if="showNannyReminder"
+      :minutes="unchosenMinutes"
+      @snooze="handleNannySnooze"
+      @stop-today="handleNannyStopToday"
+      @dismiss="nannyDismissed = true"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
@@ -53,6 +60,7 @@ import { PanelLeft } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/AppSidebar.vue'
 import AppHeader from '@/layouts/AppHeader.vue'
 import { AIChatPanel } from '@/components/ai'
+import NannyReminder from '@/components/notifications/NannyReminder.vue'
 
 const uiStore = useUIStore()
 const { direction } = useDirection()
@@ -89,7 +97,39 @@ onUnmounted(() => {
 useBeforeUnload()
 
 // Gently remind user to pick a task after 5 min without a Pomodoro
-useTaskbarNanny()
+const { unchosenMinutes, resetNanny } = useTaskbarNanny()
+
+// Nanny reminder state
+const nannyDismissed = ref(false)
+const nannySnoozedUntil = ref(0)
+const nannyStoppedToday = ref(false)
+
+const showNannyReminder = computed(() => {
+  if (nannyStoppedToday.value) return false
+  if (nannyDismissed.value) return false
+  if (nannySnoozedUntil.value > Date.now()) return false
+  return unchosenMinutes.value >= 5
+})
+
+function handleNannySnooze(minutes: number) {
+  nannySnoozedUntil.value = Date.now() + minutes * 60_000
+  nannyDismissed.value = true
+  // Re-enable showing after snooze expires
+  setTimeout(() => { nannyDismissed.value = false }, minutes * 60_000)
+}
+
+function handleNannyStopToday() {
+  nannyStoppedToday.value = true
+  // Reset at midnight
+  const now = new Date()
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  setTimeout(() => { nannyStoppedToday.value = false }, midnight.getTime() - now.getTime())
+}
+
+// Reset dismissed state when timer starts (so nanny can fire again next idle period)
+watch(unchosenMinutes, (val) => {
+  if (val === 0) nannyDismissed.value = false
+})
 
 const appSidebar = ref<InstanceType<typeof AppSidebar> | null>(null)
 

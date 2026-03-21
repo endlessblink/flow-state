@@ -73,7 +73,10 @@ PlasmoidItem {
     // ===== CURRENT CALENDAR BLOCK STATE (TASK-1531) =====
     property string currentBlockTitle: ""
     property string currentBlockEndTime: ""  // e.g., "2:30 PM"
+    property string currentBlockTaskId: ""
+    property int currentBlockMinutesLeft: 0
     readonly property bool hasCurrentBlock: currentBlockTitle !== "" && plasmoid.configuration.showCurrentBlock
+    readonly property bool isBlockSynced: currentBlockTaskId !== "" && currentTaskId === currentBlockTaskId
 
     // ===== PINNED TASKS STATE =====
     property var pinnedTasks: []
@@ -1547,13 +1550,23 @@ PlasmoidItem {
                 }
             }
 
-            // TASK-1531: Current calendar block title
+            // TASK-1531: Current calendar block title + time remaining + sync indicator
             Text {
                 id: currentBlockLabel
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.currentBlockTitle
+                text: {
+                    if (!root.hasCurrentBlock) return ""
+                    var shortTitle = root.currentBlockTitle.length > 12
+                        ? root.currentBlockTitle.substring(0, 12)
+                        : root.currentBlockTitle
+                    return shortTitle + " " + root.currentBlockMinutesLeft + "m"
+                }
                 font.pixelSize: Math.max(8, Math.round(compactRoot.height * 0.35))
-                color: root.textColor
+                color: {
+                    if (!root.hasCurrentBlock) return root.textColor
+                    if (!root.isRunning || root.currentTaskId === "") return root.textColor
+                    return root.isBlockSynced ? root.textColor : "#F0A030"
+                }
                 visible: root.hasCurrentBlock
                 elide: Text.ElideRight
                 maximumLineCount: 1
@@ -5349,6 +5362,8 @@ PlasmoidItem {
         if (!plasmoid.configuration.showCurrentBlock) {
             currentBlockTitle = ""
             currentBlockEndTime = ""
+            currentBlockTaskId = ""
+            currentBlockMinutesLeft = 0
             return
         }
 
@@ -5358,6 +5373,8 @@ PlasmoidItem {
 
         var bestTitle = ""
         var bestEnd = ""
+        var bestTaskId = ""
+        var bestMinutesLeft = 0
 
         for (var i = 0; i < tasks.length; i++) {
             var task = tasks[i]
@@ -5390,6 +5407,8 @@ PlasmoidItem {
 
                 if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
                     bestTitle = task.title || ""
+                    bestTaskId = task.id || ""
+                    bestMinutesLeft = endMinutes - nowMinutes
                     // Format end time
                     var endH = Math.floor(endMinutes / 60)
                     var endM = endMinutes % 60
@@ -5404,6 +5423,8 @@ PlasmoidItem {
 
         currentBlockTitle = bestTitle
         currentBlockEndTime = bestEnd
+        currentBlockTaskId = bestTaskId
+        currentBlockMinutesLeft = bestMinutesLeft
     }
 
     function buildNannyTaskList() {

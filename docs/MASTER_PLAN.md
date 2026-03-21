@@ -8,6 +8,16 @@
 
 ## Active Tasks
 
+### ~~TASK-1596~~: Test infrastructure setup — coverage + factories + helpers (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-21)
+
+**Scope**: Install `@vitest/coverage-v8`, update `vitest.config.ts` with coverage config, remove `tests/integration/**` from exclude, create `tests/factories/index.ts` with `createMockTask/Project/TimerSession` factories, and add `tests/helpers/selectors.ts` with `data-testid` selectors. No production source code changes.
+
+**Files**: `vitest.config.ts`, `tests/factories/index.ts`, `tests/helpers/selectors.ts`, `package.json`
+
+---
+
 ### ~~BUG-1583~~: Timer starts then stops + KDE widget session sync (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-21)
@@ -3138,6 +3148,848 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Investigation**: Multi-agent root cause analysis in progress.
 
 **Category**: Data Integrity / Sync
+
+---
+
+---
+
+## Epic: Comprehensive Testing Strategy (TASK-1584 — TASK-1640)
+
+> **Goal**: Build a full-stack testing safety net to stop the pattern of regressions, silent data corruption, and platform-specific breakage that has driven P0 bugs throughout the project's history.
+> **Priority**: P0-P3 (phased) | **Status**: 📋 PLANNED
+
+### Summary Table
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| TASK-1584 | Sync Orchestrator unit tests (40 tests) | P0 | 📋 PLANNED |
+| TASK-1585 | Regression tests for BUG-1211, 1212, 1335, 1453, 1184 (15 tests) | P0 | 📋 PLANNED |
+| ~~TASK-1586~~ | API contract tests — field names match DB columns (10 tests) | P0 | ✅ **DONE** |
+| TASK-1587 | Data integrity CRUD round-trip tests (15 tests) | P0 | 📋 PLANNED |
+| TASK-1588 | Task store CRUD + filtering tests (30 tests) | P0 | 📋 PLANNED |
+| ~~TASK-1589~~ | Integration tests: task→sync→DB flow (20 tests) | P0 | ✅ **DONE** |
+| TASK-1590 | E2E core CRUD workflow tests (15 tests) | P0 | 📋 PLANNED |
+| TASK-1591 | RLS enforcement tests (10 tests) | P0 | 📋 PLANNED |
+| TASK-1592 | Error recovery tests — server 500, malformed data (20 tests) | P0 | 📋 PLANNED |
+| TASK-1593 | Build safety — all imports resolve, no secrets (5 tests) | P0 | 📋 PLANNED |
+| ~~TASK-1594~~ | Timezone testing — due dates, DST, UTC vs local (15 tests) | P0 | ✅ **DONE** |
+| ~~TASK-1595~~ | Idempotency testing — double-click, duplicate sync (10 tests) | P0 | ✅ **DONE** |
+| TASK-1596 | Test infrastructure setup — factories, coverage, CI pipeline | P0 | 📋 PLANNED |
+| TASK-1597 | Timer store full state machine tests (30 tests) | P1 | 📋 PLANNED |
+| TASK-1598 | Auth flow tests — login, refresh, guest, logout (25 tests) | P1 | 📋 PLANNED |
+| TASK-1599 | Canvas composable tests (30 tests) | P1 | 📋 PLANNED |
+| TASK-1600 | Drag-and-drop tests — kanban, calendar, canvas, quick sort (30 tests) | P1 | 📋 PLANNED |
+| TASK-1601 | Notification delivery tests (20 tests) | P1 | 📋 PLANNED |
+| TASK-1602 | Service worker recovery tests (15 tests) | P1 | 📋 PLANNED |
+| TASK-1603 | Cross-platform tests — Tauri/mobile parity (20 tests) | P1 | 📋 PLANNED |
+| TASK-1604 | State management — all Pinia stores (35 tests) | P1 | 📋 PLANNED |
+| TASK-1605 | Backup/restore integrity tests (20 tests) | P1 | 📋 PLANNED |
+| TASK-1606 | i18n/RTL expansion tests (15 tests) | P1 | 📋 PLANNED |
+| TASK-1607 | Security tests — XSS vectors, secrets scan (15 tests) | P1 | 📋 PLANNED |
+| TASK-1608 | WebSocket resilience — realtime disconnect/reconnect (15 tests) | P1 | 📋 PLANNED |
+| TASK-1609 | Cache invalidation tests — SW, login/logout (10 tests) | P1 | 📋 PLANNED |
+| TASK-1610 | Database tests — migration safety, schema validation (15 tests) | P1 | 📋 PLANNED |
+| TASK-1611 | Component tests — base/common primitives (80 tests) | P2 | 📋 PLANNED |
+| TASK-1612 | Visual regression tests — Playwright screenshots (50 tests) | P2 | 📋 PLANNED |
+| TASK-1613 | Accessibility tests — axe-core WCAG (30 tests) | P2 | 📋 PLANNED |
+| TASK-1614 | Performance benchmarks — bundle, memory, FPS (25 tests) | P2 | 📋 PLANNED |
+| TASK-1615 | Snapshot tests — base component output stability (15 tests) | P3 | 📋 PLANNED |
+| TASK-1616 | Route/deep link tests — all routes resolve, 404 (10 tests) | P2 | 📋 PLANNED |
+| TASK-1617 | Configuration testing — setting combinations (15 tests) | P2 | 📋 PLANNED |
+| TASK-1618 | Mutation testing — validate test quality with Stryker (setup) | P3 | 📋 PLANNED |
+| TASK-1619 | Chaos/fault injection tests — random failures (15 tests) | P2 | 📋 PLANNED |
+| TASK-1620 | Localization testing — Hebrew completeness, missing keys (10 tests) | P2 | 📋 PLANNED |
+| TASK-1621 | Z-index stacking tests — dropdowns, popovers, modals appear above all content | P1 | 📋 PLANNED |
+| TASK-1622 | Dropdown positioning tests — CustomSelect, NDatePicker, context menus positioned correctly | P1 | 📋 PLANNED |
+| TASK-1623 | Modal overlay tests — BaseModal blocks interaction with background, focus trap works | P1 | 📋 PLANNED |
+| TASK-1624 | Popover/tooltip positioning — BasePopover doesn't clip at viewport edges | P2 | 📋 PLANNED |
+| TASK-1625 | Sidebar vs main content overlap — sidebar elements don't bleed into main content | P1 | 📋 PLANNED |
+| TASK-1626 | Inbox panel z-index — all Inbox dropdowns/filters appear above canvas/sidebar | P1 | 📋 PLANNED |
+| TASK-1627 | Context menu positioning — right-click menus stay within viewport bounds | P2 | 📋 PLANNED |
+| TASK-1628 | View transition tests — switching between 8 views has no visual glitches | P2 | 📋 PLANNED |
+| TASK-1629 | Responsive layout tests — sidebar collapse, mobile viewport, all breakpoints | P2 | 📋 PLANNED |
+| TASK-1630 | Scroll containment tests — scrollable areas don't leak scroll to parent | P2 | 📋 PLANNED |
+| TASK-1631 | Glass morphism consistency — all components use design tokens, no hardcoded colors | P2 | 📋 PLANNED |
+| TASK-1632 | Button pattern compliance — no solid fill buttons, all use glass morphism | P2 | 📋 PLANNED |
+| TASK-1633 | Overflow text handling — long titles/descriptions truncate with OverflowTooltip | P2 | 📋 PLANNED |
+| TASK-1634 | Empty state rendering — each view shows correct empty state, no broken UI | P2 | 📋 PLANNED |
+| TASK-1635 | Loading state rendering — skeleton/spinner shows during data fetch, no flash of empty | P2 | 📋 PLANNED |
+| TASK-1636 | Dark theme consistency — no white flashes, all surfaces use theme tokens | P2 | 📋 PLANNED |
+| TASK-1637 | RTL layout visual tests — all views render correctly in Hebrew RTL mode | P1 | 📋 PLANNED |
+| TASK-1638 | Canvas node rendering — task nodes, group nodes render all fields correctly | P1 | 📋 PLANNED |
+| TASK-1639 | Timer UI states — all timer states (idle, running, paused, complete, break) render correctly | P1 | 📋 PLANNED |
+| TASK-1640 | Naive UI override consistency — all NDatePicker, NSelect overrides in global-overrides.css work | P2 | 📋 PLANNED |
+
+---
+
+### Phase 1: Stop the Bleeding — P0 (TASK-1584 to TASK-1596)
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| TASK-1584 | Sync Orchestrator unit tests (40 tests) — extract pure functions, test queue/retry/conflict | P0 | 📋 PLANNED |
+| TASK-1585 | Regression tests for BUG-1211, 1212, 1335, 1453, 1184 (15 tests) | P0 | 📋 PLANNED |
+| ~~TASK-1586~~ | API contract tests — field names match DB columns (10 tests) | P0 | ✅ **DONE** |
+| TASK-1587 | Data integrity CRUD round-trip tests (15 tests) | P0 | 📋 PLANNED |
+| TASK-1588 | Task store CRUD + filtering tests (30 tests) | P0 | 📋 PLANNED |
+| ~~TASK-1589~~ | Integration tests: task→sync→DB flow (20 tests) | P0 | ✅ **DONE** |
+| TASK-1590 | E2E core CRUD workflow tests (15 tests) | P0 | 📋 PLANNED |
+| TASK-1591 | RLS enforcement tests (10 tests) | P0 | 📋 PLANNED |
+| TASK-1592 | Error recovery tests — server 500, malformed data (20 tests) | P0 | 📋 PLANNED |
+| TASK-1593 | Build safety — all imports resolve, no secrets (5 tests) | P0 | 📋 PLANNED |
+| ~~TASK-1594~~ | Timezone testing — due dates, DST, UTC vs local (15 tests) | P0 | ✅ **DONE** |
+| ~~TASK-1595~~ | Idempotency testing — double-click, duplicate sync (10 tests) | P0 | ✅ **DONE** |
+| TASK-1596 | Test infrastructure setup — factories, coverage, CI pipeline | P0 | 📋 PLANNED |
+
+#### TASK-1584: Sync Orchestrator Unit Tests (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: Cover the most bug-prone file in the codebase — `useSyncOrchestrator.ts`. Extract pure functions (queue management, conflict resolution, retry classification) and test them in isolation. BUG-1211, BUG-1212, BUG-1562 all originated here with zero test coverage at the time.
+
+**Test areas**: enqueue/dequeue lifecycle, coalescer merging multiple updates, retryStrategy classifications (permanent/transient/auth/conflict), LWW conflict resolution, tombstone check before CREATE, camelCase→snake_case mapping.
+
+**Files**: `tests/unit/sync/useSyncOrchestrator.test.ts`, `tests/unit/sync/retryStrategy.test.ts`, `tests/unit/sync/operationCoalescer.test.ts`
+
+---
+
+#### TASK-1585: Bug Regression Tests (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: Lock in fixes for the 5 worst historical bugs so they can never silently regress.
+
+**Bugs covered**:
+- BUG-1211: `_soft_deleted` vs `is_deleted` column name mismatch causes hard DELETE fallback
+- BUG-1212: sync queue CREATE retry hits duplicate key (upsert fix)
+- BUG-1335: vuedraggable bare boolean attrs coerced to `""` breaks forceFallback
+- BUG-1453: `preventDefault()` in passive `touchstart` kills Android Chrome touch sequence
+- BUG-1184: uncommitted imported file causes CI fail → stale VPS → chunk load 404
+
+**Files**: `tests/unit/regression/bug-1211.test.ts`, `tests/unit/regression/bug-1212.test.ts`, `tests/unit/tauri-parity/drag-and-drop.test.ts`
+
+---
+
+#### ~~TASK-1586~~: API Contract Tests (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE
+
+**Goal**: Ensure `toSupabaseTask()` and `fromSupabaseTask()` field names always match actual DB column names. The root cause of BUG-1211 and BUG-1562 was a field name mismatch with zero automated detection.
+
+**Approach**: Static source analysis of mapper and sync orchestrator. Verifies DB column names, camelCase→snake_case mapping consistency, `is_deleted`/`deleted_at` correct usage, JSONB/array field preservation.
+
+**Files**: `tests/contract/api-contract.test.ts` (10 tests — all passing)
+
+---
+
+#### TASK-1587: Data Integrity CRUD Round-Trip Tests (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: Create a task, read it back, update it, soft-delete it, verify tombstone, verify it no longer appears in fetchTasks. Run against local Supabase.
+
+**Covers**: create→read→update→soft-delete→tombstone chain; `is_deleted` flag persists across fetch; deleted task excluded from `fetchTasks()` result; tombstone row exists with correct `entity_id`.
+
+**Files**: `tests/integration/crud-round-trip.test.ts`
+
+---
+
+#### TASK-1588: Task Store CRUD and Filtering Tests (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: Comprehensive Pinia task store tests covering the full state machine: create, update, soft-delete, undo, filter by status/priority/project/smart view/date, `hideDoneTasks` per view, `_rawTasks` vs `filteredTasks` distinction.
+
+**Covers**: `today` smart view returns tasks due today, `overdue` returns past-due non-done tasks, `filteredTasks` excludes done when `hideBoardDoneTasks=true`, `_rawTasks` includes all tasks regardless of filters.
+
+**Files**: `tests/unit/stores/tasks.test.ts` (extend existing), `tests/unit/stores/taskFiltering.test.ts`
+
+---
+
+#### ~~TASK-1589~~: Integration Tests: Task→Sync→DB Flow (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE
+
+**Goal**: Test the full write path: `taskStore.updateTask()` → sync queue enqueue → queue processing → Supabase upsert → realtime echo → store dedup. Verify no ghost duplication, no data loss on retry.
+
+**Covers**: optimistic update appears immediately, queue processes within 5s, server echo does not create duplicate, rollback fires on permanent failure, `pendingWrites` guard expires after `PENDING_WRITE_TIMEOUT_MS`.
+
+**Files**: `tests/integration/task-sync-flow.test.ts`
+
+---
+
+#### TASK-1590: E2E Core CRUD Workflow Tests (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: Playwright E2E tests using the seeded test user (TASK-1457 infrastructure). Cover the most critical user journeys: create task, edit task, mark done, delete task, verify persistence after page reload.
+
+**Covers**: task appears in board after create, edited title persists after reload, done task hidden when `hideDone=true`, deleted task absent after reload, undo (Ctrl+Z) restores task.
+
+**Files**: `tests/e2e/task-crud.spec.ts`
+
+---
+
+#### TASK-1591: RLS Enforcement Tests (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: Verify Row Level Security policies block cross-user data access. Test that user A cannot read, write, or delete user B's tasks, projects, or groups — even with a valid JWT.
+
+**Covers**: SELECT, INSERT, UPDATE, DELETE all blocked for foreign user_id; tombstones only accessible to owning user; workspace_members isolation (when workspace feature ships).
+
+**Files**: `tests/integration/rls-enforcement.test.ts`
+
+---
+
+#### TASK-1592: Error Recovery Tests (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the app recovers gracefully from server errors, network drops, and malformed responses instead of silently corrupting state or hanging.
+
+**Covers**: 500 during sync → operation retried with backoff; 401 during sync → token refresh attempted before retry; malformed JSON response → error classified, not crash; offline → cached data shown, queue preserved; reconnect → queue drains automatically.
+
+**Files**: `tests/unit/sync/errorRecovery.test.ts`, `tests/integration/offline-recovery.test.ts`
+
+---
+
+#### TASK-1593: Build Safety Tests (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: CI gates that catch the class of errors from BUG-1184 (uncommitted imported file causes chunk load failure) and the secrets leak class (no VITE_ key exposed in build output).
+
+**Covers**: All imports in `src/` resolve to existing files (no dangling imports), build output `dist/` contains no `VITE_` secret patterns, no `example.com` placeholder strings baked into bundle, TypeScript compiles with zero errors.
+
+**Files**: `tests/unit/build-safety/imports.test.ts`, `scripts/check-vite-secrets.cjs` (extend existing)
+
+---
+
+#### ~~TASK-1594~~: Timezone Testing (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE
+
+**Goal**: Prevent regressions of BUG-1286 (UTC date parsing shows 2:00 AM) and other timezone-related display bugs.
+
+**Covers**: `YYYY-MM-DD` date strings parsed as local date not UTC midnight, `formatDateKey()` local-vs-UTC correctness, `moveTaskToSmartGroup('today'/'tomorrow')` uses local dates, DST spring-forward/fall-back arithmetic, ISO datetime round-trips through mappers, calendar view date grouping.
+
+**Files**: `tests/unit/timezone.test.ts` (15 tests — all passing)
+
+---
+
+#### ~~TASK-1595~~: Idempotency Testing (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE
+
+**Goal**: Verify that repeated operations produce the same result as a single operation — preventing the double-click XP exploit (BUG-1515) and duplicate task creation.
+
+**Covers**: Double-clicking "Mark Done" awards XP exactly once, rapid consecutive `updateTask()` calls coalesce to one DB write, sync queue CREATE upsert on retry does not create duplicate, `createTask()` with same ID twice is idempotent.
+
+**Files**: `tests/unit/sync/idempotency.test.ts`
+
+---
+
+#### TASK-1596: Test Infrastructure Setup (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: Foundation that makes all other test tasks faster and more reliable: factory functions for test data, coverage thresholds enforced in CI, test utilities for Supabase mocking.
+
+**Deliverables**:
+- `tests/factories/task.ts` — `createTaskFactory()` with sensible defaults and override support
+- `tests/factories/project.ts`, `tests/factories/group.ts`
+- `tests/helpers/supabaseMock.ts` — reusable Supabase client mock with spy capabilities
+- `vitest.config.ts` — coverage thresholds: statements 60%, branches 50%, lines 60%
+- CI step in `.github/workflows/ci.yml` to fail on coverage drop
+
+**Files**: `tests/factories/`, `tests/helpers/`, `vitest.config.ts`
+
+---
+
+### Phase 2: Stabilize the Core — P1 (TASK-1597 to TASK-1610)
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| TASK-1597 | Timer store full state machine tests (30 tests) | P1 | 📋 PLANNED |
+| TASK-1598 | Auth flow tests — login, refresh, guest, logout (25 tests) | P1 | 📋 PLANNED |
+| TASK-1599 | Canvas composable tests (30 tests) | P1 | 📋 PLANNED |
+| TASK-1600 | Drag-and-drop tests — kanban, calendar, canvas, quick sort (30 tests) | P1 | 📋 PLANNED |
+| TASK-1601 | Notification delivery tests (20 tests) | P1 | 📋 PLANNED |
+| TASK-1602 | Service worker recovery tests (15 tests) | P1 | 📋 PLANNED |
+| TASK-1603 | Cross-platform tests — Tauri/mobile parity (20 tests) | P1 | 📋 PLANNED |
+| TASK-1604 | State management — all Pinia stores (35 tests) | P1 | 📋 PLANNED |
+| TASK-1605 | Backup/restore integrity tests (20 tests) | P1 | 📋 PLANNED |
+| TASK-1606 | i18n/RTL expansion tests (15 tests) | P1 | 📋 PLANNED |
+| TASK-1607 | Security tests — XSS vectors, secrets scan (15 tests) | P1 | 📋 PLANNED |
+| TASK-1608 | WebSocket resilience — realtime disconnect/reconnect (15 tests) | P1 | 📋 PLANNED |
+| TASK-1609 | Cache invalidation tests — SW, login/logout (10 tests) | P1 | 📋 PLANNED |
+| TASK-1610 | Database tests — migration safety, schema validation (15 tests) | P1 | 📋 PLANNED |
+
+#### TASK-1597: Timer Store State Machine Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Full coverage of the timer state machine — the source of BUG-1583 (race condition) and BUG-1511 (dual leadership). Test all valid and invalid state transitions.
+
+**Covers**: idle→running→paused→running→completed transitions, `isStarting` guard blocks follower poll during start, atomic leadership claim grants only one leader, heartbeat demotes self when lease lost, expired session recovery calls `onCountdownComplete()`.
+
+**Files**: `tests/unit/stores/timer.test.ts`
+
+---
+
+#### TASK-1598: Auth Flow Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Test all auth paths including the edge cases that have caused production incidents (BUG-1514: offline token expiry, BUG-1355: signOut failure, BUG-1103: two-tab sign-in conflict).
+
+**Covers**: successful login populates authStore, token refresh retried 3× with backoff on failure, signOut clears IndexedDB read cache, guest mode stores tasks in localStorage, guest→auth migration transfers tasks.
+
+**Files**: `tests/unit/stores/auth.test.ts`, `tests/integration/auth-flows.test.ts`
+
+---
+
+#### TASK-1599: Canvas Composable Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Test the canvas geometry invariants: only drag handlers may write positions, sync is read-only, group containment checks use correct padding.
+
+**Covers**: `useCanvasSync` never calls `updateTask()`/`updateGroup()`, drag handler writes position on mouseup only, hysteresis padding prevents flip-flopping at group boundaries, `dynamicNodeExtent` includes group bounds, `positionVersion` increments on drag.
+
+**Files**: `tests/unit/composables/canvas/useCanvasInteractions.test.ts`, `tests/unit/composables/canvas/useCanvasSync.test.ts`
+
+---
+
+#### TASK-1600: Drag-and-Drop Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Cover the four drag-and-drop implementations that have each had separate production bugs.
+
+**Covers**: Kanban `forceFallback` must be `:force-fallback="true"` not bare attribute (BUG-1335), canvas `dragData` singleton read before `dataTransfer.getData()` (WebKitGTK fallback), Quick Sort touch `touchstart` must be passive with no `preventDefault()` (BUG-1453), calendar drag deferred to mouseup (TASK-1521).
+
+**Files**: `tests/unit/composables/useDragAndDrop.test.ts`, `tests/unit/tauri-parity/drag-data-singleton.test.ts`
+
+---
+
+#### TASK-1601: Notification Delivery Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the notification pipeline from trigger event → `deliverNotification()` → browser Notification API, including the retry and dedup logic added in BUG-1302.
+
+**Covers**: milestone fires at correct time, late tolerance window (10 min) catches skipped ticks, singleton guard restarts interval if it dies, dedup prevents double-fire within same minute, `notificationDelivery.ts` returns `false` on permission denied.
+
+**Files**: `tests/unit/composables/useTimeBlockNotifications.test.ts`, `tests/unit/utils/notificationDelivery.test.ts`
+
+---
+
+#### TASK-1602: Service Worker Recovery Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the SW auto-recovery logic from BUG-1184: stale SW with old chunk hashes triggers unregister + reload; reload happens at most once per route per session.
+
+**Covers**: `router.onError` triggers recovery on chunk load failure, stale SW unregistered before reload, reload loop guard (`sessionStorage` flag) prevents infinite reload, offline SW serves cached assets correctly.
+
+**Files**: `tests/unit/sw/recovery.test.ts`
+
+---
+
+#### TASK-1603: Cross-Platform Parity Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Extend TASK-1494 (Tauri Parity Testing Suite) with unit-level checks for all `isTauri()` code paths and WebKitGTK-specific workarounds.
+
+**Covers**: CSS scanner flags `overflow: clip` without `/* WebKitGTK-safe */` annotation, `dragData` singleton used when `isTauri()`, deep-clone pattern `JSON.parse(JSON.stringify(toRaw(obj)))` used for IndexedDB writes in Tauri, `:force-fallback="true"` binding on all vuedraggable instances.
+
+**Files**: `tests/unit/tauri-parity/` (extend existing suite)
+
+---
+
+#### TASK-1604: Pinia Store Coverage (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Baseline unit test coverage for all 14 top-level Pinia stores that currently have gaps: `notifications.ts`, `projects.ts`, `ui.ts`, `settings.ts`, `syncStatus.ts`, `workspace.ts`, and the 4 task sub-stores.
+
+**Covers**: Initial state matches expected defaults, actions mutate state correctly, getters derive correct computed values, cross-store watchers fire on expected mutations.
+
+**Files**: `tests/unit/stores/` (new files per store)
+
+---
+
+#### TASK-1605: Backup/Restore Integrity Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the 3-layer backup system (Smart Layers 1-3) preserves and restores data without corruption, and that the write-side guard in `cacheTasks()` refuses arrays over 1,000 tasks (BUG-1582 fix).
+
+**Covers**: backup round-trip preserves all task fields, restore replaces store state correctly, `cacheTasks()` refuses write when `tasks.length > 1000`, self-healing guard in `useAppInitialization.ts` clears corrupt cache (>1000 cached tasks) on startup.
+
+**Files**: `tests/unit/composables/backup/useBackupSystem.test.ts` (extend existing)
+
+---
+
+#### TASK-1606: i18n and RTL Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Prevent regressions of BUG-1359 (vue-i18n version mismatch), BUG-1218 (RTL missing in calendar), and BUG-1374 (Hebrew response on English input).
+
+**Covers**: All `$t()` keys resolve without error in both `en` and `he` locales, `dir="auto"` present on all text inputs that accept Hebrew (verify via DOM attribute), `detectLanguage()` correctly identifies Hebrew Unicode range, plugin/runtime version compatibility check.
+
+**Files**: `tests/unit/i18n/translations.test.ts`, `tests/unit/i18n/rtl.test.ts`
+
+---
+
+#### TASK-1607: Security Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Automated gates for the security issues fixed in TASK-1249 codebase hygiene audit.
+
+**Covers**: `check-vite-secrets.cjs` allowlist blocks new VITE_ secrets, Edge Functions validate Supabase JWT before proxying, no `window.__flowstate_tauri_debug` exposed in production build, CSP header present in Caddyfile, no hardcoded production API keys in source.
+
+**Files**: `tests/unit/security/secrets-scan.test.ts`, `tests/unit/security/csp.test.ts`
+
+---
+
+#### TASK-1608: WebSocket Resilience Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify Supabase Realtime subscription survives disconnect/reconnect cycles without losing events or creating duplicate subscriptions.
+
+**Covers**: channel teardown on disconnect, reconnect re-subscribes with same filter, workspace switch tears down old channel before creating new one (TASK-1548 pattern), `isSwitchingWorkspace` flag pauses queue processing during switch.
+
+**Files**: `tests/unit/composables/useSupabaseRealtime.test.ts`
+
+---
+
+#### TASK-1609: Cache Invalidation Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the read cache is cleared at all the right lifecycle moments to prevent cross-user data leakage.
+
+**Covers**: `auth.ts` clears IndexedDB read cache on signOut, new login does not show previous user's cached tasks, stale SW unregistered on chunk load error, Tauri Store cleared on workspace switch.
+
+**Files**: `tests/integration/cache-invalidation.test.ts`
+
+---
+
+#### TASK-1610: Database Migration Safety Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify migrations are idempotent and do not break existing data shapes that the TypeScript mappers expect.
+
+**Covers**: All 24+ DB tables exist and have expected columns, RLS policies present on all tables, migration files are sequential with no gaps in version numbers, `toSupabaseTask()` output satisfies DB schema constraints (NOT NULL, type constraints).
+
+**Files**: `tests/integration/db-schema.test.ts`
+
+---
+
+### Phase 3: Polish and Confidence — P2/P3 (TASK-1611 to TASK-1620)
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| TASK-1611 | Component tests — base/common primitives (80 tests) | P2 | 📋 PLANNED |
+| TASK-1612 | Visual regression tests — Playwright screenshots (50 tests) | P2 | 📋 PLANNED |
+| TASK-1613 | Accessibility tests — axe-core WCAG (30 tests) | P2 | 📋 PLANNED |
+| TASK-1614 | Performance benchmarks — bundle, memory, FPS (25 tests) | P2 | 📋 PLANNED |
+| TASK-1615 | Snapshot tests — base component output stability (15 tests) | P3 | 📋 PLANNED |
+| TASK-1616 | Route/deep link tests — all routes resolve, 404 (10 tests) | P2 | 📋 PLANNED |
+| TASK-1617 | Configuration testing — setting combinations (15 tests) | P2 | 📋 PLANNED |
+| TASK-1618 | Mutation testing — validate test quality with Stryker (setup) | P3 | 📋 PLANNED |
+| TASK-1619 | Chaos/fault injection tests — random failures (15 tests) | P2 | 📋 PLANNED |
+| TASK-1620 | Localization testing — Hebrew completeness, missing keys (10 tests) | P2 | 📋 PLANNED |
+
+#### TASK-1611: Component Tests — Base/Common Primitives (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Unit test all 20+ base components (`src/components/base/`) and key common components to catch prop contract regressions before they reach production.
+
+**Covers**: `BaseButton` renders all 5 variants, `BaseModal` emits close on Escape, `CustomSelect` emits `update:modelValue` on selection, `BaseInput` applies `dir="auto"` for RTL, `ConfirmationModal` shows above SearchModal (`--z-toast` > `--z-modal`).
+
+**Files**: `tests/unit/components/base/` (one file per component)
+
+---
+
+#### TASK-1612: Visual Regression Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Playwright screenshot comparisons for the most visually sensitive surfaces to catch glass morphism regressions, design token violations, and layout breakage.
+
+**Covers**: Board view desktop, Canvas view with nodes, Quick Sort card (desktop + mobile viewport), Settings modal, AppHeader with timer active, dark mode vs light mode parity.
+
+**Files**: `tests/e2e/visual-regression/` (one spec per view)
+
+---
+
+#### TASK-1613: Accessibility Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Automated WCAG 2.1 AA compliance scanning via `axe-core` (via `@axe-core/playwright`) on all major views.
+
+**Covers**: No critical/serious axe violations on Board, Calendar, Canvas, Settings, Quick Sort, and modal surfaces. Keyboard navigation reaches all interactive elements. Focus visible on all focusable elements.
+
+**Files**: `tests/e2e/accessibility/` (one spec per major view)
+
+---
+
+#### TASK-1614: Performance Benchmarks (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Establish performance baselines and fail CI when key metrics regress beyond thresholds.
+
+**Covers**: Production bundle size <2MB (gzipped), initial task list render <100ms for 500 tasks (virtualization check), canvas with 200 nodes renders at >30 FPS, IndexedDB cache write <50ms for 500 tasks.
+
+**Files**: `tests/benchmarks/bundle-size.test.ts`, `tests/benchmarks/render-performance.test.ts`
+
+---
+
+#### TASK-1615: Snapshot Tests (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Goal**: Vue component snapshot tests for base primitives to catch unintended structural changes.
+
+**Covers**: `BaseButton`, `BaseBadge`, `BaseCard`, `CustomSelect`, `BaseModal` HTML output snapshots. Update on intentional changes, fail on accidental regressions.
+
+**Files**: `tests/unit/components/snapshots/`
+
+---
+
+#### TASK-1616: Route and Deep Link Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Verify all 15+ routes in `src/router/index.ts` resolve to the correct component and that deep links (e.g., `/focus/:taskId`) load with the correct task pre-selected.
+
+**Covers**: All named routes resolve without 404, `/invite/:token` route exists for workspace invites, unknown route shows 404 view, `/morning` overlay does not replace route, Tauri deep links handled.
+
+**Files**: `tests/unit/router/routes.test.ts`, `tests/e2e/deep-links.spec.ts`
+
+---
+
+#### TASK-1617: Configuration Testing (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Test that settings combinations do not produce contradictory or broken states.
+
+**Covers**: `hideBoardDoneTasks=true` + `hideDone=false` on mobile resolves without conflict, `locale=he` + `theme=dark` loads correctly, AI disabled hides all AI UI without errors, Tauri-only features gracefully degrade in web build.
+
+**Files**: `tests/unit/stores/settings-combinations.test.ts`
+
+---
+
+#### TASK-1618: Mutation Testing Setup (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Goal**: Install and configure Stryker mutation testing to measure whether existing tests actually catch bugs (not just achieve line coverage). Run against the sync orchestrator and task store as a pilot.
+
+**Deliverables**: `stryker.config.mjs` configured for Vitest, baseline mutation score for `useSyncOrchestrator.ts` and `taskOperations.ts`, CI optional step (does not block merge, reports score).
+
+**Files**: `stryker.config.mjs`, `scripts/run-mutation-tests.sh`
+
+---
+
+#### TASK-1619: Chaos and Fault Injection Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Simulate random failures at the network and storage layer to verify the app degrades gracefully without corrupting user data.
+
+**Covers**: Random 503s during sync queue processing → queue retries without data loss, IndexedDB write failure → in-memory state preserved, Supabase Realtime disconnect mid-operation → no phantom duplicate, token expiry during multi-step operation → partial operation rolled back or completed on retry.
+
+**Files**: `tests/integration/chaos/fault-injection.test.ts`
+
+---
+
+#### TASK-1620: Localization Testing (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Verify Hebrew translation completeness and RTL layout correctness across the full app surface.
+
+**Covers**: All English translation keys exist in `he.json` (no missing keys), no untranslated English strings visible in Hebrew mode, RTL layout does not clip content or misalign icons in sidebar/header/modals, `dir="auto"` detects Hebrew input correctly in all text fields.
+
+**Files**: `tests/unit/i18n/completeness.test.ts`, `tests/e2e/rtl-layout.spec.ts`
+
+---
+
+### Phase 4: UI Rendering & Visual Bug Tests — P1/P2 (TASK-1621 to TASK-1640)
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| TASK-1621 | Z-index stacking tests — dropdowns, popovers, modals appear above all content | P1 | 📋 PLANNED |
+| TASK-1622 | Dropdown positioning tests — CustomSelect, NDatePicker, context menus positioned correctly | P1 | 📋 PLANNED |
+| TASK-1623 | Modal overlay tests — BaseModal blocks interaction with background, focus trap works | P1 | 📋 PLANNED |
+| TASK-1624 | Popover/tooltip positioning — BasePopover doesn't clip at viewport edges | P2 | 📋 PLANNED |
+| TASK-1625 | Sidebar vs main content overlap — sidebar elements don't bleed into main content | P1 | 📋 PLANNED |
+| TASK-1626 | Inbox panel z-index — all Inbox dropdowns/filters appear above canvas/sidebar | P1 | 📋 PLANNED |
+| TASK-1627 | Context menu positioning — right-click menus stay within viewport bounds | P2 | 📋 PLANNED |
+| TASK-1628 | View transition tests — switching between 8 views has no visual glitches | P2 | 📋 PLANNED |
+| TASK-1629 | Responsive layout tests — sidebar collapse, mobile viewport, all breakpoints | P2 | 📋 PLANNED |
+| TASK-1630 | Scroll containment tests — scrollable areas don't leak scroll to parent | P2 | 📋 PLANNED |
+| TASK-1631 | Glass morphism consistency — all components use design tokens, no hardcoded colors | P2 | 📋 PLANNED |
+| TASK-1632 | Button pattern compliance — no solid fill buttons, all use glass morphism | P2 | 📋 PLANNED |
+| TASK-1633 | Overflow text handling — long titles/descriptions truncate with OverflowTooltip | P2 | 📋 PLANNED |
+| TASK-1634 | Empty state rendering — each view shows correct empty state, no broken UI | P2 | 📋 PLANNED |
+| TASK-1635 | Loading state rendering — skeleton/spinner shows during data fetch, no flash of empty | P2 | 📋 PLANNED |
+| TASK-1636 | Dark theme consistency — no white flashes, all surfaces use theme tokens | P2 | 📋 PLANNED |
+| TASK-1637 | RTL layout visual tests — all views render correctly in Hebrew RTL mode | P1 | 📋 PLANNED |
+| TASK-1638 | Canvas node rendering — task nodes, group nodes render all fields correctly | P1 | 📋 PLANNED |
+| TASK-1639 | Timer UI states — all timer states (idle, running, paused, complete, break) render correctly | P1 | 📋 PLANNED |
+| TASK-1640 | Naive UI override consistency — all NDatePicker, NSelect overrides in global-overrides.css work | P2 | 📋 PLANNED |
+
+#### TASK-1621: Z-Index Stacking Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Assert that every floating layer renders above the content below it using the project's z-index token stack (`--z-dropdown`, `--z-modal`, `--z-toast`).
+
+**Covers**: `CustomSelect` dropdown above Board columns, `BaseModal` above sidebar, toast above modal, `ContextMenu` above canvas nodes, `BasePopover` above all surface layers.
+
+**Files**: `tests/unit/components/z-index-stacking.test.ts`, `tests/e2e/visual-rendering/z-index.spec.ts`
+
+---
+
+#### TASK-1622: Dropdown Positioning Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify that all dropdown-style overlays open in the correct direction and do not clip at viewport edges.
+
+**Covers**: `CustomSelect` opens downward by default, flips upward when near bottom viewport, `NDatePicker` popover does not overflow horizontally on mobile viewport, `ContextMenu` repositions when near right/bottom edge.
+
+**Files**: `tests/e2e/visual-rendering/dropdown-positioning.spec.ts`
+
+---
+
+#### TASK-1623: Modal Overlay Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Confirm `BaseModal` blocks background interaction and traps keyboard focus for every modal size variant.
+
+**Covers**: Click on backdrop closes modal (when `closeable`), Tab key cycles only within modal, Escape emits close, background scroll locked while modal open, stacked modals (`ConfirmationModal` over `BaseModal`) render in correct order.
+
+**Files**: `tests/unit/components/base/BaseModal.test.ts`, `tests/e2e/visual-rendering/modal-overlay.spec.ts`
+
+---
+
+#### TASK-1624: Popover/Tooltip Positioning Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Ensure `BasePopover` and `OverflowTooltip` never clip outside the visible viewport regardless of trigger position.
+
+**Covers**: Tooltip near top edge shifts downward, tooltip near right edge shifts left, `BasePopover` menu variant stays within 8px of viewport edge, tooltip does not cause horizontal scroll.
+
+**Files**: `tests/e2e/visual-rendering/popover-positioning.spec.ts`
+
+---
+
+#### TASK-1625: Sidebar vs Main Content Overlap Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify no sidebar UI element bleeds into or occludes the main content area at any sidebar state.
+
+**Covers**: Sidebar expanded — main content left-margin matches sidebar width, sidebar collapsed — no residual overlap, sidebar resize handle doesn't leave a phantom hit area over content, Settings panel doesn't overlap Board columns.
+
+**Files**: `tests/e2e/visual-rendering/sidebar-layout.spec.ts`
+
+---
+
+#### TASK-1626: Inbox Panel Z-Index Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Assert all interactive overlays inside the Inbox panel appear above the canvas and sidebar layers.
+
+**Covers**: Inbox filter `CustomSelect` dropdown above canvas nodes, date-range picker above canvas, Inbox panel itself above sidebar when open as overlay, unified inbox header actions above board columns.
+
+**Files**: `tests/e2e/visual-rendering/inbox-z-index.spec.ts`
+
+---
+
+#### TASK-1627: Context Menu Positioning Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Right-click context menus always stay fully within the viewport regardless of where the right-click occurs.
+
+**Covers**: Right-click near bottom-right corner repositions up and left, right-click on canvas node near edge stays in viewport, `TaskContextMenu` minimum 8px from any viewport edge.
+
+**Files**: `tests/e2e/visual-rendering/context-menu-positioning.spec.ts`
+
+---
+
+#### TASK-1628: View Transition Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Switching between all 8 views produces no visual glitches — no stuck overlays, orphaned portals, or layout flash.
+
+**Covers**: Board → Canvas → Calendar → Inbox → AllTasks → Performance → AIChat → Morning round-trip, no stale modal/dropdown persists after navigation, scroll position resets correctly per view.
+
+**Files**: `tests/e2e/visual-rendering/view-transitions.spec.ts`
+
+---
+
+#### TASK-1629: Responsive Layout Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the app renders correctly at the three canonical breakpoints and handles sidebar collapse gracefully.
+
+**Covers**: 1280px desktop (sidebar expanded), 768px tablet (sidebar auto-collapsed), 375px mobile (sidebar hidden, hamburger visible), no horizontal overflow at any breakpoint, QuickCapture button visible on all viewports.
+
+**Files**: `tests/e2e/visual-rendering/responsive-layout.spec.ts`
+
+---
+
+#### TASK-1630: Scroll Containment Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Scrollable regions do not propagate scroll to their ancestors (no scroll bleed).
+
+**Covers**: Board column list scrolls without scrolling the page, Canvas panning does not trigger window scroll, Settings modal content scrolls independently, Inbox task list scroll stays within panel, Quick Sort card stack does not scroll parent.
+
+**Files**: `tests/e2e/visual-rendering/scroll-containment.spec.ts`
+
+---
+
+#### TASK-1631: Glass Morphism Consistency Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Audit all components for design token compliance — no hardcoded `rgba`, hex, or pixel values for colors/spacing.
+
+**Covers**: Static analysis scan of `src/components/` for bare `rgba(` / `#[0-9a-f]{3,6}` in `<style>` blocks, runtime check that `--glass-bg`, `--overlay-component-bg`, `--space-*`, `--radius-*` tokens resolve to non-empty values.
+
+**Files**: `tests/unit/design-system/token-compliance.test.ts`
+
+---
+
+#### TASK-1632: Button Pattern Compliance Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Enforce the glass morphism button rule — no button may use `var(--brand-primary)` as its background.
+
+**Covers**: Static AST scan of all `.vue` files for `background.*--brand-primary` or `background.*#4ECDC4` on button elements, `BaseButton` all 5 variants render with `backdrop-filter` applied, no `background: var(--brand-primary)` rule present on any `<button>` or `.btn-*` selector.
+
+**Files**: `tests/unit/design-system/button-compliance.test.ts`
+
+---
+
+#### TASK-1633: Overflow Text Handling Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Long task titles and descriptions truncate gracefully and show `OverflowTooltip` rather than breaking layouts.
+
+**Covers**: 200-char task title in Board card truncates at one line with tooltip, 200-char title in Canvas node truncates without overflowing node bounds, Inbox row title truncates correctly, `OverflowTooltip` only activates when text actually overflows (not always).
+
+**Files**: `tests/e2e/visual-rendering/overflow-text.spec.ts`
+
+---
+
+#### TASK-1634: Empty State Rendering Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Every view shows a correct, unbroken empty state when no data is present.
+
+**Covers**: Board with 0 tasks shows empty-state illustration not blank columns, Canvas with 0 nodes shows placeholder, Inbox with 0 items shows empty message, AllTasks with filters that match nothing shows "no results" message, Performance view with no sessions shows zero-state gracefully.
+
+**Files**: `tests/e2e/visual-rendering/empty-states.spec.ts`
+
+---
+
+#### TASK-1635: Loading State Rendering Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Loading skeletons/spinners appear during data fetch and disappear cleanly once data arrives — no flash of empty content.
+
+**Covers**: Board renders skeleton cards before tasks load, spinner visible on initial app load before auth resolves, no blank flicker between skeleton and real content, Tauri app shows skeleton during startup (not blank white screen).
+
+**Files**: `tests/e2e/visual-rendering/loading-states.spec.ts`
+
+---
+
+#### TASK-1636: Dark Theme Consistency Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: No surface flashes white or uses an incorrect light-mode color in dark theme.
+
+**Covers**: All 8 views have dark backgrounds, Naive UI components (`NDatePicker`, `NSelect`) use overridden dark theme (via `global-overrides.css`), modal backdrop is dark-tinted not white, no `background: white` or `color: black` hardcoded in any component `<style>`.
+
+**Files**: `tests/e2e/visual-rendering/dark-theme.spec.ts`, `tests/unit/design-system/no-hardcoded-light-colors.test.ts`
+
+---
+
+#### TASK-1637: RTL Layout Visual Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: All views render correctly in Hebrew RTL mode with no clipped content, misaligned icons, or LTR-only layouts.
+
+**Covers**: Sidebar mirrors correctly in RTL, Board column drag handles appear on correct side, AppHeader items reverse order, BaseInput prefix/suffix slots swap, task edit modal fields align right, timer controls mirror correctly. Builds on TASK-1620 (i18n completeness) and BUG-1568 (Hebrew RTL fix).
+
+**Files**: `tests/e2e/rtl-visual/` (one spec per major view)
+
+---
+
+#### TASK-1638: Canvas Node Rendering Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Task nodes and group nodes on the Canvas render all data fields without overflow, clipping, or z-order issues.
+
+**Covers**: Task node shows title, status badge, priority indicator, due date, subtask count — all visible without overlap, group node label renders inside bounds, timer-active amber glow applies to correct node only, nodes with 200-char titles truncate without breaking node dimensions.
+
+**Files**: `tests/e2e/canvas/node-rendering.spec.ts`
+
+---
+
+#### TASK-1639: Timer UI State Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: All 5 timer states render the correct UI — correct button icons, colors, countdown display, and active-task highlight.
+
+**Covers**: Idle state shows start button, running state shows pause + stop + elapsed time, paused state shows resume + stop, break state shows skip-break button, completed state shows celebration and next-session prompt. Timer-active amber glow on task card in all views. Cross-device sync does not cause duplicate timers to render.
+
+**Files**: `tests/unit/stores/timer-ui-states.test.ts`, `tests/e2e/timer/ui-states.spec.ts`
+
+---
+
+#### TASK-1640: Naive UI Override Consistency Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: All Naive UI component CSS overrides defined in `global-overrides.css` are active and produce the expected visual output.
+
+**Covers**: `NDatePicker` uses dark glass background (not white), teal selection color (`#4ECDC4`), weekend days not highlighted red, "Clear" button absent when `:actions="[]"`, `NSelect` dropdown matches glass morphism design, all overrides survive a Vite CSS chunk rebuild.
+
+**Files**: `tests/e2e/visual-rendering/naive-ui-overrides.spec.ts`
 
 ---
 

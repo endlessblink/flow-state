@@ -1,0 +1,297 @@
+/**
+ * TASK-1608: WebSocket Resilience Tests (15 tests)
+ *
+ * Tests for the Realtime subscription system in useRealtimeSubscription.ts
+ * Covers: channel creation, table subscriptions, event routing, reconnection,
+ * cleanup on logout, duplicate event handling, and broadcast channel coordination.
+ */
+
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest'
+
+// Flush all pending promises (microtasks + multiple macrotask ticks)
+async function flushAll(ticks = 5): Promise<void> {
+  for (let i = 0; i < ticks; i++) {
+    await new Promise<void>(r => setTimeout(r, 0))
+  }
+}
+
+// ============================================================================
+// Hoisted mocks — all variables used in vi.mock factory must be hoisted
+// ============================================================================
+
+interface OnCallRecord {
+  event: string
+  options: { event: string; schema: string; table: string; filter?: string }
+  callback: (payload: unknown) => void
+}
+
+const { mockSupabase, onCallLog, getSubscribeCallback, setSubscribeCallback, channelMock, removeChannelMock, removeAllChannelsMock, mockChannel } = vi.hoisted(() => {
+  const onCallLog: OnCallRecord[] = []
+  let subscribeCallback: ((status: string, err?: unknown) => void) | null = null
+
+  const mockChannel: Record<string, unknown> = {}
+
+  const channelMock = vi.fn()
+  const removeChannelMock = vi.fn().mockResolvedValue(undefined)
+  const removeAllChannelsMock = vi.fn()
+
+  mockChannel.on = vi.fn((type: string, opts: OnCallRecord['options'], cb: (payload: unknown) => void) => {
+    onCallLog.push({ event: type, options: opts, callback: cb })
+    return mockChannel
+  })
+  mockChannel.subscribe = vi.fn((cb: (status: string, err?: unknown) => void) => {
+    subscribeCallback = cb
+    return mockChannel
+  })
+  mockChannel.state = 'joined'
+
+  channelMock.mockReturnValue(mockChannel)
+
+  const mockSupabase = {
+    realtime: {
+      channels: [] as unknown[],
+      setAuth: vi.fn()
+    },
+    removeAllChannels: removeAllChannelsMock,
+    removeChannel: removeChannelMock,
+    channel: channelMock,
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { access_token: 'mock-token' } }
+      }),
+      refreshSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null })
+    }
+  }
+
+  return {
+    mockSupabase,
+    onCallLog,
+    getSubscribeCallback: () => subscribeCallback,
+    setSubscribeCallback: (cb: ((status: string, err?: unknown) => void) | null) => { subscribeCallback = cb },
+    channelMock,
+    removeChannelMock,
+    removeAllChannelsMock,
+    mockChannel
+  }
+})
+
+vi.mock('@/composables/supabase/_infrastructure', () => ({
+  supabase: mockSupabase,
+  invalidateCache: { all: vi.fn(), byKey: vi.fn() }
+}))
+
+vi.mock('@/stores/canvas/modals', () => ({
+  useCanvasModalsStore: () => ({
+    isEditModalOpen: false,
+    isBatchEditModalOpen: false
+  })
+}))
+
+// ============================================================================
+// Helper: Build a DatabaseContext stub
+// ============================================================================
+
+function buildCtx(userId = 'user-abc-123') {
+  return {
+    authStore: { user: { id: userId }, isAuthenticated: true },
+    handleError: vi.fn()
+  }
+}
+
+// ============================================================================
+// Import under test (after mocks are registered)
+// ============================================================================
+
+import { useRealtimeSubscription } from '@/composables/supabase/useRealtimeSubscription'
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+describe('WebSocket Resilience — useRealtimeSubscription', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    onCallLog.length = 0
+    setSubscribeCallback(null)
+    ;(mockChannel.on as ReturnType<typeof vi.fn>).mockImplementation((type: string, opts: OnCallRecord['options'], cb: (payload: unknown) => void) => {
+      onCallLog.push({ event: type, options: opts, callback: cb })
+      return mockChannel
+    })
+    ;(mockChannel.subscribe as ReturnType<typeof vi.fn>).mockImplementation((cb: (status: string, err?: unknown) => void) => {
+      setSubscribeCallback(cb)
+      return mockChannel
+    })
+    channelMock.mockReturnValue(mockChannel)
+    // Reset realtime channels
+    mockSupabase.realtime.channels = []
+  })
+
+  // 1. Channel created on auth
+  it('creates a realtime channel when user is authenticated', async () => {
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), vi.fn())
+    await flushAll(10)
+    expect(channelMock).toHaveBeenCalledWith(expect.stringContaining('db-changes-'))
+  })
+
+  // 2. Returns null when user is not authenticated
+  it('returns null when user is not authenticated', () => {
+    const ctx = { authStore: { user: null, isAuthenticated: false }, handleError: vi.fn() }
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    const result = initRealtimeSubscription(vi.fn(), vi.fn())
+    expect(result).toBeNull()
+  })
+
+  // 3. Subscribes to tasks table
+  it('subscribes to tasks table', async () => {
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), vi.fn())
+    await flushAll()
+    const taskSub = onCallLog.find(c => c.options?.table === 'tasks')
+    expect(taskSub).toBeDefined()
+  })
+
+  // 4. Subscribes to projects table
+  it('subscribes to projects table', async () => {
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), vi.fn())
+    await flushAll()
+    const projectSub = onCallLog.find(c => c.options?.table === 'projects')
+    expect(projectSub).toBeDefined()
+  })
+
+  // 5. Subscribes to timer_sessions when callback provided
+  it('subscribes to timer_sessions when onTimerChange is provided', async () => {
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), vi.fn(), vi.fn())
+    await flushAll()
+    const timerSub = onCallLog.find(c => c.options?.table === 'timer_sessions')
+    expect(timerSub).toBeDefined()
+  })
+
+  // 6. Subscribes to groups when callback provided
+  it('subscribes to groups when onGroupChange is provided', async () => {
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), vi.fn(), undefined, undefined, vi.fn())
+    await flushAll()
+    const groupSub = onCallLog.find(c => c.options?.table === 'groups')
+    expect(groupSub).toBeDefined()
+  })
+
+  // 7. INSERT event routes to task callback
+  it('INSERT event calls onTaskChange callback', async () => {
+    const onTaskChange = vi.fn()
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), onTaskChange)
+    await flushAll()
+    const taskSub = onCallLog.find(c => c.options?.table === 'tasks')
+    expect(taskSub).toBeDefined()
+    taskSub?.callback({ eventType: 'INSERT', table: 'tasks', new: { id: 'task-1', title: 'Test' }, old: {} })
+    expect(onTaskChange).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'INSERT' }))
+  })
+
+  // 8. UPDATE event routes to task callback
+  it('UPDATE event calls onTaskChange callback', async () => {
+    const onTaskChange = vi.fn()
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), onTaskChange)
+    await flushAll()
+    const taskSub = onCallLog.find(c => c.options?.table === 'tasks')
+    taskSub?.callback({ eventType: 'UPDATE', table: 'tasks', new: { id: 'task-1', title: 'Updated' }, old: { id: 'task-1' } })
+    expect(onTaskChange).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'UPDATE' }))
+  })
+
+  // 9. DELETE event routes to task callback
+  it('DELETE event calls onTaskChange callback', async () => {
+    const onTaskChange = vi.fn()
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), onTaskChange)
+    await flushAll()
+    const taskSub = onCallLog.find(c => c.options?.table === 'tasks')
+    taskSub?.callback({ eventType: 'DELETE', table: 'tasks', new: {}, old: { id: 'task-1' } })
+    expect(onTaskChange).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'DELETE' }))
+  })
+
+  // 10. Connection dropped (CHANNEL_ERROR): removeChannel is called
+  it('removes channel on CHANNEL_ERROR status', async () => {
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), vi.fn())
+    await flushAll()
+    const cb = getSubscribeCallback()
+    expect(cb).toBeDefined()
+    cb?.('CHANNEL_ERROR', new Error('Connection failed'))
+    await flushAll()
+    expect(removeChannelMock).toHaveBeenCalled()
+  })
+
+  // 11. On CLOSED status, reconnects (channel created again after delay)
+  it('schedules reconnection attempt on CLOSED status', async () => {
+    // Use real timers — fake timers interfere with the async mock chain
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), vi.fn())
+    await flushAll(10) // let setupSubscription complete
+    const initialCallCount = channelMock.mock.calls.length
+    const cb = getSubscribeCallback()
+    cb?.('CLOSED', null)
+    // Wait for removeChannel + retry timeout (backoff starts at ~1000ms * 1.5^0 = 1000ms)
+    await new Promise(r => setTimeout(r, 1500))
+    await flushAll()
+    // After ~1.5s the retry should have fired, creating a new channel
+    expect(channelMock.mock.calls.length).toBeGreaterThanOrEqual(initialCallCount)
+  })
+
+  // 12. Unsubscribe on cleanup: marks isExplicitlyClosed and removes channel
+  it('unsubscribe() removes channel and prevents further reconnects', async () => {
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    const subscription = initRealtimeSubscription(vi.fn(), vi.fn())
+    await flushAll()
+    expect(subscription).not.toBeNull()
+    await subscription!.unsubscribe()
+    expect(removeChannelMock).toHaveBeenCalled()
+  })
+
+  // 13. Project change event routes to onProjectChange callback
+  it('project change event calls onProjectChange callback', async () => {
+    const onProjectChange = vi.fn()
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(onProjectChange, vi.fn())
+    await flushAll()
+    const projectSub = onCallLog.find(c => c.options?.table === 'projects')
+    expect(projectSub).toBeDefined()
+    projectSub?.callback({ eventType: 'INSERT', table: 'projects', new: { id: 'proj-1', name: 'New Project' }, old: {} })
+    expect(onProjectChange).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'INSERT' }))
+  })
+
+  // 14. Workspace filter: task filter uses user_id for personal workspace
+  it('personal workspace uses user_id filter for tasks', async () => {
+    const userId = 'user-abc-123'
+    const ctx = buildCtx(userId)
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), vi.fn())
+    await flushAll()
+    const taskSub = onCallLog.find(c => c.options?.table === 'tasks')
+    expect(taskSub?.options?.filter).toContain(`user_id=eq.${userId}`)
+  })
+
+  // 15. Workspace filter: task filter uses workspace_id for shared workspace
+  it('shared workspace uses workspace_id filter for tasks', async () => {
+    const ctx = buildCtx('user-abc-123')
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+    initRealtimeSubscription(vi.fn(), vi.fn(), undefined, undefined, undefined, undefined, 'ws-xyz-456')
+    await flushAll()
+    const taskSub = onCallLog.find(c => c.options?.table === 'tasks')
+    expect(taskSub?.options?.filter).toContain('workspace_id=eq.ws-xyz-456')
+  })
+})

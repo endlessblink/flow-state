@@ -124,12 +124,19 @@ export function useTimerSync(deps: TimerSyncDeps) {
     }
   }, DEVICE_HEARTBEAT_INTERVAL_MS, { immediate: false })
 
+  // BUG-TIMER-RACE: Guard that blocks follower poll and resync during the async startTimer sequence.
+  // Without this, the follower poll can fire between clearExistingSession() and saveTimerSessionWithLeadership(),
+  // find no active session (it was just cleared), and null out currentSession.
+  let isStarting = false
+  const setStartingGuard = (value: boolean) => { isStarting = value }
+
   // BUG-1411: Guard against overlapping polls when network is slow
   let isPolling = false
   let consecutiveFailures = 0
   const { pause: pauseFollowerPoll, resume: resumeFollowerPoll } = useIntervalFn(async () => {
     // Only poll if we're not the leader (leaders write, followers read)
     if (isDeviceLeader.value) return
+    if (isStarting) return // BUG-TIMER-RACE: Block poll during async start sequence
     if (isPolling) return // BUG-1411: Prevent overlapping polls
 
     isPolling = true
@@ -681,6 +688,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
     if (now - lastResyncAt < 1000) return
     lastResyncAt = now
 
+    if (isStarting) return // BUG-TIMER-RACE: Block resync during async start sequence
     if (!authStore.isAuthenticated) return
 
     try {
@@ -821,6 +829,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
     clearExistingSession,
     handleRemoteTimerUpdate,
     resyncFromDatabase,
+    setStartingGuard,
 
     // Interval controls (needed by timer.ts pause/resume/stop)
     pauseCountdown,

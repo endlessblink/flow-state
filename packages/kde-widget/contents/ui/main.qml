@@ -4323,32 +4323,49 @@ PlasmoidItem {
 
         if (root.debugLogging) console.log("[TIMER] Creating session with payload:", JSON.stringify(payload))
 
-        var xhr = new XMLHttpRequest()
-        xhr.open("POST", root.supabaseUrl + "/rest/v1/timer_sessions", true)
-        xhr.setRequestHeader("apikey", root.supabaseKey)
-        xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
-        xhr.setRequestHeader("Content-Type", "application/json")
-        xhr.setRequestHeader("Prefer", "return=representation")
+        // Clear any existing active sessions before creating a new one.
+        // Without this, multiple is_active=true rows can accumulate, confusing both
+        // the web app and this widget's own polling.
+        var clearXhr = new XMLHttpRequest()
+        clearXhr.open("PATCH", root.supabaseUrl + "/rest/v1/timer_sessions?is_active=eq.true", true)
+        clearXhr.setRequestHeader("apikey", root.supabaseKey)
+        clearXhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+        clearXhr.setRequestHeader("Content-Type", "application/json")
 
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (root.debugLogging) console.log("[TIMER] POST response:", xhr.status, xhr.responseText)
-                if (xhr.status === 201 || xhr.status === 200) {
-                    root.currentSessionId = sessionId
-                    root.totalSeconds = duration
-                    root.secondsRemaining = duration
-                    root.isRunning = true
-                    root.isWorkSession = !isBreak
-                    root.hasActiveSession = true
-                    root.isDeviceLeader = true  // Widget is leader for new session
-                    console.log("[TIMER] Started new session:", sessionId)
-                } else {
-                    console.error("[TIMER] Failed to create session:", xhr.status, xhr.responseText)
+        clearXhr.onreadystatechange = function() {
+            if (clearXhr.readyState === XMLHttpRequest.DONE) {
+                if (root.debugLogging) console.log("[TIMER] PATCH clear active sessions:", clearXhr.status)
+
+                var xhr = new XMLHttpRequest()
+                xhr.open("POST", root.supabaseUrl + "/rest/v1/timer_sessions", true)
+                xhr.setRequestHeader("apikey", root.supabaseKey)
+                xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+                xhr.setRequestHeader("Content-Type", "application/json")
+                xhr.setRequestHeader("Prefer", "return=representation")
+
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === XMLHttpRequest.DONE) {
+                        if (root.debugLogging) console.log("[TIMER] POST response:", xhr.status, xhr.responseText)
+                        if (xhr.status === 201 || xhr.status === 200) {
+                            root.currentSessionId = sessionId
+                            root.totalSeconds = duration
+                            root.secondsRemaining = duration
+                            root.isRunning = true
+                            root.isWorkSession = !isBreak
+                            root.hasActiveSession = true
+                            root.isDeviceLeader = true  // Widget is leader for new session
+                            console.log("[TIMER] Started new session:", sessionId)
+                        } else {
+                            console.error("[TIMER] Failed to create session:", xhr.status, xhr.responseText)
+                        }
+                    }
                 }
+
+                xhr.send(JSON.stringify(payload))
             }
         }
 
-        xhr.send(JSON.stringify(payload))
+        clearXhr.send(JSON.stringify({ is_active: false, completed_at: new Date().toISOString() }))
     }
 
     function startSessionForTask(taskId) {
@@ -4374,29 +4391,44 @@ PlasmoidItem {
             device_leader_last_seen: new Date().toISOString()
         }
 
-        var xhr = new XMLHttpRequest()
-        xhr.open("POST", root.supabaseUrl + "/rest/v1/timer_sessions", true)
-        xhr.setRequestHeader("apikey", root.supabaseKey)
-        xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
-        xhr.setRequestHeader("Content-Type", "application/json")
-        xhr.setRequestHeader("Prefer", "return=representation")
+        // Clear any existing active sessions before creating a new one.
+        var clearXhr = new XMLHttpRequest()
+        clearXhr.open("PATCH", root.supabaseUrl + "/rest/v1/timer_sessions?is_active=eq.true", true)
+        clearXhr.setRequestHeader("apikey", root.supabaseKey)
+        clearXhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+        clearXhr.setRequestHeader("Content-Type", "application/json")
 
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 201 || xhr.status === 200) {
-                    root.currentSessionId = sessionId
-                    root.currentTaskId = taskId  // BUG-1521: track which task the timer is for
-                    root.totalSeconds = duration
-                    root.secondsRemaining = duration
-                    root.isRunning = true
-                    root.isWorkSession = true
-                    root.hasActiveSession = true
-                    root.isDeviceLeader = true  // Widget is leader for new session
+        clearXhr.onreadystatechange = function() {
+            if (clearXhr.readyState === XMLHttpRequest.DONE) {
+                if (root.debugLogging) console.log("[TIMER] PATCH clear active sessions:", clearXhr.status)
+
+                var xhr = new XMLHttpRequest()
+                xhr.open("POST", root.supabaseUrl + "/rest/v1/timer_sessions", true)
+                xhr.setRequestHeader("apikey", root.supabaseKey)
+                xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+                xhr.setRequestHeader("Content-Type", "application/json")
+                xhr.setRequestHeader("Prefer", "return=representation")
+
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === XMLHttpRequest.DONE) {
+                        if (xhr.status === 201 || xhr.status === 200) {
+                            root.currentSessionId = sessionId
+                            root.currentTaskId = taskId  // BUG-1521: track which task the timer is for
+                            root.totalSeconds = duration
+                            root.secondsRemaining = duration
+                            root.isRunning = true
+                            root.isWorkSession = true
+                            root.hasActiveSession = true
+                            root.isDeviceLeader = true  // Widget is leader for new session
+                        }
+                    }
                 }
+
+                xhr.send(JSON.stringify(payload))
             }
         }
 
-        xhr.send(JSON.stringify(payload))
+        clearXhr.send(JSON.stringify({ is_active: false, completed_at: new Date().toISOString() }))
     }
 
     function switchTaskForSession(newTaskId) {

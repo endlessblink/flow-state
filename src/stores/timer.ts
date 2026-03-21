@@ -289,45 +289,55 @@ export const useTimerStore = defineStore('timer', () => {
       return
     }
 
-    // User's explicit action takes precedence - clear any existing session
-    try {
-      await sync.clearExistingSession()
-    } catch (error) {
-      console.warn('🍅 [TIMER] clearExistingSession failed, continuing anyway:', error)
-      // Don't block timer start because of DB cleanup failure
-    }
-
-    const claimedLeadership = crossTabSync.claimTimerLeadership()
-    if (import.meta.env.DEV) {
-      console.log('🍅 [TIMER] claimTimerLeadership:', claimedLeadership)
-    }
-    if (!claimedLeadership) {
-      // BUG-1291: Don't silently abort for user-initiated timer starts
-      // In single-window Tauri mode, stale leadership state shouldn't block the user
-      console.warn('🍅 [TIMER] Leadership claim failed but proceeding - user action takes precedence')
-    }
-    isLeader.value = true
-
-    const sessionDuration = duration || settings.workDuration
-    currentSession.value = {
-      id: crypto.randomUUID(),
-      taskId,
-      startTime: new Date(),
-      duration: sessionDuration,
-      remainingTime: sessionDuration,
-      isActive: true,
-      isPaused: false,
-      isBreak
-    }
-
+    // BUG-TIMER-RACE: Set leadership state and starting guard BEFORE any async DB calls.
+    // The follower poll fires every 3s; if it runs between clearExistingSession() and
+    // saveTimerSessionWithLeadership() it finds no active session and nulls currentSession.
+    // isDeviceLeader=true makes the poll bail out immediately. The guard blocks resync too.
+    sync.setStartingGuard(true)
     isDeviceLeader.value = true
     sync.pauseFollowerPoll() // Leaders don't poll, they write
-    sync.resumeHeartbeat()
-    sync.broadcastSession()
-    await sync.saveTimerSessionWithLeadership()
-    audio.playStartSound()
-    sync.resumeCountdown()
-    await requestWakeLock() // Keep screen on - ROAD-004
+
+    try {
+      // User's explicit action takes precedence - clear any existing session
+      try {
+        await sync.clearExistingSession()
+      } catch (error) {
+        console.warn('🍅 [TIMER] clearExistingSession failed, continuing anyway:', error)
+        // Don't block timer start because of DB cleanup failure
+      }
+
+      const claimedLeadership = crossTabSync.claimTimerLeadership()
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] claimTimerLeadership:', claimedLeadership)
+      }
+      if (!claimedLeadership) {
+        // BUG-1291: Don't silently abort for user-initiated timer starts
+        // In single-window Tauri mode, stale leadership state shouldn't block the user
+        console.warn('🍅 [TIMER] Leadership claim failed but proceeding - user action takes precedence')
+      }
+      isLeader.value = true
+
+      const sessionDuration = duration || settings.workDuration
+      currentSession.value = {
+        id: crypto.randomUUID(),
+        taskId,
+        startTime: new Date(),
+        duration: sessionDuration,
+        remainingTime: sessionDuration,
+        isActive: true,
+        isPaused: false,
+        isBreak
+      }
+
+      sync.resumeHeartbeat()
+      sync.broadcastSession()
+      await sync.saveTimerSessionWithLeadership()
+      audio.playStartSound()
+      sync.resumeCountdown()
+      await requestWakeLock() // Keep screen on - ROAD-004
+    } finally {
+      sync.setStartingGuard(false)
+    }
     if (import.meta.env.DEV) {
       console.log('🍅 [TIMER] Timer started successfully, interval resumed')
     }

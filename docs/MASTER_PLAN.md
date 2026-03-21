@@ -8,6 +8,18 @@
 
 ## Active Tasks
 
+### ~~BUG-1583~~: Timer starts then stops + KDE widget session sync (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-21)
+
+**Bug 1 — Timer race condition**: `startTimer()` had an async gap between `clearExistingSession()` and `saveTimerSessionWithLeadership()`. During this gap, the follower poll (3s interval) or visibility handler would query DB, find no active session, and null out `currentSession`. Fixed by moving `isDeviceLeader=true` + `pauseFollowerPoll()` before the first `await`, and adding an `isStarting` guard flag that blocks both the follower poll and `resyncFromDatabase` during the start sequence.
+
+**Bug 2 — KDE widget orphaned sessions**: Widget's `startNewSession()` and `startSessionForTask()` POSTed new sessions without clearing existing ones, leaving multiple `is_active=true` rows. Fixed by PATCHing all active sessions to `is_active: false` before creating the new one.
+
+**Files**: `src/stores/timer.ts`, `src/composables/timer/useTimerSync.ts`, `packages/kde-widget/contents/ui/main.qml`
+
+---
+
 ### BUG-1582: IndexedDB cache corruption (444k tasks) + Tauri time-filter dropdown unresponsive (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-21)

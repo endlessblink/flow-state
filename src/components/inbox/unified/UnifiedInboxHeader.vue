@@ -20,7 +20,12 @@
     </h3>
 
     <!-- Count Badge -->
-    <NBadge v-if="!isCollapsed" :value="taskCount" type="info" />
+    <div v-if="!isCollapsed" class="count-summary">
+      <NBadge :value="totalTaskCount" type="info" />
+      <span v-if="showFilteredCount" class="filtered-count-label">
+        {{ taskCount }} shown
+      </span>
+    </div>
 
     <!-- Done Tasks Filter - Shows ONLY done tasks when active -->
     <button
@@ -346,6 +351,9 @@ const timeFilterLabel = computed(() => {
   return labels[props.activeTimeFilter]
 })
 
+const totalTaskCount = computed(() => props.baseTasks.length)
+const showFilteredCount = computed(() => props.taskCount !== totalTaskCount.value)
+
 const handleTimeFilterSelect = (key: string) => {
   emit('update:activeTimeFilter', key as TimeFilterType)
   showTimeFilter.value = false
@@ -372,6 +380,13 @@ const handleTimeFilterSelect = (key: string) => {
   flex-shrink: 0;
 }
 
+.count-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  flex-shrink: 0;
+}
+
 /* Glass morphism override for NBadge — no solid fills */
 .inbox-header :deep(.n-badge-sup) {
   background: var(--brand-primary-subtle) !important;
@@ -379,6 +394,12 @@ const handleTimeFilterSelect = (key: string) => {
   color: var(--brand-primary) !important;
   backdrop-filter: blur(8px);
   font-weight: var(--font-medium);
+}
+
+.filtered-count-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .inbox-header.is-collapsed {

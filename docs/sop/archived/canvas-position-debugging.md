@@ -338,6 +338,6 @@ If debugging procedures don't resolve the issue:
 
 ## Related Documentation
 
-- [Architecture: Canvas System](../claude-md-extension/architecture.md)
+- [Architecture: Canvas System](../claude-md-extension/system-architecture.md)
 - Position System Refactor plan (file removed during cleanup)
 - Canvas View Stabilization plan (file removed during cleanup)

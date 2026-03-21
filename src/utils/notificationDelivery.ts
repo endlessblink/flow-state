@@ -9,6 +9,8 @@
  * We use `notify-send` (freedesktop DBus) which shows in KDE's notification area.
  */
 
+import { isTauri as isTauriRuntime } from '@/utils/platform'
+
 interface DeliveryOptions {
   title: string
   body: string
@@ -18,7 +20,7 @@ interface DeliveryOptions {
 
 /** Detect if running inside Tauri */
 function isTauri(): boolean {
-  return !!(window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__
+  return isTauriRuntime()
 }
 
 /** Detect if running inside Capacitor native app */

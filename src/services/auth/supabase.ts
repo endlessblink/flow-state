@@ -1,10 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { isTauri as isTauriRuntime } from '@/utils/platform'
 
 // These will be provided by your Supabase project settings
 // For now, we'll use empty strings or env vars if available
 // The app should handle missing config gracefully (Guest Mode)
 // BUG-339: Detect if running in Tauri context
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
+const isTauri = isTauriRuntime()
 
 // FEATURE-1345: Detect Capacitor runtime (Android/iOS native app)
 const isCapacitorRuntime = typeof window !== 'undefined' &&

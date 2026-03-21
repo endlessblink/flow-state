@@ -136,7 +136,6 @@ onMounted(async () => {
       }
     } else if (status.value === 'error') {
       console.log('[TauriUpdater] Error during check:', error.value)
-      dismissed.value = true // Hide the error notification
     } else {
       console.log('[TauriUpdater] App is up to date (current version is latest)')
     }

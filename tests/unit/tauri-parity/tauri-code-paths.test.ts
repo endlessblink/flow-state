@@ -28,6 +28,8 @@ describe('Platform Detection (src/utils/platform.ts)', () => {
   let isCapacitor: () => boolean
   let isPWA: () => boolean
   let isBrowser: () => boolean
+  let shouldTrustNavigatorOnline: () => boolean
+  let getInitialOnlineState: () => boolean
   let _resetPlatformCache: () => void
 
   // jsdom does not implement window.matchMedia — provide a stub that returns non-matching
@@ -57,6 +59,8 @@ describe('Platform Detection (src/utils/platform.ts)', () => {
     isCapacitor = mod.isCapacitor
     isPWA = mod.isPWA
     isBrowser = mod.isBrowser
+    shouldTrustNavigatorOnline = mod.shouldTrustNavigatorOnline
+    getInitialOnlineState = mod.getInitialOnlineState
     _resetPlatformCache = mod._resetPlatformCache
 
     // Clean window state
@@ -171,6 +175,27 @@ describe('Platform Detection (src/utils/platform.ts)', () => {
     ;(window as Record<string, unknown>).__TAURI_INTERNALS__ = {}
     ;(window as Record<string, unknown>).Capacitor = { isNativePlatform: () => true }
     expect(detectPlatform()).toBe('tauri')
+  })
+
+  it('useTauriStartup.isTauri() also recognizes __TAURI_INTERNALS__', async () => {
+    ;(window as Record<string, unknown>).__TAURI_INTERNALS__ = {}
+    const mod = await import('@/composables/useTauriStartup')
+    expect(mod.isTauri()).toBe(true)
+  })
+
+  it('does not trust navigator.onLine in Tauri runtime', () => {
+    ;(window as Record<string, unknown>).__TAURI__ = {}
+    vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
+
+    expect(shouldTrustNavigatorOnline()).toBe(false)
+    expect(getInitialOnlineState()).toBe(true)
+  })
+
+  it('still trusts navigator.onLine in plain browser runtime', () => {
+    vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
+
+    expect(shouldTrustNavigatorOnline()).toBe(true)
+    expect(getInitialOnlineState()).toBe(false)
   })
 })
 

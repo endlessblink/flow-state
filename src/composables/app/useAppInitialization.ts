@@ -17,6 +17,7 @@ import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, type Supabase
 // TASK-1177: Offline-first sync system
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
+import { getInitialOnlineState } from '@/utils/platform'
 // BUG-1411: Cache stats for offline mode detection
 // TASK-1425: Full cache read functions for fast offline startup
 // TASK-1427: Merged versions include pending write queue operations
@@ -153,7 +154,7 @@ export function useAppInitialization() {
 
         // Phase B (non-blocking): Background sync from Supabase
         // Skip entirely when offline — no point in fetching, just wait for 'online' event
-        const isOnline = typeof navigator !== 'undefined' ? navigator.onLine !== false : true
+        const isOnline = getInitialOnlineState()
 
         // TASK-1428: Re-apply unsynced local changes after any Supabase refresh.
         // Without this, loadFromDatabase() overwrites _rawTasks with server data

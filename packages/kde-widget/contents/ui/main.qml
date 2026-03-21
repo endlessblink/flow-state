@@ -252,18 +252,30 @@ PlasmoidItem {
         console.log("[NOTIFY] Running notify script:", cmd)
     }
 
-    // ===== TASK-1424: NANNY NOTIFICATION (rich QML popup) =====
+    // ===== NUDGE: System notification when idle (separate from nanny popup) =====
     function sendNannyNotification() {
         var tone = plasmoid.configuration.nannyTone || "gentle"
         var messages = tone === "direct" ? root.nannyDirectMessages : root.nannyGentleMessages
         var msg = messages[Math.floor(Math.random() * messages.length)]
 
-        // BUG-1498: Fetch fresh unfiltered tasks, THEN build list and show popup
+        // System notification only — no popup
+        var cmd = 'notify-send --app-name=FlowState --icon=dialog-information "🍅 ' + msg + '" "Pick a task and start a Pomodoro to stay on track."'
+        executableDataSource.connectSource(cmd)
+        console.log("[NUDGE] System notification sent:", msg)
+
+        root.nannyLastNotifyTime = Date.now()
+    }
+
+    // ===== NANNY: Task picker popup (manual trigger from nanny bar) =====
+    function showNannyPopup() {
+        var tone = plasmoid.configuration.nannyTone || "gentle"
+        var messages = tone === "direct" ? root.nannyDirectMessages : root.nannyGentleMessages
+        var msg = messages[Math.floor(Math.random() * messages.length)]
+
         root.fetchNannyTasks(function() {
             root.buildNannyTaskList()
-            console.log("[NANNY] Showing popup:", msg, "with", root.nannyTaskList.length, "tasks (pinned + recent)")
+            console.log("[NANNY] Showing popup:", msg, "with", root.nannyTaskList.length, "tasks")
 
-            // Position on the same screen as the widget
             var sg = root.getWidgetScreenGeometry()
             if (sg.screen) nannyPopup.screen = sg.screen
             nannyPopup.x = sg.x + sg.width - nannyPopup.width - 24
@@ -273,8 +285,6 @@ PlasmoidItem {
             nannyPopup.visible = true
             nannyPopup.raise()
             nannyPopup.requestActivate()
-
-            root.nannyLastNotifyTime = Date.now()
         })
     }
 
@@ -2238,8 +2248,8 @@ PlasmoidItem {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             if (plasmoid.configuration.nannyEnabled) {
-                                // Already enabled — show popup preview
-                                root.sendNannyNotification()
+                                // Already enabled — show task picker popup
+                                root.showNannyPopup()
                                 console.log("[NANNY] Manual trigger from toggle bar")
                             } else {
                                 plasmoid.configuration.nannyEnabled = true

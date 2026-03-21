@@ -106,17 +106,20 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { 
-  Square, 
-  MousePointer, 
-  Zap, 
-  CheckSquare, 
-  X, 
-  RotateCcw, 
-  MoreHorizontal 
+import {
+  Square,
+  MousePointer,
+  Zap,
+  CheckSquare,
+  X,
+  RotateCcw,
+  MoreHorizontal
 } from 'lucide-vue-next'
+import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasModalsStore } from '@/stores/canvas/modals'
 import { useTaskStore } from '@/stores/tasks'
+import { CanvasIds } from '@/utils/canvas/canvasIds'
 import type { TaskStatus, TaskPriority } from '@/types/tasks'
 import type { Node } from '@vue-flow/core'
 
@@ -137,7 +140,9 @@ const emit = defineEmits<{
 }>()
 
 const canvasStore = useCanvasStore()
-const _taskStore = useTaskStore()
+const taskStore = useTaskStore()
+const modalsStore = useCanvasModalsStore()
+const { isBulkDeleteModalOpen, bulkDeleteItems, bulkDeleteIsPermanent } = storeToRefs(modalsStore)
 
 const showBulkMenu = ref(false)
 const isSelecting = ref(false)
@@ -211,10 +216,23 @@ const bulkUpdatePriority = (priority: TaskPriority) => {
 }
 
 const bulkDelete = () => {
-  if (confirm(`Delete ${selectedCount.value} selected tasks?`)) {
-    emit('bulkAction', 'delete', { nodeIds: props.selectedNodeIds })
-    showBulkMenu.value = false
-  }
+  // BUG-1580: native confirm() is broken in Tauri/WebKitGTK — use bulk delete modal instead
+  const taskNodeIds = props.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
+  if (taskNodeIds.length === 0) return
+
+  const items = taskNodeIds.map(nodeId => {
+    const task = taskStore.getTask(nodeId)
+    return {
+      id: nodeId,
+      name: task?.title || 'Unknown Task',
+      type: 'task' as const
+    }
+  })
+
+  bulkDeleteItems.value = items
+  bulkDeleteIsPermanent.value = false
+  isBulkDeleteModalOpen.value = true
+  showBulkMenu.value = false
 }
 
 const bulkDuplicate = () => {

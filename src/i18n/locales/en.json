@@ -369,7 +369,9 @@
     "empty": {
       "noTasks": "No tasks yet",
       "inviteMembers": "Invite team members"
-    }
+    },
+    "deleteTitle": "Delete Workspace",
+    "deleteConfirm": "Delete workspace \"{name}\"? This cannot be undone."
   },
   "auth": {
     "displayName": "Display Name",

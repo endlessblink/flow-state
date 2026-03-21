@@ -609,7 +609,7 @@ Before deploying changes to weekly plan:
 - **[SOP-036](SOP-036-supabase-jwt-key-regeneration.md)** — JWT key management (if profile load fails)
 - **[CANVAS-POSITION-SYSTEM.md](canvas/CANVAS-POSITION-SYSTEM.md)** — Geometry invariants (plan respects position locks)
 - **[design-system.md](../../claude-md-extension/design-system.md)** — Design token usage (all colors/spacing via tokens)
-- **[architecture.md](../../claude-md-extension/architecture.md)** — Full system architecture, composables index
+- **[system-architecture.md](../../claude-md-extension/system-architecture.md)** — Full system architecture, composables index
 
 ---
 

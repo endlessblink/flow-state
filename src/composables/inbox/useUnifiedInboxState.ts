@@ -18,6 +18,15 @@ export type TimeFilterType = 'all' | 'today' | 'next3days' | 'week' | 'month'
 export type SortByType = 'newest' | 'priority' | 'dueDate' | 'canvasOrder'
 export type SortDirection = 'asc' | 'desc'
 
+function uniqueTasksById(tasks: Task[]): Task[] {
+    const seen = new Set<string>()
+    return tasks.filter(task => {
+        if (seen.has(task.id)) return false
+        seen.add(task.id)
+        return true
+    })
+}
+
 export function useUnifiedInboxState(props: InboxContextProps) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
@@ -112,7 +121,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         const sourceTasks = props.context === 'calendar'
             ? taskStore.calendarFilteredTasks
             : taskStore.filteredTasks
-        return sourceTasks.filter(task => {
+        const filtered = sourceTasks.filter(task => {
             // 1. Done/Active filter (exclusive - show one OR the other)
             const isDone = task.status === 'done'
             if (showDoneOnly.value) {
@@ -171,13 +180,15 @@ export function useUnifiedInboxState(props: InboxContextProps) {
                 return !task.canvasPosition
             }
         })
+
+        return uniqueTasksById(filtered)
     })
 
     // TASK-1486: Pinned tasks — always visible regardless of inbox filters
     const pinnedTasks = computed(() => {
-        return taskStore._rawTasks.filter(task =>
+        return uniqueTasksById(taskStore._rawTasks.filter(task =>
             task.isPinned && task.status !== 'done' && !task._soft_deleted
-        )
+        ))
     })
 
     const todayCount = computed(() => {
@@ -223,7 +234,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             })
         }
 
-        return tasks.filter(t => !!t.canvasPosition).length
+        return uniqueTasksById(tasks).filter(t => !!t.canvasPosition).length
     })
 
     // Done task count (for the visible Done toggle badge)
@@ -233,7 +244,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         const sourceTasks = props.context === 'calendar'
             ? taskStore.calendarFilteredTasks
             : taskStore.filteredTasks
-        return sourceTasks.filter(task => {
+        return uniqueTasksById(sourceTasks.filter(task => {
             // Must be a done task
             if (task.status !== 'done') return false
             // Must not be soft deleted
@@ -250,7 +261,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             } else {
                 return !task.canvasPosition
             }
-        }).length
+        })).length
     })
 
     const _isScheduledOnCalendar = (task: Task): boolean => {
@@ -467,7 +478,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         // TASK-1486: Exclude pinned tasks from regular inbox (they show in PinnedTasksSection)
         tasks = tasks.filter(t => !t.isPinned)
 
-        return tasks
+        return uniqueTasksById(tasks)
     })
 
     const clearAllFilters = () => {

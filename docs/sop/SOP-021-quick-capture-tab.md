@@ -163,5 +163,5 @@ if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'T') {
 
 ## Related Documentation
 
-- [QuickSort View](../claude-md-extension/architecture.md)
+- [QuickSort View](../claude-md-extension/system-architecture.md)
 - [Keyboard Shortcuts](../claude-md-extension/code-patterns.md)

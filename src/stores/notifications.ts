@@ -8,6 +8,7 @@ import { ref, computed, watch } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { deliverNotification } from '@/utils/notificationDelivery'
+import { isTauri as isTauriRuntime } from '@/utils/platform'
 import type {
   ScheduledNotification,
   NotificationPreferences,
@@ -114,8 +115,7 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const checkNotificationPermission = async (): Promise<boolean> => {
     // FEATURE-1363: Tauri uses notify-send, doesn't need browser permission
-    const isTauriRuntime = typeof window !== 'undefined' && '__TAURI__' in window
-    if (isTauriRuntime) {
+    if (isTauriRuntime()) {
       isPermissionGranted.value = true
       return true
     }
@@ -147,8 +147,7 @@ export const useNotificationStore = defineStore('notifications', () => {
   const requestNotificationPermission = async (): Promise<boolean> => {
     // BUG-1303: Skip browser Notification.requestPermission() in Tauri — WebKitGTK
     // can hang indefinitely on this call. Tauri uses notify-send which doesn't need permission.
-    const isTauriRuntime = typeof window !== 'undefined' && '__TAURI__' in window
-    if (isTauriRuntime) {
+    if (isTauriRuntime()) {
       isPermissionGranted.value = true  // FEATURE-1363: Tauri uses notify-send, always available
       return true
     }

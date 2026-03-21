@@ -184,7 +184,7 @@ npx playwright test
 
 ## Architecture
 
-For a full architecture overview, see [docs/claude-md-extension/architecture.md](docs/claude-md-extension/architecture.md).
+For a full architecture overview, see [docs/claude-md-extension/system-architecture.md](docs/claude-md-extension/system-architecture.md).
 
 Key architectural decisions:
 

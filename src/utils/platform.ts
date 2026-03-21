@@ -81,6 +81,25 @@ export const isMobileNative = (): boolean => isCapacitor()
 /** True only for Tauri (desktop native) */
 export const isDesktopNative = (): boolean => isTauri()
 
+/**
+ * navigator.onLine is unreliable in desktop webviews, especially Tauri/WebKitGTK.
+ * For desktop native runtime, prefer attempting a real network request instead of
+ * treating the app as offline solely from the browser hint.
+ */
+export function shouldTrustNavigatorOnline(): boolean {
+  return !isTauri()
+}
+
+/**
+ * Initial online state used by startup/sync code before any real request happens.
+ * In Tauri we optimistically assume online so stale IndexedDB cache does not become
+ * the long-lived source of truth when navigator.onLine is false.
+ */
+export function getInitialOnlineState(): boolean {
+  if (!shouldTrustNavigatorOnline()) return true
+  return typeof navigator !== 'undefined' ? navigator.onLine !== false : true
+}
+
 /** Reset cache — for testing only */
 export function _resetPlatformCache(): void {
   _detectedPlatform = null

@@ -704,4 +704,4 @@ logHierarchySummary(storeGroups)
 
 - `CLAUDE.md` - Development rules and canvas safety guidelines
 - `docs/MASTER_PLAN.md` - Task tracking (TASK-131, TASK-142, TASK-155, etc.)
-- `docs/claude-md-extension/architecture.md` - Overall project architecture
+- `docs/claude-md-extension/system-architecture.md` - Overall project architecture

@@ -895,7 +895,7 @@ npx tauri build
 - Desktop: Tauri 2.x (Rust + WebView)
 - AI: Ollama (local) / Groq (cloud)
 
-For detailed architecture documentation, see [architecture.md](./claude-md-extension/architecture.md).
+For detailed architecture documentation, see [system-architecture.md](./claude-md-extension/system-architecture.md).
 
 ---
 

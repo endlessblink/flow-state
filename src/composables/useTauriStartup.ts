@@ -12,6 +12,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { isTauri as isTauriRuntime } from '@/utils/platform'
 
 export type StartupStep =
   | 'checking_docker'
@@ -63,7 +64,7 @@ export interface SupabaseConfig {
  * Check if running in Tauri environment
  */
 export function isTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI__' in window
+  return isTauriRuntime()
 }
 
 /**

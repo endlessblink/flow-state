@@ -116,6 +116,7 @@
       ]
     },
     "shell:allow-open",
+    "log:default",
     "oauth:default",
     "updater:default",
     "updater:allow-check",

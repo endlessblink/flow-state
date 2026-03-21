@@ -21,6 +21,7 @@ import type {
   SyncResult
 } from '@/types/sync'
 import { DB_TABLES } from '@/constants/dbTables'
+import { getInitialOnlineState } from '@/utils/platform'
 
 // TASK-1177: Check for IndexedDB availability (not available in Node.js/tests)
 const hasIndexedDB = typeof indexedDB !== 'undefined'
@@ -165,7 +166,7 @@ const state = ref<SyncState>({
   failedCount: 0,
   lastSyncAt: undefined,
   lastError: undefined,
-  isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+  isOnline: getInitialOnlineState(),
   failedOperations: []
 })
 
@@ -604,7 +605,7 @@ async function processOperation(operation: WriteOperation): Promise<void> {
       console.warn(`[SYNC] Server appears unreachable (${consecutiveTransientFailures} consecutive transient failures), pausing queue for 60s`)
       state.value.isOnline = false
       setTimeout(() => {
-        state.value.isOnline = navigator.onLine
+        state.value.isOnline = getInitialOnlineState()
         consecutiveTransientFailures = 0
         if (state.value.isOnline) {
           console.log('[SYNC] Queue pause lifted — resuming sync')

@@ -54,5 +54,5 @@ See ADR comments in each quarantined file for full context.
 ## Related Documentation
 
 - `CLAUDE.md` - Canvas Geometry Invariants section
-- `docs/claude-md-extension/architecture.md` - Full architecture reference
+- `docs/claude-md-extension/system-architecture.md` - Full architecture reference
 - `docs/sop/active/` - Active canvas-related SOPs (prefixed `CANVAS-*`)

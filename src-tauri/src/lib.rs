@@ -501,6 +501,16 @@ async fn cleanup_services(app: tauri::AppHandle, stop_supabase_flag: bool) -> Re
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir { file_name: None }),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
+                ])
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_http::init())
         // BUG-1289: tauri-plugin-notification DISABLED — Notification::show()
@@ -539,18 +549,8 @@ pub fn run() {
             set_local_backup_policy,
         ])
         .setup(|app| {
-            // Enable logging in all builds (debug=Info, release=Error)
-            // Release logging is critical for diagnosing crashes in production
-            let log_level = if cfg!(debug_assertions) {
-                log::LevelFilter::Info
-            } else {
-                log::LevelFilter::Error
-            };
-            app.handle().plugin(
-                tauri_plugin_log::Builder::default()
-                    .level(log_level)
-                    .build(),
-            )?;
+            // Note: tauri_plugin_log is registered early in the builder chain above
+            // with Stdout + LogDir + Webview targets at Info level.
 
             // FEATURE-1194: Log $APPIMAGE path for updater diagnostics
             // The Tauri updater replaces the file at $APPIMAGE during updates.

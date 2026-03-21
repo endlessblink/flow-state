@@ -314,27 +314,24 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         }
     }
 
-    const deleteSelectedTasks = async () => {
+    const deleteSelectedTasks = () => {
         const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
         if (selectedNodeIds.length === 0) return
 
-        if (!confirm('Delete selected tasks permanently?')) return
-
-        try {
-            for (const nodeId of selectedNodeIds) {
-                await undoHistory.deleteTaskWithUndo(nodeId)
+        // BUG-1580: native confirm() is broken in Tauri/WebKitGTK — use modal instead
+        const items = selectedNodeIds.map(nodeId => {
+            const task = taskStore.getTask(nodeId)
+            return {
+                id: nodeId,
+                name: task?.title || 'Unknown Task',
+                type: 'task' as const
             }
+        })
 
-            canvasStore.setSelectedNodes([])
-            // BUG-1371: Force sync to bypass drag-settling guard.
-            // Without force, nodes with edges stay visible after deletion.
-            await nextTick()
-            deps.syncNodes(undefined, { force: true })
-            if (deps.syncEdges) deps.syncEdges({ force: true })
-            deps.closeCanvasContextMenu()
-        } catch (error) {
-            console.error('[ASYNC-ERROR] deleteSelectedTasks failed', error)
-        }
+        bulkDeleteItems.value = items
+        bulkDeleteIsPermanent.value = false
+        isBulkDeleteModalOpen.value = true
+        deps.closeCanvasContextMenu()
     }
 
     const confirmBulkDelete = async () => {

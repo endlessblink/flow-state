@@ -293,9 +293,17 @@ const groupedTasks = computed((): TaskGroup[] => {
       }
     })
 
+    // Collect tasks whose projectId wasn't found in any loaded project (e.g. projects failed to load)
+    // These go into uncategorized so they don't silently disappear from the view
+    const uncategorized = projectMap.get('') || []
+    projectMap.forEach((tasks, key) => {
+      if (key !== '' && !processedIds.has(key)) {
+        uncategorized.push(...tasks)
+      }
+    })
+
     // TASK-1455: Uncategorized tasks at the top so user can categorize them
-    const uncategorized = projectMap.get('')
-    if (uncategorized && uncategorized.length > 0) {
+    if (uncategorized.length > 0) {
       groups.unshift({
         key: 'uncategorized',
         title: 'Uncategorized',

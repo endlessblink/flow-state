@@ -318,7 +318,7 @@ ALWAYS break broad requests into atomic steps (<2 min each, single success condi
 
 **Database Layer:** `useSupabaseDatabase.ts` (single source of truth for core CRUD). Type mappers: `supabaseMappers.ts`. Auth: `src/services/auth/supabase.ts` + `src/stores/auth.ts`.
 
-**19 tables** (all RLS-enabled): 8 core (tasks, groups, projects, timer_sessions, pomodoro_history, notifications, user_settings, quick_sort_sessions), 2 data integrity (tombstones, task_dedup_audit), 7 gamification, 2 challenges. Full schema: see [`architecture.md`](docs/claude-md-extension/architecture.md).
+**19 tables** (all RLS-enabled): 8 core (tasks, groups, projects, timer_sessions, pomodoro_history, notifications, user_settings, quick_sort_sessions), 2 data integrity (tombstones, task_dedup_audit), 7 gamification, 2 challenges. Full schema: see [`system-architecture.md`](docs/claude-md-extension/system-architecture.md).
 
 **Access patterns:** Core → `useSupabaseDatabase.ts` | Gamification → `stores/gamification.ts` (intentional bypass) | Sync → `useSyncOrchestrator.ts`
 
@@ -347,7 +347,7 @@ Local and production use DIFFERENT JWT secrets — never mix them. `npm run dev`
 - Position locks (7s timeout) must be respected during sync
 
 **Before modifying canvas sync:** Run `npm run test -- --grep "Position Persistence"` + manual drag/refresh test.
-**~29 composables** in `src/composables/canvas/` — see `ls src/composables/canvas/` or [`architecture.md`](docs/claude-md-extension/architecture.md).
+**~29 composables** in `src/composables/canvas/` — see `ls src/composables/canvas/` or [`system-architecture.md`](docs/claude-md-extension/system-architecture.md).
 
 ## Canvas Geometry Invariants (CRITICAL)
 
@@ -448,7 +448,7 @@ This project has automatic task locking via `task-lock-enforcer.sh` hook to prev
 
 ## Extended Documentation
 
-**`docs/claude-md-extension/`:** architecture.md, code-patterns.md, testing.md, backup-system.md, design-system.md, troubleshooting.md, **database-operations.md** (DB queries, bulk actions, cleanup recipes)
+**`docs/claude-md-extension/`:** system-architecture.md, code-patterns.md, testing.md, backup-system.md, design-system.md, troubleshooting.md, **database-operations.md** (DB queries, bulk actions, cleanup recipes)
 
 **SOPs (20+ procedures):** `docs/sop/` — see `docs/sop/README.md` for full index. Key SOPs referenced inline throughout this file.
 

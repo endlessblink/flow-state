@@ -369,7 +369,9 @@
     "empty": {
       "noTasks": "אין משימות עדיין",
       "inviteMembers": "הזמן חברי צוות"
-    }
+    },
+    "deleteTitle": "מחיקת סביבת עבודה",
+    "deleteConfirm": "למחוק את סביבת העבודה \"{name}\"? לא ניתן לבטל פעולה זו."
   },
   "auth": {
     "displayName": "שם תצוגה",

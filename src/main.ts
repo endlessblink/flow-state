@@ -61,10 +61,17 @@ import { useSecurityMonitor as _useSecurityMonitor } from './utils/securityMonit
 
 // SECURITY: App is now 100% Supabase standard
 
+// Initialize Tauri log plugin early — must run before any other console output in Tauri
+import { initTauriLogger } from './utils/tauriLogger'
+
 // Run pre-check and initialize app
 async function initializeApp() {
   // NOTE: PouchDB migration cleanup removed Jan 2026 - migration complete
   // NOTE: BUG-1533b IndexedDB cleanup removed Mar 2026 - already ran on all clients
+
+  // Pipe console.* to tauri-plugin-log (stdout + log file) when running as desktop app
+  await initTauriLogger()
+
   console.log('🚀 [MAIN] Starting app initialization...')
 
   // Detect Tauri environment and apply class for CSS optimizations

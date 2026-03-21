@@ -5,6 +5,7 @@ import { clearGuestData, clearGuestSessionId } from '@/utils/guestModeStorage'
 import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
 import { invalidateCache } from '@/composables/useSupabaseDatabase'
 import { DB_TABLES } from '@/constants/dbTables'
+import { isTauri as isTauriRuntime } from '@/utils/platform'
 import type { Task } from '@/types/tasks'
 export type { User, Session, AuthError }
 
@@ -344,7 +345,7 @@ export const useAuthStore = defineStore('auth', () => {
 
           // FEATURE-1202: Write session to shared file for KDE widget (Tauri only)
           // ~/.config/flowstate/session.json — KDE widget reads this for authenticated API calls
-          if (typeof window !== 'undefined' && '__TAURI__' in window) {
+          if (isTauriRuntime()) {
             writeSessionFile(newSession).catch(e => {
               console.warn('[AUTH] Failed to write session file for KDE widget:', e)
             })

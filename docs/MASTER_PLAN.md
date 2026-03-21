@@ -1191,6 +1191,24 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 
 ## Active Tasks (IN PROGRESS)
 
+### ~~BUG-1580~~: Replace native confirm() dialogs broken in Tauri/WebKitGTK (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-21)
+
+**Problem**: Three places use native `confirm()` / `window.confirm()` which silently fails in Tauri's WebKitGTK webview — the dialog never appears and the call returns `false`, making task deletion impossible from the canvas.
+
+**Files**:
+1. `src/composables/canvas/useCanvasTaskActions.ts:321` — `deleteSelectedTasks()` uses `confirm()`
+2. `src/components/canvas/MultiSelectionOverlay.vue:214` — `bulkDelete()` uses `confirm()`
+3. `src/components/sidebar/SidebarWorkspaceSwitcher.vue:364` — `handleDeleteWorkspace()` uses `window.confirm()`
+
+**Fix**:
+1. `useCanvasTaskActions.ts`: Populate `bulkDeleteItems` + open `isBulkDeleteModalOpen` (same pattern as `useCanvasHotkeys.ts`)
+2. `MultiSelectionOverlay.vue`: Route through same canvas bulk delete modal (emit to parent or use modals store)
+3. `SidebarWorkspaceSwitcher.vue`: Add `ConfirmationModal` component with reactive state
+
+---
+
 ### ~~BUG-1437~~: Task doesn't inherit group properties on move (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-03)

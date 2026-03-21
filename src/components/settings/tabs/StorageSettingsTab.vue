@@ -61,7 +61,9 @@ type LocalBackupPolicy = {
   envLocalPath: string
 }
 
-const showLocalBackupPolicy = computed(() => showTauriMode.value && isDev.value)
+// The Rust command edits repo-local .env.local, so this control is only valid
+// when running the Tauri app from the dev checkout.
+const showLocalBackupPolicy = computed(() => showTauriMode.value && isDev.value && import.meta.env.DEV)
 const isLoadingLocalBackupPolicy = ref(false)
 const isSavingLocalBackupPolicy = ref(false)
 const localBackupPolicy = ref<LocalBackupPolicy | null>(null)

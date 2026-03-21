@@ -38,6 +38,8 @@
 
     <!-- AI CHAT PANEL (TASK-1120) -->
     <AIChatPanel />
+
+    <!-- Nanny uses system notifications (deliverNotification) -->
   </div>
 </template>
 
@@ -86,7 +88,7 @@ onUnmounted(() => {
 // TASK-1177: Protect against closing tab with unsaved changes
 useBeforeUnload()
 
-// Gently remind user to pick a task after 5 min of active work without one
+// Gently remind user to pick a task after 5 min without a Pomodoro
 useTaskbarNanny()
 
 const appSidebar = ref<InstanceType<typeof AppSidebar> | null>(null)

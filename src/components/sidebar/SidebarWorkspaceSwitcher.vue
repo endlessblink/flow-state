@@ -271,6 +271,16 @@
         </Transition>
       </div>
     </Transition>
+
+    <!-- BUG-1580: workspace delete confirmation — replaces window.confirm() broken in Tauri/WebKitGTK -->
+    <ConfirmationModal
+      :is-open="isDeleteWorkspaceModalOpen"
+      :title="$t('workspaces.deleteTitle')"
+      :message="deleteWorkspaceMessage"
+      :confirm-text="$t('common.delete')"
+      @confirm="executeDeleteWorkspace"
+      @cancel="cancelDeleteWorkspace"
+    />
   </div>
 </template>
 
@@ -279,6 +289,7 @@ import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
+import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -292,6 +303,15 @@ const isCreating = ref(false)
 const newWorkspaceName = ref('')
 const isCreatingWorkspace = ref(false)
 const copiedWorkspaceId = ref<string | null>(null)
+
+// BUG-1580: workspace delete confirmation state (replaces broken window.confirm() in Tauri)
+const isDeleteWorkspaceModalOpen = ref(false)
+const deleteWorkspacePending = ref<{ id: string; name: string } | null>(null)
+const deleteWorkspaceMessage = computed(() =>
+  deleteWorkspacePending.value
+    ? t('workspaces.deleteConfirm', { name: deleteWorkspacePending.value.name })
+    : ''
+)
 
 const activeName = computed(() =>
   workspaceStore.activeWorkspace?.name || t('workspaces.personal')
@@ -360,9 +380,16 @@ async function handleCopyInviteLink(workspaceId: string) {
   }
 }
 
-async function handleDeleteWorkspace(ws: { id: string; name: string }) {
-  const confirmed = window.confirm(`Delete workspace "${ws.name}"? This cannot be undone.`)
-  if (!confirmed) return
+function handleDeleteWorkspace(ws: { id: string; name: string }) {
+  // BUG-1580: window.confirm() is broken in Tauri/WebKitGTK — use ConfirmationModal instead
+  deleteWorkspacePending.value = ws
+  isDeleteWorkspaceModalOpen.value = true
+}
+
+async function executeDeleteWorkspace() {
+  if (!deleteWorkspacePending.value) return
+  const ws = deleteWorkspacePending.value
+  cancelDeleteWorkspace()
 
   const success = await workspaceStore.deleteWorkspace(ws.id)
   if (success) {
@@ -370,6 +397,11 @@ async function handleDeleteWorkspace(ws: { id: string; name: string }) {
     // Close the dropdown for a clean UX
     isOpen.value = false
   }
+}
+
+function cancelDeleteWorkspace() {
+  isDeleteWorkspaceModalOpen.value = false
+  deleteWorkspacePending.value = null
 }
 
 function handleOutsideClick(event: MouseEvent) {

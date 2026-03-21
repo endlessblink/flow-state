@@ -21,7 +21,9 @@
 
     <!-- Count Badge -->
     <div v-if="!isCollapsed" class="count-summary">
-      <NBadge :value="totalTaskCount" type="info" />
+      <!-- BUG: NBadge's slot-machine animation renders all digit spans visible in WebKitGTK (Tauri).
+           title="40" but displays "444000". Use plain span instead. -->
+      <span class="inbox-count-badge">{{ totalTaskCount }}</span>
       <span v-if="showFilteredCount" class="filtered-count-label">
         {{ taskCount }} shown
       </span>
@@ -384,11 +386,6 @@ const handleTimeFilterSelect = (key: string) => {
   width: 100%;
 }
 
-/* BUG-1078: Prevent NBadge from shrinking */
-.inbox-header :deep(.n-badge) {
-  flex-shrink: 0;
-}
-
 .count-summary {
   display: flex;
   align-items: center;
@@ -396,13 +393,24 @@ const handleTimeFilterSelect = (key: string) => {
   flex-shrink: 0;
 }
 
-/* Glass morphism override for NBadge — no solid fills */
-.inbox-header :deep(.n-badge-sup) {
-  background: var(--brand-primary-subtle) !important;
-  border: 1px solid var(--brand-primary-dim) !important;
-  color: var(--brand-primary) !important;
-  backdrop-filter: blur(8px);
+/* BUG: NBadge's slot-machine animation renders all digit spans visible in WebKitGTK.
+   Replaced with plain span styled to match. */
+.inbox-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1_5);
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
+  line-height: 1;
+  color: var(--brand-primary);
+  background: var(--brand-primary-subtle);
+  border: 1px solid var(--brand-primary-dim);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
 }
 
 .filtered-count-label {

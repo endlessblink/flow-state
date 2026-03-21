@@ -11,63 +11,102 @@ describe('FlowState Smoke Test', () => {
     console.log('App title:', title)
   })
 
-  it('should read _rawTasks count from Pinia store', async () => {
+  it('should wait for app initialization and read task count', async () => {
+    // Wait for the app to fully initialize (auth, data load)
+    await browser.pause(5000)
+
+    // Try multiple approaches to read task data
     const result = await browser.execute(() => {
-      // Access Pinia store via window — check if accessible
-      const pinia = (window).__pinia
-      if (!pinia) return { error: 'Pinia not found on window' }
-      const tasksState = pinia.state.value.tasks
-      if (!tasksState) return { error: 'Tasks store not found' }
-      return {
-        rawTasksCount: tasksState._rawTasks?.length ?? -1,
-        uniqueIds: new Set(tasksState._rawTasks?.map(t => t.id) ?? []).size
+      // Approach 1: Vue devtools hook
+      const app = document.querySelector('#app')?.__vue_app__
+      if (app) {
+        const pinia = app.config.globalProperties.$pinia
+        if (pinia) {
+          const tasksState = pinia.state.value.tasks
+          if (tasksState) {
+            const raw = tasksState._rawTasks || []
+            const uniqueIds = new Set(raw.map(t => t.id)).size
+            return {
+              source: 'vue_app',
+              rawTasksCount: raw.length,
+              uniqueIds: uniqueIds,
+              duplicateCount: raw.length - uniqueIds,
+              sampleIds: raw.slice(0, 5).map(t => t.id?.slice(0, 8)),
+              filteredTasksCount: tasksState.filteredTasks?.length ?? 'N/A'
+            }
+          }
+        }
       }
+
+      // Approach 2: Check __pinia on window
+      if (window.__pinia) {
+        const tasksState = window.__pinia.state.value.tasks
+        return {
+          source: 'window.__pinia',
+          rawTasksCount: tasksState?._rawTasks?.length ?? -1
+        }
+      }
+
+      return { error: 'Could not access Pinia store' }
     })
-    console.log('Tasks state:', JSON.stringify(result))
+    console.log('Tasks state:', JSON.stringify(result, null, 2))
   })
 
   it('should check inbox badge count', async () => {
-    // Navigate to canvas view (has inbox panel)
-    await browser.execute(() => {
-      window.location.hash = '#/canvas'
-    })
-    await browser.pause(3000) // Wait for canvas to load
+    // Navigate to canvas view
+    await browser.execute(() => { window.location.hash = '#/canvas' })
+    await browser.pause(3000)
 
-    // Read the badge value
     const badgeEl = await $('.inbox-header .n-badge')
     if (await badgeEl.isExisting()) {
       const badgeText = await badgeEl.getText()
       console.log('Inbox badge value:', badgeText)
     } else {
-      console.log('Inbox badge not found (may be collapsed)')
+      console.log('Inbox badge not found')
     }
   })
 
-  it('should test task deletion on canvas', async () => {
-    // Check if there are task nodes on canvas
-    const taskNodes = await $$('.vue-flow .task-node')
-    console.log('Task nodes on canvas:', taskNodes.length)
-
-    if (taskNodes.length > 0) {
-      // Right-click on first task
-      await taskNodes[0].click({ button: 'right' })
-      await browser.pause(500)
-
-      // Look for delete option in context menu
-      const deleteBtn = await $('[data-action="delete"]')
-      if (await deleteBtn.isExisting()) {
-        console.log('Delete button found in context menu')
-      } else {
-        console.log('Context menu items:', await $$('.context-menu-item').map(el => el.getText()))
+  it('should read IndexedDB cache size', async () => {
+    const result = await browser.execute(async () => {
+      try {
+        // Open the Dexie DB directly
+        return new Promise((resolve) => {
+          const req = indexedDB.open('FlowStateReadCache')
+          req.onsuccess = (e) => {
+            const db = e.target.result
+            const storeNames = Array.from(db.objectStoreNames)
+            if (!storeNames.includes('tasks')) {
+              resolve({ error: 'No tasks store', stores: storeNames })
+              return
+            }
+            const tx = db.transaction('tasks', 'readonly')
+            const store = tx.objectStore('tasks')
+            const countReq = store.count()
+            countReq.onsuccess = () => {
+              resolve({
+                indexedDBTaskCount: countReq.result,
+                stores: storeNames
+              })
+            }
+            countReq.onerror = () => resolve({ error: 'count failed' })
+          }
+          req.onerror = () => resolve({ error: 'Failed to open DB' })
+        })
+      } catch (e) {
+        return { error: String(e) }
       }
-    }
+    })
+    console.log('IndexedDB state:', JSON.stringify(result, null, 2))
   })
 
-  it('should capture console logs', async () => {
-    const logs = await browser.execute(() => {
-      return (window).__consoleLogs || []
+  it('should check version', async () => {
+    const version = await browser.execute(() => {
+      // Check package version from meta tag or app config
+      const metaVersion = document.querySelector('meta[name="version"]')?.content
+      // Check from Vite env
+      const buildVersion = window.__BUILD_VERSION__ || 'unknown'
+      return { metaVersion, buildVersion }
     })
-    console.log('Captured console logs:', logs.length)
-    logs.slice(-10).forEach(log => console.log('  >', log))
+    console.log('Version info:', JSON.stringify(version))
   })
 })

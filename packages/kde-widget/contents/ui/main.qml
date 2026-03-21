@@ -262,7 +262,7 @@ PlasmoidItem {
         var sg = root.getWidgetScreenGeometry()
         if (sg.screen) nudgePopup.screen = sg.screen
         nudgePopup.x = sg.x + sg.width - nudgePopup.width - 24
-        nudgePopup.y = sg.y + sg.height - nudgePopup.height - 24
+        nudgePopup.y = sg.y + 24
 
         nudgePopup.nudgeMessage = msg
         nudgePopup.visible = true

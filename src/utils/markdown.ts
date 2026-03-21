@@ -117,9 +117,13 @@ export const parseMarkdown = (content: string): string => {
       ADD_ATTR: ['type', 'checked', 'class', 'disabled', 'data-type', 'data-checked']
     })
 
+    // Convert ~~strikethrough~~ that survived marked.parse() (e.g., content stored as HTML
+    // where marked passes HTML blocks through without processing inline markdown syntax)
+    const withStrikethrough = sanitized.replace(/~~(.*?)~~/g, '<del>$1</del>')
+
     // Convert ==highlight== syntax to <mark> for Tiptap's Highlight extension
     // This is a non-standard markdown extension commonly used in Obsidian and other editors
-    const withHighlight = sanitized.replace(/==(.*?)==/g, '<mark>$1</mark>')
+    const withHighlight = withStrikethrough.replace(/==(.*?)==/g, '<mark>$1</mark>')
 
     return withHighlight
   } catch (error) {

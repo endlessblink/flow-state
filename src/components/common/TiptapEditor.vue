@@ -284,6 +284,10 @@ import { useDebounceFn } from '@vueuse/core'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
+import { Strike } from '@tiptap/extension-strike'
+import { Bold } from '@tiptap/extension-bold'
+import { Italic } from '@tiptap/extension-italic'
+import { Code as CodeMark } from '@tiptap/extension-code'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 // Link and Underline imports removed to fix duplicate extension warnings
@@ -440,8 +444,10 @@ const editor = useEditor({
     TableHeader,
     ShiftEnterExitList,
   ],
-  // Disable input rules globally - no auto-conversion on typing
-  enableInputRules: false,
+  // Enable input rules ONLY for inline formatting marks (~~strike~~, **bold**, *italic*, `code`)
+  // Structural rules (headings, lists, blockquotes, horizontal rules) stay disabled
+  // to prevent unwanted auto-conversion when typing "# ", "- ", "1. ", "---", "> "
+  enableInputRules: [Strike, Bold, Italic, CodeMark],
   // Keep paste rules for pasting formatted content
   enablePasteRules: true,
   onUpdate: ({ editor }) => {

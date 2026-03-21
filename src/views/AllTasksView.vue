@@ -19,6 +19,17 @@
           @collapse-all="handleCollapseAll"
         />
 
+        <!-- Show All Week Days Toggle -->
+        <button
+          v-if="groupBy === 'dueDate'"
+          class="mode-btn"
+          :class="{ 'mode-btn--active': showAllWeekDays }"
+          :title="showAllWeekDays ? 'Hide empty days' : 'Show all week days'"
+          @click="showAllWeekDays = !showAllWeekDays"
+        >
+          <CalendarDays :size="16" />
+        </button>
+
         <!-- View Mode Toggle -->
         <div class="view-mode-toggle" role="group" aria-label="View mode">
           <button
@@ -50,6 +61,8 @@
           :groups="groupedTasks"
           :group-by="groupBy"
           :empty-message="getEmptyMessage()"
+          :sort-by="sortBy"
+          :sort-direction="sortDirection"
           @select="handleSelectTask"
           @toggle-complete="handleToggleComplete"
           @start-timer="handleStartTimer"
@@ -61,6 +74,8 @@
           @delete-selected="handleDeleteSelected"
           @add-task-to-group="handleAddTaskToGroup"
           @reorder="sortBy = 'manual'"
+          @update:sort-by="sortBy = $event"
+          @update:sort-direction="sortDirection = $event"
         />
 
         <!-- Table Mode -->
@@ -130,7 +145,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useSettingsStore } from '@/stores/settings'
 import { useMobileDetection } from '@/composables/useMobileDetection'
-import { List, Table2 } from 'lucide-vue-next'
+import { List, Table2, CalendarDays } from 'lucide-vue-next'
 import ViewControls from '@/components/layout/ViewControls.vue'
 import TaskList from '@/components/tasks/TaskList.vue'
 import TaskTable from '@/components/tasks/TaskTable.vue'
@@ -162,9 +177,11 @@ const { hideDoneTasks } = storeToRefs(taskStore)
 
 // View State (TASK-1215: Persist across restarts via Tauri store + localStorage)
 const sortBy = usePersistentRef<string>('flowstate:all-tasks-sort-by', 'dueDate')
+const sortDirection = usePersistentRef<'asc' | 'desc'>('flowstate:all-tasks-sort-direction', 'asc')
 const groupBy = usePersistentRef<GroupByType>('flowstate:all-tasks-group-by', 'project')
 // FEATURE-1293: Catalog view mode toggle (list | table), persisted to localStorage
 const catalogViewMode = usePersistentRef<'list' | 'table'>('flowstate-catalog-view-mode', 'list')
+const showAllWeekDays = usePersistentRef<boolean>('flowstate-show-all-week-days', false)
 // Use global status filter directly from store (maintains reactivity)
 const filterStatus = computed(() => taskStore.activeStatusFilter || 'all')
 
@@ -204,30 +221,63 @@ const filteredTasks = computed(() => {
 
 const sortedTasks = computed(() => {
   const tasks = [...filteredTasks.value]
+  const dir = sortDirection.value === 'asc' ? 1 : -1
 
   switch (sortBy.value) {
     case 'dueDate':
       return tasks.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0
         if (!a.dueDate) return 1
         if (!b.dueDate) return -1
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        return dir * (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
       })
     case 'priority': {
-      const priorityOrder = { high: 0, medium: 1, low: 2 }
+      const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
       return tasks.sort((a, b) => {
         const aPriority = a.priority ? priorityOrder[a.priority] : 3
         const bPriority = b.priority ? priorityOrder[b.priority] : 3
-        return aPriority - bPriority
+        return dir * (aPriority - bPriority)
       })
     }
     case 'title':
-      return tasks.sort((a, b) => a.title.localeCompare(b.title))
+      return tasks.sort((a, b) => dir * a.title.localeCompare(b.title))
     case 'created':
       return tasks.sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        return dir * (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       })
     case 'manual':
       return tasks.sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
+    case 'status': {
+      const statusOrder: Record<string, number> = { in_progress: 0, planned: 1, backlog: 2, on_hold: 3, done: 4 }
+      return tasks.sort((a, b) => {
+        const aStatus = statusOrder[a.status] ?? 5
+        const bStatus = statusOrder[b.status] ?? 5
+        return dir * (aStatus - bStatus)
+      })
+    }
+    case 'progress': {
+      return tasks.sort((a, b) => {
+        const aSubtasks = a.subtasks as Array<{ done?: boolean }> | undefined
+        const bSubtasks = b.subtasks as Array<{ done?: boolean }> | undefined
+        const aTotal = aSubtasks?.length ?? 0
+        const bTotal = bSubtasks?.length ?? 0
+        const aProgress = aTotal > 0 ? (aSubtasks!.filter(s => s.done).length / aTotal) : -1
+        const bProgress = bTotal > 0 ? (bSubtasks!.filter(s => s.done).length / bTotal) : -1
+        if (aProgress === -1 && bProgress === -1) return 0
+        if (aProgress === -1) return 1
+        if (bProgress === -1) return -1
+        return dir * (aProgress - bProgress)
+      })
+    }
+    case 'estimatedTime':
+      return tasks.sort((a, b) => {
+        const aTime = (a as any).estimatedTime ?? null
+        const bTime = (b as any).estimatedTime ?? null
+        if (aTime === null && bTime === null) return 0
+        if (aTime === null) return 1
+        if (bTime === null) return -1
+        return dir * (aTime - bTime)
+      })
     default:
       return tasks
   }
@@ -366,15 +416,28 @@ const groupedTasks = computed((): TaskGroup[] => {
     tomorrow.setDate(tomorrow.getDate() + 1)
 
     const weekStartsOn = settingsStore.weekStartsOn ?? 0
+    const todayDow = today.getDay()
     const endOfWeek = new Date(today)
     if (weekStartsOn === 0) {
       // Sunday start: week ends Saturday (day 6)
-      const daysUntilEnd = (6 - today.getDay() + 7) % 7
+      const daysUntilEnd = (6 - todayDow + 7) % 7
       endOfWeek.setDate(today.getDate() + daysUntilEnd)
     } else {
       // Monday start: week ends Sunday (day 0)
-      const daysUntilEnd = (7 - today.getDay()) % 7
+      const daysUntilEnd = (7 - todayDow) % 7
       endOfWeek.setDate(today.getDate() + daysUntilEnd)
+    }
+    // When showAllWeekDays is on, always extend to show next week for planning
+    // When off, still extend on Fri/Sat so tasks aren't hidden
+    if (showAllWeekDays.value) {
+      // Show through end of next week
+      const nextWeekEnd = new Date(endOfWeek)
+      nextWeekEnd.setDate(endOfWeek.getDate() + 7)
+      endOfWeek.setTime(nextWeekEnd.getTime())
+    } else if (todayDow === 5 || todayDow === 6) {
+      const nextWed = new Date(endOfWeek)
+      nextWed.setDate(endOfWeek.getDate() + 4)
+      endOfWeek.setTime(nextWed.getTime())
     }
 
     // Generate per-day buckets for remaining weekdays (after tomorrow, up to end of week)
@@ -434,7 +497,9 @@ const groupedTasks = computed((): TaskGroup[] => {
 
     bucketConfig.forEach(({ key, title }) => {
       const bucketTasks = buckets[key]
-      if (bucketTasks.length > 0) {
+      const isDayBucket = key.startsWith('day-')
+      // Show empty day buckets when showAllWeekDays is on; always hide empty non-day buckets
+      if (bucketTasks.length > 0 || (showAllWeekDays.value && isDayBucket)) {
         groups.push({
           key,
           title,

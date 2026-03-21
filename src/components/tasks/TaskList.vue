@@ -31,13 +31,37 @@
         </div>
       </template>
       <template v-else>
-        <span>Task <span class="task-total-count">{{ tasks.length }}</span></span>
+        <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'title' }" @click="handleSort('title')">
+          Task <span class="task-total-count">{{ tasks.length }}</span>
+          <ChevronUp v-if="sortBy === 'title' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
+          <ChevronDown v-else-if="sortBy === 'title'" :size="12" class="sort-indicator" />
+        </span>
         <span />
-        <span>Status</span>
-        <span>Priority</span>
-        <span>Due</span>
-        <span>Progress</span>
-        <span>Est.</span>
+        <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'status' }" @click="handleSort('status')">
+          Status
+          <ChevronUp v-if="sortBy === 'status' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
+          <ChevronDown v-else-if="sortBy === 'status'" :size="12" class="sort-indicator" />
+        </span>
+        <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'priority' }" @click="handleSort('priority')">
+          Priority
+          <ChevronUp v-if="sortBy === 'priority' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
+          <ChevronDown v-else-if="sortBy === 'priority'" :size="12" class="sort-indicator" />
+        </span>
+        <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'dueDate' }" @click="handleSort('dueDate')">
+          Due
+          <ChevronUp v-if="sortBy === 'dueDate' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
+          <ChevronDown v-else-if="sortBy === 'dueDate'" :size="12" class="sort-indicator" />
+        </span>
+        <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'progress' }" @click="handleSort('progress')">
+          Progress
+          <ChevronUp v-if="sortBy === 'progress' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
+          <ChevronDown v-else-if="sortBy === 'progress'" :size="12" class="sort-indicator" />
+        </span>
+        <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'estimatedTime' }" @click="handleSort('estimatedTime')">
+          Est.
+          <ChevronUp v-if="sortBy === 'estimatedTime' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
+          <ChevronDown v-else-if="sortBy === 'estimatedTime'" :size="12" class="sort-indicator" />
+        </span>
         <span />
       </template>
     </div>
@@ -198,13 +222,15 @@ import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
-import { Inbox, ChevronRight, Pencil, Trash2, X, Zap, ArrowDownToLine, Plus } from 'lucide-vue-next'
+import { Inbox, ChevronRight, ChevronUp, ChevronDown, Pencil, Trash2, X, Zap, ArrowDownToLine, Plus } from 'lucide-vue-next'
 
 interface Props {
   tasks: Task[]
   groups: TaskGroup[]
   groupBy: string
   emptyMessage?: string
+  sortBy?: string
+  sortDirection?: 'asc' | 'desc'
 }
 
 const props = defineProps<Props>()
@@ -221,12 +247,23 @@ const emit = defineEmits<{
   deleteSelected: [taskIds: string[]]
   addTaskToGroup: [groupKey: string, groupBy: string]
   reorder: []
+  'update:sortBy': [value: string]
+  'update:sortDirection': [value: 'asc' | 'desc']
 }>()
 
 // Expand/collapse state
 const expandedTasks = ref<Set<string>>(new Set())
 const expandedGroups = ref<Set<string>>(new Set())
 const selectedTaskIds = ref<string[]>([])
+
+function handleSort(field: string) {
+  if (props.sortBy === field) {
+    emit('update:sortDirection', props.sortDirection === 'asc' ? 'desc' : 'asc')
+  } else {
+    emit('update:sortBy', field)
+    emit('update:sortDirection', 'asc')
+  }
+}
 
 // BUG-1493: Persist collapsed group keys so state survives navigation.
 // We store the COLLAPSED keys (smaller set since groups are expanded by default).
@@ -1040,6 +1077,31 @@ defineExpose({
   white-space: nowrap;
   text-transform: none;
   letter-spacing: normal;
+}
+
+.sortable-header {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  user-select: none;
+  transition: color 0.15s ease;
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+.sortable-header:hover {
+  color: var(--text-primary);
+}
+
+.sortable-header--active {
+  color: var(--brand-primary);
+}
+
+.sort-indicator {
+  opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .bulk-action-btn {

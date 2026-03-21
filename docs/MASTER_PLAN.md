@@ -3153,7 +3153,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-## Epic: Comprehensive Testing Strategy (TASK-1584 — TASK-1640)
+## Epic: Comprehensive Testing Strategy (TASK-1584 — TASK-1670)
 
 > **Goal**: Build a full-stack testing safety net to stop the pattern of regressions, silent data corruption, and platform-specific breakage that has driven P0 bugs throughout the project's history.
 > **Priority**: P0-P3 (phased) | **Status**: 📋 PLANNED
@@ -3219,6 +3219,36 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | TASK-1638 | Canvas node rendering — task nodes, group nodes render all fields correctly | P1 | 📋 PLANNED |
 | TASK-1639 | Timer UI states — all timer states (idle, running, paused, complete, break) render correctly | P1 | 📋 PLANNED |
 | TASK-1640 | Naive UI override consistency — all NDatePicker, NSelect overrides in global-overrides.css work | P2 | 📋 PLANNED |
+| BUG-1641 | Fix workspace_id column + workspace_members table missing from DB — code references non-existent schema | P0 | 📋 PLANNED |
+| TASK-1642 | SW lifecycle tests — install, activate, update, skip waiting (10 tests) | P1 | 📋 PLANNED |
+| TASK-1643 | Offline mode tests — app loads from cache, offline indicator, queued ops (10 tests) | P1 | 📋 PLANNED |
+| TASK-1644 | Install prompt tests — shows on mobile/desktop, dismissible (5 tests) | P2 | 📋 PLANNED |
+| TASK-1645 | Cache strategy tests — assets CacheFirst, API NetworkFirst, versioning (10 tests) | P1 | 📋 PLANNED |
+| TASK-1646 | Background sync tests — queued operations sync on reconnect (10 tests) | P1 | 📋 PLANNED |
+| TASK-1647 | Push notification tests — subscription, delivery, click handler (10 tests) | P2 | 📋 PLANNED |
+| TASK-1648 | Manifest validation tests — icons, theme, start URL, display mode (5 tests) | P2 | 📋 PLANNED |
+| TASK-1649 | PWA E2E tests — full offline workflow, install flow, update flow (15 tests) | P1 | 📋 PLANNED |
+| TASK-1650 | PWA performance tests — first paint, TTI, lighthouse score assertions (10 tests) | P2 | 📋 PLANNED |
+| TASK-1651 | KDE REST API contract tests — widget XHR calls match Supabase API shape (15 tests) | P1 | 📋 PLANNED |
+| TASK-1652 | KDE timer sync tests — widget follows app session, 2s polling, leadership (10 tests) | P1 | 📋 PLANNED |
+| TASK-1653 | KDE nanny timer gate tests — work hours, work days, cooldown, quiet today (15 tests) | P1 | 📋 PLANNED |
+| TASK-1654 | KDE nudge popup logic tests — snooze timing, stop today, auto-dismiss (10 tests) | P1 | 📋 PLANNED |
+| TASK-1655 | KDE task list building tests — project grouping, filtering, hidden tasks (10 tests) | P1 | 📋 PLANNED |
+| TASK-1656 | KDE auth flow tests — login, token refresh, session persistence (10 tests) | P1 | 📋 PLANNED |
+| TASK-1657 | KDE QML property binding tests — state consistency, reactive updates (10 tests) | P2 | 📋 PLANNED |
+| TASK-1658 | KDE notify-send command format tests — correct args, escaping, app name (5 tests) | P2 | 📋 PLANNED |
+| TASK-1659 | KDE full-screen overlay tests — session complete, break/work transition (10 tests) | P2 | 📋 PLANNED |
+| TASK-1660 | KDE pre-end warning tests — timing, positioning, dismiss (5 tests) | P2 | 📋 PLANNED |
+| TASK-1661 | Gamification store tests — XP, levels, achievements, streaks (15 tests) | P1 | 📋 PLANNED |
+| TASK-1662 | Quick sort logic tests — session management, card ordering, completion (10 tests) | P1 | 📋 PLANNED |
+| TASK-1663 | AI chat store tests — conversation CRUD, provider failover, context window (10 tests) | P2 | 📋 PLANNED |
+| TASK-1664 | Workspace store tests — create, switch, members, permissions (10 tests) | P1 | 📋 PLANNED |
+| TASK-1665 | Google Calendar integration tests — sync, OAuth, event mapping (10 tests) | P2 | 📋 PLANNED |
+| TASK-1666 | Voice input tests — Whisper transcription, browser fallback, NLP parsing (10 tests) | P2 | 📋 PLANNED |
+| TASK-1667 | Edge function tests — WhatsApp webhook processing (5 tests) | P2 | 📋 PLANNED |
+| TASK-1668 | Browser compatibility tests — Firefox Playwright project (20 tests) | P2 | 📋 PLANNED |
+| TASK-1669 | Backup system comprehensive tests — all 4 layers, corrupt detection (15 tests) | P1 | 📋 PLANNED |
+| TASK-1670 | E2E CRUD workflow tests — full task lifecycle across views (15 tests) | P0 | 📋 PLANNED |
 
 ---
 
@@ -3990,6 +4020,410 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Covers**: `NDatePicker` uses dark glass background (not white), teal selection color (`#4ECDC4`), weekend days not highlighted red, "Clear" button absent when `:actions="[]"`, `NSelect` dropdown matches glass morphism design, all overrides survive a Vite CSS chunk rebuild.
 
 **Files**: `tests/e2e/visual-rendering/naive-ui-overrides.spec.ts`
+
+---
+
+### BUG-1641: Workspace Schema Missing (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: The codebase references `workspace_id` columns and a `workspace_members` table that do not exist in the database schema, causing runtime 400/404 errors whenever workspace-scoped code paths execute.
+
+**Covers**: Verify DB has `workspace_id` column on `tasks` table, `workspace_members` table exists with correct columns, all RLS policies for workspace filtering are applied, and any related FK constraints are in place.
+
+**Files**: `supabase/migrations/`, `src/stores/workspace.ts`, `src/composables/sync/useSyncOrchestrator.ts`
+
+---
+
+### Phase 5: PWA Testing — P1/P2 (TASK-1642 to TASK-1650)
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| TASK-1642 | SW lifecycle tests — install, activate, update, skip waiting (10 tests) | P1 | 📋 PLANNED |
+| TASK-1643 | Offline mode tests — app loads from cache, offline indicator, queued ops (10 tests) | P1 | 📋 PLANNED |
+| TASK-1644 | Install prompt tests — shows on mobile/desktop, dismissible (5 tests) | P2 | 📋 PLANNED |
+| TASK-1645 | Cache strategy tests — assets CacheFirst, API NetworkFirst, versioning (10 tests) | P1 | 📋 PLANNED |
+| TASK-1646 | Background sync tests — queued operations sync on reconnect (10 tests) | P1 | 📋 PLANNED |
+| TASK-1647 | Push notification tests — subscription, delivery, click handler (10 tests) | P2 | 📋 PLANNED |
+| TASK-1648 | Manifest validation tests — icons, theme, start URL, display mode (5 tests) | P2 | 📋 PLANNED |
+| TASK-1649 | PWA E2E tests — full offline workflow, install flow, update flow (15 tests) | P1 | 📋 PLANNED |
+| TASK-1650 | PWA performance tests — first paint, TTI, lighthouse score assertions (10 tests) | P2 | 📋 PLANNED |
+
+#### TASK-1642: SW Lifecycle Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Validate the complete service worker lifecycle — registration, install event, activate event, cache population, update detection, and `skipWaiting` behavior.
+
+**Covers**: SW registers on first load, install event populates precache list, activate event clears old caches, update flow triggers `skipWaiting` toast, `SKIP_WAITING` message causes SW to take control immediately without forcing a hard reload.
+
+**Files**: `tests/unit/sw/lifecycle.test.ts`, `src/sw.ts`
+
+---
+
+#### TASK-1643: Offline Mode Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Confirm the app remains functional when the network is unavailable — serves cached assets, shows the offline indicator, and queues write operations for later sync.
+
+**Covers**: App shell loads from cache when `navigator.onLine = false`, `SyncStatusIndicator` shows "Offline" state, task create/update operations enter the sync queue rather than failing silently, queued ops count is accurate, auto-reconnect fires when `online` event fires.
+
+**Files**: `tests/e2e/pwa/offline-mode.spec.ts`, `src/composables/app/useAppInitialization.ts`, `src/stores/syncStatus.ts`
+
+---
+
+#### TASK-1644: Install Prompt Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the PWA install prompt appears correctly on eligible platforms and can be dismissed persistently.
+
+**Covers**: `beforeinstallprompt` event triggers install UI, install banner renders on mobile viewport, install banner renders on desktop Chromium, dismissing stores suppression flag in localStorage, re-visit respects suppression, "Install" CTA calls `prompt()`.
+
+**Files**: `tests/e2e/pwa/install-prompt.spec.ts`
+
+---
+
+#### TASK-1645: Cache Strategy Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Confirm Workbox cache strategies are applied correctly per resource type — static assets use CacheFirst, Supabase API calls use NetworkFirst, and cache versioning causes old entries to be evicted on SW update.
+
+**Covers**: `/assets/*.js` served from cache on second load (CacheFirst), Supabase REST endpoint uses NetworkFirst (network response cached, stale fallback on failure), cache name includes version hash, old cache names purged on SW activate.
+
+**Files**: `tests/unit/sw/cache-strategies.test.ts`, `src/sw.ts`, `vite.config.ts` (Workbox config)
+
+---
+
+#### TASK-1646: Background Sync Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Validate that write operations queued while offline are replayed correctly when connectivity is restored.
+
+**Covers**: Task created offline appears in IndexedDB queue, `online` event triggers queue drain, all queued CREATE/UPDATE/DELETE ops reach Supabase in dependency order, successful sync removes entries from queue, failed ops increment retry count with exponential backoff.
+
+**Files**: `tests/unit/sync/background-sync.test.ts`, `src/composables/sync/useSyncOrchestrator.ts`
+
+---
+
+#### TASK-1647: Push Notification Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Confirm push subscription, payload delivery, and notification click routing all work end-to-end.
+
+**Covers**: `pushManager.subscribe()` called with correct VAPID key, SW `push` event handler shows notification with correct title/body/actions, `notificationclick` handler routes `NAVIGATE_TO_TASK` to correct task, `SNOOZE_NOTIFICATION` calls `notificationStore.snoozeNotification()`, notification shown even when app is closed.
+
+**Files**: `tests/unit/sw/push-notifications.test.ts`, `src/sw.ts`, `src/utils/notificationDelivery.ts`
+
+---
+
+#### TASK-1648: Manifest Validation Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Assert the PWA manifest is well-formed and all referenced assets exist at build time.
+
+**Covers**: `manifest.webmanifest` parses as valid JSON, `name`/`short_name` match branding, `start_url` resolves, `display` is `standalone`, all icon sizes are present and PNG files exist on disk, `theme_color` matches `--brand-primary` token, `background_color` matches dark theme.
+
+**Files**: `tests/unit/pwa/manifest-validation.test.ts`, `public/manifest.webmanifest`
+
+---
+
+#### TASK-1649: PWA E2E Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Full end-to-end Playwright scenarios covering the critical PWA user journeys — offline task management, install flow, and in-app update acceptance.
+
+**Covers**: User creates task while offline → goes online → task syncs to Supabase, install prompt appears → user accepts → app opens as standalone, update toast appears when new SW waiting → user clicks "Update" → page reloads with new version, all using the authenticated Playwright test fixture.
+
+**Files**: `tests/e2e/pwa/pwa-workflows.spec.ts`
+
+---
+
+#### TASK-1650: PWA Performance Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Assert key performance metrics meet defined thresholds to catch bundle bloat and rendering regressions before they reach production.
+
+**Covers**: First Contentful Paint < 2s on simulated 4G, Time to Interactive < 3.5s, bundle size assertions (no single chunk > 500KB uncompressed), Lighthouse PWA score >= 90, no layout shift (CLS < 0.1) on initial load.
+
+**Files**: `tests/e2e/pwa/performance.spec.ts`, `tests/unit/build/bundle-size.test.ts`
+
+---
+
+### Phase 6: KDE Widget Testing — P1/P2 (TASK-1651 to TASK-1660)
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| TASK-1651 | KDE REST API contract tests — widget XHR calls match Supabase API shape (15 tests) | P1 | 📋 PLANNED |
+| TASK-1652 | KDE timer sync tests — widget follows app session, 2s polling, leadership (10 tests) | P1 | 📋 PLANNED |
+| TASK-1653 | KDE nanny timer gate tests — work hours, work days, cooldown, quiet today (15 tests) | P1 | 📋 PLANNED |
+| TASK-1654 | KDE nudge popup logic tests — snooze timing, stop today, auto-dismiss (10 tests) | P1 | 📋 PLANNED |
+| TASK-1655 | KDE task list building tests — project grouping, filtering, hidden tasks (10 tests) | P1 | 📋 PLANNED |
+| TASK-1656 | KDE auth flow tests — login, token refresh, session persistence (10 tests) | P1 | 📋 PLANNED |
+| TASK-1657 | KDE QML property binding tests — state consistency, reactive updates (10 tests) | P2 | 📋 PLANNED |
+| TASK-1658 | KDE notify-send command format tests — correct args, escaping, app name (5 tests) | P2 | 📋 PLANNED |
+| TASK-1659 | KDE full-screen overlay tests — session complete, break/work transition (10 tests) | P2 | 📋 PLANNED |
+| TASK-1660 | KDE pre-end warning tests — timing, positioning, dismiss (5 tests) | P2 | 📋 PLANNED |
+
+#### TASK-1651: KDE REST API Contract Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify every XHR call the KDE widget makes against the Supabase REST API matches the actual DB column names, filter syntax, and response shape — preventing silent field-name mismatches like the `_soft_deleted` bug.
+
+**Covers**: `fetchTasks` request URL has correct `select` fields, `is_deleted=eq.false` filter, ordering params; `fetchPinnedTasks` uses correct `pinned_tasks` join; `fetchProjects` returns `id`/`name`/`color`; `startSession` POST payload matches `timer_sessions` column names; PATCH update payload uses snake_case column names.
+
+**Files**: `tests/unit/kde-widget/api-contracts.test.ts`, `packages/kde-widget/contents/ui/main.qml`
+
+---
+
+#### TASK-1652: KDE Timer Sync Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Confirm the widget correctly follows the web app's timer session via 2-second polling and respects the device leadership model.
+
+**Covers**: Follower poll fetches active session every 2s, widget shows correct `remainingTime` computed from `started_at` + `duration`, widget does not claim leadership while web app session is active, widget claims leadership after 30s timeout when no heartbeat, widget switches to break timer after session complete signal.
+
+**Files**: `tests/unit/kde-widget/timer-sync.test.ts`
+
+---
+
+#### TASK-1653: KDE Nanny Timer Gate Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Validate all scheduling gates the nanny uses — work hours, active work days, per-hour cooldown, and "quiet today" suppression.
+
+**Covers**: Nanny does not fire outside configured work hours, nanny does not fire on days not in `activeDays`, nanny does not fire within cooldown window after previous nudge, "Quiet today" toggle suppresses all nudges until midnight reset, nanny fires when all gates pass and timer has been idle >= threshold, nanny never fires while Pomodoro or break timer is running.
+
+**Files**: `tests/unit/kde-widget/nanny-gate.test.ts`
+
+---
+
+#### TASK-1654: KDE Nudge Popup Logic Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Assert the nudge popup's snooze, stop-today, and auto-dismiss behaviors work correctly across all edge cases.
+
+**Covers**: "Snooze 1hr" sets next-fire timestamp correctly, snooze expires and allows next nudge, "Stop today" sets quiet flag until midnight, popup auto-dismisses after configured timeout, clicking a task in the popup starts a timer session for that task, popup does not re-show while timer is running after snooze.
+
+**Files**: `tests/unit/kde-widget/nudge-popup.test.ts`
+
+---
+
+#### TASK-1655: KDE Task List Building Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the widget's task list construction — project grouping, filter application, and hidden-task handling — produces the correct ordered output.
+
+**Covers**: Tasks grouped under correct project headers, "Today" filter returns only tasks with `due_date = today`, canvas sort uses correct column (X position) and includes Y-position secondary sort, done tasks hidden by default, soft-deleted tasks excluded, pinned tasks appear in dedicated section above main list.
+
+**Files**: `tests/unit/kde-widget/task-list.test.ts`
+
+---
+
+#### TASK-1656: KDE Auth Flow Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Confirm the widget handles login, proactive token refresh, and session persistence across widget restarts correctly.
+
+**Covers**: Login POST returns tokens stored to `PlasmaCore.DataSource`/config, refresh timer fires before token expiry (not after), 401 response on any fetch triggers `refreshAccessToken()`, refresh failure after max retries clears session and shows login form, session tokens survive widget restart via persistent config store, `isRefreshingToken` deadlock protection resets after 30s.
+
+**Files**: `tests/unit/kde-widget/auth-flow.test.ts`
+
+---
+
+#### TASK-1657: KDE QML Property Binding Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Validate that QML property bindings stay consistent across state transitions — no stale values after async XHR callbacks update shared state.
+
+**Covers**: `timerRunning` binding updates all dependent UI elements atomically, `currentTask` change propagates to both the main list and the active-task pill, `pinnedTasks` array update re-renders the chip row without duplicates, `isRefreshingToken` flag resets correctly after all code paths, rapid consecutive state changes do not leave UI in inconsistent intermediate state.
+
+**Files**: `tests/unit/kde-widget/qml-bindings.test.ts`
+
+---
+
+#### TASK-1658: KDE notify-send Command Format Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Assert that all `notify-send` shell commands emitted by the widget are correctly formatted — correct argument order, proper escaping of special characters, and correct app-name/icon values.
+
+**Covers**: Nanny nudge notification uses `--app-name=FlowState`, session-complete notification includes action buttons (`--action`), task titles with quotes or Hebrew characters are shell-escaped, urgency level maps correctly to `--urgency` flag, icon path resolves to a valid file.
+
+**Files**: `tests/unit/kde-widget/notify-send.test.ts`
+
+---
+
+#### TASK-1659: KDE Full-Screen Overlay Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the full-screen session-complete overlay appears on the correct trigger, shows accurate session data, and transitions cleanly to break or work mode.
+
+**Covers**: Overlay appears when session `remainingTime` reaches 0, overlay shows correct session duration and task name, "Start Break" button triggers break timer session, "Skip Break" dismisses overlay and resets to idle, "Start Work" on break-complete overlay starts new work session, overlay is dismissible by clicking the overlay background.
+
+**Files**: `tests/unit/kde-widget/overlay.test.ts`
+
+---
+
+#### TASK-1660: KDE Pre-End Warning Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Confirm the pre-end warning (shown N seconds before session end) appears at the correct time, is positioned correctly, and dismisses cleanly.
+
+**Covers**: Warning appears exactly `preEndWarningSeconds` before `remainingTime` reaches 0, warning does not appear if user dismissed it for this session, warning dismisses automatically when session ends, warning can be dismissed manually (click), dismissed state resets on new session start.
+
+**Files**: `tests/unit/kde-widget/pre-end-warning.test.ts`
+
+---
+
+### Phase 7: Additional Coverage Gaps — P0/P1/P2 (TASK-1661 to TASK-1670)
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| TASK-1661 | Gamification store tests — XP, levels, achievements, streaks (15 tests) | P1 | 📋 PLANNED |
+| TASK-1662 | Quick sort logic tests — session management, card ordering, completion (10 tests) | P1 | 📋 PLANNED |
+| TASK-1663 | AI chat store tests — conversation CRUD, provider failover, context window (10 tests) | P2 | 📋 PLANNED |
+| TASK-1664 | Workspace store tests — create, switch, members, permissions (10 tests) | P1 | 📋 PLANNED |
+| TASK-1665 | Google Calendar integration tests — sync, OAuth, event mapping (10 tests) | P2 | 📋 PLANNED |
+| TASK-1666 | Voice input tests — Whisper transcription, browser fallback, NLP parsing (10 tests) | P2 | 📋 PLANNED |
+| TASK-1667 | Edge function tests — WhatsApp webhook processing (5 tests) | P2 | 📋 PLANNED |
+| TASK-1668 | Browser compatibility tests — Firefox Playwright project (20 tests) | P2 | 📋 PLANNED |
+| TASK-1669 | Backup system comprehensive tests — all 4 layers, corrupt detection (15 tests) | P1 | 📋 PLANNED |
+| TASK-1670 | E2E CRUD workflow tests — full task lifecycle across views (15 tests) | P0 | 📋 PLANNED |
+
+#### TASK-1661: Gamification Store Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Validate XP award math, level thresholds, achievement unlock conditions, and streak calculation are all correct and free of the double-XP and undo-exploit bugs that have occurred in production.
+
+**Covers**: XP awarded on task complete matches formula, XP deducted on task uncomplete (undo), level-up fires at correct XP threshold, `deductXp()` clamps at 0 (never negative), achievement unlocks only once per condition met, daily streak increments on consecutive day completions, streak resets after missed day, `loadTodaySessionsFromDB()` populates `completedSessions` correctly on init.
+
+**Files**: `tests/unit/stores/gamification.test.ts`, `src/stores/gamification.ts`, `src/composables/useGamificationHooks.ts`
+
+---
+
+#### TASK-1662: Quick Sort Logic Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Confirm Quick Sort session lifecycle — creation, card ordering, swipe/skip/done actions, and session completion — are all correct and persist to the sync queue.
+
+**Covers**: New session creates record in `quick_sort_sessions` table, cards ordered by correct algorithm (priority + due date + recency), swipe-right marks task done, swipe-left skips task, pin assigns task to project, session completes when all cards processed, session state survives page reload (IndexedDB-backed), offline session queued and replayed on reconnect.
+
+**Files**: `tests/unit/composables/quick-sort-logic.test.ts`, `src/composables/useQuickSort.ts`
+
+---
+
+#### TASK-1663: AI Chat Store Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Verify conversation CRUD, provider failover logic, and context window management in the AI chat store.
+
+**Covers**: Create conversation stores with correct initial shape, delete conversation removes messages, conversation auto-names after first message, provider failover switches from Groq to Ollama on rate-limit error, context window truncation removes oldest messages when token budget exceeded, conversation entity memory resolves "it" to most recently mentioned task ID.
+
+**Files**: `tests/unit/stores/ai-chat.test.ts`, `src/stores/aiChat.ts`, `src/composables/useAIChat.ts`
+
+---
+
+#### TASK-1664: Workspace Store Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Validate workspace creation, switching, member management, and permission checks work correctly and gate data access by workspace boundary.
+
+**Covers**: `createWorkspace()` inserts row and sets `currentWorkspaceId`, `switchWorkspace()` triggers task reload with new workspace filter, `loadMembers()` fetches only members for current workspace, `isSwitchingWorkspace` flag blocks sync queue during switch, personal workspace always accessible, leaving a shared workspace reverts to personal workspace, `deleteWorkspace()` requires confirmation and removes all workspace tasks.
+
+**Files**: `tests/unit/stores/workspace.test.ts`, `src/stores/workspace.ts`
+
+---
+
+#### TASK-1665: Google Calendar Integration Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Confirm the Google Calendar sync pipeline — OAuth token storage, event fetch via Edge Function proxy, and event-to-calendar-view mapping — works end-to-end without leaking tokens to the client.
+
+**Covers**: `google-calendar-proxy` Edge Function validates Supabase JWT before proxying, `list-events` returns events in correct shape for the calendar renderer, token refresh on Google 401 returns `newAccessToken` to client, expired `googleProviderToken` triggers re-auth prompt, Google events render with distinct styling vs FlowState tasks, RRULE events expanded correctly by the iCal parser.
+
+**Files**: `tests/unit/integrations/google-calendar.test.ts`, `supabase/functions/google-calendar-proxy/index.ts`
+
+---
+
+#### TASK-1666: Voice Input Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Validate Whisper transcription, browser speech fallback, and NLP parsing produce correct task properties from spoken input.
+
+**Covers**: Whisper API call sends audio blob with correct `language` param and Hebrew prompt, `temperature=0` set for Hebrew transcription, browser Web Speech API used as fallback when Whisper unavailable, offline recording saves blob to IndexedDB queue, queue drains on reconnect with correct retry count, NLP parser extracts title/priority/due-date from natural language ("call dentist tomorrow high priority").
+
+**Files**: `tests/unit/composables/voice-input.test.ts`, `src/composables/useWhisperSpeech.ts`, `src/composables/useOfflineVoiceQueue.ts`
+
+---
+
+#### TASK-1667: Edge Function Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Verify the WhatsApp webhook Edge Function correctly authenticates WAHA requests, parses Groq AI output, and inserts tasks into Supabase with the correct shape.
+
+**Covers**: Request without valid `WAHA_API_KEY` returns 401, chat ID not in allowlist returns 403, Groq parser extracts `title`/`priority`/`dueDate`/`duration` from Hebrew/English message, inserted task has `is_in_inbox: true` and correct `user_id`, WAHA confirmation message sent after successful insert, Groq API failure returns 500 with error message.
+
+**Files**: `tests/unit/edge-functions/whatsapp-webhook.test.ts`, `supabase/functions/whatsapp-task-webhook/index.ts`
+
+---
+
+#### TASK-1668: Browser Compatibility Tests (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Goal**: Run the existing Playwright E2E suite against Firefox to surface cross-browser regressions before they reach production users.
+
+**Covers**: Add `firefox` project to `playwright.config.ts`, run full E2E suite in Firefox headed mode in CI, assert no test failures unique to Firefox, document any known Firefox-only limitations, add `webkit` (Safari simulation) project for broader coverage.
+
+**Files**: `playwright.config.ts`, `.github/workflows/ci.yml`
+
+---
+
+#### TASK-1669: Backup System Comprehensive Tests (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Validate all four backup system layers (auto-backup, manual export, IndexedDB cache, Supabase restore) work correctly and can recover from simulated corruption scenarios.
+
+**Covers**: Auto-backup fires every 5 minutes, backup JSON is parseable and contains all tasks, manual export generates valid downloadable file, corrupted IndexedDB cache (>1000 tasks) is detected and cleared on startup, Supabase restore populates task store from backup JSON, backup older than 7 days shows staleness warning in Settings > Storage, multiple backup versions retained (at least 3).
+
+**Files**: `tests/unit/backup/backup-system.test.ts`, `src/services/offline/readCacheDB.ts`, `src/composables/app/useAppInitialization.ts`
+
+---
+
+#### TASK-1670: E2E CRUD Workflow Tests (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Goal**: Full end-to-end Playwright tests covering the complete task lifecycle across all four main views — the most critical regression safety net for the project.
+
+**Covers**: Create task in Board → verify appears in Canvas, Calendar, Catalog; edit task title in Canvas → verify updated across all views; move task to "Done" → verify removed from active views; delete task → verify tombstone created; drag task between Kanban columns → verify status updated in DB; assign due date in Calendar → verify appears in Today filter; recurring task completes → verify next occurrence created; all tests use the authenticated Playwright fixture with seeded data.
+
+**Files**: `tests/e2e/crud/task-lifecycle.spec.ts`
 
 ---
 

@@ -192,12 +192,16 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 <template>
   <div class="week-view">
     <!-- Week Header -->
-    <div class="week-header">
+    <div class="week-header" :style="{ '--day-count': weekDays.length }">
       <div class="week-time-label" />
       <div
         v-for="(day, index) in weekDays"
         :key="index"
         class="week-day-header"
+        :class="{
+          'preview-day': day.isPreview,
+          'preview-day-first': day.isPreview && !weekDays[index - 1]?.isPreview
+        }"
       >
         <div class="week-day-name">
           {{ day.dayName }}
@@ -223,11 +227,15 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 
       <!-- Week Days Grid -->
       <div class="week-days-grid">
-        <div class="week-time-grid">
+        <div class="week-time-grid" :style="{ '--day-count': weekDays.length }">
           <div
             v-for="(day, dayIndex) in weekDays"
             :key="`col-${dayIndex}`"
             class="week-day-column"
+            :class="{
+              'preview-day': day.isPreview,
+              'preview-day-first': day.isPreview && !weekDays[dayIndex - 1]?.isPreview
+            }"
           >
             <div
               v-for="hour in workingHours"
@@ -360,7 +368,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 
 .week-header {
   display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
+  grid-template-columns: 80px repeat(var(--day-count, 7), 1fr);
   background: var(--glass-panel-bg);
   backdrop-filter: var(--blur-md);
   border-bottom: 1px solid var(--border-subtle);
@@ -425,8 +433,26 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
 
 .week-time-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(var(--day-count, 7), 1fr);
   height: 100%;
+}
+
+/* Next week preview columns */
+.week-day-header.preview-day {
+  opacity: 0.55;
+}
+
+.week-day-header.preview-day-first {
+  border-left: 2px dashed var(--brand-primary);
+}
+
+.week-day-column.preview-day {
+  opacity: 0.55;
+  background: var(--glass-bg-soft);
+}
+
+.week-day-column.preview-day-first {
+  border-left: 2px dashed var(--brand-primary);
 }
 
 .week-day-column {

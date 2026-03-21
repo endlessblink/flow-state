@@ -11,6 +11,7 @@ export interface WeekDay {
   date: number
   dateString: string
   fullDate: Date
+  isPreview?: boolean
 }
 
 // Re-export for consumers
@@ -97,7 +98,11 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const weekStart = getWeekStart(currentDate.value)
     const days: WeekDay[] = []
 
-    for (let i = 0; i < 7; i++) {
+    // Show 3 preview days (Mon-Tue-Wed of next week) on Friday/Saturday
+    const todayDow = new Date().getDay()
+    const extraDays = (todayDow === 5 || todayDow === 6) ? 3 : 0
+
+    for (let i = 0; i < 7 + extraDays; i++) {
       const date = new Date(weekStart)
       date.setDate(weekStart.getDate() + i)
 
@@ -105,7 +110,8 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
         dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
         date: date.getDate(),
         dateString: getDateString(date),
-        fullDate: date
+        fullDate: date,
+        isPreview: i >= 7
       })
     }
 
@@ -114,7 +120,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
 
   // Week events computation with day positioning
   const weekEvents = computed<WeekEvent[]>(() => {
-    const eventsByDay: WeekEvent[][] = Array.from({ length: 7 }, () => [])
+    const eventsByDay: WeekEvent[][] = Array.from({ length: weekDays.value.length }, () => [])
 
     weekDays.value.forEach((day, dayIndex) => {
       const dayEvents: WeekEvent[] = []
@@ -184,7 +190,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     // TASK-1418: Merge virtual recurring events when toggle is ON
     if (taskStore.showFutureRecurring) {
       const rangeStart = weekDays.value[0].dateString
-      const rangeEnd = weekDays.value[6].dateString
+      const rangeEnd = weekDays.value[weekDays.value.length - 1].dateString
       const virtualEvents = generateVirtualCalendarEvents(
         taskStore.calendarFilteredTasks,
         rangeStart,
@@ -233,7 +239,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
   // Event styling for week grid
   const getWeekEventStyle = (event: WeekEvent): Record<string, string | number> => {
     const HALF_HOUR_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
-    const dayColumnWidth = 100 / 7
+    const dayColumnWidth = 100 / weekDays.value.length
 
     // TASK-1521: Override position with drag preview while dragging (preview-then-commit)
     const isBeingDragged = weekDragPreview.value?.taskId === event.taskId && weekDragPreview.value?.isDragging
@@ -262,7 +268,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     if (!weekDaysGrid) return
 
     const gridRect = weekDaysGrid.getBoundingClientRect()
-    const dayColumnWidth = gridRect.width / 7
+    const dayColumnWidth = gridRect.width / weekDays.value.length
     const HALF_HOUR_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
     const WORKING_HOURS_OFFSET = 6
 
@@ -308,7 +314,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
 
         // Calculate day column
         const relativeX = e.clientX - gridRect.left
-        const newDayIndex = Math.max(0, Math.min(6, Math.floor(relativeX / dayColumnWidth)))
+        const newDayIndex = Math.max(0, Math.min(weekDays.value.length - 1, Math.floor(relativeX / dayColumnWidth)))
 
         // Calculate time slot
         const mouseYInGrid = e.clientY - gridRect.top + scrollTop

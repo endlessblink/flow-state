@@ -13,6 +13,18 @@ export interface Subtask {
   isCompleted: boolean
   createdAt: Date
   updatedAt: Date
+  canvasPosition?: { x: number; y: number } | null
+}
+
+/** Mini-canvas free-form planning note (not a subtask) */
+export interface PlanningNote {
+  id: string
+  title: string
+  description: string
+  color?: string
+  canvasPosition: { x: number; y: number }
+  createdAt: string
+  updatedAt: string
 }
 
 export interface TaskInstance {
@@ -110,6 +122,7 @@ export interface Task {
   recurringInstances?: RecurringTaskInstance[] // Generated recurring task instances (for backwards compatibility)
   instances?: TaskInstance[] // Calendar instances for scheduled tasks
   attachments?: TaskAttachment[] // FEATURE-1414: Image attachments via Google Drive
+  planningNotes?: PlanningNote[] // Mini-canvas free-form planning nodes
 
   // New SQL-aligned fields (Migration Phase 2)
   order?: number

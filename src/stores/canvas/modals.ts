@@ -42,6 +42,19 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
     const groupPendingDelete = ref<CanvasSection | null>(null)
     const deleteGroupMessage = ref('')
 
+    // Mini-Canvas Overlay
+    const isMiniCanvasOpen = ref(false)
+    const miniCanvasTaskId = ref<string | null>(null)
+
+    const openMiniCanvas = (taskId: string) => {
+        miniCanvasTaskId.value = taskId
+        isMiniCanvasOpen.value = true
+    }
+    const closeMiniCanvas = () => {
+        isMiniCanvasOpen.value = false
+        miniCanvasTaskId.value = null
+    }
+
     // Bulk Delete Confirmation
     const isBulkDeleteModalOpen = ref(false)
     const bulkDeleteTitle = ref('')
@@ -127,6 +140,8 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
     }
 
     return {
+        isMiniCanvasOpen, miniCanvasTaskId,
+        openMiniCanvas, closeMiniCanvas,
         isEditModalOpen, selectedTask,
         isQuickTaskCreateOpen, quickTaskPosition, groupInheritedProps,
         isBatchEditModalOpen, batchEditTaskIds,

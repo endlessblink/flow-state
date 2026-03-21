@@ -351,7 +351,14 @@ const timeFilterLabel = computed(() => {
   return labels[props.activeTimeFilter]
 })
 
-const totalTaskCount = computed(() => props.baseTasks.length)
+const totalTaskCount = computed(() => {
+    const count = props.baseTasks.length
+    const uniqueCount = new Set(props.baseTasks.map(t => t.id)).size
+    if (count !== uniqueCount) {
+        console.error(`[INBOX-BADGE-BUG] Duplicate tasks detected: ${count} total, ${uniqueCount} unique`)
+    }
+    return uniqueCount
+})
 const showFilteredCount = computed(() => props.taskCount !== totalTaskCount.value)
 
 const handleTimeFilterSelect = (key: string) => {

@@ -1,4 +1,5 @@
 node_modules
+webdriver/node_modules/
 dist
 
 *storybook.log

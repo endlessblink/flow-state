@@ -129,6 +129,7 @@ export interface SupabaseTask {
     notification_prefs?: NotificationPreferences | null
     reminders?: unknown[] | null // FEATURE-1363: Custom date/time reminders
     attachments?: unknown[] | null // FEATURE-1414: Image attachments (stored as JSONB)
+    // planning_notes?: unknown[] | null // Mini-canvas: deferred until DB column is created
     recurrence_rule?: Record<string, unknown> | null  // TASK-1403: Simplified recurrence
     recurrence_parent_id?: string | null
     recurrence_count?: number
@@ -549,6 +550,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         notification_prefs: task.notificationPreferences || null,
         reminders: task.reminders || [], // FEATURE-1363: Custom date/time reminders
         attachments: task.attachments || [],
+        // planning_notes: deferred until DB column is created
 
         parent_task_id: sanitizedParentTaskId,
 
@@ -637,6 +639,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         notificationPreferences: record.notification_prefs || undefined,
         reminders: (record.reminders as import('../types/notifications').TaskReminder[]) || [],
         attachments: (record.attachments as import('../types/tasks').TaskAttachment[]) || [],
+        // planningNotes: deferred until DB column is created
 
         isInInbox: record.is_in_inbox || false,
         order: record.order || 0,

@@ -156,7 +156,7 @@ export function useTaskEditState(
 
             // Focus title for new tasks
             nextTick(() => {
-                if (titleInputRef?.value && newTask.title === 'New Task') {
+                if (titleInputRef?.value && !newTask.title) {
                     titleInputRef.value.focus()
                     titleInputRef.value.select()
                 }

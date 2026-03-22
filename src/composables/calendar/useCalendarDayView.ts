@@ -606,7 +606,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
     dragGhost.value = {
       visible: true,
-      title: title || 'New Task',
+      title: title || '',
       duration: task?.estimatedDuration || 30,
       slotIndex: slot.slotIndex
     }

@@ -124,7 +124,7 @@ export function useTaskOperations(
 
             const newTask: Task = {
                 id: taskId,
-                title: taskData.title || 'New Task',
+                title: taskData.title || '',
                 description: taskData.description || '',
                 status: taskData.status || 'todo',
                 priority: taskData.priority || 'medium',

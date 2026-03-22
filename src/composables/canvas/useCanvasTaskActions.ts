@@ -328,6 +328,19 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             }
         })
 
+        // Check if single recurring task — route to recurrence delete modal
+        if (items.length === 1) {
+            const rawTasks = taskStore.rawTasks || taskStore.tasks
+            const task = rawTasks.find(t => t.id === items[0].id)
+            if (task?.recurrenceRule) {
+                window.dispatchEvent(new CustomEvent('recurrence-delete-requested', {
+                    detail: { taskId: task.id, permanent: false }
+                }))
+                deps.closeCanvasContextMenu()
+                return
+            }
+        }
+
         bulkDeleteItems.value = items
         bulkDeleteIsPermanent.value = false
         isBulkDeleteModalOpen.value = true
@@ -353,11 +366,22 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                         confirmGroupDeleted(item.id)
                         deps.recentlyDeletedGroups?.value.delete(item.id)
                     }
-                } else if (isPermanent) {
-                    await undoHistory.permanentlyDeleteTaskWithUndo(item.id)
                 } else {
-                    // BUG-1533: Was moving to inbox instead of deleting. Now actually deletes (with undo support).
-                    await undoHistory.deleteTaskWithUndo(item.id)
+                    // Check if task is recurring — route to recurrence modal
+                    const rawTasks = taskStore.rawTasks || taskStore.tasks
+                    const task = rawTasks.find(t => t.id === item.id)
+                    if (task?.recurrenceRule) {
+                        window.dispatchEvent(new CustomEvent('recurrence-delete-requested', {
+                            detail: { taskId: item.id, permanent: isPermanent }
+                        }))
+                        continue
+                    }
+                    if (isPermanent) {
+                        await undoHistory.permanentlyDeleteTaskWithUndo(item.id)
+                    } else {
+                        // BUG-1533: Was moving to inbox instead of deleting. Now actually deletes (with undo support).
+                        await undoHistory.deleteTaskWithUndo(item.id)
+                    }
                 }
             }
 

@@ -41,9 +41,17 @@ export function useCalendarModals() {
     }
 
     /**
-     * Open delete confirmation modal
+     * Open delete confirmation modal (with recurrence check)
      */
     const handleConfirmDelete = (taskId: string) => {
+        const rawTasks = taskStore.rawTasks || taskStore.tasks
+        const task = rawTasks.find(t => t.id === taskId)
+        if (task?.recurrenceRule) {
+            window.dispatchEvent(new CustomEvent('recurrence-delete-requested', {
+                detail: { taskId, permanent: false }
+            }))
+            return
+        }
         taskToDelete.value = taskId
         showConfirmModal.value = true
     }

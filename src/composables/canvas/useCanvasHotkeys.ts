@@ -78,6 +78,19 @@ export function useCanvasHotkeys(
 
         if (itemsToDelete.length === 0) return
 
+        // Check if single recurring task — route to recurrence delete modal via ModalManager
+        const taskItems = itemsToDelete.filter(item => item.type === 'task')
+        if (taskItems.length === 1 && itemsToDelete.length === 1) {
+            const rawTasks = taskStore.rawTasks || taskStore.tasks
+            const task = rawTasks.find(t => t.id === taskItems[0].id)
+            if (task?.recurrenceRule) {
+                window.dispatchEvent(new CustomEvent('recurrence-delete-requested', {
+                    detail: { taskId: task.id, permanent: permanentDelete }
+                }))
+                return
+            }
+        }
+
         // Show bulk delete confirmation modal
         deps.bulkDeleteItems.value = itemsToDelete
         deps.bulkDeleteIsPermanent.value = permanentDelete

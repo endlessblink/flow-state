@@ -538,7 +538,7 @@ const closeEditModal = () => {
 
 const handleAddTaskToGroup = async (groupKey: string, groupByMode: string) => {
   // Build partial task with pre-filled group property
-  const taskDefaults: Partial<Task> = { title: 'New Task' }
+  const taskDefaults: Partial<Task> = { title: '' }
 
   if (groupByMode === 'project') {
     taskDefaults.projectId = (groupKey === 'uncategorized' || groupKey === '__no_project__') ? undefined : groupKey

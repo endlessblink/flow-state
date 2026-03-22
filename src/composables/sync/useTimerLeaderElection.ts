@@ -32,22 +32,26 @@ export function useTimerLeaderElection(deps: LeaderElectionDeps) {
 
     const claimLeadership = (): boolean => {
         // BUG-294: Add logging to diagnose leadership blocking
-        console.log('🗳️ [LEADER] claimLeadership called', {
-            tabId,
-            hasLeaderState: !!leaderState.value,
-            currentLeaderId: leaderState.value?.leaderId,
-            isLeaderAlive: leaderState.value ? isLeaderAlive() : 'N/A',
-            timeSinceHeartbeat: leaderState.value
-                ? Math.round((Date.now() - leaderState.value.lastHeartbeat) / 1000) + 's'
-                : 'N/A'
-        })
+        if (import.meta.env.DEV) {
+            console.log('🗳️ [LEADER] claimLeadership called', {
+                tabId,
+                hasLeaderState: !!leaderState.value,
+                currentLeaderId: leaderState.value?.leaderId,
+                isLeaderAlive: leaderState.value ? isLeaderAlive() : 'N/A',
+                timeSinceHeartbeat: leaderState.value
+                    ? Math.round((Date.now() - leaderState.value.lastHeartbeat) / 1000) + 's'
+                    : 'N/A'
+            })
+        }
 
         if (leaderState.value && isLeaderAlive() && leaderState.value.leaderId !== tabId) {
-            console.warn('🗳️ [LEADER] Blocked: Another tab is leading', {
-                leaderId: leaderState.value.leaderId,
-                heartbeatAge: Math.round((Date.now() - leaderState.value.lastHeartbeat) / 1000) + 's',
-                timeout: LEADER_TIMEOUT / 1000 + 's'
-            })
+            if (import.meta.env.DEV) {
+                console.warn('🗳️ [LEADER] Blocked: Another tab is leading', {
+                    leaderId: leaderState.value.leaderId,
+                    heartbeatAge: Math.round((Date.now() - leaderState.value.lastHeartbeat) / 1000) + 's',
+                    timeout: LEADER_TIMEOUT / 1000 + 's'
+                })
+            }
             return false
         }
 
@@ -71,7 +75,9 @@ export function useTimerLeaderElection(deps: LeaderElectionDeps) {
             onBecomeLeader()
         }
 
-        console.log('🗳️ [LEADER] Leadership claimed successfully')
+        if (import.meta.env.DEV) {
+            console.log('🗳️ [LEADER] Leadership claimed successfully')
+        }
         return true
     }
 

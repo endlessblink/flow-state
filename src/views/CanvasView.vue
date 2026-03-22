@@ -164,6 +164,11 @@
 
 
 
+          <!-- Image Node Template (TASK-1690) -->
+          <template #node-imageNode="nodeProps">
+            <ImageNode :data="nodeProps.data" />
+          </template>
+
           <!-- Custom Task Node Template -->
           <!-- TASK-262: Using onSelect callback prop instead of @select emit -->
           <!-- Vue's emit system doesn't work reliably in Vue Flow custom nodes -->
@@ -270,7 +275,7 @@
 </template>
 
 <script setup lang="ts">
-import { markRaw } from 'vue'
+import { markRaw, onMounted, onUnmounted } from 'vue'
 import { VueFlow, type NodeMouseEvent } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
@@ -289,6 +294,7 @@ import type { CanvasGroup } from '@/types/canvas'
 
 import TaskNode from '../components/canvas/TaskNode.vue'
 import GroupNodeSimple from '../components/canvas/GroupNodeSimple.vue'
+import ImageNode from '../components/canvas/ImageNode.vue'
 import UnifiedInboxPanel from '../components/inbox/UnifiedInboxPanel.vue'
 import CanvasModals from '../components/canvas/CanvasModals.vue'
 import CanvasEmptyState from '../components/canvas/CanvasEmptyState.vue'
@@ -304,6 +310,9 @@ import DayRotationBanner from '../components/canvas/DayRotationBanner.vue'
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
+import { useCanvasImagesStore } from '@/stores/canvasImages'
+import { useAuthStore } from '@/stores/auth'
+import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/canvasImageUpload'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -314,7 +323,8 @@ const contextMenuStore = useCanvasContextMenuStore()
 // Register custom node types
 const nodeTypes = {
   taskNode: markRaw(TaskNode),
-  sectionNode: markRaw(GroupNodeSimple)
+  sectionNode: markRaw(GroupNodeSimple),
+  imageNode: markRaw(ImageNode),
 }
 
 // FEATURE-1048: Day group auto-rotation at midnight
@@ -445,6 +455,58 @@ const handleSectionContextMenu = (event: MouseEvent, section: CanvasGroup) => {
     const { x, y } = getViewportCoordinates(event)
     contextMenuStore.openCanvasContextMenu(x, y, section as unknown as CanvasGroup)
 }
+
+// ============================================================================
+// TASK-1690: Canvas Paste Image Handler
+// ============================================================================
+const canvasImagesStore = useCanvasImagesStore()
+const authStore = useAuthStore()
+
+const handleCanvasPaste = async (e: ClipboardEvent) => {
+  // Only intercept when not typing in an input / contenteditable
+  const target = e.target as HTMLElement | null
+  if (target) {
+    const tag = target.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return
+    if (target.closest('[role="dialog"], .modal, .n-modal, .n-dialog')) return
+  }
+
+  const imageFile = getClipboardImage(e)
+  if (!imageFile) return
+
+  e.preventDefault()
+
+  const userId = authStore.user?.id ?? 'guest'
+
+  try {
+    const compressed = await compressImage(imageFile)
+    const imageUrl = await uploadCanvasImage(compressed, userId)
+
+    // Place at center of current viewport using orchestrator's screenToFlowCoordinate
+    const vueFlowEl = document.querySelector('.vue-flow') as HTMLElement | null
+    let centerFlow = { x: 400, y: 400 }
+    if (vueFlowEl) {
+      const rect = vueFlowEl.getBoundingClientRect()
+      centerFlow = screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+    }
+
+    canvasImagesStore.addCanvasImage({
+      id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      imageUrl,
+      position: { x: centerFlow.x, y: centerFlow.y },
+      createdAt: new Date().toISOString(),
+    })
+  } catch (err) {
+    console.error('[CANVAS:PASTE] Failed to paste image:', err)
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('paste', handleCanvasPaste)
+})
+onUnmounted(() => {
+  document.removeEventListener('paste', handleCanvasPaste)
+})
 
 // Expose for testing purposes (Fundamental Stability)
 if (process.env.NODE_ENV === 'development' || (window as unknown as Record<string, unknown>).PLAYWRIGHT_TEST) {

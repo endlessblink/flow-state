@@ -238,9 +238,13 @@ export function useTimerSync(deps: TimerSyncDeps) {
     } catch (err) {
       // BUG-1411: Track consecutive failures and back off if too many
       consecutiveFailures++
-      console.warn('🍅 [TIMER] Follower poll error:', err)
+      if (import.meta.env.DEV) {
+        console.warn('🍅 [TIMER] Follower poll error:', err)
+      }
       if (consecutiveFailures >= 3) {
-        console.warn('🍅 [TIMER] Follower poll: 3 consecutive failures, backing off for 30s')
+        if (import.meta.env.DEV) {
+          console.warn('🍅 [TIMER] Follower poll: 3 consecutive failures, backing off for 30s')
+        }
         pauseFollowerPoll()
         setTimeout(() => {
           consecutiveFailures = 0
@@ -479,27 +483,35 @@ export function useTimerSync(deps: TimerSyncDeps) {
   const initializeSync = async () => {
     // Skip if not authenticated - we'll retry when auth becomes ready
     if (!authStore.isAuthenticated) {
-      console.log('🍅 [TIMER] initializeStore - waiting for auth...')
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] initializeStore - waiting for auth...')
+      }
       return
     }
 
     // Skip if we've already loaded in this session
     if (hasLoadedSession.value) {
-      console.log('🍅 [TIMER] initializeStore - already loaded, skipping')
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] initializeStore - already loaded, skipping')
+      }
       return
     }
 
-    console.log('🍅 [TIMER] initializeStore starting (auth ready)...')
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] initializeStore starting (auth ready)...')
+    }
     hasLoadedSession.value = true
     const saved = await fetchActiveTimerSession()
-    console.log('🍅 [TIMER] fetchActiveTimerSession result:', saved ? {
-      id: saved.id,
-      isActive: saved.isActive,
-      isPaused: saved.isPaused,
-      remainingTime: saved.remainingTime,
-      deviceLeaderId: saved.deviceLeaderId,
-      deviceLeaderLastSeen: saved.deviceLeaderLastSeen ? new Date(saved.deviceLeaderLastSeen).toISOString() : null
-    } : 'null')
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] fetchActiveTimerSession result:', saved ? {
+        id: saved.id,
+        isActive: saved.isActive,
+        isPaused: saved.isPaused,
+        remainingTime: saved.remainingTime,
+        deviceLeaderId: saved.deviceLeaderId,
+        deviceLeaderLastSeen: saved.deviceLeaderLastSeen ? new Date(saved.deviceLeaderLastSeen).toISOString() : null
+      } : 'null')
+    }
 
     if (saved && saved.isActive) {
       // Check for very stale sessions (last heartbeat > 1 hour ago)
@@ -509,11 +521,13 @@ export function useTimerSync(deps: TimerSyncDeps) {
       const timeSinceLastSeen = Date.now() - lastSeen
 
       if (timeSinceLastSeen > STALE_SESSION_THRESHOLD_MS) {
-        console.log('🍅 [TIMER] Clearing stale/abandoned session (no activity for 1+ hour)', {
-          sessionId: saved.id,
-          lastSeen: new Date(lastSeen).toISOString(),
-          staleFor: Math.round(timeSinceLastSeen / 1000 / 60) + ' minutes'
-        })
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Clearing stale/abandoned session (no activity for 1+ hour)', {
+            sessionId: saved.id,
+            lastSeen: new Date(lastSeen).toISOString(),
+            staleFor: Math.round(timeSinceLastSeen / 1000 / 60) + ' minutes'
+          })
+        }
         // Clear abandoned session from DB
         try {
           const { supabase } = await import('@/services/auth/supabase')
@@ -536,17 +550,21 @@ export function useTimerSync(deps: TimerSyncDeps) {
         const driftSeconds = Math.floor(timeSinceLastSeen / 1000)
         if (driftSeconds > 0) {
           adjustedRemainingTime = Math.max(0, saved.remainingTime - driftSeconds)
-          console.log('🍅 [TIMER] Applied drift correction:', driftSeconds, 'seconds, new remaining:', adjustedRemainingTime)
+          if (import.meta.env.DEV) {
+            console.log('🍅 [TIMER] Applied drift correction:', driftSeconds, 'seconds, new remaining:', adjustedRemainingTime)
+          }
         }
       }
 
       // If timer already expired while app was closed, properly complete it (BUG-1512)
       if (adjustedRemainingTime <= 0) {
-        console.log('🍅 [TIMER] Session already expired on load, completing with full credit', {
-          sessionId: saved.id,
-          originalRemaining: saved.remainingTime,
-          driftApplied: saved.remainingTime - adjustedRemainingTime
-        })
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Session already expired on load, completing with full credit', {
+            sessionId: saved.id,
+            originalRemaining: saved.remainingTime,
+            driftApplied: saved.remainingTime - adjustedRemainingTime
+          })
+        }
         // Restore the session with remainingTime=0 so completeSession() can find and process it.
         // This awards XP, increments pomodoro count, and writes pomodoro_history.
         currentSession.value = {
@@ -574,17 +592,21 @@ export function useTimerSync(deps: TimerSyncDeps) {
         !saved.deviceLeaderId
 
       if (shouldTakeOverLeadership) {
-        console.log('🍅 [TIMER] Attempting atomic leadership claim', {
-          reason: saved.deviceLeaderId === deviceId ? 'same device' :
-            !saved.deviceLeaderId ? 'no previous leader' :
-              `previous leader timed out (${Math.round(timeSinceLeaderSeen / 1000)}s ago)`,
-          newLeaderId: deviceId
-        })
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Attempting atomic leadership claim', {
+            reason: saved.deviceLeaderId === deviceId ? 'same device' :
+              !saved.deviceLeaderId ? 'no previous leader' :
+                `previous leader timed out (${Math.round(timeSinceLeaderSeen / 1000)}s ago)`,
+            newLeaderId: deviceId
+          })
+        }
 
         // BUG-1511: Atomic CAS — only become leader if DB confirms the claim
         const granted = await claimLeadership(saved.id, deviceId)
         if (!granted) {
-          console.log('🍅 [TIMER] Leadership claim denied on init — running as follower')
+          if (import.meta.env.DEV) {
+            console.log('🍅 [TIMER] Leadership claim denied on init — running as follower')
+          }
           isDeviceLeader.value = false
           resumeCountdown()
           resumeFollowerPoll()
@@ -598,11 +620,13 @@ export function useTimerSync(deps: TimerSyncDeps) {
           resumeCountdown()
         }
       } else {
-        console.log('🍅 [TIMER] Running as follower, leader is still active', {
-          leaderId: saved.deviceLeaderId,
-          lastSeen: new Date(lastSeen).toISOString(),
-          timeUntilTimeout: Math.round((DEVICE_LEADER_TIMEOUT_MS - timeSinceLastSeen) / 1000) + 's'
-        })
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Running as follower, leader is still active', {
+            leaderId: saved.deviceLeaderId,
+            lastSeen: new Date(lastSeen).toISOString(),
+            timeUntilTimeout: Math.round((DEVICE_LEADER_TIMEOUT_MS - timeSinceLastSeen) / 1000) + 's'
+          })
+        }
         isDeviceLeader.value = false
         // Followers should also update their local countdown
         resumeCountdown()
@@ -618,7 +642,9 @@ export function useTimerSync(deps: TimerSyncDeps) {
       // - Potential rate limiting issues
       // Realtime subscription handles detecting new sessions from other devices.
       // Follower polling is only needed when we HAVE a session and are not the leader.
-      console.log('🍅 [TIMER] No active session, waiting for Realtime to detect new sessions')
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] No active session, waiting for Realtime to detect new sessions')
+      }
       // pauseFollowerPoll() is already the default state - don't start it here
     }
 
@@ -803,7 +829,9 @@ export function useTimerSync(deps: TimerSyncDeps) {
     () => authStore.isAuthenticated,
     (isAuthenticated) => {
       if (isAuthenticated && !hasLoadedSession.value) {
-        console.log('🍅 [TIMER] Auth became ready, initializing timer store...')
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Auth became ready, initializing timer store...')
+        }
         initializeSync()
       }
     },

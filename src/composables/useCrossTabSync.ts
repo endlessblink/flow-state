@@ -123,7 +123,9 @@ export function useCrossTabSync() {
 
             // Only accept if incoming version is newer
             if (incomingVersion < localVersion) {
-              console.log(`[CROSS-TAB] Skipping stale update for ${operation.taskId.slice(0, 8)} (local v${localVersion} > remote v${incomingVersion})`)
+              if (import.meta.env.DEV) {
+                console.log(`[CROSS-TAB] Skipping stale update for ${operation.taskId.slice(0, 8)} (local v${localVersion} > remote v${incomingVersion})`)
+              }
               return
             }
 

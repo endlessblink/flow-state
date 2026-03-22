@@ -5,15 +5,46 @@ import {
 } from '@/utils/supabaseMappers'
 import { supabase, type DatabaseContext } from './_infrastructure'
 
+const CLAIM_LEADERSHIP_ERROR_LOG_WINDOW_MS = 60_000
+
+let lastClaimLeadershipErrorKey = ''
+let lastClaimLeadershipErrorAt = 0
+
+function toErrorLogKey(error: unknown): string {
+    if (error instanceof Error) return error.message
+    if (typeof error === 'string') return error
+
+    try {
+        return JSON.stringify(error)
+    } catch {
+        return String(error)
+    }
+}
+
+function shouldLogClaimLeadershipError(error: unknown): boolean {
+    const now = Date.now()
+    const key = toErrorLogKey(error)
+    const shouldLog =
+        key !== lastClaimLeadershipErrorKey ||
+        now - lastClaimLeadershipErrorAt > CLAIM_LEADERSHIP_ERROR_LOG_WINDOW_MS
+
+    if (shouldLog) {
+        lastClaimLeadershipErrorKey = key
+        lastClaimLeadershipErrorAt = now
+    }
+
+    return shouldLog
+}
+
 export function useTimerDatabase(ctx: DatabaseContext) {
     const { getUserIdSafe, withRetry, handleError } = ctx
 
     const fetchActiveTimerSession = async (): Promise<PomodoroSession | null> => {
         try {
             const userId = getUserIdSafe()
-            console.log('🍅 [DB] fetchActiveTimerSession userId:', userId)
+            if (import.meta.env.DEV) console.log('🍅 [DB] fetchActiveTimerSession userId:', userId)
             if (!userId) {
-                console.log('🍅 [DB] No userId - returning null')
+                if (import.meta.env.DEV) console.log('🍅 [DB] No userId - returning null')
                 return null
             }
 
@@ -28,7 +59,7 @@ export function useTimerDatabase(ctx: DatabaseContext) {
                     .limit(1)
                     .maybeSingle()
 
-                console.log('🍅 [DB] fetchActiveTimerSession result:', { hasData: !!data, error: error?.message })
+                if (import.meta.env.DEV) console.log('🍅 [DB] fetchActiveTimerSession result:', { hasData: !!data, error: error?.message })
 
                 if (error) throw error
                 if (!data) return null
@@ -45,12 +76,12 @@ export function useTimerDatabase(ctx: DatabaseContext) {
         try {
             const userId = getUserIdSafe()
             if (!userId) {
-                console.log('🍅 [DB] saveActiveTimerSession - no userId, skipping')
+                if (import.meta.env.DEV) console.log('🍅 [DB] saveActiveTimerSession - no userId, skipping')
                 return
             }
 
             const payload = toSupabaseTimerSession(session, userId, deviceId)
-            console.log('🍅 [DB] saveActiveTimerSession:', { sessionId: session.id, userId, deviceId, isActive: session.isActive })
+            if (import.meta.env.DEV) console.log('🍅 [DB] saveActiveTimerSession:', { sessionId: session.id, userId, deviceId, isActive: session.isActive })
             // BUG-352: Wrap in withRetry for mobile PWA network resilience (was missing from BUG-1107 fix)
             await withRetry(async () => {
                 const { error } = await supabase.from('timer_sessions').upsert(payload, { onConflict: 'id' })
@@ -59,7 +90,7 @@ export function useTimerDatabase(ctx: DatabaseContext) {
                     throw error
                 }
             }, 'saveActiveTimerSession')
-            console.log('🍅 [DB] saveActiveTimerSession success')
+            if (import.meta.env.DEV) console.log('🍅 [DB] saveActiveTimerSession success')
         } catch (e: unknown) {
             handleError(e, 'saveActiveTimerSession')
         }
@@ -98,7 +129,9 @@ export function useTimerDatabase(ctx: DatabaseContext) {
             })
 
             if (error) {
-                console.error('🍅 [DB] claimLeadership RPC error:', error)
+                if (shouldLogClaimLeadershipError(error)) {
+                    console.error('🍅 [DB] claimLeadership RPC error:', error)
+                }
                 return false
             }
 

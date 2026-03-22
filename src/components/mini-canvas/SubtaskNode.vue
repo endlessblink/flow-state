@@ -3,8 +3,14 @@
     class="subtask-node"
     :class="{ completed: data.isCompleted }"
   >
-    <Handle type="target" :position="Position.Top" />
-    <Handle type="source" :position="Position.Bottom" />
+    <Handle type="target" :position="Position.Top" id="top" />
+    <Handle type="target" :position="Position.Right" id="right" />
+    <Handle type="target" :position="Position.Bottom" id="bottom" />
+    <Handle type="target" :position="Position.Left" id="left" />
+    <Handle type="source" :position="Position.Top" id="source-top" />
+    <Handle type="source" :position="Position.Right" id="source-right" />
+    <Handle type="source" :position="Position.Bottom" id="source-bottom" />
+    <Handle type="source" :position="Position.Left" id="source-left" />
 
     <div class="subtask-header">
       <button
@@ -15,25 +21,36 @@
         <Check v-if="data.isCompleted" :size="12" />
       </button>
 
-      <input
+      <textarea
         ref="titleInput"
         class="subtask-title"
         :class="{ completed: data.isCompleted }"
         :value="data.title"
+        :dir="isRtl(data.title) ? 'rtl' : 'ltr'"
         placeholder="Subtask title..."
+        rows="1"
+        @input="autoResize($event.target as HTMLTextAreaElement)"
         @blur="handleTitleBlur"
-        @keydown.enter="($event.target as HTMLInputElement).blur()"
+        @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
+        @keydown.shift.enter.prevent="handleTitleShiftEnter"
       />
     </div>
 
-    <div v-if="data.description" class="subtask-description">
-      {{ data.description }}
-    </div>
+    <textarea
+      ref="descInput"
+      class="subtask-description"
+      :value="data.description"
+      :dir="isRtl(data.description) ? 'rtl' : 'ltr'"
+      placeholder="Add description..."
+      rows="1"
+      @input="autoResize($event.target as HTMLTextAreaElement)"
+      @blur="handleDescriptionBlur"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { Check } from 'lucide-vue-next'
 
@@ -50,14 +67,52 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'toggle-complete': [subtaskId: string]
   'update-title': [subtaskId: string, title: string]
+  'update-description': [subtaskId: string, description: string]
 }>()
 
-const titleInput = ref<HTMLInputElement | null>(null)
+const titleInput = ref<HTMLTextAreaElement | null>(null)
+const descInput = ref<HTMLTextAreaElement | null>(null)
+
+const isRtl = (text: string) => /[\u0590-\u05FF\u0600-\u06FF]/.test(text)
+
+const autoResize = (el: HTMLTextAreaElement) => {
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight}px`
+}
+
+const resizeAll = () => {
+  nextTick(() => {
+    if (titleInput.value) autoResize(titleInput.value)
+    if (descInput.value) autoResize(descInput.value)
+  })
+}
+
+onMounted(resizeAll)
+
+watch(() => props.data.title, resizeAll)
+watch(() => props.data.description, resizeAll)
 
 const handleTitleBlur = (e: FocusEvent) => {
-  const value = (e.target as HTMLInputElement).value.trim()
+  const value = (e.target as HTMLTextAreaElement).value.trim()
   if (value && value !== props.data.title) {
     emit('update-title', props.data.subtaskId, value)
+  }
+}
+
+// Allow shift+enter to insert a newline in the title
+const handleTitleShiftEnter = (e: KeyboardEvent) => {
+  const el = e.target as HTMLTextAreaElement
+  const start = el.selectionStart ?? el.value.length
+  const end = el.selectionEnd ?? el.value.length
+  el.value = el.value.slice(0, start) + '\n' + el.value.slice(end)
+  el.selectionStart = el.selectionEnd = start + 1
+  autoResize(el)
+}
+
+const handleDescriptionBlur = (e: FocusEvent) => {
+  const value = (e.target as HTMLTextAreaElement).value
+  if (value !== props.data.description) {
+    emit('update-description', props.data.subtaskId, value)
   }
 }
 </script>
@@ -71,7 +126,8 @@ const handleTitleBlur = (e: FocusEvent) => {
   border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-4);
   min-width: 180px;
-  max-width: 280px;
+  width: max-content;
+  max-width: 360px;
   transition: all var(--duration-normal) var(--ease-out);
   cursor: grab;
 }
@@ -87,7 +143,7 @@ const handleTitleBlur = (e: FocusEvent) => {
 
 .subtask-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
 }
 
@@ -102,6 +158,7 @@ const handleTitleBlur = (e: FocusEvent) => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-top: 3px; /* align with first line of textarea */
   transition: all var(--duration-fast) var(--ease-out);
   color: white;
   padding: 0;
@@ -126,6 +183,11 @@ const handleTitleBlur = (e: FocusEvent) => {
   font-weight: var(--font-medium);
   line-height: 1.4;
   padding: var(--space-1) 0;
+  resize: none;
+  overflow: hidden;
+  font-family: inherit;
+  width: 100%;
+  word-break: break-word;
 }
 
 .subtask-title.completed {
@@ -138,14 +200,23 @@ const handleTitleBlur = (e: FocusEvent) => {
 }
 
 .subtask-description {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-secondary);
   font-size: var(--text-xs);
-  color: var(--text-muted);
-  margin-top: var(--space-1);
-  line-height: 1.4;
+  line-height: 1.5;
+  resize: none;
   overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  font-family: inherit;
+  margin-top: var(--space-1);
+  padding: 0;
+  word-break: break-word;
+}
+
+.subtask-description::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
 }
 </style>

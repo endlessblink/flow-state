@@ -217,7 +217,7 @@ export function useTimeBlockNotifications() {
     const message = getMessage(milestone, block)
     const title = milestone.id === 'ended' ? 'Time Block Ended' : 'Time Block Alert'
 
-    console.log(`[TIME-BLOCK] Delivering milestone "${milestone.id}" via channels:`, {
+    if (import.meta.env.DEV) console.log(`[TIME-BLOCK] Delivering milestone "${milestone.id}" via channels:`, {
       inAppToast: channels.inAppToast,
       osNotification: channels.osNotification,
       sound: channels.sound
@@ -226,7 +226,7 @@ export function useTimeBlockNotifications() {
     if (channels.inAppToast) {
       const toastType = milestone.id === 'ended' ? 'warning' : 'info'
       showToast(message, toastType, { duration: 8000 })
-      console.log('[TIME-BLOCK] Toast delivered:', message)
+      if (import.meta.env.DEV) console.log('[TIME-BLOCK] Toast delivered:', message)
     }
 
     if (channels.osNotification) {
@@ -237,9 +237,9 @@ export function useTimeBlockNotifications() {
         sound: channels.sound
       }).then(success => {
         if (success) {
-          console.log('[TIME-BLOCK] OS notification delivered')
+          if (import.meta.env.DEV) console.log('[TIME-BLOCK] OS notification delivered')
         } else {
-          console.warn('[TIME-BLOCK] OS notification failed — check permission status')
+          if (import.meta.env.DEV) console.warn('[TIME-BLOCK] OS notification failed — check permission status')
         }
       }).catch(err => {
         console.error('[TIME-BLOCK] OS notification error:', err)
@@ -255,7 +255,7 @@ export function useTimeBlockNotifications() {
       tickCount++
       const settings = getSettings()
       if (!settings?.enabled) {
-        if (tickCount <= 3) console.log('[TIME-BLOCK] Disabled in settings, skipping tick')
+        if (import.meta.env.DEV && tickCount <= 3) console.log('[TIME-BLOCK] Disabled in settings, skipping tick')
         return
       }
 
@@ -268,7 +268,7 @@ export function useTimeBlockNotifications() {
 
       // DND check
       if (isInDND()) {
-        if (tickCount <= 3) console.log('[TIME-BLOCK] DND active, skipping tick')
+        if (import.meta.env.DEV && tickCount <= 3) console.log('[TIME-BLOCK] DND active, skipping tick')
         return
       }
 
@@ -276,7 +276,7 @@ export function useTimeBlockNotifications() {
       const blocks = getActiveTimeBlocks()
 
       // Diagnostic: log every tick for the first 4 ticks, then every 20th tick
-      if (tickCount <= 4 || tickCount % 20 === 0) {
+      if (import.meta.env.DEV && (tickCount <= 4 || tickCount % 20 === 0)) {
         const tasks = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : []
         const tasksWithInstances = tasks.filter(t => t.instances?.length)
         const tasksWithSchedule = tasks.filter(t => t.scheduledDate === today)
@@ -299,7 +299,7 @@ export function useTimeBlockNotifications() {
         }
       }
 
-      if (blocks.length > 0 && (tickCount <= 4 || tickCount % 20 === 0)) {
+      if (import.meta.env.DEV && blocks.length > 0 && (tickCount <= 4 || tickCount % 20 === 0)) {
         console.log(`[TIME-BLOCK] Active blocks:`, blocks.map(b => ({
           task: b.taskTitle,
           start: b.startTime.toLocaleTimeString(),
@@ -324,7 +324,7 @@ export function useTimeBlockNotifications() {
           // BUG-1302: Tolerance increased to 10 min for desktop sleep/background resilience
           if (now >= triggerMs && now - triggerMs <= LATE_TOLERANCE_MS) {
             const lateBy = Math.round((now - triggerMs) / 1000)
-            console.log(`[TIME-BLOCK] 🔔 FIRING milestone "${milestone.id}" for "${block.taskTitle}" (${lateBy}s after trigger)`)
+            if (import.meta.env.DEV) console.log(`[TIME-BLOCK] 🔔 FIRING milestone "${milestone.id}" for "${block.taskTitle}" (${lateBy}s after trigger)`)
             shownMilestones.value.add(key)
             fireMilestone(milestone, block)
           }
@@ -338,32 +338,34 @@ export function useTimeBlockNotifications() {
   function start(): void {
     // BUG-1302: Resilient singleton — if interval died (e.g., GC), allow restart
     if (isInitialized && activeIntervalId !== null) {
-      console.log('[TIME-BLOCK] Already initialized, skipping')
+      if (import.meta.env.DEV) console.log('[TIME-BLOCK] Already initialized, skipping')
       return
     }
 
     // Clean up dead state if needed
     if (isInitialized && activeIntervalId === null) {
-      console.warn('[TIME-BLOCK] Singleton guard was set but interval was dead — restarting')
+      if (import.meta.env.DEV) console.warn('[TIME-BLOCK] Singleton guard was set but interval was dead — restarting')
     }
 
     isInitialized = true
 
-    const settings = getSettings()
-    const permissionStatus = typeof Notification !== 'undefined' ? Notification.permission : 'N/A'
-    console.log('[TIME-BLOCK] Starting with settings:', {
-      enabled: settings.enabled,
-      milestones: settings.milestones.map(m => `${m.id}(${m.enabled ? 'on' : 'off'})`),
-      channels: settings.deliveryChannels,
-      totalTasks: taskStore.rawTasks?.length ?? 0,
-      notificationPermission: permissionStatus,
-      lateTolerance: `${LATE_TOLERANCE_MS / 60000} min`
-    })
+    if (import.meta.env.DEV) {
+      const settings = getSettings()
+      const permissionStatus = typeof Notification !== 'undefined' ? Notification.permission : 'N/A'
+      console.log('[TIME-BLOCK] Starting with settings:', {
+        enabled: settings.enabled,
+        milestones: settings.milestones.map(m => `${m.id}(${m.enabled ? 'on' : 'off'})`),
+        channels: settings.deliveryChannels,
+        totalTasks: taskStore.rawTasks?.length ?? 0,
+        notificationPermission: permissionStatus,
+        lateTolerance: `${LATE_TOLERANCE_MS / 60000} min`
+      })
+    }
 
     // Run immediately once, then every 15 seconds
     tick()
     activeIntervalId = setInterval(tick, POLL_INTERVAL_MS)
-    console.log('[TIME-BLOCK] Notification polling started (15s interval)')
+    if (import.meta.env.DEV) console.log('[TIME-BLOCK] Notification polling started (15s interval)')
   }
 
   function stop(): void {
@@ -372,7 +374,7 @@ export function useTimeBlockNotifications() {
       activeIntervalId = null
     }
     isInitialized = false
-    console.log('[TIME-BLOCK] Notification polling stopped')
+    if (import.meta.env.DEV) console.log('[TIME-BLOCK] Notification polling stopped')
   }
 
   // NOTE: No onUnmounted — this composable is called inside onMounted (outside

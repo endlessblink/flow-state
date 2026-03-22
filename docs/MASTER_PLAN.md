@@ -4470,6 +4470,89 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
+## TypeScript Strict Mode Errors (TASK-1683 — TASK-1689)
+
+> **Goal**: Fix all 388 `tsc --noEmit` errors to achieve strict type safety. Build passes (Vite skips these) but they mask real bugs.
+> **Priority**: P2 | **Status**: 📋 PLANNED
+
+| ID | Task | Priority | Status |
+|----|------|----------|--------|
+| TASK-1683 | Fix Supabase database composable types — 85 errors across 11 files. Mostly `supabase` possibly null (TS18047) and missing property on `{}` (TS2339). Files: `_infrastructure.ts`, `_tombstone.ts`, `useGroupsDatabase.ts`, `useNotificationsDatabase.ts`, `usePinnedTasksDatabase.ts`, `useProjectsDatabase.ts`, `useQuickSortDatabase.ts`, `useRealtimeSubscription.ts`, `useSettingsDatabase.ts`, `useTasksDatabase.ts`, `useWorkProfileDatabase.ts` | P2 | 📋 PLANNED |
+| TASK-1684 | Fix Canvas composable types — 120 errors across 9 files. Mostly `unknown` type assertions (TS18046), missing properties on `{}` (TS2339), and `NodeChange[]` type mismatches (TS2345). Files: `useCanvasSync.ts` (51), `useCanvasOrchestrator.ts` (14), `useNodeSync.ts` (12), `useCanvasActions.ts` (8), `useCanvasTaskActions.ts` (6), `useCanvasSelection.ts` (4), `useCanvasAlignment.ts` (2), `useCanvasOperationState.ts` (2), `useCanvasConnections.ts` (1) | P2 | 📋 PLANNED |
+| TASK-1685 | Fix App initialization & sidebar types — 40 errors across 2 files. Properties not existing on `{}` due to untyped Supabase/Realtime payloads. Files: `useAppInitialization.ts` (39), `useSidebarManagement.ts` (1) | P2 | 📋 PLANNED |
+| TASK-1686 | Fix Calendar composable types — 22 errors across 4 files. `Record<string, unknown>` vs concrete `TaskInstance`/`RecurringTaskInstance` type conflicts, `unknown` catch errors. Files: `useCalendarMonthView.ts` (9), `useCalendarWeekView.ts` (8), `useGoogleCalendar.ts` (9 — catch `e` is `unknown`), `useExternalCalendar.ts` (3) | P2 | 📋 PLANNED |
+| TASK-1687 | Fix Sync & timer types — 29 errors across 3 files. Mostly `handleLeaderMessage` param typed as `unknown`, sync orchestrator payload types. Files: `useTimerLeaderElection.ts` (15), `useSyncOrchestrator.ts` (10), `useTimerDatabase.ts` (4) | P2 | 📋 PLANNED |
+| TASK-1688 | Fix AI, board, and cross-tab types — 41 errors across 8 files. Various `unknown` assertions and `Record<string, unknown>` mismatches. Files: `useAgentChains.ts` (13), `useAISync.ts` (12), `useCrossTabSync.ts` (8), `useTaskRowActions.ts` (9), `useBoardState.ts` (4), `useAIChat.ts` (2), `useWorkProfile.ts` (2), `useTaskEditState.ts` (1) | P2 | 📋 PLANNED |
+| TASK-1689 | Fix miscellaneous type errors — 51 errors across 18 files. Scattered `unknown` type, missing property, and minor type assertion errors. Files: `auth.ts` (8), `productionLogger.ts` (1), `sw.ts` (3), `readCacheDB.ts` (2), `operationSorter.ts` (1), `routerFactory.ts` (1), `urlScraper.ts` (1), `useMobileDetection.ts` (2), `useMobileInboxLogic.ts` (1), `useMobileQuickSortLogic.ts` (2), `usePerformanceManager.ts` (2), `useRenderOptimization.ts` (2), `useSafeI18n.ts` (1), `useTaskbarNanny.ts` (1), `useUrlScraping.ts` (1), `useWhisperSpeech.ts` (1), `taskHistory.ts` (1), test specs (3) | P3 | 📋 PLANNED |
+
+#### TASK-1683: Supabase Database Composable Types (📋 PLANNED)
+- **Priority**: P2
+- **Error count**: 85 errors across 11 files in `src/composables/supabase/`
+- **Root patterns**: (1) `supabase` client imported as possibly null — needs non-null assertion or guard. (2) Supabase `.select('*')` returns `{}` type — needs explicit type parameter or cast. (3) `Record<string, unknown>` vs concrete interface mismatches in `.forEach()` callbacks.
+- **Fix approach**: Add `supabase!` non-null assertion in `_infrastructure.ts` or add null guards. Add type parameters to `.select<T>()` calls. Type callback parameters with concrete interfaces.
+
+#### TASK-1684: Canvas Composable Types (📋 PLANNED)
+- **Priority**: P2
+- **Error count**: 120 errors across 9 files in `src/composables/canvas/`
+- **Root patterns**: (1) Vue Flow `findNode()` returns `unknown` — needs type assertion. (2) `NodeChange[]` vs `unknown[]` in `onNodesChange` handlers. (3) Untyped `payload` in Realtime event handlers. (4) `undoHistory` ref typed as `unknown`.
+- **Fix approach**: Add proper Vue Flow type imports (`GraphNode`, `NodeChange`). Type the Realtime payload handlers. Fix `undoHistory` ref generic parameter.
+
+#### TASK-1685: App Initialization & Sidebar Types (📋 PLANNED)
+- **Priority**: P2
+- **Error count**: 40 errors across 2 files
+- **Root patterns**: Supabase Realtime `.on('postgres_changes')` callback payload is typed as `{}`. Properties like `id`, `is_deleted`, `title`, `name` accessed on it.
+- **Fix approach**: Type the Realtime payload with `RealtimePostgresChangesPayload<{[key: string]: unknown}>` and cast `.new`/`.old` to task/project/group interfaces.
+
+#### TASK-1686: Calendar Composable Types (📋 PLANNED)
+- **Priority**: P2
+- **Error count**: 22 errors across 4 files
+- **Root patterns**: (1) `instance` callbacks typed as `Record<string, unknown>` instead of `TaskInstance | RecurringTaskInstance`. (2) Catch clause `e` is `unknown` — needs `instanceof Error` guard. (3) Property destructuring from `unknown` objects.
+- **Fix approach**: Change callback parameter types to use proper interfaces. Add error guards in catch blocks.
+
+#### TASK-1687: Sync & Timer Types (📋 PLANNED)
+- **Priority**: P2
+- **Error count**: 29 errors across 3 files
+- **Root patterns**: (1) `useTimerLeaderElection.ts` — `handleLeaderMessage(sync: unknown)` uses `sync.action`, `sync.leaderId` etc. without narrowing. (2) `useSyncOrchestrator.ts` — various payload types.
+- **Fix approach**: Define a `LeaderMessage` discriminated union type. Type sync operation payloads.
+
+#### TASK-1688: AI, Board, and Cross-Tab Types (📋 PLANNED)
+- **Priority**: P2
+- **Error count**: 41 errors across 8 files
+- **Root patterns**: Mixed — `Record<string, unknown>` vs concrete types, `unknown` assertions, missing generics.
+- **Fix approach**: Add proper type annotations file by file. Most are simple type parameter additions.
+
+#### TASK-1689: Miscellaneous Type Errors (📋 PLANNED)
+- **Priority**: P3
+- **Error count**: 51 errors across 18 files
+- **Root patterns**: Scattered minor type issues — `unknown` catch variables, missing properties, test mock types.
+- **Fix approach**: Fix individually. Low priority since these are in less critical paths.
+
+---
+
+## Canvas Image Paste Feature (TASK-1690)
+
+### TASK-1690: Ctrl+V paste-image support for CanvasView (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-03-22)
+
+**Goal**: Allow users to paste screenshots from clipboard directly onto the canvas. Pasted images appear as draggable `imageNode` nodes, with click-to-zoom lightbox. Images are compressed and stored in Supabase Storage (with data URL fallback for offline/guest mode).
+
+**Implementation**:
+- Created `src/components/canvas/ImageNode.vue` — Vue Flow custom node with handles, inline preview, and lightbox teleport
+- Created `src/stores/canvasImages.ts` — Pinia store persisting `CanvasImage[]` to localStorage; exposes `addCanvasImage`, `removeCanvasImage`, `updateCanvasImagePosition`
+- Added `CanvasImage` type to `src/stores/canvas/types.ts`
+- Modified `src/composables/canvas/useCanvasSync.ts` — injects `imageNode` nodes into VueFlow `newNodes` array alongside task/group nodes
+- Modified `src/views/CanvasView.vue` — added `imageNode` to `nodeTypes`, registered `#node-imageNode` template slot, added `paste` event listener with `handleCanvasPaste` that guards against input fields
+
+**Files**:
+- `src/components/canvas/ImageNode.vue` (new)
+- `src/stores/canvasImages.ts` (new)
+- `src/stores/canvas/types.ts` (modified)
+- `src/composables/canvas/useCanvasSync.ts` (modified)
+- `src/views/CanvasView.vue` (modified)
+
+---
+
 ## Formatting Guide
 
 **Task Format**: `### TASK-XXX: Title (STATUS)` with `🔄 IN PROGRESS`, `✅ DONE`, `📋 PLANNED`

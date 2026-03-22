@@ -1,9 +1,22 @@
 /**
  * Tauri Log Plugin Integration
- * Pipes all console.* calls through tauri-plugin-log so they appear
- * in stdout and log files when running the Tauri desktop app.
+ * Mirrors Rust-side logs into the webview console when running the
+ * Tauri desktop app.
  *
- * Log files: ~/.local/share/flow-state/logs/
+ * !! CRITICAL SAFETY RULE — READ BEFORE EDITING !!
+ *
+ * This file must ONLY call attachConsole() (Rust -> JS direction).
+ *
+ * NEVER import { warn, debug, info, error } from '@tauri-apps/plugin-log'
+ * NEVER override console.* to call Rust log functions
+ *
+ * In March 2026 the original version forwarded every console.* call into
+ * the Rust log file (JS -> Rust direction). Combined with no rotation or
+ * size limit, this produced a 146 GB log file that filled the disk and
+ * made the system unusable. The fix was to remove the forwarding and add
+ * KeepOne rotation + 2 MB cap on the Rust side (lib.rs).
+ *
+ * Log files: ~/.local/share/com.flowstate.app/logs/
  */
 import { isTauri } from './platform'
 
@@ -14,44 +27,12 @@ export async function initTauriLogger(): Promise<void> {
   initialized = true
 
   try {
-    const { warn, debug, info, error, attachConsole } = await import('@tauri-apps/plugin-log')
+    const { attachConsole } = await import('@tauri-apps/plugin-log')
 
-    // Attach console — forwards Rust-side logs into the browser console too
+    // Keep Rust/Tauri logs visible in DevTools without persisting every
+    // frontend console.warn/error call into the desktop log file.
     await attachConsole()
-
-    // Override console methods to pipe through the log plugin
-    const originalLog = console.log.bind(console)
-    const originalDebug = console.debug.bind(console)
-    const originalInfo = console.info.bind(console)
-    const originalWarn = console.warn.bind(console)
-    const originalError = console.error.bind(console)
-
-    console.log = (...args: unknown[]) => {
-      originalLog(...args)
-      info(args.map(String).join(' ')).catch(() => {})
-    }
-
-    console.debug = (...args: unknown[]) => {
-      originalDebug(...args)
-      debug(args.map(String).join(' ')).catch(() => {})
-    }
-
-    console.info = (...args: unknown[]) => {
-      originalInfo(...args)
-      info(args.map(String).join(' ')).catch(() => {})
-    }
-
-    console.warn = (...args: unknown[]) => {
-      originalWarn(...args)
-      warn(args.map(String).join(' ')).catch(() => {})
-    }
-
-    console.error = (...args: unknown[]) => {
-      originalError(...args)
-      error(args.map(String).join(' ')).catch(() => {})
-    }
-
-    console.log('[TAURI-LOG] Logger initialized — piping to stdout and log file')
+    console.log('[TAURI-LOG] Logger initialized — Rust logs mirrored to console only')
   } catch (e) {
     // Silently fail if plugin not available (e.g., running in browser)
     console.warn('[TAURI-LOG] Failed to initialize:', e)

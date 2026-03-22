@@ -246,6 +246,23 @@ function shouldFilter(message: string): boolean {
   return false
 }
 
+// Production-only throttle for high-frequency warn/error from timer/sync loops.
+// Safety net: if someone re-introduces console→Rust forwarding, this limits the damage.
+const prodWarnThrottle = new Map<string, number>()
+const PROD_WARN_THROTTLE_MS = 10_000 // 1 warn per prefix per 10s in production
+
+function shouldThrottleProdWarn(message: string): boolean {
+  if (import.meta.env.DEV) return false
+  const throttledPrefixes = ['🍅', '🗳️', '[TIMER]', '[LEADER]', '[DB]', '[SYNC]']
+  const prefix = throttledPrefixes.find(p => message.includes(p))
+  if (!prefix) return false
+  const now = Date.now()
+  const last = prodWarnThrottle.get(prefix) || 0
+  if (now - last < PROD_WARN_THROTTLE_MS) return true
+  prodWarnThrottle.set(prefix, now)
+  return false
+}
+
 // Apply console filtering
 export function applyConsoleFiltering(): void {
   console.log = (...args: unknown[]) => {
@@ -256,7 +273,9 @@ export function applyConsoleFiltering(): void {
   }
 
   console.warn = (...args: unknown[]) => {
-    // NEVER filter console.warn - warnings must always be visible
+    // In production, throttle high-frequency timer/sync warns to prevent log flooding
+    const firstArg = String(args[0])
+    if (shouldThrottleProdWarn(firstArg)) return
     originalConsole.warn(...args)
   }
 
@@ -276,6 +295,8 @@ export function applyConsoleFiltering(): void {
 
   // Intercept error logs to catch PouchDB "guardedConsole" errors
   console.error = (...args: unknown[]) => {
+    const firstArg = String(args[0])
+    if (shouldThrottleProdWarn(firstArg)) return
     // Join all args to catch errors passed as second/third arguments (common in PouchDB)
     const allArgsStr = args.map(a => {
       if (a instanceof Error) return a.message + ' ' + a.stack

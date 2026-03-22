@@ -492,6 +492,10 @@ const startEdit = (taskId: string, field: string) => {
 
 const saveEdit = (taskId: string, field: string, event: Event) => {
   const input = event.target as HTMLInputElement
+  if (field === 'title' && !input.value.trim()) {
+    cancelEdit()
+    return
+  }
   emit('updateTask', taskId, { [field]: input.value })
   cancelEdit()
 }

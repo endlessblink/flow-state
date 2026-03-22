@@ -139,7 +139,9 @@ export function useTaskPersistence(
     // BUG-025 FIX: Atomic bulk delete for multiple tasks
     const bulkDeleteTasksFromStorage = async (taskIds: string[]): Promise<void> => {
         if (taskIds.length === 0) return
-        console.log(`🗑️ [PERSISTENCE] bulkDeleteTasksFromStorage called for ${taskIds.length} tasks`)
+        if (import.meta.env.DEV) {
+            console.log(`🗑️ [PERSISTENCE] bulkDeleteTasksFromStorage called for ${taskIds.length} tasks`)
+        }
 
         // NOTE: localStorage save happens in caller AFTER array modification
         // Don't save here - tasks are still in _rawTasks at this point!
@@ -148,13 +150,17 @@ export function useTaskPersistence(
         const { useAuthStore } = await import('@/stores/auth')
         const authStore = useAuthStore()
         if (!authStore.isAuthenticated) {
-            console.log(`✅ [PERSISTENCE] ${taskIds.length} tasks will be removed from localStorage after splice`)
+            if (import.meta.env.DEV) {
+                console.log(`✅ [PERSISTENCE] ${taskIds.length} tasks will be removed from localStorage after splice`)
+            }
             return
         }
 
         try {
             await bulkDeleteFromDB(taskIds)
-            console.log(`✅ [PERSISTENCE] ${taskIds.length} tasks soft-deleted atomically`)
+            if (import.meta.env.DEV) {
+                console.log(`✅ [PERSISTENCE] ${taskIds.length} tasks soft-deleted atomically`)
+            }
         } catch (e) {
             console.error(`❌ [PERSISTENCE] Bulk task deletion failed:`, e)
             throw e // Re-throw so bulkDeleteTasks in taskOperations knows it failed
@@ -216,7 +222,9 @@ export function useTaskPersistence(
 
     const loadFromDatabase = async () => {
         if (_loadPromise) {
-            console.log('[TASK-LOAD] Reentrancy guard: returning existing load promise')
+            if (import.meta.env.DEV) {
+                console.log('[TASK-LOAD] Reentrancy guard: returning existing load promise')
+            }
             return _loadPromise
         }
         _loadPromise = _loadFromDatabaseImpl()
@@ -314,7 +322,9 @@ export function useTaskPersistence(
                 // A pending write means the user just edited this task and the save is still
                 // in-flight or the echo hasn't been confirmed. Never accept remote data for these.
                 if (remoteTask && isPendingWrite(localTask.id)) {
-                    console.log(`🛡️ [SMART-MERGE] Preserving pending-write task "${localTask.title?.slice(0, 15)}" (BUG-1206)`)
+                    if (import.meta.env.DEV) {
+                        console.log(`🛡️ [SMART-MERGE] Preserving pending-write task "${localTask.title?.slice(0, 15)}" (BUG-1206)`)
+                    }
                     mergedTasks.push(localTask)
                     remoteMap.delete(localTask.id)
                     continue
@@ -360,7 +370,9 @@ export function useTaskPersistence(
                             }
                         }
                         merged.updatedAt = new Date(Math.max(localTime, remoteTime))
-                        console.log(`🛡️ [SMART-MERGE] Field-merging local task "${localTask.title?.slice(0, 15)}" onto remote base (Local v${localVer} > Remote v${remoteVer} || Local newer)`)
+                        if (import.meta.env.DEV) {
+                            console.log(`🛡️ [SMART-MERGE] Field-merging local task "${localTask.title?.slice(0, 15)}" onto remote base (Local v${localVer} > Remote v${remoteVer} || Local newer)`)
+                        }
                         mergedTasks.push(merged)
                     } else {
                         // Remote is newer or equal -> Accept remote
@@ -396,7 +408,9 @@ export function useTaskPersistence(
                     // KDE widget or another device) and the DB correctly excluded them.
                     // Preserving them would resurrect deleted tasks via the CREATE sync retry.
                     if (localTask._soft_deleted) {
-                        console.log(`🗑️ [SMART-MERGE] Dropping soft-deleted local-only task "${localTask.title?.slice(0, 15)}" - already deleted`)
+                        if (import.meta.env.DEV) {
+                            console.log(`🗑️ [SMART-MERGE] Dropping soft-deleted local-only task "${localTask.title?.slice(0, 15)}" - already deleted`)
+                        }
                         continue
                     }
 
@@ -408,11 +422,15 @@ export function useTaskPersistence(
                     const localCreatedAt = localTask.createdAt ? new Date(localTask.createdAt).getTime() : 0
                     const isRecentlyCreated = (Date.now() - localCreatedAt) < RECENT_CREATE_WINDOW_MS
                     if (loadedTasks.length > 0 && !isRecentlyCreated) {
-                        console.log(`🗑️ [SMART-MERGE] Dropping stale local-only task "${localTask.title?.slice(0, 15)}" - not in DB and not recently created`)
+                        if (import.meta.env.DEV) {
+                            console.log(`🗑️ [SMART-MERGE] Dropping stale local-only task "${localTask.title?.slice(0, 15)}" - not in DB and not recently created`)
+                        }
                         continue
                     }
 
-                    console.log(`🛡️ [SMART-MERGE] Preserving local-only task "${localTask.title?.slice(0, 15)}" - will sync when online`)
+                    if (import.meta.env.DEV) {
+                        console.log(`🛡️ [SMART-MERGE] Preserving local-only task "${localTask.title?.slice(0, 15)}" - will sync when online`)
+                    }
                     mergedTasks.push(localTask)
 
                     // Queue the task for sync retry via the offline sync system
@@ -492,7 +510,9 @@ export function useTaskPersistence(
                 }
             }
 
-            console.log(`✅ [SMART-MERGE] Complete. Local: ${localTasksMap.size} -> Merged: ${mergedTasks.length} (Fetched: ${loadedTasks.length})`)
+            if (import.meta.env.DEV) {
+                console.log(`✅ [SMART-MERGE] Complete. Local: ${localTasksMap.size} -> Merged: ${mergedTasks.length} (Fetched: ${loadedTasks.length})`)
+            }
 
             // BUG-1411: Cache merged tasks to IndexedDB for offline loading
             cacheTasks(mergedTasks)

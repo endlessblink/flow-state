@@ -2,6 +2,7 @@ import { ref, nextTick, type Ref } from 'vue'
 import { type Node, type NodeDragEvent, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { useCanvasImagesStore } from '@/stores/canvasImages'
 import type { Task } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
 import { useCanvasGroups } from './useCanvasGroups'
@@ -356,6 +357,7 @@ export function useCanvasInteractions(deps?: {
 
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
+    const canvasImagesStore = useCanvasImagesStore()
     const { nodeVersionMap } = storeToRefs(canvasStore)
     const { updateSectionTaskCounts } = useCanvasGroups()
     const { startDrag, endDrag, startResize, endResize, state: opState } = useCanvasOperationState()
@@ -655,6 +657,17 @@ export function useCanvasInteractions(deps?: {
                         await syncNodePosition(descendantTask.id, childNode, updatedAllGroups, 'tasks')
                         setNodeState(descendantTask.id, NodeState.IDLE)
                     }
+
+                } else if (node.type === 'imageNode') {
+                    // ============================================================
+                    // IMAGE NODE DRAG END (TASK-1690)
+                    // ============================================================
+                    // Image nodes are not task/group nodes — just persist their new position
+                    const rawAbsolutePos = positionSnapshot.get(node.id) ?? {
+                        x: Math.round(node.position.x / 16) * 16,
+                        y: Math.round(node.position.y / 16) * 16,
+                    }
+                    canvasImagesStore.updateCanvasImagePosition(node.id, rawAbsolutePos)
 
                 } else {
                     // ============================================================

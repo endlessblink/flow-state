@@ -427,14 +427,8 @@ const groupedTasks = computed((): TaskGroup[] => {
       const daysUntilEnd = (7 - todayDow) % 7
       endOfWeek.setDate(today.getDate() + daysUntilEnd)
     }
-    // When showAllWeekDays is on, always extend to show next week for planning
-    // When off, still extend on Fri/Sat so tasks aren't hidden
-    if (showAllWeekDays.value) {
-      // Show through end of next week
-      const nextWeekEnd = new Date(endOfWeek)
-      nextWeekEnd.setDate(endOfWeek.getDate() + 7)
-      endOfWeek.setTime(nextWeekEnd.getTime())
-    } else if (todayDow === 5 || todayDow === 6) {
+    // Extend on Fri/Sat so upcoming tasks aren't hidden
+    if (!showAllWeekDays.value && (todayDow === 5 || todayDow === 6)) {
       const nextWed = new Date(endOfWeek)
       nextWed.setDate(endOfWeek.getDate() + 4)
       endOfWeek.setTime(nextWed.getTime())
@@ -498,8 +492,9 @@ const groupedTasks = computed((): TaskGroup[] => {
     bucketConfig.forEach(({ key, title }) => {
       const bucketTasks = buckets[key]
       const isDayBucket = key.startsWith('day-')
-      // Show empty day buckets when showAllWeekDays is on; always hide empty non-day buckets
-      if (bucketTasks.length > 0 || (showAllWeekDays.value && isDayBucket)) {
+      const isTomorrow = key === 'tomorrow'
+      // Tomorrow is always visible; empty day buckets shown when showAllWeekDays is on
+      if (bucketTasks.length > 0 || isTomorrow || (showAllWeekDays.value && isDayBucket)) {
         groups.push({
           key,
           title,
@@ -610,6 +605,9 @@ const handleToggleComplete = async (taskId: string) => {
 }
 
 const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
+  if ('title' in updates && (!updates.title || !String(updates.title).trim())) {
+    return
+  }
   // BUG-1051: AWAIT to ensure persistence
   await taskStore.updateTask(taskId, updates)
 }

@@ -252,6 +252,10 @@ export const useQuickSortStore = defineStore('quickSort', () => {
   // Legacy localStorage functions (for fallback/migration)
   function saveToLocalStorage() {
     try {
+      // Cap session history to prevent unbounded localStorage growth
+      if (sessionHistory.value.length > 200) {
+        sessionHistory.value = sessionHistory.value.slice(-200)
+      }
       localStorage.setItem('flowstate-quicksort-history', JSON.stringify(sessionHistory.value))
       localStorage.setItem('flowstate-quicksort-last-date', lastCompletedDate.value || '')
     } catch (error) {

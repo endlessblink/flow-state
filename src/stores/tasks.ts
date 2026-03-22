@@ -214,7 +214,7 @@ export const useTaskStore = defineStore('tasks', () => {
         }
       } else {
         // BUG-061 FIX: Validate task before adding/updating
-        if (!taskDoc || !taskDoc.id || !taskDoc.title === undefined) {
+        if (!taskDoc || !taskDoc.id || taskDoc.title === undefined) {
           console.warn('[TASKS:SYNC] Ignoring invalid task from sync (missing id or title):', taskId)
           return
         }

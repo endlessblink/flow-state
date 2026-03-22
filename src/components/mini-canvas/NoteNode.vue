@@ -1,9 +1,23 @@
 <template>
   <div class="note-node">
-    <Handle type="target" :position="Position.Top" />
-    <Handle type="source" :position="Position.Bottom" />
+    <Handle type="target" :position="Position.Top" id="top" />
+    <Handle type="target" :position="Position.Right" id="right" />
+    <Handle type="target" :position="Position.Bottom" id="bottom" />
+    <Handle type="target" :position="Position.Left" id="left" />
+    <Handle type="source" :position="Position.Top" id="source-top" />
+    <Handle type="source" :position="Position.Right" id="source-right" />
+    <Handle type="source" :position="Position.Bottom" id="source-bottom" />
+    <Handle type="source" :position="Position.Left" id="source-left" />
 
     <div class="note-color-bar" :style="colorBarStyle" />
+
+    <img
+      v-if="data.imageUrl"
+      :src="data.imageUrl"
+      class="note-image"
+      alt="Pasted image"
+      @click.stop="showLightbox = true"
+    />
 
     <input
       class="note-title"
@@ -21,10 +35,16 @@
       @blur="handleDescriptionBlur"
     />
   </div>
+
+  <Teleport to="body">
+    <div v-if="showLightbox" class="image-lightbox" @click="showLightbox = false">
+      <img :src="data.imageUrl" class="lightbox-img" alt="Full image" />
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 
 interface Props {
@@ -33,10 +53,12 @@ interface Props {
     description: string
     color?: string
     noteId: string
+    imageUrl?: string
   }
 }
 
 const props = defineProps<Props>()
+const showLightbox = ref(false)
 const emit = defineEmits<{
   'update-title': [noteId: string, title: string]
   'update-description': [noteId: string, description: string]
@@ -122,5 +144,36 @@ const handleDescriptionBlur = (e: FocusEvent) => {
 .note-content::placeholder {
   color: var(--text-muted);
   opacity: 0.6;
+}
+
+.note-image {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  cursor: zoom-in;
+  display: block;
+}
+</style>
+
+<style>
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
 }
 </style>

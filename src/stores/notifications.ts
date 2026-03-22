@@ -266,7 +266,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       ? taskStore._rawTasks.filter(t => !t._soft_deleted && t.reminders && t.reminders.length > 0)
       : []
 
-    console.log(`[REMIND] Checking custom reminders... (${tasks.length} tasks with reminders)`)
+    if (import.meta.env.DEV) console.log(`[REMIND] Checking custom reminders... (${tasks.length} tasks with reminders)`)
 
     let hasChanges = false
     for (const task of tasks) {
@@ -275,7 +275,7 @@ export const useNotificationStore = defineStore('notifications', () => {
         if (reminder.fired || reminder.dismissed) continue
         const reminderTime = new Date(reminder.datetime)
         if (reminderTime <= now) {
-          console.log(`[REMIND] 🔔 Firing reminder for "${task.title}" — ${reminder.label || 'no label'}`)
+          if (import.meta.env.DEV) console.log(`[REMIND] 🔔 Firing reminder for "${task.title}" — ${reminder.label || 'no label'}`)
           // Fire the notification
           await deliverNotification({
             title: `Reminder: ${task.title}`,
@@ -340,7 +340,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       if (delivered) {
         // In browser context, we can't easily attach onclick to deliverNotification
         // The notification was successfully shown via the best available channel
-        console.log(`[NOTIFY] Notification delivered: ${notification.title}`)
+        if (import.meta.env.DEV) console.log(`[NOTIFY] Notification delivered: ${notification.title}`)
       }
 
       // Mark notification as shown regardless of delivery success
@@ -548,7 +548,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     if (notificationSaveTimer) clearTimeout(notificationSaveTimer)
     notificationSaveTimer = setTimeout(async () => {
       await saveScheduledNotifications()
-      console.log('📬 [SUPABASE] Notifications auto-saved (1s debounce)')
+      if (import.meta.env.DEV) console.log('📬 [SUPABASE] Notifications auto-saved (1s debounce)')
     }, 1000) // Refined: 1s debounce
   }, { deep: true })
 

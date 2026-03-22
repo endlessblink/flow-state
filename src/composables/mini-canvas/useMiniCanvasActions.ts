@@ -67,6 +67,16 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     taskStore.updateTask(task.id, { subtasks: updated } as Partial<Task>)
   }
 
+  const updateSubtaskDescription = (subtaskId: string, description: string) => {
+    const task = getTask()
+    if (!task) return
+
+    const updated = (task.subtasks || []).map(s =>
+      s.id === subtaskId ? { ...s, description, updatedAt: new Date() } : s
+    )
+    taskStore.updateTask(task.id, { subtasks: updated } as Partial<Task>)
+  }
+
   const deleteSubtask = (subtaskId: string) => {
     const task = getTask()
     if (!task) return
@@ -77,14 +87,15 @@ export function useMiniCanvasActions(taskId: () => string | null) {
 
   // ── Planning Note Actions ──
 
-  const addNote = (position: { x: number; y: number }, title = 'New note') => {
+  const addNote = (position: { x: number; y: number }, title = 'New note', description = '', imageUrl?: string) => {
     const task = getTask()
     if (!task) return
 
     const note: PlanningNote = {
       id: crypto.randomUUID(),
       title,
-      description: '',
+      description,
+      imageUrl,
       canvasPosition: position,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -137,6 +148,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     addSubtask,
     updateSubtaskPosition,
     updateSubtaskTitle,
+    updateSubtaskDescription,
     toggleSubtaskCompletion,
     deleteSubtask,
     addNote,

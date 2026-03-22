@@ -508,6 +508,8 @@ pub fn run() {
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir { file_name: None }),
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
                 ])
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
+                .max_file_size(2_000_000) // 2 MB — Rust-only logs are minimal
                 .level(log::LevelFilter::Info)
                 .build(),
         )

@@ -45,7 +45,7 @@
       :minutes="unchosenMinutes"
       @snooze="handleNannySnooze"
       @stop-today="handleNannyStopToday"
-      @dismiss="nannyDismissed = true"
+      @dismiss="nannyDismissed = true; nannyLastDismissedAt = Date.now()"
     />
   </div>
 </template>
@@ -97,23 +97,27 @@ onUnmounted(() => {
 useBeforeUnload()
 
 // Gently remind user to pick a task after 5 min without a Pomodoro
-const { unchosenMinutes, resetNanny } = useTaskbarNanny()
+const { unchosenMinutes, shouldNudge, resetNanny } = useTaskbarNanny()
 
 // Nanny reminder state
 const nannyDismissed = ref(false)
+const nannyLastDismissedAt = ref(0)
 const nannySnoozedUntil = ref(0)
 const nannyStoppedToday = ref(false)
+const NANNY_REDISPLAY_INTERVAL_MS = 15 * 60_000 // Re-show every 15 min if still idle
 
 const showNannyReminder = computed(() => {
-  if (nannyStoppedToday.value) return false
-  if (nannyDismissed.value) return false
-  if (nannySnoozedUntil.value > Date.now()) return false
-  return unchosenMinutes.value >= 5
+  if (nannyStoppedToday.value) { console.log('🔔 [NANNY] blocked: stoppedToday'); return false }
+  if (nannySnoozedUntil.value > Date.now()) { console.log('🔔 [NANNY] blocked: snoozed'); return false }
+  if (nannyDismissed.value && (Date.now() - nannyLastDismissedAt.value) < NANNY_REDISPLAY_INTERVAL_MS) { console.log('🔔 [NANNY] blocked: dismissed recently'); return false }
+  if (shouldNudge.value) console.log('🔔 [NANNY] ✅ SHOWING reminder!')
+  return shouldNudge.value
 })
 
 function handleNannySnooze(minutes: number) {
   nannySnoozedUntil.value = Date.now() + minutes * 60_000
   nannyDismissed.value = true
+  nannyLastDismissedAt.value = Date.now()
   // Re-enable showing after snooze expires
   setTimeout(() => { nannyDismissed.value = false }, minutes * 60_000)
 }
@@ -128,7 +132,10 @@ function handleNannyStopToday() {
 
 // Reset dismissed state when timer starts (so nanny can fire again next idle period)
 watch(unchosenMinutes, (val) => {
-  if (val === 0) nannyDismissed.value = false
+  if (val === 0) {
+    nannyDismissed.value = false
+    nannyLastDismissedAt.value = 0
+  }
 })
 
 const appSidebar = ref<InstanceType<typeof AppSidebar> | null>(null)

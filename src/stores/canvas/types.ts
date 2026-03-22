@@ -8,3 +8,12 @@ export interface CanvasViewport {
     y: number
     zoom: number
 }
+
+export interface CanvasImage {
+    id: string
+    imageUrl: string
+    position: { x: number; y: number }
+    width?: number
+    height?: number
+    createdAt: string
+}

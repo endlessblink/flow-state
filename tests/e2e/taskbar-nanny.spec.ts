@@ -1,14 +1,5 @@
 import { test, expect } from '../fixtures/auth'
 
-/**
- * Taskbar Nanny E2E test
- *
- * Verifies the nanny composable is wired up and the toast fires
- * after the configured threshold when no task is chosen.
- *
- * Uses a low threshold override (10s) via window.__NANNY_THRESHOLD_MINUTES
- * to avoid waiting 5 real minutes.
- */
 test.describe('Taskbar Nanny', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
@@ -26,13 +17,11 @@ test.describe('Taskbar Nanny', () => {
     await page.goto('/#/tasks')
     await page.waitForLoadState('networkidle')
 
-    // Wait for threshold (10s) — toast fires immediately when threshold is crossed.
-    // Wait 15s to be safe.
+    // Wait for threshold (10s) + buffer
     await page.waitForTimeout(15000)
 
-    // The toast appends to #toast-container in document.body
-    const toastContainer = page.locator('#toast-container')
-    const toastText = toastContainer.getByText('without a task')
-    await expect(toastText).toBeVisible({ timeout: 5000 })
+    // NannyReminder renders as .nanny-reminder in MainLayout
+    const nanny = page.locator('.nanny-reminder')
+    await expect(nanny.getByText('without a focused session')).toBeVisible({ timeout: 5000 })
   })
 })

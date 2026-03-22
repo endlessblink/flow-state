@@ -94,28 +94,6 @@
 
       <!-- SORT PHASE -->
       <div v-else-if="!isComplete" class="sort-phase">
-        <!-- Process Flow Indicator - Shows clear hierarchy -->
-        <div class="process-flow-indicator">
-          <div class="flow-step active">
-            <span class="flow-icon">&#x1F440;</span>
-            <span class="flow-label">Review</span>
-          </div>
-          <div class="flow-arrow">
-            &rarr;
-          </div>
-          <div class="flow-step">
-            <span class="flow-icon">&#x270F;&#xFE0F;</span>
-            <span class="flow-label">Edit</span>
-          </div>
-          <div class="flow-arrow">
-            &rarr;
-          </div>
-          <div class="flow-step">
-            <span class="flow-icon">&#x1F4BE;</span>
-            <span class="flow-label">Save</span>
-          </div>
-        </div>
-
         <!-- Swipe Instructions - 4-direction hints -->
         <div v-if="!hasSwipedOnce" class="swipe-hints">
           <div class="hint hint-up">
@@ -411,7 +389,7 @@ const {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  overflow: clip; /* WebKitGTK-safe: BUG-1453: clip vertically (header/footer) but allow horizontal card escape during swipe */
+  overflow: hidden; /* SOP-060: overflow:clip not supported in WebKitGTK, use hidden instead */
   overflow-x: visible;
   scrollbar-width: none; /* BUG-1453: hide scrollbar from overflow-x during card drag */
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -678,7 +656,7 @@ const {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: clip; /* WebKitGTK-safe: BUG-1453: clip vertically, card escapes via position:fixed during swipe */
+  overflow: hidden; /* SOP-060: overflow:clip not supported in WebKitGTK, use hidden instead */
   overflow-x: visible;
   z-index: var(--z-base);
 }
@@ -759,7 +737,7 @@ const {
   align-items: center;
   gap: var(--space-1);
   padding: 0 var(--space-4);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
   animation: fadeInOut 3s ease-in-out infinite;
 }
 
@@ -812,15 +790,16 @@ const {
   /* BUG-1453: perspective removed — it creates a containing block for position:fixed,
      trapping the card inside this container during swipe drag. Stack cards only use
      2D transforms (scale + translateY) so perspective had no visual effect. */
-  min-height: var(--kanban-column-min-height);
+  min-height: 200px;
   margin-bottom: var(--space-3);
 }
 
 .stack-card {
   position: absolute;
-  width: 92%;
-  max-width: 360px; /* Component-specific card width */
-  height: 180px; /* Component-specific card height - matches active card */
+  width: 95%;
+  max-width: 400px; /* Component-specific card width */
+  min-height: 200px; /* Component-specific card height - matches active card */
+  height: auto;
   background: var(--glass-bg-subtle);
   border: 1px solid var(--glass-border-light);
   border-radius: var(--radius-2xl);

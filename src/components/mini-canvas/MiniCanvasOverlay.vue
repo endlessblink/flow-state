@@ -46,6 +46,7 @@
                 :data="nodeProps.data"
                 @toggle-complete="miniCanvas.toggleSubtaskCompletion"
                 @update-title="miniCanvas.updateSubtaskTitle"
+                @update-description="miniCanvas.updateSubtaskDescription"
               />
             </template>
 
@@ -104,6 +105,8 @@ import type { NodeMouseEvent } from '@vue-flow/core'
 import { Background, BackgroundVariant } from '@vue-flow/background'
 import { useMiniCanvas } from '@/composables/mini-canvas/useMiniCanvas'
 import { useCanvasModalsStore } from '@/stores/canvas/modals'
+import { useAuthStore } from '@/stores/auth'
+import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/canvasImageUpload'
 import MiniCanvasToolbar from './MiniCanvasToolbar.vue'
 import MiniCanvasEmptyState from './MiniCanvasEmptyState.vue'
 import ParentTaskNode from './ParentTaskNode.vue'
@@ -291,15 +294,39 @@ const handleGlobalClick = (e: MouseEvent) => {
   }
 }
 
+const handlePaste = async (e: ClipboardEvent) => {
+  if (!isOpen.value) return
+
+  const imageFile = getClipboardImage(e)
+  if (!imageFile) return  // Not an image paste, let it through
+
+  e.preventDefault()
+
+  try {
+    const authStore = useAuthStore()
+    const userId = authStore.user?.id
+    if (!userId) return
+
+    const compressed = await compressImage(imageFile)
+    const imageUrl = await uploadCanvasImage(compressed, userId)
+
+    miniCanvas.addNote(getFlowCenter(), '', '', imageUrl)
+  } catch (err) {
+    console.error('[MiniCanvas] Failed to paste image:', err)
+  }
+}
+
 watch(isOpen, (open) => {
   if (open) {
     nextTick(() => {
       document.addEventListener('keydown', handleKeydown)
       document.addEventListener('click', handleGlobalClick, true)
+      document.addEventListener('paste', handlePaste)
     })
   } else {
     document.removeEventListener('keydown', handleKeydown)
     document.removeEventListener('click', handleGlobalClick, true)
+    document.removeEventListener('paste', handlePaste)
     showContextMenu.value = false
     hideCompleted.value = false
   }
@@ -308,6 +335,7 @@ watch(isOpen, (open) => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('click', handleGlobalClick, true)
+  document.removeEventListener('paste', handlePaste)
 })
 </script>
 

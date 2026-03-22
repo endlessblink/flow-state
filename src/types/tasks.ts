@@ -22,6 +22,7 @@ export interface PlanningNote {
   title: string
   description: string
   color?: string
+  imageUrl?: string
   canvasPosition: { x: number; y: number }
   createdAt: string
   updatedAt: string

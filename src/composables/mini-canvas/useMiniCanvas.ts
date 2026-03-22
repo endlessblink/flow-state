@@ -89,6 +89,7 @@ export function useMiniCanvas(taskId: () => string | null) {
           description: note.description,
           color: note.color,
           noteId: note.id,
+          imageUrl: note.imageUrl,
         },
       })
       childIndex++
@@ -96,6 +97,28 @@ export function useMiniCanvas(taskId: () => string | null) {
 
     return result
   })
+
+  /**
+   * Pick the best handle pair based on child position relative to parent (0,0).
+   * Returns sourceHandle (on parent) and targetHandle (on child).
+   */
+  const getHandles = (childPos: { x: number; y: number }) => {
+    if (Math.abs(childPos.y) >= Math.abs(childPos.x)) {
+      // Primarily vertical
+      if (childPos.y >= 0) {
+        return { sourceHandle: 'bottom', targetHandle: 'top' }   // child is below
+      } else {
+        return { sourceHandle: 'top', targetHandle: 'bottom' }   // child is above
+      }
+    } else {
+      // Primarily horizontal
+      if (childPos.x > 0) {
+        return { sourceHandle: 'right', targetHandle: 'left' }   // child is to the right
+      } else {
+        return { sourceHandle: 'left', targetHandle: 'right' }   // child is to the left
+      }
+    }
+  }
 
   /** Edges: auto-connect all children to parent */
   const edges = computed<Edge[]>(() => {
@@ -105,21 +128,32 @@ export function useMiniCanvas(taskId: () => string | null) {
     const parentId = `parent-${t.id}`
     const autoEdges: Edge[] = []
 
+    // Build a position lookup from current node positions (reflects post-drag state)
+    const nodePositions = new Map(nodes.value.map(n => [n.id, n.position]))
+
     for (const subtask of (t.subtasks || [])) {
+      const childPos = nodePositions.get(subtask.id) || { x: 0, y: 100 }
+      const handles = getHandles(childPos)
       autoEdges.push({
         id: `e-${parentId}-${subtask.id}`,
         source: parentId,
         target: subtask.id,
+        sourceHandle: handles.sourceHandle,
+        targetHandle: handles.targetHandle,
         animated: true,
         style: { stroke: '#4ECDC4', strokeWidth: 1.5, opacity: 0.4 },
       })
     }
 
     for (const note of (t.planningNotes || [])) {
+      const childPos = nodePositions.get(note.id) || { x: 0, y: 100 }
+      const handles = getHandles(childPos)
       autoEdges.push({
         id: `e-${parentId}-${note.id}`,
         source: parentId,
         target: note.id,
+        sourceHandle: handles.sourceHandle,
+        targetHandle: handles.targetHandle,
         animated: true,
         style: { stroke: '#8b5cf6', strokeWidth: 1.5, opacity: 0.3 },
       })

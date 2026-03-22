@@ -2,6 +2,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
 import { useCanvasContextMenuStore } from '@/stores/canvas/contextMenus'
 import { useUIStore } from '@/stores/ui'
@@ -71,6 +72,7 @@ let hasReconciledThisSession = false
 export function useCanvasOrchestrator() {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
+    const canvasImagesStore = useCanvasImagesStore()
     const canvasUiStore = useCanvasUiStore()
     const contextMenuStore = useCanvasContextMenuStore()
     const uiStore = useUIStore()
@@ -652,6 +654,12 @@ export function useCanvasOrchestrator() {
         } finally {
             isSyncingFromWatcher = false
         }
+    })
+
+    // TASK-1690: Watch for canvas image additions/removals to inject imageNode nodes
+    watch(() => canvasImagesStore.images.length, () => {
+        if (!isInitialized.value) return
+        batchedSyncNodes(undefined, { force: true })
     })
 
     // DRIFT FIX: REMOVED watcher on taskCountByGroupId

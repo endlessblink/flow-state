@@ -596,13 +596,17 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     // Transient error - schedule retry
     const nextRetryAt = calculateNextRetryTime(operation.retryCount)
     await markFailed(operation.id, result.error || 'Unknown error', nextRetryAt)
-    console.warn(`⚠️ [SYNC] Retry scheduled: ${operation.entityType}:${operation.entityId.slice(0, 8)} in ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
+    if (import.meta.env.DEV) {
+      console.warn(`⚠️ [SYNC] Retry scheduled: ${operation.entityType}:${operation.entityId.slice(0, 8)} in ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
+    }
 
     // BUG-P1: Server-unreachable detection — if consecutive transient failures exceed threshold,
     // pause the queue for 60s instead of burning the retry budget. Reset when connectivity returns.
     consecutiveTransientFailures++
     if (consecutiveTransientFailures >= TRANSIENT_PAUSE_THRESHOLD) {
-      console.warn(`[SYNC] Server appears unreachable (${consecutiveTransientFailures} consecutive transient failures), pausing queue for 60s`)
+      if (import.meta.env.DEV) {
+        console.warn(`[SYNC] Server appears unreachable (${consecutiveTransientFailures} consecutive transient failures), pausing queue for 60s`)
+      }
       state.value.isOnline = false
       setTimeout(() => {
         state.value.isOnline = getInitialOnlineState()

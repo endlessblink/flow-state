@@ -170,17 +170,19 @@ export class SecurityMonitor {
 
   // Log to console
   private logToConsole(event: SecurityEvent): void {
-    const logMethod = this.getLogLevelMethod(event.severity)
-    const emoji = this.getSeverityEmoji(event.severity)
+    if (import.meta.env.DEV) {
+      const logMethod = this.getLogLevelMethod(event.severity)
+      const emoji = this.getSeverityEmoji(event.severity)
 
-    logMethod(`${emoji} SECURITY [${event.type.toUpperCase()}]: ${event.description}`, {
-      id: event.id,
-      type: event.type,
-      severity: event.severity,
-      timestamp: new Date(event.timestamp).toISOString(),
-      source: event.source,
-      details: event.details
-    })
+      logMethod(`${emoji} SECURITY [${event.type.toUpperCase()}]: ${event.description}`, {
+        id: event.id,
+        type: event.type,
+        severity: event.severity,
+        timestamp: new Date(event.timestamp).toISOString(),
+        source: event.source,
+        details: event.details
+      })
+    }
   }
 
   // Get console log method based on severity

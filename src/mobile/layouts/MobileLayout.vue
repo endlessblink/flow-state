@@ -158,7 +158,7 @@ const projectStore = useProjectStore()
 const uiStore = useUIStore()
 
 // Routes that should be full-screen (no header/nav)
-const fullScreenRoutes: string[] = []
+const fullScreenRoutes: string[] = ['mobile-quick-sort']
 
 const isFullScreenView = computed(() => {
   return fullScreenRoutes.includes(route.name as string)
@@ -384,6 +384,7 @@ onMounted(() => {
   overflow-y: auto;
   padding-bottom: var(--space-20);
   position: relative;
+  min-height: 0;
   -webkit-overflow-scrolling: touch;
 }
 

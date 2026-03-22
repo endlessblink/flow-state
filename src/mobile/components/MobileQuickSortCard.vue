@@ -238,9 +238,10 @@ function truncateDescription(desc: string): string {
 /* Main Task Card */
 .task-card {
   position: relative;
-  width: 92%;
-  max-width: 360px;
-  height: 180px;
+  width: 95%;
+  max-width: 400px;
+  min-height: 200px;
+  height: auto;
   background: linear-gradient(
     145deg,
     var(--canvas-task-bg),
@@ -337,6 +338,7 @@ function truncateDescription(desc: string): string {
   height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   z-index: 1;
   will-change: filter, opacity;
 }
@@ -367,7 +369,7 @@ function truncateDescription(desc: string): string {
 }
 
 .task-title {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   font-weight: var(--font-bold);
   line-height: var(--leading-tight);
   margin: 0 0 var(--space-3);
@@ -375,10 +377,10 @@ function truncateDescription(desc: string): string {
   letter-spacing: -0.01em;
   overflow-wrap: anywhere;
   word-break: break-word;
-  max-height: 3.8em;
+  max-height: 5em;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   text-align: start;
   unicode-bidi: plaintext;
@@ -443,7 +445,8 @@ function truncateDescription(desc: string): string {
 
 @media (max-height: 700px) {
   .task-card {
-    height: 160px;
+    min-height: 160px;
+    height: auto;
   }
   .card-content {
     padding: var(--space-4);

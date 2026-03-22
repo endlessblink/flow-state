@@ -9,6 +9,7 @@
     :type="type"
     :disabled="disabled"
     :title="title"
+    :aria-pressed="pressed"
     :aria-label="ariaLabel || title"
     @click="$emit('click', $event)"
   >
@@ -25,6 +26,7 @@ interface Props {
   type?: 'button' | 'submit' | 'reset'
   title?: string
   ariaLabel?: string
+  pressed?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
@@ -34,7 +36,8 @@ withDefaults(defineProps<Props>(), {
   disabled: false,
   type: 'button',
   title: undefined,
-  ariaLabel: undefined
+  ariaLabel: undefined,
+  pressed: undefined
 })
 
 defineEmits<{

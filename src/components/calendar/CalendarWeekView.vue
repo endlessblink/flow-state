@@ -704,10 +704,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
   display: flex;
   align-items: flex-start;
   overflow: hidden;
-}
-
-.week-event--external:hover {
-  filter: brightness(1.15);
+  pointer-events: none; /* Allow clicks/drags to pass through to time cells underneath */
 }
 
 .week-event--external .external-event-title {

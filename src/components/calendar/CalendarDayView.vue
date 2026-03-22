@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject } from 'vue'
+import { inject, ref } from 'vue'
 import { Play } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
@@ -81,12 +81,20 @@ const {
   positionedExternalEvents
 } = inject('calendar-helpers') as CalendarHelpers
 
+const timeLabelsRef = ref<HTMLElement | null>(null)
+
+const onSlotsScroll = (e: Event) => {
+  const target = e.target as HTMLElement
+  if (timeLabelsRef.value) {
+    timeLabelsRef.value.scrollTop = target.scrollTop
+  }
+}
 </script>
 
 <template>
   <div class="calendar-grid">
     <!-- Time Labels Column -->
-    <div class="time-labels">
+    <div ref="timeLabelsRef" class="time-labels">
       <div
         v-for="hour in hours"
         :key="hour"
@@ -97,7 +105,7 @@ const {
     </div>
 
     <!-- Slots Container -->
-    <div class="slots-container">
+    <div class="slots-container" @scroll="onSlotsScroll">
       <!-- Current Time Indicator -->
       <div
         v-if="isViewingToday"
@@ -854,7 +862,7 @@ const {
   border-radius: var(--radius-sm);
   padding: 2px var(--space-1_5);
   color: var(--text-primary);
-  pointer-events: auto;
+  pointer-events: none; /* Allow clicks/drags to pass through to time slots underneath */
   overflow: hidden;
   border-style: solid;
   border-width: 1px 1px 1px 3px;
@@ -863,11 +871,6 @@ const {
   justify-content: center;
   cursor: default;
   backdrop-filter: blur(4px);
-  transition: filter 0.15s;
-}
-
-.external-event:hover {
-  filter: brightness(1.15);
 }
 
 /* Tiny events (< 25min): single inline row */

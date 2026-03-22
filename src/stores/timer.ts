@@ -97,7 +97,7 @@ export const useTimerStore = defineStore('timer', () => {
     startTimer: (taskId: string, duration: number, isBreak: boolean) => startTimer(taskId, duration, isBreak),
     addExtraTime: (seconds: number) => addExtraTime(seconds),
     getSettings: () => ({ shortBreakDuration: settings.shortBreakDuration, workDuration: settings.workDuration }),
-    findTaskTitle: (taskId: string) => taskStore.tasks.find(t => t.id === taskId)?.title
+    findTaskTitle: (taskId: string) => taskStore._rawTasks.find(t => t.id === taskId)?.title
   })
 
   // Initialize SW listener on store creation
@@ -132,7 +132,8 @@ export const useTimerStore = defineStore('timer', () => {
     if (!session?.taskId) return null
     if (session.isBreak) return session.taskId === 'break' ? t('timer.break_time') : t('timer.short_break')
     if (session.taskId === 'general') return t('timer.focus_session')
-    const task = taskStore.tasks.find(tk => tk.id === session.taskId)
+    // BUG: Use _rawTasks to find the task regardless of active filters/smart views
+    const task = taskStore._rawTasks.find(tk => tk.id === session.taskId)
     return task?.title || t('timer.unknown_task')
   })
 
@@ -149,7 +150,7 @@ export const useTimerStore = defineStore('timer', () => {
     if (!session) return ''
     if (session.isBreak) return session.taskId === 'break' ? t('timer.short_break') : t('timer.long_break')
     if (session.taskId === 'general') return t('timer.focus_session')
-    const task = taskStore.tasks.find(tk => tk.id === session.taskId)
+    const task = taskStore._rawTasks.find(tk => tk.id === session.taskId)
     return task?.title || t('timer.work_session')
   })
 

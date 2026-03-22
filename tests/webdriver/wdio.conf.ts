@@ -14,15 +14,19 @@
  */
 
 import path from 'path'
+import { fileURLToPath } from 'url'
 
-const TAURI_BINARY = path.resolve(__dirname, '../../src-tauri/target/release/flow-state')
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const TAURI_BINARY = path.resolve(__dirname, '../../src-tauri/target/debug/flow-state')
 
 export const config: WebdriverIO.Config = {
   // Connect to tauri-driver (which wraps WebKitWebDriver)
   hostname: '127.0.0.1',
   port: 4444,
 
-  specs: ['./tests/webdriver/specs/**/*.ts'],
+  specs: [path.resolve(__dirname, 'specs/**/*.ts')],
 
   capabilities: [{
     // @ts-expect-error — tauri:options is not in standard WebDriver types

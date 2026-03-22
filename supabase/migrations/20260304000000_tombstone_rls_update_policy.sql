@@ -11,6 +11,7 @@
 --
 -- Fix: Add UPDATE policy with the same auth.uid() = user_id ownership check.
 
+DROP POLICY IF EXISTS "Users can update their own tombstones" ON public.tombstones;
 CREATE POLICY "Users can update their own tombstones"
     ON public.tombstones FOR UPDATE
     USING (auth.uid() = user_id)

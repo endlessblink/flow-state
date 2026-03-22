@@ -1,7 +1,7 @@
 -- FEATURE-1317: AI Work Profile / Persistent Memory
 -- Stores user work preferences and learned productivity patterns
 
-CREATE TABLE public.ai_work_profiles (
+CREATE TABLE IF NOT EXISTS public.ai_work_profiles (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
   work_days text[] DEFAULT ARRAY['monday','tuesday','wednesday','thursday','friday'],
@@ -22,6 +22,7 @@ CREATE TABLE public.ai_work_profiles (
 );
 
 ALTER TABLE public.ai_work_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users manage own profile" ON public.ai_work_profiles;
 CREATE POLICY "Users manage own profile" ON public.ai_work_profiles
   FOR ALL USING (auth.uid() = user_id);
-CREATE INDEX idx_ai_work_profiles_user ON public.ai_work_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_work_profiles_user ON public.ai_work_profiles(user_id);

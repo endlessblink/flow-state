@@ -17,4 +17,4 @@ DROP FUNCTION IF EXISTS on_tombstone_cleanup_task();
 DELETE FROM tasks t
 USING tombstones ts
 WHERE ts.entity_type = 'task'
-  AND ts.entity_id::uuid = t.id;
+  AND ts.entity_id = t.id;

@@ -14,35 +14,40 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 );
 
 -- Index for looking up subscriptions by user
-CREATE INDEX idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
 
 -- Unique constraint: one subscription endpoint per user
-CREATE UNIQUE INDEX idx_push_subscriptions_endpoint ON push_subscriptions(user_id, endpoint);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON push_subscriptions(user_id, endpoint);
 
 -- RLS policies
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Users can read their own subscriptions
+DROP POLICY IF EXISTS "Users can read own push subscriptions" ON push_subscriptions;
 CREATE POLICY "Users can read own push subscriptions"
   ON push_subscriptions FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Users can insert their own subscriptions
+DROP POLICY IF EXISTS "Users can insert own push subscriptions" ON push_subscriptions;
 CREATE POLICY "Users can insert own push subscriptions"
   ON push_subscriptions FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own subscriptions
+DROP POLICY IF EXISTS "Users can update own push subscriptions" ON push_subscriptions;
 CREATE POLICY "Users can update own push subscriptions"
   ON push_subscriptions FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Users can delete their own subscriptions
+DROP POLICY IF EXISTS "Users can delete own push subscriptions" ON push_subscriptions;
 CREATE POLICY "Users can delete own push subscriptions"
   ON push_subscriptions FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Service role can manage all subscriptions (for push service)
+DROP POLICY IF EXISTS "Service role manages all push subscriptions" ON push_subscriptions;
 CREATE POLICY "Service role manages all push subscriptions"
   ON push_subscriptions FOR ALL
   USING (auth.role() = 'service_role');
@@ -56,6 +61,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS push_subscriptions_updated_at ON push_subscriptions;
 CREATE TRIGGER push_subscriptions_updated_at
   BEFORE UPDATE ON push_subscriptions
   FOR EACH ROW

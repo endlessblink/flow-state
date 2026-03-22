@@ -53,7 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_workspace_invites_email ON public.workspace_invit
 -- task_comments: per-task threaded comments (Phase 3 — table created now)
 CREATE TABLE IF NOT EXISTS public.task_comments (
   id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id      uuid        NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+  task_id      text        NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
   workspace_id uuid        NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   user_id      uuid        NOT NULL REFERENCES auth.users(id),
   content      text        NOT NULL,
@@ -299,32 +299,39 @@ CREATE POLICY "notifications_delete" ON public.notifications FOR DELETE USING (
 
 -- ---- workspaces ----
 -- SELECT: any member of the workspace, OR the workspace owner (for bootstrap before membership row exists)
+DROP POLICY IF EXISTS "workspaces_select" ON public.workspaces;
 CREATE POLICY "workspaces_select" ON public.workspaces FOR SELECT USING (
   id = ANY(user_workspace_ids())
 );
+DROP POLICY IF EXISTS "workspaces_select_owner" ON public.workspaces;
 CREATE POLICY "workspaces_select_owner" ON public.workspaces FOR SELECT USING (
   auth.uid() = owner_id
 );
 -- INSERT: authenticated user creating their own workspace
+DROP POLICY IF EXISTS "workspaces_insert" ON public.workspaces;
 CREATE POLICY "workspaces_insert" ON public.workspaces FOR INSERT WITH CHECK (
   auth.uid() = owner_id
 );
 -- UPDATE: any member (owner/admin can manage settings via application logic)
+DROP POLICY IF EXISTS "workspaces_update" ON public.workspaces;
 CREATE POLICY "workspaces_update" ON public.workspaces FOR UPDATE USING (
   id = ANY(user_workspace_ids())
 );
 -- DELETE: owner only
+DROP POLICY IF EXISTS "workspaces_delete" ON public.workspaces;
 CREATE POLICY "workspaces_delete" ON public.workspaces FOR DELETE USING (
   auth.uid() = owner_id
 );
 
 -- ---- workspace_members ----
 -- SELECT: any member of the same workspace can see membership list
+DROP POLICY IF EXISTS "members_select" ON public.workspace_members;
 CREATE POLICY "members_select" ON public.workspace_members FOR SELECT USING (
   workspace_id = ANY(user_workspace_ids())
 );
 -- INSERT: owner/admin of the workspace, OR the user inserting themselves,
 --         OR the workspace owner bootstrapping their first membership row
+DROP POLICY IF EXISTS "members_insert" ON public.workspace_members;
 CREATE POLICY "members_insert" ON public.workspace_members FOR INSERT WITH CHECK (
   workspace_id IN (
     SELECT workspace_id FROM workspace_members
@@ -336,10 +343,12 @@ CREATE POLICY "members_insert" ON public.workspace_members FOR INSERT WITH CHECK
   )
 );
 -- SELECT: user can always see their own memberships (needed for INSERT+RETURNING)
+DROP POLICY IF EXISTS "members_select_self" ON public.workspace_members;
 CREATE POLICY "members_select_self" ON public.workspace_members FOR SELECT USING (
   auth.uid() = user_id
 );
 -- DELETE: owner/admin removes others, OR member removes themselves (leave workspace)
+DROP POLICY IF EXISTS "members_delete" ON public.workspace_members;
 CREATE POLICY "members_delete" ON public.workspace_members FOR DELETE USING (
   workspace_id IN (
     SELECT workspace_id FROM workspace_members
@@ -351,11 +360,13 @@ CREATE POLICY "members_delete" ON public.workspace_members FOR DELETE USING (
 -- ---- workspace_invites ----
 -- SELECT: workspace members can see invites for their workspace;
 --         invited user can see their own invite by email
+DROP POLICY IF EXISTS "invites_select" ON public.workspace_invites;
 CREATE POLICY "invites_select" ON public.workspace_invites FOR SELECT USING (
   workspace_id = ANY(user_workspace_ids())
   OR invited_email = (SELECT email FROM auth.users WHERE id = auth.uid())
 );
 -- INSERT: owner/admin only
+DROP POLICY IF EXISTS "invites_insert" ON public.workspace_invites;
 CREATE POLICY "invites_insert" ON public.workspace_invites FOR INSERT WITH CHECK (
   workspace_id IN (
     SELECT workspace_id FROM workspace_members
@@ -363,6 +374,7 @@ CREATE POLICY "invites_insert" ON public.workspace_invites FOR INSERT WITH CHECK
   )
 );
 -- UPDATE: owner/admin only (e.g. revoke invite)
+DROP POLICY IF EXISTS "invites_update" ON public.workspace_invites;
 CREATE POLICY "invites_update" ON public.workspace_invites FOR UPDATE USING (
   workspace_id IN (
     SELECT workspace_id FROM workspace_members
@@ -372,29 +384,35 @@ CREATE POLICY "invites_update" ON public.workspace_invites FOR UPDATE USING (
 
 -- ---- task_comments ----
 -- SELECT: any member of the comment's workspace
+DROP POLICY IF EXISTS "task_comments_select" ON public.task_comments;
 CREATE POLICY "task_comments_select" ON public.task_comments FOR SELECT USING (
   workspace_id = ANY(user_workspace_ids())
 );
 -- INSERT: any member of the workspace
+DROP POLICY IF EXISTS "task_comments_insert" ON public.task_comments;
 CREATE POLICY "task_comments_insert" ON public.task_comments FOR INSERT WITH CHECK (
   workspace_id = ANY(user_workspace_ids())
   AND auth.uid() = user_id
 );
 -- UPDATE: own comments only
+DROP POLICY IF EXISTS "task_comments_update" ON public.task_comments;
 CREATE POLICY "task_comments_update" ON public.task_comments FOR UPDATE USING (
   auth.uid() = user_id
 );
 -- DELETE: own comments only
+DROP POLICY IF EXISTS "task_comments_delete" ON public.task_comments;
 CREATE POLICY "task_comments_delete" ON public.task_comments FOR DELETE USING (
   auth.uid() = user_id
 );
 
 -- ---- workspace_activity ----
 -- SELECT: any member of the workspace can read its activity feed
+DROP POLICY IF EXISTS "workspace_activity_select" ON public.workspace_activity;
 CREATE POLICY "workspace_activity_select" ON public.workspace_activity FOR SELECT USING (
   workspace_id = ANY(user_workspace_ids())
 );
 -- INSERT: any member of the workspace can write activity entries
+DROP POLICY IF EXISTS "workspace_activity_insert" ON public.workspace_activity;
 CREATE POLICY "workspace_activity_insert" ON public.workspace_activity FOR INSERT WITH CHECK (
   workspace_id = ANY(user_workspace_ids())
   AND auth.uid() = user_id
@@ -405,18 +423,27 @@ CREATE POLICY "workspace_activity_insert" ON public.workspace_activity FOR INSER
 -- SECTION 1h: Add new tables to Realtime publication
 -- ============================================================
 
-ALTER PUBLICATION supabase_realtime ADD TABLE public.task_comments;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.workspace_activity;
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.task_comments;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.workspace_activity;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================
 -- SECTION 1i: updated_at triggers for new tables
 -- Assumes update_updated_at_column() already exists from a prior migration.
 -- ============================================================
 
+DROP TRIGGER IF EXISTS set_updated_at ON public.workspaces;
 CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON public.workspaces
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS set_updated_at ON public.task_comments;
 CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON public.task_comments
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();

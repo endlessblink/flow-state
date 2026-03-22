@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.ai_conversations (
 
 ALTER TABLE public.ai_conversations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own conversations" ON public.ai_conversations;
 CREATE POLICY "Users manage own conversations"
   ON public.ai_conversations FOR ALL
   USING (auth.uid() = user_id);
@@ -26,6 +27,7 @@ CREATE POLICY "Users manage own conversations"
 CREATE INDEX IF NOT EXISTS idx_ai_conversations_user
   ON public.ai_conversations(user_id, updated_at DESC);
 
+DROP TRIGGER IF EXISTS update_ai_conversations_updated_at ON public.ai_conversations;
 CREATE TRIGGER update_ai_conversations_updated_at
   BEFORE UPDATE ON public.ai_conversations
   FOR EACH ROW
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS public.ai_usage_log (
 
 ALTER TABLE public.ai_usage_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own usage log" ON public.ai_usage_log;
 CREATE POLICY "Users manage own usage log"
   ON public.ai_usage_log FOR ALL
   USING (auth.uid() = user_id);
@@ -56,6 +59,7 @@ CREATE POLICY "Users manage own usage log"
 CREATE INDEX IF NOT EXISTS idx_ai_usage_log_user_date
   ON public.ai_usage_log(user_id, date DESC);
 
+DROP TRIGGER IF EXISTS update_ai_usage_log_updated_at ON public.ai_usage_log;
 CREATE TRIGGER update_ai_usage_log_updated_at
   BEFORE UPDATE ON public.ai_usage_log
   FOR EACH ROW

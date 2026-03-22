@@ -19,11 +19,12 @@ CREATE TABLE IF NOT EXISTS whatsapp_conversations (
 );
 
 -- Fast lookup by chat_id + user_id (the combo that identifies a conversation)
-CREATE INDEX idx_wa_conv_chat ON whatsapp_conversations(chat_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_wa_conv_chat ON whatsapp_conversations(chat_id, user_id);
 
 -- RLS
 ALTER TABLE whatsapp_conversations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage own conversations" ON whatsapp_conversations;
 CREATE POLICY "Users can manage own conversations"
   ON whatsapp_conversations
   FOR ALL
@@ -31,6 +32,7 @@ CREATE POLICY "Users can manage own conversations"
   WITH CHECK (auth.uid() = user_id);
 
 -- Service role bypass (edge function uses service role key)
+DROP POLICY IF EXISTS "Service role full access" ON whatsapp_conversations;
 CREATE POLICY "Service role full access"
   ON whatsapp_conversations
   FOR ALL

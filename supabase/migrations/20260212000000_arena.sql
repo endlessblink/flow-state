@@ -23,14 +23,18 @@ CREATE TABLE IF NOT EXISTS public.arena_runs (
 -- RLS
 ALTER TABLE public.arena_runs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own arena runs" ON public.arena_runs;
 CREATE POLICY "Users can manage their own arena runs"
   ON public.arena_runs
   FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.arena_runs;
+-- Realtime (ignore if already added)
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.arena_runs;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Extend user_gamification with arena stats
 ALTER TABLE public.user_gamification

@@ -1,5 +1,6 @@
 import { ref, computed, watch, onUnmounted, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
+import { useTimerStore } from '@/stores/timer'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
@@ -57,6 +58,7 @@ function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: 
 
 export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>, timerGrowthMap?: Ref<Map<string, number>>, externalEvents?: Ref<ExternalCalendarEvent[]>) {
   const taskStore = useTaskStore()
+  const timerStore = useTimerStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
   const { isDragging: globalIsDragging, startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
@@ -269,6 +271,52 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         seenInstanceKeys.add(dedupeKey)
         return true
       })
+
+      // TASK-1693: Inject virtual timer event for the currently-timed task if it has no instance today
+      const currentSession = timerStore.currentSession
+      if (
+        timerStore.isTimerActive &&
+        timerStore.currentTaskId &&
+        timerStore.currentTaskId !== 'general' &&
+        timerStore.currentTaskId !== 'break' &&
+        currentSession &&
+        !currentSession.isBreak
+      ) {
+        const timedTaskId = timerStore.currentTaskId
+        const sessionStart = currentSession.startTime
+        // Only inject if the session started today
+        const sessionDateStr = `${sessionStart.getFullYear()}-${String(sessionStart.getMonth() + 1).padStart(2, '0')}-${String(sessionStart.getDate()).padStart(2, '0')}`
+        const alreadyHasEvent = dedupedEvents.some(e => e.taskId === timedTaskId)
+
+        if (sessionDateStr === dateStr && !alreadyHasEvent) {
+          const timedTask = taskStore._rawTasks.find(t => t.id === timedTaskId)
+          if (timedTask) {
+            const elapsedSeconds = currentSession.duration - currentSession.remainingTime
+            const elapsedMinutes = Math.max(1, Math.ceil(elapsedSeconds / 60))
+            const startSlot = (sessionStart.getHours() * 2) + (sessionStart.getMinutes() >= 30 ? 1 : 0)
+            const slotSpan = Math.max(1, Math.ceil(elapsedMinutes / 30))
+            const endTime = new Date(sessionStart.getTime() + elapsedMinutes * 60000)
+
+            dedupedEvents.push({
+              id: `virtual-timer-${timedTask.id}`,
+              taskId: timedTask.id,
+              instanceId: '',
+              title: timedTask.title || 'Untitled Task',
+              startTime: sessionStart,
+              endTime,
+              duration: elapsedMinutes,
+              startSlot,
+              slotSpan,
+              color: getPriorityColor(timedTask.priority),
+              column: 0,
+              totalColumns: 1,
+              isDueDate: false,
+              taskStatus: timedTask.status,
+              isVirtual: true,
+            } as CalendarEvent)
+          }
+        }
+      }
 
       // TASK-1496: Merge external events into overlap calculation so local + external share columns
       const extEvents = externalEvents?.value ?? []

@@ -3853,6 +3853,10 @@ PlasmoidItem {
         onTriggered: root.updateCurrentBlock()
     }
 
+    // Update current block immediately when timer starts/stops
+    onIsRunningChanged: updateCurrentBlock()
+    onCurrentTaskIdChanged: updateCurrentBlock()
+
     // BUG-1347: Timer to clear transition state (replaces Date.now() < transitionUntil)
     Timer {
         id: transitionTimer
@@ -5468,10 +5472,18 @@ PlasmoidItem {
                 var duration = inst.duration || 30  // default 30 min
                 var endMinutes = startMinutes + duration
 
+                // If timer is running for this task and we're past the original end,
+                // extend the block to cover the timer's remaining time
+                var isTimedTask = root.isRunning && root.currentTaskId === task.id
+                if (isTimedTask && nowMinutes >= startMinutes) {
+                    var timerEndMinutes = nowMinutes + Math.ceil(root.secondsRemaining / 60)
+                    if (timerEndMinutes > endMinutes) endMinutes = timerEndMinutes
+                }
+
                 if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
                     bestTitle = task.title || ""
                     bestTaskId = task.id || ""
-                    bestMinutesLeft = endMinutes - nowMinutes
+                    bestMinutesLeft = isTimedTask ? Math.ceil(root.secondsRemaining / 60) : endMinutes - nowMinutes
                     // Format end time
                     var endH = Math.floor(endMinutes / 60)
                     var endM = endMinutes % 60
@@ -5482,6 +5494,23 @@ PlasmoidItem {
                 }
             }
             if (bestTitle) break
+        }
+
+        // Fallback: if timer is running but no calendar block found, show the timed task
+        if (!bestTitle && root.isRunning && root.currentTaskId && root.currentTaskId !== "general" && root.currentTaskId !== "break") {
+            var timerMinsLeft = Math.ceil(root.secondsRemaining / 60)
+            var timerTaskName = root.currentTaskName
+            if (timerTaskName) {
+                bestTitle = timerTaskName
+                bestTaskId = root.currentTaskId
+                bestMinutesLeft = timerMinsLeft
+                var endTotal = nowMinutes + timerMinsLeft
+                var eH = Math.floor(endTotal / 60)
+                var eM = endTotal % 60
+                var ap = eH >= 12 ? "PM" : "AM"
+                var dH = eH > 12 ? eH - 12 : (eH === 0 ? 12 : eH)
+                bestEnd = dH + ":" + String(eM).padStart(2, '0') + " " + ap
+            }
         }
 
         currentBlockTitle = bestTitle

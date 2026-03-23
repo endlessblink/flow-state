@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { inject, ref } from 'vue'
-import { Play } from 'lucide-vue-next'
+import { inject, ref, computed } from 'vue'
+import { Play, Timer } from 'lucide-vue-next'
+import { useTimerStore } from '@/stores/timer'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot, PositionedExternalEvent } from '@/composables/calendar/useCalendarDayView'
@@ -80,6 +81,17 @@ const {
   getStatusIcon,
   positionedExternalEvents
 } = inject('calendar-helpers') as CalendarHelpers
+
+const timerStore = useTimerStore()
+
+const timerRemainingFormatted = computed(() => {
+  const session = timerStore.currentSession
+  if (!session || !timerStore.isTimerActive) return null
+  const remaining = session.remainingTime
+  const mins = Math.floor(remaining / 60)
+  const secs = remaining % 60
+  return `${mins}:${String(secs).padStart(2, '0')}`
+})
 
 const timeLabelsRef = ref<HTMLElement | null>(null)
 
@@ -239,6 +251,13 @@ const onSlotsScroll = (e: Event) => {
               <div class="task-meta">
                 <span v-if="formatEventTime(calEvent)" class="task-time">{{ formatEventTime(calEvent) }}</span>
                 <span class="task-duration">{{ calEvent.duration }}min</span>
+                <span
+                  v-if="currentTaskId === calEvent.taskId && timerRemainingFormatted"
+                  class="timer-remaining"
+                >
+                  <Timer :size="10" />
+                  {{ timerRemainingFormatted }}
+                </span>
               </div>
             </div>
 
@@ -500,6 +519,26 @@ const onSlotsScroll = (e: Event) => {
 
 .task-duration {
   font-weight: var(--font-medium);
+}
+
+.timer-remaining {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-inline-start: var(--space-2);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--timer-active-border, #f59e0b);
+  color: var(--color-base-900, #1a1a1a);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  font-variant-numeric: tabular-nums;
+  animation: timer-badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes timer-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 /* ========================================

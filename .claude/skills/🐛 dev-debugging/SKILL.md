@@ -151,6 +151,59 @@ The user is the final authority on whether something is fixed. No exceptions.
 
 ---
 
+## Test Infrastructure (March 2026)
+
+### Test Suites Overview
+
+| Suite | Command | Engine | What it catches |
+|-------|---------|--------|-----------------|
+| **Vitest (unit)** | `npm run test` | Node.js | Logic, CSS safety, mappers |
+| **Playwright (E2E)** | `./scripts/run-e2e.sh` | Chromium + Apple WebKit | Functional UI, CRUD, navigation |
+| **WebDriver (Tauri)** | `npx wdio tests/webdriver/wdio.conf.ts` | Real WebKitGTK | Tauri-specific rendering bugs |
+
+### Playwright E2E — Critical Notes
+
+- **Config**: `playwright.config.ts` — `testDir: './tests/e2e'`, `testMatch: '**/*.spec.ts'`
+- **Auth**: Global setup creates test user `playwright@test.flowstate`, saves auth to `tests/.auth/user.json`
+- **Must use** `./scripts/run-e2e.sh` (auto-fetches Supabase keys), NOT bare `npx playwright test`
+- **3 projects**: chromium, webkit, tauri-simulation (all use Apple WebKit, NOT WebKitGTK)
+- **602 tests** across 20 files — ~450 pass, ~126 fail, ~26 skip (as of March 2026)
+- **Known limitation**: Cannot catch WebKitGTK-specific rendering bugs (BUG-1672 sidebar, BUG-1674 z-index)
+
+### WebDriver (Real Tauri/WebKitGTK) — How to Run
+
+```bash
+# 1. Build debug binary with automation enabled
+TAURI_WEBVIEW_AUTOMATION=true cargo tauri build --debug
+
+# 2. Start tauri-driver (background)
+nohup tauri-driver > /tmp/tauri-driver.log 2>&1 &
+
+# 3. Verify it's listening
+curl -s http://127.0.0.1:4444/status  # should return {"value":{"ready":true,...}}
+
+# 4. Run tests
+npx wdio tests/webdriver/wdio.conf.ts
+
+# 5. Screenshots saved to .dev/screenshots/webdriver/
+```
+
+**Prerequisites**: `tauri-driver` (cargo install), `WebKitWebDriver` (webkit2gtk-driver package)
+**Config**: `tests/webdriver/wdio.conf.ts` — uses debug binary at `src-tauri/target/debug/flow-state`
+**Tests**: `tests/webdriver/specs/webkitgtk-layout-bugs.ts` — 15 tests for sidebar, z-index, CSS compat
+
+### Confirmed WebKitGTK Bugs (caught by WebDriver, missed by Playwright)
+
+| Bug | Test | Actual Value | Expected |
+|-----|------|-------------|----------|
+| **Project names clipped** (BUG-1672) | sidebar project names readable | 24px width | >100px |
+| **overflow:clip hides content** | overflow:clip scrollable content | 1 element | 0 |
+
+### Known Test False Positives
+
+- **Font fallback test**: Matches "serif" inside "sans-serif" — needs regex fix to exclude `sans-serif`
+- **View navigation tests**: Tests 4 & 5 navigate to `localhost:1420` but debug build embeds frontend — should use relative URLs or the embedded base URL
+
 ## Reference Files
 
 Read these only when needed for the specific issue:

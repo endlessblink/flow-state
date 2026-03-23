@@ -4479,6 +4479,16 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1681 | Fix Inbox panel shows no content — inbox collapsed by default, badge/content not accessible. | P2 | 📋 PLANNED |
 | BUG-1682 | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors. | P0 | 📋 PLANNED |
 | ~~BUG-1691~~ | Fix tasks turning untitled (empty title saved) | P0 | ✅ **DONE** |
+| BUG-1696 | Tauri: Project names clipped to 24px in sidebar (WebKitGTK confirmed) | P1 | 📋 PLANNED |
+| BUG-1697 | Tauri: overflow:clip hides scrollable content in WebKitGTK | P1 | 📋 PLANNED |
+| BUG-1698 | Tauri: Views render blank pages when navigating (WebDriver test confirmed) | P1 | 📋 PLANNED |
+| BUG-1699 | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | 📋 PLANNED |
+| BUG-1700 | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | 📋 PLANNED |
+| BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
+| BUG-1702 | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | 📋 PLANNED |
+| BUG-1703 | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | 📋 PLANNED |
+| BUG-1704 | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | 📋 PLANNED |
+| BUG-1705 | CSS: 2 unannotated overflow:clip usages in MobileQuickSortView.vue (unit test failing) | P2 | 📋 PLANNED |
 
 #### BUG-1671: Workspace Migration Failure (📋 PLANNED)
 - **Priority**: P0-CRITICAL
@@ -4515,6 +4525,80 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 3. **AllTasksView.vue** `handleUpdateTask()` — added guard blocking empty title updates to prevent user-triggered saves
 
 **Files**: `src/components/common/TaskTable.vue`, `src/stores/tasks/tasks.ts`, `src/views/AllTasksView.vue`
+
+---
+
+## Tauri & E2E Test Audit Findings (BUG-1696 — BUG-1705)
+
+> **Goal**: Fix all bugs found during the March 2026 comprehensive test audit.
+> **Context**: E2E suite was completely broken (Vitest/Playwright collision). After fixing `playwright.config.ts`, 126 failures surfaced. WebDriver tests against real WebKitGTK confirmed additional Tauri-specific bugs.
+> **Priority**: P1-P2 | **Status**: 📋 PLANNED
+
+#### BUG-1696: Tauri Project Names Clipped to 24px (📋 PLANNED)
+- **Priority**: P1 | **Confirmed by**: WebDriver test against real WebKitGTK (wry 0.54.1)
+- **Symptom**: Project items in sidebar render at 24px width instead of >100px. Only icons visible, names clipped.
+- **Related**: BUG-1672 (broader sidebar clipping). This is a specific sub-issue — project name elements are narrower than the sidebar itself.
+- **Evidence**: WebDriver test `sidebar project names have readable width` — Expected >100, Received 24
+- **Files**: `src/layouts/AppSidebar.vue`, sidebar project item CSS
+
+#### BUG-1697: overflow:clip Hides Content in WebKitGTK (📋 PLANNED)
+- **Priority**: P1 | **Confirmed by**: WebDriver test + Vitest css-syntax safety test
+- **Symptom**: 1 element using `overflow:clip` with scrollable content — content vanishes in WebKitGTK.
+- **Fix**: Replace `overflow: clip` with `overflow: hidden` per SOP-060. Also fix 2 unannotated usages in MobileQuickSortView.vue (BUG-1705).
+- **Reference**: `docs/sop/SOP-060-webkitgtk-gotchas.md`
+
+#### BUG-1698: Tauri Views Render Blank on Navigation (📋 PLANNED)
+- **Priority**: P1 | **Confirmed by**: WebDriver test + screenshot showing "Could not connect to localhost"
+- **Root Cause**: Tests navigate to `http://localhost:1420/` but the debug build embeds the frontend — no dev server running. App loads initially (first test page works) but subsequent `browser.url()` calls fail.
+- **Fix**: WebDriver tests should navigate using relative paths or detect the embedded base URL from the initial page.
+- **Screenshot**: `.dev/screenshots/webdriver/view-canvas-*.png` shows "Could not connect to localhost: Connection refused"
+
+#### BUG-1699: 126 Playwright E2E Tests Failing (📋 PLANNED)
+- **Priority**: P1 | **Scope**: 126 of 602 tests across chromium + webkit + tauri-simulation
+- **Breakdown**:
+  - CRUD Workflows: 6 failures (TimeoutError on task edit modal selectors)
+  - Morning Dashboard: ~12 failures (drag-to-slot, pool rendering)
+  - Multi-Tab Sync: ~9 failures (cross-tab data sync)
+  - Mobile Core Flows: 6 failures (bottom nav, menu, timer)
+  - PWA Runtime: 6 failures (SW, offline, FCP >3s)
+  - CSS Rendering: multiple (layout, scrollbars, RTL)
+  - Tauri Layout/Specific: ~9 failures (sidebar collapse, calendar, drag)
+  - Data Integrity: 1 failure (data stuck empty after reload)
+  - Self-Host: 1 failure (quick add task)
+  - Taskbar Nanny: 1 failure (threshold without chosen task)
+- **Note**: These were previously invisible because the entire E2E suite crashed before running (Vitest/Playwright `Symbol($$jest-matchers-object)` collision). Fixed by changing `testDir` in `playwright.config.ts`.
+
+#### BUG-1700: Initial Render Takes 12.7s (📋 PLANNED)
+- **Priority**: P1 | **Confirmed by**: Playwright memory-perf test
+- **Symptom**: Performance test expects FCP under 3 seconds, actual initial render took 12.7s
+- **Impact**: Real user-facing performance problem
+
+#### BUG-1701: Memory Growth >20MB (📋 PLANNED)
+- **Priority**: P2 | **Confirmed by**: Playwright memory-perf test
+- **Symptom**: Memory grows >20MB across create/delete cycles, suggesting leak in task store or Supabase subscriptions
+
+#### BUG-1702: WebDriver Test Navigation Uses Wrong URLs (📋 PLANNED)
+- **Priority**: P2 | **Type**: Test infrastructure
+- **Problem**: `webkitgtk-layout-bugs.ts` tests 4 & 5 navigate to `http://localhost:1420/` which is the Tauri dev server port. Debug builds embed the frontend, so no dev server is running.
+- **Fix**: Use the initial page URL as base, or navigate via JS (`window.location.hash = '#/board'`) instead of `browser.url()`
+- **File**: `tests/webdriver/specs/webkitgtk-layout-bugs.ts`
+
+#### BUG-1703: WebDriver Font Test False Positive (📋 PLANNED)
+- **Priority**: P3 | **Type**: Test infrastructure
+- **Problem**: Font test checks `fontFamily.not.toContain('serif')` but actual value `"v-sans, system-ui, ... sans-serif"` matches because "sans-serif" contains "serif"
+- **Fix**: Use regex `/(?<!sans-)serif/` or check for exact "serif" as standalone font name
+- **File**: `tests/webdriver/specs/webkitgtk-layout-bugs.ts:351`
+
+#### BUG-1704: Nested `<button>` in SavedViewsDropdown (📋 PLANNED)
+- **Priority**: P2 | **Confirmed by**: Vite build warning
+- **Problem**: `<button>` element nested inside another `<button>` at lines 45-51 of `SavedViewsDropdown.vue`. Invalid HTML per spec, causes click handling issues.
+- **File**: `src/components/filters/SavedViewsDropdown.vue:45-51`
+
+#### BUG-1705: Unannotated overflow:clip in MobileQuickSortView (📋 PLANNED)
+- **Priority**: P2 | **Confirmed by**: Vitest css-syntax safety test (1 of 1812 failing)
+- **Problem**: 2 usages of `overflow: hidden` with SOP-060 comment but missing `/* WebKitGTK-safe */` annotation on lines 13 and 280
+- **Fix**: Add `/* WebKitGTK-safe */` annotation or verify the fallback is correct
+- **File**: `src/mobile/views/MobileQuickSortView.vue`
 
 ---
 

@@ -3,6 +3,7 @@ import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
+import { useSmartViews } from '@/composables/useSmartViews'
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
@@ -10,6 +11,7 @@ export function useCalendarInboxState() {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
     const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
+    const { isTodayTask } = useSmartViews()
 
     // --- State ---
     const isCollapsed = ref(false)
@@ -78,6 +80,22 @@ export function useCalendarInboxState() {
         return task.instances.some(inst => inst.scheduledDate)
     }
 
+    // Helper: Check if task is due today (status-agnostic, with proper date normalization)
+    // Uses isTodayTask from useSmartViews but also handles done tasks (isTodayTask excludes them)
+    const isTaskDueToday = (task: Task): boolean => {
+        // isTodayTask handles normalization, instances, and legacy scheduledDate
+        // but excludes done tasks — so we also check done tasks with dueDate
+        if (task.status !== 'done') return isTodayTask(task)
+
+        // For done tasks: normalize dueDate manually
+        const todayStr = getTodayStr()
+        if (task.dueDate) {
+            const normalized = task.dueDate.trim().substring(0, 10)
+            return normalized === todayStr
+        }
+        return false
+    }
+
     // Base Inbox Tasks — BUG-1333: Use calendarFilteredTasks (project + hide-done only)
     // instead of filteredTasks which also applies board-level smart view/status/duration
     // filters that incorrectly restrict the calendar inbox.
@@ -85,14 +103,26 @@ export function useCalendarInboxState() {
         return taskStore.calendarFilteredTasks.filter(task => {
             if (hideCalendarDoneTasks.value && task.status === 'done') return false
             if (task.isPinned) return false
+
+            // BUG-1530 port: Canvas tasks that are also scheduled on the calendar are included
+            // when canvas-related filters are active (Canvas group filter, Canvas sort, or Today filter).
+            // This lets users see their canvas tasks via these filters.
+            // Without canvas filters, scheduled canvas tasks stay hidden (they're already on the calendar grid).
+            const isOnCanvas = !!task.canvasPosition
+            if (isOnCanvas && isScheduledOnCalendar(task)) {
+                const hasCanvasFilter = selectedCanvasGroups.value.size > 0
+                const hasCanvasSort = sortBy.value === 'canvasOrder'
+                const hasTimeFilter = showTodayOnly.value
+                return hasCanvasFilter || hasCanvasSort || hasTimeFilter
+            }
+
             return !isScheduledOnCalendar(task)
         })
     })
 
-    // Count tasks due today
+    // Count tasks due today (uses normalized date comparison)
     const todayCount = computed(() => {
-        const todayStr = getTodayStr()
-        return baseInboxTasks.value.filter(task => task.dueDate === todayStr).length
+        return baseInboxTasks.value.filter(task => isTaskDueToday(task)).length
     })
 
     // Active filters check
@@ -117,10 +147,9 @@ export function useCalendarInboxState() {
             )
         }
 
-        // 2. Today Filter
+        // 2. Today Filter (uses normalized date comparison via isTaskDueToday)
         if (showTodayOnly.value) {
-            const todayStr = getTodayStr()
-            tasks = tasks.filter(task => task.dueDate === todayStr)
+            tasks = tasks.filter(task => isTaskDueToday(task))
         }
 
         // 3. Advanced Filters

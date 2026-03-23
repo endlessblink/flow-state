@@ -25,7 +25,7 @@ function collectConsoleErrors(page: import('@playwright/test').Page): string[] {
   return errors
 }
 
-// Filter non-critical errors (workspace, realtime, etc.)
+// Filter non-critical errors (realtime, network, SW, etc.)
 function filterCriticalErrors(errors: string[]): string[] {
   const ignoredPatterns = [
     /favicon/i,
@@ -36,12 +36,6 @@ function filterCriticalErrors(errors: string[]): string[] {
     /ResizeObserver loop/,
     /Manifest.*json/i,
     /service.worker/i,
-    /workspace_members/i,
-    /workspace_id.*does not exist/i,
-    /PGRST205/,
-    /PGRST204/,
-    /relation.*workspace/i,
-    /column.*workspace/i,
   ]
   return errors.filter(err => !ignoredPatterns.some(p => p.test(err)))
 }

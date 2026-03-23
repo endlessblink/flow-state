@@ -3220,7 +3220,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | TASK-1638 | Canvas node rendering — task nodes, group nodes render all fields correctly | P1 | 📋 PLANNED |
 | TASK-1639 | Timer UI states — all timer states (idle, running, paused, complete, break) render correctly | P1 | 📋 PLANNED |
 | TASK-1640 | Naive UI override consistency — all NDatePicker, NSelect overrides in global-overrides.css work | P2 | 📋 PLANNED |
-| BUG-1641 | Fix workspace_id column + workspace_members table missing from DB — code references non-existent schema | P0 | 📋 PLANNED |
+| ~~BUG-1641~~ | Fix workspace_id column + workspace_members table missing from DB — code references non-existent schema | P0 | ✅ **DONE** |
 | TASK-1642 | SW lifecycle tests — install, activate, update, skip waiting (10 tests) | P1 | 📋 PLANNED |
 | TASK-1643 | Offline mode tests — app loads from cache, offline indicator, queued ops (10 tests) | P1 | 📋 PLANNED |
 | TASK-1644 | Install prompt tests — shows on mobile/desktop, dismissible (5 tests) | P2 | 📋 PLANNED |
@@ -4024,9 +4024,9 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-### BUG-1641: Workspace Schema Missing (📋 PLANNED)
+### ~~BUG-1641~~: Workspace Schema Missing (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED
+**Priority**: P0 | **Status**: ✅ DONE
 
 **Goal**: The codebase references `workspace_id` columns and a `workspace_members` table that do not exist in the database schema, causing runtime 400/404 errors whenever workspace-scoped code paths execute.
 

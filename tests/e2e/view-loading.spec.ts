@@ -29,20 +29,12 @@ function filterCriticalErrors(errors: string[]): string[] {
     /favicon/i,
     /Failed to load resource.*404/,
     /Failed to load resource.*503/,  // Supabase service temporarily unavailable during startup
-    /Failed to load resource.*400/,  // Bad request (often workspace-related queries)
     /supabase.*realtime/i,
     /websocket/i,
     /net::ERR_/,
     /ResizeObserver loop/,
     /Manifest.*json/i,
     /service.worker/i,
-    // Workspace tables/columns don't exist in local Supabase — non-critical
-    /workspace_members/i,
-    /workspace_id.*does not exist/i,
-    /PGRST205/,               // PostgREST "table not found"
-    /PGRST204/,               // PostgREST "column not found"
-    /relation.*workspace/i,
-    /column.*workspace/i,
     // Supabase database query errors (handleError from composables)
     /handleError@/,
     /useTasksDatabase/,

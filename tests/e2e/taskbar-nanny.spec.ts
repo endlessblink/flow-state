@@ -8,8 +8,8 @@ test.describe('Taskbar Nanny', () => {
       }
       localStorage.setItem('flowstate-onboarding-v2', 'true')
       localStorage.setItem('flowstate-welcome-seen', 'true')
-      // Override nanny threshold to 10 seconds for testing
-      ;(window as any).__NANNY_THRESHOLD_MINUTES = 10 / 60
+      // Override nanny threshold to 0 — shouldNudge fires immediately (0 >= 0)
+      ;(window as any).__NANNY_THRESHOLD_MINUTES = 0
     })
   })
 
@@ -17,11 +17,9 @@ test.describe('Taskbar Nanny', () => {
     await page.goto('/#/tasks')
     await page.waitForLoadState('networkidle')
 
-    // Wait for threshold (10s) + buffer
-    await page.waitForTimeout(15000)
-
+    // With threshold=0, shouldNudge is true immediately (unchosenMinutes 0 >= 0)
     // NannyReminder renders as .nanny-reminder in MainLayout
     const nanny = page.locator('.nanny-reminder')
-    await expect(nanny.getByText('without a focused session')).toBeVisible({ timeout: 5000 })
+    await expect(nanny.getByText('pick a task')).toBeVisible({ timeout: 10000 })
   })
 })

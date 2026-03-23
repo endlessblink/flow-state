@@ -31,16 +31,8 @@ export function useTaskbarNanny(options: TaskbarNannyOptions = {}) {
     unchosenMinutes.value = 0
   }
 
-  // DEBUG: immediate log to confirm composable is running
-  console.log('🔔 [NANNY] composable initialized, enabled=', enabled, 'threshold=', thresholdMinutes, 'timerActive=', timerStore.isTimerActive)
-
   const tickInterval = setInterval(() => {
     if (!enabled) return
-
-    // DEBUG: log every 10s regardless of state
-    if (unchosenElapsedMs.value % 10000 === 0) {
-      console.log(`🔔 [NANNY] tick: elapsed=${unchosenElapsedMs.value / 1000}s, min=${unchosenMinutes.value}, timerActive=${timerStore.isTimerActive}, shouldNudge=${unchosenMinutes.value >= thresholdMinutes}`)
-    }
 
     if (!timerStore.isTimerActive) {
       unchosenElapsedMs.value += 1000

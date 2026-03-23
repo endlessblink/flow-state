@@ -107,10 +107,9 @@ const nannyStoppedToday = ref(false)
 const NANNY_REDISPLAY_INTERVAL_MS = 15 * 60_000 // Re-show every 15 min if still idle
 
 const showNannyReminder = computed(() => {
-  if (nannyStoppedToday.value) { console.log('🔔 [NANNY] blocked: stoppedToday'); return false }
-  if (nannySnoozedUntil.value > Date.now()) { console.log('🔔 [NANNY] blocked: snoozed'); return false }
-  if (nannyDismissed.value && (Date.now() - nannyLastDismissedAt.value) < NANNY_REDISPLAY_INTERVAL_MS) { console.log('🔔 [NANNY] blocked: dismissed recently'); return false }
-  if (shouldNudge.value) console.log('🔔 [NANNY] ✅ SHOWING reminder!')
+  if (nannyStoppedToday.value) return false
+  if (nannySnoozedUntil.value > Date.now()) return false
+  if (nannyDismissed.value && (Date.now() - nannyLastDismissedAt.value) < NANNY_REDISPLAY_INTERVAL_MS) return false
   return shouldNudge.value
 })
 

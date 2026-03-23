@@ -10,7 +10,7 @@ const hasAuth = fs.existsSync(authFile);
 export default defineConfig({
   // TASK-1457: Global setup resets test data and authenticates dev user
   globalSetup: './tests/global-setup.ts',
-  testDir: './tests',
+  testDir: './tests/e2e',
   testMatch: '**/*.spec.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,

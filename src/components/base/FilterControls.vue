@@ -38,6 +38,9 @@
     <!-- Clear Filters -->
     <button
       class="clear-filters-btn"
+      :disabled="!hasActiveFilters"
+      :title="hasActiveFilters ? 'Clear all filters' : 'No filters active'"
+      :aria-label="hasActiveFilters ? 'Clear all filters' : 'No filters active'"
       @click="clearAllFilters"
     >
       Clear
@@ -91,6 +94,11 @@ const updateStatusFilter = (value: string | number) => {
   const statusFilter = value === '' ? null : String(value)
   taskStore.setActiveStatusFilter(statusFilter)
 }
+
+// Computed property to check if any filters are active
+const hasActiveFilters = computed(() => {
+  return !!activeProjectId.value || !!activeSmartView.value || !!activeStatusFilter.value
+})
 
 // TASK-243: Clear filters (hideDoneTasks now controlled by view header toggle)
 const clearAllFilters = () => {
@@ -146,7 +154,18 @@ const clearAllFilters = () => {
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 
-.clear-filters-btn:hover {
+.clear-filters-btn:hover:not(:disabled) {
   background: var(--danger-bg-medium);
+}
+
+.clear-filters-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--danger-border-subtle);
+}
+
+.clear-filters-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
 }
 </style>

@@ -67,17 +67,15 @@
 
 ## Workspace Collaboration — Post-Implementation Bugs
 
-### BUG-1561: Sync queue classifyError fails on Supabase PostgrestError objects (🔄 IN PROGRESS)
+### ~~BUG-1561~~: Sync queue classifyError fails on Supabase PostgrestError objects (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-17)
+**Priority**: P0 | **Status**: ✅ DONE
 
-**Problem**: `classifyError()` in `retryStrategy.ts` calls `String(error)` on Supabase `PostgrestError` objects (plain objects, NOT `instanceof Error`). This produces `"[object Object]"` — all PostgREST errors fall through to `'unknown'` → retried infinitely → rate limit cascade → app goes offline.
+**Problem**: `classifyError()` in `retryStrategy.ts` called `String(error)` on Supabase `PostgrestError` objects (plain objects, NOT `instanceof Error`). Produced `"[object Object]"` — all PostgREST errors fell through to `'unknown'` → retried infinitely → rate limit cascade.
 
-**Root cause**: PostgrestError has `.message` property but is not an `Error` instance. `classifyError` only checks `instanceof Error`.
+**Fix**: Three-branch message extraction (instanceof Error → plain object .message → String fallback). Regression tests added for PostgrestError shapes.
 
-**Fix**: Extract `.message` from plain objects before classification. Already implemented in `src/services/offline/retryStrategy.ts`.
-
-**Files**: `src/services/offline/retryStrategy.ts`
+**Files**: `src/services/offline/retryStrategy.ts`, `src/services/offline/__tests__/retryStrategy.spec.ts`
 
 ---
 

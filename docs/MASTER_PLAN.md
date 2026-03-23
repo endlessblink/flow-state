@@ -2119,6 +2119,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1360**~~ | **P0** | ✅ **Canvas long task cards cut off when zooming — removed LOD content hiding, overflow:hidden chain, title 3-line clamp** (✅ DONE 2026-02-20) |
 | ~~**BUG-1567**~~ | **P2** | ✅ **Deleted projects still appear in QuickSort CategorySelector — project store `projects` computed doesn't filter soft-deleted projects (is_deleted=true)** (✅ DONE 2026-03-18) |
 | ~~**TASK-1571**~~ | **P2** | ✅ **Edit Task modal RTL support — added dir="auto" to 7 inputs across TaskEditHeader, QuickTaskCreate, QuickTaskCreateModal, TaskEditSubtasks, TaskTable** (✅ DONE 2026-03-18) |
+| ~~**TASK-1692**~~ | **P2** | ✅ **Desktop task list RTL + chat Hebrew paragraphs — reversed TaskRow/TaskTable grid in [dir="rtl"], fixed priority indicator logical props, added unicode-bidi:plaintext to markdown block elements** (✅ DONE 2026-03-23) |
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
 | **BUG-1346** | **P1** | **🔄 Mobile Inbox tab broken in PWA on mobile — layout/design broken** (🔄 IN PROGRESS 2026-03-04) |
@@ -4446,6 +4447,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1680 | Fix card border-radius not rendering — task cards missing rounded corners in some views. | P3 | 📋 PLANNED |
 | BUG-1681 | Fix Inbox panel shows no content — inbox collapsed by default, badge/content not accessible. | P2 | 📋 PLANNED |
 | BUG-1682 | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors. | P0 | 📋 PLANNED |
+| ~~BUG-1691~~ | Fix tasks turning untitled (empty title saved) | P0 | ✅ **DONE** |
 
 #### BUG-1671: Workspace Migration Failure (📋 PLANNED)
 - **Priority**: P0-CRITICAL
@@ -4467,6 +4469,21 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Priority**: P1-HIGH
 - **Root Cause**: Inbox panel's NDatePicker dropdown renders inside a stacking context trapped by sidebar z-index. Needs `teleport` or `to="body"` on the dropdown.
 - **Files**: `src/components/inbox/unified/UnifiedInboxHeader.vue`
+
+---
+
+### ~~BUG-1691~~: Fix tasks turning untitled (empty title saved) (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-22)
+
+**Problem**: Tasks lose their titles and become "untitled" after editing. Users save tasks with content but the title field becomes empty.
+
+**Root Causes**:
+1. **TaskTable.vue** `saveEdit()` — no empty-string guard allowed blank titles to be saved on blur when user edits and clears the field
+2. **tasks.ts** realtime sync — operator precedence bug (`!taskDoc.title === undefined` always false due to `!` binding tighter than `===`) disabled title validation, allowing empty strings through sync
+3. **AllTasksView.vue** `handleUpdateTask()` — added guard blocking empty title updates to prevent user-triggered saves
+
+**Files**: `src/components/common/TaskTable.vue`, `src/stores/tasks/tasks.ts`, `src/views/AllTasksView.vue`
 
 ---
 

@@ -3141,13 +3141,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-### BUG-1531: Duplicated tasks keep being created (🔄 IN PROGRESS)
+### ~~BUG-1531~~: Duplicated tasks keep being created (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-03-15)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (fixed via BUG-1533 on 2026-03-16)
 
-**Problem**: Tasks are being duplicated — the same task appears multiple times in the app, causing massive task inflation (user reports 333,111 tasks). Screenshot shows identical Hebrew tasks appearing twice in calendar view.
+**Problem**: Tasks were being duplicated — same task appeared multiple times, causing massive inflation (333,111 tasks). Root cause: recurrence scheduler cloning on every page load + calendar view missing dedup + 300s smart merge window too wide.
 
-**Investigation**: Multi-agent root cause analysis in progress.
+**Resolution**: Fixed by BUG-1533 commit `46cb445a` (12 duplication fixes): localStorage lock on recurrence, DB-level dedup check + unique index, Map-based calendar dedup, smart merge window tightened to 30s. DB verified clean: 0 duplicates, 96 healthy tasks.
 
 **Category**: Data Integrity / Sync
 

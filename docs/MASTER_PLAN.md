@@ -3223,6 +3223,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | TASK-1640 | Naive UI override consistency — all NDatePicker, NSelect overrides in global-overrides.css work | P2 | 📋 PLANNED |
 | ~~BUG-1641~~ | Fix workspace_id column + workspace_members table missing from DB — code references non-existent schema | P0 | ✅ **DONE** |
 | ~~BUG-1694~~ | Calendar inbox missing canvas tasks with today+canvas filter | P0 | ✅ **DONE** |
+| ~~TASK-1695~~ | Show active timer task on calendar view + KDE widget | P1 | ✅ **DONE** |
 | TASK-1642 | SW lifecycle tests — install, activate, update, skip waiting (10 tests) | P1 | 📋 PLANNED |
 | TASK-1643 | Offline mode tests — app loads from cache, offline indicator, queued ops (10 tests) | P1 | 📋 PLANNED |
 | TASK-1644 | Install prompt tests — shows on mobile/desktop, dismissible (5 tests) | P2 | 📋 PLANNED |
@@ -4047,6 +4048,24 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Covers**: Canvas tasks with `due_date` set to today now appear in calendar inbox when filtering by today + canvas group, scheduled canvas tasks respect canvas filter toggles and are included when filters are active, date comparison normalizes timezone offsets for correct equality matching.
 
 **Files**: `src/composables/calendar/useCalendarFiltering.ts`, `src/composables/calendar/useCalendarDayView.ts`
+
+---
+
+### ~~TASK-1695~~: Show Active Timer Task on Calendar View + KDE Widget (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-23)
+
+**Goal**: When a Pomodoro timer is running, the calendar day view displays a virtual block for the task (even without a scheduled instance), includes a timer remaining badge on the block, and the KDE widget correctly reflects the current timed task including when the timer overruns the scheduled duration.
+
+**Approach**:
+1. **Calendar virtual block**: Added computed property in day view that creates a synthetic calendar block from the active timer session, positioned as an overlay/indicator
+2. **Timer badge**: Display remaining time (HH:MM format) directly on the calendar block, updating reactively as countdown progresses
+3. **KDE widget sync**: Extended timer session sync to include current task metadata, widget reads and displays active task name and remaining time
+4. **Overrun handling**: Calendar shows the block continuing beyond scheduled duration if timer is still running after scheduled end time
+
+**Covers**: Calendar day view shows active timer task as virtual block even when task has no `due_date` or scheduled instance, timer remaining badge updates in real-time, KDE widget displays current task name and remaining time, overrun sessions show timer extending past original task duration.
+
+**Files**: `src/composables/calendar/useCalendarDayView.ts`, `src/components/calendar/CalendarDayView.vue`, `packages/kde-widget/contents/ui/main.qml`, `src/stores/timer.ts`
 
 ---
 

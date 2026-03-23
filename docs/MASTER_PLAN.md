@@ -2120,6 +2120,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1567**~~ | **P2** | ✅ **Deleted projects still appear in QuickSort CategorySelector — project store `projects` computed doesn't filter soft-deleted projects (is_deleted=true)** (✅ DONE 2026-03-18) |
 | ~~**TASK-1571**~~ | **P2** | ✅ **Edit Task modal RTL support — added dir="auto" to 7 inputs across TaskEditHeader, QuickTaskCreate, QuickTaskCreateModal, TaskEditSubtasks, TaskTable** (✅ DONE 2026-03-18) |
 | ~~**TASK-1692**~~ | **P2** | ✅ **Desktop task list RTL + chat Hebrew paragraphs — reversed TaskRow/TaskTable grid in [dir="rtl"], fixed priority indicator logical props, added unicode-bidi:plaintext to markdown block elements** (✅ DONE 2026-03-23) |
+| **TASK-1693** | **P2** | 🔄 **Calendar virtual timer block — inject virtual CalendarEvent for the currently-timed task when it has no real instance for today, so it always appears on the day view** |
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
 | **BUG-1346** | **P1** | **🔄 Mobile Inbox tab broken in PWA on mobile — layout/design broken** (🔄 IN PROGRESS 2026-03-04) |
@@ -3221,6 +3222,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | TASK-1639 | Timer UI states — all timer states (idle, running, paused, complete, break) render correctly | P1 | 📋 PLANNED |
 | TASK-1640 | Naive UI override consistency — all NDatePicker, NSelect overrides in global-overrides.css work | P2 | 📋 PLANNED |
 | ~~BUG-1641~~ | Fix workspace_id column + workspace_members table missing from DB — code references non-existent schema | P0 | ✅ **DONE** |
+| ~~BUG-1694~~ | Calendar inbox missing canvas tasks with today+canvas filter | P0 | ✅ **DONE** |
 | TASK-1642 | SW lifecycle tests — install, activate, update, skip waiting (10 tests) | P1 | 📋 PLANNED |
 | TASK-1643 | Offline mode tests — app loads from cache, offline indicator, queued ops (10 tests) | P1 | 📋 PLANNED |
 | TASK-1644 | Install prompt tests — shows on mobile/desktop, dismissible (5 tests) | P2 | 📋 PLANNED |
@@ -4033,6 +4035,18 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Covers**: Verify DB has `workspace_id` column on `tasks` table, `workspace_members` table exists with correct columns, all RLS policies for workspace filtering are applied, and any related FK constraints are in place.
 
 **Files**: `supabase/migrations/`, `src/stores/workspace.ts`, `src/composables/sync/useSyncOrchestrator.ts`
+
+---
+
+### ~~BUG-1694~~: Calendar Inbox Missing Canvas Tasks with Today+Canvas Filter (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE
+
+**Goal**: When filtering calendar inbox by "today" AND selecting a canvas group filter, scheduled canvas tasks were not displayed. Two root causes prevented visibility: (1) scheduled canvas tasks were blanket-excluded even when canvas filters were explicitly active, and (2) the "today" filter used raw string equality instead of normalized date comparison, causing tasks with proper due dates to fail the filter.
+
+**Covers**: Canvas tasks with `due_date` set to today now appear in calendar inbox when filtering by today + canvas group, scheduled canvas tasks respect canvas filter toggles and are included when filters are active, date comparison normalizes timezone offsets for correct equality matching.
+
+**Files**: `src/composables/calendar/useCalendarFiltering.ts`, `src/composables/calendar/useCalendarDayView.ts`
 
 ---
 

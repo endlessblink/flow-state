@@ -908,7 +908,7 @@ onUnmounted(() => {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 0;
+  inset-inline-start: 0;
   width: 3px;
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
   margin: 0;
@@ -1116,5 +1116,25 @@ onUnmounted(() => {
   border-radius: var(--radius-full);
   min-width: 20px;
   text-align: center;
+}
+
+/* ============================================================================
+   RTL Support
+   ============================================================================ */
+
+/* Reverse grid column order for RTL - header and rows */
+[dir="rtl"] .table-header,
+[dir="rtl"] .table-row {
+  direction: rtl;
+}
+
+/* Priority indicator border-radius flip */
+[dir="rtl"] .priority-indicator {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* Bulk actions bar in RTL */
+[dir="rtl"] .bulk-actions-bar {
+  direction: rtl;
 }
 </style>

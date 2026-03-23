@@ -453,4 +453,23 @@ onUnmounted(() => {
   50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3) var(--space-0_5) var(--color-info); background: var(--blue-bg-light); }
   100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-info); background: transparent; }
 }
+
+/* ============================================================================
+   RTL Support
+   ============================================================================ */
+
+/* Reverse grid column order for RTL */
+[dir="rtl"] .task-row {
+  grid-template-areas: "actions tags status due project title checkbox";
+}
+
+/* Flip hover lift direction */
+[dir="rtl"] .task-row:hover {
+  transform: translateY(calc(-1 * var(--space-0_5)));
+}
+
+/* Priority indicator border-radius flip */
+[dir="rtl"] .priority-indicator {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
 </style>

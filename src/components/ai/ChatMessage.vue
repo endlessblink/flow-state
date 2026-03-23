@@ -1019,6 +1019,7 @@ async function saveSchedule() {
 
 .markdown-body :deep(p) {
   margin: 0 0 var(--space-2);
+  unicode-bidi: plaintext;
 }
 
 .markdown-body :deep(p:last-child) {
@@ -1054,6 +1055,7 @@ async function saveSchedule() {
 
 .markdown-body :deep(li) {
   margin-bottom: var(--space-1);
+  unicode-bidi: plaintext;
 }
 
 .markdown-body :deep(li:last-child) {
@@ -1092,6 +1094,7 @@ async function saveSchedule() {
   margin: var(--space-2) 0;
   color: var(--text-secondary);
   font-style: italic;
+  unicode-bidi: plaintext;
 }
 
 .markdown-body :deep(a) {

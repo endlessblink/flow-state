@@ -4487,7 +4487,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
 | BUG-1702 | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | 📋 PLANNED |
 | BUG-1703 | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | 📋 PLANNED |
-| BUG-1704 | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | 📋 PLANNED |
+| ~~BUG-1704~~ | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | ✅ **DONE** |
 | ~~BUG-1705~~ | CSS: 2 unannotated overflow:clip usages in MobileQuickSortView.vue (unit test failing) | P2 | ✅ **DONE** |
 
 #### BUG-1671: Workspace Migration Failure (📋 PLANNED)
@@ -4590,7 +4590,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: Use regex `/(?<!sans-)serif/` or check for exact "serif" as standalone font name
 - **File**: `tests/webdriver/specs/webkitgtk-layout-bugs.ts:351`
 
-#### BUG-1704: Nested `<button>` in SavedViewsDropdown (📋 PLANNED)
+#### ~~BUG-1704~~: Nested `<button>` in SavedViewsDropdown (✅ DONE)
 - **Priority**: P2 | **Confirmed by**: Vite build warning
 - **Problem**: `<button>` element nested inside another `<button>` at lines 45-51 of `SavedViewsDropdown.vue`. Invalid HTML per spec, causes click handling issues.
 - **File**: `src/components/filters/SavedViewsDropdown.vue:45-51`

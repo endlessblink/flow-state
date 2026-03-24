@@ -42,13 +42,16 @@
                 :style="{ background: view.color || 'var(--brand-primary)' }"
               />
               <OverflowTooltip :text="view.name" class="view-name">{{ view.name }}</OverflowTooltip>
-              <button
+              <span
+                role="button"
+                tabindex="0"
                 class="view-delete-btn"
                 title="Delete saved view"
                 @click.stop="handleDeleteView(view.id)"
+                @keydown.enter.stop="handleDeleteView(view.id)"
               >
                 <X :size="12" />
-              </button>
+              </span>
             </button>
           </div>
 

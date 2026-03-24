@@ -485,9 +485,9 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ---
 
-### BUG-1529: Context menu shows wrong multi-select count (👀 REVIEW)
+### ~~BUG-1529~~: Context menu shows wrong multi-select count (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-24)
 
 **Problem**: Right-clicking a single task in the calendar/board view shows "Mark 6 as Done" and "Delete 6" instead of just "Mark as Done" — the selection count is wrong, showing stale/phantom selections. The menu displays an inflated count of selected tasks (6) even when only 1 task is actually selected.
 

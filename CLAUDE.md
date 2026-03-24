@@ -64,6 +64,8 @@ npm run kill         # Kill all FlowState processes (CRITICAL - DO NOT REMOVE)
 npm run build        # Production build
 npm run test         # Run unit tests (Vitest)
 npm run test:e2e     # Run E2E tests (Playwright) - auto-fetches Supabase keys
+# LOW CPU E2E (use this to avoid PC lag):
+# nice -n 15 npm run test:e2e -- --workers=2
 npm run lint         # Lint code
 npm run storybook    # Component docs (port 6006)
 npm run generate:keys  # Regenerate Supabase JWT keys if they drift

@@ -582,6 +582,14 @@ const handleContextMenu = (event: MouseEvent, task: Task) => {
   contextMenuX.value = x
   contextMenuY.value = y
   contextMenuTask.value = task
+
+  // BUG-1529: Clear stale multi-selection when right-clicking a task
+  // that isn't part of the current selection
+  const currentSelection = taskListRef.value?.selectedTaskIds ?? []
+  if (!currentSelection.includes(task.id)) {
+    taskListRef.value?.clearSelection()
+  }
+
   showContextMenu.value = true
 }
 

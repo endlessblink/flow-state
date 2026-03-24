@@ -318,6 +318,11 @@ const collapseAll = () => {
 
 // Context menu handler
 const handleContextMenu = (event: MouseEvent, task: Task) => {
+  // BUG-1529: Clear stale multi-selection when right-clicking a task
+  // that isn't part of the current selection
+  if (!selectedTaskIds.value.includes(task.id)) {
+    clearSelection()
+  }
   emit('contextMenu', event, task)
 }
 

@@ -331,6 +331,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleBoardKeydown)
+  // BUG-1529: Prevent phantom selections from persisting across view switches
+  taskStore.clearSelection()
 })
 
 // Escape key to clear board selection

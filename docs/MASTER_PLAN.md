@@ -485,15 +485,18 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ---
 
-### BUG-1529: Context menu shows wrong multi-select count (🔄 IN PROGRESS)
+### BUG-1529: Context menu shows wrong multi-select count (👀 REVIEW)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+**Priority**: P2 | **Status**: 👀 REVIEW
 
 **Problem**: Right-clicking a single task in the calendar/board view shows "Mark 6 as Done" and "Delete 6" instead of just "Mark as Done" — the selection count is wrong, showing stale/phantom selections. The menu displays an inflated count of selected tasks (6) even when only 1 task is actually selected.
 
-**Root cause**: Context menu selection count not clearing properly between interactions, or multi-select state persisting across view switches/interactions.
+**Root cause**: `handleContextMenu` in AllTasksView.vue/TaskList.vue never cleared the multi-selection when right-clicking a task outside the current selection. The stale `selectedTaskIds` persisted, inflating the count shown in the menu.
 
-**Fix**: Investigate and resolve stale multi-select state in context menu rendering. Ensure selection count matches actual selected tasks on each context menu open.
+**Fix applied (2026-03-24)**:
+- `AllTasksView.vue` handleContextMenu: clear selection when right-clicked task is not in current selection
+- `TaskList.vue` handleContextMenu: same guard before emitting contextMenu event
+- `BoardView.vue` onUnmounted: call `taskStore.clearSelection()` to prevent phantom selections across view switches
 
 ---
 
@@ -4633,6 +4636,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Priority**: P1 | **Confirmed by**: User report in Tauri production app (v1.3.25)
 - **Error**: `Error: Unhandled promise rejection` at `Promise:undefined:undefined`
 - **Impact**: Error dialog on app launch, may block functionality
+
+#### ~~BUG-1713~~: DnD to specific day group in Catalog fails (Unknown dueDate group key) (✅ DONE)
+- **Priority**: P2 | **Status**: ✅ DONE (2026-03-24)
+- **Problem**: Dragging a task to a per-day group (e.g., Wednesday) in the Catalog view's dueDate grouping failed silently. The `applyGroupTransfer` function in TaskList.vue only recognized generic bucket keys (today, tomorrow, thisWeek, etc.) but not the `day-YYYY-MM-DD` keys generated for individual weekday groups.
+- **Root Cause**: Missing handler for per-day group keys in the dueDate assignment logic. Only generic bucket grouping was supported, not individual calendar days.
+- **Fix**: Added `else if (group.key.startsWith('day-'))` handler to extract the date from the key format and set it as dueDate. The handler parses the `day-YYYY-MM-DD` format and assigns that date to the task.
+- **Files**: `src/components/tasks/TaskList.vue`
 
 #### TASK-1712: Tauri Visual Parity — Automated WebKitGTK Regression Testing (📋 PLANNED)
 - **Priority**: P1 | **Type**: Infrastructure + Bug fixes

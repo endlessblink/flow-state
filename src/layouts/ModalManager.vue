@@ -326,12 +326,19 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
 // TASK-1520: Recurrence delete handlers
 const handleRecurrenceSkip = async () => {
   const taskId = recurrenceDeleteTaskId.value
+  const isPermanent = recurrenceDeleteIsPermanent.value
   showRecurrenceDeleteModal.value = false
   recurrenceDeleteTaskId.value = null
   if (!taskId) return
 
   try {
-    await taskStore.skipRecurringOccurrence(taskId)
+    if (isPermanent) {
+      // BUG-1508: Permanent delete — chain is cleared inside permanentlyDeleteTask,
+      // so the scheduler cannot recreate this occurrence after the hard delete.
+      await taskStore.permanentlyDeleteTask(taskId)
+    } else {
+      await taskStore.skipRecurringOccurrence(taskId)
+    }
   } catch (error) {
     console.error('[ModalManager] Skip recurring occurrence failed:', error)
   }
@@ -339,12 +346,20 @@ const handleRecurrenceSkip = async () => {
 
 const handleRecurrenceStop = async () => {
   const taskId = recurrenceDeleteTaskId.value
+  const isPermanent = recurrenceDeleteIsPermanent.value
   showRecurrenceDeleteModal.value = false
   recurrenceDeleteTaskId.value = null
   if (!taskId) return
 
   try {
-    await taskStore.stopRecurrence(taskId)
+    if (isPermanent) {
+      // BUG-1508: For permanent delete, use permanentlyDeleteTask which clears the
+      // recurrence chain first (via clearRecurrenceChain) then hard-deletes.
+      // This stops future occurrences AND prevents recreation by the scheduler.
+      await taskStore.permanentlyDeleteTask(taskId)
+    } else {
+      await taskStore.stopRecurrence(taskId)
+    }
   } catch (error) {
     console.error('[ModalManager] Stop recurrence failed:', error)
   }

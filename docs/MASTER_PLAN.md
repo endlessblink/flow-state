@@ -369,9 +369,9 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **12 bugs fixed**: Canvas Delete moved to inbox instead of deleting, sync queue CREATE resurrected deleted tasks (tombstone check added), cross-tab DELETE spliced wrong array, doneForNow double-invocation guard, calendarFilteredTasks missing dedup, createTask pre-push duplicate guard, done tasks staying in inbox, smart merge 5-min resurrection window (→30s), coalescer blind to syncing ops, stale queue 24h purge, recurrence unique DB constraint, stale comment fix. Production DB cleanup: 174 done tasks cleared from inbox.
 
-### BUG-1508: Permanently deleting a recurring task causes infinite recreation loop (🔄 IN PROGRESS)
+### ~~BUG-1508~~: Permanently deleting a recurring task causes infinite recreation loop (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (being fixed in separate instance)
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-24)
 
 **Problem**: When a recurring task is permanently deleted, the deferred recurrence scheduler (`useRecurrenceScheduler.ts`) finds an older `done` ancestor with `recurrenceRule` still set, sees no active successor (deleted task is gone from `_rawTasks`), and creates a new clone — effectively resurrecting the deleted task. This loops infinitely: delete → scheduler recreates → delete → recreates.
 

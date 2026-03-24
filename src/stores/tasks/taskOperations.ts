@@ -907,6 +907,10 @@ export function useTaskOperations(
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
+        // BUG-1508: Clear recurrenceRule on all chain members BEFORE hard-deleting
+        // so the recurrence scheduler cannot find a done ancestor and recreate this task.
+        await clearRecurrenceChain(taskId)
+
         const deletedTask = _rawTasks.value[index]
         manualOperationInProgress.value = true
         addPendingWrite(taskId)
@@ -932,6 +936,26 @@ export function useTaskOperations(
     // ================================================================
     // TASK-1520: Recurrence-aware delete operations
     // ================================================================
+
+    // BUG-1508: Extracted helper — clears recurrenceRule on every chain member
+    // (including the task itself). Safe to call even when task has no recurrenceRule.
+    // Used by permanentlyDeleteTask and stopRecurrence to prevent the scheduler
+    // from finding a done ancestor with recurrenceRule set and recreating the task.
+    const clearRecurrenceChain = async (taskId: string) => {
+        const task = _rawTasks.value.find(t => t.id === taskId)
+        if (!task || !task.recurrenceRule) return
+
+        const chainId = task.recurrenceParentId || task.id
+        const chainMembers = _rawTasks.value.filter(t =>
+            t.id === chainId || t.recurrenceParentId === chainId
+        )
+
+        for (const member of chainMembers) {
+            if (member.recurrenceRule) {
+                await updateTask(member.id, { recurrenceRule: null as unknown as undefined })
+            }
+        }
+    }
 
     /**
      * Skip this recurring occurrence: advance the chain so the scheduler
@@ -982,17 +1006,8 @@ export function useTaskOperations(
             return
         }
 
-        const chainId = task.recurrenceParentId || task.id
-        const chainTasks = _rawTasks.value.filter(t =>
-            (t.id === chainId || t.recurrenceParentId === chainId) && t.id !== taskId
-        )
-
-        // Clear recurrenceRule on all chain members (except the one being deleted)
-        for (const chainTask of chainTasks) {
-            if (chainTask.recurrenceRule) {
-                await updateTask(chainTask.id, { recurrenceRule: null as unknown as undefined })
-            }
-        }
+        // BUG-1508: Use shared helper to clear the entire chain (includes current task)
+        await clearRecurrenceChain(taskId)
 
         // Delete the current task
         await deleteTask(taskId)

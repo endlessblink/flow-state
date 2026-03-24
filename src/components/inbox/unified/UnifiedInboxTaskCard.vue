@@ -321,24 +321,24 @@ const dueStatus = computed(() => {
 .due-badge-today { color: var(--text-secondary); font-weight: var(--font-medium); }
 .due-badge-tomorrow { color: var(--text-muted); }
 
-/* Quick Actions */
+/* Quick Actions — BUG-1709: use visibility instead of opacity for WebKitGTK */
 .task-actions {
   position: absolute;
-  inset-inline-end: var(--space-2); /* BUG-1709: logical property for RTL */
+  inset-inline-end: var(--space-2);
   bottom: var(--space-2);
   display: flex;
-  gap: var(--space-1);
-  opacity: 0;
-  pointer-events: none; /* Ignore clicks unless visible */
-  transition: opacity var(--duration-fast) var(--ease-out);
+  gap: var(--space-2);
+  visibility: hidden;
+  pointer-events: none;
   background: var(--surface-0);
-  padding: var(--space-0_5);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--glass-border);
 }
 
 .task-card:hover .task-actions {
-  opacity: 1;
+  visibility: visible;
   pointer-events: auto;
 }
 

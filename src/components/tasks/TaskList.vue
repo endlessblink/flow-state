@@ -454,6 +454,10 @@ const applyGroupTransfer = (taskId: string, group: TaskGroup) => {
     if (group.key in dateMap) {
       const newDate = dateMap[group.key]
       emit('updateTask', taskId, { dueDate: newDate ?? undefined })
+    } else if (group.key.startsWith('day-')) {
+      // Per-day bucket keys: "day-YYYY-MM-DD"
+      const dateStr = group.key.slice(4) // Remove "day-" prefix
+      emit('updateTask', taskId, { dueDate: dateStr })
     } else {
       console.warn('[DND-GROUP] Unknown dueDate group key:', group.key)
     }

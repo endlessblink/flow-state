@@ -869,4 +869,62 @@ describe('WebKitGTK CSS Safety (Tauri Parity)', () => {
 
     expect(violations).toHaveLength(0)
   })
+
+  // -------------------------------------------------------------------------
+  // 5. display: inline-flex inside flex containers (BUG-1696)
+  //    In WebKitGTK (wry 0.54.1), `display: inline-flex` inside a flex parent
+  //    with `flex: 1` collapses to intrinsic content width (~24px) instead of
+  //    filling available space. This causes sidebar labels to be invisible.
+  //    Components used inside flex layouts MUST use `display: flex` (not inline-flex).
+  // -------------------------------------------------------------------------
+  it('sidebar flex chain must not use display: inline-flex (BUG-1696)', () => {
+    // These files form the sidebar flex chain — inline-flex anywhere in them
+    // causes width collapse in WebKitGTK
+    const sidebarChainFiles = [
+      'src/components/base/OverflowTooltip.vue',
+      'src/components/base/BaseNavItem.vue',
+      'src/components/sidebar/SidebarProjectsSection.vue',
+      'src/components/sidebar/SidebarSmartViews.vue',
+      'src/components/sidebar/SidebarDurationSection.vue',
+      'src/layouts/AppSidebar.vue',
+    ]
+
+    const violations: { file: string; line: number; text: string }[] = []
+
+    for (const relPath of sidebarChainFiles) {
+      const filePath = join(projectRoot, relPath)
+      try {
+        const content = readFileSync(filePath, 'utf-8')
+        const lines = content.split('\n')
+
+        lines.forEach((line, idx) => {
+          const trimmed = line.trim()
+          // Match display: inline-flex (not in comments)
+          if (/display\s*:\s*inline-flex/.test(trimmed) && !trimmed.startsWith('//') && !trimmed.startsWith('/*')) {
+            // Allow if annotated with /* WebKitGTK-safe */
+            if (/WebKitGTK-safe/.test(trimmed)) return
+            violations.push({
+              file: relPath,
+              line: idx + 1,
+              text: trimmed,
+            })
+          }
+        })
+      } catch {
+        // File not found — skip
+      }
+    }
+
+    if (violations.length > 0) {
+      console.error('\n[WebKitGTK/BUG-1696] display: inline-flex in sidebar flex chain:')
+      violations.forEach(({ file, line, text }) => {
+        console.error(`  FAIL ${file}:${line} — ${text}`)
+        console.error(`       WebKitGTK collapses inline-flex to intrinsic width inside flex parents.`)
+        console.error(`       Fix: use "display: flex" instead, or annotate /* WebKitGTK-safe */ if intentional.`)
+      })
+      console.error()
+    }
+
+    expect(violations).toHaveLength(0)
+  })
 })

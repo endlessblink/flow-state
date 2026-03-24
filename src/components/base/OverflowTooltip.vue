@@ -78,9 +78,9 @@ watch(() => props.text, (newText) => {
 <style scoped>
 .overflow-tooltip-container {
   position: relative;
-  display: inline-flex;
+  display: flex; /* BUG-1696: was inline-flex — collapses to ~24px in WebKitGTK flex chains */
+  width: 100%;
   min-width: 0;
-  max-width: 100%;
 }
 
 .overflow-text {

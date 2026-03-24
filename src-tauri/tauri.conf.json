@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "FlowState",
-  "version": "1.3.23",
+  "version": "1.3.24",
   "identifier": "com.flowstate.app",
   "build": {
     "frontendDist": "../dist",
@@ -28,6 +28,7 @@
       }
     ],
     "security": {
+      "dangerousDisableAssetCspModification": ["style-src"],
       "csp": {
         "default-src": "'self'",
         "script-src": "'self' 'sha256-GAAIM+xe8eiG5EB+RWpJHnbWMBx1zpRlQrqhsVCUD8M='",

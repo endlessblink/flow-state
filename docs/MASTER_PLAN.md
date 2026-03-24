@@ -8,9 +8,9 @@
 
 ## Active Tasks
 
-### BUG-1706: Set up Epiphany WebKitGTK testing workflow (🔄 IN PROGRESS)
+### ~~BUG-1706~~: Set up Epiphany WebKitGTK testing workflow (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS
+**Priority**: P1 | **Status**: ✅ DONE
 
 **Goal**: Install Epiphany (GNOME Web) as a fast WebKitGTK testing environment. Same engine as Tauri's wry — point at `localhost:5546` to test CSS without building Tauri.
 
@@ -21,9 +21,9 @@
 
 ---
 
-### BUG-1707: Fix sidebar width calculation for WebKitGTK (📋 PLANNED)
+### ~~BUG-1707~~: Fix sidebar width calculation for WebKitGTK (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends on**: BUG-1706
+**Priority**: P0 | **Status**: ✅ DONE | **Depends on**: ~~BUG-1706~~
 
 **Root Cause Analysis** (confirmed via Perplexity research):
 - `.sidebar` has redundant `width: 100%; min-width: 240px; max-width: 340px` PLUS the grid track `minmax(240px, 340px)` — double-constraining causes WebKitGTK to miscalculate
@@ -40,9 +40,9 @@
 
 ---
 
-### BUG-1708: Deploy verified WebKitGTK sidebar fix to Tauri (📋 PLANNED)
+### ~~BUG-1708~~: Deploy verified WebKitGTK sidebar fix to Tauri (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends on**: BUG-1707
+**Priority**: P1 | **Status**: ✅ DONE | **Depends on**: ~~BUG-1707~~
 
 **Scope**: Version bump + `./scripts/deploy-tauri-update.sh` — only after fix confirmed in Epiphany.
 
@@ -4507,7 +4507,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ID | Task | Priority | Status |
 |----|------|----------|--------|
 | BUG-1671 | Fix workspace migration — `workspace_id` column missing from tasks/projects/groups, `workspace_members` table missing. Migration exists but fails due to `projects.id` type conflict (uuid vs text). Fix migration or drop FK constraint first. | P0 | 📋 PLANNED |
-| BUG-1672 | Fix sidebar clipping in Tauri — sidebar text cut off, only icons visible. CSS grid `minmax(240px, 340px)` not respected in WebKitGTK. | P1 | 📋 PLANNED |
+| ~~BUG-1672~~ | Fix sidebar clipping in Tauri — sidebar text cut off, only icons visible. CSS grid `minmax(240px, 340px)` not respected in WebKitGTK. | P1 | ✅ **DONE** |
 | BUG-1673 | Fix Catalog view empty — shows table headers but zero tasks despite data existing. Caused by workspace_id query failing. | P0 | 📋 PLANNED |
 | ~~BUG-1674~~ | Fix Inbox dropdown behind sidebar — calendar dropdown z-index lower than sidebar stacking context. | P1 | ✅ **DONE** |
 | BUG-1675 | Fix Canvas view empty in E2E — Vue Flow nodes don't render for test user. Workspace query errors prevent task loading. | P0 | 📋 PLANNED |
@@ -4536,9 +4536,9 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Impact**: ALL views fail to load data because every query now includes `.is('workspace_id', null)` which errors on missing column.
 - **Fix**: Either fix the migration chain order, or manually drop the FK constraint before running migrations.
 
-#### BUG-1672: Sidebar Clipping in Tauri (📋 PLANNED)
+#### ~~BUG-1672~~: Sidebar Clipping in Tauri (✅ DONE)
 - **Priority**: P1-HIGH
-- **Root Cause**: CSS `grid-template-columns: minmax(240px, 340px) 1fr` in MainLayout.vue not respected by WebKitGTK. Sidebar renders at icon-only width.
+- **Root Cause**: CSS `grid-template-columns: minmax(240px, 340px) 1fr` in MainLayout.vue not respected by WebKitGTK. Sidebar renders at icon-only width. Fixed by removing `contain: layout`, CSP fix via `dangerousDisableAssetCspModification`, and OverflowTooltip inline-flex→flex.
 - **Files**: `src/layouts/MainLayout.vue`, `src/layouts/AppSidebar.vue`
 
 #### BUG-1673 to BUG-1676: Empty Views (📋 PLANNED)

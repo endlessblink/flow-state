@@ -2,7 +2,7 @@
  * TASK-1177: Sync System E2E Tests
  * Verifies the offline-first sync system UI components work correctly
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../fixtures/auth'
 
 test.describe('Sync System E2E', () => {
   test('app loads and sync indicator is visible in header', async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('Sync System E2E', () => {
     await expect(controlPanel).toBeVisible({ timeout: 5000 })
 
     // Take screenshot for verification
-    await page.screenshot({ path: 'tests/e2e/screenshots/sync-indicator.png' })
+    await page.screenshot({ path: '.dev/screenshots/sync-indicator.png' })
   })
 
   test('sync indicator shows correct initial state', async ({ page }) => {

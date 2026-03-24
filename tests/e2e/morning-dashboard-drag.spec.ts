@@ -4,7 +4,7 @@ import { TEST_TASKS } from '../fixtures/test-ids'
 test.describe('Morning Dashboard - Drag & Drop + Click-to-Assign', () => {
   test.beforeEach(async ({ page }) => {
     // Clear any persisted morning visit so the dashboard shows
-    await page.goto('http://localhost:5547/')
+    await page.goto('/')
     await page.evaluate(() => {
       localStorage.removeItem('flowstate-last-morning')
       // Clear any Big 3 data from previous runs
@@ -12,7 +12,7 @@ test.describe('Morning Dashboard - Drag & Drop + Click-to-Assign', () => {
       localStorage.removeItem(`flowstate-big3-${today}`)
     })
     // Navigate to morning dashboard
-    await page.goto('http://localhost:5547/#/morning')
+    await page.goto('/#/morning')
     await page.waitForTimeout(1000) // Let composables initialize
   })
 
@@ -188,7 +188,7 @@ test.describe('Morning Dashboard - Drag & Drop + Click-to-Assign', () => {
     })
 
     // Navigate away (triggers onBeforeRouteLeave)
-    await page.goto('http://localhost:5547/#/')
+    await page.goto('/#/')
     await page.waitForTimeout(500)
 
     // Check that the filter was cleared

@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test'
+import { test, expect } from '../../fixtures/auth'
+import type { Page } from '@playwright/test'
 
 const getMobileNav = (page: Page) => page.locator('nav.mobile-nav')
 const getNavItemByLabel = (page: Page, label: string) =>

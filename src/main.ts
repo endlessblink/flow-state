@@ -15,14 +15,15 @@ import router from './router'
 import App from './App.vue'
 import i18n from './i18n'
 
-  // Early Tauri & PWA detection - must run BEFORE CSS import for proper fallback application
+  // Early platform detection - must run BEFORE CSS import for proper fallback application
+  // TASK-1718: Electron migration — detect Electron via preload's window.electronAPI
   ; (() => {
     const w = window as unknown as Record<string, unknown>
-    const isTauri = ('isTauri' in w && w.isTauri) || ('__TAURI__' in w) || ('__TAURI_INTERNALS__' in w)
+    const isElectron = typeof w.electronAPI !== 'undefined'
     const isPWA = window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone
 
-    if (isTauri) {
-      document.documentElement.classList.add('tauri-app')
+    if (isElectron) {
+      document.documentElement.classList.add('electron-app')
     }
     if (isPWA) {
       document.documentElement.classList.add('pwa-app')

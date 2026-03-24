@@ -1,0 +1,1 @@
+{"version":3,"file":"shell.js","sourceRoot":"","sources":["../../electron/ipc/shell.ts"],"names":[],"mappings":";;AAEA,sDAIC;AAND,uCAAyC;AAEzC,SAAgB,qBAAqB;IACnC,kBAAO,CAAC,MAAM,CAAC,oBAAoB,EAAE,KAAK,EAAE,MAAM,EAAE,GAAW,EAAE,EAAE;QACjE,MAAM,gBAAK,CAAC,YAAY,CAAC,GAAG,CAAC,CAAA;IAC/B,CAAC,CAAC,CAAA;AACJ,CAAC"}

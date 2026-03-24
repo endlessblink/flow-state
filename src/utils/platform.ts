@@ -1,12 +1,12 @@
 /**
  * Platform Detection Utility — Single Source of Truth
- * FEATURE-1345: Capacitor Android App
+ * TASK-1718: Electron migration (replaces Tauri detection)
  *
- * Replaces scattered isTauri() checks across 35+ files.
+ * Replaces scattered platform checks across 35+ files.
  * Cached after first detection for zero-cost subsequent calls.
  */
 
-export type Platform = 'tauri' | 'capacitor' | 'pwa' | 'browser'
+export type Platform = 'electron' | 'capacitor' | 'pwa' | 'browser'
 
 let _detectedPlatform: Platform | null = null
 
@@ -20,28 +20,18 @@ export function detectPlatform(): Platform {
     return _detectedPlatform
   }
 
-  interface ExtendedWindow extends Window {
-    isTauri?: boolean
-    __TAURI__?: unknown
-    __TAURI_INTERNALS__?: unknown
-    Capacitor?: {
-      isNativePlatform?: () => boolean
-    }
-  }
-
-  const win = window as unknown as ExtendedWindow
-
-  // Tauri detection (must be before Capacitor — both may set window objects)
+  // Electron detection — preload.ts exposes window.electronAPI
   if (
-    ('isTauri' in win && win.isTauri) ||
-    '__TAURI__' in win ||
-    '__TAURI_INTERNALS__' in win
+    typeof (window as Record<string, unknown>).electronAPI !== 'undefined'
   ) {
-    _detectedPlatform = 'tauri'
+    _detectedPlatform = 'electron'
     return _detectedPlatform
   }
 
   // Capacitor detection (runtime)
+  const win = window as unknown as {
+    Capacitor?: { isNativePlatform?: () => boolean }
+  }
   if (win.Capacitor?.isNativePlatform?.()) {
     _detectedPlatform = 'capacitor'
     return _detectedPlatform
@@ -67,36 +57,35 @@ export function detectPlatform(): Platform {
 }
 
 // Convenience checks
-export const isTauri = (): boolean => detectPlatform() === 'tauri'
+export const isElectron = (): boolean => detectPlatform() === 'electron'
 export const isCapacitor = (): boolean => detectPlatform() === 'capacitor'
 export const isPWA = (): boolean => detectPlatform() === 'pwa'
 export const isBrowser = (): boolean => detectPlatform() === 'browser'
 
-/** True for Tauri or Capacitor (native wrapper, not browser) */
-export const isNative = (): boolean => isTauri() || isCapacitor()
+/** @deprecated Tauri has been replaced by Electron — always returns false */
+export const isTauri = (): boolean => false
+
+/** True for Electron or Capacitor (native wrapper, not browser) */
+export const isNative = (): boolean => isElectron() || isCapacitor()
 
 /** True only for Capacitor (mobile native) */
 export const isMobileNative = (): boolean => isCapacitor()
 
-/** True only for Tauri (desktop native) */
-export const isDesktopNative = (): boolean => isTauri()
+/** True only for Electron (desktop native) */
+export const isDesktopNative = (): boolean => isElectron()
 
 /**
- * navigator.onLine is unreliable in desktop webviews, especially Tauri/WebKitGTK.
- * For desktop native runtime, prefer attempting a real network request instead of
- * treating the app as offline solely from the browser hint.
+ * navigator.onLine is reliable in Electron (Chromium).
+ * Unlike Tauri/WebKitGTK, Chromium's navigator.onLine is trustworthy.
  */
 export function shouldTrustNavigatorOnline(): boolean {
-  return !isTauri()
+  return true
 }
 
 /**
  * Initial online state used by startup/sync code before any real request happens.
- * In Tauri we optimistically assume online so stale IndexedDB cache does not become
- * the long-lived source of truth when navigator.onLine is false.
  */
 export function getInitialOnlineState(): boolean {
-  if (!shouldTrustNavigatorOnline()) return true
   return typeof navigator !== 'undefined' ? navigator.onLine !== false : true
 }
 

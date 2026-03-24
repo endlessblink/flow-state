@@ -228,18 +228,18 @@ function parseICalText(icsText: string, calendarId: string, color: string): Exte
 // ─── Fetch Logic ───────────────────────────────────────────────────────────
 
 async function fetchICalUrl(url: string): Promise<string> {
-  // Tauri desktop: use HTTP plugin (no CORS restrictions)
-  if (window.__TAURI__) {
+  // Electron desktop: use IPC fetch (no CORS restrictions)
+  if ((window as Record<string, unknown>).electronAPI) {
     try {
-      const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http')
-      const response = await tauriFetch(url, { method: 'GET' })
+      const api = (window as unknown as { electronAPI: { fetch: (url: string, options?: unknown) => Promise<{ ok: boolean; status: number; text: () => Promise<string> }> } }).electronAPI
+      const response = await api.fetch(url, { method: 'GET' }) as { ok: boolean; status: number; text: string }
       if (response.ok) {
-        return await response.text()
+        return typeof response.text === 'string' ? response.text : ''
       }
       throw new Error(`HTTP ${response.status}`)
     } catch (e: unknown) {
-      // If Tauri fetch fails, fall through to native fetch
-      console.warn('[ExternalCalendar] Tauri fetch failed:', e.message)
+      // If Electron fetch fails, fall through to native fetch
+      console.warn('[ExternalCalendar] Electron fetch failed:', (e as Error).message)
     }
   }
 

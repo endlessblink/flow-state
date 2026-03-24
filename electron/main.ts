@@ -1,6 +1,12 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, ipcMain } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
+import { registerShellHandlers } from './ipc/shell'
+import { registerDialogHandlers } from './ipc/dialog'
+import { registerFsHandlers } from './ipc/fs'
+import { registerStoreHandlers } from './ipc/store'
+import { registerHttpHandlers } from './ipc/http'
+import { registerWindowHandlers } from './ipc/window'
 
 // Prevent multiple instances
 const gotLock = app.requestSingleInstanceLock()
@@ -62,6 +68,15 @@ function createWindow() {
     mainWindow = null
   })
 }
+
+// Register IPC handlers (must be before window creation)
+registerShellHandlers()
+registerDialogHandlers()
+registerFsHandlers()
+registerStoreHandlers()
+registerHttpHandlers()
+registerWindowHandlers()
+ipcMain.handle('app:getVersion', () => app.getVersion())
 
 // App lifecycle
 app.whenReady().then(() => {

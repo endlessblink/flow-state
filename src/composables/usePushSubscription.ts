@@ -17,8 +17,8 @@ const subscriptionError = ref<string | null>(null)
 
 /** Check if Web Push is supported in this environment */
 function isPushSupported(): boolean {
-  // Web Push not available in Tauri WebView
-  if (window.__TAURI_INTERNALS__) return false
+  // Web Push not available in Electron (use native notifications instead)
+  if ((window as Record<string, unknown>).electronAPI) return false
   return 'serviceWorker' in navigator && 'PushManager' in window
 }
 

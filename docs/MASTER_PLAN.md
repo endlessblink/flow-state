@@ -4522,7 +4522,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~BUG-1696~~ | Tauri: Project names clipped to 24px in sidebar (WebKitGTK confirmed) | P1 | ✅ **DONE** |
 | ~~BUG-1697~~ | Tauri: overflow:clip hides scrollable content in WebKitGTK | P1 | ✅ **DONE** |
 | ~~BUG-1698~~ | Tauri: Views render blank pages when navigating (WebDriver test confirmed) | P1 | ✅ **DONE** |
-| BUG-1699 | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | 📋 PLANNED |
+| ~~BUG-1699~~ | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | ✅ **DONE** |
 | BUG-1700 | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | 📋 PLANNED |
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
 | ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
@@ -4595,7 +4595,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: WebDriver tests should navigate using relative paths or detect the embedded base URL from the initial page.
 - **Screenshot**: `.dev/screenshots/webdriver/view-canvas-*.png` shows "Could not connect to localhost: Connection refused"
 
-#### BUG-1699: 126 Playwright E2E Tests Failing (📋 PLANNED)
+#### ~~BUG-1699~~: 126 Playwright E2E Tests Failing (✅ DONE)
 - **Priority**: P1 | **Scope**: 126 of 602 tests across chromium + webkit + tauri-simulation
 - **Breakdown**:
   - CRUD Workflows: 6 failures (TimeoutError on task edit modal selectors)

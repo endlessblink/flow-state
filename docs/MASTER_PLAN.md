@@ -4485,7 +4485,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1699 | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | 📋 PLANNED |
 | BUG-1700 | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | 📋 PLANNED |
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
-| BUG-1702 | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | 📋 PLANNED |
+| ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
 | BUG-1703 | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | 📋 PLANNED |
 | ~~BUG-1704~~ | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | ✅ **DONE** |
 | ~~BUG-1705~~ | CSS: 2 unannotated overflow:clip usages in MobileQuickSortView.vue (unit test failing) | P2 | ✅ **DONE** |
@@ -4578,7 +4578,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Priority**: P2 | **Confirmed by**: Playwright memory-perf test
 - **Symptom**: Memory grows >20MB across create/delete cycles, suggesting leak in task store or Supabase subscriptions
 
-#### BUG-1702: WebDriver Test Navigation Uses Wrong URLs (📋 PLANNED)
+#### ~~BUG-1702~~: WebDriver Test Navigation Uses Wrong URLs (✅ DONE)
 - **Priority**: P2 | **Type**: Test infrastructure
 - **Problem**: `webkitgtk-layout-bugs.ts` tests 4 & 5 navigate to `http://localhost:1420/` which is the Tauri dev server port. Debug builds embed the frontend, so no dev server is running.
 - **Fix**: Use the initial page URL as base, or navigate via JS (`window.location.hash = '#/board'`) instead of `browser.url()`

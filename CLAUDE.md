@@ -2,6 +2,8 @@
 
 # NEVER EVER CLAIM SUCCESS THAT SOMETHING IS READY, DONE, READY FOR PRODUCTION ETC UNTIL THE USER CONFIRMS IT by actually testing or using the feature!!!!
 
+ALWAYS CHECK WITH PLAYWRIGHT CLI OR ANY OTHER VISUAL TESTING METHOD WHERE APPLICABLE BEFORE SAYING THAT ANYTHING IS DONE, READY, LOOKS CORRECT, WORKING ETC!!
+
 # MANDATORY Pre-Read for Major Work
 
 **Before ANY major feature, refactoring, architecture decision, or multi-file change**, read these documents first:

@@ -4527,6 +4527,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
 | BUG-1709 | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text | P2 | 📋 PLANNED |
 | BUG-1710 | Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined) | P1 | 📋 PLANNED |
+| BUG-1711 | Tauri: Task completion celebration overlay is see-through (should be opaque) | P2 | 📋 PLANNED |
 | ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
 | ~~BUG-1703~~ | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | ✅ **DONE** |
 | ~~BUG-1704~~ | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | ✅ **DONE** |
@@ -4620,6 +4621,12 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 #### BUG-1701: Memory Growth >20MB (📋 PLANNED)
 - **Priority**: P2 | **Confirmed by**: Playwright memory-perf test
 - **Symptom**: Memory grows >20MB across create/delete cycles, suggesting leak in task store or Supabase subscriptions
+
+#### BUG-1711: Tauri Task Completion Celebration Overlay See-Through (📋 PLANNED)
+- **Priority**: P2 | **Confirmed by**: User screenshot in Tauri production app
+- **Symptom**: "Sweet!" celebration overlay with checkmark is transparent — background content visible through it. Should have opaque/glass background.
+- **Root cause**: Likely same CSP issue as BUG-1674 — `backdrop-filter` or background styles not applying in Tauri production. Or `.tauri-app` override missing for this component.
+- **Files**: `src/components/tasks/` (DoneToggle celebration overlay)
 
 #### BUG-1710: Tauri Unhandled Promise Rejection on Launch (📋 PLANNED)
 - **Priority**: P1 | **Confirmed by**: User report in Tauri production app (v1.3.25)

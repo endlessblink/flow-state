@@ -4525,6 +4525,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~BUG-1699~~ | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | ✅ **DONE** |
 | ~~BUG-1700~~ | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | ✅ **DONE** |
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
+| BUG-1709 | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text | P2 | 📋 PLANNED |
 | ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
 | ~~BUG-1703~~ | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | ✅ **DONE** |
 | ~~BUG-1704~~ | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | ✅ **DONE** |
@@ -4618,6 +4619,12 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 #### BUG-1701: Memory Growth >20MB (📋 PLANNED)
 - **Priority**: P2 | **Confirmed by**: Playwright memory-perf test
 - **Symptom**: Memory grows >20MB across create/delete cycles, suggesting leak in task store or Supabase subscriptions
+
+#### BUG-1709: Tauri Inbox Task Cards — Icons Unclear + Text Overlap (📋 PLANNED)
+- **Priority**: P2 | **Confirmed by**: User screenshot in Tauri production app
+- **Issue 1**: Left done-toggle icons appear as unclear blobs instead of recognizable checkmark circles
+- **Issue 2**: Right-side action icons (project, timer, edit) overlap Hebrew RTL task title text
+- **Files**: `src/components/inbox/`, `src/components/tasks/`
 
 #### ~~BUG-1702~~: WebDriver Test Navigation Uses Wrong URLs (✅ DONE)
 - **Priority**: P2 | **Type**: Test infrastructure

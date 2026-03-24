@@ -5131,25 +5131,30 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ## Canvas Image Paste Feature (TASK-1690)
 
-### TASK-1690: Ctrl+V paste-image support for CanvasView (🔄 IN PROGRESS)
+### ~~TASK-1690~~: Ctrl+V paste-image support for CanvasView (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-03-22)
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-25)
 
 **Goal**: Allow users to paste screenshots from clipboard directly onto the canvas. Pasted images appear as draggable `imageNode` nodes, with click-to-zoom lightbox. Images are compressed and stored in Supabase Storage (with data URL fallback for offline/guest mode).
 
-**Implementation**:
-- Created `src/components/canvas/ImageNode.vue` — Vue Flow custom node with handles, inline preview, and lightbox teleport
-- Created `src/stores/canvasImages.ts` — Pinia store persisting `CanvasImage[]` to localStorage; exposes `addCanvasImage`, `removeCanvasImage`, `updateCanvasImagePosition`
-- Added `CanvasImage` type to `src/stores/canvas/types.ts`
-- Modified `src/composables/canvas/useCanvasSync.ts` — injects `imageNode` nodes into VueFlow `newNodes` array alongside task/group nodes
-- Modified `src/views/CanvasView.vue` — added `imageNode` to `nodeTypes`, registered `#node-imageNode` template slot, added `paste` event listener with `handleCanvasPaste` that guards against input fields
+**What works**: Paste (Ctrl+V), render on canvas, click-to-select (teal ring), drag, double-click lightbox, Delete key removes, undo via global operation stack.
 
-**Files**:
-- `src/components/canvas/ImageNode.vue` (new)
-- `src/stores/canvasImages.ts` (new)
-- `src/stores/canvas/types.ts` (modified)
-- `src/composables/canvas/useCanvasSync.ts` (modified)
-- `src/views/CanvasView.vue` (modified)
+**Follow-up**: TASK-1722 (polish — context menu overlap, Shift+Delete behavior)
+
+---
+
+### TASK-1722: Canvas ImageNode interaction polish (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Parent**: TASK-1690 follow-up
+
+**Issues to fix**:
+1. Right-click context menu overlaps with pane context menu (event propagation — need `stopPropagation` in `handleNodeContextMenu` for imageNode branch)
+2. Shift+Delete should skip undo stack (permanent delete behavior)
+3. Lightbox should return focus to Vue Flow pane on close
+
+**Files**: `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasHotkeys.ts`, `src/components/canvas/ImageNode.vue`
 
 ---
 

@@ -49,6 +49,7 @@
       trigger="click"
       placement="bottom-start"
       :show-arrow="false"
+      raw
       to="body"
     >
       <template #trigger>
@@ -77,6 +78,7 @@
       trigger="click"
       placement="bottom-start"
       :show-arrow="false"
+      raw
       to="body"
     >
       <template #trigger>

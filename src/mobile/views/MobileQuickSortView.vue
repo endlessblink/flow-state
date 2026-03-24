@@ -389,7 +389,7 @@ const {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  overflow: hidden; /* SOP-060: overflow:clip not supported in WebKitGTK, use hidden instead */
+  overflow: hidden; /* WebKitGTK-safe: SOP-060 — was overflow:clip, not supported in WebKitGTK */
   overflow-x: visible;
   scrollbar-width: none; /* BUG-1453: hide scrollbar from overflow-x during card drag */
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -656,7 +656,7 @@ const {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* SOP-060: overflow:clip not supported in WebKitGTK, use hidden instead */
+  overflow: hidden; /* WebKitGTK-safe: SOP-060 — was overflow:clip, not supported in WebKitGTK */
   overflow-x: visible;
   z-index: var(--z-base);
 }

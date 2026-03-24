@@ -8,6 +8,46 @@
 
 ## Active Tasks
 
+### BUG-1706: Set up Epiphany WebKitGTK testing workflow (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS
+
+**Goal**: Install Epiphany (GNOME Web) as a fast WebKitGTK testing environment. Same engine as Tauri's wry — point at `localhost:5546` to test CSS without building Tauri.
+
+**Tasks**:
+- Install `epiphany-browser` (uses system WebKitGTK)
+- Verify it reproduces the sidebar clipping bug
+- Document workflow in CLAUDE.md
+
+---
+
+### BUG-1707: Fix sidebar width calculation for WebKitGTK (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends on**: BUG-1706
+
+**Root Cause Analysis** (confirmed via Perplexity research):
+- `.sidebar` has redundant `width: 100%; min-width: 240px; max-width: 340px` PLUS the grid track `minmax(240px, 340px)` — double-constraining causes WebKitGTK to miscalculate
+- `overflow: hidden` on `.sidebar` + nested flex with `min-width: 0` triggers known cross-engine shrinkage bugs
+- `contain: style` may have side effects in WebKitGTK despite spec saying it shouldn't
+
+**Fix order** (test each in Epiphany):
+1. Change `.sidebar` to `width: auto; min-width: 0` — let grid track own the width
+2. If still broken: remove `overflow: hidden` from `.sidebar`
+3. If still broken: remove `contain: style`
+4. If still broken: temporarily remove `backdrop-filter` to isolate compositing effects
+
+**Files**: `src/layouts/AppSidebar.vue`, `src/layouts/MainLayout.vue`
+
+---
+
+### BUG-1708: Deploy verified WebKitGTK sidebar fix to Tauri (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends on**: BUG-1707
+
+**Scope**: Version bump + `./scripts/deploy-tauri-update.sh` — only after fix confirmed in Epiphany.
+
+---
+
 ### ~~TASK-1596~~: Test infrastructure setup — coverage + factories + helpers (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-21)

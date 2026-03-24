@@ -5143,9 +5143,9 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-### TASK-1722: Canvas ImageNode interaction polish (📋 PLANNED)
+### TASK-1722: Canvas ImageNode interaction polish (🔄 IN PROGRESS)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: 🔄 IN PROGRESS
 
 **Parent**: TASK-1690 follow-up
 

@@ -15,7 +15,7 @@
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <!-- ADHD-friendly: Priority shown via left border on .task-card, not this stripe -->
+    <!-- Priority left border -->
     <div class="priority-stripe" :class="`priority-${task.priority || 'none'}`" />
 
     <!-- Timer Active Badge -->
@@ -40,15 +40,13 @@
         {{ truncateUrlsInText(task.title) }}
       </OverflowTooltip>
 
-      <!-- ADHD-friendly: Minimal metadata - show only essentials -->
+      <!-- Metadata badges -->
       <div class="task-metadata">
-        <!-- Due Date Badge (essential for planning) -->
         <span v-if="dueStatus" class="metadata-badge due-date-badge" :class="`due-badge-${dueStatus.type}`">
           <Calendar :size="12" />
           {{ dueStatus.text }}
         </span>
 
-        <!-- Project Badge (only if assigned) -->
         <span v-if="task.projectId" class="metadata-badge project-badge">
           <ProjectEmojiIcon
             v-if="projectVisual.type === 'emoji'"
@@ -65,14 +63,11 @@
           <span v-else>{{ projectVisual.content }}</span>
         </span>
 
-        <!-- ADHD-friendly: Removed redundant NTag priority badge - left stripe is sufficient -->
-        <!-- Duration shown only on hover (progressive disclosure) via CSS -->
         <span v-if="task.estimatedDuration" class="metadata-badge duration-badge">
           <Clock :size="12" />
           {{ task.estimatedDuration }}m
         </span>
 
-        <!-- Not on Canvas Badge -->
         <span
           v-if="showCanvasBadge && !task.canvasPosition"
           class="metadata-badge not-on-canvas-badge"
@@ -82,7 +77,7 @@
       </div>
     </div>
 
-    <!-- Quick Actions (hover) — BUG-1709: JS hover for WebKitGTK reliability -->
+    <!-- Quick Actions (hover only) — BUG-1709 -->
     <div v-if="isHovered" class="task-actions">
       <button
         class="action-btn send-to-canvas-btn"
@@ -276,9 +271,7 @@ const dueStatus = computed(() => {
 }
 
 .task-content--inbox {
-  padding-inline-start: var(--space-3);
-  padding-inline-end: var(--space-3);
-  padding-bottom: var(--space-3); /* BUG-1709: space for action tray */
+  padding: var(--space-2) var(--space-3) var(--space-3); /* BUG-1709: breathing room */
   width: 100%;
   box-sizing: border-box;
 }

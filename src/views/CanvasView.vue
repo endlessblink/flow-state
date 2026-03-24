@@ -166,7 +166,7 @@
 
           <!-- Image Node Template (TASK-1690) -->
           <template #node-imageNode="nodeProps">
-            <ImageNode :data="nodeProps.data" />
+            <ImageNode :data="nodeProps.data" :selected="nodeProps.selected" />
           </template>
 
           <!-- Custom Task Node Template -->
@@ -228,6 +228,26 @@
           v-if="!isCanvasReady"
           message="Initializing Canvas..."
         />
+
+        <!-- TASK-1690: Simple image node context menu -->
+        <Teleport to="body">
+          <div
+            v-if="imageContextMenu.show"
+            class="image-context-menu"
+            :style="{ left: imageContextMenu.x + 'px', top: imageContextMenu.y + 'px' }"
+            @click.stop
+          >
+            <button class="image-context-menu-item danger" @click="deleteImageFromContextMenu">
+              Delete Image
+            </button>
+          </div>
+          <div
+            v-if="imageContextMenu.show"
+            class="image-context-menu-backdrop"
+            @click="imageContextMenu.show = false"
+            @contextmenu.prevent="imageContextMenu.show = false"
+          />
+        </Teleport>
       </div>
     </div>
 
@@ -457,10 +477,27 @@ const handleSectionContextMenu = (event: MouseEvent, section: CanvasGroup) => {
 }
 
 // ============================================================================
-// TASK-1690: Canvas Paste Image Handler
+// TASK-1690: Canvas Image Features (paste, context menu, delete)
 // ============================================================================
 const canvasImagesStore = useCanvasImagesStore()
 const authStore = useAuthStore()
+
+// Image context menu state
+const imageContextMenu = ref<{ show: boolean; x: number; y: number; nodeId: string }>({
+  show: false, x: 0, y: 0, nodeId: ''
+})
+
+const handleImageContextMenu = (e: Event) => {
+  const { x, y, nodeId } = (e as CustomEvent).detail
+  imageContextMenu.value = { show: true, x, y, nodeId }
+}
+
+const deleteImageFromContextMenu = () => {
+  if (imageContextMenu.value.nodeId) {
+    canvasImagesStore.removeCanvasImage(imageContextMenu.value.nodeId)
+  }
+  imageContextMenu.value.show = false
+}
 
 const handleCanvasPaste = async (e: ClipboardEvent) => {
   // Only intercept when not typing in an input / contenteditable
@@ -501,11 +538,17 @@ const handleCanvasPaste = async (e: ClipboardEvent) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('paste', handleCanvasPaste)
+  window.addEventListener('image-node-context-menu', handleImageContextMenu)
+
+  // TASK-1690: Register canvas image undo with global undo system (lazy to avoid circular deps)
+  const { registerCanvasImageUndo } = await import('@/composables/undoSingleton')
+  registerCanvasImageUndo(() => canvasImagesStore.undoRemoveCanvasImage())
 })
 onUnmounted(() => {
   document.removeEventListener('paste', handleCanvasPaste)
+  window.removeEventListener('image-node-context-menu', handleImageContextMenu)
 })
 
 // Expose for testing purposes (Fundamental Stability)
@@ -525,3 +568,50 @@ if (process.env.NODE_ENV === 'development' || (window as unknown as Record<strin
 <style scoped src="@/assets/canvas-view-layout.css"></style>
 
 <style src="@/assets/canvas-view-overrides.css"></style>
+
+<style>
+/* TASK-1690: Image node context menu (teleported to body, must be unscoped) */
+.image-context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--overlay-component-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  min-width: 140px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.image-context-menu-item {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  text-align: start;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.image-context-menu-item:hover {
+  background: var(--glass-bg-soft);
+}
+
+.image-context-menu-item.danger {
+  color: var(--color-danger);
+}
+
+.image-context-menu-item.danger:hover {
+  background: var(--danger-bg-subtle);
+}
+
+.image-context-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+}
+</style>

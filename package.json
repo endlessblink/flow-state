@@ -35,6 +35,10 @@
     "tauri:rebuild": "bash scripts/sync-doppler.sh && npm run tauri build && ./src-tauri/target/release/flow-state",
     "tauri:install": "bash scripts/build-and-install.sh",
     "tauri:run": "./src-tauri/target/release/flow-state",
+    "electron:build-main": "tsc -p electron/tsconfig.json && mv dist-electron/main.js dist-electron/main.cjs && mv dist-electron/preload.js dist-electron/preload.cjs",
+    "electron:dev": "VITE_DEV_SERVER_URL=http://localhost:5546 npm run electron:build-main && electron dist-electron/main.cjs --no-sandbox",
+    "electron:build": "ELECTRON_BUILD=true npm run build && npm run electron:build-main && electron-builder --config electron-builder.yml",
+    "electron:preview": "ELECTRON_BUILD=true npm run build && npm run electron:build-main && electron dist-electron/main.cjs --no-sandbox",
     "tauri:update-manifest": "node scripts/generate-update-manifest.cjs",
     "tauri:build:signed": "echo '' | bash scripts/tauri-build-signed.sh",
     "tauri:upload-update": "bash scripts/tauri-upload-update.sh",
@@ -295,6 +299,8 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
     "@intlify/unplugin-vue-i18n": "^11.0.7",
     "@playwright/test": "^1.57.0",
     "@storybook/addon-a11y": "^10.1.4",
@@ -322,6 +328,8 @@
     "chokidar-cli": "^3.0.0",
     "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
+    "electron": "^41.0.3",
+    "electron-builder": "^26.8.1",
     "eslint": "^8.55.0",
     "eslint-plugin-storybook": "^10.1.11",
     "eslint-plugin-vue": "^9.19.2",

@@ -2,6 +2,7 @@ import { ref, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore, type Task } from '@/stores/tasks'
+import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useVueFlow } from '@vue-flow/core'
 import {
     sanitizePosition,
@@ -97,6 +98,7 @@ export function useCanvasSync() {
     const canvasStore = useCanvasStore()
     const { nodeVersionMap, aggregatedTaskCountByGroupId, taskCountByGroupId } = storeToRefs(canvasStore)
     const taskStore = useTaskStore()
+    const canvasImagesStore = useCanvasImagesStore()
     const { getNodes, setNodes } = useVueFlow()
 
     // Alias to module-level ref for backward compatibility
@@ -508,6 +510,23 @@ export function useCanvasSync() {
                         task: { ...task },
                         label: task.title
                     }
+                })
+            }
+
+            // ================================================================
+            // TASK-1690: INJECT IMAGE NODES FROM canvasImagesStore
+            // ================================================================
+            // Image nodes are stored separately in canvasImagesStore (localStorage-backed)
+            // and must be injected here so Vue Flow renders them on the canvas.
+            for (const img of canvasImagesStore.images) {
+                newNodes.push({
+                    id: img.id,
+                    type: 'imageNode',
+                    position: img.position,
+                    data: {
+                        imageUrl: img.imageUrl,
+                        imageId: img.id,
+                    },
                 })
             }
 

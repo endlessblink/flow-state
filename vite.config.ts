@@ -28,12 +28,17 @@ const isTauri =
 // FEATURE-1345: Check if running in Capacitor context
 const isCapacitor = process.env.CAPACITOR_PLATFORM !== undefined
 
+// TASK-1715: Check if building for Electron (file:// needs relative base)
+const isElectron = process.env.ELECTRON_BUILD !== undefined
+
 // FEATURE-1194: Read version from package.json for injection into app
 const packageVersion = JSON.parse(
   readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf-8')
 ).version
 
 export default defineConfig(({ mode }) => ({
+  // TASK-1715: Electron loads from file:// which needs relative paths
+  base: isElectron ? './' : '/',
   define: {
     '__APP_VERSION__': JSON.stringify(packageVersion),
     '__IS_CAPACITOR_BUILD__': isCapacitor,

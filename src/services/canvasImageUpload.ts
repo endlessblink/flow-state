@@ -54,7 +54,11 @@ export async function uploadCanvasImage(blob: Blob, userId: string): Promise<str
     upsert: false,
   })
 
-  if (error) throw new Error(`Canvas image upload failed: ${error.message}`)
+  if (error) {
+    // TASK-1690: Fallback to data URL if storage upload fails (bucket missing, RLS, etc.)
+    console.warn(`[CANVAS:IMAGE] Upload failed, falling back to data URL: ${error.message}`)
+    return blobToDataUrl(blob)
+  }
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
   return data.publicUrl

@@ -85,6 +85,12 @@ let redoOperationStack: OperationSnapshot[] = []
 // Flag to track if we're in operation-aware mode
 const useOperationAwareUndo = true
 
+// TASK-1690: Registered canvas image undo callback (set by canvasImages store)
+let _canvasImageUndoFn: (() => boolean) | null = null
+export function registerCanvasImageUndo(fn: () => boolean) {
+  _canvasImageUndoFn = fn
+}
+
 // Global singleton refHistory instance - created only ONCE
 let refHistoryInstance: ReturnType<typeof useManualRefHistory<UnifiedUndoState>> | null = null
 let unifiedState: Ref<UnifiedUndoState> | null = null
@@ -535,6 +541,12 @@ const showUndoRedoToast = async (action: 'undo' | 'redo', description: string) =
 // BUG-309-B: Enhanced with operation-aware selective restoration
 const performUndo = async () => {
   console.log('🔴 [UNDO] performUndo called, operationStack length:', operationStack.length)
+
+  // TASK-1690: Try canvas image undo first (most recent deletion takes priority)
+  if (_canvasImageUndoFn && _canvasImageUndoFn()) {
+    console.log('🔴 [UNDO] Restored canvas image')
+    return true
+  }
 
   // BUG-309-B: Try operation-aware undo first
   if (useOperationAwareUndo && operationStack.length > 0) {

@@ -31,9 +31,16 @@ export const useCanvasImagesStore = defineStore('canvasImages', () => {
     saveToLocalStorage(images.value)
   }
 
+  // TASK-1690: Undo stack for image deletions (Ctrl+Z support)
+  const undoStack = ref<CanvasImage[]>([])
+
   const removeCanvasImage = async (id: string) => {
     const img = images.value.find(i => i.id === id)
     if (img) {
+      // Save snapshot for undo before deleting
+      undoStack.value.push({ ...img, position: { ...img.position } })
+      if (undoStack.value.length > 20) undoStack.value.shift()
+
       try {
         await deleteCanvasImage(img.imageUrl)
       } catch (e) {
@@ -42,6 +49,14 @@ export const useCanvasImagesStore = defineStore('canvasImages', () => {
     }
     images.value = images.value.filter(i => i.id !== id)
     saveToLocalStorage(images.value)
+  }
+
+  const undoRemoveCanvasImage = () => {
+    const img = undoStack.value.pop()
+    if (!img) return false
+    images.value.push(img)
+    saveToLocalStorage(images.value)
+    return true
   }
 
   const updateCanvasImagePosition = (id: string, position: { x: number; y: number }) => {
@@ -56,6 +71,7 @@ export const useCanvasImagesStore = defineStore('canvasImages', () => {
     images,
     addCanvasImage,
     removeCanvasImage,
+    undoRemoveCanvasImage,
     updateCanvasImagePosition,
   }
 })

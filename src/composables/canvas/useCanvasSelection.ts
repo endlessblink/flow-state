@@ -74,6 +74,11 @@ export function useCanvasSelection(deps: {
             selected: newSelection.includes(n.id)
         }))
         applyNodeChanges(selectionChanges)
+
+        // TASK-1690: Restore keyboard focus to VueFlow pane after clicking image nodes
+        // so Delete key reaches the @keydown handler (image clicks steal focus from pane)
+        const pane = document.querySelector('.vue-flow__pane') as HTMLElement | null
+        pane?.focus()
     }
 
     // --- SELECTION CHANGE HANDLER (Migrated from CanvasView.vue) ---

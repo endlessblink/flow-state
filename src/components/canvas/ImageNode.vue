@@ -1,5 +1,5 @@
 <template>
-  <div class="image-node">
+  <div class="image-node" :class="{ 'is-selected': selected }">
     <Handle type="target" :position="Position.Top" id="top" />
     <Handle type="target" :position="Position.Right" id="right" />
     <Handle type="target" :position="Position.Bottom" id="bottom" />
@@ -14,7 +14,7 @@
       class="node-image"
       draggable="false"
       alt="Pasted image"
-      @click.stop="showLightbox = true"
+      @dblclick.stop="showLightbox = true"
     />
 
     <Teleport to="body">
@@ -43,6 +43,8 @@ interface Props {
     imageUrl: string
     imageId: string
   }
+  // TASK-1690: forward VueFlow selection state for visible selection ring
+  selected?: boolean
 }
 
 defineProps<Props>()
@@ -67,6 +69,12 @@ const showLightbox = ref(false)
 .image-node:hover {
   border-color: var(--brand-primary);
   box-shadow: 0 0 12px var(--brand-primary-alpha-20);
+}
+
+/* TASK-1690: Selected state — visible ring using brand token */
+.image-node.is-selected {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px var(--brand-primary);
 }
 
 .node-image {

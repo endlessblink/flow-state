@@ -96,7 +96,7 @@
     </div>
 
     <!-- Quick Actions (hover) — BUG-1709: JS hover for WebKitGTK -->
-    <div v-show="isHovered" class="task-actions">
+    <div v-if="isHovered" class="task-actions">
       <button
         class="action-btn"
         title="Start Timer"

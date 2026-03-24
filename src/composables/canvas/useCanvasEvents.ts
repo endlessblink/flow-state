@@ -308,6 +308,12 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
             // Close other internal menus
             showNodeContextMenu.value = false
             showEdgeContextMenu.value = false
+        } else if (node.type === 'imageNode') {
+            // TASK-1690: Image nodes — dispatch custom event for simple delete menu
+            window.dispatchEvent(new CustomEvent('image-node-context-menu', {
+                detail: { x, y, nodeId: node.id }
+            }))
+            closeAllContextMenus()
         } else {
             // Default generic node menu (for any other custom types)
             openNodeContextMenu(x, y, node.id)

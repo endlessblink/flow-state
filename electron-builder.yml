@@ -1,0 +1,52 @@
+appId: com.flowstate.app
+productName: FlowState
+copyright: Copyright © 2026
+
+directories:
+  buildResources: src-tauri/icons
+  output: release
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+
+extraMetadata:
+  main: dist-electron/main.cjs
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Office
+  icon: src-tauri/icons
+  desktop:
+    StartupWMClass: FlowState
+
+appImage:
+  artifactName: FlowState-${version}-${arch}.AppImage
+
+deb:
+  artifactName: FlowState_${version}_${arch}.deb
+  depends:
+    - libnotify4
+    - libxss1
+    - libnss3
+
+mac:
+  target:
+    - dmg
+  icon: src-tauri/icons/icon.icns
+  category: public.app-category.productivity
+
+win:
+  target:
+    - nsis
+  icon: src-tauri/icons/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+publish:
+  provider: generic
+  url: https://in-theflow.com/updates/electron/

@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 
 interface BulkDeleteState {
@@ -16,6 +17,7 @@ export function useCanvasHotkeys(
 ) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
+    const canvasImagesStore = useCanvasImagesStore()
     const { getSelectedNodes } = useVueFlow()
 
     // Handle Delete Key
@@ -53,10 +55,21 @@ export function useCanvasHotkeys(
         event.preventDefault()
         const permanentDelete = event.shiftKey
 
+        // TASK-1690: Handle image nodes immediately (no confirmation needed)
+        const imageNodes = selectedNodes.filter(n => n.type === 'imageNode')
+        if (imageNodes.length > 0) {
+            for (const imgNode of imageNodes) {
+                canvasImagesStore.removeCanvasImage(imgNode.id)
+            }
+            // If only image nodes were selected, we're done
+            if (imageNodes.length === selectedNodes.length) return
+        }
+
         // Collect all items to delete - show ONE confirmation for all
         const itemsToDelete: { id: string; name: string; type: 'task' | 'section' }[] = []
 
         for (const node of selectedNodes) {
+            if (node.type === 'imageNode') continue // Already handled above
             if (CanvasIds.isGroupNode(node.id)) {
                 const { id: sectionId } = CanvasIds.parseNodeId(node.id)
                 const section = canvasStore.sections.find(s => s.id === sectionId)

@@ -4526,8 +4526,9 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~BUG-1700~~ | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | ✅ **DONE** |
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
 | BUG-1709 | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text | P2 | 📋 PLANNED |
-| BUG-1710 | Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined) | P1 | 📋 PLANNED |
+| BUG-1710 | Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined) | P1 | 🔄 **IN PROGRESS** |
 | BUG-1711 | Tauri: Task completion celebration overlay is see-through (should be opaque) | P2 | 📋 PLANNED |
+| TASK-1712 | Tauri visual parity: task cards/UI degrade vs web app — need automated WebKitGTK visual regression | P1 | 📋 PLANNED |
 | ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
 | ~~BUG-1703~~ | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | ✅ **DONE** |
 | ~~BUG-1704~~ | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | ✅ **DONE** |
@@ -4628,10 +4629,22 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Root cause**: Likely same CSP issue as BUG-1674 — `backdrop-filter` or background styles not applying in Tauri production. Or `.tauri-app` override missing for this component.
 - **Files**: `src/components/tasks/` (DoneToggle celebration overlay)
 
-#### BUG-1710: Tauri Unhandled Promise Rejection on Launch (📋 PLANNED)
+#### BUG-1710: Tauri Unhandled Promise Rejection on Launch (🔄 IN PROGRESS)
 - **Priority**: P1 | **Confirmed by**: User report in Tauri production app (v1.3.25)
 - **Error**: `Error: Unhandled promise rejection` at `Promise:undefined:undefined`
 - **Impact**: Error dialog on app launch, may block functionality
+
+#### TASK-1712: Tauri Visual Parity — Automated WebKitGTK Regression Testing (📋 PLANNED)
+- **Priority**: P1 | **Type**: Infrastructure + Bug fixes
+- **Problem**: Task cards, icons, overlays, and UI components look/work better in the web app than in Tauri. Multiple visual issues reported (BUG-1709 icons, BUG-1711 overlay, text overlap). No automated way to detect these before deploying.
+- **Goal**: Build a testing pipeline that catches Tauri/WebKitGTK visual regressions BEFORE deployment, so Claude can fix them without the user manually testing each build.
+- **Approach**:
+  1. Extend `scripts/webkit-test.py` to run with `cargo tauri dev` (real Tauri IPC, not HTTP mock)
+  2. Add screenshot comparison (baseline vs current) for each view
+  3. Add checks for: element overlap, icon sizing, opacity, glass morphism, RTL text rendering
+  4. Integrate into deploy pipeline (block deploy if visual regression detected)
+- **Depends on**: Working `cargo tauri dev --no-dev-server-wait` workflow
+- **Files**: `scripts/webkit-test.py`, `scripts/deploy-tauri-update.sh`, `tests/webdriver/`
 
 #### BUG-1709: Tauri Inbox Task Cards — Icons Unclear + Text Overlap (📋 PLANNED)
 - **Priority**: P2 | **Confirmed by**: User screenshot in Tauri production app

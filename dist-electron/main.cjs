@@ -9,6 +9,7 @@ const fs_2 = require("./ipc/fs");
 const store_1 = require("./ipc/store");
 const http_1 = require("./ipc/http");
 const window_1 = require("./ipc/window");
+const updater_1 = require("./updater");
 // Prevent multiple instances
 const gotLock = electron_1.app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -76,6 +77,7 @@ electron_1.ipcMain.handle('app:getVersion', () => electron_1.app.getVersion());
 // App lifecycle
 electron_1.app.whenReady().then(() => {
     createWindow();
+    (0, updater_1.registerUpdater)();
     electron_1.app.on('activate', () => {
         if (electron_1.BrowserWindow.getAllWindows().length === 0) {
             createWindow();

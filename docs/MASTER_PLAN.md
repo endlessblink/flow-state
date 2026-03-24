@@ -62,9 +62,9 @@
 
 ---
 
-### TASK-1720: Electron Phase 4 — Auto-Updater + Deploy Pipeline (📋 PLANNED)
+### ~~TASK-1720~~: Electron Phase 4 — Auto-Updater + Deploy Pipeline (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends on**: TASK-1719
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-25)
 
 **Scope**: Set up `electron-updater` and deploy pipeline to VPS.
 

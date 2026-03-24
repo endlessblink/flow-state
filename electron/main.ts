@@ -7,6 +7,7 @@ import { registerFsHandlers } from './ipc/fs'
 import { registerStoreHandlers } from './ipc/store'
 import { registerHttpHandlers } from './ipc/http'
 import { registerWindowHandlers } from './ipc/window'
+import { registerUpdater } from './updater'
 
 // Prevent multiple instances
 const gotLock = app.requestSingleInstanceLock()
@@ -81,6 +82,7 @@ ipcMain.handle('app:getVersion', () => app.getVersion())
 // App lifecycle
 app.whenReady().then(() => {
   createWindow()
+  registerUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

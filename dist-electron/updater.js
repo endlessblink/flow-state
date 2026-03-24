@@ -1,0 +1,57 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.registerUpdater = registerUpdater;
+const electron_updater_1 = require("electron-updater");
+const electron_1 = require("electron");
+/**
+ * Electron auto-updater setup.
+ * Uses generic provider pointing to VPS at /updates/electron/
+ * Replaces Tauri's auto-updater (SOP-037).
+ */
+function registerUpdater() {
+    // Don't check for updates in dev
+    if (process.env.VITE_DEV_SERVER_URL)
+        return;
+    electron_updater_1.autoUpdater.autoDownload = false;
+    electron_updater_1.autoUpdater.autoInstallOnAppQuit = true;
+    // Forward events to renderer via IPC
+    electron_updater_1.autoUpdater.on('update-available', (info) => {
+        const win = electron_1.BrowserWindow.getAllWindows()[0];
+        if (win)
+            win.webContents.send('updater:available', info);
+    });
+    electron_updater_1.autoUpdater.on('download-progress', (progress) => {
+        const win = electron_1.BrowserWindow.getAllWindows()[0];
+        if (win)
+            win.webContents.send('updater:progress', progress);
+    });
+    electron_updater_1.autoUpdater.on('update-downloaded', () => {
+        const win = electron_1.BrowserWindow.getAllWindows()[0];
+        if (win)
+            win.webContents.send('updater:downloaded');
+    });
+    electron_updater_1.autoUpdater.on('error', (err) => {
+        console.error('[Updater] Error:', err.message);
+    });
+    // IPC handlers for renderer control
+    electron_1.ipcMain.handle('updater:check', async () => {
+        try {
+            return await electron_updater_1.autoUpdater.checkForUpdates();
+        }
+        catch (err) {
+            console.error('[Updater] Check failed:', err.message);
+            return null;
+        }
+    });
+    electron_1.ipcMain.handle('updater:download', async () => {
+        await electron_updater_1.autoUpdater.downloadUpdate();
+    });
+    electron_1.ipcMain.handle('updater:install', () => {
+        electron_updater_1.autoUpdater.quitAndInstall();
+    });
+    // Check for updates after 5s delay
+    setTimeout(() => {
+        electron_updater_1.autoUpdater.checkForUpdates().catch(() => { });
+    }, 5000);
+}
+//# sourceMappingURL=updater.js.map

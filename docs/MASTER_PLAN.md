@@ -105,66 +105,38 @@
 
 ---
 
-### TASK-1715: Migrate Desktop App from Tauri to Electron (🔄 IN PROGRESS)
+### ~~TASK-1715~~: Migrate Desktop App from Tauri to Electron (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Archive**: `tauri-archive-v1.3.28`
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-25) | **Archive**: `tauri-archive-v1.3.28`
 
 **Why**: WebKitGTK (Tauri) has too many rendering bugs vs Chromium. Electron uses Chromium = zero CSS parity issues with web app.
 
 **Scope**: Replace Tauri shell only. Vue 3 + Vite frontend stays identical.
 
-**Phase 1: Electron Setup (Foundation)**
-- [ ] Install electron, electron-builder, electron-updater
-- [ ] Create `electron/main.ts` (main process), `electron/preload.ts`
-- [ ] Configure Vite for Electron (electron-vite or manual)
-- [ ] Basic window opens with the Vue app
+**Phase 1: Electron Setup (Foundation)** ✅
+- [x] Install electron, electron-builder, electron-updater
+- [x] Create `electron/main.ts` (main process), `electron/preload.ts`
+- [x] Configure Vite for Electron (manual, `base: './'`)
+- [x] Basic window opens with the Vue app
 
-**Phase 2: Platform Detection Swap**
-- [ ] Update `src/utils/platform.ts`: `isTauri()` → `isElectron()` + `isDesktop()`
-- [ ] Update all 9 raw `window.__TAURI__` checks
-- [ ] Delete `.tauri-app` CSS overrides (186 rules) — Electron uses Chromium, no workarounds needed
-- [ ] Add `.electron-app` class if any desktop-specific CSS needed
+**Phase 2: Platform Detection Swap** ✅ (TASK-1718)
+- [x] Update `src/utils/platform.ts`: `isElectron()` via `window.electronAPI`, `isTauri()` returns false
+- [x] Update all 3 raw `window.__TAURI__` checks
+- [x] Delete 38 `.tauri-app` CSS rule blocks — Electron uses Chromium, no workarounds needed
+- [x] Add `.electron-app` class in `main.ts`
 
-**Phase 3: IPC Migration (13 commands)**
-- [ ] Create `electron/ipc/` handlers using `ipcMain.handle()`
-- [ ] Docker/Supabase management → `child_process.exec()`
-- [ ] Backup policy get/set → `electron-store`
-- [ ] Memory usage → `process.memoryUsage()`
+**Phase 3+4: IPC Handlers + Plugin Replacements** ✅ (TASK-1719)
+- [x] `electron/ipc/shell.ts` — `shell.openExternal()`
+- [x] `electron/ipc/store.ts` — JSON key-value store (replaces `@tauri-apps/plugin-store`)
+- [x] `electron/ipc/fs.ts` — Node.js `fs` via IPC
+- [x] `electron/ipc/dialog.ts` — `dialog.showSaveDialog()`
+- [x] `electron/ipc/http.ts` — `net.fetch` in main process (CORS bypass)
+- [x] `electron/ipc/window.ts` — minimize, maximize, close
+- [x] All handlers registered in `electron/main.ts`
 
-**Phase 4: Plugin Replacements**
-- [ ] `plugin-shell` (open URLs) → `shell.openExternal()`
-- [ ] `plugin-store` (settings) → `electron-store`
-- [ ] `plugin-fs` (auth token) → Node.js `fs` via IPC
-- [ ] `plugin-dialog` (file save) → `dialog.showSaveDialog()`
-- [ ] `plugin-http` (CORS bypass) → Node.js `fetch` in main process
-- [ ] `plugin-log` → Electron console (already in devtools)
-- [ ] `plugin-notification` → `new Notification()` from Electron
-
-**Phase 5: Auto-Updater**
-- [ ] Set up `electron-updater` with VPS endpoint
-- [ ] Rewrite `deploy-tauri-update.sh` → `deploy-electron-update.sh`
-- [ ] Generate + upload AppImage + latest.yml to VPS
-- [ ] Update notification component
-
-**Phase 6: Build & Deploy**
-- [ ] electron-builder config (AppImage, .deb, Windows .exe, macOS .dmg)
-- [ ] CI/CD workflow for Electron builds
-- [ ] First production deploy
-
-**Files to create:**
-```
-electron/
-  main.ts          # Main process
-  preload.ts       # Preload script (context bridge)
-  ipc/             # IPC handlers
-  updater.ts       # Auto-updater
-electron-builder.yml  # Build config
-```
-
-**Files to delete after migration:**
-```
-src-tauri/         # Entire Rust backend (archived at tag)
-```
+**Remaining (separate tasks):**
+- Phase 5: Auto-updater → TASK-1720
+- Phase 6: Build & Deploy → TASK-1721
 
 **Files to modify:**
 - `src/utils/platform.ts` — swap detection

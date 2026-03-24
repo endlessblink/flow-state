@@ -8,6 +8,77 @@
 
 ## Active Tasks
 
+### TASK-1715: Migrate Desktop App from Tauri to Electron (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Archive**: `tauri-archive-v1.3.28`
+
+**Why**: WebKitGTK (Tauri) has too many rendering bugs vs Chromium. Electron uses Chromium = zero CSS parity issues with web app.
+
+**Scope**: Replace Tauri shell only. Vue 3 + Vite frontend stays identical.
+
+**Phase 1: Electron Setup (Foundation)**
+- [ ] Install electron, electron-builder, electron-updater
+- [ ] Create `electron/main.ts` (main process), `electron/preload.ts`
+- [ ] Configure Vite for Electron (electron-vite or manual)
+- [ ] Basic window opens with the Vue app
+
+**Phase 2: Platform Detection Swap**
+- [ ] Update `src/utils/platform.ts`: `isTauri()` → `isElectron()` + `isDesktop()`
+- [ ] Update all 9 raw `window.__TAURI__` checks
+- [ ] Delete `.tauri-app` CSS overrides (186 rules) — Electron uses Chromium, no workarounds needed
+- [ ] Add `.electron-app` class if any desktop-specific CSS needed
+
+**Phase 3: IPC Migration (13 commands)**
+- [ ] Create `electron/ipc/` handlers using `ipcMain.handle()`
+- [ ] Docker/Supabase management → `child_process.exec()`
+- [ ] Backup policy get/set → `electron-store`
+- [ ] Memory usage → `process.memoryUsage()`
+
+**Phase 4: Plugin Replacements**
+- [ ] `plugin-shell` (open URLs) → `shell.openExternal()`
+- [ ] `plugin-store` (settings) → `electron-store`
+- [ ] `plugin-fs` (auth token) → Node.js `fs` via IPC
+- [ ] `plugin-dialog` (file save) → `dialog.showSaveDialog()`
+- [ ] `plugin-http` (CORS bypass) → Node.js `fetch` in main process
+- [ ] `plugin-log` → Electron console (already in devtools)
+- [ ] `plugin-notification` → `new Notification()` from Electron
+
+**Phase 5: Auto-Updater**
+- [ ] Set up `electron-updater` with VPS endpoint
+- [ ] Rewrite `deploy-tauri-update.sh` → `deploy-electron-update.sh`
+- [ ] Generate + upload AppImage + latest.yml to VPS
+- [ ] Update notification component
+
+**Phase 6: Build & Deploy**
+- [ ] electron-builder config (AppImage, .deb, Windows .exe, macOS .dmg)
+- [ ] CI/CD workflow for Electron builds
+- [ ] First production deploy
+
+**Files to create:**
+```
+electron/
+  main.ts          # Main process
+  preload.ts       # Preload script (context bridge)
+  ipc/             # IPC handlers
+  updater.ts       # Auto-updater
+electron-builder.yml  # Build config
+```
+
+**Files to delete after migration:**
+```
+src-tauri/         # Entire Rust backend (archived at tag)
+```
+
+**Files to modify:**
+- `src/utils/platform.ts` — swap detection
+- `src/main.ts` — swap `.tauri-app` → `.electron-app`
+- `src/assets/styles.css` — delete 186 `.tauri-app` rules
+- `vite.config.ts` — Electron build integration
+- `package.json` — swap deps + scripts
+- 38 files using `isTauri()` → `isElectron()`
+
+---
+
 ### ~~BUG-1706~~: Set up Epiphany WebKitGTK testing workflow (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE
@@ -2470,6 +2541,193 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | Cross-tab workspace mismatch — Tab A workspace A, Tab B workspace B | MEDIUM | Add workspaceId to cross-tab protocol, ignore mismatches |
 | Invite chicken-and-egg — user can't join workspace they're not in | MEDIUM | Edge Function with service_role key |
 | Canvas parentId cross-workspace — task in workspace B references group in workspace A | LOW | App-level validation in drag handlers |
+
+#### TASK-1533: Epic: Workspace Collaboration — Tracking Parent (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: —
+**Description**: Epic tracking parent for all workspace collaboration sub-tasks (TASK-1534 through TASK-1559). No implementation work — exists to group and track the full collaboration milestone.
+
+---
+
+#### TASK-1534: DB Migration — Core Workspace Tables (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: —
+**Description**: Create `workspaces`, `workspace_members`, `workspace_invites`, `task_comments`, and `workspace_activity` tables via Supabase migration. These tables form the foundational schema for all collaboration features.
+
+---
+
+#### TASK-1535: DB Migration — Add workspace_id to Existing Tables (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1534
+**Description**: Add `workspace_id` (NULLABLE) column to `tasks`, `projects`, and `groups` tables, plus `assigned_to` column on `tasks`. NULL workspace_id means "personal workspace" — no data migration needed for existing rows.
+
+---
+
+#### TASK-1536: DB Migration — user_workspace_ids() SECURITY DEFINER Function (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1534
+**Description**: Create `user_workspace_ids()` SECURITY DEFINER function for RLS performance. Caches per-transaction to avoid correlated subquery per row when evaluating workspace-aware RLS policies.
+
+---
+
+#### TASK-1537: DB Migration — Rewrite All RLS Policies (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1535, TASK-1536
+**Description**: Rewrite ALL RLS policies to be workspace-aware (32+ policies across 8+ tables). Must handle `workspace_id IS NULL` for personal tasks. TEST AGAINST PRODUCTION DATA COPY before applying. This is the highest-risk migration in the epic.
+
+---
+
+#### TASK-1538: DB Migration — Realtime Publication for Workspace Tables (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1534
+**Description**: Add `workspace_id` filter to supabase_realtime publication for `task_comments` and `workspace_activity` tables so realtime events are scoped per workspace.
+
+---
+
+#### TASK-1539: Pinia Store — workspaces.ts (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1537
+**Description**: Create `src/stores/workspaces.ts` with `activeWorkspaceId`, `workspaces[]`, `members[]`, and actions: `switchWorkspace()`, `createWorkspace()`, `inviteMember()`, `acceptInvite()`, `removeMember()`. Central source of truth for workspace context across all stores.
+
+---
+
+#### TASK-1540: Update supabaseMappers.ts for workspace_id (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1535
+**Description**: Add `workspace_id` to `toSupabaseTask()`, `toSupabaseProject()`, and `toSupabaseGroup()` mapper functions in `supabaseMappers.ts` so all write operations include workspace context.
+
+---
+
+#### TASK-1541: Update useTaskFiltering.ts for workspace_id (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1540
+**Description**: Add `workspace_id` filter predicate to `useTaskFiltering.ts` so board, canvas, calendar, and inbox views all respect the active workspace and only show tasks belonging to it.
+
+---
+
+#### TASK-1542: Update taskPersistence.ts + useTasksDatabase.ts for workspace context (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1540
+**Description**: Pass workspace context to `fetchTasks` and add `.eq('workspace_id', ...)` filter in `taskPersistence.ts` and `useTasksDatabase.ts` so database reads are scoped to the active workspace.
+
+---
+
+#### TASK-1543: Update projects.ts Store for workspace filtering (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1540
+**Description**: Filter projects by `activeWorkspaceId` in `projects.ts` store, following the same pattern applied to tasks in TASK-1541/1542.
+
+---
+
+#### TASK-1544: Update Canvas Store (groups) for workspace filtering (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1540
+**Description**: Filter canvas groups by `activeWorkspaceId` in the canvas store. Validate workspace match on `parentId` assignment in drag handlers to prevent cross-workspace canvas group references.
+
+---
+
+#### TASK-1545: UI — Workspace Switcher Component (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Description**: Build workspace switcher component in the sidebar — dropdown listing "Personal" plus shared workspaces, with a "Create Workspace" action at the bottom. Hides automatically when user has exactly 1 workspace (see TASK-1555).
+
+---
+
+#### TASK-1546: Update auth.ts — Fetch Workspaces on Login (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Description**: On login, fetch workspaces via `workspace_members` join and restore last-used workspace from `localStorage` in `auth.ts`. Ensures workspace context is available immediately after authentication.
+
+---
+
+#### TASK-1547: Offline Sync Queue — Inject workspace_id into Payloads (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1540
+**Description**: Inject `workspace_id` into queued payloads in `useSyncOrchestrator.ts`. Defense-in-depth for ops created before the migration — existing IndexedDB queue entries lack `workspace_id` and must be patched at processing time.
+
+---
+
+#### TASK-1548: Realtime Subscriptions — Filter by workspace_id (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1538, TASK-1539
+**Description**: Update `useRealtimeSubscription.ts` to filter by `workspace_id` instead of `user_id`. Handle workspace switch by tearing down the old channel and creating a new one. Add `isWorkspaceSwitching` flag to prevent reconnect logic from fighting intentional disconnects.
+
+---
+
+#### TASK-1549: Cross-Tab Sync — Add workspaceId to Message Protocol (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Description**: Add `workspaceId` to `CrossTabMessage` and `TaskOperation` interfaces in `useCrossTabSync.ts`. Handlers must ignore messages from a different workspace. Broadcast workspace switch events so all tabs stay in sync.
+
+---
+
+#### TASK-1550: Guest Mode Isolation (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Description**: Ensure workspace store returns empty/disabled state when `!isAuthenticated`. Verify `migrateGuestData()` targets personal workspace (`NULL workspace_id`) only so guest data never bleeds into shared workspaces.
+
+---
+
+#### TASK-1551: Invite Flow — Link Generation, Route, Edge Function (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Description**: Generate invite links via the `workspace_invites` table, copy/share UI, route `/#/invite/:token`, and an accept-invite Edge Function with `SECURITY DEFINER` (required because accepting user can't INSERT into `workspace_members` until they're already a member — RLS chicken-and-egg).
+
+---
+
+#### TASK-1552: Task Assignment — assigned_to Dropdown + Board Badges (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1551
+**Description**: Add `assigned_to` dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, and "My tasks" / "All" / "Unassigned" filter options.
+
+---
+
+#### TASK-1553: Task Comments — CRUD + Realtime Thread UI (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1548
+**Description**: Full CRUD for `task_comments` with real-time updates via Supabase Realtime. Comment thread UI inside the task detail panel, supporting add, edit, and delete operations.
+
+---
+
+#### TASK-1554: Activity Feed — workspace_activity Log + UI (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Description**: Log writes to `workspace_activity` for events: `task_created`, `task_completed`, `comment_added`, `member_joined`. Sidebar panel or dedicated view with activity feed UI showing recent workspace events.
+
+---
+
+#### TASK-1555: Partner-Friendly UX Polish (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1545, TASK-1551
+**Description**: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.
+
+---
+
+#### TASK-1556: Hebrew Translations for Workspace Features (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1545
+**Description**: Add `workspaces` namespace to `he.json` covering all new UI strings: workspace, members, invite, comments, activity feed, and all related actions and states.
+
+---
+
+#### TASK-1557: Member Management UI (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Description**: Member management UI with remove member, transfer ownership, and role display (owner / admin / member) actions accessible from workspace settings.
+
+---
+
+#### TASK-1558: Empty States for Workspace Flows (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED | **Depends On**: TASK-1545
+**Description**: New workspace welcome screen, "no tasks yet", "no members yet", and pending invite states — covering all empty-state scenarios introduced by the workspace collaboration feature.
+
+---
+
+#### TASK-1559: Member Presence via Supabase Realtime Presence (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED | **Depends On**: TASK-1548
+**Description**: Show who's online in a workspace using Supabase Realtime Presence API. Nice-to-have v2 feature — displays online indicators for workspace members in the sidebar or member list.
 
 ---
 

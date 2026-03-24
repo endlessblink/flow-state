@@ -69,7 +69,7 @@ defineExpose({
   box-shadow:
     var(--shadow-2xl),
     inset -1px 0 0 var(--glass-bg-heavy);
-  contain: layout style;
+  contain: style; /* BUG-1696: WebKitGTK fix - removed 'layout' containment which collapses flex children to 24px in wry 0.54.1 */
   overflow: hidden;
 }
 

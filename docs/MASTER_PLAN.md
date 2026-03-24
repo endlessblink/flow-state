@@ -4479,7 +4479,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1681 | Fix Inbox panel shows no content — inbox collapsed by default, badge/content not accessible. | P2 | 📋 PLANNED |
 | BUG-1682 | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors. | P0 | 📋 PLANNED |
 | ~~BUG-1691~~ | Fix tasks turning untitled (empty title saved) | P0 | ✅ **DONE** |
-| BUG-1696 | Tauri: Project names clipped to 24px in sidebar (WebKitGTK confirmed) | P1 | 📋 PLANNED |
+| ~~BUG-1696~~ | Tauri: Project names clipped to 24px in sidebar (WebKitGTK confirmed) | P1 | ✅ **DONE** |
 | BUG-1697 | Tauri: overflow:clip hides scrollable content in WebKitGTK | P1 | 📋 PLANNED |
 | BUG-1698 | Tauri: Views render blank pages when navigating (WebDriver test confirmed) | P1 | 📋 PLANNED |
 | BUG-1699 | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | 📋 PLANNED |
@@ -4534,12 +4534,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 > **Context**: E2E suite was completely broken (Vitest/Playwright collision). After fixing `playwright.config.ts`, 126 failures surfaced. WebDriver tests against real WebKitGTK confirmed additional Tauri-specific bugs.
 > **Priority**: P1-P2 | **Status**: 📋 PLANNED
 
-#### BUG-1696: Tauri Project Names Clipped to 24px (📋 PLANNED)
+#### ~~BUG-1696~~: Tauri Project Names Clipped to 24px (✅ DONE)
 - **Priority**: P1 | **Confirmed by**: WebDriver test against real WebKitGTK (wry 0.54.1)
 - **Symptom**: Project items in sidebar render at 24px width instead of >100px. Only icons visible, names clipped.
 - **Related**: BUG-1672 (broader sidebar clipping). This is a specific sub-issue — project name elements are narrower than the sidebar itself.
 - **Evidence**: WebDriver test `sidebar project names have readable width` — Expected >100, Received 24
-- **Files**: `src/layouts/AppSidebar.vue`, sidebar project item CSS
+- **Fix**: Removed `contain: layout` from `.sidebar` (breaks flex sizing in WebKitGTK wry 0.54.1). Added defensive `width: 100%` to BaseNavItem and projects-list. CSS-only, 3 files.
+- **Files**: `src/layouts/AppSidebar.vue`, `src/components/base/BaseNavItem.vue`, `src/components/sidebar/SidebarProjectsSection.vue`
 
 #### BUG-1697: overflow:clip Hides Content in WebKitGTK (📋 PLANNED)
 - **Priority**: P1 | **Confirmed by**: WebDriver test + Vitest css-syntax safety test

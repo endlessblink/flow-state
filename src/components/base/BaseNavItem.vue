@@ -296,6 +296,8 @@ const handleDrop = (event: DragEvent) => {
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-lg);
+  width: 100%; /* BUG-1696: WebKitGTK fix - ensure item fills sidebar width */
+  box-sizing: border-box; /* BUG-1696: WebKitGTK fix - prevent padding from overflowing 100% width */
   cursor: pointer;
   /* Separate transitions to prevent white flash */
   transition:

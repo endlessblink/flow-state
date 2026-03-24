@@ -437,6 +437,7 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   max-height: calc(100vh - 500px);
   padding-inline-end: var(--space-2);
+  width: 100%; /* BUG-1696: WebKitGTK fix - ensure list fills sidebar width so project names are visible */
 }
 
 /* Project Selection Bar */

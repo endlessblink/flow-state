@@ -10,7 +10,7 @@
         <h1 class="title-main">
           {{ pageTitleInfo.main }}
         </h1>
-        <span v-if="pageTitleInfo.filter" class="title-filter">
+        <span v-if="pageTitleInfo.filter" class="title-filter" dir="auto">
           <template v-if="typeof pageTitleInfo.filter === 'object' && pageTitleInfo.filter.type === 'project'">
             <!-- Emoji Indicator -->
             <ProjectEmojiIcon

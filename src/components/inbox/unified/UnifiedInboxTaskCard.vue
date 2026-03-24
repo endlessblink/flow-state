@@ -12,6 +12,8 @@
     @dblclick="$emit('taskDblclick')"
     @contextmenu.prevent="$emit('taskContextmenu', $event)"
     @keydown="$emit('taskKeydown', $event)"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
   >
     <!-- ADHD-friendly: Priority shown via left border on .task-card, not this stripe -->
     <div class="priority-stripe" :class="`priority-${task.priority || 'none'}`" />
@@ -80,35 +82,35 @@
       </div>
     </div>
 
-    <!-- Quick Actions (hover) — BUG-1709: visible labels for WebKitGTK (no native tooltips) -->
-    <div class="task-actions">
+    <!-- Quick Actions (hover) — BUG-1709: JS hover for WebKitGTK reliability -->
+    <div v-show="isHovered" class="task-actions">
       <button
         class="action-btn send-to-canvas-btn"
+        title="Send to Canvas"
         @click.stop="$emit('sendToCanvas')"
       >
-        <Layout :size="12" />
-        <span class="action-label">Canvas</span>
+        <Layout :size="14" />
       </button>
       <button
         class="action-btn"
+        title="Start Timer"
         @click.stop="$emit('startTimer')"
       >
-        <Play :size="12" />
-        <span class="action-label">Timer</span>
+        <Play :size="14" />
       </button>
       <button
         class="action-btn"
+        title="Edit"
         @click.stop="$emit('taskDblclick')"
       >
-        <Edit2 :size="12" />
-        <span class="action-label">Edit</span>
+        <Edit2 :size="14" />
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Timer, Calendar, Clock, Play, Edit2, CheckCircle2, Layout } from 'lucide-vue-next'
 import type { Task } from '@/types/tasks'
 import { truncateUrlsInText } from '@/utils/urlTruncate'
@@ -138,6 +140,9 @@ defineEmits<{
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+
+// BUG-1709: JS-based hover for WebKitGTK (CSS :hover unreliable for show/hide)
+const isHovered = ref(false)
 
 // BUG-1191: Ensure date timer is running for reactive overdue detection
 ensureDateTimer()
@@ -209,7 +214,7 @@ const dueStatus = computed(() => {
 </script>
 
 <style scoped>
-/* ADHD-friendly: Calm task card — BUG-1709: more breathing room */
+/* ADHD-friendly: Calm task card — BUG-1709: breathing room */
 .task-card {
   position: relative;
   background: var(--glass-bg-soft, rgba(255, 255, 255, 0.05));
@@ -217,7 +222,7 @@ const dueStatus = computed(() => {
   border-radius: var(--radius-md);
   /* ADHD-friendly: Priority shown via inline-start border only */
   border-inline-start: 4px solid transparent;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   cursor: grab;
   user-select: none;
   transition: all var(--duration-fast) var(--ease-out);
@@ -272,7 +277,8 @@ const dueStatus = computed(() => {
 
 .task-content--inbox {
   padding-inline-start: var(--space-2);
-  padding-inline-end: var(--space-8); /* BUG-1709: Reserve space for action icons */
+  padding-inline-end: var(--space-2);
+  padding-bottom: var(--space-2); /* BUG-1709: space for action tray */
   width: 100%;
   box-sizing: border-box;
 }
@@ -280,7 +286,7 @@ const dueStatus = computed(() => {
 .task-title {
   font-size: var(--text-sm);
   color: var(--text-primary);
-  margin-bottom: var(--space-2_5);
+  margin-bottom: var(--space-3);
   line-height: 1.5;
   max-width: 100%;
 }
@@ -321,46 +327,32 @@ const dueStatus = computed(() => {
 .due-badge-today { color: var(--text-secondary); font-weight: var(--font-medium); }
 .due-badge-tomorrow { color: var(--text-muted); }
 
-/* Quick Actions — BUG-1709: use visibility instead of opacity for WebKitGTK */
+/* Quick Actions — BUG-1709: visibility controlled by v-show (JS hover) */
 .task-actions {
   position: absolute;
   inset-inline-end: var(--space-2);
   bottom: var(--space-2);
   display: flex;
-  gap: var(--space-2);
-  visibility: hidden;
-  pointer-events: none;
+  gap: var(--space-1);
   background: var(--surface-0);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-1_5);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--glass-border);
-}
-
-.task-card:hover .task-actions {
-  visibility: visible;
-  pointer-events: auto;
 }
 
 .action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  height: 24px;
-  padding: 0 var(--space-1_5);
+  width: 28px;
+  height: 28px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-normal);
-  white-space: nowrap;
-}
-
-.action-label {
-  font-size: var(--text-xs);
-  line-height: 1;
 }
 
 .action-btn:hover {

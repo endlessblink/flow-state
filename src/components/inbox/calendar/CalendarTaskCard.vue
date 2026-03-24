@@ -10,6 +10,8 @@
     @dblclick="$emit('dblclick')"
     @contextmenu.prevent="$emit('contextmenu', $event)"
     @keydown="$emit('keydown', $event)"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
   >
     <!-- Priority Stripe (top) -->
     <div class="priority-stripe" :class="`priority-${task.priority}`" />
@@ -93,28 +95,28 @@
       </div>
     </div>
 
-    <!-- Quick Actions (hover) — BUG-1709: visible labels for WebKitGTK -->
-    <div class="task-actions">
+    <!-- Quick Actions (hover) — BUG-1709: JS hover for WebKitGTK -->
+    <div v-show="isHovered" class="task-actions">
       <button
         class="action-btn"
+        title="Start Timer"
         @click.stop="$emit('startTimer')"
       >
-        <Play :size="12" />
-        <span class="action-label">Timer</span>
+        <Play :size="14" />
       </button>
       <button
         class="action-btn"
+        title="Edit"
         @click.stop="$emit('edit')"
       >
-        <Edit2 :size="12" />
-        <span class="action-label">Edit</span>
+        <Edit2 :size="14" />
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { type Task } from '@/stores/tasks'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { Play, Edit2, Timer, Calendar, Clock, ListChecks } from 'lucide-vue-next'
@@ -142,6 +144,9 @@ defineEmits<{
 }>()
 
 const taskStore = useTaskStore()
+
+// BUG-1709: JS-based hover for WebKitGTK
+const isHovered = ref(false)
 
 // BUG-1191: Ensure date timer is running for reactive overdue detection
 ensureDateTimer()
@@ -195,10 +200,10 @@ const formatDueDateLabel = (dueDate: string) => {
 </script>
 
 <style scoped>
-/* BUG-1709: more breathing room */
+/* BUG-1709: breathing room */
 .task-card {
   position: relative;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-inline-start: 4px solid transparent;
@@ -279,46 +284,32 @@ const formatDueDateLabel = (dueDate: string) => {
   border-color: var(--success-border);
 }
 
-/* BUG-1709: use visibility instead of opacity for WebKitGTK */
+/* BUG-1709: visibility controlled by v-show (JS hover) */
 .task-actions {
   position: absolute;
   top: var(--space-2);
   inset-inline-end: var(--space-2);
   display: flex;
-  gap: var(--space-2);
-  visibility: hidden;
-  pointer-events: none;
+  gap: var(--space-1);
   background: var(--surface-0);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-1_5);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--glass-border);
 }
 
-.task-card:hover .task-actions {
-  visibility: visible;
-  pointer-events: auto;
-}
-
 .action-btn {
-  background: var(--glass-bg-heavy);
+  background: transparent;
   border: none;
   color: var(--text-secondary);
-  height: 20px;
-  padding: 0 var(--space-1_5);
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-fast);
-  white-space: nowrap;
-}
-
-.action-label {
-  font-size: var(--text-xs);
-  line-height: 1;
 }
 
 .action-btn:hover {

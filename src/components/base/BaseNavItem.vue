@@ -54,7 +54,7 @@
       tooltip-position="right"
       class="nav-label-tooltip"
     >
-      <span class="nav-label">
+      <span class="nav-label" dir="auto">
         <slot />
       </span>
       <template #tooltip-content>

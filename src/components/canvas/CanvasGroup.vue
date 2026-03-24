@@ -15,7 +15,7 @@
     <div class="section-header" :style="headerStyle">
       <div class="section-title">
         <div class="section-color-indicator" :style="{ backgroundColor: section.color, color: section.color }" />
-        <span class="section-name">{{ section.name }}</span>
+        <span class="section-name" dir="auto">{{ section.name }}</span>
 
         <!-- Power Mode Indicator -->
         <div

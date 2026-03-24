@@ -93,21 +93,21 @@
       </div>
     </div>
 
-    <!-- Quick Actions (hover) -->
+    <!-- Quick Actions (hover) — BUG-1709: visible labels for WebKitGTK -->
     <div class="task-actions">
       <button
         class="action-btn"
-        :title="`Start timer for ${task.title}`"
         @click.stop="$emit('startTimer')"
       >
         <Play :size="12" />
+        <span class="action-label">Timer</span>
       </button>
       <button
         class="action-btn"
-        :title="`Edit ${task.title}`"
         @click.stop="$emit('edit')"
       >
         <Edit2 :size="12" />
+        <span class="action-label">Edit</span>
       </button>
     </div>
   </div>
@@ -195,9 +195,10 @@ const formatDueDateLabel = (dueDate: string) => {
 </script>
 
 <style scoped>
+/* BUG-1709: more breathing room */
 .task-card {
   position: relative;
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-inline-start: 4px solid transparent;
@@ -296,18 +297,25 @@ const formatDueDateLabel = (dueDate: string) => {
   background: var(--glass-bg-heavy);
   border: none;
   color: var(--text-secondary);
-  width: 20px;
   height: 20px;
+  padding: 0 var(--space-1_5);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-1);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-fast);
+  white-space: nowrap;
+}
+
+.action-label {
+  font-size: var(--text-xs);
+  line-height: 1;
 }
 
 .action-btn:hover {
-  background: var(--brand-primary-subtle); /* BUG-1709: use design token, not hardcoded rgba */
+  background: var(--brand-primary-subtle);
   color: var(--brand-primary);
 }
 

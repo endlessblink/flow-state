@@ -550,6 +550,7 @@ export function useTaskPersistence(
         }
         projectStore.setActiveProject(state.activeProjectId)
         activeSmartView.value = state.activeSmartView
+        if (state.activeStatusFilter === 'all') state.activeStatusFilter = null
         activeStatusFilter.value = state.activeStatusFilter
         // TASK-1215: Restore duration filter
         activeDurationFilter.value = state.activeDurationFilter ?? null

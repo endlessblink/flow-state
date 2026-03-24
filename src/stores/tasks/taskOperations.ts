@@ -1461,7 +1461,7 @@ export function useTaskOperations(
     }
 
     const setActiveStatusFilter = (status: string | null) => {
-        activeStatusFilter.value = status
+        activeStatusFilter.value = (status === 'all' || status === null) ? null : status
         if (status) activeDurationFilter.value = null
         persistFilters()
     }

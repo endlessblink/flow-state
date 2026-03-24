@@ -209,7 +209,7 @@ const dueStatus = computed(() => {
 </script>
 
 <style scoped>
-/* ADHD-friendly: Calm, compact task card */
+/* ADHD-friendly: Calm task card — BUG-1709: more breathing room */
 .task-card {
   position: relative;
   background: var(--glass-bg-soft, rgba(255, 255, 255, 0.05));
@@ -217,7 +217,7 @@ const dueStatus = computed(() => {
   border-radius: var(--radius-md);
   /* ADHD-friendly: Priority shown via inline-start border only */
   border-inline-start: 4px solid transparent;
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   cursor: grab;
   user-select: none;
   transition: all var(--duration-fast) var(--ease-out);
@@ -280,8 +280,8 @@ const dueStatus = computed(() => {
 .task-title {
   font-size: var(--text-sm);
   color: var(--text-primary);
-  margin-bottom: var(--space-2);
-  line-height: 1.4;
+  margin-bottom: var(--space-2_5);
+  line-height: 1.5;
   max-width: 100%;
 }
 
@@ -346,14 +346,21 @@ const dueStatus = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  gap: var(--space-1);
   height: 24px;
+  padding: 0 var(--space-1_5);
   border: none;
   background: transparent;
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-normal);
+  white-space: nowrap;
+}
+
+.action-label {
+  font-size: var(--text-xs);
+  line-height: 1;
 }
 
 .action-btn:hover {

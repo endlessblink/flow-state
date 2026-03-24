@@ -115,7 +115,7 @@ export const useTaskFiltering = (
         }
 
         // 3. Status
-        if (activeStatusFilter.value) {
+        if (activeStatusFilter.value && activeStatusFilter.value !== 'all') {
             filtered = filtered.filter(task => task.status === activeStatusFilter.value)
         }
 

@@ -211,7 +211,11 @@
     "test:db": "npx supabase test db",
     "db:stop": "bash scripts/db-stop.sh",
     "test:tauri": "npx wdio tests/webdriver/wdio.conf.ts",
-    "test:tauri:start": "tauri-driver &"
+    "test:tauri:start": "tauri-driver &",
+    "test:visual:web": "npx playwright test tests/visual/web/ --project=chromium",
+    "test:visual:tauri": "python3 scripts/webkit-test.py",
+    "test:visual:compare": "node tests/visual/compare.mjs",
+    "test:visual": "npm run test:visual:web && npm run test:visual:tauri && npm run test:visual:compare"
   },
   "keywords": [
     "productivity",
@@ -325,6 +329,8 @@
     "happy-dom": "^20.1.0",
     "jsdom": "^27.4.0",
     "nodemon": "^3.1.11",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
     "postcss": "^8.4.32",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",

@@ -281,7 +281,7 @@ const formatDueDateLabel = (dueDate: string) => {
 .task-actions {
   position: absolute;
   top: var(--space-2);
-  right: var(--space-2);
+  inset-inline-end: var(--space-2); /* BUG-1709: logical property for RTL */
   display: flex;
   gap: var(--space-1);
   opacity: 0;
@@ -307,7 +307,7 @@ const formatDueDateLabel = (dueDate: string) => {
 }
 
 .action-btn:hover {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-primary-subtle); /* BUG-1709: use design token, not hardcoded rgba */
   color: var(--brand-primary);
 }
 
@@ -317,10 +317,17 @@ const formatDueDateLabel = (dueDate: string) => {
   border-style: dashed;
 }
 
+/* BUG-1709: Reserve space for action icons to prevent RTL text overlap */
+.task-content--calendar-inbox {
+  padding-inline-end: var(--space-8);
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .timer-indicator {
   position: absolute;
   top: var(--space-2);
-  right: var(--space-2);
+  inset-inline-end: var(--space-2); /* BUG-1709: logical property for RTL */
   color: var(--brand-primary);
   animation: pulse 2s infinite;
 }

@@ -23,7 +23,7 @@
 
     <!-- Done Indicator -->
     <div v-if="isDone" class="done-indicator" title="Completed">
-      <CheckCircle2 :size="14" />
+      <CheckCircle2 :size="16" />
     </div>
 
     <!-- Task Content -->
@@ -80,28 +80,28 @@
       </div>
     </div>
 
-    <!-- Quick Actions (hover) -->
+    <!-- Quick Actions (hover) — BUG-1709: visible labels for WebKitGTK (no native tooltips) -->
     <div class="task-actions">
       <button
         class="action-btn send-to-canvas-btn"
-        title="Send to Canvas"
         @click.stop="$emit('sendToCanvas')"
       >
         <Layout :size="12" />
+        <span class="action-label">Canvas</span>
       </button>
       <button
         class="action-btn"
-        :title="`Start timer for ${task.title}`"
         @click.stop="$emit('startTimer')"
       >
         <Play :size="12" />
+        <span class="action-label">Timer</span>
       </button>
       <button
         class="action-btn"
-        :title="`Edit ${task.title}`"
         @click.stop="$emit('taskDblclick')"
       >
         <Edit2 :size="12" />
+        <span class="action-label">Edit</span>
       </button>
     </div>
   </div>
@@ -265,13 +265,14 @@ const dueStatus = computed(() => {
 .timer-indicator {
   position: absolute;
   top: var(--space-2);
-  right: var(--space-2);
+  inset-inline-end: var(--space-2); /* BUG-1709: logical property for RTL */
   color: var(--brand-primary);
   animation: pulse 2s infinite;
 }
 
 .task-content--inbox {
   padding-inline-start: var(--space-2);
+  padding-inline-end: var(--space-8); /* BUG-1709: Reserve space for action icons */
   width: 100%;
   box-sizing: border-box;
 }
@@ -323,7 +324,7 @@ const dueStatus = computed(() => {
 /* Quick Actions */
 .task-actions {
   position: absolute;
-  right: var(--space-2);
+  inset-inline-end: var(--space-2); /* BUG-1709: logical property for RTL */
   bottom: var(--space-2);
   display: flex;
   gap: var(--space-1);
@@ -375,11 +376,16 @@ const dueStatus = computed(() => {
 .done-indicator {
   position: absolute;
   top: var(--space-2);
-  left: var(--space-2);
+  inset-inline-start: var(--space-2); /* BUG-1709: logical property for RTL */
   color: var(--color-success);
   display: flex;
   align-items: center;
   justify-content: center;
+  /* BUG-1709: Add background circle for WebKitGTK clarity */
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--success-bg-subtle);
 }
 
 .task-card.is-done .task-content--inbox {
@@ -508,7 +514,7 @@ const dueStatus = computed(() => {
   position: absolute;
   /* Sit just above the pill */
   bottom: calc(100% + var(--space-1));
-  left: 50%;
+  inset-inline-start: 50%; /* BUG-1709: logical property for RTL */
   transform: translateX(-50%);
   right: unset;
 

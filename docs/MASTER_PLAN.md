@@ -119,9 +119,9 @@
 
 ---
 
-### BUG-1562: taskPersistence smart-merge enqueues raw camelCase payloads to sync queue (🔄 IN PROGRESS)
+### ~~BUG-1562~~: taskPersistence smart-merge enqueues raw camelCase payloads to sync queue (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-17)
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-24)
 
 **Problem**: `taskPersistence.ts:416-420` enqueues raw app-side task objects (with `_soft_deleted`, `projectId`, `isInInbox` etc.) directly to the sync queue, bypassing `toSupabaseTask()`. When the queue processes these, Supabase returns 400 because camelCase fields don't exist as DB columns.
 
@@ -133,9 +133,9 @@
 
 ---
 
-### BUG-1563: Workspace switch shows personal tasks in shared workspace (🔄 IN PROGRESS)
+### ~~BUG-1563~~: Workspace switch shows personal tasks in shared workspace (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-17)
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-24)
 
 **Problem**: When switching to a shared workspace, the empty-overwrite protection in `taskPersistence.ts` and `canvas.ts` blocks loading 0 tasks (legitimate for an empty workspace), keeping 216 personal tasks visible.
 
@@ -171,9 +171,9 @@
 
 ---
 
-### BUG-1566: One-time IndexedDB cleanup needed after camelCase payload contamination (🔄 IN PROGRESS)
+### ~~BUG-1566~~: One-time IndexedDB cleanup needed after camelCase payload contamination (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-03-17)
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-24)
 
 **Problem**: Stale sync queue ops with camelCase payloads accumulated in IndexedDB before BUG-1562 fix. These ops retry infinitely (due to BUG-1561), causing rate limit cascades that take down the entire app on every page load.
 
@@ -4525,7 +4525,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~BUG-1699~~ | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | ✅ **DONE** |
 | ~~BUG-1700~~ | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | ✅ **DONE** |
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
-| BUG-1709 | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text | P2 | 📋 PLANNED |
+| ~~BUG-1709~~ | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text | P2 | ✅ **DONE** |
 | ~~BUG-1710~~ | ✅ Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined) | P1 | ✅ **DONE** |
 | BUG-1711 | Tauri: Task completion celebration overlay is see-through (should be opaque) | P2 | 📋 PLANNED |
 | TASK-1712 | Tauri visual parity: task cards/UI degrade vs web app — need automated WebKitGTK visual regression | P1 | 📋 PLANNED |
@@ -4646,11 +4646,11 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Depends on**: Working `cargo tauri dev --no-dev-server-wait` workflow
 - **Files**: `scripts/webkit-test.py`, `scripts/deploy-tauri-update.sh`, `tests/webdriver/`
 
-#### BUG-1709: Tauri Inbox Task Cards — Icons Unclear + Text Overlap (📋 PLANNED)
+#### ~~BUG-1709~~: Tauri Inbox Task Cards — Icons Unclear + Text Overlap (✅ DONE)
 - **Priority**: P2 | **Confirmed by**: User screenshot in Tauri production app
-- **Issue 1**: Left done-toggle icons appear as unclear blobs instead of recognizable checkmark circles
-- **Issue 2**: Right-side action icons (project, timer, edit) overlap Hebrew RTL task title text
-- **Files**: `src/components/inbox/`, `src/components/tasks/`
+- **Issue 1**: ~~Left done-toggle icons appear as unclear blobs instead of recognizable checkmark circles~~ — Fixed: size 14→16, added `background: var(--success-bg-subtle)` + 20px circle behind icon in `.done-indicator`
+- **Issue 2**: ~~Right-side action icons overlap Hebrew RTL task title text~~ — Fixed: all physical `right`/`left` properties on `.task-actions`, `.timer-indicator`, `.done-indicator` replaced with `inset-inline-end`/`inset-inline-start`; added `padding-inline-end: var(--space-8)` to task content in both cards
+- **Files**: `src/components/inbox/unified/UnifiedInboxTaskCard.vue`, `src/components/inbox/calendar/CalendarTaskCard.vue`
 
 #### ~~BUG-1702~~: WebDriver Test Navigation Uses Wrong URLs (✅ DONE)
 - **Priority**: P2 | **Type**: Test infrastructure

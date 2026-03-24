@@ -124,8 +124,9 @@ export default defineConfig(({ mode }) => ({
     sourcemap: false,
     rollupOptions: {
       external: [
-        'fsevents'
-        // BUG-336: Removed PWA externals - VitePWA({ disable: true }) now provides proper stubs
+        'fsevents',
+        // TASK-1721: Tauri packages removed but dead-code imports remain behind isTauri() guards
+        /^@tauri-apps\//,
       ],
       output: {
         format: 'es', // Workers MUST be 'es' format

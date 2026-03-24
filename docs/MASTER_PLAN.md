@@ -79,9 +79,9 @@
 
 ---
 
-### TASK-1721: Electron Phase 5 — Cleanup & CI/CD (📋 PLANNED)
+### ~~TASK-1721~~: Electron Phase 5 — Cleanup & CI/CD (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED | **Depends on**: TASK-1720
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-25)
 
 **Scope**: Clean up Tauri remnants and set up CI/CD for Electron.
 

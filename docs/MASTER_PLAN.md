@@ -4481,7 +4481,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~BUG-1691~~ | Fix tasks turning untitled (empty title saved) | P0 | ✅ **DONE** |
 | ~~BUG-1696~~ | Tauri: Project names clipped to 24px in sidebar (WebKitGTK confirmed) | P1 | ✅ **DONE** |
 | ~~BUG-1697~~ | Tauri: overflow:clip hides scrollable content in WebKitGTK | P1 | ✅ **DONE** |
-| BUG-1698 | Tauri: Views render blank pages when navigating (WebDriver test confirmed) | P1 | 📋 PLANNED |
+| ~~BUG-1698~~ | Tauri: Views render blank pages when navigating (WebDriver test confirmed) | P1 | ✅ **DONE** |
 | BUG-1699 | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | 📋 PLANNED |
 | BUG-1700 | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | 📋 PLANNED |
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
@@ -4548,7 +4548,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: Replace `overflow: clip` with `overflow: hidden` per SOP-060. Also fix 2 unannotated usages in MobileQuickSortView.vue (BUG-1705).
 - **Reference**: `docs/sop/SOP-060-webkitgtk-gotchas.md`
 
-#### BUG-1698: Tauri Views Render Blank on Navigation (📋 PLANNED)
+#### ~~BUG-1698~~: Tauri Views Render Blank on Navigation (✅ DONE)
 - **Priority**: P1 | **Confirmed by**: WebDriver test + screenshot showing "Could not connect to localhost"
 - **Root Cause**: Tests navigate to `http://localhost:1420/` but the debug build embeds the frontend — no dev server running. App loads initially (first test page works) but subsequent `browser.url()` calls fail.
 - **Fix**: WebDriver tests should navigate using relative paths or detect the embedded base URL from the initial page.

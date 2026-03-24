@@ -48,6 +48,15 @@ async function waitForApp(browser: WebdriverIO.Browser) {
   await browser.pause(3000) // Allow Supabase store hydration
 }
 
+/* BUG-1698 */
+async function getBaseUrl(browser: WebdriverIO.Browser): Promise<string> {
+  const currentUrl = await browser.getUrl()
+  // Extract base URL (everything before the hash)
+  // e.g., "tauri://localhost/" or "http://localhost:1420/"
+  const hashIndex = currentUrl.indexOf('#')
+  return hashIndex >= 0 ? currentUrl.substring(0, hashIndex) : currentUrl
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // A. SIDEBAR CSS GRID BUG (BUG-1672)
 // The sidebar renders at ~48px (icon-only) in WebKitGTK instead of 240-340px
@@ -375,9 +384,10 @@ describe('WebKitGTK CSS Compatibility', () => {
 
     const routes = ['#/', '#/board', '#/tasks', '#/calendar']
     const results: Record<string, { hasContent: boolean; screenshot: string }> = {}
+    const baseUrl = await getBaseUrl(browser)
 
     for (const route of routes) {
-      await browser.url(`http://localhost:1420/${route}`)
+      await browser.url(`${baseUrl}${route}`)
       await browser.pause(3000)
 
       const hasContent = await browser.execute(() => {
@@ -413,8 +423,10 @@ describe('Visual Regression Baselines', () => {
       { route: '#/quick-sort', name: 'quicksort' },
     ]
 
+    const baseUrl = await getBaseUrl(browser)
+
     for (const view of views) {
-      await browser.url(`http://localhost:1420/${view.route}`)
+      await browser.url(`${baseUrl}${view.route}`)
       await browser.pause(3000)
 
       const path = await saveScreenshot(browser, `baseline-${view.name}`)

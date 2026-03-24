@@ -8,6 +8,16 @@
 
 ## Active Tasks
 
+### ~~BUG-1716~~: Dev Maestro parser shows "P1" as title for workspace tasks (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-24)
+
+**Problem**: Workspace tasks (TASK-1533–1559) showed priority ("P1") as title in dev-maestro kanban. Root causes: (1) parsers only matched `###` headers, not `####`; (2) table parser assumed `ID|Title|Priority` column order but workspace tables used `ID|Priority|Description`.
+
+**Fix**: Updated 3 parsers in `~/.dev-maestro/` — kanban/index.html (client-side), modules/task-engine.js (server-side): `####` header support, column-order detection, robust priority extraction. Added `####` detail sections for all 27 workspace tasks in MASTER_PLAN.md.
+
+---
+
 ### TASK-1715: Migrate Desktop App from Tauri to Electron (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Archive**: `tauri-archive-v1.3.28`

@@ -4469,7 +4469,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1671 | Fix workspace migration — `workspace_id` column missing from tasks/projects/groups, `workspace_members` table missing. Migration exists but fails due to `projects.id` type conflict (uuid vs text). Fix migration or drop FK constraint first. | P0 | 📋 PLANNED |
 | BUG-1672 | Fix sidebar clipping in Tauri — sidebar text cut off, only icons visible. CSS grid `minmax(240px, 340px)` not respected in WebKitGTK. | P1 | 📋 PLANNED |
 | BUG-1673 | Fix Catalog view empty — shows table headers but zero tasks despite data existing. Caused by workspace_id query failing. | P0 | 📋 PLANNED |
-| BUG-1674 | Fix Inbox dropdown behind sidebar — calendar dropdown z-index lower than sidebar stacking context. | P1 | 📋 PLANNED |
+| ~~BUG-1674~~ | Fix Inbox dropdown behind sidebar — calendar dropdown z-index lower than sidebar stacking context. | P1 | ✅ **DONE** |
 | BUG-1675 | Fix Canvas view empty in E2E — Vue Flow nodes don't render for test user. Workspace query errors prevent task loading. | P0 | 📋 PLANNED |
 | BUG-1676 | Fix Board view empty — kanban columns render but no task cards. Same workspace root cause. | P0 | 📋 PLANNED |
 | BUG-1677 | Fix context menu positioning — right-click menu not appearing or appearing outside viewport bounds. | P2 | 📋 PLANNED |
@@ -4506,9 +4506,10 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Root Cause**: All caused by BUG-1671 (workspace migration). Fixing the migration fixes all 4.
 - **Dependency**: BUG-1671
 
-#### BUG-1674: Inbox Dropdown Behind Sidebar (📋 PLANNED)
+#### ~~BUG-1674~~: Inbox Dropdown Behind Sidebar (✅ DONE)
 - **Priority**: P1-HIGH
-- **Root Cause**: Inbox panel's NDatePicker dropdown renders inside a stacking context trapped by sidebar z-index. Needs `teleport` or `to="body"` on the dropdown.
+- **Root Cause**: Inbox panel's NPopover dropdowns rendered inside a stacking context trapped by sidebar z-index.
+- **Fix**: Already resolved in BUG-1582 — `to="body"` added to both NPopover components in UnifiedInboxHeader.vue. No NDatePicker exists in inbox components.
 - **Files**: `src/components/inbox/unified/UnifiedInboxHeader.vue`
 
 ---

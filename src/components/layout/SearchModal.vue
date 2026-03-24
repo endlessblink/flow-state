@@ -3,12 +3,13 @@
     <div class="search-modal-content" @click.stop>
       <div class="search-header">
         <div class="search-input-wrapper">
-          <Search :size="20" class="search-icon" />
+          <Search :size="20" class="search-icon" aria-hidden="true" />
           <input dir="auto"
             ref="searchInput"
             v-model="searchQuery"
             type="text"
             placeholder="Search tasks, projects..."
+            aria-label="Search tasks and projects"
             class="search-input"
             @keydown="handleKeydown"
             @keydown.enter="selectResult"
@@ -21,12 +22,13 @@
       </div>
 
       <!-- Filter Row -->
-      <div class="filter-row">
+      <div class="filter-row" role="group" aria-label="Search filters">
         <button
           v-for="filter in filters"
           :key="filter.key"
           class="filter-pill"
           :class="{ active: activeFilters[filter.key] }"
+          :aria-pressed="activeFilters[filter.key]"
           @click="toggleFilter(filter.key)"
         >
           {{ filter.label }}
@@ -90,15 +92,15 @@
         </div>
 
         <!-- No Results -->
-        <div v-if="filteredTasks.length === 0 && filteredProjects.length === 0" class="no-results">
-          <Search :size="32" />
+        <div v-if="filteredTasks.length === 0 && filteredProjects.length === 0" class="no-results" role="status" aria-live="polite">
+          <Search :size="32" aria-hidden="true" />
           <p v-if="searchQuery.trim()">No results found for "{{ searchQuery }}"</p>
           <p v-else>No tasks match the active filters</p>
         </div>
       </div>
 
       <!-- Initial State - Minimal -->
-      <div v-else class="search-empty">
+      <div v-else class="search-empty" role="status" aria-live="polite">
         <span class="empty-hint">{{ hasActiveFilters ? 'Use filters above or type to search' : 'Type to search tasks and projects' }}</span>
       </div>
     </div>

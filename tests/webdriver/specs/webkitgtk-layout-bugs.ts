@@ -357,7 +357,8 @@ describe('WebKitGTK CSS Compatibility', () => {
     })
 
     console.log(`Body font-family: ${fontFamily}`)
-    expect(fontFamily.toLowerCase()).not.toContain('serif')
+    // BUG-1703: Use regex to avoid false positive — "sans-serif" contains "serif"
+    expect(fontFamily.toLowerCase()).not.toMatch(/(?<![a-z-])serif(?![a-z-])/)
     expect(fontFamily.toLowerCase()).not.toContain('times')
   })
 

@@ -4486,7 +4486,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1700 | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | 📋 PLANNED |
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
 | ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
-| BUG-1703 | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | 📋 PLANNED |
+| ~~BUG-1703~~ | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | ✅ **DONE** |
 | ~~BUG-1704~~ | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | ✅ **DONE** |
 | ~~BUG-1705~~ | CSS: 2 unannotated overflow:clip usages in MobileQuickSortView.vue (unit test failing) | P2 | ✅ **DONE** |
 
@@ -4584,7 +4584,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: Use the initial page URL as base, or navigate via JS (`window.location.hash = '#/board'`) instead of `browser.url()`
 - **File**: `tests/webdriver/specs/webkitgtk-layout-bugs.ts`
 
-#### BUG-1703: WebDriver Font Test False Positive (📋 PLANNED)
+#### ~~BUG-1703~~: WebDriver Font Test False Positive (✅ DONE)
 - **Priority**: P3 | **Type**: Test infrastructure
 - **Problem**: Font test checks `fontFamily.not.toContain('serif')` but actual value `"v-sans, system-ui, ... sans-serif"` matches because "sans-serif" contains "serif"
 - **Fix**: Use regex `/(?<!sans-)serif/` or check for exact "serif" as standalone font name

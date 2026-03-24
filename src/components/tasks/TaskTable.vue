@@ -416,6 +416,7 @@ const virtualContainerRef = ref<HTMLElement | null>(null)
 const rowHeight = computed(() => ROW_HEIGHTS[props.density])
 
 // TASK-1334: Group expand/collapse state
+// BUG-1673: Initialize with current groups AND ensure late-arriving groups get expanded
 const expandedTableGroups = ref<Set<string>>(new Set(props.groups.map(g => g.key)))
 
 const toggleTableGroupExpand = (groupKey: string) => {
@@ -552,6 +553,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 }
 
 // TASK-1334: Auto-expand new groups
+// BUG-1673: Use immediate:true to catch groups that arrive after mount (async data loading)
 watch(() => props.groups, (newGroups, oldGroups) => {
   const oldKeys = new Set(oldGroups?.map(g => g.key) || [])
   newGroups.forEach(group => {
@@ -559,7 +561,7 @@ watch(() => props.groups, (newGroups, oldGroups) => {
       expandedTableGroups.value.add(group.key)
     }
   })
-}, { deep: true })
+}, { deep: true, immediate: true })
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeyDown)

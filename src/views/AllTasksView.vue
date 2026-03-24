@@ -210,7 +210,17 @@ const batchEditTaskIds = ref<string[]>([])
 // Computed Tasks - Access store's computed directly (maintains full reactivity)
 const filteredTasks = computed(() => {
   let tasks = taskStore.filteredTasks
-  
+
+  // BUG-1673 DIAGNOSTIC: Log from same render tick to detect Realtime-induced desync
+  const raw = taskStore._rawTasks?.length ?? 0
+  if (raw > 0 && tasks.length === 0) {
+    console.warn(`🔴 [BUG-1673] DATA DESYNC: rawTasks=${raw} but filteredTasks=${tasks.length}`, {
+      smartView: taskStore.activeSmartView,
+      statusFilter: taskStore.activeStatusFilter,
+      durationFilter: taskStore.activeDurationFilter,
+    })
+  }
+
   // TASK-076: Apply view-specific 'Hide Done' filter locally
   if (hideDoneTasks.value) {
     tasks = tasks.filter(t => t.status !== 'done')

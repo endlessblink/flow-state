@@ -191,7 +191,16 @@ export const useTaskFiltering = (
         }
         const finalResult = Array.from(seen.values())
 
-        console.debug(`✅ [FILTER-DEBUG] Final filtered tasks: ${finalResult.length} (ActiveProject: ${activeProjectId.value || 'None'})`)
+        // BUG-1673: Always log when raw has tasks but filtered is empty (detect Realtime desync)
+        if (tasks.value.length > 0 && finalResult.length === 0) {
+            console.warn(`🔴 [BUG-1673] FILTER EMPTY: raw=${tasks.value.length} → afterBasic=${filtered.length} → final=${finalResult.length}`, {
+                smartView: activeSmartView.value,
+                statusFilter: activeStatusFilter.value,
+                durationFilter: activeDurationFilter.value,
+                projectId: activeProjectId.value,
+                selectedProjects: selectedProjectIds?.value?.size ?? 0,
+            })
+        }
         return finalResult
     })
 

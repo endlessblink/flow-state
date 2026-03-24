@@ -259,10 +259,7 @@
 .vue-flow-container {
     width: 100%;
     height: 100%;
-    overflow: clip; /* WebKitGTK-safe: canvas container, clipping only, no fixed-position children trapped */
-    /* Modern clipping with margin support */
-    overflow-clip-margin: 40px;
-    /* Allow 40px overflow before clipping (accommodates larger shadows) */
+    overflow: hidden; /* BUG-1697: SOP-060 — overflow:clip not supported in WebKitGTK, use hidden */
 
     /* No visible border - clean canvas workspace */
 }

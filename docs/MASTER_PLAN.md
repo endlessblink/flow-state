@@ -4480,7 +4480,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1682 | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors. | P0 | 📋 PLANNED |
 | ~~BUG-1691~~ | Fix tasks turning untitled (empty title saved) | P0 | ✅ **DONE** |
 | ~~BUG-1696~~ | Tauri: Project names clipped to 24px in sidebar (WebKitGTK confirmed) | P1 | ✅ **DONE** |
-| BUG-1697 | Tauri: overflow:clip hides scrollable content in WebKitGTK | P1 | 📋 PLANNED |
+| ~~BUG-1697~~ | Tauri: overflow:clip hides scrollable content in WebKitGTK | P1 | ✅ **DONE** |
 | BUG-1698 | Tauri: Views render blank pages when navigating (WebDriver test confirmed) | P1 | 📋 PLANNED |
 | BUG-1699 | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | 📋 PLANNED |
 | BUG-1700 | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | 📋 PLANNED |
@@ -4488,7 +4488,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | BUG-1702 | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | 📋 PLANNED |
 | BUG-1703 | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | 📋 PLANNED |
 | BUG-1704 | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | 📋 PLANNED |
-| BUG-1705 | CSS: 2 unannotated overflow:clip usages in MobileQuickSortView.vue (unit test failing) | P2 | 📋 PLANNED |
+| ~~BUG-1705~~ | CSS: 2 unannotated overflow:clip usages in MobileQuickSortView.vue (unit test failing) | P2 | ✅ **DONE** |
 
 #### BUG-1671: Workspace Migration Failure (📋 PLANNED)
 - **Priority**: P0-CRITICAL
@@ -4542,7 +4542,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: Removed `contain: layout` from `.sidebar` (breaks flex sizing in WebKitGTK wry 0.54.1). Added defensive `width: 100%` to BaseNavItem and projects-list. CSS-only, 3 files.
 - **Files**: `src/layouts/AppSidebar.vue`, `src/components/base/BaseNavItem.vue`, `src/components/sidebar/SidebarProjectsSection.vue`
 
-#### BUG-1697: overflow:clip Hides Content in WebKitGTK (📋 PLANNED)
+#### ~~BUG-1697~~: overflow:clip Hides Content in WebKitGTK (✅ DONE)
 - **Priority**: P1 | **Confirmed by**: WebDriver test + Vitest css-syntax safety test
 - **Symptom**: 1 element using `overflow:clip` with scrollable content — content vanishes in WebKitGTK.
 - **Fix**: Replace `overflow: clip` with `overflow: hidden` per SOP-060. Also fix 2 unannotated usages in MobileQuickSortView.vue (BUG-1705).
@@ -4595,7 +4595,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Problem**: `<button>` element nested inside another `<button>` at lines 45-51 of `SavedViewsDropdown.vue`. Invalid HTML per spec, causes click handling issues.
 - **File**: `src/components/filters/SavedViewsDropdown.vue:45-51`
 
-#### BUG-1705: Unannotated overflow:clip in MobileQuickSortView (📋 PLANNED)
+#### ~~BUG-1705~~: Unannotated overflow:clip in MobileQuickSortView (✅ DONE)
 - **Priority**: P2 | **Confirmed by**: Vitest css-syntax safety test (1 of 1812 failing)
 - **Problem**: 2 usages of `overflow: hidden` with SOP-060 comment but missing `/* WebKitGTK-safe */` annotation on lines 13 and 280
 - **Fix**: Add `/* WebKitGTK-safe */` annotation or verify the fallback is correct

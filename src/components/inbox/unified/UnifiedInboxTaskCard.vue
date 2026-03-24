@@ -289,6 +289,7 @@ const dueStatus = computed(() => {
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
+  margin-top: var(--space-3); /* BUG-1709: visual separation from title */
 }
 
 .metadata-badge {

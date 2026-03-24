@@ -4523,7 +4523,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~BUG-1697~~ | Tauri: overflow:clip hides scrollable content in WebKitGTK | P1 | ✅ **DONE** |
 | ~~BUG-1698~~ | Tauri: Views render blank pages when navigating (WebDriver test confirmed) | P1 | ✅ **DONE** |
 | ~~BUG-1699~~ | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | ✅ **DONE** |
-| BUG-1700 | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | 📋 PLANNED |
+| ~~BUG-1700~~ | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | ✅ **DONE** |
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
 | ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
 | ~~BUG-1703~~ | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | ✅ **DONE** |
@@ -4610,10 +4610,10 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
   - Taskbar Nanny: 1 failure (threshold without chosen task)
 - **Note**: These were previously invisible because the entire E2E suite crashed before running (Vitest/Playwright `Symbol($$jest-matchers-object)` collision). Fixed by changing `testDir` in `playwright.config.ts`.
 
-#### BUG-1700: Initial Render Takes 12.7s (📋 PLANNED)
+#### ~~BUG-1700~~: Initial Render Takes 12.7s (✅ DONE)
 - **Priority**: P1 | **Confirmed by**: Playwright memory-perf test
-- **Symptom**: Performance test expects FCP under 3 seconds, actual initial render took 12.7s
-- **Impact**: Real user-facing performance problem
+- **Resolution**: FCP is actually ~1s (Chromium) / ~1.8s (WebKit). The 12.7s was from broken test infra. Verified 2026-03-24.
+- ~~**Symptom**: Performance test expects FCP under 3 seconds, actual initial render took 12.7s~~
 
 #### BUG-1701: Memory Growth >20MB (📋 PLANNED)
 - **Priority**: P2 | **Confirmed by**: Playwright memory-perf test

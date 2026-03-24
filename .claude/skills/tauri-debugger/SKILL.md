@@ -181,7 +181,99 @@ async fn save_file(app: AppHandle) -> Option<PathBuf> {
 | `tauri-plugin-dialog` (Rust) | 2.6 | xdg-portal feature |
 | `zenity` (Linux) | any | Fallback dialog renderer |
 
+## WebKitGTK Testing Workflow (CRITICAL — read before debugging)
+
+### The Problem with Blind Deploys
+WebKitGTK bugs only appear in Tauri — NOT in Chrome/Firefox/Safari. Deploying fixes without testing in WebKitGTK leads to wasted build cycles. Use these testing methods:
+
+### Method 1: Python WebKitGTK 4.1 Wrapper (Fastest for CSS)
+Uses the **exact same engine** as Tauri's wry (libwebkit2gtk-4.1). Injects `.tauri-app` class for CSS parity.
+
+```bash
+# Start Vite on port 6366
+npx vite --port 6366 &
+
+# Open WebKitGTK 4.1 window with Tauri CSS parity
+python3 scripts/webkit-dev.py
+```
+
+- CSS changes auto-reload via HMR — no Rust rebuild
+- Right-click → Inspect Element for DevTools
+- **Limitation:** Cannot reproduce CSP issues or `tauri://` protocol bugs (uses `http://localhost`)
+
+### Method 2: cargo tauri dev (For Tauri-specific bugs)
+```bash
+# Terminal 1: Start Vite manually
+TAURI_DEV=true npm run dev
+
+# Terminal 2: Run Tauri (skip beforeDevCommand)
+cargo tauri dev --no-dev-server-wait
+```
+
+### Method 3: Epiphany (GNOME Web) — WRONG ENGINE
+Epiphany uses WebKitGTK **6.0** (GTK4), Tauri uses WebKitGTK **4.1** (GTK3). Different rendering behavior. DO NOT rely on Epiphany for Tauri bug reproduction.
+
+### When Each Method Works
+
+| Issue Type | Python Wrapper | cargo tauri dev | Production Build |
+|-----------|:-:|:-:|:-:|
+| CSS layout/clipping | ✅ | ✅ | ✅ |
+| CSS with `.tauri-app` overrides | ✅ (injected) | ✅ | ✅ |
+| CSP blocking styles | ❌ | ❌ (no CSP in dev) | ✅ only |
+| `tauri://` protocol issues | ❌ | ❌ | ✅ only |
+| NPopover/dropdown visibility | ✅ | ✅ | may differ (CSP) |
+
+### Key Insight: Dev vs Production Differences
+- **Dev mode** (`cargo tauri dev`): Loads from `http://localhost:5546` — no CSP nonce injection
+- **Production build** (`cargo tauri build`): Loads from `tauri://localhost/` — CSP nonces added to all `<style>` tags at compile time
+- Runtime-injected `<style>` tags (from CSS-in-JS like Naive UI's css-render) get **silently blocked** in production
+
+## CSP + CSS-in-JS (Naive UI) — CRITICAL
+
+### The Problem
+Naive UI uses `css-render` which injects `<style>` tags at runtime via `document.head.appendChild()`. In Tauri production builds, the CSP nonce system blocks these runtime-injected styles because they lack the compile-time nonce. This makes components like NPopover, NDropdown, NSelect **invisible** (DOM exists but has zero styling).
+
+### The Fix
+```json
+// src-tauri/tauri.conf.json → app.security
+{
+  "dangerousDisableAssetCspModification": ["style-src"],
+  "csp": {
+    "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+    ...
+  }
+}
+```
+
+`dangerousDisableAssetCspModification: ["style-src"]` tells Tauri NOT to add nonces to `style-src`, so `'unsafe-inline'` actually works for css-render's runtime style injection.
+
+**Reference:** [Tauri Discussion #8578](https://github.com/tauri-apps/tauri/discussions/8578)
+
+### Diagnosing CSP Issues
+Build with devtools enabled to see CSP violation errors:
+```bash
+cargo tauri build --debug
+# Then right-click → Inspect → Console
+# Look for: "Refused to apply inline style because it violates..."
+```
+
+### NPopover Tips for Tauri
+- `raw` prop is fine — strips Naive UI wrapper, uses custom styling
+- `to="body"` teleport works correctly with CSP fix
+- If dropdown appears with double shadow: check if `raw` is missing (Naive UI wrapper adds its own background/shadow)
+
+## WebKitGTK CSS Gotchas (confirmed bugs)
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Sidebar items 24px wide | `contain: layout` on parent | Remove `layout` from `contain` |
+| `overflow: clip` hides content | Not supported in WebKitGTK | Use `overflow: hidden` + `/* WebKitGTK-safe */` |
+| `display: inline-flex` collapses in flex chains | WebKitGTK sizes to intrinsic content | Use `display: flex; width: 100%` |
+| Fonts show as "serif" | False positive in test — "sans-serif" contains "serif" | Use regex `/(?<![a-z-])serif/` |
+| Nested `<button>` breaks clicks | Invalid HTML per spec | Use `<span role="button" tabindex="0">` |
+
 ## Related Skills
 
 - `supabase-debugger` - For Supabase connection issues in Tauri
 - `dev-debugging` - General Vue/Pinia debugging
+- `tauri` - Build, sign, deploy pipeline

@@ -4779,7 +4779,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 |----|------|----------|--------|
 | BUG-1671 | Fix workspace migration — `workspace_id` column missing from tasks/projects/groups, `workspace_members` table missing. Migration exists but fails due to `projects.id` type conflict (uuid vs text). Fix migration or drop FK constraint first. | P0 | 📋 PLANNED |
 | ~~BUG-1672~~ | Fix sidebar clipping in Tauri — sidebar text cut off, only icons visible. CSS grid `minmax(240px, 340px)` not respected in WebKitGTK. | P1 | ✅ **DONE** |
-| BUG-1673 | Fix Catalog view empty — shows table headers but zero tasks despite data existing. Caused by workspace_id query failing. | P0 | 📋 PLANNED |
+| ~~BUG-1673~~ | Fix Catalog view empty — status filter 'all' treated as literal match + WebKitGTK Realtime desync. Fixed in browser, Tauri deferred to Electron migration. | P0 | ✅ **DONE** (2026-03-24) |
 | ~~BUG-1674~~ | Fix Inbox dropdown behind sidebar — calendar dropdown z-index lower than sidebar stacking context. | P1 | ✅ **DONE** |
 | BUG-1675 | Fix Canvas view empty in E2E — Vue Flow nodes don't render for test user. Workspace query errors prevent task loading. | P0 | 📋 PLANNED |
 | BUG-1676 | Fix Board view empty — kanban columns render but no task cards. Same workspace root cause. | P0 | 📋 PLANNED |
@@ -4816,9 +4816,15 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Root Cause**: CSS `grid-template-columns: minmax(240px, 340px) 1fr` in MainLayout.vue not respected by WebKitGTK. Sidebar renders at icon-only width. Fixed by removing `contain: layout`, CSP fix via `dangerousDisableAssetCspModification`, and OverflowTooltip inline-flex→flex.
 - **Files**: `src/layouts/MainLayout.vue`, `src/layouts/AppSidebar.vue`
 
-#### BUG-1673 to BUG-1676: Empty Views (📋 PLANNED)
+#### ~~BUG-1673~~: Catalog View Empty (✅ DONE)
+- **Priority**: P0 | **Fixed**: 2026-03-24
+- **Root Cause**: (1) Status filter `'all'` from ViewControls stored literally — `filteredTasks` matched `task.status === 'all'` (nothing). Persisted in localStorage, making bug permanent. (2) In Tauri/WebKitGTK, Supabase Realtime CHANNEL_ERROR drops likely cause data desync where rawTasks has data but filteredTasks empties.
+- **Fix**: Normalized 'all' → null in setActiveStatusFilter + applyFilterState migration + defense-in-depth guard in useTaskFiltering. TaskTable groups watcher gets immediate:true. Diagnostic logging added for Tauri desync detection.
+- **Status**: Fixed in browser. Tauri-specific Realtime desync deferred to Electron migration (TASK-1715).
+
+#### BUG-1675 to BUG-1676: Empty Views (📋 PLANNED)
 - **Priority**: P0-CRITICAL
-- **Root Cause**: All caused by BUG-1671 (workspace migration). Fixing the migration fixes all 4.
+- **Root Cause**: Caused by BUG-1671 (workspace migration). Fixing the migration fixes these.
 - **Dependency**: BUG-1671
 
 #### ~~BUG-1674~~: Inbox Dropdown Behind Sidebar (✅ DONE)

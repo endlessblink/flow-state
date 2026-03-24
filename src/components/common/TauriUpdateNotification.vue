@@ -116,29 +116,31 @@ onMounted(async () => {
   if (!isTauri()) return
 
   // Check for updates after a short delay to not block startup
-  setTimeout(async () => {
-    console.log('[TauriUpdater] Starting update check...')
-    const hasNewVersion = await checkForUpdates()
-    console.log('[TauriUpdater] Check result:', {
-      hasNewVersion,
-      status: status.value,
-      updateInfo: updateInfo.value,
-      error: error.value
-    })
-    if (hasNewVersion) {
-      console.log('[TauriUpdater] Update available:', updateInfo.value?.version)
-      // FEATURE-1194: Auto-download if enabled in settings
-      const settingsStore = useSettingsStore()
-      console.log('[TauriUpdater] autoUpdateEnabled:', settingsStore.autoUpdateEnabled)
-      if (settingsStore.autoUpdateEnabled) {
-        console.log('[TauriUpdater] Auto-downloading...')
-        await downloadAndInstall()
-      }
-    } else if (status.value === 'error') {
-      console.log('[TauriUpdater] Error during check:', error.value)
-    } else {
-      console.log('[TauriUpdater] App is up to date (current version is latest)')
-    }
+  setTimeout(() => {
+    checkForUpdates()
+      .then(async (hasNewVersion) => {
+        console.log('[TauriUpdater] Check result:', {
+          hasNewVersion,
+          status: status.value,
+          updateInfo: updateInfo.value,
+          error: error.value
+        })
+        if (hasNewVersion) {
+          console.log('[TauriUpdater] Update available:', updateInfo.value?.version)
+          // FEATURE-1194: Auto-download if enabled in settings
+          const settingsStore = useSettingsStore()
+          console.log('[TauriUpdater] autoUpdateEnabled:', settingsStore.autoUpdateEnabled)
+          if (settingsStore.autoUpdateEnabled) {
+            console.log('[TauriUpdater] Auto-downloading...')
+            await downloadAndInstall()
+          }
+        } else if (status.value === 'error') {
+          console.log('[TauriUpdater] Error during check:', error.value)
+        } else {
+          console.log('[TauriUpdater] App is up to date (current version is latest)')
+        }
+      })
+      .catch(e => console.warn('[TauriUpdater] Update check failed:', e))
   }, 3000)
 })
 </script>

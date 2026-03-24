@@ -4526,7 +4526,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~BUG-1700~~ | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | ✅ **DONE** |
 | BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
 | BUG-1709 | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text | P2 | 📋 PLANNED |
-| BUG-1710 | Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined) | P1 | 🔄 **IN PROGRESS** |
+| ~~BUG-1710~~ | ✅ Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined) | P1 | ✅ **DONE** |
 | BUG-1711 | Tauri: Task completion celebration overlay is see-through (should be opaque) | P2 | 📋 PLANNED |
 | TASK-1712 | Tauri visual parity: task cards/UI degrade vs web app — need automated WebKitGTK visual regression | P1 | 📋 PLANNED |
 | ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
@@ -4629,7 +4629,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Root cause**: Likely same CSP issue as BUG-1674 — `backdrop-filter` or background styles not applying in Tauri production. Or `.tauri-app` override missing for this component.
 - **Files**: `src/components/tasks/` (DoneToggle celebration overlay)
 
-#### BUG-1710: Tauri Unhandled Promise Rejection on Launch (🔄 IN PROGRESS)
+#### ~~BUG-1710~~: Tauri Unhandled Promise Rejection on Launch (✅ DONE)
 - **Priority**: P1 | **Confirmed by**: User report in Tauri production app (v1.3.25)
 - **Error**: `Error: Unhandled promise rejection` at `Promise:undefined:undefined`
 - **Impact**: Error dialog on app launch, may block functionality

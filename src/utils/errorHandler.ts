@@ -262,10 +262,19 @@ export class GlobalErrorHandler {
 
     // Capture unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
+      // Extract useful info from rejection reason regardless of type
+      // Tauri IPC rejects with plain strings (not Error instances),
+      // so event.reason?.message may be undefined
+      const reason = event.reason
+      const message = reason instanceof Error
+        ? reason.message
+        : (typeof reason === 'string' && reason)
+          ? reason
+          : (reason?.message || `Unhandled promise rejection (${typeof reason})`)
       const errorInfo: ErrorInfo = {
-        message: event.reason?.message || 'Unhandled promise rejection',
+        message,
         source: 'Promise',
-        stack: event.reason?.stack,
+        stack: reason instanceof Error ? reason.stack : (typeof reason === 'string' ? reason : JSON.stringify(reason)),
         timestamp: new Date()
       }
       this.addError(errorInfo)

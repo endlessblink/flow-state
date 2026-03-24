@@ -145,8 +145,8 @@ async function initializeApp() {
   // with throttled notifications. Only add a lightweight handler here for known-harmless errors.
   window.addEventListener('unhandledrejection', (event) => {
     const reasonStr = String(event.reason)
-    // Prevent default for harmless browser/extension errors
-    if (reasonStr.match(/chrome is not defined|ResizeObserver loop/i)) {
+    // Prevent default for harmless browser/extension/Tauri errors
+    if (reasonStr.match(/chrome is not defined|ResizeObserver loop|plugin not found|plugin not initialized/i)) {
       event.preventDefault()
     }
   });
@@ -155,4 +155,6 @@ async function initializeApp() {
 }
 
 // Start the app
-initializeApp()
+initializeApp().catch((err) => {
+  console.error('[FlowState] Fatal initialization error:', err)
+})

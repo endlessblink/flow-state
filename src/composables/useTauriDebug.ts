@@ -175,10 +175,12 @@ export function useTauriDebug() {
     isEnabled.value = true
 
     // Take initial sample
-    sampleMemory()
+    sampleMemory().catch(e => console.warn('[TauriDebug] Initial sample failed:', e))
 
-    // Start interval
-    monitorInterval = setInterval(sampleMemory, SAMPLE_INTERVAL_MS)
+    // Start interval — wrap to catch async rejections
+    monitorInterval = setInterval(() => {
+      sampleMemory().catch(e => console.warn('[TauriDebug] Sample failed:', e))
+    }, SAMPLE_INTERVAL_MS)
   }
 
   /**

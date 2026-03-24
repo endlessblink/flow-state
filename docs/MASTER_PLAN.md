@@ -4644,6 +4644,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: Added `else if (group.key.startsWith('day-'))` handler to extract the date from the key format and set it as dueDate. The handler parses the `day-YYYY-MM-DD` format and assigns that date to the task.
 - **Files**: `src/components/tasks/TaskList.vue`
 
+#### ~~BUG-1714~~: RTL: Project names with mixed Hebrew/Latin text render in wrong direction (✅ DONE)
+- **Priority**: P2 | **Status**: ✅ DONE (2026-03-24)
+- **Problem**: Project names containing both Hebrew and Latin characters (e.g., "פרויקטים עם קבוצת AI מעצבים ב") displayed in wrong text direction (LTR instead of RTL) in sidebar nav items, app header subtitle, and canvas group headers.
+- **Root Cause**: Text-rendering elements lacked proper directionality hints, causing the browser to default to LTR for mixed-direction text.
+- **Fix**: Added `dir="auto"` to text-rendering elements in `BaseNavItem` (`.nav-label`), `AppHeader` (`.title-filter`), and `CanvasGroup` (`.section-name`) so the browser auto-detects base direction from the first strong character.
+- **Files**: `src/components/base/BaseNavItem.vue`, `src/layouts/AppHeader.vue`, `src/components/canvas/CanvasGroup.vue`
+
 #### TASK-1712: Tauri Visual Parity — Automated WebKitGTK Regression Testing (📋 PLANNED)
 - **Priority**: P1 | **Type**: Infrastructure + Bug fixes
 - **Problem**: Task cards, icons, overlays, and UI components look/work better in the web app than in Tauri. Multiple visual issues reported (BUG-1709 icons, BUG-1711 overlay, text overlap). No automated way to detect these before deploying.

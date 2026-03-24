@@ -4777,35 +4777,38 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 | ID | Task | Priority | Status |
 |----|------|----------|--------|
-| BUG-1671 | Fix workspace migration — `workspace_id` column missing from tasks/projects/groups, `workspace_members` table missing. Migration exists but fails due to `projects.id` type conflict (uuid vs text). Fix migration or drop FK constraint first. | P0 | 📋 PLANNED |
+| BUG-1671 | Fix workspace migration — `workspace_id` column missing from tasks/projects/groups, `workspace_members` table missing. Migration exists but fails due to `projects.id` type conflict (uuid vs text). Fix migration or drop FK constraint first. | P0 | ⏸️ **ARCHIVED** (Tauri) |
 | ~~BUG-1672~~ | Fix sidebar clipping in Tauri — sidebar text cut off, only icons visible. CSS grid `minmax(240px, 340px)` not respected in WebKitGTK. | P1 | ✅ **DONE** |
 | ~~BUG-1673~~ | Fix Catalog view empty — status filter 'all' treated as literal match + WebKitGTK Realtime desync. Fixed in browser, Tauri deferred to Electron migration. | P0 | ✅ **DONE** (2026-03-24) |
 | ~~BUG-1674~~ | Fix Inbox dropdown behind sidebar — calendar dropdown z-index lower than sidebar stacking context. | P1 | ✅ **DONE** |
-| BUG-1675 | Fix Canvas view empty in E2E — Vue Flow nodes don't render for test user. Workspace query errors prevent task loading. | P0 | 📋 PLANNED |
-| BUG-1676 | Fix Board view empty — kanban columns render but no task cards. Same workspace root cause. | P0 | 📋 PLANNED |
-| BUG-1677 | Fix context menu positioning — right-click menu not appearing or appearing outside viewport bounds. | P2 | 📋 PLANNED |
-| BUG-1678 | Fix tooltip z-index — tooltips render with z-index 'auto' instead of explicit value, may appear behind content. | P2 | 📋 PLANNED |
+| BUG-1675 | Fix Canvas view empty in E2E — Vue Flow nodes don't render for test user. Workspace query errors prevent task loading. | P0 | ⏸️ **ARCHIVED** (Tauri) |
+| BUG-1676 | Fix Board view empty — kanban columns render but no task cards. Same workspace root cause. | P0 | ⏸️ **ARCHIVED** (Tauri) |
+| BUG-1677 | Fix context menu positioning — right-click menu not appearing or appearing outside viewport bounds. | P2 | ⏸️ **ARCHIVED** (Tauri) |
+| BUG-1678 | Fix tooltip z-index — tooltips render with z-index 'auto' instead of explicit value, may appear behind content. | P2 | ⏸️ **ARCHIVED** (Tauri) |
 | BUG-1679 | Fix PWA manifest not linked in dev mode — `<link rel="manifest">` missing when devOptions.enabled=false. | P2 | 📋 PLANNED |
-| BUG-1680 | Fix card border-radius not rendering — task cards missing rounded corners in some views. | P3 | 📋 PLANNED |
-| BUG-1681 | Fix Inbox panel shows no content — inbox collapsed by default, badge/content not accessible. | P2 | 📋 PLANNED |
-| BUG-1682 | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors. | P0 | 📋 PLANNED |
+| BUG-1680 | Fix card border-radius not rendering — task cards missing rounded corners in some views. | P3 | ⏸️ **ARCHIVED** (Tauri) |
+| BUG-1681 | Fix Inbox panel shows no content — inbox collapsed by default, badge/content not accessible. | P2 | ⏸️ **ARCHIVED** (Tauri) |
+| BUG-1682 | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors. | P0 | ⏸️ **ARCHIVED** (Tauri) |
 | ~~BUG-1691~~ | Fix tasks turning untitled (empty title saved) | P0 | ✅ **DONE** |
 | ~~BUG-1696~~ | Tauri: Project names clipped to 24px in sidebar (WebKitGTK confirmed) | P1 | ✅ **DONE** |
 | ~~BUG-1697~~ | Tauri: overflow:clip hides scrollable content in WebKitGTK | P1 | ✅ **DONE** |
 | ~~BUG-1698~~ | Tauri: Views render blank pages when navigating (WebDriver test confirmed) | P1 | ✅ **DONE** |
 | ~~BUG-1699~~ | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | ✅ **DONE** |
 | ~~BUG-1700~~ | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | ✅ **DONE** |
-| BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | 📋 PLANNED |
+| BUG-1701 | E2E: Memory growth >20MB across create/delete cycles | P2 | ⏸️ **ARCHIVED** (Tauri) |
 | ~~BUG-1709~~ | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text | P2 | ✅ **DONE** |
 | ~~BUG-1710~~ | ✅ Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined) | P1 | ✅ **DONE** |
-| BUG-1711 | Tauri: Task completion celebration overlay is see-through (should be opaque) | P2 | 📋 PLANNED |
-| TASK-1712 | Tauri visual parity: task cards/UI degrade vs web app — need automated WebKitGTK visual regression | P1 | 📋 PLANNED |
+| BUG-1711 | Tauri: Task completion celebration overlay is see-through (should be opaque) | P2 | ⏸️ **ARCHIVED** (Tauri) |
+| TASK-1712 | Tauri visual parity: task cards/UI degrade vs web app — need automated WebKitGTK visual regression | P1 | ⏸️ **ARCHIVED** (Tauri) |
 | ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
 | ~~BUG-1703~~ | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | ✅ **DONE** |
 | ~~BUG-1704~~ | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | ✅ **DONE** |
 | ~~BUG-1705~~ | CSS: 2 unannotated overflow:clip usages in MobileQuickSortView.vue (unit test failing) | P2 | ✅ **DONE** |
 
-#### BUG-1671: Workspace Migration Failure (📋 PLANNED)
+#### BUG-1671: Workspace Migration Failure (⏸️ ARCHIVED)
+
+> ⏸️ **ARCHIVED**: Deferred to Electron migration. See [MASTER_PLAN_TAURI_ARCHIVE.md](MASTER_PLAN_TAURI_ARCHIVE.md)
+
 - **Priority**: P0-CRITICAL
 - **Root Cause**: `20260317000000_workspace_collaboration.sql` adds `workspace_id` to tasks/projects/groups and creates `workspace_members` table. Migration fails because `20260106000000_fix_id_types.sql` changes `projects.id` from uuid to text, but `pinned_tasks.project_id` FK still expects uuid. The FK constraint must be dropped/recreated first.
 - **Impact**: ALL views fail to load data because every query now includes `.is('workspace_id', null)` which errors on missing column.
@@ -4822,7 +4825,10 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: Normalized 'all' → null in setActiveStatusFilter + applyFilterState migration + defense-in-depth guard in useTaskFiltering. TaskTable groups watcher gets immediate:true. Diagnostic logging added for Tauri desync detection.
 - **Status**: Fixed in browser. Tauri-specific Realtime desync deferred to Electron migration (TASK-1715).
 
-#### BUG-1675 to BUG-1676: Empty Views (📋 PLANNED)
+#### BUG-1675 to BUG-1676: Empty Views (⏸️ ARCHIVED)
+
+> ⏸️ **ARCHIVED**: Deferred to Electron migration. See [MASTER_PLAN_TAURI_ARCHIVE.md](MASTER_PLAN_TAURI_ARCHIVE.md)
+
 - **Priority**: P0-CRITICAL
 - **Root Cause**: Caused by BUG-1671 (workspace migration). Fixing the migration fixes these.
 - **Dependency**: BUG-1671
@@ -4896,11 +4902,17 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Resolution**: FCP is actually ~1s (Chromium) / ~1.8s (WebKit). The 12.7s was from broken test infra. Verified 2026-03-24.
 - ~~**Symptom**: Performance test expects FCP under 3 seconds, actual initial render took 12.7s~~
 
-#### BUG-1701: Memory Growth >20MB (📋 PLANNED)
+#### BUG-1701: Memory Growth >20MB (⏸️ ARCHIVED)
+
+> ⏸️ **ARCHIVED**: Deferred to Electron migration. See [MASTER_PLAN_TAURI_ARCHIVE.md](MASTER_PLAN_TAURI_ARCHIVE.md)
+
 - **Priority**: P2 | **Confirmed by**: Playwright memory-perf test
 - **Symptom**: Memory grows >20MB across create/delete cycles, suggesting leak in task store or Supabase subscriptions
 
-#### BUG-1711: Tauri Task Completion Celebration Overlay See-Through (📋 PLANNED)
+#### BUG-1711: Tauri Task Completion Celebration Overlay See-Through (⏸️ ARCHIVED)
+
+> ⏸️ **ARCHIVED**: Deferred to Electron migration. See [MASTER_PLAN_TAURI_ARCHIVE.md](MASTER_PLAN_TAURI_ARCHIVE.md)
+
 - **Priority**: P2 | **Confirmed by**: User screenshot in Tauri production app
 - **Symptom**: "Sweet!" celebration overlay with checkmark is transparent — background content visible through it. Should have opaque/glass background.
 - **Root cause**: Likely same CSP issue as BUG-1674 — `backdrop-filter` or background styles not applying in Tauri production. Or `.tauri-app` override missing for this component.
@@ -4925,7 +4937,10 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: Added `dir="auto"` to text-rendering elements in `BaseNavItem` (`.nav-label`), `AppHeader` (`.title-filter`), and `CanvasGroup` (`.section-name`) so the browser auto-detects base direction from the first strong character.
 - **Files**: `src/components/base/BaseNavItem.vue`, `src/layouts/AppHeader.vue`, `src/components/canvas/CanvasGroup.vue`
 
-#### TASK-1712: Tauri Visual Parity — Automated WebKitGTK Regression Testing (📋 PLANNED)
+#### TASK-1712: Tauri Visual Parity — Automated WebKitGTK Regression Testing (⏸️ ARCHIVED)
+
+> ⏸️ **ARCHIVED**: Deferred to Electron migration. See [MASTER_PLAN_TAURI_ARCHIVE.md](MASTER_PLAN_TAURI_ARCHIVE.md)
+
 - **Priority**: P1 | **Type**: Infrastructure + Bug fixes
 - **Problem**: Task cards, icons, overlays, and UI components look/work better in the web app than in Tauri. Multiple visual issues reported (BUG-1709 icons, BUG-1711 overlay, text overlap). No automated way to detect these before deploying.
 - **Goal**: Build a testing pipeline that catches Tauri/WebKitGTK visual regressions BEFORE deployment, so Claude can fix them without the user manually testing each build.

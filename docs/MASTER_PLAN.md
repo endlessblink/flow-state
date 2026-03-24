@@ -26,9 +26,9 @@
 
 ---
 
-### TASK-1718: Electron Phase 2 — Platform Detection Swap (📋 PLANNED)
+### ~~TASK-1718~~: Electron Phase 2 — Platform Detection Swap (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends on**: BUG-1717
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-25)
 
 **Scope**: Replace all Tauri detection with Electron detection.
 
@@ -43,9 +43,9 @@
 
 ---
 
-### TASK-1719: Electron Phase 3 — IPC Handlers (📋 PLANNED)
+### ~~TASK-1719~~: Electron Phase 3 — IPC Handlers (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends on**: TASK-1718
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-25)
 
 **Scope**: Create Electron IPC handlers to replace Tauri's 13 `invoke()` commands and 10 plugins.
 

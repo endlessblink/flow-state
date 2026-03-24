@@ -8,6 +8,93 @@
 
 ## Active Tasks
 
+### BUG-1717: Fix `ref is not defined` runtime error in CanvasView production build (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED
+
+**Problem**: Production build (both web and Electron) throws `ReferenceError: ref is not defined` at `CanvasView-*.js:2:151250` during the `setup()` function. The error crashes the Canvas view. All source files correctly import `ref` from `vue` — the issue is in the production bundle (tree-shaking or chunk splitting bug).
+
+**Impact**: Canvas view broken in production web (`in-theflow.com`) and Electron. Board/Calendar/Catalog views work fine.
+
+**Debug approach**:
+1. Check if a composable used by CanvasView relies on auto-import (unplugin-auto-import) that doesn't work in production
+2. Inspect the minified chunk at the error offset to find which component's `setup()` is failing
+3. Run `npx vite build --mode development` to get unminified output and pinpoint the exact file/line
+4. Verify with `npx serve dist -l 3333` in Chrome
+
+**Files**: `src/views/CanvasView.vue`, composables in `src/composables/canvas/`
+
+---
+
+### TASK-1718: Electron Phase 2 — Platform Detection Swap (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends on**: BUG-1717
+
+**Scope**: Replace all Tauri detection with Electron detection.
+
+**Tasks**:
+1. Update `src/utils/platform.ts`: add `isElectron()` using `window.electronAPI !== undefined`
+2. Update all 9 raw `window.__TAURI__` / `window.__TAURI_INTERNALS__` checks across the codebase
+3. Update `src/main.ts`: swap `.tauri-app` class → `.electron-app` (or remove entirely since Electron = Chromium)
+4. Delete 186 `.tauri-app` CSS rules from `src/assets/styles.css` — Electron uses Chromium, no WebKitGTK workarounds needed
+5. Update `vite.config.ts`: swap `isTauri` → `isElectron` for PWA disable logic
+
+**Files to modify**: `src/utils/platform.ts`, `src/main.ts`, `src/assets/styles.css`, `vite.config.ts`, + 9 files with raw `__TAURI__` checks
+
+---
+
+### TASK-1719: Electron Phase 3 — IPC Handlers (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends on**: TASK-1718
+
+**Scope**: Create Electron IPC handlers to replace Tauri's 13 `invoke()` commands and 10 plugins.
+
+**Tasks**:
+1. Create `electron/ipc/shell.ts` — `shell.openExternal()` for URLs, `child_process.exec()` for Docker/Supabase
+2. Create `electron/ipc/store.ts` — `electron-store` for settings persistence (replaces `@tauri-apps/plugin-store`)
+3. Create `electron/ipc/fs.ts` — Node.js `fs` for auth token file at `~/.config/flowstate`
+4. Create `electron/ipc/dialog.ts` — `dialog.showSaveDialog()` for backup export
+5. Create `electron/ipc/http.ts` — Node.js `fetch` in main process for CORS-free requests (Ollama, iCal)
+6. Register all handlers in `electron/main.ts`
+7. Update renderer-side composables to use `window.electronAPI.invoke()` instead of Tauri `invoke()`
+
+**Composables to update**: `useTauriStartup.ts` → `useElectronStartup.ts`, `usePersistentRef.ts`, `backup/backupExport.ts`, `useTauriOAuth.ts`, `useTauriUpdater.ts`, `useTauriDebug.ts`
+
+---
+
+### TASK-1720: Electron Phase 4 — Auto-Updater + Deploy Pipeline (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Depends on**: TASK-1719
+
+**Scope**: Set up `electron-updater` and deploy pipeline to VPS.
+
+**Tasks**:
+1. Install `electron-updater`
+2. Create `electron/updater.ts` — check/download/install flow
+3. Rewrite `scripts/deploy-tauri-update.sh` → `scripts/deploy-electron-update.sh`
+4. Update VPS to serve Electron updates at `/updates/electron/`
+5. Update `TauriUpdateNotification.vue` → `ElectronUpdateNotification.vue`
+6. First production Electron build + deploy
+7. Verify auto-update works end-to-end
+
+---
+
+### TASK-1721: Electron Phase 5 — Cleanup & CI/CD (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED | **Depends on**: TASK-1720
+
+**Scope**: Clean up Tauri remnants and set up CI/CD for Electron.
+
+**Tasks**:
+1. Remove `src-tauri/` from active development (keep in git history at `tauri-archive-v1.3.28` tag)
+2. Remove all `@tauri-apps/*` npm dependencies
+3. Update `.github/workflows/` for Electron builds
+4. Update CLAUDE.md — replace Tauri references with Electron
+5. Update `docs/sop/SOP-011-tauri-distribution.md` → Electron distribution SOP
+6. Final E2E test run to verify nothing broke
+
+---
+
 ### ~~BUG-1716~~: Dev Maestro parser shows "P1" as title for workspace tasks (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-24)

@@ -1208,9 +1208,9 @@ Wired into `src/composables/app/useAppInitialization.ts` — runs after tasks lo
 
 ---
 
-### TASK-1521: Calendar day/week drag deferred to mouseup (🔄 IN PROGRESS)
+### ~~TASK-1521~~: Calendar day/week drag deferred to mouseup (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-03-24)
 
 **Problem**: The `_startEventDrag` (day view) and `_startWeekDrag` (week view) handlers called `taskStore.updateTask()` inside the mousemove handler on every slot change. This caused excessive DB writes and had no undo support.
 
@@ -2358,7 +2358,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1519**~~ | **P2** | ~~**Date picker calendar blurry — stacked backdrop-filter blur on context menu + submenu + NDatePicker panel**~~ (✅ DONE 2026-03-13) |
 | **TASK-1520** | **P2** | **Add recurring indicator badge to task cards (Kanban, Canvas, Table views)** (✅ DONE 2026-03-14) |
 | **~~TASK-1525~~** | **P1** | **Recurring task delete dialog — Skip/Stop/Cancel with global recurrence-aware delete** (✅ DONE 2026-03-14) |
-| **TASK-1521** | **P1** | **Calendar day/week view drag deferred to mouseup — preview-then-commit pattern, adds undo support** (🔄 IN PROGRESS) |
+| ~~**TASK-1521**~~ | **P1** | **Calendar day/week view drag deferred to mouseup — preview-then-commit pattern, adds undo support** (✅ DONE 2026-03-24) |
 | ~~**TASK-1522**~~ | **P2** | ~~**Blank screen on refresh — add loading animation to index.html**~~ (✅ DONE 2026-03-14) |
 | **TASK-1523** | **P1** | **Undo/sync race fix — cancel stale sync queue ops when undo/redo restores task create/delete** (✅ DONE 2026-03-14) |
 | **~~TASK-1524~~** | **P1** | **Migrate old `recurrence` field to new `recurrenceRule` format on app init** (✅ DONE) |

@@ -11,7 +11,7 @@
 
     <img
       :src="data.imageUrl"
-      class="node-image"
+      class="node-image nodrag"
       draggable="false"
       alt="Pasted image"
       @dblclick.stop="showLightbox = true"

@@ -181,7 +181,7 @@ defineExpose({ scrollTo })
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3); /* BUG-1709: 12px breathing room between cards */
+  gap: var(--space-4); /* BUG-1709: 16px between cards */
   /* Static scrollbar-color covers the KDE system overlay scrollbar.
      NO hover toggle — toggling transparent↔visible causes ghost/dual-render.
      Webkit browsers use ::-webkit-scrollbar rules from styles.css instead. */

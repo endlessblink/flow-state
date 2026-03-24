@@ -295,7 +295,7 @@
 </template>
 
 <script setup lang="ts">
-import { markRaw, onMounted, onUnmounted } from 'vue'
+import { ref, markRaw, onMounted, onUnmounted } from 'vue'
 import { VueFlow, type NodeMouseEvent } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
@@ -492,9 +492,15 @@ const handleImageContextMenu = (e: Event) => {
   imageContextMenu.value = { show: true, x, y, nodeId }
 }
 
-const deleteImageFromContextMenu = () => {
+const deleteImageFromContextMenu = async () => {
   if (imageContextMenu.value.nodeId) {
-    canvasImagesStore.removeCanvasImage(imageContextMenu.value.nodeId)
+    const imgData = canvasImagesStore.images.find(i => i.id === imageContextMenu.value.nodeId)
+    const removed = await canvasImagesStore.removeCanvasImage(imageContextMenu.value.nodeId)
+    const snapshot = imgData ? { ...imgData, position: { ...imgData.position } } : removed
+    if (snapshot) {
+      const { pushImageDeleteUndo } = await import('@/composables/undoSingleton')
+      pushImageDeleteUndo(snapshot)
+    }
   }
   imageContextMenu.value.show = false
 }
@@ -538,13 +544,9 @@ const handleCanvasPaste = async (e: ClipboardEvent) => {
   }
 }
 
-onMounted(async () => {
+onMounted(() => {
   document.addEventListener('paste', handleCanvasPaste)
   window.addEventListener('image-node-context-menu', handleImageContextMenu)
-
-  // TASK-1690: Register canvas image undo with global undo system (lazy to avoid circular deps)
-  const { registerCanvasImageUndo } = await import('@/composables/undoSingleton')
-  registerCanvasImageUndo(() => canvasImagesStore.undoRemoveCanvasImage())
 })
 onUnmounted(() => {
   document.removeEventListener('paste', handleCanvasPaste)

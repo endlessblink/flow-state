@@ -31,16 +31,12 @@ export const useCanvasImagesStore = defineStore('canvasImages', () => {
     saveToLocalStorage(images.value)
   }
 
-  // TASK-1690: Undo stack for image deletions (Ctrl+Z support)
-  const undoStack = ref<CanvasImage[]>([])
-
-  const removeCanvasImage = async (id: string) => {
+  // TASK-1690: Remove image and return it (caller pushes to global undo stack)
+  const removeCanvasImage = async (id: string): Promise<CanvasImage | undefined> => {
     const img = images.value.find(i => i.id === id)
-    if (img) {
-      // Save snapshot for undo before deleting
-      undoStack.value.push({ ...img, position: { ...img.position } })
-      if (undoStack.value.length > 20) undoStack.value.shift()
+    const snapshot = img ? { ...img, position: { ...img.position } } : undefined
 
+    if (img) {
       try {
         await deleteCanvasImage(img.imageUrl)
       } catch (e) {
@@ -49,14 +45,13 @@ export const useCanvasImagesStore = defineStore('canvasImages', () => {
     }
     images.value = images.value.filter(i => i.id !== id)
     saveToLocalStorage(images.value)
+    return snapshot
   }
 
-  const undoRemoveCanvasImage = () => {
-    const img = undoStack.value.pop()
-    if (!img) return false
-    images.value.push(img)
+  // TASK-1690: Restore a previously deleted image (called by global undo system)
+  const restoreCanvasImage = (image: CanvasImage) => {
+    images.value.push(image)
     saveToLocalStorage(images.value)
-    return true
   }
 
   const updateCanvasImagePosition = (id: string, position: { x: number; y: number }) => {
@@ -71,7 +66,7 @@ export const useCanvasImagesStore = defineStore('canvasImages', () => {
     images,
     addCanvasImage,
     removeCanvasImage,
-    undoRemoveCanvasImage,
+    restoreCanvasImage,
     updateCanvasImagePosition,
   }
 })

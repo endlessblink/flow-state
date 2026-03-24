@@ -3,6 +3,7 @@ import { useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
+import { pushImageDeleteUndo } from '@/composables/undoSingleton'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 
 interface BulkDeleteState {
@@ -56,10 +57,16 @@ export function useCanvasHotkeys(
         const permanentDelete = event.shiftKey
 
         // TASK-1690: Handle image nodes immediately (no confirmation needed)
+        // Capture image data BEFORE deleting so we can push to global undo stack
         const imageNodes = selectedNodes.filter(n => n.type === 'imageNode')
         if (imageNodes.length > 0) {
             for (const imgNode of imageNodes) {
-                canvasImagesStore.removeCanvasImage(imgNode.id)
+                const imgData = canvasImagesStore.images.find(i => i.id === imgNode.id)
+                const removed = await canvasImagesStore.removeCanvasImage(imgNode.id)
+                const snapshot = imgData ? { ...imgData, position: { ...imgData.position } } : removed
+                if (snapshot) {
+                    pushImageDeleteUndo(snapshot)
+                }
             }
             // If only image nodes were selected, we're done
             if (imageNodes.length === selectedNodes.length) return

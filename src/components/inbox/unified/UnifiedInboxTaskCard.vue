@@ -222,7 +222,7 @@ const dueStatus = computed(() => {
   border-radius: var(--radius-md);
   /* ADHD-friendly: Priority shown via inline-start border only */
   border-inline-start: 4px solid transparent;
-  padding: var(--space-4);
+  padding: var(--space-5) var(--space-5); /* BUG-1709: 20px breathing room */
   cursor: grab;
   user-select: none;
   transition: all var(--duration-fast) var(--ease-out);
@@ -276,9 +276,9 @@ const dueStatus = computed(() => {
 }
 
 .task-content--inbox {
-  padding-inline-start: var(--space-2);
-  padding-inline-end: var(--space-2);
-  padding-bottom: var(--space-2); /* BUG-1709: space for action tray */
+  padding-inline-start: var(--space-3);
+  padding-inline-end: var(--space-3);
+  padding-bottom: var(--space-3); /* BUG-1709: space for action tray */
   width: 100%;
   box-sizing: border-box;
 }
@@ -286,8 +286,8 @@ const dueStatus = computed(() => {
 .task-title {
   font-size: var(--text-sm);
   color: var(--text-primary);
-  margin-bottom: var(--space-3);
-  line-height: 1.5;
+  margin-bottom: var(--space-4); /* BUG-1709: 16px gap to metadata */
+  line-height: 1.6;
   max-width: 100%;
 }
 

@@ -56,6 +56,7 @@ export type UndoOperationType =
   | 'group-delete'
   | 'group-update'
   | 'group-resize'
+  | 'image-delete'  // TASK-1690: Canvas image deletion (undo restores image)
   | 'legacy' // For backward compatibility with entries that don't have metadata
 
 /**
@@ -84,12 +85,6 @@ let redoOperationStack: OperationSnapshot[] = []
 
 // Flag to track if we're in operation-aware mode
 const useOperationAwareUndo = true
-
-// TASK-1690: Registered canvas image undo callback (set by canvasImages store)
-let _canvasImageUndoFn: (() => boolean) | null = null
-export function registerCanvasImageUndo(fn: () => boolean) {
-  _canvasImageUndoFn = fn
-}
 
 // Global singleton refHistory instance - created only ONCE
 let refHistoryInstance: ReturnType<typeof useManualRefHistory<UnifiedUndoState>> | null = null
@@ -336,6 +331,18 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       break
     }
 
+    case 'image-delete': {
+      // TASK-1690: Undo image deletion = restore the image from snapshot
+      const imageData = (snapshotBefore as unknown as Record<string, unknown>)._imageData
+      if (imageData) {
+        const { useCanvasImagesStore } = await import('@/stores/canvasImages')
+        const store = useCanvasImagesStore()
+        store.restoreCanvasImage(imageData as import('@/stores/canvas/types').CanvasImage)
+        console.log(`🔄 [UNDO] Restored canvas image: ${(imageData as { id: string }).id}`)
+      }
+      break
+    }
+
     case 'legacy':
     default: {
       // Fall back to full-state restoration for legacy entries
@@ -483,6 +490,18 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       break
     }
 
+    case 'image-delete': {
+      // TASK-1690: Redo image deletion = remove the image again
+      const imageData = (snapshotBefore as unknown as Record<string, unknown>)._imageData
+      if (imageData) {
+        const { useCanvasImagesStore } = await import('@/stores/canvasImages')
+        const store = useCanvasImagesStore()
+        await store.removeCanvasImage((imageData as { id: string }).id)
+        console.log(`🔁 [REDO] Re-deleted canvas image: ${(imageData as { id: string }).id}`)
+      }
+      break
+    }
+
     case 'legacy':
     default: {
       // Fall back to full-state restoration for legacy entries
@@ -541,12 +560,6 @@ const showUndoRedoToast = async (action: 'undo' | 'redo', description: string) =
 // BUG-309-B: Enhanced with operation-aware selective restoration
 const performUndo = async () => {
   console.log('🔴 [UNDO] performUndo called, operationStack length:', operationStack.length)
-
-  // TASK-1690: Try canvas image undo first (most recent deletion takes priority)
-  if (_canvasImageUndoFn && _canvasImageUndoFn()) {
-    console.log('🔴 [UNDO] Restored canvas image')
-    return true
-  }
 
   // BUG-309-B: Try operation-aware undo first
   if (useOperationAwareUndo && operationStack.length > 0) {
@@ -1086,6 +1099,24 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
     pendingOperation = null
     throw error
   }
+}
+
+// TASK-1690: Push an image deletion onto the global operation stack for Ctrl+Z support.
+// This is called by useCanvasHotkeys and CanvasView context menu after removing an image.
+export function pushImageDeleteUndo(imageData: { id: string; imageUrl: string; position: { x: number; y: number }; createdAt: string }) {
+  operationStack.push({
+    operation: {
+      type: 'image-delete',
+      affectedIds: [imageData.id],
+      description: `Delete canvas image`,
+      timestamp: Date.now()
+    },
+    // Store image data on snapshotBefore._imageData for the undo/redo handlers
+    snapshotBefore: { tasks: [], groups: [], _imageData: imageData } as unknown as UnifiedUndoState,
+    snapshotAfter: { tasks: [], groups: [] },
+  })
+  if (operationStack.length > 30) operationStack.shift()
+  redoOperationStack = [] // Clear redo on new operation
 }
 
 /**

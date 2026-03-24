@@ -1777,19 +1777,9 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ---
 
-### TASK-1494: Tauri Parity Testing Suite (🔄 IN PROGRESS)
+### ~~TASK-1494~~: Tauri Parity Testing Suite (🗄️ ARCHIVED)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-09)
-
-**Problem**: Zero Tauri-specific test coverage. Recurring production bugs caused by WebKitGTK differences (overflow:clip, dataTransfer empty, DataCloneError, path bugs, coordinate scaling). All E2E runs Chromium only.
-
-**Plan**: 6-phase comprehensive parity suite:
-- Phase 1: Enable WebKit in Playwright + fix failures
-- Phase 2: Unit tests for all `isTauri()` code paths
-- Phase 3: CSS safety scanner (overflow:clip, perspective traps)
-- Phase 4: Tauri simulation E2E (inject `__TAURI_INTERNALS__`)
-- Phase 5: Pre-deploy gate in `/tauri` skill
-- Phase 6: Maintenance tooling (SOP, checklist, CLAUDE.md rule)
+**Priority**: P1 | **Status**: 🗄️ ARCHIVED (2026-03-25) — Tauri replaced by Electron (Chromium-based), WebKitGTK parity testing no longer needed
 
 ---
 
@@ -1950,37 +1940,6 @@ WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supab
 - [ ] Start session in WAHA dashboard, scan QR with new number
 - [ ] Test: send WhatsApp message → verify task appears in FlowState inbox
 - [ ] Configure chat ID allowlist for the new number
-
----
-
-### TASK-1471: Docker Self-Host E2E Test (🔄 IN PROGRESS)
-
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-03-06)
-
-**Goal**: Verify a fresh self-hosted installation works end-to-end before sharing repo publicly.
-
-**Bugs found & fixed (committed)**:
-- [x] Kong `rate-limiting` plugin not declared in `KONG_PLUGINS` — added
-- [x] `init-db.sh` had wrong filename (`fix_id_types.sql` → `20260106000000_fix_id_types.sql`) and was missing 12 of 24 migrations — fixed
-- [x] `.env.self-host` / `.env.self-host.test` not gitignored — added
-- [x] `supabase/postgres:17.2.0` image tag doesn't exist — updated to `17.6.1.095`
-- [x] Created `scripts/test-self-host.sh` with 6 E2E tests + `--keep` flag for browser testing
-
-**Remaining — NEXT SESSION START HERE**:
-- [ ] Run `./scripts/test-self-host.sh --keep` — this builds the full Docker stack and runs 6 E2E tests, then keeps it up for browser testing
-- [ ] Once tests pass, open `http://localhost:13050` in browser and verify: app loads, signup works, create a task, check it persists
-- [ ] If tests fail, check logs with: `docker compose -p flowstate-test -f docker-compose.self-host.yml --env-file .env.self-host.test logs --tail=50`
-- [ ] To tear down after testing: `docker compose -p flowstate-test -f docker-compose.self-host.yml --env-file .env.self-host.test down -v`
-
-**Test script details** (`scripts/test-self-host.sh --keep`):
-- Generates fresh secrets (JWT, Postgres password, anon/service_role keys)
-- Uses isolated ports: frontend `:13050`, Kong API `:18000`, Postgres `:15432`
-- Project name: `flowstate-test` (won't conflict with any running stack)
-- 6 tests: frontend HTML, /health, Kong reachable, signup, sign-in, REST API tasks query
-- `--keep` flag keeps stack running after tests pass so you can test in browser
-- Previous run failed due to root disk full (0 bytes). Freed 6.7GB via `docker system prune`. Docker data-root is already on `/media/endlessblink/docker` (341GB free) so the build context issue was transient.
-
-**Files**: `.gitignore`, `docker-compose.self-host.yml`, `docker/self-host/init-db.sh`, `scripts/test-self-host.sh`
 
 ---
 
@@ -3069,9 +3028,9 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1161: Create Shared Domain Layer for Mobile (🔄 IN PROGRESS)
+### TASK-1161: Create Shared Domain Layer for Mobile (📋 PLANNED)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
+**Priority**: P4 | **Status**: 📋 PLANNED
 
 **Problem**: Mobile views duplicate logic from desktop views.
 
@@ -3375,6 +3334,28 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 ### ROAD-025: Backup Containerization (📋 PLANNED)
 
 **Priority**: P3 | Move `auto-backup-daemon.cjs` into Docker container for VPS distribution.
+
+---
+
+### TASK-1471: Docker Self-Host E2E Test (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Goal**: Verify a fresh self-hosted installation works end-to-end before sharing repo publicly.
+
+**Bugs found & fixed (committed)**:
+- [x] Kong `rate-limiting` plugin not declared in `KONG_PLUGINS` — added
+- [x] `init-db.sh` had wrong filename (`fix_id_types.sql` → `20260106000000_fix_id_types.sql`) and was missing 12 of 24 migrations — fixed
+- [x] `.env.self-host` / `.env.self-host.test` not gitignored — added
+- [x] `supabase/postgres:17.2.0` image tag doesn't exist — updated to `17.6.1.095`
+- [x] Created `scripts/test-self-host.sh` with 6 E2E tests + `--keep` flag for browser testing
+
+**Remaining**:
+- [ ] Run `./scripts/test-self-host.sh --keep` — builds full Docker stack and runs 6 E2E tests
+- [ ] Once tests pass, verify in browser at `http://localhost:13050`
+- [ ] To tear down: `docker compose -p flowstate-test -f docker-compose.self-host.yml --env-file .env.self-host.test down -v`
+
+**Files**: `.gitignore`, `docker-compose.self-host.yml`, `docker/self-host/init-db.sh`, `scripts/test-self-host.sh`
 
 ---
 
@@ -3927,15 +3908,9 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-#### TASK-1603: Cross-Platform Parity Tests (📋 PLANNED)
+#### ~~TASK-1603~~: Cross-Platform Parity Tests (🗄️ ARCHIVED)
 
-**Priority**: P1 | **Status**: 📋 PLANNED
-
-**Goal**: Extend TASK-1494 (Tauri Parity Testing Suite) with unit-level checks for all `isTauri()` code paths and WebKitGTK-specific workarounds.
-
-**Covers**: CSS scanner flags `overflow: clip` without `/* WebKitGTK-safe */` annotation, `dragData` singleton used when `isTauri()`, deep-clone pattern `JSON.parse(JSON.stringify(toRaw(obj)))` used for IndexedDB writes in Tauri, `:force-fallback="true"` binding on all vuedraggable instances.
-
-**Files**: `tests/unit/tauri-parity/` (extend existing suite)
+**Priority**: P1 | **Status**: 🗄️ ARCHIVED (2026-03-25) — Tauri replaced by Electron, WebKitGTK parity tests obsolete
 
 ---
 

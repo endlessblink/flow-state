@@ -348,11 +348,12 @@ export function useAppInitialization() {
                     // BUG-1339: If authenticated but got 0 tasks, schedule delayed retry
                     if (authStore.isAuthenticated && taskStore._rawTasks.length === 0) {
                         console.warn('⚠️ [BUG-1339] Authenticated but 0 tasks after refresh — scheduling delayed retry (2s)')
-                        setTimeout(async () => {
-                            if (taskStore._rawTasks.length === 0 && authStore.isAuthenticated) {
-                                console.log('🔄 [BUG-1339] Delayed retry: invalidating cache and reloading...')
-                                invalidateCache.all()
-                                try {
+                        setTimeout(() => {
+                            // BUG-1710: Wrap in .catch() to prevent unhandled promise rejection dialog in Tauri
+                            (async () => {
+                                if (taskStore._rawTasks.length === 0 && authStore.isAuthenticated) {
+                                    console.log('🔄 [BUG-1339] Delayed retry: invalidating cache and reloading...')
+                                    invalidateCache.all()
                                     await Promise.all([
                                         taskStore.loadFromDatabase(),
                                         projectStore.loadProjectsFromDatabase(),
@@ -360,10 +361,8 @@ export function useAppInitialization() {
                                     ])
                                     await reapplyPendingWrites()
                                     console.log(`✅ [BUG-1339] Delayed retry loaded ${taskStore._rawTasks.length} tasks`)
-                                } catch (e) {
-                                    console.warn('⚠️ [BUG-1339] Delayed retry failed:', e)
                                 }
-                            }
+                            })().catch(e => console.warn('⚠️ [BUG-1339] Delayed retry failed:', e))
                         }, 2000)
                     }
                 } catch (refreshError) {

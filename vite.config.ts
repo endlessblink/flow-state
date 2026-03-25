@@ -44,6 +44,16 @@ export default defineConfig(({ mode }) => ({
     '__IS_CAPACITOR_BUILD__': isCapacitor,
   },
   plugins: [
+    // TASK-1721: Stub @tauri-apps/* — packages removed, dead code behind isTauri()===false
+    {
+      name: 'tauri-stub',
+      resolveId(id) {
+        if (id.startsWith('@tauri-apps/')) return '\0tauri-stub'
+      },
+      load(id) {
+        if (id === '\0tauri-stub') return 'export default {}; export const invoke = () => {}; export const getCurrentWindow = () => ({}); export const homeDir = () => ""; export const attachConsole = () => {}; export const open = () => {}; export const load = () => ({}); export const check = () => ({}); export const relaunch = () => {}; export const Command = class {}; export const fetch = globalThis.fetch; export const writeTextFile = () => {}; export const mkdir = () => {}; export const exists = () => false;'
+      }
+    },
     vue(),
     // PWA Plugin - ROAD-004 (disabled for Tauri builds - service workers don't work with tauri:// protocol)
     // BUG-336: Use `disable` option instead of conditional inclusion to provide proper stub modules

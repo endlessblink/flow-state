@@ -47,16 +47,43 @@
           />
 
           <!-- Dot nodes at line intersections -->
-          <circle class="node-dot node-dot-1" cx="80" cy="72" r="4" />
-          <circle class="node-dot node-dot-2" cx="240" cy="68" r="4" />
-          <circle class="node-dot node-dot-3" cx="160" cy="148" r="4" />
+          <circle
+            class="node-dot node-dot-1"
+            cx="80"
+            cy="72"
+            r="4"
+          />
+          <circle
+            class="node-dot node-dot-2"
+            cx="240"
+            cy="68"
+            r="4"
+          />
+          <circle
+            class="node-dot node-dot-3"
+            cx="160"
+            cy="148"
+            r="4"
+          />
 
           <!-- Center anchor node -->
-          <circle class="node-center" cx="160" cy="100" r="6" />
+          <circle
+            class="node-center"
+            cx="160"
+            cy="100"
+            r="6"
+          />
 
           <!-- Task card: top-left — floats up -->
           <g class="task-card-group float-a">
-            <rect x="28" y="44" width="104" height="56" rx="8" class="task-card-rect" />
+            <rect
+              x="28"
+              y="44"
+              width="104"
+              height="56"
+              rx="8"
+              class="task-card-rect"
+            />
             <!-- Check circle -->
             <circle cx="46" cy="60" r="6" class="task-check-ring" />
             <path d="M43 60 L45.5 62.5 L49 58" class="task-check-mark" />

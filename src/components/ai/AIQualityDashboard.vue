@@ -10,8 +10,8 @@
         <button
           class="btn btn-ghost"
           :disabled="isRunning"
-          @click="handleRunTests(1)"
           title="Quick check with 1 run per test"
+          @click="handleRunTests(1)"
         >
           Quick (1x)
         </button>
@@ -48,6 +48,7 @@
         <div class="grade-display">
           {{ report.grade }}
         </div>
+
         <p>{{ gradeLabel }}</p>
       </div>
 
@@ -69,14 +70,18 @@
 
       <div class="card glass stat-card">
         <h3>Provider</h3>
-        <div class="stat-value stat-value--small">{{ report.provider }}</div>
+        <div class="stat-value stat-value--small">
+          {{ report.provider }}
+        </div>
         <p>{{ formatTime(report.timestamp) }}</p>
       </div>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <h3 class="empty-title">AI Quality Assessment</h3>
+      <h3 class="empty-title">
+        AI Quality Assessment
+      </h3>
       <p class="empty-desc">
         Tests your AI assistant by sending {{ testPrompts.length }} prompts across {{ new Set(testPrompts.map(t => t.category)).size }} categories,
         then judges each response against {{ rubrics.length }} quality rubrics using a second LLM call.

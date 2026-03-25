@@ -36,7 +36,9 @@
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="error-banner glass">{{ error }}</div>
+    <div v-if="error" class="error-banner glass">
+      {{ error }}
+    </div>
 
     <!-- Summary Cards -->
     <div v-if="report" class="summary-cards">
@@ -123,7 +125,9 @@
               <span class="check-name">{{ check.name }}</span>
               <span class="check-score" :class="scoreColorClass(check.score)">{{ check.score }}%</span>
             </div>
-            <div class="check-value">{{ check.value }}</div>
+            <div class="check-value">
+              {{ check.value }}
+            </div>
             <div v-if="check.recommendation" class="check-recommendation">
               {{ check.recommendation }}
             </div>
@@ -168,7 +172,12 @@
           <span class="history-time">{{ formatTime(h.timestamp) }}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" @click="handleClearHistory">Clear History</button>
+      <button
+        class="btn btn-ghost"
+        @click="handleClearHistory"
+      >
+        Clear History
+      </button>
     </div>
   </div>
 </template>

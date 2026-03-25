@@ -9,6 +9,10 @@ directories:
 files:
   - dist/**/*
   - dist-electron/**/*
+  - "!node_modules/better-sqlite3/**/*"
+  - "!node_modules/node-gyp/**/*"
+
+npmRebuild: false
 
 extraMetadata:
   main: dist-electron/main.cjs
@@ -19,8 +23,7 @@ linux:
     - deb
   category: Office
   icon: src-tauri/icons
-  desktop:
-    StartupWMClass: FlowState
+  executableName: flowstate
 
 appImage:
   artifactName: FlowState-${version}-${arch}.AppImage

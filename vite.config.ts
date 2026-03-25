@@ -135,8 +135,6 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       external: [
         'fsevents',
-        // TASK-1721: Tauri packages removed but dead-code imports remain behind isTauri() guards
-        /^@tauri-apps\//,
       ],
       output: {
         format: 'es', // Workers MUST be 'es' format

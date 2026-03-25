@@ -9,6 +9,9 @@ import { registerHttpHandlers } from './ipc/http'
 import { registerWindowHandlers } from './ipc/window'
 import { registerUpdater } from './updater'
 
+// Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
+app.setName('flow-state')
+
 // Prevent multiple instances
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {

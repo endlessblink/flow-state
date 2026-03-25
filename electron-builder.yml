@@ -24,6 +24,9 @@ linux:
   category: Office
   icon: src-tauri/icons
   executableName: flowstate
+  desktop:
+    entry:
+      StartupWMClass: flow-state
 
 appImage:
   artifactName: FlowState-${version}-${arch}.AppImage

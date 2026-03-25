@@ -8,6 +8,46 @@
 
 ## Active Tasks
 
+### BUG-1726: `useBeforeUnload()` called outside setup context in useAppInitialization.ts (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Vue warns that `useBeforeUnload()` is being called outside a component setup context. The call in `useAppInitialization.ts` needs to be moved or restructured so it runs during the component's `setup()` phase.
+
+**Files**: `src/composables/app/useAppInitialization.ts`
+
+---
+
+### BUG-1727: BaseModal extraneous non-props attributes warning (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Vue warns about extraneous non-props attributes being passed to `BaseModal`. The component needs `inheritAttrs: false` added to its options so it can control where attrs are applied (typically the inner wrapper, not the fragment root).
+
+**Files**: `src/components/base/BaseModal.vue`
+
+---
+
+### BUG-1728: Projects store sync race condition (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Projects store has a sync race condition — concurrent sync operations can interleave and produce inconsistent state. Needs a `syncUpdateInProgress` guard flag to prevent overlapping sync calls.
+
+**Files**: `src/stores/projects.ts` (or equivalent projects store)
+
+---
+
+### BUG-1729: CanvasView duplicate attribute in template (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: `CanvasView.vue` template has a duplicate attribute on an element, causing a Vue compile warning. The duplicate attribute needs to be identified and removed.
+
+**Files**: `src/views/CanvasView.vue`
+
+---
+
 ### BUG-1717: Fix `ref is not defined` runtime error in CanvasView production build (📋 PLANNED)
 
 **Priority**: P0 | **Status**: 📋 PLANNED
@@ -26,21 +66,21 @@
 
 ---
 
-### BUG-1723: Supabase Realtime connection drops with CHANNEL_ERROR cycling (👀 REVIEW)
+### ~~BUG-1723~~: Supabase Realtime connection drops with CHANNEL_ERROR cycling (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW
-
----
-
-### BUG-1724: BaseModal Vue warning — extraneous class attribute on fragment root (👀 REVIEW)
-
-**Priority**: P3 | **Status**: 👀 REVIEW
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-25)
 
 ---
 
-### BUG-1725: Lifecycle hooks called outside component setup context (👀 REVIEW)
+### ~~BUG-1724~~: BaseModal Vue warning — extraneous class attribute on fragment root (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW
+**Priority**: P3 | **Status**: ✅ DONE (2026-03-25)
+
+---
+
+### ~~BUG-1725~~: Lifecycle hooks called outside component setup context (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-25)
 
 ---
 

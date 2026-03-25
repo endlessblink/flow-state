@@ -1,7 +1,11 @@
 ---
 name: tauri-debugger
-description: Debug Tauri 2.x desktop app issues including dialogs, CSP, plugins, and Vite integration. Triggers on Tauri dialog not opening, file save dialog doesn't work, CSP errors, virtual:pwa-register errors, click handlers not working in Tauri, XDG Portal issues on Linux.
+description: ARCHIVED — Tauri has been replaced by Electron. This skill is no longer active.
 ---
+
+> **ARCHIVED**: Tauri has been replaced by Electron. This skill is no longer active.
+> For Electron desktop app work, use the `electron` skill instead.
+> Historical reference kept below for context.
 
 # Tauri Debugger Skill
 

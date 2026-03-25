@@ -92,6 +92,7 @@
           ref="vueFlowRef"
           :nodes="nodes"
           :edges="edges"
+          :apply-default="false"
           :class="{ 'canvas-ready': isCanvasReady }"
           class="vue-flow-container"
           :node-types="nodeTypes"
@@ -115,6 +116,7 @@
           :connection-radius="30"
           :zoom-scroll-sensitivity="1.0"
           :zoom-activation-key-code="null"
+          :delete-key-code="false"
           prevent-scrolling
           :default-viewport="initialViewport"
           dir="ltr"

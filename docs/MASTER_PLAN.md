@@ -26,6 +26,24 @@
 
 ---
 
+### BUG-1723: Supabase Realtime connection drops with CHANNEL_ERROR cycling (👀 REVIEW)
+
+**Priority**: P2 | **Status**: 👀 REVIEW
+
+---
+
+### BUG-1724: BaseModal Vue warning — extraneous class attribute on fragment root (👀 REVIEW)
+
+**Priority**: P3 | **Status**: 👀 REVIEW
+
+---
+
+### BUG-1725: Lifecycle hooks called outside component setup context (👀 REVIEW)
+
+**Priority**: P2 | **Status**: 👀 REVIEW
+
+---
+
 ### ~~TASK-1718~~: Electron Phase 2 — Platform Detection Swap (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-25)
@@ -3806,6 +3824,65 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 3. Lightbox should return focus to Vue Flow pane on close
 
 **Files**: `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasHotkeys.ts`, `src/components/canvas/ImageNode.vue`
+
+---
+
+### BUG-1723: Supabase Realtime connection drops with CHANNEL_ERROR cycling (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Realtime WebSocket connection repeatedly drops with `CHANNEL_ERROR` and `CLOSED` events (unknown reason), then reconnects. This causes unnecessary data reloads, duplicate PROJECT event floods (6 projects × multiple reconnects), and potential missed events during the disconnect window.
+
+**Symptoms from console**:
+- `📡 [REALTIME] Connection dropped (CHANNEL_ERROR): unknown reason`
+- `📡 [REALTIME] Connection dropped (CLOSED): unknown reason`
+- Duplicate `removeChannel` calls (recursion guard catches them)
+- After reconnect: full recovery reload + PROJECT event storm (all 6 projects re-emitted multiple times)
+
+**Investigation areas**:
+1. Check Supabase Realtime server health / connection limits on VPS
+2. Review channel subscription cleanup — recursion guard suggests double-teardown
+3. Check if tab visibility changes trigger disconnects
+4. Review reconnect backoff strategy (currently ~1s)
+5. Deduplicate PROJECT events after reconnect recovery
+
+**Files**: `src/composables/useRealtimeSubscription.ts`, `src/composables/useAppInitialization.ts`
+
+---
+
+### BUG-1724: BaseModal Vue warning — extraneous class attribute on fragment root (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Problem**: Every `BaseModal` usage triggers Vue warning: "Extraneous non-props attributes (class) were passed to component but could not be automatically inherited because component renders fragment or text or teleport root nodes." Affects `ConfirmationModal`, `RecurrenceDeleteModal`, and all modals across Canvas, Calendar, and Sidebar views.
+
+**Root cause**: `BaseModal` renders a fragment (multiple root nodes) or uses `<Teleport>` as root, so Vue can't auto-inherit the `class` attribute from parent components like `ConfirmationModal`.
+
+**Fix options**:
+1. Wrap `BaseModal` template in a single root element
+2. Use `inheritAttrs: false` and manually bind `$attrs` to the correct element
+3. Remove `class` pass-through from `ConfirmationModal` wrapper
+
+**Files**: `src/components/base/BaseModal.vue`, `src/components/common/ConfirmationModal.vue`
+
+---
+
+### BUG-1725: Lifecycle hooks called outside component setup context (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Console warns `onMounted is called when there is no active component instance` and `onUnmounted is called when there is no active component instance`. This happens during app initialization, likely from an async composable that registers lifecycle hooks after an `await` statement.
+
+**Root cause**: Vue 3 requires lifecycle hooks to be registered synchronously during `setup()`. If a composable uses `async setup()` or calls `onMounted`/`onUnmounted` after an `await`, the hooks won't bind to any component instance.
+
+**Investigation**:
+1. Search for `onMounted` / `onUnmounted` calls inside async functions or after `await` in composables
+2. Check `useAppInitialization.ts` — it orchestrates many async operations during startup
+3. Check Realtime subscription setup — connection happens async
+
+**Impact**: Hooks silently fail to register, meaning cleanup code in `onUnmounted` never runs (potential memory leaks).
+
+**Files**: `src/composables/useAppInitialization.ts`, composables called during init
 
 ---
 

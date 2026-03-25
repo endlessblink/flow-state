@@ -121,7 +121,11 @@ export const useProjectStore = defineStore('projects', () => {
             // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq)
             const workspaceId = wsStore.activeWorkspaceId
             const loadedProjects = await fetchProjects(workspaceId)
+            // BUG-1723: Set syncUpdateInProgress to prevent watcher from echoing
+            // all projects back to Supabase (which triggers a Realtime PROJECT storm)
+            syncUpdateInProgress = true
             _rawProjects.value = loadedProjects
+            nextTick(() => { syncUpdateInProgress = false })
             console.log(`✅ [SUPABASE] Loaded ${loadedProjects.length} projects`)
 
             // BUG-1411: Cache projects to IndexedDB for offline loading

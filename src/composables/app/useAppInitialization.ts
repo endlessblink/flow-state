@@ -36,6 +36,8 @@ export function useAppInitialization() {
     const authStore = useAuthStore()
     const workspaceStore = useWorkspaceStore()
     const itpProtection = useSafariITPProtection()
+    // BUG-1725: Must be called synchronously during setup(), not inside async onMounted
+    useBeforeUnload()
     const activeChannel = ref<unknown>(null)
     const realtimeInitialized = ref(false)
     const onMountedCompleted = ref(false)  // BUG-1106: Prevent race condition between watcher and onMounted
@@ -553,15 +555,6 @@ export function useAppInitialization() {
             }
         } catch (error) {
             console.warn('⚠️ [SYNC] Sync system initialization failed (non-critical):', error)
-        }
-
-        // TASK-1177: Initialize beforeunload protection
-        // This warns users if they try to close the tab with unsaved changes
-        try {
-            useBeforeUnload()
-            console.log('🛡️ [SYNC] Page close protection enabled')
-        } catch (error) {
-            console.warn('⚠️ [SYNC] beforeunload protection failed (non-critical):', error)
         }
 
         // 3. Initialize Realtime Subscriptions

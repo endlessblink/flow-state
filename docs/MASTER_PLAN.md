@@ -8,6 +8,22 @@
 
 ## Active Tasks
 
+### ~~TASK-1730~~: Fix Electron OAuth Google sign-in flow (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE
+
+**Problem**: `signInWithGoogle()` in `src/stores/auth.ts` has branches for Tauri and Capacitor but no branch for Electron. It falls through to the PWA path which calls `supabase.auth.signInWithOAuth()` with `redirectTo: window.location.origin` — which in Electron's `file://` context navigates the window to the production website, losing app context and the electronStorage adapter.
+
+**Fix**:
+1. Add Electron branch in `signInWithGoogle()` using `skipBrowserRedirect: true` + `openExternal()` to open OAuth URL in system browser
+2. Add `will-navigate` interceptor in `electron/main.ts` to catch the OAuth callback and inject the auth code into the renderer
+3. Add `electron-auth-code` event listener in auth.ts to exchange the code for a session
+4. Create `public/auth/callback/index.html` as the OAuth redirect landing page
+
+**Files**: `src/stores/auth.ts`, `electron/main.ts`, `public/auth/callback/index.html`
+
+---
+
 ### BUG-1726: `useBeforeUnload()` called outside setup context in useAppInitialization.ts (📋 PLANNED)
 
 **Priority**: P2 | **Status**: 📋 PLANNED
@@ -81,6 +97,21 @@
 ### ~~BUG-1725~~: Lifecycle hooks called outside component setup context (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-25)
+
+---
+
+### ~~BUG-1731~~: Electron auth persistence — sessions lost on app restart (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-26)
+
+**Problem**: Electron's `file://` protocol didn't reliably persist localStorage across app restarts. Auth tokens were lost and users were logged out after closing and reopening the app.
+
+**Fix**:
+1. **electronStorage adapter** — IPC-backed storage adapter that routes auth tokens through `electron-store` disk-backed store (survives restarts)
+2. **localhost HTTP OAuth server** — Same pattern as Tauri: start `http://localhost:3001` server in Electron main process to capture OAuth callback (since `file://` can't handle redirects)
+3. **Settings > Account Updates section** — Added in Electron to show auto-updater status (parallel to Tauri)
+
+**Files**: `src/services/auth/electronStorage.ts`, `src/composables/useElectronAuth.ts`, `electron/ipc/auth.ts`, `src/components/settings/tabs/AccountSettingsTab.vue`
 
 ---
 
@@ -2524,30 +2555,30 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1527**~~ | **P2** | ~~**Remove entire gamification system (XP, achievements, challenges, shop, Cyberflow RPG) — ~23,700 lines removed, DB tables left dormant**~~ (✅ DONE 2026-03-14) |
 | ~~**TASK-1531**~~ | **P2** | ~~**KDE dock: show current scheduled calendar block next to pomodoro timer — always-visible context of what's planned now, with toggle in KDE widget settings**~~ (✅ DONE) |
 | **TASK-1532** | **P1** | **"Done for Now" vs "Done Fully" for recurring tasks — Hybrid clone model: "done for now" creates completion record + advances original to next occurrence; "done fully" stops recurrence (current behavior). DoneToggle click = done-for-now for recurring, context menu offers both options.** (🔄 IN PROGRESS) |
-| **TASK-1533** | **P0** | **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (📋 PLANNED) |
-| **TASK-1534** | **P0** | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (📋 PLANNED) |
-| **TASK-1535** | **P0** | **DB migration: Add workspace_id to tasks, projects, groups + assigned_to on tasks** (📋 PLANNED) |
-| **TASK-1536** | **P0** | **DB migration: SECURITY DEFINER function user_workspace_ids() for RLS performance** (📋 PLANNED) |
-| **TASK-1537** | **P0** | **DB migration: Rewrite 32+ RLS policies to be workspace-aware** (📋 PLANNED) |
-| **TASK-1538** | **P0** | **DB migration: Add new tables to supabase_realtime publication** (📋 PLANNED) |
-| **TASK-1539** | **P1** | **Pinia store: workspaces.ts — activeWorkspaceId, CRUD, switchWorkspace** (📋 PLANNED) |
-| **TASK-1540** | **P1** | **Update supabaseMappers.ts with workspace_id** (📋 PLANNED) |
+| ~~**TASK-1533**~~ | **P0** | **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (🔄 IN PROGRESS) |
+| ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1535**~~ | **P0** | **DB migration: Add workspace_id to tasks, projects, groups + assigned_to on tasks** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1536**~~ | **P0** | **DB migration: SECURITY DEFINER function user_workspace_ids() for RLS performance** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1537**~~ | **P0** | **DB migration: Rewrite 32+ RLS policies to be workspace-aware** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1538**~~ | **P0** | **DB migration: Add new tables to supabase_realtime publication** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1539**~~ | **P1** | **Pinia store: workspaces.ts — activeWorkspaceId, CRUD, switchWorkspace** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1540**~~ | **P1** | **Update supabaseMappers.ts with workspace_id** (✅ DONE (2026-03-17)) |
 | **TASK-1541** | **P1** | **Update useTaskFiltering.ts with workspace filter** (📋 PLANNED) |
-| **TASK-1542** | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts for workspace context** (📋 PLANNED) |
-| **TASK-1543** | **P1** | **Update projects.ts store for workspace filtering** (📋 PLANNED) |
-| **TASK-1544** | **P1** | **Update canvas store (groups) for workspace filtering** (📋 PLANNED) |
-| **TASK-1545** | **P1** | **UI: Workspace switcher component in sidebar** (📋 PLANNED) |
-| **TASK-1546** | **P1** | **Update auth.ts: fetch workspaces on login** (📋 PLANNED) |
-| **TASK-1547** | **P0** | **Offline sync queue: inject workspace_id into queued payloads** (📋 PLANNED) |
-| **TASK-1548** | **P0** | **Realtime subscriptions: workspace_id filtering + workspace switch handling** (📋 PLANNED) |
-| **TASK-1549** | **P0** | **Cross-tab sync: add workspaceId to protocol** (📋 PLANNED) |
+| ~~**TASK-1542**~~ | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts for workspace context** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1543**~~ | **P1** | **Update projects.ts store for workspace filtering** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1544**~~ | **P1** | **Update canvas store (groups) for workspace filtering** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1545**~~ | **P1** | **UI: Workspace switcher component in sidebar** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1546**~~ | **P1** | **Update auth.ts: fetch workspaces on login** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1547**~~ | **P0** | **Offline sync queue: inject workspace_id into queued payloads** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1548**~~ | **P0** | **Realtime subscriptions: workspace_id filtering + workspace switch handling** (✅ DONE (2026-03-17)) |
+| ~~**TASK-1549**~~ | **P0** | **Cross-tab sync: add workspaceId to protocol** (✅ DONE (2026-03-17)) |
 | **TASK-1550** | **P1** | **Guest mode isolation for workspace feature** (📋 PLANNED) |
-| **TASK-1551** | **P1** | **Invite flow: generate link, accept via Edge Function, /#/invite/:token route** (📋 PLANNED) |
+| ~~**TASK-1551**~~ | **P1** | **Invite flow: generate link, accept via Edge Function, /#/invite/:token route** (✅ DONE (2026-03-17)) |
 | **TASK-1552** | **P1** | **Task assignment UI: assigned_to dropdown, avatar badges, filters** (📋 PLANNED) |
 | **TASK-1553** | **P1** | **Task comments: CRUD + realtime + UI** (📋 PLANNED) |
 | **TASK-1554** | **P2** | **Activity feed: logging + display** (📋 PLANNED) |
 | **TASK-1555** | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (📋 PLANNED) |
-| **TASK-1556** | **P1** | **Hebrew translations for all workspace strings** (📋 PLANNED) |
+| ~~**TASK-1556**~~ | **P1** | **Hebrew translations for all workspace strings** (✅ DONE (2026-03-17)) |
 | **TASK-1557** | **P2** | **Member management UI** (📋 PLANNED) |
 | **TASK-1558** | **P2** | **Empty states for workspaces** (📋 PLANNED) |
 | **TASK-1559** | **P3** | **Member presence (v2 nice-to-have)** (📋 PLANNED) |
@@ -2557,7 +2588,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 ## Workspace Collaboration (TASK-1533 Epic)
 
 > **Goal**: Add multi-user workspace collaboration to FlowState. Personal workspace stays as-is (workspace_id IS NULL). Shared workspaces allow 2+ members to share tasks, projects, and canvas.
-> **Priority**: P0 | **Status**: 📋 PLANNED
+> **Priority**: P0 | **Status**: 🔄 IN PROGRESS
 > **Brief**: User-provided implementation brief covers DB schema, RLS, stores, UI, and phased rollout.
 > **Architect Assessment**: Feasibility confirmed with 5 HIGH-risk areas identified (RLS migration, offline sync queue, realtime subscriptions, cross-tab sync, invite chicken-and-egg).
 
@@ -2565,37 +2596,37 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | ID | Priority | Description | Status | Depends On |
 |----|----------|-------------|--------|------------|
-| **TASK-1533** | **P0** | **Epic: Workspace Collaboration — tracking parent for all sub-tasks** | 📋 PLANNED | — |
-| **TASK-1534** | **P0** | **DB migration: Create workspaces, workspace_members, workspace_invites, task_comments, workspace_activity tables** | 📋 PLANNED | — |
-| **TASK-1535** | **P0** | **DB migration: Add workspace_id (NULLABLE) to tasks, projects, groups tables + assigned_to on tasks** | 📋 PLANNED | TASK-1534 |
-| **TASK-1536** | **P0** | **DB migration: Create `user_workspace_ids()` SECURITY DEFINER function for RLS performance** | 📋 PLANNED | TASK-1534 |
-| **TASK-1537** | **P0** | **DB migration: Rewrite ALL RLS policies to be workspace-aware (32+ policies across 8+ tables). Must handle workspace_id IS NULL for personal tasks. TEST AGAINST PRODUCTION DATA COPY.** | 📋 PLANNED | TASK-1535, TASK-1536 |
-| **TASK-1538** | **P0** | **DB migration: Add workspace_id to supabase_realtime publication for task_comments and workspace_activity** | 📋 PLANNED | TASK-1534 |
-| **TASK-1539** | **P1** | **Pinia store: Create src/stores/workspaces.ts — activeWorkspaceId, workspaces[], members[], switchWorkspace(), createWorkspace(), inviteMember(), acceptInvite(), removeMember()** | 📋 PLANNED | TASK-1537 |
-| **TASK-1540** | **P1** | **Update supabaseMappers.ts: Add workspace_id to toSupabaseTask(), toSupabaseProject(), toSupabaseGroup() mappers** | 📋 PLANNED | TASK-1535 |
+| ~~**TASK-1533**~~ | **P0** | **Epic: Workspace Collaboration — tracking parent for all sub-tasks** | 🔄 IN PROGRESS | — |
+| ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspaces, workspace_members, workspace_invites, task_comments, workspace_activity tables** | ✅ DONE (2026-03-17) | — |
+| ~~**TASK-1535**~~ | **P0** | **DB migration: Add workspace_id (NULLABLE) to tasks, projects, groups tables + assigned_to on tasks** | ✅ DONE (2026-03-17) | TASK-1534 |
+| ~~**TASK-1536**~~ | **P0** | **DB migration: Create `user_workspace_ids()` SECURITY DEFINER function for RLS performance** | ✅ DONE (2026-03-17) | TASK-1534 |
+| ~~**TASK-1537**~~ | **P0** | **DB migration: Rewrite ALL RLS policies to be workspace-aware (32+ policies across 8+ tables). Must handle workspace_id IS NULL for personal tasks. TEST AGAINST PRODUCTION DATA COPY.** | ✅ DONE (2026-03-17) | TASK-1535, TASK-1536 |
+| ~~**TASK-1538**~~ | **P0** | **DB migration: Add workspace_id to supabase_realtime publication for task_comments and workspace_activity** | ✅ DONE (2026-03-17) | TASK-1534 |
+| ~~**TASK-1539**~~ | **P1** | **Pinia store: Create src/stores/workspaces.ts — activeWorkspaceId, workspaces[], members[], switchWorkspace(), createWorkspace(), inviteMember(), acceptInvite(), removeMember()** | ✅ DONE (2026-03-17) | TASK-1537 |
+| ~~**TASK-1540**~~ | **P1** | **Update supabaseMappers.ts: Add workspace_id to toSupabaseTask(), toSupabaseProject(), toSupabaseGroup() mappers** | ✅ DONE (2026-03-17) | TASK-1535 |
 | **TASK-1541** | **P1** | **Update useTaskFiltering.ts: Add workspace_id filter predicate so board/canvas/calendar/inbox respect active workspace** | 📋 PLANNED | TASK-1539, TASK-1540 |
-| **TASK-1542** | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts: Pass workspace context to fetchTasks, add .eq('workspace_id', ...) filter** | 📋 PLANNED | TASK-1539, TASK-1540 |
-| **TASK-1543** | **P1** | **Update projects.ts store: Filter projects by activeWorkspaceId, same pattern as tasks** | 📋 PLANNED | TASK-1539, TASK-1540 |
-| **TASK-1544** | **P1** | **Update canvas store (groups): Filter groups by activeWorkspaceId, validate workspace match on parentId assignment** | 📋 PLANNED | TASK-1539, TASK-1540 |
-| **TASK-1545** | **P1** | **UI: Workspace switcher component in sidebar — dropdown with "Personal" + shared workspaces + "Create Workspace" action** | 📋 PLANNED | TASK-1539 |
-| **TASK-1546** | **P1** | **Update auth.ts: On login, fetch workspaces via workspace_members join, restore last-used workspace from localStorage** | 📋 PLANNED | TASK-1539 |
+| ~~**TASK-1542**~~ | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts: Pass workspace context to fetchTasks, add .eq('workspace_id', ...) filter** | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
+| ~~**TASK-1543**~~ | **P1** | **Update projects.ts store: Filter projects by activeWorkspaceId, same pattern as tasks** | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
+| ~~**TASK-1544**~~ | **P1** | **Update canvas store (groups): Filter groups by activeWorkspaceId, validate workspace match on parentId assignment** | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
+| ~~**TASK-1545**~~ | **P1** | **UI: Workspace switcher component in sidebar — dropdown with "Personal" + shared workspaces + "Create Workspace" action** | ✅ DONE (2026-03-17) | TASK-1539 |
+| ~~**TASK-1546**~~ | **P1** | **Update auth.ts: On login, fetch workspaces via workspace_members join, restore last-used workspace from localStorage** | ✅ DONE (2026-03-17) | TASK-1539 |
 
 ### Phase 2: Sync Safety (CRITICAL — must be done before enabling workspaces)
 
 | ID | Priority | Description | Status | Depends On |
 |----|----------|-------------|--------|------------|
-| **TASK-1547** | **P0** | **Offline sync queue: Inject workspace_id into queued payloads in useSyncOrchestrator.ts. Defense-in-depth for ops created before migration (existing IndexedDB queue entries lack workspace_id)** | 📋 PLANNED | TASK-1540 |
-| **TASK-1548** | **P0** | **Realtime subscriptions: Update useRealtimeSubscription.ts to filter by workspace_id instead of user_id. Handle workspace switch (teardown old channel, create new). Add isWorkspaceSwitching flag to prevent reconnect logic from fighting intentional disconnects.** | 📋 PLANNED | TASK-1538, TASK-1539 |
-| **TASK-1549** | **P0** | **Cross-tab sync: Add workspaceId to CrossTabMessage and TaskOperation interfaces in useCrossTabSync.ts. Handler must ignore messages from different workspace. Broadcast workspace switch events.** | 📋 PLANNED | TASK-1539 |
+| ~~**TASK-1547**~~ | **P0** | **Offline sync queue: Inject workspace_id into queued payloads in useSyncOrchestrator.ts. Defense-in-depth for ops created before migration (existing IndexedDB queue entries lack workspace_id)** | ✅ DONE (2026-03-17) | TASK-1540 |
+| ~~**TASK-1548**~~ | **P0** | **Realtime subscriptions: Update useRealtimeSubscription.ts to filter by workspace_id instead of user_id. Handle workspace switch (teardown old channel, create new). Add isWorkspaceSwitching flag to prevent reconnect logic from fighting intentional disconnects.** | ✅ DONE (2026-03-17) | TASK-1538, TASK-1539 |
+| ~~**TASK-1549**~~ | **P0** | **Cross-tab sync: Add workspaceId to CrossTabMessage and TaskOperation interfaces in useCrossTabSync.ts. Handler must ignore messages from different workspace. Broadcast workspace switch events.** | ✅ DONE (2026-03-17) | TASK-1539 |
 | **TASK-1550** | **P1** | **Guest mode isolation: Ensure workspace store returns empty/disabled state when !isAuthenticated. Verify migrateGuestData() targets personal workspace (NULL workspace_id) only.** | 📋 PLANNED | TASK-1539 |
 
 ### Phase 3: Collaboration Features
 
 | ID | Priority | Description | Status | Depends On |
 |----|----------|-------------|--------|------------|
-| **TASK-1551** | **P1** | **Invite flow: Generate invite link (workspace_invites table), copy/share UI, route /#/invite/:token, accept-invite Edge Function (SECURITY DEFINER — must add user to workspace_members server-side, chicken-and-egg problem)** | 📋 PLANNED | TASK-1539 |
+| ~~**TASK-1551**~~ | **P1** | **Invite flow: Generate invite link (workspace_invites table), copy/share UI, route /#/invite/:token, accept-invite Edge Function (SECURITY DEFINER — must add user to workspace_members server-side, chicken-and-egg problem)** | ✅ DONE (2026-03-17) | TASK-1539 |
 | **TASK-1552** | **P1** | **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter** | 📋 PLANNED | TASK-1539, TASK-1551 |
-| **TASK-1553** | **P1** | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel** | 📋 PLANNED | TASK-1548 |
+| **TASK-1553** | **P1** | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel** | 🔄 IN PROGRESS | TASK-1548 |
 | **TASK-1554** | **P2** | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI** | 📋 PLANNED | TASK-1539 |
 
 ### Phase 4: Partner UX & Polish
@@ -2603,7 +2634,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ID | Priority | Description | Status | Depends On |
 |----|----------|-------------|--------|------------|
 | **TASK-1555** | **P1** | **Partner-friendly UX: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.** | 📋 PLANNED | TASK-1545, TASK-1551 |
-| **TASK-1556** | **P1** | **Hebrew translations: Add workspaces namespace to he.json — workspace, members, invite, comments, activity feed, all new UI strings** | 📋 PLANNED | TASK-1545 |
+| ~~**TASK-1556**~~ | **P1** | **Hebrew translations: Add workspaces namespace to he.json — workspace, members, invite, comments, activity feed, all new UI strings** | ✅ DONE (2026-03-17) | TASK-1545 |
 | **TASK-1557** | **P2** | **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)** | 📋 PLANNED | TASK-1539 |
 | **TASK-1558** | **P2** | **Empty states: New workspace welcome, no tasks yet, no members yet, pending invite states** | 📋 PLANNED | TASK-1545 |
 | **TASK-1559** | **P3** | **Member presence: Show who's online in workspace using Supabase Realtime Presence (nice-to-have v2)** | 📋 PLANNED | TASK-1548 |
@@ -2628,58 +2659,58 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | Invite chicken-and-egg — user can't join workspace they're not in | MEDIUM | Edge Function with service_role key |
 | Canvas parentId cross-workspace — task in workspace B references group in workspace A | LOW | App-level validation in drag handlers |
 
-#### TASK-1533: Epic: Workspace Collaboration — Tracking Parent (📋 PLANNED)
+#### ~~TASK-1533~~: Epic: Workspace Collaboration — Tracking Parent (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: —
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Depends On**: —
 **Description**: Epic tracking parent for all workspace collaboration sub-tasks (TASK-1534 through TASK-1559). No implementation work — exists to group and track the full collaboration milestone.
 
 ---
 
-#### TASK-1534: DB Migration — Core Workspace Tables (📋 PLANNED)
+#### ~~TASK-1534~~: DB Migration — Core Workspace Tables (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: —
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: —
 **Description**: Create `workspaces`, `workspace_members`, `workspace_invites`, `task_comments`, and `workspace_activity` tables via Supabase migration. These tables form the foundational schema for all collaboration features.
 
 ---
 
-#### TASK-1535: DB Migration — Add workspace_id to Existing Tables (📋 PLANNED)
+#### ~~TASK-1535~~: DB Migration — Add workspace_id to Existing Tables (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1534
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1534
 **Description**: Add `workspace_id` (NULLABLE) column to `tasks`, `projects`, and `groups` tables, plus `assigned_to` column on `tasks`. NULL workspace_id means "personal workspace" — no data migration needed for existing rows.
 
 ---
 
-#### TASK-1536: DB Migration — user_workspace_ids() SECURITY DEFINER Function (📋 PLANNED)
+#### ~~TASK-1536~~: DB Migration — user_workspace_ids() SECURITY DEFINER Function (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1534
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1534
 **Description**: Create `user_workspace_ids()` SECURITY DEFINER function for RLS performance. Caches per-transaction to avoid correlated subquery per row when evaluating workspace-aware RLS policies.
 
 ---
 
-#### TASK-1537: DB Migration — Rewrite All RLS Policies (📋 PLANNED)
+#### ~~TASK-1537~~: DB Migration — Rewrite All RLS Policies (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1535, TASK-1536
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1535, TASK-1536
 **Description**: Rewrite ALL RLS policies to be workspace-aware (32+ policies across 8+ tables). Must handle `workspace_id IS NULL` for personal tasks. TEST AGAINST PRODUCTION DATA COPY before applying. This is the highest-risk migration in the epic.
 
 ---
 
-#### TASK-1538: DB Migration — Realtime Publication for Workspace Tables (📋 PLANNED)
+#### ~~TASK-1538~~: DB Migration — Realtime Publication for Workspace Tables (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1534
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1534
 **Description**: Add `workspace_id` filter to supabase_realtime publication for `task_comments` and `workspace_activity` tables so realtime events are scoped per workspace.
 
 ---
 
-#### TASK-1539: Pinia Store — workspaces.ts (📋 PLANNED)
+#### ~~TASK-1539~~: Pinia Store — workspaces.ts (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1537
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1537
 **Description**: Create `src/stores/workspaces.ts` with `activeWorkspaceId`, `workspaces[]`, `members[]`, and actions: `switchWorkspace()`, `createWorkspace()`, `inviteMember()`, `acceptInvite()`, `removeMember()`. Central source of truth for workspace context across all stores.
 
 ---
 
-#### TASK-1540: Update supabaseMappers.ts for workspace_id (📋 PLANNED)
+#### ~~TASK-1540~~: Update supabaseMappers.ts for workspace_id (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1535
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1535
 **Description**: Add `workspace_id` to `toSupabaseTask()`, `toSupabaseProject()`, and `toSupabaseGroup()` mapper functions in `supabaseMappers.ts` so all write operations include workspace context.
 
 ---
@@ -2691,58 +2722,58 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1542: Update taskPersistence.ts + useTasksDatabase.ts for workspace context (📋 PLANNED)
+#### ~~TASK-1542~~: Update taskPersistence.ts + useTasksDatabase.ts for workspace context (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1540
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1539, TASK-1540
 **Description**: Pass workspace context to `fetchTasks` and add `.eq('workspace_id', ...)` filter in `taskPersistence.ts` and `useTasksDatabase.ts` so database reads are scoped to the active workspace.
 
 ---
 
-#### TASK-1543: Update projects.ts Store for workspace filtering (📋 PLANNED)
+#### ~~TASK-1543~~: Update projects.ts Store for workspace filtering (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1540
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1539, TASK-1540
 **Description**: Filter projects by `activeWorkspaceId` in `projects.ts` store, following the same pattern applied to tasks in TASK-1541/1542.
 
 ---
 
-#### TASK-1544: Update Canvas Store (groups) for workspace filtering (📋 PLANNED)
+#### ~~TASK-1544~~: Update Canvas Store (groups) for workspace filtering (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1540
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1539, TASK-1540
 **Description**: Filter canvas groups by `activeWorkspaceId` in the canvas store. Validate workspace match on `parentId` assignment in drag handlers to prevent cross-workspace canvas group references.
 
 ---
 
-#### TASK-1545: UI — Workspace Switcher Component (📋 PLANNED)
+#### ~~TASK-1545~~: UI — Workspace Switcher Component (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1539
 **Description**: Build workspace switcher component in the sidebar — dropdown listing "Personal" plus shared workspaces, with a "Create Workspace" action at the bottom. Hides automatically when user has exactly 1 workspace (see TASK-1555).
 
 ---
 
-#### TASK-1546: Update auth.ts — Fetch Workspaces on Login (📋 PLANNED)
+#### ~~TASK-1546~~: Update auth.ts — Fetch Workspaces on Login (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1539
 **Description**: On login, fetch workspaces via `workspace_members` join and restore last-used workspace from `localStorage` in `auth.ts`. Ensures workspace context is available immediately after authentication.
 
 ---
 
-#### TASK-1547: Offline Sync Queue — Inject workspace_id into Payloads (📋 PLANNED)
+#### ~~TASK-1547~~: Offline Sync Queue — Inject workspace_id into Payloads (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1540
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1540
 **Description**: Inject `workspace_id` into queued payloads in `useSyncOrchestrator.ts`. Defense-in-depth for ops created before the migration — existing IndexedDB queue entries lack `workspace_id` and must be patched at processing time.
 
 ---
 
-#### TASK-1548: Realtime Subscriptions — Filter by workspace_id (📋 PLANNED)
+#### ~~TASK-1548~~: Realtime Subscriptions — Filter by workspace_id (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1538, TASK-1539
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1538, TASK-1539
 **Description**: Update `useRealtimeSubscription.ts` to filter by `workspace_id` instead of `user_id`. Handle workspace switch by tearing down the old channel and creating a new one. Add `isWorkspaceSwitching` flag to prevent reconnect logic from fighting intentional disconnects.
 
 ---
 
-#### TASK-1549: Cross-Tab Sync — Add workspaceId to Message Protocol (📋 PLANNED)
+#### ~~TASK-1549~~: Cross-Tab Sync — Add workspaceId to Message Protocol (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1539
 **Description**: Add `workspaceId` to `CrossTabMessage` and `TaskOperation` interfaces in `useCrossTabSync.ts`. Handlers must ignore messages from a different workspace. Broadcast workspace switch events so all tabs stay in sync.
 
 ---
@@ -2754,9 +2785,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1551: Invite Flow — Link Generation, Route, Edge Function (📋 PLANNED)
+#### ~~TASK-1551~~: Invite Flow — Link Generation, Route, Edge Function (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1539
 **Description**: Generate invite links via the `workspace_invites` table, copy/share UI, route `/#/invite/:token`, and an accept-invite Edge Function with `SECURITY DEFINER` (required because accepting user can't INSERT into `workspace_members` until they're already a member — RLS chicken-and-egg).
 
 ---
@@ -2768,10 +2799,14 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1553: Task Comments — CRUD + Realtime Thread UI (📋 PLANNED)
+#### TASK-1553: Task Comments — CRUD + Realtime Thread UI (🔄 IN PROGRESS)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1548
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Depends On**: TASK-1548
 **Description**: Full CRUD for `task_comments` with real-time updates via Supabase Realtime. Comment thread UI inside the task detail panel, supporting add, edit, and delete operations.
+
+- [x] `src/types/workspace.ts` — `TaskComment` interface appended
+- [x] `src/composables/supabase/useTaskComments.ts` — composable with fetchComments, addComment, updateComment, deleteComment, subscribeToComments
+- [ ] Vue component for comment thread UI (future subtask)
 
 ---
 
@@ -2789,9 +2824,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1556: Hebrew Translations for Workspace Features (📋 PLANNED)
+#### ~~TASK-1556~~: Hebrew Translations for Workspace Features (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1545
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-17) | **Depends On**: TASK-1545
 **Description**: Add `workspaces` namespace to `he.json` covering all new UI strings: workspace, members, invite, comments, activity feed, and all related actions and states.
 
 ---
@@ -3923,6 +3958,27 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Impact**: Hooks silently fail to register, meaning cleanup code in `onUnmounted` never runs (potential memory leaks).
 
 **Files**: `src/composables/useAppInitialization.ts`, composables called during init
+
+---
+
+### ~~BUG-1731~~: Electron auth persistence — sessions lost on app restart (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-26)
+
+**Problem**: Electron's `file://` protocol didn't reliably persist `localStorage` across app restarts. Auth tokens were lost whenever users closed and reopened the app, forcing re-authentication.
+
+**Root cause**:
+1. Electron's `file://` scheme doesn't support persistent storage across restarts (localStorage is ephemeral)
+2. OAuth callback couldn't be captured in Electron's `file://` context (no HTTP server to receive redirects)
+3. Settings > Account section didn't show update status for Electron users
+
+**Fix**:
+1. **electronStorage adapter** (`src/services/auth/electronStorage.ts`) — IPC-backed storage adapter that routes auth tokens through `electron-store` (disk-persisted key-value store)
+2. **localhost OAuth server** (`electron/ipc/auth.ts`) — Start `http://localhost:3001` in main process to capture OAuth callback (same pattern as Tauri)
+3. **Electron-aware auth flow** (`src/composables/useElectronAuth.ts`) — Routes Electron through `skipBrowserRedirect: true` + `openExternal()` for browser-based OAuth
+4. **Account settings mirror** (`src/components/settings/tabs/AccountSettingsTab.vue`) — Added "Updates" section for Electron showing auto-updater status (parallel to Tauri)
+
+**Files**: `src/services/auth/electronStorage.ts`, `src/composables/useElectronAuth.ts`, `electron/ipc/auth.ts`, `src/components/settings/tabs/AccountSettingsTab.vue`
 
 ---
 

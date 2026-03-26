@@ -13,6 +13,9 @@ import { formatDateKey } from '@/utils/dateUtils'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { useCanvasSectionProperties } from './useCanvasSectionProperties'
 import type { CanvasSection } from '@/stores/canvas/types'
+import { useCanvasImagesStore } from '@/stores/canvasImages'
+import { pushImageDeleteUndo } from '@/composables/undoSingleton'
+import { useVueFlow } from '@vue-flow/core'
 
 
 
@@ -366,6 +369,26 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                         confirmGroupDeleted(item.id)
                         deps.recentlyDeletedGroups?.value.delete(item.id)
                     }
+                } else if (item.type === 'image') {
+                    // TASK-1722: Image deletion through same modal as tasks/groups
+                    // Order: snapshot → remove VueFlow node (sync) → undo → remove from store
+                    // This order avoids the race condition where images.length watcher
+                    // triggers syncStoreToCanvas before we can remove the VueFlow node.
+                    const imgStore = useCanvasImagesStore()
+                    const imgData = imgStore.images.find(i => i.id === item.id)
+                    const snapshot = imgData ? { ...imgData, position: { ...imgData.position } } : null
+
+                    // Remove VueFlow node first (synchronous)
+                    const { getNodes, setNodes } = useVueFlow()
+                    setNodes(getNodes.value.filter(n => n.id !== item.id))
+
+                    // Push to undo (unless permanent)
+                    if (!isPermanent && snapshot) {
+                        pushImageDeleteUndo(snapshot)
+                    }
+
+                    // Remove from store (fire-and-forget)
+                    imgStore.removeCanvasImage(item.id)
                 } else {
                     // Check if task is recurring — route to recurrence modal
                     const rawTasks = taskStore.rawTasks || taskStore.tasks

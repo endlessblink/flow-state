@@ -1499,7 +1499,12 @@ export function useTaskOperations(
 
     const getUncategorizedTaskCount = () => {
         const { isUncategorizedTask } = useSmartViews()
-        return _rawTasks.value.filter(t => t.status !== 'done' && isUncategorizedTask(t)).length
+        return _rawTasks.value.filter(t =>
+            t.status !== 'done' &&
+            !t._soft_deleted &&
+            !t.isPinned &&
+            isUncategorizedTask(t)
+        ).length
     }
 
     const getNestedTasks = (parent: string | null = null) => _rawTasks.value.filter(t => t.parentTaskId === parent)

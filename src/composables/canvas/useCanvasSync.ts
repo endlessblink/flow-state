@@ -523,6 +523,7 @@ export function useCanvasSync() {
                     id: img.id,
                     type: 'imageNode',
                     position: img.position,
+                    deletable: false,
                     data: {
                         imageUrl: img.imageUrl,
                         imageId: img.id,

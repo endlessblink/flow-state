@@ -33,6 +33,7 @@ appImage:
 
 deb:
   artifactName: FlowState_${version}_${arch}.deb
+  maintainer: endlessblink@gmail.com
   depends:
     - libnotify4
     - libxss1

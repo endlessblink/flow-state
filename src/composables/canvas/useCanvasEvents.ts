@@ -310,6 +310,8 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
             showEdgeContextMenu.value = false
         } else if (node.type === 'imageNode') {
             // TASK-1690: Image nodes — dispatch custom event for simple delete menu
+            // TASK-1722: Stop propagation so pane context menu doesn't also fire
+            mouseEvent.stopPropagation()
             window.dispatchEvent(new CustomEvent('image-node-context-menu', {
                 detail: { x, y, nodeId: node.id }
             }))

@@ -80,8 +80,9 @@ interface OperationSnapshot {
 
 // Separate operation history that parallels VueUse's refHistory
 // This allows us to associate metadata with each history entry
-let operationStack: OperationSnapshot[] = []
-let redoOperationStack: OperationSnapshot[] = []
+// TASK-1722 FIX: Use Vue ref so computed() properties (canUndo, canRedo, etc.) react to mutations
+const operationStack = ref<OperationSnapshot[]>([])
+const redoOperationStack = ref<OperationSnapshot[]>([])
 
 // Flag to track if we're in operation-aware mode
 const useOperationAwareUndo = true
@@ -333,14 +334,19 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
 
     case 'image-delete': {
       // TASK-1690: Undo image deletion = restore the image from snapshot
+      // TASK-1722: Return early — images are managed outside task/group sync,
+      // so requestSync('user:undo') is unnecessary and can cause cascading wipes
       const imageData = (snapshotBefore as unknown as Record<string, unknown>)._imageData
       if (imageData) {
         const { useCanvasImagesStore } = await import('@/stores/canvasImages')
         const store = useCanvasImagesStore()
+        const typedData = imageData as { id: string; imageUrl: string; position: { x: number; y: number } }
+        console.log(`🔄 [UNDO] Restoring canvas image: id=${typedData.id}, pos=(${typedData.position.x},${typedData.position.y}), url=${typedData.imageUrl.slice(0, 60)}...`)
         store.restoreCanvasImage(imageData as import('@/stores/canvas/types').CanvasImage)
-        console.log(`🔄 [UNDO] Restored canvas image: ${(imageData as { id: string }).id}`)
+      } else {
+        console.error('❌ [UNDO] image-delete: no _imageData in snapshot!')
       }
-      break
+      return true  // Early return — skip requestSync
     }
 
     case 'legacy':
@@ -492,6 +498,7 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
 
     case 'image-delete': {
       // TASK-1690: Redo image deletion = remove the image again
+      // TASK-1722: Return early — skip requestSync (images managed separately)
       const imageData = (snapshotBefore as unknown as Record<string, unknown>)._imageData
       if (imageData) {
         const { useCanvasImagesStore } = await import('@/stores/canvasImages')
@@ -499,7 +506,7 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
         await store.removeCanvasImage((imageData as { id: string }).id)
         console.log(`🔁 [REDO] Re-deleted canvas image: ${(imageData as { id: string }).id}`)
       }
-      break
+      return true  // Early return — skip requestSync
     }
 
     case 'legacy':
@@ -559,13 +566,13 @@ const showUndoRedoToast = async (action: 'undo' | 'redo', description: string) =
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
 // BUG-309-B: Enhanced with operation-aware selective restoration
 const performUndo = async () => {
-  console.log('🔴 [UNDO] performUndo called, operationStack length:', operationStack.length)
+  console.log('🔴 [UNDO] performUndo called, operationStack length:', operationStack.value.length)
 
   // BUG-309-B: Try operation-aware undo first
-  if (useOperationAwareUndo && operationStack.length > 0) {
+  if (useOperationAwareUndo && operationStack.value.length > 0) {
     console.log('🔴 [UNDO] Using operation-aware undo')
-    const operationSnapshot = operationStack.pop()!
-    redoOperationStack.push(operationSnapshot)
+    const operationSnapshot = operationStack.value.pop()!
+    redoOperationStack.value.push(operationSnapshot)
 
     // BUG-336 FIX: Don't call refHistoryInstance.undo() here
     // The operation stack is the source of truth in operation-aware mode.
@@ -627,9 +634,9 @@ const performUndo = async () => {
 // BUG-309-B: Enhanced with operation-aware selective restoration
 const performRedo = async () => {
   // BUG-309-B: Try operation-aware redo first
-  if (useOperationAwareUndo && redoOperationStack.length > 0) {
-    const operationSnapshot = redoOperationStack.pop()!
-    operationStack.push(operationSnapshot)
+  if (useOperationAwareUndo && redoOperationStack.value.length > 0) {
+    const operationSnapshot = redoOperationStack.value.pop()!
+    operationStack.value.push(operationSnapshot)
 
     // BUG-336 FIX: Don't call refHistoryInstance.redo() here
     // Operation stack is source of truth in operation-aware mode.
@@ -753,17 +760,17 @@ const commitOperation = async () => {
   const snapshotAfter = await captureCurrentState(pendingOperation.affectedIds)
 
   // Push to operation stack (limit capacity to 30 to bound memory usage)
-  operationStack.push({
+  operationStack.value.push({
     operation: pendingOperation,
     snapshotBefore: pendingOperationBefore,
     snapshotAfter
   })
-  if (operationStack.length > 30) {
-    operationStack.shift()
+  if (operationStack.value.length > 30) {
+    operationStack.value.shift()
   }
 
   // Clear redo stack on new operation
-  redoOperationStack = []
+  redoOperationStack.value = []
 
   // Also update VueUse's refHistory for backward compatibility
   if (unifiedState && commit) {
@@ -899,7 +906,7 @@ const permanentlyDeleteTaskWithUndo = async (taskId: string) => {
     // BUG-309-B: Commit the operation
     await nextTick()
     await commitOperation()
-    console.log('🔴 [UNDO] commitOperation completed, operationStack length:', operationStack.length)
+    console.log('🔴 [UNDO] commitOperation completed, operationStack length:', operationStack.value.length)
   } catch (error) {
     console.error('❌ permanentlyDeleteTaskWithUndo failed:', error)
     // Clear pending operation on error
@@ -1104,7 +1111,7 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
 // TASK-1690: Push an image deletion onto the global operation stack for Ctrl+Z support.
 // This is called by useCanvasHotkeys and CanvasView context menu after removing an image.
 export function pushImageDeleteUndo(imageData: { id: string; imageUrl: string; position: { x: number; y: number }; createdAt: string }) {
-  operationStack.push({
+  operationStack.value.push({
     operation: {
       type: 'image-delete',
       affectedIds: [imageData.id],
@@ -1115,8 +1122,8 @@ export function pushImageDeleteUndo(imageData: { id: string; imageUrl: string; p
     snapshotBefore: { tasks: [], groups: [], _imageData: imageData } as unknown as UnifiedUndoState,
     snapshotAfter: { tasks: [], groups: [] },
   })
-  if (operationStack.length > 30) operationStack.shift()
-  redoOperationStack = [] // Clear redo on new operation
+  if (operationStack.value.length > 30) operationStack.value.shift()
+  redoOperationStack.value = [] // Clear redo on new operation
 }
 
 /**
@@ -1130,14 +1137,14 @@ export function getUndoSystem() {
 
   // BUG-309-B: Override canUndo/canRedo to consider operation stack
   const operationAwareCanUndo = computed(() => {
-    if (useOperationAwareUndo && operationStack.length > 0) {
+    if (useOperationAwareUndo && operationStack.value.length > 0) {
       return true
     }
     return canUndo?.value ?? false
   })
 
   const operationAwareCanRedo = computed(() => {
-    if (useOperationAwareUndo && redoOperationStack.length > 0) {
+    if (useOperationAwareUndo && redoOperationStack.value.length > 0) {
       return true
     }
     return canRedo?.value ?? false
@@ -1145,14 +1152,14 @@ export function getUndoSystem() {
 
   const operationAwareUndoCount = computed(() => {
     if (useOperationAwareUndo) {
-      return operationStack.length
+      return operationStack.value.length
     }
     return undoCount?.value ?? 0
   })
 
   const operationAwareRedoCount = computed(() => {
     if (useOperationAwareUndo) {
-      return redoOperationStack.length
+      return redoOperationStack.value.length
     }
     return redoCount?.value ?? 0
   })
@@ -1189,8 +1196,8 @@ export function getUndoSystem() {
     deleteGroupWithUndo,
 
     // BUG-309-B: Debugging/inspection
-    getOperationStack: () => [...operationStack],
-    getRedoOperationStack: () => [...redoOperationStack],
+    getOperationStack: () => [...operationStack.value],
+    getRedoOperationStack: () => [...redoOperationStack.value],
     isOperationAwareMode: () => useOperationAwareUndo
   }
 }
@@ -1220,8 +1227,8 @@ export function resetUndoSystem() {
   clear = null
 
   // BUG-309-B: Clear operation stacks
-  operationStack = []
-  redoOperationStack = []
+  operationStack.value = []
+  redoOperationStack.value = []
   pendingOperationBefore = null
   pendingOperation = null
 

@@ -470,7 +470,7 @@ const dueStatus = computed(() => {
 
 /* Title */
 .task-card.compact .task-content--inbox {
-  padding-inline-start: 0;
+  padding: 0;
   width: auto;
   min-width: 0;
 }

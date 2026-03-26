@@ -9,7 +9,7 @@
       :aria-hidden="!uiStore.mainSidebarVisible"
     >
       <SidebarHeader />
-      <SidebarWorkspaceSwitcher />
+      <SidebarWorkspaceSwitcher v-if="workspaceStore.shouldShowSwitcher" />
       <SidebarQuickTaskInput ref="quickTaskInput" />
 
       <div class="task-management-section">
@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useUIStore } from '@/stores/ui'
+import { useWorkspaceStore } from '@/stores/workspace'
 import SidebarHeader from '@/components/sidebar/SidebarHeader.vue'
 import SidebarWorkspaceSwitcher from '@/components/sidebar/SidebarWorkspaceSwitcher.vue'
 import SidebarQuickTaskInput from '@/components/sidebar/SidebarQuickTaskInput.vue'
@@ -35,6 +36,7 @@ import SidebarProjectsSection from '@/components/sidebar/SidebarProjectsSection.
 import SidebarUserFooter from '@/components/sidebar/SidebarUserFooter.vue'
 
 const uiStore = useUIStore()
+const workspaceStore = useWorkspaceStore()
 
 // Quick Task Input ref (for forwarding focusQuickTask)
 const quickTaskInput = ref<InstanceType<typeof SidebarQuickTaskInput> | null>(null)

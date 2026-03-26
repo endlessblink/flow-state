@@ -79,8 +79,14 @@
       />
 
       <!-- Canvas Container -->
+      <!-- TASK-1722: tabindex="0" makes this div focusable so @keydown receives Delete key.
+           Vue Flow's node wrappers steal focus on click (tabindex=0 on node div),
+           so @keydown on VueFlow never fires. This wrapper catches it instead. -->
       <div
+        ref="canvasContainerRef"
         class="canvas-container"
+        tabindex="0"
+        @keydown="handleKeyDown"
         @mousedown="handleMouseDown"
         @mousemove="handleMouseMove"
         @mouseup="handleMouseUp"
@@ -382,9 +388,12 @@ const {
   collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, collectOverdueTasksNearGroup, disconnectEdge
 } = orchestrator
 
-// Register global hotkeys
+// TASK-1722: Focusable canvas container ref for keyboard event handling
+const canvasContainerRef = ref<HTMLElement | null>(null)
+
+// Register global hotkeys — skip Delete/Backspace since canvas-container @keydown handles those
 useEventListener(window, 'keydown', (e) => {
-  // Only handle if canvas is active/visible
+  if (e.key === 'Delete' || e.key === 'Backspace') return // handled by canvas-container @keydown
   handleKeyDown(e)
 })
 

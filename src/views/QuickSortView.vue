@@ -10,9 +10,9 @@
       </div>
       <div class="header-stats">
         <span v-if="!isComplete && progress.total > 0" class="stat-badge">
-          {{ progress.current }}/{{ progress.total }}
+          {{ progress.total - progress.current }}
         </span>
-        <span v-if="currentStreak > 2" class="streak-badge">{{ currentStreak }}</span>
+        <span v-if="!isComplete && currentStreak > 2" class="streak-badge">{{ currentStreak }}</span>
       </div>
       <button class="close-button" aria-label="Exit Quick Sort" @click="handleExit">
         <X :size="20" />

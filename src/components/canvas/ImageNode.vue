@@ -20,9 +20,10 @@
     <Teleport to="body">
       <div
         v-if="showLightbox"
+        ref="lightboxRef"
         class="image-lightbox"
-        @click="showLightbox = false"
-        @keydown.escape="showLightbox = false"
+        @click="closeLightbox"
+        @keydown.escape="closeLightbox"
         role="dialog"
         aria-modal="true"
         aria-label="Image preview"
@@ -35,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 
 interface Props {
@@ -50,6 +51,20 @@ interface Props {
 defineProps<Props>()
 
 const showLightbox = ref(false)
+const lightboxRef = ref<HTMLElement | null>(null)
+
+function closeLightbox() {
+  showLightbox.value = false
+  nextTick(() => {
+    ;(document.querySelector('.canvas-container') as HTMLElement)?.focus()
+  })
+}
+
+watch(showLightbox, (val) => {
+  if (val) {
+    nextTick(() => lightboxRef.value?.focus())
+  }
+})
 </script>
 
 <style scoped>

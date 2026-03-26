@@ -75,21 +75,36 @@ test('TASK-1690: Canvas image node select, delete, lightbox', async ({ page }) =
     await page.waitForTimeout(300)
   }
 
-  // --- Test 3: Select then Delete ---
+  // --- Test 3: Select then Delete (goes through confirmation modal) ---
   // Click the node to select it
   await imageNode.first().click()
   await page.waitForTimeout(300)
 
   await page.keyboard.press('Delete')
-  await page.waitForTimeout(1000)
+  await page.waitForTimeout(500)
+
+  // TASK-1722: Images now go through the same confirmation modal as tasks/groups
+  const deleteModal = page.locator('[role="dialog"]').filter({ hasText: 'Delete' })
+  const modalVisible = await deleteModal.isVisible().catch(() => false)
+  console.log(`Delete confirmation modal: ${modalVisible ? '✅ Visible' : '❌ Not visible'}`)
+
+  if (modalVisible) {
+    // Click the Delete button in the modal to confirm
+    const deleteButton = deleteModal.getByRole('button', { name: 'Delete' })
+    await deleteButton.click()
+    await page.waitForTimeout(1000)
+  } else {
+    // Modal didn't appear — image may have been deleted directly
+    await page.waitForTimeout(500)
+  }
 
   const afterDeleteCount = await page.locator('.vue-flow__node-imageNode').count()
   console.log(`After Delete: ${afterDeleteCount} image nodes (was ${count})`)
   console.log(`Delete worked: ${afterDeleteCount < count ? '✅ Yes' : '❌ No'}`)
 
   // --- Test 4: Ctrl+Z to undo delete ---
-  // Click on canvas pane first to ensure VueFlow has focus
-  await page.locator('.vue-flow').click({ position: { x: 50, y: 50 } })
+  // Click on canvas container to ensure focus for keyboard events
+  await page.locator('.canvas-container').click({ position: { x: 50, y: 50 } })
   await page.waitForTimeout(300)
 
   await page.keyboard.press('Control+z')

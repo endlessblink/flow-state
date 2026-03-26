@@ -2,13 +2,11 @@ import type { Ref } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
-import { useCanvasImagesStore } from '@/stores/canvasImages'
-import { pushImageDeleteUndo } from '@/composables/undoSingleton'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 
 interface BulkDeleteState {
     isBulkDeleteModalOpen: Ref<boolean>
-    bulkDeleteItems: Ref<{ id: string; name: string; type: 'task' | 'section' }[]>
+    bulkDeleteItems: Ref<{ id: string; name: string; type: 'task' | 'section' | 'image' }[]>
     bulkDeleteIsPermanent: Ref<boolean>
     createGroup: (position?: { x: number; y: number }) => Promise<string | undefined>
 }
@@ -18,7 +16,6 @@ export function useCanvasHotkeys(
 ) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const canvasImagesStore = useCanvasImagesStore()
     const { getSelectedNodes } = useVueFlow()
 
     // Handle Delete Key
@@ -49,35 +46,24 @@ export function useCanvasHotkeys(
         if (!isDeleteKey) return
 
         // Check for selected nodes
-        // Use canvasStore source of truth if possible, or VueFlow
         const selectedNodes = getSelectedNodes.value
         if (!selectedNodes || selectedNodes.length === 0) return
 
         event.preventDefault()
         const permanentDelete = event.shiftKey
 
-        // TASK-1690: Handle image nodes immediately (no confirmation needed)
-        // Capture image data BEFORE deleting so we can push to global undo stack
-        const imageNodes = selectedNodes.filter(n => n.type === 'imageNode')
-        if (imageNodes.length > 0) {
-            for (const imgNode of imageNodes) {
-                const imgData = canvasImagesStore.images.find(i => i.id === imgNode.id)
-                const removed = await canvasImagesStore.removeCanvasImage(imgNode.id)
-                const snapshot = imgData ? { ...imgData, position: { ...imgData.position } } : removed
-                if (snapshot) {
-                    pushImageDeleteUndo(snapshot)
-                }
-            }
-            // If only image nodes were selected, we're done
-            if (imageNodes.length === selectedNodes.length) return
-        }
-
         // Collect all items to delete - show ONE confirmation for all
-        const itemsToDelete: { id: string; name: string; type: 'task' | 'section' }[] = []
+        const itemsToDelete: { id: string; name: string; type: 'task' | 'section' | 'image' }[] = []
 
         for (const node of selectedNodes) {
-            if (node.type === 'imageNode') continue // Already handled above
-            if (CanvasIds.isGroupNode(node.id)) {
+            if (node.type === 'imageNode') {
+                // TASK-1722: Route images through same confirmation modal as tasks/groups
+                itemsToDelete.push({
+                    id: node.id,
+                    name: 'Canvas Image',
+                    type: 'image'
+                })
+            } else if (CanvasIds.isGroupNode(node.id)) {
                 const { id: sectionId } = CanvasIds.parseNodeId(node.id)
                 const section = canvasStore.sections.find(s => s.id === sectionId)
 

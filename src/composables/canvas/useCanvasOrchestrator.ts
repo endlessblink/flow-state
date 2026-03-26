@@ -783,10 +783,13 @@ export function useCanvasOrchestrator() {
         // Vue Flow default: clicking a node deselects all others. We only want pane click to deselect.
         handleNodesChange: (changes: unknown[]) => {
             // TASK-262 FIX: Allow all changes to pass through including deselection
-            // Previously, deselection was blocked which prevented clicking on empty canvas
-            // from clearing selection. Vue Flow's default behavior is correct - let it work.
-
-            applyNodeChanges(changes)
+            // TASK-1722: Filter out remove changes for image nodes (deletable:false safety net)
+            // Our handleKeyDown in useCanvasHotkeys owns image deletion with undo support
+            const filtered = (changes as Array<{ type: string; id?: string }>).filter(c => {
+                if (c.type === 'remove' && c.id?.startsWith('img-')) return false
+                return true
+            })
+            applyNodeChanges(filtered)
         },
         handleEdgesChange: applyEdgeChanges,
         handleConnect: (params: import('@vue-flow/core').Connection) => {

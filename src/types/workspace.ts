@@ -36,3 +36,18 @@ export interface WorkspaceInvite {
 }
 
 export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer'
+
+// TASK-1553: Task Comments
+export interface TaskComment {
+  id: string
+  taskId: string
+  userId: string
+  content: string
+  replyToCommentId: string | null
+  isDeleted: boolean
+  createdAt: Date
+  updatedAt: Date
+  // Populated from member lookup
+  userName?: string
+  userEmail?: string
+}

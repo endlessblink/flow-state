@@ -62,7 +62,7 @@ defineEmits<{
 <style scoped>
 .pinned-section {
   border-bottom: 1px solid var(--glass-border);
-  padding-bottom: var(--space-2);
+  padding-bottom: var(--space-1);
 }
 
 .pinned-header {
@@ -117,9 +117,9 @@ defineEmits<{
 .pinned-tasks {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1_5);
-  /* Extra top padding so the hover action tray (floats above pill) isn't clipped */
-  padding: var(--space-4) var(--space-1) var(--space-1_5);
+  gap: var(--space-1);
+  /* Modest top padding so the hover action tray (floats above pill) isn't clipped */
+  padding: var(--space-2) var(--space-1) var(--space-1);
   /* Pills are short — reduce max-height, keep overflow for many items */
   max-height: 160px;
   overflow-y: auto;

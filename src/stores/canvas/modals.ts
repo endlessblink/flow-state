@@ -59,7 +59,7 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
     const isBulkDeleteModalOpen = ref(false)
     const bulkDeleteTitle = ref('')
     const bulkDeleteMessage = ref('')
-    const bulkDeleteItems = ref<{ id: string; name: string; type: 'task' | 'section' }[]>([])
+    const bulkDeleteItems = ref<{ id: string; name: string; type: 'task' | 'section' | 'image' }[]>([])
     const bulkDeleteIsPermanent = ref(false)
 
     // Actions
@@ -128,7 +128,7 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
         groupPendingDelete.value = null
     }
 
-    const openBulkDeleteModal = (title: string, message: string, items: { id: string; name: string; type: 'task' | 'section' }[], isPermanent: boolean) => {
+    const openBulkDeleteModal = (title: string, message: string, items: { id: string; name: string; type: 'task' | 'section' | 'image' }[], isPermanent: boolean) => {
         bulkDeleteTitle.value = title
         bulkDeleteMessage.value = message
         bulkDeleteItems.value = items

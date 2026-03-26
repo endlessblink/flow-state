@@ -30,6 +30,10 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     storeSet: (key, value) => electron_1.ipcRenderer.invoke('store:set', key, value),
     // HTTP (replaces @tauri-apps/plugin-http for CORS bypass)
     fetch: (url, options) => electron_1.ipcRenderer.invoke('http:fetch', url, options),
+    // OAuth localhost server (for desktop Google sign-in)
+    oauthStart: () => electron_1.ipcRenderer.invoke('oauth:start'),
+    oauthWaitForCallback: () => electron_1.ipcRenderer.invoke('oauth:waitForCallback'),
+    oauthCancel: () => electron_1.ipcRenderer.invoke('oauth:cancel'),
     // Auto-updater events
     onUpdateAvailable: (callback) => {
         electron_1.ipcRenderer.on('updater:available', (_event, info) => callback(info));

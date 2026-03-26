@@ -37,6 +37,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // HTTP (replaces @tauri-apps/plugin-http for CORS bypass)
   fetch: (url: string, options?: unknown) => ipcRenderer.invoke('http:fetch', url, options),
 
+  // OAuth localhost server (for desktop Google sign-in)
+  oauthStart: () => ipcRenderer.invoke('oauth:start'),
+  oauthWaitForCallback: () => ipcRenderer.invoke('oauth:waitForCallback'),
+  oauthCancel: () => ipcRenderer.invoke('oauth:cancel'),
+
   // Auto-updater events
   onUpdateAvailable: (callback: (info: unknown) => void) => {
     ipcRenderer.on('updater:available', (_event, info) => callback(info))
@@ -75,6 +80,9 @@ declare global {
       storeGet: (key: string) => Promise<unknown>
       storeSet: (key: string, value: unknown) => Promise<void>
       fetch: (url: string, options?: unknown) => Promise<unknown>
+      oauthStart: () => Promise<number>
+      oauthWaitForCallback: () => Promise<string>
+      oauthCancel: () => Promise<void>
       onUpdateAvailable: (callback: (info: unknown) => void) => void
       onUpdateDownloadProgress: (callback: (progress: unknown) => void) => void
       onUpdateDownloaded: (callback: () => void) => void

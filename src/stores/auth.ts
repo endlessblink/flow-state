@@ -884,6 +884,85 @@ export const useAuthStore = defineStore('auth', () => {
         return
       }
 
+      // Electron: Use localhost HTTP server to capture OAuth callback (like Tauri)
+      const isElectronApp = typeof window !== 'undefined' && !!(window as any).electronAPI?.isElectron
+      if (isElectronApp) {
+        const electronAPI = (window as any).electronAPI
+
+        // 1. Start localhost OAuth server
+        let port: number
+        try {
+          port = await electronAPI.oauthStart()
+        } catch (e: unknown) {
+          throw new Error(`Failed to start OAuth server: ${e instanceof Error ? e.message : e}`)
+        }
+
+        console.log(`[AUTH] Electron OAuth server on port ${port}`)
+
+        // 2. Generate OAuth URL with localhost redirect
+        const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            skipBrowserRedirect: true,
+            redirectTo: `http://127.0.0.1:${port}`,
+            scopes: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.file',
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
+          }
+        })
+
+        if (oauthError || !oauthData?.url) {
+          await electronAPI.oauthCancel()
+          throw oauthError || new Error('Failed to generate OAuth URL')
+        }
+
+        // 3. Open OAuth in system browser
+        await electronAPI.openExternal(oauthData.url)
+        console.log('[AUTH] Opened system browser for Electron OAuth')
+
+        // 4. Wait for callback
+        let callbackUrl: string
+        try {
+          callbackUrl = await electronAPI.oauthWaitForCallback()
+        } catch (e: unknown) {
+          throw new Error(`OAuth callback failed: ${e instanceof Error ? e.message : e}`)
+        }
+
+        console.log('[AUTH] Received OAuth callback')
+
+        // 5. Extract code and exchange for session
+        const url = new URL(callbackUrl)
+        const errorParam = url.searchParams.get('error')
+        if (errorParam) {
+          throw new Error(`OAuth error: ${url.searchParams.get('error_description') || errorParam}`)
+        }
+
+        const code = url.searchParams.get('code')
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          if (exchangeError) throw exchangeError
+          console.log('[AUTH] Electron OAuth session established via PKCE')
+        } else {
+          // Fallback: check hash for implicit flow tokens
+          const hashParams = new URLSearchParams(url.hash.substring(1))
+          const accessToken = hashParams.get('access_token')
+          const refreshToken = hashParams.get('refresh_token')
+          if (accessToken) {
+            const { error: setError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken || '',
+            })
+            if (setError) throw setError
+            console.log('[AUTH] Electron OAuth session established via implicit flow')
+          } else {
+            throw new Error('No authorization code or access token in OAuth callback')
+          }
+        }
+        return
+      }
+
       // PWA: standard OAuth redirect flow
       // TASK-1283: Request calendar.readonly scope for Google Calendar integration
       // FEATURE-1414: Added drive.file scope for task image attachments

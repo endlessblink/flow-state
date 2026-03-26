@@ -1,16 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { CheckCircle, Download, RefreshCw, AlertCircle, ExternalLink, Info } from 'lucide-vue-next'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import { useTauriUpdater } from '@/composables/useTauriUpdater'
+import { useElectronUpdater } from '@/composables/useElectronUpdater'
 import { isTauri } from '@/composables/useTauriStartup'
+import { isElectron } from '@/utils/platform'
 import { useSettingsStore } from '@/stores/settings'
 import { EXTERNAL_URLS } from '@/config/urls'
 import { openExternal } from '@/utils/openExternal'
 
 declare const __APP_VERSION__: string
 
-const updater = useTauriUpdater()
+const tauriUpdater = useTauriUpdater()
+const electronUpdater = useElectronUpdater()
+// Use the appropriate updater based on platform
+const updater = isTauri() ? tauriUpdater : electronUpdater
+const showUpdater = computed(() => isTauri() || isElectron())
 const currentVersion = __APP_VERSION__
 const settingsStore = useSettingsStore()
 
@@ -56,8 +63,8 @@ const openGithub = () => {
       </div>
     </SettingsSection>
 
-    <!-- Updates Section (Tauri only) -->
-    <SettingsSection v-if="isTauri()" title="Updates">
+    <!-- Updates Section (Tauri & Electron) -->
+    <SettingsSection v-if="showUpdater" title="Updates">
       <div class="update-section">
         <!-- Idle / Up to Date State -->
         <div v-if="updater.status.value === 'idle' || updater.status.value === 'up-to-date'" class="update-idle">

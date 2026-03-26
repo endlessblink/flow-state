@@ -11,6 +11,10 @@ const isTauri = isTauriRuntime()
 const isCapacitorRuntime = typeof window !== 'undefined' &&
   !!window.Capacitor?.isNativePlatform?.()
 
+// Electron: file:// protocol does not reliably persist localStorage across restarts.
+// Detect Electron runtime via the IPC bridge injected by the preload script.
+const isElectronRuntime = typeof window !== 'undefined' && !!(window as any).electronAPI?.isElectron
+
 // FIX-MOBILE-PWA & TAURI COMPATIBILITY:
 // - Browser/PWA: Use relative path '/supabase' (from .env) to work via Tunnel/Caddy
 // - Tauri: Must use full URL 'http://127.0.0.1:54321' because relative paths fail in WebView
@@ -29,6 +33,12 @@ function resolveSupabaseUrl(): string {
     // Tauri: Use env var directly (must be a full URL)
     if (isTauri) {
         if (import.meta.env.DEV) console.log('[Supabase] Tauri →', envUrl)
+        return envUrl
+    }
+
+    // Electron: Use env var directly (file:// can't resolve relative paths)
+    if (isElectronRuntime) {
+        if (import.meta.env.DEV) console.log('[Supabase] Electron →', envUrl)
         return envUrl
     }
 
@@ -83,7 +93,7 @@ let _pendingOAuthTokens: { access_token: string; refresh_token: string } | null 
 // TASK-1283: Capture Google provider tokens for Calendar API access
 let _pendingProviderTokens: { provider_token: string; provider_refresh_token?: string } | null = null
 
-if (typeof window !== 'undefined' && !isTauri && !isCapacitorRuntime) {
+if (typeof window !== 'undefined' && !isTauri && !isElectronRuntime && !isCapacitorRuntime) {
     const hash = window.location.hash
     if (hash && (hash.includes('access_token=') || hash.includes('error='))) {
         // Handle both #/access_token=... (Vue Router prefix) and #access_token=... (normal)
@@ -117,6 +127,34 @@ if (typeof window !== 'undefined' && !isTauri && !isCapacitorRuntime) {
     }
 }
 
+/**
+ * Electron storage adapter for Supabase auth.
+ *
+ * WHY: Electron loads the app via file:// in production. The Chromium file:// origin
+ * has an isolated localStorage that is NOT persisted reliably across app restarts
+ * (each cold launch can start with an empty origin storage). This causes users to be
+ * signed out every time they relaunch the app.
+ *
+ * FIX: Route all auth token reads/writes through the disk-backed IPC store
+ * (window.electronAPI.storeGet / storeSet), which writes to userData/store.json.
+ * Supabase auth-js supports async storage — getItem/setItem/removeItem may return Promises.
+ *
+ * NOTE on removeItem: we store null via storeSet(key, null). getItem checks
+ * `typeof value === 'string'` so a null stored value correctly returns null (absent key).
+ */
+const electronStorage = isElectronRuntime ? {
+    getItem: async (key: string): Promise<string | null> => {
+        const value = await (window as any).electronAPI!.storeGet(key)
+        return typeof value === 'string' ? value : null
+    },
+    setItem: async (key: string, value: string): Promise<void> => {
+        await (window as any).electronAPI!.storeSet(key, value)
+    },
+    removeItem: async (key: string): Promise<void> => {
+        await (window as any).electronAPI!.storeSet(key, null)
+    },
+} : null
+
 let supabaseClient;
 try {
     supabaseClient = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -135,10 +173,13 @@ try {
             // For web/PWA with PKCE: detectSessionInUrl MUST be true so Supabase picks up ?code=xxx
             // from the query string and exchanges it for tokens (including provider_refresh_token).
             // Legacy: if _pendingOAuthTokens is set (old implicit flow hash), disable to avoid conflict.
-            detectSessionInUrl: !isTauri && !isCapacitorRuntime && !_pendingOAuthTokens,
-            // BUG-339: Use localStorage (reliable in Tauri 2.x)
-            // Combined with proactive token refresh in auth.ts for session persistence
-            storage: typeof window !== 'undefined' ? localStorage : undefined,
+            detectSessionInUrl: !isTauri && !isElectronRuntime && !isCapacitorRuntime && !_pendingOAuthTokens,
+            // BUG-339: Use localStorage (reliable in Tauri 2.x, not reliable in Electron file://)
+            // Electron uses disk-backed IPC store instead (see electronStorage adapter above).
+            // Combined with proactive token refresh in auth.ts for session persistence.
+            storage: isElectronRuntime
+                ? electronStorage!
+                : (typeof window !== 'undefined' ? localStorage : undefined),
         },
         // BUG-1179: Configure Realtime to prevent connection drops
         // Cloudflare has 100-second idle timeout, so we send heartbeats more frequently

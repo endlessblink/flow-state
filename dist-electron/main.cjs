@@ -10,6 +10,7 @@ const store_1 = require("./ipc/store");
 const http_1 = require("./ipc/http");
 const window_1 = require("./ipc/window");
 const updater_1 = require("./updater");
+const oauth_1 = require("./ipc/oauth");
 // Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
 electron_1.app.setName('flow-state');
 // Prevent multiple instances
@@ -75,6 +76,7 @@ function createWindow() {
 (0, store_1.registerStoreHandlers)();
 (0, http_1.registerHttpHandlers)();
 (0, window_1.registerWindowHandlers)();
+(0, oauth_1.registerOAuthHandlers)();
 electron_1.ipcMain.handle('app:getVersion', () => electron_1.app.getVersion());
 // App lifecycle
 electron_1.app.whenReady().then(() => {

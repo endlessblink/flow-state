@@ -8,6 +8,8 @@ import SettingsToggle from '../SettingsToggle.vue'
 import { supabase } from '@/services/auth/supabase'
 import { useTauriUpdater } from '@/composables/useTauriUpdater'
 import { isTauri } from '@/composables/useTauriStartup'
+import { useElectronUpdater } from '@/composables/useElectronUpdater'
+import { isElectron } from '@/utils/platform'
 import { useSettingsStore, type ExternalCalendarConfig, type GoogleCalendarConfig } from '@/stores/settings'
 import { EXTERNAL_URLS } from '@/config/urls'
 import { openExternal } from '@/utils/openExternal'
@@ -70,7 +72,10 @@ const handleDisconnectGoogle = () => {
 }
 
 // ── About section ──
-const updater = useTauriUpdater()
+const tauriUpdater = useTauriUpdater()
+const electronUpdater = useElectronUpdater()
+const updater = isTauri() ? tauriUpdater : electronUpdater
+const showUpdater = computed(() => isTauri() || isElectron())
 const currentVersion = __APP_VERSION__
 
 const handleCheckForUpdates = async () => {
@@ -352,25 +357,7 @@ const handleChangePassword = async () => {
       </div>
     </SettingsSection>
 
-    <!-- About Section (merged from AboutSettingsTab) -->
-    <SettingsSection>
-      <div class="app-info">
-        <div class="app-icon">
-          <Info :size="32" class="icon" />
-        </div>
-        <h2 class="app-name">
-          FlowState
-        </h2>
-        <p class="app-version">
-          Version {{ currentVersion }}
-        </p>
-        <p class="app-tagline">
-          Productivity meets flow
-        </p>
-      </div>
-    </SettingsSection>
-
-    <SettingsSection v-if="isTauri()" title="Updates">
+    <SettingsSection v-if="showUpdater" title="Updates">
       <div class="update-section">
         <div v-if="updater.status.value === 'idle' || updater.status.value === 'up-to-date'" class="update-idle">
           <div v-if="updater.status.value === 'up-to-date'" class="update-status success">
@@ -446,6 +433,24 @@ const handleChangePassword = async () => {
             @update="(val: boolean) => settingsStore.updateSetting('autoUpdateEnabled', val)"
           />
         </div>
+      </div>
+    </SettingsSection>
+
+    <!-- About Section -->
+    <SettingsSection>
+      <div class="app-info">
+        <div class="app-icon">
+          <Info :size="32" class="icon" />
+        </div>
+        <h2 class="app-name">
+          FlowState
+        </h2>
+        <p class="app-version">
+          Version {{ currentVersion }}
+        </p>
+        <p class="app-tagline">
+          Productivity meets flow
+        </p>
       </div>
     </SettingsSection>
 

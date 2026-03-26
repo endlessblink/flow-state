@@ -115,6 +115,12 @@
 
 ---
 
+### ~~BUG-1732~~: Canvas group badge counts task not rendered (parentId without canvasPosition) (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-26)
+
+---
+
 ### ~~TASK-1718~~: Electron Phase 2 — Platform Detection Swap (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-25)
@@ -2404,6 +2410,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1496**~~ | **P2** | ✅ **Non-obstructive overflow tooltips on all truncated text app-wide** (✅ DONE 2026-03-09) |
 | **BUG-1498** | **P2** | 🔄 **Taskbar nanny not triggering after 5min idle without active task (INQUIRY-1489 regression)** |
 | **BUG-1497** | **P2** | 📋 **CSS safety test failing due to missing fileURLToPath import** |
+| ~~**BUG-1732**~~ | **P2** | ✅ **Canvas group badge counts task not rendered — parentId without canvasPosition** (✅ DONE 2026-03-26) |
 | ~~**TASK-1487**~~ | **P2** | ✅ **Search modal: delete fix + filter pills (Today, Hide Done, High Priority, No Date)** (✅ DONE 2026-03-08) |
 | ~~**BUG-1490**~~ | **P2** | ✅ **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (✅ DONE 2026-03-09) |
 | **BUG-1530** | **P2** | 📋 **Dragging task to Today canvas group doesn't update Calendar inbox** (📋 PLANNED 2026-03-14) |
@@ -3979,6 +3986,24 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 4. **Account settings mirror** (`src/components/settings/tabs/AccountSettingsTab.vue`) — Added "Updates" section for Electron showing auto-updater status (parallel to Tauri)
 
 **Files**: `src/services/auth/electronStorage.ts`, `src/composables/useElectronAuth.ts`, `electron/ipc/auth.ts`, `src/components/settings/tabs/AccountSettingsTab.vue`
+
+---
+
+### ~~BUG-1732~~: Canvas group badge counts task not rendered (parentId without canvasPosition) (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-26)
+
+**Problem**: Canvas group badge showed inflated task count — tasks with `parentId` but no `canvasPosition` were counted in the group's task total but never rendered as Vue Flow nodes. Additionally, the task edit modal's section selector would change the `canvasPosition` but forget to set `parentId`, causing tasks assigned to canvas sections via the modal to render as root nodes instead of being contained inside their assigned groups.
+
+**Root cause**:
+1. `canvasGroups.ts` badge count computed property counted all tasks with a `parentId` without verifying they also had a valid `canvasPosition`
+2. `useTaskEditActions.ts` section change logic set `canvasPosition` (for rendering) but didn't set `parentId` (for group membership), creating orphaned visual nodes
+
+**Fix**:
+1. **canvasGroups.ts**: Updated badge count to require BOTH `parentId` AND `canvasPosition` to be present — tasks missing geometry are excluded from the count
+2. **useTaskEditActions.ts**: Section change now atomically sets both `parentId` and `canvasPosition` together, ensuring task becomes a proper group child on save
+
+**Files**: `src/stores/canvas/canvasGroups.ts`, `src/composables/tasks/useTaskEditActions.ts`
 
 ---
 

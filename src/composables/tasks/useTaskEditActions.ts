@@ -104,6 +104,7 @@ export function useTaskEditActions(
             // Move to Inbox
             editedTask.value.isInInbox = true
             editedTask.value.canvasPosition = undefined
+            editedTask.value.parentId = undefined
             return
         }
 
@@ -125,6 +126,10 @@ export function useTaskEditActions(
                 y: section.position.y + (section.position.height / 2) - 40
             }
         }
+
+        // Set parentId so the task belongs to this group
+        editedTask.value.parentId = sectionId
+        editedTask.value.isInInbox = false
 
         // Apply "Assign on Drop" settings
         if (section.assignOnDrop) {
@@ -248,6 +253,11 @@ export function useTaskEditActions(
                 updates.isInInbox = false
             } else if (originalIsInInbox !== undefined) {
                 updates.isInInbox = originalIsInInbox
+            }
+
+            // Include parentId if the task has a canvas position (set by section change)
+            if (editedTask.value.parentId !== undefined) {
+                updates.parentId = editedTask.value.parentId
             }
 
             // Preserve existing instances

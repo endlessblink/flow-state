@@ -235,7 +235,7 @@ export const useCanvasGroups = (
 
         for (const task of tasks) {
             if (task._soft_deleted || isTaskDone(task)) continue
-            if (task.parentId) {
+            if (task.parentId && task.canvasPosition) {
                 counts.set(task.parentId, (counts.get(task.parentId) ?? 0) + 1)
             }
         }

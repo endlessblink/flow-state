@@ -82,7 +82,9 @@
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
       <p>No assessment results yet.</p>
-      <p class="empty-hint">"Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).</p>
+      <p class="empty-hint">
+        "Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).
+      </p>
     </div>
 
     <!-- Sections -->
@@ -127,7 +129,9 @@
               <span class="check-name">{{ check.name }}</span>
               <span class="check-score" :class="scoreColorClass(check.score)">{{ check.score }}%</span>
             </div>
-            <div class="check-value">{{ check.value }}</div>
+            <div class="check-value">
+              {{ check.value }}
+            </div>
             <div v-if="check.recommendation" class="check-recommendation">
               {{ check.recommendation }}
             </div>

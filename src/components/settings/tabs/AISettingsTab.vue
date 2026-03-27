@@ -91,7 +91,7 @@ const wpProviderOptions = PROVIDER_OPTIONS.map(opt => {
 })
 
 const wpModelOptions = computed(() => {
-  switch (settingsStore.weeklyPlanProvider) {
+  switch ((settingsStore as any).weeklyPlanProvider) {
     case 'ollama':
       return availableOllamaModels.value.map(m => ({ id: m, label: m }))
     case 'groq':
@@ -104,14 +104,14 @@ const wpModelOptions = computed(() => {
 })
 
 function onWpProviderChange(provider: AIProviderKey) {
-  settingsStore.updateSetting('weeklyPlanProvider', provider)
+  (settingsStore as any).updateSetting('weeklyPlanProvider', provider)
   // Reset model when provider changes
-  settingsStore.updateSetting('weeklyPlanModel', '')
+  (settingsStore as any).updateSetting('weeklyPlanModel', '')
 }
 
 function onWpModelChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value
-  settingsStore.updateSetting('weeklyPlanModel', value || '')
+  (settingsStore as any).updateSetting('weeklyPlanModel', value || '')
 }
 
 // ── TASK-1350: Groq API Key Management ──
@@ -403,7 +403,7 @@ async function onClearMemories() {
           v-for="opt in wpProviderOptions"
           :key="opt.key"
           class="provider-chip"
-          :class="{ active: settingsStore.weeklyPlanProvider === opt.key }"
+          :class="{ active: (settingsStore as any).weeklyPlanProvider === opt.key }"
           @click="onWpProviderChange(opt.key)"
         >
           <span class="provider-chip-label">{{ opt.label }}</span>
@@ -412,7 +412,7 @@ async function onClearMemories() {
       </div>
 
       <!-- Model selector (when not auto) -->
-      <div v-if="settingsStore.weeklyPlanProvider !== 'auto'" class="model-selector">
+      <div v-if="(settingsStore as any).weeklyPlanProvider !== 'auto'" class="model-selector">
         <label class="model-selector-label">Model</label>
         <button
           class="free-filter-btn"
@@ -424,7 +424,7 @@ async function onClearMemories() {
         <div class="model-select-wrapper">
           <select
             class="model-select"
-            :value="settingsStore.weeklyPlanModel || ''"
+            :value="(settingsStore as any).weeklyPlanModel || ''"
             @change="onWpModelChange"
           >
             <option value="">
@@ -440,7 +440,7 @@ async function onClearMemories() {
           </select>
         </div>
         <button
-          v-if="settingsStore.weeklyPlanProvider === 'ollama'"
+          v-if="(settingsStore as any).weeklyPlanProvider === 'ollama'"
           class="refresh-models-btn"
           title="Refresh local models"
           @click="refreshOllamaModels()"

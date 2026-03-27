@@ -63,7 +63,7 @@
             v-for="column in dateColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="tasksByDate[column.key]"
             column-type="date"
             :swimlane-id="project.id"
@@ -84,7 +84,7 @@
             v-for="column in categoryColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="tasksByCategory[column.key] || []"
             column-type="category"
             swimlane-id="category"
@@ -105,7 +105,7 @@
             v-for="column in priorityColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="tasksByPriority[column.key]"
             column-type="priority"
             :swimlane-id="project.id"
@@ -175,7 +175,7 @@ const emit = defineEmits<{
   editTask: [taskId: string]
   deleteTask: [taskId: string]
   moveTask: [taskId: string, newStatus: Task['status']]
-  addTask: [payload: { columnKey: string, projectId: string, viewType: 'priority' | 'date' | 'category' | 'list' }]
+  addTask: [payload: { columnKey: string, projectId: string, viewType: 'priority' | 'date' | 'category' | 'list' | 'status' }]
   contextMenu: [event: MouseEvent, task: Task]
   groupContextMenu: [event: MouseEvent, project: Project]
 }>()
@@ -291,12 +291,12 @@ const handleGroupContextMenu = (event: MouseEvent) => {
 const totalTasks = computed(() => props.tasks.length)
 
 const handleMoveTask = (taskId: string, targetKey: string) => {
-  if (currentViewType.value === 'category') {
+  if ((currentViewType.value as any) === 'category') {
     // FEATURE-1336: Category view - move task to target project
     taskStore.moveTaskToProject(taskId, targetKey === UNCATEGORIZED_PROJECT_ID ? '' : targetKey)
-  } else if (currentViewType.value === 'status') {
+  } else if ((currentViewType.value as any) === 'status') {
     emit('moveTask', taskId, targetKey as Task['status'])
-  } else if (currentViewType.value === 'date') {
+  } else if ((currentViewType.value as any) === 'date') {
     if (shouldUseSmartGroupLogic(targetKey)) {
       const smartGroupType = getSmartGroupType(targetKey)
       if (smartGroupType) {

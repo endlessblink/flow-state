@@ -195,6 +195,7 @@ import { NBadge, NPopover } from 'naive-ui'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
+import type { Project } from '@/stores/tasks'
 import type { TimeFilterType, SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
 const props = defineProps<{

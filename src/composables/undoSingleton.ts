@@ -2,7 +2,7 @@
 // This solves initialization order issues between App.vue and globalKeyboardHandlerSimple.ts
 // UPDATED: Now tracks both tasks AND canvas groups for unified undo/redo (ISSUE-008 fix)
 
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, toRaw } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
 import type { Task } from '../stores/tasks'
@@ -708,12 +708,13 @@ const captureCurrentState = async (affectedIds?: string[]): Promise<UnifiedUndoS
   const safeClone = <T>(value: T, fallback: T): T => {
     try {
       if (value == null) return fallback
-      const serialized = JSON.stringify(value)
+      const raw = toRaw(value)
+      const serialized = JSON.stringify(raw)
       if (serialized == null) return fallback
       return JSON.parse(serialized) as T
     } catch (error) {
       console.warn('⚠️ [UNDO] Failed to clone snapshot state, using fallback:', error)
-      return fallback
+      try { return JSON.parse(JSON.stringify(toRaw(fallback))) as T } catch { return fallback }
     }
   }
 

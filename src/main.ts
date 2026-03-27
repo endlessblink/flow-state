@@ -33,22 +33,6 @@ import i18n from './i18n'
 // Design system - Tailwind CSS must be imported here for Vite to process @tailwind directives
 import './assets/styles.css'
 
-// Initialize static resource cache for CSS and other assets
-import { staticResourceCache } from './composables/useStaticResourceCache'
-
-// Preload critical CSS files with static resource cache
-const preloadCriticalResources = async () => {
-  try {
-    await staticResourceCache.preloadResources([
-      { url: '/src/assets/styles.css', priority: 'high' }
-    ])
-  } catch {
-    // Silent fail - CSS will load normally
-  }
-}
-
-preloadCriticalResources()
-
 // TASK-1215: Preload UI state from Tauri native store before Vue mounts
 import { preloadTauriUiState } from './composables/usePersistentRef'
 

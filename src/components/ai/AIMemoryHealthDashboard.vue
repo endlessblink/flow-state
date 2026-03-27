@@ -36,13 +36,17 @@
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="error-banner glass">{{ error }}</div>
+    <div v-if="error" class="error-banner glass">
+      {{ error }}
+    </div>
 
     <!-- Summary Cards -->
     <div v-if="report" class="summary-cards">
       <div class="card glass score-card" :class="gradeClass">
         <h3>Memory Grade</h3>
-        <div class="grade-display">{{ report.grade }}</div>
+        <div class="grade-display">
+          {{ report.grade }}
+        </div>
         <p>{{ gradeLabel }}</p>
       </div>
 

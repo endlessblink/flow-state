@@ -50,7 +50,6 @@
         <div class="submenu-divider" />
 
         <div
-          v-if="!isBatchOperation"
           class="menu-item menu-item--sm has-submenu"
           @mouseenter.stop="$emit('openCanvasGroup', $event)"
           @mouseleave.stop="$emit('closeCanvasGroup')"

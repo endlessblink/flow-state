@@ -343,6 +343,11 @@ export const useSmartViews = () => {
   const isUncategorizedTask = (task: Task): boolean => {
     if (task.status === 'done') return false
 
+    // Explicit opt-out: tasks created from pinned templates skip Quick Sort
+    if (task.isUncategorized === false) {
+      return false
+    }
+
     // New logic: check isUncategorized flag first
     if (task.isUncategorized === true) {
       return true

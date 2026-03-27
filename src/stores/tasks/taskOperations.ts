@@ -677,13 +677,6 @@ export function useTaskOperations(
                 if (changedKeys.has('projectId') && updatedTask.projectId !== undefined) {
                     payload.project_id = isValidUUID(updatedTask.projectId) ? updatedTask.projectId : null
                 }
-                // BUG-1184: Only set parent_id for valid UUIDs (sub-tasks)
-                // Group IDs like "group-xxx" are NOT valid UUIDs and cause Postgres errors
-                // Canvas group association is stored in position.parentId (JSONB), not parent_id (UUID)
-                // BUG-1365: Also check 'parentId' in updates for auto-archive clearing
-                if (changedKeys.has('parentId')) {
-                    payload.parent_id = isValidUUID(updatedTask.parentId) ? updatedTask.parentId : null
-                }
                 // BUG-1365: Also check if canvasPosition was explicitly set in the updates object.
                 // During auto-archive (line ~458), canvasPosition is set to undefined to clear it.
                 // Without 'canvasPosition' in updates check, the sync queue never sends position: null

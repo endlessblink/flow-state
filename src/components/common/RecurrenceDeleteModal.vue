@@ -130,6 +130,7 @@ const ruleDescription = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding-bottom: var(--space-2);
 }
 
 .action-btn {
@@ -138,7 +139,7 @@ const ruleDescription = computed(() => {
   gap: var(--space-3);
   width: 100%;
   padding: var(--space-4) var(--space-4);
-  background: var(--glass-bg-soft);
+  background: rgba(45, 40, 70, 0.55);
   backdrop-filter: blur(8px);
   border-radius: var(--radius-lg);
   cursor: pointer;
@@ -147,20 +148,20 @@ const ruleDescription = computed(() => {
 }
 
 .action-btn--skip {
-  border: 1px solid var(--brand-primary);
+  border: 1px solid rgba(78, 205, 196, 0.6);
 }
 
 .action-btn--skip:hover {
-  background: rgba(78, 205, 196, 0.08);
-  border-color: var(--brand-primary-hover);
+  background: rgba(78, 205, 196, 0.12);
+  border-color: var(--brand-primary);
 }
 
 .action-btn--stop {
-  border: 1px solid var(--color-danger);
+  border: 1px solid rgba(239, 68, 68, 0.6);
 }
 
 .action-btn--stop:hover {
-  background: var(--danger-bg-subtle);
+  background: rgba(239, 68, 68, 0.12);
   border-color: var(--color-danger);
 }
 
@@ -188,12 +189,22 @@ const ruleDescription = computed(() => {
   font-weight: var(--font-semibold);
   color: var(--text-primary);
   line-height: 1.3;
+  opacity: 1;
+}
+
+.action-btn--skip .action-label {
+  color: var(--brand-primary);
+}
+
+.action-btn--stop .action-label {
+  color: var(--color-danger);
 }
 
 .action-hint {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   line-height: 1.4;
+  opacity: 0.85;
 }
 
 .modal-actions {

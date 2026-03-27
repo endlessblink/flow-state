@@ -60,14 +60,22 @@
 
       <div class="card glass stat-card">
         <h3>Sections</h3>
-        <div class="stat-value">{{ report.sections.length }}</div>
-        <p>{{ report.mode === 'full' ? 'Full assessment' : 'Quick check' }}</p>
+        <div class="stat-value">
+          {{ report.sections.length }}
+        </div>
+        <p>
+          {{ report.mode === 'full' ? 'Full assessment' : 'Quick check' }}
+        </p>
       </div>
 
       <div class="card glass stat-card">
         <h3>Duration</h3>
-        <div class="stat-value stat-value--small">{{ formatDuration(report.durationMs) }}</div>
-        <p>{{ formatTime(report.timestamp) }}</p>
+        <div class="stat-value stat-value--small">
+          {{ formatDuration(report.durationMs) }}
+        </div>
+        <p>
+          {{ formatTime(report.timestamp) }}
+        </p>
       </div>
     </div>
 
@@ -164,7 +172,9 @@
           <span class="history-time">{{ formatTime(h.timestamp) }}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" @click="handleClearHistory">Clear History</button>
+      <button class="btn btn-ghost" @click="handleClearHistory">
+        Clear History
+      </button>
     </div>
   </div>
 </template>

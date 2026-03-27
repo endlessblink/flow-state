@@ -100,7 +100,7 @@
   <div v-if="!isCollapsed && canvasGroupOptions.length > 1" class="canvas-group-filter">
     <CustomSelect
       :model-value="Array.from(selectedCanvasGroups)[0] || ''"
-      :options="canvasGroupOptions"
+      :options="(canvasGroupOptions as any[])"
       placeholder="Show from: All Tasks"
       @update:model-value="$emit('update:selectedCanvasGroups', new Set($event ? [String($event)] : []))"
     />
@@ -129,7 +129,7 @@
         :sort-by="sortBy"
         :sort-direction="sortDirection"
         :tasks="baseTasks"
-        :projects="rootProjects"
+        :projects="(rootProjects as any[])"
         @update:unscheduled-only="$emit('update:unscheduledOnly', $event)"
         @update:selected-priorities="$emit('update:selectedPriorities', $event)"
         @update:selected-projects="$emit('update:selectedProjects', $event)"

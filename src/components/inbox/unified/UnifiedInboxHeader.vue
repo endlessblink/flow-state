@@ -172,7 +172,7 @@
         :sort-direction="sortDirection"
         :on-canvas-count="onCanvasCount"
         :tasks="baseTasks"
-        :projects="rootProjects"
+        :projects="(rootProjects as Project[])"
         @update:unscheduled-only="$emit('update:unscheduled-only', $event)"
         @update:on-canvas-only="$emit('update:on-canvas-only', $event)"
         @update:selected-priorities="$emit('update:selected-priorities', $event)"

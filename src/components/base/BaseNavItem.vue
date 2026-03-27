@@ -26,6 +26,8 @@
       v-if="hasChildren"
       class="expand-chevron"
       :class="{ expanded }"
+      :aria-expanded="expanded"
+      aria-label="Toggle nested items"
       @click.stop="$emit('toggleExpand')"
     >
       <ChevronDown :size="14" />

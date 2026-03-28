@@ -24,6 +24,22 @@
 
 ---
 
+### ~~BUG-1733~~: Production errors — FK violation, dev CSS preload, undo safeClone SyntaxError (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-28)
+
+**Problems fixed**:
+1. `tasks_parent_id_fkey` FK violation — orphaned constraint on production DB blocks task sync
+2. `/src/assets/styles.css` 404 in production — hardcoded dev path in preload
+3. `permanentlyDeleteTaskWithUndo` SyntaxError — `safeClone()` returns Vue reactive proxies
+4. `claim_timer_leadership` RPC 404 — migration not deployed to production
+
+**Fix**: Dropped orphaned FK constraint via migration, removed dead CSS preload from main.ts, added `toRaw()` to undo safeClone. Timer RPC requires manual migration deploy.
+
+**Files**: `src/main.ts`, `src/composables/undoSingleton.ts`, `supabase/migrations/20260327120000_drop_tasks_parent_id_fkey.sql`
+
+---
+
 ### BUG-1726: `useBeforeUnload()` called outside setup context in useAppInitialization.ts (📋 PLANNED)
 
 **Priority**: P2 | **Status**: 📋 PLANNED
@@ -64,9 +80,9 @@
 
 ---
 
-### BUG-1717: Fix `ref is not defined` runtime error in CanvasView production build (📋 PLANNED)
+### BUG-1717: Fix `ref is not defined` runtime error in CanvasView production build (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS
 
 **Problem**: Production build (both web and Electron) throws `ReferenceError: ref is not defined` at `CanvasView-*.js:2:151250` during the `setup()` function. The error crashes the Canvas view. All source files correctly import `ref` from `vue` — the issue is in the production bundle (tree-shaking or chunk splitting bug).
 
@@ -577,6 +593,22 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 ---
 
 ## Active Bugs (P0-P1)
+
+### ~~BUG-1733~~: Production errors — FK violation, dev CSS preload, undo safeClone SyntaxError (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-28)
+
+**Problems fixed**:
+1. `tasks_parent_id_fkey` FK violation — orphaned constraint on production DB blocks task sync
+2. `/src/assets/styles.css` 404 in production — hardcoded dev path in preload
+3. `permanentlyDeleteTaskWithUndo` SyntaxError — `safeClone()` returns Vue reactive proxies
+4. `claim_timer_leadership` RPC 404 — migration not deployed to production
+
+**Fix**: Dropped orphaned FK constraint via migration, removed dead CSS preload from main.ts, added `toRaw()` to undo safeClone. Timer RPC requires manual migration deploy.
+
+**Files**: `src/main.ts`, `src/composables/undoSingleton.ts`, `supabase/migrations/20260327120000_drop_tasks_parent_id_fkey.sql`
+
+---
 
 ### ~~BUG-1523~~: iCal parser skips ALL recurring events — RRULE expansion missing (✅ DONE)
 

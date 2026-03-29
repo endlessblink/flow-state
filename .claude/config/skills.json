@@ -852,6 +852,30 @@
       "related_skills": [],
       "description": "Custom SVG icon design and graphics generation for FlowState's Cyberflow RPG. Encodes cyberpunk icon design principles (sharp angles, circuit motifs, neon-ready), icon categories (achievements, classes, corruption, bosses, shop, stats), Vue inline SVG component patterns, Nano Banana Pro AI graphics generation integration, SVGO optimization, and animated SVG patterns. Use when creating custom game icons or generating visual assets."
     },
+    "sure": {
+      "name": "Sure? — Confidence Gate",
+      "category": "audit",
+      "triggers": [
+        "/sure?",
+        "are you sure",
+        "confidence check",
+        "sure?"
+      ],
+      "keywords": [
+        "sure",
+        "confidence",
+        "verify",
+        "gate",
+        "check"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "dev-debugging",
+        "chief-architect"
+      ],
+      "description": "Confidence gate — forces Claude to state root cause, rate confidence (HIGH/MEDIUM/LOW), describe the fix, and list side effects BEFORE writing any code. Use to prevent speculative fixes and wasted tokens."
+    },
     "tauri": {
       "name": "tauri",
       "category": "implement",

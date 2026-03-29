@@ -15,10 +15,12 @@ import { useQuickSortDatabase } from './useQuickSortDatabase'
 import { usePinnedTasksDatabase } from './usePinnedTasksDatabase'
 import { useWorkProfileDatabase } from './useWorkProfileDatabase'
 import { useRealtimeSubscription } from './useRealtimeSubscription'
+import { useTaskAuditLog } from './useTaskAuditLog'
 
 // Re-export types and singletons used by consumers
 export { invalidateCache } from './_infrastructure'
 export type { SafeCreateTaskResult, TaskIdAvailability, TimerSettings } from './_infrastructure'
+export type { TaskAuditEntry } from './useTaskAuditLog'
 
 export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const authStore = useAuthStore()
@@ -44,6 +46,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const pinnedTasks = usePinnedTasksDatabase(ctx)
     const workProfile = useWorkProfileDatabase(ctx)
     const realtime = useRealtimeSubscription(ctx)
+    const auditLog = useTaskAuditLog(ctx)
 
     return {
         isSyncing,
@@ -62,5 +65,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         // FEATURE-1317: Work Profile
         ...workProfile,
         ...realtime,
+        // TASK-1734: Task Audit Log
+        ...auditLog,
     }
 }

@@ -36,15 +36,15 @@ defineEmits<{
   (e: 'slotMouseDown', event: MouseEvent, slot: TimeSlot): void
   (e: 'eventMouseEnter', eventId: string): void
   (e: 'eventMouseLeave'): void
-  (e: 'eventDragStart', event: DragEvent, calEvent: CalendarEvent): void
-  (e: 'eventDragEnd', event: DragEvent, calEvent: CalendarEvent): void
-  (e: 'eventClick', event: MouseEvent, calEvent: CalendarEvent): void
-  (e: 'eventDblClick', calEvent: CalendarEvent): void
-  (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent): void
-  (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent): void
-  (e: 'removeFromCalendar', calEvent: CalendarEvent): void
-  (e: 'startTimer', calEvent: CalendarEvent): void
-  (e: 'startResize', event: MouseEvent, calEvent: CalendarEvent, direction: 'top' | 'bottom'): void
+  (e: 'eventDragStart', event: DragEvent, calEvent: CalendarEvent | TimeSlot | Record<string, unknown>): void
+  (e: 'eventDragEnd', event: DragEvent, calEvent: CalendarEvent | TimeSlot | Record<string, unknown>): void
+  (e: 'eventClick', event: MouseEvent, calEvent: CalendarEvent | TimeSlot | Record<string, unknown>): void
+  (e: 'eventDblClick', calEvent: CalendarEvent | TimeSlot | Record<string, unknown>): void
+  (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent | TimeSlot | Record<string, unknown>): void
+  (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent | TimeSlot | Record<string, unknown>): void
+  (e: 'removeFromCalendar', calEvent: CalendarEvent | TimeSlot | Record<string, unknown>): void
+  (e: 'startTimer', calEvent: CalendarEvent | TimeSlot | Record<string, unknown>): void
+  (e: 'startResize', event: MouseEvent, calEvent: CalendarEvent | TimeSlot | Record<string, unknown>, direction: 'top' | 'bottom'): void
 }>()
 // Inject helpers from parent CalendarView
 interface CalendarHelpers {

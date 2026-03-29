@@ -9,9 +9,9 @@
       <div class="actions">
         <button
           class="btn btn-ghost"
+          title="Quick check with 1 run per test"
           :disabled="isRunning"
           @click="handleRunTests(1)"
-          title="Quick check with 1 run per test"
         >
           Quick (1x)
         </button>
@@ -67,7 +67,9 @@
 
       <div class="card glass stat-card">
         <h3>Provider</h3>
-        <div class="stat-value stat-value--small">{{ report.provider }}</div>
+        <div class="stat-value stat-value--small">
+          {{ report.provider }}
+        </div>
         <p>{{ formatTime(report.timestamp) }}</p>
       </div>
     </div>

@@ -1,12 +1,12 @@
 <template>
   <div class="time-display">
     <div class="time-info">
-      <div class="current-time">
+      <time :datetime="isoTime" class="current-time">
         {{ currentTime }}
-      </div>
-      <div class="current-date">
+      </time>
+      <time :datetime="isoDate" class="current-date">
         {{ currentDate }}
-      </div>
+      </time>
     </div>
   </div>
 </template>
@@ -16,9 +16,25 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 const currentTime = ref('')
 const currentDate = ref('')
+const isoTime = ref('')
+const isoDate = ref('')
 
 const updateTime = () => {
   const now = new Date()
+
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+
+  isoDate.value = `${year}-${month}-${day}`
+
+  // Create an ISO 8601 string but in local time format (without Z)
+  // This matches what the user actually sees on their local device
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const seconds = String(now.getSeconds()).padStart(2, '0')
+
+  isoTime.value = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
 
   // Format time: HH:MM
   currentTime.value = now.toLocaleTimeString('en-US', {

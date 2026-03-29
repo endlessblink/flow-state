@@ -51,6 +51,8 @@ PlasmoidItem {
         }
         return ""
     }
+    property string _cachedActiveTaskId: ""
+    property string _cachedActiveTaskName: ""
     property bool hasActiveSession: false
     property int totalSeconds: plasmoid.configuration.workDuration * 60
     property int secondsRemaining: totalSeconds
@@ -408,16 +410,29 @@ PlasmoidItem {
 
     // TASK-1435: Write active task state for companion widget
     function writeActiveTaskFile() {
-        // Resolve task name inline (more reliable than QML binding)
         var resolvedName = ""
         if (root.currentTaskId && root.currentTaskId !== "general") {
+            // 1. Try local task list
             for (var i = 0; i < root.tasks.length; i++) {
                 if (root.tasks[i].id === root.currentTaskId) {
                     resolvedName = root.tasks[i].title || ""
                     break
                 }
             }
+            // 2. Try cache from previous direct fetch
+            if (!resolvedName && root.currentTaskId === root._cachedActiveTaskId) {
+                resolvedName = root._cachedActiveTaskName
+            }
+            // 3. Fetch directly from DB if still unresolved
+            if (!resolvedName) {
+                _fetchActiveTaskName(root.currentTaskId)
+                return  // _fetchActiveTaskName will call _writeActiveTaskFileImpl when done
+            }
         }
+        _writeActiveTaskFileImpl(resolvedName)
+    }
+
+    function _writeActiveTaskFileImpl(resolvedName) {
         var obj = {
             taskName: resolvedName,
             taskId: root.currentTaskId,
@@ -437,6 +452,32 @@ PlasmoidItem {
         }
         root.lastWriteCmd = cmd
         executableDataSource.connectSource(cmd)
+    }
+
+    function _fetchActiveTaskName(taskId) {
+        var xhr = new XMLHttpRequest()
+        var url = root.supabaseUrl + "/rest/v1/tasks?id=eq." + taskId + "&select=id,title&limit=1"
+        xhr.open("GET", url, true)
+        xhr.setRequestHeader("apikey", root.supabaseKey)
+        xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            if (xhr.status === 200) {
+                var tasks = JSON.parse(xhr.responseText)
+                if (tasks.length > 0) {
+                    root._cachedActiveTaskId = taskId
+                    root._cachedActiveTaskName = tasks[0].title || ""
+                    if (root.debugLogging) console.log("[SYNC] Fetched active task name:", root._cachedActiveTaskName)
+                } else {
+                    // Task not found — cache empty to avoid repeated fetches
+                    root._cachedActiveTaskId = taskId
+                    root._cachedActiveTaskName = ""
+                }
+            }
+            // Always write the file (even if fetch failed, write what we have)
+            _writeActiveTaskFileImpl(root._cachedActiveTaskName)
+        }
+        xhr.send()
     }
 
     // ===== FULL-SCREEN BREAK OVERLAY (Fokus-style) =====
@@ -4263,7 +4304,12 @@ PlasmoidItem {
                 var s = sessions[0]
                 if (root.debugLogging) console.log("[SYNC] Session:", s.id, "remaining:", s.remaining_time, "leader:", s.device_leader_id, "task:", s.task_id)
                 root.currentSessionId = s.id
-                root.currentTaskId = s.task_id || ""  // TASK-1087: Track active task
+                var newTaskId = s.task_id || ""
+                if (newTaskId !== root.currentTaskId) {
+                    root._cachedActiveTaskId = ""
+                    root._cachedActiveTaskName = ""
+                }
+                root.currentTaskId = newTaskId  // TASK-1087: Track active task
                 root.totalSeconds = s.duration
                 root.isWorkSession = !s.is_break
                 root.hasActiveSession = true
@@ -4346,6 +4392,8 @@ PlasmoidItem {
                     root.hasActiveSession = false
                     root.currentSessionId = ""
                     root.currentTaskId = ""  // TASK-1087: Clear active task
+                    root._cachedActiveTaskId = ""
+                    root._cachedActiveTaskName = ""
                     root.isRunning = false
                     root.isDeviceLeader = false
                     root.writeActiveTaskFile()

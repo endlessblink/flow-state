@@ -129,6 +129,9 @@ interface Props {
   closeAriaLabel?: string
   loading?: boolean
   confirmDisabled?: boolean
+  titleClass?: string
+  descriptionClass?: string
+  bodyClass?: string
   footerClass?: string
   trapFocus?: boolean
 }

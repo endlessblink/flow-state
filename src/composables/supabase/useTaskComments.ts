@@ -155,7 +155,8 @@ export function useTaskComments() {
   async function addComment(
     taskId: string,
     content: string,
-    replyToCommentId: string | null = null
+    replyToCommentId: string | null = null,
+    workspaceId?: string
   ): Promise<TaskComment | null> {
     const userId = authStore.user?.id
     if (!userId) {
@@ -192,6 +193,7 @@ export function useTaskComments() {
           user_id: userId,
           content,
           reply_to_comment_id: replyToCommentId,
+          workspace_id: workspaceId,
         })
         .select('*')
         .single()

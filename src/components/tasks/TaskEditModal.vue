@@ -87,6 +87,13 @@
             <!-- Child Tasks (from canvas connections) -->
             <TaskEditChildTasks :child-tasks="childTasks" />
 
+            <!-- TASK-1553: Task Comments (workspace tasks only) -->
+            <TaskComments
+              v-if="editedTask.workspaceId"
+              :task-id="editedTask.id"
+              :workspace-id="editedTask.workspaceId"
+            />
+
             <!-- Left Actions (Pomodoro reset, etc.) -->
             <div v-if="showPomodoros" class="left-actions-section">
               <button
@@ -171,6 +178,7 @@ import RecurrenceSelector from './edit/RecurrenceSelector.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import ReminderPicker from '@/components/notifications/ReminderPicker.vue'
 import TaskAttachments from './TaskAttachments.vue'
+import TaskComments from './edit/TaskComments.vue'
 import type { TaskReminder } from '@/types/notifications'
 import type { TaskAttachment } from '@/types/tasks'
 

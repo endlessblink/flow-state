@@ -70,9 +70,9 @@
 
 ---
 
-### BUG-1729: CanvasView duplicate attribute in template (📋 PLANNED)
+### ~~BUG-1729~~: CanvasView duplicate attribute in template (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE
 
 **Problem**: `CanvasView.vue` template has a duplicate attribute on an element, causing a Vue compile warning. The duplicate attribute needs to be identified and removed.
 

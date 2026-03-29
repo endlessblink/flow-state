@@ -1,4 +1,4 @@
-import { type Ref, type ComputedRef } from 'vue'
+import { ref, type Ref, type ComputedRef } from 'vue'
 import { useTaskStore, type Task, type Subtask, type TaskInstance } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
@@ -31,6 +31,8 @@ export function useTaskEditActions(
     const canvasStore = useCanvasStore()
     const canvasUiStore = useCanvasUiStore()
     const { showToast } = useToast()
+
+    const sectionChanged = ref(false)
 
 
     // --- Subtask Management ---
@@ -100,6 +102,7 @@ export function useTaskEditActions(
     // --- Canvas Interaction ---
 
     const handleSectionChange = (sectionId: string | null) => {
+        sectionChanged.value = true
         if (!sectionId) {
             // Move to Inbox
             editedTask.value.isInInbox = true
@@ -232,7 +235,6 @@ export function useTaskEditActions(
             const editedHasInstances = editedTask.value.instances && editedTask.value.instances.length > 0
             const scheduleExplicitlyRemoved = hadOriginalSchedule && !hasNewSchedule && !editedHasInstances
 
-            const originalCanvasPosition = editedTask.value.canvasPosition ?? props.task?.canvasPosition
             const originalIsInInbox = editedTask.value.isInInbox ?? props.task?.isInInbox
 
             const updates: Record<string, unknown> = {
@@ -248,8 +250,12 @@ export function useTaskEditActions(
                 subtasks: editedTask.value.subtasks
             }
 
-            if (originalCanvasPosition !== undefined) {
-                updates.canvasPosition = originalCanvasPosition
+            // Only write canvasPosition if user explicitly changed section via handleSectionChange
+            if (sectionChanged.value && editedTask.value.canvasPosition !== undefined) {
+                updates.canvasPosition = editedTask.value.canvasPosition
+                updates.isInInbox = false
+            } else if (props.task?.canvasPosition !== undefined) {
+                // Task is on canvas but position wasn't changed — don't touch position, just preserve inbox status
                 updates.isInInbox = false
             } else if (originalIsInInbox !== undefined) {
                 updates.isInInbox = originalIsInInbox
@@ -265,10 +271,7 @@ export function useTaskEditActions(
                 updates.instances = editedTask.value.instances
             }
 
-            // Lock position before update
-            if (originalCanvasPosition) {
-                // Optimistic sync removed
-            }
+            // Lock position before update (no-op, optimistic sync removed)
 
             // TASK-1403: Convert recurrence to new SimpleRecurrenceRule format (clone-on-complete)
             if (editedTask.value.recurrence?.isEnabled && editedTask.value.recurrence.rule) {
@@ -312,6 +315,7 @@ export function useTaskEditActions(
             // BUG-1097 FIX: Close modal FIRST, then show toast
             // This ensures the modal closes even if toast has issues
             emit('close')
+            sectionChanged.value = false
             isSaving.value = false
 
             // FIX: Clean up pending write after a short delay.
@@ -399,6 +403,7 @@ export function useTaskEditActions(
         resetPomodoros,
         handleScheduledDateChange,
         handleSectionChange,
-        saveTask
+        saveTask,
+        sectionChanged
     }
 }

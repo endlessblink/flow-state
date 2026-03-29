@@ -125,10 +125,30 @@ export function useCanvasNavigation(canvasStore: ReturnType<typeof useCanvasStor
         return false
     }
 
+    /**
+     * Center viewport on a specific task node by ID.
+     * Used by search "Reveal on Canvas" feature.
+     * @returns true if the task was found and centered on, false otherwise
+     */
+    const centerOnTask = (taskId: string): boolean => {
+        const nodes = getNodes.value
+        const taskNode = nodes.find(n => n.id === taskId && n.type === 'taskNode')
+        if (!taskNode) return false
+
+        const nodeWidth = taskNode.dimensions?.width || 280
+        const nodeHeight = taskNode.dimensions?.height || 120
+        const centerX = taskNode.position.x + nodeWidth / 2
+        const centerY = taskNode.position.y + nodeHeight / 2
+
+        setCenter(centerX, centerY, { zoom: 1, duration: CANVAS.NAVIGATION_ANIMATION_MS })
+        return true
+    }
+
     return {
         initialViewport,
         zoomToSelection,
         fitCanvas,
-        centerOnTodayGroup
+        centerOnTodayGroup,
+        centerOnTask
     }
 }

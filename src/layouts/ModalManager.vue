@@ -71,6 +71,7 @@
       @close="showSearchModal = false"
       @select-task="handleSearchSelectTask"
       @select-project="handleSearchSelectProject"
+      @reveal-task="handleSearchRevealTask"
     />
 
     <!-- QUICK TASK CREATE MODAL -->
@@ -390,6 +391,20 @@ const cancelConfirmAction = () => {
 
 const handleSearchSelectTask = (task: Task) => {
   openEditTask(task)
+}
+
+const handleSearchRevealTask = async (task: Task) => {
+  showSearchModal.value = false
+
+  if (route.name !== 'canvas') {
+    await router.push('/')
+    // Wait for canvas to mount and initialize nodes
+    await new Promise(resolve => setTimeout(resolve, 600))
+  }
+
+  window.dispatchEvent(new CustomEvent('reveal-task-on-canvas', {
+    detail: { taskId: task.id }
+  }))
 }
 
 const handleSearchSelectProject = (_project: Project) => {

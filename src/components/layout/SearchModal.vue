@@ -59,6 +59,14 @@
                 <span v-if="task.dueDate" class="result-due">{{ formatDueDate(task.dueDate) }}</span>
               </div>
             </div>
+            <button
+              v-if="task.canvasPosition"
+              class="reveal-canvas-btn"
+              title="Show on Canvas"
+              @click.stop="emit('revealTask', task)"
+            >
+              <Crosshair :size="14" />
+            </button>
             <ChevronRight :size="16" class="result-arrow" />
           </div>
         </div>
@@ -108,7 +116,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
-import { Search, FileText, FolderOpen, ChevronRight } from 'lucide-vue-next'
+import { Search, FileText, FolderOpen, ChevronRight, Crosshair } from 'lucide-vue-next'
 import { highlightMatchSafe } from '@/utils/security'
 import type { Task, Project } from '@/stores/tasks'
 
@@ -121,6 +129,7 @@ const emit = defineEmits<{
   close: []
   selectTask: [task: Task]
   selectProject: [project: Project]
+  revealTask: [task: Task]
 }>()
 
 const taskStore = useTaskStore()
@@ -591,6 +600,34 @@ onMounted(() => {
   color: var(--text-subtle);
   flex-shrink: 0;
   margin-inline-start: var(--space-2); /* RTL: result arrow spacing */
+}
+
+.reveal-canvas-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-subtle);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--duration-fast) var(--spring-smooth);
+  opacity: 0;
+  margin-inline-end: var(--space-1);
+}
+
+.result-item:hover .reveal-canvas-btn,
+.result-item.active .reveal-canvas-btn {
+  opacity: 1;
+}
+
+.reveal-canvas-btn:hover {
+  color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+  border-color: var(--brand-primary-alpha-50);
 }
 
 .no-results {

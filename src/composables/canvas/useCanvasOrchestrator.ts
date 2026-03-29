@@ -39,6 +39,7 @@ import { useCanvasModals } from './useCanvasModals'
 import { useCanvasFilteredState } from './useCanvasFilteredState'
 import { useCanvasLifecycle } from './useCanvasLifecycle'
 import { useCanvasNavigation } from './useCanvasNavigation' // Keeping for specialized nav if needed
+import { CANVAS } from '@/constants/canvas'
 import { useCanvasZoom } from './useCanvasZoom' // Keeping for cleanup hooks
 import { useCanvasAlignment } from './useCanvasAlignment'
 import { useCanvasConnections } from './useCanvasConnections'
@@ -146,7 +147,7 @@ export function useCanvasOrchestrator() {
     useCanvasGroups()
 
     // Navigation & Zoom (Legacy cleanup support, transitioning to Core)
-    const { initialViewport, fitCanvas: legacyFitCanvas, zoomToSelection: legacyZoomToSelection, centerOnTodayGroup } = useCanvasNavigation(canvasStore)
+    const { initialViewport, fitCanvas: legacyFitCanvas, zoomToSelection: legacyZoomToSelection, centerOnTodayGroup, centerOnTask } = useCanvasNavigation(canvasStore)
     const fitCanvas = legacyFitCanvas
     const zoomToSelection = legacyZoomToSelection
     const { cleanupZoom } = useCanvasZoom(resourceManager)
@@ -391,11 +392,25 @@ export function useCanvasOrchestrator() {
     // Without this, watchers fire as data loads, causing multiple syncNodes() calls with different task counts
     const isInitialized = ref(false)
 
+    // SEARCH REVEAL: Center viewport on a task when triggered from search modal
+    const handleRevealTaskOnCanvas = (event: Event) => {
+        const { taskId } = (event as CustomEvent<{ taskId: string }>).detail
+        const found = centerOnTask(taskId)
+        if (found) {
+            // Flash the task after the pan animation completes
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('task-action-flash', { detail: { taskId } }))
+            }, CANVAS.NAVIGATION_ANIMATION_MS + 50)
+        }
+    }
+
     // Initial sync
     onMounted(async () => {
         if (import.meta.env.DEV) {
             console.log('🚀 [ORCHESTRATOR] onMounted starting...')
         }
+
+        window.addEventListener('reveal-task-on-canvas', handleRevealTaskOnCanvas)
 
         await canvasStore.loadSavedViewport()
         await nextTick()
@@ -553,6 +568,7 @@ export function useCanvasOrchestrator() {
             clearTimeout(viewportSaveTimer)
             viewportSaveTimer = null
         }
+        window.removeEventListener('reveal-task-on-canvas', handleRevealTaskOnCanvas)
     })
 
     // Persist Viewport on Change

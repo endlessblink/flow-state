@@ -8,6 +8,20 @@
 
 ## Active Tasks
 
+### ~~BUG-1735~~: KDE widget calendar block shows pomodoro time instead of scheduled duration (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-30)
+
+**Problem**: KDE system tray widget's "Xm" calendar block countdown displayed pomodoro remaining time instead of the actual calendar event's wall-clock remaining time. A 60-min scheduled block showed "21m" (pomodoro countdown) instead of the true remaining calendar time.
+
+**Root cause**: `updateCurrentBlock()` in `main.qml` had logic that (1) extended the calendar block's end time when pomodoro ran past it, and (2) used `Math.ceil(root.secondsRemaining / 60)` (pomodoro time) instead of `endMinutes - nowMinutes` (calendar time) when a timer was active.
+
+**Fix**: Removed block extension logic and simplified `bestMinutesLeft` to always use `endMinutes - nowMinutes`. The circular pomodoro timer continues showing pomodoro countdown independently.
+
+**Files**: `packages/kde-widget/contents/ui/main.qml`
+
+---
+
 ### ~~TASK-1730~~: Fix Electron OAuth Google sign-in flow (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE

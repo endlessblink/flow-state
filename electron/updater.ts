@@ -30,8 +30,15 @@ export function registerUpdater() {
     if (win) win.webContents.send('updater:downloaded')
   })
 
+  autoUpdater.on('update-not-available', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) win.webContents.send('updater:not-available')
+  })
+
   autoUpdater.on('error', (err) => {
     console.error('[Updater] Error:', err.message)
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) win.webContents.send('updater:error', err.message)
   })
 
   // IPC handlers for renderer control
@@ -49,7 +56,8 @@ export function registerUpdater() {
   })
 
   ipcMain.handle('updater:install', () => {
-    autoUpdater.quitAndInstall()
+    // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
+    autoUpdater.quitAndInstall(false, true)
   })
 
   // Check for updates after 5s delay

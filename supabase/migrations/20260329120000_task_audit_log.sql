@@ -106,6 +106,15 @@ DECLARE
     v_old_values  jsonb;
     v_new_values  jsonb;
 BEGIN
+    -- Skip audit for E2E test users (playwright@test.flowstate)
+    IF EXISTS (
+        SELECT 1 FROM auth.users
+        WHERE id = COALESCE(NEW.user_id, OLD.user_id)
+          AND email LIKE '%@test.flowstate'
+    ) THEN
+        RETURN COALESCE(NEW, OLD);
+    END IF;
+
     -- -------------------------------------------------------------------------
     -- HARD DELETE: row being permanently removed
     -- -------------------------------------------------------------------------

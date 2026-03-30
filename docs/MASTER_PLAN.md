@@ -8,6 +8,18 @@
 
 ## Active Tasks
 
+### ~~TASK-1734~~: Task Audit Log — Forensic Task Lifecycle Tracker (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-30)
+
+**Problem**: When tasks disappear, there's no way to definitively answer "what happened to my task about X?". Tombstones only store UUIDs (no title/content), and hard-deleted tasks lose their identity entirely.
+
+**Solution**: Postgres trigger-based immutable audit log (`task_audit_log` table) that automatically captures every task lifecycle event (CREATED, SOFT_DELETED, RESTORED, STATUS_CHANGED, HARD_DELETED) with the task's title and key fields. Uses `pg_trgm` for fuzzy title search. Immutable via Postgres rules (no UPDATE/DELETE). Test user events excluded via email pattern check.
+
+**Files**: `supabase/migrations/20260329120000_task_audit_log.sql`, `src/composables/supabase/useTaskAuditLog.ts`, `src/composables/supabase/index.ts`
+
+---
+
 ### ~~BUG-1735~~: KDE widget calendar block shows pomodoro time instead of scheduled duration (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-30)

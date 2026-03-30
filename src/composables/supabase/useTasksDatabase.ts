@@ -157,6 +157,23 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     return attemptUpsert(clearedPayload, true)
                 }
 
+                // Handle recurrence dedup constraint (idx_unique_recurrence_occurrence) — cross-device race
+                if (error?.code === '23505' && error?.message?.includes('idx_unique_recurrence_occurrence') && !isRetry) {
+                    console.warn(`⚠️ [saveTasks] Recurrence dedup constraint hit, filtering duplicates and retrying`)
+                    const seen = new Set<string>()
+                    const dedupedPayload = payloadToSave.filter(t => {
+                        if (t.recurrence_parent_id && t.recurrence_count != null) {
+                            const key = `${t.recurrence_parent_id}:${t.recurrence_count}`
+                            if (seen.has(key)) return false
+                            seen.add(key)
+                        }
+                        return true
+                    })
+                    if (dedupedPayload.length < payloadToSave.length) {
+                        return attemptUpsert(dedupedPayload, true)
+                    }
+                }
+
                 if (error) throw error
 
                 // RLS check

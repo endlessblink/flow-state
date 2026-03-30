@@ -139,7 +139,7 @@ const ruleDescription = computed(() => {
   gap: var(--space-3);
   width: 100%;
   padding: var(--space-4) var(--space-4);
-  background: rgba(45, 40, 70, 0.55);
+  background: rgba(45, 40, 70, 0.75);
   backdrop-filter: blur(8px);
   border-radius: var(--radius-lg);
   cursor: pointer;
@@ -148,7 +148,7 @@ const ruleDescription = computed(() => {
 }
 
 .action-btn--skip {
-  border: 1px solid rgba(78, 205, 196, 0.6);
+  border: 1px solid rgba(78, 205, 196, 0.8);
 }
 
 .action-btn--skip:hover {
@@ -157,7 +157,7 @@ const ruleDescription = computed(() => {
 }
 
 .action-btn--stop {
-  border: 1px solid rgba(239, 68, 68, 0.6);
+  border: 1px solid rgba(239, 68, 68, 0.8);
 }
 
 .action-btn--stop:hover {
@@ -204,7 +204,6 @@ const ruleDescription = computed(() => {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   line-height: 1.4;
-  opacity: 0.85;
 }
 
 .modal-actions {

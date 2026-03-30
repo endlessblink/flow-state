@@ -22,6 +22,10 @@
       :project-display-name="taskStore.getProjectDisplayName(task.projectId)"
       :status-options="statusOptions"
       :disable-native-drag="disableNativeDrag"
+      :is-inline-editing="isInlineEditing"
+      @start-inline-edit="handleStartInlineEdit"
+      @save-inline-edit="handleSaveInlineEdit"
+      @cancel-inline-edit="handleCancelInlineEdit"
       @dragstart="actions.handleDragStart"
       @dragend="actions.handleDragEnd"
       @dragover="actions.handleDragOver"
@@ -79,6 +83,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
@@ -149,6 +154,23 @@ const actions = useTaskRowActions(
   emit, 
   state
 )
+
+const isInlineEditing = ref(false)
+
+const handleStartInlineEdit = () => {
+  isInlineEditing.value = true
+}
+
+const handleSaveInlineEdit = (value: string) => {
+  isInlineEditing.value = false
+  const trimmed = value.trim()
+  if (!trimmed || trimmed === props.task.title) return
+  emit('updateTask', props.task.id, { title: trimmed })
+}
+
+const handleCancelInlineEdit = () => {
+  isInlineEditing.value = false
+}
 
 const enterFocusMode = () => {
   router.push(`/focus/${props.task.id}`)

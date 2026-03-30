@@ -10,9 +10,10 @@
         <ViewControls
           v-model:sort-by="sortBy"
           v-model:group-by="groupBy"
+          v-model:density="density"
           :filter-status="filterStatus"
           :hide-done-tasks="hideDoneTasks"
-          :show-tree-controls="catalogViewMode === 'list'"
+          :show-tree-controls="groupBy !== 'none'"
           @update:filter-status="taskStore.setActiveStatusFilter"
           @update:hide-done-tasks="handleToggleDoneTasksFromControl"
           @expand-all="handleExpandAll"
@@ -30,32 +31,13 @@
           <CalendarDays :size="16" />
         </button>
 
-        <!-- View Mode Toggle -->
-        <div class="view-mode-toggle" role="group" aria-label="View mode">
-          <button
-            class="mode-btn"
-            :class="{ 'mode-btn--active': catalogViewMode === 'list' }"
-            title="List view"
-            @click="catalogViewMode = 'list'"
-          >
-            <List :size="16" />
-          </button>
-          <button
-            class="mode-btn"
-            :class="{ 'mode-btn--active': catalogViewMode === 'table' }"
-            title="Table view"
-            @click="catalogViewMode = 'table'"
-          >
-            <Table2 :size="16" />
-          </button>
-        </div>
+
       </div>
 
       <!-- Content Area -->
       <div class="tasks-container" @dragover.prevent>
         <!-- List Mode -->
         <TaskList
-          v-if="catalogViewMode === 'list'"
           ref="taskListRef"
           :tasks="sortedTasks"
           :groups="groupedTasks"
@@ -63,6 +45,7 @@
           :empty-message="getEmptyMessage()"
           :sort-by="sortBy"
           :sort-direction="sortDirection"
+          :density="density"
           @select="handleSelectTask"
           @toggle-complete="handleToggleComplete"
           @start-timer="handleStartTimer"
@@ -76,20 +59,6 @@
           @reorder="sortBy = 'manual'"
           @update:sort-by="sortBy = $event"
           @update:sort-direction="sortDirection = $event"
-        />
-
-        <!-- Table Mode -->
-        <TaskTable
-          v-else
-          :tasks="sortedTasks"
-          :groups="groupedTasks"
-          :group-by="groupBy"
-          density="comfortable"
-          @select="handleSelectTask"
-          @start-timer="handleStartTimer"
-          @edit="handleEditTask"
-          @context-menu="handleContextMenu"
-          @update-task="handleUpdateTask"
         />
       </div>
     </template>
@@ -145,10 +114,9 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useSettingsStore } from '@/stores/settings'
 import { useMobileDetection } from '@/composables/useMobileDetection'
-import { List, Table2, CalendarDays } from 'lucide-vue-next'
+import { CalendarDays } from 'lucide-vue-next'
 import ViewControls from '@/components/layout/ViewControls.vue'
 import TaskList from '@/components/tasks/TaskList.vue'
-import TaskTable from '@/components/tasks/TaskTable.vue'
 import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
@@ -179,9 +147,9 @@ const { hideDoneTasks } = storeToRefs(taskStore)
 const sortBy = usePersistentRef<string>('flowstate:all-tasks-sort-by', 'dueDate')
 const sortDirection = usePersistentRef<'asc' | 'desc'>('flowstate:all-tasks-sort-direction', 'asc')
 const groupBy = usePersistentRef<GroupByType>('flowstate:all-tasks-group-by', 'project')
-// FEATURE-1293: Catalog view mode toggle (list | table), persisted to localStorage
-const catalogViewMode = usePersistentRef<'list' | 'table'>('flowstate-catalog-view-mode', 'list')
 const showAllWeekDays = usePersistentRef<boolean>('flowstate-show-all-week-days', false)
+// Density control for task list rows
+const density = usePersistentRef<'compact' | 'comfortable' | 'spacious'>('flowstate:task-list-density', 'comfortable')
 // Use global status filter directly from store (maintains reactivity)
 const filterStatus = computed(() => taskStore.activeStatusFilter || 'all')
 
@@ -752,6 +720,9 @@ onMounted(() => {
     filteredTasks: taskStore.filteredTasks.length,
     sortBy: sortBy.value
   })
+  // Migrate legacy table view mode
+  const legacy = localStorage.getItem('flowstate-catalog-view-mode')
+  if (legacy) localStorage.removeItem('flowstate-catalog-view-mode')
 })
 </script>
 
@@ -770,19 +741,6 @@ onMounted(() => {
   gap: var(--space-2);
 }
 
-/* FEATURE-1293: View mode toggle pill */
-.view-mode-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border-subtle);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: var(--radius-md);
-  padding: var(--space-1);
-  flex-shrink: 0;
-}
 
 .mode-btn {
   display: flex;

@@ -51,7 +51,7 @@
     display: none;
 }
 
-/* Table Cells - Match TaskTable exactly */
+/* Task row cell */
 .task-row__done-toggle {
     grid-area: done;
     display: flex;
@@ -79,7 +79,7 @@
     color: var(--text-primary);
 }
 
-/* Due Date cell - Match TaskTable */
+/* Due Date cell */
 .task-row__due-date {
     grid-area: due;
     display: flex;
@@ -213,10 +213,11 @@
     border-inline-start-color: var(--status-on-hold-border);
 }
 
-/* ADHD-friendly: Taller row height for easier scanning (44-52px based on research) */
+/* Row density: height and padding controlled by CSS custom properties,
+   set by .task-list--{density} modifier in TaskList.vue */
 .task-row {
-    min-height: 44px;
-    padding: var(--space-1) var(--space-2);
+    min-height: var(--row-min-height, 44px);
+    padding: var(--row-padding-v, var(--space-1)) var(--row-padding-h, var(--space-2));
 }
 
 /* No progress indicator styling */

@@ -76,18 +76,22 @@
           />
         </template>
 
-        <!-- TASK-1334: List view renders TaskTable directly -->
+        <!-- TASK-1334: List view renders TaskList directly -->
         <template v-else-if="currentViewType === 'list'">
-          <TaskTable
+          <TaskList
             :tasks="allFilteredTasks"
             :groups="listViewGroups"
             group-by="project"
             :density="currentDensity === 'ultrathin' ? 'compact' : currentDensity"
             @select="handleSelectTask"
+            @toggle-complete="handleToggleComplete"
             @start-timer="handleStartTimer"
             @edit="handleEditTask"
             @update-task="handleListUpdateTask"
             @context-menu="handleContextMenu"
+            @move-task="handleMoveTask"
+            @delete-selected="handleDeleteSelected"
+            @add-task-to-group="handleAddTaskToGroup"
           />
         </template>
 
@@ -196,7 +200,7 @@ import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete
 import './BoardView.css'
 
 import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
-import TaskTable from '@/components/tasks/TaskTable.vue'
+import TaskList from '@/components/tasks/TaskList.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
@@ -309,12 +313,34 @@ const listViewGroups = computed(() => {
     projectMap.get(projectId)!.tasks.push(task)
   }
 
-  return Array.from(projectMap.values())
+  const groups = Array.from(projectMap.values())
+  // TaskList renders from parentTasks, not tasks
+  groups.forEach(g => { g.parentTasks = [...g.tasks] })
+  return groups
 })
 
 // TASK-1334: Handle inline task updates from list view
 const handleListUpdateTask = (taskId: string, updates: Partial<Task>) => {
   taskStore.updateTask(taskId, updates)
+}
+
+// Event handlers for TaskList in list view mode
+const handleToggleComplete = (taskId: string) => {
+  const task = taskStore.tasks.find(t => t.id === taskId)
+  if (!task) return
+  const newStatus = task.status === 'done' ? 'todo' : 'done'
+  taskStore.updateTask(taskId, { status: newStatus })
+}
+
+const handleDeleteSelected = (taskIds: string[]) => {
+  for (const id of taskIds) {
+    doDeleteTask(id)
+  }
+}
+
+const handleAddTaskToGroup = (groupKey: string, _groupBy: string) => {
+  // Open QuickTaskCreate with the project pre-filled
+  openQuickTaskCreate('todo', groupKey === '__uncategorized__' ? '' : groupKey, 'list')
 }
 
 // Load saved settings on mount

@@ -65,6 +65,15 @@
           @update:model-value="$emit('update:filterStatus', $event as string)"
         />
       </div>
+
+      <!-- Density Control -->
+      <div v-if="density" class="control-wrapper">
+        <CustomSelect
+          :model-value="density"
+          :options="densityOptions"
+          @update:model-value="$emit('update:density', $event as string)"
+        />
+      </div>
     </div>
   </Transition>
 </template>
@@ -86,6 +95,7 @@ const _emit = defineEmits<{
   (e: 'update:hideDoneTasks', value: boolean): void
   (e: 'expandAll'): void
   (e: 'collapseAll'): void
+  (e: 'update:density', value: string): void
 }>()
 
 const { t } = useI18n()
@@ -99,6 +109,7 @@ interface Props {
   filterStatus: string
   hideDoneTasks?: boolean
   showTreeControls?: boolean
+  density?: 'compact' | 'comfortable' | 'spacious'
 }
 
 const sortOptions = computed(() => [
@@ -121,6 +132,12 @@ const filterOptions = computed(() => [
   { label: t('filters.all_status'), value: 'all' },
   { label: t('task.status_todo'), value: 'todo' },
   { label: t('task.status_done'), value: 'done' }
+])
+
+const densityOptions = computed(() => [
+  { label: t('filters.density_compact') || 'Compact', value: 'compact' },
+  { label: t('filters.density_comfortable') || 'Comfortable', value: 'comfortable' },
+  { label: t('filters.density_spacious') || 'Spacious', value: 'spacious' }
 ])
 </script>
 

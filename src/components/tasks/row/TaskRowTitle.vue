@@ -9,7 +9,21 @@
     >
       <ChevronRight :size="14" />
     </button>
+    <input
+      v-if="isEditing"
+      ref="inlineEditInput"
+      type="text"
+      class="task-row__title-inline-edit"
+      :value="title"
+      dir="auto"
+      @blur="$emit('saveInlineEdit', ($event.target as HTMLInputElement).value)"
+      @keydown.enter.prevent="$emit('saveInlineEdit', ($event.target as HTMLInputElement).value)"
+      @keydown.esc.prevent="$emit('cancelInlineEdit')"
+      @click.stop
+      @dblclick.stop
+    />
     <span
+      v-else
       class="task-row__title-text"
       :class="[
         titleAlignmentClasses,
@@ -20,6 +34,7 @@
         }
       ]"
       :title="title"
+      @dblclick.stop="$emit('startInlineEdit')"
     >
       {{ title }}
     </span>
@@ -51,9 +66,10 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, nextTick } from 'vue'
 import { ChevronRight, Pin, Repeat } from 'lucide-vue-next'
 
-defineProps<{
+const props = defineProps<{
   title: string
   isCompleted: boolean
   isHovered: boolean
@@ -66,11 +82,26 @@ defineProps<{
   isExpanded?: boolean
   isPinned?: boolean
   recurrenceDescription?: string
+  isEditing?: boolean
 }>()
 
 defineEmits<{
   toggleExpand: []
+  startInlineEdit: []
+  saveInlineEdit: [value: string]
+  cancelInlineEdit: []
 }>()
+
+const inlineEditInput = ref<HTMLInputElement | null>(null)
+
+watch(() => props.isEditing, (val) => {
+  if (val) {
+    nextTick(() => {
+      inlineEditInput.value?.focus()
+      inlineEditInput.value?.select()
+    })
+  }
+})
 </script>
 
 <style scoped>
@@ -183,5 +214,19 @@ defineEmits<{
 
 .task-row__expand-btn--expanded svg {
   transform: rotate(90deg);
+}
+
+.task-row__title-inline-edit {
+  flex: 1;
+  min-width: 0;
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: inherit;
+  font-weight: var(--font-medium);
+  padding: var(--space-0_5) var(--space-2);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
 }
 </style>

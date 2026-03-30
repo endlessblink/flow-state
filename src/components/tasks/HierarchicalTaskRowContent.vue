@@ -68,7 +68,11 @@
       :is-expanded="isExpanded"
       :is-pinned="task.isPinned"
       :recurrence-description="recurrenceDescription"
+      :is-editing="isInlineEditing"
       @toggle-expand="$emit('toggleExpand')"
+      @start-inline-edit="$emit('startInlineEdit')"
+      @save-inline-edit="(val: string) => $emit('saveInlineEdit', val)"
+      @cancel-inline-edit="$emit('cancelInlineEdit')"
     />
 
     <!-- Project Indicator -->
@@ -166,6 +170,7 @@ interface Props {
   projectDisplayName: string
   statusOptions: Array<{ label: string, value: string }>
   disableNativeDrag?: boolean
+  isInlineEditing?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -176,6 +181,9 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
+  startInlineEdit: []
+  saveInlineEdit: [value: string]
+  cancelInlineEdit: []
   dragstart: [event: DragEvent]
   dragend: [event: DragEvent]
   dragover: [event: DragEvent]

@@ -1,5 +1,5 @@
 <template>
-  <div class="task-list" @dragover.prevent @dragstart.capture="augmentDragWithSelection">
+  <div class="task-list" :class="[`task-list--${density}`]" @dragover.prevent @dragstart.capture="augmentDragWithSelection">
     <!-- Column Headers / Bulk Actions Bar -->
     <div class="column-headers" :class="{ 'column-headers--selection': selectionMode }">
       <!-- Select-all checkbox always visible -->
@@ -158,32 +158,61 @@
           @update-task="(taskId: string, updates: Partial<Task>) => $emit('updateTask', taskId, updates)"
         />
       </div>
-      <!-- Ungrouped mode: native DnD for subtask nesting -->
-      <div
-        v-else-if="groupBy === 'none'"
-        class="group-tasks-area"
-      >
-        <HierarchicalTaskRow
-          v-for="task in group.parentTasks"
-          :key="task.id"
-          :task="task"
-          :indent-level="0"
-          :selected="selectedTaskIds.includes(task.id)"
-          :selection-mode="selectionMode"
-          :checked="selectedTaskIds.includes(task.id)"
-          :expanded-tasks="expandedTasks"
-          @select="handleSelect"
-          @check="toggleTaskSelect"
-          @toggle-complete="$emit('toggleComplete', $event)"
-          @ai-suggest="handleAISuggest"
-          @start-timer="$emit('startTimer', $event)"
-          @edit="$emit('edit', $event)"
-          @context-menu="handleContextMenu"
-          @toggle-expand="toggleTaskExpand"
-          @move-task="handleMoveTask"
-          @update-task="(taskId: string, updates: Partial<Task>) => $emit('updateTask', taskId, updates)"
-        />
-      </div>
+      <!-- Ungrouped mode: virtual scroll for large lists, standard for small -->
+      <template v-else-if="groupBy === 'none'">
+        <!-- Virtual scroll path: 50+ tasks, no expanded subtrees -->
+        <div
+          v-if="group.key === 'all' && useVirtual"
+          v-bind="containerProps"
+          class="group-tasks-area group-tasks-area--virtual"
+        >
+          <div v-bind="wrapperProps">
+            <HierarchicalTaskRow
+              v-for="{ data: task } in virtualTaskList"
+              :key="task.id"
+              :task="task"
+              :indent-level="0"
+              :selected="selectedTaskIds.includes(task.id)"
+              :selection-mode="selectionMode"
+              :checked="selectedTaskIds.includes(task.id)"
+              :expanded-tasks="expandedTasks"
+              @select="handleSelect"
+              @check="toggleTaskSelect"
+              @toggle-complete="$emit('toggleComplete', $event)"
+              @ai-suggest="handleAISuggest"
+              @start-timer="$emit('startTimer', $event)"
+              @edit="$emit('edit', $event)"
+              @context-menu="handleContextMenu"
+              @toggle-expand="toggleTaskExpand"
+              @move-task="handleMoveTask"
+              @update-task="(taskId: string, updates: Partial<Task>) => $emit('updateTask', taskId, updates)"
+            />
+          </div>
+        </div>
+        <!-- Standard path: < 50 tasks or subtrees expanded -->
+        <div v-else class="group-tasks-area">
+          <HierarchicalTaskRow
+            v-for="task in group.parentTasks"
+            :key="task.id"
+            :task="task"
+            :indent-level="0"
+            :selected="selectedTaskIds.includes(task.id)"
+            :selection-mode="selectionMode"
+            :checked="selectedTaskIds.includes(task.id)"
+            :expanded-tasks="expandedTasks"
+            @select="handleSelect"
+            @check="toggleTaskSelect"
+            @toggle-complete="$emit('toggleComplete', $event)"
+            @ai-suggest="handleAISuggest"
+            @start-timer="$emit('startTimer', $event)"
+            @edit="$emit('edit', $event)"
+            @context-menu="handleContextMenu"
+            @toggle-expand="toggleTaskExpand"
+            @move-task="handleMoveTask"
+            @update-task="(taskId: string, updates: Partial<Task>) => $emit('updateTask', taskId, updates)"
+          />
+        </div>
+      </template>
     </div>
 
     <!-- Empty State -->
@@ -215,6 +244,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useVirtualList } from '@vueuse/core'
 import type { Task, TaskGroup } from '@/types/tasks'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
@@ -231,9 +261,12 @@ interface Props {
   emptyMessage?: string
   sortBy?: string
   sortDirection?: 'asc' | 'desc'
+  density?: 'compact' | 'comfortable' | 'spacious'
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  density: 'comfortable'
+})
 
 const emit = defineEmits<{
   select: [taskId: string]
@@ -255,6 +288,30 @@ const emit = defineEmits<{
 const expandedTasks = ref<Set<string>>(new Set())
 const expandedGroups = ref<Set<string>>(new Set())
 const selectedTaskIds = ref<string[]>([])
+
+// --- Virtual Scrolling ---
+const VIRTUAL_THRESHOLD = 50
+const ROW_HEIGHTS: Record<string, number> = { compact: 36, comfortable: 44, spacious: 56 }
+const rowHeight = computed(() => ROW_HEIGHTS[props.density ?? 'comfortable'])
+
+const useVirtual = computed(() =>
+  props.groupBy === 'none' &&
+  props.tasks.length >= VIRTUAL_THRESHOLD &&
+  expandedTasks.value.size === 0
+)
+
+const flatTasksForVirtual = computed(() => {
+  if (!useVirtual.value) return []
+  return props.groups[0]?.parentTasks ?? []
+})
+
+const { list: virtualTaskList, containerProps, wrapperProps } = useVirtualList(
+  flatTasksForVirtual,
+  {
+    itemHeight: () => rowHeight.value,
+    overscan: 5
+  }
+)
 
 function handleSort(field: string) {
   if (props.sortBy === field) {
@@ -764,6 +821,44 @@ defineExpose({
   overflow-y: visible;
   min-height: 0;
   flex: 1;
+}
+
+/* Density variants — set CSS custom properties inherited by .task-row in HierarchicalTaskRow.css */
+.task-list--compact {
+  --row-min-height: 36px;
+  --row-padding-v: var(--space-0_5);
+  --row-padding-h: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.task-list--comfortable {
+  --row-min-height: 44px;
+  --row-padding-v: var(--space-1);
+  --row-padding-h: var(--space-2);
+}
+
+.task-list--spacious {
+  --row-min-height: 56px;
+  --row-padding-v: var(--space-2);
+  --row-padding-h: var(--space-3);
+}
+
+/* Density-aware column headers */
+.task-list--compact .column-headers {
+  padding: var(--space-0_5) var(--space-2);
+}
+
+.task-list--spacious .column-headers {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Virtual scroll container */
+.group-tasks-area--virtual {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-border) transparent;
 }
 
 /* TASK-1334: Group containers */

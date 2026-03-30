@@ -5520,18 +5520,10 @@ PlasmoidItem {
                 var duration = inst.duration || 30  // default 30 min
                 var endMinutes = startMinutes + duration
 
-                // If timer is running for this task and we're past the original end,
-                // extend the block to cover the timer's remaining time
-                var isTimedTask = root.isRunning && root.currentTaskId === task.id
-                if (isTimedTask && nowMinutes >= startMinutes) {
-                    var timerEndMinutes = nowMinutes + Math.ceil(root.secondsRemaining / 60)
-                    if (timerEndMinutes > endMinutes) endMinutes = timerEndMinutes
-                }
-
                 if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
                     bestTitle = task.title || ""
                     bestTaskId = task.id || ""
-                    bestMinutesLeft = isTimedTask ? Math.ceil(root.secondsRemaining / 60) : endMinutes - nowMinutes
+                    bestMinutesLeft = endMinutes - nowMinutes
                     // Format end time
                     var endH = Math.floor(endMinutes / 60)
                     var endM = endMinutes % 60

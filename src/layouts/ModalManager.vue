@@ -47,7 +47,6 @@
       }"
       @confirm-delete="handleContextMenuDelete"
       @confirm-permanent-delete="handleContextMenuPermanentDelete"
-      @move-to-section="handleMoveToSection"
       @set-priority="handleBatchSetPriority"
       @set-status="handleBatchSetStatus"
       @set-due-date="handleBatchSetDueDate"

@@ -52,14 +52,13 @@ export const SingleTask: Story = {
           @done-for-now="() => console.log('Done for now')"
           @duplicate="() => console.log('Duplicate')"
           @pin-quick-task="() => console.log('Pin as Quick Task')"
-          @move-to-section="(id) => console.log('Move to section:', id)"
         />
         <div style="
           margin-top: var(--space-4);
           font-size: var(--text-sm);
           color: var(--text-tertiary);
         ">
-          Single task mode - shows "Move to Section" option
+          Single task mode
         </div>
       </div>
     `
@@ -143,18 +142,12 @@ export const Interactive: Story = {
         alert('Task pinned as Quick Task')
       }
 
-      const handleMoveToSection = (taskId: string) => {
-        console.log('Move to section:', taskId)
-        alert(`Moving task ${taskId} to section`)
-      }
-
       return {
         args,
         style,
         handleDoneForNow,
         handleDuplicate,
-        handlePinQuickTask,
-        handleMoveToSection
+        handlePinQuickTask
       }
     },
     template: `
@@ -173,7 +166,6 @@ export const Interactive: Story = {
           @done-for-now="handleDoneForNow"
           @duplicate="handleDuplicate"
           @pin-quick-task="handlePinQuickTask"
-          @move-to-section="handleMoveToSection"
         />
         <div style="
           margin-top: var(--space-4);
@@ -220,7 +212,6 @@ export const AllOptions: Story = {
           @done-for-now="() => {}"
           @duplicate="() => {}"
           @pin-quick-task="() => {}"
-          @move-to-section="() => {}"
         />
         <div style="
           position: absolute;
@@ -234,7 +225,6 @@ export const AllOptions: Story = {
             <li>Done for now - Reschedule to tomorrow</li>
             <li>Duplicate - Create a copy</li>
             <li>Pin as Quick Task - Pin to quick access</li>
-            <li>Move to Section - Move to canvas section</li>
           </ul>
         </div>
       </div>

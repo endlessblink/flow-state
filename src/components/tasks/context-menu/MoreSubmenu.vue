@@ -38,17 +38,6 @@
           <span class="menu-text">Pin as Quick Task</span>
         </button>
 
-        <button
-          v-if="!isBatchOperation && taskId"
-          class="menu-item menu-item--sm"
-          @click.stop="$emit('moveToSection', taskId)"
-        >
-          <Layout :size="14" class="menu-icon" />
-          <span class="menu-text">Move to Section</span>
-        </button>
-
-        <div class="submenu-divider" />
-
         <div
           class="menu-item menu-item--sm has-submenu"
           @mouseenter.stop="$emit('openCanvasGroup', $event)"
@@ -99,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { Copy, Layout, X, Clock, Pin, LayoutGrid, ChevronRight, Eye, Play, Timer, Sparkles, CheckCircle } from 'lucide-vue-next'
+import { Copy, X, Clock, Pin, LayoutGrid, ChevronRight, Eye, Play, Timer, Sparkles, CheckCircle } from 'lucide-vue-next'
 import type { CSSProperties } from 'vue'
 
 defineProps<{
@@ -117,7 +106,6 @@ defineEmits<{
   doneFully: []
   duplicate: []
   pinQuickTask: []
-  moveToSection: [taskId: string]
   clearSelection: []
   mouseenter: []
   mouseleave: []

@@ -19,12 +19,35 @@
         <Check v-if="!currentGroupId" :size="12" class="check-icon" />
       </button>
 
+      <!-- Today / Tomorrow shortcuts -->
+      <button
+        v-if="todayGroup"
+        class="menu-item menu-item--sm"
+        :class="{ active: currentGroupId === todayGroup.id }"
+        @click.stop="$emit('select', todayGroup.id)"
+      >
+        <span class="group-dot" :style="{ backgroundColor: todayGroup.color }" />
+        <span class="menu-text">Today</span>
+        <Check v-if="currentGroupId === todayGroup.id" :size="12" class="check-icon" />
+      </button>
+
+      <button
+        v-if="tomorrowGroup"
+        class="menu-item menu-item--sm"
+        :class="{ active: currentGroupId === tomorrowGroup.id }"
+        @click.stop="$emit('select', tomorrowGroup.id)"
+      >
+        <span class="group-dot" :style="{ backgroundColor: tomorrowGroup.color }" />
+        <span class="menu-text">Tomorrow</span>
+        <Check v-if="currentGroupId === tomorrowGroup.id" :size="12" class="check-icon" />
+      </button>
+
       <div v-if="groups.length" class="submenu-divider" />
 
       <!-- Group list -->
       <div class="group-list">
         <button
-          v-for="group in groups"
+          v-for="group in filteredGroups"
           :key="group.id"
           class="menu-item menu-item--sm"
           :class="{ active: currentGroupId === group.id }"
@@ -40,7 +63,7 @@
       </div>
 
       <!-- Empty state -->
-      <div v-if="!groups.length" class="empty-state">
+      <div v-if="!filteredGroups.length" class="empty-state">
         No groups yet
       </div>
     </div>
@@ -53,6 +76,7 @@ import type { CSSProperties } from 'vue'
 import { Check } from 'lucide-vue-next'
 import { useCanvasStore } from '@/stores/canvas'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
+import { DAY_OF_WEEK_KEYWORDS } from '@/composables/usePowerKeywords'
 
 defineProps<{
   isVisible: boolean
@@ -69,6 +93,29 @@ defineEmits<{
 
 const canvasStore = useCanvasStore()
 const groups = computed(() => canvasStore.groups)
+
+function findGroupForDayIndex(dayIndex: number) {
+  const entry = Object.values(DAY_OF_WEEK_KEYWORDS).find(e => e.index === dayIndex)
+  if (!entry) return null
+  return groups.value.find(g => entry.keywords.some(kw => g.name.toLowerCase().includes(kw))) ?? null
+}
+
+const todayGroup = computed(() => {
+  const todayIndex = new Date().getDay()
+  return findGroupForDayIndex(todayIndex)
+})
+
+const tomorrowGroup = computed(() => {
+  const tomorrowIndex = (new Date().getDay() + 1) % 7
+  const byDay = findGroupForDayIndex(tomorrowIndex)
+  if (byDay) return byDay
+  return groups.value.find(g => g.name.toLowerCase() === 'tomorrow') ?? null
+})
+
+const filteredGroups = computed(() => {
+  const excluded = new Set([todayGroup.value?.id, tomorrowGroup.value?.id].filter(Boolean))
+  return groups.value.filter(g => !excluded.has(g.id))
+})
 </script>
 
 <style scoped>

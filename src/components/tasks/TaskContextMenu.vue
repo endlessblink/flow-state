@@ -109,7 +109,6 @@
       @done-fully="() => { closeAllSubmenusNow(); handleDoneFully() }"
       @duplicate="() => { closeAllSubmenusNow(); duplicateTask() }"
       @pin-quick-task="() => { closeAllSubmenusNow(); pinAsQuickTask() }"
-      @move-to-section="(taskId: string) => { closeAllSubmenusNow(); $emit('moveToSection', taskId); $emit('close') }"
       @clear-selection="() => { closeAllSubmenusNow(); clearSelection() }"
       @open-canvas-group="handleMoreCanvasGroup"
       @close-canvas-group="closeSubmenu('canvasGroup')"
@@ -286,7 +285,6 @@ const emit = defineEmits<{
   enterFocusMode: []
   deleteSelected: []
   setDuration: [duration: number | null]
-  moveToSection: [taskId: string]
   setProject: [projectId: string | null]
 }>()
 

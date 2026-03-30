@@ -66,13 +66,15 @@
 
 ---
 
-### BUG-1726: `useBeforeUnload()` called outside setup context in useAppInitialization.ts (📋 PLANNED)
+### ~~BUG-1726~~: `useBeforeUnload()` called outside setup context in useAppInitialization.ts (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-30)
 
 **Problem**: Vue warns that `useBeforeUnload()` is being called outside a component setup context. The call in `useAppInitialization.ts` needs to be moved or restructured so it runs during the component's `setup()` phase.
 
-**Files**: `src/composables/app/useAppInitialization.ts`
+**Fix**: Removed duplicate `useBeforeUnload()` call from `MainLayout.vue`. The composable was already correctly called in `useAppInitialization.ts` (via `App.vue` setup context). The duplicate in MainLayout could fire outside proper setup timing.
+
+**Files**: `src/layouts/MainLayout.vue`
 
 ---
 
@@ -106,21 +108,17 @@
 
 ---
 
-### BUG-1717: Fix `ref is not defined` runtime error in CanvasView production build (🔄 IN PROGRESS)
+### ~~BUG-1717~~: Fix `ref is not defined` runtime error in CanvasView production build (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS
+**Priority**: P0 | **Status**: ✅ DONE (2026-03-28)
 
 **Problem**: Production build (both web and Electron) throws `ReferenceError: ref is not defined` at `CanvasView-*.js:2:151250` during the `setup()` function. The error crashes the Canvas view. All source files correctly import `ref` from `vue` — the issue is in the production bundle (tree-shaking or chunk splitting bug).
 
 **Impact**: Canvas view broken in production web (`in-theflow.com`) and Electron. Board/Calendar/Catalog views work fine.
 
-**Debug approach**:
-1. Check if a composable used by CanvasView relies on auto-import (unplugin-auto-import) that doesn't work in production
-2. Inspect the minified chunk at the error offset to find which component's `setup()` is failing
-3. Run `npx vite build --mode development` to get unminified output and pinpoint the exact file/line
-4. Verify with `npx serve dist -l 3333` in Chrome
+**Fix**: `src/stores/canvasTaskBridge.ts` uses module-level `ref()` calls that evaluate at import time. Pinned the module to the `vue-vendor` manualChunks entry in `vite.config.ts` so it always bundles in the same chunk as Vue, eliminating the chunk-ordering race condition.
 
-**Files**: `src/views/CanvasView.vue`, composables in `src/composables/canvas/`
+**Files changed**: `vite.config.ts` (manualChunks), `src/stores/canvasTaskBridge.ts` (BUG-1717 comment)
 
 ---
 
@@ -232,13 +230,13 @@
 
 ---
 
-### ~~BUG-1716~~: Dev Maestro parser shows "P1" as title for workspace tasks (✅ DONE)
+### ~~BUG-1716~~: Watchpost parser shows "P1" as title for workspace tasks (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-24)
 
-**Problem**: Workspace tasks (TASK-1533–1559) showed priority ("P1") as title in dev-maestro kanban. Root causes: (1) parsers only matched `###` headers, not `####`; (2) table parser assumed `ID|Title|Priority` column order but workspace tables used `ID|Priority|Description`.
+**Problem**: Workspace tasks (TASK-1533–1559) showed priority ("P1") as title in Watchpost kanban. Root causes: (1) parsers only matched `###` headers, not `####`; (2) table parser assumed `ID|Title|Priority` column order but workspace tables used `ID|Priority|Description`.
 
-**Fix**: Updated 3 parsers in `~/.dev-maestro/` — kanban/index.html (client-side), modules/task-engine.js (server-side): `####` header support, column-order detection, robust priority extraction. Added `####` detail sections for all 27 workspace tasks in MASTER_PLAN.md.
+**Fix**: Updated 3 parsers in `~/.watchpost/` — kanban/index.html (client-side), modules/task-engine.js (server-side): `####` header support, column-order detection, robust priority extraction. Added `####` detail sections for all 27 workspace tasks in MASTER_PLAN.md.
 
 ---
 
@@ -1366,7 +1364,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-22) | **Parent**: TASK-303
 
-**Problem**: The Dev-Maestro orchestrator creates git worktrees in `.agent-worktrees/` for each task but does not clean them up after completion. These stale directories force Claude Code to load them into context, wasting tokens and causing confusion.
+**Problem**: The Watchpost orchestrator creates git worktrees in `.agent-worktrees/` for each task but does not clean them up after completion. These stale directories force Claude Code to load them into context, wasting tokens and causing confusion.
 
 **Evidence** (2026-01-27):
 ```
@@ -1393,7 +1391,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 
 **Related**: BUG-1019 (Swarm agent cleanup + OOM prevention)
 
-**Files**: `~/.dev-maestro/server.js` (`cleanupWorktree()`, `createAgentWorktree()`)
+**Files**: `~/.watchpost/server.js` (`cleanupWorktree()`, `createAgentWorktree()`)
 
 ---
 
@@ -2483,7 +2481,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1500**~~ | **P2** | ✅ **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (✅ DONE 2026-03-13) |
 | ~~**TASK-1486**~~ | **P2** | ✅ **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (✅ DONE 2026-03-13) |
 | ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
-| **TASK-1483** | **P2** | 📋 **Redesign Dev-Maestro Dashboard UI** (📋 PLANNED 2026-03-08) |
+| **TASK-1483** | **P2** | 📋 **Redesign Watchpost Dashboard UI** (📋 PLANNED 2026-03-08) |
 | ~~**TASK-1457**~~ | **P2** | ✅ **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (✅ DONE 2026-03-13) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
 | ~~**TASK-1455**~~ | **P2** | ✅ **Catalog view: show uncategorized tasks so they can be categorized in-place** (✅ DONE 2026-03-09) |
@@ -3271,7 +3269,7 @@ Public API unchanged — zero consumer migration needed.
 ---
 
 
-## Dev-Maestro Orchestrator (TASK-303)
+## Watchpost Orchestrator (TASK-303)
 
 **Status**: ⏸️ PAUSED | **SOP**: `docs/sop/SOP-010-dev-manager-orchestrator.md`
 
@@ -3293,7 +3291,7 @@ Enables Claude agents to implement code changes using git worktrees for isolatio
 | FEATURE-1014 | P2 | Smart questions with pros/cons |
 | FEATURE-1015 | P2 | Project context caching |
 
-**Key Files**: `~/.dev-maestro/server.js`, `~/.dev-maestro/kanban/index.html`
+**Key Files**: `~/.watchpost/server.js`, `~/.watchpost/kanban/index.html`
 
 ---
 
@@ -3524,21 +3522,21 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### TASK-1462: Dev-Maestro TUI — Multi-Project Support (🔄 IN PROGRESS)
+### TASK-1462: Watchpost TUI — Multi-Project Support (🔄 IN PROGRESS)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS
 
-**Problem**: `maestro tui` currently only works with FlowState. Running from another project directory shows 0 tasks.
+**Problem**: `watchpost tui` currently only works with FlowState. Running from another project directory shows 0 tasks.
 
-**Goal**: Make `maestro tui` work with any project that has a `MASTER_PLAN.md` by parsing it directly.
+**Goal**: Make `watchpost tui` work with any project that has a `MASTER_PLAN.md` by parsing it directly.
 
 **Approach**:
-1. Verify `~/.bashrc` alias (`~/.local/bin/maestro` wrapper) propagates `MAESTRO_CWD` after PC restart
+1. Verify `~/.bashrc` alias (`~/.local/bin/watchpost` wrapper) propagates `WATCHPOST_CWD` after PC restart
 2. Parse tasks directly from MASTER_PLAN.md headers (`### TASK-XXX: Title (STATUS)`)
 3. Map MASTER_PLAN.md statuses to TUI columns (PLANNED→backlog, IN PROGRESS→wip, REVIEW→review, DONE→done)
-4. ~~Remove dead beads code from dev-maestro server.js and kanban/index.html~~ (done via TASK-1480)
+4. ~~Remove dead beads code from watchpost server.js and kanban/index.html~~ (done via TASK-1480)
 
-**Files**: `~/.dev-maestro/tui/src/lib/bd-client.js`, `~/.dev-maestro/tui/src/lib/masterplan-parser.js`, `~/.dev-maestro/tui/src/hooks/use-board-data.js`
+**Files**: `~/.watchpost/tui/src/lib/bd-client.js`, `~/.watchpost/tui/src/lib/masterplan-parser.js`, `~/.watchpost/tui/src/hooks/use-board-data.js`
 
 ---
 

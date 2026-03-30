@@ -158,20 +158,17 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 }
 
                 // Handle recurrence dedup constraint (idx_unique_recurrence_occurrence) — cross-device race
+                // The conflict is between payload tasks and tasks already in the DB with the same
+                // recurrence_parent_id + recurrence_count but different id. Drop recurrence clones and retry.
                 if (error?.code === '23505' && error?.message?.includes('idx_unique_recurrence_occurrence') && !isRetry) {
-                    console.warn(`⚠️ [saveTasks] Recurrence dedup constraint hit, filtering duplicates and retrying`)
-                    const seen = new Set<string>()
-                    const dedupedPayload = payloadToSave.filter(t => {
-                        if (t.recurrence_parent_id && t.recurrence_count != null) {
-                            const key = `${t.recurrence_parent_id}:${t.recurrence_count}`
-                            if (seen.has(key)) return false
-                            seen.add(key)
-                        }
-                        return true
-                    })
-                    if (dedupedPayload.length < payloadToSave.length) {
-                        return attemptUpsert(dedupedPayload, true)
+                    const recurrenceCount = payloadToSave.filter(t => t.recurrence_parent_id && t.recurrence_count != null).length
+                    console.warn(`⚠️ [saveTasks] Recurrence dedup constraint hit, dropping ${recurrenceCount} recurrence clones and retrying`)
+                    const nonRecurrencePayload = payloadToSave.filter(t => !t.recurrence_parent_id || t.recurrence_count == null)
+                    if (nonRecurrencePayload.length > 0) {
+                        return attemptUpsert(nonRecurrencePayload, true)
                     }
+                    // All tasks were recurrence duplicates — DB already has them, silently succeed
+                    return
                 }
 
                 if (error) throw error

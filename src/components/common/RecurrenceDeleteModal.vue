@@ -138,6 +138,7 @@ const ruleDescription = computed(() => {
   align-items: center;
   gap: var(--space-3);
   width: 100%;
+  box-sizing: border-box;
   padding: var(--space-4) var(--space-4);
   background: rgba(45, 40, 70, 0.75);
   backdrop-filter: blur(8px);

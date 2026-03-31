@@ -175,7 +175,7 @@
             </div>
 
             <!-- Bottom actions: Re-record (optional) + Add Task -->
-            <div class="bottom-actions" :class="{ 'keyboard-open': isKeyboardOpen }">
+            <div class="bottom-actions">
               <button
                 v-if="canReRecord && !isListening && !isProcessing && !voiceError"
                 class="action-btn rerecord-action"
@@ -965,17 +965,11 @@ function autoResizeDesc(event: Event) {
   transform: scale(0.96);
 }
 
-/* Bottom actions row: Re-record + Add Task */
+/* Bottom actions row: Re-record + Add Task — always after chips, no margin-top: auto */
 .bottom-actions {
   display: flex;
   gap: var(--space-3);
   padding: var(--space-3) 0;
-  margin-top: auto; /* Pin to bottom when no keyboard */
-}
-
-/* When keyboard is open, flow naturally after chips (no push to bottom) */
-.bottom-actions.keyboard-open {
-  margin-top: var(--space-2);
 }
 
 .action-btn {

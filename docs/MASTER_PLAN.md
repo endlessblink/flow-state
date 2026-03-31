@@ -78,11 +78,13 @@
 
 ---
 
-### BUG-1727: BaseModal extraneous non-props attributes warning (📋 PLANNED)
+### ~~BUG-1727~~: BaseModal extraneous non-props attributes warning (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-31) — Duplicate of BUG-1724
 
 **Problem**: Vue warns about extraneous non-props attributes being passed to `BaseModal`. The component needs `inheritAttrs: false` added to its options so it can control where attrs are applied (typically the inner wrapper, not the fragment root).
+
+**Resolution**: Already fixed by BUG-1724 (`defineOptions({ inheritAttrs: false })` added at line 105). No callers pass extraneous attrs.
 
 **Files**: `src/components/base/BaseModal.vue`
 

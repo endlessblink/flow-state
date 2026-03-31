@@ -9,12 +9,13 @@
         <div
           class="task-create-sheet"
           :class="{ 'sheet-active': isOpen }"
+          :dir="documentDir"
           @click.stop
           @touchstart.stop
           @touchend.stop
           @touchmove.stop
         >
-          <!-- Header: Cancel | New Task | Add/Stop -->
+          <!-- Header: Cancel | New Task | Stop/Processing (no Add btn here) -->
           <div class="sheet-header">
             <button
               class="header-btn cancel-btn"
@@ -26,7 +27,7 @@
             <h3 class="sheet-title">
               {{ isListening ? 'Recording...' : isProcessing ? 'Processing...' : 'New Task' }}
             </h3>
-            <!-- Show Stop when recording, spinner when processing, Add when idle -->
+            <!-- Show Stop when recording, spinner when processing, spacer when idle -->
             <button
               v-if="isListening"
               class="header-btn stop-btn"
@@ -41,28 +42,64 @@
             >
               <div class="btn-spinner" />
             </button>
-            <button
-              v-else
-              class="header-btn add-btn"
-              :disabled="!taskTitle.trim()"
-              @click="handleCreate"
-            >
-              Add
-            </button>
+            <div v-else class="header-spacer" />
           </div>
 
           <!-- Create Form -->
           <div class="create-form">
-            <!-- Single text block for task content -->
-            <textarea
+            <!-- Title input — single line, large -->
+            <input
               ref="titleInputRef"
               v-model="taskTitle"
-              :dir="titleDirection"
-              class="task-text-block"
-              placeholder="What needs to be done?&#10;&#10;Add notes here..."
-              @input="autoResize"
+              dir="auto"
+              class="title-input"
+              placeholder="Task name"
               @paste="handlePaste"
             />
+
+            <!-- Description label + textarea -->
+            <span class="field-label">Description <span class="field-optional">optional</span></span>
+            <textarea
+              ref="descInputRef"
+              v-model="taskDescription"
+              dir="auto"
+              class="desc-textarea"
+              placeholder="Add notes..."
+              @input="autoResizeDesc"
+            />
+
+            <!-- Voice Feedback (Recording or Processing) -->
+            <div v-if="isListening || isProcessing" class="voice-feedback" :class="{ processing: isProcessing }">
+              <div class="voice-indicator">
+                <div v-if="isProcessing" class="processing-spinner" />
+                <div v-else class="voice-pulse" />
+                <span>{{ isProcessing ? 'Transcribing audio...' : 'Listening...' }}</span>
+              </div>
+              <p v-if="voiceTranscript" class="voice-transcript">
+                {{ voiceTranscript }}
+              </p>
+              <button v-if="isListening" class="stop-recording-btn" @click="emit('stopRecording')">
+                <Square :size="16" />
+                <span>Stop Recording</span>
+              </button>
+            </div>
+
+            <!-- BUG-1350: Voice error feedback (shown in sheet, not just quick-add bar) -->
+            <div v-if="voiceError && !isListening && !isProcessing" class="voice-error-sheet">
+              <span class="voice-error-text">{{ voiceError }}</span>
+              <button v-if="canReRecord" class="voice-retry-btn" @click="emit('startRecording')">
+                Try Again
+              </button>
+            </div>
+
+            <!-- TASK-1325: URL scraping feedback -->
+            <div v-if="isScraping" class="url-scraping-feedback">
+              <Globe :size="16" class="scraping-icon" />
+              <span class="scraping-status">Fetching page info...</span>
+              <button class="scraping-cancel" @click="cancelScraping">
+                <X :size="14" />
+              </button>
+            </div>
 
             <!-- Compact options -->
             <div class="compact-options">
@@ -137,48 +174,25 @@
               </div>
             </div>
 
-            <!-- TASK-1325: URL scraping feedback -->
-            <div v-if="isScraping" class="url-scraping-feedback">
-              <Globe :size="16" class="scraping-icon" />
-              <span class="scraping-status">Fetching page info...</span>
-              <button class="scraping-cancel" @click="cancelScraping">
-                <X :size="14" />
+            <!-- Bottom actions: Re-record (optional) + Add Task -->
+            <div class="bottom-actions">
+              <button
+                v-if="canReRecord && !isListening && !isProcessing && !voiceError"
+                class="action-btn rerecord-action"
+                @click="emit('startRecording')"
+              >
+                <Mic :size="18" />
+                <span>{{ taskTitle.trim() ? 'Re-record' : 'Record' }}</span>
+              </button>
+              <button
+                class="action-btn add-action"
+                :class="{ 'full-width': !canReRecord || isListening || isProcessing || voiceError }"
+                :disabled="!taskTitle.trim()"
+                @click="handleCreate"
+              >
+                <span>Add Task</span>
               </button>
             </div>
-
-            <!-- Voice Feedback (Recording or Processing) -->
-            <div v-if="isListening || isProcessing" class="voice-feedback" :class="{ processing: isProcessing }">
-              <div class="voice-indicator">
-                <div v-if="isProcessing" class="processing-spinner" />
-                <div v-else class="voice-pulse" />
-                <span>{{ isProcessing ? 'Transcribing audio...' : 'Listening...' }}</span>
-              </div>
-              <p v-if="voiceTranscript" class="voice-transcript">
-                {{ voiceTranscript }}
-              </p>
-              <button v-if="isListening" class="stop-recording-btn" @click="emit('stopRecording')">
-                <Square :size="16" />
-                <span>Stop Recording</span>
-              </button>
-            </div>
-
-            <!-- BUG-1350: Voice error feedback (shown in sheet, not just quick-add bar) -->
-            <div v-if="voiceError && !isListening && !isProcessing" class="voice-error-sheet">
-              <span class="voice-error-text">{{ voiceError }}</span>
-              <button v-if="canReRecord" class="voice-retry-btn" @click="emit('startRecording')">
-                Try Again
-              </button>
-            </div>
-
-            <!-- Re-record button (TASK-1110) - Shows when voice is supported and not actively recording -->
-            <button
-              v-if="canReRecord && !isListening && !isProcessing && !voiceError"
-              class="rerecord-btn"
-              @click="emit('startRecording')"
-            >
-              <Mic :size="16" />
-              <span>{{ taskTitle.trim() ? 'Re-record' : 'Record' }}</span>
-            </button>
           </div>
         </div>
       </div>
@@ -240,7 +254,8 @@ const taskDueDateInput = ref('')
 const showDatePicker = ref(false)
 
 // Refs
-const titleInputRef = ref<HTMLTextAreaElement | null>(null)
+const titleInputRef = ref<HTMLInputElement | null>(null)
+const descInputRef = ref<HTMLTextAreaElement | null>(null)
 const datePickerRef = ref<HTMLInputElement | null>(null)
 
 // Options
@@ -280,12 +295,12 @@ const isDueNextWeek = computed(() => {
   return dueDate.getTime() === nextWeek.getTime()
 })
 
-// BUG-1108: RTL detection for title text (Hebrew, Arabic, Persian, Urdu)
-const titleDirection = computed(() => {
-  if (!taskTitle.value.trim()) return 'auto'
-  const firstChar = taskTitle.value.trim()[0]
-  const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
-  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
+// RTL detection for the whole sheet (detects document-level dir for Hebrew/Arabic)
+const documentDir = computed(() => {
+  if (typeof document !== 'undefined') {
+    return document.documentElement.dir || document.body.dir || 'ltr'
+  }
+  return 'ltr'
 })
 
 const hasCustomDate = computed(() => {
@@ -472,11 +487,11 @@ function triggerHaptic(duration: number = 10) {
   }
 }
 
-// Auto-resize title textarea as user types
-function autoResize(event: Event) {
+// Auto-resize description textarea as user types
+function autoResizeDesc(event: Event) {
   const textarea = event.target as HTMLTextAreaElement
   textarea.style.height = 'auto'
-  textarea.style.height = textarea.scrollHeight + 'px'
+  textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px'
 }
 </script>
 
@@ -509,7 +524,7 @@ function autoResize(event: Event) {
   overflow: hidden;
 }
 
-/* Header: Cancel | Title | Add */
+/* Header: Cancel | Title | Stop/Processing (spacer when idle) */
 .sheet-header {
   display: flex;
   align-items: center;
@@ -539,6 +554,11 @@ function autoResize(event: Event) {
   transition: all var(--duration-normal) ease;
 }
 
+/* Spacer keeps "New Task" centered when no right-side button */
+.header-spacer {
+  min-width: var(--space-16);
+}
+
 .cancel-btn {
   background: transparent;
   color: var(--text-secondary);
@@ -560,20 +580,6 @@ function autoResize(event: Event) {
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
-}
-
-.add-btn {
-  background: transparent;
-  color: var(--brand-primary);
-}
-
-.add-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.add-btn:not(:disabled):active {
-  transform: scale(0.96);
 }
 
 .stop-btn {
@@ -615,39 +621,71 @@ function autoResize(event: Event) {
 .create-form {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4);
-  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-3);
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
-/* Single text block - main writing area */
-.task-text-block {
-  flex: 1;
-  min-height: 12.5rem;
-  padding: var(--space-4);
+/* Title input — single line, large, semibold */
+.title-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
   background: transparent;
   border: none;
+  border-bottom: 1px solid var(--glass-border-light);
   color: var(--text-primary);
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  font-family: inherit;
+  outline: none;
+}
+
+.title-input::placeholder {
+  color: var(--text-muted);
+}
+
+.title-input:focus {
+  border-bottom-color: var(--brand-primary);
+}
+
+/* Field label for description */
+.field-label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-2) var(--space-4) 0;
+}
+
+.field-optional {
+  font-weight: var(--font-normal);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-tertiary);
+}
+
+/* Description textarea — shorter, auto-resize */
+.desc-textarea {
+  width: 100%;
+  min-height: 60px;
+  max-height: 100px;
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
   line-height: var(--leading-normal);
   font-family: inherit;
   resize: none;
   outline: none;
 }
 
-.task-text-block::placeholder {
+.desc-textarea::placeholder {
   color: var(--text-muted);
-}
-
-/* RTL support for Hebrew/Arabic text */
-.task-text-block[dir="rtl"] {
-  text-align: end;
-}
-
-.task-text-block[dir="rtl"]::placeholder {
-  text-align: end;
 }
 
 /* Compact options at bottom */
@@ -897,32 +935,53 @@ function autoResize(event: Event) {
   transform: scale(0.96);
 }
 
-/* Re-record button (TASK-1110) */
-.rerecord-btn {
+/* Bottom actions row: Re-record + Add Task */
+.bottom-actions {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  margin-top: auto;
+}
+
+.action-btn {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding: var(--space-2_5) var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  border: none;
+}
+
+.action-btn:active {
+  transform: scale(0.97);
+}
+
+.rerecord-action {
   background: var(--state-hover-bg);
   border: 1px solid var(--brand-border-subtle);
-  border-radius: var(--radius-xl);
   color: var(--brand-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
-.rerecord-btn:hover {
-  background: var(--brand-bg-subtle);
-  border-color: var(--state-hover-border);
+.add-action {
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary);
+  color: var(--brand-primary);
+  backdrop-filter: blur(8px);
 }
 
-.rerecord-btn:active {
-  transform: scale(0.96);
-  background: var(--state-active-bg);
+.add-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.add-action.full-width {
+  flex: 1;
 }
 
 /* ================================
@@ -967,26 +1026,14 @@ function autoResize(event: Event) {
 
 /* RTL Support */
 [dir="rtl"] .sheet-header {
-  flex-direction: row-reverse;
-}
-
-[dir="rtl"] .form-field {
-  text-align: end;
-}
-
-[dir="rtl"] .field-input,
-[dir="rtl"] .field-textarea {
-  text-align: end;
   direction: rtl;
 }
 
-[dir="rtl"] .priority-options,
-[dir="rtl"] .date-options {
-  flex-direction: row-reverse;
+[dir="rtl"] .option-group {
+  direction: rtl;
 }
 
-[dir="rtl"] .priority-pill,
-[dir="rtl"] .date-pill {
-  flex-direction: row-reverse;
+[dir="rtl"] .bottom-actions {
+  direction: rtl;
 }
 </style>

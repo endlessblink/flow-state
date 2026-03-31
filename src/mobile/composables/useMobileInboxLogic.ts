@@ -192,6 +192,8 @@ export function useMobileInboxLogic() {
     // --- Computed Task Lists ---
     const filteredTasks = computed(() => {
         let tasks = [...taskStore.tasks]
+        // Defensive: filter out deleted tasks that may leak through store
+        tasks = tasks.filter(t => !t.isDeleted)
 
         if (viewMode.value === 'today') {
             tasks = tasks.filter(t => {

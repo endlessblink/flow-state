@@ -1,7 +1,7 @@
 <template>
   <div class="mobile-inbox" ref="inboxEl">
     <!-- Debug Banner (tap to toggle) - dev user only -->
-    <template v-if="isDevUser">
+    <template v-if="false">
       <div v-if="showDebug" class="debug-banner" @click="showDebug = false">
         <div><strong>Sync Debug</strong> (tap to hide)</div>
         <div>Auth: {{ authStatus }}</div>
@@ -70,7 +70,6 @@
       @delete-task="handleDeleteTask"
       @click-task="handleTaskClick"
       @toggle-task="toggleTask"
-      @start-timer="startTimer"
     />
 
     <!-- Quick Add Bar -->
@@ -326,10 +325,6 @@ const toggleTask = async (task: Task) => {
 
 const handleTaskClick = (_task: Task) => {
   // handled by swipe
-}
-
-const startTimer = async (task: Task) => {
-  await timerStore.startTimer(task.id)
 }
 
 const isTimerActive = (taskId: string) => {

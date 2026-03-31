@@ -63,7 +63,7 @@ export default defineConfig(({ mode }) => ({
       strategies: 'injectManifest', // TASK-1009: Use custom SW for notification actions
       srcDir: 'src',
       filename: 'sw.ts',
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'FlowState',
@@ -85,6 +85,7 @@ export default defineConfig(({ mode }) => ({
       injectManifest: {
         // TASK-1009: Glob patterns for precaching
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // Note: navigateFallbackDenylist is not used in injectManifest mode
         // API caching is handled at the app level via useSupabaseDatabase
       },
@@ -141,6 +142,12 @@ export default defineConfig(({ mode }) => ({
         // BUG-1123: Split vendor chunks to reduce main bundle size (was 1.9MB)
         // BUG-1183: Fixed circular dependency - naive-ui must be in vue-vendor chunk
         manualChunks(id) {
+          // BUG-1717: canvasTaskBridge uses module-level ref() calls. Keeping it in the
+          // same chunk as Vue guarantees Vue is initialized before this module evaluates,
+          // preventing "ref is not defined" errors from Rollup chunk-ordering races.
+          if (id.includes('stores/canvasTaskBridge')) {
+            return 'vue-vendor'
+          }
           if (id.includes('node_modules')) {
             // Vue ecosystem - core framework + Naive UI (BUG-1183: naive-ui depends on Vue)
             // Must be in same chunk to prevent "can't access lexical declaration" errors

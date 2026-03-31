@@ -8,8 +8,8 @@
  *
  * Uses workbox for caching + custom notification handlers
  */
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
-import { registerRoute, Route } from 'workbox-routing'
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
+import { registerRoute, Route, NavigationRoute } from 'workbox-routing'
 import { CacheFirst, NetworkFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
@@ -27,6 +27,16 @@ cleanupOutdatedCaches()
 // Precache all assets from the manifest (injected by VitePWA)
 // Precaching
 precacheAndRoute(self.__WB_MANIFEST)
+
+// Offline navigation fallback — serve cached index.html for all navigation requests
+// Hash routing (/#/) means all navigations go to index.html anyway, but this ensures
+// it works reliably offline even on hard refresh
+const navigationHandler = createHandlerBoundToURL('index.html')
+const navigationRoute = new NavigationRoute(navigationHandler, {
+  // Don't intercept Supabase API requests or static assets
+  denylist: [/\/rest\/v1\//, /\/auth\/v1\//, /\/realtime\//, /\/storage\/v1\//]
+})
+registerRoute(navigationRoute)
 
 // BUG-1089: Fallback for assets not in precache (handles stale SW edge case)
 // If precache fails, try network directly
@@ -50,26 +60,23 @@ registerRoute(
 // RUNTIME CACHING STRATEGIES
 // ============================================================================
 
-// BUG-352: Use NetworkFirst with short timeout instead of NetworkOnly.
-// On flaky mobile networks, NetworkOnly hangs until the browser's default timeout (~60s).
-// NetworkFirst with networkTimeoutSeconds fails fast and falls back to a minimal cache.
+// BUG-352: NetworkFirst with timeout for Supabase REST API (GET only).
+// Auth endpoints (/auth/v1/) are NEVER cached — stale tokens cause auth failures.
+// Realtime endpoints (/realtime/) are NEVER cached — SSE/WebSocket don't cache well.
 registerRoute(
   new Route(
-    ({ url }) => {
-      // Match Supabase API endpoints
-      // Uses path-based detection so self-hosted instances work on any hostname
-      const isRestAPI = url.pathname.includes('/rest/v1/')
-      const isRealtime = url.pathname.includes('/realtime/')
-      const isAuth = url.pathname.includes('/auth/v1/')
-      return isRestAPI || isRealtime || isAuth
+    ({ url, request }) => {
+      // Only cache GET requests to the REST API
+      if (request.method !== 'GET') return false
+      return url.pathname.includes('/rest/v1/')
     },
     new NetworkFirst({
-      cacheName: 'supabase-api-fallback',
+      cacheName: 'supabase-rest-cache',
       networkTimeoutSeconds: 8,
       plugins: [
         new ExpirationPlugin({
-          maxEntries: 1,
-          maxAgeSeconds: 10  // 10s — essentially no caching, just timeout fallback
+          maxEntries: 50,
+          maxAgeSeconds: 5 * 60  // 5 minutes — useful for offline reads
         })
       ]
     })

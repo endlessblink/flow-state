@@ -4,7 +4,7 @@
       <div
         v-if="isOpen"
         class="sheet-overlay"
-        @touchmove.prevent
+        @touchmove.stop
       >
         <div
           class="task-create-sheet"
@@ -508,20 +508,25 @@ function autoResizeDesc(event: Event) {
   backdrop-filter: blur(var(--blur-xs));
   -webkit-backdrop-filter: blur(var(--blur-xs));
   display: flex;
-  align-items: flex-start; /* Start from TOP */
+  align-items: flex-start;
   z-index: var(--z-modal);
+  overflow-y: auto;
+  /* Prevent keyboard from shrinking the overlay */
+  min-height: -webkit-fill-available;
 }
 
 .task-create-sheet {
   width: 100%;
-  height: 100dvh;
-  max-height: none;
+  height: 100%;
+  min-height: 100dvh;
   background: var(--surface-primary);
   /* No border-radius - full screen */
   border-radius: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  /* Prevent mobile keyboard from shrinking the sheet */
+  min-height: -webkit-fill-available;
 }
 
 /* Header: Cancel | Title | Stop/Processing (spacer when idle) */

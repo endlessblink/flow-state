@@ -34,6 +34,7 @@ export const STORAGE_KEYS = {
   AI_USAGE_LOG: 'flowstate-ai-usage-log',
   AI_QUALITY_REPORTS: 'flowstate-ai-quality-reports',
   AI_EVENTS: 'flowstate-ai-events',
+  AI_ASSIST_DISCOVERED: 'flowstate-ai-assist-discovered',
 
   // ── Quick Sort ────────────────────────────────────────────────────────
   QUICKSORT_HISTORY: 'flowstate-quicksort-history',

@@ -14,7 +14,19 @@ const packageVersion = JSON.parse(
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    // TASK-1470: Stub @tauri-apps/* packages for unit tests (mirrors vite.config.ts tauri-stub)
+    {
+      name: 'tauri-stub-test',
+      resolveId(id: string) {
+        if (id.startsWith('@tauri-apps/')) return '\0tauri-stub'
+      },
+      load(id: string) {
+        if (id === '\0tauri-stub') return 'export default {}; export const invoke = () => {}; export const getCurrentWindow = () => ({}); export const homeDir = () => ""; export const attachConsole = () => {}; export const open = () => {}; export const load = () => ({}); export const check = () => ({}); export const relaunch = () => {}; export const Command = class {}; export const fetch = globalThis.fetch; export const writeTextFile = () => {}; export const mkdir = () => {}; export const exists = () => false; export const listen = () => () => {}; export const emit = () => {}; export const convertFileSrc = () => "";'
+      }
+    },
+    vue(),
+  ],
   define: {
     '__APP_VERSION__': JSON.stringify(packageVersion),
   },
@@ -42,6 +54,15 @@ export default defineConfig({
     },
     // Allow file system access for safety tests
     allowOnly: true,
+    // Keep unit tests from saturating the desktop on development machines.
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        maxThreads: 4,
+        minThreads: 1,
+      },
+    },
+    maxConcurrency: 4,
     // Increase timeout for file system operations
     testTimeout: 30000,
     hookTimeout: 30000,

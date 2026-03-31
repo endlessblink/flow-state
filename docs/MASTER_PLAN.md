@@ -2595,7 +2595,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1466**~~ | **P2** | ✅ **Start task without resetting timer — allow switching active task while timer runs (web + pinned), add reset option to KDE widget** |
 | **BUG-1462** | **P1** | **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** (👀 REVIEW) |
 | ~~**TASK-1469**~~ | **P2** | ✅ **AI Chat anti-spam fix — fix ReAct loop spam, limit tool calls per turn, rewrite system prompt to be concise, add output truncation** |
-| **TASK-1470** | **P2** | **Task Assist UX resurface — make AI Task Assist discoverable: inline suggestions, keyboard shortcut (Ctrl+/), visible button in task edit modal** |
+| **TASK-1470** | **P2** | **Task Assist UX resurface — Ctrl+. shortcut hint, smart inline hint, 28-test AI effectiveness suite** | 👀 REVIEW |
 | ~~**BUG-1467**~~ | **P2** | ~~**Tasks auto-appear on calendar at 9:00 AM when dragged to Board date columns — moveTaskToDate created calendar instances instead of only setting dueDate**~~ (✅ DONE 2026-03-07) |
 | **TASK-1473** | **P0** | **KDE Widget: Add task search/filter — search box to find tasks without scrolling through long lists** |
 | ~~**TASK-1475**~~ | **P1** | ~~**KDE Widget: Nanny popup show recent tasks — show commonly used tasks alongside pinned tasks, not only pinned**~~ (✅ DONE 2026-03-07) |
@@ -3612,17 +3612,20 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### TASK-1470: Task Assist UX Resurface (🔄 IN PROGRESS)
+### TASK-1470: Task Assist UX Resurface (👀 REVIEW)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-03-08)
+**Priority**: P2 | **Status**: 👀 REVIEW (2026-03-31)
 
 **Problem**: AI Task Assist is functional but buried in a context menu popover. Most users never discover it. It provides real value (AI suggestions for task breakdown, priority, time estimates) but zero discoverability.
 
-**Fix**:
-1. Add visible "AI Assist" button in `TaskEditModal.vue` toolbar (next to other action buttons)
-2. Add keyboard shortcut `Ctrl+/` to trigger Task Assist from anywhere a task is focused
-3. Add inline suggestion prompt below task title in edit modal ("Want AI suggestions for this task?")
-4. Consider subtle indicator on tasks that haven't been AI-assisted (optional, evaluate UX impact)
+**Implemented**:
+1. ✅ AI Assist button with `Ctrl+.` shortcut hint in TaskEditModal toolbar
+2. ✅ `Ctrl+.` keyboard shortcut registered in KeyboardShortcutsPanel (searchable)
+3. ✅ Smart inline suggestion prompt — persistent for new users, re-triggers for incomplete tasks (completeness < 0.5)
+4. ✅ `useTaskCompleteness` composable — scores task metadata completeness (priority, dueDate, duration, subtasks)
+5. ✅ localStorage-backed AI discovery tracking (`AI_ASSIST_DISCOVERED` key)
+6. ✅ **28-test AI effectiveness suite** — validates result quality, task improvement measurement, acceptance tracking, parsing robustness, and UX flow
+7. ✅ Fixed vitest Tauri stub — resolved 17 previously broken test files
 
 **Category**: AI / UX
 

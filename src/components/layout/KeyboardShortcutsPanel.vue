@@ -149,6 +149,7 @@ const categories: ShortcutCategory[] = [
       { keys: ['Alt', 'N'], description: 'Quick task create', searchTerms: 'add new fast' },
       { keys: ['Shift', 'Del'], description: 'Delete selected', searchTerms: 'remove trash' },
       { keys: ['?'], description: 'Show this panel', searchTerms: 'help shortcuts keyboard' },
+      { keys: ['Ctrl', '.'], description: 'AI Assist', searchTerms: 'ai suggest smart assist' },
     ]
   },
   {

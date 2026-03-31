@@ -128,6 +128,7 @@
             >
               <Sparkles :size="16" />
               AI Assist
+              <kbd class="ai-shortcut-hint">Ctrl+.</kbd>
             </button>
             <button
               class="btn btn-danger btn-action"
@@ -162,6 +163,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { X, Sparkles, Trash2 } from 'lucide-vue-next'
 import { type Task, useTaskStore } from '@/stores/tasks'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
+import { getTaskCompleteness } from '@/composables/useTaskCompleteness'
 import { useCanvasStore } from '@/stores/canvas'
 import { useNotificationStore } from '@/stores/notifications'
 
@@ -234,15 +237,20 @@ const {
   isFormDirty
 })
 
-// TASK-1470: Inline AI hint — shown when task has a title and AI hasn't been triggered this session
+// TASK-1470: Smart AI hint — persistent for new users, re-triggers for incomplete tasks
 const aiUsedThisSession = ref(false)
-const showAIHint = computed(() =>
-  !aiUsedThisSession.value &&
-  !!editedTask.value.title?.trim() &&
-  !showAIAssist.value
-)
+const hasDiscoveredAI = ref(localStorage.getItem(STORAGE_KEYS.AI_ASSIST_DISCOVERED) === 'true')
 
-// Reset aiUsedThisSession when the modal opens with a new task
+const showAIHint = computed(() => {
+  if (aiUsedThisSession.value || showAIAssist.value || !editedTask.value.title?.trim()) return false
+  // Always show for users who haven't discovered AI yet
+  if (!hasDiscoveredAI.value) return true
+  // Show for experienced users only when task is incomplete
+  const { score } = getTaskCompleteness(editedTask.value as Task)
+  return score < 0.5
+})
+
+// Reset session flag when the modal opens with a new task
 watch(() => props.task?.id, () => {
   aiUsedThisSession.value = false
 })
@@ -305,6 +313,10 @@ function openAIAssist() {
     aiAssistPosition.value = { x: rect.left, y: rect.top - 8 }
   }
   aiUsedThisSession.value = true
+  if (!hasDiscoveredAI.value) {
+    hasDiscoveredAI.value = true
+    localStorage.setItem(STORAGE_KEYS.AI_ASSIST_DISCOVERED, 'true')
+  }
   showAIAssist.value = true
 }
 
@@ -677,6 +689,18 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 
 .btn-ai:hover {
   background: var(--brand-bg-subtle);
+}
+
+.ai-shortcut-hint {
+  font-size: var(--text-xs);
+  font-family: inherit;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-1);
+  margin-inline-start: var(--space-1);
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 .btn-danger {

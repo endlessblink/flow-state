@@ -175,7 +175,7 @@
             </div>
 
             <!-- Bottom actions: Re-record (optional) + Add Task -->
-            <div class="bottom-actions">
+            <div class="bottom-actions" :class="{ 'keyboard-open': isKeyboardOpen }">
               <button
                 v-if="canReRecord && !isListening && !isProcessing && !voiceError"
                 class="action-btn rerecord-action"
@@ -201,7 +201,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import {
   Flag, Calendar, X, Square, Mic, Globe
 } from 'lucide-vue-next'
@@ -294,6 +294,27 @@ const isDueNextWeek = computed(() => {
   dueDate.setHours(0, 0, 0, 0)
   return dueDate.getTime() === nextWeek.getTime()
 })
+
+// Keyboard detection via visualViewport — buttons pin to bottom without keyboard,
+// flow naturally after chips with keyboard open
+const isKeyboardOpen = ref(false)
+
+function onViewportResize() {
+  if (window.visualViewport) {
+    // If viewport height is significantly less than window height, keyboard is open
+    isKeyboardOpen.value = window.visualViewport.height < window.innerHeight * 0.75
+  }
+}
+
+watch(() => props.isOpen, (open) => {
+  if (open) {
+    window.visualViewport?.addEventListener('resize', onViewportResize)
+    onViewportResize()
+  } else {
+    window.visualViewport?.removeEventListener('resize', onViewportResize)
+    isKeyboardOpen.value = false
+  }
+}, { immediate: true })
 
 // RTL detection for the whole sheet (detects document-level dir for Hebrew/Arabic)
 const documentDir = computed(() => {
@@ -486,6 +507,10 @@ function triggerHaptic(duration: number = 10) {
     }
   }
 }
+
+onBeforeUnmount(() => {
+  window.visualViewport?.removeEventListener('resize', onViewportResize)
+})
 
 // Auto-resize description textarea as user types
 function autoResizeDesc(event: Event) {
@@ -945,7 +970,12 @@ function autoResizeDesc(event: Event) {
   display: flex;
   gap: var(--space-3);
   padding: var(--space-3) 0;
-  margin-top: auto;
+  margin-top: auto; /* Pin to bottom when no keyboard */
+}
+
+/* When keyboard is open, flow naturally after chips (no push to bottom) */
+.bottom-actions.keyboard-open {
+  margin-top: var(--space-2);
 }
 
 .action-btn {

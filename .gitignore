@@ -157,3 +157,4 @@ pnpm-lock.yaml
 # Cursor AI
 .cursorrules
 .watchpost/
+release/

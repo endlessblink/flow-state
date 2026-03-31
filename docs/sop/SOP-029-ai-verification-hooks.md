@@ -18,7 +18,7 @@ Prevent Claude from claiming tasks are "done" without proper verification. This 
 | **2. Auto-Test** | Run tests after code edits | `auto-test-after-edit.sh` (not currently deployed — PostToolUse array is empty) |
 | **3. Falsifiability** | Define success/failure upfront | CLAUDE.md protocol |
 | **4. User Confirmation** | Completion protocol reminders | `user-prompt-handler.sh` |
-| **5. Judge Agent** | Independent evaluation | Dev-Maestro API |
+| **5. Judge Agent** | Independent evaluation | Watchpost API |
 
 ### Key Finding
 
@@ -67,7 +67,7 @@ This is a **blocker**, not informational noise.
 ├── last-test-results.json        # Test results storage
 └── settings.json                 # Hook registration
 
-dev-maestro/
+watchpost/
 └── server.js                     # Layer 5 judge endpoint
 ```
 
@@ -179,5 +179,5 @@ echo "USER_PROMPT: '$USER_PROMPT'" >&2
 ## Related
 
 - **CLAUDE.md**: Completion Protocol section
-- **TASK-335**: Judge Agent UI in Dev-Maestro
+- **TASK-335**: Judge Agent UI in Watchpost
 - **Plan file**: `~/.claude/plans/bubbly-stargazing-galaxy.md`

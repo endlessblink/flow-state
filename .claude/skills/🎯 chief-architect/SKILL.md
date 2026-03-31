@@ -116,7 +116,7 @@ TEMPLATE:
 **ALWAYS say**: "I've implemented X. Here are the artifacts: [artifacts]. Can you test it and confirm it works?"
 
 #### Layer 5: Judge Agent
-For complex features, use Dev-Maestro's judge endpoint:
+For complex features, use Watchpost's judge endpoint:
 - Available at http://localhost:6010/api/judge/evaluate
 - Evaluates: artifacts match claimed work, success criteria met, obvious gaps
 

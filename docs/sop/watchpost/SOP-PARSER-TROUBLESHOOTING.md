@@ -1,14 +1,14 @@
-# SOP: Dev Maestro MASTER_PLAN.md Parser Troubleshooting
+# SOP: Watchpost MASTER_PLAN.md Parser Troubleshooting
 
 **Created**: January 23, 2026
 **Last Updated**: January 23, 2026
 **Related Bug**: TASK-323 parsing fix
 
-> **Note (March 2026):** Dev-Maestro TUI was rewritten in React/Ink 5. The parser also lives at `~/.dev-maestro/tui/src/lib/masterplan-parser.js`. The file references below still describe the original `dev-maestro/kanban/index.html` parser (web Kanban), which remains in use alongside the TUI.
+> **Note (March 2026):** Watchpost TUI was rewritten in React/Ink 5. The parser also lives at `~/.watchpost/tui/src/lib/masterplan-parser.js`. The file references below still describe the original `watchpost/kanban/index.html` parser (web Kanban), which remains in use alongside the TUI.
 
 ## Overview
 
-Dev Maestro parses `docs/MASTER_PLAN.md` to display tasks in the Kanban view. When tasks show incorrect status (e.g., "PLANNED" instead of "DONE"), the issue is usually in the parser logic in `dev-maestro/kanban/index.html`.
+Watchpost parses `docs/MASTER_PLAN.md` to display tasks in the Kanban view. When tasks show incorrect status (e.g., "PLANNED" instead of "DONE"), the issue is usually in the parser logic in `watchpost/kanban/index.html`.
 
 ## Parser Architecture
 
@@ -89,7 +89,7 @@ if (isDone && existingTask.status !== 'done') {
 
 ## Debugging Checklist
 
-When a task shows wrong status in Dev Maestro:
+When a task shows wrong status in Watchpost:
 
 ### 0. Check Section Membership (Most Common Issue!)
 
@@ -123,15 +123,15 @@ grep "TASK-XXX.*DONE" docs/MASTER_PLAN.md
 Search for the entity prefix handling:
 
 ```bash
-grep -n "startsWith('TASK-')" dev-maestro/kanban/index.html
-grep -n "startsWith('BUG-')" dev-maestro/kanban/index.html
+grep -n "startsWith('TASK-')" watchpost/kanban/index.html
+grep -n "startsWith('BUG-')" watchpost/kanban/index.html
 ```
 
 Compare the merge logic for each entity type. They should be consistent.
 
 ### 3. Check Browser DevTools
 
-1. Open Dev Maestro Kanban: `http://localhost:6010/kanban/`
+1. Open Watchpost Kanban: `http://localhost:6010/kanban/`
 2. Open DevTools Console (F12)
 3. Type: `MASTER_PLAN_DATA.activeWork.find(t => t.id === 'TASK-XXX')`
 4. Check the `status` and `progress` fields
@@ -154,7 +154,7 @@ The API uses cache-busting (`?t=Date.now()`), but the browser may cache aggressi
 
 | Component | File | Lines |
 |-----------|------|-------|
-| Main parser function | `dev-maestro/kanban/index.html` | ~5200-5735 |
+| Main parser function | `watchpost/kanban/index.html` | ~5200-5735 |
 | Status parsing | `parseTaskStatus()` | ~5216-5280 |
 | Table row parsing | Table handling block | ~5598-5686 |
 | Header parsing | `### TASK-XXX` regex | ~5411-5450 |
@@ -188,8 +188,8 @@ The task should appear as "done" in the Kanban view, not "todo" or "planned".
 
 ## Related Files
 
-- `dev-maestro/kanban/index.html` - Main Kanban UI and parser
-- `dev-maestro/server.js` - API server (serves MASTER_PLAN.md)
+- `watchpost/kanban/index.html` - Main Kanban UI and parser
+- `watchpost/server.js` - API server (serves MASTER_PLAN.md)
 - `docs/MASTER_PLAN.md` - Source of truth for tasks
 - `CLAUDE.md` - Documents 3-location marking requirement
 
@@ -197,5 +197,5 @@ The task should appear as "done" in the Kanban view, not "todo" or "planned".
 
 For parser issues, check:
 1. This SOP first
-2. Git history: `git log --oneline dev-maestro/kanban/index.html`
+2. Git history: `git log --oneline watchpost/kanban/index.html`
 3. Search for "parser" or "parseTask" in codebase

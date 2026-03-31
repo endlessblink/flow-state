@@ -257,7 +257,7 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 // Serve static files from current directory
 app.use(express.static(__dirname));
 
-// Status API - for Claude to detect if Dev Maestro is running
+// Status API - for Claude to detect if Watchpost is running
 app.get('/api/status', (req, res) => {
     const pkg = require('./package.json');
     const defaultPath = path.join(__dirname, '../docs/MASTER_PLAN.md');
@@ -267,7 +267,7 @@ app.get('/api/status', (req, res) => {
 
     res.json({
         running: true,
-        name: 'Dev Maestro',
+        name: 'Watchpost',
         version: pkg.version,
         port: PORT,
         project: path.dirname(masterPlanPath),
@@ -3079,7 +3079,7 @@ app.get('/api/events', (req, res) => {
 cleanupOrphanedResources();
 
 app.listen(PORT, () => {
-    console.log(`Dev Maestro running at http://localhost:${PORT}`);
+    console.log(`Watchpost running at http://localhost:${PORT}`);
     console.log(`Serving static files from: ${__dirname}`);
 
     // TASK-323: Start periodic cleanup job

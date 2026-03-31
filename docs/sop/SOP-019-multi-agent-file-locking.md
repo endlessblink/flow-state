@@ -247,16 +247,16 @@ This shouldn't happen (hook is synchronous), but if it does:
 
 ---
 
-## Integration with Dev-Maestro
+## Integration with Watchpost
 
-Dev-Maestro can orchestrate multi-agent workflows with file locking:
+Watchpost can orchestrate multi-agent workflows with file locking:
 
-1. **Task Assignment**: Maestro assigns tasks with file lists
-2. **Lock Monitoring**: Maestro dashboard shows active locks
+1. **Task Assignment**: Watchpost assigns tasks with file lists
+2. **Lock Monitoring**: Watchpost dashboard shows active locks
 3. **Queue Visualization**: See which agents are waiting
 4. **Auto-Release**: Detect crashed agents and release their locks
 
-See: `~/.dev-maestro/plugins/file-locking/` (if installed)
+See: `~/.watchpost/plugins/file-locking/` (if installed)
 
 ---
 

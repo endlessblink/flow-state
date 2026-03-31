@@ -1,4 +1,4 @@
-# SOP-051: Self-Hosted Mobile Client for Claude Code + Dev-Maestro
+# SOP-051: Self-Hosted Mobile Client for Claude Code + Watchpost
 
 **Created:** 2026-01-29
 **Status:** Active
@@ -6,7 +6,7 @@
 
 ## Overview
 
-This SOP documents the self-hosted mobile client solution that provides secure mobile access to Claude Code sessions and Dev-Maestro task management.
+This SOP documents the self-hosted mobile client solution that provides secure mobile access to Claude Code sessions and Watchpost task management.
 
 ## Architecture
 
@@ -20,8 +20,8 @@ This SOP documents the self-hosted mobile client solution that provides secure m
 │  └──────────────┘    └──────────────────┘    │  fluster.com)          │ │
 │                                              │ Port 3847              │ │
 │  ┌──────────────┐                            │                        │ │
-│  │ Dev-Maestro  │◄──────────────────────────►│ + Dev-Maestro proxy    │ │
-│  │ (port 6010)  │    SSE / REST              │   /maestro/* → :6010   │ │
+│  │ Watchpost  │◄──────────────────────────►│ + Watchpost proxy    │ │
+│  │ (port 6010)  │    SSE / REST              │   /watchpost/* → :6010   │ │
 │  └──────────────┘                            └───────────┬────────────┘ │
 │                                                          │              │
 └──────────────────────────────────────────────────────────┼──────────────┘
@@ -65,7 +65,7 @@ A security-hardened fork of [happy-cli](https://github.com/slopus/happy-cli) wit
 The relay server (`src/relay-server/`) provides:
 
 - **Socket.IO relay** for real-time Claude Code session events
-- **Dev-Maestro proxy** at `/maestro/*` → localhost:6010
+- **Watchpost proxy** at `/watchpost/*` → localhost:6010
 - **REST endpoints** for session and machine management
 - **Health check** at `/health`
 
@@ -84,7 +84,7 @@ Securely exposes the local relay without opening ports:
 1. cloudflared installed
 2. Cloudflare account with in-theflow.com domain
 3. Node.js 20+
-4. Dev-Maestro installed at ~/.dev-maestro
+4. Watchpost installed at ~/.watchpost
 
 ### Step 1: Clone and Setup Happy Local
 
@@ -193,21 +193,21 @@ HAPPY_ENABLE_WRITE_RPC=true npm run relay
 - **Access control:** Cloudflare Access requires authentication
 - **Token isolation:** API tokens never leave your machine
 
-## Dev-Maestro Integration
+## Watchpost Integration
 
-The relay server proxies Dev-Maestro on `/maestro/*`:
+The relay server proxies Watchpost on `/watchpost/*`:
 
-| Mobile Route | Dev-Maestro API | Purpose |
+| Mobile Route | Watchpost API | Purpose |
 |--------------|-----------------|---------|
-| `/maestro/status` | `/api/status` | Server health |
-| `/maestro/master-plan` | `/api/master-plan` | Task list |
-| `/maestro/task/:id/status` | `/api/task/:id/status` | Update task |
-| `/maestro/health/cached` | `/api/health/cached` | Code health |
-| `/maestro/orchestrator/:id/stream` | SSE passthrough | Real-time |
+| `/watchpost/status` | `/api/status` | Server health |
+| `/watchpost/master-plan` | `/api/master-plan` | Task list |
+| `/watchpost/task/:id/status` | `/api/task/:id/status` | Update task |
+| `/watchpost/health/cached` | `/api/health/cached` | Code health |
+| `/watchpost/orchestrator/:id/stream` | SSE passthrough | Real-time |
 
-**Requires Dev-Maestro running:**
+**Requires Watchpost running:**
 ```bash
-cd ~/.dev-maestro && npm start
+cd ~/.watchpost && npm start
 ```
 
 ## Verification
@@ -224,10 +224,10 @@ curl https://mobile.in-theflow.com/health
 # Should return: {"status":"ok",...} or redirect to Access
 ```
 
-### Test Dev-Maestro Proxy
+### Test Watchpost Proxy
 ```bash
-curl http://localhost:3847/maestro/status
-# Should return Dev-Maestro status
+curl http://localhost:3847/watchpost/status
+# Should return Watchpost status
 ```
 
 ### Test Cloudflare Access
@@ -264,11 +264,11 @@ cat ~/.cloudflared/config-happy.yml
 cloudflared tunnel login
 ```
 
-### Dev-Maestro proxy 502
+### Watchpost proxy 502
 
 ```bash
-# Start Dev-Maestro
-cd ~/.dev-maestro && npm start
+# Start Watchpost
+cd ~/.watchpost && npm start
 
 # Verify it's running
 curl http://localhost:6010/api/status
@@ -288,7 +288,7 @@ curl http://localhost:6010/api/status
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `RELAY_PORT` | 3847 | Local relay server port |
-| `DEV_MAESTRO_URL` | http://localhost:6010 | Dev-Maestro address |
+| `WATCHPOST_URL` | http://localhost:6010 | Watchpost address |
 | `HAPPY_SERVER_URL` | http://localhost:3847 | CLI connects here |
 | `HAPPY_SECURITY_LEVEL` | standard | Security level (strict/standard/relaxed/off) |
 | `HAPPY_DISABLE_BASH_RPC` | false | Disable command execution entirely |
@@ -310,7 +310,7 @@ Before using in production:
 - [ ] Cloudflare Access configured with email allowlist
 - [ ] `HAPPY_ENABLE_WRITE_RPC` is NOT set (or set to false)
 - [ ] Tunnel uses HTTPS only (no HTTP fallback)
-- [ ] Dev-Maestro only accessible via tunnel
+- [ ] Watchpost only accessible via tunnel
 - [ ] No ports exposed on firewall (ufw/iptables)
 - [ ] Systemd service running as non-root user
 
@@ -318,4 +318,4 @@ Before using in production:
 
 - [SOP-026: Custom Domain Deployment](SOP-026-custom-domain-deployment.md)
 - [SOP-030: Doppler Secrets Management](SOP-030-doppler-secrets-management.md)
-- [Dev-Maestro](~/.dev-maestro/README.md)
+- [Watchpost](~/.watchpost/README.md)

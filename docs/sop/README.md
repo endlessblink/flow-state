@@ -65,7 +65,7 @@ docs/sop/
 | `SOP-025-tauri-vue-flow-reactivity.md` | Tauri Vue Flow reactivity |
 | `SOP-026-custom-domain-deployment.md` | Custom domain (in-theflow.com) setup |
 | `SOP-027-mobile-testing-workflow.md` | Mobile testing via Playwright viewport |
-| `SOP-028-dev-maestro-task-sync.md` | Dev Maestro task status sync issues |
+| `SOP-028-watchpost-task-sync.md` | Watchpost task status sync issues |
 | `SOP-029-ai-verification-hooks.md` | AI "done" claim verification system |
 | `SOP-030-doppler-secrets-management.md` | Doppler secrets management |
 | `SOP-031-cors-configuration.md` | CORS configuration for self-hosted Supabase |
@@ -86,9 +86,9 @@ docs/sop/
 | `SOP-046-weekly-plan-ai-pipeline.md` | Weekly plan AI pipeline |
 | `SOP-047-tauri-webkit-drag-drop.md` | Tauri WebKitGTK drag-and-drop fix |
 | `SOP-048-mobile-route-guards.md` | Mobile route guards |
-| `SOP-049-dev-maestro-parser.md` | Dev-Maestro MASTER_PLAN.md parser rules |
+| `SOP-049-watchpost-parser.md` | Watchpost MASTER_PLAN.md parser rules |
 | `SOP-050-store-auth-initialization.md` | Store auth-wait initialization pattern |
-| `SOP-051-mobile-client.md` | Self-hosted mobile client for Claude Code + Dev-Maestro |
+| `SOP-051-mobile-client.md` | Self-hosted mobile client for Claude Code + Watchpost |
 | `SOP-052-data-persistence-patterns.md` | Data persistence patterns |
 | `SOP-053-tauri-linux-css-limitations.md` | Tauri Linux CSS limitations (WebKitGTK) |
 | `SOP-054-realtime-sync-position-preservation.md` | Realtime sync position preservation |

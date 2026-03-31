@@ -295,7 +295,7 @@ The stale threshold can be mentioned in the audit request:
 | Skill | How Auditor Relates |
 |-------|---------------------|
 | `/done` | Auditor recommends, `/done` executes the marking |
-| `/dev-maestro` | Both parse MASTER_PLAN.md, use same patterns |
+| `/watchpost` | Both parse MASTER_PLAN.md, use same patterns |
 | `/smart-doc-manager` | For MASTER_PLAN.md structural updates |
 
 ---

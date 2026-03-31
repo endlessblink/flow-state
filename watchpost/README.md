@@ -1,20 +1,20 @@
-# Dev Maestro
+# Watchpost
 
 AI agent orchestration platform with Kanban board, Health scanning, Skills visualization, and multi-agent workflows.
 
 ## Installation (Standalone)
 
-Install Dev Maestro on any system with one command:
+Install Watchpost on any system with one command:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/endlessblink/watchpost/main/install.sh | bash
 ```
 
-This installs to `~/.dev-maestro/`. To customize the location:
+This installs to `~/.watchpost/`. To customize the location:
 
 ```bash
-export DEV_MAESTRO_DIR=/path/to/install
-curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash
+export WATCHPOST_DIR=/path/to/install
+curl -sSL https://raw.githubusercontent.com/endlessblink/watchpost/main/install.sh | bash
 ```
 
 ## Updating
@@ -22,13 +22,13 @@ curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/instal
 Run the same install command to update to the latest version:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/endlessblink/watchpost/main/install.sh | bash
 ```
 
 Or manually:
 
 ```bash
-cd ~/.dev-maestro
+cd ~/.watchpost
 git pull origin main
 npm install
 ```
@@ -36,7 +36,7 @@ npm install
 ## Starting the Server
 
 ```bash
-cd ~/.dev-maestro
+cd ~/.watchpost
 npm start
 # Open http://localhost:6010
 ```
@@ -44,7 +44,7 @@ npm start
 Or with install + start:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash -s -- --start
+curl -sSL https://raw.githubusercontent.com/endlessblink/watchpost/main/install.sh | bash -s -- --start
 ```
 
 ## Configuration
@@ -98,15 +98,15 @@ Help Claude Code understand your MASTER_PLAN.md format for seamless task managem
 1. **Copy the instructions template** to your project:
    ```bash
    # Option A: Add to your CLAUDE.md
-   cat ~/.dev-maestro/templates/CLAUDE_INSTRUCTIONS.md >> /path/to/your/project/CLAUDE.md
+   cat ~/.watchpost/templates/CLAUDE_INSTRUCTIONS.md >> /path/to/your/project/CLAUDE.md
 
    # Option B: Add to Claude Code settings
-   cat ~/.dev-maestro/templates/CLAUDE_INSTRUCTIONS.md >> /path/to/your/project/.claude/settings/instructions.md
+   cat ~/.watchpost/templates/CLAUDE_INSTRUCTIONS.md >> /path/to/your/project/.claude/settings/instructions.md
    ```
 
 2. **Optionally, use the starter template** for a new MASTER_PLAN.md:
    ```bash
-   cp ~/.dev-maestro/templates/MASTER_PLAN.md.template /path/to/your/project/docs/MASTER_PLAN.md
+   cp ~/.watchpost/templates/MASTER_PLAN.md.template /path/to/your/project/docs/MASTER_PLAN.md
    ```
 
 ### What's Included
@@ -138,7 +138,7 @@ Description...
 Add to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
-alias dev-maestro='cd ~/.dev-maestro && node server.js'
+alias watchpost='cd ~/.watchpost && node server.js'
 ```
 
-Then just run `dev-maestro` from anywhere.
+Then just run `watchpost` from anywhere.

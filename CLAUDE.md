@@ -258,7 +258,7 @@ test('tasks are visible', async ({ page }) => {
 
 **Task Status:** Only mark ✅ DONE after USER explicitly confirms. Until then: 🔄 IN PROGRESS or 👀 REVIEW.
 
-**Judge Agent:** For complex features, invoke via Dev-Maestro at `localhost:6010/api/judge/evaluate`.
+**Judge Agent:** For complex features, invoke via Watchpost at `localhost:6010/api/judge/evaluate`.
 
 ## Design Token Usage (MANDATORY)
 
@@ -380,20 +380,20 @@ Full SOP: [CANVAS-POSITION-SYSTEM](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md)
 - Completed items: `~~TASK-001~~` with strikethrough
 - **NEVER reuse IDs** - Always run `./scripts/utils/get-next-task-id.cjs` first
 
-## Dev Maestro
+## Watchpost
 
-AI orchestration dashboard at `http://localhost:6010`. Start: `./maestro.sh`. Check: `curl -s localhost:6010/api/status`. Skill: `dev-maestro`.
+AI orchestration dashboard at `http://localhost:6010`. Start: `./watchpost.sh`. Check: `curl -s localhost:6010/api/status`. Skill: `watchpost`.
 
-**MASTER_PLAN.md Parsing:** Task headers use `### TASK-XXX: Title (STATUS)`. Completed: `### ~~TASK-XXX~~: Title (✅ DONE)`. Status keywords: `DONE`/`✅`, `IN PROGRESS`/`🔄`, `PAUSED`/`⏸️`, `REVIEW`/`👀`. Completed tasks need BOTH `~~strikethrough~~` AND `✅ DONE`. Full SOP: [SOP-049](docs/sop/SOP-049-dev-maestro-parser.md).
+**MASTER_PLAN.md Parsing:** Task headers use `### TASK-XXX: Title (STATUS)`. Completed: `### ~~TASK-XXX~~: Title (✅ DONE)`. Status keywords: `DONE`/`✅`, `IN PROGRESS`/`🔄`, `PAUSED`/`⏸️`, `REVIEW`/`👀`. Completed tasks need BOTH `~~strikethrough~~` AND `✅ DONE`. Full SOP: [SOP-049](docs/sop/SOP-049-watchpost-parser.md).
 
-**Maestro CLI** (installed at `~/.local/bin/maestro`, works from any project directory):
+**Watchpost CLI** (installed at `~/.local/bin/watchpost`, works from any project directory):
 
 | Command | Purpose |
 |---------|---------|
-| `maestro tui` | Terminal kanban board |
-| `maestro archive` | Archive DONE tasks >14 days old to `MASTER_PLAN_ARCHIVE.md` |
-| `maestro archive --dry-run` | Preview archive without writing |
-| `maestro archive --days=30` | Custom age threshold |
+| `watchpost tui` | Terminal kanban board |
+| `watchpost archive` | Archive DONE tasks >14 days old to `MASTER_PLAN_ARCHIVE.md` |
+| `watchpost archive --dry-run` | Preview archive without writing |
+| `watchpost archive --days=30` | Custom age threshold |
 
 ## UI Component Standards (MANDATORY)
 

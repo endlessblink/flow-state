@@ -1,8 +1,8 @@
 #!/bin/bash
-# Dev Maestro Launcher with Auto-Update
+# Watchpost Launcher with Auto-Update
 # Generated for: flow-state
 
-INSTALL_DIR="${DEV_MAESTRO_DIR:-$HOME/.dev-maestro}"
+INSTALL_DIR="${WATCHPOST_DIR:-$HOME/.watchpost}"
 CONFIG_FILE="$INSTALL_DIR/local/config.json"
 
 # Colors
@@ -13,9 +13,9 @@ NC='\033[0m'
 
 # Install if not present
 if [ ! -d "$INSTALL_DIR" ]; then
-    echo -e "${BLUE}Dev Maestro not installed. Installing...${NC}"
+    echo -e "${BLUE}Watchpost not installed. Installing...${NC}"
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash -s -- --master-plan "$SCRIPT_DIR/docs/MASTER_PLAN.md"
+    curl -sSL https://raw.githubusercontent.com/endlessblink/watchpost/main/install.sh | bash -s -- --master-plan "$SCRIPT_DIR/docs/MASTER_PLAN.md"
 fi
 
 # Read autoUpdate setting from local config (default: true)
@@ -42,7 +42,7 @@ update_if_available() {
     fi
 
     if [ "$LOCAL" != "$REMOTE" ]; then
-        echo -e "${BLUE}🔄 Dev Maestro update available...${NC}"
+        echo -e "${BLUE}🔄 Watchpost update available...${NC}"
         git stash --quiet 2>/dev/null || true
         if git pull origin main --quiet 2>/dev/null; then
             if git diff --name-only HEAD@{1} HEAD 2>/dev/null | grep -q "package.json"; then
@@ -52,7 +52,7 @@ update_if_available() {
             echo -e "${GREEN}✅ Updated to latest version${NC}"
         fi
     else
-        echo -e "${GREEN}✓ Dev Maestro is up to date${NC}"
+        echo -e "${GREEN}✓ Watchpost is up to date${NC}"
     fi
 }
 

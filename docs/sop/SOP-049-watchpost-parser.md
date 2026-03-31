@@ -1,7 +1,7 @@
-# SOP-049: Dev-Maestro MASTER_PLAN.md Parser Rules
+# SOP-049: Watchpost MASTER_PLAN.md Parser Rules
 
 ## Parser Location
-`~/.dev-maestro/kanban/index.html` - `parseMasterPlan()` function (line ~5955)
+`~/.watchpost/kanban/index.html` - `parseMasterPlan()` function (line ~5955)
 
 ## Critical Rules
 
@@ -38,10 +38,10 @@ When both `###` header and table row exist for a task:
 | Task not appearing | Not in recognized section | Check `##` header is recognized |
 
 ## Testing
-After parser changes, restart Dev-Maestro:
+After parser changes, restart Watchpost:
 ```bash
 lsof -ti :6010 | xargs -r kill -9
-cd ~/.dev-maestro && npm start
+cd ~/.watchpost && npm start
 ```
 
 Then hard-refresh browser (`Ctrl+Shift+R`).

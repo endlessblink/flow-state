@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dev Maestro - Task Management</title>
+  <title>Watchpost - Task Management</title>
   <style>
     /* Design tokens - Pure black theme (matching Storybook) */
     :root {
@@ -5567,7 +5567,7 @@
         }
       } catch (error) {
         console.error(`[Modal] Error:`, error);
-        showSyncStatus('error', `✗ Server not running. Start with: cd ~/.dev-maestro && npm start`);
+        showSyncStatus('error', `✗ Server not running. Start with: cd ~/.watchpost && npm start`);
       }
     }
 
@@ -5610,7 +5610,7 @@
           showSyncStatus('error', `✗ ${result.error || 'Failed to update priority'}`);
         }
       } catch (error) {
-        showSyncStatus('error', `✗ Server not running. Start with: cd ~/.dev-maestro && npm start`);
+        showSyncStatus('error', `✗ Server not running. Start with: cd ~/.watchpost && npm start`);
       }
     }
 
@@ -5651,7 +5651,7 @@
           showSyncStatus('error', `✗ ${result.error || 'Failed to update complexity'}`);
         }
       } catch (error) {
-        showSyncStatus('error', `✗ Server not running. Start with: cd ~/.dev-maestro && npm start`);
+        showSyncStatus('error', `✗ Server not running. Start with: cd ~/.watchpost && npm start`);
       }
     }
 
@@ -5800,7 +5800,7 @@
       } catch (error) {
         console.error(`[InlineStatus] Error:`, error);
         badge.textContent = originalText;
-        showToast('✗ Server not running. Start with: cd ~/.dev-maestro && npm start', 'error');
+        showToast('✗ Server not running. Start with: cd ~/.watchpost && npm start', 'error');
       }
     }
 
@@ -5835,7 +5835,7 @@
         }
       } catch (error) {
         badge.textContent = originalText;
-        showToast('✗ Server not running. Start with: cd ~/.dev-maestro && npm start', 'error');
+        showToast('✗ Server not running. Start with: cd ~/.watchpost && npm start', 'error');
       }
     }
 

@@ -1,6 +1,6 @@
 # Parser Patterns Reference
 
-Reusable patterns for parsing MASTER_PLAN.md task status. Aligned with dev-maestro parser.
+Reusable patterns for parsing MASTER_PLAN.md task status. Aligned with watchpost parser.
 
 ---
 

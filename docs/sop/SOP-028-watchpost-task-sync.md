@@ -1,14 +1,14 @@
-# SOP-028: Dev Maestro Task Status Sync Issues
+# SOP-028: Watchpost Task Status Sync Issues
 
 ## Problem
-Tasks in Dev Maestro kanban show wrong status (e.g., "IN PROGRESS" when MASTER_PLAN.md says "DONE").
+Tasks in Watchpost kanban show wrong status (e.g., "IN PROGRESS" when MASTER_PLAN.md says "DONE").
 
 ## Root Cause
 MASTER_PLAN.md has tasks in **multiple locations**:
 1. **Summary table** (~lines 25-200) - Quick reference with `| ID | Title | Status |`
 2. **Detailed sections** - Full task details with `### TASK-XXX: Title (STATUS)`
 
-Dev Maestro parses BOTH locations and can get confused when:
+Watchpost parses BOTH locations and can get confused when:
 - Detailed section is under an unrecognized `## Section` header
 - Status format doesn't match expected patterns
 - Browser caches stale parsed data
@@ -25,11 +25,11 @@ Update EACH location:
 - **Summary table row**: Add `~~` strikethrough to ID, change status column to `✅ **DONE**`
 - **Detailed section header**: Change `(📋 PLANNED)` to `(✅ DONE)`, add `~~` to ID
 
-### Step 2: Restart Dev Maestro
+### Step 2: Restart Watchpost
 ```bash
 # Kill and restart
 lsof -i :6010 -t | xargs kill 2>/dev/null
-cd ~/.dev-maestro && nohup npm start > /tmp/dev-maestro.log 2>&1 &
+cd ~/.watchpost && nohup npm start > /tmp/watchpost.log 2>&1 &
 ```
 
 ### Step 3: Hard refresh browser
@@ -42,7 +42,7 @@ Open DevTools (F12) → Console → Look for:
 [DEBUG] TASK-XXX: { status: 'done', progress: 100, title: '...' }
 ```
 
-## Dev Maestro Parser Logic
+## Watchpost Parser Logic
 
 The parser determines status from:
 1. **Strikethrough on ID**: `~~TASK-XXX~~` → done
@@ -53,15 +53,15 @@ The parser determines status from:
 Priority order: `**Status**:` line > header parentheses > table row
 
 ## Key Files
-- Parser: `~/.dev-maestro/tui/src/lib/masterplan-parser.js` (React/Ink TUI — current) and `~/.dev-maestro/kanban/index.html` (legacy browser kanban)
-- API: `~/.dev-maestro/server.js`
+- Parser: `~/.watchpost/tui/src/lib/masterplan-parser.js` (React/Ink TUI — current) and `~/.watchpost/kanban/index.html` (legacy browser kanban)
+- API: `~/.watchpost/server.js`
 - Data source: `docs/MASTER_PLAN.md`
 
 ## Prevention
 When marking tasks done, ALWAYS:
 1. Run `grep "TASK-XXX" docs/MASTER_PLAN.md` to find ALL occurrences
 2. Update each location with consistent status
-3. Restart Dev Maestro if status doesn't update
+3. Restart Watchpost if status doesn't update
 
 ---
 **Created**: 2026-01-23

@@ -156,4 +156,4 @@ pnpm-lock.yaml
 
 # Cursor AI
 .cursorrules
-.maestro/
+.watchpost/

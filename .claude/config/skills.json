@@ -3,22 +3,22 @@
   "version": "2.2.0",
   "last_updated": "2026-03-05",
   "skills": {
-    "dev-maestro": {
-      "name": "Dev Maestro",
+    "watchpost": {
+      "name": "Watchpost",
       "category": "tooling",
       "triggers": [
-        "maestro",
+        "watchpost",
         "kanban",
         "tasks",
         "master plan",
         "orchestrator",
-        "start maestro",
+        "start watchpost",
         "open kanban",
         "show tasks",
         "task board"
       ],
       "keywords": [
-        "maestro",
+        "watchpost",
         "kanban",
         "orchestrator",
         "dashboard",
@@ -30,7 +30,7 @@
         "chief-architect",
         "smart-doc-manager"
       ],
-      "description": "Start and manage Dev Maestro - the AI agent orchestration platform for Kanban task management. Use when user says 'start maestro', 'open kanban', 'show tasks', or needs to manage MASTER_PLAN.md tasks visually."
+      "description": "Start and manage Watchpost - the AI agent orchestration platform for Kanban task management. Use when user says 'start watchpost', 'open kanban', 'show tasks', or needs to manage MASTER_PLAN.md tasks visually."
     },
     "vue-flow-debug": {
       "name": "Vue Flow Nested Debugger",
@@ -436,7 +436,7 @@
       "last_used": null,
       "related_skills": [
         "chief-architect",
-        "dev-maestro",
+        "watchpost",
         "task"
       ],
       "description": "Universal documentation consolidation skill that verifies system reality before making ANY organizational decisions. Analyzes codebase, detects redundancies, and safely consolidates documentation with preservation of git history and rollback capabilities. Includes specialized MASTER_PLAN.md management with intelligent updates, backup, validation, and idea/issue processing. Triggers on \"master-plan\", \"plan update\", \"documentation\", \"consolidate docs\", \"audit docs\", \"process ideas\", \"check inbox\"."
@@ -635,7 +635,7 @@
       "last_used": null,
       "related_skills": [
         "done",
-        "dev-maestro",
+        "watchpost",
         "smart-doc-manager"
       ],
       "description": "Audit task status in MASTER_PLAN.md. Finds stale tasks, status mismatches, and likely-done tasks. NEVER auto-marks tasks - only recommends. User confirmation is the only valid evidence of completion."
@@ -664,7 +664,7 @@
       "last_used": null,
       "related_skills": [
         "master-plan-auditor",
-        "dev-maestro",
+        "watchpost",
         "smart-doc-manager"
       ],
       "description": "Analyze MASTER_PLAN.md to recommend the best task to work on next. Scores by priority (P0-P3), considers IN PROGRESS tasks, blocked dependencies, and quick wins. Use when starting a session or deciding what to tackle."

@@ -1,31 +1,31 @@
 ---
-name: dev-maestro
-description: Start Dev Maestro dashboard for MASTER_PLAN.md tasks. Use when user says "start maestro", "open kanban", or "show tasks". Also use when tasks show wrong status (PLANNED instead of DONE) - see Parser Troubleshooting section.
+name: watchpost
+description: Start Watchpost dashboard for MASTER_PLAN.md tasks. Use when user says "start watchpost", "open kanban", or "show tasks". Also use when tasks show wrong status (PLANNED instead of DONE) - see Parser Troubleshooting section.
 ---
 
-# Dev Maestro Skill
+# Watchpost Skill
 
 ## QUICK REFERENCE
 
 | Item | Value |
 |------|-------|
 | URL | http://localhost:PORT |
-| Install | `~/.dev-maestro` |
+| Install | `~/.watchpost` |
 | Default Port | 6010 |
 
 ## WHEN TO USE
 
-- User says "start maestro" / "open kanban" / "show tasks"
+- User says "start watchpost" / "open kanban" / "show tasks"
 - User wants to see MASTER_PLAN.md visually
 - User asks about task status in Kanban view
-- Task shows wrong status in Dev Maestro (e.g., "PLANNED" instead of "DONE")
+- Task shows wrong status in Watchpost (e.g., "PLANNED" instead of "DONE")
 - User reports "task still shows as planned" after marking it done
 
 ## WHEN NOT TO USE
 
-- User is working on their main project (Dev Maestro is a tool, not a target)
-- User didn't mention Dev Maestro
-- You're tempted to "improve" or extend Dev Maestro
+- User is working on their main project (Watchpost is a tool, not a target)
+- User didn't mention Watchpost
+- You're tempted to "improve" or extend Watchpost
 
 ## WORKFLOW
 
@@ -33,7 +33,7 @@ description: Start Dev Maestro dashboard for MASTER_PLAN.md tasks. Use when user
 
 Before installing or starting, ask the user:
 
-> "What port should Dev Maestro run on? (default: 6010)"
+> "What port should Watchpost run on? (default: 6010)"
 
 Use their answer for PORT in all subsequent commands. If they say "default" or don't specify, use 6010.
 
@@ -48,17 +48,17 @@ curl -s http://localhost:PORT/api/status 2>/dev/null && echo "RUNNING" || echo "
 **Download first, then run (avoids terminal line-wrap issues):**
 
 ```bash
-curl -sSL "https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh" -o /tmp/dm-install.sh
+curl -sSL "https://raw.githubusercontent.com/endlessblink/watchpost/main/install.sh" -o /tmp/wp-install.sh
 ```
 
 ```bash
-bash /tmp/dm-install.sh -m /path/to/docs/MASTER_PLAN.md
+bash /tmp/wp-install.sh -m /path/to/docs/MASTER_PLAN.md
 ```
 
 ### Step 3: Start with Custom Port
 
 ```bash
-cd ~/.dev-maestro && PORT=PORT npm start &
+cd ~/.watchpost && PORT=PORT npm start &
 ```
 
 ### Step 4: Verify
@@ -69,7 +69,7 @@ sleep 3 && curl -s http://localhost:PORT/api/status
 
 ### Step 5: Tell User
 
-> "Dev Maestro is running at http://localhost:PORT"
+> "Watchpost is running at http://localhost:PORT"
 
 ## API ENDPOINTS
 
@@ -82,16 +82,16 @@ sleep 3 && curl -s http://localhost:PORT/api/status
 
 ## ANTI-SIDETRACKING RULES
 
-1. **Don't build features for Dev Maestro** - It's a separate project
+1. **Don't build features for Watchpost** - It's a separate project
 2. **Don't add MCP wrappers** - REST API via curl is sufficient
-3. **Don't refactor Dev Maestro code** - Stay focused on user's actual task
+3. **Don't refactor Watchpost code** - Stay focused on user's actual task
 4. **Use curl directly** - No abstractions needed
 
 ## TROUBLESHOOTING
 
 **Port in use:**
 ```bash
-lsof -ti:PORT | xargs kill -9 && cd ~/.dev-maestro && PORT=PORT npm start &
+lsof -ti:PORT | xargs kill -9 && cd ~/.watchpost && PORT=PORT npm start &
 ```
 
 **MASTER_PLAN.md not found:**
@@ -100,12 +100,12 @@ lsof -ti:PORT | xargs kill -9 && cd ~/.dev-maestro && PORT=PORT npm start &
 curl -s localhost:PORT/api/status | jq '.masterPlanPath'
 
 # Reconfigure
-cd ~/.dev-maestro && ./install.sh --reconfigure
+cd ~/.watchpost && ./install.sh --reconfigure
 ```
 
 ## PARSER TROUBLESHOOTING (Task Shows Wrong Status)
 
-**Full SOP**: `docs/sop/SOP-028-dev-maestro-task-sync.md`
+**Full SOP**: `docs/sop/SOP-028-watchpost-task-sync.md`
 
 ### QUICK FIX (Do This First!)
 
@@ -117,9 +117,9 @@ grep -n "TASK-XXX" docs/MASTER_PLAN.md
 
 # 2. Update EACH location with consistent status (strikethrough + ✅ DONE)
 
-# 3. Restart Dev Maestro (CRITICAL - clears server cache)
+# 3. Restart Watchpost (CRITICAL - clears server cache)
 lsof -i :6010 -t | xargs kill 2>/dev/null
-cd ~/.dev-maestro && nohup npm start > /tmp/dev-maestro.log 2>&1 &
+cd ~/.watchpost && nohup npm start > /tmp/watchpost.log 2>&1 &
 
 # 4. Hard refresh browser (CRITICAL - clears browser cache)
 # Press Ctrl+Shift+R (not just F5)
@@ -131,7 +131,7 @@ MASTER_PLAN.md has tasks in **multiple locations**:
 1. **Summary table** (~lines 25-200) - `| ~~**TASK-XXX**~~ | ✅ **DONE** ... |`
 2. **Detailed sections** - `### ~~TASK-XXX~~: Title (✅ DONE)`
 
-Dev Maestro parses BOTH. If they disagree, you get wrong status.
+Watchpost parses BOTH. If they disagree, you get wrong status.
 
 ### Marking Tasks Done Correctly
 

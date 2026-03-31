@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dev Maestro - AI Agent Orchestration</title>
+    <title>Watchpost - AI Agent Orchestration</title>
     <style>
         /* Design tokens - Pure black theme (matching Storybook) */
         :root {
@@ -299,7 +299,7 @@
 
 <body>
     <header class="header">
-        <div class="logo">Dev Maestro</div>
+        <div class="logo">Watchpost</div>
 
         <nav class="tabs">
             <button class="tab kanban active" data-panel="kanban">
@@ -381,7 +381,7 @@
                 <circle cx="12" cy="12" r="3" fill="currentColor" />
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            Dev Maestro
+            Watchpost
         </span>
     </header>
 
@@ -419,7 +419,7 @@
         const panels = document.querySelectorAll('.panel');
 
         // Restore saved tab
-        const savedTab = localStorage.getItem('dev-maestro-tab');
+        const savedTab = localStorage.getItem('watchpost-tab');
         if (savedTab) {
             switchTab(savedTab);
         }
@@ -428,7 +428,7 @@
             tab.addEventListener('click', () => {
                 const panelId = tab.dataset.panel;
                 switchTab(panelId);
-                localStorage.setItem('dev-maestro-tab', panelId);
+                localStorage.setItem('watchpost-tab', panelId);
             });
         });
 

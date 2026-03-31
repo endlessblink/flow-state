@@ -1,13 +1,13 @@
-# TASK-1483: Dev-Maestro Dashboard UI Redesign
+# TASK-1483: Watchpost Dashboard UI Redesign
 
 ## Context
 
 ### Original Request
-Redesign the Dev-Maestro dashboard: strip dead sections, fix layout, fix design token consistency, then add a Skills & Docs monitoring system.
+Redesign the Watchpost dashboard: strip dead sections, fix layout, fix design token consistency, then add a Skills & Docs monitoring system.
 
 ### Research Findings
-- **File**: `dev-maestro/kanban/index.html` (10,571 lines) -- monolithic HTML/CSS/JS
-- **Server**: `dev-maestro/server.js` (3,937 lines) -- Express.js with beads API (~850 lines, L943-L1789)
+- **File**: `watchpost/kanban/index.html` (10,571 lines) -- monolithic HTML/CSS/JS
+- **Server**: `watchpost/server.js` (3,937 lines) -- Express.js with beads API (~850 lines, L943-L1789)
 - **Current `:root` tokens** (L10-L43): 18 tokens defined (surfaces, text, borders, brand, status, transitions)
 - **Broken token refs** (14 occurrences): `--accent-primary` (L402,415,442,3566,3567,3883,3884,4023,4034), `--border-color` (L150), `--border-default` (L389), `--color-error` (L3275,3276), `--text-tertiary` (L3094)
 - **Hardcoded hex values**: ~176 occurrences of `#hex` outside `:root`
@@ -30,7 +30,7 @@ User confirmed all requirements upfront (no interview needed -- requirements are
 ## Work Objectives
 
 ### Core Objective
-Transform the Dev-Maestro dashboard from a bloated multi-view tool into a focused, design-consistent kanban board with a new Skills & Docs monitoring system.
+Transform the Watchpost dashboard from a bloated multi-view tool into a focused, design-consistent kanban board with a new Skills & Docs monitoring system.
 
 ### Deliverables
 1. **Phase 1**: Stripped-down, layout-fixed, design-token-consistent dashboard
@@ -102,7 +102,7 @@ Phase 2 (After Phase 1):
 ### Phase 1: Strip Dead Sections + Fix Layout + Design Consistency
 
 #### TASK 1.1: Add Missing Design Tokens to `:root`
-**File**: `dev-maestro/kanban/index.html` (L10-L43)
+**File**: `watchpost/kanban/index.html` (L10-L43)
 **Action**: Add these tokens to the `:root` block:
 ```
 --accent-primary: var(--brand-primary)    /* alias for broken refs */
@@ -122,7 +122,7 @@ Phase 2 (After Phase 1):
 **Acceptance**: All 14 broken token references resolve. New tokens available for Phase 1.10.
 
 #### TASK 1.2: Remove Dead Views - CSS
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**: Remove CSS blocks for:
 - Ideas view columns (L665-L680)
 - Roadmap view columns (L682-L697)
@@ -132,7 +132,7 @@ Phase 2 (After Phase 1):
 **Acceptance**: No CSS rules for removed views remain. Estimated ~60 lines removed.
 
 #### TASK 1.3: Remove Dead Views - HTML
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**: Remove HTML blocks:
 - Ideas view container (L4606-L4641)
 - Roadmap view container (L4642-L4677)
@@ -141,7 +141,7 @@ Phase 2 (After Phase 1):
 **Acceptance**: No `#ideas-view`, `#roadmap-view`, `#archive-view`, `#status-view` elements exist. Estimated ~150 lines removed.
 
 #### TASK 1.4: Remove Dead Views - JS Renderers & Parsers
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**: Remove functions:
 - `renderIdeasKanban()` (L6163-L6228)
 - `parseIdeasMarkdown()` (L6235-L6292)
@@ -159,7 +159,7 @@ Phase 2 (After Phase 1):
 **Acceptance**: No JS references to removed views. Estimated ~700 lines removed.
 
 #### TASK 1.5: Remove Dead Views - Navigation Tabs
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**: Remove nav tab buttons (L4415-L4458):
 - Ideas tab (L4415-L4422)
 - Roadmap tab (L4423-L4430)
@@ -169,7 +169,7 @@ Phase 2 (After Phase 1):
 **Acceptance**: Only "Status Board" (kanban) tab remains. Consider renaming to just "Tasks" since it is the only view.
 
 #### TASK 1.6: Remove Beads - CSS + HTML + JS (index.html)
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**: Remove:
 - CSS: L1386-L1932 (~547 lines, `/* BEADS VIEW */` section)
 - HTML: L4757 to end of beads-view container (~70 lines)
@@ -179,7 +179,7 @@ Phase 2 (After Phase 1):
 **Acceptance**: No beads-related code remains. No D3 import. Estimated ~1,300 lines removed.
 
 #### TASK 1.7: Remove Beads - Server Endpoints
-**File**: `dev-maestro/server.js`
+**File**: `watchpost/server.js`
 **Action**: Remove:
 - Beads API section (L943-L1789, `// ============== BEADS API ==============` to just before `// ============== ORCHESTRATOR API ==============`)
 - `BD_PATH` constant (L945)
@@ -188,12 +188,12 @@ Phase 2 (After Phase 1):
 **Acceptance**: No `/api/beads` routes in server.js. Server starts without errors. Estimated ~847 lines removed.
 
 #### TASK 1.8: Remove D3.js Import
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**: Remove the `<script>` tag importing D3.js at L4388.
 **Acceptance**: No D3 reference in the file.
 
 #### TASK 1.9: Fix Broken Token References
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**: After TASK 1.1 adds alias tokens, verify all 14 broken references now resolve:
 - `--accent-primary` at L402, 415, 442, 3566, 3567, 3883, 3884, 4023, 4034 (9 occurrences)
 - `--border-color` at L150 (1 occurrence)
@@ -213,7 +213,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 **Acceptance**: Zero broken token references. `grep` for each broken token returns 0 results.
 
 #### TASK 1.10: Replace Hardcoded Hex Values with Tokens
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**: Audit all ~176 hardcoded hex values outside `:root`. For each:
 1. Map to existing token if exact match (e.g., `#4ECDC4` -> `var(--brand-primary)`)
 2. Map to closest semantic token if near match
@@ -229,7 +229,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 **Acceptance**: `grep '#[0-9a-fA-F]' index.html` returns ONLY lines inside `:root {}`. Zero hardcoded hex elsewhere.
 
 #### TASK 1.11: Standardize Border-Radius Scale
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**:
 1. Add radius tokens to `:root`:
    ```
@@ -244,7 +244,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 **Acceptance**: No hardcoded `border-radius: Npx` outside `:root`. All use `var(--radius-*)`.
 
 #### TASK 1.12: Normalize Font-Size Units
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**:
 1. Decide on `px` (matches the rest of the codebase which is all px)
 2. Add font-size tokens to `:root`:
@@ -263,7 +263,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 **Acceptance**: No hardcoded `font-size` values. All use `var(--font-*)`. No mixed px/rem.
 
 #### TASK 1.13: Redesign Layout - In Progress Top + Monitored Below
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**:
 1. Change the kanban board from horizontal columns to a vertical layout with two sections:
    - **Top section (pinned)**: "In Progress" -- shows tasks with `status === 'in_progress'`
@@ -295,7 +295,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 
 #### TASK 1.14: Smoke Test & Fix Regressions
 **Action**:
-1. Start server: `node dev-maestro/server.js`
+1. Start server: `node watchpost/server.js`
 2. Load dashboard in browser
 3. Verify: Kanban loads, tasks render, search works, filters work
 4. Verify: No console errors
@@ -313,7 +313,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 #### TASK 2.1: Design Monitoring Data Schema
 **Action**: Define data structures for tracking skill/doc usage.
 
-**Storage**: JSON file at `.maestro/monitoring.json` (simple, no new dependencies)
+**Storage**: JSON file at `.watchpost/monitoring.json` (simple, no new dependencies)
 
 ```json
 {
@@ -352,7 +352,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 **Acceptance**: Schema documented. JSON file created with empty initial state.
 
 #### TASK 2.2: Create Server-Side Monitoring Endpoints
-**File**: `dev-maestro/server.js`
+**File**: `watchpost/server.js`
 **Action**: Add new API routes:
 - `POST /api/monitoring/track` -- Log a skill invocation or doc reference
 - `GET /api/monitoring/stats` -- Get aggregated stats (invocation counts, co-occurrences)
@@ -362,7 +362,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 **Acceptance**: All endpoints respond correctly. Data persists across server restarts.
 
 #### TASK 2.3: Add Client-Side Invocation Tracking
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**:
 1. Scan `.claude/skills/` and `.claude/config/skills.json` for available skills
 2. Scan `docs/` for documentation files
@@ -372,7 +372,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 **Acceptance**: Dashboard shows current skill/doc inventory. Tracking API is callable from external tools.
 
 #### TASK 2.4: Build Frequency-Based Card Renderer
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**:
 1. Create a new view section "Skills & Docs Monitor"
 2. Render skills and docs as cards sized by invocation frequency:
@@ -385,7 +385,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 **Acceptance**: Cards render with correct sizes. Most-used skills/docs are visually prominent.
 
 #### TASK 2.5: Build Heat Map Visualization
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**:
 1. Add a heat map grid (no D3 -- use CSS Grid + inline styles for colors)
 2. X-axis: days/weeks, Y-axis: skills/docs
@@ -395,7 +395,7 @@ This approach is cleaner (no alias indirection). **Preferred.**
 **Acceptance**: Heat map renders with correct data. Color intensity maps to frequency.
 
 #### TASK 2.6: Build Connection/Co-occurrence View
-**File**: `dev-maestro/kanban/index.html`
+**File**: `watchpost/kanban/index.html`
 **Action**:
 1. Render co-occurrence relationships as a simple connection diagram
 2. Use CSS + absolute positioning (no D3) or a lightweight canvas approach

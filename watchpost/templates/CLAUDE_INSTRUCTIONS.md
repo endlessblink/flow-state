@@ -1,4 +1,4 @@
-# Dev Maestro - MASTER_PLAN.md Format Guide
+# Watchpost - MASTER_PLAN.md Format Guide
 
 Add this section to your project's `CLAUDE.md` to help Claude Code understand the MASTER_PLAN.md task format.
 
@@ -6,7 +6,7 @@ Add this section to your project's `CLAUDE.md` to help Claude Code understand th
 
 ## MASTER_PLAN.md Task Format (MANDATORY)
 
-Dev Maestro parses `docs/MASTER_PLAN.md` to display tasks on the Kanban board. Tasks MUST follow this exact format.
+Watchpost parses `docs/MASTER_PLAN.md` to display tasks on the Kanban board. Tasks MUST follow this exact format.
 
 ### Parsing Rules
 
@@ -120,12 +120,12 @@ To move a task between Kanban columns, update the status marker in the title:
 
 ---
 
-## Integration with Dev Maestro
+## Integration with Watchpost
 
-Dev Maestro provides a Kanban dashboard at `http://localhost:6010` that:
+Watchpost provides a Kanban dashboard at `http://localhost:6010` that:
 - Parses your MASTER_PLAN.md in real-time
 - Displays tasks in the correct columns based on status markers
 - Supports drag-and-drop to update task status
 - Auto-refreshes when the file changes
 
-For more information: https://github.com/endlessblink/dev-maestro
+For more information: https://github.com/endlessblink/watchpost

@@ -9,7 +9,6 @@
       aria-haspopup="listbox"
       :aria-expanded="isOpen"
       :aria-controls="dropdownId"
-      :aria-activedescendant="isOpen && focusedIndex >= 0 ? `${dropdownId}-option-${focusedIndex}` : undefined"
       @click="toggleDropdown"
       @keydown.down.prevent="openAndFocusFirst"
       @keydown.up.prevent="openAndFocusLast"
@@ -34,8 +33,11 @@
     >
       <ul
         :id="dropdownId"
+        ref="listboxElement"
         class="dropdown-list"
         role="listbox"
+        tabindex="-1"
+        :aria-activedescendant="isOpen && focusedIndex >= 0 ? `${dropdownId}-option-${focusedIndex}` : undefined"
         @keydown.down.prevent="focusNext"
         @keydown.up.prevent="focusPrevious"
         @keydown.enter.prevent="selectFocused"
@@ -96,8 +98,6 @@ interface Props {
   searchable?: boolean
 }
 
-const dropdownId = useId()
-
 const props = withDefaults(defineProps<Props>(), {
   placeholder: 'Select...',
   disabled: false,
@@ -108,6 +108,8 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[]]
 }>()
+
+const dropdownId = useId()
 
 const triggerElement = ref<HTMLElement>()
 const isOpen = ref(false)
@@ -155,6 +157,8 @@ const calculatePopoverPosition = () => {
   popoverY.value = rect.bottom + 4 // 4px offset from trigger
 }
 
+const listboxElement = ref<HTMLElement>()
+
 const toggleDropdown = () => {
   if (props.disabled) return
 
@@ -168,6 +172,7 @@ const toggleDropdown = () => {
       const selectedIndex = props.options.findIndex(opt => opt.value === props.modelValue)
       focusedIndex.value = selectedIndex >= 0 ? selectedIndex : 0
     }
+    setTimeout(() => listboxElement.value?.focus(), 0)
   }
 }
 
@@ -176,6 +181,7 @@ const openAndFocusFirst = () => {
   isOpen.value = true
   calculatePopoverPosition()
   focusedIndex.value = 0
+  setTimeout(() => listboxElement.value?.focus(), 0)
 }
 
 const openAndFocusLast = () => {
@@ -183,10 +189,12 @@ const openAndFocusLast = () => {
   isOpen.value = true
   calculatePopoverPosition()
   focusedIndex.value = props.options.length - 1
+  setTimeout(() => listboxElement.value?.focus(), 0)
 }
 
 const closeDropdown = () => {
   isOpen.value = false
+  triggerElement.value?.focus()
 }
 
 const focusNext = () => {

@@ -10,6 +10,7 @@
     >
     <div class="quick-create-modal">
       <!-- Task Title Input with AI Assist -->
+      <span class="section-label">Title</span>
       <div class="title-row">
         <input
           ref="titleInput"
@@ -46,6 +47,7 @@
       </div>
 
       <!-- Description Input -->
+      <span class="section-label">Description <span class="field-optional">optional</span></span>
       <input
         v-model="taskDescription"
         type="text"
@@ -616,15 +618,33 @@ watch(() => props.isOpen, (isOpen) => {
   color: var(--text-primary);
 }
 
+.field-optional {
+  font-weight: var(--font-normal);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-tertiary);
+}
+
 .description-input {
   width: 100%;
-  background: transparent;
-  border: none;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  padding: var(--space-2) 0;
+  padding: var(--space-3);
   margin-bottom: var(--space-4);
   outline: none;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.description-input:hover {
+  border-color: var(--border-medium);
+}
+
+.description-input:focus {
+  border-color: var(--purple-border-medium);
+  box-shadow: var(--purple-glow-subtle);
 }
 
 .description-input::placeholder {

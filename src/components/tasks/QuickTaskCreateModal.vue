@@ -13,6 +13,7 @@
     <!-- Task Form -->
     <div class="task-form">
       <!-- Title Input -->
+      <label class="field-label">Title</label>
       <div class="title-row">
         <input
           ref="titleInput"
@@ -73,6 +74,7 @@
       </div>
 
       <!-- Description Input -->
+      <label class="field-label">Description <span class="field-optional">optional</span></label>
       <MarkdownEditor
         v-model="taskDescription"
         placeholder="Describe what needs to be done..."
@@ -449,6 +451,22 @@ watch(() => _props.isOpen, (isOpen) => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.field-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.field-optional {
+  font-weight: var(--font-normal);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
 }
 
 /* Title Row with Voice Button */

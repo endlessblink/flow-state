@@ -1,0 +1,3 @@
+## 2024-03-31 - BaseDropdown Accessibility Improvements
+**Learning:** Custom dropdown implementations often miss the complete set of ARIA attributes required for a valid combobox interaction. Specifically, `<button>` triggers for listboxes need `role="combobox"`, `aria-haspopup="listbox"`, `aria-expanded`, `aria-controls`, and `aria-activedescendant` to fully support screen readers.
+**Action:** When creating custom dropdowns or select components, ensure that unique IDs are generated for the listbox and its options, and apply the full suite of combobox ARIA attributes to the trigger button to associate it with the active listbox option.

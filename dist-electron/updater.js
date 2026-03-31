@@ -30,8 +30,16 @@ function registerUpdater() {
         if (win)
             win.webContents.send('updater:downloaded');
     });
+    electron_updater_1.autoUpdater.on('update-not-available', () => {
+        const win = electron_1.BrowserWindow.getAllWindows()[0];
+        if (win)
+            win.webContents.send('updater:not-available');
+    });
     electron_updater_1.autoUpdater.on('error', (err) => {
         console.error('[Updater] Error:', err.message);
+        const win = electron_1.BrowserWindow.getAllWindows()[0];
+        if (win)
+            win.webContents.send('updater:error', err.message);
     });
     // IPC handlers for renderer control
     electron_1.ipcMain.handle('updater:check', async () => {
@@ -47,7 +55,8 @@ function registerUpdater() {
         await electron_updater_1.autoUpdater.downloadUpdate();
     });
     electron_1.ipcMain.handle('updater:install', () => {
-        electron_updater_1.autoUpdater.quitAndInstall();
+        // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
+        electron_updater_1.autoUpdater.quitAndInstall(false, true);
     });
     // Check for updates after 5s delay
     setTimeout(() => {

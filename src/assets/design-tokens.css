@@ -748,7 +748,7 @@
   --project-indicator-size-xs: 16px;
   /* Ultra-compact - minimal UI */
   --project-indicator-size-sm: 20px;
-  /* Standard - TaskCard, TaskRow, TaskTable */
+  /* Standard - TaskCard, TaskRow */
   --project-indicator-size-md: 24px;
   /* Large - TaskNode, canvas */
   --project-indicator-size-lg: 32px;

@@ -135,9 +135,9 @@ const filterOptions = computed(() => [
 ])
 
 const densityOptions = computed(() => [
-  { label: t('filters.density_compact') || 'Compact', value: 'compact' },
-  { label: t('filters.density_comfortable') || 'Comfortable', value: 'comfortable' },
-  { label: t('filters.density_spacious') || 'Spacious', value: 'spacious' }
+  { label: 'Compact', value: 'compact' },
+  { label: 'Comfortable', value: 'comfortable' },
+  { label: 'Spacious', value: 'spacious' }
 ])
 </script>
 

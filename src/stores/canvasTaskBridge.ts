@@ -7,6 +7,11 @@
  * - sharedTasksRef: tasks array published by tasks.ts, consumed by canvas/canvasGroups.ts
  * - canvasSyncTrigger: incremented by tasks.ts on sync changes, watched by canvas orchestrator
  * - canvasUiSyncRequest: incremented by taskOperations.ts on create, watched by canvasUi.ts
+ *
+ * BUG-1717: This module uses module-level ref() calls (eagerly on import).
+ * To prevent "ref is not defined" errors from Rollup chunk-ordering races in
+ * production builds, this module is pinned to the 'vue-vendor' chunk in
+ * vite.config.ts — ensuring Vue is always initialized before this module evaluates.
  */
 import { ref } from 'vue'
 import type { Task } from '@/types/tasks'

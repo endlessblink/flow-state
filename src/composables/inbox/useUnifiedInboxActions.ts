@@ -339,6 +339,7 @@ export function useUnifiedInboxActions(
             await updateTaskWithUndo(taskId, {
                 canvasPosition,
                 parentId,
+                canvasDismissed: false,
                 ...groupProps
             })
 

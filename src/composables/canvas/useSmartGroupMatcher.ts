@@ -135,18 +135,25 @@ export function findMatchingGroupForDueDate(
   if (powerGroups.length === 0) return null
 
   // Sort by specificity - prefer more specific matches
-  // Today/Tomorrow/day-of-week are more specific than "This Week"
+  // "Today"/"Tomorrow" keywords beat day-of-week which beats "This Week"
   const sortedGroups = [...powerGroups].sort((a, b) => {
     const pkA = detectPowerKeyword(a.name)!
     const pkB = detectPowerKeyword(b.name)!
 
-    // Day-of-week and today/tomorrow are most specific
-    const specificKeywords = ['today', 'tomorrow']
-    const aIsSpecific = specificKeywords.includes(pkA.keyword) || pkA.category === 'day_of_week'
-    const bIsSpecific = specificKeywords.includes(pkB.keyword) || pkB.category === 'day_of_week'
+    // Tier 1: "today"/"tomorrow" are the most specific
+    const todayTomorrowKeywords = ['today', 'tomorrow']
+    const aIsTodayTomorrow = todayTomorrowKeywords.includes(pkA.keyword)
+    const bIsTodayTomorrow = todayTomorrowKeywords.includes(pkB.keyword)
 
-    if (aIsSpecific && !bIsSpecific) return -1
-    if (!aIsSpecific && bIsSpecific) return 1
+    if (aIsTodayTomorrow && !bIsTodayTomorrow) return -1
+    if (!aIsTodayTomorrow && bIsTodayTomorrow) return 1
+
+    // Tier 2: day-of-week groups are next
+    const aIsDayOfWeek = pkA.category === 'day_of_week'
+    const bIsDayOfWeek = pkB.category === 'day_of_week'
+
+    if (aIsDayOfWeek && !bIsDayOfWeek) return -1
+    if (!aIsDayOfWeek && bIsDayOfWeek) return 1
 
     // Among similar specificity, prefer nested (child) groups
     // A child group has a parentGroupId pointing to another group

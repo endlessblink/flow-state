@@ -5,6 +5,8 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import { formatDateKey } from '@/utils/dateUtils'
+import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
+import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/stores/tasks'
 
 // Dispatch event to trigger brief flash animation on task card
@@ -21,6 +23,13 @@ export function useTaskContextMenuActions(
     const timerStore = useTimerStore()
     const canvasStore = useCanvasStore()
     const router = useRouter()
+
+    // Lazy-init: only create when actually moving tasks to avoid startup overhead
+    let _moveComposable: ReturnType<typeof useMoveToCanvasGroup> | null = null
+    const getMoveToGroup = () => {
+        if (!_moveComposable) _moveComposable = useMoveToCanvasGroup()
+        return _moveComposable.moveToGroupWithToast
+    }
 
     const currentTask = computed(() => props.contextTask || props.task)
     const isBatchOperation = computed(() => (props.selectedCount || 0) > 1)
@@ -61,6 +70,11 @@ export function useTaskContextMenuActions(
                 }
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
+                // Auto-route to matching canvas group (day-of-week groups, etc.)
+                const matchingGroup = findMatchingGroupForDueDate(customDate, canvasStore._rawGroups)
+                if (matchingGroup) {
+                    await moveToGroupWithToast(taskId, matchingGroup.id)
+                }
             } catch (error) {
                 console.error('Error updating task due date:', error)
             }
@@ -130,6 +144,11 @@ export function useTaskContextMenuActions(
                 }
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
+                // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups)
+                const matchingGroup = findMatchingGroupForDueDate(formattedDate, canvasStore._rawGroups)
+                if (matchingGroup) {
+                    await moveToGroupWithToast(taskId, matchingGroup.id)
+                }
             } catch (error) {
                 console.error('Error setting due date:', error)
             }

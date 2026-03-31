@@ -44,6 +44,7 @@ import { useCanvasZoom } from './useCanvasZoom' // Keeping for cleanup hooks
 import { useCanvasAlignment } from './useCanvasAlignment'
 import { useCanvasConnections } from './useCanvasConnections'
 import { useCanvasEdgeSync } from './useCanvasEdgeSync'
+import { useCanvasAutoPlacement } from './useCanvasAutoPlacement'
 
 // Helper for error boundaries
 const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) => {
@@ -69,6 +70,7 @@ const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) =
 // - CanvasView remounts for any reason
 // Reconciliation should only happen on FIRST load, not repeatedly.
 let hasReconciledThisSession = false
+let hasAutoPlacedThisSession = false
 
 export function useCanvasOrchestrator() {
     const canvasStore = useCanvasStore()
@@ -80,6 +82,8 @@ export function useCanvasOrchestrator() {
 
     // Store cleanup functions for onUnmounted - must be registered synchronously
     const positionManagerUnsubscribe = ref<(() => void) | null>(null)
+
+    const { autoPlaceEligibleTasks } = useCanvasAutoPlacement()
 
     // --- 1. Core State & Vue Flow (Via useCanvasCore) ---
     const {
@@ -472,6 +476,19 @@ export function useCanvasOrchestrator() {
                     } else if (hasReconciledThisSession) {
                         if (import.meta.env.DEV) {
                             console.log('⏭️ [ORCHESTRATOR] Skipping reconciliation - already ran this session')
+                        }
+                    }
+
+                    // Auto-place inbox tasks into matching smart groups (one-time)
+                    if (!hasAutoPlacedThisSession) {
+                        hasAutoPlacedThisSession = true
+                        const autoPlacedCount = await autoPlaceEligibleTasks()
+                        if (autoPlacedCount > 0) {
+                            if (import.meta.env.DEV) {
+                                console.log(`[ORCHESTRATOR] Auto-placed ${autoPlacedCount} tasks into smart groups`)
+                            }
+                            // Re-sync to show newly placed tasks
+                            syncNodes(undefined, { force: true })
                         }
                     }
 

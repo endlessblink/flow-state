@@ -20,6 +20,28 @@
 
 ---
 
+### BUG-1737: Canvas Delete + Ctrl+Z undo unreliable — task reappears then vanishes (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: After deleting a task on canvas and pressing Ctrl+Z, the task sometimes reappears briefly then vanishes again due to race conditions in the dual-write delete architecture.
+
+**Root cause**: `deleteTask()` both enqueues a sync queue DELETE and directly soft-deletes in Supabase. Undo cancels the queue DELETE but the direct soft-delete's realtime echo re-splices the restored task. Secondary: sync queue DELETE-cancels-CREATE swallows undo's CREATE.
+
+**Files**: `src/composables/undoSingleton.ts`, `src/stores/tasks/taskOperations.ts`, `src/services/offline/writeQueueDB.ts`
+
+---
+
+### BUG-1736: Flaky E2E — "create task in Canvas → node appears" fails on WebKit (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Problem**: Playwright E2E test `crud-workflows.spec.ts:429` intermittently fails on WebKit. Likely a timing issue with Vue Flow node mounting.
+
+**Files**: `tests/e2e/crud-workflows.spec.ts`
+
+---
+
 ### ~~BUG-1735~~: KDE widget calendar block shows pomodoro time instead of scheduled duration (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-30)
@@ -3469,9 +3491,9 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
-### TASK-1471: Docker Self-Host E2E Test (📋 PLANNED)
+### TASK-1471: Docker Self-Host E2E Test (🔄 IN PROGRESS)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: 🔄 IN PROGRESS
 
 **Goal**: Verify a fresh self-hosted installation works end-to-end before sharing repo publicly.
 
@@ -4067,6 +4089,41 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 2. **useTaskEditActions.ts**: Section change now atomically sets both `parentId` and `canvasPosition` together, ensuring task becomes a proper group child on save
 
 **Files**: `src/stores/canvas/canvasGroups.ts`, `src/composables/tasks/useTaskEditActions.ts`
+
+---
+
+### BUG-1737: Canvas Delete + Ctrl+Z undo unreliable — task reappears then vanishes (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: After deleting a task on canvas and pressing Ctrl+Z, the task sometimes reappears briefly then vanishes again. Undo is unreliable.
+
+**Root cause**: Three race conditions in the dual-write delete architecture:
+1. **Realtime echo re-delete (primary)**: `deleteTask()` both enqueues a sync queue DELETE *and* directly soft-deletes in Supabase. Undo cancels the queue DELETE but the direct soft-delete already triggered a realtime echo that re-splices the restored task.
+2. **Sync queue DELETE-cancels-CREATE**: The sync orchestrator's DELETE handler proactively cancels pending CREATEs for the same entity — including the CREATE that undo just enqueued.
+3. **`deleteOperationsByType` not status-aware**: If the sync queue DELETE is already `syncing` (in-flight HTTP), deleting it from IndexedDB doesn't cancel the request.
+
+**Recommended fixes** (prioritized):
+1. Suppress realtime DELETE echoes for 5s after undo restore (`addPendingWrite` window)
+2. Make `deleteOperationsByType` status-aware (warn on `syncing` operations)
+3. Consider single-write path for DELETEs (sync queue only, no direct save)
+
+**Files**: `src/composables/undoSingleton.ts`, `src/stores/tasks/taskOperations.ts`, `src/services/offline/writeQueueDB.ts`, `src/composables/app/useAppInitialization.ts`
+
+---
+
+### BUG-1736: Flaky E2E — "create task in Canvas → node appears" fails on WebKit (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Problem**: Playwright E2E test `crud-workflows.spec.ts:429` ("create task in Canvas → node appears") intermittently fails on WebKit. Likely a timing issue — Vue Flow node mounting is slower in WebKit, or canvas ready state isn't properly awaited.
+
+**Potential fixes**:
+1. Add `waitForSelector` with longer timeout for the Vue Flow node
+2. Wait for canvas `isCanvasReady` state before interacting
+3. Skip on WebKit if it's a known platform limitation
+
+**Files**: `tests/e2e/crud-workflows.spec.ts`
 
 ---
 

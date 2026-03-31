@@ -122,8 +122,9 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
         }
 
         const target = event.target as HTMLElement
-        // Don't show menu if clicking on a task or section node
-        if (target.closest('.task-node') || target.closest('[data-id^="section-"]')) {
+        // Don't show menu if clicking on a task, section, or image node
+        // TASK-1722: Added .image-node — its context menu is handled by handleNodeContextMenu
+        if (target.closest('.task-node') || target.closest('[data-id^="section-"]') || target.closest('.image-node')) {
             return
         }
 

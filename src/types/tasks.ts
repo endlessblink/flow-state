@@ -110,6 +110,7 @@ export interface Task {
   positionVersion?: number // Version for conflict resolution
   positionFormat?: 'absolute' | 'relative' // TASK-240: Transition to relative-only
   isInInbox?: boolean // True if not yet positioned on canvas
+  canvasDismissed?: boolean // True if user explicitly removed from canvas (prevents auto-re-placement)
   dependsOn?: string[] // Task IDs this depends on
   tags?: string[] // Task labels for categorization and filtering
   connectionTypes?: { [targetTaskId: string]: 'sequential' | 'blocker' | 'reference' }

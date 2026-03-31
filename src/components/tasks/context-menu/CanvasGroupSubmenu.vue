@@ -101,15 +101,19 @@ function findGroupForDayIndex(dayIndex: number) {
 }
 
 const todayGroup = computed(() => {
+  // Prefer a group literally named "Today" over the day-of-week group
+  const byName = groups.value.find(g => g.name.toLowerCase() === 'today')
+  if (byName) return byName
   const todayIndex = new Date().getDay()
   return findGroupForDayIndex(todayIndex)
 })
 
 const tomorrowGroup = computed(() => {
+  // Prefer a group literally named "Tomorrow" over the day-of-week group
+  const byName = groups.value.find(g => g.name.toLowerCase() === 'tomorrow')
+  if (byName) return byName
   const tomorrowIndex = (new Date().getDay() + 1) % 7
-  const byDay = findGroupForDayIndex(tomorrowIndex)
-  if (byDay) return byDay
-  return groups.value.find(g => g.name.toLowerCase() === 'tomorrow') ?? null
+  return findGroupForDayIndex(tomorrowIndex)
 })
 
 const filteredGroups = computed(() => {

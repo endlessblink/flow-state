@@ -257,7 +257,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             for (const nodeId of selectedNodeIds) {
                 await undoHistory.updateTaskWithUndo(nodeId, {
                     isInInbox: true,
-                    canvasPosition: undefined
+                    canvasPosition: undefined,
+                    canvasDismissed: true
                 })
             }
             canvasStore.setSelectedNodes([])
@@ -400,9 +401,12 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                         continue
                     }
                     if (isPermanent) {
-                        await undoHistory.permanentlyDeleteTaskWithUndo(item.id)
+                        // TASK-1722: Shift+Delete skips undo stack — permanent delete, no Ctrl+Z
+                        console.log('🔴 [TASK-1722] PERMANENT delete (no undo):', item.id, item.name)
+                        await taskStore.permanentlyDeleteTask(item.id)
                     } else {
                         // BUG-1533: Was moving to inbox instead of deleting. Now actually deletes (with undo support).
+                        console.log('🗑️ [TASK-1722] Soft delete (with undo):', item.id, item.name)
                         await undoHistory.deleteTaskWithUndo(item.id)
                     }
                 }

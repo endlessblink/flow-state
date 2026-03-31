@@ -247,6 +247,7 @@ import type { Task } from '@/stores/tasks'
 // New Architecture Imports
 import { useTaskContextMenuActions } from '@/composables/tasks/useTaskContextMenuActions'
 import { useCanvasModalsStore } from '@/stores/canvas/modals'
+import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { useQuickTasks } from '@/composables/useQuickTasks'
 import { useToast } from '@/composables/useToast'
 import DueDateSubmenu from './context-menu/DueDateSubmenu.vue'
@@ -441,6 +442,11 @@ const handleDatePickerSelect = async (timestamp: number) => {
       await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })
     }
     canvasStore.requestSync('user:context-menu')
+    // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups)
+    const matchingGroup = findMatchingGroupForDueDate(formattedDate, canvasStore._rawGroups)
+    if (matchingGroup) {
+      await moveToGroupWithToast(taskId, matchingGroup.id)
+    }
   } catch (error) {
     console.error('Error updating task due date:', error)
   }

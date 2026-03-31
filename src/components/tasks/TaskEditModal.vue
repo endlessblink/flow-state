@@ -54,6 +54,13 @@
               />
             </section>
 
+            <!-- TASK-1553: Task Comments (workspace tasks only) -->
+            <TaskComments
+              v-if="editedTask.workspaceId"
+              :task-id="editedTask.id"
+              :workspace-id="editedTask.workspaceId"
+            />
+
             <!-- FEATURE-1363: Task Reminders -->
             <section class="form-section">
               <h3 class="section-title">
@@ -86,13 +93,6 @@
 
             <!-- Child Tasks (from canvas connections) -->
             <TaskEditChildTasks :child-tasks="childTasks" />
-
-            <!-- TASK-1553: Task Comments (workspace tasks only) -->
-            <TaskComments
-              v-if="editedTask.workspaceId"
-              :task-id="editedTask.id"
-              :workspace-id="editedTask.workspaceId"
-            />
 
             <!-- Left Actions (Pomodoro reset, etc.) -->
             <div v-if="showPomodoros" class="left-actions-section">

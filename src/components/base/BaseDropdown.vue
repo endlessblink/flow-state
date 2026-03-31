@@ -9,6 +9,7 @@
       aria-haspopup="listbox"
       :aria-expanded="isOpen"
       :aria-controls="dropdownId"
+      :aria-activedescendant="isOpen && focusedIndex >= 0 ? `${dropdownId}-option-${focusedIndex}` : undefined"
       @click="toggleDropdown"
       @keydown.down.prevent="openAndFocusFirst"
       @keydown.up.prevent="openAndFocusLast"
@@ -37,7 +38,6 @@
         class="dropdown-list"
         role="listbox"
         tabindex="-1"
-        :aria-activedescendant="isOpen && focusedIndex >= 0 ? `${dropdownId}-option-${focusedIndex}` : undefined"
         @keydown.down.prevent="focusNext"
         @keydown.up.prevent="focusPrevious"
         @keydown.enter.prevent="selectFocused"
@@ -77,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, useId } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
 import BasePopover from './BasePopover.vue'
 import type { Component } from 'vue'
@@ -109,7 +109,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[]]
 }>()
 
-const dropdownId = useId()
+const dropdownId = `dropdown-${Math.random().toString(36).substring(2, 9)}`
 
 const triggerElement = ref<HTMLElement>()
 const isOpen = ref(false)
@@ -172,7 +172,6 @@ const toggleDropdown = () => {
       const selectedIndex = props.options.findIndex(opt => opt.value === props.modelValue)
       focusedIndex.value = selectedIndex >= 0 ? selectedIndex : 0
     }
-    setTimeout(() => listboxElement.value?.focus(), 0)
   }
 }
 
@@ -181,7 +180,6 @@ const openAndFocusFirst = () => {
   isOpen.value = true
   calculatePopoverPosition()
   focusedIndex.value = 0
-  setTimeout(() => listboxElement.value?.focus(), 0)
 }
 
 const openAndFocusLast = () => {
@@ -189,12 +187,10 @@ const openAndFocusLast = () => {
   isOpen.value = true
   calculatePopoverPosition()
   focusedIndex.value = props.options.length - 1
-  setTimeout(() => listboxElement.value?.focus(), 0)
 }
 
 const closeDropdown = () => {
   isOpen.value = false
-  triggerElement.value?.focus()
 }
 
 const focusNext = () => {

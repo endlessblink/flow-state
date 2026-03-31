@@ -15,6 +15,9 @@ export const useProjectStore = defineStore('projects', () => {
     // Manual operation flag to prevent watch system conflicts
     const manualOperationInProgress = ref(false)
 
+    // BUG-1728: Guard against concurrent loadProjectsFromDatabase calls
+    let loadInFlightPromise: Promise<void> | null = null
+
     const GUEST_PROJECTS_KEY = 'flowstate-guest-projects'
 
     const saveProjectsToLocalStorage = () => {
@@ -103,6 +106,10 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const loadProjectsFromDatabase = async () => {
+        // BUG-1728: If a load is already in progress, return existing promise
+        if (loadInFlightPromise) return loadInFlightPromise
+
+        loadInFlightPromise = (async () => {
         isLoading.value = true
         try {
             // Guest mode: skip Supabase, start with empty projects
@@ -143,6 +150,13 @@ export const useProjectStore = defineStore('projects', () => {
             }
         } finally {
             isLoading.value = false
+        }
+        })()
+
+        try {
+            await loadInFlightPromise
+        } finally {
+            loadInFlightPromise = null
         }
     }
 

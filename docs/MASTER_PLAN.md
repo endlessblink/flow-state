@@ -90,11 +90,13 @@
 
 ---
 
-### BUG-1728: Projects store sync race condition (📋 PLANNED)
+### ~~BUG-1728~~: Projects store sync race condition (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-03-31)
 
 **Problem**: Projects store has a sync race condition — concurrent sync operations can interleave and produce inconsistent state. Needs a `syncUpdateInProgress` guard flag to prevent overlapping sync calls.
+
+**Fix**: Added promise-based deduplication to `loadProjectsFromDatabase()`. If a load is already in flight, concurrent callers await the same promise instead of starting a new one.
 
 **Files**: `src/stores/projects.ts` (or equivalent projects store)
 

@@ -23,7 +23,14 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   const isPersonalWorkspace = computed(() => activeWorkspaceId.value === null)
 
-  const shouldShowSwitcher = computed(() => workspaces.value.length > 0)
+  // TASK-1550: Guest mode isolation — true when user is not authenticated
+  const isGuestMode = computed(() => {
+    const authStore = useAuthStore()
+    return !authStore.isAuthenticated
+  })
+
+  // TASK-1555: Hide switcher when user has only 1 workspace (auto-activated, no choice to make)
+  const shouldShowSwitcher = computed(() => workspaces.value.length > 1)
 
   const activeMembers = computed(() =>
     activeWorkspaceId.value
@@ -79,6 +86,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       const lastWsId = localStorage.getItem(LAST_WORKSPACE_KEY)
       if (lastWsId && workspaces.value.some(w => w.id === lastWsId)) {
         activeWorkspaceId.value = lastWsId
+      } else if (workspaces.value.length === 1) {
+        // TASK-1555: Single-workspace users auto-land in their shared workspace
+        activeWorkspaceId.value = workspaces.value[0].id
       }
 
       console.log(`[WORKSPACE] Loaded ${workspaces.value.length} workspace(s)`)
@@ -90,6 +100,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function switchWorkspace(id: string | null) {
+    // TASK-1550: Guest mode isolation — prevent unauthenticated DB loads
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return
+
     if (id === activeWorkspaceId.value) return
 
     console.log(`[WORKSPACE] Switching: ${activeWorkspaceId.value || 'personal'} → ${id || 'personal'}`)
@@ -202,6 +216,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function loadMembers(workspaceId: string) {
+    // TASK-1550: Guest mode isolation
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return
     if (!supabase) return
 
     try {
@@ -263,7 +280,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function deleteWorkspace(id: string): Promise<boolean> {
-    if (!supabase) return false
+    // TASK-1550: Guest mode isolation
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated || !supabase) return false
 
     try {
       const { error } = await supabase
@@ -307,6 +326,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     // Computed
     activeWorkspace,
     isPersonalWorkspace,
+    isGuestMode,
     shouldShowSwitcher,
     activeMembers,
     userRole,

@@ -621,6 +621,9 @@ export const useAuthStore = defineStore('auth', () => {
       let created = 0
       let skipped = 0
 
+      // TASK-1550: Guest tasks are intentionally created WITHOUT workspace_id
+      // This ensures they land in the personal workspace (NULL = personal)
+      // and never bleed into shared workspaces
       for (const task of uniqueTasks) {
         // PRESERVE the original task ID - don't generate new ones
         const result = await db.safeCreateTask(task as Task)

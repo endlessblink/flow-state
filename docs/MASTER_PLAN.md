@@ -2725,7 +2725,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1552**~~ | **P1** | ✅ **Task assignment UI: assigned_to dropdown, avatar badges, filters** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD + realtime + UI** (✅ DONE (2026-03-31)) |
 | **TASK-1554** | **P2** | **Activity feed: logging + display** (📋 PLANNED) |
-| **TASK-1555** | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (🔄 IN PROGRESS) |
+| ~~**TASK-1555**~~ | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1556**~~ | **P1** | **Hebrew translations for all workspace strings** (✅ DONE (2026-03-17)) |
 | **TASK-1557** | **P2** | **Member management UI** (📋 PLANNED) |
 | **TASK-1558** | **P2** | **Empty states for workspaces** (📋 PLANNED) |
@@ -2781,7 +2781,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | ID | Priority | Description | Status | Depends On |
 |----|----------|-------------|--------|------------|
-| **TASK-1555** | **P1** | **Partner-friendly UX: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.** | 🔄 IN PROGRESS | TASK-1545, TASK-1551 |
+| ~~**TASK-1555**~~ | **P1** | **Partner-friendly UX: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.** | ✅ DONE (2026-04-01) | TASK-1545, TASK-1551 |
 | ~~**TASK-1556**~~ | **P1** | **Hebrew translations: Add workspaces namespace to he.json — workspace, members, invite, comments, activity feed, all new UI strings** | ✅ DONE (2026-03-17) | TASK-1545 |
 | **TASK-1557** | **P2** | **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)** | 🔄 IN PROGRESS | TASK-1539 |
 | **TASK-1558** | **P2** | **Empty states: New workspace welcome, no tasks yet, no members yet, pending invite states** | 📋 PLANNED | TASK-1545 |
@@ -2969,9 +2969,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1555: Partner-Friendly UX Polish (🔄 IN PROGRESS)
+#### ~~TASK-1555~~: Partner-Friendly UX Polish (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Depends On**: TASK-1545, TASK-1551
+**Priority**: P1 | **Status**: ✅ DONE (2026-04-01) | **Depends On**: TASK-1545, TASK-1551
 **Description**: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.
 
 ---
@@ -3785,7 +3785,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~BUG-1709~~ | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text | P2 | ✅ **DONE** |
 | ~~BUG-1710~~ | ✅ Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined) | P1 | ✅ **DONE** |
 | BUG-1711 | Tauri: Task completion celebration overlay is see-through (should be opaque) | P2 | ⏸️ **ARCHIVED** (Tauri) |
-| TASK-1712 | Tauri visual parity: task cards/UI degrade vs web app — need automated WebKitGTK visual regression | P1 | ⏸️ **ARCHIVED** (Tauri) |
+| ~~TASK-1712~~ | Tauri visual parity: task cards/UI degrade vs web app — need automated WebKitGTK visual regression | P1 | ✅ **DONE** (Tauri archived) |
 | ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
 | ~~BUG-1703~~ | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | ✅ **DONE** |
 | ~~BUG-1704~~ | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | ✅ **DONE** |
@@ -3923,7 +3923,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: Added `dir="auto"` to text-rendering elements in `BaseNavItem` (`.nav-label`), `AppHeader` (`.title-filter`), and `CanvasGroup` (`.section-name`) so the browser auto-detects base direction from the first strong character.
 - **Files**: `src/components/base/BaseNavItem.vue`, `src/layouts/AppHeader.vue`, `src/components/canvas/CanvasGroup.vue`
 
-#### TASK-1712: Tauri Visual Parity — Automated WebKitGTK Regression Testing (⏸️ ARCHIVED)
+#### ~~TASK-1712~~: Tauri Visual Parity — Automated WebKitGTK Regression Testing (✅ DONE)
 
 > ⏸️ **ARCHIVED**: Deferred to Electron migration. See [MASTER_PLAN_TAURI_ARCHIVE.md](MASTER_PLAN_TAURI_ARCHIVE.md)
 

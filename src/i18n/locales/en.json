@@ -353,6 +353,7 @@
       "title": "You've been invited to a workspace",
       "loginRequired": "Sign in to join the workspace",
       "login": "Sign In",
+      "joinWorkspace": "Join Workspace",
       "processing": "Processing invite...",
       "success": "You've joined successfully!",
       "redirecting": "Taking you to the workspace...",

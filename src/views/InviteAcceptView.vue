@@ -23,7 +23,7 @@
           <h2>{{ $t('workspaces.invite.title') }}</h2>
           <p>{{ $t('workspaces.invite.loginRequired') }}</p>
           <BaseButton variant="primary" @click="showLogin">
-            {{ $t('workspaces.invite.login') }}
+            {{ $t('workspaces.invite.joinWorkspace') }}
           </BaseButton>
         </div>
       </template>
@@ -59,7 +59,9 @@ const success = ref(false)
 const token = route.params.token as string
 
 function showLogin() {
-  uiStore.openAuthModal('login')
+  // TASK-1555: Persist invite token so post-signup redirect returns here
+  localStorage.setItem('flowstate-pending-invite', token)
+  uiStore.openAuthModal('signup', `/invite/${token}`)
 }
 
 async function acceptInvite() {
@@ -73,6 +75,7 @@ async function acceptInvite() {
 
     if (result.success && result.workspaceId) {
       success.value = true
+      localStorage.removeItem('flowstate-pending-invite')
       await workspaceStore.switchWorkspace(result.workspaceId)
       setTimeout(() => router.push('/board'), 1500)
     } else {
@@ -88,6 +91,10 @@ async function acceptInvite() {
 onMounted(() => {
   if (authStore.isAuthenticated) {
     acceptInvite()
+  }
+  // TASK-1555: Clean up persisted token reference on mount (we have it from route params)
+  if (token) {
+    localStorage.removeItem('flowstate-pending-invite')
   }
 })
 

@@ -15,36 +15,6 @@
           @touchend.stop
           @touchmove.stop
         >
-          <!-- Header: Cancel | New Task | Stop/Processing (no Add btn here) -->
-          <div class="sheet-header">
-            <button
-              class="header-btn cancel-btn"
-              :class="{ 'discard-warning': pendingDiscard }"
-              @click="handleCancel"
-            >
-              {{ pendingDiscard ? 'Discard?' : 'Cancel' }}
-            </button>
-            <h3 class="sheet-title">
-              {{ isListening ? 'Recording...' : isProcessing ? 'Processing...' : 'New Task' }}
-            </h3>
-            <!-- Show Stop when recording, spinner when processing, spacer when idle -->
-            <button
-              v-if="isListening"
-              class="header-btn stop-btn"
-              @click="emit('stopRecording')"
-            >
-              Stop
-            </button>
-            <button
-              v-else-if="isProcessing"
-              class="header-btn processing-btn"
-              disabled
-            >
-              <div class="btn-spinner" />
-            </button>
-            <div v-else class="header-spacer" />
-          </div>
-
           <!-- Create Form -->
           <div class="create-form">
             <!-- Title input — single line, large -->
@@ -174,10 +144,35 @@
               </div>
             </div>
 
-            <!-- Bottom actions: Re-record (optional) + Add Task -->
+            <!-- Bottom actions: Cancel + Record/Stop + Add Task -->
             <div class="bottom-actions">
               <button
-                v-if="canReRecord && !isListening && !isProcessing && !voiceError"
+                class="action-btn cancel-action"
+                :class="{ 'discard-warning': pendingDiscard }"
+                @click="handleCancel"
+              >
+                <span>{{ pendingDiscard ? 'Discard?' : 'Cancel' }}</span>
+              </button>
+              <!-- Stop button during recording -->
+              <button
+                v-if="isListening"
+                class="action-btn stop-action"
+                @click="emit('stopRecording')"
+              >
+                <Square :size="16" />
+                <span>Stop</span>
+              </button>
+              <!-- Processing spinner -->
+              <button
+                v-else-if="isProcessing"
+                class="action-btn processing-action"
+                disabled
+              >
+                <div class="btn-spinner-inline" />
+              </button>
+              <!-- Re-record / Record button (when idle and voice supported) -->
+              <button
+                v-else-if="canReRecord && !voiceError"
                 class="action-btn rerecord-action"
                 @click="emit('startRecording')"
               >
@@ -186,7 +181,6 @@
               </button>
               <button
                 class="action-btn add-action"
-                :class="{ 'full-width': !canReRecord || isListening || isProcessing || voiceError }"
                 :disabled="!taskTitle.trim()"
                 @click="handleCreate"
               >
@@ -554,93 +548,6 @@ function autoResizeDesc(event: Event) {
   min-height: -webkit-fill-available;
 }
 
-/* Header: Cancel | Title | Stop/Processing (spacer when idle) */
-.sheet-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  border-bottom: 1px solid var(--glass-border-light);
-  flex-shrink: 0;
-}
-
-.sheet-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin: 0;
-  flex: 1;
-  text-align: center;
-}
-
-.header-btn {
-  min-width: var(--space-16);
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  cursor: pointer;
-  transition: all var(--duration-normal) ease;
-}
-
-/* Spacer keeps "New Task" centered when no right-side button */
-.header-spacer {
-  min-width: var(--space-16);
-}
-
-.cancel-btn {
-  background: transparent;
-  color: var(--text-secondary);
-  transition: all var(--duration-normal) ease;
-}
-
-.cancel-btn:active {
-  background: var(--glass-bg-weak);
-}
-
-/* BUG-1350: Discard warning state — red text to signal destructive action */
-.cancel-btn.discard-warning {
-  color: var(--color-priority-high);
-  font-weight: var(--font-bold);
-  animation: discard-pulse 0.3s ease-out;
-}
-
-@keyframes discard-pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-.stop-btn {
-  background: var(--color-priority-high);
-  color: var(--text-primary);
-}
-
-.stop-btn:active {
-  transform: scale(0.96);
-  background: var(--color-priority-high);
-}
-
-.processing-btn {
-  background: var(--glass-bg-soft);
-  color: var(--brand-primary);
-  border: 1px solid var(--brand-primary);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-spinner {
-  width: var(--icon-xl);
-  height: var(--icon-xl);
-  border: 2px solid var(--overlay-component-bg-lighter);
-  border-top-color: var(--surface-secondary);
-  border-radius: var(--radius-full);
-  animation: spin 0.8s linear infinite;
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -651,8 +558,7 @@ function autoResizeDesc(event: Event) {
 .create-form {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3);
-  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-4) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -1009,8 +915,51 @@ function autoResizeDesc(event: Event) {
   cursor: not-allowed;
 }
 
-.add-action.full-width {
-  flex: 1;
+/* Cancel button in bottom row */
+.cancel-action {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+
+.cancel-action:active {
+  background: var(--glass-bg-weak);
+}
+
+.cancel-action.discard-warning {
+  color: var(--color-priority-high);
+  border-color: var(--color-priority-high);
+  font-weight: var(--font-bold);
+  animation: discard-pulse 0.3s ease-out;
+}
+
+@keyframes discard-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Stop button during recording */
+.stop-action {
+  background: var(--danger-bg-subtle);
+  border: 1px solid var(--danger-border-strong);
+  color: var(--color-priority-high);
+}
+
+/* Processing spinner in bottom row */
+.processing-action {
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.btn-spinner-inline {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border: 2px solid var(--overlay-component-bg-lighter);
+  border-top-color: var(--brand-primary);
+  border-radius: var(--radius-full);
+  animation: spin 0.8s linear infinite;
 }
 
 /* ================================
@@ -1054,10 +1003,6 @@ function autoResizeDesc(event: Event) {
 }
 
 /* RTL Support */
-[dir="rtl"] .sheet-header {
-  direction: rtl;
-}
-
 [dir="rtl"] .option-group {
   direction: rtl;
 }

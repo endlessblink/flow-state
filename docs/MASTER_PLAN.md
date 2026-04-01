@@ -1870,7 +1870,7 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 - [x] ~~**TASK-1329**~~: ✅ Fix mixed-language responses — localized pipeline headers (preDigestedReasoning, reasoningDirective, contextOptimizer), localized ReAct tool feedback injection, added ReAct language retry loop, added agent chain language directive. 8 gaps identified, 6 high/medium fixed. (✅ DONE 2026-02-23)
 - [x] ~~**TASK-1330**~~: ✅ Improve prompt quality — 14-finding audit: consolidated 6 contradictory length instructions into 1 canonical rule, disambiguated 3 overlapping tools, slimmed tool feedback (~600 tokens/step saved), expanded intent classifier (13→25 tools), removed anti-fluff contradictions, fixed personality prompt override, fixed field name mismatches in pre-digested reasoning, removed broad keywords, added agent chain language awareness. (✅ DONE 2026-02-23)
 - [x] ~~**TASK-1331**~~: ✅ Weekly plan AI quality — 7-gap audit: (1) pass BehavioralContext through chat tool path, (2) resolve project names for batching, (3) replace plan digest/directive short-circuits with structured scheduling facts, (4) agent chain passes frontload preference when 3+ overdue, (5) enriched chain prompt with per-day distribution + unscheduled, (6) added on_hold/future-dated task filters, (7) skip past weekdays in chat-triggered plans. (✅ DONE 2026-02-25)
-- [ ] **TASK-1332**: Add Kimi K2 to Groq model dropdown — ✅ DONE (added `moonshotai/kimi-k2-instruct-0905`)
+- [x] ~~**TASK-1332**~~: ✅ Add Kimi K2 to Groq model dropdown — DONE (added `moonshotai/kimi-k2-instruct-0905`)
 - [ ] **TASK-1363**: AI chat shows done tasks + raw UUIDs + unstructured verbose responses — filter done from list/search by default, hide IDs from AI output, tighten response formatting rules
 - [x] ~~**BUG-1374**~~: ✅ AI Chat 4-bug combo — (1) English input → Hebrew response (task data context overrides language), (2) Hebrew text renders LTR (Step indicator breaks `dir="auto"`), (3) fluffy generic advice instead of concise analysis, (4) wrong tasks returned (`list_tasks` has no date/priority filter). Pipeline + prompt-level fixes all applied 2026-02-21. (✅ DONE 2026-02-21)
 
@@ -3402,8 +3402,8 @@ Enables Claude agents to implement code changes using git worktrees for isolatio
 |------|----------|-------------|
 | ~~BUG-1113~~ | P0 | ✅ Stale worktrees not cleaned up - forces Claude Code context bloat |
 | BUG-1019 | P0 | Swarm agent cleanup + OOM prevention |
-| TASK-321 | P2 | 🔄 Test merge/discard workflow E2E |
-| TASK-322 | P2 | Automatic error recovery (exponential backoff, partial progress) |
+| ~~TASK-321~~ | P2 | ✅ Test merge/discard workflow E2E |
+| TASK-322 | P2 | 🔄 IN PROGRESS — Automatic error recovery (exponential backoff, partial progress) |
 | FEATURE-1013 | P2 | Auto-detect data layer (Pinia, Supabase) |
 | FEATURE-1014 | P2 | Smart questions with pros/cons |
 | FEATURE-1015 | P2 | Project context caching |

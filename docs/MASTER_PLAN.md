@@ -2664,7 +2664,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1550** | **P1** | **Guest mode isolation for workspace feature** (📋 PLANNED) |
 | ~~**TASK-1551**~~ | **P1** | **Invite flow: generate link, accept via Edge Function, /#/invite/:token route** (✅ DONE (2026-03-17)) |
 | **TASK-1552** | **P1** | **Task assignment UI: assigned_to dropdown, avatar badges, filters** (📋 PLANNED) |
-| **TASK-1553** | **P1** | **Task comments: CRUD + realtime + UI** (📋 PLANNED) |
+| ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD + realtime + UI** (✅ DONE (2026-03-31)) |
 | **TASK-1554** | **P2** | **Activity feed: logging + display** (📋 PLANNED) |
 | **TASK-1555** | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (📋 PLANNED) |
 | ~~**TASK-1556**~~ | **P1** | **Hebrew translations for all workspace strings** (✅ DONE (2026-03-17)) |
@@ -2715,7 +2715,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 |----|----------|-------------|--------|------------|
 | ~~**TASK-1551**~~ | **P1** | **Invite flow: Generate invite link (workspace_invites table), copy/share UI, route /#/invite/:token, accept-invite Edge Function (SECURITY DEFINER — must add user to workspace_members server-side, chicken-and-egg problem)** | ✅ DONE (2026-03-17) | TASK-1539 |
 | **TASK-1552** | **P1** | **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter** | 📋 PLANNED | TASK-1539, TASK-1551 |
-| **TASK-1553** | **P1** | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel** | 🔄 IN PROGRESS | TASK-1548 |
+| ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel + simplified workspace edit modal** | ✅ DONE (2026-03-31) | TASK-1548 |
 | **TASK-1554** | **P2** | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI** | 📋 PLANNED | TASK-1539 |
 
 ### Phase 4: Partner UX & Polish
@@ -2888,14 +2888,18 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1553: Task Comments — CRUD + Realtime Thread UI (🔄 IN PROGRESS)
+#### ~~TASK-1553~~: Task Comments — CRUD + Realtime Thread UI + Workspace Edit Modal (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Depends On**: TASK-1548
-**Description**: Full CRUD for `task_comments` with real-time updates via Supabase Realtime. Comment thread UI inside the task detail panel, supporting add, edit, and delete operations.
+**Priority**: P1 | **Status**: ✅ DONE (2026-03-31) | **Depends On**: TASK-1548
+**Description**: Full CRUD for `task_comments` with real-time updates via Supabase Realtime. Comment thread UI inside the task detail panel. Simplified workspace edit modal with collaboration bar (assignee, status, due date pills), workspace context strip, "More options" disclosure, and permission gating.
 
 - [x] `src/types/workspace.ts` — `TaskComment` interface appended
 - [x] `src/composables/supabase/useTaskComments.ts` — composable with fetchComments, addComment, updateComment, deleteComment, subscribeToComments
-- [ ] Vue component for comment thread UI (future subtask)
+- [x] `src/components/tasks/edit/TaskComments.vue` — comment thread with realtime, optimistic CRUD, initials avatars, hover edit/delete
+- [x] Simplified workspace edit modal (5-zone layout, collab bar, "More options" disclosure)
+- [x] Workspace switch redirects from Canvas to Catalog
+- [x] Production DB columns fixed (`is_deleted`, `reply_to_comment_id`)
+- [x] E2E tests for workspace and personal task flows
 
 ---
 

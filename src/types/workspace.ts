@@ -51,3 +51,21 @@ export interface TaskComment {
   userName?: string
   userEmail?: string
 }
+
+// TASK-1554: Workspace Activity Feed
+export type ActivityAction = 'task_created' | 'task_completed' | 'comment_added' | 'member_joined' | 'member_removed' | 'role_changed' | 'ownership_transferred'
+export type ActivityEntityType = 'task' | 'comment' | 'member'
+
+export interface WorkspaceActivity {
+  id: string
+  workspaceId: string
+  userId: string
+  action: ActivityAction
+  entityType: ActivityEntityType
+  entityId: string | null
+  metadata: Record<string, unknown>
+  createdAt: Date
+  // Populated from member lookup
+  userName?: string
+  userEmail?: string
+}

@@ -235,6 +235,19 @@ export function useTaskOperations(
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
 
+            // TASK-1554: Log activity for workspace tasks (fire-and-forget)
+            if (newTask.workspaceId) {
+                import('@/composables/supabase/useWorkspaceActivity').then(({ useWorkspaceActivity }) => {
+                    useWorkspaceActivity().logActivity(
+                        newTask.workspaceId!,
+                        'task_created',
+                        'task',
+                        newTask.id,
+                        { title: newTask.title?.slice(0, 100) }
+                    )
+                }).catch(() => {})
+            }
+
             return newTask
         } catch (error) {
             // Only reaches here if sync queue AND cache both failed (extremely unlikely)
@@ -423,6 +436,19 @@ export function useTaskOperations(
                     // Prevents duplicate-looking entries when recurring parent (done) + clone both show
                     updates.isInInbox = false
                     console.log(`✅ [DONE-ZONE] Task "${task.title?.slice(0, 30)}" marked done, completedAt set, inbox cleared`)
+
+                    // TASK-1554: Log activity for workspace tasks (fire-and-forget)
+                    if (task.workspaceId) {
+                        import('@/composables/supabase/useWorkspaceActivity').then(({ useWorkspaceActivity }) => {
+                            useWorkspaceActivity().logActivity(
+                                task.workspaceId!,
+                                'task_completed',
+                                'task',
+                                taskId,
+                                { title: task.title?.slice(0, 100) }
+                            )
+                        }).catch(() => {})
+                    }
 
                     // BUG-1303: Stop timer if it's running on the completed task
                     // BUG-1569: Dynamic import to break circular dependency
@@ -863,32 +889,20 @@ export function useTaskOperations(
             throw localSaveError
         }
 
-        // TASK-1159: Background sync — enqueue + direct delete, don't block UI
-        // Errors here show a warning toast but don't throw (task already removed locally)
+        // BUG-1737: Single-write path — sync queue is the SOLE path to Supabase for deletes.
+        // Previously also called deleteTaskFromStorage() directly, creating a dual-write race
+        // where undo couldn't cleanly cancel both the queue DELETE and the direct DELETE.
         try {
-            // TASK-1177: Queue deletion for offline-first sync
-            try {
-                const syncOrchestrator = useSyncOrchestrator()
-                await syncOrchestrator.enqueue({
-                    entityType: 'task',
-                    operation: 'delete',
-                    entityId: taskId,
-                    payload: { id: taskId },
-                    baseVersion: deletedTask.positionVersion || 0
-                })
-            } catch (queueError) {
-                console.warn('[SYNC-QUEUE] Failed to queue delete, falling back to direct delete:', queueError)
-            }
-
-            // Also attempt direct delete for immediate sync when online
-            await deleteTaskFromStorage(taskId)
-            if (import.meta.env.DEV) {
-                console.log(`[BUG-1451] deleteTask: ${taskId.slice(0, 8)} soft-deleted in Supabase`)
-            }
-        } catch (bgError) {
-            // TASK-1159: Background delete failed — task is already removed from UI.
-            // Sync queue will retry. Show warning toast so user knows.
-            console.warn(`⚠️ [DELETE] Background delete failed for ${taskId}, sync will retry:`, bgError)
+            const syncOrchestrator = useSyncOrchestrator()
+            await syncOrchestrator.enqueue({
+                entityType: 'task',
+                operation: 'delete',
+                entityId: taskId,
+                payload: { id: taskId },
+                baseVersion: deletedTask.positionVersion || 0
+            })
+        } catch (queueError) {
+            console.warn(`⚠️ [DELETE] Failed to queue delete for ${taskId.slice(0, 8)}, sync will retry:`, queueError)
             const { showToast } = useToast()
             showToast('Delete will sync when connection restores', 'warning')
         } finally {

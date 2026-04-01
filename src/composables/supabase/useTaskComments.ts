@@ -207,6 +207,19 @@ export function useTaskComments() {
         c.id === optimisticId ? confirmed : c
       )
 
+      // TASK-1554: Log activity for workspace comments (fire-and-forget)
+      if (workspaceId) {
+        import('./useWorkspaceActivity').then(({ useWorkspaceActivity }) => {
+          useWorkspaceActivity().logActivity(
+            workspaceId!,
+            'comment_added',
+            'comment',
+            confirmed.id,
+            { taskId, snippet: content.slice(0, 80) }
+          )
+        }).catch(() => {})
+      }
+
       return confirmed
     } catch (e: unknown) {
       // Roll back optimistic entry

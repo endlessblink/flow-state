@@ -79,9 +79,9 @@
 
 ---
 
-### BUG-1737: Canvas Delete + Ctrl+Z undo unreliable — task reappears then vanishes (📋 PLANNED)
+### BUG-1737: Canvas Delete + Ctrl+Z undo unreliable — task reappears then vanishes (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
 
 **Problem**: After deleting a task on canvas and pressing Ctrl+Z, the task sometimes reappears briefly then vanishes again due to race conditions in the dual-write delete architecture.
 
@@ -2724,7 +2724,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1551**~~ | **P1** | **Invite flow: generate link, accept via Edge Function, /#/invite/:token route** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1552**~~ | **P1** | ✅ **Task assignment UI: assigned_to dropdown, avatar badges, filters** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD + realtime + UI** (✅ DONE (2026-03-31)) |
-| **TASK-1554** | **P2** | **Activity feed: logging + display** (📋 PLANNED) |
+| ~~**TASK-1554**~~ | **P2** | **Activity feed: logging + display** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1555**~~ | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1556**~~ | **P1** | **Hebrew translations for all workspace strings** (✅ DONE (2026-03-17)) |
 | **TASK-1557** | **P2** | **Member management UI** (📋 PLANNED) |
@@ -2775,7 +2775,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1551**~~ | **P1** | **Invite flow: Generate invite link (workspace_invites table), copy/share UI, route /#/invite/:token, accept-invite Edge Function (SECURITY DEFINER — must add user to workspace_members server-side, chicken-and-egg problem)** | ✅ DONE (2026-03-17) | TASK-1539 |
 | ~~**TASK-1552**~~ | **P1** | ✅ **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter** | ✅ DONE (2026-04-01) | TASK-1539, TASK-1551 |
 | ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel + simplified workspace edit modal** | ✅ DONE (2026-03-31) | TASK-1548 |
-| **TASK-1554** | **P2** | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI** | 🔄 IN PROGRESS | TASK-1539 |
+| ~~**TASK-1554**~~ | **P2** | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI** | ✅ DONE (2026-04-01) | TASK-1539 |
 
 ### Phase 4: Partner UX & Polish
 
@@ -2962,7 +2962,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1554: Activity Feed — workspace_activity Log + UI (📋 PLANNED)
+#### ~~TASK-1554~~: Activity Feed — workspace_activity Log + UI (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-01) | **Depends On**: TASK-1539
 **Description**: Log writes to `workspace_activity` for events: `task_created`, `task_completed`, `comment_added`, `member_joined`. Sidebar panel or dedicated view with activity feed UI showing recent workspace events.
@@ -4157,9 +4157,9 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-### BUG-1737: Canvas Delete + Ctrl+Z undo unreliable — task reappears then vanishes (📋 PLANNED)
+### BUG-1737: Canvas Delete + Ctrl+Z undo unreliable — task reappears then vanishes (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
 
 **Problem**: After deleting a task on canvas and pressing Ctrl+Z, the task sometimes reappears briefly then vanishes again. Undo is unreliable.
 

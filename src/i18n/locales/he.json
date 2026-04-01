@@ -310,6 +310,7 @@
     "tab_data": "נתונים וגיבוי",
     "tab_account": "חשבון",
     "tab_ai_quality": "איכות AI",
+    "tab_workspace": "סביבת עבודה",
     "interface_settings": "הגדרות ממשק",
     "sound_effects": "אפקטי קול",
     "test_start_sound": "בדוק צליל התחלה",
@@ -371,8 +372,35 @@
       "noTasks": "אין משימות עדיין",
       "inviteMembers": "הזמן חברי צוות"
     },
+    "activity": {
+      "title": "פעילות",
+      "loading": "טוען פעילות...",
+      "empty": "אין פעילות עדיין",
+      "actions": {
+        "task_created": "יצר/ה משימה",
+        "task_completed": "השלים/ה משימה",
+        "comment_added": "הוסיף/ה תגובה",
+        "member_joined": "הצטרף/ה לסביבת העבודה",
+        "member_removed": "הסיר/ה חבר/ה",
+        "role_changed": "שינה/תה תפקיד של חבר/ה",
+        "ownership_transferred": "העביר/ה בעלות"
+      }
+    },
     "deleteTitle": "מחיקת סביבת עבודה",
-    "deleteConfirm": "למחוק את סביבת העבודה \"{name}\"? לא ניתן לבטל פעולה זו."
+    "deleteConfirm": "למחוק את סביבת העבודה \"{name}\"? לא ניתן לבטל פעולה זו.",
+    "removeMember": "הסר חבר/ה",
+    "removeMemberConfirm": "להסיר את {name} מסביבת העבודה?",
+    "removeMemberDescription": "הגישה שלהם לכל המשימות והנתונים תבוטל.",
+    "changeRole": "שנה תפקיד",
+    "transferOwnership": "העבר בעלות",
+    "transferOwnershipConfirm": "להעביר בעלות ל{name}?",
+    "transferOwnershipDescription": "תהפוך/י למנהל/ת. לא ניתן לבטל פעולה זו.",
+    "leaveWorkspace": "עזוב סביבת עבודה",
+    "leaveWorkspaceConfirm": "לעזוב את סביבת העבודה?",
+    "leaveWorkspaceDescription": "תאבד/י גישה לכל המשימות והנתונים.",
+    "dangerZone": "אזור מסוכן",
+    "you": "(את/ה)",
+    "personalOnly": "ניהול חברים זמין בסביבות עבודה משותפות."
   },
   "auth": {
     "displayName": "שם תצוגה",

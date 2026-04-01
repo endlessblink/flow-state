@@ -18,6 +18,7 @@
         <SidebarProjectsSection />
       </div>
 
+      <SidebarActivityFeed />
       <SidebarUserFooter />
     </aside>
   </Transition>
@@ -34,6 +35,7 @@ import SidebarSmartViews from '@/components/sidebar/SidebarSmartViews.vue'
 import SidebarDurationSection from '@/components/sidebar/SidebarDurationSection.vue'
 import SidebarProjectsSection from '@/components/sidebar/SidebarProjectsSection.vue'
 import SidebarUserFooter from '@/components/sidebar/SidebarUserFooter.vue'
+import SidebarActivityFeed from '@/components/workspace/SidebarActivityFeed.vue'
 
 const uiStore = useUIStore()
 const workspaceStore = useWorkspaceStore()

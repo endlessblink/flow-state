@@ -310,6 +310,7 @@
     "tab_data": "Data & Backup",
     "tab_account": "Account",
     "tab_ai_quality": "AI Quality",
+    "tab_workspace": "Workspace",
     "interface_settings": "Interface Settings",
     "sound_effects": "Sound effects",
     "test_start_sound": "Test start sound",
@@ -371,8 +372,35 @@
       "noTasks": "No tasks yet",
       "inviteMembers": "Invite team members"
     },
+    "activity": {
+      "title": "Activity",
+      "loading": "Loading activity...",
+      "empty": "No activity yet",
+      "actions": {
+        "task_created": "created a task",
+        "task_completed": "completed a task",
+        "comment_added": "added a comment",
+        "member_joined": "joined the workspace",
+        "member_removed": "removed a member",
+        "role_changed": "changed a member's role",
+        "ownership_transferred": "transferred ownership"
+      }
+    },
     "deleteTitle": "Delete Workspace",
-    "deleteConfirm": "Delete workspace \"{name}\"? This cannot be undone."
+    "deleteConfirm": "Delete workspace \"{name}\"? This cannot be undone.",
+    "removeMember": "Remove member",
+    "removeMemberConfirm": "Remove {name} from this workspace?",
+    "removeMemberDescription": "They will lose access to all workspace tasks and data.",
+    "changeRole": "Change role",
+    "transferOwnership": "Transfer ownership",
+    "transferOwnershipConfirm": "Transfer ownership to {name}?",
+    "transferOwnershipDescription": "You will become an admin. This action cannot be undone.",
+    "leaveWorkspace": "Leave workspace",
+    "leaveWorkspaceConfirm": "Leave this workspace?",
+    "leaveWorkspaceDescription": "You will lose access to all workspace tasks and data.",
+    "dangerZone": "Danger Zone",
+    "you": "(you)",
+    "personalOnly": "Member management is available in shared workspaces."
   },
   "auth": {
     "displayName": "Display Name",

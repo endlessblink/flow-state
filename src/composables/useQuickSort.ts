@@ -288,7 +288,7 @@ export function useQuickSort() {
     // only fires inside updateTask on a status transition to 'done')
     await taskStore.updateTask(taskId, { status: 'done' })
     // Delete the task - MUST await so task is removed before advancing
-    await taskStore.deleteTask(taskId)
+    await taskStore.deleteTask(taskId, 'quicksort')
     advanceToNextTask()
   }
 

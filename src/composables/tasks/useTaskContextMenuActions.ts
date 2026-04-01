@@ -73,7 +73,7 @@ export function useTaskContextMenuActions(
                 // Auto-route to matching canvas group (day-of-week groups, etc.)
                 const matchingGroup = findMatchingGroupForDueDate(customDate, canvasStore._rawGroups)
                 if (matchingGroup) {
-                    await moveToGroupWithToast(taskId, matchingGroup.id)
+                    await getMoveToGroup()(taskId, matchingGroup.id)
                 }
             } catch (error) {
                 console.error('Error updating task due date:', error)
@@ -147,7 +147,7 @@ export function useTaskContextMenuActions(
                 // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups)
                 const matchingGroup = findMatchingGroupForDueDate(formattedDate, canvasStore._rawGroups)
                 if (matchingGroup) {
-                    await moveToGroupWithToast(taskId, matchingGroup.id)
+                    await getMoveToGroup()(taskId, matchingGroup.id)
                 }
             } catch (error) {
                 console.error('Error setting due date:', error)

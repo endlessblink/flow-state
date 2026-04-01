@@ -964,7 +964,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           }
         }
 
-        await taskStore.deleteTask(taskId)
+        await taskStore.deleteTask(taskId, 'ai-tools')
 
         return {
           success: true,

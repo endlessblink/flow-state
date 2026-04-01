@@ -12,10 +12,13 @@ import { ref, onMounted, computed } from 'vue'
 import { Download, X, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-vue-next'
 import { NButton, NCard, NText, NProgress } from 'naive-ui'
 import { useTauriUpdater } from '@/composables/useTauriUpdater'
+import { useElectronUpdater } from '@/composables/useElectronUpdater'
 import { isTauri } from '@/composables/useTauriStartup'
+import { isElectron } from '@/utils/platform'
 import { useSettingsStore } from '@/stores/settings'
 
-// --- State ---
+// --- State --- Use the right updater based on platform
+const updater = isElectron() ? useElectronUpdater() : useTauriUpdater()
 const {
   status,
   updateInfo,
@@ -24,13 +27,15 @@ const {
   checkForUpdates,
   downloadAndInstall,
   restart
-} = useTauriUpdater()
+} = updater
 
 const dismissed = ref(false)
 
 // --- Computed ---
+const isDesktopApp = computed(() => isTauri() || isElectron())
+
 const showNotification = computed(() => {
-  if (!isTauri() || dismissed.value) return false
+  if (!isDesktopApp.value || dismissed.value) return false
   // Show when: update available, downloading, ready to install, or error
   return ['available', 'downloading', 'ready', 'error'].includes(status.value)
 })
@@ -112,8 +117,8 @@ const handleRetry = async () => {
 
 // --- Lifecycle ---
 onMounted(async () => {
-  console.log('[TauriUpdater] TauriUpdateNotification mounted, isTauri:', isTauri())
-  if (!isTauri()) return
+  console.log('[UpdateNotification] mounted, isTauri:', isTauri(), 'isElectron:', isElectron())
+  if (!isDesktopApp.value) return
 
   // Check for updates after a short delay to not block startup
   setTimeout(() => {

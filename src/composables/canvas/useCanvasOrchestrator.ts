@@ -479,18 +479,10 @@ export function useCanvasOrchestrator() {
                         }
                     }
 
-                    // Auto-place inbox tasks into matching smart groups (one-time)
-                    if (!hasAutoPlacedThisSession) {
-                        hasAutoPlacedThisSession = true
-                        const autoPlacedCount = await autoPlaceEligibleTasks()
-                        if (autoPlacedCount > 0) {
-                            if (import.meta.env.DEV) {
-                                console.log(`[ORCHESTRATOR] Auto-placed ${autoPlacedCount} tasks into smart groups`)
-                            }
-                            // Re-sync to show newly placed tasks
-                            syncNodes(undefined, { force: true })
-                        }
-                    }
+                    // Auto-place disabled: tasks should only appear on canvas via explicit user action
+                    // (context menu "Canvas Group", due-date auto-routing, or drag-and-drop)
+                    // Previously: autoPlaceEligibleTasks() ran here on every app load
+                    hasAutoPlacedThisSession = true
 
                     // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)
                     canvasStore.recalculateAllTaskCounts(taskStore.tasks)

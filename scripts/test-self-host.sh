@@ -191,7 +191,7 @@ while [ $elapsed -lt $HEALTH_TIMEOUT ]; do
             process.stdin.on('end',()=>{
                 try {
                     const svcs=d.trim().split('\n').filter(Boolean).map(l=>JSON.parse(l));
-                    const bad=svcs.filter(s=>s.Health!=='healthy'&&s.State==='running');
+                    const bad=svcs.filter(s=>s.Health!=='healthy'&&s.State==='running'&&s.Service!=='migrate');
                     process.stdout.write(String(bad.length));
                 } catch(e) { process.stdout.write('?'); }
             });

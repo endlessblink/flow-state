@@ -2,15 +2,16 @@
 set -euo pipefail
 
 # FlowState Database Initializer
-# Runs all migrations in order on first boot.
-# Skips if the migrations have already been applied (checks for public.tasks table).
+# Runs during DB container init (docker-entrypoint-initdb.d).
+# Only creates roles, schemas, extensions, and the realtime publication.
+# FlowState migrations run AFTER GoTrue starts (see 'migrate' service in docker-compose.self-host.yml).
 
-PGHOST="${POSTGRES_HOST:-db}"
+# When running as docker-entrypoint-initdb.d script, connect via Unix socket
+PGHOST="${POSTGRES_HOST:-/var/run/postgresql}"
 PGPORT="${POSTGRES_PORT:-5432}"
 PGUSER="${POSTGRES_USER:-supabase_admin}"
 PGPASSWORD="${POSTGRES_PASSWORD}"
 PGDATABASE="${POSTGRES_DB:-postgres}"
-MIGRATIONS_DIR="/docker-entrypoint-initdb.d/migrations"
 
 export PGPASSWORD
 
@@ -34,86 +35,90 @@ wait_for_db() {
     log "PostgreSQL is ready."
 }
 
-# Check if migrations have already been applied
-check_already_migrated() {
-    local result
-    result=$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tAc \
-        "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='tasks');" 2>/dev/null || echo "f")
-    if [ "$result" = "t" ]; then
-        return 0  # Already migrated
-    fi
-    return 1  # Not yet migrated
-}
+create_roles() {
+    log "Creating required Supabase service roles and schemas..."
+    psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" <<SQL
+-- Create schemas
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE SCHEMA IF NOT EXISTS _realtime;
+CREATE SCHEMA IF NOT EXISTS storage;
+CREATE SCHEMA IF NOT EXISTS extensions;
 
-run_migrations() {
-    if [ ! -d "$MIGRATIONS_DIR" ]; then
-        log "ERROR: Migrations directory not found: ${MIGRATIONS_DIR}"
-        exit 1
-    fi
+-- Enable extensions (pgjwt may not be bundled in all images — GoTrue handles JWT internally)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" SCHEMA extensions;
+DO \$ext\$ BEGIN CREATE EXTENSION IF NOT EXISTS "pgjwt" SCHEMA extensions; EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'pgjwt not available, skipping'; END \$ext\$;
 
-    # Ordered migration files - these must run in sequence
-    local migrations=(
-        "20260105000000_initial_schema.sql"
-        "20260106000000_fix_id_types.sql"
-        "20260109000000_enable_rls_security.sql"
-        "20260111000000_add_position_versions.sql"
-        "20260112000000_position_versioning_triggers.sql"
-        "20260120000000_add_groups_deleted_at.sql"
-        "20260120000001_create_tombstones.sql"
-        "20260120000002_immutable_task_ids.sql"
-        "20260124000000_add_task_scheduling_columns.sql"
-        "20260126000000_add_done_for_now_column.sql"
-        "20260131000000_gamification.sql"
-        "20260206163002_challenges.sql"
-        "20260208151150_quick_tasks.sql"
-        "20260212000000_arena.sql"
-        "20260214000000_create_ai_work_profiles.sql"
-        "20260214100000_add_memory_graph_to_ai_work_profiles.sql"
-        "20260217000000_push_subscriptions.sql"
-        "20260218000000_ai_sync.sql"
-        "20260219000000_task_reminders.sql"
-        "20260221000000_add_personal_context_to_work_profiles.sql"
-        "20260222000001_recurrence_rule.sql"
-        "20260223000000_add_task_attachments.sql"
-        "20260304000000_tombstone_rls_update_policy.sql"
-        "20260305000000_add_whatsapp_conversations.sql"
-    )
+-- Make extensions available in search path
+ALTER DATABASE postgres SET search_path TO public, extensions;
 
-    local total=${#migrations[@]}
-    local count=0
+-- Create roles (idempotent)
+DO \$\$
+BEGIN
+  -- Auth admin
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
+    CREATE ROLE supabase_auth_admin LOGIN PASSWORD '${POSTGRES_PASSWORD}' CREATEROLE;
+  ELSE
+    ALTER ROLE supabase_auth_admin WITH PASSWORD '${POSTGRES_PASSWORD}';
+  END IF;
 
-    for migration in "${migrations[@]}"; do
-        count=$((count + 1))
-        local filepath="${MIGRATIONS_DIR}/${migration}"
+  -- Authenticator (PostgREST entry point)
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
+    CREATE ROLE authenticator LOGIN PASSWORD '${POSTGRES_PASSWORD}' NOINHERIT;
+  ELSE
+    ALTER ROLE authenticator WITH PASSWORD '${POSTGRES_PASSWORD}';
+  END IF;
 
-        if [ ! -f "$filepath" ]; then
-            log "WARNING: Migration file not found, skipping: ${migration}"
-            continue
-        fi
+  -- anon
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon NOLOGIN;
+  END IF;
 
-        log "[${count}/${total}] Running: ${migration}"
-        if ! psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
-            -v ON_ERROR_STOP=1 -f "$filepath" > /dev/null 2>&1; then
-            log "ERROR: Migration failed: ${migration}"
-            log "Attempting to show error details..."
-            psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
-                -v ON_ERROR_STOP=1 -f "$filepath" 2>&1 || true
-            exit 1
-        fi
-        log "[${count}/${total}] OK: ${migration}"
-    done
+  -- authenticated
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+    CREATE ROLE authenticated NOLOGIN;
+  END IF;
 
-    log "All ${total} migrations applied successfully."
+  -- service_role
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN
+    CREATE ROLE service_role NOLOGIN BYPASSRLS;
+  END IF;
+
+  -- Storage admin
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
+    CREATE ROLE supabase_storage_admin LOGIN PASSWORD '${POSTGRES_PASSWORD}';
+  END IF;
+
+  -- Realtime admin
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_realtime_admin') THEN
+    CREATE ROLE supabase_realtime_admin LOGIN PASSWORD '${POSTGRES_PASSWORD}';
+  END IF;
+END
+\$\$;
+
+-- Grants
+GRANT anon, authenticated, service_role TO authenticator;
+GRANT ALL ON SCHEMA auth TO supabase_auth_admin;
+ALTER SCHEMA auth OWNER TO supabase_auth_admin;
+GRANT ALL ON SCHEMA public TO anon, authenticated, service_role, supabase_auth_admin;
+ALTER SCHEMA _realtime OWNER TO supabase_realtime_admin;
+ALTER SCHEMA storage OWNER TO supabase_storage_admin;
+
+-- supabase_auth_admin needs CREATE on public for schema_migrations table
+GRANT CREATE ON SCHEMA public TO supabase_auth_admin;
+
+-- Create Realtime publication so migrations can add tables to it
+CREATE PUBLICATION IF NOT EXISTS supabase_realtime;
+
+-- Allow auth admin to manage auth schema tables
+ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT ALL ON TABLES TO supabase_auth_admin;
+ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT ALL ON SEQUENCES TO supabase_auth_admin;
+ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT ALL ON FUNCTIONS TO supabase_auth_admin;
+SQL
+    log "Roles and schemas created successfully."
 }
 
 # Main
 wait_for_db
-
-if check_already_migrated; then
-    log "Database already initialized (public.tasks exists). Skipping migrations."
-    exit 0
-fi
-
-log "First boot detected. Running migrations..."
-run_migrations
-log "Database initialization complete."
+create_roles
+log "Database pre-init complete. FlowState migrations will run after GoTrue starts (see 'migrate' service)."

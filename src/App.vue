@@ -29,8 +29,8 @@
         <FaviconManager />
         <!-- PWA Reload Prompt (Browser/PWA Only — not native apps) -->
         <ReloadPrompt v-if="!isTauriApp && !isCapacitorApp" />
-        <!-- Tauri Update Notification (Desktop Only) -->
-        <TauriUpdateNotification v-if="isTauriApp" />
+        <!-- Desktop Update Notification (Tauri + Electron) -->
+        <TauriUpdateNotification v-if="isTauriApp || isElectronApp" />
         <!-- FEATURE-1201: Onboarding Wizard (first-time visitors, desktop + mobile) -->
         <OnboardingWizard />
         <!-- TASK-1350: AI Setup Wizard (first-time AI provider setup) -->
@@ -130,6 +130,7 @@ const morningRitual = useMorningRitual()
 const startupComplete = ref(false)
 const isTauriApp = ref(false)
 const isCapacitorApp = ref(false)
+const isElectronApp = ref(false)
 const initialized = ref(false)
 
 // Only show startup screen in Tauri mode during initialization
@@ -186,6 +187,7 @@ onMounted(async () => {
   // Check for Tauri/Capacitor AFTER mount - globals should be injected by now
   isTauriApp.value = isTauriFn()
   isCapacitorApp.value = isCapacitorFn()
+  isElectronApp.value = !!(window as any).electronAPI?.isElectron
   initialized.value = true
 
   // Log for debugging

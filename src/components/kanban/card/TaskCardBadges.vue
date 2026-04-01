@@ -55,6 +55,11 @@
         <Repeat :size="12" />
       </span>
     </div>
+
+    <!-- Assignee Avatar (right side) -->
+    <div v-if="task.assignedTo && !isPersonalWorkspace" class="badge-right">
+      <AssigneeAvatar :user-id="task.assignedTo" :size="18" />
+    </div>
   </div>
 </template>
 
@@ -64,6 +69,8 @@ import type { Task } from '@/stores/tasks'
 import { Calendar, CheckSquare, Timer, Paperclip, Repeat } from 'lucide-vue-next'
 import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
 import { describeRecurrenceRule } from '@/utils/recurrenceUtils'
+import { useWorkspaceStore } from '@/stores/workspace'
+import AssigneeAvatar from '@/components/workspace/AssigneeAvatar.vue'
 
 const props = defineProps<{
   task: Task
@@ -78,6 +85,9 @@ const props = defineProps<{
 
 // BUG-1191: Ensure date timer is running for reactive overdue detection
 ensureDateTimer()
+
+const workspaceStore = useWorkspaceStore()
+const isPersonalWorkspace = computed(() => workspaceStore.isPersonalWorkspace)
 
 const recurrenceDescription = computed(() => {
   if (!props.task.recurrenceRule) return ''
@@ -154,5 +164,12 @@ const dueDateClass = computed(() => {
 /* Recurring badge */
 .badge-recurring {
   color: var(--brand-primary);
+}
+
+.badge-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 </style>

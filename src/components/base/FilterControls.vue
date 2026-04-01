@@ -30,6 +30,16 @@
       />
     </div>
 
+    <!-- Assignment Filter (workspace only) -->
+    <div v-if="!isPersonalWorkspace" class="filter-control">
+      <CustomSelect
+        :model-value="assignmentFilterMode"
+        :options="assignmentOptions"
+        placeholder="All Tasks"
+        @update:model-value="updateAssignmentFilter"
+      />
+    </div>
+
     <!-- TASK-243: Hide Done checkbox removed - use icon toggle in view header instead -->
 
     <!-- FEATURE-1162: Saved Views -->
@@ -49,11 +59,18 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
+import { useWorkspaceStore } from '@/stores/workspace'
+import { useAssignmentFilter, type AssignmentFilterMode } from '@/composables/workspace/useTaskAssignment'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import SavedViewsDropdown from '@/components/filters/SavedViewsDropdown.vue'
 
 const taskStore = useTaskStore()
 const { projects, activeProjectId, activeSmartView, activeStatusFilter } = storeToRefs(taskStore)
+
+const workspaceStore = useWorkspaceStore()
+const isPersonalWorkspace = computed(() => workspaceStore.isPersonalWorkspace)
+
+const { filterMode: assignmentFilterMode, setFilterMode } = useAssignmentFilter()
 
 // Options for CustomSelect components
 const projectOptions = computed(() => [
@@ -76,6 +93,12 @@ const statusOptions = [
   { label: 'Done', value: 'done' }
 ]
 
+const assignmentOptions = [
+  { label: 'All Tasks', value: 'all' },
+  { label: 'My Tasks', value: 'mine' },
+  { label: 'Unassigned', value: 'unassigned' }
+]
+
 // Filter update methods
 const updateProjectFilter = (value: string | number) => {
   const projectId = value === '' ? null : String(value)
@@ -92,11 +115,16 @@ const updateStatusFilter = (value: string | number) => {
   taskStore.setActiveStatusFilter(statusFilter)
 }
 
+const updateAssignmentFilter = (value: string | number) => {
+  setFilterMode((value || 'all') as AssignmentFilterMode)
+}
+
 // TASK-243: Clear filters (hideDoneTasks now controlled by view header toggle)
 const clearAllFilters = () => {
   taskStore.setActiveProject(null)
   taskStore.setSmartView(null)
   taskStore.setActiveStatusFilter(null)
+  setFilterMode('all')
 }
 </script>
 

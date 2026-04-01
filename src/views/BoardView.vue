@@ -208,6 +208,7 @@ import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, FolderOpen, List } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
+import { useAssignmentFilter } from '@/composables/workspace/useTaskAssignment'
 
 const { t } = useI18n()
 
@@ -290,9 +291,14 @@ const viewTypeOptions = computed(() => [
   { value: 'list' as const, label: t('filters.group_list'), icon: List }
 ])
 
+// TASK-1552: Assignment filter (shared singleton — same ref as FilterControls dropdown)
+const { filterFn: assignmentFilterFn } = useAssignmentFilter()
+
 // FEATURE-1336: All tasks combined (not split by project) for category view
 const allFilteredTasks = computed(() => {
-  return taskStore.filteredTasks.filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
+  return taskStore.filteredTasks
+    .filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
+    .filter(assignmentFilterFn.value)
 })
 
 // TASK-1334: Groups for list view (group by project)

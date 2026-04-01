@@ -2722,7 +2722,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1549**~~ | **P0** | **Cross-tab sync: add workspaceId to protocol** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1550**~~ | **P1** | ✅ **Guest mode isolation for workspace feature** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1551**~~ | **P1** | **Invite flow: generate link, accept via Edge Function, /#/invite/:token route** (✅ DONE (2026-03-17)) |
-| **TASK-1552** | **P1** | **Task assignment UI: assigned_to dropdown, avatar badges, filters** (🔄 IN PROGRESS) |
+| ~~**TASK-1552**~~ | **P1** | ✅ **Task assignment UI: assigned_to dropdown, avatar badges, filters** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD + realtime + UI** (✅ DONE (2026-03-31)) |
 | **TASK-1554** | **P2** | **Activity feed: logging + display** (📋 PLANNED) |
 | **TASK-1555** | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (🔄 IN PROGRESS) |
@@ -2773,7 +2773,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ID | Priority | Description | Status | Depends On |
 |----|----------|-------------|--------|------------|
 | ~~**TASK-1551**~~ | **P1** | **Invite flow: Generate invite link (workspace_invites table), copy/share UI, route /#/invite/:token, accept-invite Edge Function (SECURITY DEFINER — must add user to workspace_members server-side, chicken-and-egg problem)** | ✅ DONE (2026-03-17) | TASK-1539 |
-| **TASK-1552** | **P1** | **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter** | 🔄 IN PROGRESS | TASK-1539, TASK-1551 |
+| ~~**TASK-1552**~~ | **P1** | ✅ **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter** | ✅ DONE (2026-04-01) | TASK-1539, TASK-1551 |
 | ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel + simplified workspace edit modal** | ✅ DONE (2026-03-31) | TASK-1548 |
 | **TASK-1554** | **P2** | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI** | 🔄 IN PROGRESS | TASK-1539 |
 
@@ -2940,7 +2940,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1552: Task Assignment — assigned_to Dropdown + Board Badges (🔄 IN PROGRESS)
+#### ~~TASK-1552~~: Task Assignment — assigned_to Dropdown + Board Badges (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-04-01) | **Depends On**: TASK-1539, TASK-1551
 **Description**: Add `assigned_to` dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, and "My tasks" / "All" / "Unassigned" filter options.

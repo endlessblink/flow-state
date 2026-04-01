@@ -104,6 +104,11 @@ export type AssignmentFilterMode = 'mine' | 'unassigned' | 'all'
  * const filtered = computed(() => tasks.value.filter(filterFn.value))
  * ```
  */
+// TASK-1552: Module-level singleton so all callers (FilterControls, BoardView)
+// share the same reactive state. Without this, each useAssignmentFilter() call
+// would create an independent filterMode ref.
+const _filterMode = ref<AssignmentFilterMode>('all')
+
 export function useAssignmentFilter(): {
   filterMode: Ref<AssignmentFilterMode>
   filterFn: ComputedRef<(task: { assignedTo?: string | null }) => boolean>
@@ -111,11 +116,8 @@ export function useAssignmentFilter(): {
 } {
   const authStore = useAuthStore()
 
-  // Reactive ref — filterFn computed re-evaluates when this changes
-  const filterMode = ref<AssignmentFilterMode>('all')
-
   const filterFn = computed<(task: { assignedTo?: string | null }) => boolean>(() => {
-    const mode = filterMode.value
+    const mode = _filterMode.value
     const currentUserId = authStore.user?.id ?? null
 
     if (mode === 'all') {
@@ -131,11 +133,11 @@ export function useAssignmentFilter(): {
   })
 
   function setFilterMode(mode: AssignmentFilterMode): void {
-    filterMode.value = mode
+    _filterMode.value = mode
   }
 
   return {
-    filterMode,
+    filterMode: _filterMode,
     filterFn,
     setFilterMode,
   }

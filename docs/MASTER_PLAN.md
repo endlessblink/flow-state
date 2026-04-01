@@ -8,6 +8,18 @@
 
 ## Active Tasks
 
+### BUG-1740: Leave Workspace Does Nothing (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Clicking "Leave workspace" in Settings confirms via modal but does nothing — user stays in the shared workspace and it remains in their workspace list.
+
+**Expected**: Leaving a shared workspace should remove the membership, remove the workspace from the local list, switch the user to their personal workspace (or another shared one), and close the settings modal.
+
+**Files**: `src/stores/workspace.ts`, `src/components/settings/tabs/WorkspaceSettingsTab.vue`
+
+---
+
 ### ~~BUG-1739~~: Canvas Bulk Delete Stops Working After First Delete (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE
@@ -2727,8 +2739,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1554**~~ | **P2** | **Activity feed: logging + display** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1555**~~ | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1556**~~ | **P1** | **Hebrew translations for all workspace strings** (✅ DONE (2026-03-17)) |
-| **TASK-1557** | **P2** | **Member management UI** (📋 PLANNED) |
-| **TASK-1558** | **P2** | **Empty states for workspaces** (📋 PLANNED) |
+| ~~**TASK-1557**~~ | **P2** | ✅ **Member management UI** (✅ DONE (2026-04-02)) |
+| ~~**TASK-1558**~~ | **P2** | **Empty states for workspaces** (✅ DONE (2026-04-01)) |
 | **TASK-1559** | **P3** | **Member presence (v2 nice-to-have)** (📋 PLANNED) |
 
 ---
@@ -2783,8 +2795,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 |----|----------|-------------|--------|------------|
 | ~~**TASK-1555**~~ | **P1** | **Partner-friendly UX: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.** | ✅ DONE (2026-04-01) | TASK-1545, TASK-1551 |
 | ~~**TASK-1556**~~ | **P1** | **Hebrew translations: Add workspaces namespace to he.json — workspace, members, invite, comments, activity feed, all new UI strings** | ✅ DONE (2026-03-17) | TASK-1545 |
-| **TASK-1557** | **P2** | **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)** | 🔄 IN PROGRESS | TASK-1539 |
-| **TASK-1558** | **P2** | **Empty states: New workspace welcome, no tasks yet, no members yet, pending invite states** | 📋 PLANNED | TASK-1545 |
+| ~~**TASK-1557**~~ | **P2** | ✅ **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)** | ✅ DONE (2026-04-02) | TASK-1539 |
+| ~~**TASK-1558**~~ | **P2** | **Empty states: New workspace welcome, no tasks yet, no members yet, pending invite states** | ✅ DONE (2026-04-01) | TASK-1545 |
 | **TASK-1559** | **P3** | **Member presence: Show who's online in workspace using Supabase Realtime Presence (nice-to-have v2)** | 📋 PLANNED | TASK-1548 |
 
 ### Key Architecture Decisions
@@ -2983,16 +2995,16 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1557: Member Management UI (📋 PLANNED)
+#### ~~TASK-1557~~: Member Management UI (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-01) | **Depends On**: TASK-1539
 **Description**: Member management UI with remove member, transfer ownership, and role display (owner / admin / member) actions accessible from workspace settings.
 
 ---
 
-#### TASK-1558: Empty States for Workspace Flows (📋 PLANNED)
+#### ~~TASK-1558~~: Empty States for Workspace Flows (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED | **Depends On**: TASK-1545
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-01) | **Depends On**: TASK-1545
 **Description**: New workspace welcome screen, "no tasks yet", "no members yet", and pending invite states — covering all empty-state scenarios introduced by the workspace collaboration feature.
 
 ---
@@ -3374,7 +3386,7 @@ Enables Claude agents to implement code changes using git worktrees for isolatio
 |------|----------|-------------|
 | ~~BUG-1113~~ | P0 | ✅ Stale worktrees not cleaned up - forces Claude Code context bloat |
 | BUG-1019 | P0 | Swarm agent cleanup + OOM prevention |
-| TASK-321 | P2 | Test merge/discard workflow E2E |
+| TASK-321 | P2 | 🔄 Test merge/discard workflow E2E |
 | TASK-322 | P2 | Automatic error recovery (exponential backoff, partial progress) |
 | FEATURE-1013 | P2 | Auto-detect data layer (Pinia, Supabase) |
 | FEATURE-1014 | P2 | Smart questions with pros/cons |

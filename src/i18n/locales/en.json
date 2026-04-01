@@ -369,8 +369,21 @@
       "viewer": "Viewer"
     },
     "empty": {
-      "noTasks": "No tasks yet",
-      "inviteMembers": "Invite team members"
+      "welcome": {
+        "title": "Welcome to your new workspace",
+        "description": "Start by creating tasks or inviting your team to collaborate."
+      },
+      "noTasks": {
+        "title": "No tasks yet",
+        "description": "Create your first task to start collaborating with your team."
+      },
+      "noMembers": {
+        "title": "Working solo?",
+        "description": "Invite team members to collaborate on tasks together."
+      },
+      "pendingInvite": "{count} invite pending | {count} invites pending",
+      "createTask": "Create Task",
+      "inviteTeam": "Invite Team"
     },
     "activity": {
       "title": "Activity",
@@ -387,7 +400,8 @@
       }
     },
     "deleteTitle": "Delete Workspace",
-    "deleteConfirm": "Delete workspace \"{name}\"? This cannot be undone.",
+    "deleteConfirm": "Delete workspace \"{name}\"? All workspace tasks and data will be permanently lost. This cannot be undone.",
+    "deleteDescription": "Permanently delete this workspace and all its data.",
     "removeMember": "Remove member",
     "removeMemberConfirm": "Remove {name} from this workspace?",
     "removeMemberDescription": "They will lose access to all workspace tasks and data.",

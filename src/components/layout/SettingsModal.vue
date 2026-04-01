@@ -41,8 +41,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X, Timer, Palette, Layout, User, Database, Bot, Bell, FlaskConical } from 'lucide-vue-next'
+import { X, Timer, Palette, Layout, User, Users, Database, Bot, Bell, FlaskConical } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import { useWorkspaceStore } from '@/stores/workspace'
 import { useDirection } from '@/i18n/useDirection'
 
 // Tab components
@@ -54,6 +55,7 @@ import AISettingsTab from '../settings/tabs/AISettingsTab.vue'
 import StorageSettingsTab from '../settings/tabs/StorageSettingsTab.vue'
 import AccountSettingsTab from '../settings/tabs/AccountSettingsTab.vue'
 import AIQualityDashboard from '../ai/AIQualityDashboard.vue'
+import WorkspaceSettingsTab from '../settings/tabs/WorkspaceSettingsTab.vue'
 
 defineProps<{
   isOpen: boolean
@@ -67,10 +69,12 @@ const { t } = useI18n()
 const { direction } = useDirection()
 const activeTab = ref('general')
 const authStore = useAuthStore()
+const workspaceStore = useWorkspaceStore()
 
 const tabs = computed(() => {
   const base = [
     { id: 'general', label: t('settings.tab_general'), icon: Palette, component: AppearanceSettingsTab },
+    ...(!workspaceStore.isPersonalWorkspace ? [{ id: 'workspace', label: t('settings.tab_workspace'), icon: Users, component: WorkspaceSettingsTab }] : []),
     { id: 'timer', label: t('settings.tab_timer'), icon: Timer, component: TimerSettingsTab },
     { id: 'workflow', label: t('settings.tab_workflow'), icon: Layout, component: WorkflowSettingsTab },
     { id: 'notifications', label: t('settings.tab_notifications'), icon: Bell, component: NotificationsSettingsTab },

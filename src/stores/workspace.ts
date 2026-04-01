@@ -13,6 +13,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const members = ref<Map<string, WorkspaceMember[]>>(new Map())
   const isLoading = ref(false)
   const isSwitchingWorkspace = ref(false)
+  const pendingInvites = ref<WorkspaceInvite[]>([])
 
   // Computed
   const activeWorkspace = computed(() =>
@@ -29,8 +30,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     return !authStore.isAuthenticated
   })
 
-  // TASK-1555: Hide switcher when user has only 1 workspace (auto-activated, no choice to make)
-  const shouldShowSwitcher = computed(() => workspaces.value.length > 1)
+  // TASK-1555: Show switcher when any shared workspace exists (user needs to navigate between personal and shared)
+  const shouldShowSwitcher = computed(() => workspaces.value.length >= 1)
 
   const activeMembers = computed(() =>
     activeWorkspaceId.value
@@ -51,6 +52,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   })
 
   const isOwner = computed(() => userRole.value === 'owner')
+
+  const hasPendingInvites = computed(() => pendingInvites.value.length > 0)
+  const pendingInviteCount = computed(() => pendingInvites.value.length)
 
   // Actions
 
@@ -90,10 +94,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
       // Restore last-used workspace from localStorage
       const lastWsId = localStorage.getItem(LAST_WORKSPACE_KEY)
-      if (lastWsId && workspaces.value.some(w => w.id === lastWsId)) {
+      if (lastWsId === 'personal') {
+        // User explicitly chose personal workspace — respect that choice
+        activeWorkspaceId.value = null
+      } else if (lastWsId && workspaces.value.some(w => w.id === lastWsId)) {
         activeWorkspaceId.value = lastWsId
       } else if (workspaces.value.length === 1) {
-        // TASK-1555: Single-workspace users auto-land in their shared workspace
+        // TASK-1555: Single-workspace users auto-land in their shared workspace (first visit only)
         activeWorkspaceId.value = workspaces.value[0].id
       }
 
@@ -118,14 +125,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
     activeWorkspaceId.value = id
 
-    if (id) {
-      localStorage.setItem(LAST_WORKSPACE_KEY, id)
-    } else {
-      localStorage.removeItem(LAST_WORKSPACE_KEY)
-    }
+    // Persist workspace choice — 'personal' sentinel respects explicit switch to personal
+    localStorage.setItem(LAST_WORKSPACE_KEY, id ?? 'personal')
 
     if (id) {
       await loadMembers(id)
+      await loadPendingInvites(id)
     }
 
     // Invalidate SWR cache to force fresh workspace-aware queries
@@ -384,6 +389,47 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
+  async function leaveWorkspace(): Promise<boolean> {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated || !supabase || !activeWorkspaceId.value) return false
+
+    const workspaceId = activeWorkspaceId.value
+
+    try {
+      // Delete own membership directly by user_id + workspace_id (no need to find member row ID)
+      const { error } = await supabase
+        .from('workspace_members')
+        .delete()
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', authStore.user!.id)
+
+      if (error) throw error
+
+      // Log activity (fire-and-forget)
+      import('@/composables/supabase/useWorkspaceActivity').then(({ useWorkspaceActivity }) => {
+        useWorkspaceActivity().logActivity(
+          workspaceId,
+          'member_removed',
+          'member',
+          authStore.user!.id,
+          {}
+        )
+      }).catch(() => {})
+
+      console.log(`[WORKSPACE] Left workspace: ${workspaceId}`)
+
+      // Remove from local state and switch
+      workspaces.value = workspaces.value.filter(w => w.id !== workspaceId)
+      members.value.delete(workspaceId)
+      await switchWorkspace(null)
+
+      return true
+    } catch (e) {
+      console.error('[WORKSPACE] Failed to leave workspace:', e)
+      return false
+    }
+  }
+
   async function updateMemberRole(memberId: string, newRole: WorkspaceRole): Promise<boolean> {
     if (!supabase || !activeWorkspaceId.value || !canManageMembers.value) return false
 
@@ -479,10 +525,44 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
+  async function loadPendingInvites(workspaceId: string) {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated || !supabase) return
+
+    try {
+      const { data, error } = await supabase
+        .from('workspace_invites')
+        .select('id, workspace_id, invited_by, invited_email, token, role, status, expires_at, accepted_at, created_at')
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'pending')
+
+      if (error) {
+        console.error('[WORKSPACE] Failed to load pending invites:', error)
+        return
+      }
+
+      pendingInvites.value = (data || []).map((row: any) => ({
+        id: row.id,
+        workspaceId: row.workspace_id,
+        invitedBy: row.invited_by,
+        invitedEmail: row.invited_email,
+        token: row.token,
+        role: row.role,
+        status: row.status,
+        expiresAt: row.expires_at,
+        acceptedAt: row.accepted_at,
+        createdAt: row.created_at,
+      }))
+    } catch (e) {
+      console.error('[WORKSPACE] Error loading pending invites:', e)
+    }
+  }
+
   function clearAll() {
     workspaces.value = []
     activeWorkspaceId.value = null
     members.value = new Map()
+    pendingInvites.value = []
     localStorage.removeItem(LAST_WORKSPACE_KEY)
   }
 
@@ -493,6 +573,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     members,
     isLoading,
     isSwitchingWorkspace,
+    pendingInvites,
 
     // Computed
     activeWorkspace,
@@ -501,6 +582,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     shouldShowSwitcher,
     activeMembers,
     userRole,
+    canManageMembers,
+    isOwner,
+    hasPendingInvites,
+    pendingInviteCount,
 
     // Actions
     loadWorkspaces,
@@ -510,6 +595,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     acceptInvite,
     loadMembers,
     generateInviteLink,
+    loadPendingInvites,
+    removeMember,
+    leaveWorkspace,
+    updateMemberRole,
+    transferOwnership,
     clearAll,
   }
 })

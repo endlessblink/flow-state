@@ -91,9 +91,9 @@
 
 ---
 
-### BUG-1736: Flaky E2E — "create task in Canvas → node appears" fails on WebKit (📋 PLANNED)
+### ~~BUG-1736~~: Flaky E2E — "create task in Canvas → node appears" fails on WebKit (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-01)
 
 **Problem**: Playwright E2E test `crud-workflows.spec.ts:429` intermittently fails on WebKit. Likely a timing issue with Vue Flow node mounting.
 
@@ -4177,9 +4177,9 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-### BUG-1736: Flaky E2E — "create task in Canvas → node appears" fails on WebKit (📋 PLANNED)
+### ~~BUG-1736~~: Flaky E2E — "create task in Canvas → node appears" fails on WebKit (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-01)
 
 **Problem**: Playwright E2E test `crud-workflows.spec.ts:429` ("create task in Canvas → node appears") intermittently fails on WebKit. Likely a timing issue — Vue Flow node mounting is slower in WebKit, or canvas ready state isn't properly awaited.
 

@@ -427,36 +427,41 @@ test.describe('CRUD Workflows', () => {
   // ── Test 11: Create task in Canvas ──────────────────────────────────────
 
   test('11. create task in Canvas → node appears', async ({ page }) => {
-    await page.goto('/#/canvas')
+    // Navigate to root (Canvas view). The /canvas route redirects to /.
+    // WebKit sometimes redirects /#/ to /#/tasks on initial load, so we
+    // explicitly click the Canvas tab to ensure we're on the right view.
+    await page.goto('/#/')
     await page.waitForLoadState('networkidle')
-    await page.waitForTimeout(2000)
 
-    // Canvas should be visible
-    const canvas = page.locator('.vue-flow, .canvas-container, [data-testid="canvas"]').first()
-    await expect(canvas).toBeVisible({ timeout: 10000 })
+    // Click the Canvas tab to reliably land on Canvas view across all browsers
+    const canvasTab = page.locator('a.view-tab', { hasText: 'Canvas' }).first()
+    await expect(canvasTab).toBeVisible({ timeout: 5000 })
+    await canvasTab.click()
+    await page.waitForLoadState('networkidle')
 
-    // Look for an "Add task" or "+" button in the canvas toolbar
-    const addBtn = page.locator(
-      '.canvas-toolbar button:has-text("Task"), .toolbar-add-task, [aria-label*="Add task"]'
-    ).first()
+    // Wait for VueFlow to mount (always renders inside CanvasView)
+    const vueFlow = page.locator('.vue-flow').first()
+    await expect(vueFlow).toBeVisible({ timeout: 15000 })
 
-    if (await addBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await addBtn.click()
+    // Click the "Add new task" button in CanvasToolbar (teleported to body)
+    const addBtn = page.locator('[aria-label="Add new task"]').first()
+    await expect(addBtn).toBeVisible({ timeout: 5000 })
+    await addBtn.click()
 
-      // Type a title if an input appears
-      const titleInput = page.locator('input:focused').first()
-      if (await titleInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await titleInput.fill(`Canvas node ${Date.now()}`)
-        await page.keyboard.press('Enter')
-      }
+    // The button opens QuickTaskCreateModal — fill in the title and submit
+    const modal = page.locator('.base-modal, [role="dialog"]').first()
+    await expect(modal).toBeVisible({ timeout: 5000 })
 
-      // Verify a task node exists in the canvas
-      await expect(page.locator('.vue-flow__node, .canvas-task-node').first()).toBeVisible({ timeout: 5000 })
-    } else {
-      // Canvas may already have nodes from seeded data
-      const hasNodes = await page.locator('.vue-flow__node, .canvas-task-node').count()
-      expect(hasNodes).toBeGreaterThanOrEqual(0) // Canvas loaded without crash
-    }
+    const titleInput = modal.locator('input[aria-label="Task name"]').first()
+    await expect(titleInput).toBeVisible({ timeout: 3000 })
+    await titleInput.fill(`Canvas E2E node ${Date.now()}`)
+
+    // Submit via the "Add task" button in the modal
+    const createBtn = modal.locator('button.create-btn, button:has-text("Add task")').first()
+    await createBtn.click()
+
+    // After creation, the task gets a canvasPosition and appears as a Vue Flow node
+    await expect(page.locator('.vue-flow__node').first()).toBeVisible({ timeout: 10000 })
   })
 
   // ── Test 12: Create subtask ──────────────────────────────────────────────

@@ -149,7 +149,7 @@ fi
 echo -e "${YELLOW}[3/6] Building signed Tauri app...${NC}"
 export TAURI_SIGNING_PRIVATE_KEY="$(cat "$SIGNING_KEY")"
 export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$SIGNING_PASSWORD"
-npx tauri build
+cargo tauri build
 
 # Verify signature was generated
 APPIMAGE_SIG=$(find "$BUNDLE_DIR/appimage" -name "*.AppImage.sig" 2>/dev/null | head -1)

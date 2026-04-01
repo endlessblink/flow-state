@@ -2,6 +2,7 @@ import { computed, type Ref } from 'vue'
 import type { Task, Project } from '@/types/tasks'
 import { useSmartViews } from '@/composables/useSmartViews'
 import { formatDateKey } from '@/utils/dateUtils'
+import { useWorkspaceStore } from '@/stores/workspace'
 
 
 export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null
@@ -17,6 +18,17 @@ export const useTaskFiltering = (
     hideCalendarDoneTasks?: Ref<boolean>,
     selectedProjectIds?: Ref<Set<string>> // TASK-084: Multi-select support
 ) => {
+    const workspaceStore = useWorkspaceStore()
+
+    const filterByWorkspace = (taskList: Task[]): Task[] => {
+        const wsId = workspaceStore.activeWorkspaceId
+        if (wsId === null) {
+            // Personal workspace: show tasks with no workspace
+            return taskList.filter(t => !t.workspaceId)
+        }
+        return taskList.filter(t => t.workspaceId === wsId)
+    }
+
     const {
         applySmartViewFilter,
         isUncategorizedTask,
@@ -89,7 +101,7 @@ export const useTaskFiltering = (
 
         // TASK-1532: Completion records are calendar-only history — exclude from board/canvas/inbox
         // Pinned tasks are excluded from main views — they appear in PinnedTasksSection (Inbox)
-        let filtered = tasks.value.filter(task => !task._soft_deleted && !task.isCompletionRecord && !task.isPinned)
+        let filtered = filterByWorkspace(tasks.value).filter(task => !task._soft_deleted && !task.isCompletionRecord && !task.isPinned)
         // console.debug(`🔍 [FILTER-DEBUG] Starting filter with ${filtered.length} tasks (excluding deleted)`)
 
         // 1. Smart View
@@ -161,7 +173,7 @@ export const useTaskFiltering = (
                 })
             }
 
-            nestedTasks = tasks.value
+            nestedTasks = filterByWorkspace(tasks.value)
                 .filter(task => nestedTaskIds.includes(task.id) && !task._soft_deleted)
                 .filter(task => {
                     if (activeProjectTreeIds) {
@@ -219,13 +231,13 @@ export const useTaskFiltering = (
     })
 
     const tasksWithCanvasPosition = computed(() => {
-        return tasks.value.filter(task => task.canvasPosition &&
+        return filterByWorkspace(tasks.value).filter(task => task.canvasPosition &&
             typeof task.canvasPosition.x === 'number' &&
             typeof task.canvasPosition.y === 'number')
     })
 
     const calendarFilteredTasks = computed(() => {
-        let filtered = tasks.value.filter(task => !task._soft_deleted)
+        let filtered = filterByWorkspace(tasks.value).filter(task => !task._soft_deleted)
 
         // 1. Project
         if (activeProjectId.value) {
@@ -247,15 +259,15 @@ export const useTaskFiltering = (
         return Array.from(seen.values())
     })
 
-    const totalTasks = computed(() => tasks.value.filter(task => task.status !== 'done' && !task._soft_deleted).length)
-    const completedTasks = computed(() => tasks.value.filter(task => task.status === 'done' && !task._soft_deleted).length)
+    const totalTasks = computed(() => filterByWorkspace(tasks.value).filter(task => task.status !== 'done' && !task._soft_deleted).length)
+    const completedTasks = computed(() => filterByWorkspace(tasks.value).filter(task => task.status === 'done' && !task._soft_deleted).length)
 
     const totalPomodoros = computed(() =>
-        tasks.value.reduce((sum, task) => sum + (task.completedPomodoros || 0), 0)
+        filterByWorkspace(tasks.value).reduce((sum, task) => sum + (task.completedPomodoros || 0), 0)
     )
 
     const doneTasksForColumn = computed(() => {
-        let doneTasks = tasks.value.filter(task => task.status === 'done')
+        let doneTasks = filterByWorkspace(tasks.value).filter(task => task.status === 'done')
 
         if (activeProjectId.value) {
             const projectIds = getChildProjectIds(activeProjectId.value)
@@ -286,7 +298,7 @@ export const useTaskFiltering = (
     })
 
     const smartViewTaskCounts = computed(() => {
-        let baseTasks = tasks.value.filter(task => !task._soft_deleted)
+        let baseTasks = filterByWorkspace(tasks.value).filter(task => !task._soft_deleted)
 
         if (activeProjectId.value) {
             const projectIds = getChildProjectIds(activeProjectId.value)
@@ -321,7 +333,7 @@ export const useTaskFiltering = (
 
     const getProjectTaskCount = (projectId: string): number => {
         const projectIds = getChildProjectIds(projectId)
-        let projectTasks = tasks.value.filter(task => projectIds.includes(task.projectId))
+        let projectTasks = filterByWorkspace(tasks.value).filter(task => projectIds.includes(task.projectId))
 
         if (activeSmartView.value) {
             projectTasks = applySmartViewFilter(projectTasks, activeSmartView.value)

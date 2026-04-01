@@ -2711,7 +2711,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1538**~~ | **P0** | **DB migration: Add new tables to supabase_realtime publication** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1539**~~ | **P1** | **Pinia store: workspaces.ts — activeWorkspaceId, CRUD, switchWorkspace** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1540**~~ | **P1** | **Update supabaseMappers.ts with workspace_id** (✅ DONE (2026-03-17)) |
-| **TASK-1541** | **P1** | **Update useTaskFiltering.ts with workspace filter** (📋 PLANNED) |
+| ~~**TASK-1541**~~ | **P1** | ✅ **Update useTaskFiltering.ts with workspace filter** (✅ DONE (2026-04-01)) |
 | ~~**TASK-1542**~~ | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts for workspace context** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1543**~~ | **P1** | **Update projects.ts store for workspace filtering** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1544**~~ | **P1** | **Update canvas store (groups) for workspace filtering** (✅ DONE (2026-03-17)) |
@@ -2720,9 +2720,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1547**~~ | **P0** | **Offline sync queue: inject workspace_id into queued payloads** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1548**~~ | **P0** | **Realtime subscriptions: workspace_id filtering + workspace switch handling** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1549**~~ | **P0** | **Cross-tab sync: add workspaceId to protocol** (✅ DONE (2026-03-17)) |
-| **TASK-1550** | **P1** | **Guest mode isolation for workspace feature** (📋 PLANNED) |
+| **TASK-1550** | **P1** | **Guest mode isolation for workspace feature** (🔄 IN PROGRESS) |
 | ~~**TASK-1551**~~ | **P1** | **Invite flow: generate link, accept via Edge Function, /#/invite/:token route** (✅ DONE (2026-03-17)) |
-| **TASK-1552** | **P1** | **Task assignment UI: assigned_to dropdown, avatar badges, filters** (📋 PLANNED) |
+| **TASK-1552** | **P1** | **Task assignment UI: assigned_to dropdown, avatar badges, filters** (🔄 IN PROGRESS) |
 | ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD + realtime + UI** (✅ DONE (2026-03-31)) |
 | **TASK-1554** | **P2** | **Activity feed: logging + display** (📋 PLANNED) |
 | **TASK-1555** | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (📋 PLANNED) |
@@ -2752,7 +2752,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1538**~~ | **P0** | **DB migration: Add workspace_id to supabase_realtime publication for task_comments and workspace_activity** | ✅ DONE (2026-03-17) | TASK-1534 |
 | ~~**TASK-1539**~~ | **P1** | **Pinia store: Create src/stores/workspaces.ts — activeWorkspaceId, workspaces[], members[], switchWorkspace(), createWorkspace(), inviteMember(), acceptInvite(), removeMember()** | ✅ DONE (2026-03-17) | TASK-1537 |
 | ~~**TASK-1540**~~ | **P1** | **Update supabaseMappers.ts: Add workspace_id to toSupabaseTask(), toSupabaseProject(), toSupabaseGroup() mappers** | ✅ DONE (2026-03-17) | TASK-1535 |
-| **TASK-1541** | **P1** | **Update useTaskFiltering.ts: Add workspace_id filter predicate so board/canvas/calendar/inbox respect active workspace** | 📋 PLANNED | TASK-1539, TASK-1540 |
+| ~~**TASK-1541**~~ | **P1** | ✅ **Update useTaskFiltering.ts: Add workspace_id filter predicate so board/canvas/calendar/inbox respect active workspace** | ✅ DONE (2026-04-01) | TASK-1539, TASK-1540 |
 | ~~**TASK-1542**~~ | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts: Pass workspace context to fetchTasks, add .eq('workspace_id', ...) filter** | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
 | ~~**TASK-1543**~~ | **P1** | **Update projects.ts store: Filter projects by activeWorkspaceId, same pattern as tasks** | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
 | ~~**TASK-1544**~~ | **P1** | **Update canvas store (groups): Filter groups by activeWorkspaceId, validate workspace match on parentId assignment** | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
@@ -2766,16 +2766,16 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1547**~~ | **P0** | **Offline sync queue: Inject workspace_id into queued payloads in useSyncOrchestrator.ts. Defense-in-depth for ops created before migration (existing IndexedDB queue entries lack workspace_id)** | ✅ DONE (2026-03-17) | TASK-1540 |
 | ~~**TASK-1548**~~ | **P0** | **Realtime subscriptions: Update useRealtimeSubscription.ts to filter by workspace_id instead of user_id. Handle workspace switch (teardown old channel, create new). Add isWorkspaceSwitching flag to prevent reconnect logic from fighting intentional disconnects.** | ✅ DONE (2026-03-17) | TASK-1538, TASK-1539 |
 | ~~**TASK-1549**~~ | **P0** | **Cross-tab sync: Add workspaceId to CrossTabMessage and TaskOperation interfaces in useCrossTabSync.ts. Handler must ignore messages from different workspace. Broadcast workspace switch events.** | ✅ DONE (2026-03-17) | TASK-1539 |
-| **TASK-1550** | **P1** | **Guest mode isolation: Ensure workspace store returns empty/disabled state when !isAuthenticated. Verify migrateGuestData() targets personal workspace (NULL workspace_id) only.** | 📋 PLANNED | TASK-1539 |
+| **TASK-1550** | **P1** | **Guest mode isolation: Ensure workspace store returns empty/disabled state when !isAuthenticated. Verify migrateGuestData() targets personal workspace (NULL workspace_id) only.** | 🔄 IN PROGRESS | TASK-1539 |
 
 ### Phase 3: Collaboration Features
 
 | ID | Priority | Description | Status | Depends On |
 |----|----------|-------------|--------|------------|
 | ~~**TASK-1551**~~ | **P1** | **Invite flow: Generate invite link (workspace_invites table), copy/share UI, route /#/invite/:token, accept-invite Edge Function (SECURITY DEFINER — must add user to workspace_members server-side, chicken-and-egg problem)** | ✅ DONE (2026-03-17) | TASK-1539 |
-| **TASK-1552** | **P1** | **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter** | 📋 PLANNED | TASK-1539, TASK-1551 |
+| **TASK-1552** | **P1** | **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter** | 🔄 IN PROGRESS | TASK-1539, TASK-1551 |
 | ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel + simplified workspace edit modal** | ✅ DONE (2026-03-31) | TASK-1548 |
-| **TASK-1554** | **P2** | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI** | 📋 PLANNED | TASK-1539 |
+| **TASK-1554** | **P2** | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI** | 🔄 IN PROGRESS | TASK-1539 |
 
 ### Phase 4: Partner UX & Polish
 
@@ -2783,7 +2783,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 |----|----------|-------------|--------|------------|
 | **TASK-1555** | **P1** | **Partner-friendly UX: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.** | 📋 PLANNED | TASK-1545, TASK-1551 |
 | ~~**TASK-1556**~~ | **P1** | **Hebrew translations: Add workspaces namespace to he.json — workspace, members, invite, comments, activity feed, all new UI strings** | ✅ DONE (2026-03-17) | TASK-1545 |
-| **TASK-1557** | **P2** | **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)** | 📋 PLANNED | TASK-1539 |
+| **TASK-1557** | **P2** | **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)** | 🔄 IN PROGRESS | TASK-1539 |
 | **TASK-1558** | **P2** | **Empty states: New workspace welcome, no tasks yet, no members yet, pending invite states** | 📋 PLANNED | TASK-1545 |
 | **TASK-1559** | **P3** | **Member presence: Show who's online in workspace using Supabase Realtime Presence (nice-to-have v2)** | 📋 PLANNED | TASK-1548 |
 
@@ -2863,9 +2863,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1541: Update useTaskFiltering.ts for workspace_id (📋 PLANNED)
+#### ~~TASK-1541~~: Update useTaskFiltering.ts for workspace_id (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1540
+**Priority**: P1 | **Status**: ✅ DONE (2026-04-01) | **Depends On**: TASK-1539, TASK-1540
 **Description**: Add `workspace_id` filter predicate to `useTaskFiltering.ts` so board, canvas, calendar, and inbox views all respect the active workspace and only show tasks belonging to it.
 
 ---
@@ -2926,9 +2926,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1550: Guest Mode Isolation (📋 PLANNED)
+#### TASK-1550: Guest Mode Isolation (🔄 IN PROGRESS)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Depends On**: TASK-1539
 **Description**: Ensure workspace store returns empty/disabled state when `!isAuthenticated`. Verify `migrateGuestData()` targets personal workspace (`NULL workspace_id`) only so guest data never bleeds into shared workspaces.
 
 ---
@@ -2940,9 +2940,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1552: Task Assignment — assigned_to Dropdown + Board Badges (📋 PLANNED)
+#### TASK-1552: Task Assignment — assigned_to Dropdown + Board Badges (🔄 IN PROGRESS)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539, TASK-1551
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Depends On**: TASK-1539, TASK-1551
 **Description**: Add `assigned_to` dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, and "My tasks" / "All" / "Unassigned" filter options.
 
 ---
@@ -2964,7 +2964,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 #### TASK-1554: Activity Feed — workspace_activity Log + UI (📋 PLANNED)
 
-**Priority**: P2 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS | **Depends On**: TASK-1539
 **Description**: Log writes to `workspace_activity` for events: `task_created`, `task_completed`, `comment_added`, `member_joined`. Sidebar panel or dedicated view with activity feed UI showing recent workspace events.
 
 ---
@@ -2985,7 +2985,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 #### TASK-1557: Member Management UI (📋 PLANNED)
 
-**Priority**: P2 | **Status**: 📋 PLANNED | **Depends On**: TASK-1539
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS | **Depends On**: TASK-1539
 **Description**: Member management UI with remove member, transfer ownership, and role display (owner / admin / member) actions accessible from workspace settings.
 
 ---

@@ -358,6 +358,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         try {
             const taskIdsToMoveToInbox: string[] = []
+            const taskIdsToDelete: string[] = []
 
             for (const item of items) {
                 if (item.type === 'section') {
@@ -386,21 +387,20 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                     const { getNodes, setNodes } = useVueFlow()
                     setNodes(getNodes.value.filter(n => n.id !== item.id))
 
-                    // Push to undo (unless permanent)
-                    if (!isPermanent && snapshot) {
+                    // TASK-1722: Always push to undo for images (no tombstone issue)
+                    if (snapshot) {
                         pushImageDeleteUndo(snapshot)
                     }
 
                     // Remove from store (fire-and-forget)
                     imgStore.removeCanvasImage(item.id)
                 } else {
-                    // BUG-1739: For bulk delete, skip recurrence modal — just delete all selected tasks
-                    // The recurrence modal only makes sense for single-task delete (handled in deleteSelectedTasks)
+                    // TASK-1722: Both Delete and Shift+Delete collect task IDs for batch operation.
+                    // permanentlyDeleteTaskWithUndo is broken (corrupts shared pendingOperation state).
+                    // Using soft delete (bulkDeleteTasksWithUndo) for permanent, move-to-inbox for non-permanent.
                     if (isPermanent) {
-                        // Shift+Delete: hard delete with undo support
-                        await undoHistory.permanentlyDeleteTaskWithUndo(item.id)
+                        taskIdsToDelete.push(item.id)
                     } else {
-                        // Non-permanent: collect for batch move-to-inbox
                         taskIdsToMoveToInbox.push(item.id)
                     }
                 }
@@ -409,6 +409,12 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             // BUG-1739: Batch move-to-inbox with single undo operation (avoids N×snapshot overhead)
             if (taskIdsToMoveToInbox.length > 0) {
                 await undoHistory.bulkMoveToInboxWithUndo(taskIdsToMoveToInbox)
+            }
+
+            // TASK-1722: Shift+Delete uses soft delete with undo (same as regular delete).
+            // permanentlyDeleteTaskWithUndo was broken (corrupts shared pendingOperation state).
+            if (taskIdsToDelete.length > 0) {
+                await undoHistory.bulkDeleteTasksWithUndo(taskIdsToDelete)
             }
 
             canvasStore.setSelectedNodes([])

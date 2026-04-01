@@ -391,9 +391,9 @@ const {
 // TASK-1722: Focusable canvas container ref for keyboard event handling
 const canvasContainerRef = ref<HTMLElement | null>(null)
 
-// Register global hotkeys — skip Delete/Backspace since canvas-container @keydown handles those
+// TASK-1722: Register ALL hotkeys globally — canvas-container @keydown doesn't reliably
+// receive events because VueFlow node wrappers steal focus on drag/click.
 useEventListener(window, 'keydown', (e) => {
-  if (e.key === 'Delete' || e.key === 'Backspace') return // handled by canvas-container @keydown
   handleKeyDown(e)
 })
 

@@ -51,7 +51,6 @@ export function useCanvasHotkeys(
 
         event.preventDefault()
         const permanentDelete = event.shiftKey
-        console.log('🔑 [TASK-1722] Delete key pressed', { shiftKey: event.shiftKey, permanentDelete, selectedCount: selectedNodes.length })
 
         // Collect all items to delete - show ONE confirmation for all
         const itemsToDelete: { id: string; name: string; type: 'task' | 'section' | 'image' }[] = []
@@ -98,7 +97,7 @@ export function useCanvasHotkeys(
             }
         }
 
-        // Show bulk delete confirmation modal
+        // Show bulk delete confirmation modal (Shift+Delete only)
         deps.bulkDeleteItems.value = itemsToDelete
         deps.bulkDeleteIsPermanent.value = permanentDelete
         deps.isBulkDeleteModalOpen.value = true

@@ -256,13 +256,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const count = selectedNodeIds.length
 
         try {
-            for (const nodeId of selectedNodeIds) {
-                await undoHistory.updateTaskWithUndo(nodeId, {
-                    isInInbox: true,
-                    canvasPosition: undefined,
-                    canvasDismissed: true
-                })
-            }
+            await undoHistory.bulkMoveToInboxWithUndo(selectedNodeIds)
             canvasStore.setSelectedNodes([])
             if (deps.batchSyncNodes) deps.batchSyncNodes('high')
             deps.closeCanvasContextMenu()
@@ -363,6 +357,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const isPermanent = bulkDeleteIsPermanent.value
 
         try {
+            const taskIdsToMoveToInbox: string[] = []
+
             for (const item of items) {
                 if (item.type === 'section') {
                     markGroupDeleted(item.id)
@@ -404,15 +400,15 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                         // Shift+Delete: hard delete with undo support
                         await undoHistory.permanentlyDeleteTaskWithUndo(item.id)
                     } else {
-                        // Non-permanent: remove from canvas only, keep in system
-                        // Same pattern as moveSelectedTasksToInbox (line 260-264)
-                        await undoHistory.updateTaskWithUndo(item.id, {
-                            isInInbox: true,
-                            canvasPosition: undefined,
-                            canvasDismissed: true
-                        })
+                        // Non-permanent: collect for batch move-to-inbox
+                        taskIdsToMoveToInbox.push(item.id)
                     }
                 }
+            }
+
+            // BUG-1739: Batch move-to-inbox with single undo operation (avoids N×snapshot overhead)
+            if (taskIdsToMoveToInbox.length > 0) {
+                await undoHistory.bulkMoveToInboxWithUndo(taskIdsToMoveToInbox)
             }
 
             canvasStore.setSelectedNodes([])

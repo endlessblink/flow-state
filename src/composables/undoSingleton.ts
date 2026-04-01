@@ -1135,6 +1135,34 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
   }
 }
 
+// BUG-1739: Batch move-to-inbox with a single undo operation.
+// Avoids N × (beginOperation + snapshot + commitOperation) overhead.
+const bulkMoveToInboxWithUndo = async (taskIds: string[]) => {
+  if (taskIds.length === 0) return
+
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+
+  await beginOperation({
+    type: 'task-move',
+    affectedIds: [...taskIds],
+    description: `Remove ${taskIds.length} task${taskIds.length > 1 ? 's' : ''} from canvas`
+  })
+
+  try {
+    const updates = { isInInbox: true, canvasPosition: undefined, canvasDismissed: true }
+    await Promise.all(taskIds.map(id => taskStore.updateTask(id, updates)))
+
+    await nextTick()
+    await commitOperation()
+  } catch (error) {
+    console.error('❌ bulkMoveToInboxWithUndo failed:', error)
+    pendingOperationBefore = null
+    pendingOperation = null
+    throw error
+  }
+}
+
 // TASK-1690: Push an image deletion onto the global operation stack for Ctrl+Z support.
 // This is called by useCanvasHotkeys and CanvasView context menu after removing an image.
 export function pushImageDeleteUndo(imageData: { id: string; imageUrl: string; position: { x: number; y: number }; createdAt: string }) {
@@ -1214,6 +1242,7 @@ export function getUndoSystem() {
     deleteTaskWithUndo,
     permanentlyDeleteTaskWithUndo,
     bulkDeleteTasksWithUndo,
+    bulkMoveToInboxWithUndo,
     updateTaskWithUndo,
     createTaskWithUndo,
 

@@ -8,15 +8,31 @@
 
 ## Active Tasks
 
-### BUG-1740: Leave Workspace Does Nothing (🔄 IN PROGRESS)
+### ~~TASK-1741~~: Regression Test Gap Analysis + Fix Pre-Existing Failures (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-01)
 
-**Problem**: Clicking "Leave workspace" in Settings confirms via modal but does nothing — user stays in the shared workspace and it remains in their workspace list.
+**Summary**: Architect-driven gap analysis identified the top 5 untested critical systems. Wrote 71 regression tests across 5 new files covering: supabase mappers (28 tests, guards BUG-1211/1286/1562), smart merge algorithm (12 tests, guards BUG-1738), timer race guard (5 tests, guards BUG-TIMER-RACE), recurrence scheduler (12 tests), and cross-tab sync (10 tests). Also fixed all 14 pre-existing test failures caused by stale Tauri assertions after TASK-1718 Electron migration, version drift, and missing allow-list entries.
 
-**Expected**: Leaving a shared workspace should remove the membership, remove the workspace from the local list, switch the user to their personal workspace (or another shared one), and close the settings modal.
+**Files**:
+- `tests/unit/utils/supabaseMappers.test.ts` (new, 28 tests)
+- `tests/unit/stores/smart-merge.test.ts` (new, 12 tests)
+- `tests/unit/stores/timer-race-guard.test.ts` (new, 5 tests)
+- `tests/unit/composables/recurrence-scheduler.test.ts` (new, 12 tests)
+- `tests/unit/sync/cross-tab-sync.test.ts` (new, 10 tests)
+- 8 existing test/config files updated to fix 14 failures
 
-**Files**: `src/stores/workspace.ts`, `src/components/settings/tabs/WorkspaceSettingsTab.vue`
+**Result**: 95 files, 1959 tests, all passing (0 failures).
+
+---
+
+### ~~BUG-1740~~: Leave/Delete Workspace Does Nothing (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE
+
+**Fix**: Added `leaveWorkspace()` store action + "Delete Workspace" button for owners. Both remove workspace locally and switch to personal.
+
+**Files**: `src/stores/workspace.ts`, `src/components/settings/tabs/WorkspaceSettingsTab.vue`, i18n locales
 
 ---
 

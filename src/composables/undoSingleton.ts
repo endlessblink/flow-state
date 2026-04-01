@@ -10,6 +10,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import type { CanvasGroup } from '@/types/canvas'
 import { guardTaskCreation } from '../utils/demoContentGuard'
 import { useToast } from './useToast'
+import { supabase } from '@/services/auth/supabase'
 
 interface UndoSystemState {
   canUndo: ComputedRef<boolean> | null
@@ -193,6 +194,21 @@ function initializeRefHistory() {
 // were affected by the operation. This prevents position drift.
 
 /**
+ * TASK-1722: Remove tombstone so undo can re-create a permanently deleted task.
+ * Safe to call for soft-deleted tasks — no tombstone exists, DELETE is a no-op.
+ */
+async function clearTombstoneForUndo(taskId: string): Promise<void> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return
+    await supabase.from('tombstones').delete()
+      .eq('entity_type', 'task').eq('entity_id', taskId).eq('user_id', session.user.id)
+  } catch (e) {
+    console.warn('[UNDO] Tombstone cleanup error:', e)
+  }
+}
+
+/**
  * Perform selective undo based on operation type
  * Only restores entities that were actually affected by the operation
  */
@@ -212,7 +228,7 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       const taskId = operation.affectedIds[0]
       if (taskId) {
         console.log(`🔄 [UNDO] Removing created task: ${taskId}`)
-        await taskStore.deleteTask(taskId)
+        await taskStore.deleteTask(taskId, 'undo:revert-create')
         // Cancel only pending CREATEs — keep the DELETE we just enqueued
         try {
           const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
@@ -232,6 +248,7 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
       if (deletedTask) {
         console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
+        await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
         await taskStore.createTask(deletedTask)
         console.log('🔴 [UNDO] createTask completed')
         // Cancel only pending DELETEs — keep the CREATE we just enqueued
@@ -253,6 +270,7 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
         const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
         if (deletedTask) {
           console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
+          await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
           await taskStore.createTask(deletedTask)
           // Cancel only pending DELETEs — keep the CREATE we just enqueued
           try {
@@ -280,6 +298,14 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
           for (const key of Object.keys(afterTask) as Array<keyof typeof afterTask>) {
             if (JSON.stringify(afterTask[key]) !== JSON.stringify((previousTask as typeof afterTask)[key])) {
               changedFields[key] = (previousTask as typeof afterTask)[key]
+            }
+          }
+          // BUG-1739: Also detect fields that were REMOVED by the operation
+          // (exist in previousTask but stripped from afterTask by JSON.stringify(undefined))
+          // e.g. canvasPosition cleared to undefined → key disappears after safeClone
+          for (const key of Object.keys(previousTask) as Array<keyof typeof previousTask>) {
+            if (!(key in afterTask) && !(key in changedFields)) {
+              changedFields[key as string] = previousTask[key]
             }
           }
           if (Object.keys(changedFields).length > 0) {
@@ -405,7 +431,7 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       // Redo deletion = delete the task again
       const taskId = operation.affectedIds[0]
       console.log(`🔁 [REDO] Re-deleting task: ${taskId}`)
-      await taskStore.deleteTask(taskId)
+      await taskStore.deleteTask(taskId, 'redo:re-delete')
         // Cancel only pending CREATEs — keep the DELETE we just enqueued
         try {
           const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
@@ -420,7 +446,7 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       // Redo bulk deletion = delete all tasks again
       for (const taskId of operation.affectedIds) {
         console.log(`🔁 [REDO] Re-deleting task: ${taskId}`)
-        await taskStore.deleteTask(taskId)
+        await taskStore.deleteTask(taskId, 'redo:re-delete')
         // Cancel only pending CREATEs — keep the DELETE we just enqueued
         try {
           const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
@@ -856,7 +882,7 @@ const deleteTaskWithUndo = async (taskId: string) => {
 
   try {
     // Perform the deletion
-    await taskStore.deleteTask(taskId)
+    await taskStore.deleteTask(taskId, 'deleteTaskWithUndo')
 
     // BUG-309-B: Commit the operation
     await nextTick()
@@ -1094,7 +1120,7 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
       console.warn('⚠️ taskStore.bulkDeleteTasks not found, falling back to individual')
       // Fallback for safety (though store should have it now)
       for (const id of taskIds) {
-        await taskStore.deleteTask(id)
+        await taskStore.deleteTask(id, 'deleteTaskWithUndo')
       }
     }
 

@@ -828,11 +828,15 @@ export function useTaskOperations(
         }
     }
 
-    const deleteTask = async (taskId: string) => {
+    const deleteTask = async (taskId: string, source: string = 'unknown') => {
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
-        if (index === -1) return
+        if (index === -1) {
+            console.warn(`⚠️ Task not found for deletion: ${taskId} (source: ${source})`)
+            return
+        }
 
         const deletedTask = _rawTasks.value[index]
+        console.log(`🗑️ [DELETE] "${deletedTask.title?.slice(0, 30)}" (${taskId.slice(0, 8)}) — source: ${source}`)
         manualOperationInProgress.value = true
 
         // BUG-1211 FIX: Mark as pending write BEFORE the delete so the realtime
@@ -958,7 +962,7 @@ export function useTaskOperations(
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task || !task.recurrenceRule) {
             // Not recurring — fall through to normal delete
-            await deleteTask(taskId)
+            await deleteTask(taskId, 'skipRecurringOccurrence')
             return
         }
 
@@ -985,7 +989,7 @@ export function useTaskOperations(
 
         // Delete the current occurrence — the recurrence scheduler will create
         // the next one on app load (useRecurrenceScheduler)
-        await deleteTask(taskId)
+        await deleteTask(taskId, 'skipRecurringOccurrence:chain')
     }
 
     /**
@@ -995,7 +999,7 @@ export function useTaskOperations(
     const stopRecurrence = async (taskId: string) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task || !task.recurrenceRule) {
-            await deleteTask(taskId)
+            await deleteTask(taskId, 'stopRecurrence')
             return
         }
 
@@ -1003,7 +1007,7 @@ export function useTaskOperations(
         await clearRecurrenceChain(taskId)
 
         // Delete the current task
-        await deleteTask(taskId)
+        await deleteTask(taskId, 'stopRecurrence:final')
     }
 
     // BUG-025 FIX: Atomic bulk delete using Supabase .in() operator

@@ -253,6 +253,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
         if (selectedNodeIds.length === 0) return
 
+        const count = selectedNodeIds.length
+
         try {
             for (const nodeId of selectedNodeIds) {
                 await undoHistory.updateTaskWithUndo(nodeId, {
@@ -264,6 +266,11 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             canvasStore.setSelectedNodes([])
             if (deps.batchSyncNodes) deps.batchSyncNodes('high')
             deps.closeCanvasContextMenu()
+
+            // Show feedback toast
+            const { showToast } = useToast()
+            const label = count === 1 ? 'Removed from canvas' : `Removed ${count} tasks from canvas`
+            showToast(label, 'success', { duration: 2000 })
         } catch (error) {
             console.error('[ASYNC-ERROR] moveSelectedTasksToInbox failed', error)
         }
@@ -391,23 +398,19 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                     // Remove from store (fire-and-forget)
                     imgStore.removeCanvasImage(item.id)
                 } else {
-                    // Check if task is recurring — route to recurrence modal
-                    const rawTasks = taskStore.rawTasks || taskStore.tasks
-                    const task = rawTasks.find(t => t.id === item.id)
-                    if (task?.recurrenceRule) {
-                        window.dispatchEvent(new CustomEvent('recurrence-delete-requested', {
-                            detail: { taskId: item.id, permanent: isPermanent }
-                        }))
-                        continue
-                    }
+                    // BUG-1739: For bulk delete, skip recurrence modal — just delete all selected tasks
+                    // The recurrence modal only makes sense for single-task delete (handled in deleteSelectedTasks)
                     if (isPermanent) {
-                        // TASK-1722: Shift+Delete skips undo stack — permanent delete, no Ctrl+Z
-                        console.log('🔴 [TASK-1722] PERMANENT delete (no undo):', item.id, item.name)
-                        await taskStore.permanentlyDeleteTask(item.id)
+                        // Shift+Delete: hard delete with undo support
+                        await undoHistory.permanentlyDeleteTaskWithUndo(item.id)
                     } else {
-                        // BUG-1533: Was moving to inbox instead of deleting. Now actually deletes (with undo support).
-                        console.log('🗑️ [TASK-1722] Soft delete (with undo):', item.id, item.name)
-                        await undoHistory.deleteTaskWithUndo(item.id)
+                        // Non-permanent: remove from canvas only, keep in system
+                        // Same pattern as moveSelectedTasksToInbox (line 260-264)
+                        await undoHistory.updateTaskWithUndo(item.id, {
+                            isInInbox: true,
+                            canvasPosition: undefined,
+                            canvasDismissed: true
+                        })
                     }
                 }
             }

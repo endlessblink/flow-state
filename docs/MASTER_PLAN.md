@@ -8,6 +8,65 @@
 
 ## Active Tasks
 
+### ~~BUG-1739~~: Canvas Bulk Delete Stops Working After First Delete (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE
+
+**Problem**: When deleting multiple tasks from canvas sequentially (not Shift+Delete), after a few deletions the delete stops working. The confirmation modal appears but pressing confirm does nothing.
+
+**Root Cause**: `undoSingleton.ts:783` — `commitOperation` accesses `pendingOperation.description` but `pendingOperation` is `null`. The undo singleton tracks only one pending operation at a time. Rapid sequential deletes from canvas bulk-delete (`useCanvasTaskActions.ts:408 confirmBulkDelete`) each call `deleteTaskWithUndo` which calls `commitOperation`, but the first delete consumes `pendingOperation`, leaving it `null` for subsequent deletes.
+
+**Error**: `TypeError: can't access property "description", pendingOperation is null` at `undoSingleton.ts:783`
+
+**Stacktrace path**: `confirmBulkDelete → deleteTaskWithUndo → commitOperation → pendingOperation.description (null)`
+
+**Fix**: Canvas Delete key now removes tasks from canvas only (moves to inbox) instead of soft-deleting from system. Shift+Delete still performs actual deletion. Ctrl+Z undo works for both. Batch delete uses single undo operation (`beginOperation` once, delete all, `commitOperation` once) to avoid race conditions with drag settling.
+
+**Files**: `src/composables/canvas/useCanvasTaskActions.ts:408`, `src/stores/undoSingleton.ts:783`
+
+---
+
+### BUG-1738: Workspace Switch Causes Task Deletion — Data Integrity (📋 PLANNED)
+
+**Priority**: P0 (Critical) | **Status**: 📋 PLANNED
+
+**Problem**: Switching workspaces triggers a cascade that soft-deletes real tasks from the production database. Affects all users with multiple workspaces.
+
+**Root Cause Chain** (verified from production logs 2026-03-31):
+1. User switches workspace (`personal → other-workspace`)
+2. Other workspace loads with 0 groups, 2 tasks
+3. Canvas sync (BUG-1203 stale parentId cleanup) sees tasks with `parentId` pointing to groups from the **previous** workspace → clears their `parentId` because groups "don't exist" in current workspace
+4. When switching back to personal workspace, `SMART-MERGE` sees ~130 tasks modified locally (parentId cleared) that "don't match the DB" → drops them as "stale local-only"
+5. Dropped tasks trigger `deleteTask()` → **soft-deletes real tasks from production DB**
+6. Result: 26 tasks soft-deleted, user sees "most tasks disappeared"
+
+**Evidence**: Production DB showed 26 tasks soft-deleted between 12:22–22:23 on 2026-03-31. All restored via `UPDATE tasks SET is_deleted = false`.
+
+**Fix Strategy** (multi-layer):
+
+1. **BUG-1203 scope guard** — `useCanvasSync.ts` line 454: Before clearing `parentId`, verify the group truly doesn't exist in the **current workspace's** group set. During workspace transitions (groups=0 transient state), skip the cleanup entirely.
+   - File: `src/composables/canvas/useCanvasSync.ts`
+   - Guard: `if (canvasStore._rawGroups.length === 0) return` — don't clear parentIds when no groups loaded
+
+2. **SMART-MERGE guard** — Don't drop local-only tasks during workspace switch transitions. Add a `isWorkspaceSwitching` flag that suppresses the "stale local-only" logic.
+   - File: `src/stores/tasks/taskPersistence.ts` (or wherever SMART-MERGE runs)
+   - Guard: skip dropping during `workspaceStore.isSwitching`
+
+3. **Canvas sync workspace scope** — `syncStoreToCanvas` should only process tasks belonging to the current workspace. Filter tasks by `workspace_id` before sync.
+   - File: `src/composables/canvas/useCanvasSync.ts`
+
+4. **Delete safety net** — Before any batch soft-delete triggered by sync/merge, log the count and require threshold confirmation (e.g., refuse to delete >5 tasks in a single sync cycle without explicit user action).
+   - File: `src/composables/supabase/useTasksDatabase.ts`
+
+**Testing**:
+- [ ] Switch workspaces back and forth 5 times — zero task count changes
+- [ ] Switch to empty workspace and back — all tasks preserved
+- [ ] Canvas parentIds survive workspace round-trip
+
+**Dependencies**: None (standalone fix)
+
+---
+
 ### ~~TASK-1734~~: Task Audit Log — Forensic Task Lifecycle Tracker (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-30)

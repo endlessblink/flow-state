@@ -1136,30 +1136,42 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
 }
 
 // BUG-1739: Batch move-to-inbox with a single undo operation.
-// Avoids N × (beginOperation + snapshot + commitOperation) overhead.
+// Bypasses global beginOperation/commitOperation to avoid race condition
+// with drag-settling's stale commitOperation stealing pendingOperation.
 const bulkMoveToInboxWithUndo = async (taskIds: string[]) => {
   if (taskIds.length === 0) return
 
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
-  await beginOperation({
+  // Capture "before" snapshot directly (not via beginOperation)
+  const snapshotBefore = await captureCurrentState(taskIds)
+
+  // Perform all updates
+  const updates = { isInInbox: true, canvasPosition: undefined, canvasDismissed: true }
+  for (const id of taskIds) {
+    await taskStore.updateTask(id, updates)
+  }
+
+  // Capture "after" snapshot
+  await nextTick()
+  const snapshotAfter = await captureCurrentState(taskIds)
+
+  // Push directly to operation stack (bypasses global pendingOperation)
+  const operation: UndoOperation = {
     type: 'task-move',
     affectedIds: [...taskIds],
-    description: `Remove ${taskIds.length} task${taskIds.length > 1 ? 's' : ''} from canvas`
-  })
+    description: `Remove ${taskIds.length} task${taskIds.length > 1 ? 's' : ''} from canvas`,
+    timestamp: Date.now()
+  }
+  operationStack.value.push({ operation, snapshotBefore, snapshotAfter })
+  if (operationStack.value.length > 30) operationStack.value.shift()
+  redoOperationStack.value = []
 
-  try {
-    const updates = { isInInbox: true, canvasPosition: undefined, canvasDismissed: true }
-    await Promise.all(taskIds.map(id => taskStore.updateTask(id, updates)))
-
-    await nextTick()
-    await commitOperation()
-  } catch (error) {
-    console.error('❌ bulkMoveToInboxWithUndo failed:', error)
-    pendingOperationBefore = null
-    pendingOperation = null
-    throw error
+  // Update VueUse refHistory for backward compatibility
+  if (unifiedState && commit) {
+    unifiedState.value = snapshotAfter
+    commit()
   }
 }
 

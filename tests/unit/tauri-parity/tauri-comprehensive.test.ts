@@ -413,14 +413,15 @@ describe('2. Platform Conditional Paths', () => {
     // Browser (default)
     expect(detectPlatform()).toBe('browser')
 
-    // Tauri
+    // TASK-1718: Tauri replaced by Electron — 'tauri' is no longer a valid Platform
+    // Test Electron detection instead
     _resetPlatformCache()
-    ;(window as Record<string, unknown>).__TAURI_INTERNALS__ = {}
-    expect(detectPlatform()).toBe('tauri')
+    ;(window as Record<string, unknown>).electronAPI = {}
+    expect(detectPlatform()).toBe('electron')
+    delete (window as Record<string, unknown>).electronAPI
 
     // Capacitor
     _resetPlatformCache()
-    delete (window as Record<string, unknown>).__TAURI_INTERNALS__
     ;(window as Record<string, unknown>).Capacitor = { isNativePlatform: () => true }
     expect(detectPlatform()).toBe('capacitor')
 
@@ -431,22 +432,21 @@ describe('2. Platform Conditional Paths', () => {
     expect(detectPlatform()).toBe('pwa')
   })
 
-  it('2.3 shouldTrustNavigatorOnline() differs between Tauri and browser', () => {
-    // Browser: trust navigator.onLine
+  it('2.3 TASK-1718: shouldTrustNavigatorOnline() always true after Electron migration', () => {
+    // Chromium's navigator.onLine is always trustworthy (no WebKitGTK quirks)
     expect(shouldTrustNavigatorOnline()).toBe(true)
 
-    // Tauri: do NOT trust navigator.onLine (WebKitGTK bug)
+    // Even with Tauri globals, still true (Tauri detection is dead)
     _resetPlatformCache()
     ;(window as Record<string, unknown>).__TAURI__ = {}
-    expect(shouldTrustNavigatorOnline()).toBe(false)
+    expect(shouldTrustNavigatorOnline()).toBe(true)
   })
 
-  it('2.4 getInitialOnlineState() returns true in Tauri (WebKitGTK always reports online)', () => {
+  it('2.4 TASK-1718: getInitialOnlineState() respects navigator.onLine (no Tauri override)', () => {
     _resetPlatformCache()
-    ;(window as Record<string, unknown>).__TAURI__ = {}
-    // Even if navigator.onLine is false, Tauri should optimistically return true
+    // With navigator.onLine=false, getInitialOnlineState returns false
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
-    expect(getInitialOnlineState()).toBe(true)
+    expect(getInitialOnlineState()).toBe(false)
   })
 
   it('2.5 useTauriStartup.ts exports isTauri function', async () => {

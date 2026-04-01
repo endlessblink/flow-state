@@ -81,63 +81,61 @@ describe('A: Platform-Conditional Behavior', () => {
     expect(importAttempted).toBe(false)
   })
 
-  // 2. isTauri() true → Tauri startup sequence initializes
-  it('2 - isTauri() true triggers Tauri startup path', () => {
+  // 2. TASK-1718: isTauri() is deprecated (always false). Test isElectron() instead.
+  it('2 - isTauri() always returns false after Electron migration; isElectron() detects electronAPI', async () => {
+    const mod = await import('@/utils/platform')
+    // isTauri() is a deprecated stub — always false regardless of window globals
     ;(window as Record<string, unknown>).__TAURI_INTERNALS__ = {}
-    expect(isTauri()).toBe(true)
+    _resetPlatformCache()
+    expect(isTauri()).toBe(false)
 
-    // The startup composable checks isTauri() and runs Docker/Supabase checks
-    let startupTriggered = false
-    if (isTauri()) {
-      startupTriggered = true
-    }
-    expect(startupTriggered).toBe(true)
+    // isElectron() detects window.electronAPI
+    delete (window as Record<string, unknown>).__TAURI_INTERNALS__
+    ;(window as Record<string, unknown>).electronAPI = {}
+    _resetPlatformCache()
+    expect(mod.isElectron()).toBe(true)
+    delete (window as Record<string, unknown>).electronAPI
+    _resetPlatformCache()
   })
 
-  // 3. Window title updates with timer state in Tauri
-  it('3 - Window title update logic is gated behind isTauri()', () => {
-    // In Tauri, the app updates window title to show timer state
-    // In browser, document.title is used instead
-    const tauriTitleUpdate = vi.fn()
+  // 3. TASK-1718: Window title always uses browser path (isTauri() deprecated)
+  it('3 - Window title update always takes browser path after Electron migration', () => {
+    const nativeTitleUpdate = vi.fn()
     const browserTitleUpdate = vi.fn()
 
-    // Browser path
+    // isTauri() is always false — browser path always taken
     if (isTauri()) {
-      tauriTitleUpdate('FlowState - 25:00')
+      nativeTitleUpdate('FlowState - 25:00')
     } else {
       browserTitleUpdate('FlowState - 25:00')
     }
 
-    expect(tauriTitleUpdate).not.toHaveBeenCalled()
+    expect(nativeTitleUpdate).not.toHaveBeenCalled()
     expect(browserTitleUpdate).toHaveBeenCalledWith('FlowState - 25:00')
 
-    // Tauri path
+    // Even with __TAURI_INTERNALS__ set, isTauri() remains false
     ;(window as Record<string, unknown>).__TAURI_INTERNALS__ = {}
     _resetPlatformCache()
-
-    if (isTauri()) {
-      tauriTitleUpdate('FlowState - 24:59')
-    }
-    expect(tauriTitleUpdate).toHaveBeenCalledWith('FlowState - 24:59')
+    expect(isTauri()).toBe(false) // Deprecated stub
   })
 
-  // 4. System tray integration only in Tauri
-  it('4 - System tray features are Tauri-only', () => {
+  // 4. TASK-1718: System tray guard — isTauri() deprecated, always false
+  it('4 - System tray features never activate (isTauri() deprecated)', () => {
     let trayInitAttempted = false
 
-    // Pattern from the codebase: system tray is only set up in Tauri
     if (isTauri()) {
       trayInitAttempted = true
     }
     expect(trayInitAttempted).toBe(false)
 
+    // Even with Tauri globals, isTauri() stays false
     ;(window as Record<string, unknown>).__TAURI__ = {}
     _resetPlatformCache()
 
     if (isTauri()) {
       trayInitAttempted = true
     }
-    expect(trayInitAttempted).toBe(true)
+    expect(trayInitAttempted).toBe(false) // Deprecated — always false
   })
 
   // 5. Deep link handling in Tauri vs browser
@@ -188,25 +186,23 @@ describe('A: Platform-Conditional Behavior', () => {
     expect(result).toBe(false)
   })
 
-  // 8. Notification routing: Tauri → native, browser → Web API
-  it('8 - Notification delivery routes to correct backend', () => {
-    // notificationDelivery.ts: Tauri+Linux → notify-send, Browser → Notification API
+  // 8. TASK-1718: Notification routing — isTauri() deprecated, native-linux path is dead
+  it('8 - Notification delivery always routes to browser-api (isTauri() deprecated)', () => {
     let route: 'native-linux' | 'browser-api' | 'capacitor' = 'browser-api'
 
     if (isTauri()) {
       route = 'native-linux'
     }
-
     expect(route).toBe('browser-api')
 
+    // Even with Tauri globals, route stays browser-api
     ;(window as Record<string, unknown>).__TAURI_INTERNALS__ = {}
     _resetPlatformCache()
 
     if (isTauri()) {
       route = 'native-linux'
     }
-
-    expect(route).toBe('native-linux')
+    expect(route).toBe('browser-api') // isTauri() always false
   })
 
   // 9. Wake lock behavior differs between platforms
@@ -222,22 +218,21 @@ describe('A: Platform-Conditional Behavior', () => {
     expect(method).toBe('wake-lock-api')
   })
 
-  // 10. Online/offline detection: WebKitGTK always reports online
-  it('10 - WebKitGTK (Tauri) always assumes online state', () => {
-    // shouldTrustNavigatorOnline() returns false in Tauri
-    // getInitialOnlineState() returns true in Tauri regardless of navigator.onLine
+  // 10. TASK-1718: Online detection — Chromium (Electron) is always trustworthy
+  it('10 - After Electron migration, navigator.onLine is always trusted', () => {
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
 
-    // Browser: trusts navigator.onLine
+    // shouldTrustNavigatorOnline() always returns true (Chromium is reliable)
     expect(shouldTrustNavigatorOnline()).toBe(true)
+    // getInitialOnlineState() respects navigator.onLine
     expect(getInitialOnlineState()).toBe(false)
 
-    // Tauri: does NOT trust navigator.onLine, assumes online
+    // Even with Tauri globals, behavior is the same (Tauri detection is dead)
     ;(window as Record<string, unknown>).__TAURI__ = {}
     _resetPlatformCache()
 
-    expect(shouldTrustNavigatorOnline()).toBe(false)
-    expect(getInitialOnlineState()).toBe(true)
+    expect(shouldTrustNavigatorOnline()).toBe(true)
+    expect(getInitialOnlineState()).toBe(false)
   })
 })
 
@@ -394,11 +389,10 @@ describe('B: Store Behavior in Tauri Context', () => {
     expect(deserialized.y).toBe(200)
   })
 
-  // 17. Sync orchestrator handles Tauri network quirks
-  it('17 - Sync orchestrator uses getInitialOnlineState for platform-aware network detection', async () => {
+  // 17. TASK-1718: getInitialOnlineState respects navigator.onLine (no Tauri override)
+  it('17 - Sync orchestrator uses getInitialOnlineState — always respects navigator.onLine after Electron migration', async () => {
     const { getInitialOnlineState } = await import('@/utils/platform')
 
-    // Browser: respects navigator.onLine
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(true)
     expect(getInitialOnlineState()).toBe(true)
 
@@ -406,10 +400,10 @@ describe('B: Store Behavior in Tauri Context', () => {
     _resetPlatformCache()
     expect(getInitialOnlineState()).toBe(false)
 
-    // Tauri: always returns true (optimistic)
+    // Even with Tauri globals, navigator.onLine is still respected (no override)
     ;(window as Record<string, unknown>).__TAURI__ = {}
     _resetPlatformCache()
-    expect(getInitialOnlineState()).toBe(true)
+    expect(getInitialOnlineState()).toBe(false) // navigator.onLine is still false
   })
 
   // 18. Backup system works in both platforms

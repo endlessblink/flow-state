@@ -31,30 +31,27 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('deliverNotification — platform routing', () => {
-  it('1: Tauri + Linux → attempts notify-send before Browser API', async () => {
-    // Force Tauri environment
+  it('1: TASK-1718: Tauri notify-send path is dead (isTauri() deprecated), falls through to Browser API', async () => {
+    // Even with Tauri globals set, isTauri() returns false after Electron migration
     Object.defineProperty(window, '__TAURI_INTERNALS__', { value: {}, configurable: true })
     _resetPlatformCache()
 
-    // Mock navigator.platform
     Object.defineProperty(navigator, 'platform', { value: 'Linux x86_64', configurable: true })
 
-    const commandMock = {
-      execute: vi.fn().mockResolvedValue({ code: 0, stderr: '' })
-    }
-    const createMock = vi.fn().mockReturnValue(commandMock)
+    // Mock Browser Notification API with granted permission
+    const notifMock = vi.fn()
+    Object.defineProperty(window, 'Notification', {
+      value: Object.assign(notifMock, { permission: 'granted' }),
+      configurable: true,
+      writable: true,
+    })
 
-    vi.doMock('@tauri-apps/plugin-shell', () => ({
-      Command: { create: createMock }
-    }))
-
-    // Re-import after mock
     const { deliverNotification } = await import('@/utils/notificationDelivery')
     const result = await deliverNotification({ title: 'Test', body: 'Body' })
+    // Falls through to Browser API since isTauri() is always false
     expect(result).toBe(true)
-    expect(createMock).toHaveBeenCalledWith('notify-send', expect.any(Array))
+    expect(notifMock).toHaveBeenCalled()
 
-    vi.doUnmock('@tauri-apps/plugin-shell')
     delete (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
   })
 

@@ -13,96 +13,199 @@
             </button>
           </div>
 
+          <!-- Workspace Context Strip (workspace tasks only) -->
+          <div v-if="isWorkspaceTask" class="workspace-strip">
+            <span class="ws-dot" :style="{ background: activeWorkspace?.color || '#4ECDC4' }" />
+            <span class="ws-name">{{ activeWorkspace?.name || 'Workspace' }}</span>
+            <span class="ws-sep">&middot;</span>
+            <span class="ws-meta">{{ wsRelativeTime(editedTask.createdAt) }}</span>
+          </div>
+
           <div class="modal-body">
             <!-- Main Task Details -->
             <section class="form-section">
-              <h3 class="section-title">
+              <h3 v-if="!isWorkspaceTask" class="section-title">
                 Task Details
               </h3>
 
               <TaskEditHeader
                 ref="headerRef"
                 v-model="editedTask"
+                :hide-labels="isWorkspaceTask"
               />
 
-              <!-- TASK-1470: Inline AI suggestion prompt — visible when task has a title and AI hasn't been used yet this session -->
-              <Transition name="ai-hint-fade">
-                <button
-                  v-if="showAIHint"
-                  class="ai-inline-hint"
-                  type="button"
-                  @click="triggerInlineAIAssist"
-                >
-                  <Sparkles :size="13" class="ai-hint-icon" />
-                  <span>Get AI suggestions for this task</span>
-                </button>
-              </Transition>
+              <!-- Workspace: Collaboration Bar (replaces TaskEditMetadata) -->
+              <div v-if="isWorkspaceTask" class="collab-bar" :class="{ 'is-readonly': isReadOnly }">
+                <div class="collab-field">
+                  <span class="collab-label">Assigned</span>
+                  <CustomSelect
+                    :model-value="editedTask.assignedTo || ''"
+                    :options="assigneeOptions"
+                    placeholder="Unassigned"
+                    :compact="true"
+                    @update:model-value="handleAssigneeChange"
+                  />
+                </div>
+                <div class="collab-field">
+                  <span class="collab-label">Status</span>
+                  <CustomSelect
+                    v-model="editedTask.status"
+                    :options="statusOptions"
+                    :compact="true"
+                  />
+                </div>
+                <div class="collab-field">
+                  <span class="collab-label">Due</span>
+                  <div class="collab-due-pills">
+                    <button
+                      v-for="pill in quickDatePills"
+                      :key="pill.label"
+                      class="due-pill"
+                      :class="{ active: isDateActive(pill) }"
+                      type="button"
+                      @click="setQuickDate(pill)"
+                    >{{ pill.label }}</button>
+                    <button v-if="editedTask.dueDate" class="due-pill due-clear" type="button" @click="editedTask.dueDate = ''">×</button>
+                  </div>
+                </div>
+              </div>
 
-              <TaskEditMetadata
-                v-model="editedTask"
-                :current-section-id="currentSectionId"
-                :priority-options="priorityOptions"
-                :status-options="statusOptions"
-                @section-change="handleSectionChange"
-                @schedule-change="handleScheduledDateChange"
-              />
+              <!-- Personal: AI hint + Metadata + Recurrence (unchanged) -->
+              <template v-if="!isWorkspaceTask">
+                <!-- TASK-1470: Inline AI suggestion prompt — visible when task has a title and AI hasn't been used yet this session -->
+                <Transition name="ai-hint-fade">
+                  <button
+                    v-if="showAIHint"
+                    class="ai-inline-hint"
+                    type="button"
+                    @click="triggerInlineAIAssist"
+                  >
+                    <Sparkles :size="13" class="ai-hint-icon" />
+                    <span>Get AI suggestions for this task</span>
+                  </button>
+                </Transition>
 
-              <RecurrenceSelector
-                v-model="editedTask.recurrence"
-                :start-date="editedTask.scheduledDate || editedTask.dueDate"
-                :task-id="editedTask.id"
-              />
+                <TaskEditMetadata
+                  v-model="editedTask"
+                  :current-section-id="currentSectionId"
+                  :priority-options="priorityOptions"
+                  :status-options="statusOptions"
+                  @section-change="handleSectionChange"
+                  @schedule-change="handleScheduledDateChange"
+                />
+
+                <RecurrenceSelector
+                  v-model="editedTask.recurrence"
+                  :start-date="editedTask.scheduledDate || editedTask.dueDate"
+                  :task-id="editedTask.id"
+                />
+              </template>
             </section>
 
-            <!-- TASK-1553: Task Comments (workspace tasks only) -->
+            <!-- TASK-1553: Task Comments (workspace tasks only, default expanded) -->
             <TaskComments
-              v-if="editedTask.workspaceId"
+              v-if="isWorkspaceTask"
               :task-id="editedTask.id"
-              :workspace-id="editedTask.workspaceId"
+              :workspace-id="editedTask.workspaceId!"
+              :default-expanded="true"
             />
 
-            <!-- FEATURE-1363: Task Reminders -->
-            <section class="form-section">
-              <h3 class="section-title">
-                Reminders
-              </h3>
-              <ReminderPicker
-                :reminders="editedTask.reminders || []"
-                :due-date="editedTask.dueDate"
-                :due-time="editedTask.dueTime"
-                @add-reminder="handleAddReminder"
-                @remove-reminder="handleRemoveReminder"
-                @dismiss-reminder="handleDismissReminder"
+            <!-- Workspace: "More options" disclosure wraps secondary sections -->
+            <template v-if="isWorkspaceTask">
+              <div class="more-options-section">
+                <button class="more-options-toggle" type="button" @click="moreOptionsExpanded = !moreOptionsExpanded">
+                  <ChevronDown :size="14" class="chevron-icon" :class="{ rotated: !moreOptionsExpanded }" />
+                  <span>More options</span>
+                </button>
+                <div v-show="moreOptionsExpanded" class="more-options-content">
+                  <!-- FEATURE-1363: Task Reminders -->
+                  <section class="form-section">
+                    <h3 class="section-title">
+                      Reminders
+                    </h3>
+                    <ReminderPicker
+                      :reminders="editedTask.reminders || []"
+                      :due-date="editedTask.dueDate"
+                      :due-time="editedTask.dueTime"
+                      @add-reminder="handleAddReminder"
+                      @remove-reminder="handleRemoveReminder"
+                      @dismiss-reminder="handleDismissReminder"
+                    />
+                  </section>
+
+                  <!-- FEATURE-1414: Task Attachments -->
+                  <TaskAttachments
+                    :attachments="editedTask.attachments || []"
+                    @add="handleAddAttachment"
+                    @remove="handleRemoveAttachment"
+                  />
+
+                  <!-- Subtasks -->
+                  <TaskEditSubtasks
+                    :subtasks="editedTask.subtasks"
+                    @add="addSubtask"
+                    @delete="deleteSubtask"
+                    @update="updateSubtaskCompletion"
+                  />
+
+                  <!-- Child Tasks (from canvas connections) -->
+                  <TaskEditChildTasks :child-tasks="childTasks" />
+
+                  <!-- Recurrence (inside more options for workspace) -->
+                  <RecurrenceSelector
+                    v-model="editedTask.recurrence"
+                    :start-date="editedTask.scheduledDate || editedTask.dueDate"
+                    :task-id="editedTask.id"
+                  />
+                </div>
+              </div>
+            </template>
+
+            <!-- Personal: render all sections normally (unchanged) -->
+            <template v-else>
+              <!-- FEATURE-1363: Task Reminders -->
+              <section class="form-section">
+                <h3 class="section-title">
+                  Reminders
+                </h3>
+                <ReminderPicker
+                  :reminders="editedTask.reminders || []"
+                  :due-date="editedTask.dueDate"
+                  :due-time="editedTask.dueTime"
+                  @add-reminder="handleAddReminder"
+                  @remove-reminder="handleRemoveReminder"
+                  @dismiss-reminder="handleDismissReminder"
+                />
+              </section>
+
+              <!-- FEATURE-1414: Task Attachments -->
+              <TaskAttachments
+                :attachments="editedTask.attachments || []"
+                @add="handleAddAttachment"
+                @remove="handleRemoveAttachment"
               />
-            </section>
 
-            <!-- FEATURE-1414: Task Attachments -->
-            <TaskAttachments
-              :attachments="editedTask.attachments || []"
-              @add="handleAddAttachment"
-              @remove="handleRemoveAttachment"
-            />
+              <!-- Subtasks -->
+              <TaskEditSubtasks
+                :subtasks="editedTask.subtasks"
+                @add="addSubtask"
+                @delete="deleteSubtask"
+                @update="updateSubtaskCompletion"
+              />
 
-            <!-- Subtasks -->
-            <TaskEditSubtasks
-              :subtasks="editedTask.subtasks"
-              @add="addSubtask"
-              @delete="deleteSubtask"
-              @update="updateSubtaskCompletion"
-            />
+              <!-- Child Tasks (from canvas connections) -->
+              <TaskEditChildTasks :child-tasks="childTasks" />
 
-            <!-- Child Tasks (from canvas connections) -->
-            <TaskEditChildTasks :child-tasks="childTasks" />
-
-            <!-- Left Actions (Pomodoro reset, etc.) -->
-            <div v-if="showPomodoros" class="left-actions-section">
-              <button
-                class="reset-pomodoros-btn-inline"
-                @click="resetPomodoros"
-              >
-                Reset Pomodoros
-              </button>
-            </div>
+              <!-- Left Actions (Pomodoro reset, etc.) -->
+              <div v-if="showPomodoros" class="left-actions-section">
+                <button
+                  class="reset-pomodoros-btn-inline"
+                  @click="resetPomodoros"
+                >
+                  Reset Pomodoros
+                </button>
+              </div>
+            </template>
           </div>
 
           <!-- AI Assist Popover -->
@@ -122,6 +225,7 @@
           <!-- Sticky Action Buttons -->
           <div class="modal-actions-sticky">
             <button
+              v-if="!isWorkspaceTask"
               ref="aiAssistBtnRef"
               class="btn btn-ai btn-action"
               @click="openAIAssist"
@@ -131,6 +235,7 @@
               <kbd class="ai-shortcut-hint">Ctrl+.</kbd>
             </button>
             <button
+              v-if="!isReadOnly"
               class="btn btn-danger btn-action"
               @click="handlePermanentDelete"
             >
@@ -142,6 +247,7 @@
               Cancel
             </button>
             <button
+              v-if="!isReadOnly"
               class="btn btn-primary btn-action"
               :class="{ 'btn-loading': isSaving }"
               :disabled="isSaveDisabled"
@@ -161,12 +267,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { X, Sparkles, Trash2 } from 'lucide-vue-next'
+import { X, Sparkles, Trash2, ChevronDown } from 'lucide-vue-next'
 import { type Task, useTaskStore } from '@/stores/tasks'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
 import { getTaskCompleteness } from '@/composables/useTaskCompleteness'
 import { useCanvasStore } from '@/stores/canvas'
 import { useNotificationStore } from '@/stores/notifications'
+import { useWorkspaceStore } from '@/stores/workspace'
+import { getAssignableMembers } from '@/composables/workspace/useTaskAssignment'
 
 // Composables
 import { useTaskEditState } from '@/composables/tasks/useTaskEditState'
@@ -182,6 +290,7 @@ import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import ReminderPicker from '@/components/notifications/ReminderPicker.vue'
 import TaskAttachments from './TaskAttachments.vue'
 import TaskComments from './edit/TaskComments.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 import type { TaskReminder } from '@/types/notifications'
 import type { TaskAttachment } from '@/types/tasks'
 
@@ -199,6 +308,7 @@ const emit = defineEmits<{
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const notificationStore = useNotificationStore()
+const workspaceStore = useWorkspaceStore()
 
 // Template Refs
 const headerRef = ref<InstanceType<typeof TaskEditHeader> | null>(null)
@@ -236,6 +346,76 @@ const {
   isFormValid,
   isFormDirty
 })
+
+// --- Workspace task detection & layout ---
+const isWorkspaceTask = computed(() => !!editedTask.value.workspaceId)
+const activeWorkspace = computed(() => workspaceStore.activeWorkspace)
+const isReadOnly = computed(() =>
+  isWorkspaceTask.value && workspaceStore.userRole === 'viewer'
+)
+const moreOptionsExpanded = ref(false)
+
+// --- Workspace: Assignee options ---
+const assigneeOptions = computed(() => {
+  if (!editedTask.value.workspaceId) return []
+  const members = getAssignableMembers(editedTask.value.workspaceId)
+  return [
+    { label: 'Unassigned', value: '' },
+    ...members.map(m => ({
+      label: m.displayName || m.email || m.userId.substring(0, 8),
+      value: m.userId,
+    }))
+  ]
+})
+
+function handleAssigneeChange(value: string | number) {
+  editedTask.value.assignedTo = value === '' ? null : String(value)
+}
+
+// --- Workspace: Quick date pills ---
+const quickDatePills = [
+  { label: 'Today', offset: 0 as number | string },
+  { label: 'Tmrw', offset: 1 as number | string },
+  { label: 'Wknd', offset: 'weekend' as number | string },
+  { label: '+1wk', offset: 7 as number | string },
+]
+
+function setQuickDate(pill: { offset: number | string }) {
+  const now = new Date()
+  let target: Date
+  if (pill.offset === 'weekend') {
+    const day = now.getDay()
+    const daysUntilSat = (6 - day + 7) % 7 || 7
+    target = new Date(now.getTime() + daysUntilSat * 86400000)
+  } else {
+    target = new Date(now.getTime() + (pill.offset as number) * 86400000)
+  }
+  editedTask.value.dueDate = target.toISOString().split('T')[0]
+}
+
+function isDateActive(pill: { offset: number | string }): boolean {
+  if (!editedTask.value.dueDate) return false
+  const tempDate = new Date()
+  if (pill.offset === 'weekend') {
+    const day = tempDate.getDay()
+    const daysUntilSat = (6 - day + 7) % 7 || 7
+    const target = new Date(tempDate.getTime() + daysUntilSat * 86400000).toISOString().split('T')[0]
+    return editedTask.value.dueDate === target
+  }
+  const target = new Date(tempDate.getTime() + (pill.offset as number) * 86400000).toISOString().split('T')[0]
+  return editedTask.value.dueDate === target
+}
+
+function wsRelativeTime(date: Date | string | undefined): string {
+  if (!date) return ''
+  const diff = Date.now() - (date instanceof Date ? date.getTime() : new Date(date).getTime())
+  const days = Math.floor(diff / 86400000)
+  if (days === 0) return 'Created today'
+  if (days === 1) return 'Created yesterday'
+  if (days < 7) return `Created ${days}d ago`
+  const d = date instanceof Date ? date : new Date(date)
+  return `Created ${d.toLocaleDateString()}`
+}
 
 // TASK-1470: Smart AI hint — persistent for new users, re-triggers for incomplete tasks
 const aiUsedThisSession = ref(false)
@@ -768,6 +948,157 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
   transform: translateY(-2px);
 }
 
+/* ─── Workspace Context Strip ────────────────────────────────────────────────── */
+
+.workspace-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  background: var(--glass-bg-soft);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.ws-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.ws-name {
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+}
+
+.ws-sep {
+  color: var(--text-subtle);
+}
+
+.ws-meta {
+  color: var(--text-muted);
+}
+
+/* ─── Collaboration Bar ─────────────────────────────────────────────────────── */
+
+.collab-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.collab-bar.is-readonly {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.collab-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.collab-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-semibold);
+}
+
+.collab-due-pills {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.due-pill {
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  white-space: nowrap;
+}
+
+.due-pill:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
+}
+
+.due-pill.active {
+  background: var(--brand-primary-subtle);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  font-weight: var(--font-medium);
+}
+
+.due-pill.due-clear {
+  color: var(--text-muted);
+  padding: var(--space-1) var(--space-1_5);
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+.due-pill.due-clear:hover {
+  color: var(--color-priority-high);
+  border-color: var(--danger-border-medium);
+}
+
+/* ─── More Options Disclosure ────────────────────────────────────────────────── */
+
+.more-options-section {
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.more-options-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: color var(--duration-fast);
+}
+
+.more-options-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.more-options-toggle .chevron-icon {
+  transition: transform var(--duration-fast);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.more-options-toggle .chevron-icon.rotated {
+  transform: rotate(-90deg);
+}
+
+.more-options-content {
+  padding-top: var(--space-3);
+}
+
 /* Mobile responsiveness for sticky buttons */
 @media (max-width: 640px) {
   .modal-actions-sticky {
@@ -779,6 +1110,11 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
     flex: 1;
     min-width: unset;
     padding: var(--space-3) var(--space-3);
+  }
+
+  .collab-bar {
+    flex-direction: column;
+    gap: var(--space-3);
   }
 }
 </style>

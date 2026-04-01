@@ -98,10 +98,13 @@ import type { TaskComment } from '@/types/workspace'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   taskId: string
   workspaceId: string
-}>()
+  defaultExpanded?: boolean
+}>(), {
+  defaultExpanded: false,
+})
 
 // ─── Composable ───────────────────────────────────────────────────────────────
 
@@ -121,7 +124,7 @@ const authStore = useAuthStore()
 
 // ─── UI state ─────────────────────────────────────────────────────────────────
 
-const isExpanded = ref(false)
+const isExpanded = ref(props.defaultExpanded)
 const newComment = ref('')
 const editingCommentId = ref<string | null>(null)
 const editContent = ref('')
@@ -226,7 +229,7 @@ async function handleDelete(commentId: string): Promise<void> {
 
 onMounted(async () => {
   const fetched = await fetchComments(props.taskId)
-  if (fetched.length > 0) isExpanded.value = true
+  if (!props.defaultExpanded && fetched.length > 0) isExpanded.value = true
   setupSubscription(props.taskId)
 })
 
@@ -240,7 +243,7 @@ watch(
     if (newId !== oldId) {
       if (unsubscribe) unsubscribe()
       const fetched = await fetchComments(newId)
-      isExpanded.value = fetched.length > 0
+      isExpanded.value = props.defaultExpanded || fetched.length > 0
       setupSubscription(newId)
     }
   }

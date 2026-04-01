@@ -1,6 +1,6 @@
 <template>
   <div class="form-group">
-    <label class="form-label">Title</label>
+    <label v-if="!hideLabels" class="form-label">Title</label>
     <input
       ref="titleInput"
       v-model="title"
@@ -15,11 +15,11 @@
   </div>
 
   <div class="form-group">
-    <label class="form-label">Description</label>
+    <label v-if="!hideLabels" class="form-label">Description</label>
     <MarkdownEditor
       v-model="description"
-      placeholder="Describe what needs to be done..."
-      :min-height="120"
+      :placeholder="hideLabels ? 'Add a description... Use the toolbar for formatting.' : 'Describe what needs to be done...'"
+      :min-height="hideLabels ? 80 : 120"
     />
   </div>
 </template>
@@ -30,9 +30,12 @@ import { type Task } from '@/stores/tasks'
 import MarkdownEditor from '@/components/common/MarkdownEditor.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: Task
-}>()
+  hideLabels?: boolean
+}>(), {
+  hideLabels: false,
+})
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Task): void

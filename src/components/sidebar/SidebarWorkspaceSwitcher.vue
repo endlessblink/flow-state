@@ -286,12 +286,14 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 const workspaceStore = useWorkspaceStore()
 const authStore = useAuthStore()
 
@@ -329,6 +331,12 @@ function switchTo(id: string | null) {
   workspaceStore.switchWorkspace(id)
   isOpen.value = false
   cancelCreate()
+
+  // Shared workspaces have no canvas — redirect to Catalog if on Canvas view
+  if (id && router.currentRoute.value.path === '/') {
+    router.push('/tasks')
+  }
+  // When switching back to personal, stay on current view (all views work for personal)
 }
 
 async function openCreate() {

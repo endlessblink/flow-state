@@ -4038,22 +4038,24 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 **What works**: Paste (Ctrl+V), render on canvas, click-to-select (teal ring), drag, double-click lightbox, Delete key removes, undo via global operation stack.
 
-**Follow-up**: TASK-1722 (polish — context menu overlap, Shift+Delete behavior)
+**Follow-up**: ~~TASK-1722~~ (✅ DONE — context menu overlap, delete+undo, lightbox focus)
 
 ---
 
-### TASK-1722: Canvas ImageNode interaction polish (🔄 IN PROGRESS)
+### ~~TASK-1722~~: Canvas ImageNode interaction polish (✅ DONE)
 
-**Priority**: P3 | **Status**: 🔄 IN PROGRESS
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-01)
 
 **Parent**: TASK-1690 follow-up
 
-**Issues to fix**:
-1. Right-click context menu overlaps with pane context menu (event propagation — need `stopPropagation` in `handleNodeContextMenu` for imageNode branch)
-2. Shift+Delete should skip undo stack (permanent delete behavior)
-3. Lightbox should return focus to Vue Flow pane on close
+**Issues fixed**:
+1. ✅ Right-click context menu overlap — added `.image-node` guard to `handleCanvasRightClick`
+2. ✅ Delete + Ctrl+Z undo — fixed global keydown listener (was skipping Delete), replaced broken `permanentlyDeleteTaskWithUndo` with `bulkDeleteTasksWithUndo`, always push image deletes to undo stack
+3. ✅ Lightbox focus return — already working from TASK-1690
 
-**Files**: `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasHotkeys.ts`, `src/components/canvas/ImageNode.vue`
+**Root causes found**: Delete key not reaching handler (focus stolen by VueFlow nodes), `permanentlyDeleteTaskWithUndo` corrupting shared `pendingOperation` singleton state, tombstone blocking undo restore, console filter swallowing debug logs (`[TASK-` pattern)
+
+**Files**: `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasTaskActions.ts`, `src/views/CanvasView.vue`, `src/composables/undoSingleton.ts`
 
 ---
 

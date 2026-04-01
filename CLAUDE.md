@@ -20,6 +20,11 @@ These are the source of truth for the app's current state. When delegating to ag
 **IMPORTANT: Follow this workflow for EVERY task:**
 
 1. **Before starting**: Run `./scripts/utils/get-next-task-id.cjs` to get a unique ID, then add task to `docs/MASTER_PLAN.md` with proper ID format (TASK-XXX, BUG-XXX, etc.)
+
+**CRITICAL - Task Title Length:**
+Summary table titles MUST be **short** (max ~60 chars). Put details in the `####` detailed section, NOT the table. Example:
+- Table: `Fix Canvas composable types (120 errors, 9 files)`
+- Detail section: full file lists, error patterns, fix approach
 2. **During work**: Update progress and meaningful steps in MASTER_PLAN.md
 3. **After completion**: Mark as ✅ DONE with strikethrough on ID **IN ALL LOCATIONS**
 

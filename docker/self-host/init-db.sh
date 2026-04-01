@@ -114,6 +114,49 @@ CREATE PUBLICATION IF NOT EXISTS supabase_realtime;
 ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT ALL ON TABLES TO supabase_auth_admin;
 ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT ALL ON SEQUENCES TO supabase_auth_admin;
 ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT ALL ON FUNCTIONS TO supabase_auth_admin;
+
+-- Pre-create auth enum types that GoTrue migrations expect.
+-- GoTrue's init migration creates tables but not enums; later migrations
+-- reference these types and fail if they don't exist.
+DO \$\$
+BEGIN
+  CREATE TYPE auth.aal_level AS ENUM ('aal1', 'aal2', 'aal3');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END \$\$;
+
+DO \$\$
+BEGIN
+  CREATE TYPE auth.code_challenge_method AS ENUM ('s256', 'plain');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END \$\$;
+
+DO \$\$
+BEGIN
+  CREATE TYPE auth.factor_status AS ENUM ('unverified', 'verified');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END \$\$;
+
+DO \$\$
+BEGIN
+  CREATE TYPE auth.factor_type AS ENUM ('totp', 'webauthn');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END \$\$;
+
+DO \$\$
+BEGIN
+  CREATE TYPE auth.one_time_token_type AS ENUM (
+    'confirmation_token', 'reauthentication_token', 'recovery_token',
+    'email_change_token_new', 'email_change_token_current', 'phone_change_token'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END \$\$;
+
+-- Transfer ownership of auth types to supabase_auth_admin so GoTrue can ALTER them
+ALTER TYPE auth.aal_level OWNER TO supabase_auth_admin;
+ALTER TYPE auth.code_challenge_method OWNER TO supabase_auth_admin;
+ALTER TYPE auth.factor_status OWNER TO supabase_auth_admin;
+ALTER TYPE auth.factor_type OWNER TO supabase_auth_admin;
+ALTER TYPE auth.one_time_token_type OWNER TO supabase_auth_admin;
 SQL
     log "Roles and schemas created successfully."
 }

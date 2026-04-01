@@ -1,14 +1,23 @@
 import { supabase, invalidateCache, type DatabaseContext } from './_infrastructure'
 
+/** Shape of Supabase Realtime postgres_changes payload */
+export interface RealtimePayload {
+    eventType: string
+    table: string
+    new: Record<string, unknown> | null
+    old: Record<string, unknown> | null
+    [key: string]: unknown
+}
+
 export function useRealtimeSubscription(ctx: DatabaseContext) {
     const { authStore, handleError } = ctx
 
     const initRealtimeSubscription = (
-        onProjectChange: (payload: unknown) => void,
-        onTaskChange: (payload: unknown) => void,
-        onTimerChange?: (payload: unknown) => void,
-        onNotificationChange?: (payload: unknown) => void,
-        onGroupChange?: (payload: unknown) => void,
+        onProjectChange: (payload: RealtimePayload) => void,
+        onTaskChange: (payload: RealtimePayload) => void,
+        onTimerChange?: (payload: RealtimePayload) => void,
+        onNotificationChange?: (payload: RealtimePayload) => void,
+        onGroupChange?: (payload: RealtimePayload) => void,
         onRecovery?: () => Promise<void>, // Callback to reload data after recovery
         workspaceId?: string | null       // Workspace collaboration: null = personal
     ) => {
@@ -67,7 +76,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             // Attach Listeners with detailed logging
             channel
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: projectFilter },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePayload) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] PROJECT event received:', {
                                 eventType: payload.eventType,
@@ -79,7 +88,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                         if (payload.table === 'projects') onProjectChange(payload)
                     })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: taskFilter },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePayload) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] TASK event received:', {
                                 eventType: payload.eventType,
@@ -94,7 +103,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             if (onTimerChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'timer_sessions', filter: `user_id=eq.${userId}` },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePayload) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] TIMER event received:', {
                                 eventType: payload.eventType,
@@ -109,7 +118,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             if (onNotificationChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePayload) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] NOTIFICATION event received:', {
                                 eventType: payload.eventType,
@@ -122,7 +131,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             if (onGroupChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: groupFilter },
-                    (payload: Record<string, unknown>) => {
+                    (payload: RealtimePayload) => {
                         if (import.meta.env.DEV) {
                             console.debug('📡 [REALTIME] GROUP event received:', {
                                 eventType: payload.eventType,

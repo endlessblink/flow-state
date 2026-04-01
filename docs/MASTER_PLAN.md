@@ -4004,13 +4004,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 | ID | Task | Priority | Status |
 |----|------|----------|--------|
-| TASK-1683 | Fix Supabase database composable types — 85 errors across 11 files. Mostly `supabase` possibly null (TS18047) and missing property on `{}` (TS2339). Files: `_infrastructure.ts`, `_tombstone.ts`, `useGroupsDatabase.ts`, `useNotificationsDatabase.ts`, `usePinnedTasksDatabase.ts`, `useProjectsDatabase.ts`, `useQuickSortDatabase.ts`, `useRealtimeSubscription.ts`, `useSettingsDatabase.ts`, `useTasksDatabase.ts`, `useWorkProfileDatabase.ts` | P2 | 📋 PLANNED |
-| TASK-1684 | Fix Canvas composable types — 120 errors across 9 files. Mostly `unknown` type assertions (TS18046), missing properties on `{}` (TS2339), and `NodeChange[]` type mismatches (TS2345). Files: `useCanvasSync.ts` (51), `useCanvasOrchestrator.ts` (14), `useNodeSync.ts` (12), `useCanvasActions.ts` (8), `useCanvasTaskActions.ts` (6), `useCanvasSelection.ts` (4), `useCanvasAlignment.ts` (2), `useCanvasOperationState.ts` (2), `useCanvasConnections.ts` (1) | P2 | 📋 PLANNED |
-| TASK-1685 | Fix App initialization & sidebar types — 40 errors across 2 files. Properties not existing on `{}` due to untyped Supabase/Realtime payloads. Files: `useAppInitialization.ts` (39), `useSidebarManagement.ts` (1) | P2 | 📋 PLANNED |
-| TASK-1686 | Fix Calendar composable types — 22 errors across 4 files. `Record<string, unknown>` vs concrete `TaskInstance`/`RecurringTaskInstance` type conflicts, `unknown` catch errors. Files: `useCalendarMonthView.ts` (9), `useCalendarWeekView.ts` (8), `useGoogleCalendar.ts` (9 — catch `e` is `unknown`), `useExternalCalendar.ts` (3) | P2 | 📋 PLANNED |
-| TASK-1687 | Fix Sync & timer types — 29 errors across 3 files. Mostly `handleLeaderMessage` param typed as `unknown`, sync orchestrator payload types. Files: `useTimerLeaderElection.ts` (15), `useSyncOrchestrator.ts` (10), `useTimerDatabase.ts` (4) | P2 | 📋 PLANNED |
-| TASK-1688 | Fix AI, board, and cross-tab types — 41 errors across 8 files. Various `unknown` assertions and `Record<string, unknown>` mismatches. Files: `useAgentChains.ts` (13), `useAISync.ts` (12), `useCrossTabSync.ts` (8), `useTaskRowActions.ts` (9), `useBoardState.ts` (4), `useAIChat.ts` (2), `useWorkProfile.ts` (2), `useTaskEditState.ts` (1) | P2 | 📋 PLANNED |
-| TASK-1689 | Fix miscellaneous type errors — 51 errors across 18 files. Scattered `unknown` type, missing property, and minor type assertion errors. Files: `auth.ts` (8), `productionLogger.ts` (1), `sw.ts` (3), `readCacheDB.ts` (2), `operationSorter.ts` (1), `routerFactory.ts` (1), `urlScraper.ts` (1), `useMobileDetection.ts` (2), `useMobileInboxLogic.ts` (1), `useMobileQuickSortLogic.ts` (2), `usePerformanceManager.ts` (2), `useRenderOptimization.ts` (2), `useSafeI18n.ts` (1), `useTaskbarNanny.ts` (1), `useUrlScraping.ts` (1), `useWhisperSpeech.ts` (1), `taskHistory.ts` (1), test specs (3) | P3 | 📋 PLANNED |
+| TASK-1683 | Fix Supabase database composable types (85 errors, 11 files) | P2 | 📋 PLANNED |
+| TASK-1684 | Fix Canvas composable types (120 errors, 9 files) | P2 | 📋 PLANNED |
+| TASK-1685 | Fix App initialization & sidebar types (40 errors, 2 files) | P2 | 📋 PLANNED |
+| TASK-1686 | Fix Calendar composable types (22 errors, 4 files) | P2 | 📋 PLANNED |
+| TASK-1687 | Fix Sync & timer types (29 errors, 3 files) | P2 | 📋 PLANNED |
+| TASK-1688 | Fix AI, board, and cross-tab types (41 errors, 8 files) | P2 | 📋 PLANNED |
+| TASK-1689 | Fix miscellaneous type errors (51 errors, 18 files) | P3 | 📋 PLANNED |
 
 #### TASK-1683: Supabase Database Composable Types (📋 PLANNED)
 - **Priority**: P2

@@ -218,14 +218,15 @@ describe('Task Store — CRUD', () => {
     expect(store._rawTasks.find(t => t.id === task.id)).toBeUndefined()
   })
 
-  it('deleteTask calls deleteTaskFromStorage (tombstone path)', async () => {
+  it('deleteTask uses sync queue only — no direct Supabase delete (BUG-1737)', async () => {
     const store = useTaskStore()
     const task = await store.createTask({ title: 'Tombstone Task' })
 
     await store.deleteTask(task.id)
 
-    // deleteTaskFromStorage calls mockDeleteTask (Supabase soft-delete)
-    expect(mockDeleteTask).toHaveBeenCalledWith(task.id)
+    // BUG-1737: deleteTask no longer calls deleteTaskFromStorage directly.
+    // Single-write path: sync queue is the sole path to Supabase for deletes.
+    expect(mockDeleteTask).not.toHaveBeenCalled()
   })
 
   it('creates task with subtasks (JSONB) and preserves them', async () => {

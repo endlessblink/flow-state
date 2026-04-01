@@ -54,8 +54,18 @@
       </div>
     </Transition>
 
+    <!-- TASK-1558: Workspace empty states -->
+    <WorkspaceEmptyState
+      v-if="emptyVariant"
+      :variant="emptyVariant"
+      :has-pending-invites="hasPendingInvites"
+      :pending-invite-count="workspaceStore.pendingInviteCount"
+      @create-task="handleAddTask({ columnKey: 'planned', projectId: '', viewType: currentViewType })"
+      @invite-member="handleInviteMember"
+    />
+
     <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
-    <div class="kanban-scroll-container scroll-container" :class="{ 'list-mode': currentViewType === 'list' }">
+    <div v-else class="kanban-scroll-container scroll-container" :class="{ 'list-mode': currentViewType === 'list' }">
       <div class="kanban-board" @click="closeContextMenu">
         <!-- FEATURE-1336: Category view renders ONE swimlane with project columns -->
         <template v-if="currentViewType === 'category'">
@@ -209,6 +219,9 @@ import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, FolderOpen, Lis
 
 import FilterControls from '@/components/base/FilterControls.vue'
 import { useAssignmentFilter } from '@/composables/workspace/useTaskAssignment'
+import { useWorkspaceStore } from '@/stores/workspace'
+import { useWorkspaceEmptyState } from '@/composables/workspace/useWorkspaceEmptyState'
+import WorkspaceEmptyState from '@/components/workspace/WorkspaceEmptyState.vue'
 
 const { t } = useI18n()
 
@@ -217,6 +230,8 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
 const settingsStore = useSettingsStore()
+const workspaceStore = useWorkspaceStore()
+const { variant: emptyVariant, hasPendingInvites } = useWorkspaceEmptyState()
 
 
 // Provide progressive disclosure state for TaskCard components
@@ -374,6 +389,17 @@ const handleBoardKeydown = (event: KeyboardEvent) => {
 
   if (event.key === 'Escape' && taskStore.selectedTaskIds.length > 0) {
     taskStore.clearSelection()
+  }
+}
+
+// TASK-1558: Invite member via prompt (matches SidebarWorkspaceSwitcher.vue pattern)
+async function handleInviteMember() {
+  if (!workspaceStore.activeWorkspace) return
+  const email = window.prompt(t('workspaces.inviteEmailPlaceholder'))
+  if (!email) return
+  const link = await workspaceStore.generateInviteLink(workspaceStore.activeWorkspace.id, email)
+  if (link) {
+    await navigator.clipboard.writeText(link)
   }
 }
 

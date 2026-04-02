@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import type { Task, useTaskStore } from '@/stores/tasks'
+import type { Task, TaskInstance, useTaskStore } from '@/stores/tasks'
 import { parseDateKey, getTaskInstances, formatDateKey } from '@/stores/tasks'
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 
@@ -203,7 +203,7 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
 
         const isOverdueByDate = dueDateKey && dueDateKey < todayStr
 
-        const hasPastInstance = instances.length > 0 && instances.some((instance: Record<string, unknown>) => {
+        const hasPastInstance = instances.length > 0 && instances.some((instance: TaskInstance) => {
             const instanceDate = parseDateKey(instance.scheduledDate)
             return instanceDate && instanceDate < today
         })
@@ -243,7 +243,7 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
             return
         }
 
-        instances.forEach((instance: Record<string, unknown>) => {
+        instances.forEach((instance: TaskInstance) => {
             if (instance.isLater) {
                 result.later.push(task)
                 return

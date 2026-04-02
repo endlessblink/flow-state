@@ -16,6 +16,31 @@ import { ref } from 'vue'
 import { executeTool, type ToolCall, type ToolResult } from '@/services/ai/tools'
 
 // ============================================================================
+// Tool Result Data Shapes (for type-safe access to tool results)
+// ============================================================================
+
+interface DailySummaryData {
+  dueToday?: number
+  tasksDueToday?: number
+  completedToday?: number
+  inProgress?: number
+}
+
+interface ProductivityStatsData {
+  todayCompleted?: number
+  completedToday?: number
+  todayPomodoros?: number
+  pomodorosToday?: number
+  currentStreak?: number
+  statusBreakdown?: Record<string, number>
+}
+
+interface WeeklySummaryData {
+  completedThisWeek?: number
+  totalFocusMinutes?: number
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -79,7 +104,7 @@ const chains: AgentChain[] = [
       {
         type: 'prompt',
         promptFn: (results, language) => {
-          const summary = results[0]?.data as unknown
+          const summary = results[0]?.data as DailySummaryData | undefined
           const overdue = results[1]?.data as unknown
           const suggested = results[2]?.data as unknown
 
@@ -149,8 +174,8 @@ const chains: AgentChain[] = [
       {
         type: 'prompt',
         promptFn: (results, language) => {
-          const stats = results[0]?.data as unknown
-          const weekly = results[1]?.data as unknown
+          const stats = results[0]?.data as ProductivityStatsData | undefined
+          const weekly = results[1]?.data as WeeklySummaryData | undefined
 
           const sections: string[] = []
           sections.push('Write a 3-sentence end-of-day summary. Use the FACTS below — do NOT invent numbers.')
@@ -165,7 +190,7 @@ const chains: AgentChain[] = [
 
             if (stats.statusBreakdown) {
               const sb = stats.statusBreakdown
-              const total = Object.values(sb).reduce((a: number, b: unknown) => a + (typeof b === 'number' ? b : 0), 0)
+              const total = Object.values(sb).reduce((a: number, b: number) => a + b, 0)
               const remaining = total - (sb.done || 0)
               sections.push(`## REMAINING: ${remaining} tasks still open out of ${total} total`)
             }

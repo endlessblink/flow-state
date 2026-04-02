@@ -23,6 +23,15 @@ export interface TimerSessionSync {
   timestamp: number
 }
 
+interface TaskUpdateData {
+  updatedAt?: string | Date
+  positionVersion?: number
+  canvasPosition?: unknown
+  parentId?: unknown
+  positionFormat?: unknown
+  [key: string]: unknown
+}
+
 export interface TaskOperation {
   operation: 'create' | 'update' | 'delete' | 'bulk_update' | 'bulk_delete'
   taskId?: string
@@ -111,14 +120,14 @@ export function useCrossTabSync() {
             if (taskStore.manualOperationInProgress) return
 
             // Prevent stale data from overwriting newer data
-            const incomingTimestamp = (operation.taskData as unknown).updatedAt
+            const incomingTimestamp = (operation.taskData as TaskUpdateData).updatedAt
             if (incomingTimestamp && task.updatedAt &&
                 new Date(task.updatedAt) > new Date(incomingTimestamp)) {
               return
             }
 
             // CRITICAL FIX: Version-aware update - never overwrite geometry from cross-tab
-            const incomingVersion = (operation.taskData as unknown).positionVersion ?? 0
+            const incomingVersion = (operation.taskData as TaskUpdateData).positionVersion ?? 0
             const localVersion = task.positionVersion ?? 0
 
             // Only accept if incoming version is newer
@@ -130,7 +139,7 @@ export function useCrossTabSync() {
             }
 
             // Strip geometry fields from cross-tab sync - geometry should only come from drag handlers
-            const { canvasPosition: _canvasPosition, parentId: _parentId, positionFormat: _positionFormat, ...safeUpdates } = operation.taskData as unknown
+            const { canvasPosition: _canvasPosition, parentId: _parentId, positionFormat: _positionFormat, ...safeUpdates } = operation.taskData as TaskUpdateData
 
             // Apply only non-geometry updates
             Object.assign(task, safeUpdates)
@@ -161,9 +170,9 @@ export function useCrossTabSync() {
   }
 
   // Set up message handlers
-  onMessage('task_operation', handleTaskOperation)
-  onMessage('ui_state_change', handleUIStateChange)
-  onMessage('timer_session', handleLeaderMessage)
+  onMessage('task_operation', handleTaskOperation as (data: unknown) => void)
+  onMessage('ui_state_change', handleUIStateChange as (data: unknown) => void)
+  onMessage('timer_session', handleLeaderMessage as (data: unknown) => void)
 
   const initialize = () => {
     if (isListening.value) return

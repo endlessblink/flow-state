@@ -4,7 +4,7 @@ import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 
 export function useTaskRowActions(
     props: { task: Task; indentLevel: number; hasSubtasks: boolean; isExpanded: boolean },
-    emit: unknown,
+    emit: (event: string, ...args: any[]) => void,
     state: {
         isDragging: Ref<boolean>
         isDropTarget: Ref<boolean>

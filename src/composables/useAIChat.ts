@@ -1582,7 +1582,7 @@ export function useAIChat() {
             tool: toolCall.tool,
             type: AI_TOOLS.find(t => t.name === toolCall.tool)?.category || 'read',
           }],
-        } as unknown
+        }
       }
 
       store.completeStreamingMessage()
@@ -1646,7 +1646,7 @@ export function useAIChat() {
               type: 'read' as const,
             }
           }),
-        } as unknown
+        }
       }
 
       // If there's a final prompt, send it to the AI

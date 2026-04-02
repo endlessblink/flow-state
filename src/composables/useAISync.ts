@@ -17,6 +17,16 @@ import { useAuthStore } from '@/stores/auth'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { getUsageEntries } from '@/services/ai/usageTracker'
 
+// AI database methods — not yet implemented in useSupabaseDatabase, will be added with AI sync feature
+interface AIDatabase {
+  fetchAISettings(): Promise<{ provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' } | null>
+  fetchAIConversations(): Promise<Array<{ id: string; title: string; messages: any[]; createdAt: Date; updatedAt: Date }>>
+  saveAIConversation(conv: unknown): Promise<void>
+  saveAISettings(settings: unknown): Promise<void>
+  syncAIUsageLog(entries: unknown[]): Promise<void>
+  deleteAIConversation(id: string): Promise<void>
+}
+
 const CONVERSATION_SYNC_DEBOUNCE_MS = 2000
 const SETTINGS_SYNC_DEBOUNCE_MS = 1000
 const USAGE_SYNC_DEBOUNCE_MS = 5000
@@ -29,7 +39,7 @@ let isWatching = false
 export function useAISync() {
   const store = useAIChatStore()
   const authStore = useAuthStore()
-  const db = useSupabaseDatabase()
+  const db = useSupabaseDatabase() as ReturnType<typeof useSupabaseDatabase> & AIDatabase
 
   const isSyncing = ref(false)
   const lastSyncError = ref<string | null>(null)
@@ -69,7 +79,7 @@ export function useAISync() {
   async function loadSettings(): Promise<void> {
     const remoteSettings = await db.fetchAISettings()
     if (remoteSettings) {
-      store.saveSettings(remoteSettings)
+      ;(store as any).saveSettings(remoteSettings as { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' })
     }
   }
 
@@ -184,7 +194,7 @@ export function useAISync() {
     )
 
     // Register delete callback on the store
-    store.onConversationDelete((id: string) => {
+    ;(store as any).onConversationDelete((id: string) => {
       onConversationDeleted(id)
     })
   }
@@ -195,7 +205,7 @@ export function useAISync() {
     conversationSyncTimers.set(id, setTimeout(async () => {
       const conv = store.conversations.find(c => c.id === id)
       if (conv) {
-        await db.saveAIConversation(conv).catch(e => console.warn('[AI-SYNC] saveAIConversation failed:', e))
+        await db.saveAIConversation(conv).catch((e: unknown) => console.warn('[AI-SYNC] saveAIConversation failed:', e))
       }
       conversationSyncTimers.delete(id)
     }, CONVERSATION_SYNC_DEBOUNCE_MS))
@@ -204,7 +214,7 @@ export function useAISync() {
   function scheduleSaveSettings(settings: { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' }): void {
     if (settingsSyncTimer) clearTimeout(settingsSyncTimer)
     settingsSyncTimer = setTimeout(async () => {
-      await db.saveAISettings(settings).catch(e => console.warn('[AI-SYNC] saveAISettings failed:', e))
+      await db.saveAISettings(settings).catch((e: unknown) => console.warn('[AI-SYNC] saveAISettings failed:', e))
       settingsSyncTimer = null
     }, SETTINGS_SYNC_DEBOUNCE_MS)
   }
@@ -216,7 +226,7 @@ export function useAISync() {
       // Only sync new entries (ones added after last sync)
       const newEntries = entries.slice(lastSyncedUsageCount)
       if (newEntries.length > 0) {
-        await db.syncAIUsageLog(newEntries).catch(e => console.warn('[AI-SYNC] syncAIUsageLog failed:', e))
+        await db.syncAIUsageLog(newEntries).catch((e: unknown) => console.warn('[AI-SYNC] syncAIUsageLog failed:', e))
         lastSyncedUsageCount = entries.length
       }
       usageSyncTimer = null

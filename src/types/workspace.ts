@@ -69,3 +69,12 @@ export interface WorkspaceActivity {
   userName?: string
   userEmail?: string
 }
+
+// TASK-1559: Workspace Presence
+export interface PresenceState {
+  userId: string
+  tabState: 'active' | 'idle'
+  joinedAt: string
+}
+
+export type PresenceStatus = 'online' | 'idle' | 'offline'

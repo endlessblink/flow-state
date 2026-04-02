@@ -105,6 +105,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       }
 
       console.log(`[WORKSPACE] Loaded ${workspaces.value.length} workspace(s)`)
+
+      // TASK-1559: Connect presence if landing in a shared workspace
+      if (activeWorkspaceId.value) {
+        import('@/composables/workspace/useWorkspacePresence').then(({ useWorkspacePresence }) => {
+          useWorkspacePresence().connect(activeWorkspaceId.value!)
+        }).catch(() => {})
+      }
     } catch (e) {
       console.error('[WORKSPACE] Error loading workspaces:', e)
     } finally {
@@ -122,6 +129,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     console.log(`[WORKSPACE] Switching: ${activeWorkspaceId.value || 'personal'} → ${id || 'personal'}`)
 
     isSwitchingWorkspace.value = true  // Pause sync queue
+
+    // TASK-1559: Disconnect presence from previous workspace
+    try {
+      const { useWorkspacePresence } = await import('@/composables/workspace/useWorkspacePresence')
+      await useWorkspacePresence().disconnect()
+    } catch { /* presence not available */ }
 
     activeWorkspaceId.value = id
 
@@ -150,6 +163,14 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         useProjectStore().loadProjectsFromDatabase(),
         useCanvasStore().loadFromDatabase(),
       ])
+
+      // TASK-1559: Connect presence to new shared workspace
+      if (id) {
+        try {
+          const { useWorkspacePresence } = await import('@/composables/workspace/useWorkspacePresence')
+          await useWorkspacePresence().connect(id)
+        } catch { /* presence not available */ }
+      }
     } finally {
       isSwitchingWorkspace.value = false  // Resume sync queue
     }
@@ -564,6 +585,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     members.value = new Map()
     pendingInvites.value = []
     localStorage.removeItem(LAST_WORKSPACE_KEY)
+    // TASK-1559: Disconnect presence
+    import('@/composables/workspace/useWorkspacePresence').then(({ useWorkspacePresence }) => {
+      useWorkspacePresence().disconnect()
+    }).catch(() => {})
   }
 
   return {

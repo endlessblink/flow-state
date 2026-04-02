@@ -414,7 +414,9 @@
     "leaveWorkspaceDescription": "You will lose access to all workspace tasks and data.",
     "dangerZone": "Danger Zone",
     "you": "(you)",
-    "personalOnly": "Member management is available in shared workspaces."
+    "personalOnly": "Member management is available in shared workspaces.",
+    "online": "Online",
+    "idle": "Idle"
   },
   "auth": {
     "displayName": "Display Name",

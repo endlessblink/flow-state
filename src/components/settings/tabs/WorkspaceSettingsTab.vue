@@ -18,6 +18,13 @@
                   {{ member.displayName || member.email || member.userId.substring(0, 8) }}
                   <span v-if="member.userId === authStore.user?.id" class="you-label">{{ t('workspaces.you') }}</span>
                 </span>
+                <span
+                  v-if="getUserPresenceStatus(member.userId) !== 'offline'"
+                  class="member-presence"
+                  :class="getUserPresenceStatus(member.userId)"
+                >
+                  {{ presenceLabel(member.userId) }}
+                </span>
                 <span v-if="member.email" class="member-email">{{ member.email }}</span>
               </div>
             </div>
@@ -156,6 +163,7 @@ import { UserMinus, Crown, LogOut, Trash2 } from 'lucide-vue-next'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useAuthStore } from '@/stores/auth'
 import type { WorkspaceMember, WorkspaceRole } from '@/types/workspace'
+import { useWorkspacePresence } from '@/composables/workspace/useWorkspacePresence'
 import SettingsSection from '../SettingsSection.vue'
 import AssigneeAvatar from '@/components/workspace/AssigneeAvatar.vue'
 import BaseBadge from '@/components/base/BaseBadge.vue'
@@ -169,6 +177,14 @@ const emit = defineEmits<{ closeModal: [] }>()
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const authStore = useAuthStore()
+const { getUserPresenceStatus } = useWorkspacePresence()
+
+function presenceLabel(userId: string): string {
+  const status = getUserPresenceStatus(userId)
+  if (status === 'online') return t('workspaces.online')
+  if (status === 'idle') return t('workspaces.idle')
+  return ''
+}
 
 // Sort: owner first, then admin, then member, then viewer. Current user second in their tier.
 const roleOrder: Record<string, number> = { owner: 0, admin: 1, member: 2, viewer: 3 }
@@ -377,5 +393,40 @@ async function handleRoleChange(member: WorkspaceMember, newRole: string) {
 /* Transfer modal */
 .transfer-select {
   padding: var(--space-4) 0;
+}
+
+/* TASK-1559: Online presence indicator */
+.member-presence {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.member-presence::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.member-presence.online {
+  color: var(--color-success, #22c55e);
+}
+
+.member-presence.online::before {
+  background: var(--color-success, #22c55e);
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.4);
+}
+
+.member-presence.idle {
+  color: var(--color-warning, #f59e0b);
+}
+
+.member-presence.idle::before {
+  background: var(--color-warning, #f59e0b);
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.3);
 }
 </style>

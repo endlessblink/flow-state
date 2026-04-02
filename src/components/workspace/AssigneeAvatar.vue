@@ -34,6 +34,14 @@
       <User :size="iconSize" />
     </span>
 
+    <!-- TASK-1559: Online presence indicator -->
+    <span
+      v-if="presenceStatus !== 'offline'"
+      class="presence-dot"
+      :class="presenceStatus"
+      :aria-label="presenceStatus === 'online' ? 'Online' : 'Idle'"
+    />
+
     <!-- Tooltip -->
     <span
       v-if="showTooltip && tooltipText"
@@ -49,6 +57,8 @@
 import { computed, ref } from 'vue'
 import { User } from 'lucide-vue-next'
 import { useWorkspaceStore } from '@/stores/workspace'
+import { useWorkspacePresence } from '@/composables/workspace/useWorkspacePresence'
+import type { PresenceStatus } from '@/types/workspace'
 
 const props = withDefaults(defineProps<{
   userId: string
@@ -162,6 +172,10 @@ const initialsStyle = computed(() => ({
 
 // Lucide icon size — slightly smaller than the container
 const iconSize = computed(() => Math.max(10, Math.round(props.size * 0.6)))
+
+// TASK-1559: Online presence indicator
+const { getUserPresenceStatus } = useWorkspacePresence()
+const presenceStatus = computed<PresenceStatus>(() => getUserPresenceStatus(props.userId))
 </script>
 
 <style scoped>
@@ -244,6 +258,29 @@ const iconSize = computed(() => Math.max(10, Math.round(props.size * 0.6)))
 .has-tooltip:hover .avatar-tooltip {
   opacity: 1;
   visibility: visible;
+}
+
+/* ---- TASK-1559: Online presence indicator ---- */
+.presence-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--surface-primary, #121214);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.presence-dot.online {
+  background: var(--color-success, #22c55e);
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.4);
+}
+
+.presence-dot.idle {
+  background: var(--color-warning, #f59e0b);
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.3);
 }
 
 /* Subtle ring on hover so the avatar feels interactive */

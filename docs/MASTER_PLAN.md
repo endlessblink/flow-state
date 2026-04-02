@@ -2733,7 +2733,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1527**~~ | **P2** | ~~**Remove entire gamification system (XP, achievements, challenges, shop, Cyberflow RPG) — ~23,700 lines removed, DB tables left dormant**~~ (✅ DONE 2026-03-14) |
 | ~~**TASK-1531**~~ | **P2** | ~~**KDE dock: show current scheduled calendar block next to pomodoro timer — always-visible context of what's planned now, with toggle in KDE widget settings**~~ (✅ DONE) |
 | **TASK-1532** | **P1** | **"Done for Now" vs "Done Fully" for recurring tasks — Hybrid clone model: "done for now" creates completion record + advances original to next occurrence; "done fully" stops recurrence (current behavior). DoneToggle click = done-for-now for recurring, context menu offers both options.** (🔄 IN PROGRESS) |
-| ~~**TASK-1533**~~ | **P0** | **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (🔄 IN PROGRESS) |
+| ~~**TASK-1533**~~ | **P0** | ✅ **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (✅ DONE (2026-04-02)) |
 | ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1535**~~ | **P0** | **DB migration: Add workspace_id to tasks, projects, groups + assigned_to on tasks** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1536**~~ | **P0** | **DB migration: SECURITY DEFINER function user_workspace_ids() for RLS performance** (✅ DONE (2026-03-17)) |
@@ -2759,7 +2759,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1556**~~ | **P1** | **Hebrew translations for all workspace strings** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1557**~~ | **P2** | ✅ **Member management UI** (✅ DONE (2026-04-02)) |
 | ~~**TASK-1558**~~ | **P2** | **Empty states for workspaces** (✅ DONE (2026-04-01)) |
-| **TASK-1559** | **P3** | **Member presence (v2 nice-to-have)** (📋 PLANNED) |
+| ~~**TASK-1559**~~ | **P3** | ✅ **Member presence (v2 nice-to-have)** (✅ DONE (2026-04-02)) |
 
 ---
 
@@ -2774,7 +2774,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | ID | Priority | Description | Status | Depends On |
 |----|----------|-------------|--------|------------|
-| ~~**TASK-1533**~~ | **P0** | **Epic: Workspace Collaboration — tracking parent for all sub-tasks** | 🔄 IN PROGRESS | — |
+| ~~**TASK-1533**~~ | **P0** | ✅ **Epic: Workspace Collaboration — tracking parent for all sub-tasks** | ✅ DONE (2026-04-02) | — |
 | ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspaces, workspace_members, workspace_invites, task_comments, workspace_activity tables** | ✅ DONE (2026-03-17) | — |
 | ~~**TASK-1535**~~ | **P0** | **DB migration: Add workspace_id (NULLABLE) to tasks, projects, groups tables + assigned_to on tasks** | ✅ DONE (2026-03-17) | TASK-1534 |
 | ~~**TASK-1536**~~ | **P0** | **DB migration: Create `user_workspace_ids()` SECURITY DEFINER function for RLS performance** | ✅ DONE (2026-03-17) | TASK-1534 |
@@ -2815,7 +2815,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1556**~~ | **P1** | **Hebrew translations: Add workspaces namespace to he.json — workspace, members, invite, comments, activity feed, all new UI strings** | ✅ DONE (2026-03-17) | TASK-1545 |
 | ~~**TASK-1557**~~ | **P2** | ✅ **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)** | ✅ DONE (2026-04-02) | TASK-1539 |
 | ~~**TASK-1558**~~ | **P2** | **Empty states: New workspace welcome, no tasks yet, no members yet, pending invite states** | ✅ DONE (2026-04-01) | TASK-1545 |
-| **TASK-1559** | **P3** | **Member presence: Show who's online in workspace using Supabase Realtime Presence (nice-to-have v2)** | 📋 PLANNED | TASK-1548 |
+| ~~**TASK-1559**~~ | **P3** | ✅ **Member presence: Show who's online in workspace using Supabase Realtime Presence (nice-to-have v2)** | ✅ DONE (2026-04-02) | TASK-1548 |
 
 ### Key Architecture Decisions
 
@@ -2837,9 +2837,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | Invite chicken-and-egg — user can't join workspace they're not in | MEDIUM | Edge Function with service_role key |
 | Canvas parentId cross-workspace — task in workspace B references group in workspace A | LOW | App-level validation in drag handlers |
 
-#### ~~TASK-1533~~: Epic: Workspace Collaboration — Tracking Parent (🔄 IN PROGRESS)
+#### ~~TASK-1533~~: Epic: Workspace Collaboration — Tracking Parent (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Depends On**: —
+**Priority**: P0 | **Status**: ✅ DONE (2026-04-02) | **Depends On**: —
 **Description**: Epic tracking parent for all workspace collaboration sub-tasks (TASK-1534 through TASK-1559). No implementation work — exists to group and track the full collaboration milestone.
 
 ---
@@ -3027,10 +3027,10 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-#### TASK-1559: Member Presence via Supabase Realtime Presence (📋 PLANNED)
+#### ~~TASK-1559~~: Member Presence via Supabase Realtime Presence (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED | **Depends On**: TASK-1548
-**Description**: Show who's online in a workspace using Supabase Realtime Presence API. Nice-to-have v2 feature — displays online indicators for workspace members in the sidebar or member list.
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-02) | **Depends On**: TASK-1548
+**Description**: Show who's online in a workspace using Supabase Realtime Presence API. Implemented via separate Realtime channel (`presence:{workspaceId}`), tracks active/idle tab state via visibilitychange API. Online indicators shown on AssigneeAvatar (green/amber dot) and in WorkspaceSettingsTab member list.
 
 ---
 

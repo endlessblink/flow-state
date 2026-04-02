@@ -14,6 +14,32 @@ interface LeaderElectionDeps {
     onSessionUpdate?: (session: unknown) => void
 }
 
+interface LeaderClaimMessage {
+    action: 'claim_leadership'
+    leaderId: string
+    sessionState: unknown
+    timestamp: number
+}
+
+interface LeaderHeartbeatMessage {
+    action: 'heartbeat'
+    leaderId: string
+    sessionState: unknown
+    timestamp: number
+}
+
+interface SessionUpdateMessage {
+    action: 'session_update'
+    sessionState: unknown
+    timestamp: number
+}
+
+interface SessionStopMessage {
+    action: 'session_stop'
+}
+
+type LeaderMessage = LeaderClaimMessage | LeaderHeartbeatMessage | SessionUpdateMessage | SessionStopMessage
+
 export function useTimerLeaderElection(deps: LeaderElectionDeps) {
     const { tabId, broadcastMessage, onBecomeLeader, onLoseLeadership, onSessionUpdate } = deps
 
@@ -103,7 +129,7 @@ export function useTimerLeaderElection(deps: LeaderElectionDeps) {
         }
     }
 
-    const handleLeaderMessage = (sync: unknown) => {
+    const handleLeaderMessage = (sync: LeaderMessage) => {
         switch (sync.action) {
             case 'claim_leadership':
                 if (sync.leaderId !== tabId) {

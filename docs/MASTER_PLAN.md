@@ -2527,7 +2527,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1692**~~ | **P2** | ✅ **Desktop task list RTL + chat Hebrew paragraphs — reversed TaskRow/TaskTable grid in [dir="rtl"], fixed priority indicator logical props, added unicode-bidi:plaintext to markdown block elements** (✅ DONE 2026-03-23) |
 | **TASK-1693** | **P2** | 🔄 **Calendar virtual timer block — inject virtual CalendarEvent for the currently-timed task when it has no real instance for today, so it always appears on the day view** |
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
-| **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
+| **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Electron, KDE widget)** |
 | ~~**BUG-1346**~~ | **P1** | ✅ **Mobile Inbox tab broken in PWA on mobile — layout/design broken** (✅ DONE 2026-03-04) |
 | ~~**TASK-1362**~~ | **P0** | ✅ **Calendar task selection, multi-select & keyboard actions — click to select, Ctrl+click multi-select, Delete→inbox, Shift+Delete→remove, drag-back to inbox** (✅ DONE 2026-02-20) |
 | ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
@@ -2696,7 +2696,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | TASK-139 | P3 | Undo state persistence to localStorage |
 | TASK-125 | P3 | Remove debug console.log (reduced scope) |
 | TASK-065 | P3 | GitHub release (remove hardcoded creds, Docker guide) |
-| TASK-079 | P3 | Tauri mobile (Android/iOS) |
+| ~~TASK-079~~ | P3 | ✅ ~~Tauri mobile (Android/iOS)~~ — Archived: Tauri replaced by Electron (TASK-1715). Mobile strategy TBD. |
 | TASK-157 | P3 | ADHD-Friendly view redesign (Phases 2-4 pending) |
 | TASK-1120 | P2 | 🔄 Deep UX/UI analysis and enhancement of catalog views |
 | ~~**FEATURE-1443**~~ | **P0** | ✅ ~~**Morning Dashboard — removed route/auto-redirect (Morning Ritual banner kept)**~~ (✅ DONE 2026-03-18) |
@@ -4015,7 +4015,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~TASK-1684~~ | ✅ Fix Canvas composable types (120 errors, 9 files) | P2 | ✅ **DONE** (2026-04-02) |
 | ~~TASK-1685~~ | ✅ Fix App initialization & sidebar types (40 errors, 2 files) | P2 | ✅ **DONE** (2026-04-02) |
 | ~~TASK-1686~~ | ✅ Fix Calendar composable types (22 errors, 4 files) | P2 | ✅ **DONE** (2026-04-02) |
-| TASK-1687 | Fix Sync & timer types (29 errors, 3 files) | P2 | 🔄 IN PROGRESS |
+| ~~TASK-1687~~ | ✅ Fix Sync & timer types (29 errors, 3 files) | P2 | ✅ **DONE** (2026-04-02) |
 | TASK-1688 | Fix AI, board, and cross-tab types (41 errors, 8 files) | P2 | 📋 PLANNED |
 | TASK-1689 | Fix miscellaneous type errors (51 errors, 18 files) | P3 | 📋 PLANNED |
 
@@ -4043,7 +4043,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Root patterns**: (1) `instance` callbacks typed as `Record<string, unknown>` instead of `TaskInstance | RecurringTaskInstance`. (2) Catch clause `e` is `unknown` — needs `instanceof Error` guard. (3) Property destructuring from `unknown` objects.
 - **Fix approach**: Change callback parameter types to use proper interfaces. Add error guards in catch blocks.
 
-#### TASK-1687: Sync & Timer Types (🔄 IN PROGRESS)
+#### ~~TASK-1687~~: Sync & Timer Types (✅ DONE)
 - **Priority**: P2
 - **Error count**: 29 errors across 3 files
 - **Root patterns**: (1) `useTimerLeaderElection.ts` — `handleLeaderMessage(sync: unknown)` uses `sync.action`, `sync.leaderId` etc. without narrowing. (2) `useSyncOrchestrator.ts` — various payload types.

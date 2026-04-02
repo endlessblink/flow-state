@@ -301,7 +301,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         // A stale CREATE in the queue (from page reload, retry, or smart merge) could
         // un-delete a task that was legitimately deleted on another device.
         if (entityType === 'task') {
-          const { data: tombstone } = await supabase
+          const { data: tombstone } = await supabase!
             .from(DB_TABLES.TOMBSTONES)
             .select('id')
             .eq('entity_type', 'task')
@@ -310,7 +310,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
             .maybeSingle()
           if (tombstone) {
             console.warn(`[SYNC] Skipping CREATE for tombstoned task ${entityId.slice(0, 8)}`)
-            return { success: true, serverData: null }
+            return { success: true, operation, serverData: undefined }
           }
         }
 
@@ -331,7 +331,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         if (import.meta.env.DEV) {
           console.debug(`🔄 [SYNC] CREATE via upsert for ${entityType}:${entityId} (idempotent)`)
         }
-        result = await supabase.from(tableName).upsert(insertData, { onConflict: 'id' }).select()
+        result = await supabase!.from(tableName).upsert(insertData, { onConflict: 'id' }).select()
         break
       }
 
@@ -345,7 +345,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         // 3. If server timestamp < our timestamp, force update (our change wins)
         // 4. If server timestamp > our timestamp, server wins - discard our change
 
-        let query = supabase.from(tableName).update(payload).eq('id', entityId)
+        let query = supabase!.from(tableName).update(payload).eq('id', entityId)
 
         // Only tasks and groups have position_version column for optimistic locking
         const hasPositionVersion = entityType === 'task' || entityType === 'group'
@@ -363,7 +363,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
           }
 
           // Fetch current server state
-          const serverState = await supabase
+          const serverState = await supabase!
             .from(tableName)
             .select('*')
             .eq('id', entityId)
@@ -395,7 +395,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
               console.log(`[SYNC] LWW: Local wins (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()})`)
             }
 
-            const forceResult = await supabase
+            const forceResult = await supabase!
               .from(tableName)
               .update(payload)
               .eq('id', entityId)
@@ -436,14 +436,14 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project']
 
         if (softDeleteTables.includes(entityType)) {
-          result = await supabase
+          result = await supabase!
             .from(tableName)
             .update({ is_deleted: true, deleted_at: new Date().toISOString() })
             .eq('id', entityId)
             .select()
         } else {
           // timer_session, quick_sort_session: no is_deleted/deleted_at columns
-          result = await supabase
+          result = await supabase!
             .from(tableName)
             .delete()
             .eq('id', entityId)
@@ -552,7 +552,7 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     }
   } else if (result.isConflict) {
     // Conflict - need resolution
-    await markConflict(operation.id, result.newVersion || 0)
+    await markConflict(operation.id!, result.newVersion || 0)
     state.value.lastError = result.error
     console.warn(`⚠️ [SYNC] Conflict: ${operation.entityType}:${operation.entityId.slice(0, 8)}`)
   } else if (result.isAuthError) {
@@ -563,7 +563,7 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     if (operation.retryCount < AUTH_MAX_REFRESH_ATTEMPTS) {
       console.warn(`🔑 [SYNC] Auth error for ${operation.entityType}:${operation.entityId.slice(0, 8)} (attempt ${operation.retryCount + 1}/${AUTH_MAX_REFRESH_ATTEMPTS}) — refreshing token`)
       try {
-        const { error: refreshError } = await supabase.auth.refreshSession()
+        const { error: refreshError } = await supabase!.auth.refreshSession()
         if (refreshError) {
           // Refresh itself failed — user is truly logged out, give up
           await markFailed(operation.id, `Auth refresh failed: ${refreshError.message}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
@@ -792,7 +792,7 @@ export function useSyncOrchestrator() {
         const pendingOps = await getOperationsForEntity(operation.entityType, operation.entityId)
         for (const op of pendingOps) {
           if (op.operation === 'create' && (op.status === 'pending' || op.status === 'failed')) {
-            await deleteOp(op.id)
+            await deleteOp(op.id!)
             if (import.meta.env.DEV) {
               console.debug(`🗑️ [SYNC] Cancelled stale CREATE for ${operation.entityType}:${operation.entityId.slice(0, 8)} (DELETE takes precedence)`)
             }

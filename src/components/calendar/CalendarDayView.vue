@@ -174,7 +174,7 @@ const onSlotsScroll = (e: Event) => {
         <div class="slot-tasks-container">
           <div
             v-for="calEvent in getTasksForSlot(slot)"
-            v-show="isTaskPrimarySlot(slot, calEvent)"
+            v-show="isTaskPrimarySlot(slot, calEvent as any)"
             :key="`${calEvent.id}-${slot.slotIndex}`"
             class="slot-task is-primary"
             :class="{
@@ -184,11 +184,11 @@ const onSlotsScroll = (e: Event) => {
               'selected': selectedEventIds?.has(calEvent.id),
               'has-overlap': calEvent.totalColumns > 1,
               'is-compact': calEvent.duration <= 30,
-              'status-done': getTaskStatus(calEvent) === 'done',
+              'status-done': getTaskStatus(calEvent),
               'status-active': getTaskStatus(calEvent) === 'todo',
               'slot-task--virtual': calEvent.isVirtual
             }"
-            :style="getSlotTaskStyle(calEvent)"
+            :style="getSlotTaskStyle(calEvent as any, slot)"
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
             :draggable="!calEvent.isVirtual"
             @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"

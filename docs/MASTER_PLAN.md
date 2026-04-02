@@ -1261,9 +1261,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (📋 PLANNED)
+### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (🔄 IN PROGRESS)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: 🔄 IN PROGRESS
 
 **Goal**: Review and streamline every Storybook story to use the project's design system consistently. Replace all non-design-system elements with proper project components and tokens.
 
@@ -1782,12 +1782,13 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 2. Modified `getSectionProperties()` to traverse parent chain and merge properties (root → child order)
 3. Updated `useCanvasInteractions.ts` to pass `allGroups` for inheritance
 
-**Current Status**: Enhanced debug logging added to diagnose why inheritance isn't working in all cases. Testing in progress.
+**Current Status**: Implementation verified with 16 unit tests. Debug logging cleaned up. `applyAllNestedSectionProperties` fixed to thread `allGroups` param.
 
 **Key Files**:
-- `src/utils/canvas/storeHelpers.ts` - `getParentChain()` function
-- `src/composables/canvas/useCanvasSectionProperties.ts` - Parent chain traversal
+- `src/utils/canvas/storeHelpers.ts` - `getParentChain()` function (cycle-safe, depth-limited)
+- `src/composables/canvas/useCanvasSectionProperties.ts` - Parent chain traversal + merge (root→child)
 - `src/composables/canvas/useCanvasInteractions.ts` - Passes allGroups to enable inheritance
+- `tests/unit/canvas/parentChainInheritance.test.ts` - 16 unit tests covering chain traversal + property merge
 
 ---
 
@@ -2491,7 +2492,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1303**~~ | **P2** | ✅ **Mark Done doesn't stop active timer running on that task** (✅ DONE — fix in taskOperations.ts:431) |
 | ~~**BUG-1304**~~ | **P2** | ✅ **Done tasks in calendar view have no visual done indicator** (✅ DONE — visual indicator in all 3 calendar views) |
 | ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
-| **TASK-1337** | **P3** | **📋 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
+| **TASK-1337** | **P3** | **🔄 Storybook Design Streamlining — align all stories with design system** |
 | ~~**TASK-1338**~~ | **P0** | ✅ **Configurable PWA Push Notifications — per-category controls, quiet hours, server-side push service** |
 | ~~**BUG-1311**~~ | **P3** | ✅ **Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |

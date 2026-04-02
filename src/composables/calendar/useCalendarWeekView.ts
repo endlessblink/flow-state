@@ -138,13 +138,13 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
           let processedCount = 0
 
           instances
-            .filter((instance: Record<string, unknown>) => {
+            .filter((instance) => {
               if (processedCount >= MAX_INSTANCES_PER_TASK) return false
               const matches = instance.scheduledDate === day.dateString
               if (matches) processedCount++
               return matches
             })
-            .forEach((instance: Record<string, unknown>) => {
+            .forEach((instance) => {
               const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
               const baseDuration = instance.duration || task.estimatedDuration || 30
 
@@ -158,9 +158,9 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
                 const endTime = new Date(startTime.getTime() + duration * 60000)
 
                 dayEvents.push({
-                  id: instance.id,
+                  id: instance.id ?? '',
                   taskId: task.id,
-                  instanceId: instance.id,
+                  instanceId: instance.id ?? '',
                   title: task.title,
                   projectId: task.projectId,
                   startTime,
@@ -173,7 +173,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
                   totalColumns: 1,
                   dayIndex,
                   isDueDate: false,
-                  instanceStatus: instance.status,
+                  instanceStatus: 'status' in instance ? (instance as { status?: 'scheduled' | 'completed' | 'skipped' }).status : undefined,
                   taskStatus: task.status
                 })
               }

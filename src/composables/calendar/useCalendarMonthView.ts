@@ -1,5 +1,6 @@
 import { computed, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
+import type { TaskInstance } from '@/types/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useSettingsStore } from '@/stores/settings'
@@ -54,15 +55,15 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
         .forEach(task => {
           const instances = getTaskInstances(task)
           instances
-            .filter((instance: Record<string, unknown>) => instance.scheduledDate === dateString)
-            .forEach((instance: Record<string, unknown>) => {
+            .filter((instance) => instance.scheduledDate === dateString)
+            .forEach((instance) => {
               const [_hour, _minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
               const duration = instance.duration || task.estimatedDuration || 30
 
               dayEvents.push({
-                id: instance.id,
+                id: instance.id ?? '',
                 taskId: task.id,
-                instanceId: instance.id,
+                instanceId: instance.id ?? '',
                 title: task.title,
                 projectId: task.projectId,
                 startTime: new Date(`${instance.scheduledDate}T${instance.scheduledTime}`),
@@ -148,7 +149,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
     // TASK-1322: Properly handle both instances[] and legacy fields
     if (existingTask.instances && existingTask.instances.length > 0 && instanceId) {
       // Update the specific instance's scheduledDate (move, not duplicate)
-      const updatedInstances = existingTask.instances.map((inst: unknown) =>
+      const updatedInstances = existingTask.instances.map((inst: TaskInstance) =>
         inst.id === instanceId
           ? { ...inst, scheduledDate: targetDate }
           : inst

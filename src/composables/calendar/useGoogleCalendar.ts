@@ -77,9 +77,10 @@ export function useGoogleCalendar() {
         scheduleProactiveRefresh()
       }
     } catch (e: unknown) {
-      console.warn('[GoogleCalendar] Proactive refresh failed:', e.message)
+      const msg = e instanceof Error ? e.message : String(e)
+      console.warn('[GoogleCalendar] Proactive refresh failed:', msg)
       // If refresh fails with auth error, clear token so UI shows reconnect
-      if (e.message?.includes('expired') || e.message?.includes('401') || e.message?.includes('refresh failed')) {
+      if (msg.includes('expired') || msg.includes('401') || msg.includes('refresh failed')) {
         settingsStore.updateSetting('googleProviderToken', '')
         settingsStore.updateSetting('googleProviderTokenExpiry', 0)
         error.value = 'Google token expired — please reconnect in Settings'
@@ -171,14 +172,15 @@ export function useGoogleCalendar() {
         allEvents.push(...transformed)
       } catch (e: unknown) {
         console.error(`[GoogleCalendar] Failed to fetch events for ${cal.summary}:`, e)
+        const msg = e instanceof Error ? e.message : String(e)
         // Token expired AND refresh failed — clear access token so UI shows re-auth prompt
-        if (e.message?.includes('expired') || e.message?.includes('401') || e.message?.includes('refresh failed')) {
+        if (msg.includes('expired') || msg.includes('401') || msg.includes('refresh failed')) {
           settingsStore.updateSetting('googleProviderToken', '')
           settingsStore.updateSetting('googleProviderTokenExpiry', 0)
           error.value = 'Google token expired — please reconnect in Settings'
           break
         }
-        error.value = e.message
+        error.value = msg
       }
     }
 
@@ -215,7 +217,7 @@ export function useGoogleCalendar() {
       // After sign-in, the auth store's SIGNED_IN handler captures provider tokens
       // and stores them in settingsStore (see auth.ts TASK-1283 section)
     } catch (e: unknown) {
-      error.value = e.message
+      error.value = e instanceof Error ? e.message : String(e)
     }
   }
 

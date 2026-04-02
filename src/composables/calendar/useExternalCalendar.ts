@@ -229,12 +229,13 @@ function parseICalText(icsText: string, calendarId: string, color: string): Exte
 
 async function fetchICalUrl(url: string): Promise<string> {
   // Electron desktop: use IPC fetch (no CORS restrictions)
-  if ((window as Record<string, unknown>).electronAPI) {
+  if ((window as unknown as Record<string, unknown>).electronAPI) {
     try {
       const api = (window as unknown as { electronAPI: { fetch: (url: string, options?: unknown) => Promise<{ ok: boolean; status: number; text: () => Promise<string> }> } }).electronAPI
-      const response = await api.fetch(url, { method: 'GET' }) as { ok: boolean; status: number; text: string }
+      const response = await api.fetch(url, { method: 'GET' })
       if (response.ok) {
-        return typeof response.text === 'string' ? response.text : ''
+        const text = await response.text()
+        return text || ''
       }
       throw new Error(`HTTP ${response.status}`)
     } catch (e: unknown) {
@@ -288,12 +289,12 @@ export function useExternalCalendar() {
         }
       } catch (e: unknown) {
         console.error(`[ExternalCalendar] Sync failed for ${cal.name}:`, e)
-        syncErrors.value.set(cal.id, e.message)
+        syncErrors.value.set(cal.id, e instanceof Error ? e.message : String(e))
 
         const cals = [...settingsStore.externalCalendars]
         const idx = cals.findIndex(c => c.id === cal.id)
         if (idx !== -1) {
-          cals[idx] = { ...cals[idx], error: e.message }
+          cals[idx] = { ...cals[idx], error: e instanceof Error ? e.message : String(e) }
           settingsStore.updateSetting('externalCalendars', cals)
         }
       }

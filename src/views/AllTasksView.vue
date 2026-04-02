@@ -218,7 +218,7 @@ const sortedTasks = computed(() => {
       })
     }
     case 'title':
-      return tasks.sort((a, b) => dir * a.title.localeCompare(b.title))
+      return tasks.sort((a, b) => dir * (a.title || '').localeCompare(b.title || ''))
     case 'created':
       return tasks.sort((a, b) => {
         return dir * (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())

@@ -469,6 +469,48 @@ watch(() => props.isOpen, (isOpen) => {
     })
   }
 }, { immediate: true })
+
+// --- Bidirectional sync: start/end time <-> duration ---
+
+const timeToMinutes = (time: string): number => {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
+}
+const minutesToTime = (mins: number): string => {
+  const h = Math.floor(mins / 60) % 24
+  const m = mins % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+const _syncingTime = ref(false)
+
+// When user edits the end time input: recompute duration
+watch(localEndTime, (newEnd) => {
+  if (_syncingTime.value) return
+  if (!newEnd || !localStartTime.value) return
+  const newDuration = timeToMinutes(newEnd) - timeToMinutes(localStartTime.value)
+  if (newDuration > 0 && newDuration <= 480) {
+    duration.value = newDuration
+  }
+})
+
+// When duration dropdown changes: recompute end time
+watch(duration, (newDuration) => {
+  if (!localStartTime.value) return
+  _syncingTime.value = true
+  const newEndMinutes = timeToMinutes(localStartTime.value) + newDuration
+  localEndTime.value = minutesToTime(newEndMinutes)
+  nextTick(() => { _syncingTime.value = false })
+})
+
+// When start time changes: keep duration, recompute end time
+watch(localStartTime, (newStart) => {
+  if (!newStart) return
+  _syncingTime.value = true
+  const newEndMinutes = timeToMinutes(newStart) + duration.value
+  localEndTime.value = minutesToTime(newEndMinutes)
+  nextTick(() => { _syncingTime.value = false })
+})
 </script>
 
 <style scoped>

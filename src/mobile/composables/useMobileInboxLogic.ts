@@ -455,7 +455,7 @@ export function useMobileInboxLogic() {
             sortedGroups.sort((a, b) => {
                 if (a.key === 'no-project') return 1
                 if (b.key === 'no-project') return -1
-                return a.title.localeCompare(b.title)
+                return (a.title || '').localeCompare(b.title || '')
             })
         }
 

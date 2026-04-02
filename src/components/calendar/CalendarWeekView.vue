@@ -47,7 +47,7 @@ defineEmits<{
   (e: 'removeFromCalendar', weekEvent: WeekEvent): void
   (e: 'startTimer', weekEvent: WeekEvent): void
   (e: 'startResize', event: MouseEvent, weekEvent: WeekEvent, direction: 'top' | 'bottom'): void
-  (e: 'cellDblClick', dateString: string, hour: number): void
+  (e: 'cellDblClick', event: MouseEvent, dateString: string, hour: number): void
   (e: 'cellMouseDown', event: MouseEvent, dateString: string, hour: number): void
 }>()
 
@@ -253,7 +253,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
               @dragleave="$emit('dragleave')"
               @drop.prevent="activeDragCell = null; $emit('drop', $event, createSlot(day.dateString, hour))"
               @mousedown.self="$emit('cellMouseDown', $event, day.dateString, hour)"
-              @dblclick.self="$emit('cellDblClick', day.dateString, hour)"
+              @dblclick.self="$emit('cellDblClick', $event, day.dateString, hour)"
             >
               <!-- Ghost Preview (during inbox drag) — same as day view -->
               <div

@@ -297,20 +297,30 @@ const handleTaskCreated = () => {
 
 // TASK-1434: Handle mousedown on week view cell for drag-to-create
 const handleWeekCellMouseDown = (event: MouseEvent, dateString: string, hour: number) => {
+  const target = (event.currentTarget || event.target) as HTMLElement
+  const rect = target.getBoundingClientRect()
+  const relativeY = event.clientY - rect.top
+  const minute = relativeY >= rect.height / 2 ? 30 : 0
+
   const slot = {
-    id: `${dateString}-${hour * 2}`,
-    slotIndex: hour * 2,
+    id: `${dateString}-${hour * 2 + (minute === 30 ? 1 : 0)}`,
+    slotIndex: hour * 2 + (minute === 30 ? 1 : 0),
     date: dateString,
     hour,
-    minute: 0
+    minute
   }
   dragCreate.handleSlotMouseDown(event, slot)
 }
 
 // Double-click empty cell in week view → open quick create modal
-const handleWeekCellDblClick = (dateString: string, hour: number) => {
+const handleWeekCellDblClick = (event: MouseEvent, dateString: string, hour: number) => {
+  const target = (event.currentTarget || event.target) as HTMLElement
+  const rect = target.getBoundingClientRect()
+  const relativeY = event.clientY - rect.top
+  const minute = relativeY >= rect.height / 2 ? 30 : 0
+
   const [year, month, day] = dateString.split('-').map(Number)
-  const startTime = new Date(year, month - 1, day, hour, 0, 0, 0)
+  const startTime = new Date(year, month - 1, day, hour, minute, 0, 0)
   const endTime = new Date(startTime.getTime() + 30 * 60000)
   dragCreate.quickCreateData.startTime = startTime
   dragCreate.quickCreateData.endTime = endTime

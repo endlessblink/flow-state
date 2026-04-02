@@ -39,6 +39,27 @@
 
 ---
 
+### ~~BUG-1742~~: Calendar: can't schedule tasks between hours (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-02)
+
+**Problem**: Three calendar issues prevented scheduling tasks at half-hour boundaries (e.g. 3:30-4:30 PM). Also fixed a crash in AllTasksView and useMobileInboxLogic when sorting by title on tasks with undefined title.
+
+**Root causes**:
+1. QuickTaskCreate end time input was cosmetic — ignored by duration dropdown, no bidirectional binding
+2. Week view drag-to-create hardcoded `minute: 0` for calculated end time
+3. Week view double-click to create hardcoded `minute: 0` for calculated end time
+4. Sort by title crashed on undefined title in AllTasksView and useMobileInboxLogic
+
+**Fixes**:
+- QuickTaskCreate end time input now wired bidirectionally with duration dropdown
+- Week view drag-to-create and double-click now respect half-hour precision
+- Sort comparators now handle undefined title gracefully
+
+**Files**: `src/components/calendar/CalendarDayView.vue`, `src/components/calendar/CalendarWeekView.vue`, `src/views/AllTasksView.vue`, `src/composables/mobile/useMobileInboxLogic.ts`
+
+---
+
 ### ~~BUG-1740~~: Leave/Delete Workspace Does Nothing (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE

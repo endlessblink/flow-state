@@ -26,7 +26,7 @@ export interface TaskActionsDeps {
     closeCanvasContextMenu: () => void
     screenToFlowCoordinate: (position: { x: number; y: number }) => { x: number; y: number }
     recentlyDeletedGroups?: Ref<Set<string>>
-    undoHistory: unknown
+    undoHistory: any
     fitView?: (options?: { padding?: number; duration?: number; nodes?: string[] }) => void
 }
 

@@ -14,7 +14,7 @@ import { useCanvasTaskActions } from './useCanvasTaskActions'
 interface ActionsDeps {
     viewport: Ref<{ x: number; y: number; zoom: number }>
     batchedSyncNodes: (priority?: 'high' | 'normal' | 'low') => void
-    syncNodes: (tasks?: unknown[], options?: { force?: boolean }) => void
+    syncNodes: (tasks?: import('@/stores/tasks').Task[], options?: { force?: boolean }) => void
     syncEdges?: (options?: { force?: boolean }) => void
     closeCanvasContextMenu: () => void
     closeEdgeContextMenu: () => void
@@ -38,8 +38,8 @@ interface ActionsState {
 export function useCanvasActions(
     deps: ActionsDeps,
     // state argument removed or ignored as we build it up
-    ignoredState: unknown,
-    undoHistory: unknown
+    ignoredState: any,
+    undoHistory: any
 ) {
     const canvasStore = useCanvasStore()
     const contextMenuStore = useCanvasContextMenuStore()
@@ -141,7 +141,7 @@ export function useCanvasActions(
                     id: sectionId,
                     name: 'Ghost',
                     color: '#000',
-                    position: { x: 0, y: 0, w: 0, h: 0 } as unknown,
+                    position: { x: 0, y: 0, w: 0, h: 0 } as any,
                     type: 'custom',
                     layout: 'freeform',
                     isVisible: true,
@@ -188,7 +188,7 @@ export function useCanvasActions(
 
         for (const node of taskNodes) {
             // BUG-1203: Use computedPosition (absolute) instead of position (may be relative)
-            const vfNode = node as unknown
+            const vfNode = node as { computedPosition?: { x: number; y: number } }
             const x = (vfNode.computedPosition?.x != null && isFinite(vfNode.computedPosition.x))
                 ? vfNode.computedPosition.x
                 : node.position.x

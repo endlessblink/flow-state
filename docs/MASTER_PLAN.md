@@ -1261,9 +1261,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (👀 REVIEW)
+### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (📋 PLANNED)
 
-**Priority**: P3 | **Status**: 🔄 IN PROGRESS
+**Priority**: P3 | **Status**: 📋 PLANNED
 
 **Goal**: Review and streamline every Storybook story to use the project's design system consistently. Replace all non-design-system elements with proper project components and tokens.
 
@@ -1769,9 +1769,9 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 
 ---
 
-### TASK-1214: Child Groups Inherit Parent Group Properties (👀 REVIEW)
+### TASK-1214: Child Groups Inherit Parent Group Properties (📋 PLANNED)
 
-**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (Started: 2026-02-06)
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (Started: 2026-02-06)
 
 **Problem**: When dropping a task into a nested child group, the task only inherits properties from the immediate child group. Parent group properties (especially dates like "Today") are NOT inherited.
 
@@ -1791,9 +1791,9 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 
 ---
 
-### TASK-149: Canvas Group Stability Fixes (👀 REVIEW)
+### TASK-149: Canvas Group Stability Fixes (📋 PLANNED)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
 
 **Problems**: Position jump during resize, zombie groups, tolerance snapping, inconsistent containment, group duplication.
 
@@ -2106,9 +2106,9 @@ Wave 3 (dep Wave 2):  TASK-1398
 
 ---
 
-### INQUIRY-1413: Evaluate open-source readiness for community sharing (🔄 IN PROGRESS)
+### INQUIRY-1413: Evaluate open-source readiness for community sharing (📋 PLANNED)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-02-23)
+**Priority**: P2 | **Status**: 📋 PLANNED (2026-02-23)
 
 **Question**: Is FlowState ready to share with the open-source community? Users should be able to connect their own Supabase instance and use all features — no paid tiers, no locked features.
 
@@ -2491,7 +2491,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1303**~~ | **P2** | ✅ **Mark Done doesn't stop active timer running on that task** (✅ DONE — fix in taskOperations.ts:431) |
 | ~~**BUG-1304**~~ | **P2** | ✅ **Done tasks in calendar view have no visual done indicator** (✅ DONE — visual indicator in all 3 calendar views) |
 | ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
-| **TASK-1337** | **P3** | **👀 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
+| **TASK-1337** | **P3** | **📋 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
 | ~~**TASK-1338**~~ | **P0** | ✅ **Configurable PWA Push Notifications — per-category controls, quiet hours, server-side push service** |
 | ~~**BUG-1311**~~ | **P3** | ✅ **Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
@@ -2528,7 +2528,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1693** | **P2** | 🔄 **Calendar virtual timer block — inject virtual CalendarEvent for the currently-timed task when it has no real instance for today, so it always appears on the day view** |
 | ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
 | **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Tauri, KDE widget)** |
-| **BUG-1346** | **P1** | **🔄 Mobile Inbox tab broken in PWA on mobile — layout/design broken** (🔄 IN PROGRESS 2026-03-04) |
+| ~~**BUG-1346**~~ | **P1** | ✅ **Mobile Inbox tab broken in PWA on mobile — layout/design broken** (✅ DONE 2026-03-04) |
 | ~~**TASK-1362**~~ | **P0** | ✅ **Calendar task selection, multi-select & keyboard actions — click to select, Ctrl+click multi-select, Delete→inbox, Shift+Delete→remove, drag-back to inbox** (✅ DONE 2026-02-20) |
 | ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
 | ~~**BUG-1367**~~ | **P2** | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20) |
@@ -2583,7 +2583,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1732**~~ | **P2** | ✅ **Canvas group badge counts task not rendered — parentId without canvasPosition** (✅ DONE 2026-03-26) |
 | ~~**TASK-1487**~~ | **P2** | ✅ **Search modal: delete fix + filter pills (Today, Hide Done, High Priority, No Date)** (✅ DONE 2026-03-08) |
 | ~~**BUG-1490**~~ | **P2** | ✅ **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (✅ DONE 2026-03-09) |
-| **BUG-1530** | **P2** | 📋 **Dragging task to Today canvas group doesn't update Calendar inbox** (📋 PLANNED 2026-03-14) |
+| ~~**BUG-1530**~~ | **P2** | ✅ **Dragging task to Today canvas group doesn't update Calendar inbox** (✅ DONE 2026-03-14) |
 | **BUG-1491** | **P0** | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09) |
 | ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
 | ~~**TASK-1501**~~ | **P3** | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10) |
@@ -2591,7 +2591,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1521**~~ | **P2** | ✅ **KDE Widget: pinned task chip click does nothing — searches only filtered tasks, misses match** (✅ DONE 2026-03-14) |
 | ~~**BUG-1506**~~ | **P0** | ✅ **Edit Task: description loses bullet points on save — htmlToMarkdown regex truncation** (✅ DONE 2026-03-14) |
 | ~~**BUG-1505**~~ | **P2** | ✅ **KDE Widget: Nanny popup only shows ~2 tasks — increase limit and sort by due date** (✅ DONE 2026-03-13) |
-| **TASK-1499** | **P2** | 🔄 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (🔄 IN PROGRESS 2026-03-10) |
+| **TASK-1499** | **P2** | 📋 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (📋 PLANNED) |
 | ~~**TASK-1500**~~ | **P2** | ✅ **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (✅ DONE 2026-03-13) |
 | ~~**TASK-1486**~~ | **P2** | ✅ **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (✅ DONE 2026-03-13) |
 | ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
@@ -2604,12 +2604,12 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1453**~~ | **P0** | ✅ **Production CSS preload + mobile Quick Sort swipe broken** (✅ DONE 2026-03-07) |
 | ~~**BUG-1477**~~ | **P1** | ✅ **Zombie tasks reappear after permanent delete — tombstone/delete ordering + DB trigger conflict** (✅ DONE 2026-03-07) |
 | ~~**BUG-1479**~~ | **P2** | ✅ **Date picker calendar closes when moving cursor to it — NPopover mouseleave** (✅ DONE 2026-03-07) |
-| **BUG-1447** | **P2** | 👀 **Pin task disappears on Enter + task search + widget sync** (👀 REVIEW 2026-03-05) |
+| ~~**BUG-1447**~~ | **P2** | ✅ **Pin task disappears on Enter + task search + widget sync** (✅ DONE 2026-03-05) |
 | **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |
 | ~~**TASK-1445**~~ | **P2** | ✅ **Fix focus mode dropdown closing on hover + overlapping menus — UX research & redesign** (✅ DONE 2026-03-05) |
 | ~~**TASK-1459**~~ | **P2** | ✅ **Storybook story quality pass — fix broken/unclear stories for Teleport components and PWA Screens** (✅ DONE 2026-03-07) |
 | ~~**TASK-1444**~~ | **P1** | ✅ **Tauri desktop app design parity — investigate and fix visual discrepancies vs web/Storybook** (✅ DONE — Obsolete) **Archived**: Superseded by TASK-1715 (Electron migration) |
-| **INQUIRY-1438** | **P0** | 🔄 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (🔄 IN PROGRESS 2026-03-03) |
+| **INQUIRY-1438** | **P0** | 📋 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (📋 PLANNED) |
 | ~~**BUG-1451**~~ | **P1** | ✅ **Task done/deleted state inconsistent across views — Board hideDoneTasks coupled to Canvas/Calendar** (✅ DONE 2026-03-05) |
 | ~~**BUG-1449**~~ | **P1** | ✅ **KDE widget notification barrage + popup dismiss + nanny task selection** (✅ DONE 2026-03-05) |
 | ~~**TASK-1434**~~ | **P0** | ✅ **Calendar drag-to-create — click and drag on time slots to create a new task** (✅ DONE 2026-03-03) |
@@ -2703,7 +2703,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1464** | **P1** | **Break Timer On-Screen Overlay — full-screen pomodoro overlay during break with countdown, minimize/stop/+5min controls, glass morphism** |
 | ~~**TASK-1465**~~ | **P2** | ✅ ~~**AI Features Audit — review all AI features, decide what to keep vs ditch (broken/no value)**~~ |
 | ~~**TASK-1466**~~ | **P2** | ✅ **Start task without resetting timer — allow switching active task while timer runs (web + pinned), add reset option to KDE widget** |
-| **BUG-1462** | **P1** | **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** (👀 REVIEW) |
+| ~~**BUG-1462**~~ | **P1** | ✅ **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** (✅ DONE) |
 | ~~**TASK-1469**~~ | **P2** | ✅ **AI Chat anti-spam fix — fix ReAct loop spam, limit tool calls per turn, rewrite system prompt to be concise, add output truncation** |
 | **TASK-1470** | **P2** | **Task Assist UX resurface — Ctrl+. shortcut hint, smart inline hint, 28-test AI effectiveness suite** | 👀 REVIEW |
 | ~~**BUG-1467**~~ | **P2** | ~~**Tasks auto-appear on calendar at 9:00 AM when dragged to Board date columns — moveTaskToDate created calendar instances instead of only setting dueDate**~~ (✅ DONE 2026-03-07) |
@@ -3335,9 +3335,9 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1171: Add Mobile View E2E Tests (👀 REVIEW)
+### TASK-1171: Add Mobile View E2E Tests (📋 PLANNED)
 
-**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (partial coverage — 1 basic file, needs assessment)
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (partial coverage — 1 basic file, needs assessment)
 
 **Problem**: Mobile views have E2E test coverage gaps.
 
@@ -3646,9 +3646,9 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### TASK-1462: Watchpost TUI — Multi-Project Support (🔄 IN PROGRESS)
+### TASK-1462: Watchpost TUI — Multi-Project Support (📋 PLANNED)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+**Priority**: P2 | **Status**: 📋 PLANNED
 
 **Problem**: `watchpost tui` currently only works with FlowState. Running from another project directory shows 0 tasks.
 
@@ -4012,10 +4012,10 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ID | Task | Priority | Status |
 |----|------|----------|--------|
 | ~~TASK-1683~~ | ✅ Fix Supabase database composable types (85 errors, 11 files) | P2 | ✅ **DONE** (2026-04-02) |
-| TASK-1684 | Fix Canvas composable types (120 errors, 9 files) | P2 | 📋 PLANNED |
+| ~~TASK-1684~~ | ✅ Fix Canvas composable types (120 errors, 9 files) | P2 | ✅ **DONE** (2026-04-02) |
 | ~~TASK-1685~~ | ✅ Fix App initialization & sidebar types (40 errors, 2 files) | P2 | ✅ **DONE** (2026-04-02) |
-| TASK-1686 | Fix Calendar composable types (22 errors, 4 files) | P2 | 📋 PLANNED |
-| TASK-1687 | Fix Sync & timer types (29 errors, 3 files) | P2 | 📋 PLANNED |
+| ~~TASK-1686~~ | ✅ Fix Calendar composable types (22 errors, 4 files) | P2 | ✅ **DONE** (2026-04-02) |
+| TASK-1687 | Fix Sync & timer types (29 errors, 3 files) | P2 | 🔄 IN PROGRESS |
 | TASK-1688 | Fix AI, board, and cross-tab types (41 errors, 8 files) | P2 | 📋 PLANNED |
 | TASK-1689 | Fix miscellaneous type errors (51 errors, 18 files) | P3 | 📋 PLANNED |
 
@@ -4025,7 +4025,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Root patterns**: (1) `supabase` client imported as possibly null — needs non-null assertion or guard. (2) Supabase `.select('*')` returns `{}` type — needs explicit type parameter or cast. (3) `Record<string, unknown>` vs concrete interface mismatches in `.forEach()` callbacks.
 - **Fix approach**: Add `supabase!` non-null assertion in `_infrastructure.ts` or add null guards. Add type parameters to `.select<T>()` calls. Type callback parameters with concrete interfaces.
 
-#### TASK-1684: Canvas Composable Types (📋 PLANNED)
+#### ~~TASK-1684~~: Canvas Composable Types (✅ DONE)
 - **Priority**: P2
 - **Error count**: 120 errors across 9 files in `src/composables/canvas/`
 - **Root patterns**: (1) Vue Flow `findNode()` returns `unknown` — needs type assertion. (2) `NodeChange[]` vs `unknown[]` in `onNodesChange` handlers. (3) Untyped `payload` in Realtime event handlers. (4) `undoHistory` ref typed as `unknown`.
@@ -4037,13 +4037,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Root patterns**: Supabase Realtime `.on('postgres_changes')` callback payload is typed as `{}`. Properties like `id`, `is_deleted`, `title`, `name` accessed on it.
 - **Fix approach**: Type the Realtime payload with `RealtimePostgresChangesPayload<{[key: string]: unknown}>` and cast `.new`/`.old` to task/project/group interfaces.
 
-#### TASK-1686: Calendar Composable Types (📋 PLANNED)
+#### ~~TASK-1686~~: Calendar Composable Types (✅ DONE)
 - **Priority**: P2
 - **Error count**: 22 errors across 4 files
 - **Root patterns**: (1) `instance` callbacks typed as `Record<string, unknown>` instead of `TaskInstance | RecurringTaskInstance`. (2) Catch clause `e` is `unknown` — needs `instanceof Error` guard. (3) Property destructuring from `unknown` objects.
 - **Fix approach**: Change callback parameter types to use proper interfaces. Add error guards in catch blocks.
 
-#### TASK-1687: Sync & Timer Types (📋 PLANNED)
+#### TASK-1687: Sync & Timer Types (🔄 IN PROGRESS)
 - **Priority**: P2
 - **Error count**: 29 errors across 3 files
 - **Root patterns**: (1) `useTimerLeaderElection.ts` — `handleLeaderMessage(sync: unknown)` uses `sync.action`, `sync.leaderId` etc. without narrowing. (2) `useSyncOrchestrator.ts` — various payload types.

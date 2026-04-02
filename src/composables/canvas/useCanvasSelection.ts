@@ -84,8 +84,8 @@ export function useCanvasSelection(deps: {
     }
 
     // --- SELECTION CHANGE HANDLER (Migrated from CanvasView.vue) ---
-    const handleSelectionChange = (params: unknown) => {
-        const newSelection = params?.nodes?.map((n: unknown) => n.id) ?? []
+    const handleSelectionChange = (params: { nodes?: Array<{ id: string }> }) => {
+        const newSelection = params?.nodes?.map(n => n.id) ?? []
         canvasStore.selectedNodeIds = newSelection
     }
 
@@ -122,9 +122,10 @@ export function useCanvasSelection(deps: {
         canvasStore.setSelectedNodes([])
         selectedTask.value = null
 
-        nodes.value.forEach((node: unknown) => {
-            if (node.selected) {
-                node.selected = false
+        nodes.value.forEach((node) => {
+            const n = node as any
+            if (n.selected) {
+                n.selected = false
             }
         })
     }

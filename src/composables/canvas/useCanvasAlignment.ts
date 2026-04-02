@@ -56,8 +56,8 @@ function getAbsolutePosition(node: NodeWithComputed): { x: number; y: number } {
  */
 function getNodeBounds(node: NodeWithComputed) {
     const abs = getAbsolutePosition(node)
-    const width = node.width ?? (node as unknown).dimensions?.width ?? DEFAULT_WIDTH
-    const height = node.height ?? (node as unknown).dimensions?.height ?? DEFAULT_HEIGHT
+    const width = node.width ?? (node as any).dimensions?.width ?? DEFAULT_WIDTH
+    const height = node.height ?? (node as any).dimensions?.height ?? DEFAULT_HEIGHT
 
     return {
         left: abs.x,

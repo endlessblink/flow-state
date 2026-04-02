@@ -134,17 +134,19 @@ export function useCanvasOrchestrator() {
     // Unified Interactions (Drag & Resize)
     const { canAcceptRemoteUpdate, currentType: opCurrentType, state: opState, getDebugInfo: getOpDebugInfo } = useCanvasOperationState()
 
+    const applyNodeChangesCompat = (changes: unknown[]) => applyNodeChanges(changes as import('@vue-flow/core').NodeChange[])
+
     const interactions = useCanvasInteractions({
         nodes,
         findNode,
         updateNode,
-        applyNodeChanges
+        applyNodeChanges: applyNodeChangesCompat
     })
 
     // Selection management
     const selection = useCanvasSelection({
         nodes,
-        applyNodeChanges
+        applyNodeChanges: applyNodeChangesCompat
     })
 
     // Groups (Unified)
@@ -163,7 +165,7 @@ export function useCanvasOrchestrator() {
     // BUG-1361: Added `force` option to bypass the drag-settling guard for user-initiated
     // drops (inbox → canvas). Without this, tasks dropped during the 3-second settling
     // window after a canvas node drag would silently fail to render.
-    const syncNodes = (tasks?: unknown[], options?: { force?: boolean }) => {
+    const syncNodes = (tasks?: import('@/stores/tasks').Task[], options?: { force?: boolean }) => {
         // Prevent sync if explicitly unwanted (e.g. during specific interactions)
         if (canvasUiStore.operationLoading.syncing) {
             return
@@ -218,11 +220,11 @@ export function useCanvasOrchestrator() {
 
     // Batched edge sync to coalesce multiple updates
     let isEdgeSyncScheduled = false
-    const batchedSyncEdges = () => {
+    const batchedSyncEdges = (options?: { force?: boolean }) => {
         if (isEdgeSyncScheduled) return
         isEdgeSyncScheduled = true
         nextTick(() => {
-            syncEdges()
+            syncEdges(options)
             isEdgeSyncScheduled = false
         })
     }
@@ -231,7 +233,8 @@ export function useCanvasOrchestrator() {
     const isVueFlowReady = ref(false)
     const isVueFlowMounted = ref(false)
 
-    const events = useCanvasEvents(syncNodes)
+    const syncNodesCompat = (tasks?: unknown[], options?: { force?: boolean }) => syncNodes(tasks as import('@/stores/tasks').Task[] | undefined, options)
+    const events = useCanvasEvents(syncNodesCompat)
 
     // Actions
     const recentlyDeletedGroups = ref(new Set<string>())
@@ -536,7 +539,7 @@ export function useCanvasOrchestrator() {
         // Listen for updates from other sources (e.g. Alignment tools, Auto-layout)
         // that are NOT 'user-drag' (handled by Vue Flow) or 'remote-sync' (handled by sync loop)
         positionManagerUnsubscribe.value = positionManager.subscribe((event) => {
-            const { nodeId, payload } = event
+            const { nodeId, payload } = event as { nodeId: string; payload: { source: string; position: { x: number; y: number }; parentId?: string | null } }
             if (payload.source !== 'user-drag' && payload.source !== 'remote-sync') {
                 if (import.meta.env.DEV) {
                     console.log(`📡[ORCHESTRATOR] Applying external position update for ${nodeId} from ${payload.source}`)
@@ -782,7 +785,7 @@ export function useCanvasOrchestrator() {
         resizeLineStyle: interactions.resizeLineStyle,
         edgeHandleStyle: interactions.edgeHandleStyle,
 
-        onPaneReady: (instance: Record<string, unknown>) => {
+        onPaneReady: (instance: any) => {
             onPaneReady(instance) // Core handler
             isVueFlowReady.value = true
             isVueFlowMounted.value = true
@@ -806,7 +809,7 @@ export function useCanvasOrchestrator() {
         // Vue Flow Handlers
         // TASK-262: Filter selection changes to prevent unwanted deselection on node click
         // Vue Flow default: clicking a node deselects all others. We only want pane click to deselect.
-        handleNodesChange: (changes: unknown[]) => {
+        handleNodesChange: (changes: import('@vue-flow/core').NodeChange[]) => {
             // TASK-262 FIX: Allow all changes to pass through including deselection
             // TASK-1722: Filter out remove changes for image nodes (deletable:false safety net)
             // Our handleKeyDown in useCanvasHotkeys owns image deletion with undo support
@@ -814,7 +817,7 @@ export function useCanvasOrchestrator() {
                 if (c.type === 'remove' && c.id?.startsWith('img-')) return false
                 return true
             })
-            applyNodeChanges(filtered)
+            applyNodeChanges(filtered as import('@vue-flow/core').NodeChange[])
         },
         handleEdgesChange: applyEdgeChanges,
         handleConnect: (params: import('@vue-flow/core').Connection) => {

@@ -97,7 +97,7 @@ export function useNodeSync(
             // 2. CALCULATE ABSOLUTE POSITION
             // ================================================================
             let absolutePosition: { x: number; y: number }
-            const vfNode = vueFlowNode as unknown
+            const vfNode = vueFlowNode as { computedPosition?: { x: number; y: number } }
 
             if (vfNode.computedPosition) {
                 absolutePosition = {
@@ -124,7 +124,7 @@ export function useNodeSync(
                 try {
                     const { useTaskStore } = await import('@/stores/tasks')
                     const taskStore = useTaskStore()
-                    const task = taskStore.tasks.find((t: Record<string, unknown>) => t.id === nodeId)
+                    const task = taskStore.tasks.find(t => t.id === nodeId)
                     if (task?.positionVersion !== undefined) {
                         currentVersion = task.positionVersion
                         versionMap.set(nodeId, currentVersion) // Sync the map
@@ -156,8 +156,8 @@ export function useNodeSync(
                 updatePayload.position_json = {
                     x: positionToSave.x,
                     y: positionToSave.y,
-                    width: vueFlowNode.data?.width || (vueFlowNode as unknown).width || CANVAS.DEFAULT_GROUP_WIDTH,
-                    height: vueFlowNode.data?.height || (vueFlowNode as unknown).height || CANVAS.DEFAULT_GROUP_HEIGHT
+                    width: vueFlowNode.data?.width || (vueFlowNode as { width?: number; height?: number }).width || CANVAS.DEFAULT_GROUP_WIDTH,
+                    height: vueFlowNode.data?.height || (vueFlowNode as { width?: number; height?: number }).height || CANVAS.DEFAULT_GROUP_HEIGHT
                 }
                 updatePayload.parent_group_id = currentParentId === 'NONE' ? null : currentParentId
             }
@@ -174,7 +174,7 @@ export function useNodeSync(
                 setTimeout(() => resolve({ timeout: true }), SYNC_TIMEOUT_MS)
             )
 
-            const dbRequest = supabase
+            const dbRequest = supabase!
                 .from(tableName)
                 .update(updatePayload)
                 .eq('id', nodeId)
@@ -198,7 +198,7 @@ export function useNodeSync(
                 console.warn(`⚠️ [NODE-SYNC] Conflict detected for ${tableName} ${nodeId}, retrying...`)
 
                 // Fetch latest
-                const { data: latest, error: fetchError } = await supabase
+                const { data: latest, error: fetchError } = await supabase!
                     .from(tableName)
                     .select('position_version')
                     .eq('id', nodeId)
@@ -217,7 +217,7 @@ export function useNodeSync(
                 updatePayload.position_version = newVersion + 1
 
                 // Retry Request (With new timeout race)
-                const retryRequest = supabase
+                const retryRequest = supabase!
                     .from(tableName)
                     .update(updatePayload)
                     .eq('id', nodeId)
@@ -250,16 +250,17 @@ export function useNodeSync(
             return true
 
         } catch (err: unknown) {
+            const error = err as { message?: string; code?: string }
             console.error('❌ [NODE-SYNC] Failed:', err)
-            syncError.value = err.message || 'Sync failed'
+            syncError.value = error.message || 'Sync failed'
 
             const { showToast } = useToast()
 
             // BUG-1328: Suppress toast for PGRST116 (entity not found) —
             // not actionable by user, happens when node was deleted on another device
-            if (err.code === 'PGRST116') {
+            if (error.code === 'PGRST116') {
                 console.warn(`⚠️ [NODE-SYNC] Entity not found (PGRST116) — suppressing toast`)
-            } else if (err.message?.includes('timed out')) {
+            } else if (error.message?.includes('timed out')) {
                 // Show warning toast for timeouts - changes will be retried
                 showToast('Sync timed out - changes will retry automatically', 'warning')
             } else {

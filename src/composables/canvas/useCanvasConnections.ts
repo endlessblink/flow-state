@@ -90,13 +90,14 @@ export function useCanvasConnections(
         }, 50) // Small delay to let onConnect fire first
     }
 
-    const handleConnect = deps.withVueFlowErrorBoundary('handleConnect', async (connection: { source: string; target: string; sourceHandle?: string; targetHandle?: string }) => {
+    const handleConnect = deps.withVueFlowErrorBoundary('handleConnect', async (connection: any) => {
+        const { source, target } = connection as { source: string; target: string; sourceHandle?: string; targetHandle?: string }
         // Mark connection as successful FIRST - this prevents drag-to-create from firing
         if (state.connectionWasSuccessful) {
             state.connectionWasSuccessful.value = true
         }
 
-        const { source, target } = connection
+
         console.log('[BUG-1407:CONNECT] handleConnect fired:', { source, target })
 
         deps.closeCanvasContextMenu()

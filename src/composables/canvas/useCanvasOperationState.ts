@@ -71,7 +71,7 @@ export function useCanvasOperationState() {
 
         // Clear previous timeout if any
         if ('settleTimeout' in state.value) {
-            window.clearTimeout(state.value.settleTimeout as unknown)
+            window.clearTimeout(state.value.settleTimeout as number)
         }
 
         // BUG-1209: Set window flag so realtime handlers block during settling
@@ -158,7 +158,7 @@ export function useCanvasOperationState() {
 
     const resetToIdle = () => {
         if ('settleTimeout' in state.value) {
-            window.clearTimeout(state.value.settleTimeout as unknown)
+            window.clearTimeout(state.value.settleTimeout as number)
         }
         // BUG-1209: Clear settling flag on any reset
         if (typeof window !== 'undefined') {

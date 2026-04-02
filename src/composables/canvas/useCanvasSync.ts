@@ -108,7 +108,7 @@ export function useCanvasSync() {
      * Helper to detect if assigning a parent would create a cycle
      * Traces up the parent chain to ensure we don't point back to ourselves
      */
-    const hasParentCycle = (nodeId: string, potentialParentId: string | null, groups: unknown[]): boolean => {
+    const hasParentCycle = (nodeId: string, potentialParentId: string | null, groups: Array<{ id: string; parentGroupId?: string | null }>): boolean => {
         if (!potentialParentId) return false
         if (nodeId === potentialParentId) return true // Self-reference
 
@@ -128,7 +128,7 @@ export function useCanvasSync() {
             const parentGroup = groups.find(g => g.id === currentId)
             if (!parentGroup) break // End of known chain
 
-            currentId = parentGroup.parentGroupId
+            currentId = parentGroup.parentGroupId ?? ''
             depth++
         }
 
@@ -249,7 +249,7 @@ export function useCanvasSync() {
                 console.log(`[CANVAS:SYNC] Deferred ${rejectedIds.length} locked nodes (will retry next sync)`)
             }
 
-            const newNodes: unknown[] = []
+            const newNodes: Array<Record<string, any>> = []
 
             // ================================================================
             // PROCESS GROUPS
@@ -336,7 +336,7 @@ export function useCanvasSync() {
 
                 // BUG-226 FIX: Apply depth-based zIndex bonus
                 // ensures child groups (higher depth) are always on top of parent groups
-                const depth = (group as unknown)._depth || 0
+                const depth = (group as any)._depth || 0
                 const zIndex = 11 + (depth * 10) // Base group Z is 10 (CANVAS.Z_INDEX_GROUP)
 
                 newNodes.push({
@@ -536,10 +536,10 @@ export function useCanvasSync() {
             // ================================================================
             // Prevent recursive updates if generated nodes match existing nodes
             // We compare essential properties: id, position, parentNode, data (height/width)
-            const isDifferent = (a: unknown[], b: unknown[]) => {
+            const isDifferent = (a: Array<Record<string, any>>, b: Array<Record<string, any>>) => {
                 if (a.length !== b.length) return true
                 // Create a map for faster lookup
-                const bMap = new Map(b.map((n: unknown) => [n.id, n]))
+                const bMap = new Map(b.map((n: Record<string, any>) => [n.id, n]))
 
                 for (const nodeA of a) {
                     const nodeB = bMap.get(nodeA.id)
@@ -597,7 +597,7 @@ export function useCanvasSync() {
                     const taskNodesOld = currentNodes.filter(n => n.type === 'taskNode')
 
                     for (const newNode of taskNodesNew) {
-                        const oldNode = taskNodesOld.find((o: unknown) => o.id === newNode.id)
+                        const oldNode = taskNodesOld.find((o) => o.id === newNode.id)
                         if (oldNode && oldNode.parentNode !== newNode.parentNode) {
                             console.warn(`[CANVAS:SYNC] Task ${newNode.id.slice(0, 8)}... parentNode: "${oldNode.parentNode ?? 'root'}" → "${newNode.parentNode ?? 'root'}"`, {
                                 taskTitle: newNode.data?.label?.slice(0, 20),
@@ -625,8 +625,8 @@ export function useCanvasSync() {
                     }
 
                     // 2. Check task nodes for duplicates
-                    const taskNodes = newNodes.filter((n: unknown) => n.type === 'taskNode')
-                    const taskNodeObjects = taskNodes.map((n: unknown) => ({
+                    const taskNodes = newNodes.filter((n) => n.type === 'taskNode')
+                    const taskNodeObjects = taskNodes.map((n) => ({
                         id: n.data?.task?.id || n.id
                     }))
                     const taskNodeCheck = assertNoDuplicateIds(taskNodeObjects, 'taskNodes')
@@ -642,8 +642,8 @@ export function useCanvasSync() {
 
 
                     // 3. Check group nodes for duplicates
-                    const groupNodes = newNodes.filter((n: unknown) => n.type === 'sectionNode')
-                    const groupNodeObjects = groupNodes.map((n: unknown) => ({
+                    const groupNodes = newNodes.filter((n) => n.type === 'sectionNode')
+                    const groupNodeObjects = groupNodes.map((n) => ({
                         id: n.data?.id || n.id
                     }))
                     const groupNodeCheck = assertNoDuplicateIds(groupNodeObjects, 'groupNodes')
@@ -744,7 +744,7 @@ export function useCanvasSync() {
                     }
                 }
 
-                setNodes(newNodes)
+                setNodes(newNodes as any)
 
                 // ================================================================
                 // INVARIANT VALIDATION (Dev Only)

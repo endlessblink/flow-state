@@ -90,6 +90,7 @@ export default defineConfig(({ mode }) => ({
         // API caching is handled at the app level via useSupabaseDatabase
       },
       devOptions: {
+        // Dev mode manifest: static public/manifest.webmanifest + <link> in index.html (BUG-1679)
         enabled: false, // Disabled: caused infinite reload loop in dev mode (BUG-1112 notifications work via browser API)
         type: 'module',
       },

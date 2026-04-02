@@ -3807,7 +3807,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 | ~~BUG-1676~~ | Fix Board view empty — kanban columns render but no task cards. Same workspace root cause. | P0 | ✅ **DONE** — Obsolete (dependency on BUG-1671) |
 | ~~BUG-1677~~ | Fix context menu positioning — right-click menu not appearing or appearing outside viewport bounds. | P2 | ✅ **DONE** — Obsolete (Tauri removed) |
 | ~~BUG-1678~~ | Fix tooltip z-index — tooltips render with z-index 'auto' instead of explicit value, may appear behind content. | P2 | ✅ **DONE** — Obsolete (Tauri removed) |
-| BUG-1679 | Fix PWA manifest not linked in dev mode — `<link rel="manifest">` missing when devOptions.enabled=false. | P2 | 📋 PLANNED |
+| ~~BUG-1679~~ | Fix PWA manifest not linked in dev mode — `<link rel="manifest">` missing when devOptions.enabled=false. | P2 | ✅ **DONE** |
 | ~~BUG-1680~~ | Fix card border-radius not rendering — task cards missing rounded corners in some views. | P3 | ✅ **DONE** — Obsolete (Tauri removed) |
 | ~~BUG-1681~~ | Fix Inbox panel shows no content — inbox collapsed by default, badge/content not accessible. | P2 | ✅ **DONE** — Obsolete (Tauri removed). Note: inbox empty state should be verified in Electron. |
 | ~~BUG-1682~~ | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors. | P0 | ✅ **DONE** — Obsolete (dependency on BUG-1671) |

@@ -10,6 +10,7 @@ import { computed } from 'vue'
 import {
   detectPlatform,
   isTauri as isTauriFn,
+  isElectron as isElectronFn,
   isCapacitor as isCapacitorFn,
   isPWA as isPWAFn,
   isNative as isNativeFn,
@@ -27,7 +28,7 @@ export function usePlatform() {
     isBrowser: computed(() => !isNativeFn() && !isPWAFn()),
     isNative: computed(() => isNativeFn()),
     isMobileNative: computed(() => isCapacitorFn()),
-    isDesktopNative: computed(() => isTauriFn()),
+    isDesktopNative: computed(() => isElectronFn()),
     /** Service workers only available in browser/PWA */
     supportsServiceWorker: computed(() => !isNativeFn()),
     /** Web Push only available in browser/PWA with PushManager */

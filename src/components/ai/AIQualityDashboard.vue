@@ -76,7 +76,9 @@
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <h3 class="empty-title">AI Quality Assessment</h3>
+      <h3 class="empty-title">
+        AI Quality Assessment
+      </h3>
       <p class="empty-desc">
         Tests your AI assistant by sending {{ testPrompts.length }} prompts across {{ new Set(testPrompts.map(t => t.category)).size }} categories,
         then judges each response against {{ rubrics.length }} quality rubrics using a second LLM call.
@@ -131,7 +133,7 @@
               <span class="result-grade" :class="scoreColorClass(result.overallScore)">
                 {{ result.grade }}
               </span>
-              <span class="result-grade-dot" :class="gradeDotClass(result.grade)"></span>
+              <span class="result-grade-dot" :class="gradeDotClass(result.grade)" />
             </div>
           </div>
 
@@ -144,7 +146,9 @@
           <!-- AI Response Preview (first 3 lines) -->
           <div class="result-response-preview">
             <span class="preview-label">AI Response:</span>
-            <div class="preview-text">{{ result.response }}</div>
+            <div class="preview-text">
+              {{ result.response }}
+            </div>
           </div>
 
           <!-- Simple Verdict (derived from judge reasoning) -->
@@ -156,7 +160,9 @@
           <div v-if="expandedCards.has(result.promptId)" class="expanded-content">
             <div class="expanded-section">
               <h4>Full AI Response</h4>
-              <div class="response-text">{{ result.response }}</div>
+              <div class="response-text">
+                {{ result.response }}
+              </div>
             </div>
 
             <div v-if="result.judgeReasoning" class="expanded-section">

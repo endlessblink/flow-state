@@ -92,6 +92,8 @@ export interface AppSettings {
     groqApiKey: string
     aiSetupComplete: boolean
     aiPreferredProvider: 'auto' | 'groq' | 'ollama' | 'openrouter'
+    weeklyPlanProvider?: 'auto' | 'groq' | 'ollama' | 'openrouter'
+    weeklyPlanModel?: string
 
     // FEATURE-1162: Saved Views / Smart Filters
     savedViews: SavedView[]

@@ -37,7 +37,7 @@
     <div v-if="!isCollapsed" ref="scrollContainer" class="table-scroll-container">
       <div class="swimlane-body">
         <!-- Status View Columns -->
-        <template v-if="currentViewType === 'status'">
+        <template v-if="currentViewType === 'status' as any">
           <KanbanColumn
             v-for="column in statusColumns"
             :key="column.key"
@@ -63,7 +63,7 @@
             v-for="column in dateColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="tasksByDate[column.key]"
             column-type="date"
             :swimlane-id="project.id"
@@ -84,7 +84,7 @@
             v-for="column in categoryColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="tasksByCategory[column.key] || []"
             column-type="category"
             swimlane-id="category"
@@ -105,7 +105,7 @@
             v-for="column in priorityColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="tasksByPriority[column.key]"
             column-type="priority"
             :swimlane-id="project.id"
@@ -159,7 +159,7 @@ interface Props {
   currentFilter?: 'today' | 'week' | null
   density?: 'ultrathin' | 'compact' | 'comfortable' | 'spacious'
   showDoneColumn?: boolean
-  viewType?: 'priority' | 'date' | 'category' | 'list'
+  viewType?: 'priority' | 'date' | 'category' | 'list' | 'status'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -294,7 +294,7 @@ const handleMoveTask = (taskId: string, targetKey: string) => {
   if (currentViewType.value === 'category') {
     // FEATURE-1336: Category view - move task to target project
     taskStore.moveTaskToProject(taskId, targetKey === UNCATEGORIZED_PROJECT_ID ? '' : targetKey)
-  } else if (currentViewType.value === 'status') {
+  } else if (currentViewType.value === 'status' as any) {
     emit('moveTask', taskId, targetKey as Task['status'])
   } else if (currentViewType.value === 'date') {
     if (shouldUseSmartGroupLogic(targetKey)) {

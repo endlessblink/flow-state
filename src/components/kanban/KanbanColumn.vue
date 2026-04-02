@@ -326,7 +326,7 @@ const persistOrderForColumn = () => {
   })
 }
 
-const handleDragChange = async (event: { added?: { element: Task }; removed?: { element: Task } }) => {
+const handleDragChange = async (event: { added?: { element: Task }; removed?: { element: Task }; moved?: { element: Task } }) => {
   if (event.added) {
     try {
       const taskId = event.added.element.id

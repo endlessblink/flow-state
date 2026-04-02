@@ -170,7 +170,7 @@ const onSlotsScroll = (e: Event) => {
         <div class="slot-tasks-container">
           <div
             v-for="calEvent in getTasksForSlot(slot)"
-            v-show="isTaskPrimarySlot(slot, calEvent as any)"
+            v-show="isTaskPrimarySlot(calEvent as any, slot)"
             :key="`${calEvent.id}-${slot.slotIndex}`"
             class="slot-task is-primary"
             :class="{

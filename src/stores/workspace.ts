@@ -125,20 +125,24 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!authStore.isAuthenticated) return
 
     if (id === activeWorkspaceId.value) return
+    if (isSwitchingWorkspace.value) return  // Prevent concurrent switches (race condition guard)
 
     console.log(`[WORKSPACE] Switching: ${activeWorkspaceId.value || 'personal'} → ${id || 'personal'}`)
 
     isSwitchingWorkspace.value = true  // Pause sync queue
 
-    // TASK-1559: Disconnect presence from previous workspace
+    // TASK-1559: Disconnect presence BEFORE changing activeWorkspaceId,
+    // because the watch in useAppInitialization calls removeAllChannels()
+    // when activeWorkspaceId changes, which kills the presence channel.
+    // If we disconnect after, the await hangs on a dead channel.
     try {
       const { useWorkspacePresence } = await import('@/composables/workspace/useWorkspacePresence')
       await useWorkspacePresence().disconnect()
     } catch { /* presence not available */ }
 
+    // Set activeWorkspaceId AFTER presence cleanup so the dedup guard
+    // and filterByWorkspace computed work immediately
     activeWorkspaceId.value = id
-
-    // Persist workspace choice — 'personal' sentinel respects explicit switch to personal
     localStorage.setItem(LAST_WORKSPACE_KEY, id ?? 'personal')
 
     if (id) {

@@ -27,6 +27,18 @@
 
 ---
 
+### ~~BUG-1741~~: Switching Shared→Personal Workspace Doesn't Load Tasks (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-04-02)
+
+**Root cause**: Race condition in `switchWorkspace()` — presence disconnect hung on a dead channel. The watch in `useAppInitialization.ts` called `removeAllChannels()` when `activeWorkspaceId` changed, killing the presence channel before `switchWorkspace` could cleanly disconnect it. Also added re-entry guard to prevent concurrent switch calls.
+
+**Fix**: (1) Disconnect presence BEFORE changing `activeWorkspaceId`, (2) add `isSwitchingWorkspace` re-entry guard.
+
+**Files**: `src/stores/workspace.ts`
+
+---
+
 ### ~~BUG-1740~~: Leave/Delete Workspace Does Nothing (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE

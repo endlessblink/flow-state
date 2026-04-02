@@ -162,22 +162,6 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         // getParentChain returns [child, parent, grandparent, ...]
         const chain = getParentChain(section.id, allGroups)
 
-        if (import.meta.env.DEV) {
-            const sectionInGroups = allGroups.find(g => g.id === section.id)
-            console.log(`[TASK-1177] Section "${section.name}" (${section.id.slice(0, 8)}):`, {
-                chainLength: chain.length,
-                chainNames: chain.map(g => g.name),
-                sectionDirectParentGroupId: section.parentGroupId ?? 'UNDEFINED',
-                sectionInGroupsParentGroupId: sectionInGroups?.parentGroupId ?? 'NOT IN ARRAY',
-                groupsWithParents: allGroups.filter(g => g.parentGroupId && g.parentGroupId !== 'NONE').map(g => ({
-                    name: g.name,
-                    id: g.id.slice(0, 8),
-                    parentGroupId: g.parentGroupId?.slice(0, 8)
-                })),
-                allGroupsCount: allGroups.length
-            })
-        }
-
         if (chain.length === 0) {
             return getSingleSectionProperties(section)
         }
@@ -190,34 +174,21 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
             const group = chain[i]
             if (!group || !group.name) continue // Safety: skip invalid groups
             const props = getSingleSectionProperties(group as CanvasSection)
-            if (import.meta.env.DEV) {
-                console.log(`[TASK-1177] Chain[${i}] "${group.name}":`, {
-                    props,
-                    hasDateKeyword: detectPowerKeyword(group.name)?.category === 'date'
-                })
-            }
             Object.assign(mergedUpdates, props)
-        }
-
-        if (import.meta.env.DEV && chain.length > 1) {
-            console.log(`[TASK-1177] Inherited from ${chain.length} levels:`,
-                chain.map(g => g.name).reverse().join(' → '),
-                mergedUpdates
-            )
         }
 
         return mergedUpdates
     }
 
     // Helper: Apply properties from ALL containing sections (nested group inheritance)
-    const applyAllNestedSectionProperties = (taskId: string, taskX: number, taskY: number) => {
+    const applyAllNestedSectionProperties = (taskId: string, taskX: number, taskY: number, allGroups?: CanvasGroup[]) => {
         const containingSections = getAllContainingSections(taskX, taskY)
         if (containingSections.length === 0) return
 
         const mergedUpdates: Partial<Task> = {}
 
         for (const section of containingSections) {
-            const sectionProps = getSectionProperties(section)
+            const sectionProps = getSectionProperties(section, allGroups)
             if (Object.keys(sectionProps).length > 0) {
                 Object.assign(mergedUpdates, sectionProps)
             }

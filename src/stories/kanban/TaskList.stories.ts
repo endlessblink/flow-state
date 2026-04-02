@@ -53,7 +53,7 @@ const mockGroups = [
   {
     key: 'p1',
     title: 'Work',
-    color: '#4ECDC4',
+    color: 'var(--brand-primary)',
     tasks: [mockTasks[0], mockTasks[2]],
     parentTasks: [mockTasks[0], mockTasks[2]],
   },
@@ -61,7 +61,7 @@ const mockGroups = [
     key: 'p2',
     title: 'Personal',
     emoji: '🏠',
-    color: '#FF6B6B',
+    color: 'var(--color-priority-high)',
     tasks: [mockTasks[1], mockTasks[3]],
     parentTasks: [mockTasks[1], mockTasks[3]],
   },
@@ -86,8 +86,8 @@ const meta = {
       setup() {
         const taskStore = useTaskStore()
         taskStore.projects = [
-          { id: 'p1', name: 'Work', color: '#4ECDC4' },
-          { id: 'p2', name: 'Personal', color: '#FF6B6B', emoji: '🏠' }
+          { id: 'p1', name: 'Work', color: 'var(--brand-primary)' },
+          { id: 'p2', name: 'Personal', color: 'var(--color-priority-high)', emoji: '🏠' }
         ]
         return {}
       },

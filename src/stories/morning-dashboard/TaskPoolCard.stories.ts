@@ -6,7 +6,7 @@ const S = {
   dot: 'width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;',
   title: 'flex: 1; font-size: 0.8rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3;',
   due: 'font-size: 0.65rem; color: var(--text-muted); white-space: nowrap; padding: 1px var(--space-1); background: var(--glass-bg-soft); border-radius: var(--radius-sm);',
-  dueOverdue: 'font-size: 0.65rem; color: var(--color-danger); white-space: nowrap; padding: 1px var(--space-1); background: rgba(255, 107, 107, 0.08); border-radius: var(--radius-sm);',
+  dueOverdue: 'font-size: 0.65rem; color: var(--color-danger); white-space: nowrap; padding: 1px var(--space-1); background: var(--danger-bg-subtle); border-radius: var(--radius-sm);',
   project: 'font-size: 0.65rem; color: var(--text-muted); max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0;',
 }
 

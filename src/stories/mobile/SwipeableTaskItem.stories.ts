@@ -3,23 +3,23 @@ import { h } from 'vue'
 import { Pencil, Trash2, Check, Calendar } from 'lucide-vue-next'
 
 const S = {
-  wrapper: 'max-width:430px;margin:0 auto;background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);overflow:hidden;padding:8px',
-  container: 'position:relative;overflow:hidden;border-radius:var(--radius-lg);margin-bottom:8px',
-  actionLeft: 'position:absolute;left:0;top:0;bottom:0;width:80px;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(78,205,196,0.15);color:var(--brand-primary);font-size:13px;font-weight:500',
-  actionRight: 'position:absolute;right:0;top:0;bottom:0;width:80px;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(239,68,68,0.15);color:var(--color-danger);font-size:13px;font-weight:500',
-  content: 'position:relative;background:var(--surface-primary);padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:1',
-  contentSwiped: 'position:relative;background:var(--surface-primary);padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:1;transform:translateX(80px);filter:blur(1px);transition:transform 0.3s',
-  contentSwipedLeft: 'position:relative;background:var(--surface-primary);padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:1;transform:translateX(-80px);filter:blur(1px);transition:transform 0.3s',
+  wrapper: 'max-width:430px;margin:0 auto;background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);overflow:hidden;padding:var(--space-2)',
+  container: 'position:relative;overflow:hidden;border-radius:var(--radius-lg);margin-bottom:var(--space-2)',
+  actionLeft: 'position:absolute;left:0;top:0;bottom:0;width:80px;display:flex;align-items:center;justify-content:center;gap:var(--space-1_5);background:var(--brand-primary-subtle);color:var(--brand-primary);font-size:var(--text-meta);font-weight:500',
+  actionRight: 'position:absolute;right:0;top:0;bottom:0;width:80px;display:flex;align-items:center;justify-content:center;gap:var(--space-1_5);background:var(--priority-high-bg);color:var(--color-danger);font-size:var(--text-meta);font-weight:500',
+  content: 'position:relative;background:var(--surface-primary);padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3);z-index:1',
+  contentSwiped: 'position:relative;background:var(--surface-primary);padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3);z-index:1;transform:translateX(80px);filter:blur(1px);transition:transform 0.3s',
+  contentSwipedLeft: 'position:relative;background:var(--surface-primary);padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3);z-index:1;transform:translateX(-80px);filter:blur(1px);transition:transform 0.3s',
   checkbox: 'width:20px;height:20px;border-radius:50%;border:2px solid var(--border-subtle);flex-shrink:0',
-  checkboxDone: 'width:20px;height:20px;border-radius:50%;border:2px solid var(--brand-primary);background:rgba(78,205,196,0.15);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--brand-primary)',
-  title: 'color:var(--text-primary);font-size:14px',
-  titleDone: 'color:var(--text-tertiary);font-size:14px;text-decoration:line-through',
-  meta: 'font-size:11px;color:var(--text-tertiary);display:flex;align-items:center;gap:8px;margin-top:2px',
-  priorityHigh: 'font-size:10px;font-weight:700;padding:1px 6px;border-radius:var(--radius-sm);text-transform:uppercase;letter-spacing:0.05em;background:var(--priority-high-bg);color:var(--color-priority-high)',
-  priorityMedium: 'font-size:10px;font-weight:700;padding:1px 6px;border-radius:var(--radius-sm);text-transform:uppercase;letter-spacing:0.05em;background:var(--priority-medium-bg);color:var(--color-priority-medium)',
-  priorityLow: 'font-size:10px;font-weight:700;padding:1px 6px;border-radius:var(--radius-sm);text-transform:uppercase;letter-spacing:0.05em;background:var(--priority-low-bg);color:var(--color-priority-low)',
-  dueDate: 'display:inline-flex;align-items:center;gap:3px;color:var(--text-secondary);font-size:11px',
-  hint: 'text-align:center;padding:8px;color:var(--text-tertiary);font-size:12px;background:var(--surface-secondary);border-radius:var(--radius-md);margin-bottom:8px',
+  checkboxDone: 'width:20px;height:20px;border-radius:50%;border:2px solid var(--brand-primary);background:var(--brand-primary-subtle);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--brand-primary)',
+  title: 'color:var(--text-primary);font-size:var(--text-sm)',
+  titleDone: 'color:var(--text-tertiary);font-size:var(--text-sm);text-decoration:line-through',
+  meta: 'font-size:var(--text-xs);color:var(--text-tertiary);display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-0_5)',
+  priorityHigh: 'font-size:var(--text-xs);font-weight:700;padding:var(--space-px) var(--space-1_5);border-radius:var(--radius-sm);text-transform:uppercase;letter-spacing:0.05em;background:var(--priority-high-bg);color:var(--color-priority-high)',
+  priorityMedium: 'font-size:var(--text-xs);font-weight:700;padding:var(--space-px) var(--space-1_5);border-radius:var(--radius-sm);text-transform:uppercase;letter-spacing:0.05em;background:var(--priority-medium-bg);color:var(--color-priority-medium)',
+  priorityLow: 'font-size:var(--text-xs);font-weight:700;padding:var(--space-px) var(--space-1_5);border-radius:var(--radius-sm);text-transform:uppercase;letter-spacing:0.05em;background:var(--priority-low-bg);color:var(--color-priority-low)',
+  dueDate: 'display:inline-flex;align-items:center;gap:3px;color:var(--text-secondary);font-size:var(--text-xs)',
+  hint: 'text-align:center;padding:var(--space-2);color:var(--text-tertiary);font-size:var(--text-xs);background:var(--surface-secondary);border-radius:var(--radius-md);margin-bottom:var(--space-2)',
 }
 
 const priorityStyle = (p: string) => p === 'high' ? S.priorityHigh : p === 'medium' ? S.priorityMedium : S.priorityLow
@@ -31,7 +31,7 @@ const taskItem = (title: string, done = false, priority = '', due = '') =>
     h('div', { style: S.content }, [
       h('div', { style: done ? S.checkboxDone : S.checkbox }, done ? [h(Check, { size: 14 })] : null),
       h('div', null, [
-        h('div', { style: 'display:flex;align-items:flex-start;gap:8px' }, [
+        h('div', { style: 'display:flex;align-items:flex-start;gap:var(--space-2)' }, [
           h('span', { style: done ? S.titleDone : S.title }, title),
           priority ? h('span', { style: priorityStyle(priority) }, priority) : null,
         ]),
@@ -88,7 +88,7 @@ export const SwipedLeft: Story = {
         h('div', { style: S.contentSwipedLeft }, [
           h('div', { style: S.checkbox }),
           h('div', null, [
-            h('div', { style: 'display:flex;align-items:flex-start;gap:8px' }, [
+            h('div', { style: 'display:flex;align-items:flex-start;gap:var(--space-2)' }, [
               h('span', { style: S.title }, 'Swiped left to delete'),
               h('span', { style: S.priorityHigh }, 'high'),
             ]),

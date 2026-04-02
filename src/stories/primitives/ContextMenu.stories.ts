@@ -6,7 +6,7 @@ import type { ContextMenuItem } from '@/components/ContextMenu.vue'
 // Glass morphism container style
 const glassContainer = `
   padding: var(--space-10);
-  background: rgba(28, 25, 45, 0.7);
+  background: var(--surface-secondary);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
@@ -119,7 +119,7 @@ export const InteractiveDemo = {
         <h3 style="color: var(--text-primary); margin: 0 0 var(--space-2) 0;">Interactive Demo</h3>
         <p style="color: var(--text-secondary); margin: 0 0 var(--space-5) 0;">Right-click on the task card below</p>
 
-        <div v-if="menu.lastAction" style="padding: var(--space-2-5) var(--space-4); background: rgba(78, 205, 196, 0.1); border: 1px solid rgba(78, 205, 196, 0.3); border-radius: var(--radius-lg); margin-bottom: var(--space-5); color: var(--text-primary); font-size: var(--text-sm);">
+        <div v-if="menu.lastAction" style="padding: var(--space-2-5) var(--space-4); background: var(--brand-primary-subtle); border: 1px solid var(--brand-primary-dim); border-radius: var(--radius-lg); margin-bottom: var(--space-5); color: var(--text-primary); font-size: var(--text-sm);">
           Last action: {{ menu.lastAction }}
         </div>
 

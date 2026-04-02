@@ -38,7 +38,7 @@ export const Default: Story = {
         background: hsl(222, 47%, 9%);
         background-image: radial-gradient(
           ellipse at 40% 30%,
-          rgba(78, 205, 196, 0.03) 0%,
+          var(--glass-bg-subtle) 0%,
           transparent 60%
         );
       ">
@@ -65,12 +65,12 @@ export const Interactive: Story = {
         background: hsl(222, 47%, 9%);
         background-image: radial-gradient(
           ellipse at 60% 70%,
-          rgba(139, 92, 246, 0.04) 0%,
+          var(--glass-bg-weak) 0%,
           transparent 55%
         ),
         radial-gradient(
           ellipse at 30% 20%,
-          rgba(78, 205, 196, 0.03) 0%,
+          var(--glass-bg-subtle) 0%,
           transparent 50%
         );
       ">
@@ -92,11 +92,11 @@ export const Compact: Story = {
         position: relative;
         width: 640px;
         height: 480px;
-        margin: 40px auto;
+        margin: var(--space-10) auto;
         background: hsl(222, 47%, 9%);
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
         overflow: hidden;
-        border: 1px solid rgba(255,255,255,0.06);
+        border: 1px solid var(--border-subtle);
       ">
         <CanvasEmptyState />
       </div>

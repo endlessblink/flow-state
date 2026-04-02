@@ -3,17 +3,17 @@ import { h } from 'vue'
 
 const S = {
   wrapper: 'background:var(--bg-primary);min-height:600px;border:1px solid var(--border-primary);border-radius:var(--radius-xl);overflow:hidden',
-  header: 'display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border-primary)',
-  title: 'font-size:18px;font-weight:600;color:var(--text-primary)',
-  backBtn: 'padding:6px 14px;background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-md);color:var(--text-secondary);font-size:13px;cursor:pointer',
-  calendar: 'padding:16px',
+  header: 'display:flex;align-items:center;justify-content:space-between;padding:var(--space-4);border-bottom:1px solid var(--border-primary)',
+  title: 'font-size:var(--text-lg);font-weight:600;color:var(--text-primary)',
+  backBtn: 'padding:var(--space-1_5) var(--space-3_5);background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-md);color:var(--text-secondary);font-size:var(--text-meta);cursor:pointer',
+  calendar: 'padding:var(--space-4)',
   timeGrid: 'display:flex;flex-direction:column;gap:0',
   timeRow: 'display:flex;min-height:48px;border-bottom:1px solid var(--border-primary)',
-  timeLabel: 'width:60px;font-size:11px;color:var(--text-tertiary);padding:4px 8px;flex-shrink:0;text-align:right',
+  timeLabel: 'width:60px;font-size:var(--text-xs);color:var(--text-tertiary);padding:var(--space-1) var(--space-2);flex-shrink:0;text-align:right',
   timeSlot: 'flex:1;position:relative',
-  event: 'position:absolute;left:4px;right:4px;border-radius:var(--radius-md);padding:4px 8px;font-size:12px;cursor:pointer',
-  eventTask: 'background:rgba(78,205,196,0.15);border-left:3px solid var(--brand-primary);color:var(--text-primary)',
-  eventRecurring: 'background:rgba(99,102,241,0.15);border-left:3px solid #6366f1;color:var(--text-primary)',
+  event: 'position:absolute;left:var(--space-1);right:var(--space-1);border-radius:var(--radius-md);padding:var(--space-1) var(--space-2);font-size:var(--text-xs);cursor:pointer',
+  eventTask: 'background:var(--brand-primary-subtle);border-left:3px solid var(--brand-primary);color:var(--text-primary)',
+  eventRecurring: 'background:var(--calendar-creating-bg);border-left:3px solid var(--color-focus);color:var(--text-primary)',
 }
 
 const meta: Meta = {

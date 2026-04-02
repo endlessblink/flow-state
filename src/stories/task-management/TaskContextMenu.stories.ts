@@ -46,7 +46,7 @@ const menuStyle = `
   -webkit-backdrop-filter: var(--overlay-component-backdrop);
   border: var(--overlay-component-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--overlay-component-shadow), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  box-shadow: var(--overlay-component-shadow), 0 0 0 1px var(--border-subtle) inset;
   padding: var(--space-2) 0;
   min-width: 240px;
   max-width: 280px;
@@ -104,7 +104,7 @@ const valueStyle = `
 
 const arrowStyle = `
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--text-xs);
 `
 
 const submenuStyle = `
@@ -450,7 +450,7 @@ export const BatchSelection: Story = {
             opacity: 0.9;
           ">
             <div style="width: 14px; height: 14px; border: 1.5px solid var(--brand-primary); border-radius: var(--radius-xs); display: flex; align-items: center; justify-content: center;">
-              <span style="font-size: 9px; color: var(--brand-primary);">&#10003;</span>
+              <span style="font-size: var(--text-xs); color: var(--brand-primary);">&#10003;</span>
             </div>
             <span style="font-size: var(--text-sm); color: var(--text-primary);">{{ task.title }}</span>
           </div>

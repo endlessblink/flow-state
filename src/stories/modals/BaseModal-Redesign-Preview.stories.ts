@@ -137,11 +137,9 @@ export const ProjectModalStyle: Story = {
             <label style="display: block; color: var(--text-secondary); font-size: var(--text-sm); font-weight: 500; margin-bottom: var(--space-3);">
               Parent Project (Optional)
             </label>
-            <select style="width: 100%; padding: var(--space-3) var(--space-4); background: rgba(30, 30, 50, 0.35); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
-              <option>None (Top Level)</option>
-              <option>Work</option>
-              <option>Personal</option>
-            </select>
+            <div style="width: 100%; padding: var(--space-3) var(--space-4); background: var(--glass-bg-soft); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-muted); font-size: var(--text-sm);">
+              None (Top Level)
+            </div>
           </div>
 
           <div style="margin-bottom: 0;">
@@ -262,19 +260,15 @@ export const FormExample: Story = {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
               <div>
                 <label style="display: block; color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-2);">Priority</label>
-                <select style="width: 100%; padding: var(--space-2-5) var(--space-3); background: rgba(30, 30, 50, 0.35); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
-                </select>
+                <div style="width: 100%; padding: var(--space-2_5) var(--space-3); background: var(--glass-bg-soft); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-muted); font-size: var(--text-sm);">
+                  High
+                </div>
               </div>
               <div>
                 <label style="display: block; color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-2);">Status</label>
-                <select style="width: 100%; padding: var(--space-2-5) var(--space-3); background: rgba(30, 30, 50, 0.35); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
-                  <option>In Progress</option>
-                  <option>Planned</option>
-                  <option>Done</option>
-                </select>
+                <div style="width: 100%; padding: var(--space-2_5) var(--space-3); background: var(--glass-bg-soft); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-muted); font-size: var(--text-sm);">
+                  In Progress
+                </div>
               </div>
             </div>
           </div>

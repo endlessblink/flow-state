@@ -5,7 +5,7 @@ const S = {
   sidebar: 'width: 260px; background: var(--glass-bg-medium); border-radius: var(--radius-lg); overflow: hidden;',
   header: 'padding: var(--space-10) var(--space-6) var(--space-6) var(--space-6); background: var(--glass-bg-medium);',
   brand: 'display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-6);',
-  brandIcon: 'width: 28px; height: 28px; background: linear-gradient(135deg, var(--brand-primary), rgba(78, 205, 196, 0.5)); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: var(--text-primary);',
+  brandIcon: 'width: 28px; height: 28px; background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dim)); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: var(--text-primary);',
   brandText: 'font-size: var(--text-lg); font-weight: var(--font-semibold); color: var(--text-primary);',
   createBtn: 'width: 100%; padding: var(--space-2_5) var(--space-4); background: var(--glass-bg-soft); color: var(--text-secondary); border: 1px solid var(--border-medium); border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: var(--font-medium); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--space-2); backdrop-filter: blur(8px);',
   iconRow: 'display: flex; gap: var(--space-2); margin-top: var(--space-2);',

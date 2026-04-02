@@ -26,7 +26,7 @@ const InboxFiltersMock = defineComponent({
       <!-- Sort Row -->
       <div style="display: flex; align-items: center; gap: var(--space-2);">
         <span style="font-size: var(--text-xs); color: var(--text-muted); flex-shrink: 0;">Sort:</span>
-        <div style="display: flex; gap: 2px; flex-wrap: wrap;">
+        <div style="display: flex; gap: var(--space-0_5); flex-wrap: wrap;">
           <button
             v-for="opt in [
               { key: 'newest', label: '🕐 Newest' },
@@ -36,7 +36,7 @@ const InboxFiltersMock = defineComponent({
             ]"
             :key="opt.key"
             :style="{
-              padding: '2px var(--space-2)',
+              padding: 'var(--space-0_5) var(--space-2)',
               fontSize: 'var(--text-xs)',
               border: sortBy === opt.key ? '1px solid var(--brand-primary)' : '1px solid transparent',
               borderRadius: 'var(--radius-sm)',
@@ -57,14 +57,14 @@ const InboxFiltersMock = defineComponent({
       <div style="display: flex; gap: var(--space-1); flex-wrap: wrap;">
         <button
           :style="{
-            display: 'flex', alignItems: 'center', gap: '4px',
-            padding: '4px var(--space-2)',
+            display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
+            padding: 'var(--space-1) var(--space-2)',
             fontSize: 'var(--text-xs)',
             border: '1px solid',
             borderColor: (!hideDone && !unscheduled && !activePriority) ? 'var(--brand-primary)' : 'var(--glass-border)',
             borderRadius: 'var(--radius-full)',
             cursor: 'pointer',
-            background: (!hideDone && !unscheduled && !activePriority) ? 'rgba(78, 205, 196, 0.1)' : 'transparent',
+            background: (!hideDone && !unscheduled && !activePriority) ? 'var(--brand-primary-subtle)' : 'transparent',
             color: (!hideDone && !unscheduled && !activePriority) ? 'var(--brand-primary)' : 'var(--text-secondary)',
           }"
           @click="hideDone = false; unscheduled = false; activePriority = null"
@@ -72,14 +72,14 @@ const InboxFiltersMock = defineComponent({
 
         <button
           :style="{
-            display: 'flex', alignItems: 'center', gap: '4px',
-            padding: '4px var(--space-2)',
+            display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
+            padding: 'var(--space-1) var(--space-2)',
             fontSize: 'var(--text-xs)',
             border: '1px solid',
             borderColor: hideDone ? 'var(--brand-primary)' : 'var(--glass-border)',
             borderRadius: 'var(--radius-full)',
             cursor: 'pointer',
-            background: hideDone ? 'rgba(78, 205, 196, 0.1)' : 'transparent',
+            background: hideDone ? 'var(--brand-primary-subtle)' : 'transparent',
             color: hideDone ? 'var(--brand-primary)' : 'var(--text-secondary)',
           }"
           @click="hideDone = !hideDone"
@@ -87,14 +87,14 @@ const InboxFiltersMock = defineComponent({
 
         <button
           :style="{
-            display: 'flex', alignItems: 'center', gap: '4px',
-            padding: '4px var(--space-2)',
+            display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
+            padding: 'var(--space-1) var(--space-2)',
             fontSize: 'var(--text-xs)',
             border: '1px solid',
             borderColor: unscheduled ? 'var(--brand-primary)' : 'var(--glass-border)',
             borderRadius: 'var(--radius-full)',
             cursor: 'pointer',
-            background: unscheduled ? 'rgba(78, 205, 196, 0.1)' : 'transparent',
+            background: unscheduled ? 'var(--brand-primary-subtle)' : 'transparent',
             color: unscheduled ? 'var(--brand-primary)' : 'var(--text-secondary)',
           }"
           @click="unscheduled = !unscheduled"
@@ -108,8 +108,8 @@ const InboxFiltersMock = defineComponent({
           ]"
           :key="p.key"
           :style="{
-            display: 'flex', alignItems: 'center', gap: '4px',
-            padding: '4px var(--space-2)',
+            display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
+            padding: 'var(--space-1) var(--space-2)',
             fontSize: 'var(--text-xs)',
             border: '1px solid',
             borderColor: activePriority === p.key ? p.color : 'var(--glass-border)',

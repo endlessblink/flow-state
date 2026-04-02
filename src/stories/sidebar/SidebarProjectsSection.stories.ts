@@ -8,7 +8,7 @@ const S = {
   sectionTitle: 'display: flex; align-items: center; gap: var(--space-2); color: var(--text-muted); font-size: var(--text-xs); font-weight: var(--font-semibold); letter-spacing: 0.05em; text-transform: uppercase;',
   addBtn: 'background: transparent; border: 1px solid var(--border-medium); color: var(--text-muted); padding: var(--space-1); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center;',
   navItem: 'display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--text-secondary); cursor: pointer; transition: all 0.15s ease;',
-  navItemActive: 'display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--brand-primary); cursor: pointer; background: rgba(78, 205, 196, 0.06); border: 1px solid rgba(78, 205, 196, 0.2);',
+  navItemActive: 'display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--brand-primary); cursor: pointer; background: var(--brand-bg-dim); border: 1px solid var(--brand-primary-subtle);',
   projectIcon: 'font-size: 1rem; flex-shrink: 0;',
   chevron: 'margin-inline-start: auto; opacity: 0.5;',
   list: 'display: flex; flex-direction: column; gap: var(--space-1);',

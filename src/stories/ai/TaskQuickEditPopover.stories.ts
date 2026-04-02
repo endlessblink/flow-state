@@ -19,9 +19,9 @@ type Story = StoryObj<typeof meta>
 // Shared inline style constants (design-token based)
 const popoverStyle = 'width: 280px; position: relative; background: var(--overlay-component-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-xl); padding: var(--space-2); box-shadow: var(--shadow-2xl); backdrop-filter: blur(16px);'
 
-const tipsBannerStyle = 'background: rgba(245, 158, 11, 0.08); border-bottom: 1px solid rgba(245, 158, 11, 0.15); padding: var(--space-2) var(--space-3); border-radius: var(--radius-xl) var(--radius-xl) 0 0; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0;'
+const tipsBannerStyle = 'background: var(--color-warning-alpha-10); border-bottom: 1px solid var(--color-priority-medium-border-medium); padding: var(--space-2) var(--space-3); border-radius: var(--radius-xl) var(--radius-xl) 0 0; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0;'
 
-const tipItemStyle = 'display: flex; align-items: flex-start; gap: var(--space-1); font-size: var(--text-xs); color: rgba(245, 158, 11, 0.9); line-height: 1.4;'
+const tipItemStyle = 'display: flex; align-items: flex-start; gap: var(--space-1); font-size: var(--text-xs); color: var(--color-priority-medium); line-height: 1.4;'
 
 const titleRowStyle = 'font-size: var(--text-sm); font-weight: var(--font-semibold); color: var(--text-primary); line-height: 1.4; padding: var(--space-2) var(--space-1); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;'
 
@@ -35,7 +35,7 @@ const priorityDotsStyle = 'display: flex; gap: var(--space-1);'
 
 const priorityDotBtnStyle = 'display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 2px solid transparent; border-radius: var(--radius-full); background: transparent; cursor: pointer; padding: 0;'
 
-const priorityDotBtnActiveStyle = 'display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 2px solid rgba(255, 255, 255, 0.4); border-radius: var(--radius-full); background: transparent; cursor: pointer; padding: 0;'
+const priorityDotBtnActiveStyle = 'display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 2px solid var(--glass-border-hover); border-radius: var(--radius-full); background: transparent; cursor: pointer; padding: 0;'
 
 const priorityDotStyle = 'width: 12px; height: 12px; border-radius: var(--radius-full);'
 
@@ -64,15 +64,15 @@ const actionsRowStyle = 'display: flex; gap: var(--space-2); padding: var(--spac
 
 const actionDoneStyle = 'display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1_5) var(--space-2_5); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: var(--font-medium); cursor: pointer; flex: 1; justify-content: center; background: var(--glass-bg-soft); color: var(--status-done-text); border: 1px solid var(--status-done-border); backdrop-filter: blur(8px);'
 
-const actionTimerStyle = 'display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1_5) var(--space-2_5); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: var(--font-medium); cursor: pointer; flex: 1; justify-content: center; background: var(--glass-bg-soft); color: var(--color-focus); border: 1px solid rgba(139, 92, 246, 0.3); backdrop-filter: blur(8px);'
+const actionTimerStyle = 'display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1_5) var(--space-2_5); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: var(--font-medium); cursor: pointer; flex: 1; justify-content: center; background: var(--glass-bg-soft); color: var(--color-focus); border: 1px solid var(--purple-border-subtle); backdrop-filter: blur(8px);'
 
 const fullEditorStyle = 'display: flex; align-items: center; justify-content: center; gap: var(--space-1); width: 100%; padding: var(--space-1); border: none; background: transparent; color: var(--text-tertiary); font-size: var(--text-xs); cursor: pointer;'
 
-// Priority dot colors (semantic - these are standard Tailwind palette)
+// Priority dot colors (semantic)
 const priorityColors = {
   urgent: 'var(--priority-high-text)',
-  high: '#f97316',
-  medium: '#eab308',
+  high: 'var(--color-priority-high)',
+  medium: 'var(--color-priority-medium)',
   low: 'var(--priority-low-text)',
   none: 'var(--text-subtle)'
 }

@@ -126,18 +126,13 @@ export const ListMode: Story = {
           </div>
           <div :style="S.sortGroup">
             <span :style="S.sortLabel">Sort by:</span>
-            <select :style="S.sortSelect">
-              <option>Due Date</option>
-              <option>Priority</option>
-              <option>Title</option>
-              <option>Created</option>
-            </select>
+            <div :style="S.sortSelect + ';cursor:pointer;user-select:none;'">Due Date ▾</div>
           </div>
         </div>
         <div :style="S.listScroll">
           <div v-for="task in mockTasks" :key="task.id" :style="S.taskRow">
             <div :style="S.taskRowInner">
-              <input type="checkbox" :checked="task.status === 'done'" />
+              <div :style="'width:16px;height:16px;border-radius:var(--radius-sm);border:2px solid var(--glass-border-hover);background:transparent;flex-shrink:0;' + (task.status === \'done\' ? \'border-color:var(--brand-primary);background:var(--brand-primary);\' : \'\')"></div>
               <span :style="S.taskTitle">{{ task.title }}</span>
               <span :style="priorityStyleMap[task.priority]">{{ task.priority }}</span>
             </div>

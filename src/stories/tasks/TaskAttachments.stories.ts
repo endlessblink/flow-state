@@ -2,22 +2,22 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import { h } from 'vue'
 
 const S = {
-  wrapper: 'background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);padding:20px;max-width:500px',
-  title: 'font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:12px',
-  dropZone: 'border:2px dashed var(--border-secondary);border-radius:var(--radius-lg);padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s',
-  dropZoneActive: 'border:2px dashed var(--brand-primary);border-radius:var(--radius-lg);padding:20px;text-align:center;cursor:pointer;background:rgba(78,205,196,0.05)',
-  dropZoneDisabled: 'border:2px dashed var(--border-primary);border-radius:var(--radius-lg);padding:20px;text-align:center;opacity:0.5;cursor:not-allowed',
-  dropIcon: 'font-size:20px;color:var(--text-tertiary);margin-bottom:4px',
-  dropText: 'font-size:12px;color:var(--text-tertiary)',
-  thumbnails: 'display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px',
+  wrapper: 'background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);padding:var(--space-5);max-width:500px',
+  title: 'font-size:var(--text-sm);font-weight:600;color:var(--text-primary);margin-bottom:var(--space-3)',
+  dropZone: 'border:2px dashed var(--border-secondary);border-radius:var(--radius-lg);padding:var(--space-5);text-align:center;cursor:pointer;transition:border-color 0.2s',
+  dropZoneActive: 'border:2px dashed var(--brand-primary);border-radius:var(--radius-lg);padding:var(--space-5);text-align:center;cursor:pointer;background:var(--brand-primary-subtle)',
+  dropZoneDisabled: 'border:2px dashed var(--border-primary);border-radius:var(--radius-lg);padding:var(--space-5);text-align:center;opacity:0.5;cursor:not-allowed',
+  dropIcon: 'font-size:var(--text-xl);color:var(--text-tertiary);margin-bottom:var(--space-1)',
+  dropText: 'font-size:var(--text-xs);color:var(--text-tertiary)',
+  thumbnails: 'display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-2);margin-top:var(--space-3)',
   thumb: 'width:100%;aspect-ratio:1;background:var(--surface-secondary);border:1px solid var(--border-primary);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer',
   thumbImg: 'width:100%;height:100%;object-fit:cover;border-radius:var(--radius-md)',
-  thumbDelete: 'position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,0.7);color:white;border:none;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center',
-  thumbFallback: 'font-size:24px;color:var(--text-tertiary)',
+  thumbDelete: 'position:absolute;top:var(--space-0_5);right:var(--space-0_5);width:18px;height:18px;border-radius:50%;background:var(--overlay-heavy);color:var(--text-primary);border:none;font-size:var(--text-xs);cursor:pointer;display:flex;align-items:center;justify-content:center',
+  thumbFallback: 'font-size:var(--text-2xl);color:var(--text-tertiary)',
   uploadProgress: 'position:relative',
-  progressBar: 'height:4px;background:var(--surface-secondary);border-radius:2px;overflow:hidden;margin-bottom:4px',
-  progressFill: 'height:100%;background:var(--brand-primary);border-radius:2px',
-  progressText: 'font-size:11px;color:var(--text-tertiary);text-align:center',
+  progressBar: 'height:4px;background:var(--surface-secondary);border-radius:var(--radius-xs);overflow:hidden;margin-bottom:var(--space-1)',
+  progressFill: 'height:100%;background:var(--brand-primary);border-radius:var(--radius-xs)',
+  progressText: 'font-size:var(--text-xs);color:var(--text-tertiary);text-align:center',
 }
 
 const meta: Meta = {

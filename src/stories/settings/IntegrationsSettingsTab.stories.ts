@@ -2,27 +2,27 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import { h } from 'vue'
 
 const S = {
-  wrapper: 'background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);padding:24px;max-width:700px',
-  section: 'background:var(--surface-primary);border:1px solid var(--border-primary);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px',
-  sectionTitle: 'font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:12px;display:flex;align-items:center;gap:8px',
-  calendarItem: 'display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-secondary);border-radius:var(--radius-md);margin-bottom:8px',
-  calDot: 'width:12px;height:12px;border-radius:50%;flex-shrink:0',
+  wrapper: 'background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);padding:var(--space-6);max-width:700px',
+  section: 'background:var(--surface-primary);border:1px solid var(--border-primary);border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-4)',
+  sectionTitle: 'font-size:var(--text-sm);font-weight:600;color:var(--text-primary);margin-bottom:var(--space-3);display:flex;align-items:center;gap:var(--space-2)',
+  calendarItem: 'display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2_5) var(--space-3);background:var(--surface-secondary);border-radius:var(--radius-md);margin-bottom:var(--space-2)',
+  calDot: 'width:12px;height:12px;border-radius:var(--radius-full);flex-shrink:0',
   calInfo: 'flex:1;min-width:0',
-  calName: 'font-size:13px;font-weight:500;color:var(--text-primary)',
-  calUrl: 'font-size:11px;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis',
-  calActions: 'display:flex;gap:4px',
-  iconBtn: 'width:28px;height:28px;border-radius:var(--radius-sm);background:none;border:1px solid var(--border-primary);color:var(--text-tertiary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px',
-  addForm: 'border:1px dashed var(--border-secondary);border-radius:var(--radius-md);padding:14px;margin-top:12px',
-  addTitle: 'font-size:12px;color:var(--text-tertiary);margin-bottom:8px',
-  formRow: 'display:flex;gap:8px;margin-bottom:8px',
-  input: 'flex:1;padding:8px 10px;background:var(--surface-secondary);border:1px solid var(--border-primary);border-radius:var(--radius-md);color:var(--text-primary);font-size:13px;outline:none',
-  colorPresets: 'display:flex;gap:6px;margin-bottom:8px',
-  colorDot: 'width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent',
-  colorDotSelected: 'width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid white;box-shadow:0 0 0 1px var(--border-primary)',
-  addBtn: 'padding:6px 14px;background:var(--glass-bg-soft);border:1px solid var(--brand-primary);border-radius:var(--radius-md);color:var(--brand-primary);font-size:12px;cursor:pointer',
-  syncRow: 'display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border-primary);margin-top:8px',
-  syncLabel: 'font-size:13px;color:var(--text-secondary)',
-  syncSelect: 'padding:6px 10px;background:var(--surface-secondary);border:1px solid var(--border-primary);border-radius:var(--radius-md);color:var(--text-primary);font-size:12px',
+  calName: 'font-size:var(--text-meta);font-weight:500;color:var(--text-primary)',
+  calUrl: 'font-size:var(--text-xs);color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis',
+  calActions: 'display:flex;gap:var(--space-1)',
+  iconBtn: 'width:28px;height:28px;border-radius:var(--radius-sm);background:none;border:1px solid var(--border-primary);color:var(--text-tertiary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:var(--text-xs)',
+  addForm: 'border:1px dashed var(--border-secondary);border-radius:var(--radius-md);padding:var(--space-3_5);margin-top:var(--space-3)',
+  addTitle: 'font-size:var(--text-xs);color:var(--text-tertiary);margin-bottom:var(--space-2)',
+  formRow: 'display:flex;gap:var(--space-2);margin-bottom:var(--space-2)',
+  input: 'flex:1;padding:var(--space-2) var(--space-2_5);background:var(--surface-secondary);border:1px solid var(--border-primary);border-radius:var(--radius-md);color:var(--text-primary);font-size:var(--text-meta);outline:none',
+  colorPresets: 'display:flex;gap:var(--space-1_5);margin-bottom:var(--space-2)',
+  colorDot: 'width:24px;height:24px;border-radius:var(--radius-full);cursor:pointer;border:2px solid transparent',
+  colorDotSelected: 'width:24px;height:24px;border-radius:var(--radius-full);cursor:pointer;border:2px solid white;box-shadow:0 0 0 1px var(--border-primary)',
+  addBtn: 'padding:var(--space-1_5) var(--space-3_5);background:var(--glass-bg-soft);border:1px solid var(--brand-primary);border-radius:var(--radius-md);color:var(--brand-primary);font-size:var(--text-xs);cursor:pointer',
+  syncRow: 'display:flex;align-items:center;justify-content:space-between;padding:var(--space-2) 0;border-top:1px solid var(--border-primary);margin-top:var(--space-2)',
+  syncLabel: 'font-size:var(--text-meta);color:var(--text-secondary)',
+  syncSelect: 'padding:var(--space-1_5) var(--space-2_5);background:var(--surface-secondary);border:1px solid var(--border-primary);border-radius:var(--radius-md);color:var(--text-primary);font-size:var(--text-xs)',
 }
 
 const meta: Meta = {
@@ -95,7 +95,7 @@ export const Empty: Story = {
     setup() { return () => h('div', { style: S.wrapper }, [
       h('div', { style: S.section }, [
         h('div', { style: S.sectionTitle }, ['📅 External Calendars']),
-        h('div', { style: 'text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px' }, 'No external calendars configured.'),
+        h('div', { style: 'text-align:center;padding:var(--space-4);color:var(--text-tertiary);font-size:var(--text-meta)' }, 'No external calendars configured.'),
         h('div', { style: S.addForm }, [
           h('div', { style: S.addTitle }, '+ Add Calendar'),
           h('div', { style: S.formRow }, [

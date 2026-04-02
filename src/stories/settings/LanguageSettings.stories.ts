@@ -29,7 +29,7 @@ const LanguageSettingsMock = defineComponent({
       <div style="display: flex; flex-direction: column; gap: var(--space-3);">
         <h3 style="font-size: var(--text-lg); font-weight: 600; color: var(--text-primary); margin: 0;">Language</h3>
         <div style="display: flex; flex-direction: column; gap: var(--space-2);">
-          <button style="display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg); background: rgba(78, 205, 196, 0.08); box-shadow: 0 0 0 1px var(--brand-primary) inset; cursor: pointer; text-align: start;">
+          <button style="display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg); background: var(--glass-glow); box-shadow: 0 0 0 1px var(--brand-primary) inset; cursor: pointer; text-align: start;">
             <span style="font-size: var(--text-base); font-weight: 500; color: var(--text-primary);">English</span>
             <span style="font-size: var(--text-sm); color: var(--text-secondary);">English</span>
           </button>
@@ -73,7 +73,7 @@ const LanguageSettingsMock = defineComponent({
       { value: 'ltr', label: 'LTR', desc: 'Left to right text direction', icon: '→' },
       { value: 'rtl', label: 'RTL', desc: 'Right to left text direction', icon: '←' },
     ]
-    const activeStyle = 'border: 1px solid var(--brand-primary); background: rgba(78, 205, 196, 0.08); box-shadow: 0 0 0 1px var(--brand-primary) inset;'
+    const activeStyle = 'border: 1px solid var(--brand-primary); background: var(--glass-glow); box-shadow: 0 0 0 1px var(--brand-primary) inset;'
     const normalStyle = 'border: 1px solid var(--border-medium); background: var(--glass-bg-light);'
     return { options, activeStyle, normalStyle }
   },

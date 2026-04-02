@@ -37,8 +37,8 @@ const ghostBoxStyle = `
   justify-content: center;
   width: 48px;
   height: 48px;
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: var(--filter-tasks-bg);
+  border: 1px solid var(--filter-tasks-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   opacity: 0.85;
@@ -55,8 +55,8 @@ const dotStyle = `
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: rgba(59, 130, 246, 0.9);
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.4);
+  background: var(--color-navigation);
+  box-shadow: 0 0 6px var(--filter-tasks-border);
 `
 
 const taskRowStyle = `
@@ -127,13 +127,13 @@ export const InContext: Story = {
             <!-- Task list -->
             <div style="flex: 1; display: flex; flex-direction: column; gap: var(--space-2);">
               <div v-for="(task, i) in tasks" :key="i" style="${taskRowStyle}; position: relative;"
-                :style="i === 2 ? 'border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.05);' : ''"
+                :style="i === 2 ? 'border-color: var(--filter-tasks-border); background: var(--filter-tasks-bg);' : ''"
               >
                 <div style="${handleDotsStyle}"
                   :style="i === 2 ? 'opacity: 0.8; cursor: grabbing;' : ''"
                 >
                   <div v-for="d in 6" :key="d" style="${handleDotStyle}"
-                    :style="i === 2 ? 'background: rgba(59, 130, 246, 0.7);' : ''"
+                    :style="i === 2 ? 'background: var(--color-navigation);' : ''"
                   ></div>
                 </div>
                 <div style="
@@ -150,7 +150,7 @@ export const InContext: Story = {
                   right: -40px;
                   top: 50%;
                   transform: translateY(-50%);
-                  color: rgba(59, 130, 246, 0.6);
+                  color: var(--filter-tasks-border);
                   font-size: var(--text-lg);
                 ">→</div>
               </div>
@@ -170,7 +170,7 @@ export const InContext: Story = {
                 </div>
               </div>
               <div style="
-                color: rgba(59, 130, 246, 0.6);
+                color: var(--filter-tasks-border);
                 font-size: var(--text-xs);
                 text-align: center;
                 max-width: 80px;
@@ -191,19 +191,19 @@ export const InContext: Story = {
             flex-wrap: wrap;
           ">
             <div style="display: flex; align-items: center; gap: var(--space-2);">
-              <div style="width: 12px; height: 12px; border-radius: 2px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4);"></div>
+              <div style="width: 12px; height: 12px; border-radius: var(--radius-xs); background: var(--filter-tasks-bg); border: 1px solid var(--filter-tasks-border);"></div>
               <span style="color: var(--text-secondary); font-size: var(--text-xs);">Active drag source</span>
             </div>
             <div style="display: flex; align-items: center; gap: var(--space-2);">
               <div style="${ghostBoxStyle}; width: 16px; height: 16px; transform: none; opacity: 1;">
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;">
-                  <div v-for="n in 6" :key="n" style="width: 2px; height: 2px; border-radius: 50%; background: rgba(59, 130, 246, 0.9);"></div>
+                  <div v-for="n in 6" :key="n" style="width: 2px; height: 2px; border-radius: 50%; background: var(--color-navigation);"></div>
                 </div>
               </div>
               <span style="color: var(--text-secondary); font-size: var(--text-xs);">Floating ghost (follows cursor)</span>
             </div>
             <div style="display: flex; align-items: center; gap: var(--space-2);">
-              <div style="width: 12px; height: 12px; border-radius: 2px; background: var(--glass-bg-soft); border: 1px solid var(--glass-border);"></div>
+              <div style="width: 12px; height: 12px; border-radius: var(--radius-xs); background: var(--glass-bg-soft); border: 1px solid var(--glass-border);"></div>
               <span style="color: var(--text-secondary); font-size: var(--text-xs);">Normal task row</span>
             </div>
           </div>
@@ -262,8 +262,8 @@ export const GhostAnatomy: Story = {
                 justify-content: center;
                 width: 48px;
                 height: 48px;
-                background: rgba(59, 130, 246, 0.15);
-                border: 1px solid rgba(59, 130, 246, 0.4);
+                background: var(--filter-tasks-bg);
+                border: 1px solid var(--filter-tasks-border);
                 border-radius: var(--radius-md);
                 box-shadow: var(--shadow-md);
               ">
@@ -271,7 +271,7 @@ export const GhostAnatomy: Story = {
                   <div v-for="n in 6" :key="n" style="${dotStyle}"></div>
                 </div>
               </div>
-              <div style="color: var(--text-quaternary); font-size: 10px; margin-top: var(--space-2);">48 × 48px</div>
+              <div style="color: var(--text-quaternary); font-size: var(--text-xs); margin-top: var(--space-2);">48 × 48px</div>
             </div>
 
             <!-- Scaled (as rendered during drag) -->
@@ -288,7 +288,7 @@ export const GhostAnatomy: Story = {
                   <div v-for="n in 6" :key="n" style="${dotStyle}"></div>
                 </div>
               </div>
-              <div style="color: var(--text-quaternary); font-size: 10px; margin-top: var(--space-2);">scale(1.1), opacity 0.85</div>
+              <div style="color: var(--text-quaternary); font-size: var(--text-xs); margin-top: var(--space-2);">scale(1.1), opacity 0.85</div>
             </div>
 
             <!-- Large close-up -->
@@ -306,8 +306,8 @@ export const GhostAnatomy: Story = {
                 justify-content: center;
                 width: 144px;
                 height: 144px;
-                background: rgba(59, 130, 246, 0.15);
-                border: 1px solid rgba(59, 130, 246, 0.4);
+                background: var(--filter-tasks-bg);
+                border: 1px solid var(--filter-tasks-border);
                 border-radius: var(--radius-lg);
                 box-shadow: var(--shadow-md);
               ">
@@ -316,12 +316,12 @@ export const GhostAnatomy: Story = {
                     width: 12px;
                     height: 12px;
                     border-radius: 50%;
-                    background: rgba(59, 130, 246, 0.9);
-                    box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+                    background: var(--color-navigation);
+                    box-shadow: var(--priority-low-glow);
                   "></div>
                 </div>
               </div>
-              <div style="color: var(--text-quaternary); font-size: 10px; margin-top: var(--space-2);">6-dot grid pattern</div>
+              <div style="color: var(--text-quaternary); font-size: var(--text-xs); margin-top: var(--space-2);">6-dot grid pattern</div>
             </div>
           </div>
 

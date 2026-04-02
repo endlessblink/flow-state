@@ -3,15 +3,15 @@ import { h } from 'vue'
 
 const S = {
   wrapper: 'max-width:430px;margin:0 auto;background:var(--bg-primary);min-height:500px;border:1px solid var(--border-primary);border-radius:var(--radius-xl);overflow:hidden;display:flex;align-items:center;justify-content:center',
-  container: 'text-align:center;max-width:320px;padding:24px',
-  icon: 'font-size:80px;margin-bottom:16px',
-  title: 'font-size:28px;font-weight:700;color:var(--text-primary);margin-bottom:8px',
-  subtitle: 'font-size:14px;color:var(--text-secondary);margin-bottom:32px',
-  stats: 'display:flex;gap:16px;justify-content:center;margin-bottom:32px',
+  container: 'text-align:center;max-width:320px;padding:var(--space-6)',
+  icon: 'font-size:80px;margin-bottom:var(--space-4)',
+  title: 'font-size:28px;font-weight:700;color:var(--text-primary);margin-bottom:var(--space-2)',
+  subtitle: 'font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-8)',
+  stats: 'display:flex;gap:var(--space-4);justify-content:center;margin-bottom:var(--space-8)',
   stat: 'text-align:center',
   statValue: 'font-size:28px;font-weight:700;color:var(--brand-primary)',
-  statLabel: 'font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px',
-  button: 'display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;background:var(--glass-bg-soft);border:1px solid var(--brand-primary);border-radius:var(--radius-lg);color:var(--brand-primary);font-size:14px;font-weight:600;cursor:pointer;backdrop-filter:blur(8px);margin:0 auto',
+  statLabel: 'font-size:var(--text-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-top:var(--space-1)',
+  button: 'display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-3) var(--space-6);background:var(--glass-bg-soft);border:1px solid var(--brand-primary);border-radius:var(--radius-lg);color:var(--brand-primary);font-size:var(--text-sm);font-weight:600;cursor:pointer;backdrop-filter:blur(8px);margin:0 auto',
 }
 
 const meta: Meta = {

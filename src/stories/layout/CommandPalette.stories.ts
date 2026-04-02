@@ -38,27 +38,27 @@ export default meta
 type Story = StoryObj
 
 const S = {
-  page: 'min-height:100vh; background:linear-gradient(180deg, rgba(18,18,26,1) 0%, rgba(22,20,35,1) 100%); display:flex; align-items:flex-start; justify-content:center; padding:80px 16px;',
-  overlay: 'position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);',
-  palette: 'position:relative; width:100%; max-width:560px; background:rgba(28,25,45,0.95); border:1px solid rgba(255,255,255,0.12); border-radius:16px; box-shadow:0 24px 48px rgba(0,0,0,0.5); backdrop-filter:blur(20px); overflow:hidden;',
-  inputRow: 'display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.06);',
-  searchIcon: 'flex-shrink:0; color:rgba(255,255,255,0.4);',
-  input: 'flex:1; background:transparent; border:none; outline:none; color:rgba(255,255,255,0.95); font-size:15px; font-weight:400;',
-  kbd: 'padding:2px 6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; font-size:11px; color:rgba(255,255,255,0.4); font-family:monospace;',
-  metaRow: 'display:flex; align-items:center; gap:8px; padding:12px 20px; border-bottom:1px solid rgba(255,255,255,0.06);',
-  metaChip: 'display:flex; align-items:center; gap:6px; padding:6px 10px; background:rgba(45,40,70,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:8px; font-size:11px; color:rgba(255,255,255,0.7); cursor:pointer;',
-  metaChipActive: 'display:flex; align-items:center; gap:6px; padding:6px 10px; background:rgba(78,205,196,0.12); border:1px solid rgba(78,205,196,0.3); border-radius:8px; font-size:11px; color:#4ECDC4; cursor:pointer;',
-  footer: 'display:flex; align-items:center; justify-content:space-between; padding:10px 20px; background:rgba(18,16,30,0.4);',
-  footerHint: 'display:flex; align-items:center; gap:12px; font-size:11px; color:rgba(255,255,255,0.35);',
-  footerHintItem: 'display:flex; align-items:center; gap:4px;',
-  createBtn: 'padding:6px 14px; background:rgba(78,205,196,0.12); border:1px solid rgba(78,205,196,0.4); border-radius:8px; font-size:12px; font-weight:600; color:#4ECDC4; cursor:pointer; backdrop-filter:blur(8px);',
-  createBtnDisabled: 'padding:6px 14px; background:rgba(45,40,70,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:8px; font-size:12px; font-weight:600; color:rgba(255,255,255,0.25); cursor:default;',
-  suggestion: 'display:flex; align-items:center; gap:12px; padding:10px 20px; cursor:pointer;',
-  suggestionHover: 'display:flex; align-items:center; gap:12px; padding:10px 20px; background:rgba(78,205,196,0.06); cursor:pointer;',
-  suggestionIcon: 'width:32px; height:32px; border-radius:8px; background:rgba(45,40,70,0.5); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;',
+  page: 'min-height:100vh; background:var(--app-background-gradient); display:flex; align-items:flex-start; justify-content:center; padding:var(--space-20) var(--space-4);',
+  overlay: 'position:fixed; inset:0; background:var(--overlay-bg); backdrop-filter:blur(4px);',
+  palette: 'position:relative; width:100%; max-width:560px; background:var(--surface-secondary); border:1px solid var(--border-medium); border-radius:var(--radius-lg); box-shadow:0 24px 48px var(--overlay-bg); backdrop-filter:blur(20px); overflow:hidden;',
+  inputRow: 'display:flex; align-items:center; gap:var(--space-3); padding:var(--space-4) var(--space-5); border-bottom:1px solid var(--border-subtle);',
+  searchIcon: 'flex-shrink:0; color:var(--text-muted);',
+  input: 'flex:1; background:transparent; border:none; outline:none; color:var(--text-primary); font-size:var(--text-base); font-weight:400;',
+  kbd: 'padding:var(--space-0_5) var(--space-1_5); background:var(--glass-bg-light); border:1px solid var(--glass-border); border-radius:var(--radius-xs); font-size:var(--text-xs); color:var(--text-muted); font-family:monospace;',
+  metaRow: 'display:flex; align-items:center; gap:var(--space-2); padding:var(--space-3) var(--space-5); border-bottom:1px solid var(--border-subtle);',
+  metaChip: 'display:flex; align-items:center; gap:var(--space-1_5); padding:var(--space-1_5) var(--space-2_5); background:var(--glass-bg-heavy); border:1px solid var(--glass-border); border-radius:var(--radius-md); font-size:var(--text-xs); color:var(--text-secondary); cursor:pointer;',
+  metaChipActive: 'display:flex; align-items:center; gap:var(--space-1_5); padding:var(--space-1_5) var(--space-2_5); background:var(--brand-primary-subtle); border:1px solid var(--brand-primary-dim); border-radius:var(--radius-md); font-size:var(--text-xs); color:var(--brand-primary); cursor:pointer;',
+  footer: 'display:flex; align-items:center; justify-content:space-between; padding:var(--space-2_5) var(--space-5); background:var(--glass-bg-tint);',
+  footerHint: 'display:flex; align-items:center; gap:var(--space-3); font-size:var(--text-xs); color:var(--text-subtle);',
+  footerHintItem: 'display:flex; align-items:center; gap:var(--space-1);',
+  createBtn: 'padding:var(--space-1_5) var(--space-3_5); background:var(--brand-primary-subtle); border:1px solid var(--state-active-border); border-radius:var(--radius-md); font-size:var(--text-xs); font-weight:600; color:var(--brand-primary); cursor:pointer; backdrop-filter:blur(8px);',
+  createBtnDisabled: 'padding:var(--space-1_5) var(--space-3_5); background:var(--glass-bg-medium); border:1px solid var(--border-subtle); border-radius:var(--radius-md); font-size:var(--text-xs); font-weight:600; color:var(--text-disabled); cursor:default;',
+  suggestion: 'display:flex; align-items:center; gap:var(--space-3); padding:var(--space-2_5) var(--space-5); cursor:pointer;',
+  suggestionHover: 'display:flex; align-items:center; gap:var(--space-3); padding:var(--space-2_5) var(--space-5); background:var(--glass-glow); cursor:pointer;',
+  suggestionIcon: 'width:32px; height:32px; border-radius:var(--radius-md); background:var(--glass-bg-heavy); border:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:center;',
   suggestionText: 'flex:1;',
-  suggestionTitle: 'font-size:13px; color:rgba(255,255,255,0.9); margin-bottom:2px;',
-  suggestionDesc: 'font-size:11px; color:rgba(255,255,255,0.4);',
+  suggestionTitle: 'font-size:var(--text-meta); color:var(--text-secondary); margin-bottom:var(--space-0_5);',
+  suggestionDesc: 'font-size:var(--text-xs); color:var(--text-muted);',
 }
 
 /**
@@ -208,7 +208,7 @@ export const WithAllMetadata: Story = {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               Work Project
             </div>
-            <div style="display:flex; align-items:center; gap:6px; padding:6px 10px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:8px; font-size:11px; color:#f87171; cursor:pointer;">
+            <div style="display:flex; align-items:center; gap:var(--space-1_5); padding:var(--space-1_5) var(--space-2_5); background:var(--priority-high-bg); border:1px solid var(--priority-high-border); border-radius:var(--radius-md); font-size:var(--text-xs); color:var(--priority-high-text); cursor:pointer;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
               High
             </div>
@@ -281,7 +281,7 @@ export const Interactive: Story = {
     },
     template: `
       <div :style="S.page">
-        <div style="display:flex; flex-direction:column; gap:20px; width:100%; max-width:560px;">
+        <div style="display:flex; flex-direction:column; gap:var(--space-5); width:100%; max-width:560px;">
           <div :style="S.palette">
             <!-- Input Row -->
             <div :style="S.inputRow">
@@ -319,9 +319,9 @@ export const Interactive: Story = {
           </div>
 
           <!-- Event Log -->
-          <div v-if="logs.length" style="padding:16px; background:rgba(35,32,52,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:12px;">
-            <h3 style="color:rgba(255,255,255,0.7); margin:0 0 8px 0; font-size:12px; text-transform:uppercase; letter-spacing:0.05em;">Event Log</h3>
-            <div v-for="(log, i) in logs" :key="i" style="color:rgba(255,255,255,0.5); font-size:12px; padding:4px 0; font-family:monospace;">{{ log }}</div>
+          <div v-if="logs.length" style="padding:var(--space-4); background:var(--glass-bg-medium); border:1px solid var(--border-subtle); border-radius:var(--radius-lg);">
+            <h3 style="color:var(--text-secondary); margin:0 0 var(--space-2) 0; font-size:var(--text-xs); text-transform:uppercase; letter-spacing:0.05em;">Event Log</h3>
+            <div v-for="(log, i) in logs" :key="i" style="color:var(--text-muted); font-size:var(--text-xs); padding:var(--space-1) 0; font-family:monospace;">{{ log }}</div>
           </div>
         </div>
       </div>

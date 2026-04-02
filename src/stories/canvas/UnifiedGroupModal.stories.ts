@@ -72,7 +72,7 @@ const settingsHintStyle = 'font-size: var(--text-xs); color: var(--text-muted); 
 
 const formGroupCompactStyle = 'margin-bottom: var(--space-3);'
 
-const selectStyle = 'width: 100%; padding: var(--space-2) var(--space-3); background: var(--glass-bg-soft); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm); cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23888\' stroke-width=\'2\'%3E%3Cpath d=\'M6 9l6 6 6-6\'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right var(--space-3) center;'
+const selectStyle = 'width: 100%; display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--glass-bg-soft); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm); cursor: pointer; box-sizing: border-box;'
 
 const settingsPreviewStyle = 'display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); background: var(--purple-bg-subtle); border: 1px solid var(--brand-primary); border-radius: var(--radius-md); margin-top: var(--space-3);'
 
@@ -175,57 +175,42 @@ function renderSmartSettings(opts: {
 
         <div style="${formGroupCompactStyle}">
           <label style="${labelStyle}">Priority</label>
-          <select style="${selectStyle}">
-            <option value="" ${!priority ? 'selected' : ''}>Don't change</option>
-            <option value="high" ${priority === 'high' ? 'selected' : ''}>High</option>
-            <option value="medium" ${priority === 'medium' ? 'selected' : ''}>Medium</option>
-            <option value="low" ${priority === 'low' ? 'selected' : ''}>Low</option>
-          </select>
+          <div style="${selectStyle}">
+            <span>${priority === 'high' ? 'High' : priority === 'medium' ? 'Medium' : priority === 'low' ? 'Low' : "Don't change"}</span>
+            ${chevronDownIcon}
+          </div>
         </div>
 
         <div style="${formGroupCompactStyle}">
           <label style="${labelStyle}">Status</label>
-          <select style="${selectStyle}">
-            <option value="" ${!status ? 'selected' : ''}>Don't change</option>
-            <option value="planned" ${status === 'planned' ? 'selected' : ''}>Planned</option>
-            <option value="in_progress" ${status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-            <option value="done" ${status === 'done' ? 'selected' : ''}>Done</option>
-            <option value="backlog" ${status === 'backlog' ? 'selected' : ''}>Backlog</option>
-            <option value="on_hold" ${status === 'on_hold' ? 'selected' : ''}>On Hold</option>
-          </select>
+          <div style="${selectStyle}">
+            <span>${status === 'planned' ? 'Planned' : status === 'in_progress' ? 'In Progress' : status === 'done' ? 'Done' : status === 'backlog' ? 'Backlog' : status === 'on_hold' ? 'On Hold' : "Don't change"}</span>
+            ${chevronDownIcon}
+          </div>
         </div>
 
         <div style="${formGroupCompactStyle}">
           <label style="${labelStyle}">Due Date</label>
-          <select style="${selectStyle}">
-            <option value="" ${!dueDate ? 'selected' : ''}>Don't change</option>
-            <option value="today" ${dueDate === 'today' ? 'selected' : ''}>Today</option>
-            <option value="tomorrow" ${dueDate === 'tomorrow' ? 'selected' : ''}>Tomorrow</option>
-            <option value="this_week" ${dueDate === 'this_week' ? 'selected' : ''}>This Week</option>
-            <option value="this_weekend" ${dueDate === 'this_weekend' ? 'selected' : ''}>This Weekend</option>
-            <option value="later" ${dueDate === 'later' ? 'selected' : ''}>Later (no specific date)</option>
-          </select>
+          <div style="${selectStyle}">
+            <span>${dueDate === 'today' ? 'Today' : dueDate === 'tomorrow' ? 'Tomorrow' : dueDate === 'this_week' ? 'This Week' : dueDate === 'this_weekend' ? 'This Weekend' : dueDate === 'later' ? 'Later (no specific date)' : "Don't change"}</span>
+            ${chevronDownIcon}
+          </div>
         </div>
 
         <div style="${formGroupCompactStyle}">
           <label style="${labelStyle}">Project</label>
-          <select style="${selectStyle}">
-            <option value="">Don't change</option>
-            <option>Sprint Goals</option>
-            <option>Technical Debt</option>
-          </select>
+          <div style="${selectStyle}">
+            <span>Don't change</span>
+            ${chevronDownIcon}
+          </div>
         </div>
 
         <div style="margin-bottom: 0;">
           <label style="${labelStyle}">Duration</label>
-          <select style="${selectStyle}">
-            <option value="">Don't change</option>
-            <option>Quick (&lt;15m)</option>
-            <option>Short (15-30m)</option>
-            <option>Medium (30-60m)</option>
-            <option>Long (&gt;60m)</option>
-            <option>Unestimated</option>
-          </select>
+          <div style="${selectStyle}">
+            <span>Don't change</span>
+            ${chevronDownIcon}
+          </div>
         </div>
 
         ${preview ? `

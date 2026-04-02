@@ -2,17 +2,17 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import { h } from 'vue'
 
 const S = {
-  wrapper: 'max-width:430px;margin:0 auto;background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);overflow:hidden;padding:12px',
-  row: 'display:flex;align-items:center;gap:6px;margin-bottom:8px',
-  label: 'font-size:12px;color:var(--text-tertiary);width:52px;flex-shrink:0',
-  pills: 'display:flex;gap:6px;overflow-x:auto;flex:1',
-  pill: 'padding:5px 12px;background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-full);font-size:12px;color:var(--text-secondary);white-space:nowrap;cursor:pointer;flex-shrink:0',
-  pillActive: 'padding:5px 12px;border-radius:var(--radius-full);font-size:12px;white-space:nowrap;cursor:pointer;flex-shrink:0',
-  pillHigh: 'background:rgba(239,68,68,0.1);border:1px solid var(--color-danger);color:var(--color-danger)',
-  pillMed: 'background:rgba(245,158,11,0.1);border:1px solid var(--color-warning);color:var(--color-warning)',
-  pillLow: 'background:rgba(78,205,196,0.1);border:1px solid var(--brand-primary);color:var(--brand-primary)',
-  pillDate: 'background:rgba(78,205,196,0.1);border:1px solid var(--brand-primary);color:var(--brand-primary)',
-  clearPill: 'padding:5px 8px;background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-full);font-size:12px;color:var(--text-tertiary);cursor:pointer;flex-shrink:0',
+  wrapper: 'max-width:430px;margin:0 auto;background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);overflow:hidden;padding:var(--space-3)',
+  row: 'display:flex;align-items:center;gap:var(--space-1_5);margin-bottom:var(--space-2)',
+  label: 'font-size:var(--text-xs);color:var(--text-tertiary);width:52px;flex-shrink:0',
+  pills: 'display:flex;gap:var(--space-1_5);overflow-x:auto;flex:1',
+  pill: 'padding:var(--space-1) var(--space-3);background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-full);font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap;cursor:pointer;flex-shrink:0',
+  pillActive: 'padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);font-size:var(--text-xs);white-space:nowrap;cursor:pointer;flex-shrink:0',
+  pillHigh: 'background:var(--priority-high-bg);border:1px solid var(--color-danger);color:var(--color-danger)',
+  pillMed: 'background:var(--priority-medium-bg);border:1px solid var(--color-warning);color:var(--color-warning)',
+  pillLow: 'background:var(--priority-low-bg);border:1px solid var(--brand-primary);color:var(--brand-primary)',
+  pillDate: 'background:var(--brand-primary-subtle);border:1px solid var(--brand-primary);color:var(--brand-primary)',
+  clearPill: 'padding:var(--space-1) var(--space-2);background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-full);font-size:var(--text-xs);color:var(--text-tertiary);cursor:pointer;flex-shrink:0',
 }
 
 const meta: Meta = {

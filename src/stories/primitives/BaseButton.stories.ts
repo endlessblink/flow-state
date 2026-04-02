@@ -169,13 +169,13 @@ export const IconButtons: Story = {
           <BaseButton variant="secondary" size="md" icon-only aria-label="Add">➕</BaseButton>
           <BaseButton variant="secondary" size="lg" icon-only aria-label="Menu">☰</BaseButton>
 
-          <div style="width: 1px; height: 32px; background: rgba(255, 255, 255, 0.1);"></div>
+          <div style="width: 1px; height: 32px; background: var(--glass-border);"></div>
 
           <BaseButton variant="primary" size="sm" icon-only aria-label="Play">▶️</BaseButton>
           <BaseButton variant="primary" size="md" icon-only aria-label="Edit">✏️</BaseButton>
           <BaseButton variant="primary" size="lg" icon-only aria-label="Save">💾</BaseButton>
 
-          <div style="width: 1px; height: 32px; background: rgba(255, 255, 255, 0.1);"></div>
+          <div style="width: 1px; height: 32px; background: var(--glass-border);"></div>
 
           <BaseButton variant="danger" size="sm" icon-only aria-label="Delete">🗑️</BaseButton>
           <BaseButton variant="danger" size="md" icon-only aria-label="Close">✕</BaseButton>

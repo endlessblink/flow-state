@@ -56,7 +56,7 @@ const GroupNodeSimpleMock = defineComponent({
         <span
           :style="{
             fontSize: 'var(--text-xs)', color: taskCount > 0 ? 'var(--text-secondary)' : 'var(--text-muted)',
-            padding: '1px var(--space-1_5)', borderRadius: 'var(--radius-full)',
+            padding: 'var(--space-px) var(--space-1_5)', borderRadius: 'var(--radius-full)',
             background: 'var(--glass-bg-soft)',
           }"
         >

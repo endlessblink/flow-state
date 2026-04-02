@@ -36,26 +36,26 @@ export default meta
 type Story = StoryObj
 
 const S = {
-  page: 'min-height:100vh; background:linear-gradient(180deg, rgba(18,18,26,1) 0%, rgba(22,20,35,1) 100%); display:flex; align-items:center; justify-content:center; padding:40px 16px;',
-  overlay: 'position:absolute; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);',
-  modal: 'position:relative; width:100%; max-width:420px; background:rgba(28,25,45,0.95); border:1px solid rgba(255,255,255,0.12); border-radius:16px; box-shadow:0 24px 48px rgba(0,0,0,0.5); backdrop-filter:blur(20px); overflow:hidden; padding:32px;',
-  closeBtn: 'position:absolute; top:16px; right:16px; background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; font-size:18px;',
-  logo: 'display:flex; justify-content:center; margin-bottom:24px;',
-  logoIcon: 'width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, rgba(78,205,196,0.2), rgba(78,205,196,0.1)); border:1px solid rgba(78,205,196,0.3); display:flex; align-items:center; justify-content:center;',
-  title: 'font-size:20px; font-weight:600; color:rgba(255,255,255,0.95); text-align:center; margin:0 0 6px 0;',
-  subtitle: 'font-size:13px; color:rgba(255,255,255,0.5); text-align:center; margin:0 0 24px 0;',
-  label: 'display:block; font-size:12px; font-weight:500; color:rgba(255,255,255,0.7); margin-bottom:6px;',
-  input: 'width:100%; padding:10px 14px; background:rgba(35,32,52,0.6); border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:rgba(255,255,255,0.95); font-size:13px; outline:none; box-sizing:border-box;',
-  fieldGroup: 'margin-bottom:16px;',
-  primaryBtn: 'width:100%; padding:12px; background:rgba(78,205,196,0.12); border:1px solid rgba(78,205,196,0.4); border-radius:10px; color:#4ECDC4; font-size:14px; font-weight:600; cursor:pointer; backdrop-filter:blur(8px);',
-  googleBtn: 'width:100%; padding:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:10px; color:rgba(255,255,255,0.9); font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;',
-  divider: 'display:flex; align-items:center; gap:12px; margin:20px 0;',
-  dividerLine: 'flex:1; height:1px; background:rgba(255,255,255,0.08);',
-  dividerText: 'font-size:11px; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:0.05em;',
-  link: 'color:#4ECDC4; font-size:12px; cursor:pointer; background:none; border:none; text-decoration:none;',
-  switchRow: 'text-align:center; margin-top:20px; font-size:12px; color:rgba(255,255,255,0.5);',
-  forgotRow: 'text-align:right; margin-bottom:16px;',
-  required: 'color:rgba(239,68,68,0.8);',
+  page: 'min-height:100vh; background:var(--app-background-gradient); display:flex; align-items:center; justify-content:center; padding:var(--space-10) var(--space-4);',
+  overlay: 'position:absolute; inset:0; background:var(--overlay-bg); backdrop-filter:blur(4px);',
+  modal: 'position:relative; width:100%; max-width:420px; background:var(--surface-secondary); border:1px solid var(--border-medium); border-radius:var(--radius-lg); box-shadow:0 24px 48px var(--overlay-bg); backdrop-filter:blur(20px); overflow:hidden; padding:var(--space-8);',
+  closeBtn: 'position:absolute; top:var(--space-4); right:var(--space-4); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--text-lg);',
+  logo: 'display:flex; justify-content:center; margin-bottom:var(--space-6);',
+  logoIcon: 'width:48px; height:48px; border-radius:var(--radius-lg); background:linear-gradient(135deg, var(--brand-primary-dim), var(--brand-primary-subtle)); border:1px solid var(--brand-primary-dim); display:flex; align-items:center; justify-content:center;',
+  title: 'font-size:var(--text-xl); font-weight:600; color:var(--text-primary); text-align:center; margin:0 0 var(--space-1_5) 0;',
+  subtitle: 'font-size:var(--text-meta); color:var(--text-muted); text-align:center; margin:0 0 var(--space-6) 0;',
+  label: 'display:block; font-size:var(--text-xs); font-weight:500; color:var(--text-secondary); margin-bottom:var(--space-1_5);',
+  input: 'width:100%; padding:var(--space-2_5) var(--space-3_5); background:var(--glass-bg-medium); border:1px solid var(--border-medium); border-radius:var(--radius-md); color:var(--text-primary); font-size:var(--text-meta); outline:none; box-sizing:border-box;',
+  fieldGroup: 'margin-bottom:var(--space-4);',
+  primaryBtn: 'width:100%; padding:var(--space-3); background:var(--brand-primary-subtle); border:1px solid var(--brand-primary-dim); border-radius:var(--radius-md); color:var(--brand-primary); font-size:var(--text-sm); font-weight:600; cursor:pointer; backdrop-filter:blur(8px);',
+  googleBtn: 'width:100%; padding:var(--space-3); background:var(--glass-bg-light); border:1px solid var(--glass-border-hover); border-radius:var(--radius-md); color:var(--text-secondary); font-size:var(--text-meta); font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:var(--space-2_5);',
+  divider: 'display:flex; align-items:center; gap:var(--space-3); margin:var(--space-5) 0;',
+  dividerLine: 'flex:1; height:1px; background:var(--border-subtle);',
+  dividerText: 'font-size:var(--text-xs); color:var(--text-subtle); text-transform:uppercase; letter-spacing:0.05em;',
+  link: 'color:var(--brand-primary); font-size:var(--text-xs); cursor:pointer; background:none; border:none; text-decoration:none;',
+  switchRow: 'text-align:center; margin-top:var(--space-5); font-size:var(--text-xs); color:var(--text-muted);',
+  forgotRow: 'text-align:right; margin-bottom:var(--space-4);',
+  required: 'color:var(--color-priority-high);',
 }
 
 /**
@@ -82,7 +82,7 @@ export const Login: Story = {
           <!-- Logo -->
           <div :style="S.logo">
             <div :style="S.logoIcon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ECDC4" stroke-width="2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand-primary)" stroke-width="2">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
               </svg>
             </div>
@@ -163,7 +163,7 @@ export const Signup: Story = {
           <!-- Logo -->
           <div :style="S.logo">
             <div :style="S.logoIcon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ECDC4" stroke-width="2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand-primary)" stroke-width="2">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
               </svg>
             </div>
@@ -245,7 +245,7 @@ export const ResetPassword: Story = {
           <!-- Logo -->
           <div :style="S.logo">
             <div :style="S.logoIcon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ECDC4" stroke-width="2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand-primary)" stroke-width="2">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
@@ -297,8 +297,8 @@ export const ResetSuccess: Story = {
 
           <!-- Success Icon -->
           <div :style="S.logo">
-            <div style="width:56px; height:56px; border-radius:50%; background:rgba(78,205,196,0.12); border:2px solid rgba(78,205,196,0.3); display:flex; align-items:center; justify-content:center;">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ECDC4" stroke-width="2">
+            <div style="width:56px; height:56px; border-radius:var(--radius-full); background:var(--brand-primary-subtle); border:2px solid var(--brand-primary-dim); display:flex; align-items:center; justify-content:center;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--brand-primary)" stroke-width="2">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                 <polyline points="22 4 12 14.01 9 11.01"/>
               </svg>
@@ -308,8 +308,8 @@ export const ResetSuccess: Story = {
           <h2 :style="S.title">Check Your Email</h2>
           <p :style="S.subtitle">We've sent a password reset link to your email address. Please check your inbox and follow the instructions.</p>
 
-          <div style="padding:16px; background:rgba(78,205,196,0.06); border:1px solid rgba(78,205,196,0.15); border-radius:10px; margin-bottom:20px;">
-            <p style="font-size:12px; color:rgba(255,255,255,0.6); margin:0; line-height:1.5;">Didn't receive the email? Check your spam folder or try again in a few minutes.</p>
+          <div style="padding:var(--space-4); background:var(--glass-glow); border:1px solid var(--brand-primary-subtle); border-radius:var(--radius-md); margin-bottom:var(--space-5);">
+            <p style="font-size:var(--text-xs); color:var(--text-tertiary); margin:0; line-height:1.5;">Didn't receive the email? Check your spam folder or try again in a few minutes.</p>
           </div>
 
           <!-- Back to Login -->

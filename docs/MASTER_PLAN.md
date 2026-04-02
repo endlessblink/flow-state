@@ -1294,9 +1294,9 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 
 ---
 
-### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (🔄 IN PROGRESS)
+### ~~TASK-1337~~: Storybook Design Streamlining — Align All Stories with Design System (✅ DONE)
 
-**Priority**: P3 | **Status**: 🔄 IN PROGRESS
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-02)
 
 **Goal**: Review and streamline every Storybook story to use the project's design system consistently. Replace all non-design-system elements with proper project components and tokens.
 
@@ -2525,7 +2525,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1303**~~ | **P2** | ✅ **Mark Done doesn't stop active timer running on that task** (✅ DONE — fix in taskOperations.ts:431) |
 | ~~**BUG-1304**~~ | **P2** | ✅ **Done tasks in calendar view have no visual done indicator** (✅ DONE — visual indicator in all 3 calendar views) |
 | ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
-| **TASK-1337** | **P3** | **🔄 Storybook Design Streamlining — align all stories with design system** |
+| ~~**TASK-1337**~~ | **P3** | ✅ **Storybook Design Streamlining — align all stories with design system** |
 | ~~**TASK-1338**~~ | **P0** | ✅ **Configurable PWA Push Notifications — per-category controls, quiet hours, server-side push service** |
 | ~~**BUG-1311**~~ | **P3** | ✅ **Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |

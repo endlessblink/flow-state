@@ -319,11 +319,11 @@ export const Default: Story = {
                   min-width: 20px;
                   height: 20px;
                   padding: 0 var(--space-1_5);
-                  background: linear-gradient(135deg, var(--color-blue), #8b5cf6);
+                  background: linear-gradient(135deg, var(--color-blue), var(--color-focus));
                   border-radius: var(--radius-md);
                   font-size: var(--text-xs);
                   font-weight: 700;
-                  color: #ffffff;
+                  color: var(--text-primary);
                 ">5</span>
               </a>
               <a href="#" style="

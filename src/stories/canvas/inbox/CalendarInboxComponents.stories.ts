@@ -41,7 +41,7 @@ const CalendarInboxHeaderMock = defineComponent({
         <h3 style="font-size: var(--text-base); font-weight: var(--font-semibold); color: var(--text-primary); margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Inbox</h3>
 
         <!-- Count badge -->
-        <span style="padding: 2px 8px; background: rgba(99, 179, 237, 0.2); border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: 600; color: rgb(99, 179, 237); flex-shrink: 0;">{{ inboxCount }}</span>
+        <span style="padding: var(--space-0_5) var(--space-2); background: var(--status-planned-bg); border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: 600; color: var(--status-planned-text); flex-shrink: 0;">{{ inboxCount }}</span>
 
         <!-- Quick Today Filter -->
         <button
@@ -157,7 +157,7 @@ const CalendarInboxHeaderMock = defineComponent({
             <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
               <!-- Priority filter chip -->
               <button style="display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); background: var(--glass-bg-light); border: 1px solid var(--glass-border); border-radius: var(--radius-full); color: var(--text-secondary); font-size: var(--text-xs); cursor: pointer; transition: all var(--duration-fast) var(--spring-smooth); white-space: nowrap;">
-                <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;" />
+                <span style="width: var(--space-2); height: var(--space-2); border-radius: var(--radius-full); background: var(--color-priority-high);" />
                 High
               </button>
 
@@ -198,17 +198,17 @@ const CalendarTaskCardMock = defineComponent({
       cursor: 'pointer', transition: 'background 0.15s ease'
     }">
       <span :style="{
-        width: '8px', height: '8px', borderRadius: '50%', flexShrink: '0',
-        background: priority === 'high' ? '#ef4444' : priority === 'medium' ? '#f59e0b' : priority === 'low' ? '#3b82f6' : 'rgba(255,255,255,0.15)'
+        width: 'var(--space-2)', height: 'var(--space-2)', borderRadius: 'var(--radius-full)', flexShrink: '0',
+        background: priority === 'high' ? 'var(--color-priority-high)' : priority === 'medium' ? 'var(--color-priority-medium)' : priority === 'low' ? 'var(--color-priority-low)' : 'var(--glass-border)'
       }" />
       <span style="flex: 1; font-size: var(--text-sm); color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ title }}</span>
       <span :style="{
-        padding: '1px 6px', borderRadius: 'var(--radius-sm)', fontSize: '10px', fontWeight: '500',
-        background: status === 'done' ? 'rgba(16,185,129,0.15)' : status === 'active' ? 'rgba(59,130,246,0.15)' : 'var(--glass-bg-medium)',
-        color: status === 'done' ? 'var(--success)' : status === 'active' ? 'var(--info)' : 'var(--text-muted)',
+        padding: 'var(--space-px) var(--space-1_5)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)', fontWeight: 'var(--font-medium)',
+        background: status === 'done' ? 'var(--status-done-bg)' : status === 'active' ? 'var(--status-in-progress-bg)' : 'var(--glass-bg-medium)',
+        color: status === 'done' ? 'var(--status-done-text)' : status === 'active' ? 'var(--status-in-progress-text)' : 'var(--text-muted)',
         textTransform: 'capitalize', flexShrink: '0'
       }">{{ status }}</span>
-      <div v-if="isHovered" style="display: flex; gap: 2px;">
+      <div v-if="isHovered" style="display: flex; gap: var(--space-0_5);">
         <button style="width: 20px; height: 20px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm);">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         </button>

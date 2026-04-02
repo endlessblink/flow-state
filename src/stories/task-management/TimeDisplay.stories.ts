@@ -30,7 +30,7 @@ export const Dashboard: Story = {
     components: { TimeDisplay },
     template: `
       <div style="padding: var(--space-10); background: var(--app-background-gradient); width: 100%; max-width: 1200px;">
-        <h3 style="margin: 0 0 var(--space-4) 0; font-size: 18px; color: var(--text-primary);">Time Display Dashboard</h3>
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Time Display Dashboard</h3>
         <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Multiple time displays in a dashboard layout</p>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-4);">
           <div style="padding: var(--space-5); background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); border-radius: var(--radius-xl);">
@@ -56,7 +56,7 @@ export const AllVariants: Story = {
     components: { TimeDisplay },
     template: `
       <div style="padding: var(--space-10); background: var(--app-background-gradient); width: 100%; max-width: 600px;">
-        <h3 style="margin: 0 0 var(--space-4) 0; font-size: 18px; color: var(--text-primary);">Time Display Variants</h3>
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Time Display Variants</h3>
         <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Different configurations of the TimeDisplay component</p>
         <div style="display: grid; grid-template-columns: 1fr; gap: var(--space-5);">
           <div style="padding: var(--space-5); background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); border-radius: var(--radius-xl);">

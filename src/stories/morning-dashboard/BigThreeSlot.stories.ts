@@ -4,7 +4,7 @@ const S = {
   wrap: 'width: 360px; padding: var(--space-6); background: var(--glass-bg-soft); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); backdrop-filter: blur(8px); display: flex; flex-direction: column; gap: var(--space-3);',
   zone: 'display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); min-height: 56px; transition: all 0.2s ease;',
   zoneEmpty: 'border: 2px dashed var(--glass-border);',
-  zoneDragover: 'border: 2px solid var(--brand-primary); background: rgba(78, 205, 196, 0.06); transform: scale(1.02); box-shadow: 0 0 16px rgba(78, 205, 196, 0.15);',
+  zoneDragover: 'border: 2px solid var(--brand-primary); background: var(--brand-bg-dim); transform: scale(1.02); box-shadow: var(--brand-glow-sm);',
   zoneFilled: 'background: var(--surface-primary); border-left: 3px solid var(--brand-primary); border-top: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border);',
   zoneCompleted: 'background: var(--surface-primary); border-left: 3px solid var(--brand-primary); border-top: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); opacity: 0.6;',
   num: 'font-size: 0.75rem; font-weight: 700; color: var(--brand-primary); min-width: 18px; flex-shrink: 0;',

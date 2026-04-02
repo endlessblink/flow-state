@@ -53,24 +53,24 @@ const PWAFrame = (screenContent: string, title: string, activeNav: string) => `
     height: 844px;
     background: #1a1a1a;
     border-radius: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
+    border: 3px solid var(--glass-border);
     overflow: hidden;
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 24px 48px var(--overlay-heavy);
     display: flex;
     flex-direction: column;
   ">
     <!-- Status Bar -->
     <div style="
       height: 44px;
-      background: linear-gradient(135deg, rgba(28, 25, 45, 0.95) 0%, rgba(35, 32, 52, 0.95) 100%);
+      background: linear-gradient(135deg, var(--surface-secondary) 0%, var(--surface-primary) 100%);
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 0 24px;
       font-size: 12px;
       font-weight: 600;
-      color: rgba(255, 255, 255, 0.9);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-subtle);
     ">
       <span>9:41</span>
       <div style="display: flex; gap: 6px; align-items: center;">
@@ -82,13 +82,13 @@ const PWAFrame = (screenContent: string, title: string, activeNav: string) => `
     <!-- App Header -->
     <div style="
       height: 44px;
-      background: rgba(28, 25, 45, 0.92);
+      background: var(--surface-secondary);
       backdrop-filter: blur(20px);
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 0 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid var(--border-subtle);
     ">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2">
         <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
@@ -96,7 +96,7 @@ const PWAFrame = (screenContent: string, title: string, activeNav: string) => `
       <span style="
         font-size: 15px;
         font-weight: 600;
-        color: rgba(255, 255, 255, 0.95);
+        color: var(--text-primary);
         letter-spacing: 0.01em;
       ">${title}</span>
       <div style="display: flex; gap: 12px; align-items: center;">
@@ -104,13 +104,13 @@ const PWAFrame = (screenContent: string, title: string, activeNav: string) => `
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #22c55e;
-          box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+          background: var(--color-success);
+          box-shadow: var(--success-glow);
         "></div>
         <span style="
           font-size: 13px;
           font-weight: 500;
-          color: rgba(78, 205, 196, 1);
+          color: var(--brand-primary);
           letter-spacing: 0.02em;
         ">25:00</span>
       </div>
@@ -120,7 +120,7 @@ const PWAFrame = (screenContent: string, title: string, activeNav: string) => `
     <div style="
       flex: 1;
       overflow: hidden;
-      background: linear-gradient(180deg, rgba(18, 18, 26, 1) 0%, rgba(22, 20, 35, 1) 100%);
+      background: var(--app-background-gradient);
     ">
       ${screenContent}
     </div>
@@ -128,9 +128,9 @@ const PWAFrame = (screenContent: string, title: string, activeNav: string) => `
     <!-- Bottom Nav (real mobile: Tasks, Sort, Timer, AI, Menu) -->
     <div style="
       height: 56px;
-      background: rgba(28, 25, 45, 0.85);
+      background: var(--surface-secondary);
       backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid var(--glass-border);
       display: flex;
       justify-content: space-around;
       align-items: center;
@@ -140,31 +140,31 @@ const PWAFrame = (screenContent: string, title: string, activeNav: string) => `
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${activeNav === 'Tasks' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
         </svg>
-        <span style="font-size: 10px; color: ${activeNav === 'Tasks' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Tasks</span>
+        <span style="font-size: var(--text-xs); color: ${activeNav === 'Tasks' ? 'var(--brand-primary)' : 'var(--text-muted)'};">Tasks</span>
       </div>
       <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${activeNav === 'Sort' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
         </svg>
-        <span style="font-size: 10px; color: ${activeNav === 'Sort' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Sort</span>
+        <span style="font-size: var(--text-xs); color: ${activeNav === 'Sort' ? 'var(--brand-primary)' : 'var(--text-muted)'};">Sort</span>
       </div>
       <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${activeNav === 'Timer' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/>
         </svg>
-        <span style="font-size: 10px; color: ${activeNav === 'Timer' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Timer</span>
+        <span style="font-size: var(--text-xs); color: ${activeNav === 'Timer' ? 'var(--brand-primary)' : 'var(--text-muted)'};">Timer</span>
       </div>
       <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${activeNav === 'AI' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
         </svg>
-        <span style="font-size: 10px; color: ${activeNav === 'AI' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">AI</span>
+        <span style="font-size: var(--text-xs); color: ${activeNav === 'AI' ? 'var(--brand-primary)' : 'var(--text-muted)'};">AI</span>
       </div>
       <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${activeNav === 'Menu' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>
         </svg>
-        <span style="font-size: 10px; color: ${activeNav === 'Menu' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Menu</span>
+        <span style="font-size: var(--text-xs); color: ${activeNav === 'Menu' ? 'var(--brand-primary)' : 'var(--text-muted)'};">Menu</span>
       </div>
     </div>
   </div>
@@ -194,33 +194,33 @@ export const Tasks: Story = {
         <!-- Filter Bar -->
         <div style="
           padding: 12px 16px;
-          background: rgba(28, 25, 45, 0.6);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          background: var(--glass-bg-heavy);
+          border-bottom: 1px solid var(--border-subtle);
         ">
           <div style="display: flex; gap: 8px; margin-bottom: 10px;">
             <button style="
               padding: 6px 12px;
-              background: rgba(78, 205, 196, 0.15);
-              border: 1px solid rgba(78, 205, 196, 0.5);
-              border-radius: 8px;
-              color: #4ECDC4;
+              background: var(--state-active-bg);
+              border: 1px solid var(--state-active-border);
+              border-radius: var(--radius-md);
+              color: var(--brand-primary);
               font-size: 11px;
               font-weight: 600;
             ">All</button>
             <button style="
               padding: 6px 12px;
               background: transparent;
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 8px;
-              color: rgba(255, 255, 255, 0.5);
+              border: 1px solid var(--glass-border);
+              border-radius: var(--radius-md);
+              color: var(--text-muted);
               font-size: 11px;
             ">Today</button>
             <button style="
               padding: 6px 12px;
               background: transparent;
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 8px;
-              color: rgba(255, 255, 255, 0.5);
+              border: 1px solid var(--glass-border);
+              border-radius: var(--radius-md);
+              color: var(--text-muted);
               font-size: 11px;
             ">Overdue</button>
           </div>
@@ -229,15 +229,15 @@ export const Tasks: Story = {
             justify-content: space-between;
             align-items: center;
           ">
-            <span style="font-size: 11px; color: rgba(255, 255, 255, 0.6);">
+            <span style="font-size: var(--text-xs); color: var(--text-tertiary);">
               12 tasks
             </span>
             <button style="
-              padding: 4px 8px;
-              background: rgba(45, 40, 70, 0.3);
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
-              color: rgba(255, 255, 255, 0.7);
+              padding: var(--space-1) var(--space-2);
+              background: var(--glass-bg-medium);
+              border: 1px solid var(--glass-border);
+              border-radius: var(--radius-sm);
+              color: var(--text-secondary);
               font-size: 11px;
             ">Sort: Priority</button>
           </div>
@@ -255,24 +255,24 @@ export const Tasks: Story = {
             align-items: center;
             gap: 10px;
             padding: 12px;
-            background: rgba(35, 32, 52, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            margin-bottom: 8px;
+            background: var(--glass-bg-heavy);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-2);
           ">
             <div style="
               width: 18px;
               height: 18px;
               border-radius: 4px;
-              border: 2px solid rgba(255, 255, 255, 0.3);
+              border: 2px solid var(--canvas-task-border);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
                 font-size: 12px;
                 font-weight: 500;
-                color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                color: var(--text-primary);
+                margin-bottom: var(--space-1);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -280,12 +280,12 @@ export const Tasks: Story = {
               <div style="display: flex; gap: 6px; align-items: center;">
                 <span style="
                   padding: 2px 6px;
-                  background: rgba(239, 68, 68, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
-                  color: #f87171;
+                  background: var(--priority-high-bg);
+                  border-radius: var(--radius-xs);
+                  font-size: var(--text-xs);
+                  color: var(--priority-high-text);
                 ">High</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">Today</span>
+                <span style="font-size: var(--text-xs); color: var(--text-muted);">Today</span>
               </div>
             </div>
           </div>
@@ -296,24 +296,24 @@ export const Tasks: Story = {
             align-items: center;
             gap: 10px;
             padding: 12px;
-            background: rgba(35, 32, 52, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            margin-bottom: 8px;
+            background: var(--glass-bg-heavy);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-2);
           ">
             <div style="
               width: 18px;
               height: 18px;
               border-radius: 4px;
-              border: 2px solid rgba(255, 255, 255, 0.3);
+              border: 2px solid var(--canvas-task-border);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
                 font-size: 12px;
                 font-weight: 500;
-                color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                color: var(--text-primary);
+                margin-bottom: var(--space-1);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -321,12 +321,12 @@ export const Tasks: Story = {
               <div style="display: flex; gap: 6px; align-items: center;">
                 <span style="
                   padding: 2px 6px;
-                  background: rgba(249, 115, 22, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
-                  color: #fb923c;
+                  background: var(--priority-medium-bg);
+                  border-radius: var(--radius-xs);
+                  font-size: var(--text-xs);
+                  color: var(--priority-medium-text);
                 ">Medium</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">Tomorrow</span>
+                <span style="font-size: var(--text-xs); color: var(--text-muted);">Tomorrow</span>
               </div>
             </div>
           </div>
@@ -337,24 +337,24 @@ export const Tasks: Story = {
             align-items: center;
             gap: 10px;
             padding: 12px;
-            background: rgba(35, 32, 52, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            margin-bottom: 8px;
+            background: var(--glass-bg-heavy);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-2);
           ">
             <div style="
               width: 18px;
               height: 18px;
               border-radius: 4px;
-              border: 2px solid rgba(78, 205, 196, 0.5);
-              background: rgba(78, 205, 196, 0.3);
+              border: 2px solid var(--state-active-border);
+              background: var(--brand-primary-dim);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
                 font-size: 12px;
                 font-weight: 500;
-                color: rgba(255, 255, 255, 0.5);
+                color: var(--text-muted);
                 text-decoration: line-through;
                 margin-bottom: 4px;
                 overflow: hidden;
@@ -364,12 +364,12 @@ export const Tasks: Story = {
               <div style="display: flex; gap: 6px; align-items: center;">
                 <span style="
                   padding: 2px 6px;
-                  background: rgba(34, 197, 94, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
-                  color: #4ade80;
+                  background: var(--status-done-bg);
+                  border-radius: var(--radius-xs);
+                  font-size: var(--text-xs);
+                  color: var(--status-done-text);
                 ">Done</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.4);">Yesterday</span>
+                <span style="font-size: var(--text-xs); color: var(--text-subtle);">Yesterday</span>
               </div>
             </div>
           </div>
@@ -380,24 +380,24 @@ export const Tasks: Story = {
             align-items: center;
             gap: 10px;
             padding: 12px;
-            background: rgba(35, 32, 52, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            margin-bottom: 8px;
+            background: var(--glass-bg-heavy);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-2);
           ">
             <div style="
               width: 18px;
               height: 18px;
               border-radius: 4px;
-              border: 2px solid rgba(255, 255, 255, 0.3);
+              border: 2px solid var(--canvas-task-border);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
                 font-size: 12px;
                 font-weight: 500;
-                color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                color: var(--text-primary);
+                margin-bottom: var(--space-1);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -405,12 +405,12 @@ export const Tasks: Story = {
               <div style="display: flex; gap: 6px; align-items: center;">
                 <span style="
                   padding: 2px 6px;
-                  background: rgba(59, 130, 246, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
-                  color: #60a5fa;
+                  background: var(--priority-low-bg);
+                  border-radius: var(--radius-xs);
+                  font-size: var(--text-xs);
+                  color: var(--priority-low-text);
                 ">Low</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">Next Week</span>
+                <span style="font-size: var(--text-xs); color: var(--text-muted);">Next Week</span>
               </div>
             </div>
           </div>
@@ -421,23 +421,23 @@ export const Tasks: Story = {
             align-items: center;
             gap: 10px;
             padding: 12px;
-            background: rgba(35, 32, 52, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
+            background: var(--glass-bg-heavy);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
           ">
             <div style="
               width: 18px;
               height: 18px;
               border-radius: 4px;
-              border: 2px solid rgba(255, 255, 255, 0.3);
+              border: 2px solid var(--canvas-task-border);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
                 font-size: 12px;
                 font-weight: 500;
-                color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                color: var(--text-primary);
+                margin-bottom: var(--space-1);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -445,12 +445,12 @@ export const Tasks: Story = {
               <div style="display: flex; gap: 6px; align-items: center;">
                 <span style="
                   padding: 2px 6px;
-                  background: rgba(249, 115, 22, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
-                  color: #fb923c;
+                  background: var(--priority-medium-bg);
+                  border-radius: var(--radius-xs);
+                  font-size: var(--text-xs);
+                  color: var(--priority-medium-text);
                 ">Medium</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">This Week</span>
+                <span style="font-size: var(--text-xs); color: var(--text-muted);">This Week</span>
               </div>
             </div>
           </div>
@@ -488,27 +488,27 @@ export const QuickSort: Story = {
           align-items: center;
           gap: 8px;
           padding: 10px 16px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          border-bottom: 1px solid var(--glass-border-light);
         ">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ECDC4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
           </svg>
-          <span style="font-size: 17px; font-weight: 700; color: rgba(255,255,255,0.95); letter-spacing: -0.02em;">Quick Sort</span>
+          <span style="font-size: 17px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em;">Quick Sort</span>
           <span style="
             margin-left: auto;
             padding: 3px 10px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px;
-            font-size: 12px;
+            background: var(--glass-border-light);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-full);
+            font-size: var(--text-xs);
             font-weight: 600;
-            color: rgba(255,255,255,0.9);
+            color: var(--text-secondary);
           ">4/10</span>
         </div>
 
         <!-- Progress Bar -->
-        <div style="height: 3px; background: rgba(255,255,255,0.06); margin: 0 16px;">
-          <div style="width: 40%; height: 100%; background: #4ECDC4; border-radius: 2px; box-shadow: 0 0 8px rgba(78,205,196,0.5);"></div>
+        <div style="height: 3px; background: var(--glass-border-light); margin: 0 16px;">
+          <div style="width: 40%; height: 100%; background: var(--brand-primary); border-radius: var(--radius-xs); box-shadow: var(--brand-glow-sm);"></div>
         </div>
 
         <!-- Phase Toggle -->
@@ -516,22 +516,22 @@ export const QuickSort: Story = {
           <button style="
             display: flex; align-items: center; gap: 5px;
             padding: 6px 14px;
-            background: rgba(78,205,196,0.1);
-            border: 1px solid rgba(78,205,196,0.4);
-            border-radius: 20px;
-            font-size: 12px; color: #4ECDC4; font-weight: 500;
+            background: var(--brand-primary-subtle);
+            border: 1px solid var(--state-hover-border);
+            border-radius: var(--radius-full);
+            font-size: var(--text-xs); color: var(--brand-primary); font-weight: 500;
           ">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             Sort
-            <span style="padding: 0 5px; background: rgba(78,205,196,0.15); border: 1px solid rgba(78,205,196,0.3); border-radius: 10px; font-size: 10px; font-weight: 600;">6</span>
+            <span style="padding: 0 var(--space-1_5); background: var(--state-active-bg); border: 1px solid var(--brand-primary-dim); border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: 600;">6</span>
           </button>
           <button style="
             display: flex; align-items: center; gap: 5px;
             padding: 6px 14px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px;
-            font-size: 12px; color: rgba(255,255,255,0.5);
+            background: var(--glass-bg-subtle);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-full);
+            font-size: var(--text-xs); color: var(--text-muted);
           ">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Capture
@@ -542,18 +542,18 @@ export const QuickSort: Story = {
         <div style="
           display: flex; align-items: center; gap: 10px;
           padding: 4px 16px 8px;
-          font-size: 11px; color: rgba(255,255,255,0.5);
+          font-size: var(--text-xs); color: var(--text-muted);
         ">
           <span style="display: flex; align-items: center; gap: 3px;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Today
           </span>
-          <span style="width: 1px; height: 12px; background: rgba(255,255,255,0.1);"></span>
+          <span style="width: 1px; height: 12px; background: var(--glass-border);"></span>
           <span style="display: flex; align-items: center; gap: 4px;">
-            <span style="width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;"></span>
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--color-warning);"></span>
             Medium
           </span>
-          <span style="width: 1px; height: 12px; background: rgba(255,255,255,0.1);"></span>
+          <span style="width: 1px; height: 12px; background: var(--glass-border);"></span>
           <span style="display: flex; align-items: center; gap: 3px;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             Work
@@ -570,19 +570,19 @@ export const QuickSort: Story = {
           padding: 0 16px;
         ">
           <!-- Swipe hints -->
-          <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; color: rgba(255,255,255,0.25); font-size: 10px;">
+          <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-disabled); font-size: var(--text-xs);">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
             Edit
           </div>
-          <div style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 2px; color: rgba(255,255,255,0.25); font-size: 10px;">
+          <div style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 2px; color: var(--text-disabled); font-size: var(--text-xs);">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             Delete
           </div>
-          <div style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 2px; color: rgba(255,255,255,0.25); font-size: 10px;">
+          <div style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 2px; color: var(--text-disabled); font-size: var(--text-xs);">
             Save
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
-          <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; color: rgba(255,255,255,0.25); font-size: 10px;">
+          <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-disabled); font-size: var(--text-xs);">
             Skip
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
@@ -592,8 +592,8 @@ export const QuickSort: Story = {
             position: absolute;
             width: calc(100% - 48px);
             height: 180px;
-            background: rgba(35,32,52,0.5);
-            border: 1px solid rgba(255,255,255,0.06);
+            background: var(--glass-bg-medium);
+            border: 1px solid var(--glass-border-light);
             border-radius: 16px;
             transform: scale(0.95) translateY(8px);
             opacity: 0.5;
@@ -603,17 +603,17 @@ export const QuickSort: Story = {
           <div style="
             position: relative;
             width: 100%;
-            background: rgba(35, 32, 52, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            background: var(--canvas-task-bg);
+            border: 1px solid var(--glass-border-soft);
+            border-radius: var(--radius-xl);
+            padding: var(--space-5);
+            box-shadow: 0 8px 32px var(--overlay-bg);
             z-index: 2;
           ">
-            <div style="font-size: 17px; font-weight: 600; color: rgba(255,255,255,0.95); margin-bottom: 10px; line-height: 1.4;">
+            <div style="font-size: 17px; font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-2_5); line-height: 1.4;">
               Review Q4 marketing proposal
             </div>
-            <div style="font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.5;">
+            <div style="font-size: var(--text-xs); color: var(--text-tertiary); line-height: 1.5;">
               Analyze the proposed budget allocation and timeline for approval.
             </div>
           </div>
@@ -623,21 +623,21 @@ export const QuickSort: Story = {
         <div style="padding: 8px 12px 12px;">
           <!-- Priority Row -->
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-            <span style="font-size: 11px; color: rgba(255,255,255,0.4); width: 48px; flex-shrink: 0;">Priority</span>
+            <span style="font-size: var(--text-xs); color: var(--text-subtle); width: 48px; flex-shrink: 0;">Priority</span>
             <div style="display: flex; gap: 6px;">
-              <button style="padding: 5px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; font-size: 11px; color: rgba(255,255,255,0.5);">Low</button>
-              <button style="padding: 5px 12px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.4); border-radius: 20px; font-size: 11px; color: #f59e0b; font-weight: 500;">Med</button>
-              <button style="padding: 5px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; font-size: 11px; color: rgba(255,255,255,0.5);">High</button>
+              <button style="padding: 5px 12px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); border-radius: var(--radius-full); font-size: var(--text-xs); color: var(--text-muted);">Low</button>
+              <button style="padding: var(--space-1_5) var(--space-3); background: var(--color-warning-alpha-10); border: 1px solid var(--orange-bg-medium); border-radius: var(--radius-full); font-size: var(--text-xs); color: var(--color-warning); font-weight: 500;">Med</button>
+              <button style="padding: 5px 12px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); border-radius: var(--radius-full); font-size: var(--text-xs); color: var(--text-muted);">High</button>
             </div>
           </div>
           <!-- Date Row -->
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 11px; color: rgba(255,255,255,0.4); width: 48px; flex-shrink: 0;">Due</span>
+            <span style="font-size: var(--text-xs); color: var(--text-subtle); width: 48px; flex-shrink: 0;">Due</span>
             <div style="display: flex; gap: 6px; overflow-x: auto;">
-              <button style="padding: 5px 12px; background: rgba(78,205,196,0.1); border: 1px solid rgba(78,205,196,0.4); border-radius: 20px; font-size: 11px; color: #4ECDC4; font-weight: 500;">Today</button>
-              <button style="padding: 5px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; font-size: 11px; color: rgba(255,255,255,0.5);">Tmrw</button>
-              <button style="padding: 5px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; font-size: 11px; color: rgba(255,255,255,0.5);">+3d</button>
-              <button style="padding: 5px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; font-size: 11px; color: rgba(255,255,255,0.5);">Wknd</button>
+              <button style="padding: var(--space-1_5) var(--space-3); background: var(--brand-primary-subtle); border: 1px solid var(--state-hover-border); border-radius: var(--radius-full); font-size: var(--text-xs); color: var(--brand-primary); font-weight: 500;">Today</button>
+              <button style="padding: 5px 12px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); border-radius: var(--radius-full); font-size: var(--text-xs); color: var(--text-muted);">Tmrw</button>
+              <button style="padding: 5px 12px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); border-radius: var(--radius-full); font-size: var(--text-xs); color: var(--text-muted);">+3d</button>
+              <button style="padding: 5px 12px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); border-radius: var(--radius-full); font-size: var(--text-xs); color: var(--text-muted);">Wknd</button>
             </div>
           </div>
         </div>
@@ -665,7 +665,7 @@ export const AIChat: Story = {
         display: flex;
         flex-direction: column;
         height: 100%;
-        background: rgba(18, 18, 20, 0.98);
+        background: var(--surface-secondary);
       ">
         <!-- Chat Messages Area -->
         <div style="
@@ -682,13 +682,13 @@ export const AIChat: Story = {
             <div style="
               max-width: 75%;
               padding: 10px 14px;
-              background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(78, 205, 196, 0.15));
-              border: 1px solid rgba(78, 205, 196, 0.3);
+              background: linear-gradient(135deg, var(--state-active-bg), var(--brand-primary-subtle));
+              border: 1px solid var(--brand-primary-dim);
               border-radius: 16px 12px 4px 12px;
             ">
               <div style="
-                font-size: 12px;
-                color: rgba(255, 255, 255, 0.95);
+                font-size: var(--text-xs);
+                color: var(--text-primary);
                 line-height: 1.5;
               ">What tasks are due today?</div>
             </div>
@@ -703,20 +703,20 @@ export const AIChat: Story = {
             <div style="
               max-width: 85%;
               padding: 10px 14px;
-              background: rgba(35, 32, 52, 0.8);
-              border: 1px solid rgba(255, 255, 255, 0.1);
+              background: var(--glass-bg-heavy);
+              border: 1px solid var(--glass-border);
               border-radius: 16px 12px 12px 4px;
             ">
               <div style="
-                font-size: 12px;
-                color: rgba(255, 255, 255, 0.9);
+                font-size: var(--text-xs);
+                color: var(--text-secondary);
                 line-height: 1.6;
-              ">You have <strong style="color: #4ECDC4;">3 tasks</strong> due today:</div>
+              ">You have <strong style="color: var(--brand-primary);">3 tasks</strong> due today:</div>
               <ul style="
-                margin: 8px 0 0 0;
-                padding-left: 16px;
-                font-size: 12px;
-                color: rgba(255, 255, 255, 0.8);
+                margin: var(--space-2) 0 0 0;
+                padding-left: var(--space-4);
+                font-size: var(--text-xs);
+                color: var(--text-secondary);
                 line-height: 1.6;
               ">
                 <li>Fix critical auth bug</li>
@@ -735,13 +735,13 @@ export const AIChat: Story = {
             <div style="
               max-width: 75%;
               padding: 10px 14px;
-              background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(78, 205, 196, 0.15));
-              border: 1px solid rgba(78, 205, 196, 0.3);
+              background: linear-gradient(135deg, var(--state-active-bg), var(--brand-primary-subtle));
+              border: 1px solid var(--brand-primary-dim);
               border-radius: 16px 12px 4px 12px;
             ">
               <div style="
-                font-size: 12px;
-                color: rgba(255, 255, 255, 0.95);
+                font-size: var(--text-xs);
+                color: var(--text-primary);
                 line-height: 1.5;
               ">Plan my day</div>
             </div>
@@ -754,14 +754,14 @@ export const AIChat: Story = {
           ">
             <div style="
               padding: 10px 14px;
-              background: rgba(35, 32, 52, 0.8);
-              border: 1px solid rgba(255, 255, 255, 0.1);
+              background: var(--glass-bg-heavy);
+              border: 1px solid var(--glass-border);
               border-radius: 16px 12px 12px 4px;
             ">
               <div style="display: flex; gap: 4px; align-items: center;">
-                <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(78, 205, 196, 0.6);"></div>
-                <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(78, 205, 196, 0.4);"></div>
-                <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(78, 205, 196, 0.2);"></div>
+                <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--state-active-border);"></div>
+                <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--state-hover-border);"></div>
+                <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--brand-primary-subtle);"></div>
               </div>
             </div>
           </div>
@@ -769,9 +769,9 @@ export const AIChat: Story = {
 
         <!-- Quick Actions -->
         <div style="
-          padding: 12px 16px;
-          background: rgba(28, 25, 45, 0.6);
-          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          padding: var(--space-3) var(--space-4);
+          background: var(--glass-bg-heavy);
+          border-top: 1px solid var(--border-subtle);
         ">
           <div style="
             display: flex;
@@ -780,29 +780,29 @@ export const AIChat: Story = {
             margin-bottom: 12px;
           ">
             <button style="
-              padding: 6px 12px;
-              background: rgba(45, 40, 70, 0.5);
-              border: 1px solid rgba(255, 255, 255, 0.15);
-              border-radius: 12px;
-              color: rgba(255, 255, 255, 0.8);
+              padding: var(--space-1_5) var(--space-3);
+              background: var(--glass-bg-soft);
+              border: 1px solid var(--border-interactive);
+              border-radius: var(--radius-lg);
+              color: var(--text-secondary);
               font-size: 11px;
               white-space: nowrap;
             ">Plan my day</button>
             <button style="
-              padding: 6px 12px;
-              background: rgba(45, 40, 70, 0.5);
-              border: 1px solid rgba(255, 255, 255, 0.15);
-              border-radius: 12px;
-              color: rgba(255, 255, 255, 0.8);
+              padding: var(--space-1_5) var(--space-3);
+              background: var(--glass-bg-soft);
+              border: 1px solid var(--border-interactive);
+              border-radius: var(--radius-lg);
+              color: var(--text-secondary);
               font-size: 11px;
               white-space: nowrap;
             ">What's overdue?</button>
             <button style="
-              padding: 6px 12px;
-              background: rgba(45, 40, 70, 0.5);
-              border: 1px solid rgba(255, 255, 255, 0.15);
-              border-radius: 12px;
-              color: rgba(255, 255, 255, 0.8);
+              padding: var(--space-1_5) var(--space-3);
+              background: var(--glass-bg-soft);
+              border: 1px solid var(--border-interactive);
+              border-radius: var(--radius-lg);
+              color: var(--text-secondary);
               font-size: 11px;
               white-space: nowrap;
             ">Weekly summary</button>
@@ -815,23 +815,23 @@ export const AIChat: Story = {
               placeholder="Ask anything..."
               style="
                 flex: 1;
-                padding: 10px 14px;
-                background: rgba(35, 32, 52, 0.6);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 20px;
-                color: rgba(255, 255, 255, 0.95);
-                font-size: 12px;
+                padding: var(--space-2_5) var(--space-3_5);
+                background: var(--glass-bg-heavy);
+                border: 1px solid var(--border-interactive);
+                border-radius: var(--radius-full);
+                color: var(--text-primary);
+                font-size: var(--text-xs);
                 outline: none;
               "
             />
             <button style="
-              padding: 10px 16px;
-              background: linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(78, 205, 196, 0.2));
-              border: 1px solid rgba(78, 205, 196, 0.5);
-              border-radius: 20px;
-              color: #4ECDC4;
+              padding: var(--space-2_5) var(--space-4);
+              background: linear-gradient(135deg, var(--brand-primary-dim), var(--state-active-bg));
+              border: 1px solid var(--state-active-border);
+              border-radius: var(--radius-full);
+              color: var(--brand-primary);
               font-weight: 600;
-              font-size: 12px;
+              font-size: var(--text-xs);
             ">Send</button>
           </div>
         </div>
@@ -869,17 +869,17 @@ export const Timer: Story = {
           display: flex;
           gap: 4px;
           padding: 4px;
-          background: rgba(45, 40, 70, 0.3);
-          border-radius: 12px;
+          background: var(--glass-bg-medium);
+          border-radius: var(--radius-lg);
           width: 100%;
         ">
           <button style="
             flex: 1;
             padding: 8px;
-            background: rgba(78, 205, 196, 0.15);
-            border: 1px solid rgba(78, 205, 196, 0.5);
-            border-radius: 10px;
-            color: #4ECDC4;
+            background: var(--state-active-bg);
+            border: 1px solid var(--state-active-border);
+            border-radius: var(--radius-md);
+            color: var(--brand-primary);
             font-size: 11px;
             font-weight: 600;
           ">Focus</button>
@@ -889,8 +889,8 @@ export const Timer: Story = {
             background: transparent;
             border: 1px solid transparent;
             border-radius: 10px;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 11px;
+            color: var(--text-muted);
+            font-size: var(--text-xs);
           ">Short Break</button>
           <button style="
             flex: 1;
@@ -898,8 +898,8 @@ export const Timer: Story = {
             background: transparent;
             border: 1px solid transparent;
             border-radius: 10px;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 11px;
+            color: var(--text-muted);
+            font-size: var(--text-xs);
           ">Long Break</button>
         </div>
 
@@ -940,13 +940,13 @@ export const Timer: Story = {
               <div style="
                 font-size: 52px;
                 font-weight: 300;
-                color: rgba(255, 255, 255, 0.95);
+                color: var(--text-primary);
                 letter-spacing: 2px;
                 font-variant-numeric: tabular-nums;
               ">18:42</div>
               <div style="
                 font-size: 11px;
-                color: rgba(78, 205, 196, 0.8);
+                color: var(--brand-primary);
                 font-weight: 500;
                 text-transform: uppercase;
                 letter-spacing: 0.1em;
@@ -956,11 +956,11 @@ export const Timer: Story = {
 
           <!-- Session count -->
           <div style="display: flex; gap: 6px; align-items: center;">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: #4ECDC4;"></div>
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: #4ECDC4;"></div>
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: rgba(78, 205, 196, 0.3); border: 1px solid rgba(78, 205, 196, 0.5);"></div>
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.1);"></div>
-            <span style="font-size: 10px; color: rgba(255, 255, 255, 0.4); margin-left: 4px;">2 of 4</span>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--brand-primary);"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--brand-primary);"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--brand-primary-dim); border: 1px solid var(--state-active-border);"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--glass-border);"></div>
+            <span style="font-size: var(--text-xs); color: var(--text-subtle); margin-left: var(--space-1);">2 of 4</span>
           </div>
         </div>
 
@@ -968,17 +968,17 @@ export const Timer: Story = {
         <div style="
           width: 100%;
           padding: 12px 16px;
-          background: rgba(35, 32, 52, 0.6);
-          border: 1px solid rgba(78, 205, 196, 0.2);
-          border-left: 3px solid #4ECDC4;
-          border-radius: 12px;
+          background: var(--glass-bg-heavy);
+          border: 1px solid var(--brand-primary-subtle);
+          border-left: 3px solid var(--brand-primary);
+          border-radius: var(--radius-lg);
           margin-bottom: 24px;
         ">
-          <div style="font-size: 10px; color: rgba(255, 255, 255, 0.4); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em;">Current Task</div>
-          <div style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.95);">Fix critical auth bug</div>
-          <div style="display: flex; gap: 6px; margin-top: 6px;">
-            <span style="padding: 2px 6px; background: rgba(239, 68, 68, 0.2); border-radius: 4px; font-size: 9px; color: #f87171;">High</span>
-            <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">Due today</span>
+          <div style="font-size: var(--text-xs); color: var(--text-subtle); margin-bottom: var(--space-1); text-transform: uppercase; letter-spacing: 0.05em;">Current Task</div>
+          <div style="font-size: var(--text-sm); font-weight: 500; color: var(--text-primary);">Fix critical auth bug</div>
+          <div style="display: flex; gap: var(--space-1_5); margin-top: var(--space-1_5);">
+            <span style="padding: var(--space-0_5) var(--space-1_5); background: var(--priority-high-bg); border-radius: var(--radius-xs); font-size: var(--text-xs); color: var(--priority-high-text);">High</span>
+            <span style="font-size: var(--text-xs); color: var(--text-muted);">Due today</span>
           </div>
         </div>
 
@@ -987,20 +987,20 @@ export const Timer: Story = {
           <button style="
             flex: 1;
             padding: 14px;
-            background: rgba(45, 40, 70, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 14px;
-            color: rgba(255, 255, 255, 0.7);
+            background: var(--glass-bg-medium);
+            border: 1px solid var(--border-interactive);
+            border-radius: var(--radius-xl);
+            color: var(--text-secondary);
             font-size: 13px;
             font-weight: 500;
           ">Reset</button>
           <button style="
             flex: 2;
             padding: 14px;
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            border-radius: 14px;
-            color: #f87171;
+            background: var(--danger-bg-subtle);
+            border: 1px solid var(--danger-border-medium);
+            border-radius: var(--radius-xl);
+            color: var(--priority-high-text);
             font-size: 13px;
             font-weight: 600;
           ">Pause</button>

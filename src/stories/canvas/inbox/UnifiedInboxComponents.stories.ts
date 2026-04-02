@@ -43,7 +43,7 @@ const UnifiedInboxHeaderMock = defineComponent({
         <h3 style="margin: 0; font-size: var(--text-base); font-weight: var(--font-semibold); color: var(--text-primary); flex: 0 0 auto;">Inbox</h3>
 
         <!-- 3. Count badge -->
-        <span style="padding: 2px 8px; background: rgba(99, 179, 237, 0.2); border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: 600; color: rgb(99, 179, 237); flex-shrink: 0;">{{ taskCount }}</span>
+        <span style="padding: var(--space-0_5) var(--space-2); background: var(--status-planned-bg); border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: 600; color: var(--status-planned-text); flex-shrink: 0;">{{ taskCount }}</span>
 
         <!-- 4. Done toggle -->
         <button
@@ -52,9 +52,9 @@ const UnifiedInboxHeaderMock = defineComponent({
             display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
             padding: 'var(--space-1) var(--space-2)',
             borderRadius: 'var(--radius-md)',
-            border: hideDone ? '1px solid var(--border-subtle)' : '1px solid #22c55e',
-            background: hideDone ? 'transparent' : 'rgba(34, 197, 94, 0.15)',
-            color: hideDone ? 'var(--text-tertiary)' : '#22c55e',
+            border: hideDone ? '1px solid var(--border-subtle)' : '1px solid var(--status-done-border)',
+            background: hideDone ? 'transparent' : 'var(--status-done-bg)',
+            color: hideDone ? 'var(--text-tertiary)' : 'var(--status-done-text)',
             fontSize: 'var(--text-xs)', cursor: 'pointer',
             transition: 'all var(--duration-normal) var(--ease-out)',
             flexShrink: '0', minWidth: '28px', minHeight: '28px'
@@ -65,8 +65,8 @@ const UnifiedInboxHeaderMock = defineComponent({
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             minWidth: '16px', height: '16px', padding: '0 var(--space-1)',
             borderRadius: 'var(--radius-full)',
-            background: hideDone ? 'var(--surface-elevated)' : '#22c55e',
-            color: hideDone ? 'var(--text-secondary)' : 'white',
+            background: hideDone ? 'var(--surface-elevated)' : 'var(--status-done-text)',
+            color: hideDone ? 'var(--text-secondary)' : 'var(--text-primary)',
             fontSize: 'var(--text-xs)', fontWeight: '600'
           }">{{ doneTaskCount }}</span>
         </button>
@@ -190,7 +190,7 @@ const UnifiedInboxHeaderMock = defineComponent({
                   whiteSpace: 'nowrap'
                 }"
               >
-                <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;" />
+                <span style="width: var(--space-2); height: var(--space-2); border-radius: var(--radius-full); background: var(--color-priority-high);" />
                 High
               </button>
 
@@ -235,16 +235,16 @@ const UnifiedInboxTaskCardMock = defineComponent({
       borderRadius: 'var(--radius-md)',
       cursor: 'pointer', transition: 'background 0.15s ease'
     }">
-      <div style="display: flex; flex-direction: column; gap: 1px; cursor: grab; opacity: 0.4; padding: 2px;">
-        <span v-for="i in 3" :key="i" style="width: 10px; height: 2px; background: currentColor; border-radius: 1px;" />
+      <div style="display: flex; flex-direction: column; gap: var(--space-px); cursor: grab; opacity: 0.4; padding: var(--space-0_5);">
+        <span v-for="i in 3" :key="i" style="width: 10px; height: var(--space-0_5); background: currentColor; border-radius: var(--radius-xs);" />
       </div>
       <span :style="{
-        width: '8px', height: '8px', borderRadius: '50%', flexShrink: '0',
-        background: priority === 'high' ? '#ef4444' : priority === 'medium' ? '#f59e0b' : priority === 'low' ? '#3b82f6' : 'rgba(255,255,255,0.15)'
+        width: 'var(--space-2)', height: 'var(--space-2)', borderRadius: 'var(--radius-full)', flexShrink: '0',
+        background: priority === 'high' ? 'var(--color-priority-high)' : priority === 'medium' ? 'var(--color-priority-medium)' : priority === 'low' ? 'var(--color-priority-low)' : 'var(--glass-border)'
       }" />
       <span style="flex: 1; font-size: var(--text-sm); color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ title }}</span>
       <span v-if="dueDate" style="font-size: var(--text-xs); color: var(--text-tertiary); white-space: nowrap;">{{ dueDate }}</span>
-      <div v-if="isHovered" style="display: flex; gap: 2px;">
+      <div v-if="isHovered" style="display: flex; gap: var(--space-0_5);">
         <button style="width: 20px; height: 20px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm);">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         </button>

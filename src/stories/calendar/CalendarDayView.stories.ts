@@ -160,7 +160,7 @@ const CalendarDayViewMock = defineComponent({
               background: 'var(--surface-tertiary)',
               color: 'var(--text-primary)',
               fontWeight: '500',
-              boxShadow: ev.timerActive ? '0 0 12px rgba(245, 158, 11, 0.4), 0 0 4px rgba(245, 158, 11, 0.2)' : 'var(--shadow-sm)',
+              boxShadow: ev.timerActive ? 'var(--timer-active-glow)' : 'var(--shadow-sm)',
               cursor: 'grab',
               fontSize: 'var(--text-xs)',
               zIndex: 5,

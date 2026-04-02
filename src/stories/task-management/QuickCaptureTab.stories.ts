@@ -33,8 +33,8 @@ const QuickCaptureTabMock = defineComponent({
           <button
             :style="{
               width: '40px', height: '40px', borderRadius: '50%', border: 'none',
-              background: showVoiceFeedback ? '#ef4444' : 'var(--glass-bg-soft)',
-              color: showVoiceFeedback ? 'white' : 'var(--text-secondary)',
+              background: showVoiceFeedback ? 'var(--color-priority-high)' : 'var(--glass-bg-soft)',
+              color: showVoiceFeedback ? 'var(--text-primary)' : 'var(--text-secondary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: '0'
             }"
           >
@@ -51,7 +51,7 @@ const QuickCaptureTabMock = defineComponent({
         <!-- Voice Feedback -->
         <div v-if="showVoiceFeedback" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: var(--glass-bg-soft); border-radius: var(--radius-md); border: 1px solid var(--glass-border);">
           <div style="display: flex; align-items: center; gap: 2px; height: 20px;">
-            <span v-for="i in 5" :key="i" style="width: 3px; height: 6px; background: #ef4444; border-radius: 2px;" />
+            <span v-for="i in 5" :key="i" style="width: 3px; height: 6px; background: var(--color-priority-high); border-radius: var(--radius-xs);" />
           </div>
           <span style="flex: 1; font-size: var(--text-sm); color: var(--text-secondary);">Speak now...</span>
           <button style="width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent; color: var(--text-tertiary); display: flex; align-items: center; justify-content: center; cursor: pointer;">
@@ -103,10 +103,10 @@ const QuickCaptureTabMock = defineComponent({
 
         <!-- Add Task Button -->
         <div style="display: flex; justify-content: flex-end; padding-top: var(--space-2);">
-          <button style="display: flex; align-items: center; gap: var(--space-2); padding: 10px 20px; background: transparent; border: 1px solid var(--brand-primary); border-radius: var(--radius-lg); color: var(--brand-primary); font-size: var(--text-sm); font-weight: 600; cursor: pointer;">
+          <button style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2_5) var(--space-5); background: transparent; border: 1px solid var(--brand-primary); border-radius: var(--radius-lg); color: var(--brand-primary); font-size: var(--text-sm); font-weight: 600; cursor: pointer;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></svg>
             <span>Add Task</span>
-            <kbd style="padding: 2px 6px; background: var(--glass-bg-heavy); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); font-size: var(--text-xs); font-family: monospace;">Enter</kbd>
+            <kbd style="padding: var(--space-0_5) var(--space-1_5); background: var(--glass-bg-heavy); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); font-size: var(--text-xs); font-family: monospace;">Enter</kbd>
           </button>
         </div>
       </div>
@@ -122,7 +122,7 @@ const QuickCaptureTabMock = defineComponent({
           <button v-if="pendingTasks.length > 0" style="display: flex; align-items: center; gap: var(--space-1-5); padding: var(--space-2) var(--space-4); background: var(--glass-bg-medium); border: 1px solid var(--brand-primary); border-radius: var(--radius-md); color: var(--brand-primary); font-size: var(--text-sm); font-weight: 500; cursor: pointer;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             <span>Sort All</span>
-            <kbd style="padding: 2px 4px; background: rgba(255,255,255,0.06); border-radius: var(--radius-sm); font-size: var(--text-xs); font-family: monospace;">Tab</kbd>
+            <kbd style="padding: var(--space-0_5) var(--space-1); background: var(--glass-bg-light); border-radius: var(--radius-sm); font-size: var(--text-xs); font-family: monospace;">Tab</kbd>
           </button>
         </div>
 
@@ -135,10 +135,10 @@ const QuickCaptureTabMock = defineComponent({
                 <span v-if="task.priority" :style="{
                   display: 'inline-flex', alignItems: 'center', gap: '4px',
                   padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)', textTransform: 'capitalize',
-                  color: task.priority === 'high' ? 'var(--danger)' : task.priority === 'medium' ? 'var(--warning)' : 'var(--success)',
-                  background: task.priority === 'high' ? 'rgba(239,68,68,0.1)' : task.priority === 'medium' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)'
+                  color: task.priority === 'high' ? 'var(--priority-high-text)' : task.priority === 'medium' ? 'var(--priority-medium-text)' : 'var(--status-done-text)',
+                  background: task.priority === 'high' ? 'var(--priority-high-bg)' : task.priority === 'medium' ? 'var(--priority-medium-bg)' : 'var(--status-done-bg)'
                 }">{{ task.priority }}</span>
-                <span v-if="task.dueDate" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: rgba(59,130,246,0.1); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--info);">{{ task.dueDate }}</span>
+                <span v-if="task.dueDate" style="display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-0_5) var(--space-2); background: var(--filter-tasks-bg); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--status-planned-text);">{{ task.dueDate }}</span>
               </div>
               <p v-if="task.description" style="font-size: var(--text-xs); color: var(--text-muted); margin: 0;">{{ task.description }}</p>
             </div>

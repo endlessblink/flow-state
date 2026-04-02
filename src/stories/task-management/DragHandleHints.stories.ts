@@ -31,8 +31,8 @@ type Story = StoryObj<typeof meta>
 const handleDotsStyle = `
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
-  padding: 2px;
+  gap: var(--space-0_5);
+  padding: var(--space-0_5);
 `
 
 const handleDotStyle = `
@@ -144,9 +144,9 @@ export const Interactive: Story = {
             font-size: var(--text-xs);
             line-height: 1.5;
           ">
-            The tooltip shows: <kbd style="background: var(--glass-border-hover); padding: 1px 4px; border-radius: 3px; font-family: var(--font-mono); font-size: 10px;">Click</kbd> Start drag ·
-            <kbd style="background: var(--glass-border-hover); padding: 1px 4px; border-radius: 3px; font-family: var(--font-mono); font-size: 10px;">↑↓←→</kbd> Move ·
-            <kbd style="background: var(--glass-border-hover); padding: 1px 4px; border-radius: 3px; font-family: var(--font-mono); font-size: 10px;">Esc</kbd> Cancel
+            The tooltip shows: <kbd style="background: var(--glass-border-hover); padding: var(--space-px) var(--space-1); border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: var(--text-xs);">Click</kbd> Start drag ·
+            <kbd style="background: var(--glass-border-hover); padding: var(--space-px) var(--space-1); border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: var(--text-xs);">↑↓←→</kbd> Move ·
+            <kbd style="background: var(--glass-border-hover); padding: var(--space-px) var(--space-1); border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: var(--text-xs);">Esc</kbd> Cancel
           </div>
         </div>
       </div>

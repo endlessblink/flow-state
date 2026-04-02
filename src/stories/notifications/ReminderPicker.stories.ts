@@ -3,25 +3,25 @@ import { h } from 'vue'
 import { Bell, Clock, X } from 'lucide-vue-next'
 
 const S = {
-  wrapper: 'background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);padding:24px;max-width:360px',
-  triggerRow: 'display:flex;align-items:center;gap:12px;margin-bottom:16px',
+  wrapper: 'background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);padding:var(--space-6);max-width:360px',
+  triggerRow: 'display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4)',
   bellBtn: 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:none;border:1px solid var(--border-primary);border-radius:var(--radius-md);color:var(--text-secondary);cursor:pointer;position:relative',
   bellActive: 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:none;border:1px solid var(--brand-primary);border-radius:var(--radius-md);color:var(--brand-primary);cursor:pointer;position:relative',
-  badge: 'position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:rgba(78,205,196,0.15);border:1px solid rgba(78,205,196,0.4);color:var(--brand-primary);font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center',
-  label: 'font-size:13px;color:var(--text-secondary)',
-  popover: 'background:var(--surface-primary);border:1px solid var(--border-primary);border-radius:var(--radius-lg);box-shadow:0 8px 24px rgba(0,0,0,0.3);overflow:hidden;width:280px',
-  popoverHeader: 'display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border-primary)',
-  popoverTitle: 'font-size:13px;font-weight:600;color:var(--text-primary)',
+  badge: 'position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--state-active-bg);border:1px solid var(--state-hover-border);color:var(--brand-primary);font-size:var(--text-xs);font-weight:600;display:flex;align-items:center;justify-content:center',
+  label: 'font-size:var(--text-sm);color:var(--text-secondary)',
+  popover: 'background:var(--surface-primary);border:1px solid var(--border-primary);border-radius:var(--radius-lg);box-shadow:0 8px 24px var(--overlay-bg);overflow:hidden;width:280px',
+  popoverHeader: 'display:flex;align-items:center;justify-content:space-between;padding:var(--space-2_5) var(--space-3);border-bottom:1px solid var(--border-primary)',
+  popoverTitle: 'font-size:var(--text-sm);font-weight:600;color:var(--text-primary)',
   closeBtn: 'background:none;border:none;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center',
-  reminderItem: 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border-primary)',
+  reminderItem: 'display:flex;align-items:center;justify-content:space-between;padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--border-primary)',
   reminderInfo: 'flex:1',
-  reminderDatetime: 'display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-primary)',
-  reminderLabel: 'font-size:11px;color:var(--text-tertiary);margin-top:2px',
-  statusPending: 'font-size:10px;padding:1px 6px;background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.2);border-radius:var(--radius-sm);color:var(--brand-primary)',
-  statusFired: 'font-size:10px;padding:1px 6px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius-sm);color:var(--color-warning)',
-  addSection: 'padding:10px 12px',
-  quickChips: 'display:flex;flex-wrap:wrap;gap:4px',
-  chip: 'padding:4px 8px;background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-full);font-size:11px;color:var(--text-secondary);cursor:pointer',
+  reminderDatetime: 'display:flex;align-items:center;gap:var(--space-1);font-size:var(--text-xs);color:var(--text-primary)',
+  reminderLabel: 'font-size:var(--text-xs);color:var(--text-tertiary);margin-top:var(--space-0_5)',
+  statusPending: 'font-size:var(--text-xs);padding:1px var(--space-1_5);background:var(--brand-primary-subtle);border:1px solid var(--brand-primary-subtle);border-radius:var(--radius-sm);color:var(--brand-primary)',
+  statusFired: 'font-size:var(--text-xs);padding:1px var(--space-1_5);background:var(--color-warning-alpha-10);border:1px solid var(--orange-bg-light);border-radius:var(--radius-sm);color:var(--color-warning)',
+  addSection: 'padding:var(--space-2_5) var(--space-3)',
+  quickChips: 'display:flex;flex-wrap:wrap;gap:var(--space-1)',
+  chip: 'padding:var(--space-1) var(--space-2);background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-full);font-size:var(--text-xs);color:var(--text-secondary);cursor:pointer',
 }
 
 const meta: Meta = {
@@ -68,7 +68,7 @@ export const WithReminders: Story = {
           h('span', { style: S.statusFired }, 'Fired'),
         ]),
         h('div', { style: S.addSection }, [
-          h('div', { style: 'font-size:11px;color:var(--text-tertiary);margin-bottom:6px' }, 'Quick add:'),
+          h('div', { style: 'font-size:var(--text-xs);color:var(--text-tertiary);margin-bottom:var(--space-1_5)' }, 'Quick add:'),
           h('div', { style: S.quickChips }, [
             h('span', { style: S.chip }, 'In 30 min'),
             h('span', { style: S.chip }, 'In 1 hour'),

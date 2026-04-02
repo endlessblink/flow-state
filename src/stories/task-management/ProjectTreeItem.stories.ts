@@ -80,7 +80,7 @@ export const Default: Story = {
     },
     template: `
       <div style="padding: var(--space-10); min-height: 400px; background: var(--app-background-gradient);">
-        <h3 style="margin: 0 0 var(--space-4) 0; font-size: 18px; color: var(--text-primary);">Project Tree Item</h3>
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Project Tree Item</h3>
         <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Interactive project tree component</p>
 
         <div style="width: 300px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); border-radius: var(--radius-xl); padding: var(--space-4);">
@@ -191,7 +191,7 @@ export const NestedProjects: Story = {
     },
     template: `
       <div style="padding: var(--space-10); min-height: 500px; background: var(--app-background-gradient);">
-        <h3 style="margin: 0 0 var(--space-4) 0; font-size: 18px; color: var(--text-primary);">Nested Project Tree</h3>
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Nested Project Tree</h3>
         <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Multi-level project hierarchy</p>
 
         <div style="width: 350px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); border-radius: var(--radius-xl); padding: var(--space-4);">
@@ -244,7 +244,7 @@ export const NestedProjects: Story = {
           <div style="font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.6;">
             <div><strong>Website Redesign</strong> (12 tasks, 8 done)</div>
             <div style="margin-left: var(--space-5);">├── Frontend Development (8 tasks, 6 done)</div>
-            <div style="margin-left: var(--space-10);">├── React Components (5 tasks, 4 done) <span style="color: rgba(78, 205, 196, 1);">← Selected</span></div>
+            <div style="margin-left: var(--space-10);">├── React Components (5 tasks, 4 done) <span style="color: var(--brand-primary);">← Selected</span></div>
             <div style="margin-left: var(--space-10);">└── Styling Updates (3 tasks, 2 done)</div>
             <div style="margin-left: var(--space-5);">└── Backend API (4 tasks, 2 done)</div>
           </div>
@@ -298,7 +298,7 @@ export const ProjectStates: Story = {
     },
     template: `
       <div style="padding: var(--space-10); min-height: 600px; background: var(--app-background-gradient);">
-        <h3 style="margin: 0 0 var(--space-4) 0; font-size: 18px; color: var(--text-primary);">Project States</h3>
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Project States</h3>
         <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Different project statuses and progress</p>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6);">

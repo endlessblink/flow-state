@@ -70,7 +70,8 @@ const S = {
   layoutBtn: 'flex:1; display:flex; flex-direction:column; align-items:center; gap:var(--space-2); padding:var(--space-4); border:1px solid var(--glass-border); border-radius:var(--radius-md); background:var(--glass-bg-solid); color:var(--text-secondary); cursor:pointer;',
   layoutBtnActive: 'flex:1; display:flex; flex-direction:column; align-items:center; gap:var(--space-2); padding:var(--space-4); border:1px solid var(--brand-primary); border-radius:var(--radius-md); background:transparent; color:var(--brand-primary); cursor:pointer;',
   checkboxLabel: 'display:flex; align-items:center; font-size:var(--text-sm); font-weight:var(--font-medium); color:var(--text-primary); cursor:pointer;',
-  checkbox: 'margin-right:var(--space-2); width:16px; height:16px; cursor:pointer;',
+  checkbox: 'margin-right:var(--space-2); width:16px; height:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; border:1px solid var(--glass-border); border-radius:var(--radius-sm); background:var(--glass-bg-solid); flex-shrink:0;',
+  checkboxSVG: 'display:flex; align-items:center; justify-content:center;',
   footer: 'display:flex; gap:var(--space-3); justify-content:flex-end; padding:var(--space-6); border-top:1px solid var(--glass-border);',
   btnSecondary: 'padding:var(--space-3) var(--space-4); border-radius:var(--radius-md); font-size:var(--text-sm); font-weight:var(--font-medium); cursor:pointer; background:transparent; border:1px solid var(--glass-border); color:var(--text-secondary);',
   btnPrimary: 'padding:var(--space-3) var(--space-4); border-radius:var(--radius-md); font-size:var(--text-sm); font-weight:var(--font-medium); cursor:pointer; background:transparent; border:1px solid var(--brand-primary); color:var(--brand-primary);',
@@ -141,14 +142,14 @@ export const Default: Story = {
 
             <div :style="S.formGroup">
               <label :style="S.checkboxLabel">
-                <input :style="S.checkbox" type="checkbox" />
+                <div :style="S.checkbox"></div>
                 Start Collapsed
               </label>
             </div>
 
             <div :style="S.formGroupLast">
               <label :style="S.checkboxLabel">
-                <input :style="S.checkbox" type="checkbox" checked />
+                <div :style="S.checkbox + '; background:var(--brand-primary); border-color:var(--brand-primary);'"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
                 Visible
               </label>
             </div>
@@ -226,14 +227,14 @@ export const EmptyForm: Story = {
 
             <div :style="S.formGroup">
               <label :style="S.checkboxLabel">
-                <input :style="S.checkbox" type="checkbox" />
+                <div :style="S.checkbox"></div>
                 Start Collapsed
               </label>
             </div>
 
             <div :style="S.formGroupLast">
               <label :style="S.checkboxLabel">
-                <input :style="S.checkbox" type="checkbox" checked />
+                <div :style="S.checkbox + '; background:var(--brand-primary); border-color:var(--brand-primary);'"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
                 Visible
               </label>
             </div>
@@ -363,24 +364,28 @@ export const Interactive: Story = {
 
             <div :style="S.formGroup">
               <label :style="S.checkboxLabel">
-                <input
-                  :style="S.checkbox"
-                  type="checkbox"
-                  v-model="formData.isCollapsed"
-                  @change="addLog('Start Collapsed: ' + formData.isCollapsed)"
-                />
+                <div
+                  :style="formData.isCollapsed ? S.checkbox + '; background:var(--brand-primary); border-color:var(--brand-primary);' : S.checkbox"
+                  @click="formData.isCollapsed = !formData.isCollapsed; addLog('Start Collapsed: ' + formData.isCollapsed)"
+                  role="checkbox"
+                  :aria-checked="formData.isCollapsed"
+                >
+                  <svg v-if="formData.isCollapsed" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
                 Start Collapsed
               </label>
             </div>
 
             <div :style="S.formGroupLast">
               <label :style="S.checkboxLabel">
-                <input
-                  :style="S.checkbox"
-                  type="checkbox"
-                  v-model="formData.isVisible"
-                  @change="addLog('Visible: ' + formData.isVisible)"
-                />
+                <div
+                  :style="formData.isVisible ? S.checkbox + '; background:var(--brand-primary); border-color:var(--brand-primary);' : S.checkbox"
+                  @click="formData.isVisible = !formData.isVisible; addLog('Visible: ' + formData.isVisible)"
+                  role="checkbox"
+                  :aria-checked="formData.isVisible"
+                >
+                  <svg v-if="formData.isVisible" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
                 Visible
               </label>
             </div>

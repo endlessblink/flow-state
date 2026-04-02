@@ -58,27 +58,27 @@ const PWAFrame = (screenContent: string, title: string) => `
     height: 844px;
     background: #1a1a1a;
     border-radius: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
+    border: 3px solid var(--glass-border);
     overflow: hidden;
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 24px 48px var(--overlay-heavy);
     display: flex;
     flex-direction: column;
   ">
     <!-- Status Bar -->
     <div style="
       height: 44px;
-      background: linear-gradient(135deg, rgba(28, 25, 45, 0.95) 0%, rgba(35, 32, 52, 0.95) 100%);
+      background: linear-gradient(135deg, var(--surface-secondary) 0%, var(--surface-primary) 100%);
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 0 24px;
-      font-size: 12px;
+      font-size: var(--text-xs);
       font-weight: 600;
-      color: rgba(255, 255, 255, 0.9);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-subtle);
     ">
       <span>9:41</span>
-      <div style="display: flex; gap: 6px; align-items: center;">
+      <div style="display: flex; gap: var(--space-1_5); align-items: center;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 11h2"/></svg>
       </div>
@@ -87,35 +87,35 @@ const PWAFrame = (screenContent: string, title: string) => `
     <!-- App Header -->
     <div style="
       height: 44px;
-      background: rgba(28, 25, 45, 0.92);
+      background: var(--surface-secondary);
       backdrop-filter: blur(20px);
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 0 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid var(--border-subtle);
     ">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary);">
         <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
       </svg>
       <span style="
-        font-size: 15px;
+        font-size: var(--text-sm);
         font-weight: 600;
-        color: rgba(255, 255, 255, 0.95);
+        color: var(--text-primary);
         letter-spacing: 0.01em;
       ">${title}</span>
-      <div style="display: flex; gap: 12px; align-items: center;">
+      <div style="display: flex; gap: var(--space-3); align-items: center;">
         <div style="
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #22c55e;
-          box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+          background: var(--color-success);
+          box-shadow: var(--success-glow);
         "></div>
         <span style="
-          font-size: 13px;
+          font-size: var(--text-meta);
           font-weight: 500;
-          color: rgba(78, 205, 196, 1);
+          color: var(--brand-primary);
           letter-spacing: 0.02em;
         ">25:00</span>
       </div>
@@ -125,7 +125,7 @@ const PWAFrame = (screenContent: string, title: string) => `
     <div style="
       flex: 1;
       overflow: hidden;
-      background: linear-gradient(180deg, rgba(18, 18, 26, 1) 0%, rgba(22, 20, 35, 1) 100%);
+      background: var(--app-background-gradient);
     ">
       ${screenContent}
     </div>
@@ -133,17 +133,17 @@ const PWAFrame = (screenContent: string, title: string) => `
     <!-- Concept Label (instead of real nav) -->
     <div style="
       height: 56px;
-      background: rgba(28, 25, 45, 0.85);
+      background: var(--surface-secondary);
       backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid var(--glass-border);
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 0 12px;
     ">
       <span style="
-        font-size: 10px;
-        color: rgba(255, 255, 255, 0.3);
+        font-size: var(--text-xs);
+        color: var(--text-disabled);
         text-transform: uppercase;
         letter-spacing: 0.1em;
       ">Conceptual Design — Not in Mobile Nav</span>
@@ -166,93 +166,93 @@ export const Board: Story = {
   },
   render: () => ({
     template: PWAFrame(`
-      <div style="padding: 10px; overflow-y: auto; height: 100%; font-size: 11px;">
+      <div style="padding: var(--space-2_5); overflow-y: auto; height: 100%; font-size: var(--text-xs);">
         <!-- View Type Tabs -->
         <div style="
           display: flex;
-          gap: 6px;
-          margin-bottom: 10px;
-          padding: 4px;
-          background: rgba(45, 40, 70, 0.15);
-          border-radius: 10px;
+          gap: var(--space-1_5);
+          margin-bottom: var(--space-2_5);
+          padding: var(--space-1);
+          background: var(--glass-bg-subtle);
+          border-radius: var(--radius-lg);
         ">
           <button style="
             flex: 1;
-            padding: 5px 8px;
-            background: rgba(78, 205, 196, 0.15);
-            border: 1px solid rgba(78, 205, 196, 0.5);
-            border-radius: 8px;
-            color: #4ECDC4;
-            font-size: 10px;
+            padding: var(--space-1_5) var(--space-2);
+            background: var(--state-active-bg);
+            border: 1px solid var(--state-active-border);
+            border-radius: var(--radius-md);
+            color: var(--brand-primary);
+            font-size: var(--text-xs);
             font-weight: 600;
           ">Priority</button>
           <button style="
             flex: 1;
-            padding: 5px 8px;
+            padding: var(--space-1_5) var(--space-2);
             background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 10px;
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
+            font-size: var(--text-xs);
           ">Date</button>
           <button style="
             flex: 1;
-            padding: 5px 8px;
+            padding: var(--space-1_5) var(--space-2);
             background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 10px;
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
+            font-size: var(--text-xs);
           ">Status</button>
         </div>
 
         <!-- Kanban Columns -->
-        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;">
+        <div style="display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: var(--space-2);">
           <!-- High Priority Column -->
           <div style="
             min-width: 200px;
-            background: rgba(45, 40, 70, 0.15);
-            border-radius: 12px;
-            padding: 10px;
+            background: var(--glass-bg-light);
+            border-radius: var(--radius-lg);
+            padding: var(--space-2_5);
           ">
             <div style="
               display: flex;
               justify-content: space-between;
               align-items: center;
-              margin-bottom: 8px;
+              margin-bottom: var(--space-2);
             ">
-              <span style="font-size: 10px; font-weight: 600; color: #f87171;">High</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: var(--priority-high-text);">High</span>
               <span style="
-                padding: 1px 6px;
-                background: rgba(239, 68, 68, 0.2);
-                border-radius: 12px;
-                font-size: 10px;
-                color: #f87171;
+                padding: 1px var(--space-1_5);
+                background: var(--priority-high-bg);
+                border-radius: var(--radius-full);
+                font-size: var(--text-xs);
+                color: var(--priority-high-text);
               ">3</span>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; flex-direction: column; gap: var(--space-1_5);">
               <div style="
-                background: rgba(35, 32, 52, 0.95);
-                border: 1px solid rgba(239, 68, 68, 0.3);
-                border-radius: 8px;
-                padding: 8px;
+                background: var(--canvas-task-bg);
+                border: 1px solid var(--danger-border-subtle);
+                border-radius: var(--radius-md);
+                padding: var(--space-2);
               ">
-                <div style="font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.95); margin-bottom: 6px; line-height: 1.3;">Fix critical auth bug</div>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                  <span style="padding: 1px 5px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); border-radius: 4px; font-size: 9px; color: #f87171;">High</span>
-                  <span style="font-size: 9px; color: rgba(255, 255, 255, 0.5);">Today</span>
+                <div style="font-size: var(--text-xs); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-1_5); line-height: 1.3;">Fix critical auth bug</div>
+                <div style="display: flex; gap: var(--space-1_5); align-items: center;">
+                  <span style="padding: 1px 5px; background: var(--priority-high-bg); border: 1px solid var(--priority-high-border); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--priority-high-text);">High</span>
+                  <span style="font-size: var(--text-xs); color: var(--text-muted);">Today</span>
                 </div>
               </div>
               <div style="
-                background: rgba(35, 32, 52, 0.95);
-                border: 1px solid rgba(239, 68, 68, 0.3);
-                border-radius: 8px;
-                padding: 8px;
+                background: var(--canvas-task-bg);
+                border: 1px solid var(--danger-border-subtle);
+                border-radius: var(--radius-md);
+                padding: var(--space-2);
               ">
-                <div style="font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.95); margin-bottom: 6px; line-height: 1.3;">Deploy production hotfix</div>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                  <span style="padding: 1px 5px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); border-radius: 4px; font-size: 9px; color: #f87171;">High</span>
-                  <span style="font-size: 9px; color: rgba(255, 255, 255, 0.5);">Tomorrow</span>
+                <div style="font-size: var(--text-xs); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-1_5); line-height: 1.3;">Deploy production hotfix</div>
+                <div style="display: flex; gap: var(--space-1_5); align-items: center;">
+                  <span style="padding: 1px 5px; background: var(--priority-high-bg); border: 1px solid var(--priority-high-border); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--priority-high-text);">High</span>
+                  <span style="font-size: var(--text-xs); color: var(--text-muted);">Tomorrow</span>
                 </div>
               </div>
             </div>
@@ -261,36 +261,36 @@ export const Board: Story = {
           <!-- Medium Priority Column -->
           <div style="
             min-width: 200px;
-            background: rgba(45, 40, 70, 0.15);
-            border-radius: 12px;
-            padding: 10px;
+            background: var(--glass-bg-light);
+            border-radius: var(--radius-lg);
+            padding: var(--space-2_5);
           ">
             <div style="
               display: flex;
               justify-content: space-between;
               align-items: center;
-              margin-bottom: 8px;
+              margin-bottom: var(--space-2);
             ">
-              <span style="font-size: 10px; font-weight: 600; color: #fb923c;">Medium</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: var(--priority-medium-text);">Medium</span>
               <span style="
-                padding: 1px 6px;
-                background: rgba(249, 115, 22, 0.2);
-                border-radius: 12px;
-                font-size: 10px;
-                color: #fb923c;
+                padding: 1px var(--space-1_5);
+                background: var(--priority-medium-bg);
+                border-radius: var(--radius-full);
+                font-size: var(--text-xs);
+                color: var(--priority-medium-text);
               ">5</span>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; flex-direction: column; gap: var(--space-1_5);">
               <div style="
-                background: rgba(35, 32, 52, 0.95);
-                border: 1px solid rgba(249, 115, 22, 0.3);
-                border-radius: 8px;
-                padding: 8px;
+                background: var(--canvas-task-bg);
+                border: 1px solid var(--priority-medium-border);
+                border-radius: var(--radius-md);
+                padding: var(--space-2);
               ">
-                <div style="font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.95); margin-bottom: 6px; line-height: 1.3;">Review Q4 marketing plan</div>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                  <span style="padding: 1px 5px; background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.5); border-radius: 4px; font-size: 9px; color: #fb923c;">Medium</span>
-                  <span style="font-size: 9px; color: rgba(255, 255, 255, 0.5);">This Week</span>
+                <div style="font-size: var(--text-xs); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-1_5); line-height: 1.3;">Review Q4 marketing plan</div>
+                <div style="display: flex; gap: var(--space-1_5); align-items: center;">
+                  <span style="padding: 1px 5px; background: var(--priority-medium-bg); border: 1px solid var(--priority-medium-border); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--priority-medium-text);">Medium</span>
+                  <span style="font-size: var(--text-xs); color: var(--text-muted);">This Week</span>
                 </div>
               </div>
             </div>
@@ -299,36 +299,36 @@ export const Board: Story = {
           <!-- Low Priority Column -->
           <div style="
             min-width: 200px;
-            background: rgba(45, 40, 70, 0.15);
-            border-radius: 12px;
-            padding: 10px;
+            background: var(--glass-bg-light);
+            border-radius: var(--radius-lg);
+            padding: var(--space-2_5);
           ">
             <div style="
               display: flex;
               justify-content: space-between;
               align-items: center;
-              margin-bottom: 8px;
+              margin-bottom: var(--space-2);
             ">
-              <span style="font-size: 10px; font-weight: 600; color: #60a5fa;">Low</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: var(--priority-low-text);">Low</span>
               <span style="
-                padding: 1px 6px;
-                background: rgba(59, 130, 246, 0.2);
-                border-radius: 12px;
-                font-size: 10px;
-                color: #60a5fa;
+                padding: 1px var(--space-1_5);
+                background: var(--priority-low-bg);
+                border-radius: var(--radius-full);
+                font-size: var(--text-xs);
+                color: var(--priority-low-text);
               ">2</span>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; flex-direction: column; gap: var(--space-1_5);">
               <div style="
-                background: rgba(35, 32, 52, 0.95);
-                border: 1px solid rgba(59, 130, 246, 0.3);
-                border-radius: 8px;
-                padding: 8px;
+                background: var(--canvas-task-bg);
+                border: 1px solid var(--priority-low-border);
+                border-radius: var(--radius-md);
+                padding: var(--space-2);
               ">
-                <div style="font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.95); margin-bottom: 6px; line-height: 1.3;">Update team wiki</div>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                  <span style="padding: 1px 5px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); border-radius: 4px; font-size: 9px; color: #60a5fa;">Low</span>
-                  <span style="font-size: 9px; color: rgba(255, 255, 255, 0.5);">Next Week</span>
+                <div style="font-size: var(--text-xs); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-1_5); line-height: 1.3;">Update team wiki</div>
+                <div style="display: flex; gap: var(--space-1_5); align-items: center;">
+                  <span style="padding: 1px 5px; background: var(--priority-low-bg); border: 1px solid var(--priority-low-border); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--priority-low-text);">Low</span>
+                  <span style="font-size: var(--text-xs); color: var(--text-muted);">Next Week</span>
                 </div>
               </div>
             </div>
@@ -357,121 +357,121 @@ export const Calendar: Story = {
       <div style="display: flex; flex-direction: column; height: 100%;">
         <!-- Calendar Header -->
         <div style="
-          padding: 12px 16px;
-          background: rgba(28, 25, 45, 0.6);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding: var(--space-3) var(--space-4);
+          background: var(--glass-bg-heavy);
+          border-bottom: 1px solid var(--border-subtle);
         ">
           <div style="
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: var(--space-2_5);
           ">
             <button style="
-              padding: 6px;
-              background: rgba(45, 40, 70, 0.15);
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 8px;
-              color: rgba(255, 255, 255, 0.7);
+              padding: var(--space-1_5);
+              background: var(--glass-bg-subtle);
+              border: 1px solid var(--glass-border);
+              border-radius: var(--radius-md);
+              color: var(--text-secondary);
             ">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
-            <span style="font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.95);">Today Feb 13</span>
+            <span style="font-size: var(--text-meta); font-weight: 600; color: var(--text-primary);">Today Feb 13</span>
             <button style="
-              padding: 6px;
-              background: rgba(45, 40, 70, 0.15);
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 8px;
-              color: rgba(255, 255, 255, 0.7);
+              padding: var(--space-1_5);
+              background: var(--glass-bg-subtle);
+              border: 1px solid var(--glass-border);
+              border-radius: var(--radius-md);
+              color: var(--text-secondary);
             ">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
-          <div style="display: flex; gap: 6px;">
+          <div style="display: flex; gap: var(--space-1_5);">
             <button style="
               flex: 1;
-              padding: 6px 10px;
-              background: rgba(78, 205, 196, 0.15);
-              border: 1px solid rgba(78, 205, 196, 0.5);
-              border-radius: 8px;
-              color: #4ECDC4;
-              font-size: 11px;
+              padding: var(--space-1_5) var(--space-2_5);
+              background: var(--state-active-bg);
+              border: 1px solid var(--state-active-border);
+              border-radius: var(--radius-md);
+              color: var(--brand-primary);
+              font-size: var(--text-xs);
               font-weight: 600;
             ">Day</button>
             <button style="
               flex: 1;
-              padding: 6px 10px;
+              padding: var(--space-1_5) var(--space-2_5);
               background: transparent;
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 8px;
-              color: rgba(255, 255, 255, 0.5);
-              font-size: 11px;
+              border: 1px solid var(--glass-border);
+              border-radius: var(--radius-md);
+              color: var(--text-muted);
+              font-size: var(--text-xs);
             ">Week</button>
             <button style="
               flex: 1;
-              padding: 6px 10px;
+              padding: var(--space-1_5) var(--space-2_5);
               background: transparent;
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 8px;
-              color: rgba(255, 255, 255, 0.5);
-              font-size: 11px;
+              border: 1px solid var(--glass-border);
+              border-radius: var(--radius-md);
+              color: var(--text-muted);
+              font-size: var(--text-xs);
             ">Month</button>
           </div>
         </div>
 
         <!-- Time Grid -->
-        <div style="flex: 1; overflow-y: auto; padding: 0 12px;">
-          <div style="position: relative; height: 48px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-            <span style="position: absolute; left: 0; top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.4);">9:00</span>
+        <div style="flex: 1; overflow-y: auto; padding: 0 var(--space-3);">
+          <div style="position: relative; height: 48px; border-bottom: 1px solid var(--border-subtle);">
+            <span style="position: absolute; left: 0; top: var(--space-2); font-size: var(--text-xs); color: var(--text-subtle);">9:00</span>
           </div>
 
           <!-- 10:00 with task -->
-          <div style="position: relative; height: 96px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-            <span style="position: absolute; left: 0; top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.4);">10:00</span>
+          <div style="position: relative; height: 96px; border-bottom: 1px solid var(--border-subtle);">
+            <span style="position: absolute; left: 0; top: var(--space-2); font-size: var(--text-xs); color: var(--text-subtle);">10:00</span>
             <div style="
               position: absolute; left: 48px; right: 0; top: 4px; height: 88px;
               background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.25));
               border-left: 3px solid #f87171;
-              border-radius: 8px;
-              padding: 8px;
+              border-radius: var(--radius-md);
+              padding: var(--space-2);
             ">
-              <div style="font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin-bottom: 4px;">Team standup</div>
-              <div style="font-size: 11px; color: rgba(255, 255, 255, 0.6);">10:00 - 10:30</div>
+              <div style="font-size: var(--text-xs); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-1);">Team standup</div>
+              <div style="font-size: var(--text-xs); color: var(--text-secondary);">10:00 - 10:30</div>
             </div>
           </div>
 
-          <div style="position: relative; height: 48px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-            <span style="position: absolute; left: 0; top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.4);">11:00</span>
+          <div style="position: relative; height: 48px; border-bottom: 1px solid var(--border-subtle);">
+            <span style="position: absolute; left: 0; top: var(--space-2); font-size: var(--text-xs); color: var(--text-subtle);">11:00</span>
           </div>
 
           <!-- Current time line -->
-          <div style="position: relative; height: 48px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-            <span style="position: absolute; left: 0; top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.4);">12:00</span>
-            <div style="position: absolute; left: 48px; right: 0; top: 24px; height: 2px; background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);">
-              <div style="position: absolute; left: -6px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></div>
+          <div style="position: relative; height: 48px; border-bottom: 1px solid var(--border-subtle);">
+            <span style="position: absolute; left: 0; top: var(--space-2); font-size: var(--text-xs); color: var(--text-subtle);">12:00</span>
+            <div style="position: absolute; left: 48px; right: 0; top: 24px; height: 2px; background: var(--color-danger); box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);">
+              <div style="position: absolute; left: -6px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-danger);"></div>
             </div>
           </div>
 
           <!-- 13:00 with task -->
-          <div style="position: relative; height: 96px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-            <span style="position: absolute; left: 0; top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.4);">13:00</span>
+          <div style="position: relative; height: 96px; border-bottom: 1px solid var(--border-subtle);">
+            <span style="position: absolute; left: 0; top: var(--space-2); font-size: var(--text-xs); color: var(--text-subtle);">13:00</span>
             <div style="
               position: absolute; left: 48px; right: 0; top: 4px; height: 88px;
               background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.25));
               border-left: 3px solid #60a5fa;
-              border-radius: 8px;
-              padding: 8px;
+              border-radius: var(--radius-md);
+              padding: var(--space-2);
             ">
-              <div style="font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin-bottom: 4px;">Code review session</div>
-              <div style="font-size: 11px; color: rgba(255, 255, 255, 0.6);">13:00 - 13:30</div>
+              <div style="font-size: var(--text-xs); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-1);">Code review session</div>
+              <div style="font-size: var(--text-xs); color: var(--text-secondary);">13:00 - 13:30</div>
             </div>
           </div>
 
-          <div style="position: relative; height: 48px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-            <span style="position: absolute; left: 0; top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.4);">14:00</span>
+          <div style="position: relative; height: 48px; border-bottom: 1px solid var(--border-subtle);">
+            <span style="position: absolute; left: 0; top: var(--space-2); font-size: var(--text-xs); color: var(--text-subtle);">14:00</span>
           </div>
-          <div style="position: relative; height: 48px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-            <span style="position: absolute; left: 0; top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.4);">15:00</span>
+          <div style="position: relative; height: 48px; border-bottom: 1px solid var(--border-subtle);">
+            <span style="position: absolute; left: 0; top: var(--space-2); font-size: var(--text-xs); color: var(--text-subtle);">15:00</span>
           </div>
         </div>
       </div>
@@ -505,41 +505,41 @@ export const Canvas: Story = {
         <!-- Toolbar -->
         <div style="
           position: absolute;
-          top: 12px;
-          left: 12px;
-          right: 12px;
+          top: var(--space-3);
+          left: var(--space-3);
+          right: var(--space-3);
           display: flex;
-          gap: 8px;
+          gap: var(--space-2);
           z-index: 10;
         ">
           <button style="
-            padding: 8px 12px;
-            background: rgba(28, 25, 45, 0.85);
+            padding: var(--space-2) var(--space-3);
+            background: var(--glass-bg-heavy);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 11px;
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
+            font-size: var(--text-xs);
             font-weight: 500;
           ">+ Task</button>
           <button style="
-            padding: 8px 12px;
-            background: rgba(28, 25, 45, 0.85);
+            padding: var(--space-2) var(--space-3);
+            background: var(--glass-bg-heavy);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 11px;
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
+            font-size: var(--text-xs);
             font-weight: 500;
           ">+ Group</button>
           <div style="flex: 1;"></div>
           <button style="
-            padding: 8px;
-            background: rgba(28, 25, 45, 0.85);
+            padding: var(--space-2);
+            background: var(--glass-bg-heavy);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
           ">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
@@ -548,99 +548,99 @@ export const Canvas: Story = {
         </div>
 
         <!-- Canvas Content -->
-        <div style="position: relative; height: 100%; padding: 60px 12px 12px 12px;">
+        <div style="position: relative; height: 100%; padding: 60px var(--space-3) var(--space-3) var(--space-3);">
           <!-- Task Node 1 -->
           <div style="
             position: absolute; left: 24px; top: 80px; width: 200px;
-            background: rgba(35, 32, 52, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 8px;
-            padding: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            background: var(--canvas-task-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: var(--space-2);
+            box-shadow: 0 4px 12px var(--overlay-bg);
           ">
-            <div style="font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin-bottom: 5px;">Design new feature mockups</div>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <span style="padding: 1px 5px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); border-radius: 4px; font-size: 9px; color: #f87171;">High</span>
-              <span style="font-size: 9px; color: rgba(255, 255, 255, 0.5);">Today</span>
+            <div style="font-size: var(--text-xs); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-1_5);">Design new feature mockups</div>
+            <div style="display: flex; gap: var(--space-1_5); align-items: center;">
+              <span style="padding: 1px 5px; background: var(--priority-high-bg); border: 1px solid var(--priority-high-border); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--priority-high-text);">High</span>
+              <span style="font-size: var(--text-xs); color: var(--text-muted);">Today</span>
             </div>
           </div>
 
           <!-- Group Node -->
           <div style="
             position: absolute; left: 150px; top: 200px; width: 220px; height: 160px;
-            background: rgba(38, 35, 55, 0.7);
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 16px;
-            padding: 8px;
+            background: var(--glass-bg-medium);
+            border: 2px dashed var(--glass-border);
+            border-radius: var(--radius-xl);
+            padding: var(--space-2);
           ">
-            <div style="font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Sprint Tasks (3)</div>
+            <div style="font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-2); text-transform: uppercase; letter-spacing: 0.05em;">Sprint Tasks (3)</div>
             <div style="
-              background: rgba(35, 32, 52, 0.95);
-              border: 1px solid rgba(255, 255, 255, 0.2);
-              border-radius: 8px;
-              padding: 8px;
-              margin-bottom: 6px;
+              background: var(--canvas-task-bg);
+              border: 1px solid var(--glass-border);
+              border-radius: var(--radius-md);
+              padding: var(--space-2);
+              margin-bottom: var(--space-1_5);
             ">
-              <div style="font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.95);">API integration</div>
+              <div style="font-size: var(--text-xs); font-weight: 500; color: var(--text-primary);">API integration</div>
             </div>
             <div style="
-              background: rgba(35, 32, 52, 0.95);
-              border: 1px solid rgba(255, 255, 255, 0.2);
-              border-radius: 8px;
-              padding: 8px;
+              background: var(--canvas-task-bg);
+              border: 1px solid var(--glass-border);
+              border-radius: var(--radius-md);
+              padding: var(--space-2);
             ">
-              <div style="font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.95);">Unit tests</div>
+              <div style="font-size: var(--text-xs); font-weight: 500; color: var(--text-primary);">Unit tests</div>
             </div>
           </div>
 
           <!-- Task Node 2 -->
           <div style="
             position: absolute; right: 24px; top: 120px; width: 180px;
-            background: rgba(35, 32, 52, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 8px;
-            padding: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            background: var(--canvas-task-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: var(--space-2);
+            box-shadow: 0 4px 12px var(--overlay-bg);
           ">
-            <div style="font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin-bottom: 5px;">Update documentation</div>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <span style="padding: 1px 5px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); border-radius: 4px; font-size: 9px; color: #60a5fa;">Low</span>
+            <div style="font-size: var(--text-xs); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-1_5);">Update documentation</div>
+            <div style="display: flex; gap: var(--space-1_5); align-items: center;">
+              <span style="padding: 1px 5px; background: var(--priority-low-bg); border: 1px solid var(--priority-low-border); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--priority-low-text);">Low</span>
             </div>
           </div>
 
           <!-- Task Node 3 -->
           <div style="
             position: absolute; left: 40px; bottom: 100px; width: 190px;
-            background: rgba(35, 32, 52, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 8px;
-            padding: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            background: var(--canvas-task-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: var(--space-2);
+            box-shadow: 0 4px 12px var(--overlay-bg);
           ">
-            <div style="font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin-bottom: 5px;">Refactor auth module</div>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <span style="padding: 1px 5px; background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.5); border-radius: 4px; font-size: 9px; color: #fb923c;">Medium</span>
-              <span style="font-size: 9px; color: rgba(255, 255, 255, 0.5);">Tomorrow</span>
+            <div style="font-size: var(--text-xs); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-1_5);">Refactor auth module</div>
+            <div style="display: flex; gap: var(--space-1_5); align-items: center;">
+              <span style="padding: 1px 5px; background: var(--priority-medium-bg); border: 1px solid var(--priority-medium-border); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--priority-medium-text);">Medium</span>
+              <span style="font-size: var(--text-xs); color: var(--text-muted);">Tomorrow</span>
             </div>
           </div>
         </div>
 
         <!-- Minimap -->
         <div style="
-          position: absolute; bottom: 16px; right: 16px;
+          position: absolute; bottom: var(--space-4); right: var(--space-4);
           width: 100px; height: 70px;
-          background: rgba(28, 25, 45, 0.85);
+          background: var(--glass-bg-heavy);
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 8px;
-          padding: 4px;
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius-md);
+          padding: var(--space-1);
         ">
           <div style="
             width: 100%; height: 100%;
             background:
               radial-gradient(circle at 30% 30%, rgba(239, 68, 68, 0.3) 0%, transparent 20%),
               radial-gradient(circle at 70% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 20%);
-            border-radius: 4px;
+            border-radius: var(--radius-sm);
           "></div>
         </div>
       </div>
@@ -663,33 +663,33 @@ export const MorningDashboard: Story = {
   },
   render: () => ({
     template: PWAFrame(`
-      <div style="overflow-y: auto; height: 100%; padding: 12px;">
+      <div style="overflow-y: auto; height: 100%; padding: var(--space-3);">
         <!-- Greeting + Score Row -->
         <div style="
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 12px;
+          margin-bottom: var(--space-3);
         ">
           <div style="flex: 1;">
-            <h1 style="font-size: 1.25rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0 0 4px 0; line-height: 1.2;">Good morning, there</h1>
-            <p style="font-size: 11px; color: rgba(255, 255, 255, 0.55); margin: 0 0 4px 0;">Saturday, March 7, 2026</p>
-            <p style="font-size: 11px; font-style: italic; color: rgba(255, 255, 255, 0.35); margin: 0;">The way to get started is to quit talking and begin doing.</p>
+            <h1 style="font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin: 0 0 var(--space-1) 0; line-height: 1.2;">Good morning, there</h1>
+            <p style="font-size: var(--text-xs); color: var(--text-secondary); margin: 0 0 var(--space-1) 0;">Saturday, March 7, 2026</p>
+            <p style="font-size: var(--text-xs); font-style: italic; color: var(--text-subtle); margin: 0;">The way to get started is to quit talking and begin doing.</p>
           </div>
           <div style="
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px 12px;
-            background: rgba(45, 40, 70, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
+            display: flex; align-items: center; gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            background: var(--glass-bg-soft);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
             backdrop-filter: blur(12px);
             flex-shrink: 0;
           ">
-            <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(78, 205, 196, 0.2); border: 1.5px solid #4ECDC4; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #4ECDC4;">1</div>
-            <div style="width: 48px; height: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; overflow: hidden;">
-              <div style="width: 35%; height: 100%; background: linear-gradient(90deg, #4ECDC4, #3db8af); border-radius: 2px;"></div>
+            <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--brand-primary-subtle); border: 1.5px solid var(--brand-primary); display: flex; align-items: center; justify-content: center; font-size: var(--text-xs); font-weight: 700; color: var(--brand-primary);">1</div>
+            <div style="width: 48px; height: 4px; background: var(--border-subtle); border-radius: var(--radius-xs); overflow: hidden;">
+              <div style="width: 35%; height: 100%; background: linear-gradient(90deg, #4ECDC4, #3db8af); border-radius: var(--radius-xs);"></div>
             </div>
-            <div style="display: flex; align-items: center; gap: 3px; font-size: 10px; color: #fb923c;">
+            <div style="display: flex; align-items: center; gap: 3px; font-size: var(--text-xs); color: var(--color-warning);">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="#fb923c" stroke="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
               0
             </div>
@@ -698,113 +698,113 @@ export const MorningDashboard: Story = {
 
         <!-- Big 3 Card -->
         <div style="
-          background: rgba(35, 32, 52, 0.6);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
-          padding: 12px;
-          margin-bottom: 12px;
+          background: var(--canvas-task-bg);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-lg);
+          padding: var(--space-3);
+          margin-bottom: var(--space-3);
         ">
-          <div style="margin-bottom: 8px;">
-            <div style="font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin-bottom: 2px;">Today's Big 3</div>
-            <div style="font-size: 10px; color: rgba(255, 255, 255, 0.4);">Drag tasks from the left into your focus zones</div>
+          <div style="margin-bottom: var(--space-2);">
+            <div style="font-size: var(--text-meta); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-0_5);">Today's Big 3</div>
+            <div style="font-size: var(--text-xs); color: var(--text-subtle);">Drag tasks from the left into your focus zones</div>
           </div>
 
-          <div style="display: flex; gap: 8px; min-height: 200px;">
+          <div style="display: flex; gap: var(--space-2); min-height: 200px;">
             <!-- Task Pool -->
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-              <div style="padding: 6px 8px; background: rgba(45, 40, 70, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; font-size: 10px; color: rgba(255, 255, 255, 0.35);">Search tasks...</div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: var(--space-2);">
+              <div style="padding: var(--space-1_5) var(--space-2); background: var(--glass-bg-soft); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); font-size: var(--text-xs); color: var(--text-subtle);">Search tasks...</div>
               <div>
-                <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
-                  <span style="width: 3px; height: 12px; border-radius: 2px; background: #f87171;"></span>
-                  <span style="font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.05em;">Overdue</span>
-                  <span style="font-size: 9px; color: rgba(255,255,255,0.3); background: rgba(45,40,70,0.4); padding: 0 4px; border-radius: 3px;">2</span>
+                <div style="display: flex; align-items: center; gap: var(--space-1); margin-bottom: var(--space-1);">
+                  <span style="width: 3px; height: 12px; border-radius: var(--radius-xs); background: var(--color-danger);"></span>
+                  <span style="font-size: var(--text-xs); font-weight: 600; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.05em;">Overdue</span>
+                  <span style="font-size: var(--text-xs); color: var(--text-muted); background: var(--glass-bg-soft); padding: 0 var(--space-1); border-radius: var(--radius-sm);">2</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 3px;">
-                  <div style="padding: 6px 8px; background: rgba(35, 32, 52, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; font-size: 10px; color: rgba(255, 255, 255, 0.9); cursor: grab;">Fix landing page CTA</div>
-                  <div style="padding: 6px 8px; background: rgba(35, 32, 52, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; font-size: 10px; color: rgba(255, 255, 255, 0.9); cursor: grab;">Review PR #42</div>
+                  <div style="padding: var(--space-1_5) var(--space-2); background: var(--canvas-task-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--text-primary); cursor: grab;">Fix landing page CTA</div>
+                  <div style="padding: var(--space-1_5) var(--space-2); background: var(--canvas-task-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--text-primary); cursor: grab;">Review PR #42</div>
                 </div>
               </div>
               <div>
-                <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
-                  <span style="width: 3px; height: 12px; border-radius: 2px; background: #4ECDC4;"></span>
-                  <span style="font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.05em;">Due Today</span>
-                  <span style="font-size: 9px; color: rgba(255,255,255,0.3); background: rgba(45,40,70,0.4); padding: 0 4px; border-radius: 3px;">3</span>
+                <div style="display: flex; align-items: center; gap: var(--space-1); margin-bottom: var(--space-1);">
+                  <span style="width: 3px; height: 12px; border-radius: var(--radius-xs); background: var(--brand-primary);"></span>
+                  <span style="font-size: var(--text-xs); font-weight: 600; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.05em;">Due Today</span>
+                  <span style="font-size: var(--text-xs); color: var(--text-muted); background: var(--glass-bg-soft); padding: 0 var(--space-1); border-radius: var(--radius-sm);">3</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 3px;">
-                  <div style="padding: 6px 8px; background: rgba(35, 32, 52, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; font-size: 10px; color: rgba(255, 255, 255, 0.9); cursor: grab;">Ship v1.3 release</div>
-                  <div style="padding: 6px 8px; background: rgba(35, 32, 52, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; font-size: 10px; color: rgba(255, 255, 255, 0.9); cursor: grab;">Update API docs</div>
-                  <div style="padding: 6px 8px; background: rgba(35, 32, 52, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; font-size: 10px; color: rgba(255, 255, 255, 0.9); cursor: grab;">Write unit tests</div>
+                  <div style="padding: var(--space-1_5) var(--space-2); background: var(--canvas-task-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--text-primary); cursor: grab;">Ship v1.3 release</div>
+                  <div style="padding: var(--space-1_5) var(--space-2); background: var(--canvas-task-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--text-primary); cursor: grab;">Update API docs</div>
+                  <div style="padding: var(--space-1_5) var(--space-2); background: var(--canvas-task-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--text-primary); cursor: grab;">Write unit tests</div>
                 </div>
               </div>
-              <div style="display: flex; gap: 4px; margin-top: auto;">
-                <div style="flex: 1; padding: 6px 8px; background: rgba(45, 40, 70, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; font-size: 10px; color: rgba(255, 255, 255, 0.35);">Create a new task...</div>
-                <button style="padding: 6px 8px; background: rgba(45, 40, 70, 0.4); border: 1px solid #4ECDC4; border-radius: 8px; font-size: 10px; font-weight: 600; color: #4ECDC4; white-space: nowrap;">Add</button>
+              <div style="display: flex; gap: var(--space-1); margin-top: auto;">
+                <div style="flex: 1; padding: var(--space-1_5) var(--space-2); background: var(--glass-bg-soft); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); font-size: var(--text-xs); color: var(--text-subtle);">Create a new task...</div>
+                <button style="padding: var(--space-1_5) var(--space-2); background: var(--glass-bg-soft); border: 1px solid var(--brand-primary); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600; color: var(--brand-primary); white-space: nowrap;">Add</button>
               </div>
             </div>
 
             <!-- Drop Zones -->
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; background: rgba(45, 40, 70, 0.25); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; backdrop-filter: blur(8px);">
-              <div style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 2px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;">
-                <span style="font-size: 10px; font-weight: 700; color: #4ECDC4;">1.</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.35);">Top priority</span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); background: var(--glass-bg-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); backdrop-filter: blur(8px);">
+              <div style="flex: 1; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 2px dashed var(--glass-border); border-radius: var(--radius-md);">
+                <span style="font-size: var(--text-xs); font-weight: 700; color: var(--brand-primary);">1.</span>
+                <span style="font-size: var(--text-xs); color: var(--text-subtle);">Top priority</span>
               </div>
-              <div style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 2px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;">
-                <span style="font-size: 10px; font-weight: 700; color: #4ECDC4;">2.</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.35);">Second focus</span>
+              <div style="flex: 1; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 2px dashed var(--glass-border); border-radius: var(--radius-md);">
+                <span style="font-size: var(--text-xs); font-weight: 700; color: var(--brand-primary);">2.</span>
+                <span style="font-size: var(--text-xs); color: var(--text-subtle);">Second focus</span>
               </div>
-              <div style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 2px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;">
-                <span style="font-size: 10px; font-weight: 700; color: #4ECDC4;">3.</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.35);">One more thing</span>
+              <div style="flex: 1; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 2px dashed var(--glass-border); border-radius: var(--radius-md);">
+                <span style="font-size: var(--text-xs); font-weight: 700; color: var(--brand-primary);">3.</span>
+                <span style="font-size: var(--text-xs); color: var(--text-subtle);">One more thing</span>
               </div>
-              <button style="padding: 8px 12px; background: rgba(45, 40, 70, 0.4); border: 1px solid #4ECDC4; border-radius: 8px; font-size: 11px; font-weight: 600; color: #4ECDC4; opacity: 0.4; backdrop-filter: blur(8px); width: 100%;">Start My Day</button>
+              <button style="padding: var(--space-2) var(--space-3); background: var(--glass-bg-soft); border: 1px solid var(--brand-primary); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600; color: var(--brand-primary); opacity: 0.4; backdrop-filter: blur(8px); width: 100%;">Start My Day</button>
             </div>
           </div>
         </div>
 
         <!-- Bottom Row: Missions + News -->
-        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-3);">
           <!-- Daily Missions -->
-          <div style="flex: 1; background: rgba(35, 32, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 12px;">
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ECDC4" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-              <span style="font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.9);">Daily Missions</span>
+          <div style="flex: 1; background: var(--canvas-task-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--space-3);">
+            <div style="display: flex; align-items: center; gap: var(--space-1_5); margin-bottom: var(--space-2);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: var(--text-primary);">Daily Missions</span>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.2);"></div>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.7);">Complete 3 tasks</span>
+            <div style="display: flex; flex-direction: column; gap: var(--space-1_5);">
+              <div style="display: flex; align-items: center; gap: var(--space-1_5);">
+                <div style="width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--glass-border);"></div>
+                <span style="font-size: var(--text-xs); color: var(--text-secondary);">Complete 3 tasks</span>
               </div>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.2);"></div>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.7);">Focus for 25 min</span>
+              <div style="display: flex; align-items: center; gap: var(--space-1_5);">
+                <div style="width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--glass-border);"></div>
+                <span style="font-size: var(--text-xs); color: var(--text-secondary);">Focus for 25 min</span>
               </div>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 14px; height: 14px; border-radius: 50%; background: rgba(78,205,196,0.2); border: 1.5px solid #4ECDC4; display: flex; align-items: center; justify-content: center;">
+              <div style="display: flex; align-items: center; gap: var(--space-1_5);">
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: var(--brand-primary-subtle); border: 1.5px solid var(--brand-primary); display: flex; align-items: center; justify-content: center;">
                   <svg width="8" height="8" viewBox="0 0 16 16" fill="none"><path d="M5 8l2 2 4-4" stroke="#4ECDC4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.4); text-decoration: line-through;">Open app</span>
+                <span style="font-size: var(--text-xs); color: var(--text-subtle); text-decoration: line-through;">Open app</span>
               </div>
             </div>
           </div>
 
           <!-- Tech News -->
-          <div style="flex: 1; background: rgba(35, 32, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 12px;">
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ECDC4" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/></svg>
-              <span style="font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.9);">Tech News</span>
+          <div style="flex: 1; background: var(--canvas-task-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--space-3);">
+            <div style="display: flex; align-items: center; gap: var(--space-1_5); margin-bottom: var(--space-2);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-primary)" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/></svg>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: var(--text-primary);">Tech News</span>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: var(--space-2);">
               <div>
-                <div style="font-size: 10px; color: rgba(255, 255, 255, 0.85); line-height: 1.3; margin-bottom: 2px;">Show HN: Open-source task manager</div>
-                <div style="font-size: 9px; color: rgba(255, 255, 255, 0.3);">github.com · 142 pts</div>
+                <div style="font-size: var(--text-xs); color: var(--text-primary); line-height: 1.3; margin-bottom: var(--space-0_5);">Show HN: Open-source task manager</div>
+                <div style="font-size: var(--text-xs); color: var(--text-subtle);">github.com · 142 pts</div>
               </div>
               <div>
-                <div style="font-size: 10px; color: rgba(255, 255, 255, 0.85); line-height: 1.3; margin-bottom: 2px;">Vue 4 RFC: Signals and fine-grained reactivity</div>
-                <div style="font-size: 9px; color: rgba(255, 255, 255, 0.3);">vuejs.org · 98 pts</div>
+                <div style="font-size: var(--text-xs); color: var(--text-primary); line-height: 1.3; margin-bottom: var(--space-0_5);">Vue 4 RFC: Signals and fine-grained reactivity</div>
+                <div style="font-size: var(--text-xs); color: var(--text-subtle);">vuejs.org · 98 pts</div>
               </div>
               <div>
-                <div style="font-size: 10px; color: rgba(255, 255, 255, 0.85); line-height: 1.3; margin-bottom: 2px;">Tauri 3.0 ships with mobile support</div>
-                <div style="font-size: 9px; color: rgba(255, 255, 255, 0.3);">tauri.app · 87 pts</div>
+                <div style="font-size: var(--text-xs); color: var(--text-primary); line-height: 1.3; margin-bottom: var(--space-0_5);">Tauri 3.0 ships with mobile support</div>
+                <div style="font-size: var(--text-xs); color: var(--text-subtle);">tauri.app · 87 pts</div>
               </div>
             </div>
           </div>
@@ -812,17 +812,17 @@ export const MorningDashboard: Story = {
 
         <!-- Quick Capture -->
         <div style="
-          display: flex; align-items: center; gap: 8px;
-          padding: 10px 12px;
-          background: rgba(45, 40, 70, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
+          display: flex; align-items: center; gap: var(--space-2);
+          padding: var(--space-2_5) var(--space-3);
+          background: var(--glass-bg-soft);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-lg);
           backdrop-filter: blur(12px);
         ">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-subtle);">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          <span style="font-size: 11px; color: rgba(255, 255, 255, 0.35);">Quick capture a task...</span>
+          <span style="font-size: var(--text-xs); color: var(--text-subtle);">Quick capture a task...</span>
         </div>
       </div>
     `, 'Morning')
@@ -849,12 +849,12 @@ export const Focus: Story = {
         align-items: center;
         justify-content: center;
         height: 100%;
-        padding: 24px;
+        padding: var(--space-6);
       ">
         <div style="text-align: center;">
-          <div style="font-size: 48px; margin-bottom: 16px;">⏱</div>
-          <div style="font-size: 20px; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin-bottom: 8px;">Focus View</div>
-          <div style="font-size: 12px; color: rgba(255, 255, 255, 0.5);">Timer-centric productivity interface</div>
+          <div style="font-size: 48px; margin-bottom: var(--space-4);">⏱</div>
+          <div style="font-size: var(--text-xl); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-2);">Focus View</div>
+          <div style="font-size: var(--text-xs); color: var(--text-muted);">Timer-centric productivity interface</div>
         </div>
       </div>
     `, 'Focus')
@@ -876,69 +876,69 @@ export const Performance: Story = {
   },
   render: () => ({
     template: PWAFrame(`
-      <div style="height: 100%; overflow-y: auto; padding: 16px;">
+      <div style="height: 100%; overflow-y: auto; padding: var(--space-4);">
         <!-- Grade Card -->
         <div style="
-          background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(78, 205, 196, 0.08));
-          border: 1px solid rgba(78, 205, 196, 0.3);
-          border-radius: 16px;
-          padding: 20px;
+          background: linear-gradient(135deg, var(--brand-primary-subtle), var(--brand-bg-dim));
+          border: 1px solid var(--brand-primary-dim);
+          border-radius: var(--radius-xl);
+          padding: var(--space-5);
           text-align: center;
-          margin-bottom: 16px;
+          margin-bottom: var(--space-4);
         ">
-          <div style="font-size: 56px; font-weight: 900; color: #4ECDC4; text-shadow: 0 0 24px rgba(78, 205, 196, 0.5); margin-bottom: 8px; line-height: 1;">A+</div>
-          <div style="font-size: 13px; color: rgba(255, 255, 255, 0.8); font-weight: 600;">Excellent Performance</div>
+          <div style="font-size: 56px; font-weight: 900; color: var(--brand-primary); text-shadow: 0 0 24px var(--brand-primary-dim); margin-bottom: var(--space-2); line-height: 1;">A+</div>
+          <div style="font-size: var(--text-meta); color: var(--text-secondary); font-weight: 600;">Excellent Performance</div>
         </div>
 
         <!-- Summary Stats -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
-          <div style="background: rgba(35, 32, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; text-align: center;">
-            <div style="font-size: 10px; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Tasks Completed</div>
-            <div style="font-size: 22px; font-weight: 700; color: rgba(255, 255, 255, 0.95);">127</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2_5); margin-bottom: var(--space-4);">
+          <div style="background: var(--canvas-task-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-3); text-align: center;">
+            <div style="font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1_5);">Tasks Completed</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary);">127</div>
           </div>
-          <div style="background: rgba(35, 32, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; text-align: center;">
-            <div style="font-size: 10px; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Focus Hours</div>
-            <div style="font-size: 22px; font-weight: 700; color: rgba(255, 255, 255, 0.95);">42.5</div>
+          <div style="background: var(--canvas-task-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-3); text-align: center;">
+            <div style="font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1_5);">Focus Hours</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary);">42.5</div>
           </div>
-          <div style="background: rgba(35, 32, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; text-align: center;">
-            <div style="font-size: 10px; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Avg Completion</div>
-            <div style="font-size: 22px; font-weight: 700; color: rgba(255, 255, 255, 0.95);">94%</div>
+          <div style="background: var(--canvas-task-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-3); text-align: center;">
+            <div style="font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1_5);">Avg Completion</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary);">94%</div>
           </div>
-          <div style="background: rgba(35, 32, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; text-align: center;">
-            <div style="font-size: 10px; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Streak</div>
-            <div style="font-size: 22px; font-weight: 700; color: rgba(255, 255, 255, 0.95);">7 days</div>
+          <div style="background: var(--canvas-task-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-3); text-align: center;">
+            <div style="font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1_5);">Streak</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary);">7 days</div>
           </div>
         </div>
 
         <!-- Benchmark Results -->
-        <div style="background: rgba(35, 32, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 14px; margin-bottom: 16px;">
-          <div style="font-size: 11px; color: rgba(255, 255, 255, 0.7); font-weight: 600; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Benchmark Results</div>
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <span style="font-size: 11px; color: rgba(255, 255, 255, 0.8);">Task Creation</span>
-              <span style="font-size: 11px; font-weight: 600; color: #4ECDC4;">0.8ms</span>
+        <div style="background: var(--canvas-task-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-xl); padding: var(--space-3_5); margin-bottom: var(--space-4);">
+          <div style="font-size: var(--text-xs); color: var(--text-secondary); font-weight: 600; margin-bottom: var(--space-3); text-transform: uppercase; letter-spacing: 0.05em;">Benchmark Results</div>
+          <div style="display: flex; flex-direction: column; gap: var(--space-2_5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border-subtle);">
+              <span style="font-size: var(--text-xs); color: var(--text-secondary);">Task Creation</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: var(--brand-primary);">0.8ms</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <span style="font-size: 11px; color: rgba(255, 255, 255, 0.8);">Board Render</span>
-              <span style="font-size: 11px; font-weight: 600; color: #4ECDC4;">12.3ms</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border-subtle);">
+              <span style="font-size: var(--text-xs); color: var(--text-secondary);">Board Render</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: var(--brand-primary);">12.3ms</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <span style="font-size: 11px; color: rgba(255, 255, 255, 0.8);">Calendar Render</span>
-              <span style="font-size: 11px; font-weight: 600; color: #4ECDC4;">18.7ms</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border-subtle);">
+              <span style="font-size: var(--text-xs); color: var(--text-secondary);">Calendar Render</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: var(--brand-primary);">18.7ms</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 11px; color: rgba(255, 255, 255, 0.8);">Supabase Sync</span>
-              <span style="font-size: 11px; font-weight: 600; color: #4ECDC4;">45.2ms</span>
+              <span style="font-size: var(--text-xs); color: var(--text-secondary);">Supabase Sync</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: var(--brand-primary);">45.2ms</span>
             </div>
           </div>
         </div>
 
         <!-- Recommendations -->
-        <div style="background: rgba(35, 32, 52, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 14px;">
-          <div style="font-size: 11px; color: rgba(255, 255, 255, 0.7); font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Recommendations</div>
-          <ul style="margin: 0; padding-left: 16px; font-size: 11px; color: rgba(255, 255, 255, 0.8); line-height: 1.6;">
-            <li style="margin-bottom: 6px;">All systems optimal</li>
-            <li style="margin-bottom: 6px;">Continue current workflow</li>
+        <div style="background: var(--canvas-task-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-xl); padding: var(--space-3_5);">
+          <div style="font-size: var(--text-xs); color: var(--text-secondary); font-weight: 600; margin-bottom: var(--space-2_5); text-transform: uppercase; letter-spacing: 0.05em;">Recommendations</div>
+          <ul style="margin: 0; padding-left: var(--space-4); font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6;">
+            <li style="margin-bottom: var(--space-1_5);">All systems optimal</li>
+            <li style="margin-bottom: var(--space-1_5);">Continue current workflow</li>
             <li>Great job on 7-day streak!</li>
           </ul>
         </div>

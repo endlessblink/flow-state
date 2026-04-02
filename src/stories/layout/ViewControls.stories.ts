@@ -465,8 +465,8 @@ export const InteractiveDemo: Story = {
                     borderRadius: 'var(--radius-sm)',
                     fontSize: 'var(--text-xs)',
                     fontWeight: '500',
-                    background: task.priority === 'high' ? '#fef2f2' : task.priority === 'medium' ? '#fffbeb' : '#eff6ff',
-                    color: task.priority === 'high' ? '#dc2626' : task.priority === 'medium' ? '#d97706' : '#2563eb',
+                    background: task.priority === 'high' ? 'var(--priority-high-bg)' : task.priority === 'medium' ? 'var(--priority-medium-bg)' : 'var(--priority-low-bg)',
+                    color: task.priority === 'high' ? 'var(--priority-high-text)' : task.priority === 'medium' ? 'var(--priority-medium-text)' : 'var(--priority-low-text)',
                   }"
                 >
                   {{ task.priority }}
@@ -479,8 +479,8 @@ export const InteractiveDemo: Story = {
                     borderRadius: 'var(--radius-sm)',
                     fontSize: 'var(--text-xs)',
                     fontWeight: '500',
-                    background: task.status === 'done' ? '#f0fdf4' : task.status === 'in_progress' ? '#fffbeb' : '#f9fafb',
-                    color: task.status === 'done' ? '#166534' : task.status === 'in_progress' ? '#d97706' : '#6b7280',
+                    background: task.status === 'done' ? 'var(--status-done-bg)' : task.status === 'in_progress' ? 'var(--status-in-progress-bg)' : 'var(--status-backlog-bg)',
+                    color: task.status === 'done' ? 'var(--status-done-text)' : task.status === 'in_progress' ? 'var(--status-in-progress-text)' : 'var(--status-backlog-text)',
                   }"
                 >
                   {{ task.status }}

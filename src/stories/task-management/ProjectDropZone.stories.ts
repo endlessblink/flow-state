@@ -57,7 +57,7 @@ export const Default: Story = {
     },
     template: `
       <div style="padding: var(--space-10); min-height: 400px; background: var(--app-background-gradient);">
-        <h3 style="margin: 0 0 var(--space-4) 0; font-size: 18px; color: var(--text-primary);">Project Drop Zone</h3>
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Project Drop Zone</h3>
         <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Drag and drop zone for task organization</p>
 
         <div style="width: 300px; margin: 0 auto var(--space-6);">
@@ -91,7 +91,7 @@ export const Default: Story = {
 
         <div v-if="lastDrop" style="margin-top: var(--space-5); padding: var(--space-3); background: var(--glass-bg-subtle); border-radius: var(--radius-lg); border: 1px solid var(--glass-border);">
           <h4 style="margin: 0 0 var(--space-2) 0; font-size: var(--text-sm); color: var(--text-primary); font-weight: bold;">Last Drop Event:</h4>
-          <pre style="margin: 0; font-size: 12px; color: var(--text-muted); white-space: pre-wrap;">{{ lastDrop }}</pre>
+          <pre style="margin: 0; font-size: var(--text-xs); color: var(--text-muted); white-space: pre-wrap;">{{ lastDrop }}</pre>
         </div>
       </div>
     `,
@@ -161,7 +161,7 @@ export const InteractiveDemo: Story = {
     },
     template: `
       <div style="padding: var(--space-10); min-height: 600px; background: var(--app-background-gradient);">
-        <h3 style="margin: 0 0 var(--space-4) 0; font-size: 18px; color: var(--text-primary);">Interactive Drop Zone Demo</h3>
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Interactive Drop Zone Demo</h3>
         <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Drag tasks to different project drop zones</p>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8);">
@@ -183,9 +183,9 @@ export const InteractiveDemo: Story = {
                     borderRadius: 'var(--radius-md)',
                     fontSize: 'var(--text-xs)',
                     fontWeight: 'bold',
-                    background: task.priority === 'high' ? 'rgba(239, 68, 68, 0.15)' : task.priority === 'medium' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                    color: task.priority === 'high' ? '#ef4444' : task.priority === 'medium' ? '#f59e0b' : '#3b82f6',
-                    border: task.priority === 'high' ? '1px solid rgba(239, 68, 68, 0.3)' : task.priority === 'medium' ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
+                    background: task.priority === 'high' ? 'var(--priority-high-bg)' : task.priority === 'medium' ? 'var(--priority-medium-bg)' : 'var(--priority-low-bg)',
+                    color: task.priority === 'high' ? 'var(--color-priority-high)' : task.priority === 'medium' ? 'var(--color-priority-medium)' : 'var(--color-priority-low)',
+                    border: task.priority === 'high' ? '1px solid var(--priority-high-border)' : task.priority === 'medium' ? '1px solid var(--priority-medium-border)' : '1px solid var(--priority-low-border)',
                   }"
                 >
                   {{ task.priority }}
@@ -203,10 +203,10 @@ export const InteractiveDemo: Story = {
                 @dragenter="() => handleDragEnter('frontend')"
                 @dragleave="handleDragLeave"
                 @drop="(e) => handleDrop(e, 'frontend')"
-                style="padding: var(--space-5); border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: var(--radius-xl); text-align: center; transition: all 0.2s ease;"
+                style="padding: var(--space-5); border: 2px dashed var(--glass-border); border-radius: var(--radius-xl); text-align: center; transition: all 0.2s ease;"
                 :style="{
-                  borderColor: dropZoneActive === 'frontend' ? 'rgba(78, 205, 196, 0.5)' : 'rgba(255, 255, 255, 0.2)',
-                  background: dropZoneActive === 'frontend' ? 'rgba(78, 205, 196, 0.1)' : 'transparent',
+                  borderColor: dropZoneActive === 'frontend' ? 'var(--state-active-border)' : 'var(--glass-border)',
+                  background: dropZoneActive === 'frontend' ? 'var(--brand-primary-subtle)' : 'transparent',
                 }"
               >
                 <div style="font-size: var(--text-base); font-weight: bold; color: var(--text-primary); margin-bottom: var(--space-1);">🎨 Frontend Project</div>
@@ -218,10 +218,10 @@ export const InteractiveDemo: Story = {
                 @dragenter="() => handleDragEnter('backend')"
                 @dragleave="handleDragLeave"
                 @drop="(e) => handleDrop(e, 'backend')"
-                style="padding: var(--space-5); border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: var(--radius-xl); text-align: center; transition: all 0.2s ease;"
+                style="padding: var(--space-5); border: 2px dashed var(--glass-border); border-radius: var(--radius-xl); text-align: center; transition: all 0.2s ease;"
                 :style="{
-                  borderColor: dropZoneActive === 'backend' ? 'rgba(78, 205, 196, 0.5)' : 'rgba(255, 255, 255, 0.2)',
-                  background: dropZoneActive === 'backend' ? 'rgba(78, 205, 196, 0.1)' : 'transparent',
+                  borderColor: dropZoneActive === 'backend' ? 'var(--state-active-border)' : 'var(--glass-border)',
+                  background: dropZoneActive === 'backend' ? 'var(--brand-primary-subtle)' : 'transparent',
                 }"
               >
                 <div style="font-size: var(--text-base); font-weight: bold; color: var(--text-primary); margin-bottom: var(--space-1);">⚙️ Backend Project</div>
@@ -233,10 +233,10 @@ export const InteractiveDemo: Story = {
                 @dragenter="() => handleDragEnter('design')"
                 @dragleave="handleDragLeave"
                 @drop="(e) => handleDrop(e, 'design')"
-                style="padding: var(--space-5); border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: var(--radius-xl); text-align: center; transition: all 0.2s ease;"
+                style="padding: var(--space-5); border: 2px dashed var(--glass-border); border-radius: var(--radius-xl); text-align: center; transition: all 0.2s ease;"
                 :style="{
-                  borderColor: dropZoneActive === 'design' ? 'rgba(78, 205, 196, 0.5)' : 'rgba(255, 255, 255, 0.2)',
-                  background: dropZoneActive === 'design' ? 'rgba(78, 205, 196, 0.1)' : 'transparent',
+                  borderColor: dropZoneActive === 'design' ? 'var(--state-active-border)' : 'var(--glass-border)',
+                  background: dropZoneActive === 'design' ? 'var(--brand-primary-subtle)' : 'transparent',
                 }"
               >
                 <div style="font-size: var(--text-base); font-weight: bold; color: var(--text-primary); margin-bottom: var(--space-1);">🎯 Design Project</div>
@@ -251,15 +251,15 @@ export const InteractiveDemo: Story = {
           <h4 style="margin: 0 0 var(--space-3) 0; font-size: var(--text-base); color: var(--text-primary);">Drop Statistics</h4>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
             <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: bold; color: rgba(78, 205, 196, 1);">{{ dropCount }}</div>
+              <div style="font-size: var(--text-2xl); font-weight: bold; color: var(--brand-primary);">{{ dropCount }}</div>
               <div style="font-size: var(--text-sm); color: var(--text-secondary);">Total Drops</div>
             </div>
             <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: bold; color: rgba(78, 205, 196, 1);">{{ tasks.length - droppedTasks.length }}</div>
+              <div style="font-size: var(--text-2xl); font-weight: bold; color: var(--brand-primary);">{{ tasks.length - droppedTasks.length }}</div>
               <div style="font-size: var(--text-sm); color: var(--text-secondary);">Remaining Tasks</div>
             </div>
             <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: bold; color: rgba(78, 205, 196, 1);">{{ droppedTasks.length }}</div>
+              <div style="font-size: var(--text-2xl); font-weight: bold; color: var(--brand-primary);">{{ droppedTasks.length }}</div>
               <div style="font-size: var(--text-sm); color: var(--text-secondary);">Dropped Tasks</div>
             </div>
           </div>

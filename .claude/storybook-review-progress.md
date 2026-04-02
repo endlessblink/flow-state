@@ -4,10 +4,13 @@
 
 **Filter unchecked only:** `grep '\- \[ \]' .claude/storybook-review-progress.md`
 
-## Categories (18 total, 163 stories)
+## Categories (26 total, 226 stories)
 
-- [x] **ai** (4 stories)
+- [x] **ai** (7 stories)
   - [x] AIChatPanel
+  - [x] AIMemoryHealthDashboard
+  - [x] AIQualityDashboard
+  - [x] AISetupWizard
   - [x] AITaskAssistPopover
   - [x] ChatMessage
   - [x] TaskQuickEditPopover
@@ -22,6 +25,9 @@
   - [x] SignupForm
   - [x] UserProfile
 
+- [x] **base** (1 story)
+  - [x] AppLogo
+
 - [x] **calendar** (5 stories)
   - [x] CalendarDayView
   - [x] CalendarHeader
@@ -29,7 +35,7 @@
   - [x] CalendarStatusOverlays
   - [x] CalendarWeekView
 
-- [x] **canvas** (15 stories)
+- [x] **canvas** (21 stories)
   - [x] MultiSelectionOverlay
   - [x] CanvasContextMenu
   - [x] CanvasEmptyState
@@ -38,21 +44,22 @@
   - [x] CanvasSelectionBox
   - [x] CanvasStatusBanner
   - [x] CanvasToolbar
+  - [x] DayRotationBanner
   - [x] EdgeContextMenu
   - [x] GroupEditModal
   - [x] GroupNodeSimple
   - [x] GroupSettingsMenu
+  - [x] InboxFilters
+  - [x] InboxPanel
+  - [x] InboxTimeFilters
   - [x] ResizeHandle
   - [x] SectionSelectionModal
   - [x] SectionSelector
   - [x] TaskNode
   - [x] UnifiedGroupModal
 
-- [x] **canvas/inbox** (5 stories)
+- [x] **canvas/inbox** (2 stories)
   - [x] CalendarInboxComponents
-  - [x] InboxFilters
-  - [x] InboxPanel
-  - [x] InboxTimeFilters
   - [x] UnifiedInboxComponents
 
 - [x] **canvas/node** (6 stories)
@@ -79,21 +86,41 @@
   - [x] StreakCounter
   - [x] XpBar
 
-- [x] **kanban** (7 stories)
+- [x] **kanban** (6 stories)
   - [x] KanbanColumn
   - [x] KanbanSwimlane
   - [x] TaskCard
   - [x] TaskCardSubComponents
   - [x] TaskList
   - [x] TaskRow
-  - [x] TaskTable
 
-- [x] **layout** (12 stories)
+- [x] **kde-widget** (18 stories)
+  - [x] CompactRepresentation
+  - [x] ConfigPanel
+  - [x] ControlButtons
+  - [x] FullScreenOverlay
+  - [x] InlineEditPanel
+  - [x] LoginView
+  - [x] NannyPopup
+  - [x] PinnedTaskChips
+  - [x] PreEndWarningPopup
+  - [x] ProjectSectionHeader
+  - [x] QuickAddRow
+  - [x] SortFilterControls
+  - [x] SystemNotification
+  - [x] TaskListView
+  - [x] TaskRow
+  - [x] TimerView
+  - [x] ToggleChips
+  - [x] WidgetFooter
+
+- [x] **layout** (14 stories)
   - [x] AppHeader
   - [x] AppSidebar
   - [x] BraveBanner
   - [x] CommandPalette
   - [x] ErrorBoundary
+  - [x] KeyboardShortcutsPanel
   - [x] LocalModeBanner
   - [x] RouteErrorBoundary
   - [x] SidebarSmartItem
@@ -103,12 +130,35 @@
   - [x] TauriStartupScreen
   - [x] ViewControls
 
-- [x] **modals** (12 stories)
+- [x] **mobile** (20 stories)
+  - [x] MobileAIChatView
+  - [x] MobileInboxFilters
+  - [x] MobileInboxHeader
+  - [x] MobileInboxQuickAdd
+  - [x] MobileInboxTaskList
+  - [x] MobileInboxView
+  - [x] MobileLayout
+  - [x] MobileNav
+  - [x] MobileQuickSortCapture
+  - [x] MobileQuickSortCard
+  - [x] MobileQuickSortComplete
+  - [x] MobileQuickSortFilters
+  - [x] MobileQuickSortProjectSheet
+  - [x] MobileQuickSortView
+  - [x] MobileTimerView
+  - [x] MobileTodayView
+  - [x] SwipeableTaskItem
+  - [x] TaskCreateBottomSheet
+  - [x] TaskEditBottomSheet
+  - [x] VoiceTaskConfirmation
+
+- [x] **modals** (13 stories)
   - [x] BaseModal-Redesign-Preview
   - [x] BaseModal
   - [x] BatchEditModal
   - [x] ConfirmationModal
   - [x] GroupModal
+  - [x] OnboardingWizard
   - [x] ProjectModal
   - [x] QuickTaskCreate
   - [x] QuickTaskCreateModal
@@ -117,7 +167,20 @@
   - [x] TaskEditModal
   - [x] WelcomeModal
 
-- [x] **primitives** (21 stories)
+- [x] **morning-dashboard** (8 stories)
+  - [x] BigThreeCard
+  - [x] BigThreeSlot
+  - [x] MorningGreeting
+  - [x] MorningNews
+  - [x] MorningQuickCapture
+  - [x] NewsCard
+  - [x] TaskPoolCard
+  - [x] TaskSuggestionChip
+
+- [x] **notifications** (1 story)
+  - [x] ReminderPicker
+
+- [x] **primitives** (23 stories)
   - [x] BaseBadge
   - [x] BaseButton
   - [x] BaseCard
@@ -142,14 +205,18 @@
   - [x] TauriUpdateNotification
   - [x] TiptapEditor
 
-- [x] **pwa** (1 story)
+- [x] **pwa** (2 stories)
+  - [x] PWAConcepts
   - [x] PWAScreens
 
-- [x] **settings** (11 stories)
+- [x] **settings** (14 stories)
   - [x] AboutSettingsTab
   - [x] AccountSettingsTab
+  - [x] AISettingsTab
   - [x] AppearanceSettingsTab
+  - [x] IntegrationsSettingsTab
   - [x] LanguageSettings
+  - [x] NotificationsSettingsTab
   - [x] SettingsDurationPicker
   - [x] SettingsOptionPicker
   - [x] SettingsSection
@@ -158,7 +225,15 @@
   - [x] TimerSettingsTab
   - [x] WorkflowSettingsTab
 
-- [x] **task-management** (22 stories)
+- [x] **sidebar** (6 stories)
+  - [x] SidebarDurationSection
+  - [x] SidebarHeader
+  - [x] SidebarProjectsSection
+  - [x] SidebarQuickTaskInput
+  - [x] SidebarSmartViews
+  - [x] SidebarUserFooter
+
+- [x] **task-management** (24 stories)
   - [x] CalendarInboxPanel
   - [x] CategorySelector
   - [x] DoneToggleVisuals
@@ -195,12 +270,27 @@
   - [x] TaskRowPriority
   - [x] TaskRowProject
 
-- [x] **views** (8 stories)
+- [x] **tasks** (1 story)
+  - [x] TaskAttachments
+
+- [x] **tauri-parity** (7 stories)
+  - [x] AppHeader
+  - [x] AppSidebar
+  - [x] CommandPalette
+  - [x] DoneToggle
+  - [x] DragHandle
+  - [x] GlassEffects
+  - [x] QuickSortStatCard
+
+- [x] **views** (11 stories)
   - [x] AIChatView
   - [x] AllTasksView
   - [x] BoardView
   - [x] CalendarView
+  - [x] CalendarViewVueCal
   - [x] CanvasView
   - [x] FocusView
+  - [x] MorningDashboardView
   - [x] PerformanceView
   - [x] QuickSortView
+  - [x] TodayFlowView

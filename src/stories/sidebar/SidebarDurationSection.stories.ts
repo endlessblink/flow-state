@@ -7,7 +7,7 @@ const S = {
   chevron: 'margin-inline-start: auto; opacity: 0.5; transition: transform 0.15s ease;',
   grid: 'display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); padding: 0 var(--space-4) var(--space-4) var(--space-4);',
   item: 'display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: var(--font-medium); color: var(--text-secondary); cursor: pointer; border: 1px solid transparent;',
-  itemActive: 'display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: var(--font-medium); color: var(--brand-primary); cursor: pointer; border: 1px solid var(--brand-primary); background: rgba(78, 205, 196, 0.06);',
+  itemActive: 'display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: var(--font-medium); color: var(--brand-primary); cursor: pointer; border: 1px solid var(--brand-primary); background: var(--brand-bg-dim);',
   count: 'margin-inline-start: auto; font-size: var(--text-xs); color: var(--text-muted); background: var(--glass-bg-soft); padding: 0 var(--space-1_5); border-radius: var(--radius-sm); min-width: 18px; text-align: center;',
 }
 

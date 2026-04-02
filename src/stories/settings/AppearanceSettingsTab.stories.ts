@@ -45,8 +45,8 @@ const AppearanceSettingsTabMock = defineComponent({
               : 'width: 44px; height: 24px; border-radius: var(--radius-xl); background: var(--surface-tertiary); border: none; cursor: pointer; position: relative;'"
           >
             <span :style="soundEnabled
-              ? 'position: absolute; top: 2px; left: 22px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: left 0.2s;'
-              : 'position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: left 0.2s;'"
+              ? 'position: absolute; top: var(--space-0_5); left: 22px; width: 20px; height: 20px; border-radius: var(--radius-full); background: white; transition: left 0.2s;'
+              : 'position: absolute; top: var(--space-0_5); left: var(--space-0_5); width: 20px; height: 20px; border-radius: var(--radius-full); background: white; transition: left 0.2s;'"
             />
           </button>
         </div>
@@ -72,7 +72,7 @@ const AppearanceSettingsTabMock = defineComponent({
         <div style="display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-6);">
           <h3 style="font-size: var(--text-lg); font-weight: 600; color: var(--text-primary); margin: 0;">Language</h3>
           <div style="display: flex; flex-direction: column; gap: var(--space-2);">
-            <button style="display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg); background: rgba(78, 205, 196, 0.08); box-shadow: 0 0 0 1px var(--brand-primary) inset; cursor: pointer; text-align: start;">
+            <button style="display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg); background: var(--glass-glow); box-shadow: 0 0 0 1px var(--brand-primary) inset; cursor: pointer; text-align: start;">
               <span style="font-size: var(--text-base); font-weight: 500; color: var(--text-primary);">English</span>
               <span style="font-size: var(--text-sm); color: var(--text-secondary);">English</span>
             </button>
@@ -87,7 +87,7 @@ const AppearanceSettingsTabMock = defineComponent({
         <div style="display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-6);">
           <h3 style="font-size: var(--text-lg); font-weight: 600; color: var(--text-primary); margin: 0;">Text Direction</h3>
           <div style="display: flex; flex-direction: column; gap: var(--space-2);">
-            <button style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg); background: rgba(78, 205, 196, 0.08); box-shadow: 0 0 0 1px var(--brand-primary) inset; cursor: pointer; text-align: start;">
+            <button style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg); background: var(--glass-glow); box-shadow: 0 0 0 1px var(--brand-primary) inset; cursor: pointer; text-align: start;">
               <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--surface-primary); color: var(--text-secondary); flex-shrink: 0;">⟷</div>
               <div style="flex: 1;"><span style="font-size: var(--text-base); font-weight: 500; color: var(--text-primary); display: block;">Auto</span><span style="font-size: var(--text-sm); color: var(--text-secondary); display: block; margin-top: var(--space-1);">Automatically detect from language</span></div>
             </button>

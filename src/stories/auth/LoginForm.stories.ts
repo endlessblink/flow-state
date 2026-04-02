@@ -33,7 +33,7 @@ const meta: Meta<typeof LoginForm> = {
       }
       return {
         template: `
-          <div class="login-form-story-container" style="background: var(--app-background-gradient); min-height: 700px; width: 100%; position: relative; overflow: auto; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-lg); padding: 24px 0;">
+          <div class="login-form-story-container" style="background: var(--app-background-gradient); min-height: 700px; width: 100%; position: relative; overflow: auto; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-lg); padding: var(--space-6) 0;">
             <story />
           </div>
         `

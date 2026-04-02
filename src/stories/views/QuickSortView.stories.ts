@@ -73,9 +73,9 @@ const createMockTask = (overrides: Partial<Task> = {}): Task => ({
 
 // Mock projects data
 const mockProjects: Project[] = [
-  { id: 'p1', name: 'Work', color: '#3b82f6', colorType: 'hex', userId: 'user1' },
-  { id: 'p2', name: 'My Projects', color: '#22c55e', colorType: 'hex', userId: 'user1' },
-  { id: 'p3', name: 'Home', color: '#f59e0b', colorType: 'hex', userId: 'user1' }
+  { id: 'p1', name: 'Work', color: 'var(--color-priority-low)', colorType: 'hex', userId: 'user1' },
+  { id: 'p2', name: 'My Projects', color: 'var(--status-done-text)', colorType: 'hex', userId: 'user1' },
+  { id: 'p3', name: 'Home', color: 'var(--color-priority-medium)', colorType: 'hex', userId: 'user1' }
 ]
 
 // Setup fresh Pinia with mock data
@@ -606,8 +606,8 @@ export const CompletionState: Story = {
               align-items: center;
               gap: var(--space-2);
               padding: var(--space-5) var(--space-4);
-              background: rgba(251, 146, 60, 0.1);
-              border: 1px solid rgba(251, 146, 60, 0.3);
+              background: var(--priority-medium-bg);
+              border: 1px solid var(--color-priority-medium-border-medium);
               border-radius: var(--radius-xl);
             ">
               <span style="font-size: var(--text-3xl); font-weight: 700; color: var(--text-primary, #fff);">

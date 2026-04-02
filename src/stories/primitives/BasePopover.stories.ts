@@ -85,7 +85,7 @@ export const Interactive: Story = {
           :y="popoverY"
           @close="isVisible = false"
         >
-          <div style="color: white; padding: var(--space-3);">
+          <div style="color: var(--text-primary); padding: var(--space-3);">
             <h4 style="margin: 0 0 var(--space-2) 0;">Popover Content</h4>
             <p style="margin: 0; font-size: var(--text-sm); color: var(--text-muted);">
               This content is rendered inside the glass popover.

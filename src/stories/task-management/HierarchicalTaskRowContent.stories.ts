@@ -33,12 +33,12 @@ const HierarchicalTaskRowContentMock = defineComponent({
     <div
       :style="{
         display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-        padding: '8px 12px',
+        padding: 'var(--space-2) var(--space-3)',
         paddingLeft: (indentLevel * 20 + 12) + 'px',
-        background: isSelected ? 'rgba(78,205,196,0.08)' : isHovered ? 'var(--glass-bg-light)' : 'transparent',
+        background: isSelected ? 'var(--state-active-bg)' : isHovered ? 'var(--glass-bg-light)' : 'transparent',
         borderRadius: 'var(--radius-md)',
-        border: isTimerActive ? '1px solid var(--timer-active-border, rgba(245,158,11,0.4))' : isOverdue ? '1px solid rgba(239,68,68,0.3)' : '1px solid transparent',
-        boxShadow: isTimerActive ? '0 0 12px var(--timer-active-glow, rgba(245,158,11,0.15))' : 'none',
+        border: isTimerActive ? '1px solid var(--timer-active-border)' : isOverdue ? '1px solid var(--priority-high-bg)' : '1px solid transparent',
+        boxShadow: isTimerActive ? '0 0 12px var(--timer-active-glow)' : 'none',
         opacity: isDragging ? '0.5' : '1',
         cursor: 'pointer',
         transition: 'all 0.15s ease'
@@ -79,16 +79,16 @@ const HierarchicalTaskRowContentMock = defineComponent({
       <!-- Status -->
       <span :style="{
         padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)', fontWeight: '500',
-        background: status === 'done' ? 'rgba(16,185,129,0.15)' : status === 'active' ? 'rgba(59,130,246,0.15)' : 'var(--glass-bg-medium)',
-        color: status === 'done' ? 'var(--success)' : status === 'active' ? 'var(--info)' : 'var(--text-secondary)',
+        background: status === 'done' ? 'var(--status-done-bg)' : status === 'active' ? 'var(--filter-tasks-bg)' : 'var(--glass-bg-medium)',
+        color: status === 'done' ? 'var(--status-done-text)' : status === 'active' ? 'var(--status-planned-text)' : 'var(--text-secondary)',
         flexShrink: '0', textTransform: 'capitalize'
       }">{{ status }}</span>
 
       <!-- Priority Dot -->
       <span :style="{
         width: '10px', height: '10px', borderRadius: '50%', flexShrink: '0',
-        background: priority === 'high' ? 'var(--color-danger)' : priority === 'medium' ? 'var(--color-warning)' : priority === 'low' ? '#3b82f6' : 'rgba(255,255,255,0.2)',
-        boxShadow: priority === 'high' ? '0 0 6px rgba(239,68,68,0.4)' : priority === 'medium' ? '0 0 6px rgba(245,158,11,0.3)' : priority === 'low' ? '0 0 6px rgba(59,130,246,0.3)' : 'none'
+        background: priority === 'high' ? 'var(--color-priority-high)' : priority === 'medium' ? 'var(--color-priority-medium)' : priority === 'low' ? 'var(--color-priority-low)' : 'var(--glass-border)',
+        boxShadow: priority === 'high' ? 'var(--priority-high-glow)' : priority === 'medium' ? 'var(--priority-medium-glow)' : priority === 'low' ? 'var(--priority-low-glow)' : 'none'
       }" />
 
       <!-- Due Date -->
@@ -99,7 +99,7 @@ const HierarchicalTaskRowContentMock = defineComponent({
 
       <!-- Progress -->
       <div v-if="progress > 0" style="width: 60px; flex-shrink: 0;">
-        <div style="position: relative; height: 4px; background: var(--glass-bg-heavy); border-radius: 2px; overflow: hidden;">
+        <div style="position: relative; height: 4px; background: var(--glass-bg-heavy); border-radius: var(--radius-xs); overflow: hidden;">
           <div :style="{ width: progress + '%', height: '100%', background: 'var(--brand-primary)', borderRadius: '2px', transition: 'width 0.3s ease' }" />
         </div>
         <span style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px; display: block; text-align: center;">{{ progress }}%</span>

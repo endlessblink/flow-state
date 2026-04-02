@@ -15,7 +15,7 @@ const mockTasks = [
 const mockProject = {
   id: 'proj1',
   name: 'Productivity App',
-  color: '#4ECDC4',
+  color: 'var(--brand-primary)',
   viewType: 'status' as const,
   createdAt: new Date().toISOString(),
 }
@@ -100,8 +100,8 @@ export const ViewTypes: Story = {
     components: { KanbanSwimlane },
     setup() {
       const statusProject = ref({ ...mockProject, name: 'Status View', viewType: 'status' as const })
-      const dateProject = ref({ ...mockProject, id: 'proj2', name: 'Date View', color: '#FF6B6B', viewType: 'date' as const })
-      const priorityProject = ref({ ...mockProject, id: 'proj3', name: 'Priority View', color: '#9B59B6', viewType: 'priority' as const })
+      const dateProject = ref({ ...mockProject, id: 'proj2', name: 'Date View', color: 'var(--color-priority-high)', viewType: 'date' as const })
+      const priorityProject = ref({ ...mockProject, id: 'proj3', name: 'Priority View', color: 'var(--color-focus)', viewType: 'priority' as const })
       const tasks = ref([...mockTasks])
       return { statusProject, dateProject, priorityProject, tasks }
     },

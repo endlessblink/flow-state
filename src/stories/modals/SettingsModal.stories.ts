@@ -732,16 +732,16 @@ export const DataTab: Story = {
 
               <!-- Danger Zone Section -->
               <div :style="settingGroupStyle">
-                <h3 :style="sectionHeadingStyle" style="color: var(--color-error);">Danger Zone</h3>
+                <h3 :style="sectionHeadingStyle" style="color: var(--color-danger);">Danger Zone</h3>
 
-                <div :style="settingRowStyle" style="border-color: var(--color-error); background: rgba(220, 38, 38, 0.05);">
+                <div :style="settingRowStyle" style="border-color: var(--color-danger); background: var(--color-error-alpha-10);">
                   <div>
-                    <div :style="settingLabelStyle" style="color: var(--color-error);">Clear All Data</div>
+                    <div :style="settingLabelStyle" style="color: var(--color-danger);">Clear All Data</div>
                     <div :style="settingDescStyle">Permanently delete all tasks, projects, and settings</div>
                   </div>
                   <button
                     :style="actionButtonStyle"
-                    style="border-color: var(--color-error); color: var(--color-error);"
+                    style="border-color: var(--color-danger); color: var(--color-danger);"
                   >
                     Clear Data
                   </button>

@@ -2,20 +2,20 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import { h } from 'vue'
 
 const S = {
-  wrapper: 'max-width:430px;margin:0 auto;background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);overflow:hidden;padding:16px',
-  inputCard: 'background:var(--surface-primary);border:1px solid var(--border-primary);border-radius:var(--radius-lg);padding:12px',
-  input: 'width:100%;border:none;background:transparent;color:var(--text-primary);font-size:15px;outline:none;font-family:inherit',
-  quickActions: 'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap',
-  quickBtn: 'display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-full);font-size:12px;color:var(--text-secondary);cursor:pointer',
-  quickBtnActive: 'display:flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(78,205,196,0.1);border:1px solid var(--brand-primary);border-radius:var(--radius-full);font-size:12px;color:var(--brand-primary);cursor:pointer',
-  addBtn: 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--glass-bg-soft);border:1px solid var(--brand-primary);color:var(--brand-primary);font-size:18px;cursor:pointer;margin-left:auto',
-  addBtnDisabled: 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--glass-bg-soft);border:1px solid var(--border-primary);color:var(--text-tertiary);font-size:18px;opacity:0.5',
-  recentSection: 'margin-top:20px',
-  recentTitle: 'font-size:12px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px',
-  recentItem: 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-primary);border-radius:var(--radius-md);margin-bottom:4px',
-  recentCheck: 'color:var(--brand-primary);font-size:14px',
-  recentText: 'font-size:13px;color:var(--text-secondary)',
-  inputRow: 'display:flex;align-items:center;gap:8px',
+  wrapper: 'max-width:430px;margin:0 auto;background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:var(--radius-xl);overflow:hidden;padding:var(--space-4)',
+  inputCard: 'background:var(--surface-primary);border:1px solid var(--border-primary);border-radius:var(--radius-lg);padding:var(--space-3)',
+  input: 'width:100%;border:none;background:transparent;color:var(--text-primary);font-size:var(--text-base);outline:none;font-family:inherit',
+  quickActions: 'display:flex;gap:var(--space-2);margin-top:var(--space-2_5);flex-wrap:wrap',
+  quickBtn: 'display:flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-2_5);background:var(--glass-bg-soft);border:1px solid var(--border-primary);border-radius:var(--radius-full);font-size:var(--text-xs);color:var(--text-secondary);cursor:pointer',
+  quickBtnActive: 'display:flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-2_5);background:var(--brand-primary-subtle);border:1px solid var(--brand-primary);border-radius:var(--radius-full);font-size:var(--text-xs);color:var(--brand-primary);cursor:pointer',
+  addBtn: 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--glass-bg-soft);border:1px solid var(--brand-primary);color:var(--brand-primary);font-size:var(--text-lg);cursor:pointer;margin-left:auto',
+  addBtnDisabled: 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--glass-bg-soft);border:1px solid var(--border-primary);color:var(--text-tertiary);font-size:var(--text-lg);opacity:0.5',
+  recentSection: 'margin-top:var(--space-5)',
+  recentTitle: 'font-size:var(--text-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:var(--space-2)',
+  recentItem: 'display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--surface-primary);border-radius:var(--radius-md);margin-bottom:var(--space-1)',
+  recentCheck: 'color:var(--brand-primary);font-size:var(--text-sm)',
+  recentText: 'font-size:var(--text-meta);color:var(--text-secondary)',
+  inputRow: 'display:flex;align-items:center;gap:var(--space-2)',
 }
 
 const meta: Meta = {

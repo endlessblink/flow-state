@@ -36,7 +36,7 @@ type Story = StoryObj
 // All styles as single-line strings — multiline breaks Storybook rendering
 const S = {
   canvas: 'width:600px; height:400px; background:var(--surface-primary); border-radius:var(--radius-lg); position:relative; overflow:hidden;',
-  selectionBox: 'position:absolute; border:2px solid rgba(78,205,196,0.6); background:rgba(78,205,196,0.1); border-radius:var(--radius-sm); pointer-events:none; z-index:9999;',
+  selectionBox: 'position:absolute; border:2px solid var(--state-active-border); background:var(--brand-primary-subtle); border-radius:var(--radius-sm); pointer-events:none; z-index:9999;',
   node: 'position:absolute; background:var(--glass-bg-solid); border:1px solid var(--glass-border); border-radius:var(--radius-md); padding:var(--space-3); min-width:120px; backdrop-filter:blur(8px);',
   nodeTitle: 'font-size:var(--text-sm); color:var(--text-primary); font-weight:500;',
   nodeStatus: 'font-size:var(--text-xs); color:var(--text-secondary); margin-top:var(--space-1);',

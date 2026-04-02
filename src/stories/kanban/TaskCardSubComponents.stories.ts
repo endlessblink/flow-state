@@ -44,7 +44,7 @@ const TaskCardBadgesMock = defineComponent({
         :style="{
           display: 'inline-flex', alignItems: 'center',
           fontSize: 'var(--text-xs)', fontWeight: dueDateClass ? '500' : '400',
-          color: dueDateClass === 'overdue' ? '#ef4444' : dueDateClass === 'today' ? '#22c55e' : 'var(--text-tertiary)',
+          color: dueDateClass === 'overdue' ? 'var(--color-priority-high)' : dueDateClass === 'today' ? 'var(--status-done-text)' : 'var(--text-tertiary)',
           whiteSpace: 'nowrap'
         }"
       >{{ dueDate }}</span>
@@ -57,7 +57,7 @@ const TaskCardBadgesMock = defineComponent({
 
       <span v-if="(dueDate || subtasksTotal > 0) && pomodoros > 0" style="color: var(--text-subtle); font-size: var(--text-xs); margin: 0 var(--space-1); user-select: none;">·</span>
 
-      <span v-if="pomodoros > 0" style="display: inline-flex; align-items: center; font-size: var(--text-xs); color: rgba(239,68,68,0.6); white-space: nowrap;">
+      <span v-if="pomodoros > 0" style="display: inline-flex; align-items: center; font-size: var(--text-xs); color: var(--priority-high-text); opacity: 0.6; white-space: nowrap;">
         <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: var(--space-1);" />
         {{ pomodoros }}
       </span>
@@ -76,8 +76,8 @@ const TaskCardStatusMock = defineComponent({
       :style="{
         width: '10px', height: '10px', borderRadius: '50%', border: 'none', flexShrink: '0',
         marginRight: 'var(--space-3)', cursor: 'pointer', padding: '0',
-        background: priority === 'high' ? '#ef4444' : priority === 'medium' ? '#f59e0b' : priority === 'low' ? '#3b82f6' : 'rgba(255,255,255,0.2)',
-        boxShadow: priority === 'high' ? '0 0 6px rgba(239,68,68,0.4)' : priority === 'medium' ? '0 0 6px rgba(245,158,11,0.3)' : priority === 'low' ? '0 0 6px rgba(59,130,246,0.3)' : 'none'
+        background: priority === 'high' ? 'var(--color-priority-high)' : priority === 'medium' ? 'var(--color-priority-medium)' : priority === 'low' ? 'var(--color-priority-low)' : 'var(--glass-border)',
+        boxShadow: priority === 'high' ? 'var(--priority-high-glow)' : priority === 'medium' ? 'var(--priority-medium-glow)' : priority === 'low' ? 'var(--priority-low-glow)' : 'none'
       }"
       :title="priority === 'high' ? 'High priority' : priority === 'medium' ? 'Medium priority' : priority === 'low' ? 'Low priority' : 'No priority'"
     />

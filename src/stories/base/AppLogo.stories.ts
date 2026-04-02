@@ -26,12 +26,12 @@ export const AllSizes: Story = {
   render: () => ({
     components: { AppLogo },
     template: `
-      <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg-primary);border-radius:var(--radius-lg)">
-        <div style="text-align:center"><AppLogo size="xs" /><div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">xs (16px)</div></div>
-        <div style="text-align:center"><AppLogo size="sm" /><div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">sm (24px)</div></div>
-        <div style="text-align:center"><AppLogo size="md" /><div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">md (32px)</div></div>
-        <div style="text-align:center"><AppLogo size="lg" /><div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">lg (48px)</div></div>
-        <div style="text-align:center"><AppLogo size="xl" /><div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">xl (64px)</div></div>
+      <div style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4);background:var(--bg-primary);border-radius:var(--radius-lg)">
+        <div style="text-align:center"><AppLogo size="xs" /><div style="font-size:var(--text-xs);color:var(--text-tertiary);margin-top:var(--space-1)">xs (16px)</div></div>
+        <div style="text-align:center"><AppLogo size="sm" /><div style="font-size:var(--text-xs);color:var(--text-tertiary);margin-top:var(--space-1)">sm (24px)</div></div>
+        <div style="text-align:center"><AppLogo size="md" /><div style="font-size:var(--text-xs);color:var(--text-tertiary);margin-top:var(--space-1)">md (32px)</div></div>
+        <div style="text-align:center"><AppLogo size="lg" /><div style="font-size:var(--text-xs);color:var(--text-tertiary);margin-top:var(--space-1)">lg (48px)</div></div>
+        <div style="text-align:center"><AppLogo size="xl" /><div style="font-size:var(--text-xs);color:var(--text-tertiary);margin-top:var(--space-1)">xl (64px)</div></div>
       </div>
     `,
   }),

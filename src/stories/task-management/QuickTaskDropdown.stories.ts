@@ -30,7 +30,7 @@ const QuickTaskDropdownMock = defineComponent({
       </button>
 
       <!-- Dropdown -->
-      <div v-if="isOpen" style="position: absolute; top: 36px; left: 50%; transform: translateX(-50%); width: 280px; background: var(--overlay-component-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); box-shadow: 0 8px 32px rgba(0,0,0,0.4); padding: var(--space-2) 0; z-index: 100; max-height: 400px; overflow-y: auto;">
+      <div v-if="isOpen" style="position: absolute; top: 36px; left: 50%; transform: translateX(-50%); width: 280px; background: var(--overlay-component-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); box-shadow: 0 8px 32px var(--overlay-bg); padding: var(--space-2) 0; z-index: 100; max-height: 400px; overflow-y: auto;">
         <!-- Quick Add Input -->
         <div style="display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1-5) var(--space-3);">
           <input

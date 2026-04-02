@@ -64,9 +64,9 @@ const S = {
   grid: 'width:100%; height:100%; background-image:radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px); background-size:16px 16px; position:relative;',
   taskNode: 'width:280px; padding:var(--space-3); background:var(--canvas-task-bg); backdrop-filter:blur(12px); border:1px solid var(--canvas-task-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); cursor:move; position:absolute;',
   taskNodeCompact: 'width:240px; padding:var(--space-3); background:var(--canvas-task-bg); backdrop-filter:blur(12px); border:1px solid var(--canvas-task-border); border-radius:var(--radius-lg); cursor:move; position:absolute;',
-  selectedNode: 'width:280px; padding:var(--space-3); background:var(--canvas-task-bg); backdrop-filter:blur(12px); border:2px solid var(--primary-bg); border-radius:var(--radius-lg); box-shadow:var(--shadow-xl), 0 0 20px rgba(59,130,246,0.3); cursor:move; position:absolute;',
+  selectedNode: 'width:280px; padding:var(--space-3); background:var(--canvas-task-bg); backdrop-filter:blur(12px); border:2px solid var(--primary-bg); border-radius:var(--radius-lg); box-shadow:var(--shadow-xl), var(--state-selected-glow); cursor:move; position:absolute;',
   taskHeader: 'display:flex; align-items:start; gap:var(--space-2); margin-bottom:var(--space-2);',
-  checkbox: 'margin-top:2px; cursor:pointer;',
+  checkbox: 'margin-top:2px; cursor:pointer; width:16px; height:16px; border-radius:var(--radius-sm); border:2px solid var(--glass-border-hover); background:transparent; flex-shrink:0;',
   taskTitle: 'flex:1; font-size:var(--text-sm); color:var(--text-primary); font-weight:var(--font-medium);',
   tagRow: 'display:flex; gap:var(--space-2); flex-wrap:wrap;',
   tagRowInline: 'display:flex; gap:var(--space-2); flex-wrap:wrap; margin-top:var(--space-1);',
@@ -83,7 +83,7 @@ const S = {
   groupHeaderPink: 'padding:var(--space-3); background:linear-gradient(135deg, rgba(236,72,153,0.2), rgba(251,146,60,0.2)); border-bottom:1px solid var(--canvas-group-border); cursor:move;',
   groupTitleRow: 'display:flex; justify-content:space-between; align-items:center;',
   groupTitle: 'font-size:var(--text-base); font-weight:var(--font-semibold); color:var(--text-primary);',
-  groupBadge: 'padding:var(--space-1) var(--space-2); background:rgba(255,255,255,0.1); border-radius:var(--radius-full); font-size:var(--text-xs); color:var(--text-secondary);',
+  groupBadge: 'padding:var(--space-1) var(--space-2); background:var(--glass-border); border-radius:var(--radius-full); font-size:var(--text-xs); color:var(--text-secondary);',
   groupContent: 'padding:var(--space-3);',
   groupPlaceholder: 'text-align:center; color:var(--text-muted); font-size:var(--text-sm); padding:var(--space-4);',
   groupSubtitle: 'font-size:var(--text-xs); color:var(--text-muted);',
@@ -115,7 +115,7 @@ const S = {
   emptyPrimaryBtn: 'display:flex; align-items:center; gap:var(--space-2); padding:var(--space-3) var(--space-4); background:var(--primary-bg); color:var(--primary-text); border:none; border-radius:var(--radius-md); cursor:pointer; font-size:var(--text-base); font-weight:var(--font-medium); box-shadow:var(--shadow-lg);',
   emptySecondaryBtn: 'display:flex; align-items:center; gap:var(--space-2); padding:var(--space-3) var(--space-4); background:var(--glass-bg-medium); backdrop-filter:blur(8px); color:var(--text-primary); border:1px solid var(--glass-border); border-radius:var(--radius-md); cursor:pointer; font-size:var(--text-base);',
   // Selection story
-  rubberBand: 'position:absolute; border:2px dashed var(--primary-bg); background:rgba(59,130,246,0.1); border-radius:var(--radius-md); pointer-events:none;',
+  rubberBand: 'position:absolute; border:2px dashed var(--primary-bg); background:var(--state-selected-bg); border-radius:var(--radius-md); pointer-events:none;',
   selectionHint: 'position:absolute; padding:var(--space-2) var(--space-3); background:var(--glass-bg-medium); backdrop-filter:blur(8px); border:1px solid var(--glass-border); border-radius:var(--radius-md); font-size:var(--text-xs); color:var(--text-muted); box-shadow:var(--shadow-lg);',
   hintTitle: 'margin-bottom:var(--space-1); color:var(--text-primary); font-weight:var(--font-semibold);',
   hintSub: 'margin-top:var(--space-1); color:var(--text-secondary);',
@@ -148,7 +148,7 @@ export const Default: Story = {
         <div :style="S.grid">
           <div :style="S.taskNode + 'top:150px; left:200px;'">
             <div :style="S.taskHeader">
-              <input type="checkbox" :style="S.checkbox" />
+              <div :style="S.checkbox"></div>
               <div :style="S.taskTitle">Review Q4 marketing proposal</div>
             </div>
             <div :style="S.tagRow">
@@ -158,7 +158,7 @@ export const Default: Story = {
           </div>
           <div :style="S.taskNode + 'top:150px; left:520px;'">
             <div :style="S.taskHeader">
-              <input type="checkbox" :style="S.checkbox" />
+              <div :style="S.checkbox"></div>
               <div :style="S.taskTitle">Update team documentation</div>
             </div>
             <div :style="S.tagRow"><span :style="S.medium">MEDIUM</span></div>
@@ -176,7 +176,7 @@ export const Default: Story = {
           </div>
           <div :style="S.taskNode + 'top:320px; left:620px;'">
             <div :style="S.taskHeader">
-              <input type="checkbox" :style="S.checkbox" />
+              <div :style="S.checkbox"></div>
               <div :style="S.taskTitle">Schedule client call</div>
             </div>
             <div :style="S.tagRow"><span :style="S.low">LOW</span></div>
@@ -248,7 +248,7 @@ export const WithInbox: Story = {
           <div :style="S.grid">
             <div :style="S.taskNode + 'top:200px; left:250px;'">
               <div :style="S.taskHeader">
-                <input type="checkbox" :style="S.checkbox" />
+                <div :style="S.checkbox"></div>
                 <div :style="S.taskTitle">Review Q4 marketing proposal</div>
               </div>
               <div :style="S.tagRow"><span :style="S.high">HIGH</span></div>
@@ -387,8 +387,8 @@ export const BusyCanvas: Story = {
             <div :style="S.minimapDot + 'top:25px; left:80px;'"></div>
             <div :style="S.minimapDot + 'top:40px; left:30px;'"></div>
             <div :style="S.minimapDot + 'top:50px; left:60px;'"></div>
-            <div :style="S.minimapGroup + 'top:30px; left:120px; background:rgba(59,130,246,0.5);'"></div>
-            <div :style="S.minimapGroup + 'top:60px; left:120px; background:rgba(236,72,153,0.5);'"></div>
+            <div :style="S.minimapGroup + 'top:30px; left:120px; background:var(--filter-tasks-border);'"></div>
+            <div :style="S.minimapGroup + 'top:60px; left:120px; background:var(--status-on-hold-border);'"></div>
           </div>
         </div>
         <div :style="S.zoomControls">
@@ -427,21 +427,21 @@ export const WithSelection: Story = {
         <div :style="S.grid">
           <div :style="S.selectedNode + 'top:200px; left:250px;'">
             <div :style="S.taskHeader">
-              <input type="checkbox" :style="S.checkbox" />
+              <div :style="S.checkbox"></div>
               <div :style="S.taskTitle">Review Q4 marketing proposal</div>
             </div>
             <div :style="S.tagRow"><span :style="S.high">HIGH</span></div>
           </div>
           <div :style="S.selectedNode + 'top:350px; left:250px;'">
             <div :style="S.taskHeader">
-              <input type="checkbox" :style="S.checkbox" />
+              <div :style="S.checkbox"></div>
               <div :style="S.taskTitle">Update team documentation</div>
             </div>
             <div :style="S.tagRow"><span :style="S.medium">MEDIUM</span></div>
           </div>
           <div :style="S.taskNode + 'top:200px; left:580px;'">
             <div :style="S.taskHeader">
-              <input type="checkbox" :style="S.checkbox" />
+              <div :style="S.checkbox"></div>
               <div :style="S.taskTitle">Schedule client call</div>
             </div>
             <div :style="S.tagRow"><span :style="S.low">LOW</span></div>

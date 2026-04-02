@@ -1,6 +1,6 @@
 // TASK-1554: Workspace Activity Feed — log + fetch + realtime
 import { ref } from 'vue'
-import { supabase } from './_infrastructure'
+import { getSupabase } from './_infrastructure'
 import { useAuthStore } from '@/stores/auth'
 import type { WorkspaceActivity, ActivityAction, ActivityEntityType } from '@/types/workspace'
 
@@ -61,7 +61,7 @@ export function useWorkspaceActivity() {
     if (unknown.length === 0) return
 
     try {
-      const { data } = await supabase
+      const { data } = await getSupabase()
         .from('workspace_members')
         .select('user_id, display_name, email')
         .in('user_id', unknown)
@@ -92,7 +92,7 @@ export function useWorkspaceActivity() {
     error.value = null
 
     try {
-      const { data, error: dbError } = await supabase
+      const { data, error: dbError } = await getSupabase()
         .from('workspace_activity')
         .select('*')
         .eq('workspace_id', workspaceId)
@@ -133,7 +133,7 @@ export function useWorkspaceActivity() {
     if (!userId || !workspaceId) return
 
     try {
-      const { error: dbError } = await supabase
+      const { error: dbError } = await getSupabase()
         .from('workspace_activity')
         .insert({
           workspace_id: workspaceId,
@@ -160,7 +160,7 @@ export function useWorkspaceActivity() {
   function subscribeToFeed(workspaceId: string): () => void {
     const channelName = `workspace_activity:${workspaceId}`
 
-    const channel = supabase
+    const channel = getSupabase()
       .channel(channelName)
       .on(
         'postgres_changes',
@@ -184,7 +184,7 @@ export function useWorkspaceActivity() {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      getSupabase().removeChannel(channel)
     }
   }
 

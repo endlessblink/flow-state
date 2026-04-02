@@ -1,4 +1,4 @@
-import { type DatabaseContext, supabase } from './_infrastructure'
+import { type DatabaseContext, getSupabase } from './_infrastructure'
 
 export interface TaskAuditEntry {
     event_at: string
@@ -23,7 +23,7 @@ export function useTaskAuditLog(ctx: DatabaseContext) {
     ): Promise<TaskAuditEntry[]> => {
         try {
             return await withRetry(async () => {
-                const { data, error } = await supabase.rpc('search_task_audit', {
+                const { data, error } = await getSupabase().rpc('search_task_audit', {
                     p_query: query || null,
                     p_event_types: eventTypes || null,
                     p_limit: limit,
@@ -40,7 +40,7 @@ export function useTaskAuditLog(ctx: DatabaseContext) {
     const getTaskHistory = async (taskId: string): Promise<TaskAuditEntry[]> => {
         try {
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('task_audit_log')
                     .select('event_at, event_type, task_id, title, status, priority, project_id, is_deleted, old_values, new_values')
                     .eq('task_id', taskId)

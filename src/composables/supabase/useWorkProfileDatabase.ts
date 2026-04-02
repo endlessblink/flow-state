@@ -2,7 +2,7 @@ import {
     toSupabaseWorkProfile, fromSupabaseWorkProfile,
     type SupabaseWorkProfile, type WorkProfile
 } from '@/utils/supabaseMappers'
-import { supabase, type DatabaseContext } from './_infrastructure'
+import { getSupabase, type DatabaseContext } from './_infrastructure'
 
 export function useWorkProfileDatabase(ctx: DatabaseContext) {
     const { getUserIdSafe, withRetry, handleError } = ctx
@@ -12,7 +12,7 @@ export function useWorkProfileDatabase(ctx: DatabaseContext) {
         if (!userId) return null
         try {
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('ai_work_profiles')
                     .select('*')
                     .eq('user_id', userId)
@@ -35,7 +35,7 @@ export function useWorkProfileDatabase(ctx: DatabaseContext) {
         }
         try {
             const payload = toSupabaseWorkProfile(profile, userId)
-            const { error } = await supabase
+            const { error } = await getSupabase()
                 .from('ai_work_profiles')
                 .upsert(payload, { onConflict: 'user_id' })
             if (error) throw error
@@ -57,7 +57,7 @@ export function useWorkProfileDatabase(ctx: DatabaseContext) {
         const userId = getUserIdSafe()
         if (!userId) return
         try {
-            const { error } = await supabase.from('pomodoro_history').insert({
+            const { error } = await getSupabase().from('pomodoro_history').insert({
                 user_id: userId,
                 task_id: entry.taskId,
                 duration: entry.duration,
@@ -84,7 +84,7 @@ export function useWorkProfileDatabase(ctx: DatabaseContext) {
             const since = new Date()
             since.setDate(since.getDate() - sinceDaysAgo)
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('pomodoro_history')
                     .select('*')
                     .eq('user_id', userId)
@@ -93,11 +93,11 @@ export function useWorkProfileDatabase(ctx: DatabaseContext) {
                 if (error) throw error
                 if (!data) return []
                 return data.map((row: Record<string, unknown>) => ({
-                    taskId: row.task_id,
-                    duration: row.duration,
-                    isBreak: row.is_break,
-                    startedAt: row.started_at,
-                    completedAt: row.completed_at
+                    taskId: row.task_id as string | null,
+                    duration: row.duration as number,
+                    isBreak: row.is_break as boolean,
+                    startedAt: row.started_at as string,
+                    completedAt: row.completed_at as string
                 }))
             }, 'fetchPomodoroHistory')
         } catch (e: unknown) {

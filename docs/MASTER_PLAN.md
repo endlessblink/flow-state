@@ -2608,7 +2608,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |
 | ~~**TASK-1445**~~ | **P2** | ✅ **Fix focus mode dropdown closing on hover + overlapping menus — UX research & redesign** (✅ DONE 2026-03-05) |
 | ~~**TASK-1459**~~ | **P2** | ✅ **Storybook story quality pass — fix broken/unclear stories for Teleport components and PWA Screens** (✅ DONE 2026-03-07) |
-| **TASK-1444** | **P1** | 🔄 **Tauri desktop app design parity — investigate and fix visual discrepancies vs web/Storybook** (🔄 IN PROGRESS 2026-03-04) |
+| ~~**TASK-1444**~~ | **P1** | ✅ **Tauri desktop app design parity — investigate and fix visual discrepancies vs web/Storybook** (✅ DONE — Obsolete) **Archived**: Superseded by TASK-1715 (Electron migration) |
 | **INQUIRY-1438** | **P0** | 🔄 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (🔄 IN PROGRESS 2026-03-03) |
 | ~~**BUG-1451**~~ | **P1** | ✅ **Task done/deleted state inconsistent across views — Board hideDoneTasks coupled to Canvas/Calendar** (✅ DONE 2026-03-05) |
 | ~~**BUG-1449**~~ | **P1** | ✅ **KDE widget notification barrage + popup dismiss + nanny task selection** (✅ DONE 2026-03-05) |
@@ -3431,9 +3431,11 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
-### ROAD-010: Gamification - "Cyberflow" (🔄 IN PROGRESS)
+### ~~ROAD-010~~: Gamification - "Cyberflow" (✅ DONE — Obsolete)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-01-30)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE — Obsolete (2026-01-30)
+
+**Archived**: Gamification removed in TASK-1527
 
 **Parent Feature**: FEATURE-1118
 
@@ -3452,9 +3454,11 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
-### TASK-1317: Cyberflow RPG — Full Cyberpunk Game UI Overhaul (🔄 IN PROGRESS)
+### ~~TASK-1317~~: Cyberflow RPG — Full Cyberpunk Game UI Overhaul (✅ DONE — Obsolete)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-07)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE — Obsolete (2026-02-07)
+
+**Archived**: Gamification removed in TASK-1527
 
 **Parent**: FEATURE-1118
 
@@ -3561,9 +3565,11 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
-### FEATURE-1118: Gamification System - Design & Implementation (🔄 IN PROGRESS)
+### ~~FEATURE-1118~~: Gamification System - Design & Implementation (✅ DONE — Obsolete)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-01-30)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE — Obsolete (2026-01-30)
+
+**Archived**: Gamification removed in TASK-1527
 
 **Goal**: Add game-like elements to FlowState to increase engagement and make productivity feel rewarding.
 
@@ -4005,15 +4011,15 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 | ID | Task | Priority | Status |
 |----|------|----------|--------|
-| TASK-1683 | Fix Supabase database composable types — 85 errors across 11 files. Mostly `supabase` possibly null (TS18047) and missing property on `{}` (TS2339). Files: `_infrastructure.ts`, `_tombstone.ts`, `useGroupsDatabase.ts`, `useNotificationsDatabase.ts`, `usePinnedTasksDatabase.ts`, `useProjectsDatabase.ts`, `useQuickSortDatabase.ts`, `useRealtimeSubscription.ts`, `useSettingsDatabase.ts`, `useTasksDatabase.ts`, `useWorkProfileDatabase.ts` | P2 | 🔄 **IN PROGRESS** |
-| TASK-1684 | Fix Canvas composable types — 120 errors across 9 files. Mostly `unknown` type assertions (TS18046), missing properties on `{}` (TS2339), and `NodeChange[]` type mismatches (TS2345). Files: `useCanvasSync.ts` (51), `useCanvasOrchestrator.ts` (14), `useNodeSync.ts` (12), `useCanvasActions.ts` (8), `useCanvasTaskActions.ts` (6), `useCanvasSelection.ts` (4), `useCanvasAlignment.ts` (2), `useCanvasOperationState.ts` (2), `useCanvasConnections.ts` (1) | P2 | 📋 PLANNED |
-| TASK-1685 | Fix App initialization & sidebar types — 40 errors across 2 files. Properties not existing on `{}` due to untyped Supabase/Realtime payloads. Files: `useAppInitialization.ts` (39), `useSidebarManagement.ts` (1) | P2 | 📋 PLANNED |
-| TASK-1686 | Fix Calendar composable types — 22 errors across 4 files. `Record<string, unknown>` vs concrete `TaskInstance`/`RecurringTaskInstance` type conflicts, `unknown` catch errors. Files: `useCalendarMonthView.ts` (9), `useCalendarWeekView.ts` (8), `useGoogleCalendar.ts` (9 — catch `e` is `unknown`), `useExternalCalendar.ts` (3) | P2 | 📋 PLANNED |
-| TASK-1687 | Fix Sync & timer types — 29 errors across 3 files. Mostly `handleLeaderMessage` param typed as `unknown`, sync orchestrator payload types. Files: `useTimerLeaderElection.ts` (15), `useSyncOrchestrator.ts` (10), `useTimerDatabase.ts` (4) | P2 | 📋 PLANNED |
-| TASK-1688 | Fix AI, board, and cross-tab types — 41 errors across 8 files. Various `unknown` assertions and `Record<string, unknown>` mismatches. Files: `useAgentChains.ts` (13), `useAISync.ts` (12), `useCrossTabSync.ts` (8), `useTaskRowActions.ts` (9), `useBoardState.ts` (4), `useAIChat.ts` (2), `useWorkProfile.ts` (2), `useTaskEditState.ts` (1) | P2 | 📋 PLANNED |
-| TASK-1689 | Fix miscellaneous type errors — 51 errors across 18 files. Scattered `unknown` type, missing property, and minor type assertion errors. Files: `auth.ts` (8), `productionLogger.ts` (1), `sw.ts` (3), `readCacheDB.ts` (2), `operationSorter.ts` (1), `routerFactory.ts` (1), `urlScraper.ts` (1), `useMobileDetection.ts` (2), `useMobileInboxLogic.ts` (1), `useMobileQuickSortLogic.ts` (2), `usePerformanceManager.ts` (2), `useRenderOptimization.ts` (2), `useSafeI18n.ts` (1), `useTaskbarNanny.ts` (1), `useUrlScraping.ts` (1), `useWhisperSpeech.ts` (1), `taskHistory.ts` (1), test specs (3) | P3 | 📋 PLANNED |
+| ~~TASK-1683~~ | ✅ Fix Supabase database composable types (85 errors, 11 files) | P2 | ✅ **DONE** (2026-04-02) |
+| TASK-1684 | Fix Canvas composable types (120 errors, 9 files) | P2 | 📋 PLANNED |
+| ~~TASK-1685~~ | ✅ Fix App initialization & sidebar types (40 errors, 2 files) | P2 | ✅ **DONE** (2026-04-02) |
+| TASK-1686 | Fix Calendar composable types (22 errors, 4 files) | P2 | 📋 PLANNED |
+| TASK-1687 | Fix Sync & timer types (29 errors, 3 files) | P2 | 📋 PLANNED |
+| TASK-1688 | Fix AI, board, and cross-tab types (41 errors, 8 files) | P2 | 📋 PLANNED |
+| TASK-1689 | Fix miscellaneous type errors (51 errors, 18 files) | P3 | 📋 PLANNED |
 
-#### TASK-1683: Supabase Database Composable Types (🔄 IN PROGRESS)
+#### ~~TASK-1683~~: Supabase Database Composable Types (✅ DONE)
 - **Priority**: P2
 - **Error count**: 85 errors across 11 files in `src/composables/supabase/`
 - **Root patterns**: (1) `supabase` client imported as possibly null — needs non-null assertion or guard. (2) Supabase `.select('*')` returns `{}` type — needs explicit type parameter or cast. (3) `Record<string, unknown>` vs concrete interface mismatches in `.forEach()` callbacks.
@@ -4025,7 +4031,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Root patterns**: (1) Vue Flow `findNode()` returns `unknown` — needs type assertion. (2) `NodeChange[]` vs `unknown[]` in `onNodesChange` handlers. (3) Untyped `payload` in Realtime event handlers. (4) `undoHistory` ref typed as `unknown`.
 - **Fix approach**: Add proper Vue Flow type imports (`GraphNode`, `NodeChange`). Type the Realtime payload handlers. Fix `undoHistory` ref generic parameter.
 
-#### TASK-1685: App Initialization & Sidebar Types (📋 PLANNED)
+#### ~~TASK-1685~~: App Initialization & Sidebar Types (✅ DONE)
 - **Priority**: P2
 - **Error count**: 40 errors across 2 files
 - **Root patterns**: Supabase Realtime `.on('postgres_changes')` callback payload is typed as `{}`. Properties like `id`, `is_deleted`, `title`, `name` accessed on it.

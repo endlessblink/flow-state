@@ -3,7 +3,7 @@ import {
     toSupabaseNotification, fromSupabaseNotification,
     type SupabaseNotification
 } from '@/utils/supabaseMappers'
-import { supabase, type DatabaseContext } from './_infrastructure'
+import { getSupabase, type DatabaseContext } from './_infrastructure'
 
 export function useNotificationsDatabase(ctx: DatabaseContext) {
     const { getUserIdSafe, withRetry, handleError } = ctx
@@ -12,7 +12,7 @@ export function useNotificationsDatabase(ctx: DatabaseContext) {
         try {
             // BUG-1107: Wrap in withRetry for mobile PWA network resilience
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('notifications')
                     .select('*')
                     .eq('is_dismissed', false)
@@ -38,7 +38,7 @@ export function useNotificationsDatabase(ctx: DatabaseContext) {
             const payload = toSupabaseNotification(notification, userId)
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('notifications').upsert(payload, { onConflict: 'id' })
+                const { error } = await getSupabase().from('notifications').upsert(payload, { onConflict: 'id' })
                 if (error) throw error
             }, 'saveNotification')
         } catch (e: unknown) {
@@ -58,7 +58,7 @@ export function useNotificationsDatabase(ctx: DatabaseContext) {
             const payload = notifications.map(n => toSupabaseNotification(n, userId))
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('notifications').upsert(payload, { onConflict: 'id' })
+                const { error } = await getSupabase().from('notifications').upsert(payload, { onConflict: 'id' })
                 if (error) throw error
             }, 'saveNotifications')
         } catch (e: unknown) {
@@ -71,7 +71,7 @@ export function useNotificationsDatabase(ctx: DatabaseContext) {
         try {
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('notifications').delete().eq('id', id)
+                const { error } = await getSupabase().from('notifications').delete().eq('id', id)
                 if (error) throw error
             }, 'deleteNotification')
         } catch (e: unknown) {

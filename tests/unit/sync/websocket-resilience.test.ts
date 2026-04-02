@@ -77,6 +77,7 @@ const { mockSupabase, onCallLog, getSubscribeCallback, setSubscribeCallback, cha
 
 vi.mock('@/composables/supabase/_infrastructure', () => ({
   supabase: mockSupabase,
+  getSupabase: vi.fn(() => mockSupabase),
   invalidateCache: { all: vi.fn(), byKey: vi.fn() }
 }))
 

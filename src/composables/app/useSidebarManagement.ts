@@ -3,7 +3,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useRouter } from 'vue-router'
 import type { Project } from '@/types/tasks'
-import { useSmartViews } from '@/composables/useSmartViews'
+import { useSmartViews, type SmartView } from '@/composables/useSmartViews'
 
 /**
  * Sidebar Management State Management Composable
@@ -358,7 +358,7 @@ export function useSidebarManagement() {
       taskStore.setSmartView(null)
     } else {
       // It's a smart view
-      taskStore.setSmartView(view as unknown) // Cast still needed because view union is wide, but logic is safe
+      taskStore.setSmartView(view as SmartView) // Cast still needed because view union is wide, but logic is safe
       taskStore.setActiveDurationFilter(null)
     }
   }

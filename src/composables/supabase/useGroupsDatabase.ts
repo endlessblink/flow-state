@@ -3,7 +3,7 @@ import {
     toSupabaseGroup, fromSupabaseGroup,
     type SupabaseGroup
 } from '@/utils/supabaseMappers'
-import { supabase, swrCache, invalidateCache, type DatabaseContext } from './_infrastructure'
+import { getSupabase, swrCache, invalidateCache, type DatabaseContext } from './_infrastructure'
 import { useTombstoneDatabase } from './_tombstone'
 
 export function useGroupsDatabase(ctx: DatabaseContext) {
@@ -28,7 +28,7 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
             try {
                 // BUG-1107: Wrap in withRetry for mobile PWA network resilience
                 return await withRetry(async () => {
-                    let query = supabase
+                    let query = getSupabase()
                         .from('groups')
                         .select('*')
                         .eq('is_deleted', false)
@@ -48,7 +48,7 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
 
                     // DEBUG: Log loaded groups and their dimensions
                     const groups = data as SupabaseGroup[]
-                    groups.forEach((g: Record<string, unknown>) => {
+                    groups.forEach((g: SupabaseGroup) => {
                         const pos = g.position_json
                         console.log(`📦 [GROUP-LOAD] "${g.name}" loaded from Supabase: size=${pos?.width}x${pos?.height}`)
                     })
@@ -81,7 +81,7 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
             // TASK-142 FIX: Add .select() and check data.length to detect RLS silent failures
             // BUG FIX: Use position_json (actual DB column name), not position
             await withRetry(async () => {
-                const { data, error } = await supabase.from('groups').upsert(payload, { onConflict: 'id' }).select('id, position_json')
+                const { data, error } = await getSupabase().from('groups').upsert(payload, { onConflict: 'id' }).select('id, position_json')
                 if (error) throw error
                 if (!data || data.length === 0) {
                     throw new Error('RLS blocked write - upsert returned no data for group')
@@ -119,12 +119,12 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
             const { data, error: _error, count: _count } = await withRetry(async () => {
                 // TASK-149 FIX: Add user_id filter and verify rows affected
                 // TASK-317: Now includes deleted_at after migration
-                const { data, error, count } = await supabase
+                const { data, error, count } = await getSupabase()
                     .from('groups')
-                    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+                    .update({ is_deleted: true, deleted_at: new Date().toISOString() }, { count: 'exact' })
                     .eq('id', groupId)
                     .eq('user_id', userId)
-                    .select('id, is_deleted', { count: 'exact' })
+                    .select('id, is_deleted')
 
                 console.log(`🗑️ [SUPABASE-DELETE-GROUP] Result - error: ${error?.message || 'none'}, affected: ${count ?? 'unknown'}`)
 
@@ -156,7 +156,7 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
             await recordTombstone('group', groupId)
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase
+                const { error } = await getSupabase()
                     .from('groups')
                     .delete()
                     .eq('id', groupId)
@@ -180,14 +180,14 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
 
             // BUG-1311: Wrap in withRetry for network resilience
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('groups')
                     .select('id')
                     .eq('is_deleted', true)
                     .eq('user_id', userId)
 
                 if (error) throw error
-                return data?.map((d: Record<string, unknown>) => d.id) || []
+                return data?.map((d: Record<string, unknown>) => d.id as string) || []
             }, 'fetchDeletedGroupIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted group IDs:', e)

@@ -5,7 +5,7 @@ import {
 } from '@/utils/supabaseMappers'
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import {
-    supabase, swrCache, invalidateCache,
+    getSupabase, swrCache, invalidateCache,
     type DatabaseContext, type SafeCreateTaskResult, type TaskIdAvailability
 } from './_infrastructure'
 export function useTasksDatabase(ctx: DatabaseContext) {
@@ -28,7 +28,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         return swrCache.getOrFetch(cacheKey, async () => {
             try {
                 return await withRetry(async () => {
-                    let query = supabase
+                    let query = getSupabase()
                         .from('tasks')
                         .select('*')
                         .eq('is_deleted', false)
@@ -52,7 +52,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     const tasksWithPos = data.filter((d: Record<string, unknown>) => d.position)
                     if (tasksWithPos.length > 0) {
                         console.log(`📥 [TASK-142] LOADED ${tasksWithPos.length} tasks with positions from Supabase:`,
-                            tasksWithPos.map((d: Record<string, unknown>) => ({ id: d.id?.substring(0, 8), pos: d.position })))
+                            tasksWithPos.map((d: Record<string, unknown>) => ({ id: (d.id as string)?.substring(0, 8), pos: d.position })))
                     } else {
                         console.log(`📥 [TASK-142] LOADED ${data.length} tasks - NONE have positions in DB`)
                     }
@@ -71,7 +71,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         try {
             // BUG-1107: Wrap in withRetry for mobile PWA network resilience
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('tasks')
                     .select('*')
                     .eq('is_deleted', true)
@@ -100,7 +100,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // FK-aware upsert with single retry for orphaned parent references
             const attemptUpsert = async (payloadToSave: typeof payload, isRetry = false): Promise<void> => {
-                const { error } = await supabase.from('tasks').upsert(payloadToSave, { onConflict: 'id' })
+                const { error } = await getSupabase().from('tasks').upsert(payloadToSave, { onConflict: 'id' })
 
                 // Handle FK constraint violation on parent_task_id
                 if (error?.code === '23503' && error?.message?.includes('parent_task_id') && !isRetry) {
@@ -145,7 +145,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // FK-aware upsert with single retry for orphaned parent references
             const attemptUpsert = async (payloadToSave: typeof payload, isRetry = false): Promise<void> => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('tasks')
                     .upsert(payloadToSave, { onConflict: 'id' })
                     .select('id, position')
@@ -184,7 +184,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 const positionSaves = data.filter((d: Record<string, unknown>) => d.position)
                 if (positionSaves.length > 0) {
                     console.log(`📥 [TASK-142] RECEIVED ${positionSaves.length} tasks with positions:`,
-                        positionSaves.map((d: Record<string, unknown>) => ({ id: d.id?.substring(0, 8), pos: d.position })))
+                        positionSaves.map((d: Record<string, unknown>) => ({ id: (d.id as string)?.substring(0, 8), pos: d.position })))
                 } else if (tasksWithPos.length > 0) {
                     console.error(`❌ [TASK-142] POSITION LOST! Sent ${tasksWithPos.length} with positions, received 0 back!`)
                 }
@@ -220,11 +220,11 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // BUG-352: Wrap in withRetry for mobile network resilience
             const { error: _error, count: _count } = await withRetry(async () => {
-                const { error, count } = await supabase
+                const { error, count } = await getSupabase()
                     .from('tasks')
-                    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+                    .update({ is_deleted: true, deleted_at: new Date().toISOString() }, { count: 'exact' })
                     .eq('id', taskId)
-                    .select('*', { count: 'exact' })
+                    .select('*')
 
                 console.log(`🗑️ [SUPABASE-DELETE] Result - error: ${error?.message || 'none'}, affected rows: ${count ?? 'unknown'}`)
 
@@ -249,7 +249,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             // BUG-352: Wrap in withRetry for mobile network resilience
             let restoredTask: Task | null = null
             await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('tasks')
                     .update({ is_deleted: false, deleted_at: null })
                     .eq('id', taskId)
@@ -275,7 +275,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             // (BEFORE DELETE on tasks) auto-creates the tombstone in the same
             // transaction. No need for a separate recordTombstone() call.
             await withRetry(async () => {
-                const { error } = await supabase
+                const { error } = await getSupabase()
                     .from('tasks')
                     .delete()
                     .eq('id', taskId)
@@ -298,14 +298,14 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // BUG-1311: Wrap in withRetry for network resilience
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('tasks')
                     .select('id')
                     .eq('is_deleted', true)
                     .eq('user_id', userId)
 
                 if (error) throw error
-                return data?.map((d: Record<string, unknown>) => d.id) || []
+                return data?.map((d: Record<string, unknown>) => d.id as string) || []
             }, 'fetchDeletedTaskIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted task IDs:', e)
@@ -327,12 +327,12 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // BUG-352: Wrap in withRetry for mobile network resilience
             const { error: _error, count: _count } = await withRetry(async () => {
-                const { error, count } = await supabase
+                const { error, count } = await getSupabase()
                     .from('tasks')
                     // FIX: Schema compatibility - remove deleted_at if not in DB
-                    .update({ is_deleted: true })
+                    .update({ is_deleted: true }, { count: 'exact' })
                     .in('id', taskIds)
-                    .select('*', { count: 'exact' })
+                    .select('*')
 
                 console.log(`🗑️ [SUPABASE-BULK-DELETE] Result - error: ${error?.message || 'none'}, affected rows: ${count ?? 'unknown'}`)
 
@@ -376,7 +376,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 ? null
                 : (task.projectId || null)
 
-            const { data: rpcResult, error: rpcError } = await supabase.rpc('safe_create_task', {
+            const { data: rpcResult, error: rpcError } = await getSupabase().rpc('safe_create_task', {
                 p_task_id: task.id,
                 p_user_id: userId,
                 p_title: task.title,
@@ -421,7 +421,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
     const safeCreateTaskManual = async (task: Task, userId: string): Promise<SafeCreateTaskResult> => {
         try {
             // 1. Check if task already exists
-            const { data: existing, error: existError } = await supabase
+            const { data: existing, error: existError } = await getSupabase()
                 .from('tasks')
                 .select('id, is_deleted, title')
                 .eq('id', task.id)
@@ -444,7 +444,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             }
 
             // 2. Check tombstones
-            const { data: tombstone, error: tombError } = await supabase
+            const { data: tombstone, error: tombError } = await getSupabase()
                 .from('tombstones')
                 .select('entity_id, deleted_at')
                 .eq('entity_type', 'task')
@@ -468,7 +468,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
             // 3. Safe to create - use regular saveTask
             const payload = toSupabaseTask(task, userId)
-            const { error: insertError } = await supabase.from('tasks').insert(payload)
+            const { error: insertError } = await getSupabase().from('tasks').insert(payload)
 
             if (insertError) {
                 // Check for unique violation (race condition)
@@ -515,13 +515,14 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
         try {
             // Try RPC function first
-            const { data: rpcResult, error: rpcError } = await supabase.rpc('check_task_ids_availability', {
+            const { data: rpcResult, error: rpcError } = await getSupabase().rpc('check_task_ids_availability', {
                 p_user_id: userId,
                 p_task_ids: taskIds
             })
 
             if (!rpcError && rpcResult) {
-                return (rpcResult as unknown[]).map(r => ({
+                interface TaskIdCheckResult { task_id: string; status: string; reason: string }
+                return (rpcResult as TaskIdCheckResult[]).map(r => ({
                     taskId: r.task_id,
                     status: r.status as TaskIdAvailability['status'],
                     reason: r.reason
@@ -546,7 +547,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
         try {
             // Batch fetch existing tasks
-            const { data: existingTasks, error: tasksError } = await supabase
+            const { data: existingTasks, error: tasksError } = await getSupabase()
                 .from('tasks')
                 .select('id, is_deleted')
                 .in('id', taskIds)
@@ -560,7 +561,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             }
 
             // Batch fetch tombstones
-            const { data: tombstones, error: tombError } = await supabase
+            const { data: tombstones, error: tombError } = await getSupabase()
                 .from('tombstones')
                 .select('entity_id')
                 .eq('entity_type', 'task')
@@ -622,7 +623,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         if (!userId) return
 
         try {
-            await supabase.from('task_dedup_audit').insert({
+            await getSupabase().from('task_dedup_audit').insert({
                 user_id: userId,
                 operation,
                 task_id: taskId,

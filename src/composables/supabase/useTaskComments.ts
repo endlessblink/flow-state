@@ -1,6 +1,6 @@
 // TASK-1553: Task Comments composable — CRUD + Realtime subscription
 import { ref } from 'vue'
-import { supabase } from './_infrastructure'
+import { getSupabase } from './_infrastructure'
 import { useAuthStore } from '@/stores/auth'
 import type { TaskComment } from '@/types/workspace'
 
@@ -65,7 +65,7 @@ export function useTaskComments() {
     try {
       // workspace_members may expose displayName / email; fall back to
       // auth.users metadata via the profiles pattern used elsewhere.
-      const { data } = await supabase
+      const { data } = await getSupabase()
         .from('workspace_members')
         .select('user_id, display_name, email')
         .eq('user_id', userId)
@@ -90,7 +90,7 @@ export function useTaskComments() {
     if (unknown.length === 0) return
 
     try {
-      const { data } = await supabase
+      const { data } = await getSupabase()
         .from('workspace_members')
         .select('user_id, display_name, email')
         .in('user_id', unknown)
@@ -122,7 +122,7 @@ export function useTaskComments() {
     error.value = null
 
     try {
-      const { data, error: dbError } = await supabase
+      const { data, error: dbError } = await getSupabase()
         .from('task_comments')
         .select('*')
         .eq('task_id', taskId)
@@ -185,7 +185,7 @@ export function useTaskComments() {
     comments.value = [...comments.value, optimistic]
 
     try {
-      const { data, error: dbError } = await supabase
+      const { data, error: dbError } = await getSupabase()
         .from('task_comments')
         .insert({
           id: optimisticId,
@@ -254,7 +254,7 @@ export function useTaskComments() {
     )
 
     try {
-      const { error: dbError } = await supabase
+      const { error: dbError } = await getSupabase()
         .from('task_comments')
         .update({ content, updated_at: new Date().toISOString() })
         .eq('id', commentId)
@@ -291,7 +291,7 @@ export function useTaskComments() {
     comments.value = comments.value.filter(c => c.id !== commentId)
 
     try {
-      const { error: dbError } = await supabase
+      const { error: dbError } = await getSupabase()
         .from('task_comments')
         .update({ is_deleted: true, updated_at: new Date().toISOString() })
         .eq('id', commentId)
@@ -322,7 +322,7 @@ export function useTaskComments() {
   function subscribeToComments(taskId: string): () => void {
     const channelName = `task_comments:${taskId}`
 
-    const channel = supabase
+    const channel = getSupabase()
       .channel(channelName)
       .on(
         'postgres_changes',
@@ -373,7 +373,7 @@ export function useTaskComments() {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      getSupabase().removeChannel(channel)
     }
   }
 

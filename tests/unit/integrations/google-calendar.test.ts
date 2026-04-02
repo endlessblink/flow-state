@@ -50,12 +50,14 @@ vi.mock('@/services/auth/supabase', () => ({
   },
 }))
 
-vi.mock('@/composables/supabase/_infrastructure', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-    },
+const mockCalSupabase = {
+  auth: {
+    getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
   },
+}
+vi.mock('@/composables/supabase/_infrastructure', () => ({
+  supabase: mockCalSupabase,
+  getSupabase: vi.fn(() => mockCalSupabase),
 }))
 
 vi.mock('@/stores/auth', () => ({

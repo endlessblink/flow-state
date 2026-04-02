@@ -3,7 +3,7 @@ import {
     toSupabasePinnedTask, fromSupabasePinnedTask,
     type SupabasePinnedTask
 } from '@/utils/supabaseMappers'
-import { supabase, swrCache, invalidateCache, type DatabaseContext } from './_infrastructure'
+import { getSupabase, swrCache, invalidateCache, type DatabaseContext } from './_infrastructure'
 
 export function usePinnedTasksDatabase(ctx: DatabaseContext) {
     const { getUserIdSafe, withRetry, handleError } = ctx
@@ -15,7 +15,7 @@ export function usePinnedTasksDatabase(ctx: DatabaseContext) {
         try {
             return await swrCache.getOrFetch(`pinnedTasks:${userId}`, async () => {
                 return await withRetry(async () => {
-                    const { data, error } = await supabase
+                    const { data, error } = await getSupabase()
                         .from('pinned_tasks')
                         .select('*')
                         .eq('user_id', userId)
@@ -43,7 +43,7 @@ export function usePinnedTasksDatabase(ctx: DatabaseContext) {
             const payload = toSupabasePinnedTask(pin, userId)
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('pinned_tasks').upsert(payload, { onConflict: 'id' })
+                const { error } = await getSupabase().from('pinned_tasks').upsert(payload, { onConflict: 'id' })
                 if (error) throw error
             }, 'savePinnedTask')
             invalidateCache.pinnedTasks()
@@ -57,7 +57,7 @@ export function usePinnedTasksDatabase(ctx: DatabaseContext) {
         try {
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('pinned_tasks').delete().eq('id', pinId)
+                const { error } = await getSupabase().from('pinned_tasks').delete().eq('id', pinId)
                 if (error) throw error
             }, 'deletePinnedTask')
             invalidateCache.pinnedTasks()
@@ -76,7 +76,7 @@ export function usePinnedTasksDatabase(ctx: DatabaseContext) {
             }))
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('pinned_tasks').upsert(payload, { onConflict: 'id' })
+                const { error } = await getSupabase().from('pinned_tasks').upsert(payload, { onConflict: 'id' })
                 if (error) throw error
             }, 'reorderPinnedTasks')
             invalidateCache.pinnedTasks()

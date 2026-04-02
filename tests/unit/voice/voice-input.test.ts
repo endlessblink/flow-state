@@ -27,12 +27,14 @@ vi.mock('@vueuse/core', () => ({
   useOnline: () => ({ value: true }),
 }))
 
-vi.mock('@/composables/supabase/_infrastructure', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-    },
+const mockVoiceSupabase = {
+  auth: {
+    getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
   },
+}
+vi.mock('@/composables/supabase/_infrastructure', () => ({
+  supabase: mockVoiceSupabase,
+  getSupabase: vi.fn(() => mockVoiceSupabase),
 }))
 
 // ============================================================================

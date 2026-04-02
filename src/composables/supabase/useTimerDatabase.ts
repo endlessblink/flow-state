@@ -3,7 +3,7 @@ import {
     toSupabaseTimerSession, fromSupabaseTimerSession,
     type SupabaseTimerSession
 } from '@/utils/supabaseMappers'
-import { supabase, type DatabaseContext } from './_infrastructure'
+import { getSupabase, type DatabaseContext } from './_infrastructure'
 
 const CLAIM_LEADERSHIP_ERROR_LOG_WINDOW_MS = 60_000
 
@@ -50,7 +50,7 @@ export function useTimerDatabase(ctx: DatabaseContext) {
 
             // BUG-1107: Wrap in withRetry for mobile PWA network resilience
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('timer_sessions')
                     .select('*')
                     .eq('user_id', userId)
@@ -84,7 +84,7 @@ export function useTimerDatabase(ctx: DatabaseContext) {
             if (import.meta.env.DEV) console.log('🍅 [DB] saveActiveTimerSession:', { sessionId: session.id, userId, deviceId, isActive: session.isActive })
             // BUG-352: Wrap in withRetry for mobile PWA network resilience (was missing from BUG-1107 fix)
             await withRetry(async () => {
-                const { error } = await supabase.from('timer_sessions').upsert(payload, { onConflict: 'id' })
+                const { error } = await getSupabase().from('timer_sessions').upsert(payload, { onConflict: 'id' })
                 if (error) {
                     console.error('🍅 [DB] saveActiveTimerSession error:', error)
                     throw error
@@ -103,7 +103,7 @@ export function useTimerDatabase(ctx: DatabaseContext) {
 
             // BUG-352: Wrap in withRetry for mobile PWA network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('timer_sessions').delete().eq('id', id)
+                const { error } = await getSupabase().from('timer_sessions').delete().eq('id', id)
                 if (error) throw error
             }, 'deleteTimerSession')
         } catch (e: unknown) {
@@ -123,7 +123,7 @@ export function useTimerDatabase(ctx: DatabaseContext) {
             const userId = getUserIdSafe()
             if (!userId) return false
 
-            const { data, error } = await supabase.rpc('claim_timer_leadership', {
+            const { data, error } = await getSupabase().rpc('claim_timer_leadership', {
                 p_session_id: sessionId,
                 p_new_leader: deviceId,
             })

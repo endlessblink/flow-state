@@ -3,7 +3,7 @@ import {
     toSupabaseQuickSortSession, fromSupabaseQuickSortSession,
     type SupabaseQuickSortSession
 } from '@/utils/supabaseMappers'
-import { supabase, type DatabaseContext } from './_infrastructure'
+import { getSupabase, type DatabaseContext } from './_infrastructure'
 
 export function useQuickSortDatabase(ctx: DatabaseContext) {
     const { getUserIdSafe, withRetry, handleError } = ctx
@@ -12,7 +12,7 @@ export function useQuickSortDatabase(ctx: DatabaseContext) {
         try {
             // BUG-1311: Wrap in withRetry for network resilience (was missing)
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('quick_sort_sessions')
                     .select('*')
                     .order('completed_at', { ascending: false })
@@ -38,7 +38,7 @@ export function useQuickSortDatabase(ctx: DatabaseContext) {
             const payload = toSupabaseQuickSortSession(summary, userId)
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('quick_sort_sessions').upsert(payload, { onConflict: 'id' })
+                const { error } = await getSupabase().from('quick_sort_sessions').upsert(payload, { onConflict: 'id' })
                 if (error) throw error
             }, 'saveQuickSortSession')
         } catch (e: unknown) {

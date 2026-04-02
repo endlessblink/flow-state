@@ -15,6 +15,7 @@ import { clearGuestData, clearStaleGuestTasks, getOrCreateGuestSessionId } from 
 // BUG-FIX: Import mappers to properly convert realtime data
 import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, type SupabaseTask, type SupabaseProject, type SupabaseGroup } from '@/utils/supabaseMappers'
 // TASK-1177: Offline-first sync system
+import type { RealtimePayload } from '@/composables/supabase/useRealtimeSubscription'
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
 import { getInitialOnlineState } from '@/utils/platform'
@@ -38,7 +39,7 @@ export function useAppInitialization() {
     const itpProtection = useSafariITPProtection()
     // BUG-1725: Must be called synchronously during setup(), not inside async onMounted
     useBeforeUnload()
-    const activeChannel = ref<unknown>(null)
+    const activeChannel = ref<{ unsubscribe: () => Promise<void> } | null>(null)
     const realtimeInitialized = ref(false)
     const onMountedCompleted = ref(false)  // BUG-1106: Prevent race condition between watcher and onMounted
     // BUG-1339: Signal that initial data load has completed (tasks, projects, canvas)
@@ -560,7 +561,7 @@ export function useAppInitialization() {
         // 3. Initialize Realtime Subscriptions
         const { initRealtimeSubscription } = useSupabaseDatabase()
 
-        const onProjectChange = (payload: Record<string, unknown>) => {
+        const onProjectChange = (payload: RealtimePayload) => {
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const projects = useProjectStore()
@@ -597,7 +598,7 @@ export function useAppInitialization() {
             }
         }
 
-        const onTaskChange = (payload: Record<string, unknown>) => {
+        const onTaskChange = (payload: RealtimePayload) => {
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
@@ -672,7 +673,7 @@ export function useAppInitialization() {
             }
         }
 
-        const onGroupChange = (payload: Record<string, unknown>) => {
+        const onGroupChange = (payload: RealtimePayload) => {
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
@@ -762,7 +763,7 @@ export function useAppInitialization() {
 
             // Simplified handlers for post-login initialization
             // These use the same logic as the onMounted handlers
-            const onProjectChange = (payload: Record<string, unknown>) => {
+            const onProjectChange = (payload: RealtimePayload) => {
                 const canvas = useCanvasStore()
                 const projects = useProjectStore()
                 const tasks = useTaskStore()
@@ -784,7 +785,7 @@ export function useAppInitialization() {
                 }
             }
 
-            const onTaskChange = (payload: Record<string, unknown>) => {
+            const onTaskChange = (payload: RealtimePayload) => {
                 const canvas = useCanvasStore()
                 const tasks = useTaskStore()
 
@@ -811,7 +812,7 @@ export function useAppInitialization() {
                 }
             }
 
-            const onGroupChange = (payload: Record<string, unknown>) => {
+            const onGroupChange = (payload: RealtimePayload) => {
                 const canvas = useCanvasStore()
                 const tasks = useTaskStore()
 
@@ -866,7 +867,7 @@ export function useAppInitialization() {
         // Tear down existing subscription
         if (activeChannel.value) {
             try {
-                await (activeChannel.value as { unsubscribe: () => Promise<void> }).unsubscribe()
+                await activeChannel.value.unsubscribe()
             } catch { /* channel already closed */ }
             activeChannel.value = null
         }
@@ -874,7 +875,7 @@ export function useAppInitialization() {
         const { initRealtimeSubscription: initRealtime } = useSupabaseDatabase()
 
         // Re-use the same handler pattern as the auth watcher
-        const onProjectChange = (payload: Record<string, unknown>) => {
+        const onProjectChange = (payload: RealtimePayload) => {
             const canvas = useCanvasStore()
             const projects = useProjectStore()
             const tasks = useTaskStore()
@@ -893,7 +894,7 @@ export function useAppInitialization() {
             }
         }
 
-        const onTaskChange = (payload: Record<string, unknown>) => {
+        const onTaskChange = (payload: RealtimePayload) => {
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
             const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
@@ -916,7 +917,7 @@ export function useAppInitialization() {
             }
         }
 
-        const onGroupChange = (payload: Record<string, unknown>) => {
+        const onGroupChange = (payload: RealtimePayload) => {
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
             const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (

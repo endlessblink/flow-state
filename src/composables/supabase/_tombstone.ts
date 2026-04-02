@@ -1,4 +1,4 @@
-import { supabase, type DatabaseContext } from './_infrastructure'
+import { getSupabase, type DatabaseContext } from './_infrastructure'
 
 export function useTombstoneDatabase(ctx: DatabaseContext) {
     const { getUserIdSafe, withRetry } = ctx
@@ -20,7 +20,7 @@ export function useTombstoneDatabase(ctx: DatabaseContext) {
 
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('tombstones').upsert({
+                const { error } = await getSupabase().from('tombstones').upsert({
                     user_id: userId,
                     entity_type: entityType,
                     entity_id: entityId,
@@ -46,12 +46,12 @@ export function useTombstoneDatabase(ctx: DatabaseContext) {
         try {
             // BUG-1311: Wrap in withRetry for network resilience
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('tombstones')
                     .select('entity_type, entity_id')
                     .eq('user_id', userId)
                 if (error) throw error
-                return data?.map((t: Record<string, unknown>) => ({ entityType: t.entity_type, entityId: t.entity_id })) || []
+                return data?.map((t: Record<string, unknown>) => ({ entityType: t.entity_type as string, entityId: t.entity_id as string })) || []
             }, 'fetchTombstones')
         } catch (e: unknown) {
             console.error('[TASK-317] Failed to fetch tombstones:', e)

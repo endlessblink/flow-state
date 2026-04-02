@@ -32,12 +32,14 @@ vi.mock('@/services/auth/supabase', () => ({
   },
 }))
 
-vi.mock('@/composables/supabase/_infrastructure', () => ({
-  supabase: {
-    auth: {
-      getSession: mockGetSession,
-    },
+const mockEdgeSupabase = {
+  auth: {
+    getSession: mockGetSession,
   },
+}
+vi.mock('@/composables/supabase/_infrastructure', () => ({
+  supabase: mockEdgeSupabase,
+  getSupabase: vi.fn(() => mockEdgeSupabase),
 }))
 
 // ============================================================================

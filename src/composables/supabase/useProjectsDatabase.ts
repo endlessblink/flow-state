@@ -3,7 +3,7 @@ import {
     toSupabaseProject, fromSupabaseProject,
     type SupabaseProject
 } from '@/utils/supabaseMappers'
-import { supabase, swrCache, invalidateCache, type DatabaseContext } from './_infrastructure'
+import { getSupabase, swrCache, invalidateCache, type DatabaseContext } from './_infrastructure'
 import { useTombstoneDatabase } from './_tombstone'
 
 export function useProjectsDatabase(ctx: DatabaseContext) {
@@ -27,7 +27,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
         return swrCache.getOrFetch(cacheKey, async () => {
             try {
                 return await withRetry(async () => {
-                    let query = supabase
+                    let query = getSupabase()
                         .from('projects')
                         .select('*')
 
@@ -66,7 +66,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
             const payload = toSupabaseProject(project, userId)
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' })
+                const { error } = await getSupabase().from('projects').upsert(payload, { onConflict: 'id' })
                 if (error) throw error
             }, 'saveProject')
             lastSyncError.value = null
@@ -91,7 +91,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
                 // BUG-171 FIX: Add .select() and verify data.length to detect RLS partial write failures
-                const { data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' }).select('id')
+                const { data, error } = await getSupabase().from('projects').upsert(payload, { onConflict: 'id' }).select('id')
                 if (error) throw error
                 if (!data || data.length !== payload.length) {
                     const writtenCount = data?.length ?? 0
@@ -113,7 +113,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
             isSyncing.value = true
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase
+                const { error } = await getSupabase()
                     .from('projects')
                     .update({ is_deleted: true, deleted_at: new Date().toISOString() })
                     .eq('id', projectId)
@@ -135,7 +135,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
             isSyncing.value = true
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase
+                const { error } = await getSupabase()
                     .from('projects')
                     .update({ is_deleted: false, deleted_at: null })
                     .eq('id', projectId)
@@ -157,7 +157,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
             await recordTombstone('project', projectId)
             // BUG-352: Wrap in withRetry for mobile network resilience
             await withRetry(async () => {
-                const { error } = await supabase
+                const { error } = await getSupabase()
                     .from('projects')
                     .delete()
                     .eq('id', projectId)
@@ -180,14 +180,14 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
 
             // BUG-1311: Wrap in withRetry for network resilience
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('projects')
                     .select('id')
                     .eq('is_deleted', true)
                     .eq('user_id', userId)
 
                 if (error) throw error
-                return data?.map((d: Record<string, unknown>) => d.id) || []
+                return data?.map((d: Record<string, unknown>) => d.id as string) || []
             }, 'fetchDeletedProjectIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted project IDs:', e)

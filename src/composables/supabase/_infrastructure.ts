@@ -1,10 +1,16 @@
 import type { Ref } from 'vue'
 import { supabase } from '@/services/auth/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { useAuthStore } from '@/stores/auth'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 // Re-export for domain composables
 export { supabase }
+
+export function getSupabase(): SupabaseClient {
+    if (!supabase) throw new Error('Supabase client not initialized. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+    return supabase
+}
 
 // ============================================================================
 // DatabaseContext — shared instance state passed to all domain composables
@@ -221,8 +227,9 @@ export function createDatabaseHelpers(
                 return await operation()
             } catch (err: unknown) {
                 lastErr = err
-                const message = err?.message || String(err)
-                const status = err?.status || err?.code
+                const errObj = err as Record<string, unknown>
+                const message = (errObj?.message as string) || String(err)
+                const status = errObj?.status || errObj?.code
 
                 // BUG-352: Faster backoff for mobile: 500ms, 1s, 2s (was 1s, 2s, 4s)
                 const delay = Math.pow(2, i) * 500
@@ -240,7 +247,7 @@ export function createDatabaseHelpers(
                 if (status === 401 || status === 403 || status === '401' || status === '403' || message.includes('JWKS') || message.includes('invalid_token')) {
                     console.warn(`🔐 [AUTH-RETRY] ${context} failed (${status}). Refreshing token and retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
                     try {
-                        await supabase.auth.refreshSession()
+                        await getSupabase().auth.refreshSession()
                         console.log(`🔐 [AUTH-RETRY] Token refreshed successfully before retry`)
                     } catch (refreshErr) {
                         console.warn(`🔐 [AUTH-RETRY] Token refresh failed:`, refreshErr)

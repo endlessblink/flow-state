@@ -70,6 +70,7 @@ vi.mock('@/stores/canvas', () => ({ useCanvasStore: () => ({}) }))
 vi.mock('@/composables/supabase/_infrastructure', () => ({
   invalidateCache: { all: vi.fn() },
   supabase: null,
+  getSupabase: vi.fn(() => null),
 }))
 
 // ============================================================================

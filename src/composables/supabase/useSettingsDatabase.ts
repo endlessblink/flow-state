@@ -3,7 +3,7 @@ import {
     toSupabaseUserSettings, fromSupabaseUserSettings,
     type SupabaseUserSettings
 } from '@/utils/supabaseMappers'
-import { supabase, type DatabaseContext } from './_infrastructure'
+import { getSupabase, type DatabaseContext } from './_infrastructure'
 
 export function useSettingsDatabase(ctx: DatabaseContext) {
     const { getUserIdSafe, withRetry, handleError } = ctx
@@ -15,7 +15,7 @@ export function useSettingsDatabase(ctx: DatabaseContext) {
 
             // BUG-1311: Wrap in withRetry for network resilience
             return await withRetry(async () => {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('user_settings')
                     .select('*')
                     .eq('user_id', userId)
@@ -43,7 +43,7 @@ export function useSettingsDatabase(ctx: DatabaseContext) {
 
             await withRetry(async () => {
                 // Fix: Explicitly specify conflict target to handle 'user_settings_user_id_key' violation
-                const { error } = await supabase.from('user_settings').upsert(payload, { onConflict: 'user_id' })
+                const { error } = await getSupabase().from('user_settings').upsert(payload, { onConflict: 'user_id' })
                 if (error) throw error
             }, 'saveUserSettings')
         } catch (e: unknown) {

@@ -107,10 +107,10 @@
                     :key="currentTaskId ?? undefined"
                     :task="currentTask"
                     class="stack-active"
-                    @swipe-right="handleSave"
-                    @swipe-left="requestDelete"
-                    @swipe-up="handleEditTask"
-                    @swipe-down="handleSkip"
+                    @swipeRight="handleSave"
+                    @swipeLeft="requestDelete"
+                    @swipeUp="handleEditTask"
+                    @swipeDown="handleSkip"
                   />
                 </Transition>
               </div>

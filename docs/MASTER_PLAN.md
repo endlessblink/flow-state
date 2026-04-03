@@ -9,6 +9,22 @@
 ## Active Tasks
 
 
+### ~~TASK-1744~~: Redesign Inbox Filter/Sort into Compact Toolbar (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-03)
+
+**Summary**: Replaced the multi-row sort buttons + filter chips (consuming ~40% viewport) with a single 32px compact toolbar. Sort dropdown collapses 5 buttons into 1, filter popover organizes all options in sections, active filter pills show only enabled filters as removable pills. ~60% vertical space reduction.
+
+**Files**:
+- `src/components/inbox/unified/InboxSortDropdown.vue` (new)
+- `src/components/inbox/unified/InboxFilterPopover.vue` (new)
+- `src/components/inbox/unified/ActiveFilterPills.vue` (new)
+- `src/components/inbox/unified/InboxToolbar.vue` (new)
+- `src/components/inbox/unified/UnifiedInboxHeader.vue` (modified)
+- `src/components/inbox/UnifiedInboxPanel.vue` (modified)
+
+---
+
 ### ~~TASK-1741~~: Regression Test Gap Analysis + Fix Pre-Existing Failures (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-01)
@@ -36,6 +52,26 @@
 **Fix**: (1) Disconnect presence BEFORE changing `activeWorkspaceId`, (2) add `isSwitchingWorkspace` re-entry guard.
 
 **Files**: `src/stores/workspace.ts`
+
+---
+
+### BUG-1743: PWA blank screen when fully offline (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
+
+**Problem**: PWA shows blank screen when opened offline with expired JWT. Auth `refreshSession()` blocks the entire init chain — no timeout, no fallback to cached data.
+
+**Root causes**:
+1. `useAppInitialization.ts:57` — Cache load (Phase A) gated behind `await authStore.initialize()` which makes network calls
+2. `auth.ts:210` — `refreshSession()` has no timeout; hangs indefinitely on flaky networks
+3. `auth.ts:263-269` — Failed refresh wipes session (`user.value = null`), preventing cached data load even when IndexedDB has data
+
+**Fixes**:
+1. Add 5s AbortController timeout to `refreshSession()` in auth.ts
+2. Reorder init: load IndexedDB cache BEFORE auth (cache doesn't need auth)
+3. Keep expired session when refresh fails and IndexedDB has cached data (extend grace period)
+
+**Files**: `src/stores/auth.ts`, `src/composables/app/useAppInitialization.ts`
 
 ---
 
@@ -3369,9 +3405,9 @@ Public API unchanged — zero consumer migration needed.
 
 ---
 
-### TASK-1171: Add Mobile View E2E Tests (📋 PLANNED)
+### TASK-1171: Add Mobile View E2E Tests (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (partial coverage — 1 basic file, needs assessment)
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
 
 **Problem**: Mobile views have E2E test coverage gaps.
 

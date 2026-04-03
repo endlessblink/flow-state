@@ -23,7 +23,6 @@
       :show-group-chips="context === 'calendar' && canvasGroupOptions.length > 1"
       :group-options="canvasGroupOptions"
       :selected-canvas-groups="selectedCanvasGroups"
-      :show-advanced-filters="showAdvancedFilters"
       :unscheduled-only="unscheduledOnly"
       :on-canvas-only="onCanvasOnly"
       :selected-priorities="selectedPriorities"
@@ -41,7 +40,6 @@
 
       @toggle-collapse="isCollapsed = !isCollapsed"
       @update:active-time-filter="activeTimeFilter = $event"
-      @toggle-advanced-filters="showAdvancedFilters = !showAdvancedFilters"
       @update:selected-canvas-groups="selectedCanvasGroups = $event"
       @update:unscheduled-only="unscheduledOnly = $event"
       @update:on-canvas-only="onCanvasOnly = $event"
@@ -180,7 +178,6 @@ const timerStore = useTimerStore()
 const {
   isCollapsed,
   activeTimeFilter,
-  showAdvancedFilters,
   unscheduledOnly,
   onCanvasOnly,
   selectedPriorities,

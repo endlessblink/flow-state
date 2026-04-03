@@ -146,53 +146,37 @@
     </div>
   </Transition>
 
-  <!-- Advanced Filters Toggle -->
-  <div v-if="!isCollapsed" class="advanced-filters-section">
-    <button
-      class="toggle-filters-btn"
-      :class="{ active: showAdvancedFilters }"
-      @click="$emit('toggleAdvancedFilters')"
-    >
-      <Filter :size="14" />
-      <span>{{ showAdvancedFilters ? $t('filters.hide_filters') : $t('filters.show_filters') }}</span>
-      <ChevronDown :size="14" class="toggle-icon" :class="{ rotated: showAdvancedFilters }" />
-    </button>
-
-    <Transition name="slide-down">
-      <InboxFilters
-        v-if="showAdvancedFilters"
-        :context="context"
-        :unscheduled-only="unscheduledOnly"
-        :on-canvas-only="onCanvasOnly"
-        :selected-priorities="selectedPriorities"
-        :selected-projects="selectedProjects"
-        :selected-durations="selectedDurations"
-        :hide-done-tasks="hideDoneTasks"
-        :sort-by="sortBy"
-        :sort-direction="sortDirection"
-        :on-canvas-count="onCanvasCount"
-        :tasks="baseTasks"
-        :projects="rootProjects"
-        @update:unscheduled-only="$emit('update:unscheduled-only', $event)"
-        @update:on-canvas-only="$emit('update:on-canvas-only', $event)"
-        @update:selected-priorities="$emit('update:selected-priorities', $event)"
-        @update:selected-projects="$emit('update:selected-projects', $event)"
-        @update:selected-durations="$emit('update:selected-durations', $event)"
-        @update:hide-done-tasks="$emit('update:hide-done-tasks', $event)"
-        @update:sort-by="$emit('update:sortBy', $event)"
-        @update:sort-direction="$emit('update:sort-direction', $event)"
-        @clear-all="$emit('clearAll')"
-      />
-    </Transition>
-  </div>
+  <!-- Compact Filter Toolbar (TASK-1744) -->
+  <InboxToolbar
+    v-if="!isCollapsed"
+    :sort-by="sortBy"
+    :sort-direction="sortDirection"
+    :context="context"
+    :unscheduled-only="unscheduledOnly"
+    :on-canvas-only="onCanvasOnly"
+    :selected-priorities="selectedPriorities"
+    :selected-projects="selectedProjects"
+    :selected-durations="selectedDurations"
+    :tasks="baseTasks"
+    :projects="rootProjects"
+    :on-canvas-count="onCanvasCount"
+    @update:sort-by="$emit('update:sortBy', $event)"
+    @update:sort-direction="$emit('update:sort-direction', $event)"
+    @update:unscheduled-only="$emit('update:unscheduled-only', $event)"
+    @update:on-canvas-only="$emit('update:on-canvas-only', $event)"
+    @update:selected-priorities="$emit('update:selected-priorities', $event)"
+    @update:selected-projects="$emit('update:selected-projects', $event)"
+    @update:selected-durations="$emit('update:selected-durations', $event)"
+    @clear-all="$emit('clearAll')"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, CheckCircle2, Search, X, Layers } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, CheckCircle2, Search, X, Layers } from 'lucide-vue-next'
 import { NBadge, NPopover } from 'naive-ui'
-import InboxFilters from '@/components/canvas/InboxFilters.vue'
+import InboxToolbar from './InboxToolbar.vue'
 import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
 import type { TimeFilterType, SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
@@ -208,7 +192,6 @@ const props = defineProps<{
   showGroupChips: boolean
   groupOptions: GroupOption[]
   selectedCanvasGroups: Set<string>
-  showAdvancedFilters: boolean
   unscheduledOnly: boolean
   onCanvasOnly: boolean
   selectedPriorities: Set<string>
@@ -228,7 +211,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'toggleCollapse'): void
   (e: 'update:activeTimeFilter', value: TimeFilterType): void
-  (e: 'toggleAdvancedFilters'): void
   (e: 'update:selected-canvas-groups', groups: Set<string>): void
   (e: 'update:unscheduled-only', value: boolean): void
   (e: 'update:on-canvas-only', value: boolean): void
@@ -625,45 +607,6 @@ const handleTimeFilterSelect = (key: string) => {
   background: var(--brand-primary-subtle);
   color: var(--brand-primary);
   font-weight: var(--font-medium);
-}
-
-/* Advanced Filters Toggle */
-.advanced-filters-section {
-  border-bottom: 1px solid var(--border-light);
-  background: var(--surface-ground);
-}
-
-.toggle-filters-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-2);
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  cursor: pointer;
-  transition: all var(--duration-normal);
-}
-
-.toggle-filters-btn:hover {
-  color: var(--text-primary);
-  background: var(--surface-hover);
-}
-
-.toggle-filters-btn.active {
-  color: var(--brand-primary);
-  background: var(--brand-primary-subtle);
-}
-
-.toggle-icon {
-  transition: transform var(--duration-normal) var(--ease-out);
-}
-
-.toggle-icon.rotated {
-  transform: rotate(180deg);
 }
 
 /* Done Tasks Toggle Button */

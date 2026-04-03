@@ -58,25 +58,17 @@ const handleReload = async () => {
               </NText>
             </div>
             <div class="actions">
-              <NButton 
-                secondary 
-                type="primary" 
-                size="small" 
+              <NButton
+                secondary
+                type="primary"
+                size="small"
                 @click="handleReload"
               >
                 Reload
               </NButton>
-
-              <NButton
-                quaternary
-                circle
-                size="small"
-                @click="close"
-              >
-                <template #icon>
-                  <X :size="16" />
-                </template>
-              </NButton>
+              <!-- BUG-1743: No dismiss button for updates — user must reload to avoid
+                   stale SW serving old CSS hashes that cause broken layout offline.
+                   (Workbox #3126: cleanupOutdatedCaches deletes old assets on activation) -->
             </div>
           </div>
 

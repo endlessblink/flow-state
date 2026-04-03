@@ -207,7 +207,17 @@ export const useAuthStore = defineStore('auth', () => {
 
           if (now >= expiresAt - bufferMs) {
             console.log('[AUTH] Session expired or expiring soon, refreshing...')
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+            // BUG-1743: Timeout after 5s to prevent blank screen on flaky networks
+            const REFRESH_TIMEOUT_MS = 5000
+            const { data: refreshData, error: refreshError } = await Promise.race([
+              supabase.auth.refreshSession(),
+              new Promise<{ data: { session: null }, error: AuthError }>((resolve) =>
+                setTimeout(() => resolve({
+                  data: { session: null },
+                  error: { name: 'AuthError', message: 'Session refresh timed out (offline)', status: 408 } as AuthError
+                }), REFRESH_TIMEOUT_MS)
+              )
+            ])
             if (refreshError) {
               // TASK-1426: Offline grace period — expired session is kept in memory when offline
               // The JWT is useless for API calls, but user.id is valid for local IndexedDB operations
@@ -260,6 +270,59 @@ export const useAuthStore = defineStore('auth', () => {
                 }, { once: true })
                 return
               }
+              // BUG-1743: Don't wipe session if we have cached data — user can work offline
+              // Check if IndexedDB has data before deciding to enter guest mode
+              let hasCachedData = false
+              try {
+                const { getCacheStats } = await import('@/services/offline/readCacheDB')
+                const stats = await getCacheStats()
+                hasCachedData = (stats.tasks?.count ?? 0) > 0
+              } catch {
+                // IndexedDB check failed — fall through to original behavior
+              }
+
+              if (hasCachedData) {
+                console.log('[AUTH] BUG-1743: Refresh failed but IndexedDB has cached data — keeping session for offline access')
+                session.value = data.session  // keep expired session for user.id access
+                user.value = data.session.user
+                isOfflineGracePeriod.value = true
+                // Register online listener like the navigator.onLine === false path
+                window.addEventListener('online', async () => {
+                  console.log('[AUTH] Back online — attempting session refresh after failed-refresh grace period')
+                  if (!supabase) return
+                  const maxAttempts = 3
+                  let lastError: AuthError | null = null
+                  let refreshed = false
+                  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    if (attempt > 1) {
+                      const delay = Math.pow(3, attempt - 1) * 1000
+                      await new Promise(resolve => setTimeout(resolve, delay))
+                    }
+                    const { data: onlineData, error: onlineError } = await supabase.auth.refreshSession()
+                    if (!onlineError && onlineData.session) {
+                      session.value = onlineData.session
+                      user.value = onlineData.session.user
+                      isOfflineGracePeriod.value = false
+                      if (onlineData.session.expires_at) {
+                        scheduleTokenRefresh(onlineData.session.expires_at)
+                      }
+                      refreshed = true
+                      break
+                    }
+                    lastError = onlineError
+                  }
+                  if (!refreshed) {
+                    console.error('[AUTH] BUG-1743: Post-grace refresh failed — user must re-authenticate')
+                    error.value = lastError as AuthError
+                    initializationFailed.value = true
+                    session.value = null
+                    user.value = null
+                    isOfflineGracePeriod.value = false
+                  }
+                }, { once: true })
+                return
+              }
+
               console.error('[AUTH] Failed to refresh session:', refreshError)
               // TASK-1060: Mark initialization as failed so UI can show error state
               error.value = refreshError

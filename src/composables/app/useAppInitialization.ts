@@ -52,37 +52,21 @@ export function useAppInitialization() {
             window.FlowStateSessionStart = Date.now()
         }
 
-
-        // 0. Initialize auth and clear guest data if not authenticated
-        await authStore.initialize()
-
-        if (!authStore.isAuthenticated) {
-            // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
-            clearGuestData()
-            // BUG-1137: Ensure guest session ID exists for future migration tracking
-            getOrCreateGuestSessionId()
-        } else {
-            // BUG-339: Clear ALL stale guest localStorage (including legacy keys)
-            // This fixes race condition and historical key naming issues
-            clearStaleGuestTasks()
-
-            // BUG-1563: Load workspaces immediately after auth (before store loads)
-            // so workspace-aware queries use the correct workspace context
-            try {
-                const { useWorkspaceStore } = await import('@/stores/workspace')
-                await useWorkspaceStore().loadWorkspaces()
-            } catch (e) {
-                console.warn('[MAIN] Failed to load workspaces:', e)
-            }
+        // BUG-1743: When a new SW activates (after deploy), force reload to get fresh index.html
+        // with matching CSS chunk hashes. Without this, the old page references old hashes that
+        // the new SW's cleanupOutdatedCaches() already deleted. (Workbox #3126)
+        if ('serviceWorker' in navigator) {
+            let refreshing = false
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshing) return
+                refreshing = true
+                window.location.reload()
+            })
         }
 
-        // 1. Initial Load from Supabase
-
-        // TASK-1083: Clear SWR cache on page load to ensure fresh positions from DB
-        // This prevents stale cached positions from overriding newer data on other devices
-        invalidateCache.all()
-        console.log('🗑️ [TASK-1083] SWR cache cleared on page load')
-
+        // BUG-1743: Load UI state and IndexedDB cache BEFORE auth initialization.
+        // Auth can hang on expired JWT + flaky network, blocking the UI for up to 90s.
+        // IndexedDB is local storage — it never needs auth.
         uiStore.loadState()
 
         // TASK-1428: Cache-first loading — always load from IndexedDB first (instant),
@@ -170,6 +154,40 @@ export function useAppInitialization() {
         // Mark data as ready — UI can render with cached data (or empty state)
         authStore.markAppInitLoadComplete()
         isDataReady.value = true
+
+        // BUG-1743: Auth initialization now runs AFTER the cache load so a hanging
+        // auth call (expired JWT + flaky network) never delays the first render.
+        // 0. Initialize auth and clear guest data if not authenticated
+        await authStore.initialize()
+
+        if (!authStore.isAuthenticated) {
+            // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
+            clearGuestData()
+            // BUG-1137: Ensure guest session ID exists for future migration tracking
+            getOrCreateGuestSessionId()
+        } else {
+            // BUG-339: Clear ALL stale guest localStorage (including legacy keys)
+            // This fixes race condition and historical key naming issues
+            clearStaleGuestTasks()
+
+            // BUG-1563: Load workspaces immediately after auth (before store loads)
+            // so workspace-aware queries use the correct workspace context
+            try {
+                const { useWorkspaceStore } = await import('@/stores/workspace')
+                await useWorkspaceStore().loadWorkspaces()
+            } catch (e) {
+                console.warn('[MAIN] Failed to load workspaces:', e)
+            }
+        }
+
+        // 1. Initial Load from Supabase
+
+        // TASK-1083: Clear SWR cache on page load to ensure fresh positions from DB
+        // This prevents stale cached positions from overriding newer data on other devices
+        // BUG-1743: Moved to just before Phase B — SWR invalidation is only relevant
+        // for the Supabase refresh, not the IndexedDB cache load.
+        invalidateCache.all()
+        console.log('🗑️ [TASK-1083] SWR cache cleared on page load')
 
         // Phase B (non-blocking): Background sync from Supabase
         // Skip entirely when offline — no point in fetching, just wait for 'online' event

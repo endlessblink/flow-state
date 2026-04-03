@@ -115,6 +115,24 @@ registerRoute(
   )
 )
 
+// BUG-1743: Cache Google Fonts CSS stylesheets (request.destination = 'style', not 'font')
+// The font route above only catches actual font files (.woff2), but not the CSS stylesheet
+// from fonts.googleapis.com that defines @font-face rules.
+registerRoute(
+  new Route(
+    ({ url }) => url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com',
+    new CacheFirst({
+      cacheName: 'google-fonts-cache',
+      plugins: [
+        new ExpirationPlugin({
+          maxEntries: 20,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+        }),
+      ],
+    })
+  )
+)
+
 // ============================================================================
 // TASK-1009: TIMER NOTIFICATION HANDLERS
 // ============================================================================
@@ -415,8 +433,11 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('install', () => {
   console.log('[SW] Timer notification service worker installed')
-  // Removed: self.skipWaiting() — SW waits for user consent via ReloadPrompt.
-  // The SKIP_WAITING message handler (above) triggers skip when user clicks "Reload".
+  // BUG-1743: Force-activate new SW immediately. Without this, the new SW sits in
+  // 'waiting' state while the old SW serves stale JS/CSS with mismatched hashes.
+  // Safety net: the controllerchange listener in useAppInitialization.ts forces a
+  // page reload, and BUG-1184's router.onError catches chunk load failures.
+  self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {

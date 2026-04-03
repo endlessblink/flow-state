@@ -72,7 +72,7 @@
     <div class="menu-divider" />
 
     <!-- Start Timer -->
-    <button class="menu-item" @click="startTimer">
+    <button class="menu-item menu-item--timer" @click="startTimer">
       <Timer :size="16" class="menu-icon" />
       <span class="menu-text">Start Timer</span>
     </button>
@@ -1208,6 +1208,11 @@ onUnmounted(() => {
 .menu-item--done { color: var(--brand-primary); }
 .menu-item--done:hover { background: var(--brand-bg-subtle); }
 .menu-item--done .menu-icon { color: var(--brand-primary); opacity: 1; }
+
+/* Start Timer line is amber */
+.menu-item--timer { color: var(--amber-text); }
+.menu-item--timer:hover { background: var(--amber-bg-soft); }
+.menu-item--timer .menu-icon { color: var(--amber-text); opacity: 1; }
 
 /* Done checkmark teal color */
 .icon-done { color: var(--brand-primary); opacity: 1; }

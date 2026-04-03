@@ -574,7 +574,8 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
       duration: task.estimatedDuration || 60
     }
     await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
-      instances: [newInstance]
+      instances: [newInstance],
+      isInInbox: false
     })
   }
 

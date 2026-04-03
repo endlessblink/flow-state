@@ -167,7 +167,8 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
           scheduledDate: targetDate,
           scheduledTime: scheduledTime,
           duration: existingTask.estimatedDuration || 60
-        }]
+        }],
+        isInInbox: false
       })
     }
   }

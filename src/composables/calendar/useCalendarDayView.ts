@@ -745,13 +745,12 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
           scheduledTime: timeStr
         })
 
-        // If instance was created successfully, log it
-        // Dec 16, 2025 fix: DO NOT modify isInInbox or canvasPosition here
-        // Calendar and Canvas are INDEPENDENT systems:
-        // - Creating an instance removes task from CALENDAR inbox (filtered by !hasInstances)
-        // - Canvas state (isInInbox, canvasPosition) should NOT be affected
+        // BUG-FIX: Clear isInInbox when task is scheduled on calendar.
+        // The filter-only approach (!isScheduledOnCalendar) has gaps:
+        // pinned tasks bypass it, and non-instance scheduling paths miss it.
+        // Belt-and-suspenders: set the flag AND rely on the filter.
         if (instance) {
-          // Successfully created instance
+          await taskStore.updateTask(taskId, { isInInbox: false })
         }
       }
     } catch (_error) {

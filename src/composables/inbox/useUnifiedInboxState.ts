@@ -193,9 +193,17 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
     // TASK-1486: Pinned tasks — always visible regardless of inbox filters
     const pinnedTasks = computed(() => {
-        return uniqueTasksById(taskStore._rawTasks.filter(task =>
-            task.isPinned && task.status !== 'done' && !task._soft_deleted
-        ))
+        return uniqueTasksById(taskStore._rawTasks.filter(task => {
+            if (!task.isPinned || task.status === 'done' || task._soft_deleted) return false
+            // Calendar context: hide pinned tasks that are scheduled on the calendar
+            if (props.context === 'calendar') {
+                const isScheduled = task.instances &&
+                    task.instances.length > 0 &&
+                    task.instances.some(inst => inst.scheduledDate)
+                if (isScheduled) return false
+            }
+            return true
+        }))
     })
 
     const todayCount = computed(() => {

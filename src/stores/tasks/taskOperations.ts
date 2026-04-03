@@ -1305,6 +1305,13 @@ export function useTaskOperations(
             return
         }
 
+        // Restore to inbox when all calendar instances are removed
+        const remainingInstances = updates.instances ?? task.instances ?? []
+        const remainingRecurring = updates.recurringInstances ?? task.recurringInstances ?? []
+        if (remainingInstances.length === 0 && remainingRecurring.length === 0 && !task.canvasPosition) {
+            updates.isInInbox = true
+        }
+
         await updateTask(taskId, updates)
     }
 

@@ -8,19 +8,20 @@
     <div class="input-container">
       <slot name="prefix" />
 
-      <input :dir="inputDir"
-             :id="inputId"
-             ref="inputRef"
-             v-model="localValue"
-             :type="type"
-             :placeholder="placeholder"
-             :disabled="disabled"
-             :required="required"
-             :class="inputClasses"
-             :style="inputStyles"
-             @blur="$emit('blur', $event)"
-             @focus="$emit('focus', $event)"
-             @keydown.enter="$emit('enter', $event)"
+      <input
+        :dir="inputDir"
+        :id="inputId"
+        ref="inputRef"
+        v-model="localValue"
+        :type="type"
+        :placeholder="placeholder"
+        :disabled="disabled"
+        :required="required"
+        :class="inputClasses"
+        :style="inputStyles"
+        @blur="$emit('blur', $event)"
+        @focus="$emit('focus', $event)"
+        @keydown.enter="$emit('enter', $event)"
       >
 
       <slot name="suffix" />

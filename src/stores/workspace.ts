@@ -131,32 +131,37 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
     isSwitchingWorkspace.value = true  // Pause sync queue
 
-    // TASK-1559: Disconnect presence BEFORE changing activeWorkspaceId,
-    // because the watch in useAppInitialization calls removeAllChannels()
-    // when activeWorkspaceId changes, which kills the presence channel.
-    // If we disconnect after, the await hangs on a dead channel.
     try {
-      const { useWorkspacePresence } = await import('@/composables/workspace/useWorkspacePresence')
-      await useWorkspacePresence().disconnect()
-    } catch { /* presence not available */ }
+      // TASK-1559: Disconnect presence BEFORE changing activeWorkspaceId,
+      // because the watch in useAppInitialization calls removeAllChannels()
+      // when activeWorkspaceId changes, which kills the presence channel.
+      // BUG-1760: Wrap in 2s timeout — WebKitGTK removeChannel() can deadlock
+      // when the channel is concurrently torn down by the activeWorkspaceId watcher,
+      // leaving isSwitchingWorkspace=true forever and blocking all future switches.
+      try {
+        const { useWorkspacePresence } = await import('@/composables/workspace/useWorkspacePresence')
+        await Promise.race([
+          useWorkspacePresence().disconnect(),
+          new Promise<void>(resolve => setTimeout(resolve, 2000))
+        ])
+      } catch { /* presence not available */ }
 
-    // Set activeWorkspaceId AFTER presence cleanup so the dedup guard
-    // and filterByWorkspace computed work immediately
-    activeWorkspaceId.value = id
-    localStorage.setItem(LAST_WORKSPACE_KEY, id ?? 'personal')
+      // Set activeWorkspaceId AFTER presence cleanup so the dedup guard
+      // and filterByWorkspace computed work immediately
+      activeWorkspaceId.value = id
+      localStorage.setItem(LAST_WORKSPACE_KEY, id ?? 'personal')
 
-    if (id) {
-      await loadMembers(id)
-      await loadPendingInvites(id)
-    }
+      if (id) {
+        await loadMembers(id)
+        await loadPendingInvites(id)
+      }
 
-    // Invalidate SWR cache to force fresh workspace-aware queries
-    try {
-      const { invalidateCache } = await import('@/composables/supabase/_infrastructure')
-      invalidateCache.all()
-    } catch { /* cache not available */ }
+      // Invalidate SWR cache to force fresh workspace-aware queries
+      try {
+        const { invalidateCache } = await import('@/composables/supabase/_infrastructure')
+        invalidateCache.all()
+      } catch { /* cache not available */ }
 
-    try {
       // Dynamic imports to avoid circular dependencies
       const { useTaskStore } = await import('@/stores/tasks')
       const { useProjectStore } = await import('@/stores/projects')
@@ -176,7 +181,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         } catch { /* presence not available */ }
       }
     } finally {
-      isSwitchingWorkspace.value = false  // Resume sync queue
+      isSwitchingWorkspace.value = false  // Resume sync queue — always reset, even on early throw
     }
   }
 

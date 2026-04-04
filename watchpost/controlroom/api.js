@@ -13,6 +13,7 @@ const COVERS_DIR = path.join(DATA_DIR, 'covers');
 const SUMMARIES_DIR = path.join(DATA_DIR, 'summaries');
 const NOTES_FILE = path.join(DATA_DIR, 'user-notes.json');
 const SETTINGS_FILE = path.join(WATCHPOST_DIR, 'settings.json');
+const CHANGELOG_DIR = path.join(DATA_DIR, 'changelog');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -613,6 +614,143 @@ Start by reviewing the recent changes and pick up the next task.`;
         fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
         writeJSON(SETTINGS_FILE, req.body);
         res.json(req.body);
+    });
+
+    // ── Changelog helpers ──────────────────────────────────────────────────
+
+    /**
+     * List project subdirectory names in CHANGELOG_DIR (excludes _ prefixed files).
+     */
+    function listChangelogProjects() {
+        try {
+            return fs.readdirSync(CHANGELOG_DIR, { withFileTypes: true })
+                .filter(d => d.isDirectory() && !d.name.startsWith('_'))
+                .map(d => d.name)
+                .sort();
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Generate a list of YYYY-MM-DD date strings for the last N days (inclusive today).
+     */
+    function lastNDays(n) {
+        const dates = [];
+        for (let i = 0; i < n; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            dates.push(d.toISOString().slice(0, 10));
+        }
+        return dates;
+    }
+
+    /**
+     * Read and parse JSONL entries for one project over the last N days.
+     * Returns an array of parsed entry objects.
+     */
+    function readChangelogEntries(projectName, days) {
+        const dates = lastNDays(days);
+        const entries = [];
+        const projectDir = path.join(CHANGELOG_DIR, projectName);
+
+        for (const dateStr of dates) {
+            const filePath = path.join(projectDir, `${dateStr}.jsonl`);
+            if (!fs.existsSync(filePath)) continue;
+            try {
+                const lines = fs.readFileSync(filePath, 'utf8').split('\n');
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+                    try {
+                        const entry = JSON.parse(trimmed);
+                        entry.project = entry.project || projectName;
+                        entries.push(entry);
+                    } catch { /* malformed line */ }
+                }
+            } catch { /* unreadable file */ }
+        }
+
+        return entries;
+    }
+
+    // ── 17. GET /api/changelog/projects ───────────────────────────────────
+
+    app.get('/api/changelog/projects', (req, res) => {
+        res.json(listChangelogProjects());
+    });
+
+    // ── 18. GET /api/changelog ─────────────────────────────────────────────
+
+    app.get('/api/changelog', (req, res) => {
+        const days = Math.min(parseInt(req.query.days, 10) || 7, 90);
+        const toolFilter = req.query.tool || null;
+        const limit = Math.min(parseInt(req.query.limit, 10) || 500, 2000);
+        const projectFilter = req.query.project || null;
+
+        const projects = projectFilter ? [projectFilter] : listChangelogProjects();
+        let entries = [];
+
+        for (const proj of projects) {
+            const projEntries = readChangelogEntries(proj, days);
+            entries = entries.concat(projEntries);
+        }
+
+        // Apply tool filter
+        if (toolFilter) {
+            entries = entries.filter(e => e.tool === toolFilter);
+        }
+
+        // Sort newest first
+        entries.sort((a, b) => {
+            const ta = a.ts || '';
+            const tb = b.ts || '';
+            return tb.localeCompare(ta);
+        });
+
+        // Apply limit
+        entries = entries.slice(0, limit);
+
+        res.json({ entries, projects: listChangelogProjects() });
+    });
+
+    // ── 19. GET /api/changelog/stats ──────────────────────────────────────
+
+    app.get('/api/changelog/stats', (req, res) => {
+        const days = Math.min(parseInt(req.query.days, 10) || 7, 90);
+        const projectFilter = req.query.project || null;
+
+        const projects = projectFilter ? [projectFilter] : listChangelogProjects();
+        let entries = [];
+
+        for (const proj of projects) {
+            entries = entries.concat(readChangelogEntries(proj, days));
+        }
+
+        const byTool = {};
+        const byDay = {};
+        const sessionIds = new Set();
+
+        for (const e of entries) {
+            // byTool
+            if (e.tool) {
+                byTool[e.tool] = (byTool[e.tool] || 0) + 1;
+            }
+            // byDay
+            if (e.ts) {
+                const day = e.ts.slice(0, 10);
+                byDay[day] = (byDay[day] || 0) + 1;
+            }
+            // sessions
+            if (e.sid) sessionIds.add(e.sid);
+        }
+
+        res.json({
+            totalEvents: entries.length,
+            byTool,
+            byDay,
+            sessions: sessionIds.size
+        });
     });
 
 };

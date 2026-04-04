@@ -39,6 +39,8 @@
             /* Health green */
             --color-controlroom: #4ECDC4;
             /* Control Room teal */
+            --color-logs: #f59e0b;
+            /* Logs amber */
 
             /* Transitions */
             --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -230,6 +232,16 @@
             stroke: var(--color-controlroom);
         }
 
+        .tab.active.logs::after {
+            background: var(--color-logs);
+            box-shadow: 0 0 8px var(--color-logs);
+        }
+
+        .tab.logs:hover .icon svg,
+        .tab.logs.active .icon svg {
+            stroke: var(--color-logs);
+        }
+
         .spacer {
             flex: 1;
         }
@@ -347,6 +359,14 @@
                 </span>
                 <span>Stats</span>
             </button>
+            <button class="tab logs" data-panel="logs">
+                <span class="icon">
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                </span>
+                <span>Logs</span>
+            </button>
             <button class="tab health" data-panel="health">
                 <span class="icon">
                     <svg viewBox="0 0 24 24">
@@ -390,6 +410,9 @@
         <div id="health" class="panel">
             <!-- Lazy load: src set on first tab activation -->
             <iframe data-src="health/index.html" title="Health Dashboard"></iframe>
+        </div>
+        <div id="logs" class="panel">
+            <iframe data-src="logs/index.html" title="Changelog"></iframe>
         </div>
     </main>
 

@@ -173,8 +173,8 @@ const onSlotsScroll = (e: Event) => {
              simultaneous enter+leave animations (200ms overlap = brief double-block). -->
         <div class="slot-tasks-container">
           <div
-            v-for="calEvent in getTasksForSlot(slot)"
-            v-show="isTaskPrimarySlot(slot, calEvent)"
+            v-for="calEvent in getTasksForSlot(slot as any)"
+            v-show="isTaskPrimarySlot(slot as any, calEvent as any)"
             :key="`${calEvent.id}-${slot.slotIndex}`"
             class="slot-task is-primary"
             :class="{
@@ -192,12 +192,12 @@ const onSlotsScroll = (e: Event) => {
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
             :draggable="!calEvent.isVirtual"
             @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"
-            @mouseleave="!calEvent.isVirtual && $emit('eventMouseLeave')"
-            @dragstart="!calEvent.isVirtual && $emit('eventDragStart', $event, calEvent)"
-            @dragend="!calEvent.isVirtual && $emit('eventDragEnd', $event, calEvent)"
-            @click="!calEvent.isVirtual && $emit('eventClick', $event, calEvent)"
-            @dblclick="!calEvent.isVirtual && $emit('eventDblClick', calEvent)"
-            @contextmenu.prevent="!calEvent.isVirtual && $emit('eventContextMenu', $event, calEvent)"
+            @mouseleave="!calEvent.isVirtual && $emit('eventMouseLeave', $event as any)"
+            @dragstart="!calEvent.isVirtual && $emit('eventDragStart', $event, calEvent as any)"
+            @dragend="!calEvent.isVirtual && $emit('eventDragEnd', $event, calEvent as any)"
+            @click="!calEvent.isVirtual && $emit('eventClick', $event, calEvent as any)"
+            @dblclick="!calEvent.isVirtual && $emit('eventDblClick', calEvent as any)"
+            @contextmenu.prevent="!calEvent.isVirtual && $emit('eventContextMenu', $event, calEvent as any)"
           >
             <!-- Project Stripe -->
             <div

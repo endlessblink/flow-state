@@ -8,6 +8,90 @@
 
 ## Active Tasks
 
+### ~~TASK-1745~~: Restore BUG-1716 parser fix — #### headers + column-order (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-04-04)
+
+**Problem**: BUG-1716 fix was marked DONE but lost when watchpost files reverted to pre-edit state (only 1 commit existed). Need to re-apply parser fixes.
+
+**What to restore**:
+1. `kanban/index.html` — parser must match `####` headers, not just `###`
+2. `~/.watchpost/modules/task-engine.js` — column-order detection for tables with `ID|Priority|Description` order (not just `ID|Title|Priority`)
+3. Robust priority extraction in both parsers
+
+**Files**: `watchpost/kanban/index.html`, `~/.watchpost/modules/task-engine.js`
+
+---
+
+### TASK-1746: Add Changelog/Logs tab to Watchpost dashboard (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: A changelog capture system exists and is actively logging (hook at `~/.watchpost/scripts/changelog-capture.sh`, data in `~/.watchpost/data/changelog/`). But the dashboard tab to VIEW these logs was lost. Data is intact — 10+ projects with JSONL entries.
+
+**Goal**: Add a "Logs" tab to Watchpost that renders the changelog data in a searchable, per-project timeline view. Show what each AI session did (files edited, commands run, agents spawned).
+
+**Data location**: `~/.watchpost/data/changelog/{project-name}/*.jsonl`
+
+**Files**: `watchpost/index.html` (add tab), new `watchpost/logs/index.html`
+
+---
+
+### TASK-1747: Watchpost cover art API integration (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Problem**: Control Room has placeholder gradients for project covers. The backend supports pluggable image generation (ideogram, fal.ai, OpenAI) via `POST /api/projects/:name/generate-cover`, but no provider is configured yet.
+
+**Goal**: Configure and test at least one image generation API (ideogram or fal.ai) for auto-generating project cover art from the dashboard.
+
+**Files**: `watchpost/controlroom/api.js`, `~/.watchpost/settings.json`
+
+---
+
+### TASK-1748: Watchpost project detail panel — summary + cover upload (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: The Control Room detail slide-in panel shows project info but the 7-day summary and cover upload/change need testing and polish. Manual cover upload endpoint exists but UI flow needs wiring.
+
+**Goal**: Wire the detail panel's summary section to `/api/projects/:name/summary`, test cover upload flow, and ensure notes save correctly.
+
+**Files**: `watchpost/controlroom/index.html`
+
+---
+
+### TASK-1749: Mark TASK-303 orchestrator section as archived in MASTER_PLAN (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Problem**: TASK-303 (Watchpost Orchestrator) section still shows as PAUSED with pending subtasks (BUG-1019, FEATURE-1013/1014/1015). The orchestrator was intentionally removed from the codebase. The section should be archived, and any still-relevant subtasks (like BUG-1019 OOM prevention) should be evaluated independently.
+
+**Goal**: Archive TASK-303 section, update status to ARCHIVED, evaluate remaining subtasks.
+
+**Files**: `docs/MASTER_PLAN.md`
+
+---
+
+### TASK-1750: Create favicon for Watchpost dashboard (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Problem**: Watchpost dashboard at localhost:6010 has no favicon — browser tab shows generic icon.
+
+**Goal**: Create a simple, recognizable favicon that matches the Watchpost brand (teal accent, dark theme). Could be a stylized watchtower/eye icon or the teal dot from the logo.
+
+**Files**: `watchpost/favicon.ico`, `watchpost/index.html` (add `<link rel="icon">`)
+
+---
+
+### TASK-1483: Redesign Watchpost Dashboard UI (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-04)
+
+**Implemented**: Control Room landing page with project grid/list, category grouping, filter chips, sort dropdown, kickstart prompts, copy-path, notes section, archive/delete. Orchestrator removed from server.js (~2250 lines), kanban (~3800 lines), and index.html.
+
+---
 
 ### ~~TASK-1744~~: Redesign Inbox Filter/Sort into Compact Toolbar (✅ DONE)
 
@@ -305,9 +389,9 @@
 
 ---
 
-### ~~BUG-1723~~: Supabase Realtime connection drops with CHANNEL_ERROR cycling (✅ DONE)
+### BUG-1723: Supabase Realtime connection drops with CHANNEL_ERROR cycling (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: ✅ DONE (2026-03-25)
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-04-04)
 
 ---
 
@@ -2665,7 +2749,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1500**~~ | **P2** | ✅ **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (✅ DONE 2026-03-13) |
 | ~~**TASK-1486**~~ | **P2** | ✅ **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (✅ DONE 2026-03-13) |
 | ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
-| **TASK-1483** | **P2** | 📋 **Redesign Watchpost Dashboard UI** (📋 PLANNED 2026-03-08) |
+| ~~**TASK-1483**~~ | **P2** | ✅ **Redesign Watchpost Dashboard UI** (✅ DONE 2026-04-04) |
 | ~~**TASK-1457**~~ | **P2** | ✅ **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (✅ DONE 2026-03-13) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
 | ~~**TASK-1455**~~ | **P2** | ✅ **Catalog view: show uncategorized tasks so they can be categorized in-place** (✅ DONE 2026-03-09) |
@@ -4164,9 +4248,9 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-### BUG-1723: Supabase Realtime connection drops with CHANNEL_ERROR cycling (📋 PLANNED)
+### BUG-1723: Supabase Realtime connection drops with CHANNEL_ERROR cycling (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-04-04)
 
 **Problem**: Realtime WebSocket connection repeatedly drops with `CHANNEL_ERROR` and `CLOSED` events (unknown reason), then reconnects. This causes unnecessary data reloads, duplicate PROJECT event floods (6 projects × multiple reconnects), and potential missed events during the disconnect window.
 

@@ -124,9 +124,9 @@
 
 ---
 
-### BUG-1738: Workspace Switch Causes Task Deletion — Data Integrity (📋 PLANNED)
+### ~~BUG-1738~~: Workspace Switch Causes Task Deletion — Data Integrity (✅ DONE)
 
-**Priority**: P0 (Critical) | **Status**: 📋 PLANNED
+**Priority**: P0 (Critical) | **Status**: ✅ DONE (2026-04-04)
 
 **Problem**: Switching workspaces triggers a cascade that soft-deletes real tasks from the production database. Affects all users with multiple workspaces.
 

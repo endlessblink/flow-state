@@ -422,7 +422,10 @@ export function useCanvasSync() {
 
                 // BUG-1191 FIX: Validate parentId spatially before using it
                 // Tasks with stale parentId (pointing to group they're outside of) would be dragged with wrong group
-                if (parentId) {
+                // BUG-1738 FIX: Skip parentId validation when groups haven't loaded yet.
+                // During workspace switch, groups = [] temporarily. Without this guard,
+                // every task's parentId would be cleared because no group can be found.
+                if (parentId && groups.length > 0) {
                     const parentGroup = groups.find(g => g.id === parentId)
                     if (parentGroup) {
                         const parentAbsolutePos = getGroupAbsolutePosition(parentId, groups)

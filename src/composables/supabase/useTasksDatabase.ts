@@ -321,6 +321,15 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             console.debug('⏭️ [GUEST] Skipping bulkDeleteTasks - not authenticated')
             return
         }
+
+        // BUG-1738 SAFETY NET: Refuse to batch-delete more than 10 tasks in a single call.
+        // This prevents sync/merge cascades from accidentally wiping large numbers of tasks.
+        // User-initiated bulk deletes go through undoSingleton which processes in smaller batches.
+        if (taskIds.length > 10) {
+            console.error(`🛡️ [BULK-DELETE-GUARD] BLOCKED batch delete of ${taskIds.length} tasks (limit: 10). This may indicate a sync cascade bug.`)
+            return
+        }
+
         console.log(`🗑️ [SUPABASE-BULK-DELETE] Starting atomic soft-delete for ${taskIds.length} tasks`)
         try {
             isSyncing.value = true

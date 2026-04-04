@@ -397,6 +397,18 @@ Start by reviewing the recent changes and pick up the next task.`;
         res.json({ success: true, message: 'Removed from registry. Files on disk untouched.' });
     });
 
+    // ── 7b. POST /api/projects/:name/notes ─────────────────────────────────
+
+    app.post('/api/projects/:name/notes', (req, res) => {
+        const projects = loadProjects();
+        const idx = projects.findIndex(p => p.name === req.params.name);
+        if (idx === -1) return res.status(404).json({ error: 'Project not found' });
+
+        projects[idx].notes = req.body.notes || '';
+        saveProjects(projects);
+        res.json({ success: true });
+    });
+
     // ── 8. GET /api/projects/:name/cover ───────────────────────────────────
 
     app.get('/api/projects/:name/cover', (req, res) => {

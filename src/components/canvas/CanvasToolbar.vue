@@ -55,17 +55,33 @@
           <Calendar v-else :size="14" />
         </button>
       </div>
+
+      <!-- Separator -->
+      <div class="toolbar-separator" />
+
+      <!-- Day Group Actions -->
+      <div class="toolbar-group">
+        <button
+          class="toolbar-btn"
+          title="Rotate day groups (today → leftmost)"
+          aria-label="Rotate day groups"
+          @click="$emit('rotateDayGroups')"
+        >
+          <RotateCw :size="14" />
+        </button>
+      </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck } from 'lucide-vue-next'
+import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, RotateCw } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
 defineEmits<{
   (e: 'addTask'): void
   (e: 'createGroup', event: MouseEvent): void
+  (e: 'rotateDayGroups'): void
 }>()
 
 const taskStore = useTaskStore()

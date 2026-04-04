@@ -76,6 +76,7 @@
       <CanvasToolbar
         @add-task="handleAddTask"
         @create-group="handleToolbarCreateGroup"
+        @rotate-day-groups="handleRotateDayGroups"
       />
 
       <!-- Canvas Container -->
@@ -357,6 +358,11 @@ const nodeTypes = {
 
 // FEATURE-1048: Day group auto-rotation at midnight
 const dayRotation = useDayGroupRotation()
+
+function handleRotateDayGroups() {
+  dayRotation.rotateDayGroups()
+  dayRotation.rotateDayGroupPositions()
+}
 
 // Initialize Orchestrator
 const orchestrator = useCanvasOrchestrator()

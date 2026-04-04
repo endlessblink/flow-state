@@ -1861,9 +1861,9 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 
 ---
 
-### TASK-149: Canvas Group Stability Fixes (📋 PLANNED)
+### ~~TASK-149~~: Canvas Group Stability Fixes (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-04-04)
 
 **Problems**: Position jump during resize, zombie groups, tolerance snapping, inconsistent containment, group duplication.
 

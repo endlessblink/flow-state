@@ -2479,8 +2479,8 @@
                 subtasks: [],
                 progress: status === 'done' ? 100 : (status === 'in-progress' || status === 'paused' ? 50 : 0)
               });
-            } else if (trimmed.startsWith('### ')) {
-              // Non-matching ### header (e.g., FEATURE-XXX, ROAD-XXX) - reset currentItem
+            } else if (trimmed.startsWith('### ') || trimmed.startsWith('#### ')) {
+              // Non-matching ###/#### header (e.g., FEATURE-XXX, ROAD-XXX) - reset currentItem
               // to prevent subsequent **Priority**: or **Status**: lines from affecting the previous task
               currentItem = null;
             }
@@ -2627,27 +2627,61 @@
               const isDone = rawId.includes('~~') ||
                 cells.some(c => c.includes('DONE') || c.includes('FIXED') || c.includes('✅'));
 
-              // Map columns based on headers
+              // Map columns dynamically based on detected headers
+              // Handles both ID|Title|Priority and ID|Priority|Description column orders
+              let titleCol = 1, priorityCol = -1, statusCol = -1, notesCol = -1;
+              if (tableHeaders && tableHeaders.length > 1) {
+                for (let ci = 0; ci < tableHeaders.length; ci++) {
+                  const h = tableHeaders[ci];
+                  if (h.match(/title|description|name|feature|task/i)) titleCol = ci;
+                  else if (h.match(/priority|prio/i)) priorityCol = ci;
+                  else if (h.match(/status/i)) statusCol = ci;
+                  else if (h.match(/note|depend|dep|block/i)) notesCol = ci;
+                }
+                // If no title column found, use the first non-ID column that isn't priority
+                if (titleCol === 1 && priorityCol === 1) {
+                  titleCol = tableHeaders.length > 2 ? 2 : 1;
+                }
+              }
+
+              const rawTitle = (cells[titleCol] || cells[1] || '').replace(/~~/g, '').replace(/\*\*/g, '').trim();
               const item = {
                 id: id,
-                title: cells[1]?.replace(/~~/g, '').replace(/\*\*/g, '') || '',
+                title: rawTitle,
                 status: isDone ? 'done' : 'todo',
                 priority: '',
                 notes: '',
                 section: currentSection,
-                progress: isDone ? 100 : 0  // Set progress based on done status
+                progress: isDone ? 100 : 0
               };
 
-              // Extract priority
-              const priorityCell = cells.find(c => c.match(/P[1-3]|HIGH|MEDIUM|LOW/i));
-              if (priorityCell) {
-                item.priority = priorityCell.replace(/~~/g, '').trim();
+              // Extract priority from detected column or scan all cells
+              if (priorityCol >= 0 && cells[priorityCol]) {
+                item.priority = cells[priorityCol].replace(/[~*]/g, '').trim();
+              } else {
+                const priorityCell = cells.find(c => c.match(/P[0-3]|HIGH|MEDIUM|LOW/i));
+                if (priorityCell) {
+                  item.priority = priorityCell.replace(/[~*]/g, '').trim();
+                }
+              }
+              // Normalize priority: P1-HIGH → P1, P2-MEDIUM → P2, etc.
+              if (item.priority) {
+                const pMatch = item.priority.match(/(P[0-3])/);
+                if (pMatch) item.priority = pMatch[1];
               }
 
-              // Extract notes (usually last meaningful column)
-              if (cells.length > 2) {
+              // Extract status from detected column
+              if (statusCol >= 0 && cells[statusCol]) {
+                const parsedSt = parseTaskStatus(cells[statusCol]);
+                if (parsedSt !== 'todo') item.status = parsedSt;
+              }
+
+              // Extract notes from detected column or last cell
+              if (notesCol >= 0 && cells[notesCol]) {
+                item.notes = cells[notesCol].replace(/~~/g, '');
+              } else if (cells.length > 2) {
                 const lastCell = cells[cells.length - 1];
-                if (!lastCell.match(/^(P[1-3]|HIGH|MEDIUM|LOW|TODO|DONE|FIXED|N\/A)$/i)) {
+                if (!lastCell.match(/^(P[0-3]|HIGH|MEDIUM|LOW|TODO|DONE|FIXED|N\/A)$/i)) {
                   item.notes = lastCell.replace(/~~/g, '');
                 }
               }

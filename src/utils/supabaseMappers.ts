@@ -712,7 +712,8 @@ export function fromSupabaseUserSettings(record: SupabaseUserSettings): AppSetti
         showDoneColumn: (base.showDoneColumn as boolean | undefined) ?? true,
         powerGroupOverrideMode: (base.powerGroupOverrideMode as string | undefined) ?? 'only_empty',
         textDirection: (base.textDirection as string | undefined) ?? 'auto',
-        enableDayGroupSuggestions: (base.enableDayGroupSuggestions as boolean | undefined) ?? true
+        enableDayGroupSuggestions: (base.enableDayGroupSuggestions as boolean | undefined) ?? true,
+        enableDayGroupPositionRotation: (base.enableDayGroupPositionRotation as boolean | undefined) ?? true
     } as unknown as AppSettings
 }
 

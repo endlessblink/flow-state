@@ -4,8 +4,13 @@
  * Watches for midnight transitions and updates dueDate on tasks inside
  * day-of-week canvas groups (Monday–Sunday) so date suffixes stay current.
  *
- * GEOMETRY INVARIANT: Only dueDate (metadata) is modified.
- * parentId / canvasPosition are NEVER touched.
+ * Also physically rotates group positions at midnight so today's group is
+ * always leftmost (rotateDayGroupPositions). This is a discrete once-per-day
+ * operation, not a continuous watcher — safe per canvas geometry invariants.
+ *
+ * GEOMETRY INVARIANT: rotateDayGroups() only modifies dueDate (metadata).
+ * rotateDayGroupPositions() uses 'DRAG' source and sync suppression, as
+ * approved for discrete geometry writes.
  */
 
 import { ref } from 'vue'
@@ -14,6 +19,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+import { canvasSyncInProgress } from './useCanvasSync'
 
 export function useDayGroupRotation() {
   const canvasStore = useCanvasStore()
@@ -98,6 +104,99 @@ export function useDayGroupRotation() {
     }
   }
 
+  /**
+   * Physically rotate day-of-week group positions so that today's group is
+   * leftmost, with subsequent days flowing left-to-right.
+   *
+   * Algorithm:
+   *  1. Collect groups that have a day_of_week power-keyword.
+   *  2. Sort their current X positions to build an ordered list of "slots".
+   *  3. Re-sort the groups by distance from today (today=0, tomorrow=1, …).
+   *  4. Assign each group to the slot at the same rank and move it + its
+   *     child tasks by the resulting delta.
+   *
+   * This is a discrete once-per-day write, not a continuous watcher.
+   * canvasSyncInProgress is set during the batch to prevent spurious sync.
+   */
+  function rotateDayGroupPositions() {
+    if (!settingsStore.enableDayGroupPositionRotation) return
+
+    console.log('[DAY-ROTATION] Rotating day group positions...')
+
+    const groups = canvasStore.groups
+
+    // 1. Collect day-of-week groups with their dayIndex
+    const dayGroups: Array<{ group: (typeof groups)[number]; dayIndex: number }> = []
+    for (const group of groups) {
+      const keyword = detectPowerKeyword(group.name)
+      if (keyword?.category !== 'day_of_week') continue
+      const dayIndex = parseInt(keyword.value, 10)
+      if (isNaN(dayIndex) || dayIndex < 0 || dayIndex > 6) continue
+      if (!group.position) continue
+      dayGroups.push({ group, dayIndex })
+    }
+
+    // Need at least 2 groups to rotate
+    if (dayGroups.length < 2) return
+
+    // 2. Sort current positions by X to build ordered slot list
+    const slots = dayGroups
+      .map((dg) => ({ x: dg.group.position!.x, y: dg.group.position!.y }))
+      .sort((a, b) => a.x - b.x)
+
+    // 3. Sort groups so today comes first, then tomorrow, etc.
+    const today = new Date().getDay() // 0=Sun … 6=Sat
+    dayGroups.sort((a, b) => {
+      const aDist = (a.dayIndex - today + 7) % 7
+      const bDist = (b.dayIndex - today + 7) % 7
+      return aDist - bDist
+    })
+
+    // 4. Apply position deltas under sync suppression
+    canvasSyncInProgress.value = true
+    try {
+      for (let i = 0; i < dayGroups.length; i++) {
+        const { group } = dayGroups[i]
+        const targetSlot = slots[i]
+        const currentPos = group.position!
+
+        const deltaX = targetSlot.x - currentPos.x
+        const deltaY = targetSlot.y - currentPos.y
+
+        // Skip if already in correct position
+        if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) continue
+
+        // Move group
+        canvasStore.updateGroup(group.id, {
+          position: {
+            ...currentPos,
+            x: targetSlot.x,
+            y: targetSlot.y
+          }
+        })
+
+        // Move child tasks by same delta
+        const childTasks = taskStore.rawTasks.filter(
+          (t) => t.parentId === group.id && t.canvasPosition
+        )
+        for (const task of childTasks) {
+          taskStore.updateTask(
+            task.id,
+            {
+              canvasPosition: {
+                x: task.canvasPosition!.x + deltaX,
+                y: task.canvasPosition!.y + deltaY
+              }
+            },
+            'DRAG' // approved geometry write source
+          )
+        }
+      }
+    } finally {
+      canvasSyncInProgress.value = false
+    }
+  }
+
   function dismissBanner() {
     showBanner.value = false
   }
@@ -106,6 +205,7 @@ export function useDayGroupRotation() {
   useDateTransition({
     onDayChange: (_prev: Date, _next: Date) => {
       rotateDayGroups()
+      rotateDayGroupPositions()
     }
   })
 
@@ -115,6 +215,8 @@ export function useDayGroupRotation() {
     showBanner,
     dismissBanner,
     /** Expose for manual trigger (e.g. testing or on-mount warm-up) */
-    rotateDayGroups
+    rotateDayGroups,
+    /** Expose for manual trigger and testing */
+    rotateDayGroupPositions
   }
 }

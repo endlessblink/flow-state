@@ -53,6 +53,7 @@ export interface AppSettings {
 
     // Suggestions
     enableDayGroupSuggestions: boolean
+    enableDayGroupPositionRotation: boolean
 
     // Feedback
     showUndoRedoToasts: boolean
@@ -211,6 +212,7 @@ export const useSettingsStore = defineStore('settings', {
 
         // Suggestions defaults
         enableDayGroupSuggestions: true,
+        enableDayGroupPositionRotation: true,
 
         // Feedback defaults
         showUndoRedoToasts: true,

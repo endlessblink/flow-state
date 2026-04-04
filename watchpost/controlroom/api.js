@@ -1,0 +1,618 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+// ─── Paths ───────────────────────────────────────────────────────────────────
+
+const WATCHPOST_DIR = path.join(process.env.HOME, '.watchpost');
+const PROJECTS_FILE = path.join(WATCHPOST_DIR, 'projects.json');
+const DATA_DIR = path.join(WATCHPOST_DIR, 'data');
+const COVERS_DIR = path.join(DATA_DIR, 'covers');
+const SUMMARIES_DIR = path.join(DATA_DIR, 'summaries');
+const NOTES_FILE = path.join(DATA_DIR, 'user-notes.json');
+const SETTINGS_FILE = path.join(WATCHPOST_DIR, 'settings.json');
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function readJSON(filePath, fallback) {
+    try {
+        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } catch {
+        return fallback;
+    }
+}
+
+function writeJSON(filePath, data) {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
+
+/**
+ * Parse task status counts from a MASTER_PLAN.md file.
+ * Returns { done, inProgress, planned, paused, review, total }
+ */
+function parseTaskStats(masterPlanPath) {
+    const stats = { done: 0, inProgress: 0, planned: 0, paused: 0, review: 0, total: 0 };
+    try {
+        const content = fs.readFileSync(masterPlanPath, 'utf8');
+        // Count status markers — match both (✅ DONE) and ✅ **DONE** formats
+        // Only count from ### headers to avoid double-counting from **Status**: lines
+        const headers = content.match(/^###\s.+$/gm) || [];
+        let doneMatches = 0, inProgressMatches = 0, plannedMatches = 0, pausedMatches = 0, reviewMatches = 0;
+        for (const h of headers) {
+            if (/✅\s*DONE|✅\s*\*\*DONE\*\*/.test(h)) doneMatches++;
+            else if (/🔄\s*IN PROGRESS|🔄\s*\*\*IN PROGRESS\*\*/.test(h)) inProgressMatches++;
+            else if (/📋\s*PLANNED|📋\s*\*\*PLANNED\*\*/.test(h)) plannedMatches++;
+            else if (/⏸️?\s*PAUSED|⏸️?\s*\*\*PAUSED\*\*/.test(h)) pausedMatches++;
+            else if (/👀\s*REVIEW|👀\s*\*\*REVIEW\*\*/.test(h)) reviewMatches++;
+        }
+
+        stats.done = doneMatches;
+        stats.inProgress = inProgressMatches;
+        stats.planned = plannedMatches;
+        stats.paused = pausedMatches;
+        stats.review = reviewMatches;
+        stats.total = doneMatches + inProgressMatches + plannedMatches + pausedMatches + reviewMatches;
+    } catch {
+        // File unreadable or absent — return zeroed stats
+    }
+    return stats;
+}
+
+/**
+ * Gather git information for a project root.
+ * Returns { lastCommitDate, commits7d, recentCommits }
+ */
+function getGitInfo(projectRoot) {
+    const info = { lastCommitDate: null, commits7d: 0, recentCommits: [] };
+    try {
+        info.lastCommitDate = execSync('git log -1 --format=%ci', {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: 'pipe'
+        }).trim() || null;
+    } catch { /* not a git repo or no commits */ }
+
+    try {
+        const raw = execSync('git log --since="7 days ago" --oneline --no-merges', {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: 'pipe'
+        }).trim();
+        const lines = raw ? raw.split('\n').filter(Boolean) : [];
+        info.commits7d = lines.length;
+        info.recentCommits = lines.slice(0, 20).map(line => {
+            const [hash, ...rest] = line.split(' ');
+            return { hash, message: rest.join(' ') };
+        });
+    } catch { /* ok */ }
+
+    return info;
+}
+
+/**
+ * Detect the primary tech stack for a project root.
+ * Returns a human-readable string, e.g. "Vue 3, TypeScript, Vite"
+ */
+function detectTechStack(projectRoot) {
+    // 1. package.json → look for known frameworks
+    try {
+        const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+        const allDeps = Object.assign({}, pkg.dependencies || {}, pkg.devDependencies || {});
+        const parts = [];
+
+        if (allDeps['vue']) parts.push('Vue ' + (allDeps['vue'].replace(/[^0-9.]/g, '').split('.')[0] || '3'));
+        else if (allDeps['react']) parts.push('React');
+        else if (allDeps['svelte']) parts.push('Svelte');
+        else if (allDeps['@angular/core']) parts.push('Angular');
+
+        if (allDeps['typescript'] || allDeps['ts-node']) parts.push('TypeScript');
+        if (allDeps['vite']) parts.push('Vite');
+        else if (allDeps['webpack']) parts.push('Webpack');
+
+        if (allDeps['electron']) parts.push('Electron');
+        if (allDeps['@tauri-apps/cli'] || allDeps['@tauri-apps/api']) parts.push('Tauri');
+
+        if (parts.length > 0) return parts.join(', ');
+        return 'Node.js';
+    } catch { /* no package.json */ }
+
+    // 2. Cargo.toml → Rust
+    if (fs.existsSync(path.join(projectRoot, 'Cargo.toml'))) return 'Rust';
+
+    // 3. pyproject.toml / setup.py → Python
+    if (
+        fs.existsSync(path.join(projectRoot, 'pyproject.toml')) ||
+        fs.existsSync(path.join(projectRoot, 'setup.py'))
+    ) return 'Python';
+
+    // 4. go.mod → Go
+    if (fs.existsSync(path.join(projectRoot, 'go.mod'))) return 'Go';
+
+    return 'Unknown';
+}
+
+/**
+ * Find a project by name from projects.json. Returns null if not found.
+ */
+function findProject(name) {
+    const data = readJSON(PROJECTS_FILE, { projects: [] });
+    const projects = Array.isArray(data) ? data : (data.projects || []);
+    return projects.find(p => p.name === name) || null;
+}
+
+/**
+ * Load all projects array from projects.json.
+ */
+function loadProjects() {
+    const data = readJSON(PROJECTS_FILE, { projects: [] });
+    return Array.isArray(data) ? data : (data.projects || []);
+}
+
+/**
+ * Persist the projects array back to projects.json.
+ */
+function saveProjects(projects) {
+    const data = readJSON(PROJECTS_FILE, { projects: [] });
+    if (Array.isArray(data)) {
+        writeJSON(PROJECTS_FILE, projects);
+    } else {
+        data.projects = projects;
+        writeJSON(PROJECTS_FILE, data);
+    }
+}
+
+/**
+ * Resolve a cover file path for a project name.
+ * Returns the full path if found, or null.
+ */
+function findCoverFile(name) {
+    for (const ext of ['png', 'jpg', 'jpeg', 'webp']) {
+        const candidate = path.join(COVERS_DIR, `${name}.${ext}`);
+        if (fs.existsSync(candidate)) return { filePath: candidate, ext };
+    }
+    return null;
+}
+
+// ─── Route mount ─────────────────────────────────────────────────────────────
+
+module.exports = function mountControlRoomRoutes(app) {
+
+    // Ensure data directories exist at startup
+    fs.mkdirSync(COVERS_DIR, { recursive: true });
+    fs.mkdirSync(SUMMARIES_DIR, { recursive: true });
+
+    // ── 1. GET /api/projects/enriched ──────────────────────────────────────
+
+    app.get('/api/projects/enriched', (req, res) => {
+        const projects = loadProjects();
+        const enriched = projects.map(project => {
+            const taskStats = parseTaskStats(project.masterPlan || '');
+            const cover = findCoverFile(project.name);
+            const gitInfo = getGitInfo(project.root || '');
+
+            return {
+                ...project,
+                taskStats,
+                coverUrl: cover ? `/api/projects/${encodeURIComponent(project.name)}/cover` : null,
+                lastActivity: gitInfo.lastCommitDate,
+                archived: project.archived || false
+            };
+        });
+
+        res.json(enriched);
+    });
+
+    // ── 2. GET /api/projects/:name/stats ───────────────────────────────────
+
+    app.get('/api/projects/:name/stats', (req, res) => {
+        const project = findProject(req.params.name);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+
+        const tasks = parseTaskStats(project.masterPlan || '');
+        const gitInfo = getGitInfo(project.root || '');
+
+        res.json({
+            tasks,
+            git: {
+                commits7d: gitInfo.commits7d,
+                lastCommitDate: gitInfo.lastCommitDate
+            }
+        });
+    });
+
+    // ── 3. GET /api/projects/:name/summary ─────────────────────────────────
+
+    app.get('/api/projects/:name/summary', (req, res) => {
+        const project = findProject(req.params.name);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+
+        const cacheFile = path.join(SUMMARIES_DIR, `${project.name}.json`);
+        const ONE_HOUR = 60 * 60 * 1000;
+
+        // Return cached summary if still fresh
+        const cached = readJSON(cacheFile, null);
+        if (cached && cached.timestamp && (Date.now() - cached.timestamp < ONE_HOUR)) {
+            return res.json(cached.summary);
+        }
+
+        // Build fresh summary
+        const tasks = parseTaskStats(project.masterPlan || '');
+        const gitInfo = getGitInfo(project.root || '');
+
+        // Extract titles of recently completed tasks from MASTER_PLAN
+        let completedTitles = [];
+        try {
+            const content = fs.readFileSync(project.masterPlan, 'utf8');
+            const lines = content.split('\n');
+            for (const line of lines) {
+                // Match lines containing ✅ DONE (with or without bold/parens)
+                if (/✅\s*(?:\*\*)?DONE(?:\*\*)?/.test(line)) {
+                    const titleMatch = line.match(/\|\s*~~?(TASK|BUG|ROAD|IDEA|ISSUE)-\d+~~?\s*[:\-–]?\s*([^|]+)/i);
+                    if (titleMatch) {
+                        const title = titleMatch[2].replace(/~~|\*\*/g, '').trim();
+                        if (title) completedTitles.push(title);
+                    }
+                }
+            }
+        } catch { /* ok */ }
+
+        completedTitles = completedTitles.slice(0, 5);
+
+        const commitSummaries = gitInfo.recentCommits.slice(0, 10).map(c => c.message);
+        const summary = {
+            projectName: project.name,
+            period: 'last 7 days',
+            taskStats: tasks,
+            gitStats: {
+                commits7d: gitInfo.commits7d,
+                lastCommitDate: gitInfo.lastCommitDate
+            },
+            recentCompletions: completedTitles,
+            recentCommits: commitSummaries,
+            narrative: [
+                `This week: completed ${tasks.done} tasks across ${gitInfo.commits7d} commits.`,
+                completedTitles.length > 0
+                    ? `Key completions: ${completedTitles.join('; ')}.`
+                    : '',
+                commitSummaries.length > 0
+                    ? `Recent work: ${commitSummaries.slice(0, 3).join('; ')}.`
+                    : ''
+            ].filter(Boolean).join(' ')
+        };
+
+        writeJSON(cacheFile, { timestamp: Date.now(), summary });
+        res.json(summary);
+    });
+
+    // ── 4. GET /api/projects/:name/kickstart ───────────────────────────────
+
+    app.get('/api/projects/:name/kickstart', (req, res) => {
+        const project = findProject(req.params.name);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+
+        const stack = detectTechStack(project.root || '');
+        const gitInfo = getGitInfo(project.root || '');
+
+        // Find next task and open bugs from MASTER_PLAN
+        let nextTask = null;
+        const openBugs = [];
+
+        try {
+            const content = fs.readFileSync(project.masterPlan, 'utf8');
+            const lines = content.split('\n');
+
+            for (const line of lines) {
+                // Look for first non-done task (IN PROGRESS first, then PLANNED)
+                if (!nextTask && /🔄\s*(?:\*\*)?IN PROGRESS(?:\*\*)?/.test(line)) {
+                    const m = line.match(/(TASK|BUG|ROAD|IDEA|ISSUE)-(\d+)[:\s]+([^|(✅🔄📋⏸️👀]+)/i);
+                    if (m) nextTask = { id: `${m[1]}-${m[2]}`, title: m[3].replace(/~~|\*\*/g, '').trim(), status: 'IN PROGRESS' };
+                }
+                if (!nextTask && /📋\s*(?:\*\*)?PLANNED(?:\*\*)?/.test(line)) {
+                    const m = line.match(/(TASK|BUG|ROAD|IDEA|ISSUE)-(\d+)[:\s]+([^|(✅🔄📋⏸️👀]+)/i);
+                    if (m) nextTask = { id: `${m[1]}-${m[2]}`, title: m[3].replace(/~~|\*\*/g, '').trim(), status: 'PLANNED' };
+                }
+                // Collect open BUG-XXX items
+                const bugMatch = line.match(/(BUG-\d+)[:\s]+([^|(✅]+)/);
+                if (bugMatch && !/✅\s*(?:\*\*)?DONE(?:\*\*)?/.test(line) && !/~~/.test(bugMatch[1])) {
+                    const bugTitle = bugMatch[2].replace(/~~|\*\*|📋|🔄|⏸️|👀/g, '').trim();
+                    if (bugTitle && openBugs.length < 10) {
+                        openBugs.push({ id: bugMatch[1], title: bugTitle });
+                    }
+                }
+            }
+        } catch { /* ok */ }
+
+        const recentActivityLines = gitInfo.recentCommits
+            .slice(0, 10)
+            .map(c => `- ${c.message}`)
+            .join('\n') || '- (no recent commits)';
+
+        const nextTaskLine = nextTask
+            ? `${nextTask.id}: ${nextTask.title} (${nextTask.status})`
+            : '(no pending tasks found in MASTER_PLAN)';
+
+        const openBugsLines = openBugs.length > 0
+            ? openBugs.map(b => `- ${b.id}: ${b.title}`).join('\n')
+            : '(none)';
+
+        const prompt = `Project: ${project.name}
+Path: ${project.root}
+Stack: ${stack}
+
+## Recent Activity (last 7 days)
+${recentActivityLines}
+
+## Next Recommended Task
+${nextTaskLine}
+
+## Open Bugs
+${openBugsLines}
+
+Start by reviewing the recent changes and pick up the next task.`;
+
+        res.json({
+            path: project.root,
+            cdCommand: `cd ${project.root}`,
+            prompt
+        });
+    });
+
+    // ── 5. POST /api/projects/:name/archive ────────────────────────────────
+
+    app.post('/api/projects/:name/archive', (req, res) => {
+        const projects = loadProjects();
+        const idx = projects.findIndex(p => p.name === req.params.name);
+        if (idx === -1) return res.status(404).json({ error: 'Project not found' });
+
+        projects[idx].archived = true;
+        saveProjects(projects);
+        res.json({ success: true });
+    });
+
+    // ── 6. POST /api/projects/:name/unarchive ──────────────────────────────
+
+    app.post('/api/projects/:name/unarchive', (req, res) => {
+        const projects = loadProjects();
+        const idx = projects.findIndex(p => p.name === req.params.name);
+        if (idx === -1) return res.status(404).json({ error: 'Project not found' });
+
+        projects[idx].archived = false;
+        saveProjects(projects);
+        res.json({ success: true });
+    });
+
+    // ── 7. DELETE /api/projects/:name ──────────────────────────────────────
+
+    app.delete('/api/projects/:name', (req, res) => {
+        const projects = loadProjects();
+        const idx = projects.findIndex(p => p.name === req.params.name);
+        if (idx === -1) return res.status(404).json({ error: 'Project not found' });
+
+        projects.splice(idx, 1);
+        saveProjects(projects);
+        res.json({ success: true, message: 'Removed from registry. Files on disk untouched.' });
+    });
+
+    // ── 8. GET /api/projects/:name/cover ───────────────────────────────────
+
+    app.get('/api/projects/:name/cover', (req, res) => {
+        const cover = findCoverFile(req.params.name);
+        if (!cover) return res.status(404).json({ error: 'No cover image found' });
+
+        const mimeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
+        res.setHeader('Content-Type', mimeMap[cover.ext] || 'application/octet-stream');
+        fs.createReadStream(cover.filePath).pipe(res);
+    });
+
+    // ── 9. POST /api/projects/:name/cover (raw body upload) ────────────────
+
+    app.post('/api/projects/:name/cover', (req, res) => {
+        const contentType = (req.headers['content-type'] || '').toLowerCase();
+        let ext = 'png';
+        if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = 'jpg';
+        else if (contentType.includes('webp')) ext = 'webp';
+
+        // Collect raw body chunks
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', () => {
+            const buffer = Buffer.concat(chunks);
+            if (!buffer.length) {
+                return res.status(400).json({ error: 'Empty body' });
+            }
+
+            fs.mkdirSync(COVERS_DIR, { recursive: true });
+            const destPath = path.join(COVERS_DIR, `${req.params.name}.${ext}`);
+
+            // Remove other formats if they exist
+            for (const oldExt of ['png', 'jpg', 'jpeg', 'webp']) {
+                const old = path.join(COVERS_DIR, `${req.params.name}.${oldExt}`);
+                if (old !== destPath && fs.existsSync(old)) {
+                    try { fs.unlinkSync(old); } catch { /* ok */ }
+                }
+            }
+
+            fs.writeFile(destPath, buffer, err => {
+                if (err) return res.status(500).json({ error: 'Failed to save cover', details: err.message });
+                res.json({
+                    success: true,
+                    coverUrl: `/api/projects/${encodeURIComponent(req.params.name)}/cover`
+                });
+            });
+        });
+        req.on('error', err => res.status(500).json({ error: err.message }));
+    });
+
+    // ── 10. POST /api/projects/:name/generate-cover ────────────────────────
+
+    app.post('/api/projects/:name/generate-cover', async (req, res) => {
+        const settings = readJSON(SETTINGS_FILE, {});
+        const coverApi = settings.coverApi || {};
+
+        if (!coverApi.provider || !coverApi.apiKey) {
+            return res.status(400).json({
+                error: 'No cover API configured. Set provider in settings.'
+            });
+        }
+
+        const projectName = req.params.name;
+        const prompt = (req.body && req.body.prompt)
+            ? req.body.prompt
+            : `Abstract digital art cover for a software project called ${projectName}`;
+
+        try {
+            let imageBuffer = null;
+
+            if (coverApi.provider === 'openai') {
+                const endpoint = 'https://api.openai.com/v1/images/generations';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${coverApi.apiKey}`
+                    },
+                    body: JSON.stringify({ prompt, n: 1, size: '512x512', response_format: 'url' })
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+                const imageUrl = data.data && data.data[0] && data.data[0].url;
+                if (!imageUrl) throw new Error('No image URL in OpenAI response');
+                const imgResponse = await fetch(imageUrl);
+                imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
+
+            } else if (coverApi.provider === 'ideogram') {
+                const endpoint = coverApi.endpoint || 'https://api.ideogram.ai/generate';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Api-Key': coverApi.apiKey
+                    },
+                    body: JSON.stringify({ image_request: { prompt, aspect_ratio: 'ASPECT_1_1', model: 'V_2' } })
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(JSON.stringify(data.error));
+                const imageUrl = data.data && data.data[0] && data.data[0].url;
+                if (!imageUrl) throw new Error('No image URL in Ideogram response');
+                const imgResponse = await fetch(imageUrl);
+                imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
+
+            } else if (coverApi.provider === 'fal') {
+                const endpoint = coverApi.endpoint || 'https://fal.run/fal-ai/flux/schnell';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Key ${coverApi.apiKey}`
+                    },
+                    body: JSON.stringify({ prompt, image_size: 'square', num_images: 1 })
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(JSON.stringify(data.error));
+                const imageUrl = data.images && data.images[0] && data.images[0].url;
+                if (!imageUrl) throw new Error('No image URL in fal response');
+                const imgResponse = await fetch(imageUrl);
+                imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
+
+            } else {
+                return res.status(400).json({ error: `Unknown provider: ${coverApi.provider}` });
+            }
+
+            fs.mkdirSync(COVERS_DIR, { recursive: true });
+            const destPath = path.join(COVERS_DIR, `${projectName}.png`);
+            fs.writeFileSync(destPath, imageBuffer);
+
+            res.json({
+                success: true,
+                coverUrl: `/api/projects/${encodeURIComponent(projectName)}/cover`
+            });
+
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── 11. GET /api/notes ─────────────────────────────────────────────────
+
+    app.get('/api/notes', (req, res) => {
+        const notes = readJSON(NOTES_FILE, []);
+        res.json(Array.isArray(notes) ? notes : []);
+    });
+
+    // ── 12. POST /api/notes ────────────────────────────────────────────────
+
+    app.post('/api/notes', (req, res) => {
+        const { text, type } = req.body || {};
+        if (!text) return res.status(400).json({ error: 'text is required' });
+
+        const notes = readJSON(NOTES_FILE, []);
+        const note = {
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+            text,
+            type: type || 'note',
+            done: false,
+            createdAt: new Date().toISOString()
+        };
+
+        notes.push(note);
+        fs.mkdirSync(path.dirname(NOTES_FILE), { recursive: true });
+        writeJSON(NOTES_FILE, notes);
+        res.status(201).json(note);
+    });
+
+    // ── 13. PATCH /api/notes/:id ───────────────────────────────────────────
+
+    app.patch('/api/notes/:id', (req, res) => {
+        const notes = readJSON(NOTES_FILE, []);
+        const idx = notes.findIndex(n => n.id === req.params.id);
+        if (idx === -1) return res.status(404).json({ error: 'Note not found' });
+
+        const allowed = ['text', 'done', 'type'];
+        for (const key of allowed) {
+            if (req.body && req.body[key] !== undefined) {
+                notes[idx][key] = req.body[key];
+            }
+        }
+
+        writeJSON(NOTES_FILE, notes);
+        res.json(notes[idx]);
+    });
+
+    // ── 14. DELETE /api/notes/:id ──────────────────────────────────────────
+
+    app.delete('/api/notes/:id', (req, res) => {
+        const notes = readJSON(NOTES_FILE, []);
+        const idx = notes.findIndex(n => n.id === req.params.id);
+        if (idx === -1) return res.status(404).json({ error: 'Note not found' });
+
+        notes.splice(idx, 1);
+        writeJSON(NOTES_FILE, notes);
+        res.json({ success: true });
+    });
+
+    // ── 15. GET /api/settings ──────────────────────────────────────────────
+
+    app.get('/api/settings', (req, res) => {
+        const defaults = {
+            coverApi: { provider: null, apiKey: null, endpoint: null }
+        };
+        const settings = readJSON(SETTINGS_FILE, defaults);
+        // Merge so defaults are always present
+        res.json(Object.assign({}, defaults, settings));
+    });
+
+    // ── 16. PUT /api/settings ──────────────────────────────────────────────
+
+    app.put('/api/settings', (req, res) => {
+        if (!req.body || typeof req.body !== 'object') {
+            return res.status(400).json({ error: 'JSON body required' });
+        }
+        fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
+        writeJSON(SETTINGS_FILE, req.body);
+        res.json(req.body);
+    });
+
+};

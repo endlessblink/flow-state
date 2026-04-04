@@ -500,6 +500,7 @@
     }
 
     .column-content.collapsed,
+    .column-cards.collapsed,
     .monitored-column-content.collapsed {
       display: none !important;
     }
@@ -596,6 +597,7 @@
     }
 
     .column-content.drag-over,
+    .column-cards.drag-over,
     .monitored-column-content.drag-over,
     .section-cards.drag-over {
       background: var(--brand-subtle);
@@ -648,208 +650,78 @@
       overflow: hidden;
     }
 
-    /* KANBAN BOARD - Vertical two-section layout */
-    .kanban-vertical {
+    /* KANBAN BOARD - Standard column layout */
+    .kanban-columns {
       display: flex;
-      flex-direction: column;
-      padding: 20px;
       flex: 1;
-      overflow-y: auto;
-      gap: 16px;
+      gap: 12px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      overflow-y: hidden;
       min-height: 0;
     }
 
-    .kanban-section {
+    .kanban-column {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 260px;
+      max-width: 400px;
       background: var(--surface-secondary);
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-subtle);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .kanban-section-top {
-      flex-shrink: 0;
-      max-height: 40vh;
-    }
-
-    .kanban-section-bottom {
-      flex: 1;
-      min-height: 200px;
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 20px;
-      font-weight: 600;
-      font-size: var(--font-base);
-      text-transform: uppercase;
-      color: var(--text-muted);
-      flex-shrink: 0;
-      border-bottom: 2px solid var(--border-medium);
-    }
-
-    .section-header.in-progress {
-      border-bottom-color: var(--color-warning);
-    }
-
-    .section-header.monitored {
-      border-bottom-color: var(--brand-primary);
-    }
-
-    .section-header .icon svg {
-      stroke: currentColor;
-    }
-
-    .section-title {
-      flex: 1;
-    }
-
-    .section-count {
-      background: var(--surface-tertiary);
-      color: var(--text-muted);
-      padding: 2px 10px;
-      border-radius: var(--radius-full);
-      font-size: var(--font-sm);
-      font-weight: normal;
-    }
-
-    .section-content {
-      flex: 1;
-      overflow-y: auto;
       min-height: 0;
     }
 
-    .section-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 12px;
-      padding: 16px;
+    .column-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border-medium);
+      flex-shrink: 0;
     }
 
-    .section-cards:empty::after {
+    .column-header.todo { border-bottom-color: var(--text-subtle); }
+    .column-header.in-progress { border-bottom-color: #f59e0b; }
+    .column-header.paused { border-bottom-color: #ef4444; }
+    .column-header.review { border-bottom-color: #8b5cf6; }
+    .column-header.done { border-bottom-color: #22c55e; }
+
+    .column-title {
+      flex: 1;
+    }
+
+    .column-count {
+      background: var(--surface-tertiary);
+      color: var(--text-muted);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: normal;
+    }
+
+    .column-cards {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .column-cards:empty::after {
       content: 'No tasks';
       display: block;
       text-align: center;
       padding: 24px;
       color: var(--text-subtle);
-      grid-column: 1 / -1;
-    }
-
-    /* Monitored sub-columns */
-    .monitored-columns {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 0;
-      height: 100%;
-    }
-
-    .monitored-column {
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border-subtle);
-      min-height: 0;
-    }
-
-    .monitored-column:last-child {
-      border-right: none;
-    }
-
-    .monitored-column-header {
-      padding: 10px 16px;
-      font-weight: 600;
-      font-size: var(--font-sm);
-      text-transform: uppercase;
-      color: var(--text-muted);
-      border-bottom: 2px solid var(--border-medium);
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .monitored-column-header.todo {
-      border-bottom-color: var(--color-danger);
-    }
-
-    .monitored-column-header.paused {
-      border-bottom-color: var(--color-paused);
-    }
-
-    .monitored-column-header.review {
-      border-bottom-color: var(--color-review);
-    }
-
-    .monitored-column-header.done {
-      border-bottom-color: var(--color-success);
-    }
-
-    .monitored-column-content {
-      flex: 1;
-      padding: 12px;
-      padding-right: 4px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow-y: auto;
-      min-height: 80px;
-    }
-
-    /* Legacy classes kept for JS compatibility */
-    .kanban-board {
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      flex: 1;
-      overflow-y: auto;
-      gap: 16px;
-    }
-
-    .kanban-column {
-      display: none;
-    }
-
-    .column-header {
-      padding: 16px;
-      border-bottom: 2px solid var(--border-medium);
-      font-weight: 600;
-      font-size: var(--font-base);
-      text-transform: uppercase;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .column-header.todo {
-      border-color: var(--color-danger);
-    }
-
-    .column-header.in-progress {
-      border-color: var(--color-warning);
-    }
-
-    .column-header.review {
-      border-color: var(--color-info);
-    }
-
-    .column-header.done {
-      border-color: var(--color-success);
-    }
-
-    .column-header.paused {
-      border-color: var(--color-paused);
-    }
-
-    .column-content {
-      flex: 1;
-      padding: 12px;
-      padding-right: 4px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow-y: scroll;
-      min-height: 0;
+      font-size: 12px;
     }
 
     .task-card {
@@ -2237,55 +2109,42 @@
 
       <!-- KANBAN VIEW -->
       <div class="view-container active" id="kanban-view">
-        <div class="kanban-vertical" id="kanban-board">
-          <!-- IN PROGRESS section - pinned at top -->
-          <div class="kanban-section kanban-section-top">
-            <div class="section-header in-progress">
-              <span class="icon"><svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg></span>
-              <span class="section-title">In Progress</span>
-              <span class="section-count" id="section-count-inprogress">0</span>
+        <div class="kanban-columns" id="kanban-board">
+          <div class="kanban-column">
+            <div class="column-header todo">
+              <span class="column-title">Planned</span>
+              <span class="column-count" id="col-count-todo">0</span>
             </div>
-            <div class="section-content" id="section-in-progress">
-              <div class="section-cards" id="column-in-progress"></div>
-            </div>
+            <div class="column-cards" id="column-todo"></div>
           </div>
-          <!-- MONITORED section - fills remaining space -->
-          <div class="kanban-section kanban-section-bottom">
-            <div class="section-header monitored">
-              <span class="icon"><svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7z" />
-              </svg></span>
-              <span class="section-title">Monitored</span>
-              <span class="section-count" id="section-count-monitored">0</span>
+          <div class="kanban-column">
+            <div class="column-header in-progress">
+              <span class="column-title">In Progress</span>
+              <span class="column-count" id="col-count-inprogress">0</span>
             </div>
-            <div class="section-content" id="section-monitored">
-              <div class="monitored-columns">
-                <div class="monitored-column">
-                  <div class="monitored-column-header todo">Planned</div>
-                  <div class="monitored-column-content" id="column-todo"></div>
-                </div>
-                <div class="monitored-column">
-                  <div class="monitored-column-header paused">Paused</div>
-                  <div class="monitored-column-content" id="column-paused"></div>
-                </div>
-                <div class="monitored-column">
-                  <div class="monitored-column-header review">Review</div>
-                  <div class="monitored-column-content" id="column-review"></div>
-                </div>
-                <div class="monitored-column">
-                  <div class="monitored-column-header done" id="done-header">
-                    <span>Done</span>
-                    <span class="collapse-count" id="done-count">0</span>
-                    <button class="collapse-toggle" onclick="toggleDoneColumn()" title="Collapse/Expand">&#9660;</button>
-                  </div>
-                  <div class="monitored-column-content" id="column-done"></div>
-                </div>
-              </div>
+            <div class="column-cards" id="column-in-progress"></div>
+          </div>
+          <div class="kanban-column">
+            <div class="column-header paused">
+              <span class="column-title">Paused</span>
+              <span class="column-count" id="col-count-paused">0</span>
             </div>
+            <div class="column-cards" id="column-paused"></div>
+          </div>
+          <div class="kanban-column">
+            <div class="column-header review">
+              <span class="column-title">Review</span>
+              <span class="column-count" id="col-count-review">0</span>
+            </div>
+            <div class="column-cards" id="column-review"></div>
+          </div>
+          <div class="kanban-column">
+            <div class="column-header done" id="done-header">
+              <span class="column-title">Done</span>
+              <span class="column-count" id="done-count">0</span>
+              <button class="collapse-toggle" onclick="toggleDoneColumn()" title="Collapse/Expand">&#9660;</button>
+            </div>
+            <div class="column-cards" id="column-done"></div>
           </div>
         </div>
       </div>
@@ -2552,7 +2411,7 @@
           // (?:.*?)          - Non-greedy match for any chars (emojis like ✅, 🔴, text like "BUG:")
           // ((?:TASK|BUG|ISSUE|FEATURE|ROAD)-\d+) - CAPTURE GROUP 1: The ID itself
           // (?:~~)?          - Optional strikethrough end
-          if (currentSection === 'activeWork' && trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE|FEATURE|ROAD)-\d+)(?:~~)?/)) {
+          if (currentSection === 'activeWork' && trimmed.match(/^#{3,4}\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE|FEATURE|ROAD)-\d+)(?:~~)?/)) {
             // Save previous task's subtasks before starting new one
             if (currentItem && currentItem.id?.match(/^(?:TASK|BUG|ISSUE|FEATURE|ROAD)-/)) {
               const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
@@ -2586,7 +2445,7 @@
               }
             }
 
-            const match = trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE|FEATURE|ROAD)-\d+)(?:~~)?(?::| - | )?\s*(.+?)(?:\s*\(([^)]+)\))?$/);
+            const match = trimmed.match(/^#{3,4}\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE|FEATURE|ROAD)-\d+)(?:~~)?(?::| - | )?\s*(.+?)(?:\s*\(([^)]+)\))?$/);
             if (match) {
               // Check both parentheses status AND title for status indicators
               // Title might contain "✅ DONE" or similar without parentheses
@@ -3146,15 +3005,15 @@
                     <button class="badge-dropdown-option${priorityClass === 'low' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P3-LOW', event)"><span class="priority-dot low"></span>P3-LOW</button>
                   </div>
                 </div>
-                <div class="badge-wrapper">
-                  <div class="task-complexity ${complexityClass} editable" onclick="toggleComplexityDropdown('${task.id}', event)" title="Click to change complexity">${complexity || 'Unknown'}</div>
+                ${complexity ? `<div class="badge-wrapper">
+                  <div class="task-complexity ${complexityClass} editable" onclick="toggleComplexityDropdown('${task.id}', event)" title="Click to change complexity">${complexity}</div>
                   <div class="badge-dropdown complexity-dropdown" id="complexity-dropdown-${task.id}">
                     <button class="badge-dropdown-option${complexityClass === 'simple' ? ' selected' : ''}" onclick="updateInlineComplexity('${task.id}', 'Simple', event)"><span class="complexity-dot simple"></span>Simple</button>
                     <button class="badge-dropdown-option${complexityClass === 'medium' ? ' selected' : ''}" onclick="updateInlineComplexity('${task.id}', 'Medium', event)"><span class="complexity-dot medium"></span>Medium</button>
                     <button class="badge-dropdown-option${complexityClass === 'complex' ? ' selected' : ''}" onclick="updateInlineComplexity('${task.id}', 'Complex', event)"><span class="complexity-dot complex"></span>Complex</button>
                     <button class="badge-dropdown-option${complexityClass === 'unknown' ? ' selected' : ''}" onclick="updateInlineComplexity('${task.id}', 'Unknown', event)"><span class="complexity-dot unknown"></span>Unknown</button>
                   </div>
-                </div>
+                </div>` : ''}
               </div>
               <div class="task-title">${task.title}</div>
               ${description ? `<div class="task-description">${description}</div>` : ''}
@@ -3195,11 +3054,15 @@
           }
         }
 
-        // Update section counts for vertical layout
-        const inProgressCountEl = document.getElementById('section-count-inprogress');
-        if (inProgressCountEl) inProgressCountEl.textContent = tasks.inProgress.length;
-        const monitoredCountEl = document.getElementById('section-count-monitored');
-        if (monitoredCountEl) monitoredCountEl.textContent = tasks.todo.length + tasks.paused.length + tasks.review.length + tasks.done.length;
+        // Update column counts
+        const colCountTodo = document.getElementById('col-count-todo');
+        if (colCountTodo) colCountTodo.textContent = tasks.todo.length;
+        const colCountInProgress = document.getElementById('col-count-inprogress');
+        if (colCountInProgress) colCountInProgress.textContent = tasks.inProgress.length;
+        const colCountPaused = document.getElementById('col-count-paused');
+        if (colCountPaused) colCountPaused.textContent = tasks.paused.length;
+        const colCountReview = document.getElementById('col-count-review');
+        if (colCountReview) colCountReview.textContent = tasks.review.length;
 
         // Initialize features after render
         loadSavedFilters();
@@ -3931,7 +3794,7 @@
     function applyHideDone(hide) {
       // Find the Done column (the kanban-column containing column-done)
       const doneContent = document.getElementById('column-done');
-      const doneColumn = doneContent?.closest('.monitored-column');
+      const doneColumn = doneContent?.closest('.kanban-column');
       if (doneColumn) {
         if (hide) {
           doneColumn.classList.add('done-column-hidden');
@@ -4188,7 +4051,7 @@
     // DRAG AND DROP FUNCTIONALITY
     function initDragAndDrop() {
       const cards = document.querySelectorAll('.task-card');
-      const columns = document.querySelectorAll('.monitored-column-content, .section-cards');
+      const columns = document.querySelectorAll('.column-cards');
 
       cards.forEach(card => {
         card.addEventListener('dragstart', (e) => {

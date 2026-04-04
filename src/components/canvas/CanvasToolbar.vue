@@ -67,7 +67,7 @@
           aria-label="Rotate day groups"
           @click="$emit('rotateDayGroups')"
         >
-          <RotateCw :size="14" />
+          <CalendarClock :size="14" />
         </button>
       </div>
     </div>
@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, RotateCw } from 'lucide-vue-next'
+import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
 defineEmits<{

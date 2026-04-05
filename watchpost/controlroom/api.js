@@ -465,11 +465,17 @@ Start by reviewing the recent changes and pick up the next task.`;
         const settings = readJSON(SETTINGS_FILE, {});
         const coverApi = settings.coverApi || {};
 
-        if (!coverApi.provider || !coverApi.apiKey) {
+        // API key: prefer env var, fall back to settings file
+        const apiKey = process.env.KIE_API_KEY || process.env.COVER_API_KEY || coverApi.apiKey;
+        const provider = coverApi.provider || 'kie';
+
+        if (!apiKey) {
             return res.status(400).json({
-                error: 'No cover API configured. Set provider in settings.'
+                error: 'No API key configured. Set KIE_API_KEY env var or apiKey in ~/.watchpost/settings.json'
             });
         }
+        coverApi.apiKey = apiKey;
+        coverApi.provider = provider;
 
         const projectName = req.params.name;
         const prompt = (req.body && req.body.prompt)

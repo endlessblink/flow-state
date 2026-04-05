@@ -530,6 +530,48 @@ Start by reviewing the recent changes and pick up the next task.`;
                 const imgResponse = await fetch(imageUrl);
                 imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
 
+            } else if (coverApi.provider === 'kie' || coverApi.provider === 'kie.ai') {
+                // Kie.ai Flux Kontext API — async: submit task, then poll for result
+                const genResponse = await fetch('https://api.kie.ai/api/v1/flux/kontext/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${coverApi.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        prompt,
+                        aspectRatio: '1:1',
+                        outputFormat: 'png',
+                        model: 'flux-kontext-pro'
+                    })
+                });
+                const genData = await genResponse.json();
+                if (genData.code !== 200) throw new Error(genData.msg || JSON.stringify(genData));
+                const taskId = genData.data?.taskId;
+                if (!taskId) throw new Error('No taskId in Kie.ai response');
+
+                // Poll for result (max 60 seconds, every 3 seconds)
+                let imageUrl = null;
+                for (let i = 0; i < 20; i++) {
+                    await new Promise(r => setTimeout(r, 3000));
+                    const pollResponse = await fetch(
+                        `https://api.kie.ai/api/v1/flux/kontext/record-info?taskId=${taskId}`,
+                        { headers: { 'Authorization': `Bearer ${coverApi.apiKey}` } }
+                    );
+                    const pollData = await pollResponse.json();
+                    const flag = pollData.data?.successFlag;
+                    if (flag === 1) {
+                        imageUrl = pollData.data?.response?.resultImageUrl;
+                        break;
+                    } else if (flag === 2 || flag === 3) {
+                        throw new Error(pollData.data?.errorMessage || 'Kie.ai generation failed');
+                    }
+                    // flag 0 = still generating, continue polling
+                }
+                if (!imageUrl) throw new Error('Kie.ai generation timed out (60s)');
+                const imgResponse = await fetch(imageUrl);
+                imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
+
             } else {
                 return res.status(400).json({ error: `Unknown provider: ${coverApi.provider}` });
             }

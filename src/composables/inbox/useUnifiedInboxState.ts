@@ -150,7 +150,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // not just when canvasOrder sort is active. Tasks on the canvas are real tasks
             // that belong in the calendar inbox (unless scheduled on the calendar grid).
             const isOnCanvas = !!task.canvasPosition
-            if (!task.isInInbox && !(props.context === 'calendar' && isOnCanvas)) {
+            const isAlreadyOnCalendar = task.instances?.some(inst => inst.scheduledDate) ?? false
+            if (!task.isInInbox && !(props.context === 'calendar' && isOnCanvas && !isAlreadyOnCalendar)) {
                 return false
             }
 

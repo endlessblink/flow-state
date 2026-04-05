@@ -415,6 +415,10 @@ export const useSettingsStore = defineStore('settings', {
                     if (this.$state.aiPreferredProvider === undefined) {
                         this.$state.aiPreferredProvider = 'auto'
                     }
+                    // Backfill day group position rotation
+                    if (this.$state.enableDayGroupPositionRotation === undefined) {
+                        this.$state.enableDayGroupPositionRotation = true
+                    }
                     // FEATURE-1162: Backfill savedViews
                     if (!this.$state.savedViews) {
                         this.$state.savedViews = []

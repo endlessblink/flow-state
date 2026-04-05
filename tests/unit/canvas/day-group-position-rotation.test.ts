@@ -141,10 +141,10 @@ describe('rotateDayGroupPositions()', () => {
   })
 
   // --------------------------------------------------------------------------
-  // Test 1: Feature flag off → no changes
+  // Test 1: Manual call works even with feature flag off (flag only gates midnight auto-trigger)
   // --------------------------------------------------------------------------
 
-  it('1: feature flag off → no group positions change', () => {
+  it('1: manual call works even with feature flag off', () => {
     ;(settingsStore as any).enableDayGroupPositionRotation = false
 
     const groups = [
@@ -158,8 +158,8 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions()
 
-    expect(updateGroup).not.toHaveBeenCalled()
-    expect(updateTask).not.toHaveBeenCalled()
+    // Manual trigger should still work — flag only gates midnight auto-trigger
+    expect(updateGroup).toHaveBeenCalled()
   })
 
   // --------------------------------------------------------------------------

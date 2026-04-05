@@ -119,8 +119,6 @@ export function useDayGroupRotation() {
    * canvasSyncInProgress is set during the batch to prevent spurious sync.
    */
   function rotateDayGroupPositions() {
-    if (!settingsStore.enableDayGroupPositionRotation) return
-
     console.log('[DAY-ROTATION] Rotating day group positions...')
 
     const groups = canvasStore.groups
@@ -205,7 +203,10 @@ export function useDayGroupRotation() {
   useDateTransition({
     onDayChange: (_prev: Date, _next: Date) => {
       rotateDayGroups()
-      rotateDayGroupPositions()
+      // Auto-rotation guarded by feature flag (can be disabled if it causes issues)
+      if (settingsStore.enableDayGroupPositionRotation) {
+        rotateDayGroupPositions()
+      }
     }
   })
 

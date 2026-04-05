@@ -8,9 +8,9 @@
 
 ## Active Tasks
 
-### TASK-1754: Drag-to-reorder projects in Control Room (📋 PLANNED)
+### ~~TASK-1754~~: Drag-to-reorder projects in Control Room (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
 
 **Goal**: Let users drag project cards to set a custom display order in the Control Room Projects tab. Persist the order in `~/.watchpost/projects.json` (e.g. an `order` field per project). Fall back to the current sort (Last Active) when no custom order is set.
 

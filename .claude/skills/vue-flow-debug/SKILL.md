@@ -316,6 +316,78 @@ Vue Flow's `nodeExtent` prop constrains where nodes can be positioned. In FlowSt
 ### SOP Reference
 See `docs/sop/canvas/CANVAS-NODE-EXTENT.md` for full details.
 
+## 7. Programmatic Node Position Updates {#programmatic-moves}
+
+### The Problem
+Updating `canvasStore.updateGroup(id, { position })` changes the Pinia store but Vue Flow nodes don't visually move. The sync pipeline (`syncStoreToCanvas → setNodes`) either gets blocked by `canAcceptRemoteUpdate` guard or the PositionManager rejects the update.
+
+### Root Cause: Sync Pipeline is NOT Designed for Programmatic Moves
+The sync pipeline (`batchedSyncNodes → syncNodes → syncStoreToCanvas → setNodes`) is designed for:
+- Initial load (store → Vue Flow projection)
+- Remote sync (Supabase realtime → store → Vue Flow)
+
+It has multiple guards that can block execution:
+1. `canAcceptRemoteUpdate` — blocks if user is dragging/resizing (opState ≠ idle)
+2. `canvasSyncInProgress` — blocks recursive sync
+3. PositionManager locks — blocks if node is locked by `user-drag`
+4. `batchedSyncNodes` dedup — skips if already scheduled on this tick
+
+### The Correct Approach: `useVueFlow().updateNode()`
+
+**NEVER rely on the sync pipeline for programmatic position changes.** Instead, use Vue Flow's `updateNode()` API directly:
+
+```typescript
+import { useVueFlow } from '@vue-flow/core'
+const { updateNode } = useVueFlow()
+
+// Move a group node to a new position
+updateNode('section-group-123', { position: { x: 500, y: 200 } })
+```
+
+**This works because:**
+- `updateNode()` does a shallow `Object.assign` into the live reactive node
+- Vue Flow immediately re-renders the node at the new position
+- No sync pipeline, no guards, no PositionManager — direct mutation
+
+### Full Pattern for Programmatic Batch Moves
+
+```typescript
+// 1. Update Pinia store for persistence (suppressing sync)
+canvasSyncInProgress.value = true
+try {
+  canvasStore.updateGroup(groupId, { position: newPos })
+  // Also update child task positions if needed
+} finally {
+  canvasSyncInProgress.value = false
+}
+
+// 2. Apply to Vue Flow directly — this is what actually moves the nodes
+updateNode(`section-${groupId}`, { position: newPos })
+```
+
+### API Comparison
+
+| Method | Moves visually | Persists | Use for |
+|--------|---------------|----------|---------|
+| `updateNode(id, { position })` | ✅ Yes | ❌ No | Vue Flow visual update |
+| `canvasStore.updateGroup(id, { position })` | ❌ No | ✅ Yes | Store persistence |
+| `setNodes(allNodes)` | ✅ Yes (but replaces all) | ❌ No | Full graph rebuild only |
+| `findNode(id).position = pos` | ✅ Yes | ❌ No | Same as updateNode |
+| Sync pipeline (canvasSyncTrigger++) | ⚠️ Maybe (guards) | N/A | Remote sync only |
+
+### Key Insight: Two Sync Triggers Exist (They Are Different!)
+
+| Ref | Location | Watcher uses `force` | Purpose |
+|-----|----------|---------------------|---------|
+| `canvasStore.syncTrigger` | `src/stores/canvas.ts` | YES (`force: true`) | User-initiated re-sync |
+| `canvasSyncTrigger` | `src/stores/canvasTaskBridge.ts` | NO | Remote/automatic sync |
+
+If you bump the wrong one, the sync runs without `force` and gets blocked by `canAcceptRemoteUpdate`.
+
+### Never Use `updateNodePositions` (Internal API)
+
+Vue Flow exports `updateNodePositions(dragItems, changed, dragging)` but the docs explicitly say "you probably don't want to use this" — it's the internal drag handler callback.
+
 ## Resources
 
 ### references/

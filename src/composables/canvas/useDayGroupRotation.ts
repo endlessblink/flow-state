@@ -20,9 +20,13 @@ import { useTaskStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
-import { canvasSyncTrigger } from '@/stores/canvasTaskBridge'
 
-export function useDayGroupRotation() {
+export interface DayGroupRotationOptions {
+  /** Called with Vue Flow node moves after position rotation. Caller applies via updateNode(). */
+  onMoves?: (moves: Array<{ nodeId: string; position: { x: number; y: number } }>) => void
+}
+
+export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
   const canvasStore = useCanvasStore()
   const taskStore = useTaskStore()
   const settingsStore = useSettingsStore()
@@ -119,10 +123,16 @@ export function useDayGroupRotation() {
    * This is a discrete once-per-day write, not a continuous watcher.
    * canvasSyncInProgress is set during the batch to prevent spurious sync.
    */
-  function rotateDayGroupPositions() {
+  /**
+   * Returns an array of { nodeId, position } for all nodes that need to move.
+   * The caller (CanvasView) must apply these to Vue Flow directly via updateNode().
+   * Store positions are also updated for persistence.
+   */
+  function rotateDayGroupPositions(): Array<{ nodeId: string; position: { x: number; y: number } }> {
     console.log('[DAY-ROTATION] Rotating day group positions...')
 
     const groups = canvasStore.groups
+    const moves: Array<{ nodeId: string; position: { x: number; y: number } }> = []
 
     // 1. Collect day-of-week groups with their dayIndex
     const dayGroups: Array<{ group: (typeof groups)[number]; dayIndex: number }> = []
@@ -136,7 +146,7 @@ export function useDayGroupRotation() {
     }
 
     // Need at least 2 groups to rotate
-    if (dayGroups.length < 2) return
+    if (dayGroups.length < 2) return moves
 
     // 2. Sort current positions by X to build ordered slot list
     const slots = dayGroups
@@ -167,7 +177,7 @@ export function useDayGroupRotation() {
       return aDist - bDist
     })
 
-    // 4. Apply position deltas under sync suppression
+    // 4. Apply position deltas — update store AND collect Vue Flow moves
     canvasSyncInProgress.value = true
     try {
       for (let i = 0; i < dayGroups.length; i++) {
@@ -181,7 +191,7 @@ export function useDayGroupRotation() {
         // Skip if already in correct position
         if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) continue
 
-        // Move group
+        // Update store for persistence
         canvasStore.updateGroup(group.id, {
           position: {
             ...currentPos,
@@ -190,29 +200,34 @@ export function useDayGroupRotation() {
           }
         })
 
+        // Collect Vue Flow move for the group node
+        moves.push({
+          nodeId: `section-${group.id}`,
+          position: { x: targetSlot.x, y: targetSlot.y }
+        })
+
         // Move child tasks by same delta
         const childTasks = taskStore.rawTasks.filter(
           (t) => t.parentId === group.id && t.canvasPosition
         )
         for (const task of childTasks) {
+          const newX = task.canvasPosition!.x + deltaX
+          const newY = task.canvasPosition!.y + deltaY
           taskStore.updateTask(
             task.id,
-            {
-              canvasPosition: {
-                x: task.canvasPosition!.x + deltaX,
-                y: task.canvasPosition!.y + deltaY
-              }
-            },
-            'DRAG' // approved geometry write source
+            { canvasPosition: { x: newX, y: newY } },
+            'DRAG'
           )
+          // Task positions in Vue Flow are relative to parent, so
+          // if the parent moves but the relative position stays the same,
+          // we don't need to move the task node. Vue Flow handles this.
         }
       }
     } finally {
       canvasSyncInProgress.value = false
     }
 
-    // Trigger Vue Flow re-sync so nodes visually move to their new positions
-    canvasSyncTrigger.value++
+    return moves
   }
 
   function dismissBanner() {
@@ -225,7 +240,10 @@ export function useDayGroupRotation() {
       rotateDayGroups()
       // Auto-rotation guarded by feature flag (can be disabled if it causes issues)
       if (settingsStore.enableDayGroupPositionRotation) {
-        rotateDayGroupPositions()
+        const moves = rotateDayGroupPositions()
+        if (moves.length > 0 && options.onMoves) {
+          options.onMoves(moves)
+        }
       }
     }
   })

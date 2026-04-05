@@ -305,7 +305,7 @@
 
 <script setup lang="ts">
 import { ref, markRaw, onMounted, onUnmounted } from 'vue'
-import { VueFlow, type NodeMouseEvent } from '@vue-flow/core'
+import { VueFlow, useVueFlow, type NodeMouseEvent } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -357,11 +357,22 @@ const nodeTypes = {
 }
 
 // FEATURE-1048: Day group auto-rotation at midnight
-const dayRotation = useDayGroupRotation()
+const { updateNode } = useVueFlow()
+
+function applyDayGroupMoves(moves: Array<{ nodeId: string; position: { x: number; y: number } }>) {
+  for (const move of moves) {
+    updateNode(move.nodeId, { position: move.position })
+  }
+}
+
+const dayRotation = useDayGroupRotation({
+  onMoves: applyDayGroupMoves // Also used for midnight auto-rotation
+})
 
 function handleRotateDayGroups() {
   dayRotation.rotateDayGroups()
-  dayRotation.rotateDayGroupPositions()
+  const moves = dayRotation.rotateDayGroupPositions()
+  applyDayGroupMoves(moves)
 }
 
 // Initialize Orchestrator

@@ -478,13 +478,35 @@ Start by reviewing the recent changes and pick up the next task.`;
         coverApi.provider = provider;
 
         const projectName = req.params.name;
-        // Consistent cover style: dark minimal tech art with project name as text
-        const defaultPrompt = `Dark minimal tech cover art for a software project. ` +
-            `Pure black (#000000) background. The project name "${projectName}" written in clean, ` +
-            `modern sans-serif typography (like Inter or SF Pro) in teal/cyan color (#4ECDC4), ` +
-            `centered. Below the name, a subtle abstract geometric pattern or circuit-board motif ` +
-            `in very dark gray (#1a1a1a) with faint teal accent lines. No gradients, no 3D, no ` +
-            `photorealism — flat, minimal, developer aesthetic. Square format.`;
+
+        // Category-based accent color from project path
+        const projects = loadProjects();
+        const project = projects.find(p => p.name === projectName);
+        const root = project?.root || '';
+        const categoryColors = {
+            'productivity': { accent: 'teal (#4ECDC4)', secondary: 'gold (#D4AF37)' },
+            'bots+automation': { accent: 'electric blue (#3B82F6)', secondary: 'silver (#C0C0C0)' },
+            'content-creation': { accent: 'warm gold (#F59E0B)', secondary: 'copper (#B87333)' },
+            'freelance': { accent: 'emerald green (#10B981)', secondary: 'gold (#D4AF37)' },
+            'devops': { accent: 'deep purple (#8B5CF6)', secondary: 'silver (#C0C0C0)' },
+            'game-dev': { accent: 'crimson red (#EF4444)', secondary: 'gold (#D4AF37)' },
+            'cc-linux-enhancments': { accent: 'orange (#F97316)', secondary: 'brass (#B5A642)' },
+            'misc': { accent: 'rose (#EC4899)', secondary: 'silver (#C0C0C0)' }
+        };
+        const catFolder = root.match(/ai-development\/([^/]+)/)?.[1] || '';
+        const colors = categoryColors[catFolder] || { accent: 'teal (#4ECDC4)', secondary: 'gold (#D4AF37)' };
+
+        // Art Deco style cover prompt — consistent motif with category-unique accent color
+        const defaultPrompt = `Art Deco style poster cover for a software project called "${projectName}". ` +
+            `Deep black background. Elegant 1920s Art Deco geometric design. ` +
+            `At the top: a decorative sunburst arch with radiating geometric lines in ${colors.accent}. ` +
+            `Center: the project name "${projectName}" in large, prominent Art Deco display typography — ` +
+            `bold, geometric letterforms with sharp angles and clean edges, colored in ${colors.accent}. ` +
+            `Below the name: a thin ornamental Art Deco divider line in ${colors.secondary}. ` +
+            `The inner pattern varies — use stepped chevrons, fan shapes, or geometric lattice. ` +
+            `Bottom: subtle geometric base pattern with thin accent lines. ` +
+            `Style: flat vector, no 3D, no photorealism, pure Art Deco geometric illustration. ` +
+            `The text must be perfectly legible. Square format, 1024x1024.`;
         const prompt = (req.body && req.body.prompt) ? req.body.prompt : defaultPrompt;
 
         try {
@@ -507,23 +529,6 @@ Start by reviewing the recent changes and pick up the next task.`;
                 const imgResponse = await fetch(imageUrl);
                 imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
 
-            } else if (coverApi.provider === 'ideogram') {
-                const endpoint = coverApi.endpoint || 'https://api.ideogram.ai/generate';
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Api-Key': coverApi.apiKey
-                    },
-                    body: JSON.stringify({ image_request: { prompt, aspect_ratio: 'ASPECT_1_1', model: 'V_2' } })
-                });
-                const data = await response.json();
-                if (data.error) throw new Error(JSON.stringify(data.error));
-                const imageUrl = data.data && data.data[0] && data.data[0].url;
-                if (!imageUrl) throw new Error('No image URL in Ideogram response');
-                const imgResponse = await fetch(imageUrl);
-                imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
-
             } else if (coverApi.provider === 'fal') {
                 const endpoint = coverApi.endpoint || 'https://fal.run/fal-ai/flux/schnell';
                 const response = await fetch(endpoint, {
@@ -538,6 +543,54 @@ Start by reviewing the recent changes and pick up the next task.`;
                 if (data.error) throw new Error(JSON.stringify(data.error));
                 const imageUrl = data.images && data.images[0] && data.images[0].url;
                 if (!imageUrl) throw new Error('No image URL in fal response');
+                const imgResponse = await fetch(imageUrl);
+                imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
+
+            } else if (coverApi.provider === 'ideogram' || coverApi.provider === 'ideogram-v3') {
+                // Ideogram V3 via Kie.ai — best for Art Deco typography + style
+                const genResponse = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${coverApi.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'ideogram/v3-text-to-image',
+                        input: {
+                            prompt,
+                            rendering_speed: 'QUALITY',
+                            style: 'DESIGN',
+                            expand_prompt: false,
+                            image_size: 'square_hd',
+                            negative_prompt: 'blurry, photorealistic, 3D render, gradient mesh, low quality, watermark'
+                        }
+                    })
+                });
+                const genData = await genResponse.json();
+                if (genData.code !== 200) throw new Error(genData.msg || JSON.stringify(genData));
+                const taskId = genData.data?.taskId;
+                if (!taskId) throw new Error('No taskId in Ideogram response');
+
+                // Poll for result (max 120 seconds, every 5 seconds)
+                let imageUrl = null;
+                for (let i = 0; i < 24; i++) {
+                    await new Promise(r => setTimeout(r, 5000));
+                    const pollResponse = await fetch(
+                        `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`,
+                        { headers: { 'Authorization': `Bearer ${coverApi.apiKey}` } }
+                    );
+                    const pollData = await pollResponse.json();
+                    const state = pollData.data?.state;
+                    if (state === 'success') {
+                        const resultJson = JSON.parse(pollData.data?.resultJson || '{}');
+                        imageUrl = resultJson.resultUrls?.[0];
+                        break;
+                    } else if (state === 'fail') {
+                        throw new Error('Ideogram generation failed');
+                    }
+                    // waiting/queuing/generating — continue polling
+                }
+                if (!imageUrl) throw new Error('Ideogram generation timed out (120s)');
                 const imgResponse = await fetch(imageUrl);
                 imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
 

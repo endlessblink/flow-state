@@ -73,6 +73,18 @@
 
 ---
 
+### ~~TASK-1753~~: Constitution reminder PreToolUse hook (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
+
+**Problem**: Constitution and project docs are referenced in CLAUDE.md but no enforcement exists — agents could skip reading them.
+
+**Changes**: Added `.claude/hooks/constitution-reminder.sh` PreToolUse hook. Fires once per session on first source file edit, reminds agent to check Constitution + project docs. Never blocks. Skips docs, tests, configs.
+
+**Files**: `.claude/hooks/constitution-reminder.sh`, `.claude/settings.json`
+
+---
+
 ### ~~TASK-1751~~: Documentation deep audit + Constitution extraction (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-05)

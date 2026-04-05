@@ -1,6 +1,12 @@
 import { type RealtimeChannel } from '@supabase/supabase-js'
 import { getSupabase, invalidateCache, type DatabaseContext } from './_infrastructure'
 
+// Generation counter: incremented each time initRealtimeSubscription runs.
+// Each setupSubscription closure captures its own generation at creation time.
+// Any stale setTimeout that fires after a newer subscription exists will see
+// myGeneration !== subscriptionGeneration and bail out immediately.
+let subscriptionGeneration = 0
+
 /** Shape of Supabase Realtime postgres_changes payload */
 export interface RealtimePayload {
     eventType: string
@@ -27,6 +33,11 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         const userId = authStore.user?.id
         if (!userId) return null
 
+        // Claim this generation. Any setTimeout from a previous call to
+        // initRealtimeSubscription that hasn't fired yet will see a stale generation
+        // and abort, preventing ghost reconnects after workspace switches.
+        const myGeneration = ++subscriptionGeneration
+
         // Workspace-aware filter: personal workspace filters by user_id,
         // shared workspace filters by workspace_id instead
         const taskFilter = workspaceId
@@ -45,11 +56,11 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         const _heartbeatInterval: ReturnType<typeof setInterval> | null = null
         let isRemovingChannel = false // Guard against recursive removeChannel calls (BUG-1088)
 
-        // cleanup previous channels if any
-        if (getSupabase().realtime.channels.length > 0) {
-            console.debug(`📡 [REALTIME] Cleaning up ${getSupabase().realtime.channels.length} existing channels...`)
-            getSupabase().removeAllChannels()
-        }
+        // cleanup previous channel (scoped to this call-site's currentChannel ref only,
+        // not a nuclear removeAllChannels that would tear down other subscriptions)
+        // NOTE: currentChannel is declared below; this block will be a no-op on the first
+        // call. Subsequent re-inits re-enter this function, so the old closure's
+        // currentChannel is already gone — the generation counter is the real guard.
 
         // Unique channel name per tab
         const tabId = window.__flowstate_tab_id || (() => {
@@ -180,42 +191,61 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     }
                     currentChannel = null
 
-                    // RETRY LOGIC (Exponential Backoff)
-                    const maxRetries = 10
-                    if (retryCount < maxRetries) {
-                        const delay = Math.pow(1.5, retryCount) * 1000 + (Math.random() * 500)
-                        console.debug(`📡 [REALTIME] Reconnecting in ${delay.toFixed(0)}ms...`)
+                    // RETRY LOGIC
+                    // Phase 1 (fast): first 10 retries use exponential backoff (~1s → ~57s)
+                    // Phase 2 (slow): after 10 fast retries, retry every 60s indefinitely
+                    // Reset: retryCount resets to 0 on SUBSCRIBED (line above)
+                    const FAST_RETRY_LIMIT = 10
+                    const SLOW_RETRY_INTERVAL_MS = 60_000
 
-                        setTimeout(() => {
-                            retryCount++
-                            setupSubscription().then(async () => {
-                                // BUG-1207 FIX: Apply same cooldown as visibility/online handlers
-                                // to prevent recovery from clobbering recent user edits
-                                const timeSinceInteraction = Date.now() - lastUserInteraction
-                                if (onRecovery && timeSinceInteraction > RECOVERY_COOLDOWN_MS) {
-                                    // BUG-1206 FIX (Fix 3): Check modal state before reconnect recovery too
-                                    try {
-                                        const { useCanvasModalsStore } = await import('@/stores/canvas/modals')
-                                        const canvasModals = useCanvasModalsStore()
-                                        if (canvasModals.isEditModalOpen || canvasModals.isBatchEditModalOpen) {
-                                            console.debug('📡 [REALTIME] Skipping reconnect recovery - edit modal is open (BUG-1206)')
-                                            return
-                                        }
-                                    } catch { /* continue */ }
+                    const isSlowPhase = retryCount >= FAST_RETRY_LIMIT
+                    const delay = isSlowPhase
+                        ? SLOW_RETRY_INTERVAL_MS
+                        : Math.pow(1.5, retryCount) * 1000 + (Math.random() * 500)
 
-                                    console.debug('📡 [REALTIME] Triggering recovery data reload...')
-                                    // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
-                                    invalidateCache.all()
-                                    onRecovery().catch(e => console.error('Recovery failed:', e))
-                                } else if (onRecovery) {
-                                    console.debug(`📡 [REALTIME] Skipping reconnect recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
-                                }
-                            })
-                        }, delay)
+                    if (isSlowPhase) {
+                        // Log the transition once (when retryCount is exactly FAST_RETRY_LIMIT)
+                        if (retryCount === FAST_RETRY_LIMIT) {
+                            console.warn('📡 [REALTIME] Fast retries exhausted, entering slow retry mode (every 60s)')
+                        } else {
+                            console.debug(`📡 [REALTIME] Slow retry #${retryCount - FAST_RETRY_LIMIT + 1} in ${SLOW_RETRY_INTERVAL_MS / 1000}s...`)
+                        }
                     } else {
-                        console.error('📡 [REALTIME] Max retries reached. Connection lost permanently until refresh.')
-                        handleError(new Error('Realtime connection lost'), 'RealtimeSubscription')
+                        console.debug(`📡 [REALTIME] Reconnecting in ${delay.toFixed(0)}ms (fast retry ${retryCount + 1}/${FAST_RETRY_LIMIT})...`)
                     }
+
+                    setTimeout(() => {
+                        // Cancellation token: abort if a newer initRealtimeSubscription
+                        // call has already claimed the channel (workspace switch, re-init, etc.)
+                        if (myGeneration !== subscriptionGeneration) {
+                            console.debug('📡 [REALTIME] Stale reconnect timer fired — discarding (generation mismatch)')
+                            return
+                        }
+                        retryCount++
+                        setupSubscription().then(async () => {
+                            // BUG-1207 FIX: Apply same cooldown as visibility/online handlers
+                            // to prevent recovery from clobbering recent user edits
+                            const timeSinceInteraction = Date.now() - lastUserInteraction
+                            if (onRecovery && timeSinceInteraction > RECOVERY_COOLDOWN_MS) {
+                                // BUG-1206 FIX (Fix 3): Check modal state before reconnect recovery too
+                                try {
+                                    const { useCanvasModalsStore } = await import('@/stores/canvas/modals')
+                                    const canvasModals = useCanvasModalsStore()
+                                    if (canvasModals.isEditModalOpen || canvasModals.isBatchEditModalOpen) {
+                                        console.debug('📡 [REALTIME] Skipping reconnect recovery - edit modal is open (BUG-1206)')
+                                        return
+                                    }
+                                } catch { /* continue */ }
+
+                                console.debug('📡 [REALTIME] Triggering recovery data reload...')
+                                // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
+                                invalidateCache.all()
+                                onRecovery().catch(e => console.error('Recovery failed:', e))
+                            } else if (onRecovery) {
+                                console.debug(`📡 [REALTIME] Skipping reconnect recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
+                            }
+                        })
+                    }, delay)
                 }
             })
         }

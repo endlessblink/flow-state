@@ -969,6 +969,14 @@ export function useAppInitialization() {
             activeChannel.value = channel
             console.log(`📡 [APP-INIT] Realtime subscription re-created for workspace: ${newWsId || 'personal'}`)
         }
+
+        // BUG-1673: Reload data for the new workspace context
+        // Without this, tasks loaded for the previous workspace remain stale
+        await Promise.all([
+            taskStore.loadFromDatabase(),
+            projectStore.loadProjectsFromDatabase(),
+            canvasStore.loadFromDatabase()
+        ])
     })
 
     // TASK-1338: Handle SW push notification click actions

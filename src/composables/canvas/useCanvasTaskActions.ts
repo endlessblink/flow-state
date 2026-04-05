@@ -14,6 +14,7 @@ import { positionManager } from '@/services/canvas/PositionManager'
 import { useCanvasSectionProperties } from './useCanvasSectionProperties'
 import type { CanvasSection } from '@/stores/canvas/types'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
+import { findMatchingGroupForDueDate, calculatePositionInGroup } from './useSmartGroupMatcher'
 import { pushImageDeleteUndo } from '@/composables/undoSingleton'
 import { useVueFlow } from '@vue-flow/core'
 
@@ -306,11 +307,30 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 }
             }
 
+            // Move tasks to matching day group (e.g., "Tomorrow" group)
+            const matchingGroup = findMatchingGroupForDueDate(tomorrowStr, canvasStore.groups)
+            if (matchingGroup) {
+                for (const nodeId of selectedNodeIds) {
+                    const task = taskStore.tasks.find(t => t.id === nodeId)
+                    if (task && task.parentId !== matchingGroup.id) {
+                        const tasksInGroup = taskStore.tasks.filter(t => t.parentId === matchingGroup.id)
+                        const position = calculatePositionInGroup(matchingGroup, tasksInGroup)
+                        taskStore.updateTask(nodeId, {
+                            parentId: matchingGroup.id,
+                            canvasPosition: position
+                        }, 'USER')
+                    }
+                }
+            }
+
             // Show toast notification
             const msg = selectedNodeIds.length === 1
                 ? 'Moved to tomorrow'
                 : `${selectedNodeIds.length} tasks moved to tomorrow`
             showToast(msg, 'success', { duration: TOAST_SUCCESS_DURATION_MS })
+
+            // Trigger canvas sync to reflect group change
+            if (deps.batchSyncNodes) deps.batchSyncNodes('high')
 
             deps.closeCanvasContextMenu()
         } catch (error) {

@@ -110,12 +110,9 @@ services:
       PGRST_DB_USE_LEGACY_GUCS: "false"
       PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
       PGRST_APP_SETTINGS_JWT_EXP: 3600
+    # PostgREST is a static binary with no shell — healthcheck disabled
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ready || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      disable: true
     logging:
       driver: "json-file"
       options:
@@ -167,25 +164,28 @@ services:
   kong:
     image: kong:3.9
     restart: unless-stopped
+    entrypoint: /usr/local/bin/kong-entrypoint.sh
     depends_on:
       auth:
         condition: service_healthy
       rest:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "${KONG_HTTP_PORT:-8000}:8000"
       - "${KONG_HTTPS_PORT:-8443}:8443"
     environment:
       KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,rate-limiting
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      KONG_NGINX_PROXY_PROXY_READ_TIMEOUT: "3600s"
+      KONG_NGINX_PROXY_PROXY_SEND_TIMEOUT: "3600s"
       ANON_KEY: ${ANON_KEY}
       SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
     volumes:
-      - ./docker/self-host/volumes/api/kong.yml:/var/lib/kong/kong.yml:ro
+      - ./docker/self-host/volumes/api/kong.yml:/var/lib/kong/kong.yml.template:ro
+      - ./docker/self-host/kong-entrypoint.sh:/usr/local/bin/kong-entrypoint.sh:ro
     healthcheck:
       test: ["CMD", "kong", "health"]
       interval: 10s
@@ -205,8 +205,6 @@ services:
     image: supabase/postgres:17.6.1.095
     depends_on:
       auth:
-        condition: service_healthy
-      rest:
         condition: service_healthy
     environment:
       POSTGRES_HOST: db

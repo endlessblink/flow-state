@@ -99,10 +99,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         activeWorkspaceId.value = null
       } else if (lastWsId && workspaces.value.some(w => w.id === lastWsId)) {
         activeWorkspaceId.value = lastWsId
-      } else if (workspaces.value.length === 1) {
-        // TASK-1555: Single-workspace users auto-land in their shared workspace (first visit only)
-        activeWorkspaceId.value = workspaces.value[0].id
       }
+      // Note: Personal workspace is the default. Users explicitly switch to shared workspaces.
+      // Removed TASK-1555 auto-land (caused BUG-1673: tasks fetched for wrong workspace on init)
 
       console.log(`[WORKSPACE] Loaded ${workspaces.value.length} workspace(s)`)
 

@@ -205,7 +205,12 @@ export const useTaskFiltering = (
 
         // BUG-1673: Always log when raw has tasks but filtered is empty (detect Realtime desync)
         if (tasks.value.length > 0 && finalResult.length === 0) {
-            console.warn(`🔴 [BUG-1673] FILTER EMPTY: raw=${tasks.value.length} → afterBasic=${filtered.length} → final=${finalResult.length}`, {
+            const wsId = workspaceStore.activeWorkspaceId
+            const afterWs = filterByWorkspace(tasks.value).length
+            const sampleTask = tasks.value[0]
+            console.warn(`🔴 [BUG-1673] FILTER EMPTY: raw=${tasks.value.length} → afterWorkspace=${afterWs} → afterBasic=${filtered.length} → final=${finalResult.length}`, {
+                activeWorkspaceId: wsId,
+                sampleTaskWorkspaceId: sampleTask?.workspaceId ?? '(undefined)',
                 smartView: activeSmartView.value,
                 statusFilter: activeStatusFilter.value,
                 durationFilter: activeDurationFilter.value,

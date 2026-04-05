@@ -2,6 +2,8 @@
 
 > **Note**: Renumbered from SOP-019 to SOP-025 to resolve ID conflict with SOP-019-multi-agent-file-locking.md
 
+> **Note:** Root cause was attributed to WebKitGTK but the fix pattern (always read fresh from store, call requestSync after updates) is valid general practice for Vue Flow reactivity.
+
 **Created**: 2026-01-22
 **Status**: Active
 **Related**: BUG-357

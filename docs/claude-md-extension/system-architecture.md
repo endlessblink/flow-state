@@ -1,6 +1,6 @@
 # FlowState System Architecture
 
-> **Last verified**: March 21, 2026 | **Version**: 1.3.17
+> **Last verified**: April 5, 2026 | **Version**: 1.3.38
 > **Read this before any major feature work, refactoring, or architectural decisions.**
 
 ---
@@ -38,7 +38,7 @@
 
 ---
 
-## Views (19 total)
+## Views (19 total + AIChatView sub-view)
 
 ### Desktop Views (13)
 | Route | View | Purpose |
@@ -49,7 +49,7 @@
 | `/calendar-test` | CalendarViewVueCal | Experimental vue-cal calendar |
 | `/tasks`, `/catalog` | AllTasksView | Flat task list / catalog view |
 | `/quick-sort` | QuickSortView | Triage uncategorized tasks one-by-one |
-| `/ai` | AIHubView | AI chat entry point |
+| `/ai` | AIHubView | AI chat entry point (renders AIChatView as sub-view) |
 | `/focus/:taskId` | FocusView | Single-task focus mode with timer |
 | — (overlay) | MorningDashboardView | Morning ritual overlay launched from App.vue via useMorningRitual() |
 | `/today-flow` | TodayFlowView | Today's tasks flow view |
@@ -69,12 +69,13 @@
 
 ---
 
-## Stores (13 top-level + sub-modules)
+## Stores (14 top-level + sub-modules)
 
 | Store | File | Purpose |
 |-------|------|---------|
 | `tasks` | `stores/tasks.ts` | Facade — delegates to `tasks/` sub-modules |
 | `canvas` | `stores/canvas.ts` | Canvas state, delegates to `canvas/` sub-modules |
+| `canvasImages` | `stores/canvasImages.ts` | Canvas image nodes — localStorage + Supabase Storage |
 | `timer` | `stores/timer.ts` | Pomodoro timer + cross-device leadership |
 | `auth` | `stores/auth.ts` | Supabase auth session |
 | `settings` | `stores/settings.ts` | User preferences |
@@ -94,7 +95,7 @@
 
 ---
 
-## Composables (~160 files, 17 directories)
+## Composables (~160 files, 18 directories)
 
 | Directory | Count | Purpose |
 |-----------|-------|---------|
@@ -104,7 +105,7 @@
 | `tasks/card/` | 2 | Task card state/actions |
 | `tasks/row/` | 1 | Task row state |
 | `calendar/` | 10 | Scroll, navigation, modals, interaction, timer integration, month/day/week views, Google Calendar, external calendar |
-| `supabase/` | 13 | DB composables for tasks, projects, groups, settings, timer, notifications, quick sort, pinned tasks, work profiles, tombstones, realtime subscriptions, infrastructure |
+| `supabase/` | 16 | DB composables for tasks, projects, groups, settings, timer, notifications, quick sort, pinned tasks, work profiles, tombstones, realtime subscriptions, infrastructure, task audit log, task comments, workspace activity |
 | `sync/` | 3 | Broadcast channel, timer leader election, sync orchestrator |
 | `backup/` | 8 | Core, export, restore, history, golden snapshot, types |
 | `inbox/` | 3 | Calendar inbox, unified inbox state/actions |
@@ -113,6 +114,7 @@
 | `mobile/` | 1 | Mobile filters |
 | `app/` | 5 | App initialization, onboarding wizard, sidebar management, app shortcuts, quick task input |
 | `ui/` | 3 | Done toggle, drag handle state/interaction |
+| `workspace/` | 3 | useTaskAssignment, useWorkspaceEmptyState, useWorkspacePresence |
 | Root | ~72 | All other composables (AI, voice, platform, Tauri, Capacitor, taskbar nanny, morning dashboard, etc.) |
 
 ---
@@ -142,15 +144,15 @@
 | `base/` | 13 | BaseButton, BaseInput, BaseBadge, BaseCard, BaseModal, BasePopover, BaseIconButton, BaseDropdown, BaseNavItem, FilterControls, OverflowTooltip, ProjectEmojiIcon, AppLogo |
 | `common/` | 15 | CustomSelect, ConfirmationModal, MarkdownEditor, MarkdownRenderer, EmojiPicker, MultiSelectToggle, RecurrenceDeleteModal, TimeDisplay, TauriUpdateNotification, ErrorBoundary |
 | `canvas/` | ~22 | GroupNodeSimple, CanvasToolbar, CanvasContextMenu, GroupEditModal, ResizeHandle, CanvasModals |
-| `canvas/node/` | 6 | TaskNodeHeader, TaskNodeDescription, TaskNodePriority |
+| `canvas/node/` | 6 | TaskNodeHeader, TaskNodeDescription, TaskNodePriority, TaskNodeMeta, TaskNodeSelection, OverdueBadge |
 | `tasks/` | ~14 | DoneToggle, DragHandle, TaskContextMenu |
-| `tasks/edit/` | 5 | TaskEditHeader, TaskEditSubtasks, TaskEditMetadata, TaskEditChildTasks |
-| `tasks/context-menu/` | 7 | Context menu sub-components |
+| `tasks/edit/` | 6 | TaskEditHeader, TaskEditSubtasks, TaskEditMetadata, TaskEditChildTasks, RecurrenceSelector, TaskComments |
+| `tasks/context-menu/` | 8 | CanvasGroupSubmenu, DoneForNowSubmenu, DueDateSubmenu, DurationSubmenu, MoreSubmenu, PrioritySubmenu, ProjectSubmenu, StatusSubmenu (+ constants.ts) |
 | `tasks/row/` | 6 | Task row sub-components |
-| `kanban/` | 6 | KanbanColumn, KanbanCard + sub-components |
-| `inbox/` | 11 | UnifiedInboxPanel, UnifiedInboxHeader, PinnedTasksSection |
+| `kanban/` | 3+sub | KanbanSwimlane, TaskCard, KanbanColumn (+ `card/` sub-directory) |
+| `inbox/` | 15 | CalendarInboxPanel, UnifiedInboxPanel (top-level) + `calendar/` (4: CalendarInboxHeader, CalendarInboxInput, CalendarInboxList, CalendarTaskCard) + `unified/` (9: UnifiedInboxHeader, UnifiedInboxInput, UnifiedInboxList, UnifiedInboxTaskCard, PinnedTasksSection, InboxToolbar, InboxFilterPopover, InboxSortDropdown, ActiveFilterPills) |
 | `morning-dashboard/` | 14 | MorningRitualPanel, BigThreeCard, MorningCandidateCard, MorningTimeBlockCalendar, TaskPoolCard, MorningQuickCapture |
-| `sidebar/` | 7 | SidebarHeader, SidebarProjectsSection, SidebarQuickTaskInput, SidebarWorkspaceSwitcher, SidebarSmartViews |
+| `sidebar/` | 7 | SidebarHeader, SidebarProjectsSection, SidebarQuickTaskInput, SidebarWorkspaceSwitcher, SidebarSmartViews, SidebarUserFooter, SidebarDurationSection |
 | `settings/` | ~14 | SettingsModal + tabs (Timer, Appearance, Integrations, Storage, etc.) |
 | `ai/` | 7 | AIChatPanel, ChatMessage, AISetupWizard, AITaskAssistPopover, AIQualityDashboard, AIMemoryHealthDashboard, TaskQuickEditPopover |
 | `auth/` | 6 | AuthModal, GoogleSignInButton, LoginForm, SignupForm, UserProfile, ResetPasswordView |
@@ -162,6 +164,8 @@
 | `onboarding/` | 1 | OnboardingWizard |
 | `today-flow/` | 1 | FlowTaskCard |
 | `error/` | 1 | RouteErrorBoundary |
+| `workspace/` | 3 | AssigneeAvatar, SidebarActivityFeed, WorkspaceEmptyState |
+| `mini-canvas/` | 6 | MiniCanvasOverlay, MiniCanvasToolbar, MiniCanvasEmptyState, ParentTaskNode, SubtaskNode, NoteNode |
 | `mobile/` | 14 | MobileQuickSortCard, SwipeableTaskItem, TaskCreateBottomSheet, MobileNav, VoiceTaskConfirmation |
 
 ---
@@ -191,6 +195,7 @@
 - **Multi-select**: click, Ctrl/Shift, rectangle selection
 - **Hotkeys**: Delete, Shift+G (create group), zoom controls
 - **Geometry invariants**: single-writer principle, sync is read-only
+- **Image nodes**: upload images to canvas via `canvasImages` store + `canvasImageUpload` service + `ImageNode.vue` component (backed by localStorage + Supabase Storage)
 
 ### 3. Kanban Board
 - Status-based columns (planned, in_progress, done, backlog, on_hold)
@@ -396,25 +401,28 @@ All stores wait for `authStore.isAuthenticated` before loading data from Supabas
 
 ---
 
-## Database Schema (24+ tables, 30 migrations)
+## Database Schema (32 tables, 34 migrations)
 
 ### Core Tables (8)
 `tasks`, `groups`, `projects`, `timer_sessions`, `pomodoro_history`, `notifications`, `user_settings`, `quick_sort_sessions`
 
-### Data Integrity (2)
-`tombstones` (sync deletion tracking), `task_dedup_audit`
+### Data Integrity (3)
+`tombstones` (sync deletion tracking), `task_dedup_audit`, `task_audit_log`
 
 ### Gamification (7)
 `user_gamification`, `xp_logs`, `achievements`, `user_achievements`, `shop_items`, `user_purchases`, `user_stats`
 
-### Challenges (2)
-`user_challenges`, `arena_runs` (Daily Cyberpunk Arena)
+### Challenges (3)
+`user_challenges`, `challenge_history`, `arena_runs` (Daily Cyberpunk Arena)
 
-### Workspace/Collaboration (5 — NEW)
+### Workspace/Collaboration (5)
 `workspaces`, `workspace_members`, `workspace_invites`, `task_comments`, `workspace_activity`
 
+### AI (3)
+`ai_conversations` (cross-device AI chat sync), `ai_work_profiles`, `ai_usage_log`
+
 ### Other
-`pinned_tasks`, `ai_work_profiles`, `ai_conversations` (cross-device AI chat sync), `push_subscriptions`, `whatsapp_conversations`
+`pinned_tasks`, `push_subscriptions`, `whatsapp_conversations`
 
 All tables have RLS (Row-Level Security) enabled. Workspace-aware tables (`tasks`, `projects`, `groups`) use dual RLS: personal rows (`workspace_id IS NULL AND user_id = auth.uid()`) + shared rows (`workspace_id = ANY(user_workspace_ids())`).
 

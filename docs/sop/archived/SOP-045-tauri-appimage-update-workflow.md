@@ -1,3 +1,5 @@
+> **ARCHIVED**: Superseded by SOP-065-electron-desktop-app.md. Tauri was replaced by Electron.
+
 # SOP-045: Tauri AppImage Update Workflow
 
 **Created**: 2026-02-21

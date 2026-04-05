@@ -1,3 +1,5 @@
+> **ARCHIVED**: Superseded by SOP-065-electron-desktop-app.md. Tauri was replaced by Electron.
+
 # SOP-034: Tauri Linux Microphone Limitation
 
 **Status:** KNOWN LIMITATION

@@ -1,3 +1,5 @@
+> **ARCHIVED**: Superseded by SOP-065-electron-desktop-app.md. Tauri was replaced by Electron.
+
 # SOP-053: Tauri Linux CSS Limitations (WebKitGTK)
 
 ## Overview

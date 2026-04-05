@@ -9,7 +9,7 @@
 
 ## Overview
 
-This guide consolidates all glassmorphism and CSS debugging knowledge for the Pomo-Flow application. Use this when debugging persistent backgrounds, visibility issues, or Storybook styling problems.
+This guide consolidates all glassmorphism and CSS debugging knowledge for the FlowState application. Use this when debugging persistent backgrounds, visibility issues, or Storybook styling problems.
 
 ---
 

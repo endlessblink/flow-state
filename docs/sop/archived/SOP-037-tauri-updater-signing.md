@@ -1,3 +1,5 @@
+> **ARCHIVED**: Superseded by SOP-065-electron-desktop-app.md. Tauri was replaced by Electron.
+
 # SOP-037 - Tauri In-App Auto-Updater & Signing
 
 ## Overview

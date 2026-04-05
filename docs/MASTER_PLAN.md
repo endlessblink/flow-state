@@ -73,6 +73,24 @@
 
 ---
 
+### ~~TASK-1751~~: Documentation deep audit + Constitution extraction (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-05)
+
+**Problem**: Core documentation (system-architecture.md, design-system.md, SOPs, CLAUDE.md) had significant staleness — wrong values, missing features, dead Tauri references — causing AI agents to make incorrect decisions.
+
+**Changes**:
+- Fixed CLAUDE.md: all Tauri→Electron refs (13 locations), table count 19→32
+- Fixed design-system.md: 5 wrong glass-bg opacity values, 12 missing BaseModal props, 7 new token subsystems
+- Fixed system-architecture.md: version, counts, 5 missing directories
+- Archived 6 dead Tauri SOPs, fixed SOP-065 ID collision, corrected README
+- Created `~/.claude/knowledge/constitution.md` (167 lines) — reusable dev standards
+- Slimmed CLAUDE.md from 476→405 lines by extracting universal rules to Constitution
+
+**Files**: `CLAUDE.md`, `docs/claude-md-extension/design-system.md`, `docs/claude-md-extension/system-architecture.md`, `docs/sop/` (20+ files), `~/.claude/knowledge/constitution.md`
+
+---
+
 ### ~~TASK-1750~~: Create favicon for Watchpost dashboard (✅ DONE)
 
 **Priority**: P3 | **Status**: ✅ DONE (2026-04-05)

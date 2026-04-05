@@ -1,10 +1,8 @@
 # CLAUDE.md
 
-# NEVER EVER CLAIM SUCCESS THAT SOMETHING IS READY, DONE, READY FOR PRODUCTION ETC UNTIL THE USER CONFIRMS IT by actually testing or using the feature!!!!
+**Development Standards**: Read [`~/.claude/knowledge/constitution.md`](~/.claude/knowledge/constitution.md) for universal development rules that apply across all projects.
 
 # ALWAYS USE THE CORRECT SKILL FOR THE TASK
-
-ALWAYS CHECK WITH PLAYWRIGHT CLI OR ANY OTHER VISUAL TESTING METHOD WHERE APPLICABLE BEFORE SAYING THAT ANYTHING IS DONE, READY, LOOKS CORRECT, WORKING ETC!!
 
 # MANDATORY Pre-Read for Major Work
 
@@ -50,10 +48,10 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 | Backup System | ✅ Hardened (Smart Layers 1-3) |
 | Timer Sync | ✅ Working (cross-device via Supabase Realtime) |
 | KDE Widget | ✅ Working (packages/kde-widget/) |
-| Tauri Desktop | ✅ Working (Linux/Win/Mac releases) |
+| Electron Desktop | ✅ Working (Linux/Win/Mac releases) |
 | VPS Production | ✅ Live (Contabo VPS, set VITE_SITE_URL) |
 | Build/CI | ✅ Passing |
-| AI Chat | ✅ Working (Groq/Ollama, Tauri-aware) |
+| AI Chat | ✅ Working (Groq/Ollama) |
 | Gamification | ✅ Working (XP, achievements, shop) |
 | Offline Sync | 🔄 In Progress (TASK-1177) |
 
@@ -74,9 +72,9 @@ npm run lint         # Lint code
 npm run storybook    # Component docs (port 6006)
 npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 
-# Tauri Desktop
-npm run tauri build  # Build desktop app with signing (requires env vars)
-npm run tauri:update-manifest  # Generate latest.json for auto-updater
+# Electron Desktop
+npm run electron:build  # Build desktop app (AppImage/deb/exe)
+./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"  # Build + deploy to VPS
 
 # Deployment (auto via CI/CD on push to master)
 # Manual deploy: npm run build && rsync -avz dist/ ${VPS_USER:-root}@${VPS_HOST}:/var/www/flowstate/
@@ -124,24 +122,24 @@ SQL
 - **Vue Flow** for canvas, **Vuedraggable** for drag-drop
 - **Supabase** (Postgres + Auth + Realtime) - Self-hosted on VPS
 - **TipTap** for rich text editing
-- **Tauri 2.x** for desktop distribution (Linux, Windows, macOS)
+- **Electron** for desktop distribution (Linux, Windows, macOS)
 - **Caddy** reverse proxy + auto-SSL
 - **Cloudflare** DNS + CDN + Origin Certificates
 - **Doppler** for secrets management (CI/CD + production)
 
-## Tauri Desktop Distribution & Auto-Updater
+## Electron Desktop Distribution & Auto-Updater
 
-**Full SOPs:** [SOP-011](docs/sop/SOP-011-tauri-distribution.md) (builds/signing), [SOP-037](docs/sop/SOP-037-tauri-updater-signing.md) (updater/deployment)
+**Full SOP:** [SOP-065](docs/sop/SOP-065-electron-desktop-app.md) (builds, updater, deployment)
 
 **Deploy command (MANDATORY after code changes):**
 ```bash
-./scripts/deploy-tauri-update.sh --notes "TASK-XXX: description"
+./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"
 ```
-Options: `--skip-deploy` (build only), `--dry-run` (preview). Fallback: `sudo dpkg -i src-tauri/target/release/bundle/deb/FlowState_*.deb` (local only, no auto-updater — only if user explicitly asks).
+Options: `--skip-deploy` (build only), `--dry-run` (preview).
 
-**Release workflow:** Bump version in 3 files (package.json, tauri.conf.json, Cargo.toml) → git tag → CI/CD auto-builds.
-**Auto-updater endpoint:** `${VITE_SITE_URL}/updates/latest.json` — checks on app launch (3s delay), shows toast with "Download" button. Auto-update toggle in Settings > About.
-**Signing key:** `~/.tauri/flow-state.key` (NEVER commit). Password in KWallet via `secret-tool`.
+**Release workflow:** Bump version in 2 files (package.json, electron-builder.yml) → git tag → CI/CD auto-builds.
+**Auto-updater endpoint:** `${VITE_SITE_URL}/updates/latest.json` — checks on app launch, shows toast with "Download" button. Auto-update toggle in Settings > About.
+**Signing:** No signing key required for Linux AppImage auto-updates.
 
 ## VPS Production Deployment
 
@@ -172,7 +170,7 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 
 **Full SOPs:** [VPS-DEPLOYMENT](docs/sop/deployment/VPS-DEPLOYMENT.md), [SOP-026](docs/sop/SOP-026-custom-domain-deployment.md), [SOP-031-CORS](docs/sop/SOP-031-cors-configuration.md), [PWA-CHECKLIST](docs/sop/deployment/PWA-DEPLOYMENT-CHECKLIST.md)
 
-Both **VPS (web PWA)** and **Tauri (desktop)** distributions are active and production-ready.
+Both **VPS (web PWA)** and **Electron (desktop)** distributions are active and production-ready.
 
 ## Playwright E2E Testing (TASK-1457) — MANDATORY FOR ALL UI DEBUGGING
 
@@ -222,109 +220,41 @@ test('tasks are visible', async ({ page }) => {
 
 ## Key Development Rules
 
+Universal rules (completion, atomic tasks, design tokens, type safety, database safety, no demo data) are in the [Constitution](~/.claude/knowledge/constitution.md). FlowState-specific rules:
+
 1. **Test with Playwright First** - Use `npm run test:e2e` with the seeded test user. NEVER launch unauthenticated Playwright browsers.
 2. **Preserve npm kill script** - NEVER remove from package.json
-3. **Use Design Tokens** - Never hardcode colors/spacing (see `docs/claude-md-extension/design-system.md`)
-4. **Type Safety** - All new code must have proper TypeScript types
-5. **Check Task Dependencies** - See Task Dependency Index in `docs/MASTER_PLAN.md`
-6. **NEVER Create Demo Data** - First-time users MUST see empty app, not sample data
-7. **Database Safety** - NEVER run destructive database commands without user approval (see below)
-8. **Atomic Tasks** - ALWAYS break broad requests into single-action steps (see below)
-9. **Canvas Geometry Invariants** - Only drag handlers may change positions/parents. Sync is read-only. (see below)
-10. **Completion Protocol** - NEVER claim "done" without artifacts + user verification (see below)
-11. **Version Bump Protocol** - When releasing: update 3 files (package.json, src-tauri/tauri.conf.json, src-tauri/Cargo.toml) + create git tag
-12. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS run `./scripts/deploy-tauri-update.sh --notes "TASK-XXX: description"` to build, sign, and deploy to VPS so the user receives the update via Tauri's in-app auto-updater. Never just offer `npm run dev` or local `dpkg -i` as the final delivery. See SOP-037 for details.
-13. **No Client-Side API Keys (BUG-1131)** - NEVER use `VITE_` prefix for API keys/secrets. Cloud API keys go through Supabase Edge Function proxies. A build-time guard (`scripts/check-vite-secrets.cjs`) blocks builds with non-allowlisted VITE_ vars. To add a new safe VITE_ var, add it to the allowlist in that script.
-14. **No Images in Project Root** - NEVER save screenshots, PNGs, or any image files to the project root. Save all debug/test screenshots to `.dev/screenshots/` instead. A PreToolUse hook enforces this automatically.
-15. **WebKitGTK Parity (Tauri)** - When writing CSS: never use `overflow: clip` without fallback (WebKitGTK doesn't support it). Never use `perspective` on parents of `position: fixed` elements. When writing drag-and-drop: always read from `dragData` singleton first, fallback to `dataTransfer.getData()` (WebKitGTK returns empty). When storing to IndexedDB: always deep-clone with `JSON.parse(JSON.stringify(toRaw(obj)))`. When using vuedraggable: always use `:force-fallback="true"` not bare `force-fallback`. Full reference: [`docs/sop/SOP-060-webkitgtk-gotchas.md`](docs/sop/SOP-060-webkitgtk-gotchas.md). Run `npm run test:tauri-parity` to verify.
+3. **Check Task Dependencies** - See Task Dependency Index in `docs/MASTER_PLAN.md`
+4. **Canvas Geometry Invariants** - Only drag handlers may change positions/parents. Sync is read-only. (see below)
+5. **Version Bump Protocol** - When releasing: update 2 files (package.json, electron-builder.yml) + create git tag
+6. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS run `./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"` to build and deploy to VPS. Never just offer `npm run dev` or local install as the final delivery. See [SOP-065](docs/sop/SOP-065-electron-desktop-app.md).
+7. **No Client-Side API Keys (BUG-1131)** - Build-time guard (`scripts/check-vite-secrets.cjs`) blocks non-allowlisted VITE_ vars. Cloud API keys go through Supabase Edge Function proxies.
+8. **No Images in Project Root** - Save to `.dev/screenshots/` instead. PreToolUse hook enforces this.
+9. **WebKitGTK Parity (legacy, Tauri era)** - Tauri was replaced by Electron. Some patterns (`:force-fallback="true"` on vuedraggable, `dragData` singleton, deep-cloning for IndexedDB) may still be relevant. Full reference: [`docs/sop/SOP-060-webkitgtk-gotchas.md`](docs/sop/SOP-060-webkitgtk-gotchas.md).
 
-## Completion Protocol (MANDATORY)
+## Completion Protocol — See [Constitution](~/.claude/knowledge/constitution.md#completion-protocol) for full rules.
 
-**Before starting:** Define SUCCESS and FAILURE criteria upfront (what observable outcome proves it works vs doesn't).
+**FlowState-specific:** Deploy via `./scripts/deploy-electron-update.sh`. Judge Agent: `localhost:6010/api/judge/evaluate`.
 
-**After implementation — required artifacts:**
+## Design Token Usage — See [Constitution](~/.claude/knowledge/constitution.md#frontend-standards) for universal rules.
 
-| Context | Required Artifacts |
-|---------|-------------------|
-| **Web UI changes** | Playwright screenshot, test output, git diff |
-| **Tauri/Desktop app** | Console logs, test output, git diff, verification instructions |
-| **Backend/API changes** | curl/API response, test output, database query results |
-| **Build/Config changes** | Build output, npm run dev logs |
-| **Pure logic changes** | Unit test output, git diff |
-
-**Minimum for ANY change:** Git diff + test output + deploy via `./scripts/deploy-tauri-update.sh` + verification instructions for user.
-
-**Completion phrase — NEVER say** "Done"/"Complete"/"Fixed". **ALWAYS say**: "I've implemented X. Here are the artifacts: [artifacts]. Can you test it and confirm it works?"
-
-**Task Status:** Only mark ✅ DONE after USER explicitly confirms. Until then: 🔄 IN PROGRESS or 👀 REVIEW.
-
-**Judge Agent:** For complex features, invoke via Watchpost at `localhost:6010/api/judge/evaluate`.
-
-## Design Token Usage (MANDATORY)
-
-**NEVER hardcode CSS values** (rgba, px, hex). ALWAYS use design tokens from `src/assets/design-tokens.css`.
-
-**Full reference:** [`docs/claude-md-extension/design-system.md`](docs/claude-md-extension/design-system.md)
-
-**Quick examples:**
-```css
-/* ❌ WRONG */                    /* ✅ CORRECT */
-background: rgba(18,18,20,0.98);  background: var(--overlay-component-bg);
-padding: 8px 12px;                padding: var(--space-2) var(--space-3);
-border-radius: 12px;              border-radius: var(--radius-lg);
-```
-
-### Button Pattern (CRITICAL — NEVER SOLID FILL)
-
-**ALL buttons MUST use glass morphism. NEVER `background: var(--brand-primary); color: white;`**
-
-```css
-/* ✅ CORRECT — Glass morphism button */
-background: var(--glass-bg-soft);
-color: var(--brand-primary);
-border: 1px solid var(--brand-primary);
-backdrop-filter: blur(8px);
-
-/* ❌ WRONG — Solid fill (FORBIDDEN) */
-background: var(--brand-primary);
-color: white;
-border: none;
-```
-
+**FlowState tokens:** `src/assets/design-tokens.css`. Full reference: [`docs/claude-md-extension/design-system.md`](docs/claude-md-extension/design-system.md).
 Tailwind classes: `.btn-primary` (glass+teal), `.btn-secondary` (surface+border), `.btn-ghost` (transparent).
-Solid `var(--brand-primary)` background is ONLY acceptable for small indicators (checkbox fills, toggle dots, progress bars), NOT buttons.
 
-## Atomic Task Breakdown (CRITICAL)
+## Atomic Task Breakdown — See [Constitution](~/.claude/knowledge/constitution.md#atomic-task-breakdown) for full rules.
 
-ALWAYS break broad requests into atomic steps (<2 min each, single success condition). NEVER "test all" or "fix everything" — causes extended thinking loops (3+ min stuck). If thinking >30 seconds: STOP and break down further.
+## Database Safety — See [Constitution](~/.claude/knowledge/constitution.md#database-safety) for universal rules.
 
-**When spawning Task agents:** ONE specific task each, in PARALLEL. Each prompt completable with Yes/No answer. NEVER "test all" or "verify everything" prompts.
-
-## Database Safety (CRITICAL)
-
-**NEVER run these commands automatically:**
-- `supabase db reset` - PERMANENTLY BLOCKED (wipes all data)
-- `DROP DATABASE` / `DROP TABLE` / `TRUNCATE` - User must run manually
-- `DELETE FROM` without WHERE clause - Blocked
-- `supabase db push --force` - Blocked
-
-**Before ANY migration:**
-1. Create a backup first:
-   ```bash
-   mkdir -p supabase/backups
-   supabase db dump > supabase/backups/backup-$(date +%Y%m%d-%H%M%S).sql
-   ```
-2. NEVER run destructive commands — Claude Code must refuse and tell the user to run manually
-
-**Backup location:** `supabase/backups/` (not committed to git)
-
-**Backup system:** Auto-backup every 5 min via `npm run dev`, recovery in Settings > Storage. Details: [`backup-system.md`](docs/claude-md-extension/backup-system.md). To reset DB: tell the user to run manually — Claude Code will NOT run destructive commands.
+**FlowState-specific:**
+- `supabase db reset` / `supabase db push --force` -- PERMANENTLY BLOCKED
+- Backup before migration: `supabase db dump > supabase/backups/backup-$(date +%Y%m%d-%H%M%S).sql`
+- Auto-backup every 5 min via `npm run dev`, recovery in Settings > Storage. Details: [`backup-system.md`](docs/claude-md-extension/backup-system.md).
 
 ## Supabase Architecture
 
 **Database Layer:** `useSupabaseDatabase.ts` (single source of truth for core CRUD). Type mappers: `supabaseMappers.ts`. Auth: `src/services/auth/supabase.ts` + `src/stores/auth.ts`.
 
-**19 tables** (all RLS-enabled): 8 core (tasks, groups, projects, timer_sessions, pomodoro_history, notifications, user_settings, quick_sort_sessions), 2 data integrity (tombstones, task_dedup_audit), 7 gamification, 2 challenges. Full schema: see [`system-architecture.md`](docs/claude-md-extension/system-architecture.md).
+**32 tables** (all RLS-enabled): 8 core (tasks, groups, projects, timer_sessions, pomodoro_history, notifications, user_settings, quick_sort_sessions), 2 data integrity (tombstones, task_dedup_audit), 7 gamification, 2 challenges, 5 workspace (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity), 3 AI (ai_conversations, ai_usage_log, ai_work_profiles), 2 integrations (push_subscriptions, whatsapp_conversations), 2 additional (pinned_tasks, task_audit_log), 1 arena (arena_runs). Full schema: see [`system-architecture.md`](docs/claude-md-extension/system-architecture.md).
 
 **Access patterns:** Core → `useSupabaseDatabase.ts` | Gamification → `stores/gamification.ts` (intentional bypass) | Sync → `useSyncOrchestrator.ts`
 
@@ -397,7 +327,7 @@ AI orchestration dashboard at `http://localhost:6010`. Start: `./watchpost.sh`. 
 
 ## UI Component Standards (MANDATORY)
 
-**BEFORE creating any UI element**, check `src/components/base/` and `src/components/common/` for an existing component. This project has 20+ reusable primitives with glass morphism, keyboard nav, and Tauri compatibility built in. **NEVER** reinvent what already exists.
+**BEFORE creating any UI element**, check `src/components/base/` and `src/components/common/` for an existing component. This project has 20+ reusable primitives with glass morphism, keyboard nav, and cross-platform compatibility built in. **NEVER** reinvent what already exists.
 
 | Need | Use This | NEVER Use |
 |------|----------|-----------|
@@ -470,6 +400,6 @@ This project has automatic task locking via `task-lock-enforcer.sh` hook to prev
 
 ---
 
-**Last Updated**: February 18, 2026
-**Stack**: Vue 3.5.26, Vite 7.3.1, TypeScript 5.9.3, Supabase (self-hosted), Tauri 2.10, tauri-cli 2.10.0
+**Last Updated**: April 5, 2026
+**Stack**: Vue 3.5.26, Vite 7.3.1, TypeScript 5.9.3, Supabase (self-hosted), Electron (electron-builder)
 **Production**: Set `VITE_SITE_URL` + `VPS_HOST` env vars (Contabo VPS, Ubuntu 22.04)

@@ -1,5 +1,7 @@
 # SOP-060: WebKitGTK Gotchas (Tauri Parity)
 
+> **Note (post-Electron migration):** Sections 4-6 (dataTransfer, setDragImage, Notification.requestPermission) no longer apply to Electron (Chromium-based). Sections 1-3 (overflow:clip, perspective+fixed, IndexedDB clone) remain valid cross-platform patterns.
+
 **Created**: 2026-03-09 | **Status**: Active | **Related**: TASK-1494
 
 Tauri on Linux uses WebKitGTK, which has significant behavioral differences from Chromium. This document catalogs known gotchas and required workarounds.

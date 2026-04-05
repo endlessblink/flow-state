@@ -1,7 +1,9 @@
 # Design System
 
-> **Last verified**: March 16, 2026 | **Token file**: `src/assets/design-tokens.css` (~1,450 lines)
+> **Last verified**: April 5, 2026 | **Token files**: `src/assets/design-tokens.css` (~1,450 lines), `src/assets/theme-variables.css` (`--theme-*` tokens for light/dark switching)
 > **Read this before any UI work. NEVER hardcode CSS values — always use design tokens.**
+>
+> **Note:** `theme-variables.css` defines `--theme-*` tokens used for light/dark theme switching. These are separate from the base tokens in `design-tokens.css` and must be consulted for any theme-aware styling.
 
 ---
 
@@ -44,10 +46,10 @@
 
 **Glass Morphism (purple-tinted, lightest → heaviest):**
 ```css
---glass-bg-subtle   (0.02)    --glass-bg-weak    (0.03)
---glass-bg-light    (0.04)    --glass-bg-tint     (0.05)
---glass-bg-medium   (0.06)    --glass-bg-soft     (0.10)
---glass-bg-heavy    (0.25)    --glass-bg-solid    (0.95, Tauri)
+--glass-bg-subtle   (0.02)    --glass-bg-weak    (0.04)
+--glass-bg-light    (0.08)    --glass-bg-tint     (0.10)
+--glass-bg-medium   (0.15)    --glass-bg-soft     (0.18)
+--glass-bg-heavy    (0.25)    --glass-bg-solid    (0.95, .tauri-app/.pwa-app ONLY — NOT available in regular web mode)
 --glass-panel-bg    (0.60, semi-transparent panels)
 ```
 
@@ -69,7 +71,7 @@
 **Brand:**
 ```css
 --brand-primary           /* #4ECDC4 (teal) — THE action color */
---brand-hover             /* #3db8af */
+--brand-hover             /* hsl(var(--teal-400)) — BUG: --teal-400 is NOT DEFINED in design-tokens.css (only --teal-500 exists). This token resolves to an invalid value at runtime. */
 --brand-active            /* #2da39a */
 --brand-primary-subtle    /* Soft teal bg */
 --brand-primary-dim       /* Dimmed teal border */
@@ -127,6 +129,125 @@
 
 ---
 
+## Blur Scale
+
+```css
+--blur-xs (8px)   --blur-sm (10px)   --blur-regular (12px)
+--blur-md (16px)  --blur-lg (24px)   --blur-xl (32px)
+```
+
+Use these instead of hardcoded `blur(Xpx)` values in `backdrop-filter`.
+
+---
+
+## Button Heights & Icon Sizes
+
+**Button heights:**
+```css
+--btn-sm (1.75rem / 28px)   --btn-md (2rem / 32px)   --btn-lg (2.25rem / 36px)
+```
+
+**Icon sizes (for Lucide icons and SVG):**
+```css
+--icon-xs (10px)  --icon-sm (12px)  --icon-md (14px)
+--icon-lg (16px)  --icon-xl (20px)  --icon-2xl (24px)
+```
+
+---
+
+## Filter Chip Tokens
+
+Sidebar smart-view filter chips each have a `bg`, `border`, and `glow` token. Colors are distinct per filter type:
+
+```css
+--filter-today-bg/border/glow       /* Sky blue (rgba 56,189,248) */
+--filter-week-bg/border/glow        /* Darker sky blue (rgba 14,165,233) */
+--filter-tasks-bg/border/glow       /* Blue (rgba 59,130,246) */
+--filter-uncategorized-bg/border/glow  /* Orange (rgba 245,158,11) */
+```
+
+Pattern: `bg` at 0.12–0.15 alpha, `border` at 0.45–0.50, `glow` is `0 0 16px color(0.25)`.
+
+---
+
+## Calendar Tokens
+
+Calendar UI elements use indigo/purple tones. Key token groups:
+
+```css
+/* Hover */
+--calendar-hover-bg           /* rgba(99,102,241, 0.02) */
+--calendar-hover-bg-medium    /* rgba(99,102,241, 0.05) */
+
+/* Drag-to-create ghost */
+--calendar-creating-bg/bg-alt/border
+--calendar-ghost-bg-start/end/border/shadow
+
+/* Today column */
+--calendar-today-bg-start/bg-end/border/glow
+--calendar-today-badge-start/end/shadow
+
+/* Current time indicator — green */
+--calendar-current-time-bg-start/bg-end/border/glow
+```
+
+All indigo/purple (`rgb(99,102,241)`) except current-time indicator which uses green (`rgb(16,185,129)`).
+
+---
+
+## Kanban Tokens
+
+**Layout sizing:**
+```css
+--kanban-column-width (360px)   --kanban-column-width-lg (340px)
+--kanban-column-width-md (320px) --kanban-column-width-sm (300px)
+--kanban-gap (16px)             --kanban-column-min-height (200px)
+--kanban-drag-area-min-height (120px)
+```
+
+**Background tokens:**
+```css
+--kanban-bg                    /* transparent */
+--kanban-column-bg             /* var(--glass-bg-medium) */
+--kanban-column-bg-hover       /* var(--glass-bg-heavy) */
+--kanban-header-bg             /* var(--surface-hover) */
+--kanban-card-glass-bg         /* rgba(35,32,55, 0.7) purple-tinted */
+--kanban-badge-bg              /* var(--glass-bg-heavy) */
+--kanban-card-footer-border    /* var(--glass-border-light) */
+--kanban-card-tag-bg/border    /* glass-bg-medium / glass-border */
+--kanban-card-description-color /* var(--text-tertiary) */
+```
+
+---
+
+## Project Indicator Tokens
+
+Consistent sizing for emoji icons and colored dots across all views:
+
+**Container sizes (for `ProjectEmojiIcon`):**
+```css
+--project-indicator-size-xs (16px)  /* Ultra-compact */
+--project-indicator-size-sm (20px)  /* TaskCard, TaskRow */
+--project-indicator-size-md (24px)  /* TaskNode, canvas */
+--project-indicator-size-lg (32px)  /* Featured displays */
+```
+
+**Emoji font sizes within containers:**
+```css
+--project-emoji-size-xs (12px)  --project-emoji-size-sm (14px)
+--project-emoji-size-md (18px)  --project-emoji-size-lg (24px)
+```
+
+**Colored circle dot sizes (fallback for projects without emoji):**
+```css
+--project-circle-size-xs (4px)  --project-circle-size-sm (6px)
+--project-circle-size-md (7px)  --project-circle-size-lg (10px)
+```
+
+**Glow variants:** `--project-indicator-glow-subtle/medium/strong` (all use `currentColor` for project-color-aware glow).
+
+---
+
 ## Spacing (8px Grid)
 
 ```css
@@ -173,13 +294,17 @@ Semantic aliases: `--gap-xs/sm/md/lg`, `--padding-xs/sm/md/lg/xl/2xl`, `--margin
 ## Animation
 
 ```css
---duration-instant (50-100ms)  --duration-fast (150ms)
+--duration-instant (50ms*)     --duration-fast (150ms)
 --duration-normal (200ms)      --duration-slow (300ms)
 --duration-slower (500ms)
 
 --ease-linear  --ease-in  --ease-out  --ease-in-out
---spring-smooth  --spring-bouncy  --spring-swift  --spring-gentle
+--spring-smooth*  --spring-bouncy  --spring-swift  --spring-gentle
 ```
+
+> **Known duplicates in design-tokens.css (last definition wins):**
+> - `--duration-instant`: defined as `100ms` (line ~446) and `50ms` (line ~989). **Effective value: 50ms.**
+> - `--spring-smooth`: defined as `cubic-bezier(0.25, 0.46, 0.45, 0.94)` (line ~456) and `cubic-bezier(0.4, 0, 0.2, 1)` (line ~983). **Effective value: `cubic-bezier(0.4, 0, 0.2, 1)`** — which is identical to `--ease-in-out`.
 
 ---
 
@@ -226,6 +351,12 @@ border: none;
 
 **Tailwind classes**: `.btn-primary` (glass+teal), `.btn-secondary` (surface+border), `.btn-ghost` (transparent)
 
+> **IMPORTANT — BaseButton vs `.btn-*` classes are NOT interchangeable:**
+> - `BaseButton variant="primary"`: transparent bg + `--brand-primary` border + `--brand-primary` text. **No glass, no backdrop-filter.**
+> - `.btn-primary` (ad-hoc CSS class): `--glass-bg-soft` bg + `--brand-primary` border + `backdrop-filter: blur(8px)`. **Not a global Tailwind utility** — defined locally in various components with inconsistent implementations.
+>
+> Use `BaseButton` for all new buttons. Only use `.btn-primary` class in non-Vue contexts (e.g., Storybook decorators).
+
 **Solid `var(--brand-primary)` bg is ONLY acceptable for**: checkbox fills, toggle dots, progress bars, status badges — NOT buttons.
 
 ---
@@ -242,9 +373,10 @@ border: none;
 **Note**: Always square. `is-active` adds teal stroke.
 
 ### BaseModal
-**Props**: `isOpen`, `title`, `size` (sm|md|lg|xl|full), `variant` (default|danger|warning|success), `closeOnOverlayClick`, `closeOnEscape`, `trapFocus`, `loading`, `confirmDisabled`
+**Props**: `isOpen`, `title`, `description`, `size` (sm|md|lg|xl|full), `variant` (default|danger|warning|success), `closeOnOverlayClick`, `closeOnEscape`, `submitOnEnter` (default: true), `showHeader` (default: true), `showFooter` (default: false), `showCloseButton` (default: true), `showCancelButton` (default: true), `showConfirmButton` (default: true), `cancelText`, `confirmText`, `closeAriaLabel`, `trapFocus`, `loading`, `confirmDisabled`, `titleClass`, `descriptionClass`, `bodyClass`, `footerClass`
+**Emits**: `close`, `cancel`, `confirm`, `open`, `afterOpen`, `afterClose`
 **Slots**: default (body), title, description, footer
-**Note**: Teleports to body. Has focus trap + scroll lock.
+**Note**: Teleports to body. Has focus trap + scroll lock. Enter key submits by default (skips textarea/contenteditable). Cancel/confirm text defaults to i18n `common.cancel`/`common.confirm`.
 
 ### BaseBadge
 **Props**: `variant` (default|success|warning|danger|info|count), `size` (sm|md|lg), `rounded`
@@ -274,11 +406,17 @@ border: none;
 **Props**: `emoji`, `size` (xs|sm|md|lg|xl), `color`, `variant` (default|plain)
 
 ### BaseNavItem
-**Props**: `active`, `selected`, `nested`, `colorDot`, `emoji`, `count`, `projectId`
-**Note**: Supports drag-and-drop for tasks and project nesting.
+**Props**: `active`, `selected`, `nested`, `hasChildren`, `expanded`, `colorDot`, `colorType` ('hex' | 'emoji'), `emoji`, `count`, `projectId`
+**Emits**: `click`, `toggleExpand`, `taskDrop`, `projectDrop`
+**Note**: Supports drag-and-drop for tasks and project nesting. `hasChildren` shows expand/collapse chevron. `colorType` controls whether to render emoji or hex color dot.
+
+### AppLogo
+**Props**: `size?: 'xs'|'sm'|'md'|'lg'|'xl'|number` (default: `'sm'`), `round?: boolean`
+**Size map**: xs=16, sm=24, md=32, lg=48, xl=64. Pass a raw number for custom px size.
+**Note**: Renders the FlowState logo image. Falls back silently on load error. `round` adds `border-radius: var(--radius-full)`.
 
 ### FilterControls
-Reads from task store directly. Renders project/status filter dropdowns.
+Renders four filter dropdowns: project, smart view, status, and assignment (workspace-only). Uses CustomSelect for all dropdowns.
 
 ---
 
@@ -293,8 +431,24 @@ Reads from task store directly. Renders project/status filter dropdowns.
 **Props**: `isOpen`, `title?`, `message?`, `details?: string[]`, `confirmText?`
 **Note**: Wraps BaseModal with `variant="danger"`.
 
+### TiptapEditor
+**Props**: `modelValue: string`, `textDirection: 'ltr' | 'rtl'`
+**Emits**: `update:modelValue`
+**Note**: Full WYSIWYG editor with toolbar (headings H1–H3, bold/italic/underline/strikethrough, lists, blockquote, code block, horizontal rule, link, table, text color). Stores and emits markdown (not HTML). Uses debounced emit (150ms). Handles Shift+Enter to exit lists. **Distinct from `MarkdownEditor`** — use `TiptapEditor` when a visible formatting toolbar is needed; use `MarkdownEditor` for inline/lightweight editing.
+
+### GroupModal
+**Props**: `isOpen: boolean`, `group?: CanvasSection | null`, `position?: { x, y }`
+**Emits**: `close`, `created`, `updated`
+**Note**: Create/edit canvas groups (name, color presets + custom hex, parent group selector). Uses `BaseInput` and `CustomSelect` internally. **Does NOT use `BaseModal`** — it builds its own overlay div with Teleport. Compliance gap: should be migrated to `BaseModal`.
+
+### FaviconManager
+No props (reads from timer store directly). Hidden component (renders a `display:none` canvas). Dynamically updates the browser favicon with a progress ring around the app logo when the Pomodoro timer is active. Work phase = red ring, break phase = green ring. Updates only when the tab is visible for performance. Accepts optional `config` prop to override colors/sizes.
+
+### IOSInstallPrompt
+No props. Shows a bottom-sheet prompt on iOS Safari (non-standalone) guiding users to tap Share → Add to Home Screen. Dismissal persisted in `localStorage`. Auto-hides if already installed as PWA.
+
 ### Other Common Components
-- `MarkdownEditor` — TipTap rich text editor
+- `MarkdownEditor` — TipTap rich text editor (lightweight, no visible toolbar)
 - `MarkdownRenderer` — Safe markdown display
 - `MultiSelectToggle` — Multi-select UI
 - `EmojiPicker` — Emoji picker panel

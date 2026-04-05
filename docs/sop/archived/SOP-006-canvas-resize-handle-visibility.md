@@ -1,4 +1,4 @@
-# SOP-005: Canvas Resize Handle Visibility
+# SOP-006: Canvas Resize Handle Visibility
 
 **Created**: 2026-01-15
 **Task**: TASK-290

@@ -25,7 +25,7 @@ FlowState uses [Doppler](https://doppler.com) for secure secrets management acro
            ▼                        ▼                        ▼
     ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
     │  GitHub CI  │         │    VPS      │         │  Release    │
-    │  (Actions)  │         │  (Deploy)   │         │  (Tauri)    │
+    │  (Actions)  │         │  (Deploy)   │         │  (Electron)    │
     └─────────────┘         └─────────────┘         └─────────────┘
 ```
 

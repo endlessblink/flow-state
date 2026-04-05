@@ -1,3 +1,5 @@
+> **ARCHIVED**: Superseded by SOP-065-electron-desktop-app.md. Tauri was replaced by Electron.
+
 # SOP-011: Tauri Desktop Distribution (Complete Guide)
 
 **Created**: 2026-01-18

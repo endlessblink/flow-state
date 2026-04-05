@@ -32,7 +32,13 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
     const zoom = computed(() => {
         if (!vfContext) return 1
         const z = vfContext.viewport.value?.zoom
-        return (typeof z === 'number' && Number.isFinite(z) && z > 0) ? z : 1
+        if (typeof z !== 'number' || !Number.isFinite(z) || z <= 0) return 1
+        // Discretize to LOD boundaries to prevent per-frame re-renders during zoom
+        // Only returns 4 possible values, so downstream LOD computeds only update at thresholds
+        if (z < 0.2) return 0.1
+        if (z < 0.4) return 0.3
+        if (z < 0.6) return 0.5
+        return 1
     })
 
     // LOD Levels

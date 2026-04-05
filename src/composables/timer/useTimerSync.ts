@@ -153,6 +153,10 @@ export function useTimerSync(deps: TimerSyncDeps) {
           pauseCountdown()
           currentSession.value = null
         }
+        // No session exists and no local state — stop polling.
+        // Realtime subscription handles new session detection from other devices.
+        // Without this, the poll runs every 3s against Supabase permanently after timer stop.
+        pauseFollowerPoll()
         return
       }
 

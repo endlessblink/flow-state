@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS pinned_tasks (
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT DEFAULT '',
-    project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+    project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
     priority TEXT DEFAULT NULL,
     sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now(),

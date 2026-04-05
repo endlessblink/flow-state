@@ -6,7 +6,7 @@
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_rule jsonb;
 -- { pattern: 'weekly', interval: 1, weekdays: [5], endType: 'never', endDate: null, endCount: null }
 
-ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_parent_id uuid REFERENCES tasks(id) ON DELETE SET NULL;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_parent_id text REFERENCES tasks(id) ON DELETE SET NULL;
 -- Links back to the original task that started the chain (for history/analytics)
 
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_count integer DEFAULT 0;

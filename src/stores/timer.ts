@@ -438,7 +438,8 @@ export const useTimerStore = defineStore('timer', () => {
       setTimeout(() => completedSessionIds.delete(stoppedSession.id), PENDING_WRITE_TIMEOUT_MS)
       currentSession.value = null
       sync.broadcastSession() // For same-browser tabs
-      sync.resumeFollowerPoll() // Resume polling to detect new sessions
+      // Don't resume follower poll — Realtime subscription handles new session detection.
+      // Polling with no active session wastes Supabase queries every 3s permanently.
     }
   }
 
@@ -542,9 +543,8 @@ export const useTimerStore = defineStore('timer', () => {
       // Followers wait for Realtime. Auto-start removed per TASK-1009.
       // Old settings (autoStartBreaks, autoStartPomodoros) are now ignored for notifications
       isDeviceLeader.value = false
-      // BUG-1318: Resume follower poll so we detect new sessions from other devices
-      // Without this, the device becomes deaf after completing (not leading, not polling)
-      sync.resumeFollowerPoll()
+      // Realtime subscription handles new session detection from other devices.
+      // Don't resume follower poll — it would query Supabase every 3s with no active timer.
     } finally {
       // BUG-1318: ALWAYS release the lock, even if an error occurs mid-completion
       // Without this, any unhandled error would permanently block all future completions

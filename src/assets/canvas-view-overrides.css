@@ -314,8 +314,20 @@
     outline: none !important;
 }
 
-/* Nuclear option - remove all borders from Vue Flow elements */
-.vue-flow * {
+/* Remove borders from Vue Flow structural elements (no wildcard — avoids per-frame style recalc) */
+.vue-flow__node,
+.vue-flow__edge,
+.vue-flow__handle,
+.vue-flow__background,
+.vue-flow__pane,
+.vue-flow__viewport,
+.vue-flow__transformationpane,
+.vue-flow__container,
+.vue-flow__minimap,
+.vue-flow__controls,
+.vue-flow__edge-path,
+.vue-flow__connection-path,
+.vue-flow__resize-control {
     border: none !important;
     outline: none !important;
     text-decoration: none !important;
@@ -693,84 +705,6 @@ body.dragging-active .vue-flow__background {
     pointer-events: auto !important;
 }
 
-/* Canvas empty state */
-.canvas-empty-state {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-6);
-    padding: 2rem;
-    background: var(--color-background);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 1000;
-    pointer-events: none;
-    /* Allow clicks to pass through to Done toggle */
-}
-
-/* Re-enable pointer events for interactive children */
-.canvas-empty-state button,
-.canvas-empty-state a {
-    pointer-events: auto;
-}
-
-.empty-icon {
-    color: var(--color-text-secondary);
-    opacity: 0.6;
-}
-
-.empty-title {
-    font-size: 1.75rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0;
-    text-align: center;
-}
-
-.empty-description {
-    font-size: var(--text-base);
-    color: var(--color-text-secondary);
-    margin: 0;
-    text-align: center;
-    max-width: 400px;
-    line-height: 1.5;
-}
-
-.add-task-button {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-6);
-    background: var(--color-indigo-bg-subtle);
-    border: 1px solid var(--color-indigo-bg-heavy);
-    color: var(--color-primary);
-    border-radius: 0.5rem;
-    font-size: var(--text-sm);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--duration-normal) var(--ease-out);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-}
-
-.add-task-button:hover {
-    background: var(--color-indigo-bg-heavy);
-    border-color: var(--color-primary-alpha);
-    color: var(--color-primary);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--color-primary-alpha-low);
-}
-
-.add-task-button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px var(--color-primary-alpha-xlow);
-}
 
 /* Vue Flow fade-in transition - fixes initialization deadlock */
 /* DEBUG: Temporarily force visibility to diagnose rendering issue */
@@ -802,4 +736,36 @@ body.dragging-active .vue-flow__background {
 .shift-selecting .vue-flow__node-sectionNode *,
 .shift-selecting .vue-flow__node-taskNode * {
     pointer-events: none !important;
+}
+
+/* ====================================================================
+   ZOOM/PAN PERFORMANCE: Reduce GPU paint cost during gestures.
+   .is-zooming is toggled by useCanvasOrchestrator via onMoveStart/onMoveEnd.
+   Hides expensive-to-repaint layers that don't need per-frame updates.
+   ==================================================================== */
+
+/* Hide background grid during zoom — SVG pattern repaint is expensive */
+.is-zooming .vue-flow__background {
+    visibility: hidden !important;
+}
+
+/* Suppress backdrop-filter on empty state during zoom — full-screen blur is costly */
+.is-zooming .canvas-empty-state,
+.is-zooming .canvas-empty-state .empty-card,
+.is-zooming .canvas-empty-state .feature-pill,
+.is-zooming .canvas-empty-state .action-btn {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Suppress all transitions and animations inside vue-flow during zoom */
+.is-zooming .vue-flow__node,
+.is-zooming .vue-flow__edge-path,
+.is-zooming .vue-flow__handle {
+    transition: none !important;
+}
+
+/* Suppress minimap repaint during zoom */
+.is-zooming .vue-flow__minimap {
+    visibility: hidden !important;
 }

@@ -282,11 +282,18 @@ export async function deleteOperationsByType(
 ): Promise<number> {
   const operations = await getOperationsForEntity(entityType, entityId)
   const matching = operations.filter(op => op.operation === operationType)
-  if (matching.length > 0) {
-    const db = getWriteQueueDB()
-    await db.operations.bulkDelete(matching.map(op => op.id!))
+  // BUG-1737: Skip in-flight operations — removing from IndexedDB doesn't abort the HTTP request.
+  // Orphaned 'syncing' ops are recovered by recoverStaleSyncing() on next app load.
+  const deletable = matching.filter(op => op.status !== 'syncing')
+  const skipped = matching.length - deletable.length
+  if (skipped > 0) {
+    console.warn(`⚠️ [SYNC] deleteOperationsByType: skipped ${skipped} in-flight '${operationType}' op(s) for ${entityId.slice(0, 8)}`)
   }
-  return matching.length
+  if (deletable.length > 0) {
+    const db = getWriteQueueDB()
+    await db.operations.bulkDelete(deletable.map(op => op.id!))
+  }
+  return deletable.length
 }
 
 /**

@@ -248,16 +248,19 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
       if (deletedTask) {
         console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
+        // BUG-1737: Block realtime echoes FIRST (sync, before any await)
+        taskStore.addPendingWrite(taskId)
         await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
-        await taskStore.createTask(deletedTask)
-        console.log('🔴 [UNDO] createTask completed')
-        // Cancel only pending DELETEs — keep the CREATE we just enqueued
+        // BUG-1737: Cancel queue DELETE BEFORE enqueueing CREATE to prevent race
+        // (sync orchestrator's BUG-1534 logic cancels CREATEs when processing DELETEs)
         try {
           const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
           await deleteOperationsByType('task', taskId, 'delete')
         } catch (e) {
           console.warn('[UNDO] Failed to cancel pending sync ops:', e)
         }
+        await taskStore.createTask(deletedTask)
+        console.log('🔴 [UNDO] createTask completed')
       } else {
         console.error('❌ [UNDO] Could not find task in snapshot:', taskId)
       }
@@ -270,15 +273,17 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
         const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
         if (deletedTask) {
           console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
+          // BUG-1737: Block realtime echoes FIRST (sync, before any await)
+          taskStore.addPendingWrite(taskId)
           await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
-          await taskStore.createTask(deletedTask)
-          // Cancel only pending DELETEs — keep the CREATE we just enqueued
+          // BUG-1737: Cancel queue DELETE BEFORE enqueueing CREATE
           try {
             const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
             await deleteOperationsByType('task', taskId, 'delete')
           } catch (e) {
             console.warn('[UNDO] Failed to cancel pending sync ops:', e)
           }
+          await taskStore.createTask(deletedTask)
         }
       }
       break

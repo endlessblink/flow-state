@@ -46,6 +46,7 @@ export default defineConfig({
         // TASK-1457: Use saved auth state if available (from global-setup)
         ...(hasAuth ? { storageState: authFile } : {}),
       },
+      testIgnore: '**/mobile/**/*.spec.ts',
     },
 
     // {
@@ -59,6 +60,7 @@ export default defineConfig({
         ...devices['Desktop Safari'],
         ...(hasAuth ? { storageState: authFile } : {}),
       },
+      testIgnore: '**/mobile/**/*.spec.ts',
     },
 
     {
@@ -68,6 +70,24 @@ export default defineConfig({
         ...(hasAuth ? { storageState: authFile } : {}),
       },
       testMatch: '**/tauri-*.spec.ts',
+    },
+
+    {
+      name: 'mobile-chrome',
+      use: {
+        ...devices['Pixel 7'],
+        ...(hasAuth ? { storageState: authFile } : {}),
+      },
+      testMatch: '**/mobile/**/*.spec.ts',
+    },
+
+    {
+      name: 'mobile-safari',
+      use: {
+        ...devices['iPhone 14 Pro Max'],
+        ...(hasAuth ? { storageState: authFile } : {}),
+      },
+      testMatch: '**/mobile/**/*.spec.ts',
     },
   ],
 

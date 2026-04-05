@@ -93,6 +93,7 @@ export function useCanvasOrchestrator() {
         viewport,
         updateNode,
         findNode,
+        onMoveStart,
         onMoveEnd,
         applyNodeChanges,
         applyEdgeChanges,
@@ -103,6 +104,52 @@ export function useCanvasOrchestrator() {
     const { setOperationLoading, setOperationError, clearOperationError } = canvasUiStore
     const { width: _width, height: _height } = useWindowSize()
     const { shift, control, meta } = useMagicKeys()
+
+    // --- ZOOM PERF INSTRUMENTATION (declarations) ---
+    let zoomPerfActive = false
+    let zoomMoveStartCount = 0
+    let zoomMoveEndCount = 0
+    let zoomWheelEventCount = 0
+    let zoomStartTime = 0
+    let lastZoomLevel = 0
+    const zoomPerfLog: Array<{ event: string; zoom: number; elapsed: number; detail?: string }> = []
+
+    function logZoomPerf(event: string, zoom: number, detail?: string) {
+        if (!import.meta.env.DEV) return
+        const elapsed = zoomStartTime ? performance.now() - zoomStartTime : 0
+        zoomPerfLog.push({ event, zoom, elapsed, detail })
+    }
+
+    function flushZoomPerf() {
+        if (!import.meta.env.DEV || zoomPerfLog.length === 0) return
+        const duration = performance.now() - zoomStartTime
+        const wheelRate = duration > 0 ? (zoomWheelEventCount / (duration / 1000)).toFixed(0) : '?'
+        console.groupCollapsed(
+            `%c[ZOOM PERF]%c gesture: ${zoomWheelEventCount} wheel events (${wheelRate}/sec), ${zoomMoveStartCount} starts, ${zoomMoveEndCount} ends in ${duration.toFixed(0)}ms`,
+            'background: #4ecdc4; color: black; padding: 2px 6px; border-radius: 3px;',
+            'color: inherit;'
+        )
+        console.table(zoomPerfLog)
+        console.groupEnd()
+        zoomPerfLog.length = 0
+    }
+
+    // Track raw wheel events on the canvas to measure mouse scroll rate
+    if (import.meta.env.DEV) {
+        // Defer until DOM is ready
+        const attachWheelCounter = () => {
+            const vfEl = document.querySelector('.vue-flow')
+            if (vfEl) {
+                vfEl.addEventListener('wheel', () => {
+                    if (zoomPerfActive) zoomWheelEventCount++
+                }, { passive: true })
+            } else {
+                setTimeout(attachWheelCounter, 500)
+            }
+        }
+        setTimeout(attachWheelCounter, 1000)
+    }
+    // --- END ZOOM PERF INSTRUMENTATION ---
 
     // --- 2. Computed Data ---
     const filteredTasks = computed(() => taskStore.filteredTasks)
@@ -186,8 +233,13 @@ export function useCanvasOrchestrator() {
         }
 
         try {
+            const t0 = performance.now()
             const tasksToSync = tasks || tasksWithCanvasPosition.value
             persistence.syncStoreToCanvas(tasksToSync)
+            const syncMs = performance.now() - t0
+            if (import.meta.env.DEV && zoomPerfActive) {
+                logZoomPerf('syncNodes', viewport.value?.zoom ?? 1, `${tasksToSync.length} tasks, took ${syncMs.toFixed(1)}ms`)
+            }
         } catch (e) {
             console.error('💥 [ORCHESTRATOR] syncNodes failed:', e)
         }
@@ -588,11 +640,45 @@ export function useCanvasOrchestrator() {
     // Each scroll tick triggers a zoom animation → onMoveEnd fires → reactive store update → re-render.
     // Without debounce, rapid scroll-wheel zoom causes cascading re-renders mid-animation.
     let viewportSaveTimer: ReturnType<typeof setTimeout> | null = null
+
+    // Performance: pause expensive CSS animations during zoom/pan gestures
+    // Set on .canvas-drop-zone (parent of both VueFlow and CanvasEmptyState)
+    // Lazy query — DOM may not exist yet during composable setup
+    let zoomContainer: Element | null = null
+    onMoveStart(() => {
+        if (!zoomContainer) zoomContainer = document.querySelector('.canvas-drop-zone') || document.querySelector('.vue-flow')
+        zoomContainer?.classList.add('is-zooming')
+        if (!zoomPerfActive) {
+            zoomPerfActive = true
+            zoomStartTime = performance.now()
+            zoomMoveStartCount = 0
+            zoomMoveEndCount = 0
+            zoomWheelEventCount = 0
+            zoomPerfLog.length = 0
+            lastZoomLevel = viewport.value?.zoom ?? 1
+        }
+        zoomMoveStartCount++
+        const currentZoom = viewport.value?.zoom ?? 1
+        logZoomPerf('moveStart', currentZoom)
+    })
+
     onMoveEnd((flow) => {
+        zoomMoveEndCount++
+        const currentZoom = flow?.flowTransform?.zoom ?? viewport.value?.zoom ?? 1
+        const zoomDelta = currentZoom - lastZoomLevel
+        logZoomPerf('moveEnd', currentZoom, `Δzoom=${zoomDelta.toFixed(3)}`)
+        lastZoomLevel = currentZoom
+
         if (flow && flow.flowTransform) {
             if (viewportSaveTimer) clearTimeout(viewportSaveTimer)
             viewportSaveTimer = setTimeout(() => {
+                const t0 = performance.now()
                 canvasStore.setViewport(flow.flowTransform.x, flow.flowTransform.y, flow.flowTransform.zoom)
+                const setViewportMs = performance.now() - t0
+                logZoomPerf('setViewport', flow.flowTransform.zoom, `took ${setViewportMs.toFixed(1)}ms`)
+                zoomContainer?.classList.remove('is-zooming')
+                zoomPerfActive = false
+                flushZoomPerf()
                 viewportSaveTimer = null
             }, 150)
         }
@@ -604,20 +690,24 @@ export function useCanvasOrchestrator() {
     // OPTIMIZATION: Use batchedSyncNodes to coalesce multiple updates
     watch(() => taskStore.activeStatusFilter, () => {
         if (!isInitialized.value) return
+        if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:activeStatusFilter', viewport.value?.zoom ?? 1)
         batchedSyncNodes()
     })
     watch(() => taskStore.hideCanvasDoneTasks, () => {
         if (!isInitialized.value) return
+        if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:hideCanvasDoneTasks', viewport.value?.zoom ?? 1)
         batchedSyncNodes()
     })
     watch(() => taskStore.hideCanvasOverdueTasks, () => {
         if (!isInitialized.value) return
+        if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:hideCanvasOverdueTasks', viewport.value?.zoom ?? 1)
         batchedSyncNodes()
     })
     // BUG-1210 FIX: Watch smart view changes to re-sync canvas nodes
     // Without this, switching to "This Week" doesn't refresh canvas when task count stays the same
     watch(() => taskStore.activeSmartView, () => {
         if (!isInitialized.value) return
+        if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:activeSmartView', viewport.value?.zoom ?? 1)
         batchedSyncNodes()
         batchedSyncEdges()
     })
@@ -626,6 +716,7 @@ export function useCanvasOrchestrator() {
     // User-initiated syncs bypass the drag-settling guard (force: true)
     watch(() => canvasStore.syncTrigger, () => {
         if (!isInitialized.value) return
+        if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:canvasStore.syncTrigger', viewport.value?.zoom ?? 1)
         batchedSyncNodes(undefined, { force: true })
         batchedSyncEdges({ force: true })
     })
@@ -661,6 +752,7 @@ export function useCanvasOrchestrator() {
         isSyncingFromWatcher = true
         try {
             if (persistence.isSyncing.value) return
+            if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:taskIds', viewport.value?.zoom ?? 1, `${tasksWithCanvasPosition.value.length} tasks`)
             canvasStore.recalculateAllTaskCounts(taskStore.tasks)
             batchedSyncNodes()
             batchedSyncEdges() // Also sync edges when tasks change
@@ -677,6 +769,7 @@ export function useCanvasOrchestrator() {
         isSyncingFromWatcher = true
         try {
             if (persistence.isSyncing.value) return
+            if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:groups.length', viewport.value?.zoom ?? 1)
             canvasStore.recalculateAllTaskCounts(taskStore.tasks)
             batchedSyncNodes()
         } finally {

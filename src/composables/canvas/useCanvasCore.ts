@@ -42,6 +42,7 @@ export function useCanvasCore() {
         project,
         getIntersectingNodes,
         isNodeIntersecting,
+        onMoveStart,
         onMoveEnd,
         onConnect,
         onEdgesChange,
@@ -175,6 +176,7 @@ export function useCanvasCore() {
         onPaneReady,
 
         // Events
+        onMoveStart,
         onMoveEnd,
         onConnect,
         onEdgesChange,

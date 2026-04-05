@@ -326,6 +326,7 @@ function gridDotStyle(i: number): Record<string, string> {
 /* Float animations for card groups */
 .task-card-group {
   animation: card-group-in 0.6s var(--spring-smooth) both;
+  will-change: transform;
 }
 
 .float-a {
@@ -591,5 +592,19 @@ function gridDotStyle(i: number): Record<string, string> {
     opacity: 1;
     transform: none;
   }
+}
+
+/* ============================================================
+   PAUSE ANIMATIONS DURING ZOOM/PAN
+   Ancestor .is-zooming is set on .vue-flow during gestures.
+   Pausing prevents GPU compositing contention with viewport transforms.
+   ============================================================ */
+:global(.is-zooming) .canvas-empty-state .grid-dot,
+:global(.is-zooming) .canvas-empty-state .sparkle,
+:global(.is-zooming) .canvas-empty-state .task-card-group,
+:global(.is-zooming) .canvas-empty-state .drag-hint,
+:global(.is-zooming) .canvas-empty-state .node-center,
+:global(.is-zooming) .canvas-empty-state .connector {
+  animation-play-state: paused !important;
 }
 </style>

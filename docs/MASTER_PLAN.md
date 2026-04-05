@@ -23,9 +23,9 @@
 
 ---
 
-### TASK-1746: Add Changelog/Logs tab to Watchpost dashboard (📋 PLANNED)
+### ~~TASK-1746~~: Add Changelog/Logs tab to Watchpost dashboard (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-05)
 
 **Problem**: A changelog capture system exists and is actively logging (hook at `~/.watchpost/scripts/changelog-capture.sh`, data in `~/.watchpost/data/changelog/`). But the dashboard tab to VIEW these logs was lost. Data is intact — 10+ projects with JSONL entries.
 
@@ -37,9 +37,9 @@
 
 ---
 
-### TASK-1747: Watchpost cover art API integration (📋 PLANNED)
+### ~~TASK-1747~~: Watchpost cover art API integration (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
 
 **Problem**: Control Room has placeholder gradients for project covers. The backend supports pluggable image generation (ideogram, fal.ai, OpenAI) via `POST /api/projects/:name/generate-cover`, but no provider is configured yet.
 
@@ -49,9 +49,9 @@
 
 ---
 
-### TASK-1748: Watchpost project detail panel — summary + cover upload (📋 PLANNED)
+### ~~TASK-1748~~: Watchpost project detail panel — summary + cover upload (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-05)
 
 **Problem**: The Control Room detail slide-in panel shows project info but the 7-day summary and cover upload/change need testing and polish. Manual cover upload endpoint exists but UI flow needs wiring.
 
@@ -61,9 +61,9 @@
 
 ---
 
-### TASK-1749: Mark TASK-303 orchestrator section as archived in MASTER_PLAN (📋 PLANNED)
+### ~~TASK-1749~~: Mark TASK-303 orchestrator section as archived in MASTER_PLAN (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
 
 **Problem**: TASK-303 (Watchpost Orchestrator) section still shows as PAUSED with pending subtasks (BUG-1019, FEATURE-1013/1014/1015). The orchestrator was intentionally removed from the codebase. The section should be archived, and any still-relevant subtasks (like BUG-1019 OOM prevention) should be evaluated independently.
 
@@ -73,9 +73,9 @@
 
 ---
 
-### TASK-1750: Create favicon for Watchpost dashboard (📋 PLANNED)
+### ~~TASK-1750~~: Create favicon for Watchpost dashboard (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
 
 **Problem**: Watchpost dashboard at localhost:6010 has no favicon — browser tab shows generic icon.
 
@@ -3541,29 +3541,13 @@ Public API unchanged — zero consumer migration needed.
 ---
 
 
-## Watchpost Orchestrator (TASK-303)
+## ~~Watchpost Orchestrator (TASK-303)~~ — ARCHIVED
 
-**Status**: ⏸️ PAUSED | **SOP**: `docs/sop/SOP-010-dev-manager-orchestrator.md`
+**Status**: 🗄️ ARCHIVED (2026-04-05) — Orchestrator code removed from server.js and kanban in TASK-1483.
 
-Enables Claude agents to implement code changes using git worktrees for isolation.
+Orchestrator was a worktree-based agent execution system. Superseded by Claude Code's built-in Agent tool and oh-my-claudecode multi-agent orchestration. All orchestrator routes (~2250 lines), UI (~3800 lines), and related cleanup code removed.
 
-**Architecture**: User Goal → Questions → Plan → Execute (Worktrees) → Review → Merge/Discard
-
-**Completed Subtasks**: ~~TASK-319~~ (output capture), ~~TASK-320~~ (completion detection), ~~TASK-323~~ (stale cleanup), ~~FEATURE-1012~~ (tech stack detection) - See archive.
-
-### Pending Subtasks
-
-| Task | Priority | Description |
-|------|----------|-------------|
-| ~~BUG-1113~~ | P0 | ✅ Stale worktrees not cleaned up - forces Claude Code context bloat |
-| BUG-1019 | P0 | Swarm agent cleanup + OOM prevention |
-| ~~TASK-321~~ | P2 | ✅ Test merge/discard workflow E2E |
-| ~~TASK-322~~ | P2 | ✅ Automatic error recovery (exponential backoff, partial progress) |
-| FEATURE-1013 | P2 | Auto-detect data layer (Pinia, Supabase) |
-| FEATURE-1014 | P2 | Smart questions with pros/cons |
-| FEATURE-1015 | P2 | Project context caching |
-
-**Key Files**: `~/.watchpost/server.js`, `~/.watchpost/kanban/index.html`
+**Remaining subtask evaluated**: BUG-1019 (Swarm agent OOM) — no longer applicable since orchestrator agent spawning was removed. FEATURE-1013/1014/1015 — not needed, Claude Code handles these natively.
 
 ---
 

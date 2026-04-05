@@ -497,8 +497,10 @@ Start by reviewing the recent changes and pick up the next task.`;
         const colors = categoryColors[catFolder] || { accent: 'teal (#4ECDC4)', secondary: 'gold (#D4AF37)' };
 
         // Art Deco style cover prompt — horizontal banner, project-specific graphics, category color
-        const defaultPrompt = `Art Deco style wide banner for a software project called "${projectName}". ` +
-            `16:9 landscape ratio. Deep black background. Elegant 1920s Art Deco geometric design. ` +
+        const defaultPrompt = `Art Deco style banner for a software project called "${projectName}". ` +
+            `4:3 landscape ratio. The design MUST fill the ENTIRE canvas edge to edge — ` +
+            `NO black margins, NO empty space, NO borders around the design. ` +
+            `Rich dark background (very dark navy or charcoal, not pure black) covered entirely with Art Deco geometric patterns. ` +
             `LEFT SIDE: a stylized Art Deco illustration representing what "${projectName}" does — ` +
             `interpret the name creatively (productivity tool=geometric clock/task board, ` +
             `bot=stylized robot face, video/film=film reel/camera, game=dice/controller, ` +
@@ -506,9 +508,9 @@ Start by reviewing the recent changes and pick up the next task.`;
             `The illustration uses ${colors.accent} and ${colors.secondary} in Art Deco line art style. ` +
             `RIGHT SIDE: the project name "${projectName}" in bold Art Deco display typography — ` +
             `geometric letterforms colored in ${colors.accent}. ` +
-            `FRAME: thin Art Deco geometric border with corner accents and subtle sunburst or fan motifs. ` +
-            `Style: flat vector, no 3D, no photorealism, pure Art Deco geometric illustration. ` +
-            `The text must be perfectly legible. Composition balanced horizontally like a movie title card.`;
+            `The entire background is filled with subtle Art Deco geometric patterns (fan shapes, chevrons, radiating lines) ` +
+            `extending to every edge. Style: flat vector, no 3D, no photorealism, pure Art Deco. ` +
+            `Text must be perfectly legible.`;
         const prompt = (req.body && req.body.prompt) ? req.body.prompt : defaultPrompt;
 
         try {
@@ -563,7 +565,7 @@ Start by reviewing the recent changes and pick up the next task.`;
                             rendering_speed: 'QUALITY',
                             style: 'DESIGN',
                             expand_prompt: false,
-                            image_size: 'landscape_16_9',
+                            image_size: 'landscape_4_3',
                             negative_prompt: 'blurry, photorealistic, 3D render, gradient mesh, low quality, watermark'
                         }
                     })

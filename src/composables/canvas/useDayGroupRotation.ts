@@ -24,6 +24,9 @@ import { canvasSyncInProgress } from './useCanvasSync'
 export interface DayGroupRotationOptions {
   /** Called with Vue Flow node moves after position rotation. Caller applies via updateNode(). */
   onMoves?: (moves: Array<{ nodeId: string; position: { x: number; y: number } }>) => void
+  /** Read a Vue Flow node's current visual position. Used to ensure rotation works
+   *  even when store and Vue Flow are out of sync. */
+  getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
 }
 
 export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
@@ -134,23 +137,28 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     const groups = canvasStore.groups
     const moves: Array<{ nodeId: string; position: { x: number; y: number } }> = []
 
-    // 1. Collect day-of-week groups with their dayIndex
-    const dayGroups: Array<{ group: (typeof groups)[number]; dayIndex: number }> = []
+    // 1. Collect day-of-week groups with their dayIndex and visual position
+    const dayGroups: Array<{ group: (typeof groups)[number]; dayIndex: number; visualPos: { x: number; y: number } }> = []
     for (const group of groups) {
       const keyword = detectPowerKeyword(group.name)
       if (keyword?.category !== 'day_of_week') continue
       const dayIndex = parseInt(keyword.value, 10)
       if (isNaN(dayIndex) || dayIndex < 0 || dayIndex > 6) continue
       if (!group.position) continue
-      dayGroups.push({ group, dayIndex })
+
+      // Use Vue Flow position (what user sees) if available, else store position
+      const vfPos = options.getNodePosition?.(`section-${group.id}`)
+      const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
+      dayGroups.push({ group, dayIndex, visualPos })
     }
 
     // Need at least 2 groups to rotate
     if (dayGroups.length < 2) return moves
 
-    // 2. Sort current positions by X to build ordered slot list
+    // 2. Sort VISUAL positions by X to build ordered slot list
+    //    (uses what the user actually sees, not potentially stale store data)
     const slots = dayGroups
-      .map((dg) => ({ x: dg.group.position!.x, y: dg.group.position!.y }))
+      .map((dg) => ({ x: dg.visualPos.x, y: dg.visualPos.y }))
       .sort((a, b) => a.x - b.x)
 
     // 3. Sort groups so the nearest upcoming day comes first.
@@ -181,20 +189,21 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     canvasSyncInProgress.value = true
     try {
       for (let i = 0; i < dayGroups.length; i++) {
-        const { group } = dayGroups[i]
+        const { group, visualPos } = dayGroups[i]
         const targetSlot = slots[i]
-        const currentPos = group.position!
 
-        const deltaX = targetSlot.x - currentPos.x
-        const deltaY = targetSlot.y - currentPos.y
+        // Delta based on visual position (what user sees), not store
+        const deltaX = targetSlot.x - visualPos.x
+        const deltaY = targetSlot.y - visualPos.y
 
         // Skip if already in correct position
         if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) continue
 
-        // Update store for persistence
+        // Update store for persistence (preserve width/height from store)
+        const storePos = group.position!
         canvasStore.updateGroup(group.id, {
           position: {
-            ...currentPos,
+            ...storePos,
             x: targetSlot.x,
             y: targetSlot.y
           }

@@ -357,7 +357,7 @@ const nodeTypes = {
 }
 
 // FEATURE-1048: Day group auto-rotation at midnight
-const { updateNode } = useVueFlow()
+const { updateNode, findNode } = useVueFlow()
 
 function applyDayGroupMoves(moves: Array<{ nodeId: string; position: { x: number; y: number } }>) {
   for (const move of moves) {
@@ -366,7 +366,11 @@ function applyDayGroupMoves(moves: Array<{ nodeId: string; position: { x: number
 }
 
 const dayRotation = useDayGroupRotation({
-  onMoves: applyDayGroupMoves // Also used for midnight auto-rotation
+  onMoves: applyDayGroupMoves, // Also used for midnight auto-rotation
+  getNodePosition: (nodeId: string) => {
+    const node = findNode(nodeId)
+    return node ? { x: node.position.x, y: node.position.y } : undefined
+  }
 })
 
 function handleRotateDayGroups() {

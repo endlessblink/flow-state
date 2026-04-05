@@ -497,20 +497,75 @@ Start by reviewing the recent changes and pick up the next task.`;
         const catFolder = root.match(/ai-development\/([^/]+)/)?.[1] || '';
         const colors = categoryColors[catFolder] || { accent: 'teal (#4ECDC4)', secondary: 'gold (#D4AF37)' };
 
-        // Art Deco style cover prompt — horizontal banner, project-specific graphics, category color
+        // Gather project context for a meaningful cover
+        const techStack = project?.root ? detectTechStack(project.root) : 'Unknown';
+
+        // Try to get project description from package.json
+        let projectDescription = '';
+        try {
+            const pkgPath = path.join(project.root, 'package.json');
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+            projectDescription = pkg.description || '';
+        } catch { /* no package.json or no description */ }
+
+        // Try to get context from MASTER_PLAN.md overview section
+        let projectPurpose = '';
+        if (project?.masterPlan) {
+            try {
+                const mpContent = fs.readFileSync(project.masterPlan, 'utf8');
+                // Look for "## Overview" or "## Project Overview" section
+                const overviewMatch = mpContent.match(/##\s*(?:Project\s+)?Overview[^\n]*\n([\s\S]*?)(?=\n##|\n---|\Z)/i);
+                if (overviewMatch) {
+                    // Take first 2 sentences, clean markdown
+                    projectPurpose = overviewMatch[1].trim()
+                        .replace(/\*\*/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+                        .split(/[.!]\s+/).slice(0, 2).join('. ').substring(0, 200);
+                }
+            } catch { /* ok */ }
+        }
+
+        // Get recent task titles for thematic hints (top 5 active tasks)
+        let taskHints = '';
+        if (project?.masterPlan) {
+            try {
+                const mpContent = fs.readFileSync(project.masterPlan, 'utf8');
+                const activeTasks = [];
+                const taskRegex = /###\s*(?:~~)?(?:TASK|BUG|FEATURE)-\d+(?:~~)?:\s*(.+?)(?:\s*\(.*\))?$/gm;
+                let m;
+                while ((m = taskRegex.exec(mpContent)) !== null && activeTasks.length < 5) {
+                    const title = m[1].trim();
+                    if (!title.includes('DONE') && title.length > 5) activeTasks.push(title);
+                }
+                if (activeTasks.length > 0) taskHints = activeTasks.join(', ');
+            } catch { /* ok */ }
+        }
+
+        // Build a context string that describes what the project actually does
+        const contextParts = [];
+        if (projectDescription) contextParts.push(projectDescription);
+        if (projectPurpose) contextParts.push(projectPurpose);
+        if (taskHints) contextParts.push(`Current work: ${taskHints}`);
+        if (techStack && techStack !== 'Unknown') contextParts.push(`Built with ${techStack}`);
+        const categoryLabel = catFolder ? catFolder.replace(/[+-]/g, ' ') : '';
+        if (categoryLabel) contextParts.push(`Category: ${categoryLabel}`);
+        const projectContext = contextParts.join('. ').substring(0, 500);
+
+        // Art Deco style cover prompt — project-specific illustration based on context
         const defaultPrompt = `Art Deco style banner for a software project called "${projectName}". ` +
+            `${projectContext ? `This project is: ${projectContext}. ` : ''}` +
             `4:3 landscape ratio. The design MUST fill the ENTIRE canvas edge to edge — ` +
             `NO black margins, NO empty space, NO borders around the design. ` +
-            `Rich dark background (very dark navy or charcoal, not pure black) covered entirely with Art Deco geometric patterns. ` +
-            `LEFT SIDE: a stylized Art Deco illustration representing what "${projectName}" does — ` +
-            `interpret the name creatively (productivity tool=geometric clock/task board, ` +
-            `bot=stylized robot face, video/film=film reel/camera, game=dice/controller, ` +
-            `music=sound waves, code=terminal/brackets). ` +
+            `Rich dark background (very dark navy or charcoal, not pure black) covered entirely with themed Art Deco patterns. ` +
+            `LEFT SIDE: a stylized Art Deco illustration that visually represents what this specific project does — ` +
+            `choose distinctive visual symbols based on the project's actual purpose ` +
+            `(e.g. a task app=hourglass+checklist, a video tool=film reel+camera lens, a bot=antenna+chat bubbles, ` +
+            `a freelance tool=handshake+invoice, a game=dice+joystick, a music app=sound waves+vinyl). ` +
+            `Make the illustration UNIQUE to this project — avoid generic gears or abstract shapes. ` +
             `The illustration uses ${colors.accent} and ${colors.secondary} in Art Deco line art style. ` +
             `RIGHT SIDE: the project name "${projectName}" in bold Art Deco display typography — ` +
             `geometric letterforms colored in ${colors.accent}. ` +
-            `The entire background is filled with subtle Art Deco geometric patterns (fan shapes, chevrons, radiating lines) ` +
-            `extending to every edge. Style: flat vector, no 3D, no photorealism, pure Art Deco. ` +
+            `The background patterns should relate to the project theme (not just generic fans and chevrons). ` +
+            `Style: flat vector, no 3D, no photorealism, pure Art Deco. ` +
             `Text must be perfectly legible.`;
         const prompt = (req.body && req.body.prompt) ? req.body.prompt : defaultPrompt;
 

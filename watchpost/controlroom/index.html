@@ -331,10 +331,10 @@
         }
 
         .card-cover {
+            height: 120px;
             position: relative;
             overflow: hidden;
             flex-shrink: 0;
-            aspect-ratio: 3 / 4;
         }
 
         .card-cover-gradient {
@@ -1922,7 +1922,7 @@ function cardHtml(p) {
     const total = p.stats.done + p.stats.active + p.stats.planned || 1;
     const initial = p.name.charAt(0);
     const gradient = projectGradient(p.name);
-    const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/contain no-repeat; background-color: #000` : `background: ${gradient}`;
+    const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/cover no-repeat` : `background: ${gradient}`;
 
     return `
     <div class="project-card${p.archived ? ' archived' : ''}" data-name="${escHtml(p.name)}">
@@ -1965,7 +1965,7 @@ function cardHtml(p) {
 function listRowHtml(p) {
     const initial = p.name.charAt(0);
     const gradient = projectGradient(p.name);
-    const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/contain no-repeat; background-color: #000` : `background: ${gradient}`;
+    const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/cover no-repeat` : `background: ${gradient}`;
 
     return `
     <div class="list-row${p.archived ? ' archived' : ''}" data-name="${escHtml(p.name)}">

@@ -128,46 +128,77 @@ const SENSITIVE_FIELDS_TO_OMIT: (keyof AppSettings)[] = [
 
 async function syncSettingsToSupabase(state: AppSettings) {
     try {
+        console.log('[SETTINGS] syncSettingsToSupabase called')
         // Lazily import the singleton auth client (same client used by all DB operations)
         const { supabase } = await import('@/services/auth/supabase')
-        if (!supabase) return
+        if (!supabase) {
+            console.warn('[SETTINGS] Supabase client not available — skipping sync')
+            return
+        }
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user?.id) return
-
-        // Build a settings blob with sensitive/device-specific fields stripped out
-        const safeSettings: Record<string, unknown> = { ...state }
-        for (const field of SENSITIVE_FIELDS_TO_OMIT) {
-            delete safeSettings[field]
+        if (!user?.id) {
+            console.warn('[SETTINGS] No authenticated user — will retry settings sync in 5s')
+            // Auth not ready yet — retry once after 5 seconds
+            setTimeout(async () => {
+                try {
+                    const { supabase: sb } = await import('@/services/auth/supabase')
+                    if (!sb) return
+                    const { data: { user: retryUser } } = await sb.auth.getUser()
+                    if (!retryUser?.id) {
+                        console.warn('[SETTINGS] Retry: still no authenticated user — giving up')
+                        return
+                    }
+                    await doSettingsUpsert(sb, retryUser.id, state)
+                } catch (e) {
+                    console.warn('[SETTINGS] Retry failed:', e)
+                }
+            }, 5000)
+            return
         }
 
-        // Mirror the shape used by toSupabaseUserSettings() so the full settings
-        // blob lands in the settings JSONB column and individual legacy columns
-        // are kept in sync for backwards-compatibility.
-        await supabase
-            .from('user_settings')
-            .upsert({
-                user_id: user.id,
-                // Individual legacy columns
-                work_duration: state.workDuration,
-                short_break_duration: state.shortBreakDuration,
-                long_break_duration: state.longBreakDuration,
-                auto_start_breaks: state.autoStartBreaks,
-                auto_start_pomodoros: state.autoStartPomodoros,
-                play_notification_sounds: state.playNotificationSounds,
-                theme: state.theme || 'auto',
-                language: state.language || 'en',
-                sidebar_collapsed: state.sidebarCollapsed || false,
-                board_density: state.boardDensity || 'comfortable',
-                kanban_settings: state.kanbanSettings || {},
-                canvas_viewport: state.canvasViewport || null,
-                // Full settings blob (sensitive fields omitted)
-                settings: safeSettings,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id' })
-
-        console.log('[SETTINGS] Full settings synced to Supabase (sensitive fields omitted)')
+        await doSettingsUpsert(supabase, user.id, state)
     } catch (error) {
         console.warn('[SETTINGS] Failed to sync settings to Supabase:', error)
+    }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function doSettingsUpsert(supabase: any, userId: string, state: AppSettings) {
+    // Build a settings blob with sensitive/device-specific fields stripped out
+    const safeSettings: Record<string, unknown> = { ...state }
+    for (const field of SENSITIVE_FIELDS_TO_OMIT) {
+        delete safeSettings[field]
+    }
+
+    // Mirror the shape used by toSupabaseUserSettings() so the full settings
+    // blob lands in the settings JSONB column and individual legacy columns
+    // are kept in sync for backwards-compatibility.
+    const { error } = await supabase
+        .from('user_settings')
+        .upsert({
+            user_id: userId,
+            // Individual legacy columns
+            work_duration: state.workDuration,
+            short_break_duration: state.shortBreakDuration,
+            long_break_duration: state.longBreakDuration,
+            auto_start_breaks: state.autoStartBreaks,
+            auto_start_pomodoros: state.autoStartPomodoros,
+            play_notification_sounds: state.playNotificationSounds,
+            theme: state.theme || 'auto',
+            language: state.language || 'en',
+            sidebar_collapsed: state.sidebarCollapsed || false,
+            board_density: state.boardDensity || 'comfortable',
+            kanban_settings: state.kanbanSettings || {},
+            canvas_viewport: state.canvasViewport || null,
+            // Full settings blob (sensitive fields omitted)
+            settings: safeSettings,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' })
+
+    if (error) {
+        console.error('[SETTINGS] Supabase upsert failed:', error.message, error.code)
+    } else {
+        console.log('[SETTINGS] Settings synced to Supabase successfully')
     }
 }
 

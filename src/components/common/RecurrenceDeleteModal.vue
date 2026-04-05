@@ -21,6 +21,19 @@
 
     <!-- Action buttons -->
     <div class="action-list">
+      <!-- Remove from canvas only -->
+      <button
+        v-if="showRemoveFromCanvas"
+        class="action-btn action-btn--canvas"
+        @click="$emit('remove-from-canvas')"
+      >
+        <LayoutDashboard :size="20" class="action-icon action-icon--canvas" />
+        <div class="action-text">
+          <span class="action-label">Remove from canvas</span>
+          <span class="action-hint">Keep the task, just take it off the canvas</span>
+        </div>
+      </button>
+
       <!-- Skip this occurrence -->
       <button
         class="action-btn action-btn--skip"
@@ -62,7 +75,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Repeat, SkipForward, Ban } from 'lucide-vue-next'
+import { Repeat, SkipForward, Ban, LayoutDashboard } from 'lucide-vue-next'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import type { SimpleRecurrenceRule } from '@/types/tasks'
@@ -72,6 +85,7 @@ interface Props {
   isOpen: boolean
   taskTitle: string
   recurrenceRule: SimpleRecurrenceRule | null
+  showRemoveFromCanvas?: boolean
 }
 
 const props = defineProps<Props>()
@@ -80,6 +94,7 @@ defineEmits<{
   skip: []
   stop: []
   cancel: []
+  'remove-from-canvas': []
 }>()
 
 const ruleDescription = computed(() => {
@@ -164,6 +179,23 @@ const ruleDescription = computed(() => {
 .action-btn--stop:hover {
   background: rgba(239, 68, 68, 0.12);
   border-color: var(--color-danger);
+}
+
+.action-btn--canvas {
+  border: 1px solid rgba(168, 162, 200, 0.8);
+}
+
+.action-btn--canvas:hover {
+  background: rgba(168, 162, 200, 0.12);
+  border-color: rgba(168, 162, 200, 1);
+}
+
+.action-icon--canvas {
+  color: rgba(168, 162, 200, 1);
+}
+
+.action-btn--canvas .action-label {
+  color: rgba(168, 162, 200, 1);
 }
 
 .action-icon {

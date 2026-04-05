@@ -103,8 +103,10 @@
       :is-open="showRecurrenceDeleteModal"
       :task-title="recurrenceDeleteTaskTitle"
       :recurrence-rule="recurrenceDeleteTaskRule"
+      :show-remove-from-canvas="recurrenceDeleteShowCanvasRemove"
       @skip="handleRecurrenceSkip"
       @stop="handleRecurrenceStop"
+      @remove-from-canvas="handleRecurrenceRemoveFromCanvas"
       @cancel="showRecurrenceDeleteModal = false"
     />
 
@@ -238,6 +240,7 @@ const recurrenceDeleteTaskTitle = ref('')
 const recurrenceDeleteTaskRule = ref<import('@/types/tasks').SimpleRecurrenceRule | null>(null)
 // Track whether the pending action is a permanent delete
 const recurrenceDeleteIsPermanent = ref(false)
+const recurrenceDeleteShowCanvasRemove = ref(false)
 
 // Methods
 const openEditTask = (task: Task) => {
@@ -287,6 +290,7 @@ const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendar
     recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
     recurrenceDeleteTaskRule.value = task.recurrenceRule
     recurrenceDeleteIsPermanent.value = false
+    recurrenceDeleteShowCanvasRemove.value = !!task.canvasPosition
     showRecurrenceDeleteModal.value = true
   } else {
     confirmDeleteTask(task)
@@ -306,6 +310,7 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
     recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
     recurrenceDeleteTaskRule.value = task.recurrenceRule
     recurrenceDeleteIsPermanent.value = true
+    recurrenceDeleteShowCanvasRemove.value = !!task.canvasPosition
     showRecurrenceDeleteModal.value = true
     return
   }
@@ -362,6 +367,23 @@ const handleRecurrenceStop = async () => {
     }
   } catch (error) {
     console.error('[ModalManager] Stop recurrence failed:', error)
+  }
+}
+
+const handleRecurrenceRemoveFromCanvas = async () => {
+  const taskId = recurrenceDeleteTaskId.value
+  showRecurrenceDeleteModal.value = false
+  recurrenceDeleteTaskId.value = null
+  if (!taskId) return
+
+  try {
+    await taskStore.updateTask(taskId, {
+      canvasPosition: undefined,
+      parentId: undefined,
+      isInInbox: true
+    })
+  } catch (error) {
+    console.error('[ModalManager] Remove recurring task from canvas failed:', error)
   }
 }
 
@@ -571,6 +593,7 @@ const handleBatchDeleteSelected = () => {
     recurrenceDeleteTaskTitle.value = first.title || 'Untitled Task'
     recurrenceDeleteTaskRule.value = first.recurrenceRule ?? null
     recurrenceDeleteIsPermanent.value = false
+    recurrenceDeleteShowCanvasRemove.value = !!first.canvasPosition
     showRecurrenceDeleteModal.value = true
     return
   }
@@ -654,6 +677,7 @@ const handleConfirmDeleteSelected = () => {
     recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
     recurrenceDeleteTaskRule.value = task.recurrenceRule ?? null
     recurrenceDeleteIsPermanent.value = false
+    recurrenceDeleteShowCanvasRemove.value = !!task.canvasPosition
     showRecurrenceDeleteModal.value = true
     return
   }
@@ -666,6 +690,7 @@ const handleConfirmDeleteSelected = () => {
     recurrenceDeleteTaskTitle.value = first.title || 'Untitled Task'
     recurrenceDeleteTaskRule.value = first.recurrenceRule ?? null
     recurrenceDeleteIsPermanent.value = false
+    recurrenceDeleteShowCanvasRemove.value = !!first.canvasPosition
     showRecurrenceDeleteModal.value = true
     return
   }
@@ -754,6 +779,7 @@ const handleRecurrenceDeleteEvent = (e: Event) => {
   recurrenceDeleteTaskTitle.value = task.title || 'Untitled Task'
   recurrenceDeleteTaskRule.value = task.recurrenceRule ?? null
   recurrenceDeleteIsPermanent.value = permanent ?? false
+  recurrenceDeleteShowCanvasRemove.value = !!task.canvasPosition
   showRecurrenceDeleteModal.value = true
 }
 

@@ -496,17 +496,21 @@ Start by reviewing the recent changes and pick up the next task.`;
         const catFolder = root.match(/ai-development\/([^/]+)/)?.[1] || '';
         const colors = categoryColors[catFolder] || { accent: 'teal (#4ECDC4)', secondary: 'gold (#D4AF37)' };
 
-        // Art Deco style cover prompt — consistent motif with category-unique accent color
-        const defaultPrompt = `Art Deco style poster cover for a software project called "${projectName}". ` +
-            `Deep black background. Elegant 1920s Art Deco geometric design. ` +
-            `At the top: a decorative sunburst arch with radiating geometric lines in ${colors.accent}. ` +
-            `Center: the project name "${projectName}" in large, prominent Art Deco display typography — ` +
-            `bold, geometric letterforms with sharp angles and clean edges, colored in ${colors.accent}. ` +
+        // Art Deco style cover prompt — consistent frame, project-specific graphics, category color
+        const defaultPrompt = `Art Deco style portrait poster for a software project called "${projectName}". ` +
+            `4:5 portrait ratio. Deep black background. Elegant 1920s Art Deco geometric design. ` +
+            `TOP: a decorative Art Deco sunburst arch with radiating geometric lines in ${colors.accent}. ` +
+            `UPPER CENTER: the project name "${projectName}" in Art Deco display typography — ` +
+            `bold geometric letterforms, colored in ${colors.accent}, perfectly legible. ` +
             `Below the name: a thin ornamental Art Deco divider line in ${colors.secondary}. ` +
-            `The inner pattern varies — use stepped chevrons, fan shapes, or geometric lattice. ` +
-            `Bottom: subtle geometric base pattern with thin accent lines. ` +
-            `Style: flat vector, no 3D, no photorealism, pure Art Deco geometric illustration. ` +
-            `The text must be perfectly legible. Square format, 1024x1024.`;
+            `LOWER CENTER: a stylized Art Deco illustration representing what "${projectName}" does — ` +
+            `interpret the name creatively (e.g. if it sounds like a productivity tool: show a geometric clock or task board; ` +
+            `if it sounds like a bot: show a stylized robot face; if it sounds like video/film: show a film reel or camera; ` +
+            `if it sounds like a game: show dice or a controller; if it sounds like music: show sound waves). ` +
+            `The illustration should be rendered in the Art Deco line art style using ${colors.accent} and ${colors.secondary}. ` +
+            `BOTTOM: geometric base pattern with stepped chevrons or fan shapes. ` +
+            `Style: flat vector, no 3D, no photorealism, pure Art Deco geometric poster illustration. ` +
+            `The overall composition should look like a vintage Art Deco movie poster or book cover.`;
         const prompt = (req.body && req.body.prompt) ? req.body.prompt : defaultPrompt;
 
         try {
@@ -561,7 +565,7 @@ Start by reviewing the recent changes and pick up the next task.`;
                             rendering_speed: 'QUALITY',
                             style: 'DESIGN',
                             expand_prompt: false,
-                            image_size: 'square_hd',
+                            image_size: 'portrait_4_3',
                             negative_prompt: 'blurry, photorealistic, 3D render, gradient mesh, low quality, watermark'
                         }
                     })

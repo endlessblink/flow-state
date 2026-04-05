@@ -331,7 +331,7 @@
         }
 
         .card-cover {
-            height: 120px;
+            height: 160px;
             position: relative;
             overflow: hidden;
             flex-shrink: 0;
@@ -1922,7 +1922,7 @@ function cardHtml(p) {
     const total = p.stats.done + p.stats.active + p.stats.planned || 1;
     const initial = p.name.charAt(0);
     const gradient = projectGradient(p.name);
-    const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/cover no-repeat` : `background: ${gradient}`;
+    const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) top center/cover no-repeat` : `background: ${gradient}`;
 
     return `
     <div class="project-card${p.archived ? ' archived' : ''}" data-name="${escHtml(p.name)}">
@@ -1965,7 +1965,7 @@ function cardHtml(p) {
 function listRowHtml(p) {
     const initial = p.name.charAt(0);
     const gradient = projectGradient(p.name);
-    const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/cover no-repeat` : `background: ${gradient}`;
+    const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) top center/cover no-repeat` : `background: ${gradient}`;
 
     return `
     <div class="list-row${p.archived ? ' archived' : ''}" data-name="${escHtml(p.name)}">
@@ -2071,7 +2071,8 @@ function showContextMenu(e, projectName) {
         </div>
     `;
 
-    const rect = e.currentTarget.getBoundingClientRect();
+    const btn = e.target.closest('[data-action="more"]');
+    const rect = (btn || e.target).getBoundingClientRect();
     let top = rect.bottom + 4;
     let left = rect.left;
 

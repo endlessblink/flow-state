@@ -91,6 +91,18 @@
 
 ---
 
+### TASK-1752: Control Room — Activity-based project views + combinable filters (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Control Room only groups by folder category. Need views grouped by "last worked on", activity level, task status — with combinable filters (e.g. category + sorted by last active).
+
+**Goal**: Add "Group by" dropdown (Category, Activity Level, Task Status, None) that works alongside existing Sort dropdown. Category chips update to match selected grouping.
+
+**Files**: `watchpost/controlroom/index.html`
+
+---
+
 ### ~~TASK-1750~~: Create favicon for Watchpost dashboard (✅ DONE)
 
 **Priority**: P3 | **Status**: ✅ DONE (2026-04-05)

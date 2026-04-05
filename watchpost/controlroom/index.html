@@ -2155,6 +2155,10 @@ function showContextMenu(e, projectName) {
             Copy kickstart
         </div>
         <div class="context-divider"></div>
+        <div class="context-item" data-cmd="generate-cover">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            ${project?.cover ? 'Regenerate Cover' : 'Create Cover'}
+        </div>
         <div class="context-item" data-cmd="${isArchived ? 'unarchive' : 'archive'}">
             <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5" rx="1"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
             ${isArchived ? 'Unarchive' : 'Archive'}
@@ -2171,8 +2175,8 @@ function showContextMenu(e, projectName) {
     let left = rect.left;
 
     // Viewport edge detection
-    const menuW = 180;
-    const menuH = 150;
+    const menuW = 200;
+    const menuH = 190;
     if (left + menuW > window.innerWidth) left = window.innerWidth - menuW - 8;
     if (top + menuH > window.innerHeight) top = rect.top - menuH - 4;
 
@@ -2218,6 +2222,33 @@ async function handleContextCommand(cmd, projectName) {
         showToast(project.archived ? 'Project archived' : 'Project unarchived', 'check');
         renderProjects();
         if (detailProject?.name === projectName) openDetail(projectName);
+
+    } else if (cmd === 'generate-cover') {
+        // Find the card element and show a loading overlay
+        const card = document.querySelector(`[data-name="${CSS.escape(projectName)}"]`);
+        const coverEl = card?.querySelector('.card-cover-gradient, .list-thumb');
+        const origContent = coverEl?.innerHTML;
+        if (coverEl) {
+            coverEl.style.position = 'relative';
+            coverEl.insertAdjacentHTML('beforeend', '<div class="cover-generating" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);border-radius:inherit;"><div class="spinner"></div><span style="margin-left:8px;font-size:11px;color:#ccc;">Generating...</span></div>');
+        }
+        showToast('Generating AI cover...', 'rocket');
+        let res;
+        try {
+            const raw = await fetch(`/api/projects/${encodeURIComponent(projectName)}/generate-cover`, { method: 'POST' });
+            res = await raw.json();
+        } catch { res = null; }
+        // Remove loading overlay
+        const overlay = coverEl?.querySelector('.cover-generating');
+        if (overlay) overlay.remove();
+        if (res?.success && res?.coverUrl) {
+            project.cover = res.coverUrl + '?t=' + Date.now();
+            showToast('Cover generated!', 'check');
+            renderProjects();
+            if (detailProject?.name === projectName) openDetail(projectName);
+        } else {
+            showToast(res?.error || 'Cover generation failed', 'error');
+        }
 
     } else if (cmd === 'delete') {
         if (!confirm(`Delete project "${projectName}" from Watchpost?\n\nThis only removes it from Watchpost — your files stay on disk.`)) return;

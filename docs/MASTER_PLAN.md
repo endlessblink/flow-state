@@ -8,6 +8,16 @@
 
 ## Active Tasks
 
+### TASK-1754: Drag-to-reorder projects in Control Room (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Goal**: Let users drag project cards to set a custom display order in the Control Room Projects tab. Persist the order in `~/.watchpost/projects.json` (e.g. an `order` field per project). Fall back to the current sort (Last Active) when no custom order is set.
+
+**Files**: `~/.watchpost/local/views/controlroom/index.html`, `~/.watchpost/server.js`
+
+---
+
 ### ~~TASK-1745~~: Restore BUG-1716 parser fix — #### headers + column-order (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-04-04)

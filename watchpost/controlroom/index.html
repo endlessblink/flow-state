@@ -1509,6 +1509,13 @@
         </button>
     </div>
 
+    <select class="sort-dropdown" id="groupBySelect" title="Group projects by">
+        <option value="category">Group: Category</option>
+        <option value="activity">Group: Activity</option>
+        <option value="status">Group: Task Status</option>
+        <option value="none">Group: None</option>
+    </select>
+
     <select class="sort-dropdown" id="sortSelect" title="Sort projects">
         <option value="lastActive">Last Active</option>
         <option value="nameAZ">Name A-Z</option>
@@ -1668,6 +1675,21 @@ const CATEGORY_COLORS = {
     'Uncategorized': '#6e7681',
 };
 
+const GROUP_COLORS = {
+    'High Activity': '#4ECDC4',
+    'Medium Activity': '#e5c07b',
+    'Low Activity': '#8b949e',
+    'In Progress': '#61afef',
+    'Planned': '#c678dd',
+    'Completed': '#98c379',
+    'No Tasks': '#6e7681',
+    'All Projects': '#8b949e',
+};
+
+function getGroupColor(groupName) {
+    return GROUP_COLORS[groupName] || CATEGORY_COLORS[groupName] || CATEGORY_COLORS['Uncategorized'];
+}
+
 function getCategoryFromPath(root) {
     if (!root) return 'Uncategorized';
     const marker = 'ai-development/';
@@ -1692,6 +1714,7 @@ let showArchived = false;
 let activeCategory = 'all';
 let collapsedCategories = new Set();
 let currentSort = 'lastActive'; // 'lastActive' | 'nameAZ' | 'nameZA' | 'mostTasks'
+let currentGroupBy = 'category'; // 'category' | 'activity' | 'status' | 'none'
 let detailProject = null;
 let openContextMenu = null;
 
@@ -1747,6 +1770,7 @@ async function loadProjects() {
                 },
                 stack: p.stack || p.technologies || [],
                 cover: p.coverUrl || p.cover || null,
+                commits7d: p.commits7d ?? 0,
                 _category: getCategoryFromPath(root),
             };
         });
@@ -1783,7 +1807,24 @@ function getFilteredProjects() {
     const filtered = allProjects.filter(p => {
         if (!showArchived && p.archived) return false;
         if (query && !p.name.toLowerCase().includes(query)) return false;
-        if (activeCategory !== 'all' && p._category !== activeCategory) return false;
+        if (activeCategory !== 'all') {
+            if (currentGroupBy === 'category' || currentGroupBy === 'none') {
+                if (p._category !== activeCategory) return false;
+            } else if (currentGroupBy === 'activity') {
+                const c = p.commits7d || 0;
+                const level = c >= 7 ? 'High Activity' : c >= 1 ? 'Medium Activity' : 'Low Activity';
+                if (level !== activeCategory) return false;
+            } else if (currentGroupBy === 'status') {
+                const { done, active, planned } = p.stats;
+                const total = done + active + planned;
+                let dominant;
+                if (total === 0) dominant = 'No Tasks';
+                else if (active > 0) dominant = 'In Progress';
+                else if (planned > done) dominant = 'Planned';
+                else dominant = 'Completed';
+                if (dominant !== activeCategory) return false;
+            }
+        }
         return true;
     });
     return sortProjects(filtered);
@@ -1814,9 +1855,44 @@ function groupByCategory(projects) {
     return sorted;
 }
 
+function groupByActivityLevel(projects) {
+    const groups = { 'High Activity': [], 'Medium Activity': [], 'Low Activity': [] };
+    for (const p of projects) {
+        const c = p.commits7d || 0;
+        if (c >= 7) groups['High Activity'].push(p);
+        else if (c >= 1) groups['Medium Activity'].push(p);
+        else groups['Low Activity'].push(p);
+    }
+    return Object.entries(groups).filter(([, arr]) => arr.length > 0);
+}
+
+function groupByTaskStatus(projects) {
+    const groups = {};
+    for (const p of projects) {
+        const { done, active, planned } = p.stats;
+        const total = done + active + planned;
+        let dominant;
+        if (total === 0) dominant = 'No Tasks';
+        else if (active > 0) dominant = 'In Progress';
+        else if (planned > done) dominant = 'Planned';
+        else dominant = 'Completed';
+        if (!groups[dominant]) groups[dominant] = [];
+        groups[dominant].push(p);
+    }
+    // Fixed order
+    const order = ['In Progress', 'Planned', 'Completed', 'No Tasks'];
+    return order.filter(k => groups[k]?.length).map(k => [k, groups[k]]);
+}
+
+function getGroups(projects) {
+    if (currentGroupBy === 'activity') return groupByActivityLevel(projects);
+    if (currentGroupBy === 'status') return groupByTaskStatus(projects);
+    if (currentGroupBy === 'none') return [['All Projects', projects]];
+    return groupByCategory(projects);
+}
+
 function renderFilterChips() {
     const chips = document.getElementById('filterChips');
-    // Count projects per category (respecting search + archive filter, but not category filter)
     const query = document.getElementById('searchInput').value.trim().toLowerCase();
     const visible = allProjects.filter(p => {
         if (!showArchived && p.archived) return false;
@@ -1824,6 +1900,24 @@ function renderFilterChips() {
         return true;
     });
 
+    // When not grouping by category, show group-based chips
+    if (currentGroupBy !== 'category') {
+        const groups = getGroups(visible);
+        let html = `<button class="filter-chip${activeCategory === 'all' ? ' active' : ''}" data-category="all">All <span class="filter-chip-count">${visible.length}</span></button>`;
+        for (const [groupName, groupProjects] of groups) {
+            const color = getGroupColor(groupName);
+            const isActive = activeCategory === groupName;
+            html += `<button class="filter-chip${isActive ? ' active' : ''}" data-category="${escHtml(groupName)}">
+                <span class="filter-chip-dot" style="background:${color}"></span>
+                ${escHtml(groupName)}
+                <span class="filter-chip-count">${groupProjects.length}</span>
+            </button>`;
+        }
+        chips.innerHTML = html;
+        return;
+    }
+
+    // Category mode — existing behavior
     const catCounts = {};
     for (const p of visible) {
         const cat = p._category || 'Uncategorized';
@@ -1861,7 +1955,7 @@ function renderProjects() {
         return;
     }
 
-    const groups = groupByCategory(projects);
+    const groups = getGroups(projects);
 
     // If filtering to a single category, skip the header
     if (activeCategory !== 'all') {
@@ -1877,7 +1971,7 @@ function renderProjects() {
 
     let html = '<div class="categories-container">';
     for (const [cat, catProjects] of groups) {
-        const color = getCategoryColor(cat);
+        const color = getGroupColor(cat);
         const isCollapsed = collapsedCategories.has(cat);
         html += `<div class="category-group${isCollapsed ? ' collapsed' : ''}" data-category="${escHtml(cat)}">`;
         html += `<div class="category-header" data-toggle-category="${escHtml(cat)}">
@@ -2455,6 +2549,14 @@ document.getElementById('sortSelect').addEventListener('change', (e) => {
     renderProjects();
 });
 
+document.getElementById('groupBySelect').addEventListener('change', (e) => {
+    currentGroupBy = e.target.value;
+    localStorage.setItem('cr-groupby', currentGroupBy);
+    activeCategory = 'all';
+    collapsedCategories.clear();
+    renderProjects();
+});
+
 // Close on overlay background click (but not on panel itself)
 document.getElementById('detailOverlay').addEventListener('click', (e) => {
     if (e.target === document.getElementById('detailOverlay')) closeDetail();
@@ -2550,6 +2652,10 @@ loadNotes();
 // Restore sort preference from localStorage
 currentSort = localStorage.getItem('cr-sort') || 'lastActive';
 document.getElementById('sortSelect').value = currentSort;
+
+// Restore group-by preference from localStorage
+currentGroupBy = localStorage.getItem('cr-groupby') || 'category';
+document.getElementById('groupBySelect').value = currentGroupBy;
 </script>
 </body>
 </html>

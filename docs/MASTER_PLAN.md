@@ -103,9 +103,9 @@
 
 ---
 
-### TASK-1752: Control Room — Activity-based project views + combinable filters (📋 PLANNED)
+### ~~TASK-1752~~: Control Room — Activity-based project views + combinable filters (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-05)
 
 **Problem**: Control Room only groups by folder category. Need views grouped by "last worked on", activity level, task status — with combinable filters (e.g. category + sorted by last active).
 

@@ -199,6 +199,7 @@ module.exports = function mountControlRoomRoutes(app) {
                 taskStats,
                 coverUrl: cover ? `/api/projects/${encodeURIComponent(project.name)}/cover` : null,
                 lastActivity: gitInfo.lastCommitDate,
+                commits7d: gitInfo.commits7d,
                 archived: project.archived || false
             };
         });

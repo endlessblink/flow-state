@@ -127,6 +127,7 @@ describe('rotateDayGroupPositions()', () => {
     // Enable both feature flags by default
     ;(settingsStore as any).enableDayGroupPositionRotation = true
     ;(settingsStore as any).enableDayGroupSuggestions = true
+    ;(settingsStore as any).weekStartsOn = 1 // Monday (most common)
 
     // Reset sync flag
     mockCanvasSyncInProgress.value = false
@@ -166,16 +167,14 @@ describe('rotateDayGroupPositions()', () => {
   // Test 2: 7 day groups — full week rotation, today (Wednesday) goes leftmost
   // --------------------------------------------------------------------------
 
-  it('2: 7 day groups rotate so Wednesday (today) is at X=0', () => {
-    // Today = Wednesday (dayIndex 3). Groups placed Mon–Sun left to right.
+  it('2: 7 day groups rotate with weekStartsOn=1 — Sunday goes to end', () => {
+    // Today = Wednesday (dayIndex 3), weekStartsOn = 1 (Monday)
+    ;(settingsStore as any).weekStartsOn = 1
+
     const groups = DAY_NAMES.map((name, i) => {
-      // Reorder so Monday is index 0 visually: Mon=0, Tue=1, Wed=2 ... Sun=6
-      // JS day indices: Sun=0,Mon=1,Tue=2,Wed=3,Thu=4,Fri=5,Sat=6
-      // We want Monday first visually
-      const dayOrderIndex = i // 0=Sun,1=Mon,...6=Sat but let's just place them in JS order
       return makeGroup({
         name,
-        position: { x: dayOrderIndex * 350, y: 0, width: 350, height: 600 }
+        position: { x: i * 350, y: 0, width: 350, height: 600 }
       })
     })
 
@@ -185,15 +184,14 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions()
 
-    // Slots are sorted by X: 0, 350, 700, 1050, 1400, 1750, 2100
-    // Groups sorted by distance from today (Wed=dayIndex 3, today=Wednesday=3):
-    //   Wed dist=0, Thu dist=1, Fri dist=2, Sat dist=3, Sun dist=4, Mon dist=5, Tue dist=6
-    // Expected X assignments: Wed→0, Thu→350, Fri→700, Sat→1050, Sun→1400, Mon→1750, Tue→2100
+    // weekStartsOn=1 (Mon). Normalized day indices (Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6)
+    // Today Wed = normalized 2. Distances: Wed=0, Thu=1, Fri=2, Sat=3, Sun=4, Mon=5, Tue=6
+    // So: Wed→slot0(X0), Thu→slot1(X350), Fri→slot2(X700), Sat→slot3(X1050),
+    //     Sun→slot4(X1400), Mon→slot5(X1750), Tue→slot6(X2100)
+    // Key: Sunday is at slot 4 (not slot 1 like it would be without weekStartsOn)
 
     const calls = updateGroup.mock.calls as Array<[string, { position: { x: number; y: number } }]>
     const posById = new Map(calls.map(([id, update]) => [id, update.position.x]))
-
-    // Find group IDs by name
     const byName = new Map(groups.map((g) => [g.name, g.id]))
 
     expect(posById.get(byName.get('Wednesday')!)).toBe(0)

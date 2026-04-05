@@ -143,10 +143,15 @@ export function useDayGroupRotation() {
       .sort((a, b) => a.x - b.x)
 
     // 3. Sort groups so today comes first, then tomorrow, etc.
+    //    Normalize by weekStartsOn so Sunday lands at END when week starts Monday.
     const today = new Date().getDay() // 0=Sun … 6=Sat
+    const weekStart = settingsStore.weekStartsOn // 0=Sun, 1=Mon
     dayGroups.sort((a, b) => {
-      const aDist = (a.dayIndex - today + 7) % 7
-      const bDist = (b.dayIndex - today + 7) % 7
+      const aNorm = (a.dayIndex - weekStart + 7) % 7
+      const bNorm = (b.dayIndex - weekStart + 7) % 7
+      const todayNorm = (today - weekStart + 7) % 7
+      const aDist = (aNorm - todayNorm + 7) % 7
+      const bDist = (bNorm - todayNorm + 7) % 7
       return aDist - bDist
     })
 

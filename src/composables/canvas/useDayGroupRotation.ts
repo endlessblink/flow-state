@@ -142,16 +142,27 @@ export function useDayGroupRotation() {
       .map((dg) => ({ x: dg.group.position!.x, y: dg.group.position!.y }))
       .sort((a, b) => a.x - b.x)
 
-    // 3. Sort groups so today comes first, then tomorrow, etc.
+    // 3. Sort groups so the nearest upcoming day comes first.
+    //    If "Today" and/or "Tomorrow" smart-groups exist on the canvas,
+    //    day-of-week groups should start from the day AFTER tomorrow
+    //    (those slots are already covered by the smart-groups).
     //    Normalize by weekStartsOn so Sunday lands at END when week starts Monday.
     const today = new Date().getDay() // 0=Sun … 6=Sat
     const weekStart = settingsStore.weekStartsOn // 0=Sun, 1=Mon
+
+    // Check if Today/Tomorrow smart-groups exist — if so, offset by 2 days
+    const hasSmartToday = groups.some((g) => {
+      const kw = detectPowerKeyword(g.name)
+      return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
+    })
+    const startFrom = hasSmartToday ? (today + 2) % 7 : today
+
     dayGroups.sort((a, b) => {
       const aNorm = (a.dayIndex - weekStart + 7) % 7
       const bNorm = (b.dayIndex - weekStart + 7) % 7
-      const todayNorm = (today - weekStart + 7) % 7
-      const aDist = (aNorm - todayNorm + 7) % 7
-      const bDist = (bNorm - todayNorm + 7) % 7
+      const startNorm = (startFrom - weekStart + 7) % 7
+      const aDist = (aNorm - startNorm + 7) % 7
+      const bDist = (bNorm - startNorm + 7) % 7
       return aDist - bDist
     })
 

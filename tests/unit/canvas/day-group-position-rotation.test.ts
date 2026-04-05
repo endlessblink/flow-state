@@ -204,6 +204,54 @@ describe('rotateDayGroupPositions()', () => {
   })
 
   // --------------------------------------------------------------------------
+  // Test 2b: With Today/Tomorrow smart-groups, day-of-week groups start from day+2
+  // --------------------------------------------------------------------------
+
+  it('2b: with Today+Tomorrow groups, day groups start from day-after-tomorrow', () => {
+    // Today = Wednesday (dayIndex 3), weekStartsOn = 1
+    // Today+Tomorrow exist → day groups start from Friday (day+2 = 5)
+    ;(settingsStore as any).weekStartsOn = 1
+
+    const dayOfWeekGroups = DAY_NAMES.map((name, i) => {
+      return makeGroup({
+        name,
+        position: { x: (i + 2) * 350, y: 0, width: 350, height: 600 }
+      })
+    })
+    // Add Today and Tomorrow smart-groups (not day-of-week, won't be moved)
+    const todayGroup = makeGroup({ name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const tomorrowGroup = makeGroup({ name: 'Tomorrow', position: { x: 350, y: 0, width: 350, height: 600 } })
+    const allGroups = [todayGroup, tomorrowGroup, ...dayOfWeekGroups]
+
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue(allGroups)
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
+
+    const { rotateDayGroupPositions } = useDayGroupRotation()
+    rotateDayGroupPositions()
+
+    // Today=Wed(3), startFrom=Fri(5) because Today+Tomorrow exist
+    // weekStart=1(Mon). Normalized: Mon=0,Tue=1,Wed=2,Thu=3,Fri=4,Sat=5,Sun=6
+    // startNorm = (5-1+7)%7 = 4 (Fri)
+    // Distances from Fri: Fri=0, Sat=1, Sun=2, Mon=3, Tue=4, Wed=5, Thu=6
+    // So: Fri→slot0, Sat→slot1, Sun→slot2, Mon→slot3, Tue→slot4, Wed→slot5, Thu→slot6
+    // Key: Monday comes AFTER Sunday (not first), because Today+Tomorrow cover Wed+Thu
+
+    const calls = updateGroup.mock.calls as Array<[string, { position: { x: number } }]>
+    const posById = new Map(calls.map(([id, update]) => [id, update.position.x]))
+    const byName = new Map(dayOfWeekGroups.map((g) => [g.name, g.id]))
+
+    // Slots from day-of-week groups only (sorted by X): 700, 1050, 1400, 1750, 2100, 2450, 2800
+    const sortedSlotXs = dayOfWeekGroups
+      .map((g) => g.position!.x)
+      .sort((a, b) => a - b)
+
+    expect(posById.get(byName.get('Friday')!)).toBe(sortedSlotXs[0])
+    expect(posById.get(byName.get('Saturday')!)).toBe(sortedSlotXs[1])
+    expect(posById.get(byName.get('Sunday')!)).toBe(sortedSlotXs[2])
+    expect(posById.get(byName.get('Monday')!)).toBe(sortedSlotXs[3])
+  })
+
+  // --------------------------------------------------------------------------
   // Test 3: Partial set (3 groups: Mon/Wed/Fri) — today=Wednesday
   // --------------------------------------------------------------------------
 

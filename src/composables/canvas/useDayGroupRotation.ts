@@ -20,6 +20,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
+import { canvasSyncTrigger } from '@/stores/canvasTaskBridge'
 
 export function useDayGroupRotation() {
   const canvasStore = useCanvasStore()
@@ -209,6 +210,9 @@ export function useDayGroupRotation() {
     } finally {
       canvasSyncInProgress.value = false
     }
+
+    // Trigger Vue Flow re-sync so nodes visually move to their new positions
+    canvasSyncTrigger.value++
   }
 
   function dismissBanner() {

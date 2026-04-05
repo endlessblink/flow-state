@@ -11,7 +11,7 @@
           <h2 class="modal-title">
             {{ isEditing ? 'Edit Group' : 'Create Custom Group' }}
           </h2>
-          <button class="close-btn" @click="$emit('close')">
+          <button class="close-btn" aria-label="Close" @click="$emit('close')">
             <X :size="16" :stroke-width="1.5" />
           </button>
         </div>
@@ -39,6 +39,8 @@
                 :style="{ backgroundColor: color }"
                 type="button"
                 :title="`Select ${color}`"
+                :aria-label="`Select ${color}`"
+                :aria-pressed="groupData.color === color"
                 @click="selectColor(color)"
               />
             </div>

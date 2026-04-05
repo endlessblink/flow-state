@@ -478,9 +478,14 @@ Start by reviewing the recent changes and pick up the next task.`;
         coverApi.provider = provider;
 
         const projectName = req.params.name;
-        const prompt = (req.body && req.body.prompt)
-            ? req.body.prompt
-            : `Abstract digital art cover for a software project called ${projectName}`;
+        // Consistent cover style: dark minimal tech art with project name as text
+        const defaultPrompt = `Dark minimal tech cover art for a software project. ` +
+            `Pure black (#000000) background. The project name "${projectName}" written in clean, ` +
+            `modern sans-serif typography (like Inter or SF Pro) in teal/cyan color (#4ECDC4), ` +
+            `centered. Below the name, a subtle abstract geometric pattern or circuit-board motif ` +
+            `in very dark gray (#1a1a1a) with faint teal accent lines. No gradients, no 3D, no ` +
+            `photorealism — flat, minimal, developer aesthetic. Square format.`;
+        const prompt = (req.body && req.body.prompt) ? req.body.prompt : defaultPrompt;
 
         try {
             let imageBuffer = null;
@@ -536,9 +541,14 @@ Start by reviewing the recent changes and pick up the next task.`;
                 const imgResponse = await fetch(imageUrl);
                 imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
 
-            } else if (coverApi.provider === 'kie' || coverApi.provider === 'kie.ai') {
-                // Kie.ai Flux Kontext API — async: submit task, then poll for result
-                const genResponse = await fetch('https://api.kie.ai/api/v1/flux/kontext/generate', {
+            } else if (coverApi.provider === '4o' || coverApi.provider === 'gpt-image' || coverApi.provider === 'kie' || coverApi.provider === 'kie.ai') {
+                // Kie.ai GPT-Image-1 (4o) API — best for text rendering
+                // Falls back to Flux Kontext if provider is explicitly 'kie'
+                const use4o = coverApi.provider === '4o' || coverApi.provider === 'gpt-image' || coverApi.provider === 'kie' || coverApi.provider === 'kie.ai';
+                const genEndpoint = 'https://api.kie.ai/api/v1/gpt4o-image/generate';
+                const pollEndpoint = 'https://api.kie.ai/api/v1/gpt4o-image/record-info';
+
+                const genResponse = await fetch(genEndpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -546,9 +556,7 @@ Start by reviewing the recent changes and pick up the next task.`;
                     },
                     body: JSON.stringify({
                         prompt,
-                        aspectRatio: '1:1',
-                        outputFormat: 'png',
-                        model: 'flux-kontext-pro'
+                        size: '1:1'
                     })
                 });
                 const genData = await genResponse.json();
@@ -556,25 +564,27 @@ Start by reviewing the recent changes and pick up the next task.`;
                 const taskId = genData.data?.taskId;
                 if (!taskId) throw new Error('No taskId in Kie.ai response');
 
-                // Poll for result (max 60 seconds, every 3 seconds)
+                // Poll for result (max 90 seconds, every 4 seconds)
                 let imageUrl = null;
-                for (let i = 0; i < 20; i++) {
-                    await new Promise(r => setTimeout(r, 3000));
+                for (let i = 0; i < 22; i++) {
+                    await new Promise(r => setTimeout(r, 4000));
                     const pollResponse = await fetch(
-                        `https://api.kie.ai/api/v1/flux/kontext/record-info?taskId=${taskId}`,
+                        `${pollEndpoint}?taskId=${taskId}`,
                         { headers: { 'Authorization': `Bearer ${coverApi.apiKey}` } }
                     );
                     const pollData = await pollResponse.json();
                     const flag = pollData.data?.successFlag;
                     if (flag === 1) {
-                        imageUrl = pollData.data?.response?.resultImageUrl;
+                        // 4o returns resultUrls array, Flux returns resultImageUrl
+                        const urls = pollData.data?.response?.resultUrls || pollData.data?.response?.result_urls || [];
+                        imageUrl = urls[0] || pollData.data?.response?.resultImageUrl;
                         break;
                     } else if (flag === 2 || flag === 3) {
-                        throw new Error(pollData.data?.errorMessage || 'Kie.ai generation failed');
+                        throw new Error(pollData.data?.errorMessage || 'Generation failed');
                     }
                     // flag 0 = still generating, continue polling
                 }
-                if (!imageUrl) throw new Error('Kie.ai generation timed out (60s)');
+                if (!imageUrl) throw new Error('Generation timed out (90s)');
                 const imgResponse = await fetch(imageUrl);
                 imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
 

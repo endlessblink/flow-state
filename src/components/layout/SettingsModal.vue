@@ -5,18 +5,31 @@
         <h2 class="settings-title">
           {{ $t('settings.title') }}
 </h2>
-        <button class="close-btn" @click="$emit('close')">
+        <button
+          class="close-btn"
+          aria-label="Close settings"
+          @click="$emit('close')"
+        >
           <X :size="16" />
         </button>
       </header>
 
       <div class="settings-layout">
-        <aside class="settings-sidebar">
+        <aside
+          class="settings-sidebar"
+          role="tablist"
+          aria-orientation="vertical"
+          aria-label="Settings categories"
+        >
           <button
             v-for="tab in tabs"
+            :id="'tab-' + tab.id"
             :key="tab.id"
             class="tab-btn"
             :class="{ active: activeTab === tab.id }"
+            role="tab"
+            :aria-selected="activeTab === tab.id"
+            :aria-controls="'panel-' + tab.id"
             @click="activeTab = tab.id"
           >
             <component :is="tab.icon" :size="18" />
@@ -24,7 +37,12 @@
           </button>
         </aside>
 
-        <main class="settings-content">
+        <main
+          :id="'panel-' + activeTab"
+          class="settings-content"
+          role="tabpanel"
+          :aria-labelledby="'tab-' + activeTab"
+        >
           <Transition name="tab-fade" mode="out-in">
             <component
               :is="currentTab"

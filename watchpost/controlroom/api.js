@@ -555,7 +555,8 @@ Start by reviewing the recent changes and pick up the next task.`;
             `${projectContext ? `This project is: ${projectContext}. ` : ''}` +
             `4:3 landscape ratio. The design MUST fill the ENTIRE canvas edge to edge — ` +
             `NO black margins, NO empty space, NO borders around the design. ` +
-            `Rich dark background (very dark navy or charcoal, not pure black) covered entirely with themed Art Deco patterns. ` +
+            `Background color MUST be exactly dark charcoal #1a1a2e (very dark desaturated blue-black) — consistent across all covers. ` +
+            `The entire background is covered with themed Art Deco patterns in slightly lighter shades of the same charcoal. ` +
             `LEFT SIDE: a stylized Art Deco illustration that visually represents what this specific project does — ` +
             `choose distinctive visual symbols based on the project's actual purpose ` +
             `(e.g. a task app=hourglass+checklist, a video tool=film reel+camera lens, a bot=antenna+chat bubbles, ` +

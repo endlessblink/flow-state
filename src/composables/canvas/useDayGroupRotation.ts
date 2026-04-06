@@ -155,6 +155,14 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     // Need at least 2 groups to rotate
     if (dayGroups.length < 2) return moves
 
+    // DEBUG: Log collected groups and their positions
+    console.log('[DAY-ROTATION] Day groups:', dayGroups.map(dg => ({
+      name: dg.group.name, dayIndex: dg.dayIndex,
+      visualPos: dg.visualPos,
+      storePos: { x: dg.group.position!.x, y: dg.group.position!.y },
+      vfFound: !!options.getNodePosition?.(`section-${dg.group.id}`)
+    })))
+
     // 2. Sort VISUAL positions by X to build ordered slot list
     //    (uses what the user actually sees, not potentially stale store data)
     const slots = dayGroups
@@ -175,6 +183,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
     })
     const startFrom = hasSmartToday ? (today + 2) % 7 : today
+    console.log('[DAY-ROTATION] today:', today, 'weekStart:', weekStart, 'startFrom:', startFrom, 'hasSmartToday:', hasSmartToday)
 
     dayGroups.sort((a, b) => {
       const aNorm = (a.dayIndex - weekStart + 7) % 7
@@ -184,6 +193,9 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       const bDist = (bNorm - startNorm + 7) % 7
       return aDist - bDist
     })
+
+    console.log('[DAY-ROTATION] Sorted order:', dayGroups.map(dg => dg.group.name))
+    console.log('[DAY-ROTATION] Slots (by X):', slots)
 
     // 4. Apply position deltas — update store AND collect Vue Flow moves
     canvasSyncInProgress.value = true

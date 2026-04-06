@@ -360,13 +360,18 @@ const nodeTypes = {
 const { updateNode, findNode } = useVueFlow()
 
 function applyDayGroupMoves(moves: Array<{ nodeId: string; position: { x: number; y: number } }>) {
+  console.log('[DAY-ROTATION:VF] Applying', moves.length, 'moves')
   for (const move of moves) {
+    const before = findNode(move.nodeId)
+    console.log(`[DAY-ROTATION:VF] ${move.nodeId}: found=${!!before}, before=${JSON.stringify(before?.position)}, target=${JSON.stringify(move.position)}`)
     updateNode(move.nodeId, { position: move.position })
+    const after = findNode(move.nodeId)
+    console.log(`[DAY-ROTATION:VF] ${move.nodeId}: after=${JSON.stringify(after?.position)}`)
   }
 }
 
 const dayRotation = useDayGroupRotation({
-  onMoves: applyDayGroupMoves, // Also used for midnight auto-rotation
+  onMoves: applyDayGroupMoves,
   getNodePosition: (nodeId: string) => {
     const node = findNode(nodeId)
     return node ? { x: node.position.x, y: node.position.y } : undefined

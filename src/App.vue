@@ -35,21 +35,23 @@
         <OnboardingWizard />
         <!-- TASK-1350: AI Setup Wizard (first-time AI provider setup) -->
         <AISetupWizard ref="aiSetupWizard" />
-        <!-- TASK-1495: Morning Ritual — opt-in banner, bottom sheet panel, summary chip -->
-        <MorningBanner
-          :show="morningRitual.showBanner.value"
-          @open="morningRitual.openRitual()"
-          @dismiss="morningRitual.dismissBanner()"
-        />
-        <MorningRitualPanel
-          :show="morningRitual.isRitualActive.value"
-          @close="morningRitual.closeRitual()"
-        />
-        <MorningSummaryChip
-          :show="morningRitual.isRitualCompleted.value"
-          :task-count="morningRitual.ritualSummary.value?.taskCount ?? 0"
-          :total-minutes="morningRitual.ritualSummary.value?.totalMinutes ?? 0"
-        />
+        <!-- TASK-1495: Morning Ritual — opt-in banner, bottom sheet panel, summary chip (desktop only, no mobile flow designed) -->
+        <template v-if="!isMobile">
+          <MorningBanner
+            :show="morningRitual.showBanner.value"
+            @open="morningRitual.openRitual()"
+            @dismiss="morningRitual.dismissBanner()"
+          />
+          <MorningRitualPanel
+            :show="morningRitual.isRitualActive.value"
+            @close="morningRitual.closeRitual()"
+          />
+          <MorningSummaryChip
+            :show="morningRitual.isRitualCompleted.value"
+            :task-count="morningRitual.ritualSummary.value?.taskCount ?? 0"
+            :total-minutes="morningRitual.ritualSummary.value?.totalMinutes ?? 0"
+          />
+        </template>
       </template>
     </NMessageProvider>
   </NConfigProvider>

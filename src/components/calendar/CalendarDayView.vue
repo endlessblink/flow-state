@@ -7,7 +7,7 @@ import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot, PositionedExternalEvent } from '@/composables/calendar/useCalendarDayView'
 import type { ComputedRef } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   timeSlots: TimeSlot[]
   hours: number[]
   isViewingToday: boolean
@@ -77,8 +77,6 @@ const {
   getPriorityClass,
   getPriorityLabel,
   getTaskStatus,
-  getStatusLabel,
-  getStatusIcon,
   positionedExternalEvents
 } = inject('calendar-helpers') as CalendarHelpers
 
@@ -184,29 +182,29 @@ const onSlotsScroll = (e: Event) => {
               'selected': selectedEventIds?.has(calEvent.id),
               'has-overlap': calEvent.totalColumns > 1,
               'is-compact': calEvent.duration <= 30,
-              'status-done': getTaskStatus(calEvent) === 'done',
-              'status-active': getTaskStatus(calEvent) === 'todo',
+              'status-done': getTaskStatus(calEvent as any) === 'done',
+              'status-active': getTaskStatus(calEvent as any) === 'todo',
               'slot-task--virtual': calEvent.isVirtual
             }"
-            :style="getSlotTaskStyle(calEvent)"
+            :style="getSlotTaskStyle(calEvent as any)"
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
             :draggable="!calEvent.isVirtual"
             @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"
             @mouseleave="!calEvent.isVirtual && $emit('eventMouseLeave')"
-            @dragstart="!calEvent.isVirtual && $emit('eventDragStart', $event, calEvent)"
-            @dragend="!calEvent.isVirtual && $emit('eventDragEnd', $event, calEvent)"
-            @click="!calEvent.isVirtual && $emit('eventClick', $event, calEvent)"
-            @dblclick="!calEvent.isVirtual && $emit('eventDblClick', calEvent)"
-            @contextmenu.prevent="!calEvent.isVirtual && $emit('eventContextMenu', $event, calEvent)"
+            @dragstart="!calEvent.isVirtual && $emit('eventDragStart', $event, calEvent as any)"
+            @dragend="!calEvent.isVirtual && $emit('eventDragEnd', $event, calEvent as any)"
+            @click="!calEvent.isVirtual && $emit('eventClick', $event, calEvent as any)"
+            @dblclick="!calEvent.isVirtual && $emit('eventDblClick', calEvent as any)"
+            @contextmenu.prevent="!calEvent.isVirtual && $emit('eventContextMenu', $event, calEvent as any)"
           >
             <!-- Project Stripe -->
             <div
-              v-if="getProjectVisual(calEvent).type === 'emoji'"
+              v-if="getProjectVisual(calEvent as any).type === 'emoji'"
               class="project-stripe project-emoji-stripe"
-              :title="`Project: ${getProjectName(calEvent)}`"
+              :title="`Project: ${getProjectName(calEvent as any)}`"
             >
               <ProjectEmojiIcon
-                :emoji="getProjectVisual(calEvent).content"
+                :emoji="getProjectVisual(calEvent as any).content"
                 size="xs"
                 class="project-emoji"
               />
@@ -214,15 +212,15 @@ const onSlotsScroll = (e: Event) => {
             <div
               v-else
               class="project-stripe project-color-stripe"
-              :style="{ backgroundColor: getProjectColor(calEvent) }"
-              :title="`Project: ${getProjectName(calEvent)}`"
+              :style="{ backgroundColor: getProjectColor(calEvent as any) }"
+              :title="`Project: ${getProjectName(calEvent as any)}`"
             />
 
             <!-- Priority Stripe -->
             <div
               class="priority-stripe"
-              :class="`priority-${getPriorityClass(calEvent)}`"
-              :title="`Priority: ${getPriorityLabel(calEvent)}`"
+              :class="`priority-${getPriorityClass(calEvent as any)}`"
+              :title="`Priority: ${getPriorityLabel(calEvent as any)}`"
             />
 
             <!-- Task Content - dir="auto" detects RTL/LTR from content -->
@@ -265,12 +263,12 @@ const onSlotsScroll = (e: Event) => {
             <div
               class="resize-handle resize-top"
               title="Drag to change start time"
-              @mousedown.stop="$emit('startResize', $event, calEvent, 'top')"
+              @mousedown.stop="$emit('startResize', $event, calEvent as any, 'top')"
             />
             <div
               class="resize-handle resize-bottom"
               title="Drag to change duration"
-              @mousedown.stop="$emit('startResize', $event, calEvent, 'bottom')"
+              @mousedown.stop="$emit('startResize', $event, calEvent as any, 'bottom')"
             />
 
             <!-- Resize Preview -->

@@ -101,15 +101,6 @@
 </template>
 
 <script setup lang="ts">
-// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
-defineOptions({ inheritAttrs: false })
-
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { X } from 'lucide-vue-next'
-import { useI18n } from 'vue-i18n'
-import BaseButton from './BaseButton.vue'
-import { isTextAreaOrContentEditable } from '@/utils/dom'
-
 interface Props {
   isOpen: boolean
   title?: string
@@ -160,6 +151,15 @@ const props = withDefaults(defineProps<Props>(), {
   footerClass: undefined,
   trapFocus: true
 })
+
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { X } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import BaseButton from './BaseButton.vue'
+import { isTextAreaOrContentEditable } from '@/utils/dom'
+
+// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
+defineOptions({ inheritAttrs: false })
 
 const emit = defineEmits<{
   close: []

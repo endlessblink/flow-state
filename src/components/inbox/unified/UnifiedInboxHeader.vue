@@ -158,7 +158,7 @@
     :selected-projects="selectedProjects"
     :selected-durations="selectedDurations"
     :tasks="baseTasks"
-    :projects="rootProjects"
+    :projects="rootProjects as any"
     :on-canvas-count="onCanvasCount"
     @update:sort-by="$emit('update:sortBy', $event)"
     @update:sort-direction="$emit('update:sort-direction', $event)"

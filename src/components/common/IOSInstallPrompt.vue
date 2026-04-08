@@ -12,7 +12,7 @@ onMounted(() => {
   isIOS.value = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
   
   // Check if already installed
-  isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone
+  isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || !!(navigator as unknown as { standalone?: boolean }).standalone
   
   // Show tooltip only for iOS users not in standalone mode
   if (isIOS.value && !isStandalone.value) {

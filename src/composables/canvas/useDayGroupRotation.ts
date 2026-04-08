@@ -40,11 +40,10 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
   const showBanner = ref(false)
 
   /**
-   * Compute the next (or current) calendar date that falls on the given JS
-   * day-of-week index (0 = Sunday … 6 = Saturday).
-   *
-   * If today IS that day, we return today (daysUntil = 0).
-   * Otherwise we return the next future occurrence.
+   * Compute the next calendar date that falls on the given JS day-of-week index.
+   * If Today/Tomorrow smart-groups exist on the canvas, dates that fall on today
+   * or tomorrow are skipped (pushed to next week) since those groups already
+   * cover them.
    */
   function getNextOccurrence(dayIndex: number): Date {
     const today = new Date()
@@ -52,6 +51,16 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     const currentDay = today.getDay()
     let daysUntil = dayIndex - currentDay
     if (daysUntil < 0) daysUntil += 7
+
+    // If Today/Tomorrow groups exist, skip dates they cover (today=0, tomorrow=1)
+    const hasTodayOrTomorrow = canvasStore.groups.some((g) => {
+      const kw = detectPowerKeyword(g.name)
+      return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
+    })
+    if (hasTodayOrTomorrow && daysUntil <= 1) {
+      daysUntil += 7
+    }
+
     const result = new Date(today)
     result.setDate(result.getDate() + daysUntil)
     return result

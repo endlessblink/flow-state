@@ -181,35 +181,58 @@ const handleDateSelect = (timestamp: number | null) => {
   showDatePicker.value = false
 }
 
-// TASK-130: Compute upcoming date for day-of-week groups
+// TASK-130: Compute upcoming date for day-of-week, Today, and Tomorrow groups
 const dayOfWeekDateSuffix = computed(() => {
-  // Use local name ref for immediate reactivity
   const currentName = sectionName.value
   if (!currentName) return null
-  
-  // Re-detect keyword locally to ensure reactivity allows "instant" feedback
+
   const explicitKeyword = detectPowerKeyword(currentName)
-  
-  if (!explicitKeyword || explicitKeyword.category !== 'day_of_week') {
+  if (!explicitKeyword) return null
+
+  const today = new Date()
+
+  // Today/Tomorrow smart groups — show current date dynamically
+  if (explicitKeyword.category === 'date') {
+    if (explicitKeyword.keyword === 'today') {
+      return formatDateSuffix(today)
+    }
+    if (explicitKeyword.keyword === 'tomorrow') {
+      const tmrw = new Date(today)
+      tmrw.setDate(tmrw.getDate() + 1)
+      return formatDateSuffix(tmrw)
+    }
     return null
   }
+
+  if (explicitKeyword.category !== 'day_of_week') return null
 
   const targetDayIndex = parseInt(explicitKeyword.value, 10)
   if (isNaN(targetDayIndex)) return null
 
-  const today = new Date()
-  // Calculate next occurrence: same formula as drag-drop
-  const daysUntilTarget = ((7 + targetDayIndex - today.getDay()) % 7) || 7
+  // Calculate next occurrence
+  let daysUntilTarget = ((7 + targetDayIndex - today.getDay()) % 7) || 7
+
+  // If Today/Tomorrow groups exist on canvas, skip dates they already cover.
+  // E.g., if tomorrow is Thursday, the "Thursday" group shows NEXT Thursday.
+  const hasTodayOrTomorrow = canvasStore.groups.some((g) => {
+    const kw = detectPowerKeyword(g.name)
+    return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
+  })
+  if (hasTodayOrTomorrow && daysUntilTarget <= 2) {
+    daysUntilTarget += 7
+  }
+
   const targetDate = new Date(today)
   targetDate.setDate(today.getDate() + daysUntilTarget)
-
-  // Format as "D.M.YY" (e.g. 10.1.26)
-  const day = targetDate.getDate()
-  const month = targetDate.getMonth() + 1
-  const year = targetDate.getFullYear().toString().slice(-2)
-  
-  return `${day}.${month}.${year}`
+  return formatDateSuffix(targetDate)
 })
+
+function formatDateSuffix(date: Date): string {
+  const d = date.getDate()
+  const m = date.getMonth() + 1
+  const y = date.getFullYear().toString().slice(-2)
+  return `${d}.${m}.${y}`
+}
 
 // Watch for external name changes
 watch(() => props.data.name, (newName) => {

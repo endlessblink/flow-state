@@ -357,16 +357,21 @@ const nodeTypes = {
 }
 
 // FEATURE-1048: Day group auto-rotation at midnight
-const { updateNode, findNode } = useVueFlow()
+const { findNode } = useVueFlow()
 
 function applyDayGroupMoves(moves: Array<{ nodeId: string; position: { x: number; y: number } }>) {
   console.log('[DAY-ROTATION:VF] Applying', moves.length, 'moves')
+  // Must mutate the nodes ref directly — <VueFlow :nodes="nodes"> is in controlled mode,
+  // so updateNode() changes Vue Flow internal state but the :nodes prop overrides it.
+  const canvasNodes = canvasStore.nodes
   for (const move of moves) {
-    const before = findNode(move.nodeId)
-    console.log(`[DAY-ROTATION:VF] ${move.nodeId}: found=${!!before}, before=${JSON.stringify(before?.position)}, target=${JSON.stringify(move.position)}`)
-    updateNode(move.nodeId, { position: move.position })
-    const after = findNode(move.nodeId)
-    console.log(`[DAY-ROTATION:VF] ${move.nodeId}: after=${JSON.stringify(after?.position)}`)
+    const node = canvasNodes.find(n => n.id === move.nodeId)
+    if (node) {
+      console.log(`[DAY-ROTATION:VF] ${move.nodeId}: before=${JSON.stringify(node.position)}, target=${JSON.stringify(move.position)}`)
+      node.position = { ...move.position }
+    } else {
+      console.warn(`[DAY-ROTATION:VF] ${move.nodeId}: NOT FOUND in canvasStore.nodes`)
+    }
   }
 }
 

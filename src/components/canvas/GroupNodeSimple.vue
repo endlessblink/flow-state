@@ -218,7 +218,7 @@ const dayOfWeekDateSuffix = computed(() => {
     const kw = detectPowerKeyword(g.name)
     return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
   })
-  if (hasTodayOrTomorrow && daysUntilTarget <= 2) {
+  if (hasTodayOrTomorrow && daysUntilTarget <= 1) {
     daysUntilTarget += 7
   }
 

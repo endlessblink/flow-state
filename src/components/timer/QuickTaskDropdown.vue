@@ -3,6 +3,9 @@
     <button
       class="quick-task-trigger"
       title="Quick Tasks"
+      aria-label="Quick task search and pin"
+      :aria-expanded="isOpen"
+      aria-haspopup="dialog"
       @click="toggleDropdown"
     >
       <Zap :size="16" />
@@ -15,7 +18,6 @@
           ref="dropdownRef"
           class="quick-task-dropdown"
           :style="dropdownPosition"
-          tabindex="-1"
           @keydown="handleKeydown"
         >
           <!-- Search / Pin Input (authenticated only) -->
@@ -435,6 +437,11 @@ watch(newTaskTitle, () => {
 .quick-task-trigger:hover {
     background: var(--surface-hover);
     color: var(--color-work);
+}
+
+.quick-task-trigger:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
 }
 
 .quick-task-backdrop {

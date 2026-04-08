@@ -114,34 +114,36 @@ const emit = defineEmits([
 const canvasStore = useCanvasStore()
 
 // Computed Properties
+const safeData = computed(() => (props.data || {}) as Record<string, any>)
+
 // Ensure we handle both structure formats (direct props or nested in data)
-const section = computed(() => props.data?.section || props.data)
-const isCollapsed = computed(() => !!props.data?.isCollapsed)
+const section = computed(() => safeData.value.section || safeData.value)
+const isCollapsed = computed(() => !!safeData.value.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh
 const groupColor = computed(() => {
-  const groupId = props.data?.id
-  if (!groupId) return props.data?.color || '#3b82f6'
+  const groupId = safeData.value.id
+  if (!groupId) return safeData.value.color || '#3b82f6'
   const storeGroup = canvasStore.groups.find(g => g.id === groupId)
-  return storeGroup?.color || props.data?.color || '#3b82f6'
+  return storeGroup?.color || safeData.value.color || '#3b82f6'
 })
 const taskCount = computed(() => {
-  const data = props.data as Record<string, unknown>
+  const data = safeData.value
   if (!data) return 0
 
   // Determine which count to show based on whether this is a root or child group
   // - Root groups (no parent): show aggregated count (includes descendants)
   // - Child groups: show only direct count (tasks in this group only)
   const isRootGroup = !data.parentGroupId || data.parentGroupId === 'NONE'
-  const direct = data.directTaskCount ?? 0
-  const aggregated = data.aggregatedTaskCount ?? direct
+  const direct = (data.directTaskCount as number) ?? 0
+  const aggregated = (data.aggregatedTaskCount as number) ?? direct
 
   return isRootGroup ? aggregated : direct
 })
 
 // Local State
-const sectionName = ref(props.data?.name || '')
+const sectionName = ref(safeData.value.name || '')
 
 // TASK-166: Date picker state for bi-directional day group editing
 const showDatePicker = ref(false)
@@ -212,26 +214,26 @@ const dayOfWeekDateSuffix = computed(() => {
 })
 
 // Watch for external name changes
-watch(() => props.data.name, (newName) => {
+watch(() => safeData.value.name, (newName) => {
   sectionName.value = newName
 })
 
 const updateName = () => {
-  if (sectionName.value !== props.data.name) {
+  if (sectionName.value !== safeData.value.name) {
     emit('update', { name: sectionName.value })
   }
 }
 
 const toggleCollapse = () => {
-  // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
-  const groupId = props.data?.id || props.id.replace('section-', '')
+  // Use safeData.value.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
+  const groupId = safeData.value.id || props.id.replace('section-', '')
   canvasStore.toggleSectionCollapse(groupId)
 }
 
 // TASK-068: Removed toggleAutoCollect - feature consolidated
 
 const handleContextMenu = (event: MouseEvent) => {
-  emit('contextMenu', event, props.data)
+  emit('contextMenu', event, safeData.value)
 }
 
 // Resize event handlers

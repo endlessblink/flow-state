@@ -68,7 +68,7 @@
             padding: 0 1.25rem;
             height: 48px;
             background: var(--surface-secondary);
-            border-bottom: 1px solid var(--border-subtle);
+            border-bottom: 2px solid rgba(78, 205, 196, 0.3);
             flex-shrink: 0;
             position: sticky;
             top: 0;
@@ -176,6 +176,96 @@
             background: var(--brand-primary);
         }
 
+        .topbar-project-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.625rem;
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-size: var(--font-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-family: inherit;
+            white-space: nowrap;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .topbar-project-btn:hover {
+            background: var(--surface-elevated);
+            border-color: rgba(78,205,196,0.3);
+            color: var(--brand-primary);
+        }
+        .topbar-project-btn svg {
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            flex-shrink: 0;
+        }
+
+        .topbar-settings-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+        .topbar-settings-btn:hover {
+            color: var(--text-secondary);
+            background: var(--surface-elevated);
+            border-color: var(--border-strong);
+        }
+        .topbar-settings-btn svg {
+            stroke: currentColor;
+            stroke-width: 1.75;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .settings-popover {
+            position: absolute;
+            top: 44px;
+            right: 1.25rem;
+            width: 220px;
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            padding: 0.75rem;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 0.625rem;
+        }
+
+        .settings-popover-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .settings-label {
+            font-size: var(--font-xs);
+            font-weight: 600;
+            color: var(--text-subtle);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
         .view-toggle {
             display: flex;
             gap: 2px;
@@ -245,6 +335,202 @@
             color: var(--text-primary);
         }
 
+        /* ── Command Palette ─────────────────────────────────────────── */
+        .cmd-palette-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            padding-top: 15vh;
+            opacity: 0;
+            transition: opacity 200ms ease-out;
+        }
+        .cmd-palette-backdrop.visible { opacity: 1; }
+
+        .cmd-palette {
+            width: 520px;
+            max-height: 480px;
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-xl);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(78,205,196,0.08);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: translateY(-8px);
+            transition: transform 200ms ease-out;
+        }
+        .cmd-palette-backdrop.visible .cmd-palette { transform: translateY(0); }
+
+        .cmd-palette-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .cmd-palette-input-wrap svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--text-subtle);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            flex-shrink: 0;
+        }
+
+        .cmd-palette-input {
+            flex: 1;
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: var(--font-lg);
+            font-family: inherit;
+        }
+        .cmd-palette-input::placeholder { color: var(--text-subtle); }
+
+        .cmd-palette-hint {
+            font-size: var(--font-xs);
+            color: var(--text-subtle);
+            padding: 0.25rem 0.5rem;
+            background: var(--surface-tertiary);
+            border-radius: var(--radius-sm);
+            white-space: nowrap;
+        }
+
+        .cmd-palette-results {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.375rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-medium) transparent;
+        }
+
+        .cmd-palette-group-label {
+            font-size: var(--font-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-subtle);
+            padding: 0.5rem 0.625rem 0.25rem;
+        }
+
+        .cmd-palette-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.5rem 0.625rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background var(--transition-fast);
+            border-left: 3px solid transparent;
+        }
+        .cmd-palette-item:hover,
+        .cmd-palette-item.highlighted {
+            background: var(--surface-hover);
+        }
+        .cmd-palette-item.highlighted {
+            background: rgba(78, 205, 196, 0.08);
+            border-left-color: var(--brand-primary);
+        }
+
+        .cmd-palette-thumb {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            flex-shrink: 0;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cmd-palette-thumb-initial {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+        }
+
+        .cmd-palette-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .cmd-palette-item-name {
+            font-size: var(--font-md);
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cmd-palette-item-path {
+            font-size: var(--font-xs);
+            color: var(--text-subtle);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .cmd-palette-item-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .cmd-palette-activity-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .cmd-palette-cat-badge {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: var(--radius-full);
+            background: var(--surface-tertiary);
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .cmd-palette-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-subtle);
+            font-size: var(--font-sm);
+        }
+
+        .cmd-palette-footer {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 1rem;
+            border-top: 1px solid var(--border-subtle);
+            font-size: var(--font-xs);
+            color: var(--text-subtle);
+        }
+
+        .cmd-palette-footer kbd {
+            padding: 1px 5px;
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-medium);
+            border-radius: 3px;
+            font-size: 10px;
+            font-family: inherit;
+        }
+
         /* ── Main layout ─────────────────────────────────────────────── */
         .layout {
             display: flex;
@@ -311,6 +597,7 @@
         .project-card {
             background: var(--surface-secondary);
             border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--border-subtle);
             border-radius: var(--radius-lg);
             overflow: hidden;
             cursor: pointer;
@@ -328,6 +615,142 @@
         .project-card.archived {
             opacity: 0.55;
             filter: grayscale(0.4);
+        }
+
+        .project-card.status-healthy { border-left-color: var(--color-success); }
+        .project-card.status-active { border-left-color: var(--color-warning); }
+        .project-card.status-stale { border-left-color: var(--text-subtle); }
+        .project-card.status-empty { border-left-style: dotted; border-left-color: var(--text-subtle); }
+
+        /* ── Hero Card ───────────────────────────────────────────────── */
+        .hero-card {
+            background: var(--surface-secondary);
+            border: 1px solid rgba(78, 205, 196, 0.2);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            cursor: pointer;
+            transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+        }
+        .hero-card:hover {
+            border-color: rgba(78, 205, 196, 0.4);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(78,205,196,0.15);
+        }
+        .hero-card-inner {
+            display: flex;
+            gap: 1.25rem;
+            padding: 1rem;
+            align-items: center;
+        }
+        .hero-card-cover {
+            width: 200px;
+            height: 120px;
+            border-radius: var(--radius-md);
+            flex-shrink: 0;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .hero-card-cover-initial {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: rgba(255,255,255,0.3);
+            text-transform: uppercase;
+        }
+        .hero-card-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+        .hero-card-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--brand-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        .hero-card-label::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--brand-primary);
+            animation: hero-pulse 2s ease-in-out infinite;
+        }
+        @keyframes hero-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .hero-card-name {
+            font-size: var(--font-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .hero-card-stats {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 0.25rem;
+        }
+        .hero-card-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: var(--font-sm);
+            color: var(--text-muted);
+        }
+        .hero-card-stat-value {
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .hero-card-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        .hero-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.4rem 0.75rem;
+            background: var(--brand-subtle);
+            border: 1px solid rgba(78,205,196,0.2);
+            border-radius: var(--radius-md);
+            color: var(--brand-primary);
+            font-size: var(--font-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-family: inherit;
+        }
+        .hero-action-btn:hover {
+            background: rgba(78,205,196,0.2);
+            border-color: rgba(78,205,196,0.4);
+        }
+        .hero-action-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
         }
 
         .card-cover {
@@ -353,6 +776,23 @@
             letter-spacing: -0.04em;
             text-transform: uppercase;
             user-select: none;
+        }
+
+        .card-cover-overlay-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0.5rem 0.75rem 0.375rem;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            font-size: var(--font-md);
+            font-weight: 600;
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 1;
         }
 
         .card-cover img {
@@ -526,6 +966,11 @@
             opacity: 0.5;
             filter: grayscale(0.5);
         }
+
+        .list-row.status-healthy { border-left: 3px solid var(--color-success); }
+        .list-row.status-active { border-left: 3px solid var(--color-warning); }
+        .list-row.status-stale { border-left: 3px solid var(--text-subtle); }
+        .list-row.status-empty { border-left: 3px dotted var(--text-subtle); }
 
         .list-thumb {
             width: 36px;
@@ -1472,6 +1917,11 @@
 <div class="topbar">
     <span class="topbar-title">Control <span>Room</span></span>
 
+    <button class="topbar-project-btn" id="topbarProjectBtn" title="Switch project (Ctrl+K)">
+        <span id="topbarProjectName">All Projects</span>
+        <svg viewBox="0 0 24 24" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+
     <div class="search-wrap">
         <svg viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"/>
@@ -1481,12 +1931,6 @@
     </div>
 
     <div class="topbar-spacer"></div>
-
-    <label class="archived-toggle" title="Show archived projects">
-        <input type="checkbox" id="showArchived">
-        <span class="toggle-track"></span>
-        Archived
-    </label>
 
     <div class="view-toggle">
         <button class="view-btn active" id="viewGrid" title="Grid view">
@@ -1509,19 +1953,48 @@
         </button>
     </div>
 
-    <select class="sort-dropdown" id="groupBySelect" title="Group projects by">
-        <option value="category">Group: Category</option>
-        <option value="activity">Group: Activity</option>
-        <option value="status">Group: Task Status</option>
-        <option value="none">Group: None</option>
-    </select>
+    <button class="topbar-settings-btn" id="topbarSettingsBtn" title="Display settings">
+        <svg viewBox="0 0 24 24" width="16" height="16">
+            <line x1="4" y1="21" x2="4" y2="14"/>
+            <line x1="4" y1="10" x2="4" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12" y2="3"/>
+            <line x1="20" y1="21" x2="20" y2="16"/>
+            <line x1="20" y1="12" x2="20" y2="3"/>
+            <line x1="1" y1="14" x2="7" y2="14"/>
+            <line x1="9" y1="8" x2="15" y2="8"/>
+            <line x1="17" y1="16" x2="23" y2="16"/>
+        </svg>
+    </button>
 
-    <select class="sort-dropdown" id="sortSelect" title="Sort projects">
-        <option value="lastActive">Last Active</option>
-        <option value="nameAZ">Name A-Z</option>
-        <option value="nameZA">Name Z-A</option>
-        <option value="mostTasks">Most Tasks</option>
-    </select>
+    <!-- Settings popover -->
+    <div class="settings-popover" id="settingsPopover" style="display:none">
+        <div class="settings-popover-section">
+            <label class="settings-label">Group by</label>
+            <select class="sort-dropdown" id="groupBySelect" title="Group projects by">
+                <option value="category">Category</option>
+                <option value="activity">Activity</option>
+                <option value="status">Task Status</option>
+                <option value="none">None</option>
+            </select>
+        </div>
+        <div class="settings-popover-section">
+            <label class="settings-label">Sort</label>
+            <select class="sort-dropdown" id="sortSelect" title="Sort projects">
+                <option value="lastActive">Last Active</option>
+                <option value="nameAZ">Name A-Z</option>
+                <option value="nameZA">Name Z-A</option>
+                <option value="mostTasks">Most Tasks</option>
+            </select>
+        </div>
+        <div class="settings-popover-section">
+            <label class="archived-toggle" title="Show archived projects">
+                <input type="checkbox" id="showArchived">
+                <span class="toggle-track"></span>
+                Show Archived
+            </label>
+        </div>
+    </div>
 </div>
 
 <!-- Category filter chips -->
@@ -1532,6 +2005,9 @@
 <!-- Main layout -->
 <div class="layout">
     <div class="content-scroll" id="contentScroll">
+        <!-- Hero Card (active project) -->
+        <div id="heroCard"></div>
+
         <!-- Projects label -->
         <div class="section-label">
             <span>Projects</span>
@@ -1573,6 +2049,24 @@
                     <button class="notes-filter-btn" data-filter="done">Done</button>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Command Palette -->
+<div class="cmd-palette-backdrop" id="cmdPalette" style="display:none">
+    <div class="cmd-palette">
+        <div class="cmd-palette-input-wrap">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="cmd-palette-input" id="cmdPaletteInput" type="text" placeholder="Search projects..." autocomplete="off">
+            <span class="cmd-palette-hint">esc to close</span>
+        </div>
+        <div class="cmd-palette-results" id="cmdPaletteResults"></div>
+        <div class="cmd-palette-footer">
+            <span><kbd>&uarr;&darr;</kbd> navigate</span>
+            <span><kbd>&crarr;</kbd> open</span>
+            <span><kbd>esc</kbd> close</span>
+            <span><kbd>&#8984;K</kbd> toggle</span>
         </div>
     </div>
 </div>
@@ -1744,11 +2238,14 @@ async function loadProjects() {
                     root,
                     archived: p.archived || false,
                     updatedAt: p.updatedAt || p.updated_at || null,
+                    masterPlan: p.masterPlan || null,
                     stats: { done: 0, active: 0, planned: 0 },
                     stack: [],
                     _category: getCategoryFromPath(root),
                 };
             });
+            // Filter out projects without a MASTER_PLAN
+            allProjects = allProjects.filter(p => p.masterPlan);
         } else {
             document.getElementById('categorizedGrid').innerHTML =
                 '<div class="empty-state"><div class="empty-icon">📭</div><p>No projects found</p><p style="color:var(--text-subtle);font-size:11px;margin-top:4px;">Start by registering a project with Watchpost</p></div>';
@@ -1763,6 +2260,7 @@ async function loadProjects() {
                 root,
                 archived: p.archived || false,
                 updatedAt: p.updatedAt || p.updated_at || p.lastActivity || null,
+                masterPlan: p.masterPlan || null,
                 stats: {
                     done: p.taskStats?.done ?? p.stats?.done ?? 0,
                     active: p.taskStats?.inProgress ?? p.stats?.active ?? 0,
@@ -1774,9 +2272,12 @@ async function loadProjects() {
                 _category: getCategoryFromPath(root),
             };
         });
+        // Filter out projects without a MASTER_PLAN
+        allProjects = allProjects.filter(p => p.masterPlan);
     }
 
     renderProjects();
+    renderHeroCard();
 }
 
 // ── Render projects ────────────────────────────────────────────────────────
@@ -1942,6 +2443,86 @@ function renderFilterChips() {
     chips.innerHTML = html;
 }
 
+// ── Hero Card ─────────────────────────────────────────────────────────────
+let activeProjectPath = null;
+
+async function loadActiveProject() {
+    const status = await apiFetch('/api/status');
+    if (status && status.project) {
+        activeProjectPath = status.project;
+        // Update topbar project name
+        const btn = document.getElementById('topbarProjectName');
+        if (btn) {
+            const parts = status.project.split('/').filter(Boolean);
+            btn.textContent = parts[parts.length - 1] || 'All Projects';
+        }
+    }
+}
+
+function renderHeroCard() {
+    const container = document.getElementById('heroCard');
+    if (!activeProjectPath || !allProjects.length) {
+        container.innerHTML = '';
+        return;
+    }
+
+    // Find the active project by matching path
+    const project = allProjects.find(p => {
+        if (!p.root) return false;
+        return activeProjectPath.startsWith(p.root) || p.root.startsWith(activeProjectPath);
+    });
+
+    if (!project) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const gradient = projectGradient(project.name);
+    const coverStyle = project.cover
+        ? `background-image: url(${escHtml(project.cover)}); background-size: cover; background-position: center;`
+        : `background: ${gradient};`;
+    const initial = project.name.charAt(0);
+    const total = project.stats.done + project.stats.active + project.stats.planned;
+
+    container.innerHTML = `
+    <div class="hero-card" data-name="${escHtml(project.name)}">
+        <div class="hero-card-inner">
+            <div class="hero-card-cover" style="${coverStyle}">
+                ${!project.cover ? `<span class="hero-card-cover-initial">${escHtml(initial)}</span>` : ''}
+            </div>
+            <div class="hero-card-info">
+                <div class="hero-card-label">Active Project</div>
+                <div class="hero-card-name">${escHtml(project.name)}</div>
+                <div class="hero-card-stats">
+                    <div class="hero-card-stat">
+                        <span class="hero-card-stat-value">${total}</span> tasks
+                    </div>
+                    <div class="hero-card-stat">
+                        <span class="hero-card-stat-value" style="color: var(--color-success)">${project.stats.done}</span> done
+                    </div>
+                    <div class="hero-card-stat">
+                        <span class="hero-card-stat-value" style="color: var(--color-warning)">${project.stats.active}</span> active
+                    </div>
+                    <div class="hero-card-stat">
+                        <span class="hero-card-stat-value">${project.commits7d || 0}</span> commits/7d
+                    </div>
+                </div>
+            </div>
+            <div class="hero-card-actions">
+                <button class="hero-action-btn" onclick="event.stopPropagation(); const n='${escHtml(project.name)}'; apiFetch('/api/projects/'+encodeURIComponent(n)+'/kickstart').then(d => { if(d&&d.prompt) { navigator.clipboard.writeText(d.prompt); showToast('Kickstart copied!','rocket'); }})">
+                    <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    Kickstart
+                </button>
+            </div>
+        </div>
+    </div>`;
+
+    // Click on hero card opens detail
+    container.querySelector('.hero-card').addEventListener('click', () => {
+        openDetail(project.name);
+    });
+}
+
 function renderProjects() {
     const projects = getFilteredProjects();
     document.getElementById('projectCount').textContent = projects.length + ' project' + (projects.length !== 1 ? 's' : '');
@@ -2012,6 +2593,15 @@ function renderProjects() {
     });
 }
 
+function getProjectStatusClass(p) {
+    const total = p.stats.done + p.stats.active + p.stats.planned;
+    if (total === 0) return 'status-empty';
+    const doneRatio = p.stats.done / total;
+    if (p.stats.active > 0 || (p.commits7d || 0) >= 1) return 'status-active';
+    if (doneRatio > 0.6) return 'status-healthy';
+    return 'status-stale';
+}
+
 function cardHtml(p) {
     const total = p.stats.done + p.stats.active + p.stats.planned || 1;
     const initial = p.name.charAt(0);
@@ -2019,15 +2609,16 @@ function cardHtml(p) {
     const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/cover no-repeat` : `background: ${gradient}`;
 
     return `
-    <div class="project-card${p.archived ? ' archived' : ''}" data-name="${escHtml(p.name)}">
+    <div class="project-card${p.archived ? ' archived' : ''} ${getProjectStatusClass(p)}" data-name="${escHtml(p.name)}">
         <div class="card-cover">
             <div class="card-cover-gradient" style="${coverStyle}">
                 ${!p.cover ? `<span class="card-cover-initial">${escHtml(initial)}</span>` : ''}
             </div>
+            ${p.cover ? `<div class="card-cover-overlay-name">${escHtml(p.name)}</div>` : ''}
             ${p.archived ? '<span class="archived-badge">Archived</span>' : ''}
         </div>
         <div class="card-body" data-action="open">
-            <div class="card-name">${escHtml(p.name)}</div>
+            ${!p.cover ? `<div class="card-name">${escHtml(p.name)}</div>` : ''}
             <div class="card-stats">
                 <span class="stat-dot done">${p.stats.done} done</span>
                 <span class="stat-dot active">${p.stats.active} active</span>
@@ -2062,7 +2653,7 @@ function listRowHtml(p) {
     const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/cover no-repeat` : `background: ${gradient}`;
 
     return `
-    <div class="list-row${p.archived ? ' archived' : ''}" data-name="${escHtml(p.name)}">
+    <div class="list-row${p.archived ? ' archived' : ''} ${getProjectStatusClass(p)}" data-name="${escHtml(p.name)}">
         <div class="list-thumb" style="${coverStyle}">
             ${!p.cover ? `<span class="list-thumb-initial">${escHtml(initial)}</span>` : ''}
         </div>
@@ -2540,6 +3131,258 @@ async function deleteNote(id) {
     await apiFetch(`/api/notes/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
+// ── Command Palette ───────────────────────────────────────────────────────
+let cmdPaletteOpen = false;
+let cmdHighlightIdx = 0;
+let cmdFilteredProjects = [];
+
+function fuzzyMatch(query, text) {
+    const q = query.toLowerCase();
+    const t = text.toLowerCase();
+    // Substring match first
+    if (t.includes(q)) return true;
+    // Fuzzy: all chars must appear in order
+    let qi = 0;
+    for (let i = 0; i < t.length && qi < q.length; i++) {
+        if (t[i] === q[qi]) qi++;
+    }
+    return qi === q.length;
+}
+
+function getActivityColor(p) {
+    const c = p.commits7d || 0;
+    if (c >= 5) return 'var(--color-success)';   // green — active
+    if (c >= 1) return 'var(--color-warning)';    // amber — some activity
+    return 'var(--text-subtle)';                   // gray — stale
+}
+
+function openCmdPalette() {
+    cmdPaletteOpen = true;
+    cmdHighlightIdx = 0;
+    const backdrop = document.getElementById('cmdPalette');
+    const input = document.getElementById('cmdPaletteInput');
+    backdrop.style.display = 'flex';
+    input.value = '';
+    // Trigger animation
+    requestAnimationFrame(() => {
+        backdrop.classList.add('visible');
+        input.focus();
+    });
+    renderCmdPaletteResults();
+}
+
+function closeCmdPalette() {
+    cmdPaletteOpen = false;
+    const backdrop = document.getElementById('cmdPalette');
+    backdrop.classList.remove('visible');
+    setTimeout(() => { backdrop.style.display = 'none'; }, 200);
+}
+
+function toggleCmdPalette() {
+    cmdPaletteOpen ? closeCmdPalette() : openCmdPalette();
+}
+
+function renderCmdPaletteResults() {
+    const query = document.getElementById('cmdPaletteInput').value.trim();
+    const container = document.getElementById('cmdPaletteResults');
+
+    // Get recent projects from localStorage
+    const recentNames = JSON.parse(localStorage.getItem('cr-recent-projects') || '[]');
+
+    let filtered;
+    if (!query) {
+        // Spotlight mode: recent + active only, don't dump all projects
+        const recent = recentNames
+            .map(name => allProjects.find(p => p.name === name))
+            .filter(Boolean)
+            .slice(0, 5);
+
+        // Active projects (with commits this week, not already in recent)
+        const recentSet = new Set(recentNames);
+        const active = allProjects
+            .filter(p => !p.archived && !recentSet.has(p.name) && (p.commits7d || 0) >= 1)
+            .sort((a, b) => (b.commits7d || 0) - (a.commits7d || 0))
+            .slice(0, 5);
+
+        let html = '';
+        if (recent.length) {
+            html += `<div class="cmd-palette-group-label">Recent</div>`;
+            recent.forEach((p, i) => {
+                html += cmdPaletteItemHtml(p, i);
+            });
+        }
+
+        if (active.length) {
+            html += `<div class="cmd-palette-group-label">Active This Week</div>`;
+            active.forEach((p, i) => {
+                html += cmdPaletteItemHtml(p, i + recent.length);
+            });
+        }
+
+        cmdFilteredProjects = [...recent, ...active];
+
+        const remaining = allProjects.filter(p => !p.archived).length - cmdFilteredProjects.length;
+        if (remaining > 0) {
+            html += '<div class="cmd-palette-empty" style="padding:1rem;font-style:italic;">Type to search ' + remaining + ' more projects...</div>';
+        }
+
+        container.innerHTML = html || '<div class="cmd-palette-empty">No projects loaded</div>';
+        cmdHighlightIdx = 0;
+        updateCmdHighlight();
+        return;
+    } else {
+        filtered = allProjects.filter(p => fuzzyMatch(query, p.name));
+        // Sort: exact prefix first, then includes, then fuzzy
+        const ql = query.toLowerCase();
+        filtered.sort((a, b) => {
+            const aStart = a.name.toLowerCase().startsWith(ql) ? 0 : 1;
+            const bStart = b.name.toLowerCase().startsWith(ql) ? 0 : 1;
+            if (aStart !== bStart) return aStart - bStart;
+            const aInc = a.name.toLowerCase().includes(ql) ? 0 : 1;
+            const bInc = b.name.toLowerCase().includes(ql) ? 0 : 1;
+            return aInc - bInc;
+        });
+
+        cmdFilteredProjects = filtered;
+
+        if (!filtered.length) {
+            container.innerHTML = '<div class="cmd-palette-empty">No matching projects</div>';
+            return;
+        }
+
+        let html = '';
+        // Group by category
+        const byCategory = new Map();
+        for (const p of filtered) {
+            const cat = p._category || 'Uncategorized';
+            if (!byCategory.has(cat)) byCategory.set(cat, []);
+            byCategory.get(cat).push(p);
+        }
+
+        let globalIdx = 0;
+        for (const [cat, projects] of byCategory) {
+            if (byCategory.size > 1) {
+                html += `<div class="cmd-palette-group-label">${escHtml(cat)}</div>`;
+            }
+            for (const p of projects) {
+                html += cmdPaletteItemHtml(p, globalIdx);
+                globalIdx++;
+            }
+        }
+
+        container.innerHTML = html;
+    }
+
+    cmdHighlightIdx = 0;
+    updateCmdHighlight();
+}
+
+function cmdPaletteItemHtml(p, idx) {
+    const gradient = projectGradient(p.name);
+    const thumbStyle = p.cover
+        ? `background-image: url(${escHtml(p.cover)}); background-size: cover; background-position: center;`
+        : `background: ${gradient};`;
+    const initial = p.name.charAt(0);
+    const actColor = getActivityColor(p);
+    const catColor = getCategoryColor(p._category || 'Uncategorized');
+    // Shorten the path: show last 2 segments
+    const pathParts = (p.root || '').split('/').filter(Boolean);
+    const shortPath = pathParts.slice(-2).join('/');
+
+    return `
+    <div class="cmd-palette-item" data-cmd-idx="${idx}" data-cmd-name="${escHtml(p.name)}">
+        <div class="cmd-palette-thumb" style="${thumbStyle}">
+            ${!p.cover ? `<span class="cmd-palette-thumb-initial">${escHtml(initial)}</span>` : ''}
+        </div>
+        <div class="cmd-palette-item-info">
+            <div class="cmd-palette-item-name">${escHtml(p.name)}</div>
+            <div class="cmd-palette-item-path">${escHtml(shortPath)}</div>
+        </div>
+        <div class="cmd-palette-item-meta">
+            <span class="cmd-palette-cat-badge" style="border-left: 2px solid ${catColor}">${escHtml(p._category || '')}</span>
+            <span class="cmd-palette-activity-dot" style="background: ${actColor}" title="${p.commits7d || 0} commits this week"></span>
+        </div>
+    </div>`;
+}
+
+function updateCmdHighlight() {
+    const items = document.querySelectorAll('.cmd-palette-item');
+    items.forEach((el, i) => {
+        el.classList.toggle('highlighted', i === cmdHighlightIdx);
+    });
+    // Scroll highlighted into view
+    const highlighted = document.querySelector('.cmd-palette-item.highlighted');
+    if (highlighted) highlighted.scrollIntoView({ block: 'nearest' });
+}
+
+function selectCmdPaletteItem(name) {
+    // Save to recent
+    let recent = JSON.parse(localStorage.getItem('cr-recent-projects') || '[]');
+    recent = [name, ...recent.filter(n => n !== name)].slice(0, 8);
+    localStorage.setItem('cr-recent-projects', JSON.stringify(recent));
+
+    closeCmdPalette();
+
+    // Open the project detail
+    const project = allProjects.find(p => p.name === name);
+    if (project) openDetail(name);
+}
+
+// Command palette event listeners
+document.getElementById('cmdPaletteInput').addEventListener('input', () => {
+    renderCmdPaletteResults();
+});
+
+document.getElementById('cmdPalette').addEventListener('click', (e) => {
+    // Close on backdrop click
+    if (e.target.id === 'cmdPalette') { closeCmdPalette(); return; }
+    // Select item
+    const item = e.target.closest('.cmd-palette-item');
+    if (item) selectCmdPaletteItem(item.dataset.cmdName);
+});
+
+document.getElementById('cmdPaletteInput').addEventListener('keydown', (e) => {
+    const total = cmdFilteredProjects.length;
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        cmdHighlightIdx = (cmdHighlightIdx + 1) % Math.max(total, 1);
+        updateCmdHighlight();
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        cmdHighlightIdx = (cmdHighlightIdx - 1 + Math.max(total, 1)) % Math.max(total, 1);
+        updateCmdHighlight();
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (cmdFilteredProjects[cmdHighlightIdx]) {
+            selectCmdPaletteItem(cmdFilteredProjects[cmdHighlightIdx].name);
+        }
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeCmdPalette();
+    }
+});
+
+// ── Topbar project button → opens command palette
+document.getElementById('topbarProjectBtn').addEventListener('click', () => {
+    openCmdPalette();
+});
+
+// ── Settings popover toggle
+document.getElementById('topbarSettingsBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const popover = document.getElementById('settingsPopover');
+    popover.style.display = popover.style.display === 'none' ? 'flex' : 'none';
+});
+
+// Close settings popover on outside click
+document.addEventListener('click', (e) => {
+    const popover = document.getElementById('settingsPopover');
+    const btn = document.getElementById('topbarSettingsBtn');
+    if (popover.style.display !== 'none' && !popover.contains(e.target) && !btn.contains(e.target)) {
+        popover.style.display = 'none';
+    }
+});
+
 // ── Event wiring ───────────────────────────────────────────────────────────
 document.getElementById('searchInput').addEventListener('input', renderProjects);
 
@@ -2662,7 +3505,14 @@ document.addEventListener('click', (e) => {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+    // Ctrl+K / Cmd+K to toggle command palette
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        toggleCmdPalette();
+        return;
+    }
     if (e.key === 'Escape') {
+        if (cmdPaletteOpen) { closeCmdPalette(); return; }
         if (openContextMenu) { closeContextMenu(); return; }
         if (detailProject) { closeDetail(); return; }
     }
@@ -2677,6 +3527,7 @@ window.addEventListener('message', (e) => {
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
+loadActiveProject();
 loadProjects();
 loadNotes();
 

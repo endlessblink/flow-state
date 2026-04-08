@@ -548,26 +548,18 @@ Start by reviewing the recent changes and pick up the next task.`;
         if (techStack && techStack !== 'Unknown') contextParts.push(`Built with ${techStack}`);
         const categoryLabel = catFolder ? catFolder.replace(/[+-]/g, ' ') : '';
         if (categoryLabel) contextParts.push(`Category: ${categoryLabel}`);
-        const projectContext = contextParts.join('. ').substring(0, 500);
+        const projectContext = contextParts.join('. ').substring(0, 200);
 
-        // Art Deco style cover prompt — project-specific illustration based on context
-        const defaultPrompt = `Art Deco style banner for a software project called "${projectName}". ` +
-            `${projectContext ? `This project is: ${projectContext}. ` : ''}` +
-            `4:3 landscape ratio. The design MUST fill the ENTIRE canvas edge to edge — ` +
-            `NO black margins, NO empty space, NO borders around the design. ` +
-            `Background color MUST be exactly dark charcoal #1a1a2e (very dark desaturated blue-black) — consistent across all covers. ` +
-            `The entire background is covered with themed Art Deco patterns in slightly lighter shades of the same charcoal. ` +
-            `LEFT SIDE: a stylized Art Deco illustration that visually represents what this specific project does — ` +
-            `choose distinctive visual symbols based on the project's actual purpose ` +
-            `(e.g. a task app=hourglass+checklist, a video tool=film reel+camera lens, a bot=antenna+chat bubbles, ` +
-            `a freelance tool=handshake+invoice, a game=dice+joystick, a music app=sound waves+vinyl). ` +
-            `Make the illustration UNIQUE to this project — avoid generic gears or abstract shapes. ` +
-            `The illustration uses ${colors.accent} and ${colors.secondary} in Art Deco line art style. ` +
-            `RIGHT SIDE: the project name "${projectName}" in bold Art Deco display typography — ` +
-            `geometric letterforms colored in ${colors.accent}. ` +
-            `The background patterns should relate to the project theme (not just generic fans and chevrons). ` +
-            `Style: flat vector, no 3D, no photorealism, pure Art Deco. ` +
-            `Text must be perfectly legible.`;
+        // Art Deco style cover prompt — context used for visual inspiration only, never as text
+        const defaultPrompt = `NO TEXT EXCEPT THE PROJECT NAME. ` +
+            `Absolutely zero bullet points, descriptions, labels, taglines, captions, tech stack, or fine print anywhere in the image. ` +
+            `The ONLY words allowed are "${projectName}" in LARGE bold Art Deco display letters. ` +
+            `Art Deco thumbnail cover. Background: solid #1a1a2e dark charcoal, full bleed, no margins. ` +
+            `One bold hero illustration in ${colors.accent} and ${colors.secondary} — ` +
+            `illustrate concepts related to: ${projectContext || projectName}. ` +
+            `Pick ONE strong iconic symbol that represents the project visually (e.g. hourglass, camera lens, rocket, circuit board). ` +
+            `Large, simple, graphic — readable at 120px tall. Flat Art Deco vector style, no photorealism. ` +
+            `Project name "${projectName}" in large bold geometric Art Deco lettering, color ${colors.accent}.`;
         const prompt = (req.body && req.body.prompt) ? req.body.prompt : defaultPrompt;
 
         try {
@@ -623,7 +615,7 @@ Start by reviewing the recent changes and pick up the next task.`;
                             style: 'DESIGN',
                             expand_prompt: false,
                             image_size: 'landscape_4_3',
-                            negative_prompt: 'blurry, photorealistic, 3D render, gradient mesh, low quality, watermark'
+                            negative_prompt: 'blurry, photorealistic, 3D render, gradient mesh, low quality, watermark, small text, paragraphs, bullet points, descriptions, labels, captions, fine print, multiple text elements'
                         }
                     })
                 });

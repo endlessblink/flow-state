@@ -20,6 +20,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
+import { positionManager } from '@/services/canvas/PositionManager'
 
 export interface DayGroupRotationOptions {
   /** Called with Vue Flow node moves after position rotation. Caller applies via updateNode(). */
@@ -220,6 +221,15 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
             y: targetSlot.y
           }
         })
+
+        // Update PositionManager so sync pipeline reads new positions
+        // (sync reads from PM first, falls back to store — PM must be current)
+        positionManager.updatePosition(
+          group.id,
+          { x: targetSlot.x, y: targetSlot.y },
+          'user-drag', // same source as drag handlers — approved geometry writer
+          group.parentGroupId || null
+        )
 
         // Collect Vue Flow move for the group node
         moves.push({

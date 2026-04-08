@@ -4324,9 +4324,9 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-### BUG-1725: Lifecycle hooks called outside component setup context (📋 PLANNED)
+### ~~BUG-1725~~: Lifecycle hooks called outside component setup context (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-08)
 
 **Problem**: Console warns `onMounted is called when there is no active component instance` and `onUnmounted is called when there is no active component instance`. This happens during app initialization, likely from an async composable that registers lifecycle hooks after an `await` statement.
 

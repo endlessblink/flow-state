@@ -533,17 +533,20 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
     clearCache()
   }
 
+  let cleanupListeners: (() => void) | null = null
+
   // Setup
   if (getCurrentInstance()) {
     onMounted(() => {
-      const cleanupListeners = setupEventListeners()
+      cleanupListeners = setupEventListeners()
       getNetworkInfo()
       measureConnectionSpeed()
-
-      onUnmounted(cleanupListeners)
     })
 
-    onUnmounted(cleanup)
+    onUnmounted(() => {
+      if (cleanupListeners) cleanupListeners()
+      cleanup()
+    })
   }
 
   return {

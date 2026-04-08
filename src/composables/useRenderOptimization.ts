@@ -348,20 +348,21 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
     memoryEfficiency: renderMetrics.value.memoryUsage < 50 * 1024 * 1024 // 50MB threshold
   }))
 
+  let memoryInterval: ReturnType<typeof setInterval> | null = null
+
   // Setup on mount
   onMounted(() => {
     setupPerformanceMonitoring()
 
     // Monitor memory usage periodically
-    const memoryInterval = setInterval(updateMemoryUsage, 5000)
-
-    onUnmounted(() => {
-      clearInterval(memoryInterval)
-    })
+    memoryInterval = setInterval(updateMemoryUsage, 5000)
   })
 
   // Cleanup on unmount
-  onUnmounted(cleanup)
+  onUnmounted(() => {
+    if (memoryInterval) clearInterval(memoryInterval)
+    cleanup()
+  })
 
   return {
     // Core optimization functions

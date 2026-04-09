@@ -643,15 +643,14 @@ Start by reviewing the recent changes and pick up the next task.`;
         if (categoryLabel) contextParts.push(`Category: ${categoryLabel}`);
         const projectContext = contextParts.join('. ').substring(0, 200);
 
-        // Art Deco emblem cover — visual metaphor only, no descriptive text
-        const defaultPrompt = `Ornamental Art Deco emblem illustration. ` +
-            `"${projectName}" in bold geometric Art Deco display lettering, centered prominently. ` +
-            `Background: solid dark charcoal #1a1a2e, full bleed edge to edge. ` +
-            `One bold symbolic icon in ${colors.accent} and ${colors.secondary} Art Deco line art — ` +
-            `a decorative geometric motif representing the concept. ` +
-            `Intricate Art Deco border patterns and ornamental bands fill all remaining space. ` +
-            `Flat vector, symbolic iconography, decorative, no photorealism. ` +
-            `Clean composition with large readable title and bold graphic elements only.`;
+        // Pure logo — no descriptive text, no project metadata
+        const defaultPrompt = `Art Deco logo for "${projectName}". ` +
+            `Dark charcoal #1a1a2e background. ` +
+            `The name "${projectName}" in large bold Art Deco geometric lettering colored ${colors.accent}. ` +
+            `One simple geometric icon in ${colors.secondary} line art. ` +
+            `Decorative Art Deco border frame. ` +
+            `Logo design, minimal, clean, flat vector. ` +
+            `Only the name "${projectName}" as text, absolutely nothing else written.`;
         const prompt = (req.body && req.body.prompt) ? req.body.prompt : defaultPrompt;
 
         try {

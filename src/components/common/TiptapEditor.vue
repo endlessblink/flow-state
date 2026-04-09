@@ -290,7 +290,7 @@ import { Italic } from '@tiptap/extension-italic'
 import { Code as CodeMark } from '@tiptap/extension-code'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
-// Link and Underline imports removed to fix duplicate extension warnings
+// Underline and Link are included in StarterKit — configure via StarterKit.configure() to avoid duplicates
 import Placeholder from '@tiptap/extension-placeholder'
 import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
@@ -415,13 +415,19 @@ const editor = useEditor({
       orderedList: {
         // Keep the node type but without input rules
       },
-      // Keep other extensions with their defaults
+      // Underline and Link are built into StarterKit — configure here to avoid duplicates
+      link: {
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'editor-link',
+        },
+      },
+      // underline: uses defaults (no config needed)
     }),
     TaskList,
     TaskItem.configure({
       nested: true,
     }),
-    // Link and Underline removed to fix duplicate extension warning
     Placeholder.configure({
       placeholder: 'Add a description... Use the toolbar for formatting.',
     }),

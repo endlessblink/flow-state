@@ -169,9 +169,8 @@ export function htmlToMarkdown(html: string): string {
   markdown = markdown.replace(/<s[^>]*>(.*?)<\/s>/gi, '~~$1~~')
   markdown = markdown.replace(/<del[^>]*>(.*?)<\/del>/gi, '~~$1~~')
 
-  // Underline: <u> -> no standard markdown, keep as HTML for now
-  // Some parsers support __text__ but it conflicts with bold
-  markdown = markdown.replace(/<u[^>]*>(.*?)<\/u>/gi, '<u>$1</u>')
+  // Underline: <u> -> no standard markdown, use placeholders to survive the catch-all HTML strip
+  markdown = markdown.replace(/<u[^>]*>(.*?)<\/u>/gi, '%%UNDERLINE_OPEN%%$1%%UNDERLINE_CLOSE%%')
 
   // Highlight: <mark> -> ==text== (some markdown flavors support this)
   markdown = markdown.replace(/<mark[^>]*>(.*?)<\/mark>/gi, '==$1==')
@@ -263,6 +262,10 @@ export function htmlToMarkdown(html: string): string {
 
   // Remove any remaining HTML tags
   markdown = markdown.replace(/<[^>]+>/g, '')
+
+  // Restore underline HTML tags from placeholders
+  markdown = markdown.replace(/%%UNDERLINE_OPEN%%/g, '<u>')
+  markdown = markdown.replace(/%%UNDERLINE_CLOSE%%/g, '</u>')
 
   // Decode HTML entities
   markdown = markdown.replace(/&nbsp;/g, ' ')

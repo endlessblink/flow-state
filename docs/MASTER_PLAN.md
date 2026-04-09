@@ -8,6 +8,16 @@
 
 ## Active Tasks
 
+### ~~TASK-1755~~: Watchpost Control Room UI redesign + smart project switcher (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-09)
+
+**Goal**: Redesign the Control Room and main dashboard project switching UX. Replace flat 96-item native dropdown with command palette (Ctrl+K), add hero card for active project, editorial card covers with overlaid names, decluttered topbar, status-aware card borders, Spotlight pattern (recent + active only), masterPlan-filtered switcher, and Browse All Projects modal with card grid.
+
+**Files**: `watchpost/controlroom/index.html`, `watchpost/controlroom/api.js`, `~/.watchpost/index.html`, `~/.watchpost/local/views/controlroom/index.html`
+
+---
+
 ### ~~TASK-1754~~: Drag-to-reorder projects in Control Room (✅ DONE)
 
 **Priority**: P3 | **Status**: ✅ DONE (2026-04-05)

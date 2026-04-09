@@ -421,6 +421,99 @@ Start by reviewing the recent changes and pick up the next task.`;
         fs.createReadStream(cover.filePath).pipe(res);
     });
 
+    // GET /api/projects/:name/covers — list all cover versions (current + history)
+    app.get('/api/projects/:name/covers', (req, res) => {
+        const projectName = req.params.name;
+        const current = findCoverFile(projectName);
+        const historyDir = path.join(COVERS_DIR, 'history');
+        const versions = [];
+
+        // Add current
+        if (current) {
+            const stat = fs.statSync(current.filePath);
+            versions.push({
+                url: `/api/projects/${encodeURIComponent(projectName)}/cover`,
+                timestamp: stat.mtimeMs,
+                date: stat.mtime.toISOString(),
+                current: true
+            });
+        }
+
+        // Add history
+        if (fs.existsSync(historyDir)) {
+            const prefix = projectName + '_';
+            const files = fs.readdirSync(historyDir).filter(f => f.startsWith(prefix));
+            for (const f of files) {
+                const tsMatch = f.match(/_(\d+)\./);
+                if (tsMatch) {
+                    versions.push({
+                        url: `/api/projects/${encodeURIComponent(projectName)}/covers/${tsMatch[1]}`,
+                        timestamp: parseInt(tsMatch[1]),
+                        date: new Date(parseInt(tsMatch[1])).toISOString(),
+                        current: false
+                    });
+                }
+            }
+        }
+
+        versions.sort((a, b) => b.timestamp - a.timestamp);
+        res.json(versions);
+    });
+
+    // GET /api/projects/:name/covers/:timestamp — serve a specific historical cover
+    app.get('/api/projects/:name/covers/:timestamp', (req, res) => {
+        const historyDir = path.join(COVERS_DIR, 'history');
+        const prefix = `${req.params.name}_${req.params.timestamp}.`;
+        if (!fs.existsSync(historyDir)) return res.status(404).json({ error: 'No history' });
+        const file = fs.readdirSync(historyDir).find(f => f.startsWith(prefix));
+        if (!file) return res.status(404).json({ error: 'Version not found' });
+        const ext = path.extname(file).slice(1);
+        const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }[ext] || 'image/png';
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.sendFile(path.join(historyDir, file));
+    });
+
+    // POST /api/projects/:name/cover/restore — restore a historical cover as current
+    app.post('/api/projects/:name/cover/restore', (req, res) => {
+        const projectName = req.params.name;
+        const { url } = req.body || {};
+        if (!url) return res.status(400).json({ error: 'Missing url parameter' });
+
+        // Extract timestamp from URL like /api/projects/foo/covers/1234567890
+        const tsMatch = url.match(/\/covers\/(\d+)/);
+        if (!tsMatch) return res.status(400).json({ error: 'Invalid cover URL' });
+
+        const timestamp = tsMatch[1];
+        const historyDir = path.join(COVERS_DIR, 'history');
+        const prefix = `${projectName}_${timestamp}.`;
+
+        if (!fs.existsSync(historyDir)) return res.status(404).json({ error: 'No history directory' });
+
+        const histFile = fs.readdirSync(historyDir).find(f => f.startsWith(prefix));
+        if (!histFile) return res.status(404).json({ error: 'Historical cover not found' });
+
+        const histPath = path.join(historyDir, histFile);
+        const ext = path.extname(histFile).slice(1) || 'png';
+
+        // Save current cover to history before replacing
+        const currentCover = findCoverFile(projectName);
+        if (currentCover) {
+            const ts = Date.now();
+            fs.mkdirSync(historyDir, { recursive: true });
+            fs.copyFileSync(currentCover.filePath, path.join(historyDir, `${projectName}_${ts}.${currentCover.ext}`));
+        }
+
+        // Copy historical cover to current position
+        const destPath = path.join(COVERS_DIR, `${projectName}.${ext}`);
+        fs.copyFileSync(histPath, destPath);
+
+        res.json({
+            success: true,
+            coverUrl: `/api/projects/${encodeURIComponent(projectName)}/cover`
+        });
+    });
+
     // ── 9. POST /api/projects/:name/cover (raw body upload) ────────────────
 
     app.post('/api/projects/:name/cover', (req, res) => {
@@ -550,16 +643,15 @@ Start by reviewing the recent changes and pick up the next task.`;
         if (categoryLabel) contextParts.push(`Category: ${categoryLabel}`);
         const projectContext = contextParts.join('. ').substring(0, 200);
 
-        // Art Deco style cover prompt — context used for visual inspiration only, never as text
-        const defaultPrompt = `NO TEXT EXCEPT THE PROJECT NAME. ` +
-            `Absolutely zero bullet points, descriptions, labels, taglines, captions, tech stack, or fine print anywhere in the image. ` +
-            `The ONLY words allowed are "${projectName}" in LARGE bold Art Deco display letters. ` +
-            `Art Deco thumbnail cover. Background: solid #1a1a2e dark charcoal, full bleed, no margins. ` +
-            `One bold hero illustration in ${colors.accent} and ${colors.secondary} — ` +
-            `illustrate concepts related to: ${projectContext || projectName}. ` +
-            `Pick ONE strong iconic symbol that represents the project visually (e.g. hourglass, camera lens, rocket, circuit board). ` +
-            `Large, simple, graphic — readable at 120px tall. Flat Art Deco vector style, no photorealism. ` +
-            `Project name "${projectName}" in large bold geometric Art Deco lettering, color ${colors.accent}.`;
+        // Art Deco emblem cover — visual metaphor only, no descriptive text
+        const defaultPrompt = `Ornamental Art Deco emblem illustration. ` +
+            `"${projectName}" in bold geometric Art Deco display lettering, centered prominently. ` +
+            `Background: solid dark charcoal #1a1a2e, full bleed edge to edge. ` +
+            `One bold symbolic icon in ${colors.accent} and ${colors.secondary} Art Deco line art — ` +
+            `a decorative geometric motif representing the concept. ` +
+            `Intricate Art Deco border patterns and ornamental bands fill all remaining space. ` +
+            `Flat vector, symbolic iconography, decorative, no photorealism. ` +
+            `Clean composition with large readable title and bold graphic elements only.`;
         const prompt = (req.body && req.body.prompt) ? req.body.prompt : defaultPrompt;
 
         try {
@@ -615,7 +707,7 @@ Start by reviewing the recent changes and pick up the next task.`;
                             style: 'DESIGN',
                             expand_prompt: false,
                             image_size: 'landscape_4_3',
-                            negative_prompt: 'blurry, photorealistic, 3D render, gradient mesh, low quality, watermark, small text, paragraphs, bullet points, descriptions, labels, captions, fine print, multiple text elements'
+                            negative_prompt: 'text, typography, words, letters, writing, labels, captions, watermarks, bullet points, paragraphs, descriptions, annotations, subtitles, taglines, fine print, small text, multiple text elements, status text, tech stack, project details, information box, blurry, photorealistic, 3D render'
                         }
                     })
                 });
@@ -700,6 +792,14 @@ Start by reviewing the recent changes and pick up the next task.`;
 
             fs.mkdirSync(COVERS_DIR, { recursive: true });
             const destPath = path.join(COVERS_DIR, `${projectName}.png`);
+            // Save previous cover to history before overwriting
+            const existingCover = findCoverFile(projectName);
+            if (existingCover) {
+                const historyDir = path.join(COVERS_DIR, 'history');
+                fs.mkdirSync(historyDir, { recursive: true });
+                const ts = Date.now();
+                fs.copyFileSync(existingCover.filePath, path.join(historyDir, `${projectName}_${ts}.${existingCover.ext}`));
+            }
             fs.writeFileSync(destPath, imageBuffer);
 
             res.json({

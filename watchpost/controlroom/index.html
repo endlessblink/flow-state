@@ -1092,6 +1092,120 @@
             margin: 3px 0;
         }
 
+        /* Cover Gallery Modal */
+        .cover-gallery-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 150ms;
+        }
+        .cover-gallery-backdrop.open {
+            opacity: 1;
+        }
+        .cover-gallery-modal {
+            background: var(--surface-tertiary, #161b22);
+            border: 1px solid var(--border-medium, rgba(255,255,255,0.08));
+            border-radius: 12px;
+            width: 560px;
+            max-width: 90vw;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+            transform: scale(0.95);
+            transition: transform 150ms;
+        }
+        .cover-gallery-backdrop.open .cover-gallery-modal {
+            transform: scale(1);
+        }
+        .cover-gallery-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .cover-gallery-header h3 {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary, #e6edf3);
+        }
+        .cover-gallery-close {
+            background: none;
+            border: none;
+            color: var(--text-subtle, #8b949e);
+            cursor: pointer;
+            font-size: 1.25rem;
+            padding: 0.25rem;
+            border-radius: 4px;
+            line-height: 1;
+        }
+        .cover-gallery-close:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+        }
+        .cover-gallery-grid {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+        .cover-gallery-item {
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.15s;
+            position: relative;
+        }
+        .cover-gallery-item:hover {
+            border-color: rgba(78,205,196,0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .cover-gallery-item.current {
+            border-color: rgba(78,205,196,0.6);
+        }
+        .cover-gallery-item img {
+            width: 100%;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+            display: block;
+        }
+        .cover-gallery-item-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0.25rem 0.5rem;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.7);
+            text-align: right;
+        }
+        .cover-gallery-item.current .cover-gallery-item-label::before {
+            content: 'Current • ';
+            color: rgba(78,205,196,0.9);
+            font-weight: 600;
+        }
+        .cover-gallery-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-subtle, #8b949e);
+            font-style: italic;
+        }
+
         /* ── Detail Panel ────────────────────────────────────────────── */
         .detail-overlay {
             position: fixed;
@@ -2086,6 +2200,16 @@
 <!-- Context menu -->
 <div class="context-menu" id="contextMenu" style="display:none;"></div>
 
+<div class="cover-gallery-backdrop" id="coverGalleryBackdrop" style="display:none">
+    <div class="cover-gallery-modal">
+        <div class="cover-gallery-header">
+            <h3 id="coverGalleryTitle">Cover History</h3>
+            <button class="cover-gallery-close" id="coverGalleryClose">&times;</button>
+        </div>
+        <div class="cover-gallery-grid" id="coverGalleryGrid"></div>
+    </div>
+</div>
+
 <!-- Toast container -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -2199,6 +2323,7 @@ function getCategoryColor(category) {
 }
 
 // ── State ──────────────────────────────────────────────────────────────────
+const generatingCovers = new Set();
 let allProjects = [];
 let notes = [];
 let notesFilter = 'all';
@@ -2211,6 +2336,7 @@ let currentSort = 'lastActive'; // 'lastActive' | 'nameAZ' | 'nameZA' | 'mostTas
 let currentGroupBy = 'category'; // 'category' | 'activity' | 'status' | 'none'
 let detailProject = null;
 let openContextMenu = null;
+let contextMenuProjectName = null;
 
 // ── API helpers ────────────────────────────────────────────────────────────
 async function apiFetch(url, opts = {}) {
@@ -2244,8 +2370,6 @@ async function loadProjects() {
                     _category: getCategoryFromPath(root),
                 };
             });
-            // Filter out projects without a MASTER_PLAN
-            allProjects = allProjects.filter(p => p.masterPlan);
         } else {
             document.getElementById('categorizedGrid').innerHTML =
                 '<div class="empty-state"><div class="empty-icon">📭</div><p>No projects found</p><p style="color:var(--text-subtle);font-size:11px;margin-top:4px;">Start by registering a project with Watchpost</p></div>';
@@ -2272,8 +2396,6 @@ async function loadProjects() {
                 _category: getCategoryFromPath(root),
             };
         });
-        // Filter out projects without a MASTER_PLAN
-        allProjects = allProjects.filter(p => p.masterPlan);
     }
 
     renderProjects();
@@ -2750,6 +2872,10 @@ function showContextMenu(e, projectName) {
             <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             ${project?.cover ? 'Regenerate Cover' : 'Create Cover'}
         </div>
+        <div class="context-item" data-cmd="browse-covers">
+            <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M2 14l6-6 4 4 4-4 6 6"/><circle cx="15.5" cy="7.5" r="1.5"/></svg>
+            Browse Covers
+        </div>
         <div class="context-item" data-cmd="${isArchived ? 'unarchive' : 'archive'}">
             <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5" rx="1"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
             ${isArchived ? 'Unarchive' : 'Archive'}
@@ -2776,14 +2902,7 @@ function showContextMenu(e, projectName) {
     menu.style.left = left + 'px';
 
     openContextMenu = { menu, projectName };
-
-    menu.addEventListener('click', async (ev) => {
-        const item = ev.target.closest('[data-cmd]');
-        if (!item) return;
-        const cmd = item.dataset.cmd;
-        closeContextMenu();
-        await handleContextCommand(cmd, projectName);
-    }, { once: true });
+    contextMenuProjectName = projectName;
 }
 
 function closeContextMenu() {
@@ -2791,7 +2910,17 @@ function closeContextMenu() {
         openContextMenu.menu.style.display = 'none';
         openContextMenu = null;
     }
+    contextMenuProjectName = null;
 }
+
+document.getElementById('contextMenu').addEventListener('click', async (ev) => {
+    const item = ev.target.closest('[data-cmd]');
+    if (!item || !contextMenuProjectName) return;
+    const cmd = item.dataset.cmd;
+    const name = contextMenuProjectName;
+    closeContextMenu();
+    await handleContextCommand(cmd, name);
+});
 
 async function handleContextCommand(cmd, projectName) {
     const project = allProjects.find(p => p.name === projectName);
@@ -2814,7 +2943,36 @@ async function handleContextCommand(cmd, projectName) {
         renderProjects();
         if (detailProject?.name === projectName) openDetail(projectName);
 
+    } else if (cmd === 'browse-covers') {
+        // Fetch cover history from API
+        let versions = [];
+        try {
+            versions = await apiFetch(`/api/projects/${encodeURIComponent(projectName)}/covers`);
+        } catch { versions = []; }
+
+        const gallery = document.getElementById('coverGalleryBackdrop');
+        const grid = document.getElementById('coverGalleryGrid');
+        document.getElementById('coverGalleryTitle').textContent = `Covers — ${projectName}`;
+
+        if (!versions || !versions.length) {
+            grid.innerHTML = '<div class="cover-gallery-empty">No covers generated yet.<br>Use "Create Cover" to generate one.</div>';
+        } else {
+            grid.innerHTML = versions.map(v => {
+                const date = new Date(v.timestamp);
+                const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                return `<div class="cover-gallery-item${v.current ? ' current' : ''}" data-cover-url="${v.url}" data-project="${projectName}">` +
+                    `<img src="${v.url}?t=${Date.now()}" alt="Cover version">` +
+                    `<div class="cover-gallery-item-label">${label}</div>` +
+                    `</div>`;
+            }).join('');
+        }
+
+        gallery.style.display = 'flex';
+        requestAnimationFrame(() => gallery.classList.add('open'));
+
     } else if (cmd === 'generate-cover') {
+        if (generatingCovers.has(projectName)) { showToast('Already generating...', 'clock'); return; }
+        generatingCovers.add(projectName);
         // Find the card element and show a loading overlay
         const card = document.querySelector(`[data-name="${CSS.escape(projectName)}"]`);
         const coverEl = card?.querySelector('.card-cover-gradient, .list-thumb');
@@ -2840,6 +2998,7 @@ async function handleContextCommand(cmd, projectName) {
         } else {
             showToast(res?.error || 'Cover generation failed', 'error');
         }
+        generatingCovers.delete(projectName);
 
     } else if (cmd === 'delete') {
         if (!confirm(`Delete project "${projectName}" from Watchpost?\n\nThis only removes it from Watchpost — your files stay on disk.`)) return;
@@ -2979,7 +3138,9 @@ async function openDetail(name) {
         showToast('Kickstart prompt copied!', 'rocket');
     });
 
-    document.getElementById('detailGenCover')?.addEventListener('click', async () => {
+    document.getElementById('detailGenCover').onclick = async () => {
+        if (generatingCovers.has(name)) { showToast('Already generating...', 'clock'); return; }
+        generatingCovers.add(name);
         const btn = document.getElementById('detailGenCover');
         const origText = btn.innerHTML;
         btn.innerHTML = '<svg viewBox="0 0 24 24" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg> Generating...';
@@ -3001,26 +3162,27 @@ async function openDetail(name) {
         } catch (err) {
             showToast('Error: ' + (err.message || 'Failed'), 'clipboard');
         }
+        generatingCovers.delete(name);
         btn.innerHTML = origText;
         btn.disabled = false;
-    });
+    };
 
-    document.getElementById('detailArchive')?.addEventListener('click', async () => {
+    document.getElementById('detailArchive').onclick = async () => {
         await apiFetch(`/api/projects/${encodeURIComponent(name)}/archive`, { method: 'POST' });
         project.archived = !project.archived;
         showToast(project.archived ? 'Project archived' : 'Project unarchived', 'check');
         renderProjects();
         openDetail(name); // Re-render panel
-    });
+    };
 
-    document.getElementById('detailDelete')?.addEventListener('click', async () => {
+    document.getElementById('detailDelete').onclick = async () => {
         if (!confirm(`Delete project "${name}" from Watchpost?`)) return;
         await apiFetch(`/api/projects/${encodeURIComponent(name)}`, { method: 'DELETE' });
         allProjects = allProjects.filter(p => p.name !== name);
         showToast('Project removed', 'check');
         renderProjects();
         closeDetail();
-    });
+    };
 
     overlay.classList.add('open');
     scroll.scrollTop = 0;
@@ -3538,6 +3700,52 @@ document.getElementById('sortSelect').value = currentSort;
 // Restore group-by preference from localStorage
 currentGroupBy = localStorage.getItem('cr-groupby') || 'category';
 document.getElementById('groupBySelect').value = currentGroupBy;
+
+// Cover gallery: close
+document.getElementById('coverGalleryClose').onclick = () => {
+    const gallery = document.getElementById('coverGalleryBackdrop');
+    gallery.classList.remove('open');
+    setTimeout(() => { gallery.style.display = 'none'; }, 150);
+};
+document.getElementById('coverGalleryBackdrop').addEventListener('click', (e) => {
+    if (e.target.id === 'coverGalleryBackdrop') {
+        const gallery = document.getElementById('coverGalleryBackdrop');
+        gallery.classList.remove('open');
+        setTimeout(() => { gallery.style.display = 'none'; }, 150);
+    }
+});
+
+// Cover gallery: select a cover
+document.getElementById('coverGalleryGrid').addEventListener('click', async (e) => {
+    const item = e.target.closest('.cover-gallery-item');
+    if (!item) return;
+    const coverUrl = item.dataset.coverUrl;
+    const projectName = item.dataset.project;
+    const project = allProjects.find(p => p.name === projectName);
+    if (!project) return;
+
+    // If clicking a historical cover, restore it (copy to current)
+    if (!item.classList.contains('current')) {
+        try {
+            await apiFetch(`/api/projects/${encodeURIComponent(projectName)}/cover/restore`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: coverUrl })
+            });
+            project.cover = `/api/projects/${encodeURIComponent(projectName)}/cover?t=${Date.now()}`;
+            showToast('Cover restored!', 'check');
+            renderProjects();
+        } catch (err) {
+            showToast('Failed to restore cover', 'error');
+            return;
+        }
+    }
+
+    // Close gallery
+    const gallery = document.getElementById('coverGalleryBackdrop');
+    gallery.classList.remove('open');
+    setTimeout(() => { gallery.style.display = 'none'; }, 150);
+});
 </script>
 </body>
 </html>

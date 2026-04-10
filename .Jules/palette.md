@@ -1,0 +1,3 @@
+## 2024-05-18 - [Add full ARIA combobox relationship to custom dropdowns]
+**Learning:** Custom dropdown components missing `role="combobox"`, `aria-haspopup`, `aria-expanded`, and `aria-controls` bindings break screen reader announcements and interactive context. `aria-activedescendant` is necessary to announce the focused option while maintaining actual DOM focus on the trigger element.
+**Action:** Always ensure that custom dropdown component triggers (like `BaseDropdown.vue`) explicitly define the `role="combobox"` relationship, link their listbox via `aria-controls`, and manage `aria-activedescendant` using dynamically generated IDs to fully simulate native `<select>` behavior for assistive technologies.

@@ -94,6 +94,10 @@ export interface AppSettings {
     aiSetupComplete: boolean
     aiPreferredProvider: 'auto' | 'groq' | 'ollama' | 'openrouter'
 
+    // TASK-1500: Weekly Plan
+    weeklyPlanProvider: 'auto' | 'groq' | 'ollama' | 'openrouter'
+    weeklyPlanModel: string
+
     // FEATURE-1162: Saved Views / Smart Filters
     savedViews: SavedView[]
 
@@ -289,6 +293,10 @@ export const useSettingsStore = defineStore('settings', {
         sidebarCollapsed: false,
         kanbanSettings: {},
         canvasViewport: null,
+
+        // AI Weekly Plan
+        weeklyPlanProvider: 'auto',
+        weeklyPlanModel: '',
 
         // Spread persisted values last — overrides defaults with saved state
         ...(_persisted || {})

@@ -53,7 +53,7 @@ import { Calendar, Clock } from 'lucide-vue-next'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
-import { useTaskStore } from '@/stores/tasks'
+import { useTaskStore, type Task } from '@/stores/tasks'
 
 interface Props {
   active?: boolean

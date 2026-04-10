@@ -18,6 +18,19 @@
 
 ---
 
+### ~~TASK-1755~~: AI cover generation improvements + cover gallery (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-10)
+
+- Refined cover prompt to minimize unwanted AI text (logo framing approach)
+- Cover containers use 4:3 aspect-ratio instead of fixed height
+- Cover history versioning (old covers saved before overwrite)
+- Cover gallery modal with browse/restore past covers
+- Generation debounce prevents duplicate API calls
+- Fixed event listener accumulation bug in detail panel
+
+---
+
 ### ~~TASK-1754~~: Drag-to-reorder projects in Control Room (✅ DONE)
 
 **Priority**: P3 | **Status**: ✅ DONE (2026-04-05)

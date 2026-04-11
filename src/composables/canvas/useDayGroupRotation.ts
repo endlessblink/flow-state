@@ -258,9 +258,17 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
             { canvasPosition: { x: newX, y: newY } },
             'DRAG'
           )
+          // Keep PositionManager in sync so the spatial validation in
+          // useCanvasSync (BUG-1191) sees correct post-rotation positions
+          // instead of orphaning the task from its parent group.
+          positionManager.updatePosition(
+            task.id,
+            { x: newX, y: newY },
+            'user-drag',
+            group.id
+          )
           // Task positions in Vue Flow are relative to parent, so
-          // if the parent moves but the relative position stays the same,
-          // we don't need to move the task node. Vue Flow handles this.
+          // we don't need to emit Vue Flow moves for children.
         }
       }
     } finally {

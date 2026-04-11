@@ -8,6 +8,21 @@
 
 ## Active Tasks
 
+### ~~TASK-1756~~: Canvas day group date rotation + dynamic Today/Tomorrow dates (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-11)
+
+- Today/Tomorrow smart groups now show dynamic date suffixes (e.g., "Today / 11.4.26")
+- Day-of-week groups skip dates covered by Today/Tomorrow (e.g., if Tomorrow is Saturday, the Saturday group shows next Saturday)
+- Added rotation button (CalendarClock icon) to canvas toolbar for manual day group reordering
+- Midnight auto-rotation updates task dueDates and respects weekStartsOn setting
+- Marked TASK-149 (Canvas Group Stability Fixes) as DONE — all 5 sub-issues resolved in prior work
+- Visual position rotation (groups physically swapping slots) still pending — algorithm works but Vue Flow controlled-mode prevents visual updates
+
+**Files**: `src/composables/canvas/useDayGroupRotation.ts`, `src/components/canvas/GroupNodeSimple.vue`, `src/components/canvas/CanvasToolbar.vue`, `src/views/CanvasView.vue`, `src/stores/settings.ts`
+
+---
+
 ### ~~TASK-1755~~: Watchpost Control Room UI redesign + smart project switcher (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-09)

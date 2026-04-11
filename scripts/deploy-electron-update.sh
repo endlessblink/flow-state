@@ -76,8 +76,8 @@ fi
 
 # Check artifacts exist
 if [ "$DRY_RUN" = false ]; then
-  APPIMAGE=$(find "$RELEASE_DIR" -name "*.AppImage" -type f 2>/dev/null | head -1)
-  DEB=$(find "$RELEASE_DIR" -name "*.deb" -type f 2>/dev/null | head -1)
+  APPIMAGE=$(find "$RELEASE_DIR" -name "*${VERSION}*.AppImage" -type f 2>/dev/null | head -1)
+  DEB=$(find "$RELEASE_DIR" -name "*${VERSION}*.deb" -type f 2>/dev/null | head -1)
   YML=$(find "$RELEASE_DIR" -name "latest-linux.yml" -type f 2>/dev/null | head -1)
 
   if [ -z "$APPIMAGE" ]; then

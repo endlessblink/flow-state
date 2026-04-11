@@ -582,7 +582,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         // TASK-1403: Only include new recurrence columns when set (safe before migration)
         ...(task.recurrenceRule ? { recurrence_rule: JSON.parse(JSON.stringify(task.recurrenceRule)) } : {}),
         ...(task.recurrenceParentId ? { recurrence_parent_id: sanitizeUUID(task.recurrenceParentId) } : {}),
-        ...(task.recurrenceCount ? { recurrence_count: task.recurrenceCount } : {}),
+        ...(task.recurrenceCount != null ? { recurrence_count: task.recurrenceCount } : {}),
     }
 }
 
@@ -634,7 +634,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         recurrence: record.recurrence || undefined,
         recurrenceRule: record.recurrence_rule as import('../types/tasks').SimpleRecurrenceRule | undefined,
         recurrenceParentId: record.recurrence_parent_id || undefined,
-        recurrenceCount: record.recurrence_count || undefined,
+        recurrenceCount: record.recurrence_count ?? undefined,
         recurringInstances: record.recurring_instances || [],
         notificationPreferences: record.notification_prefs || undefined,
         reminders: (record.reminders as import('../types/notifications').TaskReminder[]) || [],

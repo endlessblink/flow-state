@@ -332,6 +332,16 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
           console.debug(`🔄 [SYNC] CREATE via upsert for ${entityType}:${entityId} (idempotent)`)
         }
         result = await supabase!.from(tableName).upsert(insertData, { onConflict: 'id' }).select()
+
+        // Handle recurrence dedup constraint — cross-device race creates duplicate clones.
+        // Soft-delete the local clone so the DB's existing version wins.
+        if (result.error?.code === '23505' && result.error?.message?.includes('idx_unique_recurrence_occurrence')) {
+          console.warn(`⚠️ [SYNC] Recurrence dedup for ${entityType}:${entityId}, soft-deleting local clone`)
+          const deleteResult = await supabase!.from(tableName)
+            .upsert({ ...insertData, is_deleted: true, deleted_at: new Date().toISOString() }, { onConflict: 'id' })
+            .select()
+          result = { ...deleteResult, data: deleteResult.data, error: null }
+        }
         break
       }
 

@@ -1174,6 +1174,8 @@ export function useTaskOperations(
             updatedAt: new Date(),
         })) || []
 
+        // Remove from canvas group when due date no longer matches
+        // (task will reappear in the correct group when its date comes)
         await updateTask(taskId, {
             status: 'todo',
             completedAt: undefined,
@@ -1181,8 +1183,9 @@ export function useTaskOperations(
             recurrenceCount: count,
             instances: nextInstances,
             subtasks: resetSubtasks,
-            // Keep canvasPosition — task stays on canvas
-            // Keep parentId — task stays in its group
+            parentId: undefined,
+            canvasPosition: undefined,
+            isInInbox: true,
         })
 
         // Set recurrence lock to prevent deferred scheduler from creating duplicates

@@ -227,7 +227,7 @@ Universal rules (completion, atomic tasks, design tokens, type safety, database 
 3. **Check Task Dependencies** - See Task Dependency Index in `docs/MASTER_PLAN.md`
 4. **Canvas Geometry Invariants** - Only drag handlers may change positions/parents. Sync is read-only. (see below)
 5. **Version Bump Protocol** - When releasing: update 2 files (package.json, electron-builder.yml) + create git tag
-6. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS run `./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"` to build and deploy to VPS. Never just offer `npm run dev` or local install as the final delivery. See [SOP-065](docs/sop/SOP-065-electron-desktop-app.md).
+6. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS bump the version in `package.json` (patch increment) AND run `./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"` to build and deploy to VPS. The Electron auto-updater only triggers when the version is higher than the installed one. Never skip the bump. Never just offer `npm run dev` or local install as the final delivery. See [SOP-065](docs/sop/SOP-065-electron-desktop-app.md).
 7. **No Client-Side API Keys (BUG-1131)** - Build-time guard (`scripts/check-vite-secrets.cjs`) blocks non-allowlisted VITE_ vars. Cloud API keys go through Supabase Edge Function proxies.
 8. **No Images in Project Root** - Save to `.dev/screenshots/` instead. PreToolUse hook enforces this.
 9. **WebKitGTK Parity (legacy, Tauri era)** - Tauri was replaced by Electron. Some patterns (`:force-fallback="true"` on vuedraggable, `dragData` singleton, deep-cloning for IndexedDB) may still be relevant. Full reference: [`docs/sop/SOP-060-webkitgtk-gotchas.md`](docs/sop/SOP-060-webkitgtk-gotchas.md).

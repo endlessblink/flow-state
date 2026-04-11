@@ -158,16 +158,34 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 }
 
                 // Handle recurrence dedup constraint (idx_unique_recurrence_occurrence) — cross-device race
-                // The conflict is between payload tasks and tasks already in the DB with the same
-                // recurrence_parent_id + recurrence_count but different id. Drop recurrence clones and retry.
+                // The batch includes both legitimate updates (done toggle) and duplicate clones.
+                // We can't tell which task caused the conflict from the batch error, so retry
+                // each recurrence task individually: successes go through, failures get soft-deleted.
                 if (error?.code === '23505' && error?.message?.includes('idx_unique_recurrence_occurrence') && !isRetry) {
-                    const recurrenceCount = payloadToSave.filter(t => t.recurrence_parent_id && t.recurrence_count != null).length
-                    console.warn(`⚠️ [saveTasks] Recurrence dedup constraint hit, dropping ${recurrenceCount} recurrence clones and retrying`)
-                    const nonRecurrencePayload = payloadToSave.filter(t => !t.recurrence_parent_id || t.recurrence_count == null)
-                    if (nonRecurrencePayload.length > 0) {
-                        return attemptUpsert(nonRecurrencePayload, true)
+                    const recurrenceTasks = payloadToSave.filter(t => !!t.recurrence_parent_id)
+                    const nonRecurrenceTasks = payloadToSave.filter(t => !t.recurrence_parent_id)
+                    console.warn(`⚠️ [saveTasks] Recurrence dedup constraint hit, retrying ${recurrenceTasks.length} recurrence tasks individually`)
+
+                    // Retry each recurrence task individually to find the real duplicate
+                    for (const task of recurrenceTasks) {
+                        const { error: individualError } = await getSupabase()
+                            .from('tasks')
+                            .upsert(task, { onConflict: 'id' })
+                            .select('id')
+                        if (individualError?.code === '23505') {
+                            // This is the duplicate clone — soft-delete it
+                            console.warn(`⚠️ [saveTasks] Soft-deleting duplicate clone ${task.id?.slice(0, 8)}`)
+                            await getSupabase().from('tasks').upsert(
+                                { ...task, is_deleted: true, deleted_at: new Date().toISOString() },
+                                { onConflict: 'id' }
+                            )
+                        }
                     }
-                    // All tasks were recurrence duplicates — DB already has them, silently succeed
+
+                    // Save non-recurrence tasks normally
+                    if (nonRecurrenceTasks.length > 0) {
+                        return attemptUpsert(nonRecurrenceTasks, true)
+                    }
                     return
                 }
 

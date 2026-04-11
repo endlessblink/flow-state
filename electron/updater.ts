@@ -1,5 +1,5 @@
 import { autoUpdater } from 'electron-updater'
-import { ipcMain, BrowserWindow } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 
 /**
  * Electron auto-updater setup.
@@ -12,7 +12,7 @@ export function registerUpdater() {
   if (process.env.VITE_DEV_SERVER_URL) return
 
   autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.autoInstallOnAppQuit = false
 
   // Forward events to renderer via IPC
   autoUpdater.on('update-available', (info) => {
@@ -56,6 +56,9 @@ export function registerUpdater() {
   })
 
   ipcMain.handle('updater:install', () => {
+    // Release single-instance lock before restart, otherwise the new process
+    // can't acquire the lock and immediately exits (appears as a crash).
+    app.releaseSingleInstanceLock()
     // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
     autoUpdater.quitAndInstall(false, true)
   })

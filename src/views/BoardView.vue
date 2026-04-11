@@ -331,11 +331,16 @@ const handleListUpdateTask = (taskId: string, updates: Partial<Task>) => {
 }
 
 // Event handlers for TaskList in list view mode
-const handleToggleComplete = (taskId: string) => {
+const handleToggleComplete = async (taskId: string) => {
   const task = taskStore.tasks.find(t => t.id === taskId)
   if (!task) return
+  // Recurring tasks use "done for now" to avoid clone-on-complete conflicts
+  if (task.status !== 'done' && task.recurrenceRule) {
+    await taskStore.doneForNow(taskId)
+    return
+  }
   const newStatus = task.status === 'done' ? 'todo' : 'done'
-  taskStore.updateTask(taskId, { status: newStatus })
+  await taskStore.updateTask(taskId, { status: newStatus })
 }
 
 const handleDeleteSelected = (taskIds: string[]) => {

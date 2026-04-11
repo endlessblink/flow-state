@@ -2,7 +2,9 @@
   <div class="canvas-empty-state" aria-label="Canvas is empty">
     <!-- Ambient background dots — subtle grid suggestion -->
     <div class="ambient-grid" aria-hidden="true">
-      <span v-for="i in 24" :key="i" class="grid-dot" :style="gridDotStyle(i)" />
+      <span v-for="i in 24" :key="i" class="grid-dot"
+        :style="gridDotStyle(i)"
+      />
     </div>
 
     <!-- Main content card -->

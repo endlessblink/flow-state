@@ -1,0 +1,3 @@
+## 2026-04-11 - Interactive elements in slots require manual focus styling
+**Learning:** Interactive elements placed within scoped slots of base components (like `#suffix` in `BaseInput.vue`) do not automatically inherit the parent component's keyboard focus styling. For example, password visibility toggles were lacking both keyboard reachability (`tabindex="-1"`) and visual focus indicators.
+**Action:** When adding interactive elements to input slots, ensure they are natively focusable (no negative tabindex) and explicitly apply `:focus-visible` styling that matches the project's established pattern (`outline` + `box-shadow`).

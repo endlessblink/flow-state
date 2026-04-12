@@ -975,6 +975,18 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1757~~: Editing task due date to another day leaves it inside canvas day-group, date resets to today (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-04-12)
+
+**Problem**: When a task parented to a canvas smart day-group (e.g. "Today = 12/04/2026") had its due date edited to another day (e.g. 19/04/2026), the task stayed visually inside the today-group. Worse, `useDayGroupRotation` (`src/composables/canvas/useDayGroupRotation.ts:111-112`) re-applied the group's current date to every `parentId === group.id` child, silently overwriting the user's edit back to today.
+
+**Fix**: In `updateTask()` (`src/stores/tasks/taskOperations.ts`), when `updates.dueDate` is present, the call didn't come from `'SMART-GROUP'` source, the task has a `parentId`, and the caller isn't already managing `parentId` — look up the parent group, confirm it has a power keyword (skip freeform groups per user preference), and use `findMatchingGroupForDueDate(newDueDate, canvasStore.groups)` to check whether the new date still belongs in that group. If not, clear `parentId`, `canvasPosition`, set `isInInbox: true`, bump `positionVersion`. This detaches the Vue Flow child (visual exit), and the rotation loop stops touching the task (`useDayGroupRotation` filters on `parentId === group.id`). Mirrors the `doneForNow` v1.3.43 pattern at lines 1177-1189.
+
+**Files**: `src/stores/tasks/taskOperations.ts` (added imports + new branch before `syncDateFields`)
+
+---
+
 ### ~~BUG-1733~~: Production errors — FK violation, dev CSS preload, undo safeClone SyntaxError (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-28)

@@ -46,6 +46,9 @@ export type GeometryWriteSource = 'DRAG' | 'RECONCILE' | 'USER' | 'SYNC' | 'SMAR
 import { useSmartViews, type SmartView } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
 import { useAuthStore } from '../auth'
+// BUG-1757: Drop tasks out of smart day-group when user edits dueDate to a non-matching day
+import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 
 export function useTaskOperations(
     // SAFETY: Named _rawTasks to indicate this is the raw array for mutations
@@ -598,6 +601,45 @@ export function useTaskOperations(
                     updates.completedAt = undefined
                     console.log(`🔄 [DONE-ZONE] Task "${task.title?.slice(0, 30)}" reopened, completedAt cleared`)
 
+                }
+            }
+
+            // BUG-1757: Drop task out of smart day-group when user edits dueDate to a
+            // non-matching day. Without this, useDayGroupRotation keeps overwriting the
+            // user's new date back to the group's date (SMART-GROUP source, line 112).
+            // Excludes SMART-GROUP source so the rotation itself is not cancelled.
+            // Excludes freeform groups (no power keyword) — user may group by theme.
+            if (
+                'dueDate' in updates &&
+                source !== 'SMART-GROUP' &&
+                task.parentId &&
+                !('parentId' in updates)
+            ) {
+                try {
+                    const { useCanvasStore } = await import('@/stores/canvas')
+                    const canvasStore = useCanvasStore()
+                    const parentGroup = canvasStore.groups.find(g => g.id === task.parentId)
+                    const parentIsSmart = parentGroup
+                        ? !!detectPowerKeyword(parentGroup.name)
+                        : false
+
+                    if (parentIsSmart) {
+                        const newDueDate = updates.dueDate
+                            ? normalizeDueDate(updates.dueDate as any)
+                            : undefined
+                        const match = findMatchingGroupForDueDate(newDueDate, canvasStore.groups)
+                        if (match?.id !== task.parentId) {
+                            updates.parentId = undefined
+                            updates.canvasPosition = undefined
+                            updates.isInInbox = true
+                            updates.positionVersion = (task.positionVersion || 0) + 1
+                            console.log(
+                                `📅 [DUE-DATE-EDIT] "${task.title?.slice(0, 30)}" new dueDate ${newDueDate} no longer matches group "${parentGroup?.name}" — dropping to inbox`
+                            )
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[BUG-1757] dueDate→group check failed:', e)
                 }
             }
 

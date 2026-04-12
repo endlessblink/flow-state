@@ -32,7 +32,7 @@
           <div class="mobile-menu-content" @click.stop>
             <div class="menu-header">
               <h3>Menu</h3>
-              <button class="close-btn" @click="closeMenu">
+              <button class="close-btn" aria-label="Close menu" @click="closeMenu">
                 <X :size="20" />
               </button>
             </div>

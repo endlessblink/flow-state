@@ -17,7 +17,7 @@
             <CheckCircle2 :size="18" class="header-icon" />
             <span class="header-title">{{ $t?.('voice.confirmTask') || 'Confirm Task' }}</span>
           </div>
-          <button class="close-btn" @click="handleCancel">
+          <button class="close-btn" aria-label="Close voice task" @click="handleCancel">
             <X :size="18" />
           </button>
         </div>

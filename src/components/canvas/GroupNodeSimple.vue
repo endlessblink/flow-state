@@ -127,15 +127,16 @@ const groupColor = computed(() => {
   return storeGroup?.color || props.data?.color || '#3b82f6'
 })
 const taskCount = computed(() => {
-  const data = props.data as Record<string, unknown>
-  if (!data) return 0
+  const data = props.data as Record<string, unknown> | undefined
+  const groupId = (data?.id as string) || props.id.replace(/^section-/, '')
+  if (!groupId) return 0
 
-  // Determine which count to show based on whether this is a root or child group
-  // - Root groups (no parent): show aggregated count (includes descendants)
-  // - Child groups: show only direct count (tasks in this group only)
-  const isRootGroup = !data.parentGroupId || data.parentGroupId === 'NONE'
-  const direct = data.directTaskCount ?? 0
-  const aggregated = data.aggregatedTaskCount ?? direct
+  // Read from reactive store computeds instead of stale node.data snapshot.
+  // Root groups show aggregated count (includes descendants); child groups
+  // show direct count only.
+  const isRootGroup = !data?.parentGroupId || data.parentGroupId === 'NONE'
+  const direct = canvasStore.taskCountByGroupId.get(groupId) ?? 0
+  const aggregated = canvasStore.aggregatedTaskCountByGroupId.get(groupId) ?? direct
 
   return isRootGroup ? aggregated : direct
 })

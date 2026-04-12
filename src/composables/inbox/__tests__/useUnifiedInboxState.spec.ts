@@ -38,6 +38,17 @@ vi.mock('@/composables/canvas/useCanvasGroupMembership', () => ({
   }),
 }))
 
+vi.mock('@/i18n/useDirection', () => ({
+  useDirection: () => ({
+    direction: ref<'ltr' | 'rtl'>('ltr'),
+    isRTL: ref(false),
+    isLTR: ref(true),
+    directionPreference: ref<'ltr' | 'rtl' | 'auto'>('auto'),
+    setDirection: () => {},
+    updateDocumentDirection: () => {},
+  }),
+}))
+
 describe('useUnifiedInboxState', () => {
   beforeEach(() => {
     setActivePinia(createPinia())

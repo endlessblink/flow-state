@@ -228,9 +228,15 @@ Universal rules (completion, atomic tasks, design tokens, type safety, database 
 4. **Canvas Geometry Invariants** - Only drag handlers may change positions/parents. Sync is read-only. (see below)
 5. **Version Bump Protocol** - When releasing: update 2 files (package.json, electron-builder.yml) + create git tag
 6. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS bump the version in `package.json` (patch increment) AND run `./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"` to build and deploy to VPS. The Electron auto-updater only triggers when the version is higher than the installed one. Never skip the bump. Never just offer `npm run dev` or local install as the final delivery. See [SOP-065](docs/sop/SOP-065-electron-desktop-app.md).
-7. **No Client-Side API Keys (BUG-1131)** - Build-time guard (`scripts/check-vite-secrets.cjs`) blocks non-allowlisted VITE_ vars. Cloud API keys go through Supabase Edge Function proxies.
-8. **No Images in Project Root** - Save to `.dev/screenshots/` instead. PreToolUse hook enforces this.
-9. **WebKitGTK Parity (legacy, Tauri era)** - Tauri was replaced by Electron. Some patterns (`:force-fallback="true"` on vuedraggable, `dragData` singleton, deep-cloning for IndexedDB) may still be relevant. Full reference: [`docs/sop/SOP-060-webkitgtk-gotchas.md`](docs/sop/SOP-060-webkitgtk-gotchas.md).
+7. **Electron Build On Every Production Push (MANDATORY)** - Whenever you push to production (CI/CD `master` deploy, manual `rsync` of `dist/`, or any `VITE_SITE_URL` web deploy), you MUST also build and deploy an Electron update in the same release:
+    1. Bump `package.json` and `electron-builder.yml` version (patch increment).
+    2. Run `./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"`.
+    3. Verify `${VITE_SITE_URL}/updates/latest.json` reflects the new version.
+
+    Web PWA and Electron desktop share the same codebase. Shipping web-only leaves desktop users behind and silently breaks auto-update expectations. This extends rule 6 — it applies even when no Electron-specific code changed. Never ship web-only.
+8. **No Client-Side API Keys (BUG-1131)** - Build-time guard (`scripts/check-vite-secrets.cjs`) blocks non-allowlisted VITE_ vars. Cloud API keys go through Supabase Edge Function proxies.
+9. **No Images in Project Root** - Save to `.dev/screenshots/` instead. PreToolUse hook enforces this.
+10. **WebKitGTK Parity (legacy, Tauri era)** - Tauri was replaced by Electron. Some patterns (`:force-fallback="true"` on vuedraggable, `dragData` singleton, deep-cloning for IndexedDB) may still be relevant. Full reference: [`docs/sop/SOP-060-webkitgtk-gotchas.md`](docs/sop/SOP-060-webkitgtk-gotchas.md).
 
 ## Completion Protocol — See [Constitution](~/.claude/knowledge/constitution.md#completion-protocol) for full rules.
 

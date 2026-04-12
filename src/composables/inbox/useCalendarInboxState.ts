@@ -4,6 +4,7 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
 import { useSmartViews } from '@/composables/useSmartViews'
+import { useDirection } from '@/i18n/useDirection'
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
@@ -12,6 +13,7 @@ export function useCalendarInboxState() {
     const canvasStore = useCanvasStore()
     const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
     const { isTodayTask } = useSmartViews()
+    const { isRTL } = useDirection()
 
     // --- State ---
     const isCollapsed = ref(false)
@@ -191,8 +193,21 @@ export function useCalendarInboxState() {
         const dir = sortDirection.value === 'desc' ? -1 : 1
 
         if (sortBy.value === 'canvasOrder') {
-            // TASK-1412: Right-to-left group ordering + connection-aware DFS within each group
+            // TASK-1412 + BUG-1758: Direction-aware canvas-order sort — group X sort and
+            // task-row X tiebreaker both honor isRTL. Without the X tiebreaker, grid rows
+            // (tasks sharing the same Y) come out in arbitrary array order.
             const groups = canvasStore.groups || []
+
+            // Reading-order comparator: Y ascending primary (top→bottom),
+            // X direction-aware secondary (LTR: left→right, RTL: right→left).
+            const byReadingOrder = (a: Task, b: Task) => {
+                const ay = a.canvasPosition?.y ?? 0
+                const by = b.canvasPosition?.y ?? 0
+                if (ay !== by) return ay - by
+                const ax = a.canvasPosition?.x ?? 0
+                const bx = b.canvasPosition?.x ?? 0
+                return isRTL.value ? bx - ax : ax - bx
+            }
 
             // Build a map of parentId → tasks for DFS bucketing
             const buckets = new Map<string | null, Task[]>()
@@ -202,10 +217,14 @@ export function useCalendarInboxState() {
                 buckets.get(key)!.push(task)
             }
 
-            // Sort groups by X DESCENDING (rightmost first = right-to-left)
-            const sortedGroups = [...groups].sort((a, b) => (b.position?.x ?? 0) - (a.position?.x ?? 0))
+            // Group order: LTR = leftmost first (ASC), RTL = rightmost first (DESC)
+            const sortedGroups = [...groups].sort((a, b) => {
+                const ax = a.position?.x ?? 0
+                const bx = b.position?.x ?? 0
+                return isRTL.value ? bx - ax : ax - bx
+            })
 
-            // DFS: push a task then recursively push its children (by parentTaskId), sorted by y
+            // DFS: push a task then recursively push its children (by parentTaskId), in reading order
             const result: Task[] = []
             const visited = new Set<string>()
 
@@ -217,18 +236,18 @@ export function useCalendarInboxState() {
                 const siblings = buckets.get(task.parentId ?? null) ?? []
                 const children = siblings
                     .filter(t => t.parentTaskId === task.id && !visited.has(t.id))
-                    .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+                    .sort(byReadingOrder)
                 for (const child of children) dfs(child)
             }
 
-            // Process grouped tasks (rightmost group first)
+            // Process grouped tasks in direction-aware group order
             for (const group of sortedGroups) {
                 const bucket = buckets.get(group.id) ?? []
                 // Root tasks in this group: parentTaskId is null/undefined or points outside this bucket
                 const bucketIds = new Set(bucket.map(t => t.id))
                 const roots = bucket
                     .filter(t => !t.parentTaskId || !bucketIds.has(t.parentTaskId))
-                    .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+                    .sort(byReadingOrder)
                 for (const root of roots) dfs(root)
                 // Catch any remaining (orphaned cycles or unvisited)
                 for (const t of bucket) dfs(t)
@@ -239,7 +258,7 @@ export function useCalendarInboxState() {
             const ungroupedIds = new Set(ungroupedBucket.map(t => t.id))
             const ungroupedRoots = ungroupedBucket
                 .filter(t => !t.parentTaskId || !ungroupedIds.has(t.parentTaskId))
-                .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+                .sort(byReadingOrder)
             for (const root of ungroupedRoots) dfs(root)
             for (const t of ungroupedBucket) dfs(t)
 

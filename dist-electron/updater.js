@@ -13,7 +13,7 @@ function registerUpdater() {
     if (process.env.VITE_DEV_SERVER_URL)
         return;
     electron_updater_1.autoUpdater.autoDownload = false;
-    electron_updater_1.autoUpdater.autoInstallOnAppQuit = true;
+    electron_updater_1.autoUpdater.autoInstallOnAppQuit = false;
     // Forward events to renderer via IPC
     electron_updater_1.autoUpdater.on('update-available', (info) => {
         const win = electron_1.BrowserWindow.getAllWindows()[0];
@@ -55,6 +55,9 @@ function registerUpdater() {
         await electron_updater_1.autoUpdater.downloadUpdate();
     });
     electron_1.ipcMain.handle('updater:install', () => {
+        // Release single-instance lock before restart, otherwise the new process
+        // can't acquire the lock and immediately exits (appears as a crash).
+        electron_1.app.releaseSingleInstanceLock();
         // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
         electron_updater_1.autoUpdater.quitAndInstall(false, true);
     });

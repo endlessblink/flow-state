@@ -8,6 +8,20 @@
 
 ## Active Tasks
 
+### ~~BUG-1758~~: Inbox Canvas Order sort ignored X for same-Y rows (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-12)
+
+- Calendar, Board (Unified) and Mobile inboxes sorted canvas-order tasks by `canvasPosition.y` only
+- Grid rows (multiple tasks sharing a Y) came out in arbitrary array order instead of matching canvas reading order
+- Added an X tiebreaker driven by `useDirection().isRTL` (LTR: left→right, RTL: right→left)
+- Made group-level X sort direction-aware in the same pass (preserves existing RTL behavior, fixes LTR)
+- Confirmed root cause against the user's real DB: rows at y=210/440/670/900/1130 with 4 tasks each at distinct X
+
+**Files**: `src/composables/inbox/useCalendarInboxState.ts`, `src/composables/inbox/useUnifiedInboxState.ts`, `src/mobile/composables/useMobileInboxLogic.ts`, `src/composables/inbox/__tests__/useUnifiedInboxState.spec.ts`
+
+---
+
 ### ~~TASK-1756~~: Canvas day group date rotation + dynamic Today/Tomorrow dates (✅ DONE)
 
 **Priority**: P3 | **Status**: ✅ DONE (2026-04-11)

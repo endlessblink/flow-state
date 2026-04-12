@@ -764,37 +764,45 @@ const captureCurrentState = async (affectedIds?: string[]): Promise<UnifiedUndoS
 }
 
 /**
- * Track the state BEFORE an operation starts
- * Call this BEFORE performing the operation
+ * Handle returned by beginOperation and passed back to commitOperation.
+ * Each in-flight operation owns its own handle; there is no shared module-level
+ * state, so overlapping operations cannot clobber each other.
  */
-let pendingOperationBefore: UnifiedUndoState | null = null
-let pendingOperation: UndoOperation | null = null
+type OperationHandle = {
+  before: UnifiedUndoState
+  operation: UndoOperation
+}
 
-const beginOperation = async (operation: Omit<UndoOperation, 'timestamp'>) => {
+const beginOperation = async (operation: Omit<UndoOperation, 'timestamp'>): Promise<OperationHandle> => {
   // Pass affectedIds so captureCurrentState only clones the relevant tasks
-  pendingOperationBefore = await captureCurrentState(operation.affectedIds)
-  pendingOperation = {
-    ...operation,
-    timestamp: Date.now()
+  const before = await captureCurrentState(operation.affectedIds)
+  return {
+    before,
+    operation: {
+      ...operation,
+      timestamp: Date.now()
+    }
   }
 }
 
 /**
- * Complete the operation and save the undo entry
- * Call this AFTER performing the operation
+ * Complete the operation and save the undo entry.
+ * Pass the handle returned by beginOperation. No-arg call is retained as a
+ * safe no-op (warns and returns false) for paths like bulkMoveToInboxWithUndo
+ * that bypass the begin/commit API entirely (BUG-1739).
  */
-const commitOperation = async () => {
-  if (!pendingOperationBefore || !pendingOperation) {
+const commitOperation = async (handle?: OperationHandle) => {
+  if (!handle) {
     console.warn('⚠️ [UNDO] commitOperation called without beginOperation')
     return false
   }
 
-  const snapshotAfter = await captureCurrentState(pendingOperation.affectedIds)
+  const snapshotAfter = await captureCurrentState(handle.operation.affectedIds)
 
   // Push to operation stack (limit capacity to 30 to bound memory usage)
   operationStack.value.push({
-    operation: pendingOperation,
-    snapshotBefore: pendingOperationBefore,
+    operation: handle.operation,
+    snapshotBefore: handle.before,
     snapshotAfter
   })
   if (operationStack.value.length > 30) {
@@ -810,12 +818,7 @@ const commitOperation = async () => {
     commit()
   }
 
-  // Capture description before clearing
-  const operationDescription = pendingOperation.description
-
-  // Clear pending state
-  pendingOperationBefore = null
-  pendingOperation = null
+  const operationDescription = handle.operation.description
 
   console.log(`✅ [UNDO] Committed operation: ${operationDescription}`)
   return true
@@ -878,25 +881,18 @@ const deleteTaskWithUndo = async (taskId: string) => {
     return
   }
 
-  // BUG-309-B: Begin operation-aware tracking
-  await beginOperation({
+  const handle = await beginOperation({
     type: 'task-delete',
     affectedIds: [taskId],
     description: `Delete task: ${taskToDelete.title}`
   })
 
   try {
-    // Perform the deletion
     await taskStore.deleteTask(taskId, 'deleteTaskWithUndo')
-
-    // BUG-309-B: Commit the operation
     await nextTick()
-    await commitOperation()
+    await commitOperation(handle)
   } catch (error) {
     console.error('❌ deleteTaskWithUndo failed:', error)
-    // Clear pending operation on error
-    pendingOperationBefore = null
-    pendingOperation = null
     throw error
   }
 }
@@ -921,29 +917,23 @@ const permanentlyDeleteTaskWithUndo = async (taskId: string) => {
 
   console.log('🔴 [UNDO] Task found, capturing snapshot before deletion:', taskToDelete.title)
 
-  // BUG-309-B: Begin operation-aware tracking
-  await beginOperation({
+  const handle = await beginOperation({
     type: 'task-delete',
     affectedIds: [taskId],
     description: `Permanently delete task: ${taskToDelete.title}`
   })
 
-  console.log('🔴 [UNDO] beginOperation completed, pendingOperationBefore has', pendingOperationBefore?.tasks.length, 'tasks')
+  console.log('🔴 [UNDO] beginOperation completed, snapshot has', handle.before.tasks.length, 'tasks')
 
   try {
-    // Perform permanent deletion (hard delete from database)
     await taskStore.permanentlyDeleteTask(taskId)
     console.log('🔴 [UNDO] permanentlyDeleteTask completed')
 
-    // BUG-309-B: Commit the operation
     await nextTick()
-    await commitOperation()
+    await commitOperation(handle)
     console.log('🔴 [UNDO] commitOperation completed, operationStack length:', operationStack.value.length)
   } catch (error) {
     console.error('❌ permanentlyDeleteTaskWithUndo failed:', error)
-    // Clear pending operation on error
-    pendingOperationBefore = null
-    pendingOperation = null
     throw error
   }
 }
@@ -964,18 +954,17 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
   const isPositionUpdate = 'canvasPosition' in updates || 'parentId' in updates
   const operationType: UndoOperationType = isPositionUpdate ? 'task-move' : 'task-update'
 
-  await beginOperation({
+  const handle = await beginOperation({
     type: operationType,
     affectedIds: [taskId],
     description: `${operationType === 'task-move' ? 'Move' : 'Update'} task: ${taskToUpdate.title}`
   })
 
-  // Perform the update
-  await taskStore.updateTask(taskId, updates) // BUG-1051: AWAIT to ensure persistence
+  // BUG-1051: AWAIT to ensure persistence
+  await taskStore.updateTask(taskId, updates)
 
-  // BUG-309-B: Commit the operation
   await nextTick()
-  await commitOperation()
+  await commitOperation(handle)
 }
 
 const createTaskWithUndo = async (taskData: Partial<Task>) => {
@@ -984,27 +973,23 @@ const createTaskWithUndo = async (taskData: Partial<Task>) => {
     guardTaskCreation(taskData.title)
   }
 
-  // BUG-309-B: Begin operation-aware tracking (we don't know ID yet, will update)
-  await beginOperation({
+  // Begin tracking (we don't know ID yet, will update after creation)
+  const handle = await beginOperation({
     type: 'task-create',
-    affectedIds: [], // Will be updated after creation
+    affectedIds: [],
     description: `Create task: ${taskData.title || 'Untitled'}`
   })
 
-  // Create the task
-  // Dynamic import
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
   const newTask = await taskStore.createTask(taskData)
 
-  // BUG-309-B: Update affectedIds with the actual new task ID
-  if (pendingOperation && newTask) {
-    pendingOperation.affectedIds = [newTask.id]
+  if (newTask) {
+    handle.operation.affectedIds = [newTask.id]
   }
 
-  // BUG-309-B: Commit the operation
   await nextTick()
-  await commitOperation()
+  await commitOperation(handle)
   return newTask
 }
 
@@ -1012,30 +997,24 @@ const createTaskWithUndo = async (taskData: Partial<Task>) => {
 const createGroupWithUndo = async (groupData: Omit<CanvasGroup, 'id'>) => {
   const canvasStore = useCanvasStore()
 
-  // BUG-309-B: Begin operation-aware tracking
-  await beginOperation({
+  const handle = await beginOperation({
     type: 'group-create',
-    affectedIds: [], // Will be updated after creation
+    affectedIds: [],
     description: `Create group: ${groupData.name || 'Untitled'}`
   })
 
   try {
-    // Perform the creation
     const newGroup = await canvasStore.createGroup(groupData)
 
-    // BUG-309-B: Update affectedIds with the actual new group ID
-    if (pendingOperation && newGroup) {
-      pendingOperation.affectedIds = [newGroup.id]
+    if (newGroup) {
+      handle.operation.affectedIds = [newGroup.id]
     }
 
-    // BUG-309-B: Commit the operation
     await nextTick()
-    await commitOperation()
+    await commitOperation(handle)
     return newGroup
   } catch (error) {
     console.error('❌ createGroupWithUndo failed:', error)
-    pendingOperationBefore = null
-    pendingOperation = null
     throw error
   }
 }
@@ -1053,23 +1032,18 @@ const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup
   const isResizeUpdate = updates.position && ('width' in updates.position || 'height' in updates.position)
   const operationType: UndoOperationType = isResizeUpdate ? 'group-resize' : 'group-update'
 
-  await beginOperation({
+  const handle = await beginOperation({
     type: operationType,
     affectedIds: [groupId],
     description: `${operationType === 'group-resize' ? 'Resize' : 'Update'} group: ${groupToUpdate.name}`
   })
 
   try {
-    // Perform the update
     await canvasStore.updateGroup(groupId, updates)
-
-    // BUG-309-B: Commit the operation
     await nextTick()
-    await commitOperation()
+    await commitOperation(handle)
   } catch (error) {
     console.error('❌ updateGroupWithUndo failed:', error)
-    pendingOperationBefore = null
-    pendingOperation = null
     throw error
   }
 }
@@ -1083,24 +1057,18 @@ const deleteGroupWithUndo = async (groupId: string) => {
     return
   }
 
-  // BUG-309-B: Begin operation-aware tracking
-  await beginOperation({
+  const handle = await beginOperation({
     type: 'group-delete',
     affectedIds: [groupId],
     description: `Delete group: ${groupToDelete.name}`
   })
 
   try {
-    // Perform the deletion
     await canvasStore.deleteGroup(groupId)
-
-    // BUG-309-B: Commit the operation
     await nextTick()
-    await commitOperation()
+    await commitOperation(handle)
   } catch (error) {
     console.error('❌ deleteGroupWithUndo failed:', error)
-    pendingOperationBefore = null
-    pendingOperation = null
     throw error
   }
 }
@@ -1111,8 +1079,7 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
-  // BUG-309-B: Begin operation-aware tracking
-  await beginOperation({
+  const handle = await beginOperation({
     type: 'task-bulk-delete',
     affectedIds: [...taskIds],
     description: `Bulk delete ${taskIds.length} tasks`
@@ -1123,19 +1090,15 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
       await taskStore.bulkDeleteTasks(taskIds)
     } else {
       console.warn('⚠️ taskStore.bulkDeleteTasks not found, falling back to individual')
-      // Fallback for safety (though store should have it now)
       for (const id of taskIds) {
         await taskStore.deleteTask(id, 'deleteTaskWithUndo')
       }
     }
 
-    // BUG-309-B: Commit the operation
     await nextTick()
-    await commitOperation()
+    await commitOperation(handle)
   } catch (error) {
     console.error('❌ bulkDeleteTasksWithUndo failed:', error)
-    pendingOperationBefore = null
-    pendingOperation = null
     throw error
   }
 }
@@ -1302,8 +1265,6 @@ export function resetUndoSystem() {
   // BUG-309-B: Clear operation stacks
   operationStack.value = []
   redoOperationStack.value = []
-  pendingOperationBefore = null
-  pendingOperation = null
 
   if (typeof window !== 'undefined') {
     delete (window as Window & typeof globalThis).__pomoFlowUndoSystem

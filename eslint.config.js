@@ -266,5 +266,5 @@ export default [
       'vue/no-unused-components': 'off'
     }
   },
-  ...storybook.configs["flat/recommended"]
+
 ];

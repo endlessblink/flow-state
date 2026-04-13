@@ -1,5 +1,5 @@
-
-
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
 
 import js from '@eslint/js'
 import pluginVue from 'eslint-plugin-vue'
@@ -266,5 +266,5 @@ export default [
       'vue/no-unused-components': 'off'
     }
   },
-
+  ...storybook.configs["flat/recommended"]
 ];

@@ -63,6 +63,7 @@
               v-if="task.canvasPosition"
               class="reveal-canvas-btn"
               title="Show on Canvas"
+              aria-label="Show on Canvas"
               @click.stop="emit('revealTask', task)"
             >
               <Crosshair :size="14" />

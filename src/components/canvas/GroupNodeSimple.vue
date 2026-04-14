@@ -113,21 +113,23 @@ const emit = defineEmits([
 // Initialize Stores
 const canvasStore = useCanvasStore()
 
+const dataRef = computed(() => props.data as Record<string, any> | undefined)
+
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
-const section = computed(() => props.data?.section || props.data)
-const isCollapsed = computed(() => !!props.data?.isCollapsed)
+const section = computed(() => dataRef.value?.section || dataRef.value)
+const isCollapsed = computed(() => !!dataRef.value?.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh
 const groupColor = computed(() => {
-  const groupId = props.data?.id
-  if (!groupId) return props.data?.color || '#3b82f6'
+  const groupId = dataRef.value?.id
+  if (!groupId) return dataRef.value?.color || '#3b82f6'
   const storeGroup = canvasStore.groups.find(g => g.id === groupId)
-  return storeGroup?.color || props.data?.color || '#3b82f6'
+  return storeGroup?.color || dataRef.value?.color || '#3b82f6'
 })
 const taskCount = computed(() => {
-  const data = props.data as Record<string, unknown> | undefined
+  const data = dataRef.value
   const groupId = (data?.id as string) || props.id.replace(/^section-/, '')
   if (!groupId) return 0
 
@@ -142,7 +144,7 @@ const taskCount = computed(() => {
 })
 
 // Local State
-const sectionName = ref(props.data?.name || '')
+const sectionName = ref(dataRef.value?.name || '')
 
 // TASK-166: Date picker state for bi-directional day group editing
 const showDatePicker = ref(false)
@@ -236,26 +238,28 @@ function formatDateSuffix(date: Date): string {
 }
 
 // Watch for external name changes
-watch(() => props.data.name, (newName) => {
-  sectionName.value = newName
+watch(() => dataRef.value?.name, (newName) => {
+  if (newName !== undefined) {
+    sectionName.value = newName
+  }
 })
 
 const updateName = () => {
-  if (sectionName.value !== props.data.name) {
+  if (sectionName.value !== dataRef.value?.name) {
     emit('update', { name: sectionName.value })
   }
 }
 
 const toggleCollapse = () => {
   // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
-  const groupId = props.data?.id || props.id.replace('section-', '')
+  const groupId = dataRef.value?.id || props.id.replace('section-', '')
   canvasStore.toggleSectionCollapse(groupId)
 }
 
 // TASK-068: Removed toggleAutoCollect - feature consolidated
 
 const handleContextMenu = (event: MouseEvent) => {
-  emit('contextMenu', event, props.data)
+  emit('contextMenu', event, dataRef.value)
 }
 
 // Resize event handlers

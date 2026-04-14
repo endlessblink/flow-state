@@ -84,7 +84,7 @@
             v-for="column in categoryColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as Task['status']"
             :tasks="tasksByCategory[column.key] || []"
             column-type="category"
             swimlane-id="category"
@@ -105,7 +105,7 @@
             v-for="column in priorityColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as Task['status']"
             :tasks="tasksByPriority[column.key]"
             column-type="priority"
             :swimlane-id="project.id"
@@ -159,7 +159,7 @@ interface Props {
   currentFilter?: 'today' | 'week' | null
   density?: 'ultrathin' | 'compact' | 'comfortable' | 'spacious'
   showDoneColumn?: boolean
-  viewType?: 'priority' | 'date' | 'category' | 'list'
+  viewType?: 'status' | 'priority' | 'date' | 'category' | 'list'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -175,7 +175,7 @@ const emit = defineEmits<{
   editTask: [taskId: string]
   deleteTask: [taskId: string]
   moveTask: [taskId: string, newStatus: Task['status']]
-  addTask: [payload: { columnKey: string, projectId: string, viewType: 'priority' | 'date' | 'category' | 'list' }]
+  addTask: [payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' | 'category' | 'list' }]
   contextMenu: [event: MouseEvent, task: Task]
   groupContextMenu: [event: MouseEvent, project: Project]
 }>()

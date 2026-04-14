@@ -94,6 +94,10 @@ export interface AppSettings {
     aiSetupComplete: boolean
     aiPreferredProvider: 'auto' | 'groq' | 'ollama' | 'openrouter'
 
+    // TASK-1327: Weekly Plan AI Settings
+    weeklyPlanProvider: 'auto' | 'groq' | 'ollama' | 'openrouter'
+    weeklyPlanModel: string
+
     // FEATURE-1162: Saved Views / Smart Filters
     savedViews: SavedView[]
 
@@ -281,6 +285,10 @@ export const useSettingsStore = defineStore('settings', {
         groqApiKey: '',
         aiSetupComplete: false,
         aiPreferredProvider: 'auto' as 'auto' | 'groq' | 'ollama' | 'openrouter',
+
+        // TASK-1327: Weekly Plan AI Settings
+        weeklyPlanProvider: 'auto' as 'auto' | 'groq' | 'ollama' | 'openrouter',
+        weeklyPlanModel: '',
 
         // FEATURE-1162: Saved Views defaults
         savedViews: [],

@@ -175,6 +175,7 @@
 import { computed, ref, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, CheckCircle2, Search, X, Layers } from 'lucide-vue-next'
+import type { Project } from '@/stores/tasks'
 import { NBadge, NPopover } from 'naive-ui'
 import InboxToolbar from './InboxToolbar.vue'
 import type { Task } from '@/types/tasks'
@@ -200,7 +201,7 @@ const props = defineProps<{
   hideDoneTasks: boolean
   doneTaskCount: number
   baseTasks: Task[]
-  rootProjects: unknown[]
+  rootProjects: Project[]
   context: string
   sortBy: SortByType // TASK-1073
   sortDirection: SortDirection // TASK-1412

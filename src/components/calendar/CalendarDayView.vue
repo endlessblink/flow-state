@@ -7,7 +7,7 @@ import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot, PositionedExternalEvent } from '@/composables/calendar/useCalendarDayView'
 import type { ComputedRef } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   timeSlots: TimeSlot[]
   hours: number[]
   isViewingToday: boolean

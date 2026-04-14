@@ -147,6 +147,8 @@
 import { ref, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, Search, X } from 'lucide-vue-next'
+import type { Project } from '@/stores/tasks'
+import type { SelectOption } from '@/types/common'
 import { NBadge } from 'naive-ui'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -162,7 +164,7 @@ defineProps<{
   todayCount: number
   hasActiveFilters: boolean
   baseCount: number
-  canvasGroupOptions: unknown[]
+  canvasGroupOptions: SelectOption[]
   selectedCanvasGroups: Set<string>
   showAdvancedFilters: boolean
   unscheduledOnly: boolean
@@ -171,7 +173,7 @@ defineProps<{
   selectedDurations: Set<DurationCategory>
   hideDoneTasks: boolean
   baseTasks: Task[]
-  rootProjects: unknown[]
+  rootProjects: Project[]
   searchQuery: string // TASK-1075
   sortBy?: SortByType // TASK-1303
   sortDirection?: SortDirection // TASK-1412

@@ -1,0 +1,3 @@
+## 2024-05-14 - Keyboard Accessible Input Add-ons
+**Learning:** Interactive elements placed inside BaseInput.vue's `#suffix` or `#prefix` slots (like password visibility toggles) do not automatically inherit focus visibility from the parent input, and developers sometimes add `tabindex="-1"` to prevent them from trapping focus. This makes them inaccessible to keyboard users.
+**Action:** When adding interactive add-ons to inputs, ensure they are focusable (do not use `tabindex="-1"`) and manually add `:focus-visible` styling (e.g., `outline: 2px solid var(--brand-primary); outline-offset: 2px;`) to the scoped elements to match the app's established focus patterns.

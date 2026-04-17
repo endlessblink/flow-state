@@ -88,6 +88,10 @@ import { Position } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 // TASK-167: Direct import to ensure latest logic
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+// TASK-1756: Shared date math — header and rotation must agree
+import { getDayGroupDate, formatDayGroupSuffix } from '@/utils/dayGroupDate'
+// TASK-1756: Reactive today ref — invalidates header suffix at midnight
+import { useCurrentDay } from '@/composables/useCurrentDay'
 // TASK-166: Date picker for bi-directional day group editing
 import { NPopover, NDatePicker } from 'naive-ui'
 
@@ -144,6 +148,9 @@ const taskCount = computed(() => {
 // Local State
 const sectionName = ref(props.data?.name || '')
 
+// TASK-1756: Reactive "today" — shared across all group nodes; flips at midnight.
+const today = useCurrentDay()
+
 // TASK-166: Date picker state for bi-directional day group editing
 const showDatePicker = ref(false)
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -151,21 +158,21 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 // Get the current target date as timestamp for the date picker
 const currentTargetTimestamp = computed(() => {
   const currentName = sectionName.value
-  if (!currentName) return Date.now()
+  if (!currentName) return today.value.getTime()
 
   const explicitKeyword = detectPowerKeyword(currentName)
   if (!explicitKeyword || explicitKeyword.category !== 'day_of_week') {
-    return Date.now()
+    return today.value.getTime()
   }
 
   const targetDayIndex = parseInt(explicitKeyword.value, 10)
-  if (isNaN(targetDayIndex)) return Date.now()
+  if (isNaN(targetDayIndex)) return today.value.getTime()
 
-  const today = new Date()
-  const daysUntilTarget = ((7 + targetDayIndex - today.getDay()) % 7) || 7
-  const targetDate = new Date(today)
-  targetDate.setDate(today.getDate() + daysUntilTarget)
-  return targetDate.getTime()
+  const hasTodayOrTomorrow = canvasStore.groups.some((g) => {
+    const kw = detectPowerKeyword(g.name)
+    return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
+  })
+  return getDayGroupDate(targetDayIndex, today.value, hasTodayOrTomorrow).getTime()
 })
 
 // Handle date selection from picker
@@ -182,7 +189,9 @@ const handleDateSelect = (timestamp: number | null) => {
   showDatePicker.value = false
 }
 
-// TASK-130: Compute upcoming date for day-of-week, Today, and Tomorrow groups
+// TASK-130 / TASK-1756: Compute upcoming date for day-of-week, Today, and
+// Tomorrow groups using the shared helper so header matches rotation dueDate.
+// Depends on the reactive `today` ref → the suffix re-renders at midnight.
 const dayOfWeekDateSuffix = computed(() => {
   const currentName = sectionName.value
   if (!currentName) return null
@@ -190,17 +199,16 @@ const dayOfWeekDateSuffix = computed(() => {
   const explicitKeyword = detectPowerKeyword(currentName)
   if (!explicitKeyword) return null
 
-  const today = new Date()
+  const now = today.value
 
-  // Today/Tomorrow smart groups — show current date dynamically
   if (explicitKeyword.category === 'date') {
     if (explicitKeyword.keyword === 'today') {
-      return formatDateSuffix(today)
+      return formatDayGroupSuffix(now)
     }
     if (explicitKeyword.keyword === 'tomorrow') {
-      const tmrw = new Date(today)
+      const tmrw = new Date(now)
       tmrw.setDate(tmrw.getDate() + 1)
-      return formatDateSuffix(tmrw)
+      return formatDayGroupSuffix(tmrw)
     }
     return null
   }
@@ -210,30 +218,13 @@ const dayOfWeekDateSuffix = computed(() => {
   const targetDayIndex = parseInt(explicitKeyword.value, 10)
   if (isNaN(targetDayIndex)) return null
 
-  // Calculate next occurrence
-  let daysUntilTarget = ((7 + targetDayIndex - today.getDay()) % 7) || 7
-
-  // If Today/Tomorrow groups exist on canvas, skip dates they already cover.
-  // E.g., if tomorrow is Thursday, the "Thursday" group shows NEXT Thursday.
   const hasTodayOrTomorrow = canvasStore.groups.some((g) => {
     const kw = detectPowerKeyword(g.name)
     return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
   })
-  if (hasTodayOrTomorrow && daysUntilTarget <= 1) {
-    daysUntilTarget += 7
-  }
 
-  const targetDate = new Date(today)
-  targetDate.setDate(today.getDate() + daysUntilTarget)
-  return formatDateSuffix(targetDate)
+  return formatDayGroupSuffix(getDayGroupDate(targetDayIndex, now, hasTodayOrTomorrow))
 })
-
-function formatDateSuffix(date: Date): string {
-  const d = date.getDate()
-  const m = date.getMonth() + 1
-  const y = date.getFullYear().toString().slice(-2)
-  return `${d}.${m}.${y}`
-}
 
 // Watch for external name changes
 watch(() => props.data.name, (newName) => {

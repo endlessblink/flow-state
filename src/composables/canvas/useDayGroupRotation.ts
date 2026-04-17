@@ -21,6 +21,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
 import { positionManager } from '@/services/canvas/PositionManager'
+import { getDayGroupDate, toDateString } from '@/utils/dayGroupDate'
 
 export interface DayGroupRotationOptions {
   /** Called with Vue Flow node moves after position rotation. Caller applies via updateNode(). */
@@ -41,39 +42,14 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
 
   /**
    * Compute the next calendar date that falls on the given JS day-of-week index.
-   * If Today/Tomorrow smart-groups exist on the canvas, dates that fall on today
-   * or tomorrow are skipped (pushed to next week) since those groups already
-   * cover them.
+   * Delegates to shared helper so the group header and rotation agree.
    */
   function getNextOccurrence(dayIndex: number): Date {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const currentDay = today.getDay()
-    let daysUntil = dayIndex - currentDay
-    if (daysUntil < 0) daysUntil += 7
-
-    // If Today/Tomorrow groups exist, skip dates they cover (today=0, tomorrow=1)
     const hasTodayOrTomorrow = canvasStore.groups.some((g) => {
       const kw = detectPowerKeyword(g.name)
       return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
     })
-    if (hasTodayOrTomorrow && daysUntil <= 1) {
-      daysUntil += 7
-    }
-
-    const result = new Date(today)
-    result.setDate(result.getDate() + daysUntil)
-    return result
-  }
-
-  /**
-   * Format a Date as YYYY-MM-DD (local time).
-   */
-  function toDateString(date: Date): string {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
+    return getDayGroupDate(dayIndex, new Date(), hasTodayOrTomorrow)
   }
 
   /**

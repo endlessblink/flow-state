@@ -110,6 +110,17 @@ app.get('/api/status', (req, res) => {
     });
 });
 
+// POST /api/config/project — switch active project at runtime
+app.post('/api/config/project', express.json(), (req, res) => {
+    const { masterPlanPath } = req.body || {};
+    if (!masterPlanPath) return res.status(400).json({ error: 'masterPlanPath required' });
+    const resolved = path.resolve(masterPlanPath);
+    if (!fs.existsSync(resolved)) return res.status(404).json({ error: 'File not found: ' + resolved });
+    process.env.MASTER_PLAN_PATH = resolved;
+    console.log('[Config] Active project switched to:', resolved);
+    res.json({ ok: true, masterPlanPath: resolved });
+});
+
 // API Endpoint to get MASTER_PLAN.md content
 app.get('/api/master-plan', (req, res) => {
     // Default to ../docs/MASTER_PLAN.md relative to this script
@@ -811,6 +822,9 @@ app.get('/api/locks', (req, res) => {
 
 // Control Room routes (projects/enriched, notes, settings, covers, kickstart, etc.)
 require('./controlroom/api')(app);
+
+// VPS monitoring routes (services, health, logs, restart)
+require('./vps/api')(app);
 
 // SSE Endpoint for live updates
 app.get('/api/events', (req, res) => {

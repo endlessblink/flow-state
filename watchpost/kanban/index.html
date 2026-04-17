@@ -4499,6 +4499,13 @@
       }
     });
     // ===== END LIVE FILE SYNC =====
+
+    // Listen for project switch from parent frame
+    window.addEventListener('message', (e) => {
+      if (e.data?.type === 'switch-project') {
+        renderKanban();
+      }
+    });
   </script>
 </body>
 

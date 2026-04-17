@@ -758,6 +758,42 @@
             position: relative;
             overflow: hidden;
             flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .card-cover-activate-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            font-size: var(--font-sm);
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .card-cover:hover .card-cover-activate-hint {
+            opacity: 1;
+        }
+
+        .card-cover.disabled {
+            cursor: default;
+        }
+
+        .card-cover.disabled .card-cover-gradient {
+            filter: saturate(0.75) brightness(0.85);
+        }
+
+        .card-cover.disabled:hover .card-cover-activate-hint {
+            opacity: 0;
         }
 
         .card-cover-gradient {
@@ -981,6 +1017,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        .list-thumb.disabled {
+            cursor: default;
+            filter: saturate(0.75) brightness(0.85);
         }
 
         .list-thumb-initial {
@@ -2023,6 +2064,30 @@
             color: var(--text-subtle);
             backdrop-filter: blur(4px);
         }
+
+        .no-kanban-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            padding: 0.175rem 0.5rem;
+            background: rgba(59, 130, 246, 0.16);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: var(--radius-full);
+            font-size: var(--font-xs);
+            color: #93c5fd;
+            backdrop-filter: blur(4px);
+            z-index: 2;
+        }
+
+        .list-kanban-badge {
+            flex-shrink: 0;
+            padding: 0.125rem 0.45rem;
+            background: rgba(59, 130, 246, 0.16);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: var(--radius-full);
+            font-size: var(--font-xs);
+            color: #93c5fd;
+        }
     </style>
 </head>
 <body>
@@ -2729,15 +2794,18 @@ function cardHtml(p) {
     const initial = p.name.charAt(0);
     const gradient = projectGradient(p.name);
     const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/cover no-repeat` : `background: ${gradient}`;
+    const hasKanban = !!p.masterPlan;
 
     return `
     <div class="project-card${p.archived ? ' archived' : ''} ${getProjectStatusClass(p)}" data-name="${escHtml(p.name)}">
-        <div class="card-cover">
+        <div class="card-cover${hasKanban ? '' : ' disabled'}"${hasKanban ? ' data-action="activate" title="Activate project"' : ' title="No kanban available"'}>
             <div class="card-cover-gradient" style="${coverStyle}">
                 ${!p.cover ? `<span class="card-cover-initial">${escHtml(initial)}</span>` : ''}
             </div>
+            ${!hasKanban ? '<span class="no-kanban-badge">No kanban</span>' : ''}
             ${p.cover ? `<div class="card-cover-overlay-name">${escHtml(p.name)}</div>` : ''}
             ${p.archived ? '<span class="archived-badge">Archived</span>' : ''}
+            ${hasKanban ? '<div class="card-cover-activate-hint"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg> Activate</div>' : ''}
         </div>
         <div class="card-body" data-action="open">
             ${!p.cover ? `<div class="card-name">${escHtml(p.name)}</div>` : ''}
@@ -2773,13 +2841,15 @@ function listRowHtml(p) {
     const initial = p.name.charAt(0);
     const gradient = projectGradient(p.name);
     const coverStyle = p.cover ? `background: url(${escHtml(p.cover)}) center/cover no-repeat` : `background: ${gradient}`;
+    const hasKanban = !!p.masterPlan;
 
     return `
     <div class="list-row${p.archived ? ' archived' : ''} ${getProjectStatusClass(p)}" data-name="${escHtml(p.name)}">
-        <div class="list-thumb" style="${coverStyle}">
+        <div class="list-thumb${hasKanban ? '' : ' disabled'}"${hasKanban ? ' data-action="activate"' : ''} style="${coverStyle};${hasKanban ? 'cursor:pointer;' : ''}" title="${hasKanban ? 'Activate project' : 'No kanban available'}">
             ${!p.cover ? `<span class="list-thumb-initial">${escHtml(initial)}</span>` : ''}
         </div>
         <span class="list-name" data-action="open">${escHtml(p.name)}</span>
+        ${!hasKanban ? '<span class="list-kanban-badge">No kanban</span>' : ''}
         <div class="list-stats">
             <span class="list-stat done">${p.stats.done}</span>
             <span class="list-stat active">${p.stats.active}</span>
@@ -2841,6 +2911,34 @@ function bindCardEvents(container, rowSelector) {
         if (action === 'more') {
             e.stopPropagation();
             showContextMenu(e, name);
+            return;
+        }
+
+        if (action === 'activate') {
+            e.stopPropagation();
+            const project = allProjects.find(p => p.name === name);
+            if (!project) return;
+            if (!project.masterPlan) {
+                showToast('This project has no MASTER_PLAN.md registered yet.', 'error');
+                return;
+            }
+
+            const switchResult = await apiFetch('/api/config/project', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ masterPlanPath: project.masterPlan })
+            });
+
+            if (!switchResult?.ok) {
+                showToast('Failed to switch project. Kanban was not changed.', 'error');
+                return;
+            }
+
+            activeProjectPath = project.root;
+            const topbar = document.getElementById('topbarProjectName');
+            if (topbar) topbar.textContent = project.name;
+            renderHeroCard();
+            window.parent.postMessage({ type: 'activate-and-navigate', project: name }, '*');
             return;
         }
 

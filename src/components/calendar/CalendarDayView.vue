@@ -495,8 +495,15 @@ const onSlotsScroll = (e: Event) => {
   transition: opacity var(--duration-fast);
 }
 
-.slot-task:hover .task-actions {
+.slot-task:hover .task-actions,
+.slot-task:focus-within .task-actions {
   opacity: 1;
+}
+
+.play-timer-btn:focus-visible,
+.remove-from-calendar-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
 }
 
 .task-meta {

@@ -600,10 +600,19 @@ watch(newTaskTitle, () => {
 }
 
 .quick-item:hover .quick-item-action,
+.quick-item:focus-within .quick-item-action,
 .quick-item:hover .quick-item-play,
+.quick-item:focus-within .quick-item-play,
 .quick-item--focused .quick-item-action,
 .quick-item--focused .quick-item-play {
     opacity: 1;
+}
+
+.quick-item-action:focus-visible,
+.quick-item-play:focus-visible,
+.quick-task-trigger:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
 }
 
 .quick-item-action:hover {

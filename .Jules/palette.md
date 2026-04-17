@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility issue pattern: Keyboard inaccessibility for hover-revealed action buttons
+**Learning:** Action buttons within Kanban cards, lists, calendar items (`.task-actions`), and dropdowns (like `.quick-item-action`, `.quick-item-play` in `QuickTaskDropdown.vue`) are often hidden behind a hover state (`opacity: 0`). Because there is no `:focus-within` selector on the parent and no `:focus-visible` styles on the buttons themselves, keyboard-only users cannot see or interact with these actions.
+**Action:** When action buttons are hover-revealed, always add `:focus-within` to the parent container so they become visible when a user tabs into them, and apply proper `:focus-visible` styles to the buttons.

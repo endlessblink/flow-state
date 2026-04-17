@@ -28,6 +28,20 @@ function uniqueTasksById(tasks: Task[]): Task[] {
     })
 }
 
+function getTodayStr(): string {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+}
+
+function isDateToday(dateStr?: string): boolean {
+    if (!dateStr) return false
+    return dateStr.trim().substring(0, 10) === getTodayStr()
+}
+
 export function useUnifiedInboxState(props: InboxContextProps) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
@@ -114,6 +128,30 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         return options
     })
 
+    const hasScheduledInstanceToday = (task: Task): boolean => {
+        if (task.instances && task.instances.length > 0) {
+            return task.instances.some(inst => isDateToday(inst?.scheduledDate))
+        }
+
+        return isDateToday(task.scheduledDate)
+    }
+
+    const matchesCalendarInboxTodayFilter = (task: Task): boolean => {
+        if (isTodayTask(task)) return true
+
+        // Calendar inbox should still surface due-today tasks even when calendar
+        // instances live on another date. Otherwise "set to today" disappears as
+        // soon as the Today filter is enabled.
+        return props.context === 'calendar' && isDateToday(task.dueDate)
+    }
+
+    const shouldShowDueTodayTaskInCalendarInbox = (task: Task): boolean => {
+        if (props.context !== 'calendar') return false
+        if (!isDateToday(task.dueDate) || hasScheduledInstanceToday(task)) return false
+
+        return true
+    }
+
     // --- Filter Logic ---
 
     // Base Inbox Tasks (Filtered by global rules + context rules)
@@ -153,7 +191,11 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // that belong in the calendar inbox (unless scheduled on the calendar grid).
             const isOnCanvas = !!task.canvasPosition
             const isAlreadyOnCalendar = task.instances?.some(inst => inst.scheduledDate) ?? false
-            if (!task.isInInbox && !(props.context === 'calendar' && isOnCanvas && !isAlreadyOnCalendar)) {
+            const shouldBypassInboxGate = props.context === 'calendar' && (
+                shouldShowDueTodayTaskInCalendarInbox(task) ||
+                (isOnCanvas && !isAlreadyOnCalendar)
+            )
+            if (!task.isInInbox && !shouldBypassInboxGate) {
                 return false
             }
 
@@ -168,6 +210,13 @@ export function useUnifiedInboxState(props: InboxContextProps) {
                 const isScheduledOnCalendar = task.instances &&
                     task.instances.length > 0 &&
                     task.instances.some(inst => inst.scheduledDate)
+
+                // Keep due-today tasks visible in the default calendar inbox even when they
+                // have a calendar instance elsewhere. Otherwise they disappear from both the
+                // inbox and today's calendar, which makes "set for today" feel broken.
+                if (isScheduledOnCalendar && shouldShowDueTodayTaskInCalendarInbox(task)) {
+                    return true
+                }
 
                 if (isOnCanvas && isScheduledOnCalendar) {
                     // Include if any canvas-related filter is active
@@ -210,7 +259,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     })
 
     const todayCount = computed(() => {
-        return baseInboxTasks.value.filter(task => isTodayTask(task)).length
+        return baseInboxTasks.value.filter(task => matchesCalendarInboxTodayFilter(task)).length
     })
 
     const next3DaysCount = computed(() => {
@@ -243,7 +292,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         if (timeFilter !== 'all') {
             tasks = tasks.filter(task => {
                 switch (timeFilter) {
-                    case 'today': return isTodayTask(task)
+                    case 'today': return matchesCalendarInboxTodayFilter(task)
                     case 'next3days': return isNext3DaysTask(task)
                     case 'week': return isWeekTask(task)
                     case 'month': return isThisMonthTask(task)
@@ -337,7 +386,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         const hasTimeFilter = timeFilter !== 'all'
         const timeCheck = (task: Task) => {
             switch (timeFilter) {
-                case 'today': return isTodayTask(task)
+                case 'today': return matchesCalendarInboxTodayFilter(task)
                 case 'next3days': return isNext3DaysTask(task)
                 case 'week': return isWeekTask(task)
                 case 'month': return isThisMonthTask(task)

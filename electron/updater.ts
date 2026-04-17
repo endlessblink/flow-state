@@ -59,8 +59,15 @@ export function registerUpdater() {
     // Release single-instance lock before restart, otherwise the new process
     // can't acquire the lock and immediately exits (appears as a crash).
     app.releaseSingleInstanceLock()
-    // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
-    autoUpdater.quitAndInstall(false, true)
+    // Return from IPC first, then hand off to the updater on the next tick.
+    // Calling quitAndInstall() inline from an invoke handler can leave the
+    // renderer stuck in a half-dead state while the app is trying to exit.
+    setImmediate(() => {
+      // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
+      autoUpdater.quitAndInstall(false, true)
+    })
+
+    return true
   })
 
   // Check for updates after 5s delay

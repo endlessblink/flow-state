@@ -50,6 +50,35 @@ export function isTauri(): boolean {
 
 ## Development
 
+## Default Agent Workflow
+
+- For FlowState feature work and bug fixes, treat Electron as the default validation target.
+- If the user is expected to test the change in the desktop app, do not stop at `npm run dev` or browser-only verification.
+- If the user is expected to receive the change via Electron auto-update, you must bump the app version first. Rebuilding and redeploying the same version will not produce an update prompt.
+- Minimum desktop build step for handoff:
+
+```bash
+npm run electron:build
+```
+
+- If the goal is to validate install/update behavior, continue to packaging and deploy/update steps below.
+
+Updater delivery checklist:
+
+```bash
+# 1. Bump version
+# edit package.json (and keep package-lock.json root version aligned if touched)
+
+# 2. Build/package
+npm run electron:build
+
+# 3. Deploy to VPS feed
+VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "..."
+
+# 4. Verify public manifest
+curl -fsSL https://in-theflow.com/updates/electron/latest-linux.yml
+```
+
 **Two-terminal workflow:**
 
 ```bash
@@ -73,13 +102,17 @@ npm run electron:preview   # Builds + runs production Electron
 ## Production Build
 
 ```bash
-# Step 1: Build Vue app with Electron mode flag
+# Preferred one-command build
+npm run electron:build
+
+# Equivalent manual steps:
+# 1: Build Vue app with Electron mode flag
 ELECTRON_BUILD=true npm run build
 
-# Step 2: Compile Electron main process (TypeScript → CommonJS)
+# 2: Compile Electron main process (TypeScript → CommonJS)
 npm run electron:build-main
 
-# Step 3: Package with electron-builder
+# 3: Package with electron-builder
 npx electron-builder --config electron-builder.yml --linux
 ```
 

@@ -18,10 +18,24 @@ Or use the `/next` skill to get scored task recommendations.
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
 
+## Electron-First Rule
+
+- For FlowState changes that the user may need to test in the desktop app or receive through the desktop updater, always build the Electron app, not just the web app.
+- Default verification/build target for desktop-facing work:
+  - `npm run electron:build`
+- If the user needs to update through Electron, version bumping is mandatory before build and deploy. Without a newer version, the updater has nothing to detect.
+- Required updater delivery flow:
+  - bump version
+  - build Electron
+  - deploy update artifacts to VPS
+  - verify `https://in-theflow.com/updates/electron/latest-linux.yml`
+- If a packaged artifact is specifically needed for install/update validation, follow the Electron SOP and package with `electron-builder`.
+- Do not stop after browser-only verification when the change is expected to be tested or updated through Electron.
+
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Add tasks to MASTER_PLAN.md
-2. **Run quality gates** (if code changed) - Tests, linters, builds
+2. **Run quality gates** (if code changed) - Tests, linters, Electron build
 3. **Update task status** - Mark done tasks in MASTER_PLAN.md (all 3 locations)
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash

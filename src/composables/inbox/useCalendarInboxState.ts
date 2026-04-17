@@ -76,10 +76,29 @@ export function useCalendarInboxState() {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     }
 
+    const isDateToday = (dateStr?: string): boolean => {
+        if (!dateStr) return false
+        return dateStr.trim().substring(0, 10) === getTodayStr()
+    }
+
     // Helper: Check if task is scheduled
     const isScheduledOnCalendar = (task: Task): boolean => {
         if (!task.instances || task.instances.length === 0) return false
         return task.instances.some(inst => inst.scheduledDate)
+    }
+
+    const isScheduledForToday = (task: Task): boolean => {
+        if (task.instances && task.instances.length > 0) {
+            return task.instances.some(inst => isDateToday(inst?.scheduledDate))
+        }
+
+        return isDateToday(task.scheduledDate)
+    }
+
+    const shouldShowDueTodayTask = (task: Task): boolean => {
+        if (!isDateToday(task.dueDate) || isScheduledForToday(task)) return false
+
+        return true
     }
 
     // Helper: Check if task is due today (status-agnostic, with proper date normalization)
@@ -111,6 +130,10 @@ export function useCalendarInboxState() {
             // This lets users see their canvas tasks via these filters.
             // Without canvas filters, scheduled canvas tasks stay hidden (they're already on the calendar grid).
             const isOnCanvas = !!task.canvasPosition
+            if (isScheduledOnCalendar(task) && shouldShowDueTodayTask(task)) {
+                return true
+            }
+
             if (isOnCanvas && isScheduledOnCalendar(task)) {
                 const hasCanvasFilter = selectedCanvasGroups.value.size > 0
                 const hasCanvasSort = sortBy.value === 'canvasOrder'

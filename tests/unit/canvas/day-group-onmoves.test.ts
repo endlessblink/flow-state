@@ -109,7 +109,8 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    const moves = rotateDayGroupPositions()
+    const { moves, release } = rotateDayGroupPositions()
+    release()
 
     expect(moves.length).toBeGreaterThan(0)
     for (const move of moves) {
@@ -189,7 +190,8 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     })
 
     const { rotateDayGroupPositions } = useDayGroupRotation({ getNodePosition })
-    const moves = rotateDayGroupPositions()
+    const { moves, release } = rotateDayGroupPositions()
+    release()
 
     // Slots are the Vue Flow Xs sorted: [1000, 1350]. Wed (today) → slot 0 = 1000.
     const wedMove = moves.find((m) => m.nodeId === 'section-grp-wed')

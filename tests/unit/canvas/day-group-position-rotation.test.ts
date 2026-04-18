@@ -157,7 +157,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     // Manual trigger should still work — flag only gates midnight auto-trigger
     expect(updateGroup).toHaveBeenCalled()
@@ -182,7 +182,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     // weekStartsOn=1 (Mon). Normalized day indices (Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6)
     // Today Wed = normalized 2. Distances: Wed=0, Thu=1, Fri=2, Sat=3, Sun=4, Mon=5, Tue=6
@@ -227,7 +227,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     // Today=Wed(3), startFrom=Fri(5) because Today+Tomorrow exist
     // weekStart=1(Mon). Normalized: Mon=0,Tue=1,Wed=2,Thu=3,Fri=4,Sat=5,Sun=6
@@ -265,7 +265,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     // Slots sorted by X: 0, 350, 700
     // Groups sorted by distance from Wed (3):
@@ -302,7 +302,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([childTask])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     // Wed (today) → slot X=0, delta = 0 - 350 = -350
     // child should be called with x: 100 + (-350) = -250, y: 50 + 0 = 50
@@ -346,7 +346,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([childOfMon])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     // Mon dist from Wed=3: (1 - 3 + 7) % 7 = 5 → slot[1] = X=350, delta = +350
     const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
@@ -368,7 +368,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     expect(updateGroup).not.toHaveBeenCalled()
     expect(updateTask).not.toHaveBeenCalled()
@@ -388,7 +388,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     expect(updateGroup).not.toHaveBeenCalled()
     expect(updateTask).not.toHaveBeenCalled()
@@ -411,7 +411,7 @@ describe('rotateDayGroupPositions()', () => {
     })
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     // At least one group moved, so updateGroup was called with sync=true
     expect(syncStates.length).toBeGreaterThan(0)
@@ -434,7 +434,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     // Only 1 day-of-week group found → less than 2, no rotation
     expect(updateGroup).not.toHaveBeenCalled()
@@ -462,12 +462,67 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(tasks)
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions()
+    rotateDayGroupPositions().release()
 
     const taskCalls = updateTask.mock.calls as Array<[string, unknown, string]>
     expect(taskCalls.length).toBeGreaterThan(0)
     taskCalls.forEach(([_id, _update, source]) => {
       expect(source).toBe('DRAG')
     })
+  })
+
+  // --------------------------------------------------------------------------
+  // Test 10 (TASK-1756 v2): Stacked groups → canonical row layout
+  // --------------------------------------------------------------------------
+
+  it('10: stacked day groups (identical X) are laid out into a canonical row', () => {
+    // All three groups spawn at the exact same default position
+    const mon = makeGroup({ id: 'grp-mon', name: 'Monday',    position: { x: 0, y: 0, width: 350, height: 600 } })
+    const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const fri = makeGroup({ id: 'grp-fri', name: 'Friday',    position: { x: 0, y: 0, width: 350, height: 600 } })
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, wed, fri])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
+
+    const { rotateDayGroupPositions } = useDayGroupRotation()
+    const { moves, release } = rotateDayGroupPositions()
+    release()
+
+    // Today = Wednesday (2026-04-08, dayIndex 3). weekStartsOn=1 (Monday).
+    // Normalized: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+    // Distances from Wed(2): Wed=0, Fri=2, Mon=5 → slot indices 0, 1, 2
+    // GROUP_SPACING = 420, origin X = 0, origin Y = 0
+    // Wed already sits at slot 0 (deltaX=0) so it's skipped from the moves
+    // array — only Fri (→ 420) and Mon (→ 840) produce moves.
+    const byNode = new Map(moves.map((m) => [m.nodeId, m.position.x]))
+    expect(byNode.get('section-' + fri.id)).toBe(420)
+    expect(byNode.get('section-' + mon.id)).toBe(840)
+    // And the store should have been updated for Fri and Mon via updateGroup
+    const groupIdsUpdated = updateGroup.mock.calls.map(([id]: [string]) => id)
+    expect(groupIdsUpdated).toContain(fri.id)
+    expect(groupIdsUpdated).toContain(mon.id)
+  })
+
+  // --------------------------------------------------------------------------
+  // Test 11 (TASK-1756 v2): canvasSyncInProgress is held until release()
+  // --------------------------------------------------------------------------
+
+  it('11: rotateDayGroupPositions keeps canvasSyncInProgress true until release() is called', () => {
+    const mon = makeGroup({ id: 'grp-mon', name: 'Monday',    position: { x:   0, y: 0, width: 350, height: 600 } })
+    const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, wed])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
+
+    const { rotateDayGroupPositions } = useDayGroupRotation()
+    const { release } = rotateDayGroupPositions()
+
+    // Flag must still be held — the sync gate protects applyDayGroupMoves
+    expect(mockCanvasSyncInProgress.value).toBe(true)
+
+    release()
+    expect(mockCanvasSyncInProgress.value).toBe(false)
+
+    // release() is idempotent
+    release()
+    expect(mockCanvasSyncInProgress.value).toBe(false)
   })
 })

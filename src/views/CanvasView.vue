@@ -304,7 +304,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, markRaw, onMounted, onUnmounted } from 'vue'
+import { ref, markRaw, nextTick, onMounted, onUnmounted } from 'vue'
 import { VueFlow, useVueFlow, type NodeMouseEvent } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
@@ -382,8 +382,13 @@ const dayRotation = useDayGroupRotation({
 
 function handleRotateDayGroups() {
   dayRotation.rotateDayGroups()
-  const moves = dayRotation.rotateDayGroupPositions()
+  // TASK-1756 v2: rotateDayGroupPositions holds canvasSyncInProgress until
+  // release() is called. Apply moves to Vue Flow first, then release on
+  // nextTick so syncStoreToCanvas can't flush BUG-1504 preservation with
+  // stale getNodes.value and revert the rotation visually.
+  const { moves, release } = dayRotation.rotateDayGroupPositions()
   applyDayGroupMoves(moves)
+  nextTick(release)
 }
 
 // Initialize Orchestrator

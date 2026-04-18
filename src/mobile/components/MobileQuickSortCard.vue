@@ -93,10 +93,10 @@ defineProps<{
   task: Task | null
 }>()
 const emit = defineEmits<{
-  (e: 'swipe-right'): void
-  (e: 'swipe-left'): void
-  (e: 'swipe-up'): void
-  (e: 'swipe-down'): void
+  (e: 'swipeRight'): void
+  (e: 'swipeLeft'): void
+  (e: 'swipeUp'): void
+  (e: 'swipeDown'): void
 }>()
 
 const cardRef = ref<HTMLElement | null>(null)
@@ -116,10 +116,10 @@ const {
   onSwipeStart: () => onSwipeStartCapture(),
   onSwipeEnd: () => onSwipeEndCapture(),
   onSwipeCancel: () => onSwipeEndCapture(),
-  onSwipeRight: () => emit('swipe-right'),
-  onSwipeLeft: () => emit('swipe-left'),
-  onSwipeUp: () => emit('swipe-up'),
-  onSwipeDown: () => emit('swipe-down')
+  onSwipeRight: () => emit('swipeRight'),
+  onSwipeLeft: () => emit('swipeLeft'),
+  onSwipeUp: () => emit('swipeUp'),
+  onSwipeDown: () => emit('swipeDown')
 })
 
 // BUG-1453: Capture card's viewport position when swipe starts so we can

@@ -157,4 +157,8 @@ pnpm-lock.yaml
 # Cursor AI
 .cursorrules
 .watchpost/
+
+# Per-project plugin runtime state
+watchpost/.claude/
+watchpost/.omc/
 release/

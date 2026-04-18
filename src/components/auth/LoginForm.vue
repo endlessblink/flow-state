@@ -51,7 +51,6 @@
               type="button"
               class="password-toggle"
               :aria-label="showPassword ? 'Hide password' : 'Show password'"
-              tabindex="-1"
               @click="showPassword = !showPassword"
             >
               <EyeIcon v-if="!showPassword" class="icon" />
@@ -286,6 +285,12 @@ async function handleSubmit() {
 .password-toggle:hover {
   color: var(--text-primary);
   background: var(--surface-hover);
+}
+
+.password-toggle:focus-visible {
+  outline: var(--space-0_5) solid var(--color-work);
+  outline-offset: var(--space-0_5);
+  box-shadow: 0 0 0 var(--space-1) rgba(var(--color-success), 0.1);
 }
 
 .password-toggle .icon {

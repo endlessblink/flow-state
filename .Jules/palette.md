@@ -1,0 +1,3 @@
+## 2025-02-28 - Removed tabindex from auth toggle buttons
+**Learning:** Found instances where `tabindex="-1"` was manually added to interactive action buttons within form inputs (like password visibility toggles in `LoginForm.vue` and `SignupForm.vue`). This explicit setting actively removes crucial interactive elements from the sequential keyboard navigation flow.
+**Action:** Interactive form elements or actions injected into input slots (like `#suffix`) must naturally receive focus via standard tab order. If custom styles are needed, `:focus-visible` styling should be explicitly provided instead of disabling tab accessibility.

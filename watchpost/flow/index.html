@@ -423,6 +423,371 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 3px; }
+
+    /* ─── Sprint-focused view (active when MASTER_PLAN has `### Current sprint framing`) ── */
+    .sprint-layout {
+      position: absolute; inset: 0;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      background: var(--surface-primary);
+    }
+    .sprint-layout[hidden] { display: none; }
+
+    .sprint-sidebar {
+      background: var(--surface-secondary);
+      border-right: 1px solid var(--border-subtle);
+      padding: 14px 0;
+      overflow-y: auto;
+    }
+    .sprint-sidebar-header {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--text-subtle);
+      padding: 4px 18px 12px;
+      text-transform: uppercase;
+    }
+    .sprint-item {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-left: 3px solid transparent;
+      color: var(--text-muted);
+      text-align: left;
+      padding: 10px 16px 10px 15px;
+      cursor: pointer;
+      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+      font: inherit;
+    }
+    .sprint-item:hover {
+      background: var(--surface-hover);
+      color: var(--text-secondary);
+    }
+    .sprint-item:focus-visible {
+      outline: 2px solid var(--color-flow);
+      outline-offset: -2px;
+    }
+    .sprint-item.active {
+      background: rgba(99, 102, 241, 0.08);
+      border-left-color: var(--color-flow);
+      color: var(--text-primary);
+    }
+    .sprint-item-letter {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--color-flow);
+      opacity: 0.85;
+    }
+    .sprint-item-name {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 3px 0 6px;
+      line-height: 1.25;
+    }
+    .sprint-item-progress {
+      height: 3px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .sprint-item-progress-fill {
+      height: 100%;
+      background: #22c55e;
+      transition: width 300ms ease-out;
+    }
+    .sprint-item-counts {
+      font-size: 10.5px;
+      color: var(--text-subtle);
+      margin-top: 5px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sprint-item-counts .pill {
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .sprint-item-counts .pill.ready  { color: #22c55e; background: rgba(34,197,94,0.08); }
+    .sprint-item-counts .pill.active { color: #f59e0b; background: rgba(245,158,11,0.08); }
+
+    .sprint-main {
+      padding: 28px 36px;
+      overflow-y: auto;
+    }
+    .sprint-main-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 4px;
+    }
+    .sprint-main-header .sub {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+    .sprint-main-header .sub b.ready { color: #22c55e; }
+    .sprint-main-header .sub b.active { color: #f59e0b; }
+    .sprint-main-header .sub b.blocked { color: #ef4444; }
+
+    .bucket {
+      margin-top: 28px;
+    }
+    .bucket-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-subtle);
+      margin-bottom: 12px;
+    }
+    .bucket-title .accent { font-size: 14px; font-weight: 700; }
+    .bucket-title.in-progress .accent { color: #f59e0b; }
+    .bucket-title.ready .accent { color: #22c55e; }
+    .bucket-title.next .accent { color: #6366f1; }
+    .bucket-title .count {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 10px;
+      letter-spacing: 0;
+      font-size: 10px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .task-card {
+      position: relative;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-left-width: 3px;
+      border-radius: 8px;
+      padding: 12px 14px 14px;
+      cursor: pointer;
+      transition: border-color 120ms ease, transform 90ms ease, background 120ms ease;
+      min-height: 96px;
+    }
+    .task-card:hover {
+      background: var(--surface-tertiary);
+      border-color: var(--border-medium);
+    }
+    .task-card:focus-visible {
+      outline: 2px solid var(--color-flow);
+      outline-offset: 2px;
+    }
+    .task-card:active { transform: scale(0.98); }
+    .task-card.p0 { border-left-color: #ef4444; }
+    .task-card.p1 { border-left-color: #f59e0b; }
+    .task-card.p2 { border-left-color: #8b949e; }
+    .task-card.selected {
+      border-color: var(--color-flow);
+      box-shadow: 0 0 0 1px var(--color-flow) inset;
+    }
+    .task-card-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .task-card-id {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.02em;
+    }
+    .task-card-priority {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+    .task-card-priority.p0 { color: #ef4444; background: rgba(239,68,68,0.1); }
+    .task-card-priority.p1 { color: #f59e0b; background: rgba(245,158,11,0.1); }
+    .task-card-priority.p2 { color: #8b949e; background: rgba(139,148,158,0.1); }
+    .task-card-status {
+      margin-left: auto;
+      font-size: 9.5px;
+      font-weight: 600;
+      color: var(--text-subtle);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .task-card-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .task-card-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .task-card-actions .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 5px;
+      background: rgba(99, 102, 241, 0.1);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      cursor: pointer;
+      transition: all 120ms ease;
+      font-family: inherit;
+    }
+    .task-card-actions .btn:hover {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: var(--color-flow);
+      color: var(--text-primary);
+    }
+    .task-card-actions .btn.secondary {
+      background: transparent;
+      border-color: var(--border-medium);
+      color: var(--text-muted);
+    }
+    .task-card-actions .btn.secondary:hover {
+      color: var(--text-primary);
+      background: var(--surface-hover);
+    }
+    .task-card-wait {
+      font-size: 10.5px;
+      color: #ef4444;
+      margin-top: 6px;
+    }
+
+    .next-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px;
+    }
+    .next-row {
+      display: grid;
+      grid-template-columns: 28px 110px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 120ms ease;
+      color: var(--text-secondary);
+      font-size: 12.5px;
+    }
+    .next-row:hover { background: var(--surface-hover); }
+    .next-row:focus-visible {
+      outline: 2px solid var(--color-flow);
+      outline-offset: -2px;
+    }
+    .next-row-num {
+      color: var(--text-subtle);
+      font-size: 10px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .next-row-id {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .next-row-title {
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .next-row-blocker {
+      color: #ef4444;
+      font-size: 10.5px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .sprint-empty {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed var(--border-medium);
+      border-radius: 8px;
+      padding: 22px;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .sprint-empty b { color: var(--text-primary); }
+    .sprint-empty .blocker-list {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .sprint-empty .blocker-list .blocker {
+      padding: 3px 8px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: #fca5a5;
+      font-size: 11px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .remaining-toggle {
+      margin-top: 24px;
+      background: transparent;
+      border: 1px dashed var(--border-medium);
+      color: var(--text-muted);
+      padding: 10px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+      width: 100%;
+      text-align: left;
+    }
+    .remaining-toggle:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
+    .remaining-table {
+      margin-top: 12px;
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .remaining-table th {
+      text-align: left;
+      padding: 6px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .remaining-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+    .remaining-table tr:hover td { background: var(--surface-hover); cursor: pointer; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sprint-item-progress-fill { transition: none; }
+      .task-card { transition: none; }
+      .task-card:active { transform: none; }
+    }
   </style>
 </head>
 <body>
@@ -518,6 +883,15 @@
         <button id="zoom-in" title="Zoom in">+</button>
         <button id="zoom-out" title="Zoom out">−</button>
       </div>
+
+      <!-- Sprint-focused view (hidden unless MASTER_PLAN has `### Current sprint framing`) -->
+      <div class="sprint-layout" id="sprint-layout" hidden>
+        <nav class="sprint-sidebar" aria-label="Sprints">
+          <div class="sprint-sidebar-header">Delivery Spine</div>
+          <div id="sprint-list" role="list"></div>
+        </nav>
+        <main class="sprint-main" id="sprint-main" aria-labelledby="sprint-heading"></main>
+      </div>
     </div>
 
     <aside class="side-pane" id="side-pane">
@@ -528,7 +902,7 @@
           <line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         Click a task for details.<br>
-        Left columns are earlier in the flow; right columns depend on them. Top-3 recommended tasks glow teal.
+        In sprint mode, the left sidebar is the delivery spine. Each sprint shows what's ready to start now, what's next, and what's still blocked.
       </div>
     </aside>
   </div>
@@ -561,6 +935,7 @@
 
     /* ─── State ─────────────────────────────────────────────────────── */
     let allTasks = [];
+    let rawMarkdown = '';
     let selectedId = null;
     let eventSource = null;
     let reconnectAttempts = 0;
@@ -1068,6 +1443,17 @@
 
     function renderGraph() {
       const tasks = allTasks;
+
+      // ── Two-mode dispatch: if MASTER_PLAN has a `### Current sprint framing`
+      //    block, render the focused sprint view instead of the streams graph.
+      const sprints = parseSprintFraming(rawMarkdown);
+      if (sprints.length > 0) {
+        setViewMode('sprint');
+        renderSprintView(tasks, sprints);
+        return;
+      }
+      setViewMode('streams');
+
       const edgeMap = extractEdges(tasks);
       const recommended = rankTasks(tasks, edgeMap);
 
@@ -1309,6 +1695,439 @@
     function truncate(str, n) {
       if (!str) return '';
       return str.length > n ? str.slice(0, n - 1) + '…' : str;
+    }
+
+    /* ─── Sprint framing parser ─────────────────────────────────────
+       Returns [] if the MASTER_PLAN has no `### Current sprint framing` block.
+       Otherwise returns:
+         [{ letter: 'A', name: 'Recording Infrastructure', ids: ['TASK-013', 'TASK-086', ...] }, ...]
+    ─────────────────────────────────────────────────────────────── */
+    function parseSprintFraming(markdown) {
+      if (!markdown || !/###\s+Current\s+sprint\s+framing/i.test(markdown)) return [];
+      const sprintRe = /^\s*\d+\.\s*\*\*Sprint\s+([A-Z])\s*[-–—]+\s*(.+?)\*\*:\s*(.+)$/gm;
+      const sprints = [];
+      let m;
+      while ((m = sprintRe.exec(markdown))) {
+        const letter = m[1];
+        const name = m[2].trim();
+        const ids = m[3].match(/(?:TASK|BUG|ISSUE|FEATURE|ROAD)-\d+/g) || [];
+        sprints.push({ letter, name, ids });
+      }
+      return sprints;
+    }
+
+    /* ─── Sprint-focused renderer ────────────────────────────────── */
+    let selectedSprintLetter = null;
+    let showRemaining = false;
+
+    function classifySprintTasks(sprint, taskById) {
+      const buckets = { inProgress: [], ready: [], blocked: [], done: [], unknown: [] };
+      for (const id of sprint.ids) {
+        const t = taskById.get(id);
+        if (!t) { buckets.unknown.push({ id }); continue; }
+        if (t.status === 'done') { buckets.done.push(t); continue; }
+        if (t.status === 'in-progress') { buckets.inProgress.push(t); continue; }
+        const unfinished = (t.dependsOn || []).filter(d => {
+          const b = taskById.get(d);
+          return b && b.status !== 'done';
+        });
+        if (unfinished.length === 0) buckets.ready.push(t);
+        else buckets.blocked.push({ ...t, unfinishedBlockerIds: unfinished });
+      }
+      return buckets;
+    }
+
+    function renderSprintSidebar(sprints, taskById) {
+      const list = document.getElementById('sprint-list');
+      list.innerHTML = '';
+      sprints.forEach((sp, i) => {
+        const b = classifySprintTasks(sp, taskById);
+        const total = sp.ids.length;
+        const done = b.done.length;
+        const pct = total ? Math.round((done / total) * 100) : 0;
+
+        const btn = document.createElement('button');
+        btn.className = 'sprint-item' + (sp.letter === selectedSprintLetter ? ' active' : '');
+        btn.type = 'button';
+        btn.setAttribute('role', 'listitem');
+        btn.setAttribute('aria-current', sp.letter === selectedSprintLetter ? 'page' : 'false');
+        btn.dataset.letter = sp.letter;
+        btn.dataset.index = String(i);
+
+        const countsBits = [];
+        if (b.inProgress.length) countsBits.push(`<span class="pill active">${b.inProgress.length} active</span>`);
+        if (b.ready.length)      countsBits.push(`<span class="pill ready">${b.ready.length} ready</span>`);
+
+        btn.innerHTML = `
+          <div class="sprint-item-letter">SPRINT ${sp.letter}</div>
+          <div class="sprint-item-name">${escapeHtml(sp.name)}</div>
+          <div class="sprint-item-progress"><div class="sprint-item-progress-fill" style="width:${pct}%"></div></div>
+          <div class="sprint-item-counts">
+            <span class="pill">${done}/${total} done</span>
+            ${countsBits.join('')}
+          </div>
+        `;
+        btn.addEventListener('click', () => selectSprint(sp.letter));
+        btn.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const dir = e.key === 'ArrowDown' ? 1 : -1;
+            const next = sprints[i + dir];
+            if (next) {
+              selectSprint(next.letter);
+              requestAnimationFrame(() => {
+                const el = document.querySelector(`.sprint-item[data-letter="${next.letter}"]`);
+                if (el) el.focus();
+              });
+            }
+          }
+        });
+        list.appendChild(btn);
+      });
+    }
+
+    function renderSprintMain(sprint, taskById) {
+      const main = document.getElementById('sprint-main');
+      if (!sprint) {
+        main.innerHTML = '<div class="sprint-empty">No sprint selected.</div>';
+        return;
+      }
+      const b = classifySprintTasks(sprint, taskById);
+      const activeTotal = b.inProgress.length + b.ready.length + b.blocked.length;
+
+      // Fully done?
+      if (activeTotal === 0 && b.done.length > 0) {
+        main.innerHTML = `
+          <div class="sprint-main-header">
+            <h1 id="sprint-heading">Sprint ${sprint.letter} — ${escapeHtml(sprint.name)}</h1>
+            <div class="sub"><b>🎉 Complete</b> — ${b.done.length} task${b.done.length === 1 ? '' : 's'} shipped.</div>
+          </div>
+          <div class="sprint-empty" style="margin-top:24px;">
+            All tasks in this sprint are done. Use the sidebar to switch to the next sprint.
+          </div>
+        `;
+        focusSprintHeading();
+        return;
+      }
+
+      // Fully blocked (nothing ready or in-progress)?
+      if (b.inProgress.length === 0 && b.ready.length === 0 && b.blocked.length > 0) {
+        // Find cross-sprint blockers (blockers that are outside this sprint's id list)
+        const sprintIds = new Set(sprint.ids);
+        const crossBlockers = new Set();
+        for (const t of b.blocked) {
+          for (const bid of t.unfinishedBlockerIds || []) {
+            if (!sprintIds.has(bid)) crossBlockers.add(bid);
+          }
+        }
+        const chips = [...crossBlockers]
+          .map(id => `<span class="blocker" data-id="${id}">${id}</span>`)
+          .join('') || '<span style="color:var(--text-subtle)">(all blockers inside this sprint)</span>';
+        main.innerHTML = `
+          <div class="sprint-main-header">
+            <h1 id="sprint-heading">Sprint ${sprint.letter} — ${escapeHtml(sprint.name)}</h1>
+            <div class="sub">${b.done.length} done · <b class="blocked">${b.blocked.length} blocked</b> · 0 ready</div>
+          </div>
+          <div class="sprint-empty" style="margin-top:24px;">
+            <b>Sprint ${sprint.letter} is fully blocked.</b><br>
+            Finish these prerequisite tasks first (they live outside this sprint):
+            <div class="blocker-list">${chips}</div>
+          </div>
+        `;
+        wireBlockerChips(main, taskById);
+        focusSprintHeading();
+        return;
+      }
+
+      // Normal render
+      const headerHTML = `
+        <div class="sprint-main-header">
+          <h1 id="sprint-heading">Sprint ${sprint.letter} — ${escapeHtml(sprint.name)}</h1>
+          <div class="sub">
+            ${b.done.length} done ·
+            <b class="active">${b.inProgress.length} in progress</b> ·
+            <b class="ready">${b.ready.length} ready</b> ·
+            <b class="blocked">${b.blocked.length} blocked</b>
+          </div>
+        </div>
+      `;
+
+      // Ready card pool — fill with ready tasks, top up to 4 from soonest-blocked if short
+      const MAX_READY_CARDS = 4;
+      const readyCards = b.ready.slice(0, MAX_READY_CARDS);
+      const fillerSlots = MAX_READY_CARDS - readyCards.length;
+      const blockedQueue = b.blocked.slice();
+      const fillerCards = fillerSlots > 0
+        ? blockedQueue.splice(0, fillerSlots).map(t => ({ ...t, _filler: true }))
+        : [];
+
+      const inProgressCardsHTML = b.inProgress.length
+        ? `<section class="bucket" aria-labelledby="bucket-inprogress">
+             <div class="bucket-title in-progress" id="bucket-inprogress">
+               <span class="accent">▶ In progress</span>
+               <span class="count">${b.inProgress.length}</span>
+             </div>
+             <div class="cards-grid">${b.inProgress.map(t => cardHTML(t, { action: 'kanban', status: 'IN PROGRESS' })).join('')}</div>
+           </section>`
+        : '';
+
+      const readyCardsHTML = (readyCards.length + fillerCards.length) > 0
+        ? `<section class="bucket" aria-labelledby="bucket-ready">
+             <div class="bucket-title ready" id="bucket-ready">
+               <span class="accent">✓ Ready now</span>
+               <span class="count">${readyCards.length}${fillerCards.length ? ` + ${fillerCards.length} soon` : ''}</span>
+             </div>
+             <div class="cards-grid">
+               ${readyCards.map(t => cardHTML(t, { action: 'start', status: 'READY' })).join('')}
+               ${fillerCards.map(t => cardHTML(t, { action: 'soon', status: 'SOON', wait: t.unfinishedBlockerIds })).join('')}
+             </div>
+           </section>`
+        : (b.inProgress.length === 0 ? `
+           <section class="bucket">
+             <div class="bucket-title ready">
+               <span class="accent">✓ Ready now</span>
+               <span class="count">0</span>
+             </div>
+             <div class="sprint-empty">All active tasks in this sprint are in progress or blocked.</div>
+           </section>` : '');
+
+      const remainingBlocked = blockedQueue; // after filler removed from front
+      const upNextRows = remainingBlocked.slice(0, 3);
+      const upNextHTML = upNextRows.length
+        ? `<section class="bucket" aria-labelledby="bucket-next">
+             <div class="bucket-title next" id="bucket-next">
+               <span class="accent">⋯ Up next</span>
+               <span class="count">${upNextRows.length}</span>
+             </div>
+             <div class="next-list" role="list">
+               ${upNextRows.map((t, i) => nextRowHTML(t, i + 1)).join('')}
+             </div>
+           </section>`
+        : '';
+
+      const extraBlocked = remainingBlocked.slice(3);
+      const doneHidden = b.done;
+      const remainingCount = extraBlocked.length + doneHidden.length;
+      const remainingHTML = remainingCount > 0
+        ? `<button class="remaining-toggle" id="toggle-remaining" aria-expanded="${showRemaining}">
+             ${showRemaining ? '▾' : '▸'} Show remaining ${remainingCount} task${remainingCount === 1 ? '' : 's'}
+           </button>
+           ${showRemaining ? remainingTableHTML([...extraBlocked, ...doneHidden]) : ''}`
+        : '';
+
+      main.innerHTML = headerHTML + inProgressCardsHTML + readyCardsHTML + upNextHTML + remainingHTML;
+      wireCardClicks(main, taskById);
+      focusSprintHeading();
+    }
+
+    function cardHTML(t, opts = {}) {
+      const pclass = t.priority === 'high' ? 'p0' : t.priority === 'medium' ? 'p1' : t.priority === 'low' ? 'p2' : '';
+      const plabel = t.priority === 'high' ? 'P0' : t.priority === 'medium' ? 'P1' : t.priority === 'low' ? 'P2' : '';
+      const statusLabel = opts.status || '';
+      const waitLine = opts.wait && opts.wait.length
+        ? `<div class="task-card-wait">waits for ${opts.wait[0]}${opts.wait.length > 1 ? ` +${opts.wait.length - 1}` : ''}</div>`
+        : '';
+      const primary = opts.action === 'start'
+        ? `<button class="btn" data-action="start" data-id="${t.id}" aria-label="Start ${t.id} in Kanban">▶ Start now</button>`
+        : opts.action === 'kanban'
+          ? `<button class="btn" data-action="kanban" data-id="${t.id}" aria-label="Open ${t.id} in Kanban">▶ Continue</button>`
+          : opts.action === 'soon'
+            ? `<button class="btn secondary" data-action="details" data-id="${t.id}" aria-label="See details for ${t.id}">See blocker</button>`
+            : '';
+      return `
+        <article class="task-card ${pclass}" data-id="${t.id}" tabindex="0" role="button" aria-label="${t.id}: ${escapeAttr(t.title)}">
+          <div class="task-card-top">
+            <span class="task-card-id">${t.id}</span>
+            ${plabel ? `<span class="task-card-priority ${pclass}">${plabel}</span>` : ''}
+            ${statusLabel ? `<span class="task-card-status">${statusLabel}</span>` : ''}
+          </div>
+          <div class="task-card-title">${escapeHtml(t.title || '')}</div>
+          ${waitLine}
+          <div class="task-card-actions">${primary}</div>
+        </article>
+      `;
+    }
+
+    function nextRowHTML(t, n) {
+      const blocker = (t.unfinishedBlockerIds || [])[0];
+      const more = (t.unfinishedBlockerIds || []).length - 1;
+      return `
+        <div class="next-row" data-id="${t.id}" tabindex="0" role="listitem">
+          <span class="next-row-num">${n}.</span>
+          <span class="next-row-id">${t.id}</span>
+          <span class="next-row-title">${escapeHtml(t.title || '')}</span>
+          <span class="next-row-blocker">← waits for ${blocker || '?'}${more > 0 ? ` +${more}` : ''}</span>
+        </div>
+      `;
+    }
+
+    function remainingTableHTML(tasks) {
+      const rows = tasks.map(t => {
+        const st = statusLabel(t.status);
+        const pr = t.priority === 'high' ? 'P0' : t.priority === 'medium' ? 'P1' : t.priority === 'low' ? 'P2' : '';
+        const blockers = (t.unfinishedBlockerIds || []).join(', ') || (t.dependsOn || []).join(', ') || '—';
+        return `<tr data-id="${t.id}">
+          <td><b>${t.id}</b></td>
+          <td>${escapeHtml(t.title || '')}</td>
+          <td>${st}</td>
+          <td>${pr}</td>
+          <td style="color:var(--text-subtle)">${blockers}</td>
+        </tr>`;
+      }).join('');
+      return `<table class="remaining-table">
+        <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Pri</th><th>Deps</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    }
+
+    function wireCardClicks(root, taskById) {
+      root.querySelectorAll('.task-card').forEach(card => {
+        const id = card.dataset.id;
+        card.addEventListener('click', (e) => {
+          const actionEl = e.target.closest('[data-action]');
+          if (actionEl) {
+            const action = actionEl.dataset.action;
+            if (action === 'start' || action === 'kanban') {
+              window.parent.postMessage({ type: 'activate-and-navigate', target: 'kanban', taskId: id }, '*');
+            } else {
+              openTaskDetail(id);
+            }
+            e.stopPropagation();
+            return;
+          }
+          openTaskDetail(id);
+        });
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openTaskDetail(id);
+          }
+        });
+      });
+      root.querySelectorAll('.next-row').forEach(row => {
+        const id = row.dataset.id;
+        row.addEventListener('click', () => openTaskDetail(id));
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTaskDetail(id); }
+        });
+      });
+      root.querySelectorAll('.remaining-table tr[data-id]').forEach(row => {
+        row.addEventListener('click', () => openTaskDetail(row.dataset.id));
+      });
+      const toggleBtn = root.querySelector('#toggle-remaining');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          showRemaining = !showRemaining;
+          const sprint = currentSprints.find(s => s.letter === selectedSprintLetter);
+          if (sprint) renderSprintMain(sprint, new Map(allTasks.map(t => [t.id, t])));
+        });
+      }
+    }
+
+    function wireBlockerChips(root, taskById) {
+      root.querySelectorAll('.blocker[data-id]').forEach(chip => {
+        chip.addEventListener('click', () => openTaskDetail(chip.dataset.id));
+      });
+    }
+
+    function openTaskDetail(id) {
+      selectedId = id;
+      const t = allTasks.find(x => x.id === id);
+      if (t) {
+        // Ensure computed fields exist for the side panel (blockers, unblocks)
+        if (!t.blockerIds || !t.unfinishedBlockerIds) {
+          const taskById = new Map(allTasks.map(x => [x.id, x]));
+          const blockers = t.dependsOn || [];
+          t.blockerIds = blockers;
+          t.unfinishedBlockerIds = blockers.filter(b => {
+            const bt = taskById.get(b);
+            return bt && bt.status !== 'done';
+          });
+          t.unblocks = t.unblocks || [];
+          t.isReady = t.status !== 'done' && t.unfinishedBlockerIds.length === 0;
+          t.isBlocked = t.status !== 'done' && t.unfinishedBlockerIds.length > 0;
+        }
+      }
+      renderSidePanel(t || null);
+      // Reflect selection on the card
+      document.querySelectorAll('.task-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.id === id);
+      });
+    }
+
+    function focusSprintHeading() {
+      // Non-destructive focus: only moves focus if user hasn't focused something else
+      // (i.e., avoid stealing focus mid-interaction). Skip focus if active element is inside main.
+      const active = document.activeElement;
+      if (active && (active.closest('.sprint-main') || active.closest('.sprint-sidebar'))) return;
+      const h = document.getElementById('sprint-heading');
+      if (h) {
+        h.setAttribute('tabindex', '-1');
+        h.focus({ preventScroll: true });
+      }
+    }
+
+    let currentSprints = [];
+
+    function selectSprint(letter) {
+      if (letter === selectedSprintLetter) return;
+      selectedSprintLetter = letter;
+      showRemaining = false;
+      try { localStorage.setItem('watchpost-flow-sprint', letter); } catch (e) {}
+      const taskById = new Map(allTasks.map(t => [t.id, t]));
+      const sprint = currentSprints.find(s => s.letter === letter);
+      renderSprintSidebar(currentSprints, taskById);
+      renderSprintMain(sprint, taskById);
+    }
+
+    function renderSprintView(tasks, sprints) {
+      currentSprints = sprints;
+      const taskById = new Map(tasks.map(t => [t.id, t]));
+
+      // Resolve selected sprint: saved → first
+      let letter = selectedSprintLetter
+        || localStorage.getItem('watchpost-flow-sprint')
+        || (sprints[0] && sprints[0].letter);
+      if (!sprints.find(s => s.letter === letter)) letter = sprints[0]?.letter;
+      selectedSprintLetter = letter;
+
+      // Toolbar stats (reuse existing spots but show sprint-scoped numbers)
+      updateSprintStats(sprints, taskById);
+
+      renderSprintSidebar(sprints, taskById);
+      const sprint = sprints.find(s => s.letter === letter);
+      renderSprintMain(sprint, taskById);
+    }
+
+    function updateSprintStats(sprints, taskById) {
+      const sprint = sprints.find(s => s.letter === selectedSprintLetter) || sprints[0];
+      if (!sprint) return;
+      const b = classifySprintTasks(sprint, taskById);
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('stat-ready',   b.ready.length);
+      set('stat-blocked', b.blocked.length);
+      set('stat-active',  b.inProgress.length);
+      set('stat-review',  0);
+      set('stat-overdue', 0);
+    }
+
+    function setViewMode(mode) {
+      const graphPane = document.getElementById('graph');
+      const emptyEl = document.getElementById('empty-state');
+      const legendEl = document.querySelector('.legend');
+      const zoomEl = document.querySelector('.zoom-controls');
+      const layoutEl = document.getElementById('sprint-layout');
+      const isSprint = mode === 'sprint';
+      if (graphPane) graphPane.style.display = isSprint ? 'none' : '';
+      if (emptyEl) emptyEl.style.display = isSprint ? 'none' : '';
+      if (legendEl) legendEl.style.display = isSprint ? 'none' : '';
+      if (zoomEl) zoomEl.style.display = isSprint ? 'none' : '';
+      if (layoutEl) layoutEl.hidden = !isSprint;
+      // Toolbar toggles that only apply to streams view
+      ['toggle-rank-labels', 'toggle-auto-infer', 'toggle-inferred', 'fit-view'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = isSprint ? 'none' : '';
+      });
     }
 
     function renderStats(tasks) {
@@ -1575,7 +2394,8 @@
         const res = await fetch(`${API_BASE}/api/master-plan`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        allTasks = parseMasterPlan(json.content || '');
+        rawMarkdown = json.content || '';
+        allTasks = parseMasterPlan(rawMarkdown);
         renderGraph();
         if (shouldFit) requestAnimationFrame(() => requestAnimationFrame(fitView));
       } catch (err) {

@@ -210,31 +210,22 @@ describe('TASK-1593: Build Safety', () => {
   // Test 4 — Version strings are consistent across the three canonical files
   // ---------------------------------------------------------------------------
 
-  it('4. package.json version matches tauri.conf.json and Cargo.toml versions', () => {
+  it('4. package.json has a valid semver version (Electron desktop stack)', () => {
+    // Historical note: this test used to assert the package.json version
+    // matched src-tauri/tauri.conf.json and src-tauri/Cargo.toml. The project
+    // migrated from Tauri to Electron; the src-tauri/ directory is archived
+    // and those files no longer track the active desktop version. Electron
+    // reads the version directly from package.json (electron-builder.yml uses
+    // ${version} templating), so package.json is the single source of truth.
     const pkgVersion: string = JSON.parse(
       readFileSync(join(ROOT, 'package.json'), 'utf-8')
     ).version
 
-    const tauriConf = JSON.parse(
-      readFileSync(join(ROOT, 'src-tauri/tauri.conf.json'), 'utf-8')
-    )
-    const tauriVersion: string = tauriConf.version
-
-    const cargoSrc = readFileSync(join(ROOT, 'src-tauri/Cargo.toml'), 'utf-8')
-    const cargoMatch = cargoSrc.match(/^version\s*=\s*"([^"]+)"/m)
-    const cargoVersion = cargoMatch ? cargoMatch[1] : null
-
     expect(pkgVersion, 'package.json must have a non-empty version').toBeTruthy()
-
     expect(
-      tauriVersion,
-      `src-tauri/tauri.conf.json version (${tauriVersion}) must match package.json (${pkgVersion})`
-    ).toBe(pkgVersion)
-
-    expect(
-      cargoVersion,
-      `src-tauri/Cargo.toml version (${cargoVersion}) must match package.json (${pkgVersion})`
-    ).toBe(pkgVersion)
+      pkgVersion,
+      `package.json version (${pkgVersion}) must be semver-formatted`
+    ).toMatch(/^\d+\.\d+\.\d+(?:-[\w.]+)?(?:\+[\w.]+)?$/)
   })
 
   // ---------------------------------------------------------------------------

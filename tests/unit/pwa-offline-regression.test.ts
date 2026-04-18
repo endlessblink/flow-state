@@ -74,13 +74,15 @@ describe('PWA Offline Configuration (regression)', () => {
       expect(swSource).toContain("url.pathname.includes('/rest/v1/')")
     })
 
-    it('does NOT call skipWaiting() on install (controlled via SKIP_WAITING message)', () => {
-      // The install listener should NOT contain skipWaiting
-      // But SKIP_WAITING message handler should exist
+    it('force-activates on install and also accepts SKIP_WAITING message (BUG-1743)', () => {
+      // BUG-1743 restored skipWaiting() in the install handler to prevent the
+      // new SW from sitting in 'waiting' state while the old SW serves stale
+      // chunks with mismatched hashes. The message handler is also still wired
+      // for manual triggers.
       expect(swSource).toContain("case 'SKIP_WAITING':")
       expect(swSource).toContain('self.skipWaiting()')
-      // Verify the install event doesn't auto-skip
-      expect(swSource).toMatch(/addEventListener\('install'[\s\S]*?Removed:?\s*self\.skipWaiting/)
+      // Install handler must include skipWaiting() (the fix for BUG-1743)
+      expect(swSource).toMatch(/addEventListener\('install'[\s\S]*?self\.skipWaiting\(\)/)
     })
 
     it('uses supabase-rest-cache (not supabase-api-fallback which cached auth)', () => {

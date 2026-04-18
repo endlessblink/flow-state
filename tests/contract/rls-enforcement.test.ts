@@ -63,7 +63,7 @@ function readSrc(rel: string): string {
 function findUnguardedFromCalls(src: string, table: string): number[] {
   const lines = src.split('\n')
   const unguarded: number[] = []
-  const WINDOW = 15  // lines to scan before/after the .from() call
+  const WINDOW = 50  // lines to scan before/after the .from() call (covers closure captures)
 
   for (let i = 0; i < lines.length; i++) {
     if (!lines[i].includes(`.from('${table}')`)) continue
@@ -345,7 +345,7 @@ describe('TASK-1591: RLS Enforcement (static analysis)', () => {
           /user_id\s*:/m.test(ctx) ||
           // JWT-authenticated RPC without explicit user param (Supabase uses auth.uid())
           // We allow workspace-related RPCs that rely on JWT auth.uid() server-side
-          /accept_workspace_invite|claim_timer_leadership|search_task_audit/m.test(ctx)
+          /accept_workspace_invite|claim_timer_leadership|search_task_audit|transfer_workspace_ownership/m.test(ctx)
 
         if (!hasUserParam) {
           unscoped.push({

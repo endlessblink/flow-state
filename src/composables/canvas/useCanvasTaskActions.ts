@@ -133,11 +133,22 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             absolutePos.x = Math.max(minX, Math.min(absolutePos.x, maxX))
             absolutePos.y = Math.max(minY, Math.min(absolutePos.y, maxY))
         } else {
-            // Fallback: center of group (absolute coordinates)
-            absolutePos = {
-                x: groupX + (groupWidth / 2) - (CANVAS.DEFAULT_TASK_WIDTH / 2),
-                y: groupY + (groupHeight / 2) - (CANVAS.DEFAULT_TASK_HEIGHT / 2)
-            }
+            // Menu-initiated create: collision-aware stacked placement.
+            // _rawTasks (not tasks) so hidden-but-visible done siblings still
+            // count for collision avoidance.
+            absolutePos = calculatePositionInGroup(group, taskStore._rawTasks)
+        }
+
+        if (import.meta.env.DEV) {
+            console.log('[TASK-CREATE] createTaskInGroup', {
+                groupId: group.id,
+                groupName: group.name,
+                entryPath: screenPos ? 'click' : 'menu',
+                siblingCount: taskStore._rawTasks.filter(
+                    t => t.parentId === group.id && t.canvasPosition
+                ).length,
+                chosenPos: { x: absolutePos.x, y: absolutePos.y },
+            })
         }
 
         const finalPosition = {
@@ -190,6 +201,14 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
             // TASK-1428: Read inherited group properties (pre-filled in modal, also used as fallbacks)
             const inherited = modalsStore.groupInheritedProps
+
+            if (import.meta.env.DEV) {
+                console.log('[TASK-CREATE] handleQuickTaskCreate persist', {
+                    parentId,
+                    canvasPosition: shouldCreateInInbox ? null : { x, y },
+                    isDefaultPosition,
+                })
+            }
 
             await taskStore.createTaskWithUndo({
                 title: data.title,
@@ -310,11 +329,15 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             // Move tasks to matching day group (e.g., "Tomorrow" group)
             const matchingGroup = findMatchingGroupForDueDate(tomorrowStr, canvasStore.groups)
             if (matchingGroup) {
+                // BUG-1773: Track batch placements so multi-select siblings
+                // stack below each other regardless of reactivity timing.
+                const batchPlaced: Array<{ x: number; y: number }> = []
                 for (const nodeId of selectedNodeIds) {
                     const task = taskStore.tasks.find(t => t.id === nodeId)
                     if (task && task.parentId !== matchingGroup.id) {
                         const tasksInGroup = taskStore.tasks.filter(t => t.parentId === matchingGroup.id)
-                        const position = calculatePositionInGroup(matchingGroup, tasksInGroup)
+                        const position = calculatePositionInGroup(matchingGroup, tasksInGroup, batchPlaced)
+                        batchPlaced.push(position)
                         taskStore.updateTask(nodeId, {
                             parentId: matchingGroup.id,
                             canvasPosition: position

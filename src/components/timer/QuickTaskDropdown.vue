@@ -167,6 +167,13 @@
               <span class="quick-item-title" dir="auto">{{ item.title }}</span>
               <span class="pomodoro-badge">{{ item.frequency }}</span>
               <button
+                class="quick-item-action"
+                title="Hide from Frequent"
+                @click.stop="handleHideFrequent(item.sourceId)"
+              >
+                <X :size="12" />
+              </button>
+              <button
                 v-if="!item.isPinned"
                 class="quick-item-action"
                 title="Pin as Quick Task"
@@ -212,7 +219,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import type { QuickTaskItem } from '@/types/quickTasks'
 
-const { quickTaskItems, unpinTask, pinTask, pinFromTask, selectAndStartTimer, loadPinnedTasks } = useQuickTasks()
+const { quickTaskItems, unpinTask, pinTask, pinFromTask, selectAndStartTimer, loadPinnedTasks, dismissFromFrequent } = useQuickTasks()
 const authStore = useAuthStore()
 const taskStore = useTaskStore()
 const projectStore = useProjectStore()
@@ -350,6 +357,10 @@ const handlePin = async (item: QuickTaskItem) => {
     if (task) {
         await pinFromTask(task)
     }
+}
+
+const handleHideFrequent = (taskId: string) => {
+    dismissFromFrequent(taskId)
 }
 
 const handleKeydown = (e: KeyboardEvent) => {

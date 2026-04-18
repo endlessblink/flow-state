@@ -176,16 +176,27 @@ export function findMatchingGroupForDueDate(
 /**
  * Calculate position for a new task inside a group
  *
- * Positions the task inside the group bounds, avoiding overlap with existing tasks
- * when possible. Falls back to center of group if overlap is unavoidable.
+ * Positions the task inside the group bounds, left-aligned at the group's
+ * padding edge and stacked vertically below any existing siblings. When the
+ * group's visible area is full, continues stacking below (overflow) rather
+ * than centering on top of existing tasks.
+ *
+ * BUG-1773: Removed the +20 visual nudge (not left-aligned) and the
+ * geometric-center fallback (overlap source). Added optional
+ * `alreadyPlacedPositions` so batch callers can track siblings being placed
+ * in the same synchronous loop, immune to reactivity/sync-flush timing.
  *
  * @param group - Target group to place task in
  * @param existingTasks - Tasks currently in this group (for collision avoidance)
+ * @param alreadyPlacedPositions - Absolute positions of tasks already placed
+ *                                 in this batch but not yet visible via the
+ *                                 store filter. Merged into stacking math.
  * @returns Absolute position { x, y } for the task's canvasPosition
  */
 export function calculatePositionInGroup(
   group: CanvasGroup,
-  existingTasks: Task[]
+  existingTasks: Task[],
+  alreadyPlacedPositions: Array<{ x: number; y: number }> = []
 ): { x: number; y: number } {
   const groupX = group.position?.x || 0
   const groupY = group.position?.y || 0
@@ -196,48 +207,33 @@ export function calculatePositionInGroup(
   const taskHeight = CANVAS.DEFAULT_TASK_HEIGHT
   const padding = 20
   const headerHeight = 50 // Group header space
+  const gap = 10
 
-  // Available space inside the group
+  // Available space inside the group — true left-align at padding edge
   const availableX = groupX + padding
   const availableY = groupY + headerHeight + padding
   const maxX = groupX + groupWidth - taskWidth - padding
-  const maxY = groupY + groupHeight - taskHeight - padding
+  const stackX = Math.max(availableX, Math.min(availableX, maxX))
 
-  // Filter to tasks actually in this group
-  const tasksInGroup = existingTasks.filter(t => t.parentId === group.id && t.canvasPosition)
+  // Collect Y-tops from the store AND from in-flight batch placements
+  const storePositions = existingTasks
+    .filter(t => t.parentId === group.id && t.canvasPosition)
+    .map(t => t.canvasPosition!)
 
-  // If no existing tasks, place near top-left
-  if (tasksInGroup.length === 0) {
-    return {
-      x: Math.max(availableX, Math.min(availableX + 20, maxX)),
-      y: Math.max(availableY, Math.min(availableY + 20, maxY))
-    }
+  const allPositions = [...storePositions, ...alreadyPlacedPositions]
+
+  if (allPositions.length === 0) {
+    return { x: stackX, y: availableY }
   }
 
-  // Find lowest Y position of existing tasks to stack below them
-  let lowestY = availableY
-  for (const task of tasksInGroup) {
-    if (task.canvasPosition) {
-      const taskBottom = task.canvasPosition.y + taskHeight + 10 // 10px gap
-      if (taskBottom > lowestY) {
-        lowestY = taskBottom
-      }
-    }
+  // Stack directly below the lowest sibling (or in-flight placement) with a gap
+  let lowestBottom = availableY
+  for (const pos of allPositions) {
+    const bottom = pos.y + taskHeight + gap
+    if (bottom > lowestBottom) lowestBottom = bottom
   }
 
-  // If there's room below existing tasks, place there
-  if (lowestY + taskHeight <= maxY + padding) {
-    return {
-      x: Math.max(availableX, Math.min(availableX + 20, maxX)),
-      y: lowestY
-    }
-  }
-
-  // Fallback: center of group (may overlap, but user can adjust)
-  return {
-    x: groupX + (groupWidth / 2) - (taskWidth / 2),
-    y: groupY + (groupHeight / 2) - (taskHeight / 2)
-  }
+  return { x: stackX, y: lowestBottom }
 }
 
 /**

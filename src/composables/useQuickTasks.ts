@@ -1,101 +1,104 @@
 /**
- * FEATURE-1248: Quick Tasks — Pinned & Frequent Task Shortcuts
+ * Quick Tasks — Pinned & Frequent Task Shortcuts
  *
- * Central composable for the Quick Tasks system:
- * - Pinned tasks: user-created shortcuts stored in `pinned_tasks` table
- * - Frequent tasks: auto-detected from `completedPomodoros` on active tasks
+ * TASK-1772: Unified "Pinned" onto `task.isPinned`. The Supabase `pinned_tasks`
+ * table is gone; pinned items are real tasks filtered by `task.isPinned`.
+ *
+ * - Pinned: tasks in the store where `isPinned === true`
+ * - Frequent: auto-detected from `completedPomodoros` on active tasks
  */
 
-import { ref, computed, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import { useTimerStore } from '@/stores/timer'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-import type { PinnedTask, QuickTaskItem } from '@/types/quickTasks'
+import type { QuickTaskItem } from '@/types/quickTasks'
 import type { Task } from '@/types/tasks'
 
-const pinnedTasks = ref<PinnedTask[]>([])
-const isLoading = ref(false)
+// FEATURE-1774: per-user dismissals for the Frequent list, localStorage-backed.
+// Display preference only — intentionally not synced across devices.
+const DISMISS_STORAGE_KEY = 'flowstate:dismissed-frequent'
+
+function loadDismissedFrequent(): Set<string> {
+    if (typeof window === 'undefined' || !window.localStorage) return new Set()
+    try {
+        const raw = window.localStorage.getItem(DISMISS_STORAGE_KEY)
+        if (!raw) return new Set()
+        const parsed = JSON.parse(raw)
+        return Array.isArray(parsed) ? new Set(parsed as string[]) : new Set()
+    } catch {
+        return new Set()
+    }
+}
+
+const dismissedFrequentIds = ref<Set<string>>(loadDismissedFrequent())
+
+function persistDismissedFrequent() {
+    if (typeof window === 'undefined' || !window.localStorage) return
+    try {
+        window.localStorage.setItem(
+            DISMISS_STORAGE_KEY,
+            JSON.stringify([...dismissedFrequentIds.value])
+        )
+    } catch {
+        // Storage may be unavailable (private mode, quota) — fail silently.
+    }
+}
 
 export function useQuickTasks() {
     const authStore = useAuthStore()
     const taskStore = useTaskStore()
     const projectStore = useProjectStore()
     const timerStore = useTimerStore()
-    const db = useSupabaseDatabase()
 
-    // --- Pinned Tasks (from Supabase) ---
+    // --- Pinned Tasks (from task store — single source of truth) ---
 
-    const loadPinnedTasks = async () => {
-        if (!authStore.isAuthenticated) {
-            pinnedTasks.value = []
-            return
-        }
-        isLoading.value = true
-        try {
-            pinnedTasks.value = await db.fetchPinnedTasks()
-        } catch (e) {
-            console.error('[QUICK-TASKS] Failed to load pinned tasks:', e)
-        } finally {
-            isLoading.value = false
-        }
-    }
+    const pinnedTasks = computed<Task[]>(() =>
+        taskStore.tasks.filter(t =>
+            t.isPinned === true &&
+            t.status !== 'done' &&
+            !t._soft_deleted
+        )
+    )
 
     const pinTask = async (title: string, opts?: { description?: string; projectId?: string | null; priority?: string | null }) => {
         if (!authStore.isAuthenticated) return
+        const trimmed = title.trim()
+        if (!trimmed) return
 
-        const maxOrder = pinnedTasks.value.reduce((max, p) => Math.max(max, p.sortOrder), -1)
-        const newPin: PinnedTask = {
-            id: crypto.randomUUID(),
-            userId: authStore.user!.id,
-            title,
+        // If a task with this title already exists, just pin it in place.
+        const existing = taskStore.tasks.find(
+            t => t.title.toLowerCase() === trimmed.toLowerCase() &&
+                t.status !== 'done' &&
+                !t._soft_deleted
+        )
+        if (existing) {
+            if (!existing.isPinned) {
+                await taskStore.updateTask(existing.id, { isPinned: true })
+            }
+            return
+        }
+
+        await taskStore.createTask({
+            title: trimmed,
             description: opts?.description || '',
-            projectId: opts?.projectId || null,
-            priority: opts?.priority || null,
-            sortOrder: maxOrder + 1,
-            createdAt: new Date(),
-            updatedAt: new Date()
-        }
-
-        // Optimistic update
-        pinnedTasks.value = [...pinnedTasks.value, newPin]
-
-        try {
-            await db.savePinnedTask(newPin)
-        } catch (e) {
-            console.error('[QUICK-TASKS] Failed to save pin:', e)
-            // Rollback
-            pinnedTasks.value = pinnedTasks.value.filter(p => p.id !== newPin.id)
-        }
+            projectId: opts?.projectId || undefined,
+            priority: (opts?.priority as Task['priority']) || null,
+            status: 'todo',
+            isPinned: true,
+        })
     }
 
-    const unpinTask = async (pinId: string) => {
-        const backup = [...pinnedTasks.value]
-
-        // Optimistic update
-        pinnedTasks.value = pinnedTasks.value.filter(p => p.id !== pinId)
-
-        try {
-            await db.deletePinnedTask(pinId)
-        } catch (e) {
-            console.error('[QUICK-TASKS] Failed to delete pin:', e)
-            pinnedTasks.value = backup
-        }
+    const unpinTask = async (taskId: string) => {
+        const task = taskStore.tasks.find(t => t.id === taskId)
+        if (!task || !task.isPinned) return
+        await taskStore.updateTask(taskId, { isPinned: false })
     }
 
     const pinFromTask = async (task: Task) => {
-        // Check if already pinned by title (case-insensitive)
-        const already = pinnedTasks.value.some(
-            p => p.title.toLowerCase() === task.title.toLowerCase()
-        )
-        if (already) return
-
-        await pinTask(task.title, {
-            description: task.description,
-            projectId: task.projectId === 'uncategorized' ? null : task.projectId,
-            priority: task.priority
-        })
+        if (task.isPinned) return
+        await taskStore.updateTask(task.id, { isPinned: true })
     }
 
     // --- Frequent Tasks (client-side from task store) ---
@@ -106,6 +109,7 @@ export function useQuickTasks() {
                 t.status !== 'done' &&
                 !t._soft_deleted &&
                 (t.completedPomodoros || 0) > 0 &&
+                !dismissedFrequentIds.value.has(t.id) &&
                 (!taskStore.activeStatusFilter || t.status === taskStore.activeStatusFilter) &&
                 (!projectStore.activeProjectId ||
                     t.projectId === projectStore.activeProjectId ||
@@ -115,50 +119,72 @@ export function useQuickTasks() {
             .slice(0, 10)
     })
 
+    /**
+     * FEATURE-1774: Hide a task from the Frequent list. Persists to localStorage
+     * so the dismissal survives reloads. Does not touch the task itself or
+     * cross-device sync — this is a per-device display preference.
+     */
+    const dismissFromFrequent = (taskId: string) => {
+        if (!taskId) return
+        if (dismissedFrequentIds.value.has(taskId)) return
+        const next = new Set(dismissedFrequentIds.value)
+        next.add(taskId)
+        dismissedFrequentIds.value = next
+        persistDismissedFrequent()
+    }
+
+    /**
+     * FEATURE-1774: Clear all Frequent dismissals. Exposed for a future
+     * Settings "Restore hidden" action; currently unused in the UI.
+     */
+    const restoreFrequentDismissals = () => {
+        if (dismissedFrequentIds.value.size === 0) return
+        dismissedFrequentIds.value = new Set()
+        persistDismissedFrequent()
+    }
+
     // --- Merged Quick Task Items ---
 
     const quickTaskItems = computed<QuickTaskItem[]>(() => {
         const items: QuickTaskItem[] = []
-        const seenTitles = new Set<string>()
+        const seenIds = new Set<string>()
 
-        // 1. Pinned tasks first (in sort order)
-        const visiblePins = [...pinnedTasks.value]
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-            .filter(pin =>
-                !pin.projectId ||
-                !projectStore.activeProjectId ||
-                pin.projectId === projectStore.activeProjectId ||
-                projectStore.isDescendantOf(pin.projectId, projectStore.activeProjectId)
-            )
+        // 1. Pinned tasks (real tasks scoped to active project, same as before)
+        const visiblePins = pinnedTasks.value.filter(task =>
+            !task.projectId ||
+            task.projectId === 'uncategorized' ||
+            !projectStore.activeProjectId ||
+            task.projectId === projectStore.activeProjectId ||
+            projectStore.isDescendantOf(task.projectId, projectStore.activeProjectId)
+        )
 
-        for (const pin of visiblePins) {
-            const titleLower = pin.title.toLowerCase()
-            seenTitles.add(titleLower)
-
-            const project = pin.projectId ? taskStore.getProjectById(pin.projectId) : null
+        for (const task of visiblePins) {
+            seenIds.add(task.id)
+            const project = task.projectId && task.projectId !== 'uncategorized'
+                ? taskStore.getProjectById(task.projectId)
+                : null
             const projectColor = project?.color
                 ? (Array.isArray(project.color) ? project.color[0] : project.color)
                 : null
 
             items.push({
-                key: `pin-${pin.id}`,
+                key: `pin-${task.id}`,
                 type: 'pinned',
-                title: pin.title,
-                sourceId: pin.id,
-                projectId: pin.projectId,
+                title: task.title,
+                sourceId: task.id,
+                projectId: task.projectId === 'uncategorized' ? null : task.projectId ?? null,
                 projectName: project?.name || null,
                 projectColor,
-                priority: pin.priority,
+                priority: task.priority,
                 frequency: 0,
                 isPinned: true
             })
         }
 
-        // 2. Frequent tasks (deduplicated by title)
+        // 2. Frequent tasks (deduped against pinned by task ID)
         for (const task of frequentTasks.value) {
-            const titleLower = task.title.toLowerCase()
-            if (seenTitles.has(titleLower)) continue
-            seenTitles.add(titleLower)
+            if (seenIds.has(task.id)) continue
+            seenIds.add(task.id)
 
             const project = task.projectId && task.projectId !== 'uncategorized'
                 ? taskStore.getProjectById(task.projectId)
@@ -167,21 +193,17 @@ export function useQuickTasks() {
                 ? (Array.isArray(project.color) ? project.color[0] : project.color)
                 : null
 
-            const isPinned = pinnedTasks.value.some(
-                p => p.title.toLowerCase() === titleLower
-            )
-
             items.push({
                 key: `freq-${task.id}`,
                 type: 'frequent',
                 title: task.title,
                 sourceId: task.id,
-                projectId: task.projectId === 'uncategorized' ? null : task.projectId,
+                projectId: task.projectId === 'uncategorized' ? null : task.projectId ?? null,
                 projectName: project?.name || null,
                 projectColor: freqProjectColor,
                 priority: task.priority,
                 frequency: task.completedPomodoros || 0,
-                isPinned
+                isPinned: !!task.isPinned
             })
         }
 
@@ -191,65 +213,30 @@ export function useQuickTasks() {
     // --- Actions ---
 
     /**
-     * Select a quick task and start the timer.
-     * For pinned tasks: finds matching active task by title, or creates a new one.
-     * For frequent tasks: uses the task directly.
+     * Select a quick task and start the timer. All items are real tasks
+     * post-unification, so `sourceId` is always a task id.
      */
     const selectAndStartTimer = async (item: QuickTaskItem) => {
-        let taskId: string
-
-        if (item.type === 'frequent') {
-            taskId = item.sourceId
-        } else {
-            // Pinned: find matching active task by title (case-insensitive)
-            const match = taskStore.tasks.find(
-                t => t.title.toLowerCase() === item.title.toLowerCase() &&
-                    t.status !== 'done' &&
-                    !t._soft_deleted
-            )
-
-            if (match) {
-                taskId = match.id
-            } else {
-                // Create a new task from the pin template
-                const newTask = await taskStore.createTask({
-                    title: item.title,
-                    description: '',
-                    projectId: item.projectId || 'uncategorized',
-                    priority: item.priority as Task['priority'] || null,
-                    status: 'todo',
-                    isUncategorized: false,
-                })
-                taskId = newTask?.id || item.title
-            }
-        }
-
-        await timerStore.startTimer(taskId)
+        await timerStore.startTimer(item.sourceId)
     }
 
-    // --- Auth Watcher ---
-
-    watch(
-        () => authStore.isAuthenticated,
-        (isAuth) => {
-            if (isAuth) {
-                loadPinnedTasks()
-            } else {
-                pinnedTasks.value = []
-            }
-        },
-        { immediate: true }
-    )
+    /**
+     * No-op kept for backward compat with callers that used to trigger a
+     * DB refresh. The task store drives reactivity now.
+     */
+    const loadPinnedTasks = async () => { /* intentional no-op */ }
 
     return {
-        pinnedTasks: computed(() => pinnedTasks.value),
+        pinnedTasks,
         frequentTasks,
         quickTaskItems,
-        isLoading: computed(() => isLoading.value),
+        isLoading: computed(() => false),
         loadPinnedTasks,
         pinTask,
         unpinTask,
         pinFromTask,
-        selectAndStartTimer
+        selectAndStartTimer,
+        dismissFromFrequent,
+        restoreFrequentDismissals
     }
 }

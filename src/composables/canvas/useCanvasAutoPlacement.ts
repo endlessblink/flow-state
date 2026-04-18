@@ -43,11 +43,19 @@ export function useCanvasAutoPlacement() {
 
         let placedCount = 0
 
+        // BUG-1773: Track positions we've placed in this batch so consecutive
+        // iterations stack below siblings even when reactivity/sync hasn't
+        // flushed the prior updateTask write into the filtered task list yet.
+        const placedByGroup = new Map<string, Array<{ x: number; y: number }>>()
+
         for (const task of eligible) {
             const targetGroup = findMatchingGroupForDueDate(task.dueDate, allGroups)
             if (!targetGroup) continue
 
-            const canvasPosition = calculatePositionInGroup(targetGroup, taskStore.tasks)
+            const already = placedByGroup.get(targetGroup.id) ?? []
+            const canvasPosition = calculatePositionInGroup(targetGroup, taskStore.tasks, already)
+            already.push(canvasPosition)
+            placedByGroup.set(targetGroup.id, already)
 
             // GEOMETRY WRITER: One-time initial placement
             taskStore.updateTask(task.id, {

@@ -8,6 +8,84 @@
 
 ## Active Tasks
 
+### ~~BUG-1773~~: Canvas auto-placement overlaps tasks in day-groups + not left-aligned (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-18)
+
+**Problem**: When tasks are automatically routed into day-of-week groups (on canvas mount via `autoPlaceEligibleTasks`, multi-select "Move to Tomorrow", or "Send to Canvas" from inbox), siblings land at the same starting position or overlap each other, and the first task is indented 20px from the group's left padding instead of being true-left-aligned.
+
+**Goal**: Left-align tasks at the group's padding edge, always stack subsequent tasks vertically with a consistent gap, even across batch placements where reactivity may lag.
+
+**Fix**:
+1. `useSmartGroupMatcher.ts::calculatePositionInGroup` — dropped the `+20` empty-group nudge; replaced center-fallback (overlap source) with continued below-stack; added optional `alreadyPlacedPositions` param so batch callers stay immune to reactivity timing
+2. `useCanvasAutoPlacement.ts::autoPlaceEligibleTasks` — maintains a local `Map<groupId, positions[]>` across the loop and passes into the helper
+3. `useCanvasTaskActions.ts` Move-to-Tomorrow multi-select — same local tracker pattern
+
+**Tests added**: `tests/unit/canvas/smart-group-matcher.test.ts` (5 tests, all green): first-task left-align, stacking gap, batch `alreadyPlacedPositions`, overflow-below-not-center, other-group isolation.
+
+**Files**: `src/composables/canvas/useSmartGroupMatcher.ts`, `src/composables/canvas/useCanvasAutoPlacement.ts`, `src/composables/canvas/useCanvasTaskActions.ts`, `tests/unit/canvas/smart-group-matcher.test.ts`
+
+---
+
+### ~~FEATURE-1774~~: Allow hiding items from Quick Tasks Frequent list (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-04-18)
+
+**Problem**: The Quick Tasks dropdown's "Frequent" section (derived from tasks with completedPomodoros > 0) had no way to dismiss a specific task. Users who stopped caring about a historically-frequent task had no affordance to hide it.
+
+**Goal**: Add a per-user "hide from Frequent" action that persists locally and filters the list immediately.
+
+**Fix**:
+1. `useQuickTasks.ts` — module-scoped `dismissedFrequentIds` Set hydrated from `localStorage['flowstate:dismissed-frequent']`, `dismissFromFrequent(id)` action, `restoreFrequentDismissals()` escape hatch, filter applied in `frequentTasks` computed
+2. `QuickTaskDropdown.vue` — X button in the Frequent `v-for` row (before the Pin button), wired via `handleHideFrequent`
+
+**Tests added**: `tests/unit/composables/useQuickTasks-dismiss.test.ts` (3 tests, all green): persists to localStorage, excludes dismissed from `frequentTasks`, restore clears.
+
+**Storage**: localStorage-only (intentionally not cross-device synced — display preference, not task data).
+
+**Files**: `src/composables/useQuickTasks.ts`, `src/components/timer/QuickTaskDropdown.vue`, `tests/unit/composables/useQuickTasks-dismiss.test.ts`
+
+---
+
+### TASK-1772: Unify Pinned lists — drop pinned_tasks table, use task.isPinned everywhere (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Calendar view shows two "Pinned" sections with different contents — top-right lightning-icon dropdown (4 shortcut rows from `pinned_tasks` table) vs left Inbox sidebar (1 real task with `isPinned=true`). Two independent systems share one label; user didn't know there were two.
+
+**Goal**: One unified pinned list backed by `task.isPinned`. Every pinned item is a real task editable/removable from any surface.
+
+**Approach**:
+1. Rewrite `useQuickTasks.ts` pinned source to computed over `taskStore.tasks.filter(t => t.isPinned)`
+2. Rewire pin/unpin/pinFromTask to `taskStore.createTask/updateTask`
+3. Rewire KDE widget `main.qml` 3 REST endpoints from `/pinned_tasks` to `/tasks?is_pinned=eq.true`
+4. One-time client migration: convert 4 existing `pinned_tasks` rows into real tasks with `isPinned=true`
+5. Delete `usePinnedTasksDatabase.ts`, `PinnedTask` type, `pinned_tasks` dbTables entry
+6. Supabase migration: `DROP TABLE pinned_tasks CASCADE`
+7. Bump version, deploy web + Electron, update KDE widget
+
+**Files**: `src/composables/useQuickTasks.ts`, `src/components/timer/QuickTaskDropdown.vue`, `src/types/quickTasks.ts`, `src/composables/supabase/usePinnedTasksDatabase.ts` (DELETE), `src/constants/dbTables.ts`, `packages/kde-widget/contents/ui/main.qml`, `supabase/migrations/<ts>_drop_pinned_tasks.sql`
+
+---
+
+### BUG-1771: Canvas "Add Task to Group" overlaps existing tasks at group center (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Right-clicking inside a day-group and choosing "Add Task to Group" creates the new task at the geometric center of the group, overlapping existing siblings. Users perceive this as sibling tasks "moving" when in fact only the new node renders on top. The creation path also lacks any diagnostic log for the chosen position.
+
+**Goal**: Use the existing collision-aware `calculatePositionInGroup` helper on the menu path and add two DEV-gated logs that expose the placement decision.
+
+**Approach**:
+1. In `createTaskInGroup` else-branch, call `calculatePositionInGroup(group, taskStore._rawTasks)` instead of centering
+2. Add `[TASK-CREATE]` log before `finalPosition` compose (group, entry path, sibling count, chosen pos)
+3. Add `[TASK-CREATE]` log before `createTaskWithUndo` call (parentId, canvasPosition, isDefaultPosition)
+4. Leave `screenPos` branch untouched (drag-to-place path); leave `calculatePositionInGroup` internals untouched
+
+**Files**: `src/composables/canvas/useCanvasTaskActions.ts`
+
+---
+
 ### FEATURE-1759: Unified Knowledge + Custom Lists roadmap foundation (📋 PLANNED)
 
 **Priority**: P1 | **Status**: 📋 PLANNED

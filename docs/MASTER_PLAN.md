@@ -47,9 +47,9 @@
 
 ---
 
-### BUG-1775: Quick Sort chips mirror sidebar; deletes roll back on remote failure (🔄 IN PROGRESS)
+### ~~BUG-1775~~: Quick Sort chips mirror sidebar; deletes roll back on remote failure (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-18)
 
 **Problem**: Quick Sort EDIT popover's project chips show projects the user cannot see in the sidebar tree (e.g., `flow-state`, `משחק Blood And Rust` appeared as chips while absent from sidebar). Two defects combine:
 

@@ -57,7 +57,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
-import type { Project } from '@/stores/tasks'
+import type { Project, ProjectTreeNode } from '@/types/tasks'
+import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 interface Props {
@@ -77,64 +78,28 @@ const emit = defineEmits<{
 }>()
 
 const taskStore = useTaskStore()
+const sidebar = useSidebarManagement()
 const focusedIndex = ref(-1)
 
-// Category tree node for nested display
-interface CategoryNode {
-  project: Project
-  children: CategoryNode[]
-  depth: number
-}
+// BUG-1775: Only render projects that are actually visible in the sidebar
+// tree. Walk the canonical `projectTree` (defined in projectStore) and
+// descend into a parent's children only when the sidebar has that parent
+// expanded. This guarantees "same source, same view" across surfaces.
+const availableProjects = computed<ProjectTreeNode[]>(() => {
+  const expanded = new Set<string>(sidebar.expandedProjects.value ?? [])
+  const result: ProjectTreeNode[] = []
 
-// Build nested category tree
-const categoryTree = computed<CategoryNode[]>(() => {
-  const allProjects = taskStore.projects // All user-created projects
-
-  function buildTree(parentId: string | null | undefined, depth = 0, visited = new Set<string>()): CategoryNode[] {
-    if (depth > 10) return [] // Safety limit for depth
-
-    return allProjects
-      .filter(p => p.parentId === parentId)
-      .map(project => {
-         // Cycle detection guard
-         if (visited.has(project.id)) {
-            return { project, depth, children: [] }
-         }
-         
-         const newVisited = new Set(visited)
-         newVisited.add(project.id)
-
-         return {
-            project,
-            depth,
-            children: buildTree(project.id, depth + 1, newVisited)
-         }
-      })
-  }
-
-  return buildTree(null)
-})
-
-// Flatten tree for rendering (with depth info preserved)
-const flattenedCategories = computed<CategoryNode[]>(() => {
-  const result: CategoryNode[] = []
-
-  function flatten(nodes: CategoryNode[]) {
+  const visit = (nodes: ProjectTreeNode[]) => {
     for (const node of nodes) {
       result.push(node)
-      if (node.children.length > 0) {
-        flatten(node.children)
+      if (node.children.length > 0 && expanded.has(node.project.id)) {
+        visit(node.children)
       }
     }
   }
 
-  flatten(categoryTree.value)
-  return result.slice(0, props.maxShortcuts) // Limit to max shortcuts
-})
-
-// Get first N projects for keyboard shortcuts (now includes nested structure)
-const availableProjects = computed<CategoryNode[]>(() => {
-  return flattenedCategories.value
+  visit(taskStore.projectTree)
+  return result.slice(0, props.maxShortcuts)
 })
 
 function getCategoryStyle(project: Project) {

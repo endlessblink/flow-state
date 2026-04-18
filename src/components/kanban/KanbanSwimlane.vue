@@ -232,8 +232,7 @@ const categoryColumns = computed(() => {
   const columns: { key: string; label: string; parentId?: string }[] = []
 
   // Get root projects sorted by name
-  const rootProjects = taskStore.projects
-    .filter(p => !p.parentId)
+  const rootProjects = [...taskStore.rootProjects]
     .sort((a, b) => a.name.localeCompare(b.name))
 
   for (const project of rootProjects) {

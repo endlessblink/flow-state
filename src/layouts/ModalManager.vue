@@ -133,6 +133,7 @@ import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { createLazyModal } from '@/composables/useLazyComponent'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import { Edit, Palette, Copy, Trash2 } from 'lucide-vue-next'
+import { useMessage } from 'naive-ui'
 
 // Components
 import AuthModal from '@/components/auth/AuthModal.vue'
@@ -156,6 +157,7 @@ import { useSettingsStore } from '@/stores/settings'
 // Stores
 const uiStore = useUIStore()
 const settingsStore = useSettingsStore()
+const message = useMessage()
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const sidebar = useSidebarManagement()
@@ -655,8 +657,14 @@ const confirmDeleteProject = (project: Project) => {
   if (childCount > 0) details.push(`${childCount} child project${childCount > 1 ? 's' : ''} will be un-nested`)
 
   confirmMessage.value = `Delete project "${project.name}"?`
-  confirmAction.value = () => {
-    taskStore.deleteProject(project.id)
+  confirmAction.value = async () => {
+    try {
+      await taskStore.deleteProject(project.id)
+    } catch (error) {
+      // BUG-1775: deleteProject now throws + rolls back on remote failure
+      console.error('❌ Error deleting project:', error)
+      message.error(`Failed to delete "${project.name}" — please try again.`)
+    }
     showProjectContextMenu.value = false
   }
   confirmDetails.value = details

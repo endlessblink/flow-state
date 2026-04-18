@@ -341,7 +341,7 @@ export function useSidebarManagement() {
       return result
     }
 
-    return flatten(taskStore.projects)
+    return flatten(taskStore.rootProjects)
   }
 
 

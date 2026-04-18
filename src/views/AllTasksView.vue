@@ -289,7 +289,7 @@ const groupedTasks = computed((): TaskGroup[] => {
     })
 
     // Build project hierarchy: top-level projects first, then children indented
-    const topLevelProjects = taskStore.projects.filter(p => !p.parentId)
+    const topLevelProjects = taskStore.rootProjects
     const processedIds = new Set<string>()
 
     const addProjectGroup = (project: { id: string; name: string; emoji?: string; color?: string | string[] }, indent: number) => {

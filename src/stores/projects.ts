@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-import { type Project, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
+import { type Project, type ProjectTreeNode, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 import { cacheProjects, getCachedProjects } from '@/services/offline/readCacheDB'
 
 export const useProjectStore = defineStore('projects', () => {
@@ -66,6 +66,38 @@ export const useProjectStore = defineStore('projects', () => {
     // Root projects - projects without parentId (uses filtered projects to exclude corrupted)
     const rootProjects = computed(() => {
         return projects.value.filter(p => !p.parentId || p.parentId === 'undefined' || p.parentId === undefined)
+    })
+
+    // BUG-1775: Canonical nested tree used by Quick Sort CategorySelector and any
+    // future consumer that needs the full hierarchy. Orphans (parentId that
+    // doesn't resolve to a live project id) are re-bucketed under the null
+    // root so they remain reachable from a single traversal rather than
+    // silently vanishing. Cycle detection via `seen`, depth capped at 10 to
+    // mirror the previous inline implementation.
+    const projectTree = computed<ProjectTreeNode[]>(() => {
+        const validIds = new Set(projects.value.map(p => p.id))
+        const byParent = new Map<string | null, Project[]>()
+        for (const p of projects.value) {
+            const resolved = (!p.parentId || !validIds.has(p.parentId)) ? null : p.parentId
+            const bucket = byParent.get(resolved) ?? []
+            bucket.push(p)
+            byParent.set(resolved, bucket)
+        }
+        const build = (parent: string | null, depth: number, seen: Set<string>): ProjectTreeNode[] => {
+            if (depth > 10) return []
+            return (byParent.get(parent) ?? [])
+                .filter(p => !seen.has(p.id))
+                .map(project => {
+                    const nextSeen = new Set(seen)
+                    nextSeen.add(project.id)
+                    return {
+                        project,
+                        depth,
+                        children: build(project.id, depth + 1, nextSeen),
+                    }
+                })
+        }
+        return build(null, 0, new Set())
     })
 
     // Optimization: fast lookup map for projects
@@ -270,84 +302,102 @@ export const useProjectStore = defineStore('projects', () => {
 
     const deleteProject = async (projectId: string) => {
         const projectIndex = _rawProjects.value.findIndex(p => p.id === projectId)
-        if (projectIndex !== -1) {
-            manualOperationInProgress.value = true
-            try {
-                const projectToDelete = _rawProjects.value[projectIndex]
-                const parentId = projectToDelete.parentId
+        if (projectIndex === -1) return
 
-                const { useTaskStore } = await import('./tasks')
-                // Define minimal interface to avoid circular dependency issues
-                type TaskStoreLoophole = {
-                    _rawTasks: { id: string; projectId: string }[];
-                    updateTask: (id: string, updates: { projectId: null; isUncategorized: boolean }) => Promise<void>;
-                }
-                const taskStore = useTaskStore() as unknown as TaskStoreLoophole
-                // SAFETY: Use _rawTasks to include soft-deleted tasks in project reassignment
-                // BUG-P1: Replaced O(n) sequential await with parallel batches to prevent partial orphans
-                const tasksToReassign = taskStore._rawTasks.filter(t => t.projectId === projectId)
-                // Update all in memory first so UI reflects change immediately
-                for (const task of tasksToReassign) {
-                    task.projectId = null as unknown as string
-                    ;(task as unknown as { isUncategorized: boolean }).isUncategorized = true
-                }
-                // Persist in parallel batches of 10 to avoid overwhelming the server
-                const BATCH_SIZE = 10
-                for (let i = 0; i < tasksToReassign.length; i += BATCH_SIZE) {
-                    const batch = tasksToReassign.slice(i, i + BATCH_SIZE)
-                    await Promise.all(batch.map(t =>
-                        taskStore.updateTask(t.id, { projectId: null, isUncategorized: true }).catch(err =>
-                            console.error(`[DELETE-PROJECT] Failed to reassign task ${t.id}:`, err)
-                        )
-                    ))
-                }
+        manualOperationInProgress.value = true
 
-                // SAFETY: Use _rawProjects for mutation
-                _rawProjects.value.forEach(project => {
-                    if (project.parentId === projectId) {
-                        project.parentId = parentId
-                    }
-                })
+        // BUG-1775: Snapshot project state BEFORE any mutation so we can
+        // roll back if the remote soft-delete fails. Task re-assignment is
+        // persisted to the server per-update and is not rolled back — a
+        // retry of the delete will still succeed because the tasks are
+        // already uncategorized.
+        const projectsSnapshot = _rawProjects.value.map(p => ({ ...p }))
+        const activeProjectSnapshot = activeProjectId.value
 
-                _rawProjects.value.splice(projectIndex, 1)
+        try {
+            const projectToDelete = _rawProjects.value[projectIndex]
+            const parentId = projectToDelete.parentId
 
-                // P0: Reset active project if the deleted project was active
-                if (activeProjectId.value === projectId) {
-                    setActiveProject(null)
-                }
-
-                // TASK-1428: Update IndexedDB read cache after delete
-                cacheProjects([..._rawProjects.value])
-
-                // TASK-1428: Queue for offline-first sync
-                try {
-                    const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
-                    const syncOrchestrator = useSyncOrchestrator()
-                    await syncOrchestrator.enqueue({
-                        entityType: 'project',
-                        operation: 'delete',
-                        entityId: projectId,
-                        payload: { id: projectId },
-                        baseVersion: 0
-                    })
-                } catch (queueError) {
-                    console.warn('[SYNC-QUEUE] Failed to queue project delete:', queueError)
-                }
-
-                // Guest mode: persist to localStorage immediately
-                const { useAuthStore: getAuth } = await import('@/stores/auth')
-                if (!getAuth().isAuthenticated) {
-                    saveProjectsToLocalStorage()
-                }
-
-                // Supabase Soft Delete
-                await deleteProjectRemote(projectId)
-
-            } catch (e) {
-                console.error('Failed to delete project:', e)
-            } finally {
-                manualOperationInProgress.value = false
+            const { useTaskStore } = await import('./tasks')
+            // Define minimal interface to avoid circular dependency issues
+            type TaskStoreLoophole = {
+                _rawTasks: { id: string; projectId: string }[];
+                updateTask: (id: string, updates: { projectId: null; isUncategorized: boolean }) => Promise<void>;
             }
+            const taskStore = useTaskStore() as unknown as TaskStoreLoophole
+            // SAFETY: Use _rawTasks to include soft-deleted tasks in project reassignment
+            // BUG-P1: Replaced O(n) sequential await with parallel batches to prevent partial orphans
+            const tasksToReassign = taskStore._rawTasks.filter(t => t.projectId === projectId)
+            // Update all in memory first so UI reflects change immediately
+            for (const task of tasksToReassign) {
+                task.projectId = null as unknown as string
+                ;(task as unknown as { isUncategorized: boolean }).isUncategorized = true
+            }
+            // Persist in parallel batches of 10 to avoid overwhelming the server
+            const BATCH_SIZE = 10
+            for (let i = 0; i < tasksToReassign.length; i += BATCH_SIZE) {
+                const batch = tasksToReassign.slice(i, i + BATCH_SIZE)
+                await Promise.all(batch.map(t =>
+                    taskStore.updateTask(t.id, { projectId: null, isUncategorized: true }).catch(err =>
+                        console.error(`[DELETE-PROJECT] Failed to reassign task ${t.id}:`, err)
+                    )
+                ))
+            }
+
+            // SAFETY: Use _rawProjects for mutation
+            _rawProjects.value.forEach(project => {
+                if (project.parentId === projectId) {
+                    project.parentId = parentId
+                }
+            })
+
+            _rawProjects.value.splice(projectIndex, 1)
+
+            // P0: Reset active project if the deleted project was active
+            if (activeProjectId.value === projectId) {
+                setActiveProject(null)
+            }
+
+            // TASK-1428: Update IndexedDB read cache after delete
+            cacheProjects([..._rawProjects.value])
+
+            // TASK-1428: Queue for offline-first sync
+            try {
+                const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+                const syncOrchestrator = useSyncOrchestrator()
+                await syncOrchestrator.enqueue({
+                    entityType: 'project',
+                    operation: 'delete',
+                    entityId: projectId,
+                    payload: { id: projectId },
+                    baseVersion: 0
+                })
+            } catch (queueError) {
+                console.warn('[SYNC-QUEUE] Failed to queue project delete:', queueError)
+            }
+
+            // Guest mode: persist to localStorage immediately
+            const { useAuthStore: getAuth } = await import('@/stores/auth')
+            if (!getAuth().isAuthenticated) {
+                saveProjectsToLocalStorage()
+            }
+
+            // Supabase Soft Delete — throws on failure so the catch below rolls back
+            await deleteProjectRemote(projectId)
+
+        } catch (e) {
+            // BUG-1775: Remote delete failed — restore local state so the UI
+            // doesn't pretend the project is gone while the server still has
+            // it. Re-throw so callers can surface a toast.
+            console.error('[DELETE-PROJECT] Delete failed, rolling back local state:', e)
+            _rawProjects.value = projectsSnapshot
+            if (activeProjectId.value !== activeProjectSnapshot) {
+                activeProjectId.value = activeProjectSnapshot
+            }
+            cacheProjects([..._rawProjects.value])
+            throw e
+        } finally {
+            manualOperationInProgress.value = false
         }
     }
 
@@ -358,6 +408,11 @@ export const useProjectStore = defineStore('projects', () => {
         if (projectIds.length === 0) return
 
         manualOperationInProgress.value = true
+
+        // BUG-1775: Snapshot for rollback if any remote soft-delete rejects.
+        const projectsSnapshot = _rawProjects.value.map(p => ({ ...p }))
+        const activeProjectSnapshot = activeProjectId.value
+
         try {
             const { useTaskStore } = await import('./tasks')
             type TaskStoreLoophole = {
@@ -418,11 +473,38 @@ export const useProjectStore = defineStore('projects', () => {
                 saveProjectsToLocalStorage()
             }
 
-            // Supabase Bulk Delete
+            // BUG-1775: Supabase bulk delete — collect failures, don't swallow them.
+            const failures: string[] = []
             for (const id of projectIds) {
-                await deleteProjectRemote(id)
+                try {
+                    await deleteProjectRemote(id)
+                } catch (e) {
+                    console.error(`[DELETE-PROJECTS] Remote delete failed for ${id}:`, e)
+                    failures.push(id)
+                }
             }
-
+            if (failures.length > 0) {
+                // At least one remote delete rejected. Roll back the entire
+                // snapshot — partial-success rollback would leave a
+                // confusing half-deleted state. The caller should toast.
+                _rawProjects.value = projectsSnapshot
+                if (activeProjectId.value !== activeProjectSnapshot) {
+                    activeProjectId.value = activeProjectSnapshot
+                }
+                cacheProjects([..._rawProjects.value])
+                throw new Error(`Failed to delete ${failures.length} project(s): ${failures.join(', ')}`)
+            }
+        } catch (e) {
+            // Any thrown error (including the one we raise above) rolls back
+            // the snapshot and re-throws so the caller surfaces a toast.
+            // If the mutations never ran (import/reassign failure) the
+            // snapshot restore is a no-op.
+            _rawProjects.value = projectsSnapshot
+            if (activeProjectId.value !== activeProjectSnapshot) {
+                activeProjectId.value = activeProjectSnapshot
+            }
+            cacheProjects([..._rawProjects.value])
+            throw e
         } finally {
             manualOperationInProgress.value = false
         }
@@ -654,6 +736,7 @@ export const useProjectStore = defineStore('projects', () => {
         activeProjectId,
         isLoading,
         rootProjects,
+        projectTree,
         loadProjectsFromDatabase,
         createProject,
         updateProject,

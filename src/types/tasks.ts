@@ -165,6 +165,16 @@ export type TaskStatus = Task['status']
 export type TaskPriority = Task['priority']
 export type ProjectViewType = Project['viewType']
 
+// Project tree node — shared between the store's projectTree getter and
+// consumers (CategorySelector, sidebar flatten helpers). Orphans whose
+// parentId points at a no-longer-existing project are bucketed under the
+// null root so they remain reachable from a single traversal.
+export interface ProjectTreeNode {
+  project: Project
+  children: ProjectTreeNode[]
+  depth: number
+}
+
 // Calendar event types (used by calendar composables)
 export interface CalendarEvent {
   id: string // instanceId

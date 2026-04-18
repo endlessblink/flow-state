@@ -74,7 +74,7 @@
       </div>
 
       <ProjectTreeItem
-        v-for="project in taskStore.projects.filter(p => !p.parentId)"
+        v-for="project in taskStore.rootProjects"
         :key="project.id"
         :project="project"
         :expanded-projects="sidebar.expandedProjects.value || []"
@@ -95,12 +95,14 @@ import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { FolderOpen, Plus, Trash2, X, Layers } from 'lucide-vue-next'
+import { useMessage } from 'naive-ui'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
 import ProjectTreeItem from '@/components/projects/ProjectTreeItem.vue'
 
 const uiStore = useUIStore()
 const taskStore = useTaskStore()
 const sidebar = useSidebarManagement()
+const message = useMessage()
 
 // Project Multi-Select State
 const selectedProjectIds = computed(() => uiStore.selectedProjectIds)
@@ -174,7 +176,14 @@ const deleteSelectedProjects = async () => {
   try {
     await taskStore.deleteProjects(idsToDelete)
   } catch (error) {
+    // BUG-1775: deleteProjects now throws on remote failure + rolls back
+    // local state. Surface it so the user knows the delete didn't stick.
     console.error('❌ Error deleting projects:', error)
+    message.error(
+      idsToDelete.length === 1
+        ? 'Failed to delete project — please try again.'
+        : `Failed to delete ${idsToDelete.length} projects — please try again.`
+    )
   }
   clearProjectSelection()
 }
@@ -354,7 +363,7 @@ const getFlattenedProjectList = () => {
     }
     return result
   }
-  return flatten(taskStore.projects.filter(p => !p.parentId))
+  return flatten(taskStore.rootProjects)
 }
 
 const hasProjectChildren = (projectId: string) => {

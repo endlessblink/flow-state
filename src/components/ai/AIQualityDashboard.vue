@@ -9,9 +9,9 @@
       <div class="actions">
         <button
           class="btn btn-ghost"
+          title="Quick check with 1 run per test"
           :disabled="isRunning"
           @click="handleRunTests(1)"
-          title="Quick check with 1 run per test"
         >
           Quick (1x)
         </button>

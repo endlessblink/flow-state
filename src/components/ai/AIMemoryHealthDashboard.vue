@@ -74,15 +74,23 @@
 
       <div class="card glass stat-card">
         <h3>Duration</h3>
-        <div class="stat-value stat-value--small">{{ formatDuration(report.durationMs) }}</div>
-        <p>{{ formatTime(report.timestamp) }}</p>
+        <div class="stat-value stat-value--small">
+          {{ formatDuration(report.durationMs) }}
+        </div>
+        <p>
+          {{ formatTime(report.timestamp) }}
+        </p>
       </div>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <p>No assessment results yet.</p>
-      <p class="empty-hint">"Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).</p>
+      <p>
+        No assessment results yet.
+      </p>
+      <p class="empty-hint">
+        "Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).
+      </p>
     </div>
 
     <!-- Sections -->
@@ -124,10 +132,16 @@
               <span class="check-status" :class="'status-' + check.status">
                 {{ check.status === 'pass' ? 'PASS' : check.status === 'warn' ? 'WARN' : 'FAIL' }}
               </span>
-              <span class="check-name">{{ check.name }}</span>
-              <span class="check-score" :class="scoreColorClass(check.score)">{{ check.score }}%</span>
+              <span class="check-name">
+                {{ check.name }}
+              </span>
+              <span class="check-score" :class="scoreColorClass(check.score)">
+                {{ check.score }}%
+              </span>
             </div>
-            <div class="check-value">{{ check.value }}</div>
+            <div class="check-value">
+              {{ check.value }}
+            </div>
             <div v-if="check.recommendation" class="check-recommendation">
               {{ check.recommendation }}
             </div>
@@ -172,7 +186,9 @@
           <span class="history-time">{{ formatTime(h.timestamp) }}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" @click="handleClearHistory">Clear History</button>
+      <button class="btn btn-ghost" @click="handleClearHistory">
+        Clear History
+      </button>
     </div>
   </div>
 </template>

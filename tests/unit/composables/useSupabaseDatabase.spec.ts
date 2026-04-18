@@ -133,10 +133,6 @@ const mapperSpies = vi.hoisted(() => ({
     id: n.id,
     user_id: userId
   })),
-  toSupabasePinnedTask: vi.fn((p: any, userId: string) => ({
-    id: p.id,
-    user_id: userId
-  })),
   toSupabaseWorkProfile: vi.fn((wp: any, userId: string) => ({
     user_id: userId,
     name: wp.name
@@ -159,7 +155,6 @@ vi.mock('@/utils/supabaseMappers', async () => {
     toSupabaseUserSettings: mapperSpies.toSupabaseUserSettings,
     fromSupabaseUserSettings: mapperSpies.fromSupabaseUserSettings,
     toSupabaseNotification: mapperSpies.toSupabaseNotification,
-    toSupabasePinnedTask: mapperSpies.toSupabasePinnedTask,
     toSupabaseWorkProfile: mapperSpies.toSupabaseWorkProfile,
     toSupabaseQuickSortSession: mapperSpies.toSupabaseQuickSortSession
   }
@@ -619,23 +614,6 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
     expect(upsertCalls).toHaveLength(1)
     expect(upsertCalls[0]?.args[0]).toEqual([
       expect.objectContaining({ id: 'notif-1', user_id: 'user-1' })
-    ])
-    expect(upsertCalls[0]?.args[1]).toEqual({ onConflict: 'id' })
-  })
-
-  // PINNED TASKS TESTS
-  it('saves pinned tasks successfully', async () => {
-    queueResponse('pinned_tasks', [{ error: null }])
-
-    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
-    const db = useSupabaseDatabase()
-
-    await db.reorderPinnedTasks([{ id: 'pin-1' }] as any)
-
-    const upsertCalls = queryCalls.filter(call => call.table === 'pinned_tasks' && call.method === 'upsert')
-    expect(upsertCalls).toHaveLength(1)
-    expect(upsertCalls[0]?.args[0]).toEqual([
-      expect.objectContaining({ id: 'pin-1', user_id: 'user-1' })
     ])
     expect(upsertCalls[0]?.args[1]).toEqual({ onConflict: 'id' })
   })

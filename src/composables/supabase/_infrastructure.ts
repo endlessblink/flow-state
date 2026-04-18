@@ -164,7 +164,6 @@ export const invalidateCache = {
     tasks: () => swrCache.invalidatePrefix('tasks:'),
     projects: () => swrCache.invalidatePrefix('projects:'),
     groups: () => swrCache.invalidatePrefix('groups:'),
-    pinnedTasks: () => swrCache.invalidatePrefix('pinnedTasks:'),
     all: () => swrCache.clear(),
     // BUG-1056: Expose user change check for auth state changes
     onAuthChange: (userId: string | null) => swrCache.checkUserChange(userId)

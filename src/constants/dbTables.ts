@@ -15,7 +15,6 @@ export const DB_TABLES = {
   NOTIFICATIONS: 'notifications',
   USER_SETTINGS: 'user_settings',
   POMODORO_HISTORY: 'pomodoro_history',
-  PINNED_TASKS: 'pinned_tasks',
   TASK_DEDUP_AUDIT: 'task_dedup_audit',
   QUICK_SORT_SESSIONS: 'quick_sort_sessions',
   // gamification tables

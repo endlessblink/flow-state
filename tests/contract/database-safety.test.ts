@@ -140,7 +140,6 @@ describe('Database Migration Safety', () => {
     // These tables are known to skip created_at (e.g. simple lookup/junction tables,
     // audit tables, membership tables that use joined_at instead):
     const knownExceptions = new Set([
-      'pinned_tasks',
       'whatsapp_conversations',
       'tombstones',          // uses deleted_at, not created_at
       'user_achievements',   // junction: user_id + achievement_id
@@ -281,7 +280,7 @@ describe('Database Migration Safety', () => {
     }
 
     // Some junction tables use composite PKs defined separately — known exceptions:
-    const knownExceptions = new Set(['whatsapp_conversations', 'pinned_tasks'])
+    const knownExceptions = new Set(['whatsapp_conversations'])
     const unexpected = missing.filter(t => !knownExceptions.has(t.toLowerCase()))
     expect(unexpected).toEqual([])
   })

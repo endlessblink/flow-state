@@ -2,7 +2,6 @@
 import { type Task, type Project, type Subtask, type TaskInstance, type TaskRecurrence, type RecurringTaskInstance, type NotificationPreferences, UNCATEGORIZED_PROJECT_ID } from '../types/tasks'
 import type { ScheduledNotification } from '../types/recurrence'
 import type { CanvasGroup } from '../types/canvas'
-import type { PinnedTask } from '../types/quickTasks'
 import type { AppSettings } from '../stores/settings'
 import type { PomodoroSession } from '../stores/timer'
 import type { SessionSummary } from '../stores/quickSort'
@@ -257,18 +256,6 @@ export interface SupabaseQuickSortSession {
     efficiency: number
     streak_days: number
     completed_at: string
-}
-
-export interface SupabasePinnedTask {
-    id: string
-    user_id: string
-    title: string
-    description?: string
-    project_id?: string | null
-    priority?: string | null
-    sort_order?: number
-    created_at?: string
-    updated_at?: string
 }
 
 // -- Work Profile Types (FEATURE-1317) --
@@ -843,35 +830,6 @@ export interface MemoryObservation {
     confidence: number  // 0.0 - 1.0
     source: string      // "pomodoro_data" | "weekly_history" | "ai_observation"
     createdAt: string   // ISO date
-}
-
-// -- Pinned Task Mappers (FEATURE-1248) --
-
-export function toSupabasePinnedTask(pin: PinnedTask, userId: string): SupabasePinnedTask {
-    return {
-        id: pin.id,
-        user_id: userId,
-        title: pin.title,
-        description: pin.description || '',
-        project_id: sanitizeUUID(pin.projectId),
-        priority: pin.priority || null,
-        sort_order: pin.sortOrder || 0,
-        updated_at: new Date().toISOString()
-    }
-}
-
-export function fromSupabasePinnedTask(record: SupabasePinnedTask): PinnedTask {
-    return {
-        id: record.id,
-        userId: record.user_id,
-        title: record.title,
-        description: record.description || '',
-        projectId: record.project_id || null,
-        priority: record.priority || null,
-        sortOrder: record.sort_order || 0,
-        createdAt: new Date(record.created_at || Date.now()),
-        updatedAt: new Date(record.updated_at || Date.now())
-    }
 }
 
 // -- Work Profile Mappers (FEATURE-1317) --

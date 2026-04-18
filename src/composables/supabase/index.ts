@@ -12,7 +12,6 @@ import { useNotificationsDatabase } from './useNotificationsDatabase'
 import { useTimerDatabase } from './useTimerDatabase'
 import { useSettingsDatabase } from './useSettingsDatabase'
 import { useQuickSortDatabase } from './useQuickSortDatabase'
-import { usePinnedTasksDatabase } from './usePinnedTasksDatabase'
 import { useWorkProfileDatabase } from './useWorkProfileDatabase'
 import { useRealtimeSubscription } from './useRealtimeSubscription'
 import { useTaskAuditLog } from './useTaskAuditLog'
@@ -43,7 +42,6 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const timer = useTimerDatabase(ctx)
     const settings = useSettingsDatabase(ctx)
     const quickSort = useQuickSortDatabase(ctx)
-    const pinnedTasks = usePinnedTasksDatabase(ctx)
     const workProfile = useWorkProfileDatabase(ctx)
     const realtime = useRealtimeSubscription(ctx)
     const auditLog = useTaskAuditLog(ctx)
@@ -60,8 +58,6 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         ...timer,
         ...settings,
         ...quickSort,
-        // FEATURE-1248: Pinned Tasks
-        ...pinnedTasks,
         // FEATURE-1317: Work Profile
         ...workProfile,
         ...realtime,

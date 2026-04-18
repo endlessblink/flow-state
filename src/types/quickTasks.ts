@@ -1,27 +1,17 @@
 /**
- * FEATURE-1248: Quick Tasks — Pinned & Frequent Task Shortcuts
+ * Quick Tasks — Pinned & Frequent Task Shortcuts
+ *
+ * TASK-1772: `PinnedTask` type removed. Pinned items are real tasks
+ * (filtered by `task.isPinned`); only the merged display type remains.
  */
-
-/** A user-created pinned task shortcut (stored in pinned_tasks table) */
-export interface PinnedTask {
-    id: string
-    userId: string
-    title: string
-    description: string
-    projectId: string | null
-    priority: string | null
-    sortOrder: number
-    createdAt: Date
-    updatedAt: Date
-}
 
 /** Unified display item for the Quick Tasks dropdown */
 export interface QuickTaskItem {
-    /** Unique key for rendering (pinned: pin ID, frequent: task ID) */
+    /** Unique key for rendering */
     key: string
     type: 'pinned' | 'frequent' | 'search'
     title: string
-    /** For pinned: the pin ID. For frequent: the task ID */
+    /** The backing task id (always a real task post-unification) */
     sourceId: string
     projectId: string | null
     projectName: string | null
@@ -29,6 +19,6 @@ export interface QuickTaskItem {
     priority: string | null
     /** Number of completed pomodoros (frequent tasks only) */
     frequency: number
-    /** Whether this item has a corresponding pin */
+    /** Whether the backing task is flagged pinned */
     isPinned: boolean
 }

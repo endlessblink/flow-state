@@ -891,7 +891,8 @@ PlasmoidItem {
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: {
                                             var item = root.nannyTaskList[index]
-                                            root.hideNannyTask(item.isPinned ? item.pinId : item.taskId)
+                                            // TASK-1772: pinId === taskId post-unification; always pass the task id.
+                                            root.hideNannyTask(item.taskId)
                                         }
                                     }
                                 }
@@ -5273,8 +5274,9 @@ PlasmoidItem {
 
         var xhr = new XMLHttpRequest()
         // TASK-1373: Include project_id for optional config-based filtering
+        // TASK-1772: Query real tasks where is_pinned=true; the legacy pinned_tasks table is gone.
         var filterProjectId = plasmoid.configuration.filterProjectId || ""
-        var url = root.supabaseUrl + "/rest/v1/pinned_tasks?user_id=eq." + root.userId + "&order=sort_order.asc&select=id,title,sort_order,project_id"
+        var url = root.supabaseUrl + "/rest/v1/tasks?user_id=eq." + root.userId + "&is_pinned=eq.true&is_deleted=eq.false&status=neq.done&order=created_at.asc&select=id,title,project_id,priority,due_date,status"
 
         xhr.open("GET", url, true)
         xhr.setRequestHeader("apikey", root.supabaseKey)
@@ -5313,63 +5315,9 @@ PlasmoidItem {
     }
 
     function selectPinnedTask(pin) {
-        if (!root.isAuthenticated) return
-
-        // BUG-1521: Search filtered tasks first, then ALL tasks, then API lookup
-        var matchId = ""
-
-        // 1. Search currently filtered tasks
-        for (var i = 0; i < root.tasks.length; i++) {
-            var t = root.tasks[i]
-            if (t.title && t.title.toLowerCase() === pin.title.toLowerCase()) {
-                matchId = t.id
-                break
-            }
-        }
-
-        // 2. Search ALL non-done tasks (nanny cache)
-        if (!matchId && root.nannyAllTasks.length > 0) {
-            for (var j = 0; j < root.nannyAllTasks.length; j++) {
-                var nt = root.nannyAllTasks[j]
-                if (nt.title && nt.title.toLowerCase() === pin.title.toLowerCase()) {
-                    matchId = nt.id
-                    console.log("[PINS] Found match in nannyAllTasks:", matchId)
-                    break
-                }
-            }
-        }
-
-        if (matchId) {
-            console.log("[PINS] Found matching task:", matchId)
-            root._startOrSwitchForTask(matchId)
-        } else {
-            // 3. API lookup — search DB directly (local arrays may not be loaded yet)
-            console.log("[PINS] No local match, querying API for:", pin.title)
-            var xhr = new XMLHttpRequest()
-            var encodedTitle = encodeURIComponent(pin.title)
-            var url = root.supabaseUrl + "/rest/v1/tasks?select=id&title=eq." + encodedTitle + "&is_deleted=eq.false&status=neq.done&user_id=eq." + root.userId + "&limit=1"
-            xhr.open("GET", url, true)
-            xhr.setRequestHeader("apikey", root.supabaseKey)
-            xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === XMLHttpRequest.DONE) {
-                    if (xhr.status === 200) {
-                        var results = JSON.parse(xhr.responseText)
-                        if (results.length > 0) {
-                            console.log("[PINS] Found task via API:", results[0].id)
-                            root._startOrSwitchForTask(results[0].id)
-                        } else {
-                            console.log("[PINS] No existing task found, creating:", pin.title)
-                            root.createTask(pin.title, true)
-                        }
-                    } else {
-                        console.error("[PINS] API lookup failed:", xhr.status, "- creating task as fallback")
-                        root.createTask(pin.title, true)
-                    }
-                }
-            }
-            xhr.send()
-        }
+        if (!root.isAuthenticated || !pin || !pin.id) return
+        // TASK-1772: Pinned items are real tasks — pin.id IS the task id, no title lookup needed.
+        root._startOrSwitchForTask(pin.id)
     }
 
     // BUG-1521: shared helper — start timer or switch task
@@ -5385,61 +5333,97 @@ PlasmoidItem {
     }
 
     function pinTask(title) {
+        // TASK-1772: Pinning creates a real task with is_pinned=true (matches webapp).
         if (!root.isAuthenticated || !title.trim()) return
 
-        // Check if already pinned
+        var trimmed = title.trim()
+
+        // If a currently-loaded pin has the same title, nothing to do.
         for (var i = 0; i < root.pinnedTasks.length; i++) {
-            if (root.pinnedTasks[i].title.toLowerCase() === title.trim().toLowerCase()) {
-                console.log("[PINS] Already pinned:", title)
+            if (root.pinnedTasks[i].title && root.pinnedTasks[i].title.toLowerCase() === trimmed.toLowerCase()) {
+                console.log("[PINS] Already pinned:", trimmed)
                 return
             }
         }
 
+        // Look up an existing active task with this title — pin it in place instead of creating a duplicate.
+        var lookup = new XMLHttpRequest()
+        var encodedTitle = encodeURIComponent(trimmed)
+        var lookupUrl = root.supabaseUrl + "/rest/v1/tasks?select=id&title=eq." + encodedTitle + "&is_deleted=eq.false&status=neq.done&user_id=eq." + root.userId + "&limit=1"
+        lookup.open("GET", lookupUrl, true)
+        lookup.setRequestHeader("apikey", root.supabaseKey)
+        lookup.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+        lookup.onreadystatechange = function() {
+            if (lookup.readyState !== XMLHttpRequest.DONE) return
+            if (lookup.status === 200) {
+                var hits = JSON.parse(lookup.responseText)
+                if (hits.length > 0) {
+                    root._setTaskPinned(hits[0].id, true, function() { root.fetchPinnedTasks() })
+                    return
+                }
+            }
+            // No match (or lookup failed) — create a fresh task, pinned.
+            root._createPinnedTask(trimmed)
+        }
+        lookup.send()
+    }
+
+    function _createPinnedTask(title) {
+        var taskId = root.generateUUID()
+        var now = new Date().toISOString()
         var payload = {
+            id: taskId,
             user_id: root.userId,
-            title: title.trim(),
-            sort_order: root.pinnedTasks.length
+            title: title,
+            status: "planned",
+            is_in_inbox: true,
+            is_pinned: true,
+            is_deleted: false,
+            created_at: now,
+            updated_at: now
         }
 
         var xhr = new XMLHttpRequest()
-        xhr.open("POST", root.supabaseUrl + "/rest/v1/pinned_tasks", true)
+        xhr.open("POST", root.supabaseUrl + "/rest/v1/tasks", true)
         xhr.setRequestHeader("apikey", root.supabaseKey)
         xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
         xhr.setRequestHeader("Content-Type", "application/json")
         xhr.setRequestHeader("Prefer", "return=representation")
-
         xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 201 || xhr.status === 200) {
-                    console.log("[PINS] Pinned:", title)
-                    root.fetchPinnedTasks()
-                } else {
-                    console.error("[PINS] Pin failed:", xhr.status, xhr.responseText)
-                }
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            if (xhr.status === 201 || xhr.status === 200) {
+                console.log("[PINS] Pinned via new task:", title)
+                root.fetchPinnedTasks()
+                root.fetchTasks()
+            } else {
+                console.error("[PINS] Pin-create failed:", xhr.status, xhr.responseText)
             }
         }
-
         xhr.send(JSON.stringify(payload))
     }
 
-    function unpinTask(pinId) {
-        if (!root.isAuthenticated || !pinId) return
+    function unpinTask(taskId) {
+        // TASK-1772: Unpin == PATCH is_pinned=false on the real task row.
+        if (!root.isAuthenticated || !taskId) return
+        root._setTaskPinned(taskId, false, function() { root.fetchPinnedTasks() })
+    }
 
+    function _setTaskPinned(taskId, pinned, onDone) {
         var xhr = new XMLHttpRequest()
-        xhr.open("DELETE", root.supabaseUrl + "/rest/v1/pinned_tasks?id=eq." + pinId, true)
+        xhr.open("PATCH", root.supabaseUrl + "/rest/v1/tasks?id=eq." + taskId, true)
         xhr.setRequestHeader("apikey", root.supabaseKey)
         xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
-
+        xhr.setRequestHeader("Content-Type", "application/json")
         xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 200 || xhr.status === 204) {
-                    console.log("[PINS] Unpinned:", pinId)
-                    root.fetchPinnedTasks()
-                }
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            if (xhr.status === 200 || xhr.status === 204) {
+                console.log("[PINS] is_pinned=" + pinned + " for", taskId)
+                if (onDone) onDone()
+            } else {
+                console.error("[PINS] is_pinned toggle failed:", xhr.status, xhr.responseText)
             }
         }
-
-        xhr.send()
+        xhr.send(JSON.stringify({ is_pinned: pinned, updated_at: new Date().toISOString() }))
     }
 
     // ===== NANNY TASK LIST BUILDER (TASK-1475) =====
@@ -5613,20 +5597,19 @@ PlasmoidItem {
             return root.mutedColor
         }
 
-        // 1. Add pinned tasks first (with details from matching task)
+        // 1. Add pinned tasks first. TASK-1772: pins ARE real tasks, so they carry priority/due_date directly.
         for (var i = 0; i < root.pinnedTasks.length && combined.length < maxItems; i++) {
             var pin = root.pinnedTasks[i]
             // Skip if hidden today
             if (root.nannyHiddenToday[pin.id]) continue
 
-            var matchedTask = findTaskByTitle(pin.title)
-            var proj = getProjectInfo(pin.project_id || (matchedTask ? matchedTask.project_id : ""))
-            var prio = matchedTask ? matchedTask.priority : ""
-            var dueDate = matchedTask ? matchedTask.due_date : ""
+            var proj = getProjectInfo(pin.project_id || "")
+            var prio = pin.priority || ""
+            var dueDate = pin.due_date || ""
 
             combined.push({
                 title: pin.title,
-                taskId: matchedTask ? matchedTask.id : pin.id,
+                taskId: pin.id,
                 pinId: pin.id,
                 isPinned: true,
                 source: "pinned",

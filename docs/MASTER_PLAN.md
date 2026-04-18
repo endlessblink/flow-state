@@ -47,9 +47,29 @@
 
 ---
 
-### TASK-1772: Unify Pinned lists — drop pinned_tasks table, use task.isPinned everywhere (🔄 IN PROGRESS)
+### BUG-1775: Quick Sort chips mirror sidebar; deletes roll back on remote failure (🔄 IN PROGRESS)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Quick Sort EDIT popover's project chips show projects the user cannot see in the sidebar tree (e.g., `flow-state`, `משחק Blood And Rust` appeared as chips while absent from sidebar). Two defects combine:
+
+1. **CategorySelector flattens what the sidebar hides.** `src/components/layout/CategorySelector.vue:90-133` walks the whole project tree up to depth 10 and slices to `maxShortcuts=9` — zero coupling to `useSidebarManagement.expandedProjects`. Children of collapsed sidebar parents still appear as chips.
+2. **Silent remote-delete failures.** `src/stores/projects.ts:271-352` (`deleteProject`) and `:357-429` (`deleteProjects`) splice `_rawProjects` optimistically, then `await deleteProjectRemote(...)`, but catch only logs — no rollback, no toast. A failed remote call leaves UI "deleted" while the server keeps the row. Next fetch/realtime resurrects it.
+3. **Inline `!p.parentId` root filters duplicated** across 5 callsites instead of consuming the existing `projectStore.rootProjects`.
+
+Confirmed live on VPS production Supabase — both reported rows have `is_deleted=false`, non-null `parent_id`, identical `updated_at=2026-04-18 08:32:24+00`.
+
+**Goal**: (a) Quick Sort chips reflect exactly what the sidebar tree shows. (b) A failed remote delete restores local state + surfaces an error. (c) One canonical root-projects getter across sidebar, Quick Sort, Kanban, AllTasks, useSidebarManagement.
+
+**Plan**: See `~/.claude/plans/iridescent-stargazing-cat.md`.
+
+**Files**: `src/stores/projects.ts`, `src/stores/tasks.ts`, `src/types/tasks.ts`, `src/components/layout/CategorySelector.vue`, `src/components/sidebar/SidebarProjectsSection.vue`, `src/views/AllTasksView.vue`, `src/components/kanban/KanbanSwimlane.vue`, `src/composables/app/useSidebarManagement.ts`.
+
+---
+
+### ~~TASK-1772~~: Unify Pinned lists — drop pinned_tasks table, use task.isPinned everywhere (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ **DONE** (2026-04-18)
 
 **Problem**: Calendar view shows two "Pinned" sections with different contents — top-right lightning-icon dropdown (4 shortcut rows from `pinned_tasks` table) vs left Inbox sidebar (1 real task with `isPinned=true`). Two independent systems share one label; user didn't know there were two.
 

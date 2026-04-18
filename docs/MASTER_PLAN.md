@@ -1,12 +1,212 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: February 19, 2026
+> **Last Updated**: April 16, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
 ---
 
 ## Active Tasks
+
+### FEATURE-1759: Unified Knowledge + Custom Lists roadmap foundation (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: FlowState is strong as an action system, but it does not yet support a coherent second-brain / data-management workflow or lightweight custom lists like groceries without overloading the task model.
+
+**Goal**: Extend FlowState into a unified action + knowledge system where tasks remain the execution layer, notes become the thinking/reference layer, and custom lists become the lightweight execution layer.
+
+**Approach**:
+1. Add a shared content taxonomy and visibility rules first
+2. Turn `/catalog` into a real knowledge surface
+3. Add note/page workflows optimized for capture and retrieval
+4. Add grouped custom lists with lightweight list items
+5. Reuse AI and search infrastructure only after the base model is stable
+
+**Files**: `src/types/tasks.ts`, `src/stores/tasks.ts`, `src/views/AllTasksView.vue`, `src/router/index.ts`, `src/services/ai/`, `src/components/common/TiptapEditor.vue`
+
+---
+
+### TASK-1760: Content taxonomy: task, note, list + shared visibility rules (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: The app currently treats most rich content as tasks, but there is no explicit content kind or rules for where notes/lists should appear.
+
+**Goal**: Introduce a minimal content taxonomy so the app can distinguish task, note, and list behavior without splitting into multiple disconnected systems.
+
+**Approach**:
+1. Add a content-kind field and shared display rules
+2. Define where each kind appears: inbox, board, calendar, catalog, AI context
+3. Ensure note/list entities do not pollute scheduling/task-focused views by default
+4. Preserve reuse of existing task persistence and offline/sync patterns where possible
+
+**Files**: `src/types/tasks.ts`, `src/stores/tasks/taskOperations.ts`, `src/stores/tasks/taskPersistence.ts`, `src/composables/tasks/useTaskFiltering.ts`, `src/utils/supabaseMappers.ts`
+
+---
+
+### TASK-1761: Catalog -> Knowledge Hub MVP with type filters and capture entry (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: `/catalog` is labeled as a knowledge base in UI copy, but it is still just the flat tasks view.
+
+**Goal**: Make Catalog the home for knowledge browsing and capture across tasks, notes, and lists.
+
+**Approach**:
+1. Add content-type filters and segmented views
+2. Add quick capture entry points for note and list creation
+3. Support browsing by project/container/tag/type
+4. Preserve fast categorization and bulk actions
+
+**Files**: `src/views/AllTasksView.vue`, `src/layouts/AppHeader.vue`, `src/components/base/FilterControls.vue`, `src/components/filters/SavedViewsDropdown.vue`
+
+---
+
+### TASK-1762: Note/Page MVP using task-based content, markdown, tags, attachments (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: There is no dedicated second-brain note/page workflow despite existing rich-text, attachments, and task description support.
+
+**Goal**: Ship a first useful note/page system without introducing a fully separate note architecture.
+
+**Approach**:
+1. Reuse the task-based model for note/page entities
+2. Use existing markdown/Tiptap editor and attachment support
+3. Support tags and project/container placement
+4. Optimize note UX for quick capture and later retrieval
+5. Defer full graph/backlink semantics to later tasks
+
+**Files**: `src/types/tasks.ts`, `src/components/common/TiptapEditor.vue`, `src/components/tasks/TaskEditModal.vue`, `src/components/tasks/TaskAttachments.vue`
+
+---
+
+### TASK-1763: Custom Lists MVP: lightweight items, groups, reorder, check off (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: Lists like groceries, packing, shopping, and household supplies are too lightweight and repetitive to model as full tasks by default.
+
+**Goal**: Add list containers with lightweight list items and grouped sections that feel native and fast.
+
+**Approach**:
+1. Add list entities and lightweight list items
+2. Support grouped sections like Produce, Pantry, Household
+3. Support fast add, check/uncheck, drag reorder, regroup, clear completed
+4. Keep promotion to full task as an explicit action, not the default
+
+**Files**: `src/types/tasks.ts`, `src/stores/tasks.ts`, `src/views/AllTasksView.vue`, `src/components/tasks/`, `src/components/common/`
+
+---
+
+### TASK-1764: Recurring list templates and reset/reuse workflow (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Reusable lists such as weekly groceries or packing checklists need a reset/template workflow, not task recurrence semantics.
+
+**Goal**: Allow a list to be reused or regenerated on demand and optionally on a recurring schedule.
+
+**Approach**:
+1. Add list template/reset behavior
+2. Support duplicate-from-template and clear-completed reset
+3. Add optional recurrence for list regeneration
+4. Keep this separate from task clone-on-complete recurrence rules
+
+**Files**: `src/types/tasks.ts`, `src/stores/tasks/taskOperations.ts`, `src/stores/tasks/taskPersistence.ts`, `src/types/recurrence.ts`
+
+---
+
+### TASK-1765: Unified search across tasks, notes, and lists (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Problem**: A second brain is only useful if capture and retrieval are excellent; current search is task-centric.
+
+**Goal**: Make search a cross-content retrieval surface for tasks, notes, lists, and list items where appropriate.
+
+**Approach**:
+1. Extend search indexing/filtering across content kinds
+2. Search title, body, tags, project/container, and list/group names
+3. Add content-type and scope filters
+4. Defer semantic/vector search until structured search proves insufficient
+
+**Files**: `src/components/layout/SearchModal.vue`, `src/composables/tasks/useTaskFiltering.ts`, `src/services/ai/tools.ts`, `src/stores/tasks.ts`
+
+---
+
+### TASK-1766: Promote note or list item into full task flow (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Some notes and list items become actionable, but there is no explicit conversion flow.
+
+**Goal**: Let users promote lightweight knowledge/list content into full tasks with minimal friction.
+
+**Approach**:
+1. Add "Convert to task" or "Promote to task" actions
+2. Preserve source context and backlinks/reference where useful
+3. Optionally prefill project, due date, tags, and metadata
+4. Keep the original source item intact unless user chooses move/replace semantics
+
+**Files**: `src/stores/tasks/taskOperations.ts`, `src/components/tasks/TaskContextMenu.vue`, `src/components/tasks/TaskEditModal.vue`
+
+---
+
+### TASK-1767: AI can read notes/lists and turn them into useful actions (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: AI memory/context currently leans on task/work-profile data, not on a richer personal knowledge layer.
+
+**Goal**: Let AI search notes/lists, summarize them, and convert them into useful actions or plans.
+
+**Approach**:
+1. Expose notes/lists to AI retrieval tools and user context building
+2. Add flows like summarize note, extract actions, build grocery list, regroup list items
+3. Feed note/list interactions into existing work-profile and memory graph systems
+4. Defer embeddings/RAG until normal structured retrieval is in place
+
+**Files**: `src/services/ai/tools.ts`, `src/services/ai/userContext.ts`, `src/composables/useWorkProfile.ts`, `src/stores/aiChat.ts`
+
+---
+
+### TASK-1768: Persist mini-canvas planning notes for knowledge workflows (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: `planningNotes` already exist and are a strong fit for second-brain thinking, but persistence is still deferred.
+
+**Goal**: Make mini-canvas planning notes durable so they can support knowledge capture and note clustering.
+
+**Approach**:
+1. Add database support for planning notes
+2. Wire persistence through Supabase mappers and sync
+3. Ensure note positions and metadata survive reload/sync/offline flows
+4. Reuse mini-canvas as a first knowledge-clustering surface
+
+**Files**: `src/types/tasks.ts`, `src/composables/mini-canvas/useMiniCanvas.ts`, `src/composables/mini-canvas/useMiniCanvasActions.ts`, `src/utils/supabaseMappers.ts`
+
+---
+
+### TASK-1769: Lightweight links/backlinks between notes and tasks (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Problem**: Capture and search are the first priority, but over time note-to-note and note-to-task relationships will matter.
+
+**Goal**: Add simple explicit links/backlinks without committing to a heavy graph feature too early.
+
+**Approach**:
+1. Support explicit references between tasks, notes, and lists
+2. Show related items in detail views
+3. Track backlinks automatically where practical
+4. Defer graph visualization and advanced knowledge navigation
+
+**Files**: `src/types/tasks.ts`, `src/components/tasks/TaskEditModal.vue`, `src/views/AllTasksView.vue`, `src/services/ai/`
+
+---
 
 ### ~~BUG-1758~~: Inbox Canvas Order sort ignored X for same-Y rows (✅ DONE)
 
@@ -22,18 +222,64 @@
 
 ---
 
-### ~~TASK-1756~~: Canvas day group date rotation + dynamic Today/Tomorrow dates (✅ DONE)
+### TASK-1756: Canvas day group date rotation + dynamic Today/Tomorrow dates (🔄 REOPENED)
 
-**Priority**: P3 | **Status**: ✅ DONE (2026-04-11)
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (reopened 2026-04-17)
 
-- Today/Tomorrow smart groups now show dynamic date suffixes (e.g., "Today / 11.4.26")
-- Day-of-week groups skip dates covered by Today/Tomorrow (e.g., if Tomorrow is Saturday, the Saturday group shows next Saturday)
-- Added rotation button (CalendarClock icon) to canvas toolbar for manual day group reordering
-- Midnight auto-rotation updates task dueDates and respects weekStartsOn setting
-- Marked TASK-149 (Canvas Group Stability Fixes) as DONE — all 5 sub-issues resolved in prior work
-- Visual position rotation (groups physically swapping slots) still pending — algorithm works but Vue Flow controlled-mode prevents visual updates
+**Reopen reason (2026-04-17)**: User reports day-of-week groups still don't update to the correct dates. Today is Friday 17.4.26 — reproducing in dev to capture exact failure mode before patching.
+
+**Fix applied 2026-04-17** (commit pending):
+
+1. **Shared date helper** — new `src/utils/dayGroupDate.ts::getDayGroupDate()` used by both the group header (`GroupNodeSimple.vue`) and rotation (`useDayGroupRotation.ts`). Removes the formula drift that caused header suffix and rotation dueDate to disagree.
+2. **`|| 7` bug** — the old `((…) % 7) || 7` fall-through in `GroupNodeSimple.vue` turned today=target into +7 days. Fixed. The Friday group on a Friday now shows today (17.4.26) instead of next Friday when no Today/Tomorrow smart group exists. Live-verified in dev server: Friday=17.4.26, Monday=20.4.26.
+3. **Midnight reactivity** — new singleton composable `src/composables/useCurrentDay.ts` exposes a reactive "today" ref that flips at 00:00 and on tab-visibility regain. `dayOfWeekDateSuffix` + `currentTargetTimestamp` in `GroupNodeSimple.vue` now depend on this ref, so the header label re-renders at midnight without a reload.
+4. **onMoves / Vue Flow bridge** — confirmed `applyDayGroupMoves` in `CanvasView.vue:362` calls `updateNode` with `section-`-prefixed IDs, wiring the rotation to the Vue Flow node layout. Added `tests/unit/canvas/day-group-onmoves.test.ts` (5 tests) pinning: return payload uses `section-<id>`, midnight callback fires with correct payload, feature-flag off suppresses callback, no-op when already sorted, `getNodePosition` overrides stale store positions.
+
+**Test coverage** (all green as of 2026-04-17):
+- `tests/unit/canvas/day-group-date-suffix.test.ts` (7 tests)
+- `tests/unit/composables/useCurrentDay.test.ts` (3 tests)
+- `tests/unit/canvas/day-group-onmoves.test.ts` (5 tests)
+- `tests/unit/canvas/day-group-position-rotation.test.ts` (11 tests, pre-existing)
+- Total: 77 canvas + composables tests green, no new TS errors.
+
+**Live verification** (dev server, Friday 2026-04-17 14:18):
+- "Friday" group header reads `17.4.26` (today). "Monday" reads `20.4.26` (+3 days).
+- "Rotate day groups" toolbar button fires `[DAY-ROTATION]` logs with correct sort order (Friday first as today).
+- "2 day groups updated for today" banner shown after rotation.
+
+**Symptoms to verify in-app** (Friday 2026-04-17):
+- Day-of-week group for today's weekday shows next week's date (e.g. Friday group shows 24.4 instead of 17.4) when no Today/Tomorrow smart group exists — **should be fixed** by formula change.
+- Visual position rotation still pending from prior pass (Vue Flow controlled-mode blocker).
+- Possible regression interacting with BUG-1757 fix (dueDate edit leaving task in old group).
+
+**Previous scope (2026-04-11, now partial)**:
+- Today/Tomorrow smart groups show dynamic date suffixes (e.g., "Today / 11.4.26")
+- Day-of-week groups skip dates covered by Today/Tomorrow
+- Rotation button (CalendarClock icon) in canvas toolbar
+- Midnight auto-rotation updates task dueDates, respects weekStartsOn
+- Visual position rotation pending — algorithm works but Vue Flow controlled-mode prevents visual updates
 
 **Files**: `src/composables/canvas/useDayGroupRotation.ts`, `src/components/canvas/GroupNodeSimple.vue`, `src/components/canvas/CanvasToolbar.vue`, `src/views/CanvasView.vue`, `src/stores/settings.ts`
+
+---
+
+### ~~TASK-1770~~: Watchpost VPS Server monitoring panel (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-17)
+
+**Goal**: Add a "Server" tab to Watchpost with live monitoring of all VPS services and infrastructure.
+
+- New `vps/` panel with Services + Health sub-tabs
+- Live Docker auto-discovery — all running containers appear automatically on each poll, no manual registration needed
+- `vps/bots.json` enrichment registry — adds names, covers, dashboard links, restart commands; `category` field groups cards into Bots / Apps / Infrastructure / Containers sections
+- SSH via stdin piping with ControlMaster reuse (~50ms after first connect)
+- HTTP pings for reachability (green/amber/red status)
+- Health sub-tab: CPU sparkline, RAM/disk bars, load average, uptime, top processes by CPU/RAM, network I/O
+- Cover sharing: VPS services link to local project covers via `projectAlias` (botson→robotnik, flowstate→flow-state, claude-and-conquer→claude-and-conquer)
+- DNS setup: `botson.noamnau.com` and `waha.noamnau.com` via Cloudflare + Box.co.il nameserver transfer
+- Caddy proxy blocks added for both subdomains on VPS
+
+**Files**: `watchpost/vps/api.js`, `watchpost/vps/index.html`, `watchpost/vps/bots.json`, `watchpost/server.js`, `watchpost/index.html`
 
 ---
 
@@ -3002,6 +3248,17 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1527**~~ | **P2** | ~~**Remove entire gamification system (XP, achievements, challenges, shop, Cyberflow RPG) — ~23,700 lines removed, DB tables left dormant**~~ (✅ DONE 2026-03-14) |
 | ~~**TASK-1531**~~ | **P2** | ~~**KDE dock: show current scheduled calendar block next to pomodoro timer — always-visible context of what's planned now, with toggle in KDE widget settings**~~ (✅ DONE) |
 | **TASK-1532** | **P1** | **"Done for Now" vs "Done Fully" for recurring tasks — Hybrid clone model: "done for now" creates completion record + advances original to next occurrence; "done fully" stops recurrence (current behavior). DoneToggle click = done-for-now for recurring, context menu offers both options.** (🔄 IN PROGRESS) |
+| **FEATURE-1759** | **P1** | **📋 Unified Knowledge + Custom Lists roadmap foundation** |
+| **TASK-1760** | **P1** | **📋 Content taxonomy: task, note, list + shared visibility rules** |
+| **TASK-1761** | **P1** | **📋 Catalog -> Knowledge Hub MVP with type filters and capture entry** |
+| **TASK-1762** | **P1** | **📋 Note/Page MVP using task-based content, markdown, tags, attachments** |
+| **TASK-1763** | **P1** | **📋 Custom Lists MVP: lightweight items, groups, reorder, check off** |
+| **TASK-1764** | **P2** | **📋 Recurring list templates and reset/reuse workflow** |
+| **TASK-1765** | **P1** | **📋 Unified search across tasks, notes, and lists** |
+| **TASK-1766** | **P2** | **📋 Promote note or list item into full task flow** |
+| **TASK-1767** | **P2** | **📋 AI can read notes/lists and turn them into useful actions** |
+| **TASK-1768** | **P2** | **📋 Persist mini-canvas planning notes for knowledge workflows** |
+| **TASK-1769** | **P3** | **📋 Lightweight links/backlinks between notes and tasks** |
 | ~~**TASK-1533**~~ | **P0** | ✅ **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (✅ DONE (2026-04-02)) |
 | ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1535**~~ | **P0** | **DB migration: Add workspace_id to tasks, projects, groups + assigned_to on tasks** (✅ DONE (2026-03-17)) |

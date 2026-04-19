@@ -8,6 +8,20 @@
 
 ## Active Tasks
 
+### ~~TASK-1758~~: Deploy World's Greatest Bot + rename WhatsApp bot to Botty (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-19)
+
+**What was done**:
+- Renamed `packages/whatsapp-bot/` → `packages/botty/` (package name, log prefixes, docker-compose service name)
+- Deployed Botty to VPS (`/opt/botty/`) — built Docker image, runs on `supabase_default` network, WAHA webhook updated to point to Botty
+- Deployed World's Greatest Bot (`/opt/worlds-greatest-bot/`) — Discord bot with voice join notifications, AI posts, activity tracking; registered 17 slash commands; dashboard at `http://84.46.253.137:3049`
+- Updated watchpost `bots.json` with both new entries
+
+**Files**: `packages/botty/`, `watchpost/vps/bots.json`
+
+---
+
 ### ~~BUG-1773~~: Canvas auto-placement overlaps tasks in day-groups + not left-aligned (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-18)

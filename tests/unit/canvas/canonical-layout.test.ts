@@ -125,6 +125,24 @@ describe('computeCanonicalLayout', () => {
     expect(first).toEqual(second)
   })
 
+  it('the 8th task bottom edge is fully inside the group bounds (BUG-1203 safety)', () => {
+    // TASK-1756 v9: regression for off-by-40. BUG-1203's spatial validation
+    // in useCanvasSync uses zero-padding `isNodeCompletelyInside`. If the
+    // 8th task's bottom extends beyond the group's bottom edge by even 1px,
+    // that task's parentId is cleared and it tears out of the group.
+    const eight = Array.from({ length: 8 }, (_, i) => tk(`t${i}`, 'a', i * 10))
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: eight },
+    ]
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, ['a'])
+
+    const group = groupMoves[0]
+    const lastTask = taskMoves[taskMoves.length - 1]
+    const groupBottom = group.position.y + group.size.height
+    const lastTaskBottom = lastTask.position.y + CANVAS.DEFAULT_TASK_HEIGHT
+    expect(lastTaskBottom).toBeLessThanOrEqual(groupBottom)
+  })
+
   it('skips orderedIds that have no matching input (defensive)', () => {
     const inputs: DayGroupInput[] = [
       { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [] },

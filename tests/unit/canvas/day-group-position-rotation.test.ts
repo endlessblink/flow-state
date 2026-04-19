@@ -387,7 +387,7 @@ describe('rotateDayGroupPositions()', () => {
     expect(calls.length).toBe(3)
     for (const [, update] of calls) {
       expect(update.position.width).toBe(350)
-      expect(update.position.height).toBe(920)
+      expect(update.position.height).toBe(1000)
     }
     expect(updateTask).not.toHaveBeenCalled() // no tasks
   })

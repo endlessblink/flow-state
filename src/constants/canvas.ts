@@ -36,7 +36,11 @@ export const CANVAS = {
     DAY_GROUP_WIDTH_1COL: 350,
     DAY_GROUP_WIDTH_2COL: 700,
     DAY_GROUP_SPACING: 420, // 350 width + 70 px gutter
-    DAY_GROUP_HEIGHT: 920, // header 50 + padding 40 + 8*(task 100 + gap 10) - 10 + padding = fits 8 tasks per column
+    // Exact fit math: HEADER(50) + PADDING(20) + 8*TASK_H(100) + 7*GAP(10) + PADDING(20)
+    //                 = 50 + 20 + 800 + 70 + 20 = 960
+    // Add 40px slack so BUG-1203's zero-padding spatial check never trips on
+    // the 8th task's bottom edge.
+    DAY_GROUP_HEIGHT: 1000,
     DAY_GROUP_HEADER_HEIGHT: 50,
     DAY_GROUP_COLUMN_GAP: 20,
     DAY_GROUP_MAX_TASKS_PER_COLUMN: 8,

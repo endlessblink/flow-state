@@ -1,6 +1,9 @@
 <template>
-  <!-- Teleport to body to render OUTSIDE canvas containment -->
-  <Teleport to="body">
+  <!-- TASK-1756 v5: Teleport removed — it was leaving orphaned DOM in <body>
+       on async-mount races, which stranded the click→emit→parent chain.
+       CanvasView already renders us as a sibling to VueFlow, so position:fixed
+       escapes the Vue Flow transformed pane without needing Teleport. -->
+  <div>
     <div class="canvas-toolbar-edge">
       <!-- Primary Actions Group -->
       <div class="toolbar-group">
@@ -71,11 +74,10 @@
         </button>
       </div>
     </div>
-  </Teleport>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, onBeforeUnmount } from 'vue'
 import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
@@ -86,22 +88,6 @@ defineEmits<{
 }>()
 
 const taskStore = useTaskStore()
-
-// TASK-1756 v4: the <Teleport to="body"> wrapper can leave orphaned toolbar
-// DOM in <body> when CanvasView's initial mount races with async chunk load.
-// The zombie DOM still responds to clicks but $emit targets an unmounted
-// component — silent no-op. Kill any prior instances before rendering, and
-// force-remove on unmount so Vue's Teleport cleanup can never miss.
-onBeforeMount(() => {
-  if (typeof document !== 'undefined') {
-    document.querySelectorAll('.canvas-toolbar-edge').forEach((el) => el.remove())
-  }
-})
-onBeforeUnmount(() => {
-  if (typeof document !== 'undefined') {
-    document.querySelectorAll('.canvas-toolbar-edge').forEach((el) => el.remove())
-  }
-})
 </script>
 
 <style scoped>

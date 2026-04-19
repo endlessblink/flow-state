@@ -162,3 +162,4 @@ pnpm-lock.yaml
 watchpost/.claude/
 watchpost/.omc/
 release/
+.dev-debug-electron.mjs

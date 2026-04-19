@@ -1,8 +1,0 @@
-# Environment
-.env
-
-# Dependencies (optional - uncomment if dev-manager is standalone)
-# node_modules/
-
-# Orchestrator data (contains user session data)
-data/orchestrations.json

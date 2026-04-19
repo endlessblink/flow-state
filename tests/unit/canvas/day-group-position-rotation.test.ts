@@ -184,23 +184,22 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // weekStartsOn=1 (Mon). Normalized day indices (Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6)
-    // Today Wed = normalized 2. Distances: Wed=0, Thu=1, Fri=2, Sat=3, Sun=4, Mon=5, Tue=6
-    // So: Wed→slot0(X0), Thu→slot1(X350), Fri→slot2(X700), Sat→slot3(X1050),
-    //     Sun→slot4(X1400), Mon→slot5(X1750), Tue→slot6(X2100)
-    // Key: Sunday is at slot 4 (not slot 1 like it would be without weekStartsOn)
-
+    // TASK-1756 v8: canonical layout — origin X = min input X = 0,
+    // spacing = DAY_GROUP_SPACING (420).
+    // weekStart=1 (Mon). today=Wed. Distances: Wed=0, Thu=1, Fri=2, Sat=3, Sun=4, Mon=5, Tue=6
+    // So: Wed→slot0(X0), Thu→slot1(X420), Fri→slot2(X840), Sat→slot3(X1260),
+    //     Sun→slot4(X1680), Mon→slot5(X2100), Tue→slot6(X2520)
     const calls = updateGroup.mock.calls as Array<[string, { position: { x: number; y: number } }]>
     const posById = new Map(calls.map(([id, update]) => [id, update.position.x]))
     const byName = new Map(groups.map((g) => [g.name, g.id]))
 
     expect(posById.get(byName.get('Wednesday')!)).toBe(0)
-    expect(posById.get(byName.get('Thursday')!)).toBe(350)
-    expect(posById.get(byName.get('Friday')!)).toBe(700)
-    expect(posById.get(byName.get('Saturday')!)).toBe(1050)
-    expect(posById.get(byName.get('Sunday')!)).toBe(1400)
-    expect(posById.get(byName.get('Monday')!)).toBe(1750)
-    expect(posById.get(byName.get('Tuesday')!)).toBe(2100)
+    expect(posById.get(byName.get('Thursday')!)).toBe(420)
+    expect(posById.get(byName.get('Friday')!)).toBe(840)
+    expect(posById.get(byName.get('Saturday')!)).toBe(1260)
+    expect(posById.get(byName.get('Sunday')!)).toBe(1680)
+    expect(posById.get(byName.get('Monday')!)).toBe(2100)
+    expect(posById.get(byName.get('Tuesday')!)).toBe(2520)
   })
 
   // --------------------------------------------------------------------------
@@ -229,26 +228,27 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Today=Wed(3), startFrom=Fri(5) because Today+Tomorrow exist
-    // weekStart=1(Mon). Normalized: Mon=0,Tue=1,Wed=2,Thu=3,Fri=4,Sat=5,Sun=6
-    // startNorm = (5-1+7)%7 = 4 (Fri)
-    // Distances from Fri: Fri=0, Sat=1, Sun=2, Mon=3, Tue=4, Wed=5, Thu=6
-    // So: Fri→slot0, Sat→slot1, Sun→slot2, Mon→slot3, Tue→slot4, Wed→slot5, Thu→slot6
-    // Key: Monday comes AFTER Sunday (not first), because Today+Tomorrow cover Wed+Thu
-
+    // TASK-1756 v8: Today + Tomorrow now ARE part of the canonical layout.
+    // Order: Today → Tomorrow → day-of-week by distance from startFrom (Fri).
+    // All 9 groups (2 smart + 7 weekday) laid out at origin X = 0 with spacing 420.
+    // Slot indices:
+    //   Today→0(X0), Tomorrow→1(X420),
+    //   Fri→2(X840), Sat→3(X1260), Sun→4(X1680), Mon→5(X2100),
+    //   Tue→6(X2520), Wed→7(X2940), Thu→8(X3360)
     const calls = updateGroup.mock.calls as Array<[string, { position: { x: number } }]>
     const posById = new Map(calls.map(([id, update]) => [id, update.position.x]))
-    const byName = new Map(dayOfWeekGroups.map((g) => [g.name, g.id]))
+    const byName = new Map([
+      ...dayOfWeekGroups.map((g) => [g.name, g.id] as const),
+      ['Today', todayGroup.id] as const,
+      ['Tomorrow', tomorrowGroup.id] as const,
+    ])
 
-    // Slots from day-of-week groups only (sorted by X): 700, 1050, 1400, 1750, 2100, 2450, 2800
-    const sortedSlotXs = dayOfWeekGroups
-      .map((g) => g.position!.x)
-      .sort((a, b) => a - b)
-
-    expect(posById.get(byName.get('Friday')!)).toBe(sortedSlotXs[0])
-    expect(posById.get(byName.get('Saturday')!)).toBe(sortedSlotXs[1])
-    expect(posById.get(byName.get('Sunday')!)).toBe(sortedSlotXs[2])
-    expect(posById.get(byName.get('Monday')!)).toBe(sortedSlotXs[3])
+    expect(posById.get(byName.get('Today')!)).toBe(0)
+    expect(posById.get(byName.get('Tomorrow')!)).toBe(420)
+    expect(posById.get(byName.get('Friday')!)).toBe(840)
+    expect(posById.get(byName.get('Saturday')!)).toBe(1260)
+    expect(posById.get(byName.get('Sunday')!)).toBe(1680)
+    expect(posById.get(byName.get('Monday')!)).toBe(2100)
   })
 
   // --------------------------------------------------------------------------
@@ -267,31 +267,30 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Slots sorted by X: 0, 350, 700
+    // TASK-1756 v8: origin X = min input X = 0, spacing = 420.
     // Groups sorted by distance from Wed (3):
     //   Wed dist=0 → slot[0]=X0
-    //   Fri  dist=2 → slot[1]=X350
-    //   Mon  dist=5 → slot[2]=X700
+    //   Fri dist=2 → slot[1]=X420
+    //   Mon dist=5 → slot[2]=X840
     const calls = updateGroup.mock.calls as Array<[string, { position: { x: number } }]>
     const posById = new Map(calls.map(([id, u]) => [id, u.position.x]))
 
     expect(posById.get(wed.id)).toBe(0)
-    expect(posById.get(fri.id)).toBe(350)
-    expect(posById.get(mon.id)).toBe(700)
+    expect(posById.get(fri.id)).toBe(420)
+    expect(posById.get(mon.id)).toBe(840)
   })
 
   // --------------------------------------------------------------------------
   // Test 4: Child tasks move with parent group
   // --------------------------------------------------------------------------
 
-  it('4: child tasks move by same delta as their parent group', () => {
-    // Mon is at X=0, Wed is at X=350. Today=Wed → Wed should go to X=0, Mon to X=350.
+  it('4: child tasks are restacked at canonical positions inside new parent', () => {
+    // TASK-1756 v8: rotation no longer moves tasks by parent's delta.
+    // Instead, tasks are restacked canonically via the layout primitive —
+    // column 0 at groupX + GROUP_PADDING, row N at groupY + HEADER + PADDING + N*(taskH+gap).
     const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
 
-    // Child of Wed group at (100, 50). After Wed moves by delta (-350, 0) → (100-350, 50) NO...
-    // Wed moves from X=350 → X=0, delta = 0 - 350 = -350
-    // So child (100, 50) → (100 + (-350), 50) = (-250, 50)
     const childTask = makeTask({
       id: 'child-1',
       parentId: 'grp-wed',
@@ -304,14 +303,15 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Wed (today) → slot X=0, delta = 0 - 350 = -350
-    // child should be called with x: 100 + (-350) = -250, y: 50 + 0 = 50
+    // Wed (today) → slot0 → newGroupX = 0, newGroupY = 0
+    // Task 0 of Wed: x = 0 + PADDING(20) = 20
+    //                y = 0 + HEADER(50) + PADDING(20) + 0*(100+10) = 70
     const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
     const childCall = taskCalls.find(([id]) => id === 'child-1')
 
     expect(childCall).toBeDefined()
-    expect(childCall![1].canvasPosition.x).toBe(-250)
-    expect(childCall![1].canvasPosition.y).toBe(50)
+    expect(childCall![1].canvasPosition.x).toBe(20)
+    expect(childCall![1].canvasPosition.y).toBe(70)
     expect(childCall![2]).toBe('DRAG')
   })
 
@@ -319,20 +319,7 @@ describe('rotateDayGroupPositions()', () => {
   // Test 4b: Child tasks — example from spec (delta 350,0)
   // --------------------------------------------------------------------------
 
-  it('4b: child task at (100, 50) with group delta (+350, 0) ends at (450, 50)', () => {
-    // Mon at X=350, Wed at X=0. Today=Wed → Wed stays at 0 (no move), Mon stays at 350 (no move).
-    // To get a delta of +350 for a child, we need the parent group to move +350.
-    // Let's put Wed at X=0 and Mon at X=350. Today=Wednesday.
-    // Slots sorted by X: 0, 350.
-    // Groups by dist from Wed: Wed dist=0→slot X=0, Mon dist=5→slot X=350.
-    // Wed is already at X=0, Mon is already at X=350. No moves. Children not touched.
-    //
-    // For the +350 scenario: put Mon at X=0, Wed at X=350, then rotate.
-    // Wed (today) → slot X=0, delta = 0 - 350 = -350 (not +350).
-    // For +350: put a non-today group at X=0 that should move to X=350.
-    // Mon at X=0 → after rotation Mon needs slot X=350 → delta = +350.
-    // A child of Mon at (100, 50) → (100+350, 50) = (450, 50). ✓
-
+  it('4b: child of non-today group lands at canonical position inside its new slot', () => {
     const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
 
@@ -348,13 +335,15 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Mon dist from Wed=3: (1 - 3 + 7) % 7 = 5 → slot[1] = X=350, delta = +350
+    // Mon → slot1 → newGroupX = 420 (origin 0 + 420), newGroupY = 0.
+    // Task 0 of Mon: x = 420 + PADDING(20) = 440
+    //                y = 0 + HEADER(50) + PADDING(20) + 0*(100+10) = 70
     const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
     const childCall = taskCalls.find(([id]) => id === 'child-mon')
 
     expect(childCall).toBeDefined()
-    expect(childCall![1].canvasPosition.x).toBe(450)
-    expect(childCall![1].canvasPosition.y).toBe(50)
+    expect(childCall![1].canvasPosition.x).toBe(440)
+    expect(childCall![1].canvasPosition.y).toBe(70)
   })
 
   // --------------------------------------------------------------------------
@@ -378,11 +367,13 @@ describe('rotateDayGroupPositions()', () => {
   // Test 6: Already in correct order → no updates fired
   // --------------------------------------------------------------------------
 
-  it('6: groups already in correct rotation order → no updates fired', () => {
-    // Today=Wednesday. Correct order: Wed=0, Thu=350, Fri=700.
+  it('6: groups already in order still get canonical width/height writes', () => {
+    // TASK-1756 v8: even if X positions and weekday order are already correct,
+    // canonical layout normalises width (350) and height (920). So updateGroup
+    // IS always called — dimensions get normalised every rotation.
     const wed = makeGroup({ name: 'Wednesday', position: { x: 0, y: 0, width: 350, height: 600 } })
-    const thu = makeGroup({ name: 'Thursday', position: { x: 350, y: 0, width: 350, height: 600 } })
-    const fri = makeGroup({ name: 'Friday', position: { x: 700, y: 0, width: 350, height: 600 } })
+    const thu = makeGroup({ name: 'Thursday', position: { x: 420, y: 0, width: 350, height: 600 } })
+    const fri = makeGroup({ name: 'Friday', position: { x: 840, y: 0, width: 350, height: 600 } })
 
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([wed, thu, fri])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
@@ -390,8 +381,15 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    expect(updateGroup).not.toHaveBeenCalled()
-    expect(updateTask).not.toHaveBeenCalled()
+    // All 3 groups get their size normalized (width=350, height=920) even
+    // though positions don't change.
+    const calls = updateGroup.mock.calls as Array<[string, { position: { width: number; height: number } }]>
+    expect(calls.length).toBe(3)
+    for (const [, update] of calls) {
+      expect(update.position.width).toBe(350)
+      expect(update.position.height).toBe(920)
+    }
+    expect(updateTask).not.toHaveBeenCalled() // no tasks
   })
 
   // --------------------------------------------------------------------------
@@ -425,7 +423,9 @@ describe('rotateDayGroupPositions()', () => {
   // Test 8: Non-day groups are ignored
   // --------------------------------------------------------------------------
 
-  it('8: non-day-of-week groups are ignored during rotation', () => {
+  it('8: custom-named groups are ignored; smart + day-of-week groups are included', () => {
+    // TASK-1756 v8: "Today" is a smart group and IS part of the canonical
+    // layout now. Custom-named groups (no power keyword) are still ignored.
     const wed = makeGroup({ name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
     const today = makeGroup({ name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
     const custom = makeGroup({ name: 'My Custom Group', position: { x: 700, y: 0, width: 350, height: 600 } })
@@ -436,12 +436,11 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Only 1 day-of-week group found → less than 2, no rotation
-    expect(updateGroup).not.toHaveBeenCalled()
-
-    // 'Today' and 'My Custom Group' should never be touched
     const updatedIds = updateGroup.mock.calls.map(([id]: [string]) => id)
-    expect(updatedIds).not.toContain(today.id)
+    // Today + Wed are the 2 qualifying inputs — both get written.
+    expect(updatedIds).toContain(today.id)
+    expect(updatedIds).toContain(wed.id)
+    // Custom group never touched.
     expect(updatedIds).not.toContain(custom.id)
   })
 
@@ -484,7 +483,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    const { moves, release } = rotateDayGroupPositions()
+    const { groupMoves: moves, release } = rotateDayGroupPositions()
     release()
 
     // Today = Wednesday (2026-04-08, dayIndex 3). weekStartsOn=1 (Monday).
@@ -542,7 +541,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    const { moves, release } = rotateDayGroupPositions()
+    const { groupMoves: moves, release } = rotateDayGroupPositions()
     release()
 
     expect(moves.length).toBeGreaterThan(0)

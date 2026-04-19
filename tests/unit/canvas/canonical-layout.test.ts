@@ -1,0 +1,136 @@
+/**
+ * TASK-1756 v8: Tests for the pure canonical-layout primitive.
+ *
+ * The primitive is deterministic and has no store dependencies — these
+ * tests just feed it inputs and verify the returned shape.
+ */
+
+import { describe, it, expect } from 'vitest'
+import {
+  computeCanonicalLayout,
+  type DayGroupInput,
+} from '@/composables/canvas/useCanonicalDayGroupLayout'
+import { CANVAS } from '@/constants/canvas'
+import type { CanvasGroup } from '@/types/canvas'
+import type { Task } from '@/types/tasks'
+
+function grp(id: string, name: string, x: number, y: number): CanvasGroup {
+  return {
+    id,
+    name,
+    isVisible: true,
+    position: { x, y, width: 200, height: 200 },
+  } as unknown as CanvasGroup
+}
+
+function tk(id: string, parentId: string, y = 100): Task {
+  return {
+    id,
+    parentId,
+    canvasPosition: { x: 0, y },
+    createdAt: '2026-01-01T00:00:00Z',
+  } as unknown as Task
+}
+
+describe('computeCanonicalLayout', () => {
+  it('returns empty arrays when no inputs are given', () => {
+    const { groupMoves, taskMoves } = computeCanonicalLayout([], [])
+    expect(groupMoves).toEqual([])
+    expect(taskMoves).toEqual([])
+  })
+
+  it('places groups on a single row at common Y, spaced by DAY_GROUP_SPACING', () => {
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 100, 500), visualPos: { x: 100, y: 500 }, tasks: [] },
+      { group: grp('b', 'B', 50, 300), visualPos: { x: 50, y: 300 }, tasks: [] },
+      { group: grp('c', 'C', 700, 800), visualPos: { x: 700, y: 800 }, tasks: [] },
+    ]
+    const ordered = ['a', 'b', 'c']
+    const { groupMoves } = computeCanonicalLayout(inputs, ordered)
+
+    // originX = min(100, 50, 700) = 50; originY = min(500, 300, 800) = 300
+    expect(groupMoves[0].position).toEqual({ x: 50, y: 300 })
+    expect(groupMoves[1].position).toEqual({ x: 50 + CANVAS.DAY_GROUP_SPACING, y: 300 })
+    expect(groupMoves[2].position).toEqual({ x: 50 + 2 * CANVAS.DAY_GROUP_SPACING, y: 300 })
+  })
+
+  it('assigns groups to slots in the orderedIds sequence, not the input array order', () => {
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [] },
+      { group: grp('b', 'B', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [] },
+    ]
+    const { groupMoves } = computeCanonicalLayout(inputs, ['b', 'a'])
+    expect(groupMoves[0].groupId).toBe('b')
+    expect(groupMoves[1].groupId).toBe('a')
+  })
+
+  it('gives every group uniform width 350 and height 920 when tasks fit in one column', () => {
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [tk('t1', 'a'), tk('t2', 'a')] },
+      { group: grp('b', 'B', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [] },
+    ]
+    const { groupMoves } = computeCanonicalLayout(inputs, ['a', 'b'])
+    for (const gm of groupMoves) {
+      expect(gm.size.width).toBe(CANVAS.DAY_GROUP_WIDTH_1COL)
+      expect(gm.size.height).toBe(CANVAS.DAY_GROUP_HEIGHT)
+    }
+  })
+
+  it('bumps group width to 700 when a group has more than 8 tasks (2-column overflow)', () => {
+    const tenTasks = Array.from({ length: 10 }, (_, i) => tk(`t${i}`, 'a', i * 10))
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: tenTasks },
+      { group: grp('b', 'B', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [] },
+    ]
+    const { groupMoves } = computeCanonicalLayout(inputs, ['a', 'b'])
+    expect(groupMoves.find((m) => m.groupId === 'a')!.size.width).toBe(CANVAS.DAY_GROUP_WIDTH_2COL)
+    expect(groupMoves.find((m) => m.groupId === 'b')!.size.width).toBe(CANVAS.DAY_GROUP_WIDTH_1COL)
+  })
+
+  it('stacks first 8 tasks in column 0 and tasks 9+ in column 1 with correct X offsets', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => tk(`t${i}`, 'a', i * 10))
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: ten },
+    ]
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'])
+
+    // Col 0: x = 0 + PADDING(20) = 20
+    // Col 1: x = 0 + PADDING(20) + TASK_WIDTH(220) + COLUMN_GAP(20) = 260
+    const col0Xs = taskMoves.slice(0, 8).map((t) => t.position.x)
+    const col1Xs = taskMoves.slice(8).map((t) => t.position.x)
+    expect(col0Xs.every((x) => x === 20)).toBe(true)
+    expect(col1Xs.every((x) => x === 260)).toBe(true)
+  })
+
+  it('orders tasks top-to-bottom using their current Y (stable ordering)', () => {
+    // Tasks given in mixed order; layout should output them bottom-most-to-
+    // top-most-in-store → sorted ascending Y → first task in moves is the
+    // one that was top-most.
+    const t1 = tk('t1', 'a', 500)
+    const t2 = tk('t2', 'a', 100)
+    const t3 = tk('t3', 'a', 300)
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [t1, t2, t3] },
+    ]
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'])
+    expect(taskMoves.map((t) => t.taskId)).toEqual(['t2', 't3', 't1'])
+  })
+
+  it('is pure — calling twice with same input returns deep-equal output', () => {
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 10, 20), visualPos: { x: 10, y: 20 }, tasks: [tk('t', 'a')] },
+    ]
+    const first = computeCanonicalLayout(inputs, ['a'])
+    const second = computeCanonicalLayout(inputs, ['a'])
+    expect(first).toEqual(second)
+  })
+
+  it('skips orderedIds that have no matching input (defensive)', () => {
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [] },
+    ]
+    const { groupMoves } = computeCanonicalLayout(inputs, ['missing', 'a'])
+    expect(groupMoves.length).toBe(1)
+    expect(groupMoves[0].groupId).toBe('a')
+  })
+})

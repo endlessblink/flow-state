@@ -32,6 +32,15 @@ export const CANVAS = {
     TASK_MARGIN: 10,
     GRID_SNAP_SIZE: 16, // Matching snap grid in CanvasView.vue
 
+    // TASK-1756 v8: canonical day-group layout
+    DAY_GROUP_WIDTH_1COL: 350,
+    DAY_GROUP_WIDTH_2COL: 700,
+    DAY_GROUP_SPACING: 420, // 350 width + 70 px gutter
+    DAY_GROUP_HEIGHT: 920, // header 50 + padding 40 + 8*(task 100 + gap 10) - 10 + padding = fits 8 tasks per column
+    DAY_GROUP_HEADER_HEIGHT: 50,
+    DAY_GROUP_COLUMN_GAP: 20,
+    DAY_GROUP_MAX_TASKS_PER_COLUMN: 8,
+
     // Borders
     GROUP_BORDER_WIDTH: 2,
 } as const

@@ -77,6 +77,7 @@
         @add-task="handleAddTask"
         @create-group="handleToolbarCreateGroup"
         @rotate-day-groups="handleRotateDayGroups"
+        @tidy-layout="handleTidyLayout"
       />
 
       <!-- Canvas Container -->
@@ -339,6 +340,7 @@ import DayRotationBanner from '../components/canvas/DayRotationBanner.vue'
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
+import { useTidyLayout } from '@/composables/canvas/useTidyLayout'
 import { useCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
@@ -360,34 +362,60 @@ const nodeTypes = {
 // FEATURE-1048: Day group auto-rotation at midnight
 const { findNode, updateNode } = useVueFlow()
 
-function applyDayGroupMoves(moves: Array<{ nodeId: string; position: { x: number; y: number } }>) {
-  console.log('[DAY-ROTATION:VF] Applying', moves.length, 'moves')
-  for (const move of moves) {
+// TASK-1756 v8: canonical layout move shape — position + size. Size comes
+// through to Vue Flow via node.style.width/height (GroupNodeSimple reads
+// `width: 100%; height: 100%` off the node's outer style).
+function applyCanonicalLayoutMoves(
+  groupMoves: Array<{ nodeId: string; position: { x: number; y: number }; size: { width: number; height: number } }>
+) {
+  console.log('[CANONICAL-LAYOUT:VF] Applying', groupMoves.length, 'group moves')
+  for (const move of groupMoves) {
     const node = findNode(move.nodeId)
-    if (node) {
-      console.log(`[DAY-ROTATION:VF] ${move.nodeId}: ${Math.round(node.position.x)} → ${Math.round(move.position.x)}`)
-      updateNode(move.nodeId, { position: move.position })
-    } else {
-      console.warn(`[DAY-ROTATION:VF] ${move.nodeId}: NOT FOUND`)
+    if (!node) {
+      console.warn(`[CANONICAL-LAYOUT:VF] ${move.nodeId}: NOT FOUND`)
+      continue
     }
+    console.log(`[CANONICAL-LAYOUT:VF] ${move.nodeId}: x=${Math.round(node.position.x)} → ${Math.round(move.position.x)}, w=${Math.round(move.size.width)}, h=${Math.round(move.size.height)}`)
+    updateNode(move.nodeId, {
+      position: move.position,
+      style: {
+        width: `${move.size.width}px`,
+        height: `${move.size.height}px`,
+      },
+    })
   }
 }
 
 const dayRotation = useDayGroupRotation({
-  onMoves: applyDayGroupMoves,
+  onMoves: applyCanonicalLayoutMoves,
   getNodePosition: (nodeId: string) => {
     const node = findNode(nodeId)
     return node ? { x: node.position.x, y: node.position.y } : undefined
   }
 })
 
+const tidyLayout = useTidyLayout({
+  getNodePosition: (nodeId: string) => {
+    const node = findNode(nodeId)
+    return node ? { x: node.position.x, y: node.position.y } : undefined
+  },
+})
+
 function handleRotateDayGroups() {
   // TASK-1756 v3: toolbar still bypasses lastRotationDate guard via { force: true }
   // on rotateDayGroups (dueDate/marker path). Physical rotation always produces
-  // moves — no gate to bypass anymore.
+  // moves — the canonical primitive owns all geometry math now.
   dayRotation.rotateDayGroups({ force: true })
-  const { moves, release } = dayRotation.rotateDayGroupPositions()
-  applyDayGroupMoves(moves)
+  const { groupMoves, release } = dayRotation.rotateDayGroupPositions()
+  applyCanonicalLayoutMoves(groupMoves)
+  nextTick(release)
+}
+
+function handleTidyLayout() {
+  // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
+  // (user's left-to-right order preserved) and restack tasks inside them.
+  const { groupMoves, release } = tidyLayout.tidyDayGroups()
+  applyCanonicalLayoutMoves(groupMoves)
   nextTick(release)
 }
 
@@ -432,8 +460,8 @@ const {
 // on cold starts and leaves applyDayGroupMoves with NOT FOUND for every id.
 const currentDay = useCurrentDay()
 function runDayGroupCatchup() {
-  const { moves, release } = dayRotation.runCatchupIfNeeded()
-  if (moves.length > 0) applyDayGroupMoves(moves)
+  const { groupMoves, release } = dayRotation.runCatchupIfNeeded()
+  if (groupMoves.length > 0) applyCanonicalLayoutMoves(groupMoves)
   nextTick(release)
 }
 watch(isVueFlowReady, (ready) => { if (ready) runDayGroupCatchup() }, { immediate: true })

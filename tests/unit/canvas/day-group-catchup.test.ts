@@ -210,6 +210,7 @@ describe('useDayGroupRotation — catch-up guard', () => {
     const second = runCatchupIfNeeded()
     second.release()
     expect(updateTask).not.toHaveBeenCalled()
-    expect(second.moves).toEqual([])
+    expect(second.groupMoves).toEqual([])
+    expect(second.taskMoves).toEqual([])
   })
 })

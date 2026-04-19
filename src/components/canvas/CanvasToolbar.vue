@@ -72,19 +72,28 @@
         >
           <CalendarClock :size="14" />
         </button>
+        <button
+          class="toolbar-btn"
+          title="Tidy day-group layout (1 row, even spacing, restack tasks)"
+          aria-label="Tidy day-group layout"
+          @click="$emit('tidyLayout')"
+        >
+          <LayoutGrid :size="14" />
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock } from 'lucide-vue-next'
+import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock, LayoutGrid } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
 defineEmits<{
   (e: 'addTask'): void
   (e: 'createGroup', event: MouseEvent): void
   (e: 'rotateDayGroups'): void
+  (e: 'tidyLayout'): void
 }>()
 
 const taskStore = useTaskStore()

@@ -24,6 +24,12 @@ import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { getDayGroupDate, toDateString } from '@/utils/dayGroupDate'
+import {
+  computeCanonicalLayout,
+  type DayGroupInput,
+  type GroupMove,
+  type TaskMove,
+} from '@/composables/canvas/useCanonicalDayGroupLayout'
 
 // TASK-1756: persisted "last rotation YYYY-MM-DD" — prevents double-rotation
 // when mount catch-up, midnight setTimeout, and visibility/focus all fire on
@@ -42,8 +48,11 @@ export function __setLastRotationDateForTest(value: string): void {
 }
 
 export interface DayGroupRotationOptions {
-  /** Called with Vue Flow node moves after position rotation. Caller applies via updateNode(). */
-  onMoves?: (moves: Array<{ nodeId: string; position: { x: number; y: number } }>) => void
+  /**
+   * Called with Vue Flow moves after rotation. Caller applies position +
+   * size to VF via updateNode(id, { position, style }).
+   */
+  onMoves?: (moves: GroupMove[]) => void
   /** Read a Vue Flow node's current visual position. Used to ensure rotation works
    *  even when store and Vue Flow are out of sync. */
   getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
@@ -146,20 +155,21 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
    * The caller (CanvasView) must apply these to Vue Flow directly via updateNode().
    * Store positions are also updated for persistence.
    */
-  /** TASK-1756 v2: lay-out constants for stacked day-group detection. */
-  const GROUP_SPACING = 420 // default canvas group width (350) + gutter (~70)
-  const STACKED_X_SPREAD_THRESHOLD = 200
+  // TASK-1756 v8: layout constants moved to `@/constants/canvas` (DAY_GROUP_*).
+  // The canonical primitive owns all layout math now.
 
   function rotateDayGroupPositions(): {
-    moves: Array<{ nodeId: string; position: { x: number; y: number } }>
+    groupMoves: GroupMove[]
+    taskMoves: TaskMove[]
     release: () => void
   } {
     console.log('[DAY-ROTATION] Rotating day group positions...')
 
-    // TASK-1756 v2: hold canvasSyncInProgress across the caller's applyDayGroupMoves.
-    // Callers MUST invoke release() after Vue Flow has absorbed the moves (typically
-    // on nextTick). Without this, syncStoreToCanvas can flush between the store
-    // write and updateNode() and revert positions via BUG-1504 preservation.
+    // TASK-1756 v2: hold canvasSyncInProgress across the caller's apply step.
+    // Callers MUST invoke release() after Vue Flow has absorbed the moves
+    // (typically on nextTick). Without this, syncStoreToCanvas can flush
+    // between the store writes and updateNode() and revert geometry via
+    // BUG-1504 preservation.
     canvasSyncInProgress.value = true
     let released = false
     const release = () => {
@@ -169,153 +179,123 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     }
 
     const groups = canvasStore.groups
-    const moves: Array<{ nodeId: string; position: { x: number; y: number } }> = []
 
-    // 1. Collect day-of-week groups with their dayIndex and visual position
-    const dayGroups: Array<{ group: (typeof groups)[number]; dayIndex: number; visualPos: { x: number; y: number } }> = []
+    // Collect BOTH day-of-week and smart (Today/Tomorrow) groups. The canonical
+    // primitive arranges whatever we pass; we filter to the relevant set here
+    // and decide sort order below.
+    type WithKeyword = DayGroupInput & {
+      category: 'date' | 'day_of_week'
+      keyword: string
+      dayIndex: number | null
+    }
+    const inputs: WithKeyword[] = []
     for (const group of groups) {
       const keyword = detectPowerKeyword(group.name)
-      if (keyword?.category !== 'day_of_week') continue
-      const dayIndex = parseInt(keyword.value, 10)
-      if (isNaN(dayIndex) || dayIndex < 0 || dayIndex > 6) continue
+      if (!keyword) continue
+      if (keyword.category !== 'day_of_week' && keyword.category !== 'date') continue
+      if (keyword.category === 'date' && keyword.keyword !== 'today' && keyword.keyword !== 'tomorrow') continue
       if (!group.position) continue
 
-      // Use Vue Flow position (what user sees) if available, else store position
       const vfPos = options.getNodePosition?.(`section-${group.id}`)
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
-      dayGroups.push({ group, dayIndex, visualPos })
+      const tasks = taskStore.rawTasks.filter((t) => t.parentId === group.id)
+
+      const dayIndex =
+        keyword.category === 'day_of_week'
+          ? parseInt(keyword.value, 10)
+          : null
+      if (dayIndex !== null && (isNaN(dayIndex) || dayIndex < 0 || dayIndex > 6)) continue
+
+      inputs.push({
+        group,
+        visualPos,
+        tasks,
+        category: keyword.category,
+        keyword: keyword.keyword,
+        dayIndex,
+      })
     }
 
-    // Need at least 2 groups to rotate
-    if (dayGroups.length < 2) {
+    if (inputs.length < 2) {
       release()
-      return { moves, release }
+      return { groupMoves: [], taskMoves: [], release }
     }
 
-    // DEBUG: Log collected groups and their positions
-    console.log('[DAY-ROTATION] Day groups:', dayGroups.map(dg => ({
-      name: dg.group.name, dayIndex: dg.dayIndex,
-      visualPos: dg.visualPos,
-      storePos: { x: dg.group.position!.x, y: dg.group.position!.y },
-      vfFound: !!options.getNodePosition?.(`section-${dg.group.id}`)
-    })))
+    console.log(
+      '[DAY-ROTATION] Inputs:',
+      inputs.map((i) => ({ name: i.group.name, category: i.category, taskCount: i.tasks.length }))
+    )
 
-    // 2. Build ordered slot list.
-    //    TASK-1756 v2: if groups are stacked / tightly clustered (xSpread below
-    //    threshold), synthesise a canonical row at fixed spacing instead of
-    //    reusing the degenerate slot list. Otherwise preserve the user's
-    //    layout and just sort their existing positions by X.
-    const xs = dayGroups.map((dg) => dg.visualPos.x)
-    const ys = dayGroups.map((dg) => dg.visualPos.y)
-    const xSpread = Math.max(...xs) - Math.min(...xs)
-    const stacked = xSpread < STACKED_X_SPREAD_THRESHOLD
-
-    const slots = stacked
-      ? dayGroups.map((_, i) => ({
-          x: Math.min(...xs) + i * GROUP_SPACING,
-          y: Math.min(...ys),
-        }))
-      : dayGroups
-          .map((dg) => ({ x: dg.visualPos.x, y: dg.visualPos.y }))
-          .sort((a, b) => a.x - b.x)
-
-    // 3. Sort groups so the nearest upcoming day comes first.
-    //    If "Today" and/or "Tomorrow" smart-groups exist on the canvas,
-    //    day-of-week groups should start from the day AFTER tomorrow
-    //    (those slots are already covered by the smart-groups).
-    //    Normalize by weekStartsOn so Sunday lands at END when week starts Monday.
+    // Sort: Today → Tomorrow → day-of-week by weekday-distance-from-startFrom.
     const today = new Date().getDay() // 0=Sun … 6=Sat
-    const weekStart = settingsStore.weekStartsOn // 0=Sun, 1=Mon
-
-    // Check if Today/Tomorrow smart-groups exist — if so, offset by 2 days
-    const hasSmartToday = groups.some((g) => {
-      const kw = detectPowerKeyword(g.name)
-      return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
-    })
+    const weekStart = settingsStore.weekStartsOn
+    const hasSmartToday = inputs.some(
+      (i) => i.category === 'date' && (i.keyword === 'today' || i.keyword === 'tomorrow')
+    )
     const startFrom = hasSmartToday ? (today + 2) % 7 : today
-    console.log('[DAY-ROTATION] today:', today, 'weekStart:', weekStart, 'startFrom:', startFrom, 'hasSmartToday:', hasSmartToday, 'stacked:', stacked, 'xSpread:', Math.round(xSpread))
 
-    dayGroups.sort((a, b) => {
-      const aNorm = (a.dayIndex - weekStart + 7) % 7
-      const bNorm = (b.dayIndex - weekStart + 7) % 7
+    const sortedInputs = [...inputs].sort((a, b) => {
+      // Smart groups first (Today before Tomorrow).
+      const smartOrder: Record<string, number> = { today: 0, tomorrow: 1 }
+      const aSmart = a.category === 'date' ? smartOrder[a.keyword] ?? 99 : 99
+      const bSmart = b.category === 'date' ? smartOrder[b.keyword] ?? 99 : 99
+      if (a.category === 'date' && b.category === 'date') return aSmart - bSmart
+      if (a.category === 'date') return -1
+      if (b.category === 'date') return 1
+      // Both day_of_week — sort by distance from startFrom.
+      const aDay = a.dayIndex!
+      const bDay = b.dayIndex!
+      const aNorm = (aDay - weekStart + 7) % 7
+      const bNorm = (bDay - weekStart + 7) % 7
       const startNorm = (startFrom - weekStart + 7) % 7
       const aDist = (aNorm - startNorm + 7) % 7
       const bDist = (bNorm - startNorm + 7) % 7
       return aDist - bDist
     })
 
-    console.log('[DAY-ROTATION] Sorted order:', dayGroups.map(dg => dg.group.name))
-    console.log('[DAY-ROTATION] Slots:', slots)
+    const orderedIds = sortedInputs.map((i) => i.group.id)
+    console.log(
+      '[DAY-ROTATION] Sorted order:',
+      sortedInputs.map((i) => i.group.name)
+    )
 
-    // 4. Apply position deltas — update store AND collect Vue Flow moves
+    const { groupMoves, taskMoves } = computeCanonicalLayout(
+      inputs.map((i) => ({ group: i.group, visualPos: i.visualPos, tasks: i.tasks })),
+      orderedIds
+    )
+
+    // Apply STORE + PositionManager writes here. The caller applies Vue Flow
+    // moves via updateNode with both position AND style (width/height).
     try {
-      for (let i = 0; i < dayGroups.length; i++) {
-        const { group, visualPos } = dayGroups[i]
-        const targetSlot = slots[i]
-
-        // Delta based on visual position (what user sees), not store
-        const deltaX = targetSlot.x - visualPos.x
-        const deltaY = targetSlot.y - visualPos.y
-
-        // Skip if already in correct position
-        if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) continue
-
-        // Update store for persistence (preserve width/height from store)
-        const storePos = group.position!
-        canvasStore.updateGroup(group.id, {
+      for (const gm of groupMoves) {
+        const storePos = inputs.find((i) => i.group.id === gm.groupId)?.group.position
+        if (!storePos) continue
+        canvasStore.updateGroup(gm.groupId, {
           position: {
             ...storePos,
-            x: targetSlot.x,
-            y: targetSlot.y
-          }
+            x: gm.position.x,
+            y: gm.position.y,
+            width: gm.size.width,
+            height: gm.size.height,
+          },
         })
-
-        // Update PositionManager so sync pipeline reads new positions
-        // (sync reads from PM first, falls back to store — PM must be current)
         positionManager.updatePosition(
-          group.id,
-          { x: targetSlot.x, y: targetSlot.y },
-          'user-drag', // same source as drag handlers — approved geometry writer
-          group.parentGroupId || null
+          gm.groupId,
+          gm.position,
+          'user-drag',
+          null
         )
-
-        // Collect Vue Flow move for the group node
-        moves.push({
-          nodeId: `section-${group.id}`,
-          position: { x: targetSlot.x, y: targetSlot.y }
-        })
-
-        // Move child tasks by same delta
-        const childTasks = taskStore.rawTasks.filter(
-          (t) => t.parentId === group.id && t.canvasPosition
-        )
-        for (const task of childTasks) {
-          const newX = task.canvasPosition!.x + deltaX
-          const newY = task.canvasPosition!.y + deltaY
-          taskStore.updateTask(
-            task.id,
-            { canvasPosition: { x: newX, y: newY } },
-            'DRAG'
-          )
-          // Keep PositionManager in sync so the spatial validation in
-          // useCanvasSync (BUG-1191) sees correct post-rotation positions
-          // instead of orphaning the task from its parent group.
-          positionManager.updatePosition(
-            task.id,
-            { x: newX, y: newY },
-            'user-drag',
-            group.id
-          )
-          // Task positions in Vue Flow are relative to parent, so
-          // we don't need to emit Vue Flow moves for children.
-        }
+      }
+      for (const tm of taskMoves) {
+        taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG')
+        positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
       }
     } catch (err) {
       release()
       throw err
     }
 
-    return { moves, release }
+    return { groupMoves, taskMoves, release }
   }
 
   function dismissBanner() {
@@ -332,16 +312,17 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
    * `release()` on nextTick (same contract as `rotateDayGroupPositions`).
    */
   function runCatchupIfNeeded(): {
-    moves: Array<{ nodeId: string; position: { x: number; y: number } }>
+    groupMoves: GroupMove[]
+    taskMoves: TaskMove[]
     release: () => void
   } {
     const todayStr = toDateString(useCurrentDay().value)
     if (lastRotationDate.value === todayStr) {
-      return { moves: [], release: () => {} }
+      return { groupMoves: [], taskMoves: [], release: () => {} }
     }
     rotateDayGroups()
     if (!settingsStore.enableDayGroupPositionRotation) {
-      return { moves: [], release: () => {} }
+      return { groupMoves: [], taskMoves: [], release: () => {} }
     }
     return rotateDayGroupPositions()
   }
@@ -352,8 +333,8 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       rotateDayGroups()
       // Auto-rotation guarded by feature flag (can be disabled if it causes issues)
       if (!settingsStore.enableDayGroupPositionRotation) return
-      const { moves, release } = rotateDayGroupPositions()
-      if (moves.length > 0 && options.onMoves) options.onMoves(moves)
+      const { groupMoves, release } = rotateDayGroupPositions()
+      if (groupMoves.length > 0 && options.onMoves) options.onMoves(groupMoves)
       // TASK-1756 v2: release the sync gate only AFTER Vue Flow has absorbed
       // the moves from the onMoves callback. Otherwise the next microtask
       // can run syncStoreToCanvas before updateNode() reflects in getNodes.value.

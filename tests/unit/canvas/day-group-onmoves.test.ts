@@ -109,7 +109,7 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    const { moves, release } = rotateDayGroupPositions()
+    const { groupMoves: moves, release } = rotateDayGroupPositions()
     release()
 
     expect(moves.length).toBeGreaterThan(0)
@@ -143,8 +143,10 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     }
   })
 
-  it('onMoves is NOT called when midnight rotation has no work to do', () => {
-    // Already in correct order → no moves
+  it('onMoves IS called when midnight runs with qualifying groups present', () => {
+    // TASK-1756 v8: canonical layout ALWAYS produces group moves when there
+    // are ≥2 qualifying groups, because widths/heights are normalised even if
+    // positions don't change.
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const thu = makeGroup({ id: 'grp-thu', name: 'Thursday', position: { x: 350, y: 0, width: 350, height: 600 } })
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([wed, thu])
@@ -155,7 +157,9 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
 
     capturedOnDayChange!(WEDNESDAY, new Date(2026, 3, 9))
 
-    expect(onMoves).not.toHaveBeenCalled()
+    expect(onMoves).toHaveBeenCalledTimes(1)
+    const payload = onMoves.mock.calls[0][0]
+    expect(payload.length).toBe(2) // both groups get move+size normalization
   })
 
   it('onMoves is NOT called when feature flag is off', () => {
@@ -190,14 +194,17 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     })
 
     const { rotateDayGroupPositions } = useDayGroupRotation({ getNodePosition })
-    const { moves, release } = rotateDayGroupPositions()
+    const { groupMoves: moves, release } = rotateDayGroupPositions()
     release()
 
-    // Slots are the Vue Flow Xs sorted: [1000, 1350]. Wed (today) → slot 0 = 1000.
+    // TASK-1756 v8: canonical layout anchors at min visual X = 1000 and
+    // spaces by DAY_GROUP_SPACING (420). Wed (today) → slot 0 = 1000;
+    // Mon (dist 5 from Wed) → slot 1 = 1420. getNodePosition IS used
+    // because without it the anchor would be min store X = 0 → slots 0/420.
     const wedMove = moves.find((m) => m.nodeId === 'section-grp-wed')
     expect(wedMove?.position.x).toBe(1000)
     const monMove = moves.find((m) => m.nodeId === 'section-grp-mon')
-    expect(monMove?.position.x).toBe(1350)
+    expect(monMove?.position.x).toBe(1420)
   })
 
 })

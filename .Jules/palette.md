@@ -1,3 +1,0 @@
-## 2024-04-19 - Adding ARIA labels to Icon Buttons in Dropdowns
-**Learning:** Icon-only buttons within highly interactive components like dropdowns often miss accessible names. Screen readers rely on `aria-label` or `title` properties. In this app, many icon buttons only have a `title`. While `title` works for visual hover, it is often not reliably exposed to screen readers. Adding an explicit `aria-label` alongside `title` ensures standard accessibility, while preserving tooltips.
-**Action:** Always include an `aria-label` on bare `<button>` tags wrapping an icon, especially in repetitive lists or dropdown options.

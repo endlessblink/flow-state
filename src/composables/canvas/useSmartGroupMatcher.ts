@@ -22,6 +22,7 @@ import {
 } from '@/composables/usePowerKeywords'
 import { CANVAS } from '@/constants/canvas'
 import { formatDateKey } from '@/utils/dateUtils'
+import { getDayGroupDate, toDateString } from '@/utils/dayGroupDate'
 
 /**
  * Result of group matching with calculated position
@@ -57,7 +58,11 @@ function getNextDayOfWeekDate(dayIndex: number): string {
  * @param group - Canvas group to check
  * @returns true if the task's due date matches the group's date criteria
  */
-function doesTaskMatchGroup(taskDueDate: string, group: CanvasGroup): boolean {
+function doesTaskMatchGroup(
+  taskDueDate: string,
+  group: CanvasGroup,
+  allGroups: CanvasGroup[] = []
+): boolean {
   const powerKeyword = detectPowerKeyword(group.name)
   if (!powerKeyword) return false
 
@@ -90,13 +95,23 @@ function doesTaskMatchGroup(taskDueDate: string, group: CanvasGroup): boolean {
   }
 
   // Handle day-of-week groups (Monday, Tuesday, etc.)
+  //
+  // TASK-1756 v7: match on EXACT target date (computed via the shared
+  // `getDayGroupDate` helper), not just weekday. Otherwise a task due
+  // 19.5.26 (Tuesday next month) would "match" the Tuesday group that
+  // actually targets 21.4.26 (this week's Tuesday), so BUG-1757's
+  // drop-to-inbox check skips and the task sits inside a group whose
+  // header date is wrong for it.
   if (powerKeyword.category === 'day_of_week') {
     const dayIndex = parseInt(powerKeyword.value, 10)
-    const _nextOccurrence = getNextDayOfWeekDate(dayIndex)
+    if (isNaN(dayIndex) || dayIndex < 0 || dayIndex > 6) return false
 
-    // Match if task is due on that day of the week (this week or next)
-    const taskDate = new Date(taskDateOnly)
-    return taskDate.getDay() === dayIndex
+    const hasTodayOrTomorrow = allGroups.some((g) => {
+      const kw = detectPowerKeyword(g.name)
+      return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
+    })
+    const groupTargetDate = toDateString(getDayGroupDate(dayIndex, new Date(), hasTodayOrTomorrow))
+    return taskDateOnly === groupTargetDate
   }
 
   return false
@@ -165,7 +180,7 @@ export function findMatchingGroupForDueDate(
 
   // Find first matching group
   for (const group of sortedGroups) {
-    if (doesTaskMatchGroup(effectiveDate, group)) {
+    if (doesTaskMatchGroup(effectiveDate, group, groups)) {
       return group
     }
   }

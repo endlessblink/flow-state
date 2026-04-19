@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { calculatePositionInGroup } from '@/composables/canvas/useSmartGroupMatcher'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { calculatePositionInGroup, findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
 import { CANVAS } from '@/constants/canvas'
@@ -84,5 +84,76 @@ describe('calculatePositionInGroup (BUG-1773)', () => {
         const otherGroupSibling = taskAt('ta', 'grp-other', expectedLeft, expectedFirstTop + 500)
         const pos = calculatePositionInGroup(group, [otherGroupSibling])
         expect(pos).toEqual({ x: expectedLeft, y: expectedFirstTop })
+    })
+})
+
+/**
+ * TASK-1756 v7: findMatchingGroupForDueDate must match day-of-week groups
+ * on EXACT target date (via getDayGroupDate), not just weekday. Otherwise a
+ * task due three weeks out on a Tuesday sticks inside the "Tuesday" group
+ * whose header says this-week Tuesday.
+ */
+describe('findMatchingGroupForDueDate — day-of-week exact date matching', () => {
+    // Sunday 2026-04-19. Weekday indices: Sun=0, Mon=1, Tue=2, …
+    const SUNDAY_2026_04_19 = new Date(2026, 3, 19, 10, 0, 0, 0)
+
+    beforeEach(() => {
+        vi.useFakeTimers()
+        vi.setSystemTime(SUNDAY_2026_04_19)
+    })
+    afterEach(() => vi.useRealTimers())
+
+    function dayGroup(id: string, name: string): CanvasGroup {
+        return { id, name, isVisible: true, position: { x: 0, y: 0, width: 350, height: 600 } } as unknown as CanvasGroup
+    }
+
+    it('matches when the task due date equals the Tuesday group target (with no Today/Tomorrow)', () => {
+        const tuesday = dayGroup('g-tue', 'Tuesday')
+        // With no Today/Tomorrow groups, Tuesday from Sunday = +2 days = 2026-04-21
+        const match = findMatchingGroupForDueDate('2026-04-21', [tuesday])
+        expect(match?.id).toBe('g-tue')
+    })
+
+    it('does NOT match a Tuesday-weekday date that is one week out (user rescheduled +1 week)', () => {
+        const tuesday = dayGroup('g-tue', 'Tuesday')
+        // 2026-04-28 is a Tuesday, but the Tuesday group currently targets 2026-04-21.
+        // Strict date match must return null → BUG-1757 drops the task to inbox.
+        const match = findMatchingGroupForDueDate('2026-04-28', [tuesday])
+        expect(match).toBeNull()
+    })
+
+    it('does NOT match a Tuesday-weekday date one MONTH out (the original user repro)', () => {
+        const tuesday = dayGroup('g-tue', 'Tuesday')
+        // 2026-05-19 is a Tuesday but a month later — must not sit inside "Tuesday" group.
+        const match = findMatchingGroupForDueDate('2026-05-19', [tuesday])
+        expect(match).toBeNull()
+    })
+
+    it('Today + Tomorrow smart groups shift the day-of-week target by 2 days', () => {
+        // With Today and Tomorrow smart groups present, day-of-week groups skip
+        // today and tomorrow: Tuesday from Sunday becomes 2026-04-21 → skip to
+        // +7 because day-of-week offset adds 7 when daysUntil <= 1, so Tuesday
+        // stays at +2 days (not shifted by 2 — the rule only applies when
+        // daysUntil is 0 or 1).
+        const today = dayGroup('g-today', 'Today')
+        const tomorrow = dayGroup('g-tomorrow', 'Tomorrow')
+        const tuesday = dayGroup('g-tue', 'Tuesday')
+        // Tuesday = +2 days (Sunday + 2 = Tuesday 21.4). daysUntil=2, not <=1,
+        // so no +7 shift. Match at 21.4.
+        expect(findMatchingGroupForDueDate('2026-04-21', [today, tomorrow, tuesday])?.id).toBe('g-tue')
+        // 28.4 still doesn't match
+        expect(findMatchingGroupForDueDate('2026-04-28', [today, tomorrow, tuesday])).toBeNull()
+    })
+
+    it('with Today+Tomorrow, a Sunday weekday group targets next-week Sunday (not today)', () => {
+        // The daysUntil<=1 + hasTodayOrTomorrow rule ADDS 7 — so Sunday from
+        // Sunday becomes next Sunday (26.4). A dueDate of today routes to the
+        // Today smart group (sort-tier 1). A dueDate of 26.4 routes to the
+        // Sunday weekday group.
+        const today = dayGroup('g-today', 'Today')
+        const tomorrow = dayGroup('g-tomorrow', 'Tomorrow')
+        const sunday = dayGroup('g-sun', 'Sunday')
+        expect(findMatchingGroupForDueDate('2026-04-19', [today, tomorrow, sunday])?.id).toBe('g-today')
+        expect(findMatchingGroupForDueDate('2026-04-26', [today, tomorrow, sunday])?.id).toBe('g-sun')
     })
 })

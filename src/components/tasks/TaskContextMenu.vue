@@ -442,10 +442,15 @@ const handleDatePickerSelect = async (timestamp: number) => {
       await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })
     }
     canvasStore.requestSync('user:context-menu')
-    // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups)
+    // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups).
+    // TASK-1756 v6: skipDueDateInheritance — we JUST set dueDate above from
+    // the user's exact pick (e.g. +1 month). If the matching group is a
+    // day-of-week one, moveToGroupWithToast would otherwise overwrite our
+    // dueDate with the group's this-week target (e.g. Tuesday→21.4), silently
+    // undoing the reschedule.
     const matchingGroup = findMatchingGroupForDueDate(formattedDate, canvasStore._rawGroups)
     if (matchingGroup) {
-      await moveToGroupWithToast(taskId, matchingGroup.id)
+      await moveToGroupWithToast(taskId, matchingGroup.id, { skipDueDateInheritance: true })
     }
   } catch (error) {
     console.error('Error updating task due date:', error)

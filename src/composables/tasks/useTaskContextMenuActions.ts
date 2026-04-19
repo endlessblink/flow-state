@@ -70,10 +70,13 @@ export function useTaskContextMenuActions(
                 }
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
-                // Auto-route to matching canvas group (day-of-week groups, etc.)
+                // Auto-route to matching canvas group (day-of-week groups, etc.).
+                // TASK-1756 v6: skipDueDateInheritance — we already wrote the
+                // user's exact pick; day-of-week groups would otherwise
+                // overwrite it with their this-week target date.
                 const matchingGroup = findMatchingGroupForDueDate(customDate, canvasStore._rawGroups)
                 if (matchingGroup) {
-                    await getMoveToGroup()(taskId, matchingGroup.id)
+                    await getMoveToGroup()(taskId, matchingGroup.id, { skipDueDateInheritance: true })
                 }
             } catch (error) {
                 console.error('Error updating task due date:', error)
@@ -144,10 +147,11 @@ export function useTaskContextMenuActions(
                 }
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
-                // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups)
+                // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups).
+                // TASK-1756 v6: same rationale as custom-date branch above.
                 const matchingGroup = findMatchingGroupForDueDate(formattedDate, canvasStore._rawGroups)
                 if (matchingGroup) {
-                    await getMoveToGroup()(taskId, matchingGroup.id)
+                    await getMoveToGroup()(taskId, matchingGroup.id, { skipDueDateInheritance: true })
                 }
             } catch (error) {
                 console.error('Error setting due date:', error)

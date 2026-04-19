@@ -108,10 +108,8 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, wed])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
-    // TASK-1756: direct call on non-stacked layout represents the toolbar
-    // force-path (auto-path preserves user layout). Pass { force: true }.
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    const { moves, release } = rotateDayGroupPositions({ force: true })
+    const { moves, release } = rotateDayGroupPositions()
     release()
 
     expect(moves.length).toBeGreaterThan(0)
@@ -124,11 +122,8 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
   })
 
   it('onMoves callback fires at midnight with the computed move payload', () => {
-    // TASK-1756: midnight auto-rotate only reorders when the layout is stacked
-    // (user hasn't customized horizontal order). Use stacked X to test the
-    // midnight → onMoves payload path.
     const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
-    const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, wed])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
@@ -183,7 +178,6 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     // Store says Mon=0 / Wed=350, but Vue Flow says Mon=1000 / Wed=1350 (user
     // dragged them but store is stale). Rotation must use the Vue Flow values
     // so the visible nodes swap correctly.
-    // TASK-1756: direct call with non-stacked VF positions uses force path.
     const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, wed])
@@ -196,7 +190,7 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     })
 
     const { rotateDayGroupPositions } = useDayGroupRotation({ getNodePosition })
-    const { moves, release } = rotateDayGroupPositions({ force: true })
+    const { moves, release } = rotateDayGroupPositions()
     release()
 
     // Slots are the Vue Flow Xs sorted: [1000, 1350]. Wed (today) → slot 0 = 1000.
@@ -206,25 +200,4 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     expect(monMove?.position.x).toBe(1350)
   })
 
-  // --------------------------------------------------------------------------
-  // TASK-1756: midnight auto-rotate preserves user-customized horizontal order
-  // --------------------------------------------------------------------------
-
-  it('midnight onMoves is NOT fired when the user has customized the horizontal layout', () => {
-    // Three groups spread horizontally (xSpread = 1000 > threshold).
-    // At midnight, the automatic path must preserve the user's drag order —
-    // only dueDates + header labels update via rotateDayGroups().
-    const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
-    const tue = makeGroup({ id: 'grp-tue', name: 'Tuesday', position: { x: 500, y: 0, width: 350, height: 600 } })
-    const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 1000, y: 0, width: 350, height: 600 } })
-    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, tue, wed])
-    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
-
-    const onMoves = vi.fn()
-    useDayGroupRotation({ onMoves })
-
-    capturedOnDayChange!(WEDNESDAY, new Date(2026, 3, 9))
-
-    expect(onMoves).not.toHaveBeenCalled()
-  })
 })

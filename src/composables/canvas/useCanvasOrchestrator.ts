@@ -819,6 +819,10 @@ export function useCanvasOrchestrator() {
         nodes,
         edges,
         isCanvasReady,
+        // TASK-1756: exposed so CanvasView can gate day-group catchup on real
+        // Vue Flow pane readiness (findNode returns undefined before this flips).
+        isVueFlowReady,
+        isVueFlowMounted,
         operationLoading,
         operationError,
 

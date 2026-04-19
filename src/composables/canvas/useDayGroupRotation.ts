@@ -150,11 +150,11 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
   const GROUP_SPACING = 420 // default canvas group width (350) + gutter (~70)
   const STACKED_X_SPREAD_THRESHOLD = 200
 
-  function rotateDayGroupPositions(opts: { force?: boolean } = {}): {
+  function rotateDayGroupPositions(): {
     moves: Array<{ nodeId: string; position: { x: number; y: number } }>
     release: () => void
   } {
-    console.log('[DAY-ROTATION] Rotating day group positions...', opts.force ? '(forced)' : '(auto)')
+    console.log('[DAY-ROTATION] Rotating day group positions...')
 
     // TASK-1756 v2: hold canvasSyncInProgress across the caller's applyDayGroupMoves.
     // Callers MUST invoke release() after Vue Flow has absorbed the moves (typically
@@ -209,16 +209,6 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     const ys = dayGroups.map((dg) => dg.visualPos.y)
     const xSpread = Math.max(...xs) - Math.min(...xs)
     const stacked = xSpread < STACKED_X_SPREAD_THRESHOLD
-
-    // TASK-1756: if the user has spread groups into a custom horizontal
-    // layout (xSpread exceeds threshold) and this is an automatic call
-    // (not the toolbar force-path), preserve their layout — only dates
-    // and header labels update via rotateDayGroups() + reactive useCurrentDay.
-    if (!stacked && !opts.force) {
-      console.log('[DAY-ROTATION] user-customized layout (xSpread=' + Math.round(xSpread) + ') — skipping position rotation')
-      release()
-      return { moves, release }
-    }
 
     const slots = stacked
       ? dayGroups.map((_, i) => ({

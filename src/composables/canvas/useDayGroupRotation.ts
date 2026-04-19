@@ -335,10 +335,12 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       if (!settingsStore.enableDayGroupPositionRotation) return
       const { groupMoves, release } = rotateDayGroupPositions()
       if (groupMoves.length > 0 && options.onMoves) options.onMoves(groupMoves)
-      // TASK-1756 v2: release the sync gate only AFTER Vue Flow has absorbed
-      // the moves from the onMoves callback. Otherwise the next microtask
-      // can run syncStoreToCanvas before updateNode() reflects in getNodes.value.
-      nextTick(release)
+      // TASK-1756 v10: double nextTick — Vue Flow's dimension/bounds
+      // bookkeeping lags Vue's reactivity by one extra cycle. Single nextTick
+      // lets the spatial validator (BUG-1203) see stale parent dimensions,
+      // orphaning children whose canonical positions fall outside the
+      // still-pre-resize bounds.
+      nextTick(() => nextTick(release))
     }
   })
 

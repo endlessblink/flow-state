@@ -22,6 +22,7 @@ import {
   type GroupMove,
   type TaskMove,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
+import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
@@ -49,6 +50,26 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       if (released) return
       released = true
       canvasSyncInProgress.value = false
+    }
+
+    // TASK-1756 v10: re-home orphans first. Prior buggy versions of
+    // rotation/tidy wrote task positions that fell outside their parents'
+    // new bounds → BUG-1203 cleared parentId on those tasks. Tidy should
+    // heal that state by reattaching orphans whose dueDate matches an
+    // existing day-group, so the next step can restack them canonically.
+    let rehomedCount = 0
+    for (const task of taskStore.rawTasks) {
+      if (task.parentId) continue
+      if (!task.canvasPosition) continue // inbox-only, skip
+      if (!task.dueDate) continue
+      const match = findMatchingGroupForDueDate(task.dueDate, canvasStore.groups)
+      if (match) {
+        taskStore.updateTask(task.id, { parentId: match.id }, 'DRAG')
+        rehomedCount++
+      }
+    }
+    if (rehomedCount > 0) {
+      console.log('[TIDY] Re-homed', rehomedCount, 'orphaned tasks into matching day-groups')
     }
 
     // Collect smart + day-of-week groups. Custom groups skipped per user spec.

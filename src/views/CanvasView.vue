@@ -362,9 +362,12 @@ const nodeTypes = {
 // FEATURE-1048: Day group auto-rotation at midnight
 const { findNode, updateNode } = useVueFlow()
 
-// TASK-1756 v8: canonical layout move shape — position + size. Size comes
-// through to Vue Flow via node.style.width/height (GroupNodeSimple reads
-// `width: 100%; height: 100%` off the node's outer style).
+// TASK-1756 v10: Vue Flow dimension bookkeeping uses the top-level
+// `width` / `height` fields on the node. Setting only `style.width` (px)
+// renders visually but Vue Flow's internal bounds use the OLD `width`, so
+// NodeResizer + spatial validation see stale dimensions → overlap + detach.
+// Pass BOTH the top-level fields (numbers) AND the style (px strings) for
+// GroupNodeSimple, which reads off `node.style` in its template.
 function applyCanonicalLayoutMoves(
   groupMoves: Array<{ nodeId: string; position: { x: number; y: number }; size: { width: number; height: number } }>
 ) {
@@ -378,6 +381,8 @@ function applyCanonicalLayoutMoves(
     console.log(`[CANONICAL-LAYOUT:VF] ${move.nodeId}: x=${Math.round(node.position.x)} → ${Math.round(move.position.x)}, w=${Math.round(move.size.width)}, h=${Math.round(move.size.height)}`)
     updateNode(move.nodeId, {
       position: move.position,
+      width: move.size.width,
+      height: move.size.height,
       style: {
         width: `${move.size.width}px`,
         height: `${move.size.height}px`,
@@ -401,6 +406,14 @@ const tidyLayout = useTidyLayout({
   },
 })
 
+// TASK-1756 v10: Vue Flow's dimension + bounds bookkeeping lags Vue's
+// reactivity cycle. Single nextTick lets the BUG-1203 spatial validator
+// run while VF still sees stale parent dimensions → tasks get orphaned.
+// Double nextTick is the reliable pattern.
+function releaseOnDoubleNextTick(release: () => void) {
+  nextTick(() => nextTick(release))
+}
+
 function handleRotateDayGroups() {
   // TASK-1756 v3: toolbar still bypasses lastRotationDate guard via { force: true }
   // on rotateDayGroups (dueDate/marker path). Physical rotation always produces
@@ -408,7 +421,7 @@ function handleRotateDayGroups() {
   dayRotation.rotateDayGroups({ force: true })
   const { groupMoves, release } = dayRotation.rotateDayGroupPositions()
   applyCanonicalLayoutMoves(groupMoves)
-  nextTick(release)
+  releaseOnDoubleNextTick(release)
 }
 
 function handleTidyLayout() {
@@ -416,7 +429,7 @@ function handleTidyLayout() {
   // (user's left-to-right order preserved) and restack tasks inside them.
   const { groupMoves, release } = tidyLayout.tidyDayGroups()
   applyCanonicalLayoutMoves(groupMoves)
-  nextTick(release)
+  releaseOnDoubleNextTick(release)
 }
 
 // Initialize Orchestrator

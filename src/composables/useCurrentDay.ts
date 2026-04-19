@@ -64,6 +64,12 @@ function ensureInitialized() {
 
   if (typeof window !== 'undefined') {
     scheduleNextMidnight()
+    // TASK-1756: trigger a refresh on any signal that the app resumed from a
+    // dormant state — bfcache restore, window focus (Electron/desktop wake),
+    // or network regain (PWA offline→online).
+    window.addEventListener('pageshow', refreshIfDayChanged)
+    window.addEventListener('focus', refreshIfDayChanged)
+    window.addEventListener('online', refreshIfDayChanged)
   }
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {

@@ -320,9 +320,11 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 
 ---
 
-### TASK-1756: Canvas day group date rotation + dynamic Today/Tomorrow dates (🔄 REOPENED)
+### ~~TASK-1756~~: Canvas day group date rotation + dynamic Today/Tomorrow dates (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (reopened 2026-04-17)
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-19)
+
+**Final fix (2026-04-19)**: Root-caused to `useDateTransition.ts:144` re-seeding `currentDate` on mount — blinded the visibility handler to midnights crossed while the app was closed. Added a persisted `lastRotationDate` (YYYY-MM-DD via VueUse `useStorage`) as a catch-up guard called on canvas-ready + `useCurrentDay` flips (pageshow / focus / online / visibilitychange all refresh the reactive today ref). Manual rearrangement preserved: `rotateDayGroupPositions()` now no-ops on non-stacked layouts (`xSpread > 200`) unless called with `{ force: true }` — the toolbar button passes force so it still snaps to canonical row on demand. 40 unit tests green (15 position-rotation + 6 catchup + 6 onmoves + 7 date-suffix + 6 useCurrentDay).
 
 **Reopen reason (2026-04-17)**: User reports day-of-week groups still don't update to the correct dates. Today is Friday 17.4.26 — reproducing in dev to capture exact failure mode before patching.
 

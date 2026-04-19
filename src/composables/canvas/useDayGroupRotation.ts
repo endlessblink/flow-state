@@ -14,7 +14,9 @@
  */
 
 import { nextTick, ref } from 'vue'
+import { useStorage } from '@vueuse/core'
 import { useDateTransition } from '@/composables/useDateTransition'
+import { useCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
@@ -22,6 +24,22 @@ import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { getDayGroupDate, toDateString } from '@/utils/dayGroupDate'
+
+// TASK-1756: persisted "last rotation YYYY-MM-DD" — prevents double-rotation
+// when mount catch-up, midnight setTimeout, and visibility/focus all fire on
+// the same day. Module-scoped so every canvas mount shares the same marker
+// and cross-tab syncs via the native `storage` event.
+const lastRotationDate = useStorage<string>('flowstate:day-group-last-rotation', '')
+
+/** Test helper — read the current marker (bypasses useStorage async flush). */
+export function __getLastRotationDateForTest(): string {
+  return lastRotationDate.value
+}
+
+/** Test helper — set the marker directly so tests can simulate a prior run. */
+export function __setLastRotationDateForTest(value: string): void {
+  lastRotationDate.value = value
+}
 
 export interface DayGroupRotationOptions {
   /** Called with Vue Flow node moves after position rotation. Caller applies via updateNode(). */
@@ -49,7 +67,9 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       const kw = detectPowerKeyword(g.name)
       return kw?.category === 'date' && (kw.keyword === 'today' || kw.keyword === 'tomorrow')
     })
-    return getDayGroupDate(dayIndex, new Date(), hasTodayOrTomorrow)
+    // TASK-1756: read the reactive "today" so header suffix + rotation agree
+    // even if "today" has flipped since initial mount.
+    return getDayGroupDate(dayIndex, useCurrentDay().value, hasTodayOrTomorrow)
   }
 
   /**
@@ -58,8 +78,13 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
    *
    * Only dueDate is written — geometry (canvasPosition, parentId) is untouched.
    */
-  function rotateDayGroups() {
+  function rotateDayGroups(opts: { force?: boolean } = {}) {
     if (!settingsStore.enableDayGroupSuggestions) return
+
+    // TASK-1756: persisted guard — skip if we already rotated today (unless
+    // the caller forces it, e.g. toolbar button).
+    const todayStr = toDateString(useCurrentDay().value)
+    if (!opts.force && lastRotationDate.value === todayStr) return
 
     const groups = canvasStore.groups
     let count = 0
@@ -91,11 +116,15 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       count++
     }
 
+    // TASK-1756: write the marker even when no tasks changed — we still
+    // "rotated" in the sense that today was processed; no need to re-enter
+    // on the next visibility/focus event.
     if (count > 0) {
       rotatedGroupsCount.value = count
       lastRotationTime.value = new Date()
       showBanner.value = true
     }
+    lastRotationDate.value = todayStr
   }
 
   /**
@@ -121,11 +150,11 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
   const GROUP_SPACING = 420 // default canvas group width (350) + gutter (~70)
   const STACKED_X_SPREAD_THRESHOLD = 200
 
-  function rotateDayGroupPositions(): {
+  function rotateDayGroupPositions(opts: { force?: boolean } = {}): {
     moves: Array<{ nodeId: string; position: { x: number; y: number } }>
     release: () => void
   } {
-    console.log('[DAY-ROTATION] Rotating day group positions...')
+    console.log('[DAY-ROTATION] Rotating day group positions...', opts.force ? '(forced)' : '(auto)')
 
     // TASK-1756 v2: hold canvasSyncInProgress across the caller's applyDayGroupMoves.
     // Callers MUST invoke release() after Vue Flow has absorbed the moves (typically
@@ -180,6 +209,16 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     const ys = dayGroups.map((dg) => dg.visualPos.y)
     const xSpread = Math.max(...xs) - Math.min(...xs)
     const stacked = xSpread < STACKED_X_SPREAD_THRESHOLD
+
+    // TASK-1756: if the user has spread groups into a custom horizontal
+    // layout (xSpread exceeds threshold) and this is an automatic call
+    // (not the toolbar force-path), preserve their layout — only dates
+    // and header labels update via rotateDayGroups() + reactive useCurrentDay.
+    if (!stacked && !opts.force) {
+      console.log('[DAY-ROTATION] user-customized layout (xSpread=' + Math.round(xSpread) + ') — skipping position rotation')
+      release()
+      return { moves, release }
+    }
 
     const slots = stacked
       ? dayGroups.map((_, i) => ({
@@ -293,6 +332,30 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     showBanner.value = false
   }
 
+  /**
+   * TASK-1756: idempotent "catch up if today hasn't been rotated yet".
+   * Safe to call on mount, on canvas-ready, on `useCurrentDay` flip, on
+   * visibility regain — the persisted `lastRotationDate` guard inside
+   * `rotateDayGroups()` makes repeated calls no-ops until the day changes.
+   *
+   * Callers are responsible for applying `moves` to Vue Flow and invoking
+   * `release()` on nextTick (same contract as `rotateDayGroupPositions`).
+   */
+  function runCatchupIfNeeded(): {
+    moves: Array<{ nodeId: string; position: { x: number; y: number } }>
+    release: () => void
+  } {
+    const todayStr = toDateString(useCurrentDay().value)
+    if (lastRotationDate.value === todayStr) {
+      return { moves: [], release: () => {} }
+    }
+    rotateDayGroups()
+    if (!settingsStore.enableDayGroupPositionRotation) {
+      return { moves: [], release: () => {} }
+    }
+    return rotateDayGroupPositions()
+  }
+
   // Hook into midnight transition — fires automatically at 00:00 each day
   useDateTransition({
     onDayChange: (_prev: Date, _next: Date) => {
@@ -316,6 +379,8 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     /** Expose for manual trigger (e.g. testing or on-mount warm-up) */
     rotateDayGroups,
     /** Expose for manual trigger and testing */
-    rotateDayGroupPositions
+    rotateDayGroupPositions,
+    /** TASK-1756: idempotent catch-up for mount / visibility / midnight */
+    runCatchupIfNeeded
   }
 }

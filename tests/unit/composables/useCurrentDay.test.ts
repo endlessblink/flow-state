@@ -51,4 +51,38 @@ describe('useCurrentDay()', () => {
     const b = useCurrentDay()
     expect(a).toBe(b)
   })
+
+  // ------------------------------------------------------------------------
+  // TASK-1756: resume-from-dormant signals — pageshow, focus, online
+  // ------------------------------------------------------------------------
+
+  it('picks up the new day on a `focus` event (Electron window regain)', () => {
+    const today = useCurrentDay()
+    expect(today.value.getDate()).toBe(16)
+
+    vi.setSystemTime(FRIDAY_00_01)
+    window.dispatchEvent(new Event('focus'))
+
+    expect(today.value.getDate()).toBe(17)
+  })
+
+  it('picks up the new day on a `pageshow` event (bfcache restore)', () => {
+    const today = useCurrentDay()
+    expect(today.value.getDate()).toBe(16)
+
+    vi.setSystemTime(FRIDAY_00_01)
+    window.dispatchEvent(new Event('pageshow'))
+
+    expect(today.value.getDate()).toBe(17)
+  })
+
+  it('picks up the new day on an `online` event (PWA offline→online)', () => {
+    const today = useCurrentDay()
+    expect(today.value.getDate()).toBe(16)
+
+    vi.setSystemTime(FRIDAY_00_01)
+    window.dispatchEvent(new Event('online'))
+
+    expect(today.value.getDate()).toBe(17)
+  })
 })

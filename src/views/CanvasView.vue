@@ -304,7 +304,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, markRaw, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, markRaw, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { VueFlow, useVueFlow, type NodeMouseEvent } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
@@ -339,6 +339,7 @@ import DayRotationBanner from '../components/canvas/DayRotationBanner.vue'
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
+import { useCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
 import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/canvasImageUpload'
@@ -381,12 +382,15 @@ const dayRotation = useDayGroupRotation({
 })
 
 function handleRotateDayGroups() {
-  dayRotation.rotateDayGroups()
+  // TASK-1756: toolbar button is the explicit "force canonical" affordance —
+  // bypasses the persisted lastRotationDate guard AND the xSpread preserve-
+  // user-layout gate so clicks always produce visible reordering.
+  dayRotation.rotateDayGroups({ force: true })
   // TASK-1756 v2: rotateDayGroupPositions holds canvasSyncInProgress until
   // release() is called. Apply moves to Vue Flow first, then release on
   // nextTick so syncStoreToCanvas can't flush BUG-1504 preservation with
   // stale getNodes.value and revert the rotation visually.
-  const { moves, release } = dayRotation.rotateDayGroupPositions()
+  const { moves, release } = dayRotation.rotateDayGroupPositions({ force: true })
   applyDayGroupMoves(moves)
   nextTick(release)
 }
@@ -420,6 +424,31 @@ const {
   distributeHorizontal, distributeVertical, arrangeInRow, arrangeInColumn, arrangeInGrid,
   collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, collectOverdueTasksNearGroup, disconnectEdge
 } = orchestrator
+
+// TASK-1756: run day-group catchup whenever the canvas becomes ready and
+// whenever the reactive "today" flips (midnight, focus, online, pageshow,
+// visibility). The composable's persisted `lastRotationDate` guard means
+// repeated calls on the same day are no-ops.
+//
+// Defer each run via nextTick so Vue Flow's node map is populated before
+// getNodePosition is called — otherwise findNode() returns undefined on
+// cold mount and xSpread reads stale store positions.
+const currentDay = useCurrentDay()
+function runDayGroupCatchup() {
+  nextTick(() => {
+    const { moves, release } = dayRotation.runCatchupIfNeeded()
+    if (moves.length > 0) applyDayGroupMoves(moves)
+    nextTick(release)
+  })
+}
+// Fire on the false→true transition AND on initial mount (when the canvas is
+// already warm). Using onMounted + watch (no immediate:true) keeps the setup-
+// time execution out of the critical path.
+onMounted(() => {
+  if (isCanvasReady.value) runDayGroupCatchup()
+})
+watch(isCanvasReady, (ready) => { if (ready) runDayGroupCatchup() })
+watch(currentDay, runDayGroupCatchup)
 
 // TASK-1722: Focusable canvas container ref for keyboard event handling
 const canvasContainerRef = ref<HTMLElement | null>(null)

@@ -157,7 +157,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     // Manual trigger should still work — flag only gates midnight auto-trigger
     expect(updateGroup).toHaveBeenCalled()
@@ -182,7 +182,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     // weekStartsOn=1 (Mon). Normalized day indices (Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6)
     // Today Wed = normalized 2. Distances: Wed=0, Thu=1, Fri=2, Sat=3, Sun=4, Mon=5, Tue=6
@@ -227,7 +227,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     // Today=Wed(3), startFrom=Fri(5) because Today+Tomorrow exist
     // weekStart=1(Mon). Normalized: Mon=0,Tue=1,Wed=2,Thu=3,Fri=4,Sat=5,Sun=6
@@ -265,7 +265,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     // Slots sorted by X: 0, 350, 700
     // Groups sorted by distance from Wed (3):
@@ -302,7 +302,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([childTask])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     // Wed (today) → slot X=0, delta = 0 - 350 = -350
     // child should be called with x: 100 + (-350) = -250, y: 50 + 0 = 50
@@ -346,7 +346,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([childOfMon])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     // Mon dist from Wed=3: (1 - 3 + 7) % 7 = 5 → slot[1] = X=350, delta = +350
     const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
@@ -368,7 +368,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     expect(updateGroup).not.toHaveBeenCalled()
     expect(updateTask).not.toHaveBeenCalled()
@@ -388,7 +388,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     expect(updateGroup).not.toHaveBeenCalled()
     expect(updateTask).not.toHaveBeenCalled()
@@ -411,7 +411,7 @@ describe('rotateDayGroupPositions()', () => {
     })
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     // At least one group moved, so updateGroup was called with sync=true
     expect(syncStates.length).toBeGreaterThan(0)
@@ -434,7 +434,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     // Only 1 day-of-week group found → less than 2, no rotation
     expect(updateGroup).not.toHaveBeenCalled()
@@ -462,7 +462,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(tasks)
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    rotateDayGroupPositions().release()
+    rotateDayGroupPositions({ force: true }).release()
 
     const taskCalls = updateTask.mock.calls as Array<[string, unknown, string]>
     expect(taskCalls.length).toBeGreaterThan(0)
@@ -513,7 +513,7 @@ describe('rotateDayGroupPositions()', () => {
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { rotateDayGroupPositions } = useDayGroupRotation()
-    const { release } = rotateDayGroupPositions()
+    const { release } = rotateDayGroupPositions({ force: true })
 
     // Flag must still be held — the sync gate protects applyDayGroupMoves
     expect(mockCanvasSyncInProgress.value).toBe(true)
@@ -524,5 +524,51 @@ describe('rotateDayGroupPositions()', () => {
     // release() is idempotent
     release()
     expect(mockCanvasSyncInProgress.value).toBe(false)
+  })
+
+  // --------------------------------------------------------------------------
+  // Test 12 (TASK-1756): non-stacked layout w/o force → preserve user drag order
+  // --------------------------------------------------------------------------
+
+  it('12: non-stacked layout without force returns empty moves (user layout preserved)', () => {
+    // Three groups spread horizontally — xSpread = 1000 > threshold (200).
+    // Without { force: true } this represents the automatic mount/midnight
+    // path, which must NOT reorder groups the user has dragged.
+    const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0,    y: 0, width: 350, height: 600 } })
+    const tue = makeGroup({ id: 'grp-tue', name: 'Tuesday', position: { x: 500, y: 0, width: 350, height: 600 } })
+    const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 1000, y: 0, width: 350, height: 600 } })
+
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, tue, wed])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
+
+    const { rotateDayGroupPositions } = useDayGroupRotation()
+    const { moves, release } = rotateDayGroupPositions()
+    release()
+
+    expect(moves).toEqual([])
+    expect(updateGroup).not.toHaveBeenCalled()
+  })
+
+  // --------------------------------------------------------------------------
+  // Test 13 (TASK-1756): non-stacked layout WITH force → canonical reorder
+  // --------------------------------------------------------------------------
+
+  it('13: non-stacked layout WITH force produces canonical moves (toolbar path)', () => {
+    const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0,    y: 0, width: 350, height: 600 } })
+    const tue = makeGroup({ id: 'grp-tue', name: 'Tuesday', position: { x: 500, y: 0, width: 350, height: 600 } })
+    const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 1000, y: 0, width: 350, height: 600 } })
+
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, tue, wed])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
+
+    const { rotateDayGroupPositions } = useDayGroupRotation()
+    const { moves, release } = rotateDayGroupPositions({ force: true })
+    release()
+
+    // Wed (today) should land at leftmost slot (x=0). Force bypasses the
+    // customized-layout gate and uses the user's existing slot X positions.
+    expect(moves.length).toBeGreaterThan(0)
+    const byNode = new Map(moves.map((m) => [m.nodeId, m.position.x]))
+    expect(byNode.get('section-' + wed.id)).toBe(0)
   })
 })

@@ -8,6 +8,57 @@
 
 ## Active Tasks
 
+### BUG-1776: Canvas day-group Tidy/Rotate still produces overlap + orphans (🔴 BROKEN)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (opened 2026-04-20, 6 failed fix attempts)
+
+**Problem**: The Canvas "Tidy day-group layout" button (and the "Rotate day groups" auto/manual path) still produces visually broken state in production despite 10 shipped versions of fixes. Symptoms across v1.3.55 → v1.3.64:
+  - Day-groups render at inconsistent widths despite `updateNode({ width, height, style })` in v1.3.64.
+  - Adjacent day-groups overlap horizontally (Monday visually collides with Wednesday).
+  - Tasks tear out of their parent group and float below it (BUG-1203 `isNodeCompletelyInside` zero-padding detach path).
+  - Orphan-recovery pass added in v1.3.64 doesn't visibly rehome previously-detached tasks.
+  - Clicking Tidy repeatedly doesn't converge — layout stays wrong.
+
+**What's already shipped (NOT enough)**:
+  - v1.3.57: removed xSpread gate + wired catchup on `isVueFlowReady`.
+  - v1.3.59: removed `<Teleport to="body">` wrapper from CanvasToolbar (previous "button does nothing" fix).
+  - v1.3.60–61: fixed right-click reschedule (`skipDueDateInheritance`, strict exact-date matching).
+  - v1.3.62: canonical layout primitive, Tidy button, uniform widths/heights.
+  - v1.3.63: bumped `DAY_GROUP_HEIGHT` 920 → 1000 (fixed off-by-40 that overflowed 8th task past parent).
+  - v1.3.64: added `width`/`height` top-level fields to `updateNode` (not just style), double `nextTick` before sync release, orphan-rehome pre-pass.
+
+**Perplexity research (external, 2026-04-20)** confirmed Vue Flow 1.48+ internals:
+  - `updateNode({ style: { width: '350px' } })` is fragile — must use top-level `width`/`height` fields too. ✅ Applied in v1.3.64.
+  - Single `nextTick` lags Vue Flow's dimension bookkeeping. Double `nextTick` or `setTimeout(r, 0)` required. ✅ Applied in v1.3.64.
+  - **Unverified suspicion**: when a node has `parentNode` set, its `position` must be RELATIVE to parent. My rotation/tidy writes absolute to store; `useCanvasSync.ts:89` claims to translate abs→rel for parented nodes during sync — but never verified live under the tidy batch conditions. Could still be the root cause.
+
+**Next session directive — MUST DO FIRST**:
+  1. Ask the user to relaunch Electron with the remote debug port so the next Claude Code session can CDP-attach and inspect live state:
+     ```bash
+     killall -9 flowstate FlowState 2>/dev/null
+     ~/Downloads/FlowState-1.3.64.AppImage --no-sandbox --remote-debugging-port=9223 &
+     ```
+  2. Connect via Playwright CDP (`chromium.connectOverCDP('http://localhost:9223')`) against the REAL user data — do NOT inject fake groups or simulate. Previous sessions shipped 3 fixes each based on guessed state.
+  3. Dump every group's `{ id, name, storePos: canvasStore._rawGroups[i].position, vfPos: findNode(id).position, vfDim: { findNode(id).width, .height, .style }, taskCount }` and every task's `{ id, parentId, canvasPosition, dueDate }` BEFORE any click.
+  4. Click the Tidy button via `page.locator('button[aria-label="Tidy day-group layout"]').click()`.
+  5. Diff store vs Vue Flow positions and dimensions for every group + task. Find any node where store + VF diverge (the real bug is one of these).
+  6. Specifically verify: do tasks with `parentNode` set in VF have their `position` as relative-to-parent or absolute? Compare `findNode(taskId).position.x` to `(taskStore.rawTasks[i].canvasPosition.x - parent.position.x)`. Mismatch = the assumed bug.
+
+**Files to revisit** (DON'T blindly re-edit):
+  - `src/composables/canvas/useCanonicalDayGroupLayout.ts` — pure layout math (verified correct in 10 unit tests).
+  - `src/composables/canvas/useDayGroupRotation.ts` — rotation entry + sort order.
+  - `src/composables/canvas/useTidyLayout.ts` — tidy entry + orphan rehome.
+  - `src/views/CanvasView.vue::applyCanonicalLayoutMoves` — the updateNode bridge.
+  - `src/composables/canvas/useCanvasSync.ts:89` — claims to translate abs→rel for parented nodes. VERIFY THIS ACTUALLY RUNS inside the tidy batch, given `canvasSyncInProgress=true` suppresses sync.
+
+**Risk of blind re-edits**: I've shipped 10 versions each "fixing" a theory without live inspection. User explicitly said "stop making empty promises". Next iteration MUST start with CDP inspection. If the user cannot relaunch with the debug port, do not ship another version — say so explicitly.
+
+**Related artifacts**:
+  - [SOP-069](./sop/SOP-069-teleport-async-mount-trap.md) — Teleport + async-mount trap (fixed in v1.3.59, still relevant).
+  - `src/constants/canvas.ts::DAY_GROUP_*` — canonical layout constants.
+
+---
+
 ### ~~TASK-1758~~: Deploy World's Greatest Bot + rename WhatsApp bot to Botty (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-19)

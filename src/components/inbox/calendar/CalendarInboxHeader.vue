@@ -151,6 +151,8 @@ import { NBadge } from 'naive-ui'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
+
+import type { Project } from '@/stores/tasks'
 import { type Task } from '@/stores/tasks'
 import { type DurationCategory } from '@/utils/durationCategories'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
@@ -162,7 +164,7 @@ defineProps<{
   todayCount: number
   hasActiveFilters: boolean
   baseCount: number
-  canvasGroupOptions: unknown[]
+  canvasGroupOptions: { label: string, value: string }[]
   selectedCanvasGroups: Set<string>
   showAdvancedFilters: boolean
   unscheduledOnly: boolean
@@ -171,7 +173,7 @@ defineProps<{
   selectedDurations: Set<DurationCategory>
   hideDoneTasks: boolean
   baseTasks: Task[]
-  rootProjects: unknown[]
+  rootProjects: Project[]
   searchQuery: string // TASK-1075
   sortBy?: SortByType // TASK-1303
   sortDirection?: SortDirection // TASK-1412

@@ -98,7 +98,7 @@ import { NPopover, NDatePicker } from 'naive-ui'
 // Define Props
 const props = defineProps<{
   id: string
-  data: unknown
+  data: Record<string, any>
   selected?: boolean
   dragging?: boolean
 }>()
@@ -227,18 +227,18 @@ const dayOfWeekDateSuffix = computed(() => {
 })
 
 // Watch for external name changes
-watch(() => props.data.name, (newName) => {
+watch(() => props.data?.name, (newName) => {
   sectionName.value = newName
 })
 
 const updateName = () => {
-  if (sectionName.value !== props.data.name) {
+  if (sectionName.value !== props.data?.name) {
     emit('update', { name: sectionName.value })
   }
 }
 
 const toggleCollapse = () => {
-  // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
+  // Use props.data?.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
   const groupId = props.data?.id || props.id.replace('section-', '')
   canvasStore.toggleSectionCollapse(groupId)
 }

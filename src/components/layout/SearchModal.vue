@@ -21,12 +21,13 @@
       </div>
 
       <!-- Filter Row -->
-      <div class="filter-row">
+      <div class="filter-row" role="group" aria-label="Search filters">
         <button
           v-for="filter in filters"
           :key="filter.key"
           class="filter-pill"
           :class="{ active: activeFilters[filter.key] }"
+          :aria-pressed="activeFilters[filter.key]"
           @click="toggleFilter(filter.key)"
         >
           {{ filter.label }}
@@ -63,6 +64,7 @@
               v-if="task.canvasPosition"
               class="reveal-canvas-btn"
               title="Show on Canvas"
+              aria-label="Show on Canvas"
               @click.stop="emit('revealTask', task)"
             >
               <Crosshair :size="14" />

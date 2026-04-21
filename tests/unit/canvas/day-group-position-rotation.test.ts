@@ -186,21 +186,21 @@ describe('rotateDayGroupPositions()', () => {
     rotateDayGroupPositions().release()
 
     // TASK-1756 v8: canonical layout — origin X = min input X = 0,
-    // spacing = DAY_GROUP_SPACING (520).
+    // spacing = DAY_GROUP_SPACING (416).
     // weekStart=1 (Mon). today=Wed. Distances: Wed=0, Thu=1, Fri=2, Sat=3, Sun=4, Mon=5, Tue=6
-    // So: Wed→slot0(X0), Thu→slot1(X520), Fri→slot2(X1040), Sat→slot3(X1560),
-    //     Sun→slot4(X2080), Mon→slot5(X2600), Tue→slot6(X3120)
+    // So: Wed→slot0(X0), Thu→slot1(X416), Fri→slot2(X832), Sat→slot3(X1248),
+    //     Sun→slot4(X1664), Mon→slot5(X2080), Tue→slot6(X2496)
     const calls = updateGroup.mock.calls as Array<[string, { position: { x: number; y: number } }]>
     const posById = new Map(calls.map(([id, update]) => [id, update.position.x]))
     const byName = new Map(groups.map((g) => [g.name, g.id]))
 
     expect(posById.get(byName.get('Wednesday')!)).toBe(0)
-    expect(posById.get(byName.get('Thursday')!)).toBe(520)
-    expect(posById.get(byName.get('Friday')!)).toBe(1040)
-    expect(posById.get(byName.get('Saturday')!)).toBe(1560)
-    expect(posById.get(byName.get('Sunday')!)).toBe(2080)
-    expect(posById.get(byName.get('Monday')!)).toBe(2600)
-    expect(posById.get(byName.get('Tuesday')!)).toBe(3120)
+    expect(posById.get(byName.get('Thursday')!)).toBe(416)
+    expect(posById.get(byName.get('Friday')!)).toBe(832)
+    expect(posById.get(byName.get('Saturday')!)).toBe(1248)
+    expect(posById.get(byName.get('Sunday')!)).toBe(1664)
+    expect(posById.get(byName.get('Monday')!)).toBe(2080)
+    expect(posById.get(byName.get('Tuesday')!)).toBe(2496)
   })
 
   // --------------------------------------------------------------------------
@@ -231,11 +231,11 @@ describe('rotateDayGroupPositions()', () => {
 
     // TASK-1756 v8: Today + Tomorrow now ARE part of the canonical layout.
     // Order: Today → Tomorrow → day-of-week by distance from startFrom (Fri).
-    // All 9 groups (2 smart + 7 weekday) laid out at origin X = 0 with spacing 520.
+    // All 9 groups (2 smart + 7 weekday) laid out at origin X = 0 with spacing 416.
     // Slot indices:
-    //   Today→0(X0), Tomorrow→1(X520),
-    //   Fri→2(X1040), Sat→3(X1560), Sun→4(X2080), Mon→5(X2600),
-    //   Tue→6(X3120), Wed→7(X3640), Thu→8(X4160)
+    //   Today→0(X0), Tomorrow→1(X416),
+    //   Fri→2(X832), Sat→3(X1248), Sun→4(X1664), Mon→5(X2080),
+    //   Tue→6(X2496), Wed→7(X2912), Thu→8(X3328)
     const calls = updateGroup.mock.calls as Array<[string, { position: { x: number } }]>
     const posById = new Map(calls.map(([id, update]) => [id, update.position.x]))
     const byName = new Map([
@@ -245,11 +245,11 @@ describe('rotateDayGroupPositions()', () => {
     ])
 
     expect(posById.get(byName.get('Today')!)).toBe(0)
-    expect(posById.get(byName.get('Tomorrow')!)).toBe(520)
-    expect(posById.get(byName.get('Friday')!)).toBe(1040)
-    expect(posById.get(byName.get('Saturday')!)).toBe(1560)
-    expect(posById.get(byName.get('Sunday')!)).toBe(2080)
-    expect(posById.get(byName.get('Monday')!)).toBe(2600)
+    expect(posById.get(byName.get('Tomorrow')!)).toBe(416)
+    expect(posById.get(byName.get('Friday')!)).toBe(832)
+    expect(posById.get(byName.get('Saturday')!)).toBe(1248)
+    expect(posById.get(byName.get('Sunday')!)).toBe(1664)
+    expect(posById.get(byName.get('Monday')!)).toBe(2080)
   })
 
   // --------------------------------------------------------------------------
@@ -268,17 +268,17 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // TASK-1756 v8: origin X = min input X = 0, spacing = 520.
+    // TASK-1756 v8: origin X = min input X = 0, spacing = 416.
     // Groups sorted by distance from Wed (3):
     //   Wed dist=0 → slot[0]=X0
-    //   Fri dist=2 → slot[1]=X520
-    //   Mon dist=5 → slot[2]=X1040
+    //   Fri dist=2 → slot[1]=X416
+    //   Mon dist=5 → slot[2]=X832
     const calls = updateGroup.mock.calls as Array<[string, { position: { x: number } }]>
     const posById = new Map(calls.map(([id, u]) => [id, u.position.x]))
 
     expect(posById.get(wed.id)).toBe(0)
-    expect(posById.get(fri.id)).toBe(520)
-    expect(posById.get(mon.id)).toBe(1040)
+    expect(posById.get(fri.id)).toBe(416)
+    expect(posById.get(mon.id)).toBe(832)
   })
 
   // --------------------------------------------------------------------------
@@ -336,14 +336,14 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Mon → slot1 → newGroupX = 520 (origin 0 + 520), newGroupY = 0.
-    // Task 0 of Mon: x = 520 + PADDING(20) = 540
+    // Mon → slot1 → newGroupX = 416 (origin 0 + 416), newGroupY = 0.
+    // Task 0 of Mon: x = 416 + PADDING(20) = 436
     //                y = 0 + HEADER(50) + PADDING(20) + 0*(100+10) = 70
     const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
     const childCall = taskCalls.find(([id]) => id === 'child-mon')
 
     expect(childCall).toBeDefined()
-    expect(childCall![1].canvasPosition.x).toBe(540)
+    expect(childCall![1].canvasPosition.x).toBe(436)
     expect(childCall![1].canvasPosition.y).toBe(70)
   })
 
@@ -373,8 +373,8 @@ describe('rotateDayGroupPositions()', () => {
     // canonical layout normalises width (400) and height (920). So updateGroup
     // IS always called — dimensions get normalised every rotation.
     const wed = makeGroup({ name: 'Wednesday', position: { x: 0, y: 0, width: 350, height: 600 } })
-    const thu = makeGroup({ name: 'Thursday', position: { x: 520, y: 0, width: 350, height: 600 } })
-    const fri = makeGroup({ name: 'Friday', position: { x: 1040, y: 0, width: 350, height: 600 } })
+    const thu = makeGroup({ name: 'Thursday', position: { x: 416, y: 0, width: 350, height: 600 } })
+    const fri = makeGroup({ name: 'Friday', position: { x: 832, y: 0, width: 350, height: 600 } })
 
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([wed, thu, fri])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
@@ -490,12 +490,12 @@ describe('rotateDayGroupPositions()', () => {
     // Today = Wednesday (2026-04-08, dayIndex 3). weekStartsOn=1 (Monday).
     // Normalized: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
     // Distances from Wed(2): Wed=0, Fri=2, Mon=5 → slot indices 0, 1, 2
-    // GROUP_SPACING = 520, origin X = 0, origin Y = 0
+    // GROUP_SPACING = 416, origin X = 0, origin Y = 0
     // Wed already sits at slot 0 (deltaX=0) so it's skipped from the moves
-    // array — only Fri (→ 520) and Mon (→ 1040) produce moves.
+    // array — only Fri (→ 416) and Mon (→ 832) produce moves.
     const byNode = new Map(moves.map((m) => [m.nodeId, m.position.x]))
-    expect(byNode.get('section-' + fri.id)).toBe(520)
-    expect(byNode.get('section-' + mon.id)).toBe(1040)
+    expect(byNode.get('section-' + fri.id)).toBe(416)
+    expect(byNode.get('section-' + mon.id)).toBe(832)
     // And the store should have been updated for Fri and Mon via updateGroup
     const groupIdsUpdated = updateGroup.mock.calls.map(([id]: [string]) => id)
     expect(groupIdsUpdated).toContain(fri.id)

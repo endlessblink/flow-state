@@ -477,6 +477,9 @@ export function toDbStatus(appStatus: string): string {
 
 export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
     const now = new Date().toISOString()
+    const safeTitle = typeof task.title === 'string' && task.title.trim().length > 0
+        ? task.title.trim()
+        : 'Untitled Task'
 
     // SAFETY: Sanitize UUID fields to prevent 400 errors from Supabase
     const sanitizedProjectId = sanitizeUUID(task.projectId)
@@ -500,7 +503,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         id: task.id,
         user_id: userId,
         project_id: sanitizedProjectId,
-        title: task.title,
+        title: safeTitle,
         description: task.description,
         status: dbStatus,
         priority: task.priority,

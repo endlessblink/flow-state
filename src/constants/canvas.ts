@@ -35,7 +35,7 @@ export const CANVAS = {
     // TASK-1756 v8: canonical day-group layout
     DAY_GROUP_WIDTH_1COL: 400,
     DAY_GROUP_WIDTH_2COL: 700,
-    DAY_GROUP_SPACING: 520, // 400 width + 120 px visible gutter
+    DAY_GROUP_SPACING: 416, // 400 width + 16 px visible gutter
     // Exact fit math: HEADER(50) + PADDING(20) + 8*TASK_H(100) + 7*GAP(10) + PADDING(20)
     //                 = 50 + 20 + 800 + 70 + 20 = 960
     // Add 40px slack so BUG-1203's zero-padding spatial check never trips on

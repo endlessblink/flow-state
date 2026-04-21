@@ -401,7 +401,6 @@ function applyCanonicalTaskMoves(
   for (const move of taskMoves) {
     const node = findNode(CanvasIds.taskNodeId(move.taskId))
     if (!node) {
-      console.warn(`[CANONICAL-LAYOUT:VF] task ${move.taskId}: NOT FOUND`)
       continue
     }
 
@@ -417,7 +416,6 @@ function applyCanonicalTaskMoves(
       })()
 
     if (!parentAbsPos) {
-      console.warn(`[CANONICAL-LAYOUT:VF] task ${move.taskId}: parent ${move.parentId} position missing`)
       continue
     }
 

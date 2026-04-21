@@ -17,6 +17,7 @@ import { toDbStatus, toSupabaseTask } from '@/utils/supabaseMappers'
 import { useToast } from '@/composables/useToast'
 // TASK-1428: Keep IndexedDB read cache warm after offline mutations
 import { cacheTasks } from '@/services/offline/readCacheDB'
+import { sanitizeTaskTitle } from '@/utils/taskValidation'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
@@ -127,7 +128,7 @@ export function useTaskOperations(
 
             const newTask: Task = {
                 id: taskId,
-                title: taskData.title || '',
+                title: sanitizeTaskTitle(taskData.title),
                 description: taskData.description || '',
                 status: taskData.status || 'todo',
                 priority: taskData.priority || 'medium',
@@ -409,6 +410,10 @@ export function useTaskOperations(
             if ('projectId' in updates) {
                 const isUncategorized = !updates.projectId || updates.projectId === '1' || updates.projectId === UNCATEGORIZED_PROJECT_ID
                 updates.isUncategorized = isUncategorized
+            }
+
+            if ('title' in updates) {
+                updates.title = sanitizeTaskTitle(updates.title)
             }
 
             // Orphan prevention

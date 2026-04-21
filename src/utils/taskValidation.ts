@@ -30,6 +30,14 @@ export interface BatchValidationResult {
   invalidCount: number
 }
 
+export const FALLBACK_TASK_TITLE = 'Untitled Task'
+
+export function sanitizeTaskTitle(title: unknown): string {
+  if (typeof title !== 'string') return FALLBACK_TASK_TITLE
+  const trimmed = title.trim()
+  return trimmed.length > 0 ? trimmed : FALLBACK_TASK_TITLE
+}
+
 /**
  * UUID regex pattern for validation
  */
@@ -197,9 +205,7 @@ export function sanitizeTask(task: unknown, options: {
   // Build sanitized task
   const sanitizedTask: Task = {
     id: taskId,
-    title: (typeof taskObj.title === 'string' && taskObj.title.trim())
-      ? taskObj.title
-      : 'Recovered Task',
+    title: sanitizeTaskTitle(taskObj.title),
     description: typeof taskObj.description === 'string' ? taskObj.description : '',
     status: isValidStatus(taskObj.status) ? taskObj.status : 'todo',
     priority: isValidPriority(taskObj.priority) ? taskObj.priority : 'medium',
@@ -302,6 +308,22 @@ export function validateBeforeSave(tasks: Task[]): {
     validTasks,
     blockedTasks: []
   }
+}
+
+export function repairTaskTitles(tasks: Task[]): { repairedTasks: Task[], repairedCount: number } {
+  let repairedCount = 0
+  const repairedTasks = tasks.map((task) => {
+    const safeTitle = sanitizeTaskTitle(task.title)
+    if (safeTitle === task.title) return task
+    repairedCount++
+    return {
+      ...task,
+      title: safeTitle,
+      updatedAt: new Date(),
+    }
+  })
+
+  return { repairedTasks, repairedCount }
 }
 
 // Helper functions

@@ -4,7 +4,7 @@ import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 import type { Task } from '@/types/tasks'
 import { cacheTasks, getCachedTasks } from '@/services/offline/readCacheDB'
 import { useProjectStore } from '../projects'
-import { validateBeforeSave, logTaskIdStats } from '@/utils/taskValidation'
+import { validateBeforeSave, logTaskIdStats, repairTaskTitles } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
 // TASK-1215: Tauri dual-write for filter persistence
 import { getTauriStore, isTauriEnv } from '@/composables/usePersistentRef'
@@ -183,6 +183,16 @@ export function useTaskPersistence(
         }
 
         try {
+            const { repairedTasks, repairedCount } = repairTaskTitles(tasksToSave)
+            if (repairedCount > 0) {
+                for (const repaired of repairedTasks) {
+                    const idx = _rawTasks.value.findIndex(task => task.id === repaired.id)
+                    if (idx !== -1) _rawTasks.value[idx] = repaired
+                }
+                tasksToSave = repairedTasks
+                console.warn(`🛠️ [TASK-TITLE-REPAIR] Repaired ${repairedCount} blank task title(s) before save (${context})`)
+            }
+
             // Validation
             const validation = validateBeforeSave(tasksToSave)
             if (validation.blockedTasks.length > 0) {

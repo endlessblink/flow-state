@@ -33,9 +33,9 @@ export const CANVAS = {
     GRID_SNAP_SIZE: 16, // Matching snap grid in CanvasView.vue
 
     // TASK-1756 v8: canonical day-group layout
-    DAY_GROUP_WIDTH_1COL: 350,
+    DAY_GROUP_WIDTH_1COL: 400,
     DAY_GROUP_WIDTH_2COL: 700,
-    DAY_GROUP_SPACING: 420, // 350 width + 70 px gutter
+    DAY_GROUP_SPACING: 470, // 400 width + 70 px gutter
     // Exact fit math: HEADER(50) + PADDING(20) + 8*TASK_H(100) + 7*GAP(10) + PADDING(20)
     //                 = 50 + 20 + 800 + 70 + 20 = 960
     // Add 40px slack so BUG-1203's zero-padding spatial check never trips on

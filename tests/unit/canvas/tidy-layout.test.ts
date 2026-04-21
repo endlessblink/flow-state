@@ -87,10 +87,10 @@ describe('useTidyLayout', () => {
     release()
 
     const byNode = new Map(groupMoves.map((m) => [m.groupId, m.position.x]))
-    // Origin = min X = 50. Spacing = 420. slots: 50, 470, 890.
+    // Origin = min X = 50. Spacing = 470. slots: 50, 520, 990.
     expect(byNode.get(tue.id)).toBe(50)
-    expect(byNode.get(fri.id)).toBe(470)
-    expect(byNode.get(mon.id)).toBe(890)
+    expect(byNode.get(fri.id)).toBe(520)
+    expect(byNode.get(mon.id)).toBe(990)
   })
 
   it('ignores custom-named groups (no power keyword)', () => {
@@ -155,8 +155,8 @@ describe('useTidyLayout', () => {
     const byNode = new Map(groupMoves.map((m) => [m.groupId, m.position.x]))
     // Order preserved by current X: Today (0), Tomorrow (100), Mon (200).
     expect(byNode.get(today.id)).toBe(0)
-    expect(byNode.get(tomorrow.id)).toBe(420)
-    expect(byNode.get(mon.id)).toBe(840)
+    expect(byNode.get(tomorrow.id)).toBe(470)
+    expect(byNode.get(mon.id)).toBe(940)
   })
 
   it('returns taskMoves and persists stacked child task positions during tidy', () => {

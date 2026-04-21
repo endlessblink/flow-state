@@ -198,13 +198,13 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     release()
 
     // TASK-1756 v8: canonical layout anchors at min visual X = 1000 and
-    // spaces by DAY_GROUP_SPACING (420). Wed (today) → slot 0 = 1000;
-    // Mon (dist 5 from Wed) → slot 1 = 1420. getNodePosition IS used
-    // because without it the anchor would be min store X = 0 → slots 0/420.
+    // spaces by DAY_GROUP_SPACING (470). Wed (today) → slot 0 = 1000;
+    // Mon (dist 5 from Wed) → slot 1 = 1470. getNodePosition IS used
+    // because without it the anchor would be min store X = 0 → slots 0/470.
     const wedMove = moves.find((m) => m.nodeId === 'section-grp-wed')
     expect(wedMove?.position.x).toBe(1000)
     const monMove = moves.find((m) => m.nodeId === 'section-grp-mon')
-    expect(monMove?.position.x).toBe(1420)
+    expect(monMove?.position.x).toBe(1470)
   })
 
 })

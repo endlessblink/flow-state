@@ -26,6 +26,7 @@ Or use the `/next` skill to get scored task recommendations.
 - If the user needs to update through Electron, version bumping is mandatory before build and deploy. Without a newer version, the updater has nothing to detect.
 - For desktop-facing FlowState work, assume the full Electron updater flow is required unless the user explicitly says local-only, skip deploy, or skip push.
 - If the user says to "do it", "ship it", "push the update", or otherwise asks to deliver the change, treat that as instruction to complete the full Electron flow end-to-end: version bump, build, deploy, verify updater manifest, commit, and push.
+- For any local FlowState code change that fixes behavior the user is testing in the desktop app, default to shipping the Electron update in the same session. Do not leave desktop fixes local unless the user explicitly asks to keep them unshipped.
 - Required updater delivery flow:
   - bump version
   - build Electron

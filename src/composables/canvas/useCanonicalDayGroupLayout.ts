@@ -7,7 +7,7 @@
  *   - All day-of-week + smart (Today/Tomorrow) groups share one Y.
  *   - Uniform width (350 or 700 for 2-column overflow).
  *   - Uniform height (920 — fits 8 tasks in a single column).
- *   - Evenly spaced on X by DAY_GROUP_SPACING.
+ *   - Evenly spaced on X with a fixed gutter between actual rendered widths.
  *   - Tasks inside each group stacked vertically, wrapping to a 2nd column
  *     when task count exceeds 8 (group width bumped to 700 for those).
  *
@@ -76,6 +76,9 @@ export function computeCanonicalLayout(
   const groupMoves: GroupMove[] = []
   const taskMoves: TaskMove[] = []
 
+  const groupGutter = CANVAS.DAY_GROUP_SPACING - CANVAS.DAY_GROUP_WIDTH_1COL
+  let nextGroupX = originX
+
   for (let i = 0; i < orderedIds.length; i++) {
     const id = orderedIds[i]
     const dg = byId.get(id)
@@ -84,7 +87,7 @@ export function computeCanonicalLayout(
     const taskCount = dg.tasks.length
     const hasOverflow = taskCount > CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
 
-    const groupX = originX + i * CANVAS.DAY_GROUP_SPACING
+    const groupX = nextGroupX
     const groupY = originY
     const groupWidth = hasOverflow ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
     const groupHeight = CANVAS.DAY_GROUP_HEIGHT
@@ -95,6 +98,8 @@ export function computeCanonicalLayout(
       position: { x: groupX, y: groupY },
       size: { width: groupWidth, height: groupHeight },
     })
+
+    nextGroupX += groupWidth + groupGutter
 
     // Stable task order: top-most first. Fall back to created-at so ties
     // behave predictably across runs.

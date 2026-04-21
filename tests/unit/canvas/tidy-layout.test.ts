@@ -158,4 +158,45 @@ describe('useTidyLayout', () => {
     expect(byNode.get(tomorrow.id)).toBe(420)
     expect(byNode.get(mon.id)).toBe(840)
   })
+
+  it('returns taskMoves and persists stacked child task positions during tidy', () => {
+    const mon = makeGroup('Monday', 0)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'task-low',
+        parentId: mon.id,
+        canvasPosition: { x: 200, y: 500 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+      {
+        id: 'task-high',
+        parentId: mon.id,
+        canvasPosition: { x: 150, y: 100 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves.map((move) => move.taskId)).toEqual(['task-high', 'task-low'])
+    expect(taskMoves[0]?.parentId).toBe(mon.id)
+    expect(taskMoves[0]?.position).toEqual({ x: 20, y: 70 })
+    expect(taskMoves[1]?.position).toEqual({ x: 20, y: 180 })
+    expect(updateTask).toHaveBeenCalledTimes(2)
+    expect(updateTask).toHaveBeenNthCalledWith(
+      1,
+      'task-high',
+      { canvasPosition: { x: 20, y: 70 } },
+      'DRAG'
+    )
+    expect(updateTask).toHaveBeenNthCalledWith(
+      2,
+      'task-low',
+      { canvasPosition: { x: 20, y: 180 } },
+      'DRAG'
+    )
+  })
 })

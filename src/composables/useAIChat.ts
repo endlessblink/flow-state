@@ -1842,8 +1842,10 @@ export function useAIChat() {
       } else {
         activeProviderRef.value = selectedProvider.value
       }
-      // Fetch available Ollama models
-      availableOllamaModels.value = await fetchOllamaModels()
+      // Avoid localhost/CSP probes unless the user is actively using Ollama.
+      if (selectedProvider.value === 'ollama') {
+        availableOllamaModels.value = await fetchOllamaModels()
+      }
     } catch (err) {
       console.warn('[AIChat] Router initialization failed, will retry on first use:', err)
     }

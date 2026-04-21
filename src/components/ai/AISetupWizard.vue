@@ -205,7 +205,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, watch } from 'vue'
 import {
   X, Zap, Monitor, ExternalLink, Eye, EyeOff,
   CheckCircle2, AlertCircle, Loader2, RefreshCw
@@ -214,7 +214,6 @@ import { useSettingsStore } from '@/stores/settings'
 import { isServiceReachable } from '@/services/ai/utils/tauriHttp'
 import { tauriFetch } from '@/services/ai/utils/tauriHttp'
 import { resetSharedRouter } from '@/services/ai/routerFactory'
-import { isProxyAvailable } from '@/services/ai/proxy/aiChatProxy'
 
 const settingsStore = useSettingsStore()
 
@@ -236,28 +235,8 @@ const testMessage = ref('')
 const ollamaDetected = ref(false)
 const ollamaChecking = ref(false)
 
-onMounted(async () => {
-  // Already set up — nothing to do
-  if (settingsStore.aiSetupComplete) return
-
-  // TASK-1350: If the Groq proxy (Supabase Edge Function) is already available,
-  // auto-complete setup silently. The developer (or anyone with a configured proxy)
-  // should never be asked for an API key.
-  try {
-    const proxyReady = await isProxyAvailable('groq')
-    if (proxyReady) {
-      console.log('[AISetupWizard] Groq proxy detected — auto-completing AI setup')
-      settingsStore.updateSetting('aiSetupComplete', true)
-      settingsStore.updateSetting('aiPreferredProvider', 'groq')
-      return
-    }
-  } catch {
-    // Proxy check failed — continue to wizard
-  }
-
-  // No proxy available — show wizard for BYOK setup
-  isVisible.value = true
-})
+// Keep the wizard fully opt-in. Automatic AI proxy checks during app boot caused
+// noisy startup failures on web/PWA and were unrelated to the user's current task.
 
 // Pre-populate API key if user already has one
 watch(() => settingsStore.groqApiKey, (key) => {

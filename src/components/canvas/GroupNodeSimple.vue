@@ -20,38 +20,39 @@
         @blur="updateName"
         @keydown.enter="($event.target as HTMLInputElement).blur()"
       >
-      <!-- TASK-130: Show date suffix for day-of-week groups (e.g., "/ Jan 10") -->
-      <!-- TASK-166: Clickable date picker for bi-directional editing -->
-      <NPopover
-        v-if="dayOfWeekDateSuffix"
-        trigger="click"
-        placement="bottom"
-        :show="showDatePicker"
-        @update:show="showDatePicker = $event"
-      >
-        <template #trigger>
-          <span
-            class="section-date-suffix clickable"
-            title="Click to change date"
-            @click.stop="showDatePicker = true"
-          >
-            / {{ dayOfWeekDateSuffix }}
-          </span>
-        </template>
-        <NDatePicker
-          panel
-          type="date"
-          :value="currentTargetTimestamp"
-          :actions="[]"
-          @update:value="handleDateSelect"
-        />
-      </NPopover>
+      <div class="section-header-meta">
+        <!-- TASK-130: Show date suffix for day-of-week groups (e.g., "/ Jan 10") -->
+        <!-- TASK-166: Clickable date picker for bi-directional editing -->
+        <NPopover
+          v-if="dayOfWeekDateSuffix"
+          trigger="click"
+          placement="bottom"
+          :show="showDatePicker"
+          @update:show="showDatePicker = $event"
+        >
+          <template #trigger>
+            <span
+              class="section-date-suffix clickable"
+              title="Click to change date"
+              @click.stop="showDatePicker = true"
+            >
+              / {{ dayOfWeekDateSuffix }}
+            </span>
+          </template>
+          <NDatePicker
+            panel
+            type="date"
+            :value="currentTargetTimestamp"
+            :actions="[]"
+            @update:value="handleDateSelect"
+          />
+        </NPopover>
 
-      <!-- TASK-068: All actions moved to context menu for cleaner header -->
-
-      <div class="section-count" :class="{ 'has-tasks': taskCount > 0 }">
-        {{ taskCount }}
-        <span v-if="isCollapsed && taskCount > 0" class="hidden-indicator" :title="`${taskCount} hidden tasks`">📦</span>
+        <!-- TASK-068: All actions moved to context menu for cleaner header -->
+        <div class="section-count" :class="{ 'has-tasks': taskCount > 0 }">
+          {{ taskCount }}
+          <span v-if="isCollapsed && taskCount > 0" class="hidden-indicator" :title="`${taskCount} hidden tasks`">📦</span>
+        </div>
       </div>
     </div>
 
@@ -355,7 +356,6 @@ const handleResizeEnd = (event: unknown) => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  padding-inline-end: var(--space-12_5); /* Make space for count badge */
   border-bottom: var(--space-0_5) solid var(--glass-border-soft);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   min-height: var(--space-10); /* Ensure consistent header height */
@@ -443,6 +443,15 @@ const handleResizeEnd = (event: unknown) => {
   white-space: nowrap;
 }
 
+.section-header-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+
 .section-name-input:hover,
 .section-name-input:focus {
   background: var(--glass-bg-medium);
@@ -456,7 +465,9 @@ const handleResizeEnd = (event: unknown) => {
   font-weight: var(--font-medium);
   white-space: nowrap;
   flex-shrink: 0;
-  padding-inline-start: var(--space-1);
+  max-width: min(40%, 6.5rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .section-date-suffix.clickable {
@@ -474,12 +485,6 @@ const handleResizeEnd = (event: unknown) => {
 /* TASK-068: Removed .section-type-badge CSS - non-actionable element removed */
 
 .section-count {
-  /* Position badge absolutely to prevent overflow */
-  position: absolute;
-  top: 50%;
-  right: var(--space-3);
-  transform: translateY(-50%);
-
   /* Badge styling */
   background: var(--glass-bg-medium);
   color: var(--text-secondary);
@@ -491,11 +496,9 @@ const handleResizeEnd = (event: unknown) => {
   text-align: center;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
-
-  /* Prevent interference with resize handles */
-  pointer-events: none;
-  z-index: 10;
+  flex-shrink: 0;
 }
 
 .section-count.has-tasks {

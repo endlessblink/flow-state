@@ -3,15 +3,58 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerUpdater = registerUpdater;
 const electron_updater_1 = require("electron-updater");
 const electron_1 = require("electron");
+function hasValidAppVersion(version) {
+    return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
+}
 /**
  * Electron auto-updater setup.
  * Uses generic provider pointing to VPS at /updates/electron/
  * Replaces Tauri's auto-updater (SOP-037).
  */
 function registerUpdater() {
-    // Don't check for updates in dev
-    if (process.env.VITE_DEV_SERVER_URL)
+    const isDev = !!process.env.VITE_DEV_SERVER_URL;
+    const appVersion = electron_1.app.getVersion();
+    const canUseUpdater = !isDev && hasValidAppVersion(appVersion);
+    // Register IPC handlers in all environments so renderer invocations don't
+    // fail during local dev. In dev or unpackaged preview mode, updater actions
+    // become safe no-ops.
+    electron_1.ipcMain.handle('updater:check', async () => {
+        if (!canUseUpdater)
+            return null;
+        try {
+            return await electron_updater_1.autoUpdater.checkForUpdates();
+        }
+        catch (err) {
+            console.error('[Updater] Check failed:', err.message);
+            return null;
+        }
+    });
+    electron_1.ipcMain.handle('updater:download', async () => {
+        if (!canUseUpdater)
+            return;
+        await electron_updater_1.autoUpdater.downloadUpdate();
+    });
+    electron_1.ipcMain.handle('updater:install', () => {
+        if (!canUseUpdater)
+            return true;
+        // Release single-instance lock before restart, otherwise the new process
+        // can't acquire the lock and immediately exits (appears as a crash).
+        electron_1.app.releaseSingleInstanceLock();
+        // Return from IPC first, then hand off to the updater on the next tick.
+        // Calling quitAndInstall() inline from an invoke handler can leave the
+        // renderer stuck in a half-dead state while the app is trying to exit.
+        setImmediate(() => {
+            // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
+            electron_updater_1.autoUpdater.quitAndInstall(false, true);
+        });
+        return true;
+    });
+    if (!canUseUpdater) {
+        if (!isDev) {
+            console.warn(`[Updater] Skipping updater initialization for invalid app version: ${appVersion}`);
+        }
         return;
+    }
     electron_updater_1.autoUpdater.autoDownload = false;
     electron_updater_1.autoUpdater.autoInstallOnAppQuit = false;
     // Forward events to renderer via IPC
@@ -40,32 +83,6 @@ function registerUpdater() {
         const win = electron_1.BrowserWindow.getAllWindows()[0];
         if (win)
             win.webContents.send('updater:error', err.message);
-    });
-    // IPC handlers for renderer control
-    electron_1.ipcMain.handle('updater:check', async () => {
-        try {
-            return await electron_updater_1.autoUpdater.checkForUpdates();
-        }
-        catch (err) {
-            console.error('[Updater] Check failed:', err.message);
-            return null;
-        }
-    });
-    electron_1.ipcMain.handle('updater:download', async () => {
-        await electron_updater_1.autoUpdater.downloadUpdate();
-    });
-    electron_1.ipcMain.handle('updater:install', () => {
-        // Release single-instance lock before restart, otherwise the new process
-        // can't acquire the lock and immediately exits (appears as a crash).
-        electron_1.app.releaseSingleInstanceLock();
-        // Return from IPC first, then hand off to the updater on the next tick.
-        // Calling quitAndInstall() inline from an invoke handler can leave the
-        // renderer stuck in a half-dead state while the app is trying to exit.
-        setImmediate(() => {
-            // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
-            electron_updater_1.autoUpdater.quitAndInstall(false, true);
-        });
-        return true;
     });
     // Check for updates after 5s delay
     setTimeout(() => {

@@ -345,6 +345,7 @@ import { useCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
 import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/canvasImageUpload'
+import { CanvasIds } from '@/utils/canvas/canvasIds'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -391,6 +392,45 @@ function applyCanonicalLayoutMoves(
   }
 }
 
+function applyCanonicalTaskMoves(
+  taskMoves: Array<{ taskId: string; parentId: string; position: { x: number; y: number } }>,
+  groupMoves: Array<{ groupId: string; position: { x: number; y: number } }>
+) {
+  const targetGroupPositions = new Map(groupMoves.map((move) => [move.groupId, move.position]))
+
+  for (const move of taskMoves) {
+    const node = findNode(CanvasIds.taskNodeId(move.taskId))
+    if (!node) {
+      console.warn(`[CANONICAL-LAYOUT:VF] task ${move.taskId}: NOT FOUND`)
+      continue
+    }
+
+    const parentAbsPos =
+      targetGroupPositions.get(move.parentId) ??
+      (() => {
+        const parentNode = findNode(CanvasIds.groupNodeId(move.parentId))
+        return parentNode ? { x: parentNode.position.x, y: parentNode.position.y } : undefined
+      })() ??
+      (() => {
+        const parentGroup = canvasStore.groups.find((group) => group.id === move.parentId)
+        return parentGroup?.position ? { x: parentGroup.position.x, y: parentGroup.position.y } : undefined
+      })()
+
+    if (!parentAbsPos) {
+      console.warn(`[CANONICAL-LAYOUT:VF] task ${move.taskId}: parent ${move.parentId} position missing`)
+      continue
+    }
+
+    updateNode(CanvasIds.taskNodeId(move.taskId), {
+      position: {
+        x: move.position.x - parentAbsPos.x,
+        y: move.position.y - parentAbsPos.y,
+      },
+      parentNode: CanvasIds.groupNodeId(move.parentId),
+    })
+  }
+}
+
 const dayRotation = useDayGroupRotation({
   onMoves: applyCanonicalLayoutMoves,
   getNodePosition: (nodeId: string) => {
@@ -419,16 +459,18 @@ function handleRotateDayGroups() {
   // on rotateDayGroups (dueDate/marker path). Physical rotation always produces
   // moves — the canonical primitive owns all geometry math now.
   dayRotation.rotateDayGroups({ force: true })
-  const { groupMoves, release } = dayRotation.rotateDayGroupPositions()
+  const { groupMoves, taskMoves, release } = dayRotation.rotateDayGroupPositions()
   applyCanonicalLayoutMoves(groupMoves)
+  applyCanonicalTaskMoves(taskMoves, groupMoves)
   releaseOnDoubleNextTick(release)
 }
 
 function handleTidyLayout() {
   // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
   // (user's left-to-right order preserved) and restack tasks inside them.
-  const { groupMoves, release } = tidyLayout.tidyDayGroups()
+  const { groupMoves, taskMoves, release } = tidyLayout.tidyDayGroups()
   applyCanonicalLayoutMoves(groupMoves)
+  applyCanonicalTaskMoves(taskMoves, groupMoves)
   releaseOnDoubleNextTick(release)
 }
 
@@ -473,9 +515,10 @@ const {
 // on cold starts and leaves applyDayGroupMoves with NOT FOUND for every id.
 const currentDay = useCurrentDay()
 function runDayGroupCatchup() {
-  const { groupMoves, release } = dayRotation.runCatchupIfNeeded()
+  const { groupMoves, taskMoves, release } = dayRotation.runCatchupIfNeeded()
   if (groupMoves.length > 0) applyCanonicalLayoutMoves(groupMoves)
-  nextTick(release)
+  if (taskMoves.length > 0) applyCanonicalTaskMoves(taskMoves, groupMoves)
+  releaseOnDoubleNextTick(release)
 }
 watch(isVueFlowReady, (ready) => { if (ready) runDayGroupCatchup() }, { immediate: true })
 watch(currentDay, runDayGroupCatchup)

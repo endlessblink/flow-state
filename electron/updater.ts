@@ -1,6 +1,10 @@
 import { autoUpdater } from 'electron-updater'
 import { app, ipcMain, BrowserWindow } from 'electron'
 
+function hasValidAppVersion(version: string): boolean {
+  return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)
+}
+
 /**
  * Electron auto-updater setup.
  * Uses generic provider pointing to VPS at /updates/electron/
@@ -8,8 +12,53 @@ import { app, ipcMain, BrowserWindow } from 'electron'
  */
 
 export function registerUpdater() {
-  // Don't check for updates in dev
-  if (process.env.VITE_DEV_SERVER_URL) return
+  const isDev = !!process.env.VITE_DEV_SERVER_URL
+  const appVersion = app.getVersion()
+  const canUseUpdater = !isDev && hasValidAppVersion(appVersion)
+
+  // Register IPC handlers in all environments so renderer invocations don't
+  // fail during local dev. In dev or unpackaged preview mode, updater actions
+  // become safe no-ops.
+  ipcMain.handle('updater:check', async () => {
+    if (!canUseUpdater) return null
+
+    try {
+      return await autoUpdater.checkForUpdates()
+    } catch (err) {
+      console.error('[Updater] Check failed:', (err as Error).message)
+      return null
+    }
+  })
+
+  ipcMain.handle('updater:download', async () => {
+    if (!canUseUpdater) return
+
+    await autoUpdater.downloadUpdate()
+  })
+
+  ipcMain.handle('updater:install', () => {
+    if (!canUseUpdater) return true
+
+    // Release single-instance lock before restart, otherwise the new process
+    // can't acquire the lock and immediately exits (appears as a crash).
+    app.releaseSingleInstanceLock()
+    // Return from IPC first, then hand off to the updater on the next tick.
+    // Calling quitAndInstall() inline from an invoke handler can leave the
+    // renderer stuck in a half-dead state while the app is trying to exit.
+    setImmediate(() => {
+      // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
+      autoUpdater.quitAndInstall(false, true)
+    })
+
+    return true
+  })
+
+  if (!canUseUpdater) {
+    if (!isDev) {
+      console.warn(`[Updater] Skipping updater initialization for invalid app version: ${appVersion}`)
+    }
+    return
+  }
 
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = false
@@ -39,35 +88,6 @@ export function registerUpdater() {
     console.error('[Updater] Error:', err.message)
     const win = BrowserWindow.getAllWindows()[0]
     if (win) win.webContents.send('updater:error', err.message)
-  })
-
-  // IPC handlers for renderer control
-  ipcMain.handle('updater:check', async () => {
-    try {
-      return await autoUpdater.checkForUpdates()
-    } catch (err) {
-      console.error('[Updater] Check failed:', (err as Error).message)
-      return null
-    }
-  })
-
-  ipcMain.handle('updater:download', async () => {
-    await autoUpdater.downloadUpdate()
-  })
-
-  ipcMain.handle('updater:install', () => {
-    // Release single-instance lock before restart, otherwise the new process
-    // can't acquire the lock and immediately exits (appears as a crash).
-    app.releaseSingleInstanceLock()
-    // Return from IPC first, then hand off to the updater on the next tick.
-    // Calling quitAndInstall() inline from an invoke handler can leave the
-    // renderer stuck in a half-dead state while the app is trying to exit.
-    setImmediate(() => {
-      // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
-      autoUpdater.quitAndInstall(false, true)
-    })
-
-    return true
   })
 
   // Check for updates after 5s delay

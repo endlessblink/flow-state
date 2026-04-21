@@ -167,6 +167,13 @@ const openrouterKeyStatus = ref<'idle' | 'success' | 'error'>('idle')
 
 // Provider health status
 const providerHealth = ref<Record<string, 'healthy' | 'degraded' | 'unavailable' | 'unknown'>>({})
+const aiInitialized = ref(false)
+
+async function ensureInitialized() {
+  if (aiInitialized.value) return
+  await initialize()
+  aiInitialized.value = true
+}
 
 // ============================================================================
 // Error UX - Contextual Error Messages
@@ -507,8 +514,9 @@ function handlePanelModeShortcut(event: KeyboardEvent) {
 // Focus Management
 // ============================================================================
 
-watch(isPanelOpen, (open) => {
+watch(isPanelOpen, async (open) => {
   if (open) {
+    await ensureInitialized()
     nextTick(() => {
       inputRef.value?.focus()
     })
@@ -533,7 +541,6 @@ function selectProviderOption(provider: 'auto' | 'groq' | 'openrouter' | 'ollama
 // ============================================================================
 
 onMounted(() => {
-  initialize()
   document.addEventListener('keydown', handleKeyboardShortcut)
   document.addEventListener('keydown', handleEscapeKey)
   document.addEventListener('keydown', handlePanelModeShortcut)

@@ -24,6 +24,8 @@ Or use the `/next` skill to get scored task recommendations.
 - Default verification/build target for desktop-facing work:
   - `npm run electron:build`
 - If the user needs to update through Electron, version bumping is mandatory before build and deploy. Without a newer version, the updater has nothing to detect.
+- For desktop-facing FlowState work, assume the full Electron updater flow is required unless the user explicitly says local-only, skip deploy, or skip push.
+- If the user says to "do it", "ship it", "push the update", or otherwise asks to deliver the change, treat that as instruction to complete the full Electron flow end-to-end: version bump, build, deploy, verify updater manifest, commit, and push.
 - Required updater delivery flow:
   - bump version
   - build Electron

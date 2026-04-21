@@ -1,0 +1,3 @@
+## 2024-05-15 - BaseDropdown Accessibility Pattern
+**Learning:** Custom dropdown components must use `role="combobox"` on the trigger along with `aria-haspopup="listbox"`, `:aria-expanded`, and `:aria-controls`. Focus must remain on the combobox trigger for `aria-activedescendant` to work correctly, rather than moving focus to the listbox. Unique IDs must be generated for the listbox and its options to associate them with the trigger.
+**Action:** Always implement `aria-activedescendant` pattern using Vue 3.5+ `useId()` for robust ID generation on custom comboboxes to ensure screen readers correctly announce the active option while focus remains on the trigger.

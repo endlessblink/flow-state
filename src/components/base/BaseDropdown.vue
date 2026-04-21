@@ -3,6 +3,11 @@
     <button
       type="button"
       class="dropdown-trigger"
+      role="combobox"
+      aria-haspopup="listbox"
+      :aria-expanded="isOpen"
+      :aria-controls="listboxId"
+      :aria-activedescendant="isOpen && focusedIndex >= 0 ? getOptionId(focusedIndex) : undefined"
       :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
       :disabled="disabled"
       @click="toggleDropdown"
@@ -28,6 +33,7 @@
       @close="closeDropdown"
     >
       <ul
+        :id="listboxId"
         class="dropdown-list"
         role="listbox"
         @keydown.down.prevent="focusNext"
@@ -38,6 +44,7 @@
         <li
           v-for="(option, index) in options"
           :key="getOptionValue(option)"
+          :id="getOptionId(index)"
           class="dropdown-option"
           :class="{
             'is-selected': isSelected(option),
@@ -68,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useId } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
 import BasePopover from './BasePopover.vue'
 import type { Component } from 'vue'
@@ -99,6 +106,9 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[]]
 }>()
+
+const listboxId = useId()
+const getOptionId = (index: number) => `${listboxId}-opt-${index}`
 
 const triggerElement = ref<HTMLElement>()
 const isOpen = ref(false)

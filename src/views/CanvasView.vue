@@ -376,7 +376,6 @@ function applyCanonicalLayoutMoves(
   for (const move of groupMoves) {
     const node = findNode(move.nodeId)
     if (!node) {
-      console.warn(`[CANONICAL-LAYOUT:VF] ${move.nodeId}: NOT FOUND`)
       continue
     }
     console.log(`[CANONICAL-LAYOUT:VF] ${move.nodeId}: x=${Math.round(node.position.x)} → ${Math.round(move.position.x)}, w=${Math.round(move.size.width)}, h=${Math.round(move.size.height)}`)

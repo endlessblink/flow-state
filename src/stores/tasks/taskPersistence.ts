@@ -4,7 +4,7 @@ import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 import type { Task } from '@/types/tasks'
 import { cacheTasks, getCachedTasks } from '@/services/offline/readCacheDB'
 import { useProjectStore } from '../projects'
-import { validateBeforeSave, logTaskIdStats, repairTaskTitles } from '@/utils/taskValidation'
+import { validateBeforeSave, logTaskIdStats, repairTaskTitles, sanitizeLoadedTasks } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
 // TASK-1215: Tauri dual-write for filter persistence
 import { getTauriStore, isTauriEnv } from '@/composables/usePersistentRef'
@@ -73,7 +73,7 @@ export function useTaskPersistence(
         try {
             const stored = localStorage.getItem(GUEST_TASKS_KEY)
             if (stored) {
-                const tasks = JSON.parse(stored) as Task[]
+                const tasks = sanitizeLoadedTasks(JSON.parse(stored)) as Task[]
 
                 // BUG-339: Deduplicate by ID to prevent guest mode congestion
                 const seenIds = new Set<string>()
@@ -254,8 +254,12 @@ export function useTaskPersistence(
             const authStore = useAuthStore()
             if (!authStore.isAuthenticated) {
                 const localTasks = loadTasksFromLocalStorage()
+                const repairedGuest = repairTaskTitles(localTasks)
+                if (repairedGuest.repairedCount > 0) {
+                    localStorage.setItem(GUEST_TASKS_KEY, JSON.stringify(repairedGuest.repairedTasks))
+                }
                 console.log(`👤 [GUEST-MODE] Loaded ${localTasks.length} tasks from localStorage`)
-                _rawTasks.value = localTasks
+                _rawTasks.value = repairedGuest.repairedTasks
                 return
             }
 
@@ -269,7 +273,16 @@ export function useTaskPersistence(
             const wsStore = useWorkspaceStore()
             // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq), undefined = legacy (no filter)
             const workspaceId = wsStore.activeWorkspaceId
-            const loadedTasks = await fetchTasks(workspaceId)
+            const repairedLoaded = repairTaskTitles(sanitizeLoadedTasks(await fetchTasks(workspaceId)))
+            const loadedTasks = repairedLoaded.repairedTasks
+            if (repairedLoaded.repairedCount > 0) {
+                console.warn(`🛠️ [TASK-TITLE-REPAIR] Repaired ${repairedLoaded.repairedCount} blank task title(s) during load`)
+                try {
+                    await saveTasks(loadedTasks)
+                } catch (repairSaveError) {
+                    console.warn('[TASK-TITLE-REPAIR] Failed to persist repaired titles during load:', repairSaveError)
+                }
+            }
 
             // TASK-142: Position integrity validation - detect invalid canvas positions early
             const tasksWithPositions = loadedTasks.filter(t => t.canvasPosition)
@@ -534,8 +547,9 @@ export function useTaskPersistence(
             if (_rawTasks.value.length === 0) {
                 const cachedTasks = await getCachedTasks()
                 if (cachedTasks && cachedTasks.length > 0) {
+                    const repairedCached = repairTaskTitles(sanitizeLoadedTasks(cachedTasks))
                     console.log(`📦 [OFFLINE] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
-                    _rawTasks.value = cachedTasks
+                    _rawTasks.value = repairedCached.repairedTasks
                     // Don't throw — we have data from cache, degrade gracefully
                     return
                 }

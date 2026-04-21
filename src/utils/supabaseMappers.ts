@@ -321,7 +321,9 @@ export function toSupabaseGroup(group: CanvasGroup, userId: string): SupabaseGro
     if (!isValidUUID(group.id)) {
         if (!warnedLegacyGroupIds.has(group.id)) {
             warnedLegacyGroupIds.add(group.id)
-            console.warn(`[SUPABASE-MAPPER] Group "${group.name}" has legacy ID: "${group.id}" - skipping Supabase sync (local only)`)
+            if (import.meta.env.DEV) {
+                console.debug(`[SUPABASE-MAPPER] Group "${group.name}" has legacy ID: "${group.id}" - skipping Supabase sync (local only)`)
+            }
         }
         return null
     }

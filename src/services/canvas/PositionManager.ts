@@ -34,7 +34,10 @@ class PositionManager {
     ): boolean {
         // 1. Concurrency Check
         if (!lockManager.acquire(nodeId, source)) {
-            console.warn(`[PositionManager] Update rejected for ${nodeId} from ${source} - Locked by ${lockManager.getLockOwner(nodeId)}`)
+            const lockOwner = lockManager.getLockOwner(nodeId)
+            if (!(source === 'remote-sync' && lockOwner === 'user-drag')) {
+                console.warn(`[PositionManager] Update rejected for ${nodeId} from ${source} - Locked by ${lockOwner}`)
+            }
             return false
         }
 

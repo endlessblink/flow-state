@@ -316,9 +316,15 @@ export function repairTaskTitles(tasks: Task[]): { repairedTasks: Task[], repair
     const safeTitle = sanitizeTaskTitle(task.title)
     if (safeTitle === task.title) return task
     repairedCount++
+
+    // Corrupted blank-title tasks are preserved, but should not keep occupying
+    // canvas groups automatically after recovery.
     return {
       ...task,
       title: safeTitle,
+      canvasPosition: undefined,
+      parentId: undefined,
+      isInInbox: true,
       updatedAt: new Date(),
     }
   })

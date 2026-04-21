@@ -428,7 +428,7 @@ const handleResizeEnd = (event: unknown) => {
 
 .section-name-input {
   flex: 1 1 var(--space-15); /* Grow, shrink, min basis of 60px */
-  min-width: var(--space-15); /* Minimum readable width */
+  min-width: 0; /* Let the title shrink before date/count get clipped */
   background: transparent;
   border: none;
   color: var(--text-primary);
@@ -465,9 +465,6 @@ const handleResizeEnd = (event: unknown) => {
   font-weight: var(--font-medium);
   white-space: nowrap;
   flex-shrink: 0;
-  max-width: min(40%, 6.5rem);
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .section-date-suffix.clickable {

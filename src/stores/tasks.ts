@@ -8,6 +8,7 @@ import { useProjectStore } from './projects'
 // TASK-1158: Canvas sync via shared bridge (breaks circular dependency)
 import { canvasSyncTrigger, sharedTasksRef } from './canvasTaskBridge'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { sanitizeTaskTitle } from '@/utils/taskValidation'
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 // TASK-089: Updated to use unified canvas state lock system
@@ -214,9 +215,16 @@ export const useTaskStore = defineStore('tasks', () => {
         }
       } else {
         // BUG-061 FIX: Validate task before adding/updating
-        if (!taskDoc || !taskDoc.id || taskDoc.title === undefined) {
-          console.warn('[TASKS:SYNC] Ignoring invalid task from sync (missing id or title):', taskId)
+        if (!taskDoc || !taskDoc.id) {
+          console.warn('[TASKS:SYNC] Ignoring invalid task from sync (missing id):', taskId)
           return
+        }
+        // BUG-1777: Sanitize blank/whitespace/non-string titles at sync ingress.
+        // Previous guard only rejected `title === undefined`, so `""` from a corrupted
+        // DB row silently landed in the store and surfaced as "Untitled Task" artifacts.
+        const safeTitle = sanitizeTaskTitle(taskDoc.title)
+        if (safeTitle !== taskDoc.title) {
+          taskDoc = { ...taskDoc, title: safeTitle }
         }
         // Handle strings, timestamps, or Date objects safely
         const toDate = (val: unknown): Date => {

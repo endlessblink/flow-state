@@ -660,4 +660,67 @@ describe('TaskStore', () => {
       expect(store.selectedTaskIds.length).toBe(1)
     })
   })
+
+  describe('updateTaskFromSync — blank-title sanitization (BUG-1777)', () => {
+    // createTask registers a pending write to prevent sync races; we clear it so
+    // updateTaskFromSync actually applies in these focused tests.
+    const seed = async (title: string) => {
+      const store = useTaskStore()
+      const task = await store.createTask({ title })
+      store.removePendingWrite(task.id)
+      return { store, task }
+    }
+
+    it('sanitizes empty-string titles from realtime sync into "Untitled Task"', async () => {
+      const { store, task } = await seed('Original')
+
+      store.updateTaskFromSync(task.id, {
+        ...task,
+        title: '',
+        updatedAt: new Date(Date.now() + 10_000),
+      } as Task)
+
+      const updated = store.tasks.find(t => t.id === task.id)
+      expect(updated?.title).toBe('Untitled Task')
+    })
+
+    it('sanitizes whitespace-only titles', async () => {
+      const { store, task } = await seed('Original')
+
+      store.updateTaskFromSync(task.id, {
+        ...task,
+        title: '   ',
+        updatedAt: new Date(Date.now() + 10_000),
+      } as Task)
+
+      const updated = store.tasks.find(t => t.id === task.id)
+      expect(updated?.title).toBe('Untitled Task')
+    })
+
+    it('still drops updates missing an id', async () => {
+      const { store, task } = await seed('Keep me')
+
+      store.updateTaskFromSync(task.id, {
+        ...task,
+        id: '',
+        title: 'would-apply-if-valid',
+      } as Task)
+
+      const updated = store.tasks.find(t => t.id === task.id)
+      expect(updated?.title).toBe('Keep me')
+    })
+
+    it('preserves a valid title through sync', async () => {
+      const { store, task } = await seed('Original')
+
+      store.updateTaskFromSync(task.id, {
+        ...task,
+        title: 'Renamed remotely',
+        updatedAt: new Date(Date.now() + 10_000),
+      } as Task)
+
+      const updated = store.tasks.find(t => t.id === task.id)
+      expect(updated?.title).toBe('Renamed remotely')
+    })
+  })
 })

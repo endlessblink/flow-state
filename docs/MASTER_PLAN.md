@@ -8,6 +8,32 @@
 
 ## Active Tasks
 
+### BUG-1777: Blank task titles bypass sync guard, cause "Untitled Task" artifacts (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-04-22)
+
+**Problem**: 7 tasks in VPS production Supabase have `title = ""` / NULL. They reach the Electron app because `fromSupabaseTask` at `src/utils/supabaseMappers.ts:584` passes `record.title` through unchanged, and `updateTaskFromSync` at `src/stores/tasks.ts:217` only rejected `title === undefined` — empty strings slipped through. The load-time `repairTaskTitles` relabels them "Untitled Task" and is supposed to move them to Inbox, but the user's screenshot on v1.3.70 still shows them on the Canvas "Today" column.
+
+**Root cause (verified)**: `taskValidation.ts:108` treats blank title as a *warning*, so `sanitizeLoadedTasks` passes blanks through. `updateTaskFromSync` guard missed empty strings. Source of the 7 blank rows predates 1.3.69's preventive sanitization.
+
+**Fix**:
+1. `src/stores/tasks.ts:217` — replace `title === undefined` guard with `sanitizeTaskTitle()` call. Empty/whitespace/non-string titles become "Untitled Task" at the sync-ingress chokepoint.
+2. Deliberately NOT touching `fromSupabaseTask` — the existing `repairTaskTitles` on load depends on seeing blank titles to trigger its inbox-move side effect.
+3. VPS recovery: pull original titles from `public.task_audit_log` (indexed by `task_id, event_at DESC`), `UPDATE tasks SET title = … WHERE id = … AND (title IS NULL OR title = '')`. Realtime propagates the restored titles to all clients.
+4. Version bump 1.3.70 → 1.3.71 + `./scripts/deploy-electron-update.sh` (CLAUDE.md rules 6 & 7).
+
+**Tests added**:
+- `src/utils/__tests__/taskValidation.test.ts` — 10 cases covering `sanitizeTaskTitle` for ''/null/undefined/whitespace/non-string and `repairTaskTitles` counts + side effects (canvasPosition/parentId cleared, isInInbox=true).
+- `src/stores/__tests__/tasks.test.ts` — 4 cases on `updateTaskFromSync`: sanitizes '', sanitizes whitespace, still drops missing-id updates, passes valid titles through.
+
+All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskValidation.ts ↔ taskOperations.ts` from 1.3.69/1.3.70 is NOT introduced by this fix.)
+
+**Files**: `src/stores/tasks.ts`, `src/utils/__tests__/taskValidation.test.ts`, `src/stores/__tests__/tasks.test.ts`, `package.json`.
+
+**Plan**: `~/.claude/plans/getting-untitled-tasks-in-eventual-seahorse.md`.
+
+---
+
 ### BUG-1776: Canvas day-group Tidy/Rotate still produces overlap + orphans (🔴 BROKEN)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (opened 2026-04-20, 6 failed fix attempts)

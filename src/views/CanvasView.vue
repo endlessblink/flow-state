@@ -512,9 +512,15 @@ const {
 // on cold starts and leaves applyDayGroupMoves with NOT FOUND for every id.
 const currentDay = useCurrentDay()
 function runDayGroupCatchup() {
-  const { groupMoves, taskMoves, release } = dayRotation.runCatchupIfNeeded()
-  if (groupMoves.length > 0) applyCanonicalLayoutMoves(groupMoves)
-  if (taskMoves.length > 0) applyCanonicalTaskMoves(taskMoves, groupMoves)
+  // BUG-1780: do NOT apply canonical group-moves here. Historically the catchup
+  // applied groupMoves on every Vue Flow ready (app launch / reload / update)
+  // which silently overwrote the user's manually-arranged group positions and
+  // sizes with canonical values. That's the "rearrange reverts on restart"
+  // regression. Metadata-only work (task re-homing on dueDate rotation) is
+  // preserved. The explicit Tidy button (handleTidyLayout) still applies full
+  // canonical layout on user request.
+  const { taskMoves, release } = dayRotation.runCatchupIfNeeded()
+  if (taskMoves.length > 0) applyCanonicalTaskMoves(taskMoves, [])
   releaseOnDoubleNextTick(release)
 }
 watch(isVueFlowReady, (ready) => { if (ready) runDayGroupCatchup() }, { immediate: true })

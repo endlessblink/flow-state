@@ -8,6 +8,44 @@
 
 ## Active Tasks
 
+### BUG-1780: Canvas group positions reset to canonical on every launch (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-04-22, shipping in v1.3.72)
+
+**Problem**: User drags or resizes a day-group to a new position/size; closes Electron; relaunches; group jumps back to pre-rearrange position. The resize + drag persistence pipeline writes `groups.position_json = {x, y, width, height}` correctly (verified). The regression is on the LOAD side — `src/views/CanvasView.vue:520` runs `runDayGroupCatchup()` as soon as Vue Flow is ready on every launch, which calls `applyCanonicalLayoutMoves(groupMoves)` and overwrites user-arranged positions with canonical values.
+
+**Fix**: Subtractive edit at `CanvasView.vue:514-524` — `runDayGroupCatchup` now skips `applyCanonicalLayoutMoves` and only applies `taskMoves` (dueDate-driven task re-homing on midnight is preserved). `applyCanonicalTaskMoves` has a three-tier fallback for parent-position lookup (groupMoves map → Vue Flow node → canvas store), so passing `[]` makes it use the current user-customized group positions. Explicit canonical layout is still available on demand via the Tidy button (`handleTidyLayout`, unchanged).
+
+**Risk**: BUG-1776 adjacency. Subtractive change; rollback is a one-line revert.
+
+**Files**: `src/views/CanvasView.vue`.
+
+---
+
+### ~~BUG-1779~~: DB-level defense against blank task titles (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-04-22)
+
+**Problem**: `public.tasks.title` is only `text not null` — empty string accepted. Client-side `toSupabaseTask` sanitizes but any bypass (RPC, direct SQL, future code that forgets the mapper) can write blanks. Defense-in-depth gap exposed by BUG-1777 post-mortem.
+
+**Fix**: New migration `supabase/migrations/20260422T000000_task_title_normalize_trigger.sql` creating `trg_normalize_task_title()` function + `BEFORE INSERT OR UPDATE OF title` trigger on `public.tasks`. Normalizes NULL/empty/whitespace-only titles to `'Untitled Task'` and trims non-blank titles. Applied to VPS production; `pg_trigger` confirms registration.
+
+**Files**: `supabase/migrations/20260422T000000_task_title_normalize_trigger.sql`.
+
+---
+
+### ~~BUG-1778~~: Content fields wiped for 7 tasks (description, priority, due_date, etc.) (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-04-22)
+
+**Problem**: The 2026-04-21 22:54 corruption wiped more than titles. Diff against pg_dump backup `flowstate_20260421_223002.sql.gz` showed lost fields across the 7 previously-blank tasks: `description` (1), `priority` (5), `due_date` (all 7), `estimated_duration` (2), `project_id` (2), `is_pinned` (2), `is_in_inbox` flipped (4 — via BUG-1777 repair side effect). `subtasks`, `tags`, `recurrence_rule`, `depends_on`, `reminders` unchanged in both snapshots — no loss there.
+
+**Fix**: Same non-destructive pattern as BUG-1777 — backup restored into temp DB `bug1777_restore` on VPS, 7 rows extracted as JSONB, loaded into prod via temp table + `UPDATE FROM`. COALESCE for nullable scalars (only restore when current is NULL/empty); direct overwrite for booleans. Single transaction with `RETURNING` verification. All 7 rows updated; pixielabs got its long Hebrew project note back + pinned + 180min + project_id. Temp DB dropped, backup file removed.
+
+**Files**: `scripts/recover-blank-task-titles.sql`, `scripts/recover-titles-from-backup.sh` (reused from BUG-1777).
+
+---
+
 ### ~~BUG-1777~~: Blank task titles bypass sync guard, cause "Untitled Task" artifacts (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-04-22, v1.3.71)

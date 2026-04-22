@@ -8,9 +8,9 @@
 
 ## Active Tasks
 
-### BUG-1777: Blank task titles bypass sync guard, cause "Untitled Task" artifacts (🔄 IN PROGRESS)
+### ~~BUG-1777~~: Blank task titles bypass sync guard, cause "Untitled Task" artifacts (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-04-22)
+**Priority**: P1 | **Status**: ✅ DONE (2026-04-22, v1.3.71)
 
 **Problem**: 7 tasks in VPS production Supabase have `title = ""` / NULL. They reach the Electron app because `fromSupabaseTask` at `src/utils/supabaseMappers.ts:584` passes `record.title` through unchanged, and `updateTaskFromSync` at `src/stores/tasks.ts:217` only rejected `title === undefined` — empty strings slipped through. The load-time `repairTaskTitles` relabels them "Untitled Task" and is supposed to move them to Inbox, but the user's screenshot on v1.3.70 still shows them on the Canvas "Today" column.
 

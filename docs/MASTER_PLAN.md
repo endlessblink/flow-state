@@ -8,9 +8,9 @@
 
 ## Active Tasks
 
-### BUG-1780: Canvas group positions reset to canonical on every launch (🔄 IN PROGRESS)
+### ~~BUG-1780~~: Canvas group positions reset to canonical on every launch (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-04-22, shipping in v1.3.72)
+**Priority**: P1 | **Status**: ✅ DONE (2026-04-22, v1.3.72)
 
 **Problem**: User drags or resizes a day-group to a new position/size; closes Electron; relaunches; group jumps back to pre-rearrange position. The resize + drag persistence pipeline writes `groups.position_json = {x, y, width, height}` correctly (verified). The regression is on the LOAD side — `src/views/CanvasView.vue:520` runs `runDayGroupCatchup()` as soon as Vue Flow is ready on every launch, which calls `applyCanonicalLayoutMoves(groupMoves)` and overwrites user-arranged positions with canonical values.
 

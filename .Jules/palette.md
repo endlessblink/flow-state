@@ -1,0 +1,3 @@
+## 2025-02-12 - Password Visibility Toggle Keyboard Accessibility
+**Learning:** Action buttons placed inside form input slots (like the #suffix slot in BaseInput for password visibility toggles) that use `tabindex="-1"` severely impact keyboard accessibility by preventing users from revealing passwords without a mouse. Default button styling inside these slots does not inherit the application's global focus styles.
+**Action:** Always ensure interactive elements within form input slots remain focusable (avoid `tabindex="-1"`) and explicitly apply custom `:focus-visible` CSS rules (`outline: 2px solid var(--brand-primary); outline-offset: 2px;`) to match the application's standard focus patterns.

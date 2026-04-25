@@ -1,0 +1,3 @@
+## 2025-02-23 - Authentication Forms Accessibility Update
+**Learning:** Interactive action buttons within form inputs (like password visibility toggles in `LoginForm.vue` and `SignupForm.vue`'s `#suffix` slot) must remain keyboard accessible; using `tabindex='-1'` prevents users relying on keyboard navigation from interacting with them. Also, they need explicit `:focus-visible` styles as default styles might not be sufficient.
+**Action:** Removed `tabindex='-1'` from password toggle buttons and explicitly applied a `:focus-visible` styling using `var(--brand-primary)` to ensure strong focus visibility.

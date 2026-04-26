@@ -290,13 +290,11 @@
     "vue-cal": "^4.10.2",
     "vue-i18n": "^11.2.8",
     "vue-router": "^4.6.4",
-    "vuedraggable": "^4.1.0",
-    "workbox-window": "^7.4.0"
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "@eslint/js": "^10.0.1",
     "@intlify/unplugin-vue-i18n": "^11.0.7",
     "@playwright/test": "^1.57.0",
     "@storybook/addon-a11y": "^10.1.4",
@@ -352,7 +350,6 @@
     "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^3.2.4",
-    "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "^3.2.2",
     "webdriverio": "^9.26.1",
     "write-file-atomic": "^7.0.0"

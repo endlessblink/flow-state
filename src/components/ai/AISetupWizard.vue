@@ -97,7 +97,12 @@
                   spellcheck="false"
                   autocomplete="off"
                 />
-                <button class="icon-btn" @click="showKey = !showKey" :title="showKey ? 'Hide' : 'Show'" :aria-label="showKey ? 'Hide' : 'Show'">
+                <button
+                  class="icon-btn"
+                  @click="showKey = !showKey"
+                  :title="showKey ? 'Hide' : 'Show'"
+                  :aria-label="showKey ? 'Hide' : 'Show'"
+                >
                   <EyeOff v-if="showKey" :size="16" />
                   <Eye v-else :size="16" />
                 </button>

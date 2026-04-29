@@ -5,7 +5,7 @@
         <h2 class="settings-title">
           {{ $t('settings.title') }}
 </h2>
-        <button class="close-btn" @click="$emit('close')">
+        <button class="close-btn" :aria-label="$t('common.close')" @click="$emit('close')">
           <X :size="16" />
         </button>
       </header>

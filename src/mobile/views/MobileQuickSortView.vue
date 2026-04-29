@@ -134,10 +134,10 @@
           <MobileQuickSortCard
             v-if="currentTask"
             :task="currentTask"
-            @swipeRight="onSwipeRight"
-            @swipeLeft="onSwipeLeft"
-            @swipeUp="onSwipeUp"
-            @swipeDown="onSwipeDown"
+            @swipe-right="onSwipeRight"
+            @swipe-left="onSwipeLeft"
+            @swipe-up="onSwipeUp"
+            @swipe-down="onSwipeDown"
           />
         </div>
 

@@ -120,16 +120,16 @@ const canvasStore = useCanvasStore()
 
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
-const section = computed(() => ((props.data as Record<string, unknown>)?.section) || props.data)
-const isCollapsed = computed(() => !!((props.data as Record<string, unknown>)?.isCollapsed))
+const section = computed(() => props.data?.section || props.data)
+const isCollapsed = computed(() => !!props.data?.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh
 const groupColor = computed(() => {
-  const groupId = ((props.data as Record<string, unknown>)?.id)
-  if (!groupId) return ((props.data as Record<string, unknown>)?.color) || '#3b82f6'
+  const groupId = props.data?.id
+  if (!groupId) return props.data?.color || '#3b82f6'
   const storeGroup = canvasStore.groups.find(g => g.id === groupId)
-  return storeGroup?.color || ((props.data as Record<string, unknown>)?.color) || '#3b82f6'
+  return storeGroup?.color || props.data?.color || '#3b82f6'
 })
 const taskCount = computed(() => {
   const data = props.data as Record<string, unknown> | undefined
@@ -147,7 +147,7 @@ const taskCount = computed(() => {
 })
 
 // Local State
-const sectionName = ref(((props.data as Record<string, unknown>)?.name) || '')
+const sectionName = ref(props.data?.name || '')
 
 // TASK-1756: Reactive "today" — shared across all group nodes; flips at midnight.
 const today = useCurrentDay()
@@ -228,19 +228,19 @@ const dayOfWeekDateSuffix = computed(() => {
 })
 
 // Watch for external name changes
-watch(() => ((props.data as Record<string, unknown>).name), (newName) => {
+watch(() => props.data.name, (newName) => {
   sectionName.value = newName
 })
 
 const updateName = () => {
-  if (sectionName.value !== ((props.data as Record<string, unknown>).name)) {
+  if (sectionName.value !== props.data.name) {
     emit('update', { name: sectionName.value })
   }
 }
 
 const toggleCollapse = () => {
   // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
-  const groupId = ((props.data as Record<string, unknown>)?.id) || props.id.replace('section-', '')
+  const groupId = props.data?.id || props.id.replace('section-', '')
   canvasStore.toggleSectionCollapse(groupId)
 }
 

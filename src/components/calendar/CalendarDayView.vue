@@ -235,6 +235,7 @@ const onSlotsScroll = (e: Event) => {
                   <button
                     class="play-timer-btn"
                     title="Start timer for this task"
+                    aria-label="Start timer for this task"
                     @click.stop="$emit('startTimer', calEvent)"
                   >
                     <Play :size="12" />
@@ -242,6 +243,7 @@ const onSlotsScroll = (e: Event) => {
                   <button
                     class="remove-from-calendar-btn"
                     title="Remove from calendar (move to inbox)"
+                    aria-label="Remove from calendar (move to inbox)"
                     @click.stop="$emit('removeFromCalendar', calEvent)"
                   >
                     ✕

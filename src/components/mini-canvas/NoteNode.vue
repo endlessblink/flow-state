@@ -1,5 +1,5 @@
 <template>
-  <div class="note-node">
+  <div class="note-node" dir="rtl">
     <Handle type="target" :position="Position.Top" id="top" />
     <Handle type="target" :position="Position.Right" id="right" />
     <Handle type="target" :position="Position.Bottom" id="bottom" />
@@ -22,6 +22,7 @@
     <input
       class="note-title"
       :value="data.title"
+      dir="auto"
       placeholder="Note title..."
       @blur="handleTitleBlur"
       @keydown.enter="($event.target as HTMLInputElement).blur()"
@@ -30,6 +31,7 @@
     <textarea
       class="note-content"
       :value="data.description"
+      dir="auto"
       placeholder="Write your thoughts..."
       rows="2"
       @blur="handleDescriptionBlur"
@@ -121,6 +123,7 @@ const handleDescriptionBlur = (e: FocusEvent) => {
   font-weight: var(--font-semibold);
   line-height: 1.4;
   padding: var(--space-1) 0;
+  text-align: start;
 }
 
 .note-title::placeholder {
@@ -139,6 +142,7 @@ const handleDescriptionBlur = (e: FocusEvent) => {
   min-height: 40px;
   padding: 0;
   font-family: inherit;
+  text-align: start;
 }
 
 .note-content::placeholder {

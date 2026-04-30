@@ -16,7 +16,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
 
   // ── Subtask Actions ──
 
-  const addSubtask = (position: { x: number; y: number }, title = 'New subtask') => {
+  const addSubtask = (position: { x: number; y: number }, title = '') => {
     const task = getTask()
     if (!task) return
 

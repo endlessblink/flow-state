@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="mini-canvas">
-      <div v-if="isOpen" class="mini-canvas-overlay">
+      <div v-if="isOpen" class="mini-canvas-overlay" dir="rtl">
         <MiniCanvasToolbar
           :task-title="task?.title || 'Task'"
           :hide-completed="hideCompleted"
@@ -30,12 +30,15 @@
             fit-view-on-init
             :fit-view-params="{ padding: 0.4, maxZoom: 1 }"
             :connection-line-style="{ stroke: '#4ECDC4', strokeWidth: 1.5 }"
-            dir="ltr"
+            dir="rtl"
             @node-drag-stop="miniCanvas.onNodeDragStop"
             @pane-click="handlePaneClick"
             @pane-context-menu="handlePaneContextMenu"
+            @node-click="handleNodeClick"
             @node-context-menu="handleNodeContextMenu"
-            @connect="miniCanvas.onConnect"
+            @connect="handleConnect"
+            @connect-start="handleConnectStart"
+            @connect-end="handleConnectEnd"
           >
             <template #node-parentTaskNode="nodeProps">
               <ParentTaskNode :data="nodeProps.data" />
@@ -144,6 +147,10 @@ const contextMenuPos = ref({ x: 0, y: 0 })
 const contextNodeId = ref<string | null>(null)
 const contextNodeType = ref<string | null>(null)
 const contextFlowPos = ref({ x: 0, y: 0 })
+const selectedNodeId = ref<string | null>(null)
+const selectedNodeType = ref<string | null>(null)
+const pendingConnectionSource = ref<string | null>(null)
+const connectionWasSuccessful = ref(false)
 
 const contextMenuStyle = computed(() => ({
   position: 'fixed' as const,
@@ -189,8 +196,24 @@ const getFlowCenter = () => {
   return { x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 }
 }
 
+const getFlowPositionFromEvent = (event: MouseEvent | TouchEvent) => {
+  const point = 'changedTouches' in event ? event.changedTouches[0] : event
+  if (!point) return null
+
+  try {
+    const { project } = useVueFlow({ id: 'mini-canvas' })
+    const el = document.querySelector('.mini-canvas-body .vue-flow') as HTMLElement
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      return project({ x: point.clientX - rect.left, y: point.clientY - rect.top })
+    }
+  } catch { /* fallback below */ }
+
+  return { x: point.clientX, y: point.clientY }
+}
+
 const handleAddSubtask = () => {
-  miniCanvas.addSubtask(getFlowCenter(), 'New subtask')
+  miniCanvas.addSubtask(getFlowCenter())
 }
 
 const handleAddNote = () => {
@@ -201,6 +224,39 @@ const handleAddNote = () => {
 
 const handlePaneClick = () => {
   showContextMenu.value = false
+  selectedNodeId.value = null
+  selectedNodeType.value = null
+}
+
+const handleNodeClick = (event: NodeMouseEvent) => {
+  selectedNodeId.value = event.node.id
+  selectedNodeType.value = event.node.type || null
+}
+
+const handleConnectStart = (event: { nodeId?: string | null }) => {
+  pendingConnectionSource.value = event.nodeId || null
+  connectionWasSuccessful.value = false
+}
+
+const handleConnectEnd = (event: MouseEvent | TouchEvent) => {
+  const sourceId = pendingConnectionSource.value
+
+  setTimeout(() => {
+    if (sourceId && !connectionWasSuccessful.value) {
+      const position = getFlowPositionFromEvent(event)
+      if (position) {
+        miniCanvas.createConnectedSubtask(sourceId, position)
+      }
+    }
+
+    pendingConnectionSource.value = null
+    connectionWasSuccessful.value = false
+  }, 50)
+}
+
+const handleConnect = (params: { source: string; target: string }) => {
+  connectionWasSuccessful.value = true
+  miniCanvas.onConnect(params)
 }
 
 const handlePaneContextMenu = (event: MouseEvent) => {
@@ -239,6 +295,8 @@ const handleNodeContextMenu = (event: NodeMouseEvent) => {
   contextMenuPos.value = { x: mouseEvent.clientX, y: mouseEvent.clientY }
   contextNodeId.value = event.node.id
   contextNodeType.value = event.node.type || null
+  selectedNodeId.value = event.node.id
+  selectedNodeType.value = event.node.type || null
 
   try {
     const { project } = useVueFlow({ id: 'mini-canvas' })
@@ -257,7 +315,7 @@ const handleNodeContextMenu = (event: NodeMouseEvent) => {
 // ── Context menu actions ──
 
 const handleContextAddSubtask = () => {
-  miniCanvas.addSubtask(contextFlowPos.value, 'New subtask')
+  miniCanvas.addSubtask(contextFlowPos.value)
   showContextMenu.value = false
 }
 
@@ -273,12 +331,44 @@ const handleContextDelete = () => {
   } else if (contextNodeType.value === 'noteNode') {
     miniCanvas.deleteNote(contextNodeId.value)
   }
+  if (selectedNodeId.value === contextNodeId.value) {
+    selectedNodeId.value = null
+    selectedNodeType.value = null
+  }
   showContextMenu.value = false
+}
+
+const deleteSelectedNode = () => {
+  if (!selectedNodeId.value) return false
+
+  const nodeType = selectedNodeType.value || miniCanvas.nodes.value.find(n => n.id === selectedNodeId.value)?.type
+  if (nodeType === 'subtaskNode') {
+    miniCanvas.deleteSubtask(selectedNodeId.value)
+  } else if (nodeType === 'noteNode') {
+    miniCanvas.deleteNote(selectedNodeId.value)
+  } else {
+    return false
+  }
+
+  selectedNodeId.value = null
+  selectedNodeType.value = null
+  showContextMenu.value = false
+  return true
 }
 
 // ── Keyboard + global click handlers ──
 
 const handleKeydown = (e: KeyboardEvent) => {
+  const target = e.target as HTMLElement | null
+  const isEditingText = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable
+
+  if ((e.key === 'Delete' || e.key === 'Backspace') && isOpen.value && !isEditingText) {
+    if (deleteSelectedNode()) {
+      e.preventDefault()
+    }
+    return
+  }
+
   if (e.key === 'Escape' && isOpen.value) {
     if (showContextMenu.value) {
       showContextMenu.value = false

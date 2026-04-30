@@ -176,18 +176,34 @@ export function useMiniCanvas(taskId: () => string | null) {
     }
   }
 
-  /** Handle new connection between nodes */
-  const onConnect = (params: { source: string; target: string }) => {
-    const edgeId = `user-${params.source}-${params.target}`
-    // Don't add duplicate
+  /** Add a temporary user edge between non-parent nodes. */
+  const addUserEdge = (source: string, target: string) => {
+    const t = task.value
+    const parentId = t ? `parent-${t.id}` : null
+    if (source === parentId) return
+
+    const edgeId = `user-${source}-${target}`
     if (userEdges.value.some(e => e.id === edgeId)) return
 
     userEdges.value.push({
       id: edgeId,
-      source: params.source,
-      target: params.target,
-      style: { stroke: '#6b7280', strokeWidth: 1.5 },
+      source,
+      target,
+      style: { stroke: '#3b82f6', strokeWidth: 2 },
     })
+  }
+
+  /** Handle new connection between nodes */
+  const onConnect = (params: { source: string; target: string }) => {
+    addUserEdge(params.source, params.target)
+  }
+
+  /** Create a subtask when a connection is dropped on empty space. */
+  const createConnectedSubtask = (sourceId: string, position: { x: number; y: number }) => {
+    const newSubtaskId = actions.addSubtask(position)
+    if (newSubtaskId) {
+      addUserEdge(sourceId, newSubtaskId)
+    }
   }
 
   /** Reset edges when mini-canvas closes */
@@ -202,6 +218,7 @@ export function useMiniCanvas(taskId: () => string | null) {
     editingNodeId,
     onNodeDragStop,
     onConnect,
+    createConnectedSubtask,
     resetEdges,
     ...actions,
   }

@@ -2,6 +2,7 @@
   <div
     class="subtask-node"
     :class="{ completed: data.isCompleted }"
+    dir="rtl"
   >
     <Handle type="target" :position="Position.Top" id="top" />
     <Handle type="target" :position="Position.Right" id="right" />
@@ -26,8 +27,8 @@
         class="subtask-title"
         :class="{ completed: data.isCompleted }"
         :value="data.title"
-        :dir="isRtl(data.title) ? 'rtl' : 'ltr'"
-        placeholder="Subtask title..."
+        dir="auto"
+        placeholder="New subtask"
         rows="1"
         @input="autoResize($event.target as HTMLTextAreaElement)"
         @blur="handleTitleBlur"
@@ -40,7 +41,7 @@
       ref="descInput"
       class="subtask-description"
       :value="data.description"
-      :dir="isRtl(data.description) ? 'rtl' : 'ltr'"
+      dir="auto"
       placeholder="Add description..."
       rows="1"
       @input="autoResize($event.target as HTMLTextAreaElement)"
@@ -72,8 +73,6 @@ const emit = defineEmits<{
 
 const titleInput = ref<HTMLTextAreaElement | null>(null)
 const descInput = ref<HTMLTextAreaElement | null>(null)
-
-const isRtl = (text: string) => /[\u0590-\u05FF\u0600-\u06FF]/.test(text)
 
 const autoResize = (el: HTMLTextAreaElement) => {
   el.style.height = 'auto'
@@ -188,6 +187,7 @@ const handleDescriptionBlur = (e: FocusEvent) => {
   font-family: inherit;
   width: 100%;
   word-break: break-word;
+  text-align: start;
 }
 
 .subtask-title.completed {
@@ -213,6 +213,7 @@ const handleDescriptionBlur = (e: FocusEvent) => {
   margin-top: var(--space-1);
   padding: 0;
   word-break: break-word;
+  text-align: start;
 }
 
 .subtask-description::placeholder {

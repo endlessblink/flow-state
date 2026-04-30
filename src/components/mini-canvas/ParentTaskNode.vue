@@ -1,5 +1,5 @@
 <template>
-  <div class="parent-task-node" :class="[`priority-${data.priority || 'none'}`]">
+  <div class="parent-task-node" :class="[`priority-${data.priority || 'none'}`]" dir="rtl">
     <Handle type="source" :position="Position.Top" id="top" />
     <Handle type="source" :position="Position.Right" id="right" />
     <Handle type="source" :position="Position.Bottom" id="bottom" />
@@ -9,9 +9,9 @@
       {{ data.status === 'done' ? 'Done' : 'Active' }}
     </div>
 
-    <h3 class="parent-title" :dir="titleDir">{{ data.title }}</h3>
+    <h3 class="parent-title" dir="auto">{{ data.title }}</h3>
 
-    <p v-if="data.description" class="parent-description" :dir="titleDir">
+    <p v-if="data.description" class="parent-description" dir="auto">
       {{ truncatedDescription }}
     </p>
   </div>
@@ -32,11 +32,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
-const titleDir = computed(() => {
-  const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF]/
-  return rtlRegex.test(props.data.title) ? 'rtl' : 'ltr'
-})
 
 const truncatedDescription = computed(() => {
   const desc = props.data.description || ''

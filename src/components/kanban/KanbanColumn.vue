@@ -164,8 +164,9 @@ const onDragStart = (evt: DragEvent) => {
   isDragActive.value = true
 
   // Bridge to global drag state so sidebar can receive drops
-  const taskId = evt.item?.dataset?.taskId || evt.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
-  const taskTitle = evt.item?.querySelector?.('.task-title')?.textContent?.trim() || ''
+  const sortableEvent = evt as any;
+  const taskId = sortableEvent.item?.dataset?.taskId || sortableEvent.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
+  const taskTitle = sortableEvent.item?.querySelector?.('.task-title')?.textContent?.trim() || ''
   if (taskId) {
     startDrag({
       type: 'task',
@@ -178,17 +179,18 @@ const onDragStart = (evt: DragEvent) => {
 
 const onDragEnd = (evt: DragEvent) => {
   isDragActive.value = false
+  const sortableEvent = evt as any;
 
   // Check if dropped on a sidebar project (SortableJS forceFallback doesn't fire
   // native drag events on external elements, so we detect the target manually)
-  const mouseEvt = evt.originalEvent as MouseEvent | undefined
+  const mouseEvt = sortableEvent.originalEvent as MouseEvent | undefined
   if (mouseEvt) {
     const elements = document.elementsFromPoint(mouseEvt.clientX, mouseEvt.clientY)
     for (const el of elements) {
       const navItem = (el as HTMLElement).closest('[data-drop-project-id]') as HTMLElement | null
       if (navItem) {
         const projectId = navItem.dataset.dropProjectId
-        const taskId = evt.item?.dataset?.taskId || evt.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
+        const taskId = sortableEvent.item?.dataset?.taskId || sortableEvent.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
         if (projectId && taskId) {
           taskStore.moveTaskToProject(taskId, projectId)
         }
@@ -366,7 +368,7 @@ const handleDragChange = async (event: { added?: { element: Task }; removed?: { 
     }
   }
 
-  if (event.moved) {
+  if ((event as any).moved) {
     // Within-column reorder: persist new order values
     persistOrderForColumn()
   }

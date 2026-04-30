@@ -224,6 +224,11 @@ export const useCanvasGroups = (
 
     const isTaskDone = (task: Task): boolean => task.status === 'done'
 
+    const hasValidCanvasPosition = (task: Task): boolean => {
+        const pos = task.canvasPosition
+        return !!pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)
+    }
+
     const taskCountByGroupId = computed(() => {
         const counts = new Map<string, number>()
         const _version = taskParentVersion.value
@@ -236,7 +241,7 @@ export const useCanvasGroups = (
         for (const task of tasks) {
             if (task._soft_deleted || isTaskDone(task)) continue
             if (task.isCompletionRecord || task.isPinned) continue
-            if (task.parentId && task.canvasPosition) {
+            if (task.parentId && hasValidCanvasPosition(task)) {
                 counts.set(task.parentId, (counts.get(task.parentId) ?? 0) + 1)
             }
         }

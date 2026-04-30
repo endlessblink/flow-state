@@ -22,6 +22,7 @@ vi.stubGlobal('import.meta', { env: { DEV: false } })
 
 import { useCanvasOperationState } from '@/composables/canvas/useCanvasOperationState'
 import { useCanvasFilteredState } from '@/composables/canvas/useCanvasFilteredState'
+import { useCanvasGroups } from '@/stores/canvas/canvasGroups'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { findMatchingGroupForDueDate, calculatePositionInGroup } from '@/composables/canvas/useSmartGroupMatcher'
 import type { Task } from '@/types/tasks'
@@ -405,5 +406,44 @@ describe('useSmartGroupMatcher — matching without geometry mutations', () => {
     const groupsBefore = JSON.stringify([todayGroup])
     findMatchingGroupForDueDate(todayKey, [todayGroup])
     expect(JSON.stringify([todayGroup])).toBe(groupsBefore)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TESTS 31-32: Canvas group task counts match renderable canvas tasks
+// ---------------------------------------------------------------------------
+
+describe('useCanvasGroups — task count badges', () => {
+  const persistence = {
+    saveGroupToStorage: vi.fn(async () => undefined),
+    saveGroupsToLocalStorage: vi.fn(),
+    deleteGroupRemote: vi.fn(async () => undefined)
+  }
+
+  it('31: ignores tasks with malformed canvas positions', () => {
+    const taskStoreRef = ref<{ tasks: Task[] } | null>({
+      tasks: [
+        makeTask({ id: 'task-empty-position', parentId: 'group-today', canvasPosition: {} as Task['canvasPosition'] }),
+        makeTask({ id: 'task-nan-position', parentId: 'group-today', canvasPosition: { x: Number.NaN, y: 10 } })
+      ]
+    })
+    const groups = useCanvasGroups(persistence, taskStoreRef)
+    groups.setGroups([makeGroup({ id: 'group-today' })])
+
+    expect(groups.taskCountByGroupId.value.get('group-today') ?? 0).toBe(0)
+  })
+
+  it('32: counts only visible-renderable active tasks in a group', () => {
+    const taskStoreRef = ref<{ tasks: Task[] } | null>({
+      tasks: [
+        makeTask({ id: 'task-valid', parentId: 'group-today', canvasPosition: { x: 10, y: 10 } }),
+        makeTask({ id: 'task-done', parentId: 'group-today', status: 'done', canvasPosition: { x: 20, y: 20 } }),
+        makeTask({ id: 'task-pinned', parentId: 'group-today', isPinned: true, canvasPosition: { x: 30, y: 30 } }),
+      ]
+    })
+    const groups = useCanvasGroups(persistence, taskStoreRef)
+    groups.setGroups([makeGroup({ id: 'group-today' })])
+
+    expect(groups.taskCountByGroupId.value.get('group-today')).toBe(1)
   })
 })

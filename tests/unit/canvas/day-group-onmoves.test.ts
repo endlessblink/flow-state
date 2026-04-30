@@ -121,7 +121,7 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     }
   })
 
-  it('onMoves callback fires at midnight with the computed move payload', () => {
+  it('midnight transition does not emit geometry moves automatically', () => {
     const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, wed])
@@ -134,32 +134,21 @@ describe('useDayGroupRotation() — onMoves / Vue Flow bridge', () => {
     // Simulate midnight transition
     capturedOnDayChange!(WEDNESDAY, new Date(2026, 3, 9))
 
-    expect(onMoves).toHaveBeenCalledTimes(1)
-    const payload = onMoves.mock.calls[0][0] as Array<{ nodeId: string; position: { x: number; y: number } }>
-    expect(payload.length).toBeGreaterThan(0)
-    // Every node ID is the Vue-Flow-prefixed form
-    for (const m of payload) {
-      expect(m.nodeId.startsWith('section-')).toBe(true)
-    }
+    expect(onMoves).not.toHaveBeenCalled()
   })
 
-  it('onMoves IS called when midnight runs with qualifying groups present', () => {
-    // TASK-1756 v8: canonical layout ALWAYS produces group moves when there
-    // are ≥2 qualifying groups, because widths/heights are normalised even if
-    // positions don't change.
+  it('explicit rotation still returns moves when qualifying groups are present', () => {
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const thu = makeGroup({ id: 'grp-thu', name: 'Thursday', position: { x: 350, y: 0, width: 350, height: 600 } })
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([wed, thu])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
-    const onMoves = vi.fn()
-    useDayGroupRotation({ onMoves })
+    const { rotateDayGroupPositions } = useDayGroupRotation()
 
-    capturedOnDayChange!(WEDNESDAY, new Date(2026, 3, 9))
+    const { groupMoves, release } = rotateDayGroupPositions()
+    release()
 
-    expect(onMoves).toHaveBeenCalledTimes(1)
-    const payload = onMoves.mock.calls[0][0]
-    expect(payload.length).toBe(2) // both groups get move+size normalization
+    expect(groupMoves.length).toBe(2) // both groups get move+size normalization
   })
 
   it('onMoves is NOT called when feature flag is off', () => {

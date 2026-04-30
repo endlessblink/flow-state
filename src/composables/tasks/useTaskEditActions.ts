@@ -18,6 +18,12 @@ const getTaskInstances = (task: Task): TaskInstance[] => {
 export interface TaskEditActionsOptions {
     isFormValid?: ComputedRef<boolean>
     isFormDirty?: ComputedRef<boolean>
+    markCurrentTaskSaved?: () => void
+}
+
+export interface SaveTaskOptions {
+    close?: boolean
+    showSuccessToast?: boolean
 }
 
 export function useTaskEditActions(
@@ -195,9 +201,12 @@ export function useTaskEditActions(
     // --- Main Save Action ---
 
     // BUG-291 FIX: Made async to properly await updateTaskWithUndo
-    const saveTask = async () => {
+    const saveTask = async (saveOptions: SaveTaskOptions = {}): Promise<boolean> => {
+        const shouldClose = saveOptions.close ?? true
+        const shouldShowSuccessToast = saveOptions.showSuccessToast ?? true
+
         // Guard: Prevent double-save
-        if (isSaving.value || !props.task) return
+        if (isSaving.value || !props.task) return false
 
         // Validate form before saving
         if (options.isFormValid && !options.isFormValid.value) {
@@ -207,14 +216,14 @@ export function useTaskEditActions(
             } else {
                 showToast('Please fix form errors before saving', 'error')
             }
-            return
+            return false
         }
 
         // Check if there are actually changes to save
         if (options.isFormDirty && !options.isFormDirty.value) {
             // No changes - just close without showing error
-            emit('close')
-            return
+            if (shouldClose) emit('close')
+            return true
         }
 
         isSaving.value = true
@@ -312,9 +321,11 @@ export function useTaskEditActions(
             // This fixes Tauri/WebKitGTK reactivity issue where computed doesn't re-evaluate
             canvasUiStore.requestSync('user:manual')
 
+            options.markCurrentTaskSaved?.()
+
             // BUG-1097 FIX: Close modal FIRST, then show toast
             // This ensures the modal closes even if toast has issues
-            emit('close')
+            if (shouldClose) emit('close')
             sectionChanged.value = false
             isSaving.value = false
 
@@ -328,7 +339,7 @@ export function useTaskEditActions(
             }, 5000)
 
             // Show success feedback after close
-            showToast('Task saved successfully', 'success')
+            if (shouldShowSuccessToast) showToast('Task saved successfully', 'success')
 
             // === BACKGROUND OPERATIONS (fire-and-forget) ===
             // These run after modal closes - user doesn't wait for them
@@ -381,6 +392,7 @@ export function useTaskEditActions(
             // Subtasks are included in the main updateTask call above (no separate sync needed)
 
             // NOTE: emit('close') already called above for instant feedback
+            return true
         } catch (error) {
             // Handle save errors gracefully
             console.error('Failed to save task:', error)
@@ -393,6 +405,7 @@ export function useTaskEditActions(
             showToast(`Failed to save task: ${errorMessage}`, 'error')
 
             // Don't close the modal on error - let user retry
+            return false
         }
     }
 

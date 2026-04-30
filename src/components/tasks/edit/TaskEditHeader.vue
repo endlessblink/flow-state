@@ -17,6 +17,7 @@
   <div class="form-group">
     <label v-if="!hideLabels" class="form-label">Description</label>
     <MarkdownEditor
+      ref="descriptionEditorRef"
       v-model="description"
       :placeholder="hideLabels ? 'Add a description... Use the toolbar for formatting.' : 'Describe what needs to be done...'"
       :min-height="hideLabels ? 80 : 120"
@@ -52,6 +53,7 @@ const description = computed({
 })
 
 const titleInput = ref<HTMLInputElement | null>(null)
+const descriptionEditorRef = ref<InstanceType<typeof MarkdownEditor> | null>(null)
 
 // Hebrew Alignment
 const { getAlignmentClasses, applyInputAlignment, containsHebrew } = useHebrewAlignment()
@@ -60,7 +62,8 @@ const titleAlignmentStyles = computed(() => applyInputAlignment(props.modelValue
 const titleDir = computed(() => containsHebrew(props.modelValue.title ?? '') ? 'rtl' : 'ltr')
 
 defineExpose({
-  titleInput
+  titleInput,
+  flushPendingEdits: () => descriptionEditorRef.value?.flushContent(),
 })
 </script>
 

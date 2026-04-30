@@ -32,6 +32,11 @@ const isValidUUID = (str: string | null | undefined): boolean => {
     return uuidRegex.test(str)
 }
 
+const FALLBACK_TASK_TITLE = 'Untitled Task'
+
+const isRealTaskTitle = (title: unknown): title is string =>
+    typeof title === 'string' && title.trim().length > 0 && title.trim() !== FALLBACK_TASK_TITLE
+
 // =============================================================================
 // GEOMETRY WRITE SOURCE (TASK-255 Geometry Invariants)
 // =============================================================================
@@ -120,7 +125,12 @@ export function useTaskOperations(
             }
 
             // BUG-1321: Exclude instances and canvasPosition from spread to prevent overwriting computed values
-            const { canvasPosition: explicitCanvasPosition, instances: _taskDataInstances, ...taskDataWithoutPositionAndInstances } = taskData
+            const {
+                canvasPosition: explicitCanvasPosition,
+                instances: _taskDataInstances,
+                title: _taskDataTitle,
+                ...taskDataWithoutPositionAndInstances
+            } = taskData
 
             // Workspace collaboration: inject active workspace into new tasks
             const { useWorkspaceStore } = await import('../workspace')
@@ -413,7 +423,10 @@ export function useTaskOperations(
             }
 
             if ('title' in updates) {
-                updates.title = sanitizeTaskTitle(updates.title)
+                const safeTitle = sanitizeTaskTitle(updates.title)
+                updates.title = safeTitle === FALLBACK_TASK_TITLE && isRealTaskTitle(task.title)
+                    ? task.title
+                    : safeTitle
             }
 
             // Orphan prevention

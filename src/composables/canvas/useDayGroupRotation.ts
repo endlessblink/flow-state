@@ -13,7 +13,7 @@
  * approved for discrete geometry writes.
  */
 
-import { nextTick, ref } from 'vue'
+import { ref } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { useDateTransition } from '@/composables/useDateTransition'
 import { useCurrentDay } from '@/composables/useCurrentDay'
@@ -308,8 +308,10 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
    * visibility regain — the persisted `lastRotationDate` guard inside
    * `rotateDayGroups()` makes repeated calls no-ops until the day changes.
    *
-   * Callers are responsible for applying `moves` to Vue Flow and invoking
-   * `release()` on nextTick (same contract as `rotateDayGroupPositions`).
+   * Automatic catch-up must be metadata-only. Calling rotateDayGroupPositions()
+   * here writes canonical group positions into the store before CanvasView can
+   * choose not to apply them visually, which resets manually arranged spacing on
+   * app reload/update. Geometry changes are reserved for explicit user actions.
    */
   function runCatchupIfNeeded(): {
     groupMoves: GroupMove[]
@@ -321,26 +323,13 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       return { groupMoves: [], taskMoves: [], release: () => {} }
     }
     rotateDayGroups()
-    if (!settingsStore.enableDayGroupPositionRotation) {
-      return { groupMoves: [], taskMoves: [], release: () => {} }
-    }
-    return rotateDayGroupPositions()
+    return { groupMoves: [], taskMoves: [], release: () => {} }
   }
 
   // Hook into midnight transition — fires automatically at 00:00 each day
   useDateTransition({
     onDayChange: (_prev: Date, _next: Date) => {
       rotateDayGroups()
-      // Auto-rotation guarded by feature flag (can be disabled if it causes issues)
-      if (!settingsStore.enableDayGroupPositionRotation) return
-      const { groupMoves, release } = rotateDayGroupPositions()
-      if (groupMoves.length > 0 && options.onMoves) options.onMoves(groupMoves)
-      // TASK-1756 v10: double nextTick — Vue Flow's dimension/bounds
-      // bookkeeping lags Vue's reactivity by one extra cycle. Single nextTick
-      // lets the spatial validator (BUG-1203) see stale parent dimensions,
-      // orphaning children whose canonical positions fall outside the
-      // still-pre-resize bounds.
-      nextTick(() => nextTick(release))
     }
   })
 

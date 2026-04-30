@@ -24,6 +24,7 @@
       :value="data.title"
       dir="auto"
       placeholder="Note title..."
+      @input="handleTitleInput"
       @blur="handleTitleBlur"
       @keydown.enter="($event.target as HTMLInputElement).blur()"
     />
@@ -34,6 +35,7 @@
       dir="auto"
       placeholder="Write your thoughts..."
       rows="2"
+      @input="handleDescriptionInput"
       @blur="handleDescriptionBlur"
     />
   </div>
@@ -46,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 
 interface Props {
@@ -61,6 +63,13 @@ interface Props {
 
 const props = defineProps<Props>()
 const showLightbox = ref(false)
+const AUTOSAVE_DELAY_MS = 250
+const lastSavedTitle = ref(props.data.title)
+const lastSavedDescription = ref(props.data.description)
+let pendingTitle: string | null = null
+let pendingDescription: string | null = null
+let titleSaveTimer: ReturnType<typeof setTimeout> | null = null
+let descriptionSaveTimer: ReturnType<typeof setTimeout> | null = null
 const emit = defineEmits<{
   'update-title': [noteId: string, title: string]
   'update-description': [noteId: string, description: string]
@@ -70,19 +79,86 @@ const colorBarStyle = computed(() => ({
   background: props.data.color || 'var(--brand-primary)',
 }))
 
-const handleTitleBlur = (e: FocusEvent) => {
-  const value = (e.target as HTMLInputElement).value.trim()
-  if (value && value !== props.data.title) {
+watch(() => props.data.title, value => {
+  lastSavedTitle.value = value
+})
+
+watch(() => props.data.description, value => {
+  lastSavedDescription.value = value
+})
+
+const saveTitle = (value: string) => {
+  if (value !== lastSavedTitle.value) {
+    lastSavedTitle.value = value
     emit('update-title', props.data.noteId, value)
   }
 }
 
-const handleDescriptionBlur = (e: FocusEvent) => {
-  const value = (e.target as HTMLTextAreaElement).value
-  if (value !== props.data.description) {
+const saveDescription = (value: string) => {
+  if (value !== lastSavedDescription.value) {
+    lastSavedDescription.value = value
     emit('update-description', props.data.noteId, value)
   }
 }
+
+const flushTitleAutosave = () => {
+  if (titleSaveTimer) {
+    clearTimeout(titleSaveTimer)
+    titleSaveTimer = null
+  }
+  if (pendingTitle !== null) {
+    saveTitle(pendingTitle)
+    pendingTitle = null
+  }
+}
+
+const flushDescriptionAutosave = () => {
+  if (descriptionSaveTimer) {
+    clearTimeout(descriptionSaveTimer)
+    descriptionSaveTimer = null
+  }
+  if (pendingDescription !== null) {
+    saveDescription(pendingDescription)
+    pendingDescription = null
+  }
+}
+
+const scheduleTitleAutosave = (value: string) => {
+  pendingTitle = value
+  if (titleSaveTimer) clearTimeout(titleSaveTimer)
+  titleSaveTimer = setTimeout(flushTitleAutosave, AUTOSAVE_DELAY_MS)
+}
+
+const scheduleDescriptionAutosave = (value: string) => {
+  pendingDescription = value
+  if (descriptionSaveTimer) clearTimeout(descriptionSaveTimer)
+  descriptionSaveTimer = setTimeout(flushDescriptionAutosave, AUTOSAVE_DELAY_MS)
+}
+
+const handleTitleInput = (e: Event) => {
+  scheduleTitleAutosave((e.target as HTMLInputElement).value.trim())
+}
+
+const handleDescriptionInput = (e: Event) => {
+  scheduleDescriptionAutosave((e.target as HTMLTextAreaElement).value)
+}
+
+const handleTitleBlur = (e: FocusEvent) => {
+  const value = (e.target as HTMLInputElement).value.trim()
+  pendingTitle = value
+  flushTitleAutosave()
+}
+
+const handleDescriptionBlur = (e: FocusEvent) => {
+  const value = (e.target as HTMLTextAreaElement).value
+  pendingDescription = value
+  flushDescriptionAutosave()
+}
+
+onBeforeUnmount(() => {
+  flushTitleAutosave()
+  flushDescriptionAutosave()
+})
 </script>
 
 <style scoped>

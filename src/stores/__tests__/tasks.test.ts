@@ -39,6 +39,18 @@ describe('TaskStore', () => {
       expect(task.projectId).toBe('uncategorized')
     })
 
+    it('sanitizes blank titles when creating tasks', async () => {
+      const store = useTaskStore()
+
+      const emptyTitleTask = await store.createTask({ title: '' })
+      const whitespaceTitleTask = await store.createTask({ title: '   ' })
+
+      expect(emptyTitleTask.title).toBe('Untitled Task')
+      expect(whitespaceTitleTask.title).toBe('Untitled Task')
+      expect(store.tasks.find(t => t.id === emptyTitleTask.id)?.title).toBe('Untitled Task')
+      expect(store.tasks.find(t => t.id === whitespaceTitleTask.id)?.title).toBe('Untitled Task')
+    })
+
     it('creates a task with scheduled date and time as instance', async () => {
       const store = useTaskStore()
 
@@ -68,6 +80,16 @@ describe('TaskStore', () => {
       const updatedTask = store.tasks.find(t => t.id === task.id)
       expect(updatedTask?.title).toBe('Updated')
       expect(updatedTask?.status).toBe('todo')
+    })
+
+    it('does not overwrite an existing real title with a blank update', async () => {
+      const store = useTaskStore()
+      const task = await store.createTask({ title: 'Keep this title' })
+
+      await store.updateTask(task.id, { title: '   ' })
+
+      const updatedTask = store.tasks.find(t => t.id === task.id)
+      expect(updatedTask?.title).toBe('Keep this title')
     })
 
     it('deletes a task', async () => {

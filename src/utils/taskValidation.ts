@@ -6,8 +6,7 @@
  * preventing phantom tasks, sync loops, and data corruption.
  */
 
-import type { Task } from '@/types/tasks'
-import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
+import { type Task, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 
 /**
  * Validation result with detailed error information

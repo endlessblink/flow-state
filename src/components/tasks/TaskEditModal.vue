@@ -1,14 +1,14 @@
 <template>
   <Teleport to="body">
     <Transition name="modal" appear>
-      <div v-if="isOpen" class="modal-overlay" @mousedown.self="$emit('close')">
+      <div v-if="isOpen" class="modal-overlay" @mousedown.self="handleCloseRequest">
         <div class="modal-content" @click.stop>
           <!-- Header -->
           <div class="modal-header">
             <h2 class="modal-title">
               Edit Task
             </h2>
-            <button class="close-btn" @click="$emit('close')">
+            <button class="close-btn" @click="handleCloseRequest">
               <X :size="16" />
             </button>
           </div>
@@ -235,6 +235,14 @@
               <kbd class="ai-shortcut-hint">Ctrl+.</kbd>
             </button>
             <button
+              v-if="editedTask.id"
+              class="btn btn-secondary btn-action btn-thinking-flow"
+              @click="handleOpenThinkingFlow"
+            >
+              <LayoutDashboard :size="16" />
+              Thinking Flow
+            </button>
+            <button
               v-if="!isReadOnly"
               class="btn btn-danger btn-action"
               @click="handlePermanentDelete"
@@ -243,7 +251,7 @@
               Delete
             </button>
             <div class="spacer" />
-            <button class="btn btn-secondary btn-action" @click="$emit('close')">
+            <button class="btn btn-secondary btn-action" @click="handleCloseRequest">
               Cancel
             </button>
             <button
@@ -251,7 +259,7 @@
               class="btn btn-primary btn-action"
               :class="{ 'btn-loading': isSaving }"
               :disabled="isSaveDisabled"
-              @click="saveTask"
+              @click="handleManualSave"
             >
               <span v-if="isSaving" class="btn-spinner" aria-hidden="true" />
               <span :class="{ 'btn-text-hidden': isSaving }">
@@ -266,12 +274,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { X, Sparkles, Trash2, ChevronDown } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { X, Sparkles, Trash2, ChevronDown, LayoutDashboard } from 'lucide-vue-next'
 import { type Task, useTaskStore } from '@/stores/tasks'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
 import { getTaskCompleteness } from '@/composables/useTaskCompleteness'
 import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasModalsStore } from '@/stores/canvas/modals'
 import { useNotificationStore } from '@/stores/notifications'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { getAssignableMembers } from '@/composables/workspace/useTaskAssignment'
@@ -307,6 +316,7 @@ const emit = defineEmits<{
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
+const canvasModalsStore = useCanvasModalsStore()
 const notificationStore = useNotificationStore()
 const workspaceStore = useWorkspaceStore()
 
@@ -330,7 +340,8 @@ const {
   isFormValid,
   isFormDirty,
   isFormPristine,
-  isSaveDisabled
+  isSaveDisabled,
+  markCurrentTaskSaved
 } = useTaskEditState(props, titleInputRef)
 
 // Actions Composable
@@ -341,11 +352,81 @@ const {
   resetPomodoros,
   handleScheduledDateChange,
   handleSectionChange,
-  saveTask
+  saveTask: persistTask
 } = useTaskEditActions(props, () => emit('close'), editedTask, isSaving, {
   isFormValid,
-  isFormDirty
+  isFormDirty,
+  markCurrentTaskSaved
 })
+
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null
+let isFlushingBeforeClose = false
+
+const clearAutosaveTimer = () => {
+  if (autosaveTimer) {
+    clearTimeout(autosaveTimer)
+    autosaveTimer = null
+  }
+}
+
+const flushEditorContent = async () => {
+  headerRef.value?.flushPendingEdits?.()
+  await nextTick()
+}
+
+const autosaveTask = async () => {
+  clearAutosaveTimer()
+  if (!props.isOpen || isSaving.value || isReadOnly.value || isFlushingBeforeClose) return
+  await flushEditorContent()
+  if (!isFormValid.value || !isFormDirty.value) return
+  await persistTask({ close: false, showSuccessToast: false })
+}
+
+const scheduleAutosave = () => {
+  if (!props.isOpen || isSaving.value || isReadOnly.value || isFlushingBeforeClose) return
+  clearAutosaveTimer()
+  autosaveTimer = setTimeout(() => {
+    autosaveTask()
+  }, 500)
+}
+
+const handleManualSave = async () => {
+  clearAutosaveTimer()
+  await flushEditorContent()
+  await persistTask()
+}
+
+const handleOpenThinkingFlow = async () => {
+  const taskId = editedTask.value.id
+  if (!taskId || isSaving.value) return
+
+  clearAutosaveTimer()
+  await flushEditorContent()
+
+  if (!isReadOnly.value && isFormDirty.value) {
+    const saved = await persistTask({ close: false, showSuccessToast: false })
+    if (!saved) return
+  }
+
+  emit('close')
+  canvasModalsStore.openMiniCanvas(taskId)
+}
+
+const handleCloseRequest = async () => {
+  if (isSaving.value) return
+  isFlushingBeforeClose = true
+  clearAutosaveTimer()
+  await flushEditorContent()
+  if (!isReadOnly.value && isFormValid.value && isFormDirty.value) {
+    const saved = await persistTask({ close: false, showSuccessToast: false })
+    if (!saved) {
+      isFlushingBeforeClose = false
+      return
+    }
+  }
+  isFlushingBeforeClose = false
+  emit('close')
+}
 
 // --- Workspace task detection & layout ---
 const isWorkspaceTask = computed(() => !!editedTask.value.workspaceId)
@@ -465,7 +546,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
   if (!props.isOpen || isSaving.value) return
 
   if (event.key === 'Escape') {
-    emit('close')
+    handleCloseRequest()
   } else if (event.key === 'Enter') {
     const target = event.target as HTMLElement
     const isTextarea = target.tagName === 'TEXTAREA'
@@ -474,13 +555,13 @@ const handleKeyDown = (event: KeyboardEvent) => {
     if (isTextarea || isContentEditable) {
       if (event.ctrlKey || event.metaKey) {
         event.preventDefault()
-        saveTask()
+        handleManualSave()
       }
       return
     }
 
     event.preventDefault()
-    saveTask()
+    handleManualSave()
   }
 }
 
@@ -591,8 +672,19 @@ function handlePermanentDelete() {
   emit('permanent-delete', taskId)
 }
 
+watch(editedTask, () => {
+  scheduleAutosave()
+}, { deep: true })
+
+watch(() => props.isOpen, (open) => {
+  if (!open) clearAutosaveTimer()
+})
+
 onMounted(() => document.addEventListener('keydown', handleKeyDown))
-onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
+onUnmounted(() => {
+  clearAutosaveTimer()
+  document.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <style scoped>

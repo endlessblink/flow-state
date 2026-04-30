@@ -371,7 +371,22 @@ const debouncedEmit = useDebounceFn((markdown: string) => {
   nextTick(() => {
     isInternalUpdate.value = false
   })
-}, 150)
+  }, 150)
+
+const flushContent = () => {
+  if (!editor.value) return
+
+  const html = editor.value.getHTML()
+  const markdown = htmlToMarkdown(html)
+  if (markdown !== lastEmittedMarkdown.value) {
+    isInternalUpdate.value = true
+    lastEmittedMarkdown.value = markdown
+    emit('update:modelValue', markdown)
+    nextTick(() => {
+      isInternalUpdate.value = false
+    })
+  }
+}
 
 // BUG-1506: Shift+Enter exits list → plain paragraph. Only acts inside lists.
 // Falls through to default HardBreak (soft line break) outside lists.
@@ -489,16 +504,12 @@ watch(() => props.modelValue, (newValue) => {
 onBeforeUnmount(() => {
   // Flush any pending debounced content before destroying the editor
   // This ensures that fast-typing followed by immediate save/unmount doesn't lose the last 150ms of content
-  if (editor.value) {
-    const html = editor.value.getHTML()
-    const markdown = htmlToMarkdown(html)
-    if (markdown !== lastEmittedMarkdown.value) {
-      isInternalUpdate.value = true
-      lastEmittedMarkdown.value = markdown
-      emit('update:modelValue', markdown)
-    }
-  }
+  flushContent()
   editor.value?.destroy()
+})
+
+defineExpose({
+  flushContent,
 })
 
 // Link handling

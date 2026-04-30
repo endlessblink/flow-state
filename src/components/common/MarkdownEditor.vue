@@ -1,6 +1,7 @@
 <template>
   <div class="markdown-editor" :dir="textDirection">
     <TiptapEditor
+      ref="editorRef"
       :model-value="internalValue"
       :text-direction="textDirection"
       @update:model-value="handleInternalUpdate"
@@ -30,6 +31,7 @@ const emit = defineEmits<{
 }>()
 
 const internalValue = ref(props.modelValue)
+const editorRef = ref<InstanceType<typeof TiptapEditor> | null>(null)
 
 const handleInternalUpdate = (markdown: string) => {
   if (markdown !== internalValue.value) {
@@ -59,6 +61,14 @@ const updateTextDirection = useDebounceFn((content: string) => {
 
 // Watch internal value for RTL detection
 watch(internalValue, updateTextDirection, { immediate: true })
+
+const flushContent = () => {
+  editorRef.value?.flushContent()
+}
+
+defineExpose({
+  flushContent,
+})
 </script>
 
 <style scoped>

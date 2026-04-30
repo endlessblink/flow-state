@@ -30,7 +30,7 @@
         dir="auto"
         placeholder="New subtask"
         rows="1"
-        @input="autoResize($event.target as HTMLTextAreaElement)"
+        @input="handleTitleInput"
         @blur="handleTitleBlur"
         @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
         @keydown.shift.enter.prevent="handleTitleShiftEnter"
@@ -44,14 +44,14 @@
       dir="auto"
       placeholder="Add description..."
       rows="1"
-      @input="autoResize($event.target as HTMLTextAreaElement)"
+      @input="handleDescriptionInput"
       @blur="handleDescriptionBlur"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { Check } from 'lucide-vue-next'
 
@@ -73,6 +73,13 @@ const emit = defineEmits<{
 
 const titleInput = ref<HTMLTextAreaElement | null>(null)
 const descInput = ref<HTMLTextAreaElement | null>(null)
+const AUTOSAVE_DELAY_MS = 250
+const lastSavedTitle = ref(props.data.title)
+const lastSavedDescription = ref(props.data.description)
+let pendingTitle: string | null = null
+let pendingDescription: string | null = null
+let titleSaveTimer: ReturnType<typeof setTimeout> | null = null
+let descriptionSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 const autoResize = (el: HTMLTextAreaElement) => {
   el.style.height = 'auto'
@@ -90,12 +97,77 @@ onMounted(resizeAll)
 
 watch(() => props.data.title, resizeAll)
 watch(() => props.data.description, resizeAll)
+watch(() => props.data.title, value => {
+  lastSavedTitle.value = value
+})
+watch(() => props.data.description, value => {
+  lastSavedDescription.value = value
+})
+
+const saveTitle = (value: string) => {
+  if (value !== lastSavedTitle.value) {
+    lastSavedTitle.value = value
+    emit('update-title', props.data.subtaskId, value)
+  }
+}
+
+const saveDescription = (value: string) => {
+  if (value !== lastSavedDescription.value) {
+    lastSavedDescription.value = value
+    emit('update-description', props.data.subtaskId, value)
+  }
+}
+
+const flushTitleAutosave = () => {
+  if (titleSaveTimer) {
+    clearTimeout(titleSaveTimer)
+    titleSaveTimer = null
+  }
+  if (pendingTitle !== null) {
+    saveTitle(pendingTitle)
+    pendingTitle = null
+  }
+}
+
+const flushDescriptionAutosave = () => {
+  if (descriptionSaveTimer) {
+    clearTimeout(descriptionSaveTimer)
+    descriptionSaveTimer = null
+  }
+  if (pendingDescription !== null) {
+    saveDescription(pendingDescription)
+    pendingDescription = null
+  }
+}
+
+const scheduleTitleAutosave = (value: string) => {
+  pendingTitle = value
+  if (titleSaveTimer) clearTimeout(titleSaveTimer)
+  titleSaveTimer = setTimeout(flushTitleAutosave, AUTOSAVE_DELAY_MS)
+}
+
+const scheduleDescriptionAutosave = (value: string) => {
+  pendingDescription = value
+  if (descriptionSaveTimer) clearTimeout(descriptionSaveTimer)
+  descriptionSaveTimer = setTimeout(flushDescriptionAutosave, AUTOSAVE_DELAY_MS)
+}
+
+const handleTitleInput = (e: Event) => {
+  const el = e.target as HTMLTextAreaElement
+  autoResize(el)
+  scheduleTitleAutosave(el.value.trim())
+}
+
+const handleDescriptionInput = (e: Event) => {
+  const el = e.target as HTMLTextAreaElement
+  autoResize(el)
+  scheduleDescriptionAutosave(el.value)
+}
 
 const handleTitleBlur = (e: FocusEvent) => {
   const value = (e.target as HTMLTextAreaElement).value.trim()
-  if (value && value !== props.data.title) {
-    emit('update-title', props.data.subtaskId, value)
-  }
+  pendingTitle = value
+  flushTitleAutosave()
 }
 
 // Allow shift+enter to insert a newline in the title
@@ -106,14 +178,19 @@ const handleTitleShiftEnter = (e: KeyboardEvent) => {
   el.value = el.value.slice(0, start) + '\n' + el.value.slice(end)
   el.selectionStart = el.selectionEnd = start + 1
   autoResize(el)
+  scheduleTitleAutosave(el.value.trim())
 }
 
 const handleDescriptionBlur = (e: FocusEvent) => {
   const value = (e.target as HTMLTextAreaElement).value
-  if (value !== props.data.description) {
-    emit('update-description', props.data.subtaskId, value)
-  }
+  pendingDescription = value
+  flushDescriptionAutosave()
 }
+
+onBeforeUnmount(() => {
+  flushTitleAutosave()
+  flushDescriptionAutosave()
+})
 </script>
 
 <style scoped>

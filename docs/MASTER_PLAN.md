@@ -492,124 +492,6 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 
 ---
 
-### ~~TASK-1770~~: Watchpost VPS Server monitoring panel (✅ DONE)
-
-**Priority**: P2 | **Status**: ✅ DONE (2026-04-17)
-
-**Goal**: Add a "Server" tab to Watchpost with live monitoring of all VPS services and infrastructure.
-
-- New `vps/` panel with Services + Health sub-tabs
-- Live Docker auto-discovery — all running containers appear automatically on each poll, no manual registration needed
-- `vps/bots.json` enrichment registry — adds names, covers, dashboard links, restart commands; `category` field groups cards into Bots / Apps / Infrastructure / Containers sections
-- SSH via stdin piping with ControlMaster reuse (~50ms after first connect)
-- HTTP pings for reachability (green/amber/red status)
-- Health sub-tab: CPU sparkline, RAM/disk bars, load average, uptime, top processes by CPU/RAM, network I/O
-- Cover sharing: VPS services link to local project covers via `projectAlias` (botson→robotnik, flowstate→flow-state, claude-and-conquer→claude-and-conquer)
-- DNS setup: `botson.noamnau.com` and `waha.noamnau.com` via Cloudflare + Box.co.il nameserver transfer
-- Caddy proxy blocks added for both subdomains on VPS
-
-**Files**: `watchpost/vps/api.js`, `watchpost/vps/index.html`, `watchpost/vps/bots.json`, `watchpost/server.js`, `watchpost/index.html`
-
----
-
-### ~~TASK-1755~~: Watchpost Control Room UI redesign + smart project switcher (✅ DONE)
-
-**Priority**: P2 | **Status**: ✅ DONE (2026-04-09)
-
-**Goal**: Redesign the Control Room and main dashboard project switching UX. Replace flat 96-item native dropdown with command palette (Ctrl+K), add hero card for active project, editorial card covers with overlaid names, decluttered topbar, status-aware card borders, Spotlight pattern (recent + active only), masterPlan-filtered switcher, and Browse All Projects modal with card grid.
-
-**Files**: `watchpost/controlroom/index.html`, `watchpost/controlroom/api.js`, `~/.watchpost/index.html`, `~/.watchpost/local/views/controlroom/index.html`
-
----
-
-### ~~TASK-1755~~: AI cover generation improvements + cover gallery (✅ DONE)
-
-**Priority**: P3 | **Status**: ✅ DONE (2026-04-10)
-
-- Refined cover prompt to minimize unwanted AI text (logo framing approach)
-- Cover containers use 4:3 aspect-ratio instead of fixed height
-- Cover history versioning (old covers saved before overwrite)
-- Cover gallery modal with browse/restore past covers
-- Generation debounce prevents duplicate API calls
-- Fixed event listener accumulation bug in detail panel
-
----
-
-### ~~TASK-1754~~: Drag-to-reorder projects in Control Room (✅ DONE)
-
-**Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
-
-**Goal**: Let users drag project cards to set a custom display order in the Control Room Projects tab. Persist the order in `~/.watchpost/projects.json` (e.g. an `order` field per project). Fall back to the current sort (Last Active) when no custom order is set.
-
-**Files**: `~/.watchpost/local/views/controlroom/index.html`, `~/.watchpost/server.js`
-
----
-
-### ~~TASK-1745~~: Restore BUG-1716 parser fix — #### headers + column-order (✅ DONE)
-
-**Priority**: P1 | **Status**: ✅ DONE (2026-04-04)
-
-**Problem**: BUG-1716 fix was marked DONE but lost when watchpost files reverted to pre-edit state (only 1 commit existed). Need to re-apply parser fixes.
-
-**What to restore**:
-1. `kanban/index.html` — parser must match `####` headers, not just `###`
-2. `~/.watchpost/modules/task-engine.js` — column-order detection for tables with `ID|Priority|Description` order (not just `ID|Title|Priority`)
-3. Robust priority extraction in both parsers
-
-**Files**: `watchpost/kanban/index.html`, `~/.watchpost/modules/task-engine.js`
-
----
-
-### ~~TASK-1746~~: Add Changelog/Logs tab to Watchpost dashboard (✅ DONE)
-
-**Priority**: P2 | **Status**: ✅ DONE (2026-04-05)
-
-**Problem**: A changelog capture system exists and is actively logging (hook at `~/.watchpost/scripts/changelog-capture.sh`, data in `~/.watchpost/data/changelog/`). But the dashboard tab to VIEW these logs was lost. Data is intact — 10+ projects with JSONL entries.
-
-**Goal**: Add a "Logs" tab to Watchpost that renders the changelog data in a searchable, per-project timeline view. Show what each AI session did (files edited, commands run, agents spawned).
-
-**Data location**: `~/.watchpost/data/changelog/{project-name}/*.jsonl`
-
-**Files**: `watchpost/index.html` (add tab), new `watchpost/logs/index.html`
-
----
-
-### ~~TASK-1747~~: Watchpost cover art API integration (✅ DONE)
-
-**Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
-
-**Problem**: Control Room has placeholder gradients for project covers. The backend supports pluggable image generation (ideogram, fal.ai, OpenAI) via `POST /api/projects/:name/generate-cover`, but no provider is configured yet.
-
-**Goal**: Configure and test at least one image generation API (ideogram or fal.ai) for auto-generating project cover art from the dashboard.
-
-**Files**: `watchpost/controlroom/api.js`, `~/.watchpost/settings.json`
-
----
-
-### ~~TASK-1748~~: Watchpost project detail panel — summary + cover upload (✅ DONE)
-
-**Priority**: P2 | **Status**: ✅ DONE (2026-04-05)
-
-**Problem**: The Control Room detail slide-in panel shows project info but the 7-day summary and cover upload/change need testing and polish. Manual cover upload endpoint exists but UI flow needs wiring.
-
-**Goal**: Wire the detail panel's summary section to `/api/projects/:name/summary`, test cover upload flow, and ensure notes save correctly.
-
-**Files**: `watchpost/controlroom/index.html`
-
----
-
-### ~~TASK-1749~~: Mark TASK-303 orchestrator section as archived in MASTER_PLAN (✅ DONE)
-
-**Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
-
-**Problem**: TASK-303 (Watchpost Orchestrator) section still shows as PAUSED with pending subtasks (BUG-1019, FEATURE-1013/1014/1015). The orchestrator was intentionally removed from the codebase. The section should be archived, and any still-relevant subtasks (like BUG-1019 OOM prevention) should be evaluated independently.
-
-**Goal**: Archive TASK-303 section, update status to ARCHIVED, evaluate remaining subtasks.
-
-**Files**: `docs/MASTER_PLAN.md`
-
----
-
 ### ~~TASK-1753~~: Constitution reminder PreToolUse hook (✅ DONE)
 
 **Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
@@ -637,38 +519,6 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 - Slimmed CLAUDE.md from 476→405 lines by extracting universal rules to Constitution
 
 **Files**: `CLAUDE.md`, `docs/claude-md-extension/design-system.md`, `docs/claude-md-extension/system-architecture.md`, `docs/sop/` (20+ files), `~/.claude/knowledge/constitution.md`
-
----
-
-### ~~TASK-1752~~: Control Room — Activity-based project views + combinable filters (✅ DONE)
-
-**Priority**: P2 | **Status**: ✅ DONE (2026-04-05)
-
-**Problem**: Control Room only groups by folder category. Need views grouped by "last worked on", activity level, task status — with combinable filters (e.g. category + sorted by last active).
-
-**Goal**: Add "Group by" dropdown (Category, Activity Level, Task Status, None) that works alongside existing Sort dropdown. Category chips update to match selected grouping.
-
-**Files**: `watchpost/controlroom/index.html`
-
----
-
-### ~~TASK-1750~~: Create favicon for Watchpost dashboard (✅ DONE)
-
-**Priority**: P3 | **Status**: ✅ DONE (2026-04-05)
-
-**Problem**: Watchpost dashboard at localhost:6010 has no favicon — browser tab shows generic icon.
-
-**Goal**: Create a simple, recognizable favicon that matches the Watchpost brand (teal accent, dark theme). Could be a stylized watchtower/eye icon or the teal dot from the logo.
-
-**Files**: `watchpost/favicon.ico`, `watchpost/index.html` (add `<link rel="icon">`)
-
----
-
-### TASK-1483: Redesign Watchpost Dashboard UI (✅ DONE)
-
-**Priority**: P2 | **Status**: ✅ DONE (2026-04-04)
-
-**Implemented**: Control Room landing page with project grid/list, category grouping, filter chips, sort dropdown, kickstart prompts, copy-path, notes section, archive/delete. Orchestrator removed from server.js (~2250 lines), kanban (~3800 lines), and index.html.
 
 ---
 
@@ -1073,16 +923,6 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 4. Update CLAUDE.md — replace Tauri references with Electron
 5. Update `docs/sop/SOP-011-tauri-distribution.md` → Electron distribution SOP
 6. Final E2E test run to verify nothing broke
-
----
-
-### ~~BUG-1716~~: Watchpost parser shows "P1" as title for workspace tasks (✅ DONE)
-
-**Priority**: P1 | **Status**: ✅ DONE (2026-03-24)
-
-**Problem**: Workspace tasks (TASK-1533–1559) showed priority ("P1") as title in Watchpost kanban. Root causes: (1) parsers only matched `###` headers, not `####`; (2) table parser assumed `ID|Title|Priority` column order but workspace tables used `ID|Priority|Description`.
-
-**Fix**: Updated 3 parsers in `~/.watchpost/` — kanban/index.html (client-side), modules/task-engine.js (server-side): `####` header support, column-order detection, robust priority extraction. Added `####` detail sections for all 27 workspace tasks in MASTER_PLAN.md.
 
 ---
 
@@ -2218,41 +2058,6 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 
 ---
 
-### ~~BUG-1113~~: Stale Worktrees Not Cleaned Up - Forces Claude Code Context Bloat (✅ DONE)
-
-**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-22) | **Parent**: TASK-303
-
-**Problem**: The Watchpost orchestrator creates git worktrees in `.agent-worktrees/` for each task but does not clean them up after completion. These stale directories force Claude Code to load them into context, wasting tokens and causing confusion.
-
-**Evidence** (2026-01-27):
-```
-.agent-worktrees/
-├── orch-audit-task-1/   # Jan 20 - 10+ days old
-├── orch-audit-task-2/
-├── orch-audit-task-3/
-├── orch-task-1/         # Jan 18 - 12+ days old
-├── task-1 through task-18/  # Jan 27 - multiple stale worktrees
-```
-
-**Impact**:
-1. Claude Code loads all these directories into context on startup
-2. Wastes context tokens on stale/irrelevant code
-3. Git worktrees consume disk space (~100MB+ each)
-4. Confuses Claude when it sees duplicate file structures
-
-**Expected Behavior**:
-1. Worktrees should be cleaned up after task completion (merge OR discard)
-2. Automatic cleanup of worktrees older than 24 hours
-3. Manual cleanup command available in UI
-
-**Status Note (2026-02-14):** No activity since 2026-01-27. Likely resolved or superseded.
-
-**Related**: BUG-1019 (Swarm agent cleanup + OOM prevention)
-
-**Files**: `~/.watchpost/server.js` (`cleanupWorktree()`, `createAgentWorktree()`)
-
----
-
 ### ~~BUG-1182~~: saveTasks Fails After Realtime Disconnect (✅ DONE)
 
 **Root Cause**: After sleep/wake, the JWT token expires but `withRetry()` retries 401 errors with the same stale token (all 3 attempts fail). The save failure was silently swallowed in `saveTasksToStorage()`, causing data loss.
@@ -3340,7 +3145,6 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1500**~~ | **P2** | ✅ **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (✅ DONE 2026-03-13) |
 | ~~**TASK-1486**~~ | **P2** | ✅ **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (✅ DONE 2026-03-13) |
 | ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
-| ~~**TASK-1483**~~ | **P2** | ✅ **Redesign Watchpost Dashboard UI** (✅ DONE 2026-04-04) |
 | ~~**TASK-1457**~~ | **P2** | ✅ **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (✅ DONE 2026-03-13) |
 | ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
 | ~~**TASK-1455**~~ | **P2** | ✅ **Catalog view: show uncategorized tasks so they can be categorized in-place** (✅ DONE 2026-03-09) |
@@ -4143,16 +3947,6 @@ Public API unchanged — zero consumer migration needed.
 ---
 
 
-## ~~Watchpost Orchestrator (TASK-303)~~ — ARCHIVED
-
-**Status**: 🗄️ ARCHIVED (2026-04-05) — Orchestrator code removed from server.js and kanban in TASK-1483.
-
-Orchestrator was a worktree-based agent execution system. Superseded by Claude Code's built-in Agent tool and oh-my-claudecode multi-agent orchestration. All orchestrator routes (~2250 lines), UI (~3800 lines), and related cleanup code removed.
-
-**Remaining subtask evaluated**: BUG-1019 (Swarm agent OOM) — no longer applicable since orchestrator agent spawning was removed. FEATURE-1013/1014/1015 — not needed, Claude Code handles these natively.
-
----
-
 ## Roadmaps
 
 ### ROAD-004: Mobile PWA (✅ DONE)
@@ -4383,24 +4177,6 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 **Marker**: All wrapped calls tagged with `[OFFLINE-SAFE]` comment for traceability.
 
 **Files**: `src/stores/gamification.ts`
-
----
-
-### TASK-1462: Watchpost TUI — Multi-Project Support (📋 PLANNED)
-
-**Priority**: P2 | **Status**: 📋 PLANNED
-
-**Problem**: `watchpost tui` currently only works with FlowState. Running from another project directory shows 0 tasks.
-
-**Goal**: Make `watchpost tui` work with any project that has a `MASTER_PLAN.md` by parsing it directly.
-
-**Approach**:
-1. Verify `~/.bashrc` alias (`~/.local/bin/watchpost` wrapper) propagates `WATCHPOST_CWD` after PC restart
-2. Parse tasks directly from MASTER_PLAN.md headers (`### TASK-XXX: Title (STATUS)`)
-3. Map MASTER_PLAN.md statuses to TUI columns (PLANNED→backlog, IN PROGRESS→wip, REVIEW→review, DONE→done)
-4. ~~Remove dead beads code from watchpost server.js and kanban/index.html~~ (done via TASK-1480)
-
-**Files**: `~/.watchpost/tui/src/lib/bd-client.js`, `~/.watchpost/tui/src/lib/masterplan-parser.js`, `~/.watchpost/tui/src/hooks/use-board-data.js`
 
 ---
 

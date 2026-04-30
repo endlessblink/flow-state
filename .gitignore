@@ -1,6 +1,9 @@
 node_modules
 webdriver/node_modules/
 dist
+dist-electron/
+src-tauri/target/
+android/app/src/main/assets/public/
 
 *storybook.log
 storybook-static

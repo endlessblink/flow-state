@@ -10,6 +10,14 @@ import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
 import { getTauriStore, isTauriEnv } from '@/composables/usePersistentRef'
 import type { SmartView } from '@/composables/tasks/useTaskFiltering'
 
+const FALLBACK_TASK_TITLE = 'Untitled Task'
+
+const isRealTaskTitle = (title: unknown): title is string =>
+    typeof title === 'string' && title.trim().length > 0 && title.trim() !== FALLBACK_TASK_TITLE
+
+const shouldPreserveRemoteTitle = (localTask: Task, remoteTask: Task): boolean =>
+    !isRealTaskTitle(localTask.title) && isRealTaskTitle(remoteTask.title)
+
 export function useTaskPersistence(
     // SAFETY: Named _rawTasks to indicate this is the raw array for load/save operations
     _rawTasks: Ref<Task[]>,
@@ -348,7 +356,9 @@ export function useTaskPersistence(
                     if (import.meta.env.DEV) {
                         console.log(`🛡️ [SMART-MERGE] Preserving pending-write task "${localTask.title?.slice(0, 15)}" (BUG-1206)`)
                     }
-                    mergedTasks.push(localTask)
+                    mergedTasks.push(shouldPreserveRemoteTitle(localTask, remoteTask)
+                        ? { ...localTask, title: remoteTask.title }
+                        : localTask)
                     remoteMap.delete(localTask.id)
                     continue
                 }
@@ -388,6 +398,9 @@ export function useTaskPersistence(
                         ])
                         const merged = { ...remoteTask } as Task
                         for (const key of Object.keys(localTask) as (keyof Task)[]) {
+                            if (key === 'title' && shouldPreserveRemoteTitle(localTask, remoteTask)) {
+                                continue
+                            }
                             if (localTask[key] !== undefined && !DB_AUTHORITATIVE_FIELDS.has(key)) {
                                 (merged as any)[key] = localTask[key]
                             }

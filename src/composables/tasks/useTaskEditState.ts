@@ -93,6 +93,10 @@ export function useTaskEditState(
         return isFormPristine.value || !isFormValid.value || isSaving.value
     })
 
+    const markCurrentTaskSaved = () => {
+        originalTaskSnapshot.value = createTaskFingerprint(editedTask.value)
+    }
+
     // Options
     const priorityOptions = [
         { label: 'Low', value: 'low' },
@@ -201,6 +205,7 @@ export function useTaskEditState(
         isFormValid,
         isFormDirty,
         isFormPristine,
-        isSaveDisabled
+        isSaveDisabled,
+        markCurrentTaskSaved
     }
 }

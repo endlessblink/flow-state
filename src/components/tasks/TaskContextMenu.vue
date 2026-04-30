@@ -77,10 +77,10 @@
       <span class="menu-text">Start Timer</span>
     </button>
 
-    <!-- Open Planning Canvas (single task only) -->
+    <!-- Open Thinking Flow (single task only) -->
     <button v-if="!isBatchOperation" class="menu-item" @click="handleOpenPlanningCanvas">
       <LayoutDashboard :size="16" class="menu-icon" />
-      <span class="menu-text">Planning Canvas</span>
+      <span class="menu-text">Thinking Flow</span>
     </button>
 
     <!-- More submenu -->
@@ -223,6 +223,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted, watch, inject } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useProjectStore } from '@/stores/projects'
@@ -321,6 +322,7 @@ const handleOpenPlanningCanvas = () => {
 
 const focusModeState = inject<FocusModeState | null>(FOCUS_MODE_KEY, null)
 const enterFocusModeFn = focusModeState?.enterFocusMode || null
+const router = useRouter()
 
 // Direct store access for custom date handling
 const taskStore = useTaskStore()
@@ -1059,8 +1061,12 @@ const enterFocus = () => {
   closeAllSubmenusNow()
   emit('close')
 
-  if (currentTask.value && !isBatchOperation.value && enterFocusModeFn) {
-    enterFocusModeFn(currentTask.value.id)
+  if (currentTask.value && !isBatchOperation.value) {
+    if (enterFocusModeFn) {
+      enterFocusModeFn(currentTask.value.id)
+    } else {
+      router.push(`/focus/${currentTask.value.id}`)
+    }
   } else if (isBatchOperation.value) {
     emit('enterFocusMode')
   }

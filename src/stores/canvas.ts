@@ -104,12 +104,60 @@ export const useCanvasStore = defineStore('canvas', () => {
       const workspaceId = wsStore.activeWorkspaceId
       const loadedGroups = await fetchGroups(workspaceId)
 
+      // Electron updates/restarts can happen before the queued remote group
+      // geometry write finishes. In that case Supabase may still contain the
+      // old canonical layout while IndexedDB/localStorage has the user's newer
+      // manual positions and sizes. Prefer newer local geometry, but only for
+      // groups that still exist in the remote result to avoid resurrecting
+      // deleted groups from cache.
+      const localCandidates = [
+        ...loadGroupsFromLocalStorage(),
+        ...((await getCachedGroups().catch(() => [])) ?? []),
+      ]
+      const localById = new Map<string, CanvasGroup>()
+      for (const localGroup of localCandidates) {
+        const existing = localById.get(localGroup.id)
+        const existingTime = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0
+        const localTime = localGroup.updatedAt ? new Date(localGroup.updatedAt).getTime() : 0
+        const existingVersion = existing?.positionVersion ?? 0
+        const localVersion = localGroup.positionVersion ?? 0
+        if (!existing || localVersion > existingVersion || (localVersion === existingVersion && localTime > existingTime)) {
+          localById.set(localGroup.id, localGroup)
+        }
+      }
+
+      const locallyNewerGroupIds = new Set<string>()
+      const geometryMergedGroups = loadedGroups.map((remoteGroup) => {
+        const localGroup = localById.get(remoteGroup.id)
+        if (!localGroup?.position) return remoteGroup
+
+        const localVersion = localGroup.positionVersion ?? 0
+        const remoteVersion = remoteGroup.positionVersion ?? 0
+        const localTime = localGroup.updatedAt ? new Date(localGroup.updatedAt).getTime() : 0
+        const remoteTime = remoteGroup.updatedAt ? new Date(remoteGroup.updatedAt).getTime() : 0
+        const localIsNewer = localVersion > remoteVersion || (localVersion === remoteVersion && localTime > remoteTime)
+        if (!localIsNewer) return remoteGroup
+
+        if (import.meta.env.DEV) {
+          console.log(`[CANVAS:LOAD] Preserving newer local geometry for group ${remoteGroup.name}`)
+        }
+        locallyNewerGroupIds.add(remoteGroup.id)
+        return {
+          ...remoteGroup,
+          position: localGroup.position,
+          parentGroupId: localGroup.parentGroupId ?? remoteGroup.parentGroupId,
+          positionFormat: localGroup.positionFormat ?? remoteGroup.positionFormat,
+          positionVersion: localVersion,
+          updatedAt: localGroup.updatedAt ?? remoteGroup.updatedAt,
+        }
+      })
+
       if (import.meta.env.DEV) {
-        assertNoDuplicateIds(loadedGroups, 'Supabase groups load')
+        assertNoDuplicateIds(geometryMergedGroups, 'Supabase groups load')
       }
 
       // Integrity checks
-      loadedGroups.forEach((g: CanvasGroup) => {
+      geometryMergedGroups.forEach((g: CanvasGroup) => {
         if (!g.position || !Number.isFinite(g.position.x) || !Number.isFinite(g.position.y)) {
           console.warn(`[CANVAS:INTEGRITY] Auto-repairing position for group ${g.name}`)
           g.position = { x: 0, y: 0, width: g.position?.width || 600, height: g.position?.height || 400 }
@@ -118,7 +166,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       // BUG-169 Safety — but allow empty during workspace switches
       const isWorkspaceSwitch = wsStore.isSwitchingWorkspace
-      if (loadedGroups.length === 0 && groupsModule._rawGroups.value.length > 0) {
+      if (geometryMergedGroups.length === 0 && groupsModule._rawGroups.value.length > 0) {
         if (!isWorkspaceSwitch) {
           const sessionStart = (window as unknown as Record<string, unknown>).FlowStateSessionStart as number || 0
           if (Date.now() - sessionStart < 10000) {
@@ -130,7 +178,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         }
       }
 
-      const cleanedGroups = breakGroupCycles(loadedGroups)
+      const cleanedGroups = breakGroupCycles(geometryMergedGroups)
       groupsModule.setGroups(cleanedGroups, isWorkspaceSwitch)
 
       // BUG-1411: Cache groups to IndexedDB for offline loading
@@ -138,7 +186,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       // Persist fixes
       cleanedGroups.forEach((g: CanvasGroup, i: number) => {
-        if (g.parentGroupId !== loadedGroups[i]?.parentGroupId) {
+        if (g.parentGroupId !== geometryMergedGroups[i]?.parentGroupId || locallyNewerGroupIds.has(g.id)) {
           saveGroup(g)
         }
       })
@@ -148,7 +196,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         nodeVersionMap.value = new Map()
       }
       nodeVersionMap.value.clear()
-      loadedGroups.forEach((g: CanvasGroup) => nodeVersionMap.value.set(g.id, g.positionVersion ?? 0))
+      geometryMergedGroups.forEach((g: CanvasGroup) => nodeVersionMap.value.set(g.id, g.positionVersion ?? 0))
       if (taskStoreRef.value?.tasks) {
         taskStoreRef.value.tasks.forEach((t: Task) => nodeVersionMap.value.set(t.id, t.positionVersion ?? 0))
       }

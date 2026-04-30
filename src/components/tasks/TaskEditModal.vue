@@ -224,48 +224,51 @@
 
           <!-- Sticky Action Buttons -->
           <div class="modal-actions-sticky">
-            <button
-              v-if="!isWorkspaceTask"
-              ref="aiAssistBtnRef"
-              class="btn btn-ai btn-action"
-              @click="openAIAssist"
-            >
-              <Sparkles :size="16" />
-              AI Assist
-              <kbd class="ai-shortcut-hint">Ctrl+.</kbd>
-            </button>
-            <button
-              v-if="editedTask.id"
-              class="btn btn-secondary btn-action btn-thinking-flow"
-              @click="handleOpenThinkingFlow"
-            >
-              <LayoutDashboard :size="16" />
-              Thinking Flow
-            </button>
-            <button
-              v-if="!isReadOnly"
-              class="btn btn-danger btn-action"
-              @click="handlePermanentDelete"
-            >
-              <Trash2 :size="16" />
-              Delete
-            </button>
-            <div class="spacer" />
-            <button class="btn btn-secondary btn-action" @click="handleCloseRequest">
-              Cancel
-            </button>
-            <button
-              v-if="!isReadOnly"
-              class="btn btn-primary btn-action"
-              :class="{ 'btn-loading': isSaving }"
-              :disabled="isSaveDisabled"
-              @click="handleManualSave"
-            >
-              <span v-if="isSaving" class="btn-spinner" aria-hidden="true" />
-              <span :class="{ 'btn-text-hidden': isSaving }">
-                {{ isFormPristine ? 'No Changes' : 'Save Changes' }}
-              </span>
-            </button>
+            <div class="modal-action-group modal-action-group-start">
+              <button
+                v-if="!isWorkspaceTask"
+                ref="aiAssistBtnRef"
+                class="btn btn-ai btn-action"
+                @click="openAIAssist"
+              >
+                <Sparkles :size="16" />
+                AI Assist
+                <kbd class="ai-shortcut-hint">Ctrl+.</kbd>
+              </button>
+              <button
+                v-if="editedTask.id"
+                class="btn btn-secondary btn-action btn-thinking-flow"
+                @click="handleOpenThinkingFlow"
+              >
+                <LayoutDashboard :size="16" />
+                Thinking Flow
+              </button>
+              <button
+                v-if="!isReadOnly"
+                class="btn btn-danger btn-action"
+                @click="handlePermanentDelete"
+              >
+                <Trash2 :size="16" />
+                Delete
+              </button>
+            </div>
+            <div class="modal-action-group modal-action-group-end">
+              <button class="btn btn-secondary btn-action" @click="handleCloseRequest">
+                Cancel
+              </button>
+              <button
+                v-if="!isReadOnly"
+                class="btn btn-primary btn-action"
+                :class="{ 'btn-loading': isSaving }"
+                :disabled="isSaveDisabled"
+                @click="handleManualSave"
+              >
+                <span v-if="isSaving" class="btn-spinner" aria-hidden="true" />
+                <span :class="{ 'btn-text-hidden': isSaving }">
+                  {{ isFormPristine ? 'No Changes' : 'Save Changes' }}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -878,7 +881,9 @@ onUnmounted(() => {
   position: sticky;
   bottom: 0;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   background: var(--overlay-component-bg);
@@ -891,16 +896,35 @@ onUnmounted(() => {
   width: 100%;
 }
 
+.modal-action-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.modal-action-group-start {
+  flex: 1 1 100%;
+  justify-content: flex-start;
+}
+
+.modal-action-group-end {
+  flex: 1 1 100%;
+  justify-content: flex-end;
+}
+
 /* Larger, more prominent action buttons */
 .btn-action {
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-4);
   font-size: var(--text-base);
-  min-width: 120px;
+  min-width: 108px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   position: relative;
+  white-space: nowrap;
 }
 
 /* Loading spinner for Save button */
@@ -963,6 +987,10 @@ onUnmounted(() => {
   background: var(--brand-bg-subtle);
 }
 
+.btn-thinking-flow {
+  min-width: 136px;
+}
+
 .ai-shortcut-hint {
   font-size: var(--text-xs);
   font-family: inherit;
@@ -984,10 +1012,6 @@ onUnmounted(() => {
 .btn-danger:hover {
   background: var(--danger-bg-subtle);
   border-color: var(--danger-border-hover);
-}
-
-.spacer {
-  flex: 1;
 }
 
 /* TASK-1470: Inline AI suggestion hint */
@@ -1196,12 +1220,23 @@ onUnmounted(() => {
   .modal-actions-sticky {
     padding: var(--space-3) var(--space-4);
     gap: var(--space-2);
+    align-items: stretch;
+  }
+
+  .modal-action-group,
+  .modal-action-group-start,
+  .modal-action-group-end {
+    flex: 1 1 100%;
+    justify-content: stretch;
+    gap: var(--space-2);
+    margin-inline-start: 0;
   }
 
   .btn-action {
-    flex: 1;
+    flex: 1 1 calc(50% - var(--space-2));
     min-width: unset;
     padding: var(--space-3) var(--space-3);
+    font-size: var(--text-sm);
   }
 
   .collab-bar {

@@ -150,6 +150,7 @@ const contextFlowPos = ref({ x: 0, y: 0 })
 const selectedNodeId = ref<string | null>(null)
 const selectedNodeType = ref<string | null>(null)
 const pendingConnectionSource = ref<string | null>(null)
+const pendingConnectionSourceHandle = ref<string | null>(null)
 const connectionWasSuccessful = ref(false)
 
 const contextMenuStyle = computed(() => ({
@@ -233,8 +234,9 @@ const handleNodeClick = (event: NodeMouseEvent) => {
   selectedNodeType.value = event.node.type || null
 }
 
-const handleConnectStart = (event: { nodeId?: string | null }) => {
+const handleConnectStart = (event: { nodeId?: string | null; handleId?: string | null }) => {
   pendingConnectionSource.value = event.nodeId || null
+  pendingConnectionSourceHandle.value = event.handleId || null
   connectionWasSuccessful.value = false
 }
 
@@ -245,16 +247,17 @@ const handleConnectEnd = (event: MouseEvent | TouchEvent) => {
     if (sourceId && !connectionWasSuccessful.value) {
       const position = getFlowPositionFromEvent(event)
       if (position) {
-        miniCanvas.createConnectedSubtask(sourceId, position)
+        miniCanvas.createConnectedSubtask(sourceId, position, pendingConnectionSourceHandle.value)
       }
     }
 
     pendingConnectionSource.value = null
+    pendingConnectionSourceHandle.value = null
     connectionWasSuccessful.value = false
   }, 50)
 }
 
-const handleConnect = (params: { source: string; target: string }) => {
+const handleConnect = (params: { source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null }) => {
   connectionWasSuccessful.value = true
   miniCanvas.onConnect(params)
 }
@@ -326,6 +329,7 @@ const handleContextAddNote = () => {
 
 const handleContextDelete = () => {
   if (!contextNodeId.value || !contextNodeType.value) return
+  miniCanvas.removeEdgesForNode(contextNodeId.value)
   if (contextNodeType.value === 'subtaskNode') {
     miniCanvas.deleteSubtask(contextNodeId.value)
   } else if (contextNodeType.value === 'noteNode') {
@@ -342,6 +346,7 @@ const deleteSelectedNode = () => {
   if (!selectedNodeId.value) return false
 
   const nodeType = selectedNodeType.value || miniCanvas.nodes.value.find(n => n.id === selectedNodeId.value)?.type
+  miniCanvas.removeEdgesForNode(selectedNodeId.value)
   if (nodeType === 'subtaskNode') {
     miniCanvas.deleteSubtask(selectedNodeId.value)
   } else if (nodeType === 'noteNode') {

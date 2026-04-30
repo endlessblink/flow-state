@@ -128,10 +128,14 @@ export function useMiniCanvas(taskId: () => string | null) {
     const parentId = `parent-${t.id}`
     const autoEdges: Edge[] = []
 
+    const userEdgeTargets = new Set(userEdges.value.map(e => e.target))
+
     // Build a position lookup from current node positions (reflects post-drag state)
     const nodePositions = new Map(nodes.value.map(n => [n.id, n.position]))
 
     for (const subtask of (t.subtasks || [])) {
+      if (userEdgeTargets.has(subtask.id)) continue
+
       const childPos = nodePositions.get(subtask.id) || { x: 0, y: 100 }
       const handles = getHandles(childPos)
       autoEdges.push({
@@ -146,6 +150,8 @@ export function useMiniCanvas(taskId: () => string | null) {
     }
 
     for (const note of (t.planningNotes || [])) {
+      if (userEdgeTargets.has(note.id)) continue
+
       const childPos = nodePositions.get(note.id) || { x: 0, y: 100 }
       const handles = getHandles(childPos)
       autoEdges.push({
@@ -177,7 +183,22 @@ export function useMiniCanvas(taskId: () => string | null) {
   }
 
   /** Add a temporary user edge between non-parent nodes. */
-  const addUserEdge = (source: string, target: string) => {
+  const getRelativeHandles = (source: string, target: string) => {
+    const nodePositions = new Map(nodes.value.map(n => [n.id, n.position]))
+    const sourcePos = nodePositions.get(source) || { x: 0, y: 0 }
+    const targetPos = nodePositions.get(target) || { x: 0, y: 0 }
+
+    return getHandles({
+      x: targetPos.x - sourcePos.x,
+      y: targetPos.y - sourcePos.y,
+    })
+  }
+
+  const removeEdgesForNode = (nodeId: string) => {
+    userEdges.value = userEdges.value.filter(e => e.source !== nodeId && e.target !== nodeId)
+  }
+
+  const addUserEdge = (source: string, target: string, sourceHandle?: string | null, targetHandle?: string | null) => {
     const t = task.value
     const parentId = t ? `parent-${t.id}` : null
     if (source === parentId) return
@@ -185,24 +206,30 @@ export function useMiniCanvas(taskId: () => string | null) {
     const edgeId = `user-${source}-${target}`
     if (userEdges.value.some(e => e.id === edgeId)) return
 
+    const handles = getRelativeHandles(source, target)
+
     userEdges.value.push({
       id: edgeId,
       source,
       target,
+      sourceHandle: sourceHandle || handles.sourceHandle,
+      targetHandle: targetHandle || handles.targetHandle,
       style: { stroke: '#3b82f6', strokeWidth: 2 },
     })
   }
 
   /** Handle new connection between nodes */
-  const onConnect = (params: { source: string; target: string }) => {
-    addUserEdge(params.source, params.target)
+  const onConnect = (params: { source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null }) => {
+    addUserEdge(params.source, params.target, params.sourceHandle, params.targetHandle)
   }
 
   /** Create a subtask when a connection is dropped on empty space. */
-  const createConnectedSubtask = (sourceId: string, position: { x: number; y: number }) => {
+  const createConnectedSubtask = (sourceId: string, position: { x: number; y: number }, sourceHandle?: string | null) => {
+    const sourcePos = nodes.value.find(n => n.id === sourceId)?.position || { x: 0, y: 0 }
+    const handles = getHandles({ x: position.x - sourcePos.x, y: position.y - sourcePos.y })
     const newSubtaskId = actions.addSubtask(position)
     if (newSubtaskId) {
-      addUserEdge(sourceId, newSubtaskId)
+      addUserEdge(sourceId, newSubtaskId, sourceHandle || handles.sourceHandle, handles.targetHandle)
     }
   }
 
@@ -219,6 +246,7 @@ export function useMiniCanvas(taskId: () => string | null) {
     onNodeDragStop,
     onConnect,
     createConnectedSubtask,
+    removeEdgesForNode,
     resetEdges,
     ...actions,
   }

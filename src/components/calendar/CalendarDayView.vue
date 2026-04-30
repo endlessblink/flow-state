@@ -165,7 +165,7 @@ const onSlotsScroll = (e: Event) => {
         @dragover.prevent="$emit('dragover', $event, slot)"
         @dragenter.prevent="$emit('dragenter', $event, slot)"
         @dragleave="$emit('dragleave')"
-        @drop.prevent="$emit('drop', $event, slot)"
+        @drop.prevent="$emit('drop', $event, slot as any)"
         @mousedown="$emit('slotMouseDown', $event, slot)"
       >
         <!-- BUG-1354: Removed TransitionGroup — it caused visual "duplicate" artifacts.
@@ -174,7 +174,7 @@ const onSlotsScroll = (e: Event) => {
         <div class="slot-tasks-container">
           <div
             v-for="calEvent in getTasksForSlot(slot)"
-            v-show="isTaskPrimarySlot(slot, calEvent)"
+            v-show="isTaskPrimarySlot(calEvent, slot as any)"
             :key="`${calEvent.id}-${slot.slotIndex}`"
             class="slot-task is-primary"
             :class="{
@@ -188,7 +188,7 @@ const onSlotsScroll = (e: Event) => {
               'status-active': getTaskStatus(calEvent) === 'todo',
               'slot-task--virtual': calEvent.isVirtual
             }"
-            :style="getSlotTaskStyle(calEvent)"
+            :style="getSlotTaskStyle(calEvent, slot as any)"
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
             :draggable="!calEvent.isVirtual"
             @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"

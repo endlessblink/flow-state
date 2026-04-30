@@ -155,7 +155,7 @@ const handleDrop = async (event: DragEvent) => {
 
   if (dragData.value && isDragValid.value && dragData.value.type === 'task' && dragData.value.taskId) {
     const store = taskStore as unknown as Record<string, (...args: unknown[]) => unknown>
-    const updates: Partial<Task> = {}
+    const updates: Record<string, any> = {}
 
     if (props.dropType === 'date') {
       updates.dueDate = calculateTargetDate()

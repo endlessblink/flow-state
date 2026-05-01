@@ -231,7 +231,7 @@
                 class="btn btn-ai btn-action"
                 @click="openAIAssist"
               >
-                <Sparkles :size="16" />
+                <Sparkles :size="14" />
                 AI Assist
                 <kbd class="ai-shortcut-hint">Ctrl+.</kbd>
               </button>
@@ -240,7 +240,7 @@
                 class="btn btn-secondary btn-action btn-thinking-flow"
                 @click="handleOpenThinkingFlow"
               >
-                <LayoutDashboard :size="16" />
+                <LayoutDashboard :size="14" />
                 Thinking Flow
               </button>
               <button
@@ -248,7 +248,7 @@
                 class="btn btn-danger btn-action"
                 @click="handlePermanentDelete"
               >
-                <Trash2 :size="16" />
+                <Trash2 :size="14" />
                 Delete
               </button>
             </div>
@@ -884,8 +884,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   background: var(--overlay-component-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -900,29 +900,29 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .modal-action-group-start {
-  flex: 1 1 100%;
+  flex: 1 1 auto;
   justify-content: flex-start;
 }
 
 .modal-action-group-end {
-  flex: 1 1 100%;
+  flex: 0 0 auto;
   justify-content: flex-end;
+  margin-inline-start: auto;
 }
 
-/* Larger, more prominent action buttons */
+/* Compact action buttons that fit in modal width */
 .btn-action {
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--text-base);
-  min-width: 108px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-1_5);
   position: relative;
   white-space: nowrap;
 }
@@ -985,10 +985,6 @@ onUnmounted(() => {
 
 .btn-ai:hover {
   background: var(--brand-bg-subtle);
-}
-
-.btn-thinking-flow {
-  min-width: 136px;
 }
 
 .ai-shortcut-hint {

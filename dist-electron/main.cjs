@@ -27,7 +27,7 @@ function createWindow() {
         minWidth: 800,
         minHeight: 600,
         title: 'FlowState',
-        icon: (0, path_1.join)(__dirname, '../src-tauri/icons/icon.png'),
+        icon: (0, path_1.join)(__dirname, '../public/icons/pwa-512x512.png'),
         webPreferences: {
             preload: (0, path_1.join)(__dirname, 'preload.cjs'),
             contextIsolation: true,

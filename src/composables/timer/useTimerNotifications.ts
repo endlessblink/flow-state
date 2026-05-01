@@ -2,7 +2,6 @@
  * useTimerNotifications — Browser notifications + Service Worker handlers
  * Extracted from src/stores/timer.ts (TASK-1406)
  */
-import { isTauri } from '@/composables/useTauriStartup'
 
 export interface TimerNotificationsDeps {
   startTimer: (taskId: string, duration: number, isBreak: boolean) => Promise<void>
@@ -60,7 +59,7 @@ export function useTimerNotifications(deps: TimerNotificationsDeps) {
       : (taskName ? `Great work on "${taskName}"! Time for a break.` : 'Great work! Time for a break.')
 
     // BUG-1112: Only show notification when KDE widget is NOT active
-    if (isTauri() && kdeActive) {
+    if (kdeActive) {
       if (import.meta.env.DEV) {
         console.log('🍅 [TIMER] KDE widget is active, skipping notification (widget handles it)')
       }
@@ -68,7 +67,7 @@ export function useTimerNotifications(deps: TimerNotificationsDeps) {
     }
 
     // BUG-1318: Try Service Worker notification FIRST (has action buttons: Start Break, +5 min)
-    // This works in both browser AND Tauri webview (WebKitGTK supports SW)
+    // This works in browsers/PWAs when a service worker is active.
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
         type: 'TIMER_COMPLETE',
@@ -119,13 +118,10 @@ export function useTimerNotifications(deps: TimerNotificationsDeps) {
   }
 
   const requestNotificationPermission = async () => {
-    // BUG-1303: Skip browser Notification.requestPermission() in Tauri — WebKitGTK
-    // can hang indefinitely on this call. Tauri uses its own notification plugin.
-    const isTauriRuntime = typeof window !== 'undefined' && '__TAURI__' in window
-    if (!isTauriRuntime && 'Notification' in window && Notification.permission === 'default') {
+    if ('Notification' in window && Notification.permission === 'default') {
       await Notification.requestPermission()
     }
-    return !isTauriRuntime && 'Notification' in window && Notification.permission === 'granted'
+    return 'Notification' in window && Notification.permission === 'granted'
   }
 
   // BUG-1178: Setup Service Worker message listener with proper initialization

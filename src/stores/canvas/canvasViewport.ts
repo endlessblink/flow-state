@@ -1,7 +1,5 @@
 import { ref } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-// TASK-1215: Tauri dual-write for viewport persistence
-import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 export const useCanvasViewport = (initialViewport = { x: 0, y: 0, zoom: 1 }) => {
@@ -18,13 +16,6 @@ export const useCanvasViewport = (initialViewport = { x: 0, y: 0, zoom: 1 }) => 
         }
         viewport.value = { x, y, zoom }
         localStorage.setItem(STORAGE_KEYS.CANVAS_VIEWPORT, JSON.stringify({ x, y, zoom }))
-        // TASK-1215: Tauri dual-write
-        if (isTauriEnv()) {
-            getTauriStore().then(store => {
-                if (!store) return
-                store.set(STORAGE_KEYS.CANVAS_VIEWPORT, { x, y, zoom }).then(() => scheduleTauriSave(STORAGE_KEYS.CANVAS_VIEWPORT))
-            })
-        }
         // TASK-1579: Debounced Supabase write (2s) — single owner of cloud persistence
         if (_viewportSupabaseSaveTimer) clearTimeout(_viewportSupabaseSaveTimer)
         _viewportSupabaseSaveTimer = setTimeout(async () => {

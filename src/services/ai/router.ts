@@ -323,20 +323,12 @@ export class AIRouter {
    */
   private async createOllamaProvider(): Promise<OllamaProvider | null> {
     try {
-      const isTauri = typeof window !== 'undefined' &&
-        ('__TAURI__' in window || '__TAURI_INTERNALS__' in window)
-
       const isProduction = typeof window !== 'undefined' &&
-        !isTauri &&
         !window.location.hostname.includes('localhost') &&
         !window.location.hostname.includes('127.0.0.1')
 
       if (isProduction) {
         this.log('Production domain detected - attempting Ollama detection (requires OLLAMA_ORIGINS)')
-      }
-
-      if (isTauri) {
-        this.log('Tauri environment detected - attempting Ollama detection (TASK-1186)')
       }
 
       // Check environment variable for Ollama URL

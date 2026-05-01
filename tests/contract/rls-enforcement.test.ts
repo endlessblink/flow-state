@@ -250,11 +250,7 @@ describe('TASK-1591: RLS Enforcement (static analysis)', () => {
       f.endsWith('.ts') || f.endsWith('.tsx') || f.endsWith('.vue') || f.endsWith('.js')
     )
 
-    // Allow list: files that legitimately handle the service-role key only
-    // as a type-level field name (for Tauri local startup config reading).
-    const ALLOWED_FILES = new Set([
-      join(SRC, 'composables/useTauriStartup.ts'),
-    ])
+    const ALLOWED_FILES = new Set<string>()
 
     const violations: Array<{ file: string; line: number; text: string }> = []
 
@@ -288,7 +284,7 @@ describe('TASK-1591: RLS Enforcement (static analysis)', () => {
         v => `  ${v.file}:${v.line}\n    ${v.text}`
       ).join('\n')
       expect.fail(
-        `service_role found in frontend source (outside the allowed Tauri startup config type):\n${report}`
+        `service_role found in frontend source:\n${report}`
       )
     }
   })

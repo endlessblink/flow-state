@@ -53,11 +53,6 @@ vi.mock('@/utils/integrity', () => ({
   },
 }))
 
-// Mock isTauri
-vi.mock('@/composables/useTauriStartup', () => ({
-  isTauri: () => false,
-}))
-
 // Mock Stores
 const mockTaskStore = {
   tasks: [] as any[],

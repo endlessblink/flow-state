@@ -81,10 +81,6 @@ vi.mock('@/composables/useWakeLock', () => ({
   }),
 }))
 
-vi.mock('@/composables/useTauriStartup', () => ({
-  isTauri: () => false,
-}))
-
 vi.mock('@/composables/useGamificationHooks', () => ({
   useGamificationHooks: () => ({
     onPomodoroCompleted: vi.fn().mockResolvedValue(undefined),

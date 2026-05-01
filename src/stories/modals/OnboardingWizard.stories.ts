@@ -56,7 +56,7 @@ const meta: Meta = {
 - Keyboard: Enter or Escape to dismiss
 - Persists dismissal in localStorage (\`flowstate-onboarding-v2\`)
 - Backward-compatible with legacy \`flowstate-welcome-seen\` key
-- Replaces the old WelcomeModal`
+- Replaces the old first-run modal`
       }
     }
   }

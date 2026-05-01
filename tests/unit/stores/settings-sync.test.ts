@@ -35,13 +35,6 @@ vi.mock('@/services/auth/supabase', () => ({
   },
 }))
 
-// Stub Tauri env so saveToStorage doesn't try to call Tauri APIs
-vi.mock('@/composables/usePersistentRef', () => ({
-  isTauriEnv: () => false,
-  getTauriStore: vi.fn(),
-  scheduleTauriSave: vi.fn(),
-}))
-
 // ============================================================================
 // Store import — AFTER mocks
 // ============================================================================

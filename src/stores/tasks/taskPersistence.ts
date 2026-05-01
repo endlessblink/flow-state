@@ -1,13 +1,10 @@
 import { ref, type Ref } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 import type { Task } from '@/types/tasks'
 import { cacheTasks, getCachedTasks } from '@/services/offline/readCacheDB'
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats, repairTaskTitles, sanitizeLoadedTasks } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
-// TASK-1215: Tauri dual-write for filter persistence
-import { getTauriStore, isTauriEnv } from '@/composables/usePersistentRef'
 import type { SmartView } from '@/composables/tasks/useTaskFiltering'
 
 const FALLBACK_TASK_TITLE = 'Untitled Task'
@@ -378,11 +375,7 @@ export function useTaskPersistence(
                     // 5s was too narrow — tasks edited 6s ago could be clobbered by recovery reload
                     // if the sync queue hadn't processed them yet (VPS latency can be 20s+).
                     const now = Date.now()
-                    // BUG-1206 FIX (Fix 2): Extend isVeryRecent for Tauri.
-                    // Tauri/WebKitGTK fires aggressive visibility changes that trigger loadFromDatabase()
-                    // more frequently than browsers. 30s is too narrow — align with PENDING_WRITE_TIMEOUT_MS.
-                    const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
-                    const RECENT_THRESHOLD_MS = isTauri ? PENDING_WRITE_TIMEOUT_MS : 30_000
+                    const RECENT_THRESHOLD_MS = 30_000
                     const isVeryRecent = (now - localTime) < RECENT_THRESHOLD_MS
 
                     if (localVer > remoteVer || localTime > remoteTime || isVeryRecent) {
@@ -623,26 +616,7 @@ export function useTaskPersistence(
     const loadPersistedFilters = async () => {
         isLoadingFilters.value = true
         try {
-            const loadedFromLocal = loadFiltersFromLocalStorage()
-
-            // BUG-1219: In Tauri, localStorage can be empty after restart.
-            // Fall back to reading directly from Tauri native store.
-            if (!loadedFromLocal && isTauriEnv()) {
-                try {
-                    const store = await getTauriStore()
-                    if (store) {
-                        const state = await store.get(FILTER_STORAGE_KEY) as PersistedFilterState | null
-                        if (state) {
-                            console.log('[TaskPersistence] Restored filters from Tauri store (localStorage was empty)')
-                            applyFilterState(state)
-                            // Re-populate localStorage so subsequent reads work
-                            localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
-                        }
-                    }
-                } catch (e) {
-                    console.warn('[TaskPersistence] Failed to read filters from Tauri store:', e)
-                }
-            }
+            loadFiltersFromLocalStorage()
         } finally {
             isLoadingFilters.value = false
         }
@@ -666,21 +640,6 @@ export function useTaskPersistence(
                 showFutureRecurring: showFutureRecurring.value
             }
             localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
-
-            // TASK-1215: Also write to Tauri store for reliable persistence
-            // BUG-1219: Flush immediately (no scheduleTauriSave debounce) to prevent
-            // data loss if the app is closed shortly after a filter change
-            if (isTauriEnv()) {
-                const store = await getTauriStore()
-                if (store) {
-                    try {
-                        await store.set(FILTER_STORAGE_KEY, state)
-                        await store.save()
-                    } catch (e) {
-                        console.warn('[TaskPersistence] Failed to write filters to Tauri store:', e)
-                    }
-                }
-            }
         }, 500)
     }
 

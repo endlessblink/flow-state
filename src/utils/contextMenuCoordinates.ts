@@ -3,18 +3,15 @@
  *
  * Simple utility to extract viewport coordinates from mouse/touch events.
  * clientX/clientY are the correct viewport coordinates for positioning
- * context menus in all environments (browser, PWA, Tauri).
- *
- * BUG-1096 FIX: Removed Tauri-specific "correction" that was double-counting
- * the canvas container position by adding targetRect.left + offsetX.
+ * context menus in all supported environments.
  * clientX/clientY are already correct viewport coordinates.
  */
 
 /**
- * Check if running inside Tauri desktop app
+ * Legacy platform helper retained for diagnostics compatibility.
  */
 export function isTauri(): boolean {
-    return typeof window !== 'undefined' && '__TAURI__' in window
+    return false
 }
 
 /**
@@ -36,8 +33,7 @@ function getPlatformString(): string {
 }
 
 /**
- * Check if running on Linux (for Tauri WebKitGTK-specific handling)
- * BUG-1116: Linux Tauri uses WebKitGTK which may have coordinate issues
+ * Legacy platform helper retained for diagnostics compatibility.
  */
 export function isLinuxTauri(): boolean {
     if (!isTauri()) return false
@@ -46,7 +42,7 @@ export function isLinuxTauri(): boolean {
 
 /**
  * Get platform diagnostic info for debugging drag/coordinate issues
- * BUG-1116: Helps diagnose WebKitGTK coordinate mismatches
+ * Helps diagnose coordinate mismatches.
  */
 export function getPlatformDiagnostics(): {
     isTauri: boolean
@@ -77,34 +73,10 @@ export function getPlatformDiagnostics(): {
 }
 
 /**
- * Get scale factor correction for Linux Tauri (WebKitGTK)
- *
- * BUG-1116: On Linux, WebKitGTK may not report correct devicePixelRatio
- * when display scaling is used. This function detects the mismatch and
- * returns a correction factor.
- *
- * Returns 1.0 if no correction needed (non-Tauri, non-Linux, or no mismatch)
+ * Legacy scale correction hook. Chromium/Electron reports viewport coordinates
+ * consistently, so no correction is needed.
  */
 export function getLinuxTauriScaleFactor(): number {
-    if (!isLinuxTauri()) return 1
-
-    const dpr = window.devicePixelRatio || 1
-    const screenRatio = screen.width / window.innerWidth
-
-    // If there's a significant mismatch between reported DPR and actual screen ratio,
-    // WebKitGTK is likely misreporting. Use the screen ratio instead.
-    // Threshold of 0.1 allows for minor floating point differences.
-    if (Math.abs(dpr - screenRatio) > 0.1) {
-        if (import.meta.env.DEV) {
-            console.log('[BUG-1116] Linux Tauri scale factor mismatch detected:', {
-                reportedDPR: dpr,
-                actualScreenRatio: screenRatio,
-                correction: screenRatio / dpr
-            })
-        }
-        return screenRatio / dpr
-    }
-
     return 1
 }
 

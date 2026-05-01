@@ -1,6 +1,4 @@
 import { defineStore } from 'pinia'
-// TASK-1215: Tauri dual-write for settings persistence
-import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
 // TASK-1219: Time block notification types
 import type { TimeBlockNotificationSettings } from '@/types/timeBlockNotifications'
 import { DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS } from '@/types/timeBlockNotifications'
@@ -462,13 +460,6 @@ export const useSettingsStore = defineStore('settings', {
 
         saveToStorage() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(this.$state))
-            // TASK-1215: Tauri dual-write
-            if (isTauriEnv()) {
-                getTauriStore().then(store => {
-                    if (!store) return
-                    store.set(STORAGE_KEY, this.$state).then(() => scheduleTauriSave(STORAGE_KEY))
-                })
-            }
             // FEATURE-1363: Debounced sync to Supabase for push service
             if (settingsSyncTimer) clearTimeout(settingsSyncTimer)
             settingsSyncTimer = setTimeout(() => syncSettingsToSupabase(this.$state), SETTINGS_SYNC_DEBOUNCE)

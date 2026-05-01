@@ -211,10 +211,8 @@ describe('TASK-1593: Build Safety', () => {
   // ---------------------------------------------------------------------------
 
   it('4. package.json has a valid semver version (Electron desktop stack)', () => {
-    // Historical note: this test used to assert the package.json version
-    // matched src-tauri/tauri.conf.json and src-tauri/Cargo.toml. The project
-    // migrated from Tauri to Electron; the src-tauri/ directory is archived
-    // and those files no longer track the active desktop version. Electron
+    // Historical note: package.json is now the active desktop version source.
+    // Electron
     // reads the version directly from package.json (electron-builder.yml uses
     // ${version} templating), so package.json is the single source of truth.
     const pkgVersion: string = JSON.parse(

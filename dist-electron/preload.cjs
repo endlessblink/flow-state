@@ -15,20 +15,20 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     isElectron: true,
     // App info
     getVersion: () => electron_1.ipcRenderer.invoke('app:getVersion'),
-    // Shell operations (replaces @tauri-apps/plugin-shell)
+    // Shell operations
     openExternal: (url) => electron_1.ipcRenderer.invoke('shell:openExternal', url),
-    // Dialog operations (replaces @tauri-apps/plugin-dialog)
+    // Dialog operations
     showSaveDialog: (options) => electron_1.ipcRenderer.invoke('dialog:showSave', options),
     showOpenDialog: (options) => electron_1.ipcRenderer.invoke('dialog:showOpen', options),
-    // File system (replaces @tauri-apps/plugin-fs)
+    // File system
     readFile: (path) => electron_1.ipcRenderer.invoke('fs:readFile', path),
     writeFile: (path, data) => electron_1.ipcRenderer.invoke('fs:writeFile', path, data),
     exists: (path) => electron_1.ipcRenderer.invoke('fs:exists', path),
     mkdir: (path) => electron_1.ipcRenderer.invoke('fs:mkdir', path),
-    // Store (replaces @tauri-apps/plugin-store)
+    // Store
     storeGet: (key) => electron_1.ipcRenderer.invoke('store:get', key),
     storeSet: (key, value) => electron_1.ipcRenderer.invoke('store:set', key, value),
-    // HTTP (replaces @tauri-apps/plugin-http for CORS bypass)
+    // HTTP with CORS bypass
     fetch: (url, options) => electron_1.ipcRenderer.invoke('http:fetch', url, options),
     // OAuth localhost server (for desktop Google sign-in)
     oauthStart: () => electron_1.ipcRenderer.invoke('oauth:start'),

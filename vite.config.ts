@@ -18,13 +18,6 @@ const CACHE_DURATIONS = {
   ONE_YEAR: 60 * 60 * 24 * 365,
 } as const
 
-// Check if running in Tauri context (dev or build)
-// BUG-336: TAURI_DEV is set via beforeDevCommand in tauri.conf.json
-// TAURI_ENV_PLATFORM is set during `tauri build`
-const isTauri =
-  process.env.TAURI_ENV_PLATFORM !== undefined ||
-  process.env.TAURI_DEV !== undefined
-
 // FEATURE-1345: Check if running in Capacitor context
 const isCapacitor = process.env.CAPACITOR_PLATFORM !== undefined
 
@@ -44,22 +37,11 @@ export default defineConfig(({ mode }) => ({
     '__IS_CAPACITOR_BUILD__': isCapacitor,
   },
   plugins: [
-    // TASK-1721: Stub @tauri-apps/* — packages removed, dead code behind isTauri()===false
-    {
-      name: 'tauri-stub',
-      resolveId(id) {
-        if (id.startsWith('@tauri-apps/')) return '\0tauri-stub'
-      },
-      load(id) {
-        if (id === '\0tauri-stub') return 'export default {}; export const invoke = () => {}; export const getCurrentWindow = () => ({}); export const homeDir = () => ""; export const attachConsole = () => {}; export const open = () => {}; export const load = () => ({}); export const check = () => ({}); export const relaunch = () => {}; export const Command = class {}; export const fetch = globalThis.fetch; export const writeTextFile = () => {}; export const mkdir = () => {}; export const exists = () => false;'
-      }
-    },
     vue(),
-    // PWA Plugin - ROAD-004 (disabled for Tauri builds - service workers don't work with tauri:// protocol)
-    // BUG-336: Use `disable` option instead of conditional inclusion to provide proper stub modules
+    // PWA Plugin - ROAD-004
     // TASK-1009: Switched to injectManifest for custom timer notification handlers
     VitePWA({
-      disable: isTauri || isCapacitor, // Provides empty stub modules for virtual:pwa-register imports
+      disable: isCapacitor, // Provides empty stub modules for virtual:pwa-register imports
       strategies: 'injectManifest', // TASK-1009: Use custom SW for notification actions
       srcDir: 'src',
       filename: 'sw.ts',
@@ -174,10 +156,6 @@ export default defineConfig(({ mode }) => ({
             // TipTap editor
             if (id.includes('tiptap') || id.includes('prosemirror')) {
               return 'tiptap'
-            }
-            // Tauri APIs
-            if (id.includes('@tauri-apps')) {
-              return 'tauri'
             }
           }
         }

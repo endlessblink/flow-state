@@ -498,12 +498,8 @@ export function useAppInitialization() {
         }
 
         // TASK-1219 + BUG-1302: Time block progress notifications
-        // BUG-1303: Skip browser Notification.requestPermission() in Tauri — WebKitGTK
-        // can hang indefinitely on this call, blocking the entire init flow.
-        // Tauri uses its own notification plugin, not the Web Notification API.
         try {
-            const isTauriRuntime = typeof window !== 'undefined' && '__TAURI__' in window
-            if (!isTauriRuntime && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+            if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
                 const perm = await Notification.requestPermission()
                 console.log('[TIME-BLOCK] Notification permission:', perm)
             }

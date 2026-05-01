@@ -2,7 +2,6 @@ import { ipcMain, net } from 'electron'
 
 /**
  * CORS-free HTTP fetch via Electron's net module.
- * Replaces @tauri-apps/plugin-http.
  */
 
 interface FetchOptions {

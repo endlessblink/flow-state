@@ -47,31 +47,14 @@ import { useSecurityMonitor as _useSecurityMonitor } from './utils/securityMonit
 // SECURITY: App is now 100% Supabase standard
 
 // Initialize Tauri log plugin early — must run before any other console output in Tauri
-import { initTauriLogger } from './utils/tauriLogger'
-
 // Run pre-check and initialize app
 async function initializeApp() {
   // NOTE: PouchDB migration cleanup removed Jan 2026 - migration complete
   // NOTE: BUG-1533b IndexedDB cleanup removed Mar 2026 - already ran on all clients
 
-  // Pipe console.* to tauri-plugin-log (stdout + log file) when running as desktop app
-  await initTauriLogger()
-
   console.log('🚀 [MAIN] Starting app initialization...')
 
-  // Detect Tauri environment and apply class for CSS optimizations
-  // WebKitGTK on Linux has limited backdrop-filter support, so we need fallbacks
-  // Tauri v2 uses window.isTauri, older versions use __TAURI__ or __TAURI_INTERNALS__
-  const win = window as unknown as Record<string, unknown>
-  const isTauriEnv = ('isTauri' in win && win.isTauri) ||
-    ('__TAURI__' in win) ||
-    ('__TAURI_INTERNALS__' in win)
-
-  if (isTauriEnv) {
-    document.documentElement.classList.add('tauri-app')
-    document.body?.classList.add('tauri-app')
-    console.log('🖥️ [MAIN] Tauri environment detected - applying CSS optimizations')
-  } else if (window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone) {
+  if (window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone) {
     document.documentElement.classList.add('pwa-app')
     document.body?.classList.add('pwa-app')
     console.log('📱 [MAIN] PWA standalone environment detected - applying CSS optimizations')

@@ -8,14 +8,8 @@
       <!-- BUG-1101: Route Error Boundary for dynamic import failures -->
       <RouteErrorBoundary />
 
-      <!-- Tauri Startup Screen (only shows in Tauri mode during initialization) -->
-      <TauriStartupScreen
-        v-if="showStartupScreen"
-        @ready="onStartupReady"
-      />
-
       <!-- BUG-1339: Loading state while data loads (PWA/browser mode only) -->
-      <div v-if="!appReady && !showStartupScreen" class="app-loading">
+      <div v-if="!appReady" class="app-loading">
         <div class="app-loading-spinner" />
       </div>
 
@@ -28,9 +22,9 @@
         <ModalManager ref="modalManager" />
         <FaviconManager />
         <!-- PWA Reload Prompt (Browser/PWA Only — not native apps) -->
-        <ReloadPrompt v-if="!isTauriApp && !isCapacitorApp" />
-        <!-- Desktop Update Notification (Tauri + Electron) -->
-        <TauriUpdateNotification v-if="isTauriApp || isElectronApp" />
+        <ReloadPrompt v-if="!isCapacitorApp && !isElectronApp" />
+        <!-- Desktop Update Notification (Electron) -->
+        <ElectronUpdateNotification v-if="isElectronApp" />
         <!-- FEATURE-1201: Onboarding Wizard (first-time visitors, desktop + mobile) -->
         <OnboardingWizard />
         <!-- TASK-1350: AI Setup Wizard (first-time AI provider setup) -->
@@ -90,8 +84,7 @@ import MobileLayout from '@/mobile/layouts/MobileLayout.vue'
 import ModalManager from '@/layouts/ModalManager.vue'
 import FaviconManager from '@/components/common/FaviconManager.vue'
 import ReloadPrompt from '@/components/common/ReloadPrompt.vue'
-import TauriUpdateNotification from '@/components/common/TauriUpdateNotification.vue'
-import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
+import ElectronUpdateNotification from '@/components/common/ElectronUpdateNotification.vue'
 import BraveBanner from '@/components/ui/BraveBanner.vue'
 import RouteErrorBoundary from '@/components/error/RouteErrorBoundary.vue'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
@@ -106,9 +99,7 @@ import { useMorningRitual } from '@/composables/useMorningRitual'
 import { destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { useMobileDetection } from '@/composables/useMobileDetection'
 import { initializeBraveProtection } from '@/utils/braveProtection'
-import { useTauriDebug } from '@/composables/useTauriDebug'
-import { isTauri as isTauriFn, isCapacitor as isCapacitorFn } from '@/utils/platform'
-import { openExternal } from '@/utils/openExternal'
+import { isCapacitor as isCapacitorFn } from '@/utils/platform'
 import { useRouter } from 'vue-router'
 // FEATURE-1345: Capacitor Android services
 import { initCapacitorStatusBar } from '@/composables/useCapacitorStatusBar'
@@ -128,50 +119,21 @@ const appRouter = useRouter()
 // TASK-1495: Morning Ritual
 const morningRitual = useMorningRitual()
 
-// Startup state - check Tauri/Capacitor AFTER mount to ensure globals are injected
-const startupComplete = ref(false)
-const isTauriApp = ref(false)
+// Startup state - check native wrappers AFTER mount to ensure globals are injected
 const isCapacitorApp = ref(false)
 const isElectronApp = ref(false)
 const initialized = ref(false)
-
-// Only show startup screen in Tauri mode during initialization
-const showStartupScreen = computed(() => initialized.value && isTauriApp.value && !startupComplete.value)
 
 // App is ready when startup is complete OR we're in browser mode
 // BUG-1339: Also require data to be loaded before showing views
 // This prevents blank views on first load due to race between render and async data fetch
 const appReady = computed(() => {
-  const startupOk = !initialized.value || startupComplete.value || !isTauriApp.value
-  return startupOk && isDataReady.value
+  return initialized.value && isDataReady.value
 })
-
-// Handle startup completion
-const onStartupReady = () => {
-  startupComplete.value = true
-}
 
 // Initialize App Logic
 // BUG-1339: Capture isDataReady to gate view rendering until tasks are loaded
 const { isDataReady } = useAppInitialization()
-
-// Intercept external link clicks in Tauri to open in system browser
-const handleExternalLinkClick = (event: MouseEvent) => {
-  if (!isTauriApp.value) return
-  let target = event.target as HTMLElement | null
-  while (target && target.tagName !== 'A') {
-    target = target.parentElement
-  }
-  if (!target) return
-  const href = (target as HTMLAnchorElement).href
-  if (!href) return
-  if (!href.startsWith('http://') && !href.startsWith('https://')) return
-  // Skip same-origin (internal app links) and localhost dev server
-  const url = new URL(href)
-  if (url.origin === window.location.origin) return
-  event.preventDefault()
-  openExternal(href)
-}
 
 // Handle global events that require interaction with MainLayout
 const handleGlobalNewTask = () => {
@@ -186,22 +148,13 @@ const handleRerunAIWizard = () => {
 }
 
 onMounted(async () => {
-  // Check for Tauri/Capacitor AFTER mount - globals should be injected by now
-  isTauriApp.value = isTauriFn()
+  // Check for native wrappers AFTER mount - globals should be injected by now
   isCapacitorApp.value = isCapacitorFn()
   isElectronApp.value = !!(window as any).electronAPI?.isElectron
   initialized.value = true
 
   // Log for debugging
-  console.log('[App] Platform detected:', { tauri: isTauriApp.value, capacitor: isCapacitorApp.value })
-
-  // TASK-1060: Start Tauri memory monitoring for SIGTERM debugging
-  if (isTauriApp.value) {
-    const tauriDebug = useTauriDebug()
-    tauriDebug.startMonitoring()
-    console.log('[App] Tauri memory monitoring started')
-
-  }
+  console.log('[App] Platform detected:', { electron: isElectronApp.value, capacitor: isCapacitorApp.value })
 
   // FEATURE-1345: Initialize Capacitor Android services
   if (isCapacitorApp.value) {
@@ -222,14 +175,12 @@ onMounted(async () => {
   window.addEventListener('global-new-task', handleGlobalNewTask)
   window.addEventListener('global-rerun-ai-wizard', handleRerunAIWizard)
   window.addEventListener('keydown', handleKeydown)
-  document.addEventListener('click', handleExternalLinkClick)
 })
 
 onUnmounted(() => {
   window.removeEventListener('global-new-task', handleGlobalNewTask)
   window.removeEventListener('global-rerun-ai-wizard', handleRerunAIWizard)
   window.removeEventListener('keydown', handleKeydown)
-  document.removeEventListener('click', handleExternalLinkClick)
   destroyGlobalKeyboardShortcuts()
 })
 </script>

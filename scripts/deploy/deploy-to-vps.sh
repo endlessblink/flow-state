@@ -54,7 +54,6 @@ rsync -avz --delete \
     --exclude '.env.*' \
     --exclude '*.tar.gz' \
     --exclude '*.zip' \
-    --exclude 'src-tauri/target' \
     ./ $VPS_TARGET:$DEST_DIR/
 
 # 4. Transfer Environment Configuration

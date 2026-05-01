@@ -25,7 +25,7 @@ const REPORTS_DIR = path.join(__dirname, '..', 'reports');
 const DEPRECATED_KEYWORDS = [
   'pouchdb',           // Removed, now using Supabase
   'couchdb',           // Removed, now using Supabase
-  'electron',          // Removed, using Tauri
+  'tauri',             // Removed, using Electron
   'sqlite',            // Removed, using Supabase Postgres
   'localStorage',      // Mostly deprecated for Supabase
   'indexeddb',         // Deprecated

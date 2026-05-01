@@ -7,7 +7,6 @@ const promises_1 = require("fs/promises");
 const fs_1 = require("fs");
 /**
  * Simple JSON key-value store persisted to disk.
- * Replaces @tauri-apps/plugin-store.
  */
 const storePath = () => (0, path_1.join)(electron_1.app.getPath('userData'), 'store.json');
 let storeData = {};

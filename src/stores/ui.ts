@@ -1,8 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
-// TASK-1215: Tauri dual-write for UI state persistence
-import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
 // TASK-1574: theme and locale are now the single source of truth in settingsStore
 import { useSettingsStore } from '@/stores/settings'
 
@@ -218,13 +216,6 @@ export const useUIStore = defineStore('ui', () => {
     settingsStore.updateSetting('language', languageCode)
     // Keep flowstate-app-locale in sync so i18n/index.ts can read it on next cold boot.
     localStorage.setItem('flowstate-app-locale', languageCode)
-    // TASK-1215: Tauri dual-write for locale
-    if (isTauriEnv()) {
-      getTauriStore().then(store => {
-        if (!store) return
-        store.set('flowstate-app-locale', languageCode).then(() => scheduleTauriSave('flowstate-app-locale'))
-      })
-    }
     persistState()
   }
 
@@ -253,14 +244,6 @@ export const useUIStore = defineStore('ui', () => {
       isDurationSectionExpanded: isDurationSectionExpanded.value
     }
     localStorage.setItem(UI_STATE_STORAGE_KEY, JSON.stringify(state))
-
-    // TASK-1215: Tauri dual-write
-    if (isTauriEnv()) {
-      getTauriStore().then(store => {
-        if (!store) return
-        store.set(UI_STATE_STORAGE_KEY, state).then(() => scheduleTauriSave(UI_STATE_STORAGE_KEY))
-      })
-    }
   }
 
   const loadState = () => {

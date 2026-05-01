@@ -254,7 +254,6 @@ const routeNameToTitle = computed(() => ({
   'quick-sort': t('views.quick_sort'),
   'focus': t('views.focus'),
   'today': t('smart_views.today'),
-  'calendar-test': 'Calendar Test',
   'keyboard-test': 'Keyboard Test',
   'yjs-test': 'YJS Test',
   'design-system': 'Design System',

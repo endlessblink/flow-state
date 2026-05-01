@@ -233,7 +233,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             }
         })
 
-        if (import.meta.env.DEV || (typeof window !== 'undefined' && (window as any).__TAURI__)) {
+        if (import.meta.env.DEV) {
             const uniqueCount = new Set(filtered.map(t => t.id)).size
             if (filtered.length !== uniqueCount) {
                 console.error(`[INBOX-BUG] baseInboxTasks has duplicates: ${filtered.length} total, ${uniqueCount} unique, context=${props.context}`)

@@ -10,8 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
 // ---------------------------------------------------------------------------
-// Reset platform cache between tests so isTauri() / isCapacitor() can be
-// forced to different values in each test.
+// Reset platform cache between tests so platform state can be forced per test.
 // ---------------------------------------------------------------------------
 import { _resetPlatformCache } from '@/utils/platform'
 
@@ -31,34 +30,8 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('deliverNotification — platform routing', () => {
-  it('1: TASK-1718: Tauri notify-send path is dead (isTauri() deprecated), falls through to Browser API', async () => {
-    // Even with Tauri globals set, isTauri() returns false after Electron migration
-    Object.defineProperty(window, '__TAURI_INTERNALS__', { value: {}, configurable: true })
-    _resetPlatformCache()
-
-    Object.defineProperty(navigator, 'platform', { value: 'Linux x86_64', configurable: true })
-
-    // Mock Browser Notification API with granted permission
-    const notifMock = vi.fn()
-    Object.defineProperty(window, 'Notification', {
-      value: Object.assign(notifMock, { permission: 'granted' }),
-      configurable: true,
-      writable: true,
-    })
-
-    const { deliverNotification } = await import('@/utils/notificationDelivery')
-    const result = await deliverNotification({ title: 'Test', body: 'Body' })
-    // Falls through to Browser API since isTauri() is always false
-    expect(result).toBe(true)
-    expect(notifMock).toHaveBeenCalled()
-
-    delete (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
-  })
-
   it('2: Browser / PWA → uses Browser Notification API when permission granted', async () => {
-    // Ensure non-Tauri, non-Capacitor environment
     _resetPlatformCache()
-    delete (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
 
     const notifMock = vi.fn()
     Object.defineProperty(window, 'Notification', {
@@ -124,33 +97,6 @@ describe('deliverNotification — platform routing', () => {
     delete (window as { Capacitor?: unknown }).Capacitor
   })
 
-  it('5: notify-send failure falls through to Browser Notification API', async () => {
-    Object.defineProperty(window, '__TAURI_INTERNALS__', { value: {}, configurable: true })
-    _resetPlatformCache()
-    Object.defineProperty(navigator, 'platform', { value: 'Linux x86_64', configurable: true })
-
-    vi.doMock('@tauri-apps/plugin-shell', () => ({
-      Command: {
-        create: vi.fn().mockReturnValue({
-          execute: vi.fn().mockResolvedValue({ code: 1, stderr: 'not found' })
-        })
-      }
-    }))
-
-    const notifMock = vi.fn()
-    Object.defineProperty(window, 'Notification', {
-      value: Object.assign(notifMock, { permission: 'granted' }),
-      configurable: true,
-      writable: true
-    })
-
-    const { deliverNotification } = await import('@/utils/notificationDelivery')
-    await deliverNotification({ title: 'Fallback', body: 'test' })
-    expect(notifMock).toHaveBeenCalled()
-
-    vi.doUnmock('@tauri-apps/plugin-shell')
-    delete (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
-  })
 })
 
 // ---------------------------------------------------------------------------
@@ -211,7 +157,6 @@ describe('Notification permission handling', () => {
 
     const { deliverNotification } = await import('@/utils/notificationDelivery')
     _resetPlatformCache()
-    delete (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
 
     await deliverNotification({ title: 'Granted', body: 'test' })
     expect(fired).toHaveBeenCalled()
@@ -240,27 +185,10 @@ describe('Notification permission handling', () => {
     global.Notification = NotifMock as unknown as typeof Notification
 
     _resetPlatformCache()
-    delete (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
 
     const { deliverNotification } = await import('@/utils/notificationDelivery')
     await deliverNotification({ title: 'Default', body: 'test' })
     expect(requestMock).toHaveBeenCalled()
-  })
-
-  it('14: BUG-1303 — Tauri skips requestPermission (WebKitGTK hangs)', () => {
-    // Code-level check: deliverViaBrowserAPI skips requestPermission when isTauri()
-    const fs = require('fs')
-    const path = require('path')
-    const deliveryPath = path.resolve(
-      __dirname,
-      '../../../src/utils/notificationDelivery.ts'
-    )
-    const source = fs.readFileSync(deliveryPath, 'utf-8')
-    // The guard must exist: skip requestPermission when in Tauri
-    expect(source).toContain('isTauri()')
-    expect(source).toContain('requestPermission')
-    // And the skip pattern (return false after the isTauri check)
-    expect(source).toContain('Skipping permission request in Tauri')
   })
 
   it('15: Notification API not available in environment — returns false gracefully', async () => {
@@ -270,8 +198,6 @@ describe('Notification permission handling', () => {
     Object.defineProperty(window, 'Notification', { value: undefined, configurable: true, writable: true })
 
     _resetPlatformCache()
-    delete (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
-
     const { deliverNotification } = await import('@/utils/notificationDelivery')
     const result = await deliverNotification({ title: 'NoAPI', body: 'test' })
     expect(result).toBe(false)

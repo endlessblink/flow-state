@@ -14,7 +14,7 @@ const { isSubscribed, subscribe, canUsePush } = usePushSubscription()
 const timeBlockSettings = computed(() => settingsStore.timeBlockNotifications)
 const pushSettings = computed(() => settingsStore.pushNotifications)
 
-const isTauri = ref(!!(window as Record<string, unknown>).electronAPI)
+const isElectron = ref(!!(window as Record<string, unknown>).electronAPI)
 
 // Push notification settings helpers
 function updatePushMasterToggle(val: boolean) {
@@ -182,7 +182,7 @@ const categories = [
 ]
 
 const permissionDenied = computed(() => {
-  if (!canUsePush.value || isTauri.value) return false
+  if (!canUsePush.value || isElectron.value) return false
   return Notification.permission === 'denied'
 })
 
@@ -204,7 +204,7 @@ async function handleSubscribe() {
 
       <!-- Status Chip -->
       <div v-if="pushSettings.enabled" class="push-status">
-        <div v-if="isTauri" class="status-info-note">
+        <div v-if="isElectron" class="status-info-note">
           <span class="info-icon">ℹ️</span>
           <p>Push notifications are not available in the desktop app. OS notifications are used instead.</p>
         </div>
@@ -268,7 +268,7 @@ async function handleSubscribe() {
                 <input
                   type="checkbox"
                   :checked="pushSettings.categories[category.key].webPush"
-                  :disabled="isTauri"
+                  :disabled="isElectron"
                   @change="updateCategoryChannel(category.key, 'webPush', ($event.target as HTMLInputElement).checked)"
                 >
                 <span class="checkbox-custom" />

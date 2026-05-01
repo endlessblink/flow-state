@@ -1,12 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { isTauri as isTauriRuntime } from '@/utils/platform'
 
 // These will be provided by your Supabase project settings
 // For now, we'll use empty strings or env vars if available
 // The app should handle missing config gracefully (Guest Mode)
-// BUG-339: Detect if running in Tauri context
-const isTauri = isTauriRuntime()
-
 // FEATURE-1345: Detect Capacitor runtime (Android/iOS native app)
 const isCapacitorRuntime = typeof window !== 'undefined' &&
   !!window.Capacitor?.isNativePlatform?.()
@@ -15,9 +11,8 @@ const isCapacitorRuntime = typeof window !== 'undefined' &&
 // Detect Electron runtime via the IPC bridge injected by the preload script.
 const isElectronRuntime = typeof window !== 'undefined' && !!(window as any).electronAPI?.isElectron
 
-// FIX-MOBILE-PWA & TAURI COMPATIBILITY:
+// FIX-MOBILE-PWA compatibility:
 // - Browser/PWA: Use relative path '/supabase' (from .env) to work via Tunnel/Caddy
-// - Tauri: Must use full URL 'http://127.0.0.1:54321' because relative paths fail in WebView
 const envUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
@@ -28,12 +23,6 @@ function resolveSupabaseUrl(): string {
     if (!envUrl) {
         console.warn('[Supabase] No VITE_SUPABASE_URL configured — running in Guest Mode')
         return ''
-    }
-
-    // Tauri: Use env var directly (must be a full URL)
-    if (isTauri) {
-        if (import.meta.env.DEV) console.log('[Supabase] Tauri →', envUrl)
-        return envUrl
     }
 
     // Electron: Use env var directly (file:// can't resolve relative paths)
@@ -93,7 +82,7 @@ let _pendingOAuthTokens: { access_token: string; refresh_token: string } | null 
 // TASK-1283: Capture Google provider tokens for Calendar API access
 let _pendingProviderTokens: { provider_token: string; provider_refresh_token?: string } | null = null
 
-if (typeof window !== 'undefined' && !isTauri && !isElectronRuntime && !isCapacitorRuntime) {
+if (typeof window !== 'undefined' && !isElectronRuntime && !isCapacitorRuntime) {
     const hash = window.location.hash
     if (hash && (hash.includes('access_token=') || hash.includes('error='))) {
         // Handle both #/access_token=... (Vue Router prefix) and #access_token=... (normal)
@@ -173,7 +162,7 @@ try {
             // For web/PWA with PKCE: detectSessionInUrl MUST be true so Supabase picks up ?code=xxx
             // from the query string and exchanges it for tokens (including provider_refresh_token).
             // Legacy: if _pendingOAuthTokens is set (old implicit flow hash), disable to avoid conflict.
-            detectSessionInUrl: !isTauri && !isElectronRuntime && !isCapacitorRuntime && !_pendingOAuthTokens,
+            detectSessionInUrl: !isElectronRuntime && !isCapacitorRuntime && !_pendingOAuthTokens,
             // BUG-339: Use localStorage (reliable in Tauri 2.x, not reliable in Electron file://)
             // Electron uses disk-backed IPC store instead (see electronStorage adapter above).
             // Combined with proactive token refresh in auth.ts for session persistence.

@@ -1,91 +1,33 @@
 /**
- * Tauri HTTP Utility
- * TASK-1186: Provides CORS-free HTTP requests in Tauri desktop environment
- *
- * In Tauri, the WebView has the same CORS restrictions as a browser.
- * For local services like Ollama (localhost:11434), we need to use
- * Tauri's plugin-http which bypasses CORS from the Rust backend.
+ * Legacy HTTP utility retained for existing imports.
  *
  * Usage:
  * ```typescript
  * import { tauriFetch, isTauriEnvironment } from './utils/tauriHttp'
  *
- * // Automatically uses Tauri HTTP in desktop, browser fetch in web
+ * // Uses browser fetch in all supported runtimes.
  * const response = await tauriFetch('http://localhost:11434/api/tags')
  * ```
  */
 
-// Type for Tauri HTTP fetch function
-type TauriFetchFn = (
-  url: string | URL | Request,
-  options?: RequestInit & { connectTimeout?: number }
-) => Promise<Response>
-
-// Cache the Tauri fetch function to avoid repeated dynamic imports
-let cachedTauriFetch: TauriFetchFn | null = null
-let tauriCheckDone = false
-let isTauri = false
-
-/**
- * Check if running in Tauri environment.
- * Cached after first check for performance.
- */
 export function isTauriEnvironment(): boolean {
-  if (tauriCheckDone) {
-    return isTauri
-  }
-
-  isTauri = typeof window !== 'undefined' &&
-    ('__TAURI__' in window || '__TAURI_INTERNALS__' in window)
-
-  tauriCheckDone = true
-  return isTauri
-}
-
-/**
- * Get the Tauri fetch function, with lazy loading.
- * Returns null if not in Tauri environment.
- */
-async function getTauriFetch(): Promise<TauriFetchFn | null> {
-  if (!isTauriEnvironment()) {
-    return null
-  }
-
-  if (cachedTauriFetch) {
-    return cachedTauriFetch
-  }
-
-  try {
-    // Dynamic import to avoid bundling Tauri in web builds
-    const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http')
-    cachedTauriFetch = tauriFetch as TauriFetchFn
-    return cachedTauriFetch
-  } catch (error) {
-    console.warn('[tauriHttp] Failed to load Tauri HTTP plugin:', error)
-    return null
-  }
+  return false
 }
 
 /**
  * Extended fetch options for Tauri HTTP
  */
 export interface TauriFetchOptions extends RequestInit {
-  /** Connection timeout in seconds (Tauri only) */
+  /** Legacy option, ignored in supported runtimes. */
   connectTimeout?: number
-  /** Force browser fetch even in Tauri (for testing) */
+  /** Legacy option, ignored in supported runtimes. */
   forceBrowserFetch?: boolean
 }
 
 /**
  * Fetch with automatic Tauri/browser selection.
  *
- * In Tauri environment:
- * - Uses @tauri-apps/plugin-http for CORS-free requests
- * - Supports additional options like connectTimeout
- *
- * In browser environment:
- * - Uses standard fetch API
- * - Tauri-specific options are ignored
+ * Uses standard fetch API; legacy options are ignored.
  *
  * @param url - URL to fetch
  * @param options - Fetch options (extends RequestInit)
@@ -95,32 +37,7 @@ export async function tauriFetch(
   url: string | URL | Request,
   options: TauriFetchOptions = {}
 ): Promise<Response> {
-  const { forceBrowserFetch, connectTimeout, ...fetchOptions } = options
-
-  // Use browser fetch if forced or not in Tauri
-  if (forceBrowserFetch || !isTauriEnvironment()) {
-    return fetch(url, fetchOptions)
-  }
-
-  // Try Tauri fetch
-  const tauriFetchFn = await getTauriFetch()
-
-  if (tauriFetchFn) {
-    try {
-      // Tauri fetch with optional connect timeout
-      const tauriOptions = {
-        ...fetchOptions,
-        ...(connectTimeout !== undefined ? { connectTimeout } : {})
-      }
-      return await tauriFetchFn(url, tauriOptions)
-    } catch (error) {
-      // Log and fall back to browser fetch
-      console.warn('[tauriHttp] Tauri fetch failed, falling back to browser:', error)
-      return fetch(url, fetchOptions)
-    }
-  }
-
-  // Fallback to browser fetch if Tauri HTTP not available
+  const { forceBrowserFetch: _forceBrowserFetch, connectTimeout: _connectTimeout, ...fetchOptions } = options
   return fetch(url, fetchOptions)
 }
 

@@ -49,12 +49,6 @@ const router = createRouter({
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
-      path: '/calendar-test',
-      name: 'calendar-test',
-      component: () => import('@/views/CalendarViewVueCal.vue'),
-      meta: { requiresAuth: false } // Temporarily disabled for development
-    },
-    {
       path: '/design-system',
       name: 'design-system',
       beforeEnter() {
@@ -142,12 +136,14 @@ const router = createRouter({
       path: '/ai-chat',
       redirect: '/ai'
     },
-    {
-      path: '/performance',
-      name: 'performance',
-      component: () => import('@/views/PerformanceView.vue'),
-      meta: { requiresAdmin: true }
-    },
+    ...(import.meta.env.DEV ? [
+      {
+        path: '/performance',
+        name: 'performance',
+        component: () => import('@/views/PerformanceView.vue'),
+        meta: { requiresAdmin: true }
+      }
+    ] : []),
     {
       path: '/invite/:token',
       name: 'invite-accept',

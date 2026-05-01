@@ -5,7 +5,6 @@ import { existsSync } from 'fs'
 
 /**
  * Simple JSON key-value store persisted to disk.
- * Replaces @tauri-apps/plugin-store.
  */
 
 const storePath = () => join(app.getPath('userData'), 'store.json')

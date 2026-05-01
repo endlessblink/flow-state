@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { usePersistentRef, getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
+import { usePersistentRef } from '@/composables/usePersistentRef'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 export const useCanvasUiStore = defineStore('canvasUi', () => {
@@ -35,7 +35,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
 
     // Group display state
     const activeGroupId = ref<string | null>(null)
-    // TASK-1215: Persist canvas preferences across restarts via Tauri store + localStorage
+    // Persist canvas preferences across restarts via localStorage.
     const showGroupGuides = usePersistentRef<boolean>('flowstate:canvas-group-guides', true)
     const snapToGroups = usePersistentRef<boolean>('flowstate:canvas-snap-groups', true)
 
@@ -94,7 +94,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         // syncTrigger.value++ // REMOVED - no longer allowed
     }
 
-    // Node display preferences (TASK-1215: Persist across restarts via Tauri store + localStorage)
+    // Node display preferences.
     const showPriorityIndicator = usePersistentRef<boolean>('flowstate:canvas-show-priority', true)
     const showStatusBadge = usePersistentRef<boolean>('flowstate:canvas-show-status', true)
     const showDurationBadge = usePersistentRef<boolean>('flowstate:canvas-show-duration', true)
@@ -115,13 +115,6 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         viewportInitializedAt.value = value ? Date.now() : null
         const fitData = { value, timestamp: Date.now() }
         localStorage.setItem(STORAGE_KEYS.CANVAS_HAS_INITIAL_FIT, JSON.stringify(fitData))
-        // TASK-1215: Tauri dual-write
-        if (isTauriEnv()) {
-            getTauriStore().then(store => {
-                if (!store) return
-                store.set(STORAGE_KEYS.CANVAS_HAS_INITIAL_FIT, fitData).then(() => scheduleTauriSave(STORAGE_KEYS.CANVAS_HAS_INITIAL_FIT))
-            })
-        }
     }
 
     // Reset hasInitialFit (for testing or when user requests re-center)

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { storeToRefs } from 'pinia'
+import { ref, onMounted } from 'vue'
 import {
   Database,
   Download,
@@ -11,18 +10,13 @@ import {
   Clock,
   History,
   CloudLightning,
-  RefreshCw,
-  Cloud,
-  HardDrive
+  RefreshCw
 } from 'lucide-vue-next'
 import useBackupSystem from '@/composables/useBackupSystem'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import SettingsOptionPicker from '../SettingsOptionPicker.vue'
-import { isTauri, getTauriMode, setTauriMode } from '@/composables/useTauriStartup'
-import { EXTERNAL_URLS } from '@/config/urls'
 import { useTaskStore } from '@/stores/tasks'
-import { useAuthStore } from '@/stores/auth'
 import { clearAll as clearAllOperations } from '@/services/offline/writeQueueDB'
 
 const {
@@ -46,68 +40,11 @@ const showValidation = ref(false)
 const isScanningShadow = ref(false)
 const goldenRotation = ref<unknown[]>([])
 
-// Tauri mode state (only shown in Tauri desktop app)
-const showTauriMode = computed(() => isTauri())
-const currentTauriMode = ref<'cloud' | 'local'>(getTauriMode())
-const authStore = useAuthStore()
-const { isDev } = storeToRefs(authStore)
-
-type LocalBackupPolicy = {
-  intervalMinutes: number
-  sqlKeepBackups: number
-  shadowDbBackupEvery: number
-  shadowDbKeepBackups: number
-  shadowDbBackupMinIntervalMinutes: number
-  envLocalPath: string
-}
-
-// The Rust command edits repo-local .env.local, so this control is only valid
-// when running the Tauri app from the dev checkout.
-const showLocalBackupPolicy = computed(() => showTauriMode.value && isDev.value && import.meta.env.DEV)
-const isLoadingLocalBackupPolicy = ref(false)
-const isSavingLocalBackupPolicy = ref(false)
-const localBackupPolicy = ref<LocalBackupPolicy | null>(null)
-const localBackupPolicyError = ref<string | null>(null)
-const localBackupPolicyStatus = ref<string | null>(null)
-
 const backupIntervals = [
   { value: 60000, label: '1 min' },
   { value: 300000, label: '5 min' },
   { value: 900000, label: '15 min' },
   { value: 3600000, label: '1 hour' }
-]
-
-const daemonIntervalOptions = [
-  { value: 15, label: '15 min' },
-  { value: 30, label: '30 min' },
-  { value: 60, label: '1 hour' },
-  { value: 180, label: '3 hours' }
-]
-
-const sqlRetentionOptions = [
-  { value: 5, label: '5' },
-  { value: 10, label: '10' },
-  { value: 20, label: '20' },
-  { value: 50, label: '50' }
-]
-
-const shadowBackupEveryOptions = [
-  { value: 6, label: 'Every 6' },
-  { value: 12, label: 'Every 12' },
-  { value: 24, label: 'Every 24' }
-]
-
-const shadowCopyRetentionOptions = [
-  { value: 3, label: '3' },
-  { value: 5, label: '5' },
-  { value: 10, label: '10' }
-]
-
-const shadowCopyMinIntervalOptions = [
-  { value: 60, label: '1 hour' },
-  { value: 180, label: '3 hours' },
-  { value: 360, label: '6 hours' },
-  { value: 720, label: '12 hours' }
 ]
 
 const historySizes = [
@@ -116,64 +53,6 @@ const historySizes = [
   { value: 25, label: '25' },
   { value: 50, label: '50' }
 ]
-
-const handleModeChange = (mode: 'cloud' | 'local') => {
-  currentTauriMode.value = mode
-  setTauriMode(mode)
-
-  // Warn user they need to restart the app
-  alert(`Mode changed to ${mode === 'cloud' ? 'Cloud' : 'Local'}. Please restart the app for changes to take effect.`)
-}
-
-const updateLocalBackupPolicy = (key: keyof LocalBackupPolicy, value: number | string) => {
-  if (!localBackupPolicy.value) return
-  localBackupPolicy.value = {
-    ...localBackupPolicy.value,
-    [key]: value
-  } as LocalBackupPolicy
-}
-
-const loadLocalBackupPolicy = async () => {
-  if (!showLocalBackupPolicy.value) return
-
-  isLoadingLocalBackupPolicy.value = true
-  localBackupPolicyError.value = null
-
-  try {
-    const { invoke } = await import('@tauri-apps/api/core')
-    localBackupPolicy.value = await invoke<LocalBackupPolicy>('get_local_backup_policy')
-  } catch (e) {
-    localBackupPolicyError.value = e instanceof Error ? e.message : 'Could not load local backup policy'
-  } finally {
-    isLoadingLocalBackupPolicy.value = false
-  }
-}
-
-const saveLocalBackupPolicy = async () => {
-  if (!localBackupPolicy.value) return
-
-  isSavingLocalBackupPolicy.value = true
-  localBackupPolicyError.value = null
-  localBackupPolicyStatus.value = null
-
-  try {
-    const { invoke } = await import('@tauri-apps/api/core')
-    localBackupPolicy.value = await invoke<LocalBackupPolicy>('set_local_backup_policy', {
-      policy: {
-        intervalMinutes: localBackupPolicy.value.intervalMinutes,
-        sqlKeepBackups: localBackupPolicy.value.sqlKeepBackups,
-        shadowDbBackupEvery: localBackupPolicy.value.shadowDbBackupEvery,
-        shadowDbKeepBackups: localBackupPolicy.value.shadowDbKeepBackups,
-        shadowDbBackupMinIntervalMinutes: localBackupPolicy.value.shadowDbBackupMinIntervalMinutes
-      }
-    })
-    localBackupPolicyStatus.value = 'Saved to .env.local. Restart the dev stack to apply the new policy.'
-  } catch (e) {
-    localBackupPolicyError.value = e instanceof Error ? e.message : 'Could not save local backup policy'
-  } finally {
-    isSavingLocalBackupPolicy.value = false
-  }
-}
 
 const handleCreateBackup = async () => {
   await createBackup('manual')
@@ -273,76 +152,11 @@ onMounted(async () => {
     validationInfo.value = await getGoldenBackupValidation()
     goldenRotation.value = getGoldenBackups()
     checkShadowHub()
-    await loadLocalBackupPolicy()
 })
 </script>
 
 <template>
   <div class="storage-settings-tab">
-    <!-- Tauri Desktop Mode Selector (only shown in desktop app) -->
-    <SettingsSection v-if="showTauriMode" title="💻 Desktop Connection Mode">
-      <div class="mode-selector-panel">
-        <p class="mode-description">
-          Choose how your desktop app connects to your data
-        </p>
-
-        <div class="mode-options">
-          <button
-            class="mode-option"
-            :class="{ active: currentTauriMode === 'cloud' }"
-            @click="handleModeChange('cloud')"
-          >
-            <div class="mode-option-icon">
-              <Cloud :size="24" />
-            </div>
-            <div class="mode-option-content">
-              <h4 class="mode-option-title">
-                Cloud Mode
-                <span v-if="currentTauriMode === 'cloud'" class="mode-badge">Active</span>
-              </h4>
-              <p class="mode-option-desc">
-                Connect to {{ EXTERNAL_URLS.PRODUCTION_SITE }} (VPS)
-              </p>
-              <ul class="mode-option-features">
-                <li>✓ Sync across devices</li>
-                <li>✓ No local setup required</li>
-                <li>✓ Automatic backups</li>
-              </ul>
-            </div>
-          </button>
-
-          <button
-            class="mode-option"
-            :class="{ active: currentTauriMode === 'local' }"
-            @click="handleModeChange('local')"
-          >
-            <div class="mode-option-icon">
-              <HardDrive :size="24" />
-            </div>
-            <div class="mode-option-content">
-              <h4 class="mode-option-title">
-                Local Mode
-                <span v-if="currentTauriMode === 'local'" class="mode-badge">Active</span>
-              </h4>
-              <p class="mode-option-desc">
-                Run your own database (Docker)
-              </p>
-              <ul class="mode-option-features">
-                <li>✓ Full data control</li>
-                <li>✓ Works offline</li>
-                <li>⚠️ Requires Docker setup</li>
-              </ul>
-            </div>
-          </button>
-        </div>
-
-        <p class="mode-help-text">
-          <AlertTriangle :size="14" />
-          Changing modes requires an app restart. Your data will not be lost.
-        </p>
-      </div>
-    </SettingsSection>
-
     <SettingsSection title="🛡️ Backup Strategy">
       <SettingsToggle
         label="Auto-Backup Enabled"
@@ -373,86 +187,6 @@ onMounted(async () => {
         :value="config.filterMockTasks"
         @update="val => config.filterMockTasks = val"
       />
-    </SettingsSection>
-
-    <SettingsSection v-if="showLocalBackupPolicy" title="🧪 Local Backup Policy">
-      <div class="local-policy-panel">
-        <p class="local-policy-description">
-          Developer-only controls for the Node backup daemon that writes local disk copies in Tauri/dev mode.
-        </p>
-
-        <p v-if="localBackupPolicy?.envLocalPath" class="local-policy-path">
-          Writing to {{ localBackupPolicy.envLocalPath }}
-        </p>
-
-        <p v-if="isLoadingLocalBackupPolicy" class="local-policy-muted">
-          Loading current policy...
-        </p>
-
-        <template v-else-if="localBackupPolicy">
-          <SettingsOptionPicker
-            label="Daemon Interval"
-            description="How often the dev backup daemon runs."
-            :options="daemonIntervalOptions"
-            :value="localBackupPolicy.intervalMinutes"
-            @update="val => updateLocalBackupPolicy('intervalMinutes', Number(val))"
-          />
-
-          <SettingsOptionPicker
-            label="SQL Dump Retention"
-            description="How many SQL dump files to keep."
-            :options="sqlRetentionOptions"
-            :value="localBackupPolicy.sqlKeepBackups"
-            @update="val => updateLocalBackupPolicy('sqlKeepBackups', Number(val))"
-          />
-
-          <SettingsOptionPicker
-            label="Shadow Copy Check"
-            description="Only consider a full SQLite copy after this many snapshots."
-            :options="shadowBackupEveryOptions"
-            :value="localBackupPolicy.shadowDbBackupEvery"
-            @update="val => updateLocalBackupPolicy('shadowDbBackupEvery', Number(val))"
-          />
-
-          <SettingsOptionPicker
-            label="Shadow Copy Retention"
-            description="How many full shadow DB copy files to keep."
-            :options="shadowCopyRetentionOptions"
-            :value="localBackupPolicy.shadowDbKeepBackups"
-            @update="val => updateLocalBackupPolicy('shadowDbKeepBackups', Number(val))"
-          />
-
-          <SettingsOptionPicker
-            label="Shadow Copy Minimum Gap"
-            description="Minimum time between full SQLite copy files."
-            :options="shadowCopyMinIntervalOptions"
-            :value="localBackupPolicy.shadowDbBackupMinIntervalMinutes"
-            @update="val => updateLocalBackupPolicy('shadowDbBackupMinIntervalMinutes', Number(val))"
-          />
-
-          <div class="local-policy-actions">
-            <button class="cleanup-btn" :disabled="isSavingLocalBackupPolicy" @click="saveLocalBackupPolicy">
-              <Database :size="16" />
-              {{ isSavingLocalBackupPolicy ? 'Saving...' : 'Save Local Policy' }}
-            </button>
-            <button class="cleanup-btn secondary" :disabled="isLoadingLocalBackupPolicy" @click="loadLocalBackupPolicy">
-              <RefreshCw :size="16" :class="{ spinning: isLoadingLocalBackupPolicy }" />
-              Reload
-            </button>
-          </div>
-
-          <p class="local-policy-muted">
-            Changes apply to the local machine backup daemon after the dev stack restarts.
-          </p>
-        </template>
-
-        <p v-if="localBackupPolicyStatus" class="cleanup-result success">
-          {{ localBackupPolicyStatus }}
-        </p>
-        <p v-if="localBackupPolicyError" class="cleanup-result">
-          {{ localBackupPolicyError }}
-        </p>
-      </div>
     </SettingsSection>
 
     <SettingsSection title="💾 Manual Actions">
@@ -636,149 +370,6 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.local-policy-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.local-policy-description,
-.local-policy-muted,
-.local-policy-path {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.local-policy-path {
-  font-family: var(--font-mono, monospace);
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  word-break: break-all;
-}
-
-.local-policy-actions {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-/* Tauri Mode Selector */
-.mode-selector-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.mode-description {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.mode-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--space-3);
-}
-
-.mode-option {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--glass-bg-soft);
-  border: 2px solid var(--glass-border);
-  border-radius: var(--radius-xl);
-  cursor: pointer;
-  transition: all var(--duration-normal);
-  text-align: start;
-}
-
-.mode-option:hover {
-  border-color: var(--glass-border-strong);
-  background: var(--glass-bg-medium);
-  transform: translateY(-1px);
-}
-
-.mode-option.active {
-  border-color: var(--color-success);
-  background: rgba(var(--color-success-rgb, 16, 185, 129), 0.1);
-}
-
-.mode-option-icon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--glass-bg-medium);
-  border-radius: var(--radius-lg);
-  color: var(--text-primary);
-}
-
-.mode-option.active .mode-option-icon {
-  background: var(--color-success);
-  color: white;
-}
-
-.mode-option-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.mode-option-title {
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.mode-badge {
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  color: var(--color-success);
-  background: rgba(var(--color-success-rgb, 16, 185, 129), 0.2);
-  padding: var(--space-0_5) var(--space-2);
-  border-radius: var(--radius-full);
-}
-
-.mode-option-desc {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.mode-option-features {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.mode-option-features li {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-
-.mode-help-text {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--color-warning);
-  background: rgba(var(--color-warning-rgb, 245, 158, 11), 0.1);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-lg);
-  margin: 0;
 }
 
 .action-grid {

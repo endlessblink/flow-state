@@ -32,8 +32,8 @@ describe('PWA Offline Configuration (regression)', () => {
       expect(value).toBeGreaterThanOrEqual(5 * 1024 * 1024)
     })
 
-    it('disables SW for Tauri and Capacitor builds', () => {
-      expect(viteConfig).toContain('disable: isTauri || isCapacitor')
+    it('disables SW for Capacitor builds', () => {
+      expect(viteConfig).toContain('disable: isCapacitor')
     })
 
     it('disables SW in dev mode (prevents infinite reload loop BUG-1112)', () => {

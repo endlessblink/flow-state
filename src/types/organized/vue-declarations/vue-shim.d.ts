@@ -118,12 +118,6 @@ declare module '@/views/CalendarView.vue' {
   export default component
 }
 
-declare module '@/views/CalendarViewVueCal.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
-  export default component
-}
-
 declare module '@/views/AllTasksView.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, any>

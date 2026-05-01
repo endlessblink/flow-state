@@ -134,48 +134,6 @@ declare global {
   }
 }
 
-// vue-cal module declaration (missing types)
-declare module 'vue-cal' {
-  import { App } from 'vue'
-
-  interface VueCalProps {
-    activeView?: string
-    events?: unknown[]
-    selectable?: boolean
-    hideViewSelector?: boolean
-    hideTitleBar?: boolean
-    hideWeekends?: boolean
-    time?: boolean
-    timeFrom?: number
-    timeTo?: number
-    timeStep?: number
-    timeCellHeight?: number
-    timeFormat?: string
-    twelveHour?: boolean
-    showTimeInCells?: boolean
-    disableDays?: number[]
-    eventsOnMonthView?: boolean
-    minDate?: string | Date
-    maxDate?: string | Date
-    minEventWidth?: number
-    maxEventWidth?: number
-    specialHours?: Record<number, { label: string; class: string }>
-    stickySplitLabels?: boolean
-    splitDays?: number[]
-    watchRealTime?: boolean
-    onEventClick?: (event: unknown, window: unknown) => void
-    onEventCreate?: (event: unknown, deleteEvent: () => void) => void
-    onEventDelete?: (event: unknown) => void
-    onEventDblClick?: (event: unknown, window: unknown) => void
-    onViewChange?: (view: string, window: unknown) => void
-    onCellClick?: (cell: unknown, window: unknown) => void
-    onCellDoubleClick?: (cell: unknown, window: unknown) => void
-  }
-
-  const VueCal: DefineComponent<VueCalProps>
-  export default VueCal
-}
-
 // Vue module declarations - Critical for TypeScript to recognize .vue files
 declare module '*.vue' {
   import type { DefineComponent } from 'vue'
@@ -307,12 +265,6 @@ declare module '@/views/BoardView.vue' {
 }
 
 declare module '@/views/CalendarView.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, unknown>
-  export default component
-}
-
-declare module '@/views/CalendarViewVueCal.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component

@@ -49,12 +49,6 @@ const router = createRouter({
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
-      path: '/calendar-test',
-      name: 'calendar-test',
-      component: () => import('@/views/CalendarViewVueCal.vue'),
-      meta: { requiresAuth: false } // Temporarily disabled for development
-    },
-    {
       path: '/design-system',
       name: 'design-system',
       beforeEnter() {
@@ -96,7 +90,7 @@ const router = createRouter({
     {
       path: '/ai',
       name: 'ai',
-      component: () => import('@/views/AIHubView.vue'),
+      component: () => import('@/views/AIChatView.vue'),
       meta: { requiresAuth: false }
     },
     {

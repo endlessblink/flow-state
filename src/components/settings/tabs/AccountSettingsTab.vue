@@ -6,8 +6,6 @@ import { LogOut, Key, Eye, EyeOff, Check, AlertCircle, Loader2, CheckCircle, Dow
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import { supabase } from '@/services/auth/supabase'
-import { useTauriUpdater } from '@/composables/useTauriUpdater'
-import { isTauri } from '@/composables/useTauriStartup'
 import { useElectronUpdater } from '@/composables/useElectronUpdater'
 import { isElectron } from '@/utils/platform'
 import { useSettingsStore, type ExternalCalendarConfig, type GoogleCalendarConfig } from '@/stores/settings'
@@ -72,10 +70,8 @@ const handleDisconnectGoogle = () => {
 }
 
 // ── About section ──
-const tauriUpdater = useTauriUpdater()
-const electronUpdater = useElectronUpdater()
-const updater = isTauri() ? tauriUpdater : electronUpdater
-const showUpdater = computed(() => isTauri() || isElectron())
+const updater = useElectronUpdater()
+const showUpdater = computed(() => isElectron())
 const currentVersion = __APP_VERSION__
 
 const handleCheckForUpdates = async () => {

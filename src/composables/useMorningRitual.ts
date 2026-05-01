@@ -49,7 +49,7 @@ function formatTime(minutesSinceMidnight: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Overlap detection (ported from TimeBlockPicker.vue pattern)
+// Overlap detection for scheduled morning focus blocks.
 // ---------------------------------------------------------------------------
 
 function blocksOverlap(a: TimeBlock, b: TimeBlock): boolean {

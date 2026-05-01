@@ -10,7 +10,7 @@ const needRefresh = ref(false)
 let updateServiceWorker = () => {}
 
 // Dynamically import PWA register only when available (web builds)
-if (typeof window !== 'undefined' && !('__TAURI__' in window)) {
+if (typeof window !== 'undefined') {
   // @ts-expect-error - Virtual module provided by vite-plugin-pwa
   import('virtual:pwa-register/vue').then(({ useRegisterSW }) => {
     const sw = useRegisterSW()
@@ -21,7 +21,7 @@ if (typeof window !== 'undefined' && !('__TAURI__' in window)) {
     watch(sw.offlineReady, (val) => { offlineReady.value = val })
     watch(sw.needRefresh, (val) => { needRefresh.value = val })
   }).catch(() => {
-    // PWA plugin not available (Tauri build), ignore
+    // PWA plugin not available, ignore
   })
 }
 

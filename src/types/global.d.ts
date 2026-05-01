@@ -55,17 +55,6 @@ declare global {
     // Cross-tab coordination: unique ID per browser tab
     __flowstate_tab_id?: string
 
-    // Dev-only Tauri debug helper (set in useIsTauriDebug when DEV=true)
-    __flowstate_tauri_debug?: {
-      getSummary: () => string
-      exportHistory: () => string
-      getTrend: () => unknown
-    }
-
-    // Tauri runtime markers (injected by Tauri WebView)
-    __TAURI_INTERNALS__?: unknown
-    __TAURI__?: unknown
-
     // Capacitor native platform detection (Ionic/Capacitor apps)
     Capacitor?: {
       isNativePlatform?: () => boolean
@@ -132,48 +121,6 @@ declare global {
       viewport?: { x: number; y: number; zoom: number }
     }
   }
-}
-
-// vue-cal module declaration (missing types)
-declare module 'vue-cal' {
-  import { App } from 'vue'
-
-  interface VueCalProps {
-    activeView?: string
-    events?: unknown[]
-    selectable?: boolean
-    hideViewSelector?: boolean
-    hideTitleBar?: boolean
-    hideWeekends?: boolean
-    time?: boolean
-    timeFrom?: number
-    timeTo?: number
-    timeStep?: number
-    timeCellHeight?: number
-    timeFormat?: string
-    twelveHour?: boolean
-    showTimeInCells?: boolean
-    disableDays?: number[]
-    eventsOnMonthView?: boolean
-    minDate?: string | Date
-    maxDate?: string | Date
-    minEventWidth?: number
-    maxEventWidth?: number
-    specialHours?: Record<number, { label: string; class: string }>
-    stickySplitLabels?: boolean
-    splitDays?: number[]
-    watchRealTime?: boolean
-    onEventClick?: (event: unknown, window: unknown) => void
-    onEventCreate?: (event: unknown, deleteEvent: () => void) => void
-    onEventDelete?: (event: unknown) => void
-    onEventDblClick?: (event: unknown, window: unknown) => void
-    onViewChange?: (view: string, window: unknown) => void
-    onCellClick?: (cell: unknown, window: unknown) => void
-    onCellDoubleClick?: (cell: unknown, window: unknown) => void
-  }
-
-  const VueCal: DefineComponent<VueCalProps>
-  export default VueCal
 }
 
 // Vue module declarations - Critical for TypeScript to recognize .vue files
@@ -307,12 +254,6 @@ declare module '@/views/BoardView.vue' {
 }
 
 declare module '@/views/CalendarView.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, unknown>
-  export default component
-}
-
-declare module '@/views/CalendarViewVueCal.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component

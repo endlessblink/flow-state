@@ -3,7 +3,7 @@
  *
  * Provides auto-update functionality for the Electron desktop app.
  * Uses electron-updater with generic provider pointing to VPS.
- * Mirrors the useTauriUpdater API for drop-in usage in AboutSettingsTab.
+ * Provides the desktop updater API used by settings and update notifications.
  */
 
 import { ref, computed, onMounted } from 'vue'

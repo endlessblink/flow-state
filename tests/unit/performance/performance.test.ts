@@ -468,7 +468,7 @@ describe('Critical path — lazy loading', () => {
     expect(src).toMatch(/import\s*\(\s*['"]@\/views\/BoardView/)
   })
 
-  it('AIHubView or AIChatView is lazily imported in the router', () => {
+  it('AIChatView is lazily imported in the router', () => {
     const src = readSrc(join(SRC_ROOT, 'router/index.ts'))
     const hasLazyAi = /import\s*\(\s*['"]@\/views\/AI/.test(src) ||
       /import\s*\(\s*['"]@\/mobile\/views\/MobileAI/.test(src)

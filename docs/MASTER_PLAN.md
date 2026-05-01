@@ -8,6 +8,22 @@
 
 ## Active Tasks
 
+### TASK-1773: Planning canvas interaction polish (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (opened 2026-05-01)
+
+**Problem**: The mini planning canvas has the core graph interactions now, but the creation flow still feels mechanical: cable-dropped nodes do not immediately enter edit mode, selected nodes lack an obvious local action surface, and messy sessions need a lightweight tidy affordance.
+
+**Planned slices**:
+1. Auto-focus the title field when cable-drop creates a connected subtask.
+2. Add a selected-node floating toolbar for add/edit/delete actions.
+3. Add a mini-canvas Tidy action that cleans up subtask/note spacing.
+4. Add restrained node/edge microinteractions with reduced-motion support.
+
+**Files**: `src/components/mini-canvas/`, `src/composables/mini-canvas/`.
+
+---
+
 ### ~~BUG-1780~~: Canvas group positions reset to canonical on every launch (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-04-22, v1.3.72)

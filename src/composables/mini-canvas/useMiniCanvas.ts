@@ -231,6 +231,7 @@ export function useMiniCanvas(taskId: () => string | null) {
     if (newSubtaskId) {
       addUserEdge(sourceId, newSubtaskId, sourceHandle || handles.sourceHandle, handles.targetHandle)
     }
+    return newSubtaskId
   }
 
   /** Reset edges when mini-canvas closes */

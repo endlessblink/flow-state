@@ -47,9 +47,11 @@
             <template #node-subtaskNode="nodeProps">
               <SubtaskNode
                 :data="nodeProps.data"
+                :auto-focus="nodeProps.data.subtaskId === pendingFocusSubtaskId"
                 @toggle-complete="miniCanvas.toggleSubtaskCompletion"
                 @update-title="miniCanvas.updateSubtaskTitle"
                 @update-description="miniCanvas.updateSubtaskDescription"
+                @auto-focused="pendingFocusSubtaskId = null"
               />
             </template>
 
@@ -151,6 +153,7 @@ const selectedNodeId = ref<string | null>(null)
 const selectedNodeType = ref<string | null>(null)
 const pendingConnectionSource = ref<string | null>(null)
 const pendingConnectionSourceHandle = ref<string | null>(null)
+const pendingFocusSubtaskId = ref<string | null>(null)
 const connectionWasSuccessful = ref(false)
 
 const contextMenuStyle = computed(() => ({
@@ -247,7 +250,7 @@ const handleConnectEnd = (event: MouseEvent | TouchEvent) => {
     if (sourceId && !connectionWasSuccessful.value) {
       const position = getFlowPositionFromEvent(event)
       if (position) {
-        miniCanvas.createConnectedSubtask(sourceId, position, pendingConnectionSourceHandle.value)
+        pendingFocusSubtaskId.value = miniCanvas.createConnectedSubtask(sourceId, position, pendingConnectionSourceHandle.value) || null
       }
     }
 

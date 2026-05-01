@@ -62,13 +62,17 @@ interface Props {
     isCompleted: boolean
     subtaskId: string
   }
+  autoFocus?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  autoFocus: false,
+})
 const emit = defineEmits<{
   'toggle-complete': [subtaskId: string]
   'update-title': [subtaskId: string, title: string]
   'update-description': [subtaskId: string, description: string]
+  'auto-focused': []
 }>()
 
 const titleInput = ref<HTMLTextAreaElement | null>(null)
@@ -93,10 +97,26 @@ const resizeAll = () => {
   })
 }
 
-onMounted(resizeAll)
+const focusTitle = () => {
+  nextTick(() => {
+    const el = titleInput.value
+    if (!el) return
+    el.focus()
+    el.select()
+    emit('auto-focused')
+  })
+}
+
+onMounted(() => {
+  resizeAll()
+  if (props.autoFocus) focusTitle()
+})
 
 watch(() => props.data.title, resizeAll)
 watch(() => props.data.description, resizeAll)
+watch(() => props.autoFocus, (shouldFocus) => {
+  if (shouldFocus) focusTitle()
+})
 watch(() => props.data.title, value => {
   lastSavedTitle.value = value
 })

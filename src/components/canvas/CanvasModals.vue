@@ -83,6 +83,7 @@ import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import type { TaskAttachment } from '@/types/tasks'
+import type { CanvasGroup, CanvasSection } from '@/types/canvas'
 
 interface QuickTaskData {
   title: string
@@ -98,9 +99,9 @@ const emit = defineEmits<{
   (e: 'handleQuickTaskCreate', data: QuickTaskData): void
   (e: 'handleBatchEditApplied'): void
   (e: 'handleSectionSettingsSave', settings: Record<string, unknown>): void
-  (e: 'handleGroupCreated', group: Record<string, unknown>): void
-  (e: 'handleGroupUpdated', group: Record<string, unknown>): void
-  (e: 'handleGroupEditSave', updatedSection: Record<string, unknown>): void
+  (e: 'handleGroupCreated', group: CanvasGroup): void
+  (e: 'handleGroupUpdated', group: CanvasGroup): void
+  (e: 'handleGroupEditSave', updatedSection: Partial<CanvasSection> & { id: string }): void
   (e: 'confirmDeleteGroup'): void
   (e: 'confirmBulkDelete'): void
 }>()

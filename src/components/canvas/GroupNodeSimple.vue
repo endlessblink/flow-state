@@ -99,7 +99,7 @@ import { NPopover, NDatePicker } from 'naive-ui'
 // Define Props
 const props = defineProps<{
   id: string
-  data: unknown
+  data: Record<string, any>
   selected?: boolean
   dragging?: boolean
 }>()

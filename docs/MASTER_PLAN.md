@@ -415,21 +415,22 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 
 ---
 
-### TASK-1768: Persist mini-canvas planning notes for knowledge workflows (📋 PLANNED)
+### ~~TASK-1768~~: Persist mini-canvas planning notes for knowledge workflows (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-02)
 
-**Problem**: `planningNotes` already exist and are a strong fit for second-brain thinking, but persistence is still deferred.
+**Problem**: `planningNotes` already existed and were a strong fit for second-brain thinking, but persistence was deferred — three commented placeholders in `src/utils/supabaseMappers.ts` skipped the field, so notes vanished on reload.
 
-**Goal**: Make mini-canvas planning notes durable so they can support knowledge capture and note clustering.
+**Resolution**: Stored as `planning_notes JSONB DEFAULT '[]'` on the `tasks` table (mirrors the existing `subtasks` jsonb pattern — same offline queue, same realtime sync, same RLS).
 
-**Approach**:
-1. Add database support for planning notes
-2. Wire persistence through Supabase mappers and sync
-3. Ensure note positions and metadata survive reload/sync/offline flows
-4. Reuse mini-canvas as a first knowledge-clustering surface
+1. ✅ New migration `20260502000000_add_planning_notes_to_tasks.sql` (idempotent — column already existed locally; migration locks it in git for production parity).
+2. ✅ Uncommented three lines in `src/utils/supabaseMappers.ts` (row-type field, `toSupabaseTask` write, `fromSupabaseTask` read) and added `PlanningNote` to imports.
+3. ✅ Round-trip verified by new unit test in `tests/unit/data-integrity-crud.test.ts` ("planningNotes JSONB array preserves structure after round-trip"). Contract test allowlist updated in `tests/contract/api-contract.test.ts`.
+4. ⏳ Production migration application — needs explicit user approval before SSH'ing to VPS.
 
-**Files**: `src/types/tasks.ts`, `src/composables/mini-canvas/useMiniCanvas.ts`, `src/composables/mini-canvas/useMiniCanvasActions.ts`, `src/utils/supabaseMappers.ts`
+**Files**: `src/utils/supabaseMappers.ts`, `supabase/migrations/20260502000000_add_planning_notes_to_tasks.sql`, `tests/unit/data-integrity-crud.test.ts`, `tests/contract/api-contract.test.ts`. No client-code changes needed — `useMiniCanvasActions.ts` already wrote `task.planningNotes` through `taskStore.updateTask`.
+
+**Out of scope** (separate tasks): TASK-1767 (AI context from notes), TASK-1769 (backlinks), separate `planning_notes` table for cross-task sharing.
 
 ---
 
@@ -3306,7 +3307,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1765** | **P1** | **📋 Unified search across tasks, notes, and lists** |
 | **TASK-1766** | **P2** | **📋 Promote note or list item into full task flow** |
 | **TASK-1767** | **P2** | **📋 AI can read notes/lists and turn them into useful actions** |
-| **TASK-1768** | **P2** | **📋 Persist mini-canvas planning notes for knowledge workflows** |
+| ~~**TASK-1768**~~ | **P2** | ✅ **Persist mini-canvas planning notes for knowledge workflows** (✅ DONE (2026-05-02)) |
 | **TASK-1769** | **P3** | **📋 Lightweight links/backlinks between notes and tasks** |
 | ~~**TASK-1533**~~ | **P0** | ✅ **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (✅ DONE (2026-04-02)) |
 | ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (✅ DONE (2026-03-17)) |

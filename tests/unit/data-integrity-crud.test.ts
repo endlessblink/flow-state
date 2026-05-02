@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest'
 import { toSupabaseTask, fromSupabaseTask, type SupabaseTask } from '@/utils/supabaseMappers'
 import { createMockTask } from '../factories'
-import type { Task, Subtask } from '@/types/tasks'
+import type { Task, Subtask, PlanningNote } from '@/types/tasks'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -159,6 +159,37 @@ describe('TASK-1587: Data Integrity — mapper round-trip', () => {
     expect(result.subtasks[0].isCompleted).toBe(true)
     expect(result.subtasks[1].title).toBe('Second subtask')
     expect(result.subtasks[1].isCompleted).toBe(false)
+  })
+
+  // TASK-1768: planning_notes (JSONB array) preserve structure
+  it('task planningNotes JSONB array preserves structure after round-trip', () => {
+    const planningNotes: PlanningNote[] = [
+      {
+        id: '44444444-4444-4444-8444-444444444444',
+        title: 'Idea 1',
+        description: 'Some thinking',
+        canvasPosition: { x: 120, y: -40 },
+        createdAt: '2026-05-01T10:00:00.000Z',
+        updatedAt: '2026-05-01T10:05:00.000Z',
+      },
+      {
+        id: '55555555-5555-4555-8555-555555555555',
+        title: 'Idea 2',
+        description: '',
+        imageUrl: 'https://example.com/note.png',
+        canvasPosition: { x: -200, y: 300 },
+        createdAt: '2026-05-01T11:00:00.000Z',
+        updatedAt: '2026-05-01T11:00:00.000Z',
+      },
+    ]
+    const task = createMockTask({ id: VALID_UUID, planningNotes })
+    const result = roundTrip(task)
+
+    expect(result.planningNotes).toHaveLength(2)
+    expect(result.planningNotes![0].title).toBe('Idea 1')
+    expect(result.planningNotes![0].canvasPosition).toEqual({ x: 120, y: -40 })
+    expect(result.planningNotes![1].imageUrl).toBe('https://example.com/note.png')
+    expect(result.planningNotes![1].canvasPosition).toEqual({ x: -200, y: 300 })
   })
 
   // Test 6: tags array preserves order and values

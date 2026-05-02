@@ -44,7 +44,7 @@ const VALID_TASK_COLUMNS = new Set([
   'done_for_now_until', 'is_completion_record', 'is_pinned',
   'workspace_id', 'assigned_to',
   'created_at', 'updated_at',
-  // 'planning_notes', // deferred until DB column is created
+  'planning_notes', // TASK-1768: mini-canvas planning notes (jsonb)
 ])
 
 // --------------------------------------------------------------------------

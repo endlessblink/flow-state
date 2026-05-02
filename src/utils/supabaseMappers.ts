@@ -1,5 +1,5 @@
 
-import { type Task, type Project, type Subtask, type TaskInstance, type TaskRecurrence, type RecurringTaskInstance, type NotificationPreferences, UNCATEGORIZED_PROJECT_ID } from '../types/tasks'
+import { type Task, type Project, type Subtask, type PlanningNote, type TaskInstance, type TaskRecurrence, type RecurringTaskInstance, type NotificationPreferences, UNCATEGORIZED_PROJECT_ID } from '../types/tasks'
 import type { ScheduledNotification } from '../types/recurrence'
 import type { CanvasGroup } from '../types/canvas'
 import type { AppSettings } from '../stores/settings'
@@ -128,7 +128,7 @@ export interface SupabaseTask {
     notification_prefs?: NotificationPreferences | null
     reminders?: unknown[] | null // FEATURE-1363: Custom date/time reminders
     attachments?: unknown[] | null // FEATURE-1414: Image attachments (stored as JSONB)
-    // planning_notes?: unknown[] | null // Mini-canvas: deferred until DB column is created
+    planning_notes?: PlanningNote[] | null // TASK-1768: Mini-canvas free-form planning notes (jsonb)
     recurrence_rule?: Record<string, unknown> | null  // TASK-1403: Simplified recurrence
     recurrence_parent_id?: string | null
     recurrence_count?: number
@@ -542,7 +542,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         notification_prefs: task.notificationPreferences || null,
         reminders: task.reminders || [], // FEATURE-1363: Custom date/time reminders
         attachments: task.attachments || [],
-        // planning_notes: deferred until DB column is created
+        planning_notes: task.planningNotes || [], // TASK-1768
 
         parent_task_id: sanitizedParentTaskId,
 
@@ -631,7 +631,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         notificationPreferences: record.notification_prefs || undefined,
         reminders: (record.reminders as import('../types/notifications').TaskReminder[]) || [],
         attachments: (record.attachments as import('../types/tasks').TaskAttachment[]) || [],
-        // planningNotes: deferred until DB column is created
+        planningNotes: record.planning_notes || [], // TASK-1768
 
         isInInbox: record.is_in_inbox || false,
         order: record.order || 0,

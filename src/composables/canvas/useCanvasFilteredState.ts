@@ -3,9 +3,12 @@ import type { Task } from '@/types/tasks'
 
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 
+// Accept any object exposing the two reactive booleans. Pass the live Pinia
+// taskStore here (not a plain-object getter wrapper) so reads inside the
+// consumer's `computed` track natively via Pinia's Proxy.
 interface TaskStoreSettings {
-    hideCanvasDoneTasks?: boolean
-    hideCanvasOverdueTasks?: boolean
+    hideCanvasDoneTasks: boolean
+    hideCanvasOverdueTasks: boolean
 }
 
 interface CanvasGroup {

@@ -24,6 +24,55 @@
 
 ---
 
+### ~~BUG-1781~~: Canvas "Hide overdue tasks" toggle flipped state without re-filtering visible nodes (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-03, v1.4.10)
+
+**Problem**: Clicking the calendar/Hide-overdue button on the canvas right-side toolbar flipped `taskStore.hideCanvasOverdueTasks` (icon swapped Calendar↔CalendarX correctly) but the canvas didn't visually hide/show overdue task nodes.
+
+**Root cause**: `useCanvasOrchestrator.ts:158-164` wrapped `taskStore` inside a plain object with getters before passing to `useCanvasFilteredState`. The getter wrapper around Pinia refs is a brittle reactivity pattern — Vue's tracking through plain-object getters can break depending on consumer access patterns, and the `...canvasStore` spread immediately above stripped reactivity off everything else.
+
+**Fix**: pass the live Pinia `taskStore` directly to `useCanvasFilteredState`. Native Pinia auto-tracking applies; no plain-object indirection.
+
+**Files**: `src/composables/canvas/useCanvasOrchestrator.ts`, `src/composables/canvas/useCanvasFilteredState.ts`.
+
+---
+
+### ~~BUG-1782~~: Canvas Tidy button silently no-op'd for users without day-of-week groups (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-03, v1.4.10)
+
+**Problem**: Clicking the LayoutGrid/Tidy button on the canvas right-side toolbar did nothing for users whose canvas only had custom-named groups (no Today/Tomorrow/Mon-Sun). `tidyDayGroups()` filtered inputs by `detectPowerKeyword` and bailed early when none matched.
+
+**Fix (user-approved)**: broaden the input collector at `useTidyLayout.ts:75-93` to include every group with a position. Tidy now lays out custom + smart + day groups uniformly in a canonical single row, preserving the user's left-to-right X order and restacking tasks inside each.
+
+**Side effect**: custom groups get resized to canonical day-group width/height (350-700w × 1000h). Documented; user explicitly chose this scope.
+
+**Test contract update**: `tests/unit/canvas/tidy-layout.test.ts` — renamed "ignores custom-named groups" → "includes custom-named groups alongside day groups" with corresponding assertion flip.
+
+**Files**: `src/composables/canvas/useTidyLayout.ts`, `tests/unit/canvas/tidy-layout.test.ts`.
+
+---
+
+### ~~BUG-1783~~: RecurrenceDeleteModal action buttons looked dim / low contrast (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-05-03, v1.4.10)
+
+**Problem**: User reported "Skip this occurrence" + "Stop all future occurrences" buttons in `RecurrenceDeleteModal.vue` looked broken/dim.
+
+**Cause**: prior styling commits (5 in total since the modal was added) progressively reduced background opacity and used fractional-alpha border colours (`rgba(78,205,196,0.8)`) that read as washed-out against the modal's dark surface. The current outlined-only design didn't visually communicate "primary action".
+
+**Fix**: subtle CSS contrast bump in `RecurrenceDeleteModal.vue` scoped style:
+- Border switched from `rgba(*, 0.8)` to full-saturation `var(--brand-primary)` / `var(--color-danger)`.
+- Default background gains a tinted gradient (`linear-gradient(180deg, rgba(*, 0.12), rgba(*, 0.06))`) plus a 1px inset shadow ring so the brand colour reads at a glance.
+- Hover deepens the gradient + adds a coloured drop-shadow halo.
+
+**Why not BaseButton**: BaseButton enforces `white-space: nowrap` which would clip the two-line label/subtitle pattern these action buttons use. Bespoke styling is appropriate for this multi-line-action pattern.
+
+**Files**: `src/components/common/RecurrenceDeleteModal.vue`.
+
+---
+
 ### ~~BUG-1780~~: Canvas group positions reset to canonical on every launch (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-04-22, v1.3.72)

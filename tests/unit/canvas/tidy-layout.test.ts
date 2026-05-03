@@ -93,7 +93,11 @@ describe('useTidyLayout', () => {
     expect(byNode.get(mon.id)).toBe(882)
   })
 
-  it('ignores custom-named groups (no power keyword)', () => {
+  it('includes custom-named groups alongside day groups', () => {
+    // 2026-05-03: Tidy was broadened to lay out every group on the canvas
+    // (custom + smart + day-of-week), preserving the user's left-to-right
+    // X order. Previously custom groups were filtered out and the button
+    // silently no-op'd for users without day groups.
     const mon = makeGroup('Monday', 0)
     const custom = makeGroup('Project Work', 200)
     const tue = makeGroup('Tuesday', 400)
@@ -104,11 +108,10 @@ describe('useTidyLayout', () => {
     const { groupMoves, release } = tidyDayGroups()
     release()
 
-    expect(groupMoves.length).toBe(2)
-    expect(groupMoves.find((m) => m.groupId === custom.id)).toBeUndefined()
-    // updateGroup not called for custom
+    expect(groupMoves.length).toBe(3)
+    expect(groupMoves.find((m) => m.groupId === custom.id)).toBeDefined()
     const updatedIds = updateGroup.mock.calls.map(([id]: [string]) => id)
-    expect(updatedIds).not.toContain(custom.id)
+    expect(updatedIds).toContain(custom.id)
     expect(updatedIds).toContain(mon.id)
     expect(updatedIds).toContain(tue.id)
   })

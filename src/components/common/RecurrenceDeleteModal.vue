@@ -155,7 +155,8 @@ const ruleDescription = computed(() => {
   width: 100%;
   box-sizing: border-box;
   padding: var(--space-4) var(--space-4);
-  background: rgba(45, 40, 70, 0.75);
+  /* Glass surface — slightly brighter than the modal body so the buttons read as primary actions. */
+  background: rgba(45, 40, 70, 0.55);
   backdrop-filter: blur(8px);
   border-radius: var(--radius-lg);
   cursor: pointer;
@@ -164,21 +165,28 @@ const ruleDescription = computed(() => {
 }
 
 .action-btn--skip {
-  border: 1px solid rgba(78, 205, 196, 0.8);
+  /* Full-saturation border + subtle tinted fill so the brand colour reads at a glance. */
+  background: linear-gradient(180deg, rgba(78, 205, 196, 0.12) 0%, rgba(78, 205, 196, 0.06) 100%);
+  border: 1px solid var(--brand-primary);
+  box-shadow: 0 0 0 1px rgba(78, 205, 196, 0.18) inset;
 }
 
 .action-btn--skip:hover {
-  background: rgba(78, 205, 196, 0.12);
+  background: linear-gradient(180deg, rgba(78, 205, 196, 0.22) 0%, rgba(78, 205, 196, 0.12) 100%);
   border-color: var(--brand-primary);
+  box-shadow: 0 4px 16px rgba(78, 205, 196, 0.18), 0 0 0 1px rgba(78, 205, 196, 0.28) inset;
 }
 
 .action-btn--stop {
-  border: 1px solid rgba(239, 68, 68, 0.8);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.06) 100%);
+  border: 1px solid var(--color-danger);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.18) inset;
 }
 
 .action-btn--stop:hover {
-  background: rgba(239, 68, 68, 0.12);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.22) 0%, rgba(239, 68, 68, 0.12) 100%);
   border-color: var(--color-danger);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.18), 0 0 0 1px rgba(239, 68, 68, 0.28) inset;
 }
 
 .action-btn--canvas {

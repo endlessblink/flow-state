@@ -2,9 +2,9 @@
  * TASK-1756 v8: Tidy Layout composable.
  *
  * Wraps `computeCanonicalLayout` to produce a clean single-row layout for
- * all day-of-week + smart (Today/Tomorrow) groups, preserving the user's
- * current left-to-right X order (unlike rotation, which re-sorts by
- * weekday distance). Custom-named groups are left untouched.
+ * every group on the canvas (day-of-week, smart Today/Tomorrow, AND
+ * custom-named groups), preserving the user's current left-to-right X
+ * order. Tasks inside each group are restacked vertically.
  *
  * Same move-application contract as rotation: returns { groupMoves,
  * taskMoves, release }. Caller applies Vue Flow moves via updateNode and
@@ -13,7 +13,6 @@
 
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
-import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
 import { positionManager } from '@/services/canvas/PositionManager'
 import {
@@ -72,13 +71,11 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       console.log('[TIDY] Re-homed', rehomedCount, 'orphaned tasks into matching day-groups')
     }
 
-    // Collect smart + day-of-week groups. Custom groups skipped per user spec.
+    // Collect every group with a position. Day-of-week / smart / custom — all
+    // get the canonical single-row treatment so the Tidy button always does
+    // something visible regardless of the user's group naming.
     const inputs: DayGroupInput[] = []
     for (const group of canvasStore.groups) {
-      const keyword = detectPowerKeyword(group.name)
-      if (!keyword) continue
-      if (keyword.category !== 'day_of_week' && keyword.category !== 'date') continue
-      if (keyword.category === 'date' && keyword.keyword !== 'today' && keyword.keyword !== 'tomorrow') continue
       if (!group.position) continue
 
       const vfPos = options.getNodePosition?.(`section-${group.id}`)

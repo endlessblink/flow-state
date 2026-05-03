@@ -154,13 +154,14 @@ export function useCanvasOrchestrator() {
     // --- 2. Computed Data ---
     const filteredTasks = computed(() => taskStore.filteredTasks)
 
-    // Pass taskStore reference so filtering can access hideCanvasDoneTasks etc.
+    // Pass the live Pinia taskStore reference (not a plain-object getter wrapper)
+    // so consumer computeds get native Pinia tracking on `hideCanvasDoneTasks` /
+    // `hideCanvasOverdueTasks`. The previous wrapper at this site was the suspected
+    // cause of the "Hide overdue tasks" toggle flipping state without re-filtering
+    // visible canvas nodes.
     const canvasStoreWithTaskStore = {
         ...canvasStore,
-        taskStore: {
-            get hideCanvasDoneTasks() { return taskStore.hideCanvasDoneTasks },
-            get hideCanvasOverdueTasks() { return taskStore.hideCanvasOverdueTasks }
-        }
+        taskStore,
     }
 
     const {

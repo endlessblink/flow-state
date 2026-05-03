@@ -15,10 +15,10 @@
 **Problem**: The mini planning canvas has the core graph interactions now, but the creation flow still feels mechanical: cable-dropped nodes do not immediately enter edit mode, selected nodes lack an obvious local action surface, and messy sessions need a lightweight tidy affordance.
 
 **Planned slices**:
-1. Auto-focus the title field when cable-drop creates a connected subtask.
-2. Add a selected-node floating toolbar for add/edit/delete actions.
-3. Add a mini-canvas Tidy action that cleans up subtask/note spacing.
-4. Add restrained node/edge microinteractions with reduced-motion support.
+1. ~~Auto-focus the title field when cable-drop creates a connected subtask.~~ ✅ DONE (commit `98d5b5df`)
+2. ~~Add a selected-node floating toolbar for add/edit/delete actions.~~ ✅ DONE (2026-05-03, v1.4.9 — `MiniCanvasFloatingToolbar.vue` via `@vue-flow/node-toolbar`)
+3. Add a mini-canvas Tidy action that cleans up subtask/note spacing. 📋 PLANNED
+4. Add restrained node/edge microinteractions with reduced-motion support. 📋 PLANNED
 
 **Files**: `src/components/mini-canvas/`, `src/composables/mini-canvas/`.
 

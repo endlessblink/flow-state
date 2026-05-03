@@ -58,12 +58,24 @@
             <template #node-noteNode="nodeProps">
               <NoteNode
                 :data="nodeProps.data"
+                :auto-focus="nodeProps.data.noteId === pendingFocusNoteId"
                 @update-title="miniCanvas.updateNoteTitle"
                 @update-description="miniCanvas.updateNoteDescription"
+                @auto-focused="pendingFocusNoteId = null"
               />
             </template>
 
             <Background :variant="BackgroundVariant.Dots" :gap="24" :size="1.5" />
+
+            <MiniCanvasFloatingToolbar
+              :node-id="toolbarVisible ? selectedNodeId : null"
+              :node-type="(selectedNodeType as 'subtaskNode' | 'noteNode' | null)"
+              :is-completed="selectedSubtaskCompleted"
+              @edit="handleToolbarEdit"
+              @delete="deleteSelectedNode"
+              @add-child="handleToolbarAddChild"
+              @toggle-complete="handleToolbarToggleComplete"
+            />
           </VueFlow>
 
           <MiniCanvasEmptyState
@@ -114,6 +126,7 @@ import { useAuthStore } from '@/stores/auth'
 import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/canvasImageUpload'
 import MiniCanvasToolbar from './MiniCanvasToolbar.vue'
 import MiniCanvasEmptyState from './MiniCanvasEmptyState.vue'
+import MiniCanvasFloatingToolbar from './MiniCanvasFloatingToolbar.vue'
 import ParentTaskNode from './ParentTaskNode.vue'
 import SubtaskNode from './SubtaskNode.vue'
 import NoteNode from './NoteNode.vue'
@@ -154,7 +167,63 @@ const selectedNodeType = ref<string | null>(null)
 const pendingConnectionSource = ref<string | null>(null)
 const pendingConnectionSourceHandle = ref<string | null>(null)
 const pendingFocusSubtaskId = ref<string | null>(null)
+const pendingFocusNoteId = ref<string | null>(null)
 const connectionWasSuccessful = ref(false)
+
+const toolbarVisible = computed(
+  () => selectedNodeId.value !== null
+    && !showContextMenu.value
+    && selectedNodeType.value !== 'parentTaskNode'
+    && selectedNodeType.value !== null
+)
+
+const selectedSubtaskCompleted = computed(() => {
+  if (selectedNodeType.value !== 'subtaskNode' || !selectedNodeId.value) return false
+  const t = task.value
+  if (!t?.subtasks) return false
+  // miniCanvas exposes subtask nodes with id `subtask-${subtaskId}`; data.subtaskId is the raw id
+  const node = miniCanvas.nodes.value.find(n => n.id === selectedNodeId.value)
+  const subtaskId = (node?.data as { subtaskId?: string } | undefined)?.subtaskId
+  if (!subtaskId) return false
+  return t.subtasks.some(s => s.id === subtaskId && s.isCompleted)
+})
+
+const getSelectedSubtaskId = () => {
+  const node = miniCanvas.nodes.value.find(n => n.id === selectedNodeId.value)
+  return (node?.data as { subtaskId?: string } | undefined)?.subtaskId || null
+}
+
+const getSelectedNoteId = () => {
+  const node = miniCanvas.nodes.value.find(n => n.id === selectedNodeId.value)
+  return (node?.data as { noteId?: string } | undefined)?.noteId || null
+}
+
+const handleToolbarEdit = () => {
+  if (selectedNodeType.value === 'subtaskNode') {
+    const id = getSelectedSubtaskId()
+    if (id) pendingFocusSubtaskId.value = id
+  } else if (selectedNodeType.value === 'noteNode') {
+    const id = getSelectedNoteId()
+    if (id) pendingFocusNoteId.value = id
+  }
+}
+
+const handleToolbarAddChild = () => {
+  const node = miniCanvas.nodes.value.find(n => n.id === selectedNodeId.value)
+  const basePos = node?.position ?? getFlowCenter()
+  const offsetPos = { x: basePos.x + 220, y: basePos.y + 40 }
+  if (selectedNodeType.value === 'subtaskNode') {
+    const id = miniCanvas.createConnectedSubtask(selectedNodeId.value!, offsetPos, null)
+    if (id) pendingFocusSubtaskId.value = id
+  } else if (selectedNodeType.value === 'noteNode') {
+    miniCanvas.addNote(offsetPos, 'New note')
+  }
+}
+
+const handleToolbarToggleComplete = () => {
+  const id = getSelectedSubtaskId()
+  if (id) miniCanvas.toggleSubtaskCompletion(id)
+}
 
 const contextMenuStyle = computed(() => ({
   position: 'fixed' as const,
@@ -380,6 +449,10 @@ const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape' && isOpen.value) {
     if (showContextMenu.value) {
       showContextMenu.value = false
+    } else if (selectedNodeId.value) {
+      selectedNodeId.value = null
+      selectedNodeType.value = null
+      e.preventDefault()
     } else {
       handleClose()
     }

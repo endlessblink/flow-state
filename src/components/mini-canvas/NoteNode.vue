@@ -20,6 +20,7 @@
     />
 
     <input
+      ref="titleInputRef"
       class="note-title"
       :value="data.title"
       dir="auto"
@@ -48,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 
 interface Props {
@@ -59,10 +60,14 @@ interface Props {
     noteId: string
     imageUrl?: string
   }
+  autoFocus?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  autoFocus: false,
+})
 const showLightbox = ref(false)
+const titleInputRef = ref<HTMLInputElement | null>(null)
 const AUTOSAVE_DELAY_MS = 250
 const lastSavedTitle = ref(props.data.title)
 const lastSavedDescription = ref(props.data.description)
@@ -73,7 +78,22 @@ let descriptionSaveTimer: ReturnType<typeof setTimeout> | null = null
 const emit = defineEmits<{
   'update-title': [noteId: string, title: string]
   'update-description': [noteId: string, description: string]
+  'auto-focused': []
 }>()
+
+const focusTitle = () => {
+  nextTick(() => {
+    const el = titleInputRef.value
+    if (!el) return
+    el.focus()
+    el.select()
+    emit('auto-focused')
+  })
+}
+
+watch(() => props.autoFocus, (shouldFocus) => {
+  if (shouldFocus) focusTitle()
+}, { immediate: true })
 
 const colorBarStyle = computed(() => ({
   background: props.data.color || 'var(--brand-primary)',

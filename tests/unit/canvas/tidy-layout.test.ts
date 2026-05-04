@@ -2,7 +2,7 @@
  * TASK-1756 v8: useTidyLayout composable tests.
  *
  * Verifies:
- *  1. Tidy preserves user's left-to-right X order (doesn't re-sort by weekday).
+ *  1. Tidy applies today's semantic order for day groups.
  *  2. Custom-named groups are ignored.
  *  3. Safe to call with no day-groups present.
  *  4. Holds canvasSyncInProgress until release().
@@ -58,6 +58,8 @@ describe('useTidyLayout', () => {
   let updateTask: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-04T12:00:00Z')) // Monday
     setActivePinia(createPinia())
     canvasStore = useCanvasStore()
     taskStore = useTaskStore()
@@ -71,11 +73,10 @@ describe('useTidyLayout', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
-  it('preserves user left-to-right X order (no weekday reorder)', () => {
-    // Groups at arbitrary X: Fri(100), Mon(500), Tue(50). Sorted by X:
-    // Tue(50), Fri(100), Mon(500). Canonical row preserves that order.
+  it('orders day groups from the current weekday instead of preserving broken X order', () => {
     const fri = makeGroup('Friday', 100)
     const mon = makeGroup('Monday', 500)
     const tue = makeGroup('Tuesday', 50)
@@ -87,10 +88,10 @@ describe('useTidyLayout', () => {
     release()
 
     const byNode = new Map(groupMoves.map((m) => [m.groupId, m.position.x]))
-    // Origin = min X = 50. Spacing = 416. slots: 50, 466, 882.
-    expect(byNode.get(tue.id)).toBe(50)
-    expect(byNode.get(fri.id)).toBe(466)
-    expect(byNode.get(mon.id)).toBe(882)
+    // Origin = min X = 50. Monday is today, then Tuesday, then Friday.
+    expect(byNode.get(mon.id)).toBe(50)
+    expect(byNode.get(tue.id)).toBe(466)
+    expect(byNode.get(fri.id)).toBe(882)
   })
 
   it('includes custom-named groups alongside day groups', () => {
@@ -156,7 +157,7 @@ describe('useTidyLayout', () => {
 
     expect(groupMoves.length).toBe(3)
     const byNode = new Map(groupMoves.map((m) => [m.groupId, m.position.x]))
-    // Order preserved by current X: Today (0), Tomorrow (100), Mon (200).
+    // Smart groups stay before weekday groups.
     expect(byNode.get(today.id)).toBe(0)
     expect(byNode.get(tomorrow.id)).toBe(416)
     expect(byNode.get(mon.id)).toBe(832)

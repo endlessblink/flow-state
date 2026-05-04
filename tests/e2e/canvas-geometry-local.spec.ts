@@ -125,7 +125,8 @@ const readVisibleGroupOrder = async (page: Page, ids: string[]) => page.evaluate
     .map((id) => {
       const element = document.querySelector(`[data-id="section-${id}"]`) as HTMLElement | null
       if (!element) return null
-      const rect = element.getBoundingClientRect()
+      const renderedNode = element.closest('.vue-flow__node') as HTMLElement | null
+      const rect = (renderedNode ?? element).getBoundingClientRect()
       return { id, left: Math.round(rect.left) }
     })
     .filter((entry): entry is { id: string; left: number } => !!entry)
@@ -162,6 +163,38 @@ test.describe('local canvas geometry regressions', () => {
     expect(new Set([alpha.y, beta.y]).size, JSON.stringify(geometry, null, 2)).toBe(1)
     expect(alphaTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([alpha.y + 70, alpha.y + 70])
     expect(alphaTasks[1].x - alphaTasks[0].x, JSON.stringify(geometry, null, 2)).toBe(240)
+  })
+
+  test('tidy day-group button preserves today-first order and two-column task spacing', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'thu', name: 'Thursday', x: 100, y: 200 },
+      { id: 'fri', name: 'Friday', x: 700, y: 200 },
+      { id: 'sat', name: 'Saturday', x: 1300, y: 200 },
+      { id: 'sun', name: 'Sunday', x: 1900, y: 200 },
+      { id: 'mon', name: 'Monday', x: 2500, y: 200 },
+      { id: 'tue', name: 'Tuesday', x: 3100, y: 200 },
+    ], [
+      { id: 'task-fri-a', title: 'Friday A', parentId: 'fri', x: 720, y: 620 },
+      { id: 'task-fri-b', title: 'Friday B', parentId: 'fri', x: 720, y: 500 },
+      { id: 'task-fri-c', title: 'Friday C', parentId: 'fri', x: 720, y: 380 },
+    ])
+
+    await expect.poll(async () => readVisibleGroupOrder(page, ['thu', 'fri', 'sat', 'sun', 'mon', 'tue']))
+      .toEqual(['thu', 'fri', 'sat', 'sun', 'mon', 'tue'])
+
+    await clickToolbar(page, /tidy|layout/)
+
+    await expect.poll(async () => readVisibleGroupOrder(page, ['thu', 'fri', 'sat', 'sun', 'mon', 'tue']))
+      .toEqual(['mon', 'tue', 'thu', 'fri', 'sat', 'sun'])
+
+    const geometry = await readGeometry(page)
+    const friday = geometry.groups.find((group) => group.id === 'fri')!
+    const fridayTasks = geometry.tasks.filter((task) => task.parentId === 'fri').sort((a, b) => a.y - b.y || a.x - b.x)
+
+    expect(friday.width, JSON.stringify(geometry, null, 2)).toBe(700)
+    expect(fridayTasks.slice(0, 2).map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([friday.y + 70, friday.y + 70])
+    expect(fridayTasks[1].x - fridayTasks[0].x, JSON.stringify(geometry, null, 2)).toBe(240)
+    expect(fridayTasks[2].y, JSON.stringify(geometry, null, 2)).toBe(friday.y + 180)
   })
 
   test('rotate orders Today, Tomorrow, then the day after tomorrow on Monday', async ({ page }) => {

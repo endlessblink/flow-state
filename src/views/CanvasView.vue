@@ -361,7 +361,7 @@ const nodeTypes = {
 }
 
 // FEATURE-1048: Day group auto-rotation at midnight
-const { findNode, updateNode } = useVueFlow()
+const { findNode, updateNode, setNodes, applyNodeChanges } = useVueFlow()
 
 // TASK-1756 v10: Vue Flow dimension bookkeeping uses the top-level
 // `width` / `height` fields on the node. Setting only `style.width` (px)
@@ -380,7 +380,6 @@ function applyCanonicalLayoutMoves(
     }
     console.log(`[CANONICAL-LAYOUT:VF] ${move.nodeId}: x=${Math.round(node.position.x)} → ${Math.round(move.position.x)}, w=${Math.round(move.size.width)}, h=${Math.round(move.size.height)}`)
     updateNode(move.nodeId, {
-      position: move.position,
       width: move.size.width,
       height: move.size.height,
       style: {
@@ -388,7 +387,40 @@ function applyCanonicalLayoutMoves(
         height: `${move.size.height}px`,
       },
     })
+    updateNode(move.nodeId, { position: move.position })
+    nodes.value = nodes.value.map((candidate) => candidate.id === move.nodeId
+      ? {
+          ...candidate,
+          position: move.position,
+          computedPosition: {
+            ...(candidate.computedPosition ?? {}),
+            x: move.position.x,
+            y: move.position.y,
+          },
+          width: move.size.width,
+          height: move.size.height,
+          dimensions: {
+            ...(candidate.dimensions ?? {}),
+            width: move.size.width,
+            height: move.size.height,
+          },
+          style: {
+            ...(candidate.style ?? {}),
+            width: `${move.size.width}px`,
+            height: `${move.size.height}px`,
+          },
+        }
+      : candidate)
   }
+  const positionChanges = groupMoves.map((move) => ({
+    id: move.nodeId,
+    type: 'position',
+    position: move.position,
+    dragging: false,
+  }))
+  applyNodeChanges(positionChanges)
+  handleNodesChange(positionChanges as any)
+  setNodes(nodes.value)
 }
 
 function applyCanonicalTaskMoves(
@@ -396,6 +428,7 @@ function applyCanonicalTaskMoves(
   groupMoves: Array<{ groupId: string; position: { x: number; y: number } }>
 ) {
   const targetGroupPositions = new Map(groupMoves.map((move) => [move.groupId, move.position]))
+  const positionChanges: Array<{ id: string; type: 'position'; position: { x: number; y: number }; dragging: false }> = []
 
   for (const move of taskMoves) {
     const node = findNode(CanvasIds.taskNodeId(move.taskId))
@@ -418,14 +451,44 @@ function applyCanonicalTaskMoves(
       continue
     }
 
-    updateNode(CanvasIds.taskNodeId(move.taskId), {
-      position: {
-        x: move.position.x - parentAbsPos.x,
-        y: move.position.y - parentAbsPos.y,
-      },
+    const taskNodeId = CanvasIds.taskNodeId(move.taskId)
+    const relativePosition = {
+      x: move.position.x - parentAbsPos.x,
+      y: move.position.y - parentAbsPos.y,
+    }
+
+    updateNode(taskNodeId, {
+      position: relativePosition,
       parentNode: CanvasIds.groupNodeId(move.parentId),
     })
+    positionChanges.push({ id: taskNodeId, type: 'position', position: relativePosition, dragging: false })
+    nodes.value = nodes.value.map((candidate) => candidate.id === taskNodeId
+      ? {
+          ...candidate,
+          position: relativePosition,
+          computedPosition: {
+            ...(candidate.computedPosition ?? {}),
+            x: move.position.x,
+            y: move.position.y,
+          },
+          parentNode: CanvasIds.groupNodeId(move.parentId),
+        }
+      : candidate)
   }
+  if (positionChanges.length > 0) {
+    applyNodeChanges(positionChanges)
+    handleNodesChange(positionChanges as any)
+  }
+  setNodes(nodes.value)
+}
+
+function refreshRenderedNodesFromModel() {
+  const refreshedNodes = nodes.value.map((node) => ({ ...node }))
+  setNodes([])
+  nextTick(() => {
+    nodes.value = refreshedNodes
+    setNodes(refreshedNodes)
+  })
 }
 
 const dayRotation = useDayGroupRotation({
@@ -447,8 +510,11 @@ const tidyLayout = useTidyLayout({
 // reactivity cycle. Single nextTick lets the BUG-1203 spatial validator
 // run while VF still sees stale parent dimensions → tasks get orphaned.
 // Double nextTick is the reliable pattern.
-function releaseOnDoubleNextTick(release: () => void) {
-  nextTick(() => nextTick(release))
+function releaseOnDoubleNextTick(release: () => void, afterRelease?: () => void) {
+  nextTick(() => nextTick(() => {
+    release()
+    afterRelease?.()
+  }))
 }
 
 function handleRotateDayGroups() {
@@ -459,7 +525,10 @@ function handleRotateDayGroups() {
   const { groupMoves, taskMoves, release } = dayRotation.rotateDayGroupPositions()
   applyCanonicalLayoutMoves(groupMoves)
   applyCanonicalTaskMoves(taskMoves, groupMoves)
-  releaseOnDoubleNextTick(release)
+  releaseOnDoubleNextTick(release, () => {
+    syncNodes(undefined, { force: true })
+    refreshRenderedNodesFromModel()
+  })
 }
 
 function handleTidyLayout() {
@@ -468,7 +537,10 @@ function handleTidyLayout() {
   const { groupMoves, taskMoves, release } = tidyLayout.tidyDayGroups()
   applyCanonicalLayoutMoves(groupMoves)
   applyCanonicalTaskMoves(taskMoves, groupMoves)
-  releaseOnDoubleNextTick(release)
+  releaseOnDoubleNextTick(release, () => {
+    syncNodes(undefined, { force: true })
+    refreshRenderedNodesFromModel()
+  })
 }
 
 // Initialize Orchestrator
@@ -498,7 +570,8 @@ const {
   selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
   alignLeft, alignRight, alignTop, alignBottom, alignCenterHorizontal, alignCenterVertical,
   distributeHorizontal, distributeVertical, arrangeInRow, arrangeInColumn, arrangeInGrid,
-  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, collectOverdueTasksNearGroup, disconnectEdge
+  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, collectOverdueTasksNearGroup, disconnectEdge,
+  syncNodes
 } = orchestrator
 
 // TASK-1756 v3: run day-group catchup once Vue Flow is fully ready (findNode

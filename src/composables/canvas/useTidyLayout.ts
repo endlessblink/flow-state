@@ -3,8 +3,8 @@
  *
  * Wraps `computeCanonicalLayout` to produce a clean single-row layout for
  * every group on the canvas (day-of-week, smart Today/Tomorrow, AND
- * custom-named groups), preserving the user's current left-to-right X
- * order. Tasks inside each group are restacked vertically.
+ * custom-named groups). Day groups use today's semantic order; custom groups
+ * keep their current left-to-right X order after the smart/day groups.
  *
  * Same move-application contract as rotation: returns { groupMoves,
  * taskMoves, release }. Caller applies Vue Flow moves via updateNode and
@@ -22,6 +22,7 @@ import {
   type TaskMove,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
@@ -89,9 +90,30 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       return { groupMoves: [], taskMoves: [], release }
     }
 
-    // Preserve user's left-to-right order: sort by current visual X.
+    // Tidy must not canonize a broken visual order. Smart/day groups follow the
+    // same today-first order as Rotate; custom groups keep their current X order.
+    const today = new Date().getDay()
     const orderedIds = [...inputs]
-      .sort((a, b) => a.visualPos.x - b.visualPos.x)
+      .sort((a, b) => {
+        const aKeyword = detectPowerKeyword(a.group.name)
+        const bKeyword = detectPowerKeyword(b.group.name)
+        const smartOrder: Record<string, number> = { today: 0, tomorrow: 1 }
+
+        const rank = (input: DayGroupInput, keyword: ReturnType<typeof detectPowerKeyword>) => {
+          if (keyword?.category === 'date' && keyword.keyword in smartOrder) {
+            return smartOrder[keyword.keyword]
+          }
+          if (keyword?.category === 'day_of_week') {
+            const dayIndex = parseInt(keyword.value, 10)
+            return Number.isFinite(dayIndex) ? 2 + ((dayIndex - today + 7) % 7) : 99
+          }
+          return 1000 + input.visualPos.x
+        }
+
+        const aRank = rank(a, aKeyword)
+        const bRank = rank(b, bKeyword)
+        return aRank === bRank ? a.visualPos.x - b.visualPos.x : aRank - bRank
+      })
       .map((i) => i.group.id)
 
     const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds, { taskLayout: 'horizontal' })

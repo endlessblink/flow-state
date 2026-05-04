@@ -10,8 +10,8 @@
         <button
           class="btn btn-ghost"
           :disabled="isRunning"
-          @click="handleRunTests(1)"
           title="Quick check with 1 run per test"
+          @click="handleRunTests(1)"
         >
           Quick (1x)
         </button>

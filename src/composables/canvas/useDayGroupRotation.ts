@@ -227,7 +227,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     )
 
     // Sort: Today → Tomorrow → day-of-week by weekday-distance-from-startFrom.
-    const today = useCurrentDay().value.getDay() // 0=Sun … 6=Sat
+    const today = new Date().getDay() // 0=Sun … 6=Sat. Explicit toolbar rotation must use the live clock.
     const weekStart = settingsStore.weekStartsOn
     const hasSmartToday = inputs.some(
       (i) => i.category === 'date' && (i.keyword === 'today' || i.keyword === 'tomorrow')

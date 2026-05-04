@@ -171,4 +171,24 @@ test.describe('local canvas geometry regressions', () => {
     expect(order.slice(0, 4), JSON.stringify(geometry, null, 2)).toEqual(['Today', 'Tomorrow', 'Wednesday', 'Thursday'])
     expect(geometry.groups.map((group) => group.width), JSON.stringify(geometry, null, 2)).toEqual([400, 400, 400, 400, 400])
   })
+
+  test('rotate weekday-only groups starts from the current weekday', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'wed', name: 'Wednesday', x: 3000, y: 200 },
+      { id: 'thu', name: 'Thursday', x: 100, y: 200 },
+      { id: 'sat', name: 'Saturday', x: 1800, y: 200 },
+      { id: 'mon', name: 'Monday', x: 2400, y: 200 },
+      { id: 'tue', name: 'Tuesday', x: 3600, y: 200 },
+    ], [])
+
+    await clickToolbar(page, /rotate/)
+    await page.waitForTimeout(500)
+
+    const geometry = await readGeometry(page)
+    const order = [...geometry.groups]
+      .sort((a, b) => a.x - b.x)
+      .map((group) => group.name)
+
+    expect(order, JSON.stringify(geometry, null, 2)).toEqual(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday'])
+  })
 })

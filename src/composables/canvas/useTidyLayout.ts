@@ -14,6 +14,7 @@
 
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { useSettingsStore } from '@/stores/settings'
 import { canvasSyncInProgress } from './useCanvasSync'
 import { positionManager } from '@/services/canvas/PositionManager'
 import {
@@ -33,6 +34,7 @@ export interface TidyLayoutOptions {
 export function useTidyLayout(options: TidyLayoutOptions = {}) {
   const canvasStore = useCanvasStore()
   const taskStore = useTaskStore()
+  const settingsStore = useSettingsStore()
 
   /**
    * Lay out smart + day-of-week groups in a canonical single row. Restacks
@@ -91,9 +93,15 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       return { groupMoves: [], taskMoves: [], release }
     }
 
-    // Tidy must not canonize a broken visual order. Smart/day groups follow the
-    // same today-first order as Rotate; custom groups keep their current X order.
+    // Tidy must complement Rotate, not overwrite it. Smart/day groups follow
+    // the same order as Rotate; custom groups keep their current X order.
     const today = new Date().getDay()
+    const weekStart = settingsStore.weekStartsOn
+    const hasSmartToday = inputs.some((input) => {
+      const keyword = detectPowerKeyword(input.group.name)
+      return keyword?.category === 'date' && (keyword.keyword === 'today' || keyword.keyword === 'tomorrow')
+    })
+    const startFrom = hasSmartToday ? (today + 2) % 7 : today
     const orderedIds = [...inputs]
       .sort((a, b) => {
         const aKeyword = detectPowerKeyword(a.group.name)
@@ -106,7 +114,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
           }
           if (keyword?.category === 'day_of_week') {
             const dayIndex = parseInt(keyword.value, 10)
-            return Number.isFinite(dayIndex) ? 2 + ((dayIndex - today + 7) % 7) : 99
+            if (!Number.isFinite(dayIndex)) return 99
+            const dayNorm = (dayIndex - weekStart + 7) % 7
+            const startNorm = (startFrom - weekStart + 7) % 7
+            return 2 + ((dayNorm - startNorm + 7) % 7)
           }
           return 1000 + input.visualPos.x
         }

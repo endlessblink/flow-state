@@ -144,23 +144,25 @@ describe('useTidyLayout', () => {
     expect(mockCanvasSyncInProgress.value).toBe(false)
   })
 
-  it('includes Today + Tomorrow smart groups alongside day-of-week', () => {
+  it('matches Rotate order when Today + Tomorrow smart groups exist', () => {
     const today = makeGroup('Today', 0)
     const tomorrow = makeGroup('Tomorrow', 100)
     const mon = makeGroup('Monday', 200)
-    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow, mon])
+    const wed = makeGroup('Wednesday', 300)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow, mon, wed])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { tidyDayGroups } = useTidyLayout()
     const { groupMoves, release } = tidyDayGroups()
     release()
 
-    expect(groupMoves.length).toBe(3)
+    expect(groupMoves.length).toBe(4)
     const byNode = new Map(groupMoves.map((m) => [m.groupId, m.position.x]))
-    // Smart groups stay before weekday groups.
+    // On Monday, Rotate/Tidy both place Today, Tomorrow, then Wednesday.
     expect(byNode.get(today.id)).toBe(0)
     expect(byNode.get(tomorrow.id)).toBe(416)
-    expect(byNode.get(mon.id)).toBe(832)
+    expect(byNode.get(wed.id)).toBe(832)
+    expect(byNode.get(mon.id)).toBe(1248)
   })
 
   it('returns taskMoves and persists child task positions in a vertical stack during tidy', () => {

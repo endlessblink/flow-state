@@ -217,6 +217,43 @@ test.describe('local canvas geometry regressions', () => {
     expect(geometry.groups.map((group) => group.width), JSON.stringify(geometry, null, 2)).toEqual([400, 400, 400, 400, 400])
   })
 
+  test('rotate and tidy complement each other without resetting order', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'wed', name: 'Wednesday', x: 3000, y: 200 },
+      { id: 'mon', name: 'Monday', x: 1400, y: 200 },
+      { id: 'today', name: 'Today', x: 900, y: 200 },
+      { id: 'tomorrow', name: 'Tomorrow', x: 2200, y: 200 },
+      { id: 'thu', name: 'Thursday', x: 100, y: 200 },
+    ], [
+      { id: 'task-wed-a', title: 'Wednesday A', parentId: 'wed', x: 3020, y: 760 },
+      { id: 'task-wed-b', title: 'Wednesday B', parentId: 'wed', x: 3020, y: 640 },
+    ])
+
+    await clickToolbar(page, /rotate/)
+    await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'mon', 'today', 'tomorrow', 'thu']))
+      .toEqual(['today', 'tomorrow', 'wed', 'thu', 'mon'])
+
+    await clickToolbar(page, /tidy|layout/)
+    await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'mon', 'today', 'tomorrow', 'thu']))
+      .toEqual(['today', 'tomorrow', 'wed', 'thu', 'mon'])
+
+    let geometry = await readGeometry(page)
+    let wednesday = geometry.groups.find((group) => group.id === 'wed')!
+    let wednesdayTasks = geometry.tasks.filter((task) => task.parentId === 'wed').sort((a, b) => a.y - b.y)
+    expect(wednesday.width, JSON.stringify(geometry, null, 2)).toBe(400)
+    expect(wednesdayTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([wednesday.y + 70, wednesday.y + 180])
+
+    await clickToolbar(page, /rotate/)
+    await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'mon', 'today', 'tomorrow', 'thu']))
+      .toEqual(['today', 'tomorrow', 'wed', 'thu', 'mon'])
+
+    geometry = await readGeometry(page)
+    wednesday = geometry.groups.find((group) => group.id === 'wed')!
+    wednesdayTasks = geometry.tasks.filter((task) => task.parentId === 'wed').sort((a, b) => a.y - b.y)
+    expect(wednesday.width, JSON.stringify(geometry, null, 2)).toBe(400)
+    expect(wednesdayTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([wednesday.y + 70, wednesday.y + 180])
+  })
+
   test('rotate weekday-only groups starts from the current weekday', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'wed', name: 'Wednesday', x: 3000, y: 200 },

@@ -496,14 +496,29 @@ const dayRotation = useDayGroupRotation({
   getNodePosition: (nodeId: string) => {
     const node = findNode(nodeId)
     return node ? { x: node.position.x, y: node.position.y } : undefined
-  }
+  },
+  getNodeSize: (nodeId: string) => getRenderedNodeSize(nodeId),
 })
+
+function getRenderedNodeSize(nodeId: string) {
+  const element = document.querySelector(`[data-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null
+  const rect = element?.getBoundingClientRect()
+  if (rect && rect.width > 0 && rect.height > 0) {
+    return { width: rect.width, height: rect.height }
+  }
+
+  const node = findNode(nodeId) as any
+  const width = node?.dimensions?.width ?? node?.measured?.width ?? node?.width
+  const height = node?.dimensions?.height ?? node?.measured?.height ?? node?.height
+  return Number.isFinite(width) && Number.isFinite(height) ? { width, height } : undefined
+}
 
 const tidyLayout = useTidyLayout({
   getNodePosition: (nodeId: string) => {
     const node = findNode(nodeId)
     return node ? { x: node.position.x, y: node.position.y } : undefined
   },
+  getNodeSize: (nodeId: string) => getRenderedNodeSize(nodeId),
 })
 
 // TASK-1756 v10: Vue Flow's dimension + bounds bookkeeping lags Vue's

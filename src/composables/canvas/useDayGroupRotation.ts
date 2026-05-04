@@ -56,6 +56,8 @@ export interface DayGroupRotationOptions {
   /** Read a Vue Flow node's current visual position. Used to ensure rotation works
    *  even when store and Vue Flow are out of sync. */
   getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
+  /** Read a Vue Flow node's current rendered dimensions for stable task stacking. */
+  getNodeSize?: (nodeId: string) => { width: number; height: number } | undefined
 }
 
 export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
@@ -199,6 +201,11 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       const vfPos = options.getNodePosition?.(`section-${group.id}`)
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
       const tasks = taskStore.rawTasks.filter((t) => t.parentId === group.id)
+      const taskSizes = new Map<string, { width: number; height: number }>()
+      for (const task of tasks) {
+        const size = options.getNodeSize?.(task.id)
+        if (size) taskSizes.set(task.id, size)
+      }
 
       const dayIndex =
         keyword.category === 'day_of_week'
@@ -210,6 +217,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
         group,
         visualPos,
         tasks,
+        taskSizes,
         category: keyword.category,
         keyword: keyword.keyword,
         dayIndex,
@@ -260,7 +268,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     )
 
     const { groupMoves, taskMoves } = computeCanonicalLayout(
-      inputs.map((i) => ({ group: i.group, visualPos: i.visualPos, tasks: i.tasks })),
+      inputs.map((i) => ({ group: i.group, visualPos: i.visualPos, tasks: i.tasks, taskSizes: i.taskSizes })),
       orderedIds
     )
 

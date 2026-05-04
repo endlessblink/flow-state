@@ -6,10 +6,10 @@
  * Produces a clean single-row layout:
  *   - All day-of-week + smart (Today/Tomorrow) groups share one Y.
  *   - Uniform width (350 or 700 for 2-column overflow).
- *   - Uniform height (920 — fits 8 tasks in a single column).
+ *   - Uniform minimum height (1000 — grows if measured task cards need more).
  *   - Evenly spaced on X with a fixed gutter between actual rendered widths.
- *   - Tasks inside each group stacked vertically, wrapping to a 2nd column
- *     when task count exceeds 8 (group width bumped to 700 for those).
+ *   - Tasks inside each group stacked vertically from measured rendered heights,
+ *     wrapping to a 2nd column when task count exceeds 8.
  *
  * Pure: reads only its inputs, returns new data. No store mutations.
  * No Vue Flow calls. The caller applies the returned moves.
@@ -25,6 +25,8 @@ export interface DayGroupInput {
   visualPos: { x: number; y: number }
   /** Tasks that belong to this group (parentId === group.id). */
   tasks: Task[]
+  /** Rendered task sizes keyed by task id. Falls back to canvas defaults. */
+  taskSizes?: Map<string, { width: number; height: number }>
 }
 
 export interface GroupMove {
@@ -82,6 +84,8 @@ export function computeCanonicalLayout(
   const taskMoves: TaskMove[] = []
 
   const groupGutter = CANVAS.DAY_GROUP_SPACING - CANVAS.DAY_GROUP_WIDTH_1COL
+  const snapToGridFrom = (value: number, origin: number) =>
+    origin + Math.ceil((value - origin) / CANVAS.GRID_SNAP_SIZE) * CANVAS.GRID_SNAP_SIZE
   let nextGroupX = originX
 
   for (let i = 0; i < orderedIds.length; i++) {
@@ -89,8 +93,16 @@ export function computeCanonicalLayout(
     const dg = byId.get(id)
     if (!dg) continue
 
-    const taskCount = dg.tasks.length
     const taskLayout = options.taskLayout ?? 'vertical'
+    const sortedTasks = [...dg.tasks].sort((a, b) => {
+      const ay = a.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
+      const by = b.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
+      if (ay !== by) return ay - by
+      const at = a.createdAt ? Date.parse(a.createdAt) : 0
+      const bt = b.createdAt ? Date.parse(b.createdAt) : 0
+      return at - bt
+    })
+    const taskCount = sortedTasks.length
     const hasOverflow = taskLayout === 'vertical' && taskCount > CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
 
     const groupX = nextGroupX
@@ -98,7 +110,24 @@ export function computeCanonicalLayout(
     const groupWidth = taskLayout === 'horizontal'
       ? taskCount > 1 ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
       : hasOverflow ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
-    const groupHeight = CANVAS.DAY_GROUP_HEIGHT
+    const columnHeights = [0, 0]
+    for (let t = 0; t < sortedTasks.length; t++) {
+      const task = sortedTasks[t]
+      const column = taskLayout === 'horizontal'
+        ? t % 2
+        : t < CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN ? 0 : 1
+      const size = dg.taskSizes?.get(task.id)
+      const taskHeight = Math.max(1, size?.height ?? CANVAS.DEFAULT_TASK_HEIGHT)
+      columnHeights[column] += taskHeight
+      const isColumnEnd = taskLayout === 'horizontal'
+        ? t + 2 >= sortedTasks.length
+        : column === 0
+          ? t === Math.min(sortedTasks.length, CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN) - 1
+          : t === sortedTasks.length - 1
+      if (!isColumnEnd) columnHeights[column] += CANVAS.TASK_MARGIN
+    }
+    const requiredHeight = CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING + Math.max(...columnHeights) + CANVAS.GROUP_PADDING
+    const groupHeight = Math.max(CANVAS.DAY_GROUP_HEIGHT, requiredHeight)
 
     groupMoves.push({
       nodeId: `section-${dg.group.id}`,
@@ -109,16 +138,8 @@ export function computeCanonicalLayout(
 
     nextGroupX += groupWidth + groupGutter
 
-    // Stable task order: top-most first. Fall back to created-at so ties
-    // behave predictably across runs.
-    const sortedTasks = [...dg.tasks].sort((a, b) => {
-      const ay = a.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
-      const by = b.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
-      if (ay !== by) return ay - by
-      const at = a.createdAt ? Date.parse(a.createdAt) : 0
-      const bt = b.createdAt ? Date.parse(b.createdAt) : 0
-      return at - bt
-    })
+    const firstTaskY = groupY + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING
+    const nextTaskYByColumn = [firstTaskY, firstTaskY]
 
     for (let t = 0; t < sortedTasks.length; t++) {
       const task = sortedTasks[t]
@@ -126,25 +147,20 @@ export function computeCanonicalLayout(
       const column = taskLayout === 'horizontal'
         ? t % maxHorizontalColumns
         : t < CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN ? 0 : 1
-      const row = taskLayout === 'horizontal'
-        ? Math.floor(t / maxHorizontalColumns)
-        : t % CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
+      const taskSize = dg.taskSizes?.get(task.id)
 
       const taskX =
         groupX +
         CANVAS.GROUP_PADDING +
         column * (CANVAS.DEFAULT_TASK_WIDTH + CANVAS.DAY_GROUP_COLUMN_GAP)
-      const taskY =
-        groupY +
-        CANVAS.DAY_GROUP_HEADER_HEIGHT +
-        CANVAS.GROUP_PADDING +
-        row * (CANVAS.DEFAULT_TASK_HEIGHT + CANVAS.TASK_MARGIN)
+      const taskY = snapToGridFrom(nextTaskYByColumn[column], firstTaskY)
 
       taskMoves.push({
         taskId: task.id,
         parentId: dg.group.id,
         position: { x: taskX, y: taskY },
       })
+      nextTaskYByColumn[column] = taskY + Math.max(1, taskSize?.height ?? CANVAS.DEFAULT_TASK_HEIGHT) + CANVAS.TASK_MARGIN
     }
   }
 

@@ -29,6 +29,8 @@ import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
   getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
+  /** Read a Vue Flow node's current rendered dimensions. */
+  getNodeSize?: (nodeId: string) => { width: number; height: number } | undefined
 }
 
 export function useTidyLayout(options: TidyLayoutOptions = {}) {
@@ -85,7 +87,12 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       const vfPos = options.getNodePosition?.(`section-${group.id}`)
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
       const tasks = taskStore.rawTasks.filter((t) => t.parentId === group.id)
-      inputs.push({ group, visualPos, tasks })
+      const taskSizes = new Map<string, { width: number; height: number }>()
+      for (const task of tasks) {
+        const size = options.getNodeSize?.(task.id)
+        if (size) taskSizes.set(task.id, size)
+      }
+      inputs.push({ group, visualPos, tasks, taskSizes })
     }
 
     if (inputs.length === 0) {

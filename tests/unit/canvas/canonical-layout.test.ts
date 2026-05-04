@@ -113,7 +113,7 @@ describe('computeCanonicalLayout', () => {
     expect(taskMoves.map((t) => t.position)).toEqual([
       { x: 20, y: 70 },
       { x: 260, y: 70 },
-      { x: 20, y: 180 },
+      { x: 20, y: 182 },
     ])
     expect(groupMoves[0].size.width).toBe(700)
   })
@@ -130,6 +130,31 @@ describe('computeCanonicalLayout', () => {
     ]
     const { taskMoves } = computeCanonicalLayout(inputs, ['a'])
     expect(taskMoves.map((t) => t.taskId)).toEqual(['t2', 't3', 't1'])
+  })
+
+  it('stacks tasks by measured height so edge gaps stay consistent', () => {
+    const t1 = tk('t1', 'a', 100)
+    const t2 = tk('t2', 'a', 200)
+    const t3 = tk('t3', 'a', 300)
+    const inputs: DayGroupInput[] = [
+      {
+        group: grp('a', 'A', 0, 0),
+        visualPos: { x: 0, y: 0 },
+        tasks: [t1, t2, t3],
+        taskSizes: new Map([
+          ['t1', { width: 220, height: 64 }],
+          ['t2', { width: 220, height: 132 }],
+          ['t3', { width: 220, height: 84 }],
+        ]),
+      },
+    ]
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'])
+
+    expect(taskMoves.map((t) => t.position.y)).toEqual([
+      70,
+      150,
+      294,
+    ])
   })
 
   it('is pure — calling twice with same input returns deep-equal output', () => {

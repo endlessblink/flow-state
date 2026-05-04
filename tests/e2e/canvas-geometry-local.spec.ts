@@ -134,6 +134,37 @@ const readVisibleGroupOrder = async (page: Page, ids: string[]) => page.evaluate
     .map((entry) => entry.id)
 }, ids)
 
+const readTaskEdgeGaps = async (page: Page, ids: string[]) => page.evaluate((ids) => {
+  const rects = ids.map((id) => {
+    const element = document.querySelector(`[data-id="${id}"]`) as HTMLElement | null
+    const rect = element?.getBoundingClientRect()
+    if (!rect) return null
+    return { id, top: rect.top, bottom: rect.bottom, height: rect.height }
+  }).filter((entry): entry is { id: string; top: number; bottom: number; height: number } => !!entry)
+
+  rects.sort((a, b) => a.top - b.top)
+  return {
+    order: rects.map((rect) => rect.id),
+    heights: rects.map((rect) => Math.round(rect.height)),
+    gaps: rects.slice(1).map((rect, index) => Math.round(rect.top - rects[index].bottom)),
+  }
+}, ids)
+
+const dayIdByIndex = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+const dayNameByIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+const expectedWeekdayIds = (availableIds: string[], startFrom: number) => {
+  const available = new Set(availableIds)
+  return Array.from({ length: 7 }, (_, index) => dayIdByIndex[(startFrom + index) % 7])
+    .filter((id) => available.has(id))
+}
+
+const expectedWeekdayNames = (availableNames: string[], startFrom: number) => {
+  const available = new Set(availableNames)
+  return Array.from({ length: 7 }, (_, index) => dayNameByIndex[(startFrom + index) % 7])
+    .filter((name) => available.has(name))
+}
+
 test.describe('local canvas geometry regressions', () => {
   test.beforeEach(async ({ page }) => {
     await setupCanvas(page)
@@ -162,7 +193,8 @@ test.describe('local canvas geometry regressions', () => {
     expect(Math.abs(alpha.x - beta.x), JSON.stringify(geometry, null, 2)).toBe(416)
     expect(new Set([alpha.y, beta.y]).size, JSON.stringify(geometry, null, 2)).toBe(1)
     expect(alphaTasks.map((task) => task.x), JSON.stringify(geometry, null, 2)).toEqual([alpha.x + 20, alpha.x + 20])
-    expect(alphaTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([alpha.y + 70, alpha.y + 180])
+    const alphaGaps = await readTaskEdgeGaps(page, ['task-a', 'task-b'])
+    expect(alphaGaps.gaps, JSON.stringify(alphaGaps, null, 2)).toEqual([22])
   })
 
   test('tidy day-group button preserves today-first order and compact vertical spacing', async ({ page }) => {
@@ -184,8 +216,10 @@ test.describe('local canvas geometry regressions', () => {
 
     await clickToolbar(page, /tidy|layout/)
 
+    const todayIndex = new Date().getDay()
+    const expectedOrder = expectedWeekdayIds(['thu', 'fri', 'sat', 'sun', 'mon', 'tue'], todayIndex)
     await expect.poll(async () => readVisibleGroupOrder(page, ['thu', 'fri', 'sat', 'sun', 'mon', 'tue']))
-      .toEqual(['mon', 'tue', 'thu', 'fri', 'sat', 'sun'])
+      .toEqual(expectedOrder)
 
     const geometry = await readGeometry(page)
     const friday = geometry.groups.find((group) => group.id === 'fri')!
@@ -193,7 +227,8 @@ test.describe('local canvas geometry regressions', () => {
 
     expect(friday.width, JSON.stringify(geometry, null, 2)).toBe(400)
     expect(fridayTasks.map((task) => task.x), JSON.stringify(geometry, null, 2)).toEqual([friday.x + 20, friday.x + 20, friday.x + 20])
-    expect(fridayTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([friday.y + 70, friday.y + 180, friday.y + 290])
+    const fridayGaps = await readTaskEdgeGaps(page, ['task-fri-a', 'task-fri-b', 'task-fri-c'])
+    expect(fridayGaps.gaps, JSON.stringify(fridayGaps, null, 2)).toEqual([22, 22])
   })
 
   test('rotate orders Today, Tomorrow, then the day after tomorrow on Monday', async ({ page }) => {
@@ -213,7 +248,9 @@ test.describe('local canvas geometry regressions', () => {
       .sort((a, b) => a.x - b.x)
       .map((group) => group.name)
 
-    expect(order.slice(0, 4), JSON.stringify(geometry, null, 2)).toEqual(['Today', 'Tomorrow', 'Wednesday', 'Thursday'])
+    const todayIndex = new Date().getDay()
+    const expectedAfterSmart = expectedWeekdayNames(['Wednesday', 'Monday', 'Thursday'], (todayIndex + 2) % 7)
+    expect(order.slice(0, 4), JSON.stringify(geometry, null, 2)).toEqual(['Today', 'Tomorrow', ...expectedAfterSmart].slice(0, 4))
     expect(geometry.groups.map((group) => group.width), JSON.stringify(geometry, null, 2)).toEqual([400, 400, 400, 400, 400])
   })
 
@@ -230,28 +267,30 @@ test.describe('local canvas geometry regressions', () => {
     ])
 
     await clickToolbar(page, /rotate/)
+    const todayIndex = new Date().getDay()
+    const expectedAfterSmart = expectedWeekdayIds(['wed', 'mon', 'thu'], (todayIndex + 2) % 7)
     await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'mon', 'today', 'tomorrow', 'thu']))
-      .toEqual(['today', 'tomorrow', 'wed', 'thu', 'mon'])
+      .toEqual(['today', 'tomorrow', ...expectedAfterSmart])
 
     await clickToolbar(page, /tidy|layout/)
     await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'mon', 'today', 'tomorrow', 'thu']))
-      .toEqual(['today', 'tomorrow', 'wed', 'thu', 'mon'])
+      .toEqual(['today', 'tomorrow', ...expectedAfterSmart])
 
     let geometry = await readGeometry(page)
     let wednesday = geometry.groups.find((group) => group.id === 'wed')!
-    let wednesdayTasks = geometry.tasks.filter((task) => task.parentId === 'wed').sort((a, b) => a.y - b.y)
     expect(wednesday.width, JSON.stringify(geometry, null, 2)).toBe(400)
-    expect(wednesdayTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([wednesday.y + 70, wednesday.y + 180])
+    let wednesdayGaps = await readTaskEdgeGaps(page, ['task-wed-a', 'task-wed-b'])
+    expect(wednesdayGaps.gaps, JSON.stringify(wednesdayGaps, null, 2)).toEqual([22])
 
     await clickToolbar(page, /rotate/)
     await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'mon', 'today', 'tomorrow', 'thu']))
-      .toEqual(['today', 'tomorrow', 'wed', 'thu', 'mon'])
+      .toEqual(['today', 'tomorrow', ...expectedAfterSmart])
 
     geometry = await readGeometry(page)
     wednesday = geometry.groups.find((group) => group.id === 'wed')!
-    wednesdayTasks = geometry.tasks.filter((task) => task.parentId === 'wed').sort((a, b) => a.y - b.y)
     expect(wednesday.width, JSON.stringify(geometry, null, 2)).toBe(400)
-    expect(wednesdayTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([wednesday.y + 70, wednesday.y + 180])
+    wednesdayGaps = await readTaskEdgeGaps(page, ['task-wed-a', 'task-wed-b'])
+    expect(wednesdayGaps.gaps, JSON.stringify(wednesdayGaps, null, 2)).toEqual([22])
   })
 
   test('rotate weekday-only groups starts from the current weekday', async ({ page }) => {
@@ -274,9 +313,11 @@ test.describe('local canvas geometry regressions', () => {
       .sort((a, b) => a.x - b.x)
       .map((group) => group.name)
 
-    expect(order, JSON.stringify(geometry, null, 2)).toEqual(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday'])
+    const todayIndex = new Date().getDay()
+    const expectedOrder = expectedWeekdayNames(['Wednesday', 'Thursday', 'Saturday', 'Monday', 'Tuesday'], todayIndex)
+    expect(order, JSON.stringify(geometry, null, 2)).toEqual(expectedOrder)
 
     await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'thu', 'sat', 'mon', 'tue']))
-      .toEqual(['mon', 'tue', 'wed', 'thu', 'sat'])
+      .toEqual(expectedWeekdayIds(['wed', 'thu', 'sat', 'mon', 'tue'], todayIndex))
   })
 })

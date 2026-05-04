@@ -34,7 +34,9 @@
 
 **Fix**: pass the live Pinia `taskStore` directly to `useCanvasFilteredState`. Native Pinia auto-tracking applies; no plain-object indirection.
 
-**Files**: `src/composables/canvas/useCanvasOrchestrator.ts`, `src/composables/canvas/useCanvasFilteredState.ts`.
+**Regression test**: `tests/e2e/canvas-toolbar-regressions.spec.ts` — describe "BUG-1781 — Canvas hide-overdue toggle reactively re-filters". Mutates two seeded test-user tasks (one overdue, one future) with canvas positions, clicks the Hide-overdue button, asserts the overdue node leaves the DOM via its `data-id` selector, clicks again, asserts the overdue node returns. Runs on both chromium + webkit.
+
+**Files**: `src/composables/canvas/useCanvasOrchestrator.ts`, `src/composables/canvas/useCanvasFilteredState.ts`, `tests/e2e/canvas-toolbar-regressions.spec.ts`.
 
 ---
 
@@ -50,7 +52,9 @@
 
 **Test contract update**: `tests/unit/canvas/tidy-layout.test.ts` — renamed "ignores custom-named groups" → "includes custom-named groups alongside day groups" with corresponding assertion flip.
 
-**Files**: `src/composables/canvas/useTidyLayout.ts`, `tests/unit/canvas/tidy-layout.test.ts`.
+**Regression test**: `tests/e2e/canvas-toolbar-regressions.spec.ts` — describe "BUG-1782 — Canvas Tidy works on custom-named groups". Creates 3 custom groups (no day-keyword) at non-canonical positions via `canvasStore.createGroup`, clicks Tidy, asserts all 3 settle to the same Y (canonical row) and X values are evenly spaced. Runs on both chromium + webkit.
+
+**Files**: `src/composables/canvas/useTidyLayout.ts`, `tests/unit/canvas/tidy-layout.test.ts`, `tests/e2e/canvas-toolbar-regressions.spec.ts`.
 
 ---
 
@@ -69,7 +73,9 @@
 
 **Why not BaseButton**: BaseButton enforces `white-space: nowrap` which would clip the two-line label/subtitle pattern these action buttons use. Bespoke styling is appropriate for this multi-line-action pattern.
 
-**Files**: `src/components/common/RecurrenceDeleteModal.vue`.
+**Regression test**: `tests/unit/recurrence-delete-modal-styles.test.ts` — source-text assertions on the SFC's scoped style block (jsdom doesn't apply Vue scoped CSS reliably). 5 tests: Skip border references `var(--brand-primary)`, Stop border references `var(--color-danger)`, neither contains a fractional-alpha rgba (the washed-out shape), both have `linear-gradient` backgrounds with brand RGB tints, label colours still resolve to brand tokens.
+
+**Files**: `src/components/common/RecurrenceDeleteModal.vue`, `tests/unit/recurrence-delete-modal-styles.test.ts`.
 
 ---
 

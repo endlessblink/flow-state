@@ -10,6 +10,28 @@ import {
 import { CANVAS } from '@/constants/canvas'
 import { useToast } from '@/composables/useToast'
 
+export function getAbsolutePositionForNodeSync(
+    vueFlowNode: Pick<Node, 'position'> & { computedPosition?: { x: number; y: number } },
+    currentParentId: string | null,
+    allGroups: CanvasGroup[]
+): { x: number; y: number } {
+    const relativePos = sanitizePosition(vueFlowNode.position)
+
+    if (currentParentId && currentParentId !== 'NONE') {
+        const parentAbsolute = getGroupAbsolutePosition(currentParentId, allGroups)
+        return toAbsolutePosition(relativePos, parentAbsolute)
+    }
+
+    if (vueFlowNode.computedPosition) {
+        return {
+            x: vueFlowNode.computedPosition.x,
+            y: vueFlowNode.computedPosition.y
+        }
+    }
+
+    return relativePos
+}
+
 /**
  * Composable for managing node sync with optimistic locking
  *
@@ -96,23 +118,7 @@ export function useNodeSync(
             // ================================================================
             // 2. CALCULATE ABSOLUTE POSITION
             // ================================================================
-            let absolutePosition: { x: number; y: number }
-            const vfNode = vueFlowNode as { computedPosition?: { x: number; y: number } }
-
-            if (vfNode.computedPosition) {
-                absolutePosition = {
-                    x: vfNode.computedPosition.x,
-                    y: vfNode.computedPosition.y
-                }
-            } else {
-                const relativePos = sanitizePosition(vueFlowNode.position)
-                if (currentParentId && currentParentId !== 'NONE') {
-                    const parentAbsolute = getGroupAbsolutePosition(currentParentId, allGroups)
-                    absolutePosition = toAbsolutePosition(relativePos, parentAbsolute)
-                } else {
-                    absolutePosition = relativePos
-                }
-            }
+            const absolutePosition = getAbsolutePositionForNodeSync(vueFlowNode, currentParentId, allGroups)
 
             // ================================================================
             // 3. GET CURRENT VERSION (with fallback to store)

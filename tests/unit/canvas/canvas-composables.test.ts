@@ -20,11 +20,14 @@ vi.useFakeTimers()
 // Silence DEV console.log noise
 vi.stubGlobal('import.meta', { env: { DEV: false } })
 
+vi.mock('@/services/auth/supabase', () => ({ supabase: null }))
+
 import { useCanvasOperationState } from '@/composables/canvas/useCanvasOperationState'
 import { useCanvasFilteredState } from '@/composables/canvas/useCanvasFilteredState'
 import { useCanvasGroups } from '@/stores/canvas/canvasGroups'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { findMatchingGroupForDueDate, calculatePositionInGroup } from '@/composables/canvas/useSmartGroupMatcher'
+import { getAbsolutePositionForNodeSync } from '@/composables/canvas/useNodeSync'
 import type { Task } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
 
@@ -352,7 +355,35 @@ describe('Canvas alignment — pure bounding-box math', () => {
 })
 
 // ---------------------------------------------------------------------------
-// TESTS 26-30: Smart group matcher — never modifies geometry
+// TESTS 26-27: Node sync position conversion
+// ---------------------------------------------------------------------------
+
+describe('useNodeSync — absolute position conversion', () => {
+  it('26: ignores stale computedPosition for nested nodes after parent moves', () => {
+    const parent = makeGroup({
+      id: 'group-1',
+      position: { x: 500, y: 300, width: 400, height: 300 },
+    })
+    const node = {
+      position: { x: 20, y: 70 },
+      computedPosition: { x: 120, y: 170 },
+    }
+
+    expect(getAbsolutePositionForNodeSync(node, parent.id, [parent])).toEqual({ x: 520, y: 370 })
+  })
+
+  it('27: still uses computedPosition for root nodes when available', () => {
+    const node = {
+      position: { x: 20, y: 70 },
+      computedPosition: { x: 120, y: 170 },
+    }
+
+    expect(getAbsolutePositionForNodeSync(node, null, [])).toEqual({ x: 120, y: 170 })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TESTS 28-32: Smart group matcher — never modifies geometry
 // ---------------------------------------------------------------------------
 
 describe('useSmartGroupMatcher — matching without geometry mutations', () => {

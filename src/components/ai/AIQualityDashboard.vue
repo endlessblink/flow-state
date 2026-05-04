@@ -45,7 +45,9 @@
     <div v-if="report" class="summary-cards">
       <div class="card glass score-card" :class="gradeClass">
         <h3>Overall Grade</h3>
-        <div class="grade-display">{{ report.grade }}</div>
+        <div class="grade-display">
+          {{ report.grade }}
+        </div>
         <p>{{ gradeLabel }}</p>
       </div>
 
@@ -67,14 +69,18 @@
 
       <div class="card glass stat-card">
         <h3>Provider</h3>
-        <div class="stat-value stat-value--small">{{ report.provider }}</div>
+        <div class="stat-value stat-value--small">
+          {{ report.provider }}
+        </div>
         <p>{{ formatTime(report.timestamp) }}</p>
       </div>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!isRunning" class="empty-state glass">
-      <h3 class="empty-title">AI Quality Assessment</h3>
+      <h3 class="empty-title">
+        AI Quality Assessment
+      </h3>
       <p class="empty-desc">
         Tests your AI assistant by sending {{ testPrompts.length }} prompts across {{ new Set(testPrompts.map(t => t.category)).size }} categories,
         then judges each response against {{ rubrics.length }} quality rubrics using a second LLM call.
@@ -129,7 +135,7 @@
               <span class="result-grade" :class="scoreColorClass(result.overallScore)">
                 {{ result.grade }}
               </span>
-              <span class="result-grade-dot" :class="gradeDotClass(result.grade)"></span>
+              <span class="result-grade-dot" :class="gradeDotClass(result.grade)" />
             </div>
           </div>
 
@@ -142,7 +148,9 @@
           <!-- AI Response Preview (first 3 lines) -->
           <div class="result-response-preview">
             <span class="preview-label">AI Response:</span>
-            <div class="preview-text">{{ result.response }}</div>
+            <div class="preview-text">
+              {{ result.response }}
+            </div>
           </div>
 
           <!-- Simple Verdict (derived from judge reasoning) -->
@@ -154,12 +162,16 @@
           <div v-if="expandedCards.has(result.promptId)" class="expanded-content">
             <div class="expanded-section">
               <h4>Full AI Response</h4>
-              <div class="response-text">{{ result.response }}</div>
+              <div class="response-text">
+                {{ result.response }}
+              </div>
             </div>
 
             <div v-if="result.judgeReasoning" class="expanded-section">
               <h4>Judge's Detailed Assessment</h4>
-              <div class="judge-text">{{ result.judgeReasoning }}</div>
+              <div class="judge-text">
+                {{ result.judgeReasoning }}
+              </div>
             </div>
 
             <!-- Expected Behavior -->
@@ -260,7 +272,9 @@
           <span class="history-time">{{ formatTime(h.timestamp) }}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" @click="handleClearHistory">Clear History</button>
+      <button class="btn btn-ghost" @click="handleClearHistory">
+        Clear History
+      </button>
     </div>
   </div>
 </template>

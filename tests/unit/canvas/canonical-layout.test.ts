@@ -102,6 +102,22 @@ describe('computeCanonicalLayout', () => {
     expect(col1Xs.every((x) => x === 260)).toBe(true)
   })
 
+  it('can arrange tasks horizontally for the toolbar tidy action without changing default rotation layout', () => {
+    const tasks = [tk('t1', 'a', 300), tk('t2', 'a', 100), tk('t3', 'a', 200)]
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks },
+    ]
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, ['a'], { taskLayout: 'horizontal' })
+
+    expect(taskMoves.map((t) => t.taskId)).toEqual(['t2', 't3', 't1'])
+    expect(taskMoves.map((t) => t.position)).toEqual([
+      { x: 20, y: 70 },
+      { x: 250, y: 70 },
+      { x: 480, y: 70 },
+    ])
+    expect(groupMoves[0].size.width).toBeGreaterThanOrEqual(720)
+  })
+
   it('orders tasks top-to-bottom using their current Y (stable ordering)', () => {
     // Tasks given in mixed order; layout should output them bottom-most-to-
     // top-most-in-store → sorted ascending Y → first task in moves is the

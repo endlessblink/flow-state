@@ -58,6 +58,7 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
 // ============================================================================
 
 import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
+import { __forceRefreshCurrentDay, __resetCurrentDayForTest } from '@/composables/useCurrentDay'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
@@ -111,6 +112,7 @@ describe('rotateDayGroupPositions()', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(WEDNESDAY)
+    __resetCurrentDayForTest()
 
     setActivePinia(createPinia())
 
@@ -138,6 +140,7 @@ describe('rotateDayGroupPositions()', () => {
   })
 
   afterEach(() => {
+    __resetCurrentDayForTest()
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
@@ -250,6 +253,39 @@ describe('rotateDayGroupPositions()', () => {
     expect(posById.get(byName.get('Saturday')!)).toBe(1248)
     expect(posById.get(byName.get('Sunday')!)).toBe(1664)
     expect(posById.get(byName.get('Monday')!)).toBe(2080)
+  })
+
+  it('2c: on Monday with Today+Tomorrow groups, Wednesday is the day-after-tomorrow slot', () => {
+    vi.setSystemTime(new Date(2026, 4, 4, 0, 0, 0, 0)) // Monday 2026-05-04
+    __forceRefreshCurrentDay()
+    ;(settingsStore as any).weekStartsOn = 1
+
+    const dayOfWeekGroups = DAY_NAMES.map((name, i) => makeGroup({
+      name,
+      position: { x: (i + 2) * 350, y: 0, width: 350, height: 600 }
+    }))
+    const todayGroup = makeGroup({ name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const tomorrowGroup = makeGroup({ name: 'Tomorrow', position: { x: 350, y: 0, width: 350, height: 600 } })
+    const allGroups = [todayGroup, tomorrowGroup, ...dayOfWeekGroups]
+
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue(allGroups)
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
+
+    const { rotateDayGroupPositions } = useDayGroupRotation()
+    rotateDayGroupPositions().release()
+
+    const calls = updateGroup.mock.calls as Array<[string, { position: { x: number } }]>
+    const posById = new Map(calls.map(([id, update]) => [id, update.position.x]))
+    const byName = new Map([
+      ...dayOfWeekGroups.map((g) => [g.name, g.id] as const),
+      ['Today', todayGroup.id] as const,
+      ['Tomorrow', tomorrowGroup.id] as const,
+    ])
+
+    expect(posById.get(byName.get('Today')!)).toBe(0)
+    expect(posById.get(byName.get('Tomorrow')!)).toBe(416)
+    expect(posById.get(byName.get('Wednesday')!)).toBe(832)
+    expect(posById.get(byName.get('Thursday')!)).toBe(1248)
   })
 
   // --------------------------------------------------------------------------

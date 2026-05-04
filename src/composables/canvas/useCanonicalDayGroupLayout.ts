@@ -45,6 +45,10 @@ export interface CanonicalLayoutResult {
   taskMoves: TaskMove[]
 }
 
+export interface CanonicalLayoutOptions {
+  taskLayout?: 'vertical' | 'horizontal'
+}
+
 /**
  * Compute canonical layout for day/smart groups.
  *
@@ -58,7 +62,8 @@ export interface CanonicalLayoutResult {
  */
 export function computeCanonicalLayout(
   dayGroups: DayGroupInput[],
-  orderedIds: string[]
+  orderedIds: string[],
+  options: CanonicalLayoutOptions = {}
 ): CanonicalLayoutResult {
   if (dayGroups.length === 0) {
     return { groupMoves: [], taskMoves: [] }
@@ -85,11 +90,17 @@ export function computeCanonicalLayout(
     if (!dg) continue
 
     const taskCount = dg.tasks.length
-    const hasOverflow = taskCount > CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
+    const taskLayout = options.taskLayout ?? 'vertical'
+    const hasOverflow = taskLayout === 'vertical' && taskCount > CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
 
     const groupX = nextGroupX
     const groupY = originY
-    const groupWidth = hasOverflow ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
+    const horizontalTaskWidth = taskCount > 0
+      ? CANVAS.GROUP_PADDING * 2 + taskCount * CANVAS.DEFAULT_TASK_WIDTH + (taskCount - 1) * CANVAS.TASK_MARGIN
+      : CANVAS.DAY_GROUP_WIDTH_1COL
+    const groupWidth = taskLayout === 'horizontal'
+      ? Math.max(CANVAS.DAY_GROUP_WIDTH_1COL, horizontalTaskWidth)
+      : hasOverflow ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
     const groupHeight = CANVAS.DAY_GROUP_HEIGHT
 
     groupMoves.push({
@@ -114,13 +125,17 @@ export function computeCanonicalLayout(
 
     for (let t = 0; t < sortedTasks.length; t++) {
       const task = sortedTasks[t]
-      const column = t < CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN ? 0 : 1
-      const row = t % CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
+      const column = taskLayout === 'horizontal'
+        ? t
+        : t < CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN ? 0 : 1
+      const row = taskLayout === 'horizontal'
+        ? 0
+        : t % CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
 
       const taskX =
         groupX +
         CANVAS.GROUP_PADDING +
-        column * (CANVAS.DEFAULT_TASK_WIDTH + CANVAS.DAY_GROUP_COLUMN_GAP)
+        column * (CANVAS.DEFAULT_TASK_WIDTH + (taskLayout === 'horizontal' ? CANVAS.TASK_MARGIN : CANVAS.DAY_GROUP_COLUMN_GAP))
       const taskY =
         groupY +
         CANVAS.DAY_GROUP_HEADER_HEIGHT +

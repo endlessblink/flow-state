@@ -94,7 +94,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       .sort((a, b) => a.visualPos.x - b.visualPos.x)
       .map((i) => i.group.id)
 
-    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds)
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds, { taskLayout: 'horizontal' })
 
     // Apply store + PositionManager writes. Caller applies Vue Flow moves.
     try {

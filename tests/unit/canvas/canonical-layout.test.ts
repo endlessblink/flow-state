@@ -112,10 +112,10 @@ describe('computeCanonicalLayout', () => {
     expect(taskMoves.map((t) => t.taskId)).toEqual(['t2', 't3', 't1'])
     expect(taskMoves.map((t) => t.position)).toEqual([
       { x: 20, y: 70 },
-      { x: 250, y: 70 },
-      { x: 480, y: 70 },
+      { x: 260, y: 70 },
+      { x: 20, y: 180 },
     ])
-    expect(groupMoves[0].size.width).toBeGreaterThanOrEqual(720)
+    expect(groupMoves[0].size.width).toBe(700)
   })
 
   it('orders tasks top-to-bottom using their current Y (stable ordering)', () => {

@@ -95,11 +95,8 @@ export function computeCanonicalLayout(
 
     const groupX = nextGroupX
     const groupY = originY
-    const horizontalTaskWidth = taskCount > 0
-      ? CANVAS.GROUP_PADDING * 2 + taskCount * CANVAS.DEFAULT_TASK_WIDTH + (taskCount - 1) * CANVAS.TASK_MARGIN
-      : CANVAS.DAY_GROUP_WIDTH_1COL
     const groupWidth = taskLayout === 'horizontal'
-      ? Math.max(CANVAS.DAY_GROUP_WIDTH_1COL, horizontalTaskWidth)
+      ? taskCount > 1 ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
       : hasOverflow ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
     const groupHeight = CANVAS.DAY_GROUP_HEIGHT
 
@@ -125,17 +122,18 @@ export function computeCanonicalLayout(
 
     for (let t = 0; t < sortedTasks.length; t++) {
       const task = sortedTasks[t]
+      const maxHorizontalColumns = 2
       const column = taskLayout === 'horizontal'
-        ? t
+        ? t % maxHorizontalColumns
         : t < CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN ? 0 : 1
       const row = taskLayout === 'horizontal'
-        ? 0
+        ? Math.floor(t / maxHorizontalColumns)
         : t % CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
 
       const taskX =
         groupX +
         CANVAS.GROUP_PADDING +
-        column * (CANVAS.DEFAULT_TASK_WIDTH + (taskLayout === 'horizontal' ? CANVAS.TASK_MARGIN : CANVAS.DAY_GROUP_COLUMN_GAP))
+        column * (CANVAS.DEFAULT_TASK_WIDTH + CANVAS.DAY_GROUP_COLUMN_GAP)
       const taskY =
         groupY +
         CANVAS.DAY_GROUP_HEADER_HEIGHT +

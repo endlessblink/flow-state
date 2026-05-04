@@ -120,6 +120,19 @@ const readGeometry = async (page: Page) => page.evaluate(() => {
   }
 })
 
+const readVisibleGroupOrder = async (page: Page, ids: string[]) => page.evaluate((ids) => {
+  return ids
+    .map((id) => {
+      const element = document.querySelector(`[data-id="section-${id}"]`) as HTMLElement | null
+      if (!element) return null
+      const rect = element.getBoundingClientRect()
+      return { id, left: Math.round(rect.left) }
+    })
+    .filter((entry): entry is { id: string; left: number } => !!entry)
+    .sort((a, b) => a.left - b.left)
+    .map((entry) => entry.id)
+}, ids)
+
 test.describe('local canvas geometry regressions', () => {
   test.beforeEach(async ({ page }) => {
     await setupCanvas(page)
@@ -181,6 +194,9 @@ test.describe('local canvas geometry regressions', () => {
       { id: 'tue', name: 'Tuesday', x: 3600, y: 200 },
     ], [])
 
+    await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'thu', 'sat', 'mon', 'tue']))
+      .toEqual(['thu', 'sat', 'mon', 'wed', 'tue'])
+
     await clickToolbar(page, /rotate/)
     await page.waitForTimeout(500)
 
@@ -190,5 +206,8 @@ test.describe('local canvas geometry regressions', () => {
       .map((group) => group.name)
 
     expect(order, JSON.stringify(geometry, null, 2)).toEqual(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday'])
+
+    await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'thu', 'sat', 'mon', 'tue']))
+      .toEqual(['mon', 'tue', 'wed', 'thu', 'sat'])
   })
 })

@@ -139,7 +139,7 @@ test.describe('local canvas geometry regressions', () => {
     await setupCanvas(page)
   })
 
-  test('tidy keeps compact groups and lays tasks side-by-side with small gaps', async ({ page }) => {
+  test('tidy keeps compact groups and stacks tasks with vertical spacing', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'alpha', name: 'Project Alpha', x: 900, y: 620, width: 400, height: 1000 },
       { id: 'beta', name: 'Project Beta', x: 100, y: 500, width: 400, height: 1000 },
@@ -155,17 +155,17 @@ test.describe('local canvas geometry regressions', () => {
     const geometry = await readGeometry(page)
     const alpha = geometry.groups.find((group) => group.id === 'alpha')!
     const beta = geometry.groups.find((group) => group.id === 'beta')!
-    const alphaTasks = geometry.tasks.filter((task) => task.parentId === 'alpha').sort((a, b) => a.x - b.x)
+    const alphaTasks = geometry.tasks.filter((task) => task.parentId === 'alpha').sort((a, b) => a.y - b.y)
 
-    expect(alpha.width, JSON.stringify(geometry, null, 2)).toBe(700)
+    expect(alpha.width, JSON.stringify(geometry, null, 2)).toBe(400)
     expect(beta.width, JSON.stringify(geometry, null, 2)).toBe(400)
     expect(Math.abs(alpha.x - beta.x), JSON.stringify(geometry, null, 2)).toBe(416)
     expect(new Set([alpha.y, beta.y]).size, JSON.stringify(geometry, null, 2)).toBe(1)
-    expect(alphaTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([alpha.y + 70, alpha.y + 70])
-    expect(alphaTasks[1].x - alphaTasks[0].x, JSON.stringify(geometry, null, 2)).toBe(240)
+    expect(alphaTasks.map((task) => task.x), JSON.stringify(geometry, null, 2)).toEqual([alpha.x + 20, alpha.x + 20])
+    expect(alphaTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([alpha.y + 70, alpha.y + 180])
   })
 
-  test('tidy day-group button preserves today-first order and two-column task spacing', async ({ page }) => {
+  test('tidy day-group button preserves today-first order and compact vertical spacing', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'thu', name: 'Thursday', x: 100, y: 200 },
       { id: 'fri', name: 'Friday', x: 700, y: 200 },
@@ -191,10 +191,9 @@ test.describe('local canvas geometry regressions', () => {
     const friday = geometry.groups.find((group) => group.id === 'fri')!
     const fridayTasks = geometry.tasks.filter((task) => task.parentId === 'fri').sort((a, b) => a.y - b.y || a.x - b.x)
 
-    expect(friday.width, JSON.stringify(geometry, null, 2)).toBe(700)
-    expect(fridayTasks.slice(0, 2).map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([friday.y + 70, friday.y + 70])
-    expect(fridayTasks[1].x - fridayTasks[0].x, JSON.stringify(geometry, null, 2)).toBe(240)
-    expect(fridayTasks[2].y, JSON.stringify(geometry, null, 2)).toBe(friday.y + 180)
+    expect(friday.width, JSON.stringify(geometry, null, 2)).toBe(400)
+    expect(fridayTasks.map((task) => task.x), JSON.stringify(geometry, null, 2)).toEqual([friday.x + 20, friday.x + 20, friday.x + 20])
+    expect(fridayTasks.map((task) => task.y), JSON.stringify(geometry, null, 2)).toEqual([friday.y + 70, friday.y + 180, friday.y + 290])
   })
 
   test('rotate orders Today, Tomorrow, then the day after tomorrow on Monday', async ({ page }) => {

@@ -4,7 +4,8 @@
  * Wraps `computeCanonicalLayout` to produce a clean single-row layout for
  * every group on the canvas (day-of-week, smart Today/Tomorrow, AND
  * custom-named groups). Day groups use today's semantic order; custom groups
- * keep their current left-to-right X order after the smart/day groups.
+ * keep their current left-to-right X order after the smart/day groups. Tasks
+ * are stacked vertically so day columns stay compact.
  *
  * Same move-application contract as rotation: returns { groupMoves,
  * taskMoves, release }. Caller applies Vue Flow moves via updateNode and
@@ -34,8 +35,8 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
   const taskStore = useTaskStore()
 
   /**
-   * Lay out smart + day-of-week groups in a canonical single row, preserving
-   * the user's current left-to-right X order. Restacks tasks inside each group.
+   * Lay out smart + day-of-week groups in a canonical single row. Restacks
+   * tasks vertically inside each group.
    */
   function tidyDayGroups(): {
     groupMoves: GroupMove[]
@@ -116,7 +117,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       })
       .map((i) => i.group.id)
 
-    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds, { taskLayout: 'horizontal' })
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds)
 
     // Apply store + PositionManager writes. Caller applies Vue Flow moves.
     try {

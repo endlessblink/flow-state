@@ -1,6 +1,6 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: April 16, 2026
+> **Last Updated**: May 4, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
@@ -143,9 +143,9 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
 
 ---
 
-### BUG-1776: Canvas day-group Tidy/Rotate still produces overlap + orphans (🔴 BROKEN)
+### ~~BUG-1776~~: Canvas day-group Tidy/Rotate still produces overlap + orphans (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (opened 2026-04-20, 6 failed fix attempts)
+**Priority**: P0 | **Status**: ✅ DONE (2026-05-04, v1.4.16)
 
 **Problem**: The Canvas "Tidy day-group layout" button (and the "Rotate day groups" auto/manual path) still produces visually broken state in production despite 10 shipped versions of fixes. Symptoms across v1.3.55 → v1.3.64:
   - Day-groups render at inconsistent widths despite `updateNode({ width, height, style })` in v1.3.64.
@@ -167,17 +167,28 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
   - Single `nextTick` lags Vue Flow's dimension bookkeeping. Double `nextTick` or `setTimeout(r, 0)` required. ✅ Applied in v1.3.64.
   - **Unverified suspicion**: when a node has `parentNode` set, its `position` must be RELATIVE to parent. My rotation/tidy writes absolute to store; `useCanvasSync.ts:89` claims to translate abs→rel for parented nodes during sync — but never verified live under the tidy batch conditions. Could still be the root cause.
 
-**Next session directive — MUST DO FIRST**:
-  1. Ask the user to relaunch Electron with the remote debug port so the next Claude Code session can CDP-attach and inspect live state:
-     ```bash
-     killall -9 flowstate FlowState 2>/dev/null
-     ~/Downloads/FlowState-1.3.64.AppImage --no-sandbox --remote-debugging-port=9223 &
-     ```
-  2. Connect via Playwright CDP (`chromium.connectOverCDP('http://localhost:9223')`) against the REAL user data — do NOT inject fake groups or simulate. Previous sessions shipped 3 fixes each based on guessed state.
-  3. Dump every group's `{ id, name, storePos: canvasStore._rawGroups[i].position, vfPos: findNode(id).position, vfDim: { findNode(id).width, .height, .style }, taskCount }` and every task's `{ id, parentId, canvasPosition, dueDate }` BEFORE any click.
-  4. Click the Tidy button via `page.locator('button[aria-label="Tidy day-group layout"]').click()`.
-  5. Diff store vs Vue Flow positions and dimensions for every group + task. Find any node where store + VF diverge (the real bug is one of these).
-  6. Specifically verify: do tasks with `parentNode` set in VF have their `position` as relative-to-parent or absolute? Compare `findNode(taskId).position.x` to `(taskStore.rawTasks[i].canvasPosition.x - parent.position.x)`. Mismatch = the assumed bug.
+**Resolution (v1.4.11-v1.4.16)**:
+- `useCanvasInteractions.ts` now persists group drags together with descendant task/group absolute positions.
+- `useNodeSync.ts` persists nested Vue Flow nodes from relative positions instead of stale `computedPosition`.
+- `useCanonicalDayGroupLayout.ts` centralizes group width/height/spacing and task placement.
+- `useDayGroupRotation.ts` anchors explicit toolbar rotation to the live weekday clock so weekday-only groups start at today.
+- `useTidyLayout.ts` uses today's semantic order for day groups, keeps Tidy compact at `400px`, and stacks tasks vertically with visible spacing instead of widening groups into a horizontal layout.
+- `CanvasView.vue` forces Vue Flow node refresh after explicit canonical layout writes to clear stale internal `computedPosition` state.
+
+**Regression coverage**:
+- `tests/e2e/canvas-geometry-local.spec.ts` covers real toolbar clicks for compact Tidy, today-first Tidy order, Today/Tomorrow rotation, weekday-only rotation, visible DOM order, group widths, and task spacing.
+- `tests/e2e/playwright.canvas-local.config.ts` runs those canvas checks without the Supabase auth global setup.
+- `tests/unit/canvas/tidy-layout.test.ts` covers today's semantic order and vertical task stack positions.
+- `tests/unit/canvas/day-group-position-rotation.test.ts` covers rotation order, Today/Tomorrow offset, child task positions, and sync suppression release.
+- `tests/unit/canvas/canonical-layout.test.ts` covers canonical spacing/size math.
+
+**Verification**:
+- `npx playwright test --config tests/e2e/playwright.canvas-local.config.ts` passed 4/4.
+- `npx vitest run --maxWorkers=4 tests/unit/canvas/tidy-layout.test.ts tests/unit/canvas/canonical-layout.test.ts tests/unit/canvas/day-group-position-rotation.test.ts` passed 32/32.
+- `npm run electron:build` passed.
+- Electron updater deployed and manifest verified at `1.4.16`.
+
+**User confirmation**: User reported the Tidy button looks like it is working after v1.4.16.
 
 **Files to revisit** (DON'T blindly re-edit):
   - `src/composables/canvas/useCanonicalDayGroupLayout.ts` — pure layout math (verified correct in 10 unit tests).
@@ -186,7 +197,7 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
   - `src/views/CanvasView.vue::applyCanonicalLayoutMoves` — the updateNode bridge.
   - `src/composables/canvas/useCanvasSync.ts:89` — claims to translate abs→rel for parented nodes. VERIFY THIS ACTUALLY RUNS inside the tidy batch, given `canvasSyncInProgress=true` suppresses sync.
 
-**Risk of blind re-edits**: I've shipped 10 versions each "fixing" a theory without live inspection. User explicitly said "stop making empty promises". Next iteration MUST start with CDP inspection. If the user cannot relaunch with the debug port, do not ship another version — say so explicitly.
+**Risk note**: Do not reintroduce horizontal Tidy task layout for day groups. That was the cause of stretched groups and insufficient vertical spacing.
 
 **Related artifacts**:
   - [SOP-069](./sop/SOP-069-teleport-async-mount-trap.md) — Teleport + async-mount trap (fixed in v1.3.59, still relevant).

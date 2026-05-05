@@ -27,6 +27,8 @@ export interface DayGroupInput {
   tasks: Task[]
   /** Rendered task sizes keyed by task id. Falls back to canvas defaults. */
   taskSizes?: Map<string, { width: number; height: number }>
+  /** Absolute visual task positions keyed by task id. Falls back to task.canvasPosition. */
+  taskPositions?: Map<string, { x: number; y: number }>
 }
 
 export interface GroupMove {
@@ -97,8 +99,8 @@ export function computeCanonicalLayout(
     const taskLayout = options.taskLayout ?? 'vertical'
     const taskPositioning = options.taskPositioning ?? 'fromHeader'
     const sortedTasks = [...dg.tasks].sort((a, b) => {
-      const ay = a.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
-      const by = b.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
+      const ay = dg.taskPositions?.get(a.id)?.y ?? a.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
+      const by = dg.taskPositions?.get(b.id)?.y ?? b.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
       if (ay !== by) return ay - by
       const at = a.createdAt ? Date.parse(a.createdAt) : 0
       const bt = b.createdAt ? Date.parse(b.createdAt) : 0
@@ -141,7 +143,7 @@ export function computeCanonicalLayout(
     nextGroupX += groupWidth + groupGutter
 
     const defaultFirstTaskY = groupY + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING
-    const currentTopY = Math.min(...sortedTasks.map((task) => task.canvasPosition?.y ?? defaultFirstTaskY))
+    const currentTopY = Math.min(...sortedTasks.map((task) => dg.taskPositions?.get(task.id)?.y ?? task.canvasPosition?.y ?? defaultFirstTaskY))
     const currentTopRelativeY = Number.isFinite(currentTopY) ? currentTopY - dg.visualPos.y : CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING
     const compactStartRelativeY = Math.max(CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING, currentTopRelativeY)
     const firstTaskY = taskPositioning === 'compactFromCurrentTop'
@@ -151,7 +153,7 @@ export function computeCanonicalLayout(
 
     for (let t = 0; t < sortedTasks.length; t++) {
       const task = sortedTasks[t]
-      const currentTaskPosition = task.canvasPosition ?? {
+      const currentTaskPosition = dg.taskPositions?.get(task.id) ?? task.canvasPosition ?? {
         x: dg.visualPos.x + CANVAS.GROUP_PADDING,
         y: dg.visualPos.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
       }

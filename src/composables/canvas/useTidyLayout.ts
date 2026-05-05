@@ -45,6 +45,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
   function tidyDayGroups(): {
     groupMoves: GroupMove[]
     taskMoves: TaskMove[]
+    pendingWrites: Promise<void>
     release: () => void
   } {
     console.log('[TIDY] Tidying day-group layout...')
@@ -54,8 +55,17 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     const release = () => {
       if (released) return
       released = true
+      for (const gm of pendingGroupMoves) {
+        positionManager.releasePositionLock(gm.groupId, 'user-drag')
+      }
+      for (const tm of pendingTaskMoves) {
+        positionManager.releasePositionLock(tm.taskId, 'user-drag')
+      }
       canvasSyncInProgress.value = false
     }
+    const pendingWrites: Promise<unknown>[] = []
+    let pendingGroupMoves: GroupMove[] = []
+    let pendingTaskMoves: TaskMove[] = []
 
     // TASK-1756 v10: re-home orphans first. Prior buggy versions of
     // rotation/tidy wrote task positions that fell outside their parents'
@@ -88,16 +98,19 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
       const tasks = taskStore.rawTasks.filter((t) => t.parentId === group.id)
       const taskSizes = new Map<string, { width: number; height: number }>()
+      const taskPositions = new Map<string, { x: number; y: number }>()
       for (const task of tasks) {
         const size = options.getNodeSize?.(task.id)
         if (size) taskSizes.set(task.id, size)
+        const position = options.getNodePosition?.(task.id)
+        if (position) taskPositions.set(task.id, position)
       }
-      inputs.push({ group, visualPos, tasks, taskSizes })
+      inputs.push({ group, visualPos, tasks, taskSizes, taskPositions })
     }
 
     if (inputs.length === 0) {
       release()
-      return { groupMoves: [], taskMoves: [], release }
+      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
     }
 
     // Tidy must complement Rotate, not overwrite it. Smart/day groups follow
@@ -138,6 +151,8 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds, {
       taskPositioning: 'compactFromCurrentTop',
     })
+    pendingGroupMoves = groupMoves
+    pendingTaskMoves = taskMoves
 
     // Apply store + PositionManager writes. Caller applies Vue Flow moves.
     try {
@@ -156,7 +171,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
         positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
       }
       for (const tm of taskMoves) {
-        taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG')
+        pendingWrites.push(taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG'))
         positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
       }
     } catch (err) {
@@ -165,7 +180,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     }
 
     console.log('[TIDY] Wrote', groupMoves.length, 'group moves +', taskMoves.length, 'task moves')
-    return { groupMoves, taskMoves, release }
+    return { groupMoves, taskMoves, pendingWrites: Promise.all(pendingWrites).then(() => undefined), release }
   }
 
   return { tidyDayGroups }

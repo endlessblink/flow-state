@@ -493,12 +493,26 @@ function refreshRenderedNodesFromModel() {
 
 const dayRotation = useDayGroupRotation({
   onMoves: applyCanonicalLayoutMoves,
-  getNodePosition: (nodeId: string) => {
-    const node = findNode(nodeId)
-    return node ? { x: node.position.x, y: node.position.y } : undefined
-  },
+  getNodePosition: (nodeId: string) => getVisualNodePosition(nodeId),
   getNodeSize: (nodeId: string) => getRenderedNodeSize(nodeId),
 })
+
+function getVisualNodePosition(nodeId: string): { x: number; y: number } | undefined {
+  const node = findNode(nodeId) as any
+  if (!node?.position) return undefined
+
+  if (node.parentNode) {
+    const parentNode = findNode(node.parentNode) as any
+    if (parentNode?.position) {
+      return {
+        x: parentNode.position.x + node.position.x,
+        y: parentNode.position.y + node.position.y,
+      }
+    }
+  }
+
+  return { x: node.position.x, y: node.position.y }
+}
 
 function getRenderedNodeSize(nodeId: string) {
   const element = document.querySelector(`[data-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null
@@ -514,10 +528,7 @@ function getRenderedNodeSize(nodeId: string) {
 }
 
 const tidyLayout = useTidyLayout({
-  getNodePosition: (nodeId: string) => {
-    const node = findNode(nodeId)
-    return node ? { x: node.position.x, y: node.position.y } : undefined
-  },
+  getNodePosition: (nodeId: string) => getVisualNodePosition(nodeId),
   getNodeSize: (nodeId: string) => getRenderedNodeSize(nodeId),
 })
 
@@ -525,10 +536,17 @@ const tidyLayout = useTidyLayout({
 // reactivity cycle. Single nextTick lets the BUG-1203 spatial validator
 // run while VF still sees stale parent dimensions → tasks get orphaned.
 // Double nextTick is the reliable pattern.
-function releaseOnDoubleNextTick(release: () => void, afterRelease?: () => void) {
+function releaseOnDoubleNextTick(release: () => void, afterRelease?: () => void, pendingWrites?: Promise<void>) {
   nextTick(() => nextTick(() => {
-    release()
-    afterRelease?.()
+    const finish = () => {
+      release()
+      afterRelease?.()
+    }
+    if (pendingWrites) {
+      pendingWrites.finally(finish)
+    } else {
+      finish()
+    }
   }))
 }
 
@@ -537,25 +555,25 @@ function handleRotateDayGroups() {
   // on rotateDayGroups (dueDate/marker path). Physical rotation always produces
   // moves — the canonical primitive owns all geometry math now.
   dayRotation.rotateDayGroups({ force: true })
-  const { groupMoves, taskMoves, release } = dayRotation.rotateDayGroupPositions()
+  const { groupMoves, taskMoves, pendingWrites, release } = dayRotation.rotateDayGroupPositions()
   applyCanonicalLayoutMoves(groupMoves)
   applyCanonicalTaskMoves(taskMoves, groupMoves)
   releaseOnDoubleNextTick(release, () => {
     syncNodes(undefined, { force: true })
     refreshRenderedNodesFromModel()
-  })
+  }, pendingWrites)
 }
 
 function handleTidyLayout() {
   // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
   // (user's left-to-right order preserved) and restack tasks inside them.
-  const { groupMoves, taskMoves, release } = tidyLayout.tidyDayGroups()
+  const { groupMoves, taskMoves, pendingWrites, release } = tidyLayout.tidyDayGroups()
   applyCanonicalLayoutMoves(groupMoves)
   applyCanonicalTaskMoves(taskMoves, groupMoves)
   releaseOnDoubleNextTick(release, () => {
     syncNodes(undefined, { force: true })
     refreshRenderedNodesFromModel()
-  })
+  }, pendingWrites)
 }
 
 // Initialize Orchestrator

@@ -189,19 +189,19 @@ describe('useTidyLayout', () => {
 
     expect(taskMoves.map((move) => move.taskId)).toEqual(['task-high', 'task-low'])
     expect(taskMoves[0]?.parentId).toBe(mon.id)
-    expect(taskMoves[0]?.position).toEqual({ x: 20, y: 70 })
-    expect(taskMoves[1]?.position).toEqual({ x: 20, y: 182 })
+    expect(taskMoves[0]?.position).toEqual({ x: 20, y: 100 })
+    expect(taskMoves[1]?.position).toEqual({ x: 20, y: 212 })
     expect(updateTask).toHaveBeenCalledTimes(2)
     expect(updateTask).toHaveBeenNthCalledWith(
       1,
       'task-high',
-      { canvasPosition: { x: 20, y: 70 } },
+      { canvasPosition: { x: 20, y: 100 } },
       'DRAG'
     )
     expect(updateTask).toHaveBeenNthCalledWith(
       2,
       'task-low',
-      { canvasPosition: { x: 20, y: 182 } },
+      { canvasPosition: { x: 20, y: 212 } },
       'DRAG'
     )
   })

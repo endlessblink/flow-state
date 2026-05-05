@@ -269,7 +269,8 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
 
     const { groupMoves, taskMoves } = computeCanonicalLayout(
       inputs.map((i) => ({ group: i.group, visualPos: i.visualPos, tasks: i.tasks, taskSizes: i.taskSizes })),
-      orderedIds
+      orderedIds,
+      { taskPositioning: 'preserveRelative' }
     )
 
     // Apply STORE + PositionManager writes here. The caller applies Vue Flow

@@ -157,6 +157,32 @@ describe('computeCanonicalLayout', () => {
     ])
   })
 
+  it('can compact tasks from their current top instead of teleporting them to the header', () => {
+    const t1 = tk('t1', 'a', 520)
+    const t2 = tk('t2', 'a', 700)
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 200), visualPos: { x: 0, y: 200 }, tasks: [t2, t1] },
+    ]
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'], { taskPositioning: 'compactFromCurrentTop' })
+
+    expect(taskMoves.map((t) => t.position)).toEqual([
+      { x: 20, y: 520 },
+      { x: 20, y: 632 },
+    ])
+  })
+
+  it('can preserve task offsets while moving groups', () => {
+    const t1 = { ...tk('t1', 'a', 520), canvasPosition: { x: 140, y: 520 } }
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 100, 300), visualPos: { x: 100, y: 300 }, tasks: [t1 as Task] },
+      { group: grp('b', 'B', 0, 100), visualPos: { x: 0, y: 100 }, tasks: [] },
+    ]
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, ['a', 'b'], { taskPositioning: 'preserveRelative' })
+
+    expect(groupMoves[0].position).toEqual({ x: 0, y: 100 })
+    expect(taskMoves[0].position).toEqual({ x: 40, y: 320 })
+  })
+
   it('is pure — calling twice with same input returns deep-equal output', () => {
     const inputs: DayGroupInput[] = [
       { group: grp('a', 'A', 10, 20), visualPos: { x: 10, y: 20 }, tasks: [tk('t', 'a')] },

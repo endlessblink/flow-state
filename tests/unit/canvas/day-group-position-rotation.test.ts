@@ -321,17 +321,14 @@ describe('rotateDayGroupPositions()', () => {
   // Test 4: Child tasks move with parent group
   // --------------------------------------------------------------------------
 
-  it('4: child tasks are restacked at canonical positions inside new parent', () => {
-    // TASK-1756 v8: rotation no longer moves tasks by parent's delta.
-    // Instead, tasks are restacked canonically via the layout primitive —
-    // column 0 at groupX + GROUP_PADDING, row N at groupY + HEADER + PADDING + N*(taskH+gap).
+  it('4: child tasks preserve their group-relative offset during rotation', () => {
     const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
 
     const childTask = makeTask({
       id: 'child-1',
       parentId: 'grp-wed',
-      canvasPosition: { x: 100, y: 50 }
+      canvasPosition: { x: 370, y: 80 }
     })
 
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, wed])
@@ -340,15 +337,13 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Wed (today) → slot0 → newGroupX = 0, newGroupY = 0
-    // Task 0 of Wed: x = 0 + PADDING(20) = 20
-    //                y = 0 + HEADER(50) + PADDING(20) + 0*(100+10) = 70
+    // Wed (today) → slot0. The child keeps its previous +20,+80 offset.
     const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
     const childCall = taskCalls.find(([id]) => id === 'child-1')
 
     expect(childCall).toBeDefined()
     expect(childCall![1].canvasPosition.x).toBe(20)
-    expect(childCall![1].canvasPosition.y).toBe(70)
+    expect(childCall![1].canvasPosition.y).toBe(80)
     expect(childCall![2]).toBe('DRAG')
   })
 
@@ -356,7 +351,7 @@ describe('rotateDayGroupPositions()', () => {
   // Test 4b: Child tasks — example from spec (delta 350,0)
   // --------------------------------------------------------------------------
 
-  it('4b: child of non-today group lands at canonical position inside its new slot', () => {
+  it('4b: child of non-today group preserves its group-relative offset', () => {
     const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
 
@@ -372,15 +367,13 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Mon → slot1 → newGroupX = 416 (origin 0 + 416), newGroupY = 0.
-    // Task 0 of Mon: x = 416 + PADDING(20) = 436
-    //                y = 0 + HEADER(50) + PADDING(20) + 0*(100+10) = 70
+    // Mon → slot1. The child keeps its previous +100,+50 offset.
     const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
     const childCall = taskCalls.find(([id]) => id === 'child-mon')
 
     expect(childCall).toBeDefined()
-    expect(childCall![1].canvasPosition.x).toBe(436)
-    expect(childCall![1].canvasPosition.y).toBe(70)
+    expect(childCall![1].canvasPosition.x).toBe(516)
+    expect(childCall![1].canvasPosition.y).toBe(50)
   })
 
   // --------------------------------------------------------------------------

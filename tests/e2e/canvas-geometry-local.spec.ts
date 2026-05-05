@@ -172,11 +172,11 @@ test.describe('local canvas geometry regressions', () => {
 
   test('tidy keeps compact groups and stacks tasks with vertical spacing', async ({ page }) => {
     await seedCanvas(page, [
-      { id: 'alpha', name: 'Project Alpha', x: 900, y: 620, width: 400, height: 1000 },
-      { id: 'beta', name: 'Project Beta', x: 100, y: 500, width: 400, height: 1000 },
+      { id: 'alpha', name: 'Project Alpha', x: 900, y: 200, width: 400, height: 1000 },
+      { id: 'beta', name: 'Project Beta', x: 100, y: 200, width: 400, height: 1000 },
     ], [
-      { id: 'task-a', title: 'A', parentId: 'alpha', x: 920, y: 780 },
-      { id: 'task-b', title: 'B', parentId: 'alpha', x: 920, y: 660 },
+      { id: 'task-a', title: 'A', parentId: 'alpha', x: 920, y: 900 },
+      { id: 'task-b', title: 'B', parentId: 'alpha', x: 920, y: 600 },
       { id: 'task-d', title: 'D', parentId: 'beta', x: 120, y: 560 },
     ])
 
@@ -193,6 +193,7 @@ test.describe('local canvas geometry regressions', () => {
     expect(Math.abs(alpha.x - beta.x), JSON.stringify(geometry, null, 2)).toBe(416)
     expect(new Set([alpha.y, beta.y]).size, JSON.stringify(geometry, null, 2)).toBe(1)
     expect(alphaTasks.map((task) => task.x), JSON.stringify(geometry, null, 2)).toEqual([alpha.x + 20, alpha.x + 20])
+    expect(alphaTasks[0].y, JSON.stringify(geometry, null, 2)).toBeGreaterThan(alpha.y + 300)
     const alphaGaps = await readTaskEdgeGaps(page, ['task-a', 'task-b'])
     expect(alphaGaps.gaps, JSON.stringify(alphaGaps, null, 2)).toEqual([22])
   })

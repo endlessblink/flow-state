@@ -8,8 +8,8 @@
  *   - Uniform width (350 or 700 for 2-column overflow).
  *   - Uniform minimum height (1000 — grows if measured task cards need more).
  *   - Evenly spaced on X with a fixed gutter between actual rendered widths.
- *   - Tasks inside each group stacked vertically from measured rendered heights,
- *     wrapping to a 2nd column when task count exceeds 8.
+ *   - Task positioning is caller-selected: canonical from header, compact from
+ *     the current top task, or preserve relative offsets while moving groups.
  *
  * Pure: reads only its inputs, returns new data. No store mutations.
  * No Vue Flow calls. The caller applies the returned moves.
@@ -49,6 +49,7 @@ export interface CanonicalLayoutResult {
 
 export interface CanonicalLayoutOptions {
   taskLayout?: 'vertical' | 'horizontal'
+  taskPositioning?: 'fromHeader' | 'compactFromCurrentTop' | 'preserveRelative'
 }
 
 /**
@@ -94,6 +95,7 @@ export function computeCanonicalLayout(
     if (!dg) continue
 
     const taskLayout = options.taskLayout ?? 'vertical'
+    const taskPositioning = options.taskPositioning ?? 'fromHeader'
     const sortedTasks = [...dg.tasks].sort((a, b) => {
       const ay = a.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
       const by = b.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
@@ -138,11 +140,33 @@ export function computeCanonicalLayout(
 
     nextGroupX += groupWidth + groupGutter
 
-    const firstTaskY = groupY + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING
+    const defaultFirstTaskY = groupY + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING
+    const currentTopY = Math.min(...sortedTasks.map((task) => task.canvasPosition?.y ?? defaultFirstTaskY))
+    const currentTopRelativeY = Number.isFinite(currentTopY) ? currentTopY - dg.visualPos.y : CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING
+    const compactStartRelativeY = Math.max(CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING, currentTopRelativeY)
+    const firstTaskY = taskPositioning === 'compactFromCurrentTop'
+      ? groupY + compactStartRelativeY
+      : defaultFirstTaskY
     const nextTaskYByColumn = [firstTaskY, firstTaskY]
 
     for (let t = 0; t < sortedTasks.length; t++) {
       const task = sortedTasks[t]
+      const currentTaskPosition = task.canvasPosition ?? {
+        x: dg.visualPos.x + CANVAS.GROUP_PADDING,
+        y: dg.visualPos.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
+      }
+      if (taskPositioning === 'preserveRelative') {
+        taskMoves.push({
+          taskId: task.id,
+          parentId: dg.group.id,
+          position: {
+            x: groupX + (currentTaskPosition.x - dg.visualPos.x),
+            y: groupY + (currentTaskPosition.y - dg.visualPos.y),
+          },
+        })
+        continue
+      }
+
       const maxHorizontalColumns = 2
       const column = taskLayout === 'horizontal'
         ? t % maxHorizontalColumns

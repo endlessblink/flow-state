@@ -135,7 +135,9 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       })
       .map((i) => i.group.id)
 
-    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds)
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds, {
+      taskPositioning: 'compactFromCurrentTop',
+    })
 
     // Apply store + PositionManager writes. Caller applies Vue Flow moves.
     try {

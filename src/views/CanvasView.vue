@@ -361,7 +361,7 @@ const nodeTypes = {
 }
 
 // FEATURE-1048: Day group auto-rotation at midnight
-const { findNode, updateNode, setNodes, applyNodeChanges } = useVueFlow()
+const { findNode, updateNode, setNodes, applyNodeChanges, getViewport } = useVueFlow()
 
 // TASK-1756 v10: Vue Flow dimension bookkeeping uses the top-level
 // `width` / `height` fields on the node. Setting only `style.width` (px)
@@ -477,7 +477,6 @@ function applyCanonicalTaskMoves(
   }
   if (positionChanges.length > 0) {
     applyNodeChanges(positionChanges)
-    handleNodesChange(positionChanges as any)
   }
   setNodes(nodes.value)
 }
@@ -501,6 +500,11 @@ function getVisualNodePosition(nodeId: string): { x: number; y: number } | undef
   const node = findNode(nodeId) as any
   if (!node?.position) return undefined
 
+  const computedPosition = node.computedPosition
+  if (Number.isFinite(computedPosition?.x) && Number.isFinite(computedPosition?.y)) {
+    return { x: computedPosition.x, y: computedPosition.y }
+  }
+
   if (node.parentNode) {
     const parentNode = findNode(node.parentNode) as any
     if (parentNode?.position) {
@@ -515,16 +519,31 @@ function getVisualNodePosition(nodeId: string): { x: number; y: number } | undef
 }
 
 function getRenderedNodeSize(nodeId: string) {
-  const element = document.querySelector(`[data-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null
+  const element = document.querySelector(`[data-task-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null
+    ?? document.querySelector(`[data-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null
   const rect = element?.getBoundingClientRect()
   if (rect && rect.width > 0 && rect.height > 0) {
-    return { width: rect.width, height: rect.height }
+    const zoom = getRenderedCanvasZoom()
+    const measured = {
+      width: Math.max(rect.width / zoom, element.scrollWidth, element.offsetWidth),
+      height: Math.max(rect.height / zoom, element.scrollHeight, element.offsetHeight),
+    }
+    return measured
   }
 
   const node = findNode(nodeId) as any
   const width = node?.dimensions?.width ?? node?.measured?.width ?? node?.width
   const height = node?.dimensions?.height ?? node?.measured?.height ?? node?.height
   return Number.isFinite(width) && Number.isFinite(height) ? { width, height } : undefined
+}
+
+function getRenderedCanvasZoom() {
+  const viewportElement = document.querySelector('.vue-flow__viewport') as HTMLElement | null
+  const transform = viewportElement ? getComputedStyle(viewportElement).transform : ''
+  const matrixScale = transform.match(/matrix\(([^)]+)\)/)?.[1]?.split(',')?.[0]
+  const renderedZoom = matrixScale ? Number(matrixScale.trim()) : NaN
+  if (Number.isFinite(renderedZoom) && renderedZoom > 0) return renderedZoom
+  return getViewport().zoom || 1
 }
 
 const tidyLayout = useTidyLayout({

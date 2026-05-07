@@ -2,6 +2,10 @@
   <div ref="triggerElement" class="base-dropdown">
     <button
       type="button"
+      role="combobox"
+      aria-haspopup="listbox"
+      :aria-expanded="isOpen"
+      :aria-controls="listboxId"
       class="dropdown-trigger"
       :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
       :disabled="disabled"
@@ -28,6 +32,7 @@
       @close="closeDropdown"
     >
       <ul
+        :id="listboxId"
         class="dropdown-list"
         role="listbox"
         @keydown.down.prevent="focusNext"
@@ -68,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useId } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
 import BasePopover from './BasePopover.vue'
 import type { Component } from 'vue'
@@ -105,6 +110,7 @@ const isOpen = ref(false)
 const focusedIndex = ref(0)
 const popoverX = ref(0)
 const popoverY = ref(0)
+const listboxId = useId()
 
 const selectedOption = computed(() => {
   if (props.multiple) {

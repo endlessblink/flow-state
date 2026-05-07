@@ -25,7 +25,8 @@
     transition: opacity var(--duration-fast) ease;
 }
 
-.task-card:hover .card-actions {
+.task-card:hover .card-actions,
+.task-card:focus-within .card-actions {
     opacity: 1;
 }
 
@@ -35,7 +36,8 @@
     transition: opacity var(--duration-fast) ease;
 }
 
-.task-card:hover .compact-actions {
+.task-card:hover .compact-actions,
+.task-card:focus-within .compact-actions {
     opacity: 1;
 }
 

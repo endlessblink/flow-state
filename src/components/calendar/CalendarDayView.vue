@@ -36,15 +36,15 @@ defineEmits<{
   (e: 'slotMouseDown', event: MouseEvent, slot: TimeSlot): void
   (e: 'eventMouseEnter', eventId: string): void
   (e: 'eventMouseLeave'): void
-  (e: 'eventDragStart', event: DragEvent, calEvent: CalendarEvent): void
-  (e: 'eventDragEnd', event: DragEvent, calEvent: CalendarEvent): void
-  (e: 'eventClick', event: MouseEvent, calEvent: CalendarEvent): void
-  (e: 'eventDblClick', calEvent: CalendarEvent): void
-  (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent): void
-  (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent): void
-  (e: 'removeFromCalendar', calEvent: CalendarEvent): void
-  (e: 'startTimer', calEvent: CalendarEvent): void
-  (e: 'startResize', event: MouseEvent, calEvent: CalendarEvent, direction: 'top' | 'bottom'): void
+  (e: 'eventDragStart', event: DragEvent, calEvent: any): void
+  (e: 'eventDragEnd', event: DragEvent, calEvent: any): void
+  (e: 'eventClick', event: MouseEvent, calEvent: any): void
+  (e: 'eventDblClick', calEvent: any): void
+  (e: 'eventContextMenu', event: MouseEvent, calEvent: any): void
+  (e: 'cycleStatus', event: MouseEvent, calEvent: any): void
+  (e: 'removeFromCalendar', calEvent: any): void
+  (e: 'startTimer', calEvent: any): void
+  (e: 'startResize', event: MouseEvent, calEvent: any, direction: 'top' | 'bottom'): void
 }>()
 // Inject helpers from parent CalendarView
 interface CalendarHelpers {
@@ -174,7 +174,7 @@ const onSlotsScroll = (e: Event) => {
         <div class="slot-tasks-container">
           <div
             v-for="calEvent in getTasksForSlot(slot)"
-            v-show="isTaskPrimarySlot(slot, calEvent)"
+            v-show="isTaskPrimarySlot(calEvent, slot)"
             :key="`${calEvent.id}-${slot.slotIndex}`"
             class="slot-task is-primary"
             :class="{
@@ -188,7 +188,7 @@ const onSlotsScroll = (e: Event) => {
               'status-active': getTaskStatus(calEvent) === 'todo',
               'slot-task--virtual': calEvent.isVirtual
             }"
-            :style="getSlotTaskStyle(calEvent)"
+            :style="getSlotTaskStyle(calEvent, slot)"
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
             :draggable="!calEvent.isVirtual"
             @mouseenter="!calEvent.isVirtual && $emit('eventMouseEnter', calEvent.id)"

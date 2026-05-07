@@ -99,7 +99,7 @@ import { NPopover, NDatePicker } from 'naive-ui'
 // Define Props
 const props = defineProps<{
   id: string
-  data: unknown
+  data: Record<string, any>
   selected?: boolean
   dragging?: boolean
 }>()
@@ -120,7 +120,7 @@ const canvasStore = useCanvasStore()
 
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
-const section = computed(() => props.data?.section || props.data)
+const section = computed(() => props.data || props.data)
 const isCollapsed = computed(() => !!props.data?.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data

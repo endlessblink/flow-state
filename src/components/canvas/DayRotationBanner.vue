@@ -14,7 +14,6 @@
 import { Sun, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 
 defineProps<{
   showBanner: boolean
@@ -24,6 +23,7 @@ defineProps<{
 defineEmits<{
   dismiss: []
 }>()
+const { t } = useI18n()
 </script>
 
 <style scoped>

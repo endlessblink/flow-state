@@ -2,7 +2,12 @@
   <div class="canvas-empty-state" aria-label="Canvas is empty">
     <!-- Ambient background dots — subtle grid suggestion -->
     <div class="ambient-grid" aria-hidden="true">
-      <span v-for="i in 24" :key="i" class="grid-dot" :style="gridDotStyle(i)" />
+      <span
+        v-for="i in 24"
+        :key="i"
+        class="grid-dot"
+        :style="gridDotStyle(i)"
+      />
     </div>
 
     <!-- Main content card -->
@@ -16,54 +21,201 @@
           xmlns="http://www.w3.org/2000/svg"
         >
           <!-- Connecting lines -->
-          <line class="connector connector-1" x1="80" y1="72" x2="160" y2="100" stroke-dasharray="4 3" />
-          <line class="connector connector-2" x1="240" y1="68" x2="160" y2="100" stroke-dasharray="4 3" />
-          <line class="connector connector-3" x1="160" y1="100" x2="160" y2="148" stroke-dasharray="4 3" />
+          <line
+            class="connector connector-1"
+            x1="80"
+            y1="72"
+            x2="160"
+            y2="100"
+            stroke-dasharray="4 3"
+          />
+          <line
+            class="connector connector-2"
+            x1="240"
+            y1="68"
+            x2="160"
+            y2="100"
+            stroke-dasharray="4 3"
+          />
+          <line
+            class="connector connector-3"
+            x1="160"
+            y1="100"
+            x2="160"
+            y2="148"
+            stroke-dasharray="4 3"
+          />
 
           <!-- Dot nodes at line intersections -->
-          <circle class="node-dot node-dot-1" cx="80" cy="72" r="4" />
-          <circle class="node-dot node-dot-2" cx="240" cy="68" r="4" />
-          <circle class="node-dot node-dot-3" cx="160" cy="148" r="4" />
+          <circle
+            class="node-dot node-dot-1"
+            cx="80"
+            cy="72"
+            r="4"
+          />
+          <circle
+            class="node-dot node-dot-2"
+            cx="240"
+            cy="68"
+            r="4"
+          />
+          <circle
+            class="node-dot node-dot-3"
+            cx="160"
+            cy="148"
+            r="4"
+          />
 
           <!-- Center anchor node -->
-          <circle class="node-center" cx="160" cy="100" r="6" />
+          <circle
+            class="node-center"
+            cx="160"
+            cy="100"
+            r="6"
+          />
 
           <!-- Task card: top-left — floats up -->
           <g class="task-card-group float-a">
-            <rect x="28" y="44" width="104" height="56" rx="8" class="task-card-rect" />
+            <rect
+              x="28"
+              y="44"
+              width="104"
+              height="56"
+              rx="8"
+              class="task-card-rect"
+            />
             <!-- Check circle -->
-            <circle cx="46" cy="60" r="6" class="task-check-ring" />
+            <circle
+              cx="46"
+              cy="60"
+              r="6"
+              class="task-check-ring"
+            />
             <path d="M43 60 L45.5 62.5 L49 58" class="task-check-mark" />
             <!-- Title bar -->
-            <rect x="56" y="55" width="60" height="5" rx="2.5" class="task-bar-title" />
+            <rect
+              x="56"
+              y="55"
+              width="60"
+              height="5"
+              rx="2.5"
+              class="task-bar-title"
+            />
             <!-- Sub bar -->
-            <rect x="56" y="64" width="44" height="4" rx="2" class="task-bar-sub" />
+            <rect
+              x="56"
+              y="64"
+              width="44"
+              height="4"
+              rx="2"
+              class="task-bar-sub"
+            />
             <!-- Tag pill -->
-            <rect x="36" y="78" width="32" height="14" rx="7" class="task-tag-a" />
-            <rect x="74" y="78" width="24" height="14" rx="7" class="task-tag-b" />
+            <rect
+              x="36"
+              y="78"
+              width="32"
+              height="14"
+              rx="7"
+              class="task-tag-a"
+            />
+            <rect
+              x="74"
+              y="78"
+              width="24"
+              height="14"
+              rx="7"
+              class="task-tag-b"
+            />
           </g>
 
           <!-- Task card: top-right — floats up delayed -->
           <g class="task-card-group float-b">
-            <rect x="188" y="40" width="104" height="56" rx="8" class="task-card-rect" />
-            <circle cx="206" cy="56" r="6" class="task-check-ring" />
+            <rect
+              x="188"
+              y="40"
+              width="104"
+              height="56"
+              rx="8"
+              class="task-card-rect"
+            />
+            <circle
+              cx="206"
+              cy="56"
+              r="6"
+              class="task-check-ring"
+            />
             <path d="M203 56 L205.5 58.5 L209 54" class="task-check-mark" />
-            <rect x="216" y="51" width="60" height="5" rx="2.5" class="task-bar-title" />
-            <rect x="216" y="60" width="36" height="4" rx="2" class="task-bar-sub" />
-            <rect x="196" y="74" width="40" height="14" rx="7" class="task-tag-c" />
-            <rect x="242" y="74" width="22" height="14" rx="7" class="task-tag-b" />
+            <rect
+              x="216"
+              y="51"
+              width="60"
+              height="5"
+              rx="2.5"
+              class="task-bar-title"
+            />
+            <rect
+              x="216"
+              y="60"
+              width="36"
+              height="4"
+              rx="2"
+              class="task-bar-sub"
+            />
+            <rect
+              x="196"
+              y="74"
+              width="40"
+              height="14"
+              rx="7"
+              class="task-tag-c"
+            />
+            <rect
+              x="242"
+              y="74"
+              width="22"
+              height="14"
+              rx="7"
+              class="task-tag-b"
+            />
           </g>
 
           <!-- Task card: bottom-center — floats down -->
           <g class="task-card-group float-c">
-            <rect x="108" y="152" width="104" height="40" rx="8" class="task-card-rect-muted" />
-            <rect x="120" y="163" width="52" height="5" rx="2.5" class="task-bar-title-muted" />
-            <rect x="120" y="173" width="36" height="4" rx="2" class="task-bar-sub-muted" />
+            <rect
+              x="108"
+              y="152"
+              width="104"
+              height="40"
+              rx="8"
+              class="task-card-rect-muted"
+            />
+            <rect
+              x="120"
+              y="163"
+              width="52"
+              height="5"
+              rx="2.5"
+              class="task-bar-title-muted"
+            />
+            <rect
+              x="120"
+              y="173"
+              width="36"
+              height="4"
+              rx="2"
+              class="task-bar-sub-muted"
+            />
           </g>
 
           <!-- Drag cursor hint — small hand icon near center-left -->
           <g class="drag-hint float-hint">
-            <circle cx="112" cy="100" r="12" class="drag-hint-bg" />
+            <circle
+              cx="112"
+              cy="100"
+              r="12"
+              class="drag-hint-bg"
+            />
             <!-- Simplified hand/cursor icon -->
             <path d="M109 104 L109 97 Q109 95.5 110.5 95.5 Q112 95.5 112 97 L112 101 Q112.5 99.5 114 99.5 Q115.5 99.5 115.5 101 L115.5 102 Q116 101 117 101 Q118 101 118 102.5 L118 105.5 Q118 108 115 108 L112 108 Q109 108 109 104 Z" class="drag-hand" />
           </g>
@@ -78,7 +230,9 @@
 
       <!-- Copy -->
       <div class="empty-copy">
-        <h2 class="empty-title">Your spatial canvas awaits</h2>
+        <h2 class="empty-title">
+          Your spatial canvas awaits
+        </h2>
         <p class="empty-description">
           Arrange tasks in space. See the big picture. Think visually.
         </p>

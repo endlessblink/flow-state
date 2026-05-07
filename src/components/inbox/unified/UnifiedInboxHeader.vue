@@ -125,8 +125,9 @@
     <div v-if="!isCollapsed && isSearchExpanded" class="search-input-row">
       <div class="search-input-wrapper">
         <Search :size="14" class="search-icon" />
-        <input dir="auto"
+        <input
           ref="searchInputRef"
+          dir="auto"
           type="text"
           class="search-input"
           :value="searchQuery"
@@ -175,7 +176,7 @@
 import { computed, ref, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, CheckCircle2, Search, X, Layers } from 'lucide-vue-next'
-import { NBadge, NPopover } from 'naive-ui'
+import { NPopover } from 'naive-ui'
 import InboxToolbar from './InboxToolbar.vue'
 import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'

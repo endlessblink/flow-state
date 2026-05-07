@@ -193,7 +193,7 @@ const emit = defineEmits<{
   (e: 'clearAllFilters'): void
 }>()
 
-const { t } = useI18n()
+
 
 // TASK-1075: Search state
 const isSearchExpanded = ref(false)

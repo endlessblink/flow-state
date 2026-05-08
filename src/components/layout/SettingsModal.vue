@@ -168,6 +168,7 @@ const currentTab = computed(() => {
   justify-content: center;
 }
 
+.close-btn:focus-visible,
 .close-btn:hover {
   background: var(--glass-border);
   color: var(--text-primary);
@@ -211,6 +212,7 @@ const currentTab = computed(() => {
   text-align: start;
 }
 
+.tab-btn:focus-visible,
 .tab-btn:hover {
   background: var(--glass-bg-medium);
   color: var(--text-primary);

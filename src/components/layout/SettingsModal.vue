@@ -5,7 +5,11 @@
         <h2 class="settings-title">
           {{ $t('settings.title') }}
 </h2>
-        <button class="close-btn" @click="$emit('close')">
+        <button
+          class="close-btn"
+          :aria-label="$t('common.close')"
+          @click="$emit('close')"
+        >
           <X :size="16" />
         </button>
       </header>
@@ -170,6 +174,11 @@ const currentTab = computed(() => {
   transform: scale(1.05);
 }
 
+.close-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .settings-layout {
   display: flex;
   flex: 1;
@@ -205,6 +214,11 @@ const currentTab = computed(() => {
 .tab-btn:hover {
   background: var(--glass-bg-medium);
   color: var(--text-primary);
+}
+
+.tab-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: -2px;
 }
 
 .tab-btn.active {

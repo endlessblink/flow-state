@@ -46,7 +46,7 @@
     :section="modals.selectedSectionForEdit"
     :is-visible="modals.isGroupEditModalOpen"
     @close="modals.closeGroupEditModal"
-    @save="(updatedSection) => $emit('handleGroupEditSave', updatedSection)"
+    @save="(updatedSection) => $emit('handleGroupUpdated', updatedSection)"
   />
 
   <!-- Group Delete Confirmation Modal -->
@@ -100,7 +100,7 @@ const emit = defineEmits<{
   (e: 'handleSectionSettingsSave', settings: Record<string, unknown>): void
   (e: 'handleGroupCreated', group: Record<string, unknown>): void
   (e: 'handleGroupUpdated', group: Record<string, unknown>): void
-  (e: 'handleGroupEditSave', updatedSection: Record<string, unknown>): void
+  (e: 'handleGroupUpdated', updatedSection: Record<string, unknown>): void
   (e: 'confirmDeleteGroup'): void
   (e: 'confirmBulkDelete'): void
 }>()

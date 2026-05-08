@@ -99,7 +99,7 @@ import { NPopover, NDatePicker } from 'naive-ui'
 // Define Props
 const props = defineProps<{
   id: string
-  data: unknown
+  data: Record<string, any>
   selected?: boolean
   dragging?: boolean
 }>()
@@ -132,7 +132,7 @@ const groupColor = computed(() => {
   return storeGroup?.color || props.data?.color || '#3b82f6'
 })
 const taskCount = computed(() => {
-  const data = props.data as Record<string, unknown> | undefined
+  const data = props.data
   const groupId = (data?.id as string) || props.id.replace(/^section-/, '')
   if (!groupId) return 0
 

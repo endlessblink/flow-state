@@ -1,10 +1,15 @@
 <template>
   <div v-if="isOpen" class="settings-overlay" @click="$emit('close')">
-    <div class="settings-modal" :class="{ 'wide-mode': activeTab === 'ai-quality' }" :dir="direction" @click.stop>
+    <div
+      class="settings-modal"
+      :class="{ 'wide-mode': activeTab === 'ai-quality' }"
+      :dir="direction"
+      @click.stop
+    >
       <header class="settings-header">
         <h2 class="settings-title">
           {{ $t('settings.title') }}
-</h2>
+        </h2>
         <button
           class="close-btn"
           :aria-label="$t('common.close')"
@@ -169,6 +174,7 @@ const currentTab = computed(() => {
 }
 
 .close-btn:focus-visible,
+.close-btn:focus-visible { outline: 2px solid var(--brand-primary); }
 .close-btn:hover {
   background: var(--glass-border);
   color: var(--text-primary);
@@ -213,6 +219,7 @@ const currentTab = computed(() => {
 }
 
 .tab-btn:focus-visible,
+.tab-btn:focus-visible { outline: 2px solid var(--brand-primary); }
 .tab-btn:hover {
   background: var(--glass-bg-medium);
   color: var(--text-primary);

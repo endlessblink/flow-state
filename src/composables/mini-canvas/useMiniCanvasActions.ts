@@ -1,5 +1,5 @@
 import { useTaskStore } from '@/stores/tasks'
-import type { Subtask, PlanningNote, Task } from '@/types/tasks'
+import type { Subtask, PlanningNote, Task, MiniCanvasEdge } from '@/types/tasks'
 
 /**
  * Mini-canvas CRUD actions for subtasks and planning notes.
@@ -144,6 +144,36 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     taskStore.updateTask(task.id, { planningNotes: updated } as Partial<Task>)
   }
 
+  // ── Mini-Canvas User-Drawn Edge Actions ──
+
+  const addMiniCanvasEdge = (edge: MiniCanvasEdge) => {
+    const task = getTask()
+    if (!task) return
+
+    const existing = task.miniCanvasEdges ?? []
+    if (existing.some(e => e.id === edge.id)) return
+
+    taskStore.updateTask(task.id, { miniCanvasEdges: [...existing, edge] } as Partial<Task>)
+  }
+
+  const removeMiniCanvasEdge = (edgeId: string) => {
+    const task = getTask()
+    if (!task || !task.miniCanvasEdges?.length) return
+
+    const next = task.miniCanvasEdges.filter(e => e.id !== edgeId)
+    taskStore.updateTask(task.id, { miniCanvasEdges: next } as Partial<Task>)
+  }
+
+  const removeMiniCanvasEdgesForNode = (nodeId: string) => {
+    const task = getTask()
+    if (!task || !task.miniCanvasEdges?.length) return
+
+    const next = task.miniCanvasEdges.filter(e => e.source !== nodeId && e.target !== nodeId)
+    if (next.length === task.miniCanvasEdges.length) return
+
+    taskStore.updateTask(task.id, { miniCanvasEdges: next } as Partial<Task>)
+  }
+
   return {
     addSubtask,
     updateSubtaskPosition,
@@ -156,5 +186,8 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     updateNoteTitle,
     updateNoteDescription,
     deleteNote,
+    addMiniCanvasEdge,
+    removeMiniCanvasEdge,
+    removeMiniCanvasEdgesForNode,
   }
 }

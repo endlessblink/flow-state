@@ -45,6 +45,7 @@ const VALID_TASK_COLUMNS = new Set([
   'workspace_id', 'assigned_to',
   'created_at', 'updated_at',
   'planning_notes', // TASK-1768: mini-canvas planning notes (jsonb)
+  'mini_canvas_edges', // Mini-canvas user-drawn edges (jsonb)
 ])
 
 // --------------------------------------------------------------------------

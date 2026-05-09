@@ -809,6 +809,9 @@ export function useTaskOperations(
                 if (changedKeys.has('subtasks') && updatedTask.subtasks !== undefined) {
                     payload.subtasks = JSON.parse(JSON.stringify(updatedTask.subtasks))
                 }
+                if (changedKeys.has('miniCanvasEdges') && updatedTask.miniCanvasEdges !== undefined) {
+                    payload.mini_canvas_edges = JSON.parse(JSON.stringify(updatedTask.miniCanvasEdges))
+                }
                 // TASK-1403: Include new recurrence fields in sync queue
                 // TASK-1520: Handle null explicitly to clear recurrence on stop
                 if (changedKeys.has('recurrenceRule')) {

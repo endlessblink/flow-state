@@ -233,7 +233,6 @@ const contextMenuStyle = computed(() => ({
 }))
 
 const handleClose = () => {
-  miniCanvas.resetEdges()
   modalsStore.closeMiniCanvas()
 }
 

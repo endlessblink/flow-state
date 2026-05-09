@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useMiniCanvasActions } from './useMiniCanvasActions'
 import type { Node, Edge } from '@vue-flow/core'
+import type { MiniCanvasEdge } from '@/types/tasks'
 
 const CHILD_RADIUS = 300
 
@@ -15,13 +16,24 @@ export function useMiniCanvas(taskId: () => string | null) {
 
   const editingNodeId = ref<string | null>(null)
 
-  // Store user-created edges (connections between nodes)
-  const userEdges = ref<Edge[]>([])
-
   const task = computed(() => {
     const id = taskId()
     if (!id) return undefined
     return taskStore._rawTasks.find(t => t.id === id)
+  })
+
+  // User-created edges are persisted on task.miniCanvasEdges (survives modal close + reload).
+  // Visual style is re-applied at render time so we don't store presentation in the DB.
+  const userEdges = computed<Edge[]>(() => {
+    const stored = task.value?.miniCanvasEdges ?? []
+    return stored.map(e => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+      style: { stroke: '#3b82f6', strokeWidth: 2 },
+    }))
   })
 
   /** Auto-layout: place children in a circle around parent */
@@ -195,7 +207,7 @@ export function useMiniCanvas(taskId: () => string | null) {
   }
 
   const removeEdgesForNode = (nodeId: string) => {
-    userEdges.value = userEdges.value.filter(e => e.source !== nodeId && e.target !== nodeId)
+    actions.removeMiniCanvasEdgesForNode(nodeId)
   }
 
   const addUserEdge = (source: string, target: string, sourceHandle?: string | null, targetHandle?: string | null) => {
@@ -204,17 +216,16 @@ export function useMiniCanvas(taskId: () => string | null) {
     if (source === parentId) return
 
     const edgeId = `user-${source}-${target}`
-    if (userEdges.value.some(e => e.id === edgeId)) return
+    if ((t?.miniCanvasEdges ?? []).some(e => e.id === edgeId)) return
 
     const handles = getRelativeHandles(source, target)
 
-    userEdges.value.push({
+    actions.addMiniCanvasEdge({
       id: edgeId,
       source,
       target,
       sourceHandle: sourceHandle || handles.sourceHandle,
       targetHandle: targetHandle || handles.targetHandle,
-      style: { stroke: '#3b82f6', strokeWidth: 2 },
     })
   }
 
@@ -234,9 +245,9 @@ export function useMiniCanvas(taskId: () => string | null) {
     return newSubtaskId
   }
 
-  /** Reset edges when mini-canvas closes */
+  /** No-op: user edges are now persisted on task.miniCanvasEdges. Kept for callsite compat. */
   const resetEdges = () => {
-    userEdges.value = []
+    /* user edges live on the task; closing the modal must not clear them */
   }
 
   return {

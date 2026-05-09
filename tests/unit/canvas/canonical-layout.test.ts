@@ -102,6 +102,22 @@ describe('computeCanonicalLayout', () => {
     expect(col1Xs.every((x) => x === 260)).toBe(true)
   })
 
+  it('can arrange tasks horizontally for the toolbar tidy action without changing default rotation layout', () => {
+    const tasks = [tk('t1', 'a', 300), tk('t2', 'a', 100), tk('t3', 'a', 200)]
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks },
+    ]
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, ['a'], { taskLayout: 'horizontal' })
+
+    expect(taskMoves.map((t) => t.taskId)).toEqual(['t2', 't3', 't1'])
+    expect(taskMoves.map((t) => t.position)).toEqual([
+      { x: 20, y: 70 },
+      { x: 260, y: 70 },
+      { x: 20, y: 182 },
+    ])
+    expect(groupMoves[0].size.width).toBe(700)
+  })
+
   it('orders tasks top-to-bottom using their current Y (stable ordering)', () => {
     // Tasks given in mixed order; layout should output them bottom-most-to-
     // top-most-in-store → sorted ascending Y → first task in moves is the
@@ -114,6 +130,57 @@ describe('computeCanonicalLayout', () => {
     ]
     const { taskMoves } = computeCanonicalLayout(inputs, ['a'])
     expect(taskMoves.map((t) => t.taskId)).toEqual(['t2', 't3', 't1'])
+  })
+
+  it('stacks tasks by measured height so edge gaps stay consistent', () => {
+    const t1 = tk('t1', 'a', 100)
+    const t2 = tk('t2', 'a', 200)
+    const t3 = tk('t3', 'a', 300)
+    const inputs: DayGroupInput[] = [
+      {
+        group: grp('a', 'A', 0, 0),
+        visualPos: { x: 0, y: 0 },
+        tasks: [t1, t2, t3],
+        taskSizes: new Map([
+          ['t1', { width: 220, height: 64 }],
+          ['t2', { width: 220, height: 132 }],
+          ['t3', { width: 220, height: 84 }],
+        ]),
+      },
+    ]
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'])
+
+    expect(taskMoves.map((t) => t.position.y)).toEqual([
+      70,
+      150,
+      294,
+    ])
+  })
+
+  it('can compact tasks from their current top instead of teleporting them to the header', () => {
+    const t1 = tk('t1', 'a', 520)
+    const t2 = tk('t2', 'a', 700)
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 200), visualPos: { x: 0, y: 200 }, tasks: [t2, t1] },
+    ]
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'], { taskPositioning: 'compactFromCurrentTop' })
+
+    expect(taskMoves.map((t) => t.position)).toEqual([
+      { x: 20, y: 520 },
+      { x: 20, y: 632 },
+    ])
+  })
+
+  it('can preserve task offsets while moving groups', () => {
+    const t1 = { ...tk('t1', 'a', 520), canvasPosition: { x: 140, y: 520 } }
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 100, 300), visualPos: { x: 100, y: 300 }, tasks: [t1 as Task] },
+      { group: grp('b', 'B', 0, 100), visualPos: { x: 0, y: 100 }, tasks: [] },
+    ]
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, ['a', 'b'], { taskPositioning: 'preserveRelative' })
+
+    expect(groupMoves[0].position).toEqual({ x: 0, y: 100 })
+    expect(taskMoves[0].position).toEqual({ x: 40, y: 320 })
   })
 
   it('is pure — calling twice with same input returns deep-equal output', () => {

@@ -435,6 +435,8 @@ const editor = useEditor({
         openOnClick: false,
         HTMLAttributes: {
           class: 'editor-link',
+          target: '_blank',
+          rel: 'noopener noreferrer',
         },
       },
       // underline: uses defaults (no config needed)

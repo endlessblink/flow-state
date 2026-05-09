@@ -2,7 +2,7 @@
  * TASK-1756 v8: useTidyLayout composable tests.
  *
  * Verifies:
- *  1. Tidy preserves user's left-to-right X order (doesn't re-sort by weekday).
+ *  1. Tidy applies today's semantic order for day groups.
  *  2. Custom-named groups are ignored.
  *  3. Safe to call with no day-groups present.
  *  4. Holds canvasSyncInProgress until release().
@@ -58,6 +58,8 @@ describe('useTidyLayout', () => {
   let updateTask: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-04T12:00:00Z')) // Monday
     setActivePinia(createPinia())
     canvasStore = useCanvasStore()
     taskStore = useTaskStore()
@@ -71,11 +73,10 @@ describe('useTidyLayout', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
-  it('preserves user left-to-right X order (no weekday reorder)', () => {
-    // Groups at arbitrary X: Fri(100), Mon(500), Tue(50). Sorted by X:
-    // Tue(50), Fri(100), Mon(500). Canonical row preserves that order.
+  it('orders day groups from the current weekday instead of preserving broken X order', () => {
     const fri = makeGroup('Friday', 100)
     const mon = makeGroup('Monday', 500)
     const tue = makeGroup('Tuesday', 50)
@@ -87,10 +88,10 @@ describe('useTidyLayout', () => {
     release()
 
     const byNode = new Map(groupMoves.map((m) => [m.groupId, m.position.x]))
-    // Origin = min X = 50. Spacing = 416. slots: 50, 466, 882.
-    expect(byNode.get(tue.id)).toBe(50)
-    expect(byNode.get(fri.id)).toBe(466)
-    expect(byNode.get(mon.id)).toBe(882)
+    // Origin = min X = 50. Monday is today, then Tuesday, then Friday.
+    expect(byNode.get(mon.id)).toBe(50)
+    expect(byNode.get(tue.id)).toBe(466)
+    expect(byNode.get(fri.id)).toBe(882)
   })
 
   it('includes custom-named groups alongside day groups', () => {
@@ -143,26 +144,28 @@ describe('useTidyLayout', () => {
     expect(mockCanvasSyncInProgress.value).toBe(false)
   })
 
-  it('includes Today + Tomorrow smart groups alongside day-of-week', () => {
+  it('matches Rotate order when Today + Tomorrow smart groups exist', () => {
     const today = makeGroup('Today', 0)
     const tomorrow = makeGroup('Tomorrow', 100)
     const mon = makeGroup('Monday', 200)
-    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow, mon])
+    const wed = makeGroup('Wednesday', 300)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow, mon, wed])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
 
     const { tidyDayGroups } = useTidyLayout()
     const { groupMoves, release } = tidyDayGroups()
     release()
 
-    expect(groupMoves.length).toBe(3)
+    expect(groupMoves.length).toBe(4)
     const byNode = new Map(groupMoves.map((m) => [m.groupId, m.position.x]))
-    // Order preserved by current X: Today (0), Tomorrow (100), Mon (200).
+    // On Monday, Rotate/Tidy both place Today, Tomorrow, then Wednesday.
     expect(byNode.get(today.id)).toBe(0)
     expect(byNode.get(tomorrow.id)).toBe(416)
-    expect(byNode.get(mon.id)).toBe(832)
+    expect(byNode.get(wed.id)).toBe(832)
+    expect(byNode.get(mon.id)).toBe(1248)
   })
 
-  it('returns taskMoves and persists stacked child task positions during tidy', () => {
+  it('returns taskMoves and persists child task positions in a vertical stack during tidy', () => {
     const mon = makeGroup('Monday', 0)
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
@@ -186,20 +189,54 @@ describe('useTidyLayout', () => {
 
     expect(taskMoves.map((move) => move.taskId)).toEqual(['task-high', 'task-low'])
     expect(taskMoves[0]?.parentId).toBe(mon.id)
-    expect(taskMoves[0]?.position).toEqual({ x: 20, y: 70 })
-    expect(taskMoves[1]?.position).toEqual({ x: 20, y: 180 })
+    expect(taskMoves[0]?.position).toEqual({ x: 20, y: 100 })
+    expect(taskMoves[1]?.position).toEqual({ x: 20, y: 212 })
     expect(updateTask).toHaveBeenCalledTimes(2)
     expect(updateTask).toHaveBeenNthCalledWith(
       1,
       'task-high',
-      { canvasPosition: { x: 20, y: 70 } },
+      { canvasPosition: { x: 20, y: 100 } },
       'DRAG'
     )
     expect(updateTask).toHaveBeenNthCalledWith(
       2,
       'task-low',
-      { canvasPosition: { x: 20, y: 180 } },
+      { canvasPosition: { x: 20, y: 212 } },
       'DRAG'
     )
+  })
+
+  it('keeps 9+ tasks in a single vertical column instead of overflowing to a 2-column grid', () => {
+    // Regression: image 1 had 9 tasks in Today arranged vertically by the user.
+    // Tidy used to flip this to a 2-column staggered grid (image 2) because the
+    // hard-coded `DAY_GROUP_MAX_TASKS_PER_COLUMN = 8` threshold fired. Tidy now
+    // passes `maxTasksPerColumn: null` so the column never overflows.
+    const today = makeGroup('Today', 0)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    const tasks = Array.from({ length: 9 }, (_, i) => ({
+      id: `task-${i}`,
+      parentId: today.id,
+      canvasPosition: { x: 30, y: 100 + i * 110 },
+      createdAt: '2026-04-01T00:00:00Z',
+    })) as any
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(tasks)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { groupMoves, taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves.length).toBe(9)
+    // Every task is in column 0 (x === GROUP_PADDING).
+    for (const move of taskMoves) {
+      expect(move.position.x).toBe(20)
+    }
+    // Y values are strictly monotonically increasing — no column 1 starting at top.
+    for (let i = 1; i < taskMoves.length; i++) {
+      expect(taskMoves[i].position.y).toBeGreaterThan(taskMoves[i - 1].position.y)
+    }
+    // Group keeps the single-column width and grows tall enough to contain all tasks.
+    expect(groupMoves[0].size.width).toBe(400)
+    const lastMoveY = taskMoves[taskMoves.length - 1].position.y
+    expect(groupMoves[0].size.height).toBeGreaterThanOrEqual(lastMoveY)
   })
 })

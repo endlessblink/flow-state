@@ -56,6 +56,8 @@ export interface DayGroupRotationOptions {
   /** Read a Vue Flow node's current visual position. Used to ensure rotation works
    *  even when store and Vue Flow are out of sync. */
   getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
+  /** Read a Vue Flow node's current rendered dimensions for stable task stacking. */
+  getNodeSize?: (nodeId: string) => { width: number; height: number } | undefined
 }
 
 export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
@@ -161,6 +163,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
   function rotateDayGroupPositions(): {
     groupMoves: GroupMove[]
     taskMoves: TaskMove[]
+    pendingWrites: Promise<void>
     release: () => void
   } {
     console.log('[DAY-ROTATION] Rotating day group positions...')
@@ -175,8 +178,17 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     const release = () => {
       if (released) return
       released = true
+      for (const gm of pendingGroupMoves) {
+        positionManager.releasePositionLock(gm.groupId, 'user-drag')
+      }
+      for (const tm of pendingTaskMoves) {
+        positionManager.releasePositionLock(tm.taskId, 'user-drag')
+      }
       canvasSyncInProgress.value = false
     }
+    const pendingWrites: Promise<unknown>[] = []
+    let pendingGroupMoves: GroupMove[] = []
+    let pendingTaskMoves: TaskMove[] = []
 
     const groups = canvasStore.groups
 
@@ -199,6 +211,14 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       const vfPos = options.getNodePosition?.(`section-${group.id}`)
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
       const tasks = taskStore.rawTasks.filter((t) => t.parentId === group.id)
+      const taskSizes = new Map<string, { width: number; height: number }>()
+      const taskPositions = new Map<string, { x: number; y: number }>()
+      for (const task of tasks) {
+        const size = options.getNodeSize?.(task.id)
+        if (size) taskSizes.set(task.id, size)
+        const position = options.getNodePosition?.(task.id)
+        if (position) taskPositions.set(task.id, position)
+      }
 
       const dayIndex =
         keyword.category === 'day_of_week'
@@ -210,6 +230,8 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
         group,
         visualPos,
         tasks,
+        taskSizes,
+        taskPositions,
         category: keyword.category,
         keyword: keyword.keyword,
         dayIndex,
@@ -218,7 +240,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
 
     if (inputs.length < 2) {
       release()
-      return { groupMoves: [], taskMoves: [], release }
+      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
     }
 
     console.log(
@@ -227,7 +249,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     )
 
     // Sort: Today → Tomorrow → day-of-week by weekday-distance-from-startFrom.
-    const today = useCurrentDay().value.getDay() // 0=Sun … 6=Sat
+    const today = new Date().getDay() // 0=Sun … 6=Sat. Explicit toolbar rotation must use the live clock.
     const weekStart = settingsStore.weekStartsOn
     const hasSmartToday = inputs.some(
       (i) => i.category === 'date' && (i.keyword === 'today' || i.keyword === 'tomorrow')
@@ -260,9 +282,12 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     )
 
     const { groupMoves, taskMoves } = computeCanonicalLayout(
-      inputs.map((i) => ({ group: i.group, visualPos: i.visualPos, tasks: i.tasks })),
-      orderedIds
+      inputs.map((i) => ({ group: i.group, visualPos: i.visualPos, tasks: i.tasks, taskSizes: i.taskSizes, taskPositions: i.taskPositions })),
+      orderedIds,
+      { taskPositioning: 'preserveRelative' }
     )
+    pendingGroupMoves = groupMoves
+    pendingTaskMoves = taskMoves
 
     // Apply STORE + PositionManager writes here. The caller applies Vue Flow
     // moves via updateNode with both position AND style (width/height).
@@ -287,7 +312,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
         )
       }
       for (const tm of taskMoves) {
-        taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG')
+        pendingWrites.push(taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG'))
         positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
       }
     } catch (err) {
@@ -295,7 +320,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       throw err
     }
 
-    return { groupMoves, taskMoves, release }
+    return { groupMoves, taskMoves, pendingWrites: Promise.all(pendingWrites).then(() => undefined), release }
   }
 
   function dismissBanner() {

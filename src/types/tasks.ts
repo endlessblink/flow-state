@@ -16,6 +16,15 @@ export interface Subtask {
   canvasPosition?: { x: number; y: number } | null
 }
 
+/** Mini-canvas user-drawn connection between two child nodes (subtask or note). */
+export interface MiniCanvasEdge {
+  id: string             // stable id, format: `user-${source}-${target}`
+  source: string
+  target: string
+  sourceHandle?: string | null
+  targetHandle?: string | null
+}
+
 /** Mini-canvas free-form planning note (not a subtask) */
 export interface PlanningNote {
   id: string
@@ -125,6 +134,7 @@ export interface Task {
   instances?: TaskInstance[] // Calendar instances for scheduled tasks
   attachments?: TaskAttachment[] // FEATURE-1414: Image attachments via Google Drive
   planningNotes?: PlanningNote[] // Mini-canvas free-form planning nodes
+  miniCanvasEdges?: MiniCanvasEdge[] // User-drawn connections inside Thinking Flow
 
   // New SQL-aligned fields (Migration Phase 2)
   order?: number

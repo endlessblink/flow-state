@@ -125,7 +125,12 @@ export const parseMarkdown = (content: string): string => {
     // This is a non-standard markdown extension commonly used in Obsidian and other editors
     const withHighlight = withStrikethrough.replace(/==(.*?)==/g, '<mark>$1</mark>')
 
-    return withHighlight
+    // Normalize sentinel blank-line paragraphs (a non-breaking-space inserted by
+    // htmlToMarkdown to survive the round-trip) back to true empty <p></p> so
+    // Tiptap's editor state stays clean and re-edits don't accumulate stray  .
+    const withBlanks = withHighlight.replace(/<p>(?:&nbsp;| |\s)*<\/p>/gi, '<p></p>')
+
+    return withBlanks
   } catch (error) {
     console.error('Error parsing markdown:', error)
     return content // Fallback to raw text
@@ -250,9 +255,23 @@ export function htmlToMarkdown(html: string): string {
   markdown = markdown.replace(/<\/?ul[^>]*>/gi, '')
   markdown = markdown.replace(/<\/?ol[^>]*>/gi, '')
 
-  // Paragraphs: <p> -> text with newline
+  // Preserve user-inserted blank lines: empty <p></p> and <p><br></p> become
+  // a single non-breaking-space paragraph in markdown so the blank line
+  // survives the HTML→Markdown→HTML round-trip (markdown has no native syntax
+  // for an empty paragraph between two non-empty ones).
+  markdown = markdown.replace(/<p[^>]*>(?:\s|<br\s*\/?>)*<\/p>/gi, '<p> </p>')
+
+  // Cap consecutive sentinel (blank-line) paragraphs at one — matches the
+  // behaviour of common rich-text editors and prevents pasted vertical
+  // whitespace from ballooning the description.
+  markdown = markdown.replace(/(?:<p> <\/p>\s*){2,}/gi, '<p> </p>')
+
+  // Paragraphs: <p> -> text + standard markdown paragraph separator (\n\n).
+  // Using a single \n here would let `breaks: true` (marked config) re-render
+  // adjacent paragraphs as one paragraph with a hard break, collapsing the
+  // user's structure on reload.
   // BUG-1506: Use [\s\S]*? to match <p> content across newlines
-  markdown = markdown.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n')
+  markdown = markdown.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n\n')
 
   // Line breaks
   markdown = markdown.replace(/<br\s*\/?>/gi, '\n')
@@ -275,8 +294,9 @@ export function htmlToMarkdown(html: string): string {
   markdown = markdown.replace(/&quot;/g, '"')
   markdown = markdown.replace(/&#39;/g, "'")
 
-  // Clean up extra whitespace
-  markdown = markdown.replace(/\n{3,}/g, '\n\n')
+  // Clean up runaway whitespace (only collapse 4+ consecutive newlines so the
+  // blank-line sentinel above can produce up to one visible blank between paragraphs).
+  markdown = markdown.replace(/\n{4,}/g, '\n\n\n')
   markdown = markdown.trim()
 
   return markdown

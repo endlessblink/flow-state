@@ -188,6 +188,10 @@ class PositionManager {
         return this.positions.get(nodeId)
     }
 
+    releasePositionLock(nodeId: string, source: LockSource): boolean {
+        return lockManager.release(nodeId, source)
+    }
+
     /**
      * GET read-only map for Vue Flow binding
      */

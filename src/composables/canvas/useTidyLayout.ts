@@ -3,8 +3,9 @@
  *
  * Wraps `computeCanonicalLayout` to produce a clean single-row layout for
  * every group on the canvas (day-of-week, smart Today/Tomorrow, AND
- * custom-named groups), preserving the user's current left-to-right X
- * order. Tasks inside each group are restacked vertically.
+ * custom-named groups). Day groups use today's semantic order; custom groups
+ * keep their current left-to-right X order after the smart/day groups. Tasks
+ * are stacked vertically so day columns stay compact.
  *
  * Same move-application contract as rotation: returns { groupMoves,
  * taskMoves, release }. Caller applies Vue Flow moves via updateNode and
@@ -13,6 +14,7 @@
 
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { useSettingsStore } from '@/stores/settings'
 import { canvasSyncInProgress } from './useCanvasSync'
 import { positionManager } from '@/services/canvas/PositionManager'
 import {
@@ -22,23 +24,28 @@ import {
   type TaskMove,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
   getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
+  /** Read a Vue Flow node's current rendered dimensions. */
+  getNodeSize?: (nodeId: string) => { width: number; height: number } | undefined
 }
 
 export function useTidyLayout(options: TidyLayoutOptions = {}) {
   const canvasStore = useCanvasStore()
   const taskStore = useTaskStore()
+  const settingsStore = useSettingsStore()
 
   /**
-   * Lay out smart + day-of-week groups in a canonical single row, preserving
-   * the user's current left-to-right X order. Restacks tasks inside each group.
+   * Lay out smart + day-of-week groups in a canonical single row. Restacks
+   * tasks vertically inside each group.
    */
   function tidyDayGroups(): {
     groupMoves: GroupMove[]
     taskMoves: TaskMove[]
+    pendingWrites: Promise<void>
     release: () => void
   } {
     console.log('[TIDY] Tidying day-group layout...')
@@ -48,8 +55,17 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     const release = () => {
       if (released) return
       released = true
+      for (const gm of pendingGroupMoves) {
+        positionManager.releasePositionLock(gm.groupId, 'user-drag')
+      }
+      for (const tm of pendingTaskMoves) {
+        positionManager.releasePositionLock(tm.taskId, 'user-drag')
+      }
       canvasSyncInProgress.value = false
     }
+    const pendingWrites: Promise<unknown>[] = []
+    let pendingGroupMoves: GroupMove[] = []
+    let pendingTaskMoves: TaskMove[] = []
 
     // TASK-1756 v10: re-home orphans first. Prior buggy versions of
     // rotation/tidy wrote task positions that fell outside their parents'
@@ -81,20 +97,65 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       const vfPos = options.getNodePosition?.(`section-${group.id}`)
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
       const tasks = taskStore.rawTasks.filter((t) => t.parentId === group.id)
-      inputs.push({ group, visualPos, tasks })
+      const taskSizes = new Map<string, { width: number; height: number }>()
+      const taskPositions = new Map<string, { x: number; y: number }>()
+      for (const task of tasks) {
+        const size = options.getNodeSize?.(task.id)
+        if (size) taskSizes.set(task.id, size)
+        const position = options.getNodePosition?.(task.id)
+        if (position) taskPositions.set(task.id, position)
+      }
+      inputs.push({ group, visualPos, tasks, taskSizes, taskPositions })
     }
 
     if (inputs.length === 0) {
       release()
-      return { groupMoves: [], taskMoves: [], release }
+      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
     }
 
-    // Preserve user's left-to-right order: sort by current visual X.
+    // Tidy must complement Rotate, not overwrite it. Smart/day groups follow
+    // the same order as Rotate; custom groups keep their current X order.
+    const today = new Date().getDay()
+    const weekStart = settingsStore.weekStartsOn
+    const hasSmartToday = inputs.some((input) => {
+      const keyword = detectPowerKeyword(input.group.name)
+      return keyword?.category === 'date' && (keyword.keyword === 'today' || keyword.keyword === 'tomorrow')
+    })
+    const startFrom = hasSmartToday ? (today + 2) % 7 : today
     const orderedIds = [...inputs]
-      .sort((a, b) => a.visualPos.x - b.visualPos.x)
+      .sort((a, b) => {
+        const aKeyword = detectPowerKeyword(a.group.name)
+        const bKeyword = detectPowerKeyword(b.group.name)
+        const smartOrder: Record<string, number> = { today: 0, tomorrow: 1 }
+
+        const rank = (input: DayGroupInput, keyword: ReturnType<typeof detectPowerKeyword>) => {
+          if (keyword?.category === 'date' && keyword.keyword in smartOrder) {
+            return smartOrder[keyword.keyword]
+          }
+          if (keyword?.category === 'day_of_week') {
+            const dayIndex = parseInt(keyword.value, 10)
+            if (!Number.isFinite(dayIndex)) return 99
+            const dayNorm = (dayIndex - weekStart + 7) % 7
+            const startNorm = (startFrom - weekStart + 7) % 7
+            return 2 + ((dayNorm - startNorm + 7) % 7)
+          }
+          return 1000 + input.visualPos.x
+        }
+
+        const aRank = rank(a, aKeyword)
+        const bRank = rank(b, bKeyword)
+        return aRank === bRank ? a.visualPos.x - b.visualPos.x : aRank - bRank
+      })
       .map((i) => i.group.id)
 
-    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds)
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds, {
+      taskPositioning: 'compactFromCurrentTop',
+      // Tidy must never silently flip the user's single-column arrangement
+      // into a 2-column overflow grid. Group height grows as needed.
+      maxTasksPerColumn: null,
+    })
+    pendingGroupMoves = groupMoves
+    pendingTaskMoves = taskMoves
 
     // Apply store + PositionManager writes. Caller applies Vue Flow moves.
     try {
@@ -113,7 +174,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
         positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
       }
       for (const tm of taskMoves) {
-        taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG')
+        pendingWrites.push(taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG'))
         positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
       }
     } catch (err) {
@@ -122,7 +183,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     }
 
     console.log('[TIDY] Wrote', groupMoves.length, 'group moves +', taskMoves.length, 'task moves')
-    return { groupMoves, taskMoves, release }
+    return { groupMoves, taskMoves, pendingWrites: Promise.all(pendingWrites).then(() => undefined), release }
   }
 
   return { tidyDayGroups }

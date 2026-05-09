@@ -572,6 +572,13 @@ export function useCanvasInteractions(deps?: {
                     const group = allGroups.find(g => g.id === groupId)
                     if (!group) continue
 
+                    // Capture descendants before writing the moved group position.
+                    // The collector validates stored child task positions against
+                    // group bounds; after the group moves, those stored positions
+                    // are intentionally stale until this drag-stop sync updates them.
+                    const descendantTasksBeforeMove = collectDescendantTasks(groupId, taskStore.tasks, allGroups)
+                    const descendantGroupsBeforeMove = collectDescendantGroups(groupId, allGroups)
+
                     // BUG-1492: Use snapshotted position to prevent reactivity drift
                     const absolutePos = positionSnapshot.get(node.id) ?? (() => {
                         const raw = computeNodeAbsolutePosition(node, allGroups)
@@ -630,8 +637,8 @@ export function useCanvasInteractions(deps?: {
                     // When parent moves, Vue Flow moves all children visually.
                     // We must sync their NEW absolute positions to DB.
 
-                    const descendantTasks = collectDescendantTasks(groupId, taskStore.tasks, updatedAllGroups)
-                    const descendantGroups = collectDescendantGroups(groupId, updatedAllGroups)
+                    const descendantTasks = descendantTasksBeforeMove
+                    const descendantGroups = descendantGroupsBeforeMove
 
                     // BUG-1209: Wait for Vue Flow to re-render with parent's new position
                     // so computedPosition is fresh for descendant position calculations.

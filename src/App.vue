@@ -155,9 +155,11 @@ const onStartupReady = () => {
 // BUG-1339: Capture isDataReady to gate view rendering until tasks are loaded
 const { isDataReady } = useAppInitialization()
 
-// Intercept external link clicks in Tauri to open in system browser
+// Intercept external link clicks so they open in the system browser (Electron)
+// or a new tab (PWA/browser) instead of replacing the app view.
 const handleExternalLinkClick = (event: MouseEvent) => {
-  if (!isTauriApp.value) return
+  // Capacitor (mobile) handles links via plugin and is out of scope here.
+  if (isCapacitorApp.value) return
   let target = event.target as HTMLElement | null
   while (target && target.tagName !== 'A') {
     target = target.parentElement

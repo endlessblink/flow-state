@@ -53,6 +53,24 @@ function createWindow() {
     return { action: 'deny' }
   })
 
+  // Catch plain <a href> clicks and any programmatic navigation that would
+  // replace the app window. setWindowOpenHandler only fires for target="_blank"
+  // and window.open(); will-navigate covers everything else.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const currentUrl = mainWindow?.webContents.getURL() ?? ''
+    try {
+      const target = new URL(url)
+      const here = new URL(currentUrl)
+      const isHttp = target.protocol === 'http:' || target.protocol === 'https:'
+      if (isHttp && target.origin !== here.origin) {
+        event.preventDefault()
+        shell.openExternal(url)
+      }
+    } catch {
+      // Unparseable URL — let Electron decide.
+    }
+  })
+
   // Load the app
   if (process.env.VITE_DEV_SERVER_URL) {
     // Dev mode — connect to Vite dev server

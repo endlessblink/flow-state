@@ -150,6 +150,9 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
 
     const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds, {
       taskPositioning: 'compactFromCurrentTop',
+      // Tidy must never silently flip the user's single-column arrangement
+      // into a 2-column overflow grid. Group height grows as needed.
+      maxTasksPerColumn: null,
     })
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves

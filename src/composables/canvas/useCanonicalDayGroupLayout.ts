@@ -52,6 +52,13 @@ export interface CanonicalLayoutResult {
 export interface CanonicalLayoutOptions {
   taskLayout?: 'vertical' | 'horizontal'
   taskPositioning?: 'fromHeader' | 'compactFromCurrentTop' | 'preserveRelative'
+  /**
+   * Vertical-mode column threshold. Default = CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN.
+   * Pass `null` to disable overflow entirely (always single column, group grows
+   * as tall as needed). Tidy uses `null` so it never surprises users with a
+   * 2-column grid when they have arranged tasks vertically.
+   */
+  maxTasksPerColumn?: number | null
 }
 
 /**
@@ -107,7 +114,10 @@ export function computeCanonicalLayout(
       return at - bt
     })
     const taskCount = sortedTasks.length
-    const hasOverflow = taskLayout === 'vertical' && taskCount > CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
+    const maxPerColumn = options.maxTasksPerColumn === null
+      ? Number.POSITIVE_INFINITY
+      : options.maxTasksPerColumn ?? CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
+    const hasOverflow = taskLayout === 'vertical' && taskCount > maxPerColumn
 
     const groupX = nextGroupX
     const groupY = originY
@@ -119,14 +129,14 @@ export function computeCanonicalLayout(
       const task = sortedTasks[t]
       const column = taskLayout === 'horizontal'
         ? t % 2
-        : t < CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN ? 0 : 1
+        : t < maxPerColumn ? 0 : 1
       const size = dg.taskSizes?.get(task.id)
       const taskHeight = Math.max(1, size?.height ?? CANVAS.DEFAULT_TASK_HEIGHT)
       columnHeights[column] += taskHeight
       const isColumnEnd = taskLayout === 'horizontal'
         ? t + 2 >= sortedTasks.length
         : column === 0
-          ? t === Math.min(sortedTasks.length, CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN) - 1
+          ? t === Math.min(sortedTasks.length, maxPerColumn) - 1
           : t === sortedTasks.length - 1
       if (!isColumnEnd) columnHeights[column] += CANVAS.TASK_MARGIN
     }
@@ -172,7 +182,7 @@ export function computeCanonicalLayout(
       const maxHorizontalColumns = 2
       const column = taskLayout === 'horizontal'
         ? t % maxHorizontalColumns
-        : t < CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN ? 0 : 1
+        : t < maxPerColumn ? 0 : 1
       const taskSize = dg.taskSizes?.get(task.id)
 
       const taskX =

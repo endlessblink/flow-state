@@ -1387,6 +1387,22 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1784~~: Canvas Tidy button flips 9+ tasks into a messy 2-column staggered grid (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-09)
+
+**Problem**: User arranges 9 tasks vertically in the Today group, clicks Tidy, and the cards rearrange into a 2-column staggered layout instead of staying in a clean single column. Five prior commits on `regression-canvas-recovery` (c9c5b651, 137ca809, c4e939a4, af37a03e, 79ceedbb) addressed adjacent symptoms (zoom-aware DOM measurement, persistence, gap math, rotation alignment) but did not touch the actual trigger.
+
+**Root cause**: `useCanonicalDayGroupLayout.ts:110` flipped `hasOverflow = true` whenever `taskCount > CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN` (8). Tasks 9+ moved to column 1 at `groupX + 260`, while column 1's Y cursor started at `firstTaskY` (top of group) — producing the staggered pattern visible in the user's screenshot.
+
+**Fix**: Added `maxTasksPerColumn?: number | null` to `CanonicalLayoutOptions`. When `null`, `maxPerColumn = Infinity` so all tasks land in column 0 and the group height grows via the existing `requiredHeight` math. Tidy passes `maxTasksPerColumn: null`. Rotation still uses the default 8-task threshold. Added a 9-task regression unit test asserting all `taskMoves[*].position.x === 20` and Y monotonically increases.
+
+**Files**: `src/composables/canvas/useCanonicalDayGroupLayout.ts`, `src/composables/canvas/useTidyLayout.ts`, `tests/unit/canvas/tidy-layout.test.ts`
+
+**Shipped in**: v1.4.22 (deployed via `deploy-electron-update.sh` 2026-05-09)
+
+---
+
 ### ~~BUG-1757~~: Editing task due date to another day leaves it inside canvas day-group, date resets to today (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-04-12)

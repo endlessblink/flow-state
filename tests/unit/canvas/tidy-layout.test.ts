@@ -205,4 +205,38 @@ describe('useTidyLayout', () => {
       'DRAG'
     )
   })
+
+  it('keeps 9+ tasks in a single vertical column instead of overflowing to a 2-column grid', () => {
+    // Regression: image 1 had 9 tasks in Today arranged vertically by the user.
+    // Tidy used to flip this to a 2-column staggered grid (image 2) because the
+    // hard-coded `DAY_GROUP_MAX_TASKS_PER_COLUMN = 8` threshold fired. Tidy now
+    // passes `maxTasksPerColumn: null` so the column never overflows.
+    const today = makeGroup('Today', 0)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    const tasks = Array.from({ length: 9 }, (_, i) => ({
+      id: `task-${i}`,
+      parentId: today.id,
+      canvasPosition: { x: 30, y: 100 + i * 110 },
+      createdAt: '2026-04-01T00:00:00Z',
+    })) as any
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(tasks)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { groupMoves, taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves.length).toBe(9)
+    // Every task is in column 0 (x === GROUP_PADDING).
+    for (const move of taskMoves) {
+      expect(move.position.x).toBe(20)
+    }
+    // Y values are strictly monotonically increasing — no column 1 starting at top.
+    for (let i = 1; i < taskMoves.length; i++) {
+      expect(taskMoves[i].position.y).toBeGreaterThan(taskMoves[i - 1].position.y)
+    }
+    // Group keeps the single-column width and grows tall enough to contain all tasks.
+    expect(groupMoves[0].size.width).toBe(400)
+    const lastMoveY = taskMoves[taskMoves.length - 1].position.y
+    expect(groupMoves[0].size.height).toBeGreaterThanOrEqual(lastMoveY)
+  })
 })

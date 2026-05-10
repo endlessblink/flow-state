@@ -210,6 +210,55 @@ describe('computeCanonicalLayout', () => {
     expect(lastTaskBottom).toBeLessThanOrEqual(groupBottom)
   })
 
+  it('preserveRelative: group height grows to contain a tall single-column stack instead of using 2-col simulation', () => {
+    // Regression: rotation uses preserveRelative — tasks are NOT re-flowed.
+    // Before the fix, computeCanonicalLayout simulated a 2-column overflow
+    // for >8 tasks, sizing the group at 1000px tall × 700px wide. But the
+    // preserveRelative branch never moved tasks, so a 10-task single-column
+    // stack (~1180px tall) would overflow the group's bottom edge.
+    const ten = Array.from({ length: 10 }, (_, i) =>
+      // Every task at column-0 X (20), stacked vertically with 100px height + 10px gap.
+      ({
+        id: `t${i}`,
+        parentId: 'a',
+        canvasPosition: { x: 20, y: 70 + i * 110 },
+        createdAt: '2026-01-01T00:00:00Z',
+      }) as unknown as Task
+    )
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'Today', 0, 0), visualPos: { x: 0, y: 0 }, tasks: ten },
+    ]
+    const { groupMoves } = computeCanonicalLayout(inputs, ['a'], { taskPositioning: 'preserveRelative' })
+    const move = groupMoves.find((m) => m.groupId === 'a')!
+
+    // Last task bottom: relY (70 + 9*110 = 1060) + height (100) = 1160.
+    // Plus GROUP_PADDING (20) = required height 1180 → group must be at least that tall.
+    expect(move.size.height).toBeGreaterThanOrEqual(1180)
+    // Single-column stack stays inside DAY_GROUP_WIDTH_1COL — no spurious 2-col widening.
+    expect(move.size.width).toBe(CANVAS.DAY_GROUP_WIDTH_1COL)
+  })
+
+  it('preserveRelative: keeps width at 700 when tasks really are arranged in two columns', () => {
+    // Five tasks in column 0 (X=20) and five in column 1 (X=260) — actual 2-col layout.
+    const tasks = [
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `c0-${i}`, parentId: 'a',
+        canvasPosition: { x: 20, y: 70 + i * 110 },
+        createdAt: '2026-01-01T00:00:00Z',
+      }) as unknown as Task),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `c1-${i}`, parentId: 'a',
+        canvasPosition: { x: 260, y: 70 + i * 110 },
+        createdAt: '2026-01-01T00:00:00Z',
+      }) as unknown as Task),
+    ]
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'Today', 0, 0), visualPos: { x: 0, y: 0 }, tasks },
+    ]
+    const { groupMoves } = computeCanonicalLayout(inputs, ['a'], { taskPositioning: 'preserveRelative' })
+    expect(groupMoves[0].size.width).toBe(CANVAS.DAY_GROUP_WIDTH_2COL)
+  })
+
   it('skips orderedIds that have no matching input (defensive)', () => {
     const inputs: DayGroupInput[] = [
       { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [] },

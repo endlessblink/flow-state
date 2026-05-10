@@ -121,26 +121,58 @@ export function computeCanonicalLayout(
 
     const groupX = nextGroupX
     const groupY = originY
-    const groupWidth = taskLayout === 'horizontal'
-      ? taskCount > 1 ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
-      : hasOverflow ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
-    const columnHeights = [0, 0]
-    for (let t = 0; t < sortedTasks.length; t++) {
-      const task = sortedTasks[t]
-      const column = taskLayout === 'horizontal'
-        ? t % 2
-        : t < maxPerColumn ? 0 : 1
-      const size = dg.taskSizes?.get(task.id)
-      const taskHeight = Math.max(1, size?.height ?? CANVAS.DEFAULT_TASK_HEIGHT)
-      columnHeights[column] += taskHeight
-      const isColumnEnd = taskLayout === 'horizontal'
-        ? t + 2 >= sortedTasks.length
-        : column === 0
-          ? t === Math.min(sortedTasks.length, maxPerColumn) - 1
-          : t === sortedTasks.length - 1
-      if (!isColumnEnd) columnHeights[column] += CANVAS.TASK_MARGIN
+
+    let groupWidth: number
+    let requiredHeight: number
+
+    if (taskPositioning === 'preserveRelative') {
+      // Rotation path: tasks are NOT re-flowed — they keep their existing
+      // relative offsets. Sizing the group via the column simulation below
+      // would lie about the layout and clip overflow. Derive size from real
+      // task positions + measured sizes instead.
+      let maxRight: number = CANVAS.DAY_GROUP_WIDTH_1COL
+      let maxBottom: number = CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING
+      for (const task of sortedTasks) {
+        const pos = dg.taskPositions?.get(task.id) ?? task.canvasPosition
+        if (!pos) continue
+        const size = dg.taskSizes?.get(task.id)
+        const w = Math.max(1, size?.width ?? CANVAS.DEFAULT_TASK_WIDTH)
+        const h = Math.max(1, size?.height ?? CANVAS.DEFAULT_TASK_HEIGHT)
+        const relX = pos.x - dg.visualPos.x
+        const relY = pos.y - dg.visualPos.y
+        maxRight = Math.max(maxRight, relX + w + CANVAS.GROUP_PADDING)
+        maxBottom = Math.max(maxBottom, relY + h)
+      }
+      groupWidth = maxRight <= CANVAS.DAY_GROUP_WIDTH_1COL + CANVAS.GROUP_PADDING
+        ? CANVAS.DAY_GROUP_WIDTH_1COL
+        : CANVAS.DAY_GROUP_WIDTH_2COL
+      requiredHeight = maxBottom + CANVAS.GROUP_PADDING
+    } else {
+      // Re-flow paths (fromHeader / compactFromCurrentTop): simulate the
+      // column packing the second loop will perform, so the group is sized
+      // to fit the layout it's about to apply.
+      groupWidth = taskLayout === 'horizontal'
+        ? taskCount > 1 ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
+        : hasOverflow ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
+      const columnHeights = [0, 0]
+      for (let t = 0; t < sortedTasks.length; t++) {
+        const task = sortedTasks[t]
+        const column = taskLayout === 'horizontal'
+          ? t % 2
+          : t < maxPerColumn ? 0 : 1
+        const size = dg.taskSizes?.get(task.id)
+        const taskHeight = Math.max(1, size?.height ?? CANVAS.DEFAULT_TASK_HEIGHT)
+        columnHeights[column] += taskHeight
+        const isColumnEnd = taskLayout === 'horizontal'
+          ? t + 2 >= sortedTasks.length
+          : column === 0
+            ? t === Math.min(sortedTasks.length, maxPerColumn) - 1
+            : t === sortedTasks.length - 1
+        if (!isColumnEnd) columnHeights[column] += CANVAS.TASK_MARGIN
+      }
+      requiredHeight = CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING + Math.max(...columnHeights) + CANVAS.GROUP_PADDING
     }
-    const requiredHeight = CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING + Math.max(...columnHeights) + CANVAS.GROUP_PADDING
+
     const groupHeight = Math.max(CANVAS.DAY_GROUP_HEIGHT, requiredHeight)
 
     groupMoves.push({

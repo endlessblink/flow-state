@@ -94,15 +94,13 @@ interface QuickTaskData {
   attachments?: TaskAttachment[]  // FEATURE-1414
 }
 
-import type { CanvasGroup } from '@/types/canvas'
-
 const emit = defineEmits<{
   (e: 'handleQuickTaskCreate', data: QuickTaskData): void
   (e: 'handleBatchEditApplied'): void
   (e: 'handleSectionSettingsSave', settings: Record<string, unknown>): void
-  (e: 'handleGroupCreated', group: CanvasGroup): void
-  (e: 'handleGroupUpdated', group: CanvasGroup): void
-  (e: 'handleGroupEditSave', updatedSection: CanvasGroup): void
+  (e: 'handleGroupCreated', group: Record<string, unknown>): void
+  (e: 'handleGroupUpdated', group: Record<string, unknown>): void
+  (e: 'handleGroupEditSave', updatedSection: Record<string, unknown>): void
   (e: 'confirmDeleteGroup'): void
   (e: 'confirmBulkDelete'): void
 }>()

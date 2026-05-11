@@ -223,14 +223,14 @@ onMounted(async () => {
 
   window.addEventListener('global-new-task', handleGlobalNewTask)
   window.addEventListener('global-rerun-ai-wizard', handleRerunAIWizard)
-  window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('keydown', handleKeydown, true)
   document.addEventListener('click', handleExternalLinkClick)
 })
 
 onUnmounted(() => {
   window.removeEventListener('global-new-task', handleGlobalNewTask)
   window.removeEventListener('global-rerun-ai-wizard', handleRerunAIWizard)
-  window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('keydown', handleKeydown, true)
   document.removeEventListener('click', handleExternalLinkClick)
   destroyGlobalKeyboardShortcuts()
 })

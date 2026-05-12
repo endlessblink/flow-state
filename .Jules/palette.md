@@ -1,0 +1,3 @@
+## 2024-05-12 - Keyboard accessibility for hover actions
+**Learning:** Hover-revealed action buttons (like those on Kanban cards or Task Rows) are inaccessible to keyboard users if they are hidden behind `tabindex="-1"` and rely purely on `:hover` for visibility. The common pattern of hiding these elements to save visual space breaks tab navigation.
+**Action:** When implementing compact UI elements that reveal actions on hover, ensure the interactive elements remain natively focusable (do not use `tabindex="-1"`) and bind the visibility of the action container to the `:focus-within` pseudo-class as well as `:hover`. This ensures screen reader compatibility and natural tab progression without relying on complex JS event listeners.

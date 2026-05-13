@@ -1,0 +1,3 @@
+## 2024-05-18 - Hover-revealed kanban card actions keyboard accessibility
+**Learning:** Hover-revealed task card action buttons were missing `focus-within` styling on their parent containers, preventing keyboard users from accessing them or knowing they exist when tabbing through task cards.
+**Action:** Applied `:focus-within` visibility rules to the `.compact-actions` and `.card-actions` container in `TaskCard.css` and `global-overrides.css`, and removed `tabindex="-1"` from the action buttons themselves. Always ensure components with hover states have equivalent `:focus-within` states for keyboard navigation.

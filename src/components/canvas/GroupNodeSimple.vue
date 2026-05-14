@@ -12,8 +12,9 @@
         <ChevronDown v-if="!isCollapsed" :size="14" />
         <ChevronRight v-else :size="14" />
       </button>
-      <input dir="auto"
+      <input
         v-model="sectionName"
+        dir="auto"
         class="section-name-input"
         placeholder="Group name..."
         :disabled="isCollapsed"
@@ -120,16 +121,16 @@ const canvasStore = useCanvasStore()
 
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
-const section = computed(() => props.data?.section || props.data)
-const isCollapsed = computed(() => !!props.data?.isCollapsed)
+const section = computed(() => (props.data as Record<string, unknown>)?.section || props.data)
+const isCollapsed = computed(() => !!(props.data as Record<string, unknown>)?.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh
 const groupColor = computed(() => {
-  const groupId = props.data?.id
-  if (!groupId) return props.data?.color || '#3b82f6'
+  const groupId = (props.data as Record<string, unknown>)?.id as string | undefined
+  if (!groupId) return (props.data as Record<string, unknown>)?.color as string | undefined || '#3b82f6'
   const storeGroup = canvasStore.groups.find(g => g.id === groupId)
-  return storeGroup?.color || props.data?.color || '#3b82f6'
+  return storeGroup?.color || (props.data as Record<string, unknown>)?.color as string | undefined || '#3b82f6'
 })
 const taskCount = computed(() => {
   const data = props.data as Record<string, unknown> | undefined

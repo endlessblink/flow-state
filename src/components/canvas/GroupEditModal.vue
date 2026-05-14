@@ -116,10 +116,10 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import { X, LayoutGrid, LayoutList, Rows } from 'lucide-vue-next'
-import type { CanvasSection } from '@/stores/canvas'
+import type { CanvasGroup } from '@/types/canvas'
 
 interface Props {
-  section: CanvasSection | null
+  section: CanvasGroup | null
   isVisible: boolean
 }
 
@@ -127,7 +127,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   close: []
-  save: [section: CanvasSection]
+  save: [section: Partial<CanvasGroup> & { id: string }]
 }>()
 
 const formData = reactive({
@@ -160,7 +160,7 @@ const save = () => {
   if (!formData.name.trim()) return
   if (!props.section) return
 
-  const updatedSection: CanvasSection = {
+  const updatedSection: Partial<CanvasGroup> & { id: string } = {
     ...props.section,
     name: formData.name.trim(),
     color: formData.color,

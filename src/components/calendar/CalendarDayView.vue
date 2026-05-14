@@ -7,7 +7,7 @@ import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot, PositionedExternalEvent } from '@/composables/calendar/useCalendarDayView'
 import type { ComputedRef } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   timeSlots: TimeSlot[]
   hours: number[]
   isViewingToday: boolean
@@ -52,16 +52,14 @@ interface CalendarHelpers {
   formatEventTime: (event: CalendarEvent) => string
   isCurrentTimeSlot: (slot: TimeSlot) => boolean
   getTasksForSlot: (slot: TimeSlot) => CalendarEvent[]
-  isTaskPrimarySlot: (task: CalendarEvent, slot: TimeSlot) => boolean
-  getSlotTaskStyle: (task: CalendarEvent, slot: TimeSlot) => Record<string, string>
+  isTaskPrimarySlot: (slot: TimeSlot, task: CalendarEvent) => boolean
+  getSlotTaskStyle: (task: CalendarEvent) => Record<string, string>
   getProjectVisual: (event: { projectId?: string }) => { type: 'color' | 'emoji'; content: string }
   getProjectName: (event: CalendarEvent) => string
   getProjectColor: (event: CalendarEvent) => string
   getPriorityClass: (event: CalendarEvent) => string
   getPriorityLabel: (event: CalendarEvent) => string
   getTaskStatus: (event: CalendarEvent) => string
-  getStatusLabel: (event: CalendarEvent) => string
-  getStatusIcon: (status: string) => string
   positionedExternalEvents: ComputedRef<PositionedExternalEvent[]>
 }
 const {
@@ -77,8 +75,6 @@ const {
   getPriorityClass,
   getPriorityLabel,
   getTaskStatus,
-  getStatusLabel,
-  getStatusIcon,
   positionedExternalEvents
 } = inject('calendar-helpers') as CalendarHelpers
 

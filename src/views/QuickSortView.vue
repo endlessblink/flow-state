@@ -159,14 +159,20 @@
             <CheckCircle :size="64" />
             <h2>All Caught Up!</h2>
             <p>You have no uncategorized tasks.</p>
-            <button class="primary-button" @click="handleExit">Return to Tasks</button>
+            <button class="primary-button" @click="handleExit">
+              Return to Tasks
+            </button>
           </div>
 
           <!-- Completion State -->
           <div v-else-if="isComplete" class="completion-state">
-            <div class="celebration-icon">&#x1F389;</div>
+            <div class="celebration-icon">
+              &#x1F389;
+            </div>
             <h2>Amazing Work!</h2>
-            <p class="completion-message">You've sorted all your tasks!</p>
+            <p class="completion-message">
+              You've sorted all your tasks!
+            </p>
             <div v-if="sessionSummary" class="session-stats">
               <div class="stat-card">
                 <span class="stat-value">{{ sessionSummary.tasksProcessed }}</span>
@@ -215,15 +221,23 @@
         <div class="edit-panel">
           <div class="edit-panel-handle" @click="showEditPanel = false" />
 
-          <h3 class="edit-panel-title" dir="auto">{{ currentTask.title }}</h3>
+          <h3 class="edit-panel-title" dir="auto">
+            {{ currentTask.title }}
+          </h3>
 
           <!-- Priority pills -->
           <div class="control-row">
             <span class="control-label">Priority</span>
             <div class="pill-group">
-              <button class="pill" :class="{ active: currentTask.priority === 'low' }" @click="handleTaskUpdate({ priority: 'low' })">Low</button>
-              <button class="pill" :class="{ active: currentTask.priority === 'medium' }" @click="handleTaskUpdate({ priority: 'medium' })">Med</button>
-              <button class="pill" :class="{ active: currentTask.priority === 'high' }" @click="handleTaskUpdate({ priority: 'high' })">High</button>
+              <button class="pill" :class="{ active: currentTask.priority === 'low' }" @click="handleTaskUpdate({ priority: 'low' })">
+                Low
+              </button>
+              <button class="pill" :class="{ active: currentTask.priority === 'medium' }" @click="handleTaskUpdate({ priority: 'medium' })">
+                Med
+              </button>
+              <button class="pill" :class="{ active: currentTask.priority === 'high' }" @click="handleTaskUpdate({ priority: 'high' })">
+                High
+              </button>
             </div>
           </div>
 
@@ -231,13 +245,27 @@
           <div class="control-row">
             <span class="control-label">Due</span>
             <div class="pill-group pill-scroll">
-              <button class="pill" :class="{ active: isDueToday }" @click="setQuickDate('today')">Today</button>
-              <button class="pill" :class="{ active: isDueTomorrow }" @click="setQuickDate('tomorrow')">+1</button>
-              <button class="pill" @click="setQuickDate('in3days')">+3</button>
-              <button class="pill" :class="{ active: isDueWeekend }" @click="setQuickDate('weekend')">Wknd</button>
-              <button class="pill" :class="{ active: isDueNextWeek }" @click="setQuickDate('nextweek')">+7</button>
-              <button class="pill" @click="setQuickDate('in2weeks')">+14</button>
-              <button class="pill" @click="setQuickDate('in30days')">+30</button>
+              <button class="pill" :class="{ active: isDueToday }" @click="setQuickDate('today')">
+                Today
+              </button>
+              <button class="pill" :class="{ active: isDueTomorrow }" @click="setQuickDate('tomorrow')">
+                +1
+              </button>
+              <button class="pill" @click="setQuickDate('in3days')">
+                +3
+              </button>
+              <button class="pill" :class="{ active: isDueWeekend }" @click="setQuickDate('weekend')">
+                Wknd
+              </button>
+              <button class="pill" :class="{ active: isDueNextWeek }" @click="setQuickDate('nextweek')">
+                +7
+              </button>
+              <button class="pill" @click="setQuickDate('in2weeks')">
+                +14
+              </button>
+              <button class="pill" @click="setQuickDate('in30days')">
+                +30
+              </button>
               <NPopover trigger="click" placement="bottom" :show-arrow="false">
                 <template #trigger>
                   <button class="pill date-picker-trigger" :class="{ active: currentTask.dueDate && !isDueToday && !isDueTomorrow && !isDueWeekend && !isDueNextWeek }">
@@ -291,12 +319,22 @@
       @close="showDeleteConfirm = false"
     >
       <div class="delete-confirm-content">
-        <div class="delete-confirm-icon"><Trash2 :size="32" /></div>
-        <h3 class="delete-confirm-title">Delete this task?</h3>
-        <p class="delete-confirm-desc">This action cannot be undone. The task will be permanently removed.</p>
+        <div class="delete-confirm-icon">
+          <Trash2 :size="32" />
+        </div>
+        <h3 class="delete-confirm-title">
+          Delete this task?
+        </h3>
+        <p class="delete-confirm-desc">
+          This action cannot be undone. The task will be permanently removed.
+        </p>
         <div class="delete-confirm-actions">
-          <button class="dc-cancel-btn" @click="showDeleteConfirm = false">Cancel</button>
-          <button class="dc-delete-btn" @click="confirmDelete">Delete</button>
+          <button class="dc-cancel-btn" @click="showDeleteConfirm = false">
+            Cancel
+          </button>
+          <button class="dc-delete-btn" @click="confirmDelete">
+            Delete
+          </button>
         </div>
       </div>
     </BaseModal>
@@ -305,11 +343,19 @@
       <div v-if="showNothingSetReminder" class="nothing-set-overlay" @click.self="cancelSaveReminder">
         <div class="nothing-set-modal">
           <span class="nothing-set-emoji" aria-hidden="true">🤔</span>
-          <h3 class="nothing-set-title">Whoops, nothing changed!</h3>
-          <p class="nothing-set-desc">You swiped without setting anything. Go back and triage, or save as-is.</p>
+          <h3 class="nothing-set-title">
+            Whoops, nothing changed!
+          </h3>
+          <p class="nothing-set-desc">
+            You swiped without setting anything. Go back and triage, or save as-is.
+          </p>
           <div class="nothing-set-actions">
-            <button class="ns-set-btn" @click="cancelSaveReminder">Go back</button>
-            <button class="ns-save-btn" @click="confirmSaveAnyway">Save as-is</button>
+            <button class="ns-set-btn" @click="cancelSaveReminder">
+              Go back
+            </button>
+            <button class="ns-save-btn" @click="confirmSaveAnyway">
+              Save as-is
+            </button>
           </div>
         </div>
       </div>

@@ -229,19 +229,19 @@ const dayOfWeekDateSuffix = computed(() => {
 })
 
 // Watch for external name changes
-watch(() => props.data.name, (newName) => {
-  sectionName.value = newName
+watch(() => (props.data as Record<string, unknown>)?.name as string | undefined, (newName) => {
+  if (newName) sectionName.value = newName
 })
 
 const updateName = () => {
-  if (sectionName.value !== props.data.name) {
+  if (sectionName.value !== (props.data as Record<string, unknown>)?.name) {
     emit('update', { name: sectionName.value })
   }
 }
 
 const toggleCollapse = () => {
   // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
-  const groupId = props.data?.id || props.id.replace('section-', '')
+  const groupId = ((props.data as Record<string, unknown>)?.id as string) || props.id.replace('section-', '')
   canvasStore.toggleSectionCollapse(groupId)
 }
 

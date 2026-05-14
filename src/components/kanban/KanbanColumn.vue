@@ -160,7 +160,7 @@ const dragGroup = 'tasks'
 // BUG-1516c: Also expose dragData so handleNativeDrop can read singleton (WebKitGTK/Tauri fix)
 const { startDrag, endDrag: endGlobalDrag, dragData } = useDragAndDrop()
 
-const onDragStart = (evt: DragEvent) => {
+const onDragStart = (evt: any) => {
   isDragActive.value = true
 
   // Bridge to global drag state so sidebar can receive drops
@@ -176,7 +176,7 @@ const onDragStart = (evt: DragEvent) => {
   }
 }
 
-const onDragEnd = (evt: DragEvent) => {
+const onDragEnd = (evt: any) => {
   isDragActive.value = false
 
   // Check if dropped on a sidebar project (SortableJS forceFallback doesn't fire

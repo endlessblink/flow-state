@@ -1,0 +1,3 @@
+## 2024-05-15 - [QuickTaskDropdown Accessibility Enhancements]
+**Learning:** For custom popup triggers (like Quick Tasks), `aria-haspopup` and `:aria-expanded` are necessary for conveying context to screen readers. Furthermore, internal icon-only action buttons revealed on hover must manually receive `:focus-visible` styles to ensure they are perceivable during keyboard navigation, as default CSS transitions on hover don't apply to focus.
+**Action:** Always verify `aria-haspopup`/`aria-expanded` attributes on custom triggers and proactively check keyboard focus states using `:focus-visible` styles on all nested, hover-revealed action buttons.

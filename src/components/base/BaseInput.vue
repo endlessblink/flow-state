@@ -8,11 +8,12 @@
     <div class="input-container">
       <slot name="prefix" />
 
-      <input :dir="inputDir"
-        :id="inputId"
-        ref="inputRef"
-        v-model="localValue"
-        :type="type"
+      <input
+        :dir="inputDir"
+      :id="inputId"
+      ref="inputRef"
+      v-model="localValue"
+      :type="type"
         :placeholder="placeholder"
         :disabled="disabled"
         :required="required"

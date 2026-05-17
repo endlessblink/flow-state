@@ -9,6 +9,7 @@ import { registerHttpHandlers } from './ipc/http'
 import { registerWindowHandlers } from './ipc/window'
 import { registerUpdater } from './updater'
 import { registerOAuthHandlers } from './ipc/oauth'
+import { setupRendererLogging, registerLoggerIpc } from './logger'
 
 // Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
 app.setName('flow-state')
@@ -46,6 +47,9 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
   })
+
+  // TASK-1786: Capture renderer logs to disk for post-mortem diagnostics
+  setupRendererLogging(mainWindow)
 
   // Open external links in default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -100,6 +104,7 @@ registerStoreHandlers()
 registerHttpHandlers()
 registerWindowHandlers()
 registerOAuthHandlers()
+registerLoggerIpc()
 ipcMain.handle('app:getVersion', () => app.getVersion())
 
 // App lifecycle

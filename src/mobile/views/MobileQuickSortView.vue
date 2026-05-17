@@ -12,6 +12,15 @@
         </h1>
       </div>
       <div class="header-stats">
+        <button
+          class="overdue-toggle"
+          :class="{ active: includeOverdue, disabled: !canToggleOverdue }"
+          :aria-pressed="includeOverdue"
+          :aria-label="includeOverdue ? 'Hide overdue & no-due tasks' : 'Include overdue & no-due tasks'"
+          @click="toggleOverdueQueue"
+        >
+          <AlarmClock :size="14" />
+        </button>
         <span class="stat-badge">{{ progress.current }}/{{ progress.total }}</span>
       </div>
     </header>
@@ -311,11 +320,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import {
   Zap, Plus, CheckCircle, CalendarDays, Calendar,
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  Trash2, FolderOpen, AlertCircle
+  Trash2, FolderOpen, AlertCircle, AlarmClock
 } from 'lucide-vue-next'
+import { useSettingsStore } from '@/stores/settings'
+import { useQuickSortStore } from '@/stores/quickSort'
 
 import MobileQuickSortCard from '../components/MobileQuickSortCard.vue'
 import MobileQuickSortFilters from '../components/MobileQuickSortFilters.vue'
@@ -375,6 +387,19 @@ const {
   cancelSave,
   celebrationLabel
 } = useMobileQuickSortLogic()
+
+// TASK-1786: Include overdue & no-due tasks toggle (mirrors desktop)
+const settingsStore = useSettingsStore()
+const quickSortStore = useQuickSortStore()
+const includeOverdue = computed({
+  get: () => settingsStore.includeOverdueInQuickSort,
+  set: (v: boolean) => { settingsStore.includeOverdueInQuickSort = v }
+})
+const canToggleOverdue = computed(() => !quickSortStore.isActive)
+function toggleOverdueQueue() {
+  if (!canToggleOverdue.value) return
+  includeOverdue.value = !includeOverdue.value
+}
 </script>
 
 <style scoped>
@@ -452,6 +477,30 @@ const {
 .header-stats {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
+}
+
+/* TASK-1786: Overdue + no-due queue toggle (mobile) */
+.overdue-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-normal);
+}
+.overdue-toggle.active {
+  background: color-mix(in srgb, var(--accent-warning, #f59e0b) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent-warning, #f59e0b) 45%, transparent);
+  color: var(--accent-warning, #f59e0b);
+}
+.overdue-toggle.disabled {
+  opacity: 0.55;
 }
 
 .stat-badge {

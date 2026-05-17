@@ -367,6 +367,29 @@ export const useSmartViews = () => {
   }
 
   /**
+   * TASK-1786: Check if a task is overdue (due_date in the past, not done).
+   * Compared at day granularity (start of local day).
+   */
+  const isOverdueTask = (task: Task): boolean => {
+    if (task.status === 'done') return false
+    if (!task.dueDate) return false
+    const due = new Date(task.dueDate)
+    if (isNaN(due.getTime())) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    due.setHours(0, 0, 0, 0)
+    return due.getTime() < today.getTime()
+  }
+
+  /**
+   * TASK-1786: Check if a task has no due date set and is not done.
+   */
+  const isMissingDueDateTask = (task: Task): boolean => {
+    if (task.status === 'done') return false
+    return !task.dueDate || task.dueDate.trim() === ''
+  }
+
+  /**
    * Check if a task is unscheduled (no instances or legacy schedule)
    */
   const isUnscheduledTask = (task: Task): boolean => {
@@ -488,6 +511,8 @@ export const useSmartViews = () => {
     isWeekTask,
     isThisMonthTask,
     isUncategorizedTask,
+    isOverdueTask,
+    isMissingDueDateTask,
     isUnscheduledTask,
     isInProgressTask,
     isQuickTask,

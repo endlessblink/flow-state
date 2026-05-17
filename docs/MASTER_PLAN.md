@@ -8,6 +8,42 @@
 
 ## Active Tasks
 
+### TASK-1785: Calendar Shift+drag ripple-push reschedule mode (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-17)
+
+**Problem**: Dragging a calendar task to a later time only re-times that one task. When a meeting runs long or a block shifts, users have to manually re-time every later task on the day — N drags for one logical "everything moved later" action.
+
+**Goal**: Add a Shift modifier on calendar drag. Hold Shift + drag a task to a later time → every later task on the same day (chronologically after the dragged task) shifts forward by the same delta. Locked tasks are skipped. Crossing midnight spills into the next day. One drag = one undo step.
+
+**User-confirmed scope (v1)**:
+- Same day, all later tasks (not just colliders)
+- Spill into next day past midnight
+- Per-task `calendarLocked` field; ripple skips locked tasks
+- Live ghost-shift preview while Shift is held mid-drag
+- Negative delta (drag earlier) explicitly out of scope for v1
+
+**Approach (two pushes for safety)**:
+1. **Push 1** — Ripple math + undo + tests. `calendarLocked` stubbed as `false` so no migration yet. Verify forward ripple, midnight spill, single-undo restore, non-Shift regression.
+2. **Push 2** — Supabase migration `calendar_locked BOOLEAN NOT NULL DEFAULT false`, mapper round-trip, lock toggle in event context menu, 🔒 indicator.
+
+**Critical files**:
+- `src/composables/calendar/useCalendarDayView.ts:690` (`handleDrop`), `:913` (`handleEventDragStart`)
+- `src/composables/calendar/useCalendarWeekView.ts` (parallel changes)
+- `src/components/calendar/CalendarDayView.vue`, `CalendarWeekView.vue` (ghost transform binding)
+- `src/composables/undoSingleton.ts:1109` (`bulkMoveToInboxWithUndo` is the template — must clone its `beginOperation`/`commitOperation` *bypass* to dodge BUG-1739 drag-settle race)
+- `src/stores/tasks/taskOperations.ts:1388` (`updateTaskWithSchedule` — reuse as-is per task)
+- Push 2 only: `src/types/Task.ts`, `src/services/database/supabaseMappers.ts`, new Supabase migration
+
+**Verification**:
+- New `tests/calendar-ripple-shift.spec.ts`: forward ripple, locked-skip, midnight spill, one-Ctrl-Z restore, non-Shift regression
+- Run: `nice -n 15 npm run test:e2e -- --workers=2 --grep "ripple"`
+- Manual smoke: Electron + browser, two-tab sync against VPS
+
+**Plan file**: `~/.claude/plans/yes-and-ask-me-flickering-river.md`
+
+---
+
 ### TASK-1773: Planning canvas interaction polish (🔄 IN PROGRESS)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS (opened 2026-05-01)
@@ -1386,6 +1422,25 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 ---
 
 ## Active Bugs (P0-P1)
+
+### BUG-1786: Canvas "Move to Today" leaves tasks bucketed as Tomorrow when they carry a calendar instance (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-05-17)
+
+**Problem**: On the Canvas view (Electron), moving a task to Today via drag, right-click date menu, or overdue "Reschedule → Today" updates `task.dueDate` and (for drag) `parentId`, but never touches `task.instances[].scheduledDate`. Because `getTaskInstances` (`src/stores/tasks.ts:30`) makes any reader prefer `instances[]` over `dueDate`, Board view, smart-group matchers, and day-rotation continue to bucket the task as Tomorrow.
+
+**Fix**: Add `realignInstancesToDate(task, dateStr)` helper in `src/stores/tasks/taskOperations.ts`. Skip recurring tasks and tasks with no instances (preserves BUG-1467 — don't invent calendar slots). Wire into the three canvas writers so the new `dueDate` and realigned `instances` ship atomically in a single `updateTask` call.
+
+**Files**:
+- `src/stores/tasks/taskOperations.ts` (helper near line 1485)
+- `src/composables/canvas/useCanvasInteractions.ts:855` (drag)
+- `src/composables/canvas/node/useTaskNodeActions.ts:295` (overdue reschedule)
+- `src/composables/tasks/useTaskContextMenuActions.ts:64-83, 143-147` (context menu — drop `isCalendarEvent` gate)
+- `src/stores/__tests__/tasks.test.ts:583-614` (new cases: instance realigned, recurring untouched, no-instances preserved)
+
+**Plan file**: `~/.claude/plans/mighty-petting-stearns.md`
+
+---
 
 ### ~~BUG-1784~~: Canvas Tidy button flips 9+ tasks into a messy 2-column staggered grid (✅ DONE)
 
@@ -3391,6 +3446,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1767** | **P2** | **📋 AI can read notes/lists and turn them into useful actions** |
 | ~~**TASK-1768**~~ | **P2** | ✅ **Persist mini-canvas planning notes for knowledge workflows** (✅ DONE (2026-05-02)) |
 | **TASK-1769** | **P3** | **📋 Lightweight links/backlinks between notes and tasks** |
+| **TASK-1785** | **P2** | **📋 Calendar Shift+drag ripple-push reschedule — push all later same-day tasks forward by same delta, locked tasks skipped, midnight spill, one-step undo** |
+| ~~**TASK-1786**~~ | **P2** | ✅ **Quick Sort: "Include overdue & no-due" toggle + empty-title ghost filter + Electron renderer log capture** (✅ DONE (2026-05-18)) |
 | ~~**TASK-1533**~~ | **P0** | ✅ **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (✅ DONE (2026-04-02)) |
 | ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (✅ DONE (2026-03-17)) |
 | ~~**TASK-1535**~~ | **P0** | **DB migration: Add workspace_id to tasks, projects, groups + assigned_to on tasks** (✅ DONE (2026-03-17)) |

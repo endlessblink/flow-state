@@ -1,6 +1,7 @@
 import { ref, shallowRef, triggerRef, computed, onUnmounted, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useQuickSortStore } from '@/stores/quickSort'
+import { useSettingsStore } from '@/stores/settings'
 import { useSmartViews } from '@/composables/useSmartViews'
 import type { Task } from '@/types/tasks'
 import type { CategoryAction } from '@/stores/quickSort'
@@ -8,7 +9,8 @@ import type { CategoryAction } from '@/stores/quickSort'
 export function useQuickSort() {
   const taskStore = useTaskStore()
   const quickSortStore = useQuickSortStore()
-  const { isUncategorizedTask } = useSmartViews()
+  const settingsStore = useSettingsStore()
+  const { isUncategorizedTask, isOverdueTask, isMissingDueDateTask } = useSmartViews()
 
   // State - pin by ID instead of index
   const currentTaskId = ref<string | null>(null)
@@ -63,13 +65,40 @@ export function useQuickSort() {
   // Getters
   // TASK-243: Use raw tasks so Quick Sort sees ALL uncategorized tasks regardless of active smart view
   // Filter out processedTaskIds so saved/done tasks don't reappear
+  // TASK-1786: When settings.includeOverdueInQuickSort is true, also include overdue + no-due tasks
+  // even when they already belong to a project (non-destructive — assignment preserved).
+  // TASK-1786: One-shot warning when ghost rows (empty title) appear in the queue.
+  // Reset whenever a real task comes through so a recurrence is logged again.
+  let _ghostWarnedThisSession = false
+
   const uncategorizedTasks = computed<Task[]>(() => {
-    return taskStore.rawTasks.filter(task =>
-      !task._soft_deleted &&
-      !task.isPinned &&
-      isUncategorizedTask(task) &&
-      !processedTaskIds.value.has(task.id)
-    )
+    const includeOverdue = settingsStore.includeOverdueInQuickSort
+    let ghostCount = 0
+    const list = taskStore.rawTasks.filter(task => {
+      if (task._soft_deleted) return false
+      if (task.isPinned) return false
+      if (processedTaskIds.value.has(task.id)) return false
+      if (task.status === 'done') return false
+      // Defensive: skip half-hydrated rows with empty titles (post-version-bump
+      // cache races have been observed to leak these). Real tasks always have a title.
+      if (!task.title || task.title.trim() === '') {
+        ghostCount++
+        return false
+      }
+      if (isUncategorizedTask(task)) return true
+      if (includeOverdue && (isOverdueTask(task) || isMissingDueDateTask(task))) return true
+      return false
+    })
+    if (ghostCount > 0 && !_ghostWarnedThisSession) {
+      _ghostWarnedThisSession = true
+      console.warn(
+        `[QuickSort] Skipped ${ghostCount} task(s) with empty title — likely stale client cache after update. ` +
+        `If this persists, fully restart the app to clear local state.`
+      )
+    } else if (ghostCount === 0 && _ghostWarnedThisSession) {
+      _ghostWarnedThisSession = false
+    }
+    return list
   })
 
   // Look up current task by ID from rawTasks (reactive to live edits)
@@ -118,6 +147,17 @@ export function useQuickSort() {
       processedTaskIds: processedTaskIds.value
     })
   }
+
+  // TASK-1786: When the overdue toggle is flipped on and we have no current task
+  // (e.g. user finished sorting and then expanded the queue), auto-pick the next one
+  // so they don't need to restart the session.
+  watch(() => settingsStore.includeOverdueInQuickSort, () => {
+    if (!currentTaskId.value && quickSortStore.isActive && uncategorizedTasks.value.length > 0) {
+      currentTaskId.value = uncategorizedTasks.value[0].id
+      snapshotCurrentTask()
+      persistSession()
+    }
+  })
 
   // Navigation helpers
   function advanceToNextTask() {

@@ -14,6 +14,16 @@
         </span>
         <span v-if="!isComplete && currentStreak > 2" class="streak-badge">{{ currentStreak }}</span>
       </div>
+      <button
+        class="overdue-toggle"
+        :class="{ active: includeOverdue }"
+        :aria-pressed="includeOverdue"
+        :title="includeOverdue ? 'Showing overdue & no-due tasks too' : 'Include overdue & no-due tasks'"
+        @click="toggleOverdueQueue"
+      >
+        <AlarmClock :size="16" />
+        <span class="overdue-toggle-label">Overdue + no-due</span>
+      </button>
       <button class="close-button" aria-label="Exit Quick Sort" @click="handleExit">
         <X :size="20" />
       </button>
@@ -221,9 +231,9 @@
           <div class="control-row">
             <span class="control-label">Priority</span>
             <div class="pill-group">
-              <button class="pill" :class="{ active: currentTask.priority === 'low' }" @click="handleTaskUpdate({ priority: 'low' })">Low</button>
-              <button class="pill" :class="{ active: currentTask.priority === 'medium' }" @click="handleTaskUpdate({ priority: 'medium' })">Med</button>
-              <button class="pill" :class="{ active: currentTask.priority === 'high' }" @click="handleTaskUpdate({ priority: 'high' })">High</button>
+              <button class="pill" :class="{ active: currentTask.priority === 'low' }" :data-assumed="assumedPriority === 'low' || null" @click="handleTaskUpdate({ priority: 'low' })">Low</button>
+              <button class="pill" :class="{ active: currentTask.priority === 'medium' || assumedPriority === 'medium' }" :data-assumed="assumedPriority === 'medium' || null" @click="handleTaskUpdate({ priority: 'medium' })">Med</button>
+              <button class="pill" :class="{ active: currentTask.priority === 'high' }" :data-assumed="assumedPriority === 'high' || null" @click="handleTaskUpdate({ priority: 'high' })">High</button>
             </div>
           </div>
 
@@ -231,7 +241,7 @@
           <div class="control-row">
             <span class="control-label">Due</span>
             <div class="pill-group pill-scroll">
-              <button class="pill" :class="{ active: isDueToday }" @click="setQuickDate('today')">Today</button>
+              <button class="pill" :class="{ active: isDueToday || assumedDueIsToday }" :data-assumed="assumedDueIsToday || null" @click="setQuickDate('today')">Today</button>
               <button class="pill" :class="{ active: isDueTomorrow }" @click="setQuickDate('tomorrow')">+1</button>
               <button class="pill" @click="setQuickDate('in3days')">+3</button>
               <button class="pill" :class="{ active: isDueWeekend }" @click="setQuickDate('weekend')">Wknd</button>
@@ -260,6 +270,21 @@
             </div>
           </div>
 
+          <!-- Length pills -->
+          <div class="control-row">
+            <span class="control-label">Length</span>
+            <div class="pill-group">
+              <button class="pill" :class="{ active: currentTask.estimatedDuration === 15 }" @click="handleTaskUpdate({ estimatedDuration: 15 })">15m</button>
+              <button class="pill" :class="{ active: currentTask.estimatedDuration === 30 }" @click="handleTaskUpdate({ estimatedDuration: 30 })">30m</button>
+              <button class="pill" :class="{ active: currentTask.estimatedDuration === 60 }" @click="handleTaskUpdate({ estimatedDuration: 60 })">1h</button>
+              <button class="pill" :class="{ active: currentTask.estimatedDuration === 120 }" @click="handleTaskUpdate({ estimatedDuration: 120 })">2h</button>
+              <button class="pill" :class="{ active: !!currentTask.estimatedDuration && currentTask.estimatedDuration >= 240 }" @click="handleTaskUpdate({ estimatedDuration: 240 })">4h+</button>
+              <button class="pill clear" :class="{ active: !currentTask.estimatedDuration }" @click="handleTaskUpdate({ estimatedDuration: undefined })">
+                <X :size="14" />
+              </button>
+            </div>
+          </div>
+
           <!-- Project Selector -->
           <CategorySelector
             compact
@@ -273,6 +298,11 @@
             <Pencil :size="14" />
             Full Edit
           </button>
+
+          <!-- Smart-default hint row -->
+          <div v-if="settingsStore.quickSortSmartDefaults" class="smart-hint">
+            <span><kbd>↵</kbd> save · <kbd>esc</kbd> skip · dashed chips auto-fill</span>
+          </div>
         </div>
       </div>
     </Transition>
@@ -324,12 +354,14 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   Zap, X, CheckCircle, Undo2, Plus, Save, Trash2, Pencil, SkipForward,
-  CalendarDays, FolderOpen, Calendar
+  CalendarDays, FolderOpen, Calendar, AlarmClock
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickCapture } from '@/composables/useQuickCapture'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
+import { useSettingsStore } from '@/stores/settings'
+import { useQuickSortStore } from '@/stores/quickSort'
 import QuickSortCard from '@/components/QuickSortCard.vue'
 import QuickCaptureTab from '@/components/quicksort/QuickCaptureTab.vue'
 import CategorySelector from '@/components/layout/CategorySelector.vue'
@@ -345,6 +377,22 @@ const route = useRoute()
 const taskStore = useTaskStore()
 const projectStore = useProjectStore()
 const quickCapture = useQuickCapture()
+const settingsStore = useSettingsStore()
+const quickSortStore = useQuickSortStore()
+
+// TASK-1786: Toggle to include overdue & no-due tasks (project-assigned ones) in the queue.
+const includeOverdue = computed({
+  get: () => settingsStore.includeOverdueInQuickSort,
+  set: (v: boolean) => { settingsStore.includeOverdueInQuickSort = v }
+})
+function toggleOverdueQueue() {
+  includeOverdue.value = !includeOverdue.value
+  showFeedback(
+    includeOverdue.value ? 'Including overdue & no-due tasks' : 'Uncategorized only',
+    'info',
+    1200
+  )
+}
 
 const activeTab = ref<'sort' | 'capture'>('sort')
 const captureTabRef = ref<InstanceType<typeof QuickCaptureTab> | null>(null)
@@ -402,6 +450,50 @@ const {
 // Reset touch tracking when task changes
 watch(currentTaskId, () => { userTouchedCard.value = false })
 
+// Quick Sort smart defaults: track which fields the user explicitly touched
+// so we can fill the rest with sensible defaults on save. Per-session memory
+// of the last project the user assigned (so consecutive tasks tend to land
+// in the same place without re-picking).
+const touchedFields = ref<Set<'priority' | 'dueDate' | 'projectId'>>(new Set())
+const lastUsedProjectId = ref<string | null>(null)
+
+watch(currentTaskId, () => { touchedFields.value = new Set() })
+
+// Show dashed-outline on the chip that WILL be auto-filled if user hits Enter
+const assumedPriority = computed<'low' | 'medium' | 'high' | null>(() => {
+  if (!settingsStore.quickSortSmartDefaults) return null
+  if (!currentTask.value) return null
+  if (currentTask.value.priority) return null
+  if (touchedFields.value.has('priority')) return null
+  return 'medium'
+})
+
+const assumedDueIsToday = computed<boolean>(() => {
+  if (!settingsStore.quickSortSmartDefaults) return false
+  if (!currentTask.value) return false
+  if (currentTask.value.dueDate) return false
+  if (touchedFields.value.has('dueDate')) return false
+  return true
+})
+
+function applySmartDefaultsBeforeSave(): Promise<void> | void {
+  if (!settingsStore.quickSortSmartDefaults) return
+  if (!currentTask.value) return
+  const updates: Partial<Task> = {}
+  if (!currentTask.value.priority && !touchedFields.value.has('priority')) {
+    updates.priority = 'medium'
+  }
+  if (!currentTask.value.dueDate && !touchedFields.value.has('dueDate')) {
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    updates.dueDate = today.toISOString().slice(0, 10)
+  }
+  if (!currentTask.value.projectId && !touchedFields.value.has('projectId') && lastUsedProjectId.value) {
+    updates.projectId = lastUsedProjectId.value
+  }
+  if (Object.keys(updates).length === 0) return
+  return taskStore.updateTask(currentTask.value.id, updates)
+}
+
 onMounted(() => {
   const resumed = tryResumeSession()
   if (!resumed) startSession()
@@ -417,11 +509,18 @@ watch(isComplete, (completed) => {
 function handleCategorize(projectId: string) {
   if (!currentTask.value) return
   userTouchedCard.value = true
+  touchedFields.value.add('projectId')
+  lastUsedProjectId.value = projectId
   categorizeTask(currentTask.value.id, projectId)
 }
 
 function handleSave() {
   if (!currentTask.value) return
+  // Smart defaults: if enabled, Enter/Save fills missing values instead of nagging.
+  if (settingsStore.quickSortSmartDefaults) {
+    _doSave()
+    return
+  }
   if (!userTouchedCard.value) {
     showNothingSetReminder.value = true
     return
@@ -429,7 +528,9 @@ function handleSave() {
   _doSave()
 }
 
-function _doSave() {
+async function _doSave() {
+  if (!currentTask.value) return
+  await applySmartDefaultsBeforeSave()
   if (!currentTask.value) return
   pickCelebrationLabel()
   showFeedback(celebrationLabel.value, 'success')
@@ -448,6 +549,12 @@ function cancelSaveReminder() {
 async function handleTaskUpdate(updates: Partial<Task>) {
   if (!currentTask.value) return
   userTouchedCard.value = true
+  if ('priority' in updates) touchedFields.value.add('priority')
+  if ('dueDate' in updates) touchedFields.value.add('dueDate')
+  if ('projectId' in updates) {
+    touchedFields.value.add('projectId')
+    if (updates.projectId) lastUsedProjectId.value = updates.projectId
+  }
   await taskStore.updateTask(currentTask.value.id, updates)
 }
 
@@ -577,6 +684,7 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 
   if (event.key === 'd' || event.key === 'D') { event.preventDefault(); handleMarkDone() }
   if ((event.key === 's' || event.key === 'S') && !event.ctrlKey && !event.metaKey) { event.preventDefault(); handleSave() }
+  if (event.key === 'Enter' && !event.ctrlKey && !event.metaKey && !event.shiftKey) { event.preventDefault(); handleSave() }
   if (event.key === ' ') { event.preventDefault(); handleSkip() }
   if (event.key === 'e' || event.key === 'E') { event.preventDefault(); handleEditTask() }
   if (event.key === 'Delete') { event.preventDefault(); requestDelete() }
@@ -705,6 +813,41 @@ const currentTaskProject = computed(() => {
 .close-button:hover {
   background: var(--glass-bg-medium);
   color: var(--text-primary);
+}
+
+/* TASK-1786: Overdue + no-due queue toggle */
+.overdue-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  height: 32px;
+  padding: 0 var(--space-2_5);
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-normal);
+  margin-inline-end: var(--space-2);
+}
+.overdue-toggle:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
+}
+.overdue-toggle.active {
+  background: color-mix(in srgb, var(--accent-warning, #f59e0b) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent-warning, #f59e0b) 45%, transparent);
+  color: var(--accent-warning, #f59e0b);
+}
+.overdue-toggle.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+@media (max-width: 640px) {
+  .overdue-toggle-label { display: none; }
+  .overdue-toggle { padding: 0 var(--space-2); }
 }
 
 /* ================================
@@ -1123,6 +1266,35 @@ const currentTaskProject = computed(() => {
   -webkit-backdrop-filter: blur(8px);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
+}
+
+/* Assumed (smart-default) chip: dashed outline, no fill — signals "press Enter to accept" */
+.pill.active[data-assumed] {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-style: dashed;
+  border-color: var(--text-tertiary);
+  color: var(--text-secondary);
+}
+
+.smart-hint {
+  margin-top: var(--space-3);
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.01em;
+}
+.smart-hint kbd {
+  display: inline-block;
+  padding: 0 4px;
+  margin: 0 2px;
+  font-family: inherit;
+  font-size: 11px;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  border-radius: 3px;
+  color: var(--text-secondary);
 }
 
 .pill.clear { padding: var(--space-2); color: var(--text-muted); }

@@ -151,6 +151,20 @@ export function useAppInitialization() {
           else console.log('✅ [DEDUP] No duplicates after cache load. Total:', taskStore._rawTasks.length)
         }
 
+        // TASK-1786: Integrity check — ghost rows (empty title) have appeared after
+        // version bumps when stale IndexedDB cache races a new bundle. Log loudly
+        // so future occurrences are diagnosable; consumers (Quick Sort, lists) defensively skip them.
+        {
+          const ghosts = taskStore._rawTasks.filter(t => !t._soft_deleted && (!t.title || t.title.trim() === ''))
+          if (ghosts.length > 0) {
+            console.warn(
+              `🟡 [INTEGRITY] ${ghosts.length} task(s) with empty title detected after cache load. ` +
+              `IDs:`, ghosts.slice(0, 10).map(t => t.id.slice(0, 8)),
+              `\nIf this persists after a full app restart, the upstream cache is corrupt.`
+            )
+          }
+        }
+
         // Mark data as ready — UI can render with cached data (or empty state)
         authStore.markAppInitLoadComplete()
         isDataReady.value = true
@@ -329,7 +343,17 @@ export function useAppInitialization() {
                     await Promise.all([
                         taskStore.loadFromDatabase(),
                         projectStore.loadProjectsFromDatabase(),
-                        canvasStore.loadFromDatabase()
+                        canvasStore.loadFromDatabase(),
+                        // Hydrate synced settings (e.g. googleConnected, externalCalendars, savedViews)
+                        // so cross-device state appears reliably on every launch.
+                        (async () => {
+                            try {
+                                const { useSettingsStore } = await import('@/stores/settings')
+                                await useSettingsStore().hydrateFromSupabase()
+                            } catch (e) {
+                                console.warn('[APP-INIT] Settings hydration failed:', e)
+                            }
+                        })()
                     ])
 
                     // TASK-1428: Re-apply unsynced offline changes that Supabase doesn't know about yet

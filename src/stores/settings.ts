@@ -69,6 +69,13 @@ export interface AppSettings {
     aiPremiumModel: string
     aiMonthlyBudgetCents: number
 
+    // TASK-1786: Include overdue & no-due tasks in Quick Sort queue
+    includeOverdueInQuickSort: boolean
+
+    // Quick Sort smart defaults: auto-fill priority=medium, due=today, project=last-used
+    // when user presses Enter/Save without touching those fields. Auto-advance on Enter.
+    quickSortSmartDefaults: boolean
+
     // TASK-1219: Time block progress notifications
     timeBlockNotifications: TimeBlockNotificationSettings
 
@@ -258,6 +265,12 @@ export const useSettingsStore = defineStore('settings', {
         aiSmartRouting: _persisted?.aiSmartRouting ?? false,
         aiPremiumModel: _persisted?.aiPremiumModel ?? 'anthropic/claude-sonnet-4-6',
         aiMonthlyBudgetCents: _persisted?.aiMonthlyBudgetCents ?? 500,
+
+        // TASK-1786: Include overdue & no-due tasks in Quick Sort queue (default off)
+        includeOverdueInQuickSort: _persisted?.includeOverdueInQuickSort ?? false,
+
+        // Quick Sort smart defaults (default on — flip off to disable)
+        quickSortSmartDefaults: _persisted?.quickSortSmartDefaults ?? true,
 
         // TASK-1219: Time block notification defaults
         timeBlockNotifications: { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS },
@@ -477,6 +490,62 @@ export const useSettingsStore = defineStore('settings', {
         updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
             this.$state[key] = value
             this.saveToStorage()
+        },
+
+        // Pull cross-device "integration" settings down from Supabase so they appear
+        // reliably on every device. Deliberately narrow: only fields whose source of
+        // truth is "the user's account state across devices" (Google connection,
+        // calendar lists, saved views). User-tuned UI/UX preferences (timer durations,
+        // theme, density, etc.) are NOT touched here — the local value wins so an
+        // offline edit can't be silently reverted on next launch.
+        // Sensitive device-local OAuth tokens are never overwritten either.
+        async hydrateFromSupabase() {
+            try {
+                const { supabase } = await import('@/services/auth/supabase')
+                if (!supabase) return
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user?.id) return
+
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .select('settings')
+                    .eq('user_id', user.id)
+                    .maybeSingle()
+                if (error || !data?.settings) return
+
+                const remote = data.settings as Partial<AppSettings>
+
+                // Allowlist of fields safe to overwrite from Supabase truth.
+                // Add fields here only when remote is authoritative across devices.
+                const CROSS_DEVICE_FIELDS: (keyof AppSettings)[] = [
+                    'googleConnected',
+                    'googleCalendars',
+                    'showGoogleCalendarEvents',
+                    'externalCalendars',
+                    'savedViews',
+                ]
+
+                let changed = 0
+                for (const key of CROSS_DEVICE_FIELDS) {
+                    if (remote[key] === undefined) continue
+                    // Skip if remote value equals local value (avoid pointless writes)
+                    const localVal = this.$state[key]
+                    const remoteVal = remote[key]
+                    if (JSON.stringify(localVal) === JSON.stringify(remoteVal)) continue
+                    // @ts-expect-error — keys are constrained by CROSS_DEVICE_FIELDS
+                    this.$state[key] = remoteVal
+                    changed++
+                }
+
+                if (changed > 0) {
+                    try {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.$state))
+                    } catch (_) { /* non-fatal */ }
+                }
+                console.log(`[SETTINGS] Hydrated ${changed} cross-device field(s) from Supabase (googleConnected: ${this.$state.googleConnected})`)
+            } catch (e) {
+                console.warn('[SETTINGS] hydrateFromSupabase failed:', e)
+            }
         },
 
         // FEATURE-1162: Saved Views CRUD

@@ -1,5 +1,5 @@
 import { ref, computed, watch, onUnmounted, type Ref } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
+import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
@@ -8,6 +8,8 @@ import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculati
 import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
 import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
 import { CALENDAR_SLOT_HEIGHT_PX, CALENDAR_SNAP_MINUTES } from '@/constants/calendar'
+import { getUndoSystem } from '@/composables/undoSingleton'
+import { computeRippleUpdates, type RippleLaterEvent } from '@/utils/calendar/rippleShift'
 
 export interface PositionedExternalEvent extends ExternalCalendarEvent {
   top: number        // startMinutes from midnight
@@ -111,6 +113,27 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
   // Drag mode state - enable dragging by default
   const dragMode = ref<'none' | 'shift'>('shift')
+
+  // TASK-1785: Ripple-shift state. Populated when Shift is held on dragstart;
+  // consumed in handleDrop to push every later same-day task forward by the delta.
+  // Math lives in @/utils/calendar/rippleShift for unit-testability.
+  const rippleActive = ref(false)
+  const rippleOriginMinutes = ref<number | null>(null)
+  const rippleOriginDate = ref<string | null>(null)
+  const rippleLaterEvents = ref<RippleLaterEvent[]>([])
+  // TASK-1785 (Push 1.5): live ghost-preview offsets — eventId -> pixel offset
+  // applied as transform: translateY() while the user is mid-drag with Shift.
+  const rippleGhostOffsets = ref<Map<string, number>>(new Map())
+
+  const resetRippleState = () => {
+    rippleActive.value = false
+    rippleOriginMinutes.value = null
+    rippleOriginDate.value = null
+    rippleLaterEvents.value = []
+    if (rippleGhostOffsets.value.size > 0) {
+      rippleGhostOffsets.value = new Map()
+    }
+  }
 
   // Drag state for visual feedback
   const isDragging = ref(false)
@@ -552,13 +575,19 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     // Mark short tasks for compact CSS styling (single horizontal line)
     const isCompact = calEvent.duration <= 30
 
+    // TASK-1785 (Push 1.5): apply ripple live-preview offset if present.
+    // Keyed by instanceId, same id used to build the map in handleDragOver.
+    const rippleOffset = rippleGhostOffsets.value.get(calEvent.instanceId) ?? 0
+    const rippleTransform = rippleOffset > 0 ? `translateY(${rippleOffset}px)` : undefined
+
     // If no overlap (totalColumns is 1 or undefined), use normal flow with full width
     if (!calEvent.totalColumns || calEvent.totalColumns <= 1) {
       return {
         height: `${baseHeight}px`,
         minHeight: `${baseHeight}px`,
         zIndex: 10,
-        '--is-compact': isCompact ? '1' : '0'
+        '--is-compact': isCompact ? '1' : '0',
+        ...(rippleTransform ? { transform: rippleTransform, transition: 'transform 60ms linear' } : {})
       }
     }
 
@@ -577,7 +606,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       width: `calc(${widthPercentage}% - 4px)`,
       left: `calc(${leftPercentage}% + 2px)`,
       zIndex: 10 + (calEvent.column || 0), // Later columns render on top
-      '--is-compact': isCompact ? '1' : '0'
+      '--is-compact': isCompact ? '1' : '0',
+      ...(rippleTransform ? { transform: rippleTransform, transition: 'transform 60ms linear' } : {})
     }
   }
 
@@ -673,6 +703,28 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     if (dragGhost.value.visible) {
       dragGhost.value.slotIndex = slot.slotIndex
     }
+
+    // TASK-1785 (Push 1.5): live ghost-preview offsets for ripple-shift.
+    // Compute deltaPx from origin to current slot, apply translateY() to every
+    // later same-day event so they slide with the cursor before drop commits.
+    if (
+      rippleActive.value &&
+      rippleOriginDate.value === slot.date &&
+      rippleOriginMinutes.value !== null
+    ) {
+      const targetMinutes = slot.hour * 60 + slot.minute
+      const deltaMinutes = targetMinutes - rippleOriginMinutes.value
+      if (deltaMinutes > 0) {
+        const deltaPx = (deltaMinutes / 30) * CALENDAR_SLOT_HEIGHT_PX
+        const next = new Map<string, number>()
+        for (const later of rippleLaterEvents.value) {
+          next.set(later.instanceId, deltaPx)
+        }
+        rippleGhostOffsets.value = next
+      } else if (rippleGhostOffsets.value.size > 0) {
+        rippleGhostOffsets.value = new Map()
+      }
+    }
   }
 
   const handleDragLeave = () => {
@@ -731,11 +783,70 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       if (source === 'calendar-event') {
         const instanceToUpdate = task?.instances?.find(i => i.id)
 
-        await taskStore.updateTaskWithSchedule(taskId, {
-          scheduledDate: slot.date,
-          scheduledTime: timeStr,
-          instanceId: instanceToUpdate?.id
-        })
+        // TASK-1785: Ripple-shift branch. If Shift was held at dragstart and the
+        // drop produces a positive time delta on the same day, also re-time every
+        // later same-day task by the same delta as one undo step.
+        const targetMinutes = snappedTime.hour * 60 + snappedTime.minute
+
+        let rippleUpdates: Array<{ id: string; scheduledDate: string; scheduledTime: string; instanceId?: string }> = []
+        if (
+          rippleActive.value &&
+          rippleOriginDate.value !== null &&
+          rippleOriginMinutes.value !== null
+        ) {
+          rippleUpdates = computeRippleUpdates(
+            {
+              taskId,
+              instanceId: instanceToUpdate?.id,
+              originDate: rippleOriginDate.value,
+              originMinutes: rippleOriginMinutes.value
+            },
+            { date: slot.date, totalMinutes: targetMinutes },
+            rippleLaterEvents.value
+          )
+        }
+
+        if (rippleUpdates.length > 1) {
+          // Re-resolve instance ids for later tasks against the current store state
+          // (handles cases where the instance was renamed between dragstart and drop).
+          const resolvedUpdates = rippleUpdates.map((u, idx) => {
+            if (idx === 0) return u
+            const laterTask = taskStore._rawTasks.find(t => t.id === u.id)
+            const inst = laterTask?.instances?.find(i => i.id === u.instanceId)
+              ?? laterTask?.instances?.find(i => i.id)
+            return { ...u, instanceId: inst?.id }
+          })
+
+          // Clear live-preview offsets BEFORE the store update so events don't
+          // render at "new position + deltaPx" for a frame (would look like a
+          // double-shift). The store update that follows places them correctly.
+          if (rippleGhostOffsets.value.size > 0) {
+            rippleGhostOffsets.value = new Map()
+          }
+
+          const undoSystem = getUndoSystem()
+          const delta = targetMinutes - (rippleOriginMinutes.value ?? targetMinutes)
+          if (undoSystem?.rippleShiftWithUndo) {
+            await undoSystem.rippleShiftWithUndo(
+              resolvedUpdates,
+              `Ripple shift +${delta}m (${resolvedUpdates.length} tasks)`
+            )
+          } else {
+            for (const u of resolvedUpdates) {
+              await taskStore.updateTaskWithSchedule(u.id, {
+                scheduledDate: u.scheduledDate,
+                scheduledTime: u.scheduledTime,
+                instanceId: u.instanceId
+              })
+            }
+          }
+        } else {
+          await taskStore.updateTaskWithSchedule(taskId, {
+            scheduledDate: slot.date,
+            scheduledTime: timeStr,
+            instanceId: instanceToUpdate?.id
+          })
+        }
       } else {
         // Drag from inbox or other sources
         // Create task instance and update task to remove from inbox
@@ -758,6 +869,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     }
 
     resetDragState()
+    resetRippleState()
   }
 
   // Event drag-and-drop (repositioning within calendar)
@@ -916,6 +1028,52 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     isDragging.value = true
     draggedEventId.value = calendarEvent.id
 
+    // TASK-1785: If Shift is held at dragstart, capture the snapshot needed to
+    // ripple-push every later same-day task by the same delta on drop. We do
+    // this here (not on drop) because the dragged event's original time is
+    // about to change — we need the "before" reference.
+    //
+    // NOTE: we enumerate from taskStore._rawTasks (not calendarEvents.value)
+    // so this works in both day view AND week view. calendarEvents is scoped
+    // to currentDate, but in week view the dragged task may live on a day
+    // other than currentDate.
+    resetRippleState()
+    if (event.shiftKey) {
+      const origin = calendarEvent.startTime
+      const originMinutes = origin.getHours() * 60 + origin.getMinutes()
+      const originDate = getDateString(origin)
+
+      const laterEvents: RippleLaterEvent[] = []
+      for (const task of taskStore._rawTasks) {
+        if (!task || task.deletedAt) continue
+        // Push 1: no calendarLocked field yet — every later task ripples.
+        // Push 2 will add: if (task.calendarLocked) continue
+        const instances = getTaskInstances(task)
+        for (const inst of instances) {
+          if (!inst?.id) continue
+          if (inst.id === calendarEvent.instanceId) continue
+          if (inst.scheduledDate !== originDate) continue
+          if (!inst.scheduledTime) continue
+          const [h, m] = inst.scheduledTime.split(':').map(Number)
+          if (!Number.isFinite(h) || !Number.isFinite(m)) continue
+          const instMinutes = h * 60 + m
+          if (instMinutes <= originMinutes) continue
+          laterEvents.push({
+            taskId: task.id,
+            instanceId: inst.id,
+            originDate,
+            originMinutes: instMinutes
+          })
+        }
+      }
+      laterEvents.sort((a, b) => a.originMinutes - b.originMinutes)
+
+      rippleActive.value = true
+      rippleOriginMinutes.value = originMinutes
+      rippleOriginDate.value = originDate
+      rippleLaterEvents.value = laterEvents
+    }
+
     // Allow dragging calendar events without Shift key or restrictions
     if (event.dataTransfer) {
       const dragData = {
@@ -949,6 +1107,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
     // BUG-1340: Reset all local calendar drag state
     resetDragState()
+    resetRippleState()
 
     // Clean up any visual dragging classes that might be stuck
     setTimeout(() => {
@@ -1164,6 +1323,9 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     resizePreview,
 
     // TASK-1521: Drag preview (preview-then-commit)
-    dragPreview
+    dragPreview,
+
+    // TASK-1785: ripple-shift live-preview offsets (consumed by both day and week views)
+    rippleGhostOffsets
   }
 }

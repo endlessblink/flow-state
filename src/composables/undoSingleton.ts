@@ -1143,6 +1143,52 @@ const bulkMoveToInboxWithUndo = async (taskIds: string[]) => {
   }
 }
 
+// TASK-1785: Shift+drag ripple-push reschedule on the calendar.
+// Pushes one combined undo entry that covers re-timing N tasks (the dragged task
+// plus every later same-day task that ripple-shifted with it).
+// Bypasses beginOperation/commitOperation deliberately — same reason as
+// bulkMoveToInboxWithUndo above (BUG-1739: drag-settling can steal pendingOperation).
+const rippleShiftWithUndo = async (
+  taskUpdates: Array<{ id: string; scheduledDate: string; scheduledTime: string; instanceId?: string }>,
+  description?: string
+) => {
+  if (taskUpdates.length === 0) return
+
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+
+  const affectedIds = taskUpdates.map(u => u.id)
+  const snapshotBefore = await captureCurrentState(affectedIds)
+
+  // Apply schedule updates in order. updateTaskWithSchedule is atomic per task
+  // and respects existing pending-write echo suppression.
+  for (const update of taskUpdates) {
+    await taskStore.updateTaskWithSchedule(update.id, {
+      scheduledDate: update.scheduledDate,
+      scheduledTime: update.scheduledTime,
+      instanceId: update.instanceId
+    })
+  }
+
+  await nextTick()
+  const snapshotAfter = await captureCurrentState(affectedIds)
+
+  const operation: UndoOperation = {
+    type: 'task-move',
+    affectedIds: [...affectedIds],
+    description: description ?? `Ripple shift ${taskUpdates.length} task${taskUpdates.length > 1 ? 's' : ''}`,
+    timestamp: Date.now()
+  }
+  operationStack.value.push({ operation, snapshotBefore, snapshotAfter })
+  if (operationStack.value.length > 30) operationStack.value.shift()
+  redoOperationStack.value = []
+
+  if (unifiedState && commit) {
+    unifiedState.value = snapshotAfter
+    commit()
+  }
+}
+
 // TASK-1690: Push an image deletion onto the global operation stack for Ctrl+Z support.
 // This is called by useCanvasHotkeys and CanvasView context menu after removing an image.
 export function pushImageDeleteUndo(imageData: { id: string; imageUrl: string; position: { x: number; y: number }; createdAt: string }) {
@@ -1223,6 +1269,7 @@ export function getUndoSystem() {
     permanentlyDeleteTaskWithUndo,
     bulkDeleteTasksWithUndo,
     bulkMoveToInboxWithUndo,
+    rippleShiftWithUndo,
     updateTaskWithUndo,
     createTaskWithUndo,
 

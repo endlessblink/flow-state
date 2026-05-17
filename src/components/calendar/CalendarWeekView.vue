@@ -30,6 +30,8 @@ const props = defineProps<{
   createStartSlotIndex?: number | null
   createEndSlotIndex?: number | null
   createDate?: string | null
+  // TASK-1785: ripple-shift live-preview offsets keyed by instanceId
+  rippleGhostOffsets?: Map<string, number>
 }>()
 
 // Same emit signatures as CalendarDayView — uses TimeSlot for drop targets
@@ -152,6 +154,13 @@ const HALF_HOUR_HEIGHT = CALENDAR_SLOT_HEIGHT_PX
 const getWeekEventCellStyle = (event: WeekEvent) => {
   const topOffset = (event.startSlot % 2) * HALF_HOUR_HEIGHT
   const height = event.slotSpan * HALF_HOUR_HEIGHT
+  // TASK-1785: apply ripple-shift live-preview offset if this event is in the
+  // affected set. Keyed by instanceId — same convention as the day view.
+  const rippleOffset = props.rippleGhostOffsets?.get(event.instanceId) ?? 0
+  const rippleStyle = rippleOffset > 0
+    ? { transform: `translateY(${rippleOffset}px)`, transition: 'transform 60ms linear' }
+    : undefined
+
   if (event.totalColumns > 1) {
     const widthPercent = 100 / event.totalColumns
     const leftPercent = widthPercent * event.column
@@ -161,7 +170,8 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
       height: `${height}px`,
       width: `calc(${widthPercent}% - 4px)`,
       left: `calc(${leftPercent}% + 2px)`,
-      zIndex: 10 + event.column
+      zIndex: 10 + event.column,
+      ...(rippleStyle ?? {})
     }
   }
   return {
@@ -170,7 +180,8 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
     height: `${height}px`,
     left: '2px',
     right: '2px',
-    zIndex: 10
+    zIndex: 10,
+    ...(rippleStyle ?? {})
   }
 }
 
@@ -344,9 +355,27 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
                   borderColor: ext.color,
                   backgroundColor: ext.color + '20'
                 }"
-                :title="`${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
               >
-                <span class="external-event-title" dir="auto">{{ ext.title }}</span>
+                <a
+                  v-if="ext.htmlLink"
+                  class="external-event-link"
+                  :href="ext.htmlLink"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :title="buildExternalEventTooltip(ext)"
+                  @click.stop
+                  @mousedown.stop
+                >
+                  <span class="external-event-title" dir="auto">{{ ext.title }}</span>
+                </a>
+                <span
+                  v-else
+                  class="external-event-link external-event-link--readonly"
+                  :title="buildExternalEventTooltip(ext)"
+                  @mousedown.stop
+                >
+                  <span class="external-event-title" dir="auto">{{ ext.title }}</span>
+                </span>
               </div>
             </div>
           </div>

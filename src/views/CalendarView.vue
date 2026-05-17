@@ -137,6 +137,7 @@
         :create-start-slot-index="dragCreate.createDragState.startSlot?.slotIndex ?? null"
         :create-end-slot-index="dragCreate.createDragState.currentSlot?.slotIndex ?? null"
         :create-date="dragCreate.createDragState.startSlot?.date ?? null"
+        :ripple-ghost-offsets="rippleGhostOffsets"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
         @dragleave="onDragLeave"
@@ -389,7 +390,7 @@ const currentTime = ref(new Date())
 
 
 // Destructure commonly used items from composables
-const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart: _rawEventDragStart, handleEventDragEnd: _rawEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle, positionedExternalEvents } = dayView
+const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart: _rawEventDragStart, handleEventDragEnd: _rawEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle, positionedExternalEvents, rippleGhostOffsets } = dayView
 
 
 const { workingHours, weekDays, weekEvents, getWeekEventStyle, isCurrentWeekTimeCell, startWeekResize, resizePreview: weekResizePreview } = weekView

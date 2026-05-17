@@ -50,6 +50,15 @@ const boardDensities = [
       />
     </SettingsSection>
 
+    <SettingsSection title="⚡ Quick Sort">
+      <SettingsToggle
+        label="Smart defaults + Enter to save"
+        description="Press Enter to save and advance. Untouched fields auto-fill: priority → Medium, due → Today, project → last used. Turn off to require explicit choices."
+        :value="settingsStore.quickSortSmartDefaults"
+        @update="val => settingsStore.updateSetting('quickSortSmartDefaults', val)"
+      />
+    </SettingsSection>
+
   </div>
 </template>
 

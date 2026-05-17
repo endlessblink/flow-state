@@ -3,6 +3,9 @@
     <button
       class="quick-task-trigger"
       title="Quick Tasks"
+      aria-label="Quick Tasks"
+      aria-haspopup="dialog"
+      :aria-expanded="isOpen"
       @click="toggleDropdown"
     >
       <Zap :size="16" />
@@ -441,6 +444,11 @@ watch(newTaskTitle, () => {
     border-radius: var(--radius-6);
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
+}
+
+.quick-task-trigger:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
 }
 
 .quick-task-trigger:hover {

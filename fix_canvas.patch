@@ -1,0 +1,23 @@
+--- src/components/canvas/GroupNodeSimple.vue
++++ src/components/canvas/GroupNodeSimple.vue
+@@ -120,15 +120,15 @@
+
+ // Computed Properties
+ // Ensure we handle both structure formats (direct props or nested in data)
+-const section = computed(() => props.data?.section || props.data)
+-const isCollapsed = computed(() => !!props.data?.isCollapsed)
++const section = computed(() => (props.data as Record<string, unknown>)?.section || props.data)
++const isCollapsed = computed(() => !!(props.data as Record<string, unknown>)?.isCollapsed)
+
+ // BUG-225 FIX: Get color reactively from store instead of static props.data
+ // This ensures color updates immediately when changed in the modal without page refresh
+ const groupColor = computed(() => {
+-  const groupId = props.data?.id
+-  if (!groupId) return props.data?.color || '#3b82f6'
++  const groupId = (props.data as Record<string, unknown>)?.id as string | undefined
++  if (!groupId) return (props.data as Record<string, unknown>)?.color || '#3b82f6'
+   const storeGroup = canvasStore.groups.find(g => g.id === groupId)
+-  return storeGroup?.color || props.data?.color || '#3b82f6'
++  return storeGroup?.color || (props.data as Record<string, unknown>)?.color || '#3b82f6'
+ })
+ const taskCount = computed(() => {

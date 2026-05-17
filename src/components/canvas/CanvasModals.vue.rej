@@ -1,0 +1,22 @@
+--- src/components/canvas/CanvasModals.vue
++++ src/components/canvas/CanvasModals.vue
+@@ -37,16 +37,16 @@
+   <UnifiedGroupModal
+     :is-open="modals.isGroupModalOpen"
+     :group="modals.selectedGroup"
+     :position="modals.groupModalPosition"
+     @close="modals.closeGroupModal"
+-    @created="(group) => $emit('handleGroupCreated', group)"
+-    @updated="(group) => $emit('handleGroupUpdated', group)"
++    @created="(group: any) => $emit('handleGroupCreated', group)"
++    @updated="(group: any) => $emit('handleGroupUpdated', group)"
+   />
+
+   <!-- Group Edit Modal -->
+   <GroupEditModal
+     :section="modals.selectedSectionForEdit"
+     :is-visible="modals.isGroupEditModalOpen"
+     @close="modals.closeGroupEditModal"
+-    @save="(updatedSection) => $emit('handleGroupEditSave', updatedSection)"
++    @save="(updatedSection: any) => $emit('handleGroupEditSave', updatedSection)"
+   />

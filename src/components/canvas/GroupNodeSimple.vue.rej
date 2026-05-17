@@ -1,0 +1,27 @@
+--- src/components/canvas/GroupNodeSimple.vue
++++ src/components/canvas/GroupNodeSimple.vue
+@@ -228,19 +228,19 @@
+ })
+
+ const hasSmartFilters = computed(() => {
+-  return props.data?.isSmartGroup && (
+-    props.data?.smartGroupFilters?.projects?.length > 0 ||
+-    props.data?.smartGroupFilters?.tags?.length > 0 ||
+-    props.data?.smartGroupFilters?.statuses?.length > 0
++  const data = props.data as Record<string, any> | undefined
++  return data?.isSmartGroup && (
++    data?.smartGroupFilters?.projects?.length > 0 ||
++    data?.smartGroupFilters?.tags?.length > 0 ||
++    data?.smartGroupFilters?.statuses?.length > 0
+   )
+ })
+
+ const onDropNode = (e: any) => {
+   e.preventDefault()
+   isDragOver.value = false
+-
+-  const groupId = props.data?.id
++  const groupId = (props.data as Record<string, unknown>)?.id as string | undefined
+   if (!groupId) return
+
+   const rawData = e.dataTransfer?.getData('application/vueflow')

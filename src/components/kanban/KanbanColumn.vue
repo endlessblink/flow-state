@@ -28,7 +28,7 @@
         :group="dragGroup"
         item-key="id"
         class="drag-area"
-        :animation="200"
+        :animation="220"
         ghost-class="ghost-card"
         chosen-class="chosen-card"
         drag-class="drag-card"
@@ -162,6 +162,10 @@ const { startDrag, endDrag: endGlobalDrag, dragData } = useDragAndDrop()
 
 const onDragStart = (evt: DragEvent) => {
   isDragActive.value = true
+  document.body.classList.add('is-board-dragging')
+  // Clear any existing text selection — otherwise highlighted text from before
+  // the drag remains visible (force-fallback bypasses native DnD's auto-clear).
+  window.getSelection?.()?.removeAllRanges?.()
 
   // Bridge to global drag state so sidebar can receive drops
   const taskId = evt.item?.dataset?.taskId || evt.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
@@ -178,6 +182,7 @@ const onDragStart = (evt: DragEvent) => {
 
 const onDragEnd = (evt: DragEvent) => {
   isDragActive.value = false
+  document.body.classList.remove('is-board-dragging')
 
   // Check if dropped on a sidebar project (SortableJS forceFallback doesn't fire
   // native drag events on external elements, so we detect the target manually)
@@ -391,5 +396,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('kanban:drag-end', handleDragEndBroadcast)
+  document.body.classList.remove('is-board-dragging')
 })
 </script>

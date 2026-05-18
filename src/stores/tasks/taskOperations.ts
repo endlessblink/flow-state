@@ -24,6 +24,21 @@ import { sanitizeTaskTitle } from '@/utils/taskValidation'
 // BUG-1569: Re-export from types/tasks.ts to avoid breaking existing imports
 export { UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 
+// BUG-1786: Realign existing calendar instances to a new date so readers that
+// prefer `instances[].scheduledDate` over `dueDate` (e.g. Board's
+// groupTasksByDate, day-rotation, smart-group matchers) see the new date.
+// Returns `undefined` to mean "leave instances alone":
+//   - recurring tasks: instances are owned by the recurrence rule
+//   - no existing instances: don't invent calendar slots (BUG-1467 contract)
+export const realignInstancesToDate = (
+    task: Pick<Task, 'recurrence' | 'instances'>,
+    dateStr: string
+): TaskInstance[] | undefined => {
+    if (task.recurrence) return undefined
+    if (!task.instances?.length) return undefined
+    return task.instances.map(i => ({ ...i, scheduledDate: dateStr }))
+}
+
 // BUG-1184: Helper to check if a string is a valid UUID (for parent_id column)
 // Group IDs like "group-xxx" should NOT be saved to parent_id (UUID column)
 const isValidUUID = (str: string | null | undefined): boolean => {
@@ -268,6 +283,68 @@ export function useTaskOperations(
             const index = _rawTasks.value.findIndex(t => t.id === taskId)
             if (index !== -1) _rawTasks.value.splice(index, 1)
             throw error
+        } finally {
+            manualOperationInProgress.value = false
+        }
+    }
+
+    /**
+     * Restore a task from an undo snapshot via a SINGLE direct upsert.
+     *
+     * Why this exists separate from createTask:
+     *   createTask does BOTH a direct upsert AND a queue CREATE. The queued
+     *   CREATE races with any in-flight DELETE for the same id — when the
+     *   orphaned DELETE lands on Supabase AFTER our upsert, the row is
+     *   re-soft-deleted and the orchestrator takes up to 5s (one queue cycle)
+     *   to reconcile. That race is the "15-20s after-undo lag" we hit.
+     *
+     * Pattern: optimistic-restore + direct upsert, no queue. The upsert with
+     * onConflict:'id' INSERTs hard-deleted rows or UPDATEs soft-deleted rows,
+     * setting is_deleted=false decisively. addPendingWrite suppresses our own
+     * realtime echo. Works for both soft-delete and Shift+Delete restores.
+     *
+     * If offline, the direct save throws and the upstream undo path catches
+     * — local state still has the optimistic push so the UI looks correct,
+     * the next sync cycle will reconcile.
+     */
+    const restoreTaskFromUndo = async (deletedTask: Task): Promise<void> => {
+        const taskId = deletedTask.id
+        if (!taskId) {
+            console.warn('⚠️ [UNDO] restoreTaskFromUndo: snapshot has no id')
+            return
+        }
+
+        // Build a clean restore payload — explicitly clear delete flags so the
+        // upsert can't accidentally preserve them from a partial snapshot.
+        const restored: Task = {
+            ...deletedTask,
+            _soft_deleted: false,
+            deletedAt: undefined
+        }
+
+        manualOperationInProgress.value = true
+        addPendingWrite(taskId)
+
+        try {
+            // Optimistic local push — instant UI. createTask's dedup logic
+            // (line 188-194) is here in spirit: never push a duplicate.
+            const existingIdx = _rawTasks.value.findIndex(t => t.id === taskId)
+            if (existingIdx === -1) {
+                _rawTasks.value.push(restored)
+            } else {
+                _rawTasks.value[existingIdx] = restored
+            }
+            cacheTasks([..._rawTasks.value])
+
+            // Single direct upsert. No queue. No race.
+            await saveSpecificTasks([restored], `restoreTaskFromUndo-${taskId.slice(0, 8)}`)
+            if (import.meta.env.DEV) {
+                console.log(`🟢 [UNDO] restoreTaskFromUndo upserted ${taskId.slice(0, 8)} (is_deleted=false)`)
+            }
+        } catch (error) {
+            console.warn(`⚠️ [UNDO] restoreTaskFromUndo direct save failed for ${taskId.slice(0, 8)}, local state intact:`, error)
+            // Don't rethrow — local optimistic state is still correct; next
+            // sync cycle / page reload will reconcile if needed.
         } finally {
             manualOperationInProgress.value = false
         }
@@ -1612,6 +1689,7 @@ export function useTaskOperations(
 
     return {
         createTask,
+        restoreTaskFromUndo,
         updateTask,
         deleteTask,
         permanentlyDeleteTask,

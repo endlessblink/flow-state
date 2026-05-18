@@ -131,6 +131,21 @@ const getEventsForCell = (dayIndex: number, hour: number): WeekEvent[] => {
   return eventsByCell.value.get(`${dayIndex}-${hour}`) || []
 }
 
+// Build a rich tooltip string for an external (Google/iCal) event.
+// Native title attribute renders multi-line text on \n in all desktop browsers + Electron.
+const buildExternalEventTooltip = (ext: ExternalCalendarEvent): string => {
+  const fmt = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const timeRange = ext.isAllDay ? 'All day' : `${fmt(ext.startTime)} – ${fmt(ext.endTime)}`
+  const lines = [ext.title, timeRange]
+  if (ext.location) lines.push(`📍 ${ext.location}`)
+  if (ext.description) {
+    const desc = ext.description.length > 240 ? ext.description.slice(0, 240) + '…' : ext.description
+    lines.push('', desc)
+  }
+  if (ext.htmlLink) lines.push('', 'Click to open in Google Calendar')
+  return lines.join('\n')
+}
+
 // TASK-1317: External events grouped by cell
 const externalEventsByCell = computed(() => {
   const map = new Map<string, ExternalCalendarEvent[]>()
@@ -743,5 +758,31 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.2;
+}
+
+/* The clickable target inside an external event. The event container has
+   pointer-events: none so drag-create still works on the underlying cell;
+   the link/text re-enables pointer events for hover-tooltip + click-to-open. */
+.week-event--external .external-event-link {
+  pointer-events: auto;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.week-event--external .external-event-link--readonly {
+  cursor: default;
+}
+
+.week-event--external .external-event-link:hover .external-event-title {
+  text-decoration: underline;
+}
+
+.week-event--external .external-event-link--readonly:hover .external-event-title {
+  text-decoration: none;
 }
 </style>

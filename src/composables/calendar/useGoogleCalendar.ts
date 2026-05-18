@@ -123,7 +123,8 @@ export function useGoogleCalendar() {
       location: event.location,
       description: event.description,
       calendarId: `gcal-${calendarId}`,
-      color
+      color,
+      htmlLink: event.htmlLink
     }
   }
 

@@ -213,3 +213,51 @@ Read these only when needed for the specific issue:
 | `references/production-cdn-debugging.md` | Cloudflare/Caddy/VPS debugging in depth |
 | `references/tauri-icon-troubleshooting.md` | Desktop icons not updating after Tauri build |
 | `references/css-layout-debugging.md` | CSS shadow clipping, layout, overflow issues |
+
+---
+
+## Canvas "count ≠ render" diagnostic (May 2026)
+
+When a canvas day-group shows a count like `12` but the rectangle appears empty, OR tasks float outside their group after a rotate / tidy — the data is almost always intact and the bug is a Pinia↔Vue Flow sync gap. **Don't delete or "recover" anything until you've run this checklist.**
+
+### Quick sanity check before anything else
+
+```bash
+# Tasks updated in the last 15 min — verify canvas parent + position
+ssh -i ~/.ssh/id_ed25519 root@84.46.253.137 \
+  "docker exec supabase-db psql -U postgres -c \
+   \"SELECT id, LEFT(title,30), due_date::date, \
+            position->>'parentId' as canvas_parent, \
+            position->>'x' as x, position->>'y' as y \
+     FROM tasks WHERE is_deleted=false \
+     AND updated_at > now() - interval '15 minutes' \
+     ORDER BY updated_at DESC LIMIT 20;\""
+```
+
+**Important columns:**
+- The real canvas parent is `position->>'parentId'` (text inside JSONB), **NOT** the top-level `parent_id` UUID column. The top-level column is unused by canvas — checking it will give a false "all NULL" signal.
+- `is_deleted = false` confirms no actual deletion happened.
+- Tombstones live in a separate `tombstones` table — query that to confirm no recent deletes:
+  ```sql
+  SELECT entity_id, entity_type, deleted_at
+  FROM tombstones
+  WHERE deleted_at > now() - interval '2 hours'
+  ORDER BY deleted_at DESC LIMIT 20;
+  ```
+
+### If data is intact, the bug is rendering
+
+Read the `vue-flow-debug` skill — the "Upstream Vue Flow gotchas" section (Discussion #1202 extent-then-parent dance, Issue #1630 change-handler race, the SMART-GROUP source bypass of BUG-1757) covers the actual fix patterns. The bug is **not** Electron-specific — it would manifest the same on the web build.
+
+### Pattern: user thinks they deleted but the count persists
+
+A common false alarm is "I deleted these but the count still shows them." Check:
+1. Tombstones table for the time range — if zero rows, the delete never fired or never reached the queue.
+2. The task rows themselves — `is_deleted = false` confirms they're still live.
+3. If the user expected a soft-delete via canvas right-click "Remove from group" — that only clears `parentId`, it does not delete the task. The task moves to inbox / dateless view.
+
+Tell the user honestly: "The tasks were never deleted — they're still in your data, just rendering in the wrong place." Don't run any recovery before confirming this.
+
+### Source of truth tiebreaker
+
+When Pinia store says one thing and Vue Flow renders another, **trust the DB** — that's the persisted truth. Force a `refreshRenderedNodesFromModel()` (clear-and-repopulate Vue Flow's nodes from `nodes.value`) to recover. If that doesn't help, the Pinia store itself is stale; reload the app.

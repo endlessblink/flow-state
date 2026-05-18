@@ -100,16 +100,35 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     const groups = canvasStore.groups
     let count = 0
 
+    // BUG-1787: Pre-compute today/tomorrow so we can rotate Today/Tomorrow
+    // power-keyword groups along with day-of-week groups in one pass. Without
+    // this, tasks parented to "Tomorrow" keep yesterday's dueDate after the
+    // clock flips → badge shows wrong date even though the group's header is
+    // correct (the header reads useCurrentDay reactively).
+    const todayDate = useCurrentDay().value
+    const tomorrowDate = new Date(todayDate)
+    tomorrowDate.setDate(todayDate.getDate() + 1)
+    const todayDateStr = toDateString(todayDate)
+    const tomorrowDateStr = toDateString(tomorrowDate)
+
     for (const group of groups) {
       const keyword = detectPowerKeyword(group.name)
-      if (keyword?.category !== 'day_of_week') continue
+      if (!keyword) continue
 
-      // keyword.value is the stringified JS day index (e.g. "1" for Monday)
-      const dayIndex = parseInt(keyword.value, 10)
-      if (isNaN(dayIndex) || dayIndex < 0 || dayIndex > 6) continue
-
-      const nextDate = getNextOccurrence(dayIndex)
-      const nextDateStr = toDateString(nextDate)
+      // Determine target dueDate for this group's children based on its keyword.
+      let nextDateStr: string | null = null
+      if (keyword.category === 'day_of_week') {
+        const dayIndex = parseInt(keyword.value, 10)
+        if (isNaN(dayIndex) || dayIndex < 0 || dayIndex > 6) continue
+        nextDateStr = toDateString(getNextOccurrence(dayIndex))
+      } else if (keyword.category === 'date') {
+        if (keyword.keyword === 'today') nextDateStr = todayDateStr
+        else if (keyword.keyword === 'tomorrow') nextDateStr = tomorrowDateStr
+        else continue // 'this week' / 'this weekend' / 'later' are span keywords — leave dueDate alone
+      } else {
+        continue
+      }
+      if (!nextDateStr) continue
 
       // Update metadata-only for non-done tasks in this group
       const tasksInGroup = taskStore.rawTasks.filter(

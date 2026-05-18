@@ -101,6 +101,21 @@ const onSlotsScroll = (e: Event) => {
     timeLabelsRef.value.scrollTop = target.scrollTop
   }
 }
+
+// Build a rich tooltip string for an external (Google/iCal) event.
+// Multi-line text via \n renders in the browser's native title tooltip.
+const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; startTime: Date; endTime: Date; location?: string; description?: string; htmlLink?: string }): string => {
+  const fmt = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const timeRange = ext.isAllDay ? 'All day' : `${fmt(ext.startTime)} – ${fmt(ext.endTime)}`
+  const lines = [ext.title, timeRange]
+  if (ext.location) lines.push(`📍 ${ext.location}`)
+  if (ext.description) {
+    const desc = ext.description.length > 240 ? ext.description.slice(0, 240) + '…' : ext.description
+    lines.push('', desc)
+  }
+  if (ext.htmlLink) lines.push('', 'Click to open in Google Calendar')
+  return lines.join('\n')
+}
 </script>
 
 <template>
@@ -307,20 +322,29 @@ const onSlotsScroll = (e: Event) => {
           borderColor: ext.color,
           zIndex: 10 + ext.column
         }"
-        :title="`${ext.formattedTime} — ${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
       >
-        <!-- Tiny events (< 25min): single line with time + title inline -->
-        <template v-if="ext.height < 25">
-          <span class="external-event-inline" dir="auto">
+        <component
+          :is="ext.htmlLink ? 'a' : 'span'"
+          class="external-event-link"
+          :class="{ 'external-event-link--readonly': !ext.htmlLink }"
+          v-bind="ext.htmlLink ? { href: ext.htmlLink, target: '_blank', rel: 'noopener noreferrer' } : {}"
+          :title="buildExternalEventTooltip(ext)"
+          @click.stop
+          @mousedown.stop
+        >
+          <!-- Tiny events (< 25min): single line with time + title inline -->
+          <template v-if="ext.height < 25">
+            <span class="external-event-inline" dir="auto">
+              <span class="external-event-time">{{ ext.formattedTime }}</span>
+              {{ ext.title }}
+            </span>
+          </template>
+          <!-- Normal events: time on top, title below -->
+          <template v-else>
             <span class="external-event-time">{{ ext.formattedTime }}</span>
-            {{ ext.title }}
-          </span>
-        </template>
-        <!-- Normal events: time on top, title below -->
-        <template v-else>
-          <span class="external-event-time">{{ ext.formattedTime }}</span>
-          <span class="external-event-title" dir="auto">{{ ext.title }}</span>
-        </template>
+            <span class="external-event-title" dir="auto">{{ ext.title }}</span>
+          </template>
+        </component>
       </div>
     </div>
   </div>
@@ -939,6 +963,37 @@ const onSlotsScroll = (e: Event) => {
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.2;
+}
+
+/* Clickable inner target. The .external-event container has pointer-events: none
+   so drag-create / slot interactions still work on the underlying time slot;
+   this re-enables pointer events for hover-tooltip + click-to-open. */
+.external-event .external-event-link {
+  pointer-events: auto;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.external-event--tiny .external-event-link {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.external-event .external-event-link--readonly {
+  cursor: default;
+}
+
+.external-event .external-event-link:not(.external-event-link--readonly):hover .external-event-title,
+.external-event .external-event-link:not(.external-event-link--readonly):hover .external-event-inline {
+  text-decoration: underline;
 }
 
 /* Inline layout for tiny events: "14:00 Event Title" on one line */

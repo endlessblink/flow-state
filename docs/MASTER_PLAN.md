@@ -8,6 +8,41 @@
 
 ## Active Tasks
 
+### TASK-1789: Sync orchestrator architectural fixes for undo coherence (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Problem**: The current sync orchestrator has structural races that surface as 15-20s lag on the second delete after an undo, "Untitled Task" phantoms from stale realtime echoes, and "second restore doesn't work" symptoms. PR 1 (delete-time toast + `restoreTaskFromUndo` direct-upsert path) eliminates the most visible race but doesn't address the underlying architecture.
+
+**Findings (from Perplexity research + this session's deep dive)** — see `.claude/skills/↩️ dev-undo-redo/SKILL.md` § 7 for full context:
+
+1. **No AbortController plumbing.** `deleteOperationsByType()` cannot cancel in-flight HTTP requests; rows in `status='syncing'` are orphaned. Supabase JS supports `.abortSignal(ac.signal)` — wire it through `WriteOperation` and the orchestrator.
+2. **No operation intents.** Add `intent: 'normal' | 'undo-restore' | 'force'` to `enqueue()`. Lets the orchestrator pick a different reconciliation strategy for restores (skip tombstone gate, force upsert, cancel siblings). Standard pattern in Replicache, PowerSync.
+3. **No per-entity mutex.** Concurrent ops for the same id race freely. Hold a `Map<entityId, Promise>` so ops for the same id serialize.
+4. **Polling-only queue (5s `setInterval`).** Replace with event-driven: process-on-enqueue + process-after-completion. Restores latency floor to <500ms.
+5. **No coalescing.** Collapse delete→undo→delete into a single net DELETE before enqueueing.
+6. **Weak echo gating.** `pendingWrites` Set is timeout-based (5min). Replace with version-aware gating: track `localVersion` per entity, ignore realtime echoes whose `updated_at` is older than the local optimistic version.
+7. **Schema-level title default.** `title text NOT NULL DEFAULT 'Untitled Task'` prevents the phantom-on-sanitization-ingress bug.
+
+**Critical files**:
+- `src/composables/sync/useSyncOrchestrator.ts` — process loop, enqueue, BUG-1534 logic
+- `src/services/offline/writeQueueDB.ts` — `WriteOperation` schema, `deleteOperationsByType`, `waitForInFlightOperations`
+- `src/composables/supabase/useTasksDatabase.ts` — wire AbortSignal into Supabase upsert/delete calls
+- DB migration for `tasks.title NOT NULL DEFAULT`
+
+**Suggested sequencing**:
+1. AbortController plumbing — unblocks all other fixes
+2. Per-entity mutex — prevents the entire race class
+3. Operation intents + restore-specific reconciliation
+4. Event-driven processing — latency win
+5. Coalescing — UX polish
+
+**Scope**: 1-2 days. High test risk — every undo path needs verification. Build deterministic vitest harness for mocked-network sequences (delete/undo/delete) per the research recommendation.
+
+**Backlog dependency**: Should land before re-enabling `permanentlyDeleteTaskWithUndo` for inbox right-click (currently routed through `bulkDeleteTasksWithUndo` as workaround).
+
+---
+
 ### TASK-1785: Calendar Shift+drag ripple-push reschedule mode (📋 PLANNED)
 
 **Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-17)
@@ -1423,9 +1458,51 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
-### BUG-1786: Canvas "Move to Today" leaves tasks bucketed as Tomorrow when they carry a calendar instance (🔄 IN PROGRESS)
+### ~~BUG-1788~~: Canvas rotation handlers locked in CanvasView.vue — no unit coverage for null-retry / sync-lock pre-acquire (📋 PLANNED)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-05-17)
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Problem**: BUG-1786 (v1.4.33) and BUG-1787 (v1.4.34) both touched canvas rotation/render logic that lives inside `src/views/CanvasView.vue` (an SFC). Because the affected handlers — `applyCanonicalTaskMoves` (with the null-retry path) and `handleRotateDayGroups` (with the sync-lock pre-acquire) — are scoped to the SFC, they can't be unit-tested in isolation. E2E covers them indirectly; we need direct unit coverage to keep these fragile paths from regressing silently.
+
+**Fix**: Pure refactor. Extract `applyCanonicalLayoutMoves`, `applyCanonicalTaskMoves`, `refreshRenderedNodesFromModel`, `releaseOnDoubleNextTick`, `getVisualNodePosition`, `getRenderedNodeSize`, `getRenderedCanvasZoom`, `handleRotateDayGroups`, `handleTidyLayout`, `runDayGroupCatchup`, and the `useDayGroupRotation`/`useTidyLayout` initialization into a new composable `src/composables/canvas/useCanvasRotationLayout.ts`. Pass `syncNodes` + `handleNodesChange` as deps (sourced from `useCanvasOrchestrator`). Add 7 unit test cases.
+
+**Files**:
+- New: `src/composables/canvas/useCanvasRotationLayout.ts`
+- Modified: `src/views/CanvasView.vue` (remove ~120 inline lines, add composable import + destructure)
+- New: `tests/unit/canvas/canvas-rotation-layout.test.ts` (null-retry × 3, sync-lock pre-acquire × 2, relative-coord math × 2)
+
+**Plan file**: `~/.claude/plans/mighty-petting-stearns.md`
+
+---
+
+### ~~BUG-1787~~: Canvas rotate-days makes tasks visually disappear from groups (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-17, shipped v1.4.34)
+
+**Problem**: Clicking the rotate-days toolbar button left tasks counted in their groups but visually rendered outside the group rectangle. Day-of-week groups (Mon-Sun) rotated correctly, but Today/Tomorrow power-keyword groups were skipped, leaving stale `dueDate` on their children even after midnight.
+
+**Root cause**: Two issues compounded:
+1. `rotateDayGroups()` in `useDayGroupRotation.ts:103-128` only iterated `keyword.category === 'day_of_week'` groups, skipping Today/Tomorrow `date`-category groups.
+2. `handleRotateDayGroups` in `CanvasView.vue` did NOT pre-acquire `canvasSyncInProgress=true` before calling `rotateDayGroups()` — the SMART-GROUP `dueDate` writes fired the sync watcher mid-rotation, leaving Vue Flow node positions stale relative to the freshly-moved group positions. `applyCanonicalTaskMoves` then silently skipped tasks whose `findNode` returned null (mid-sync gap), leaving them at pre-rotation relative coords.
+
+**Fix**:
+1. Extended `rotateDayGroups` to also rotate Today (→ today's date) and Tomorrow (→ tomorrow's date) keyword groups. Left "this week" / "this weekend" / "later" alone (span keywords, not specific dates).
+2. `handleRotateDayGroups` now sets `canvasSyncInProgress.value = true` BEFORE invoking `rotateDayGroups`. `rotateDayGroupPositions` already re-asserted the lock (idempotent) and `releaseOnDoubleNextTick` releases it.
+3. `applyCanonicalTaskMoves` now collects tasks where `findNode` returned null and retries them on `nextTick`. Still-missing tasks are logged with a `[BUG-1787]` warning instead of silently dropped.
+
+**Files**:
+- `src/composables/canvas/useDayGroupRotation.ts` (rotateDayGroups expanded to Today/Tomorrow)
+- `src/views/CanvasView.vue` (`handleRotateDayGroups` pre-acquire + `applyCanonicalTaskMoves` null-retry)
+- `tests/unit/canvas/day-group-today-tomorrow-rotation.test.ts` (new, 8 cases)
+- `tests/e2e/canvas-rotate-render-bug-1787.spec.ts` (new, 2 cases — DOM containment check)
+
+**Shipped in**: v1.4.34 (deployed via `deploy-electron-update.sh` 2026-05-17)
+
+---
+
+### ~~BUG-1786~~: Canvas "Move to Today" leaves tasks bucketed as Tomorrow when they carry a calendar instance (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-17, shipped v1.4.33)
 
 **Problem**: On the Canvas view (Electron), moving a task to Today via drag, right-click date menu, or overdue "Reschedule → Today" updates `task.dueDate` and (for drag) `parentId`, but never touches `task.instances[].scheduledDate`. Because `getTaskInstances` (`src/stores/tasks.ts:30`) makes any reader prefer `instances[]` over `dueDate`, Board view, smart-group matchers, and day-rotation continue to bucket the task as Tomorrow.
 
@@ -3447,6 +3524,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1768**~~ | **P2** | ✅ **Persist mini-canvas planning notes for knowledge workflows** (✅ DONE (2026-05-02)) |
 | **TASK-1769** | **P3** | **📋 Lightweight links/backlinks between notes and tasks** |
 | **TASK-1785** | **P2** | **📋 Calendar Shift+drag ripple-push reschedule — push all later same-day tasks forward by same delta, locked tasks skipped, midnight spill, one-step undo** |
+| **TASK-1789** | **P1** | **📋 Sync orchestrator architectural fixes for undo coherence — AbortController, operation intents, per-entity mutex, event-driven queue, coalescing, version-aware echo gating, schema title default** |
 | ~~**TASK-1786**~~ | **P2** | ✅ **Quick Sort: "Include overdue & no-due" toggle + empty-title ghost filter + Electron renderer log capture** (✅ DONE (2026-05-18)) |
 | ~~**TASK-1533**~~ | **P0** | ✅ **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (✅ DONE (2026-04-02)) |
 | ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (✅ DONE (2026-03-17)) |

@@ -305,8 +305,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, markRaw, nextTick, onMounted, onUnmounted, watch } from 'vue'
-import { VueFlow, useVueFlow, type NodeMouseEvent } from '@vue-flow/core'
+import { ref, markRaw, onMounted, onUnmounted, watch } from 'vue'
+import { VueFlow, type NodeMouseEvent } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -339,8 +339,7 @@ import DayRotationBanner from '../components/canvas/DayRotationBanner.vue'
 
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
-import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
-import { useTidyLayout } from '@/composables/canvas/useTidyLayout'
+import { useCanvasRotationLayout } from '@/composables/canvas/useCanvasRotationLayout'
 import { useCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
@@ -361,239 +360,10 @@ const nodeTypes = {
 }
 
 // FEATURE-1048: Day group auto-rotation at midnight
-const { findNode, updateNode, setNodes, applyNodeChanges, getViewport } = useVueFlow()
-
-// TASK-1756 v10: Vue Flow dimension bookkeeping uses the top-level
-// `width` / `height` fields on the node. Setting only `style.width` (px)
-// renders visually but Vue Flow's internal bounds use the OLD `width`, so
-// NodeResizer + spatial validation see stale dimensions → overlap + detach.
-// Pass BOTH the top-level fields (numbers) AND the style (px strings) for
-// GroupNodeSimple, which reads off `node.style` in its template.
-function applyCanonicalLayoutMoves(
-  groupMoves: Array<{ nodeId: string; position: { x: number; y: number }; size: { width: number; height: number } }>
-) {
-  console.log('[CANONICAL-LAYOUT:VF] Applying', groupMoves.length, 'group moves')
-  for (const move of groupMoves) {
-    const node = findNode(move.nodeId)
-    if (!node) {
-      continue
-    }
-    console.log(`[CANONICAL-LAYOUT:VF] ${move.nodeId}: x=${Math.round(node.position.x)} → ${Math.round(move.position.x)}, w=${Math.round(move.size.width)}, h=${Math.round(move.size.height)}`)
-    updateNode(move.nodeId, {
-      width: move.size.width,
-      height: move.size.height,
-      style: {
-        width: `${move.size.width}px`,
-        height: `${move.size.height}px`,
-      },
-    })
-    updateNode(move.nodeId, { position: move.position })
-    nodes.value = nodes.value.map((candidate) => candidate.id === move.nodeId
-      ? {
-          ...candidate,
-          position: move.position,
-          computedPosition: {
-            ...(candidate.computedPosition ?? {}),
-            x: move.position.x,
-            y: move.position.y,
-          },
-          width: move.size.width,
-          height: move.size.height,
-          dimensions: {
-            ...(candidate.dimensions ?? {}),
-            width: move.size.width,
-            height: move.size.height,
-          },
-          style: {
-            ...(candidate.style ?? {}),
-            width: `${move.size.width}px`,
-            height: `${move.size.height}px`,
-          },
-        }
-      : candidate)
-  }
-  const positionChanges = groupMoves.map((move) => ({
-    id: move.nodeId,
-    type: 'position',
-    position: move.position,
-    dragging: false,
-  }))
-  applyNodeChanges(positionChanges)
-  handleNodesChange(positionChanges as any)
-  setNodes(nodes.value)
-}
-
-function applyCanonicalTaskMoves(
-  taskMoves: Array<{ taskId: string; parentId: string; position: { x: number; y: number } }>,
-  groupMoves: Array<{ groupId: string; position: { x: number; y: number } }>
-) {
-  const targetGroupPositions = new Map(groupMoves.map((move) => [move.groupId, move.position]))
-  const positionChanges: Array<{ id: string; type: 'position'; position: { x: number; y: number }; dragging: false }> = []
-
-  for (const move of taskMoves) {
-    const node = findNode(CanvasIds.taskNodeId(move.taskId))
-    if (!node) {
-      continue
-    }
-
-    const parentAbsPos =
-      targetGroupPositions.get(move.parentId) ??
-      (() => {
-        const parentNode = findNode(CanvasIds.groupNodeId(move.parentId))
-        return parentNode ? { x: parentNode.position.x, y: parentNode.position.y } : undefined
-      })() ??
-      (() => {
-        const parentGroup = canvasStore.groups.find((group) => group.id === move.parentId)
-        return parentGroup?.position ? { x: parentGroup.position.x, y: parentGroup.position.y } : undefined
-      })()
-
-    if (!parentAbsPos) {
-      continue
-    }
-
-    const taskNodeId = CanvasIds.taskNodeId(move.taskId)
-    const relativePosition = {
-      x: move.position.x - parentAbsPos.x,
-      y: move.position.y - parentAbsPos.y,
-    }
-
-    updateNode(taskNodeId, {
-      position: relativePosition,
-      parentNode: CanvasIds.groupNodeId(move.parentId),
-    })
-    positionChanges.push({ id: taskNodeId, type: 'position', position: relativePosition, dragging: false })
-    nodes.value = nodes.value.map((candidate) => candidate.id === taskNodeId
-      ? {
-          ...candidate,
-          position: relativePosition,
-          computedPosition: {
-            ...(candidate.computedPosition ?? {}),
-            x: move.position.x,
-            y: move.position.y,
-          },
-          parentNode: CanvasIds.groupNodeId(move.parentId),
-        }
-      : candidate)
-  }
-  if (positionChanges.length > 0) {
-    applyNodeChanges(positionChanges)
-  }
-  setNodes(nodes.value)
-}
-
-function refreshRenderedNodesFromModel() {
-  const refreshedNodes = nodes.value.map((node) => ({ ...node }))
-  setNodes([])
-  nextTick(() => {
-    nodes.value = refreshedNodes
-    setNodes(refreshedNodes)
-  })
-}
-
-const dayRotation = useDayGroupRotation({
-  onMoves: applyCanonicalLayoutMoves,
-  getNodePosition: (nodeId: string) => getVisualNodePosition(nodeId),
-  getNodeSize: (nodeId: string) => getRenderedNodeSize(nodeId),
-})
-
-function getVisualNodePosition(nodeId: string): { x: number; y: number } | undefined {
-  const node = findNode(nodeId) as any
-  if (!node?.position) return undefined
-
-  const computedPosition = node.computedPosition
-  if (Number.isFinite(computedPosition?.x) && Number.isFinite(computedPosition?.y)) {
-    return { x: computedPosition.x, y: computedPosition.y }
-  }
-
-  if (node.parentNode) {
-    const parentNode = findNode(node.parentNode) as any
-    if (parentNode?.position) {
-      return {
-        x: parentNode.position.x + node.position.x,
-        y: parentNode.position.y + node.position.y,
-      }
-    }
-  }
-
-  return { x: node.position.x, y: node.position.y }
-}
-
-function getRenderedNodeSize(nodeId: string) {
-  const element = document.querySelector(`[data-task-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null
-    ?? document.querySelector(`[data-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null
-  const rect = element?.getBoundingClientRect()
-  if (rect && rect.width > 0 && rect.height > 0) {
-    const zoom = getRenderedCanvasZoom()
-    const measured = {
-      width: Math.max(rect.width / zoom, element.scrollWidth, element.offsetWidth),
-      height: Math.max(rect.height / zoom, element.scrollHeight, element.offsetHeight),
-    }
-    return measured
-  }
-
-  const node = findNode(nodeId) as any
-  const width = node?.dimensions?.width ?? node?.measured?.width ?? node?.width
-  const height = node?.dimensions?.height ?? node?.measured?.height ?? node?.height
-  return Number.isFinite(width) && Number.isFinite(height) ? { width, height } : undefined
-}
-
-function getRenderedCanvasZoom() {
-  const viewportElement = document.querySelector('.vue-flow__viewport') as HTMLElement | null
-  const transform = viewportElement ? getComputedStyle(viewportElement).transform : ''
-  const matrixScale = transform.match(/matrix\(([^)]+)\)/)?.[1]?.split(',')?.[0]
-  const renderedZoom = matrixScale ? Number(matrixScale.trim()) : NaN
-  if (Number.isFinite(renderedZoom) && renderedZoom > 0) return renderedZoom
-  return getViewport().zoom || 1
-}
-
-const tidyLayout = useTidyLayout({
-  getNodePosition: (nodeId: string) => getVisualNodePosition(nodeId),
-  getNodeSize: (nodeId: string) => getRenderedNodeSize(nodeId),
-})
-
-// TASK-1756 v10: Vue Flow's dimension + bounds bookkeeping lags Vue's
-// reactivity cycle. Single nextTick lets the BUG-1203 spatial validator
-// run while VF still sees stale parent dimensions → tasks get orphaned.
-// Double nextTick is the reliable pattern.
-function releaseOnDoubleNextTick(release: () => void, afterRelease?: () => void, pendingWrites?: Promise<void>) {
-  nextTick(() => nextTick(() => {
-    const finish = () => {
-      release()
-      afterRelease?.()
-    }
-    if (pendingWrites) {
-      pendingWrites.finally(finish)
-    } else {
-      finish()
-    }
-  }))
-}
-
-function handleRotateDayGroups() {
-  // TASK-1756 v3: toolbar still bypasses lastRotationDate guard via { force: true }
-  // on rotateDayGroups (dueDate/marker path). Physical rotation always produces
-  // moves — the canonical primitive owns all geometry math now.
-  dayRotation.rotateDayGroups({ force: true })
-  const { groupMoves, taskMoves, pendingWrites, release } = dayRotation.rotateDayGroupPositions()
-  applyCanonicalLayoutMoves(groupMoves)
-  applyCanonicalTaskMoves(taskMoves, groupMoves)
-  releaseOnDoubleNextTick(release, () => {
-    syncNodes(undefined, { force: true })
-    refreshRenderedNodesFromModel()
-  }, pendingWrites)
-}
-
-function handleTidyLayout() {
-  // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
-  // (user's left-to-right order preserved) and restack tasks inside them.
-  const { groupMoves, taskMoves, pendingWrites, release } = tidyLayout.tidyDayGroups()
-  applyCanonicalLayoutMoves(groupMoves)
-  applyCanonicalTaskMoves(taskMoves, groupMoves)
-  releaseOnDoubleNextTick(release, () => {
-    syncNodes(undefined, { force: true })
-    refreshRenderedNodesFromModel()
-  }, pendingWrites)
-}
+// TASK-1788: rotation/layout handlers extracted to useCanvasRotationLayout
+// composable so they can be unit-tested. handleRotateDayGroups,
+// handleTidyLayout, runDayGroupCatchup, dayRotation are destructured from
+// the composable below (after orchestrator init).
 
 // Initialize Orchestrator
 const orchestrator = useCanvasOrchestrator()
@@ -626,28 +396,24 @@ const {
   syncNodes
 } = orchestrator
 
-// TASK-1756 v3: run day-group catchup once Vue Flow is fully ready (findNode
-// works) and whenever the reactive "today" flips (midnight, focus, online,
-// pageshow, visibility). The composable's persisted `lastRotationDate` guard
-// makes repeat calls on the same day no-ops.
+// TASK-1788: Rotation/tidy/catchup handlers + their Vue Flow apply helpers
+// were extracted from this SFC so they can be unit-tested in isolation.
+// See `src/composables/canvas/useCanvasRotationLayout.ts` for the moved
+// implementations (BUG-1786 instance realignment + BUG-1787 sync-lock
+// pre-acquire + findNode null-retry).
 //
 // `isVueFlowReady` flips true inside `onPaneReady` — the only safe signal
 // that `useVueFlow().findNode('section-xxx')` will return a node. Using
 // `isCanvasReady` (which tracks loading/syncing only) races the pane mount
 // on cold starts and leaves applyDayGroupMoves with NOT FOUND for every id.
 const currentDay = useCurrentDay()
-function runDayGroupCatchup() {
-  // BUG-1780: do NOT apply canonical group-moves here. Historically the catchup
-  // applied groupMoves on every Vue Flow ready (app launch / reload / update)
-  // which silently overwrote the user's manually-arranged group positions and
-  // sizes with canonical values. That's the "rearrange reverts on restart"
-  // regression. Metadata-only work (task re-homing on dueDate rotation) is
-  // preserved. The explicit Tidy button (handleTidyLayout) still applies full
-  // canonical layout on user request.
-  const { taskMoves, release } = dayRotation.runCatchupIfNeeded()
-  if (taskMoves.length > 0) applyCanonicalTaskMoves(taskMoves, [])
-  releaseOnDoubleNextTick(release)
-}
+const {
+  handleRotateDayGroups,
+  handleTidyLayout,
+  runDayGroupCatchup,
+  dayRotation,
+} = useCanvasRotationLayout({ syncNodes, handleNodesChange, currentDay })
+
 watch(isVueFlowReady, (ready) => { if (ready) runDayGroupCatchup() }, { immediate: true })
 watch(currentDay, runDayGroupCatchup)
 

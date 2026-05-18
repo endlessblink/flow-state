@@ -317,14 +317,18 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
     return
   }
 
-  confirmMessage.value = `Permanently delete task "${task.title}"?`
+  confirmMessage.value = `Delete task "${task.title}"?`
   confirmDetails.value = [
-    'This performs a hard delete from storage.',
-    'Use this only when you do not want the task recoverable from trash.'
+    'The task moves to Trash and can be undone with Ctrl+Z (or the toast Undo button).',
+    'Recover deleted tasks from Settings > Trash for up to 30 days.'
   ]
   confirmAction.value = async () => {
+    // Route through bulkDeleteTasksWithUndo (BUG-1739 workaround): the singular
+    // permanentlyDeleteTaskWithUndo corrupts the shared pendingOperation state,
+    // leaving the operation un-undoable. The bulk path bypasses that singleton
+    // and pushes a clean entry to the operation stack.
     const { getUndoSystem } = await import('@/composables/undoSingleton')
-    await getUndoSystem().permanentlyDeleteTaskWithUndo(task.id)
+    await getUndoSystem().bulkDeleteTasksWithUndo([task.id])
     showTaskContextMenu.value = false
   }
   showConfirmModal.value = true

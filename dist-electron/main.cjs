@@ -11,6 +11,7 @@ const http_1 = require("./ipc/http");
 const window_1 = require("./ipc/window");
 const updater_1 = require("./updater");
 const oauth_1 = require("./ipc/oauth");
+const logger_1 = require("./logger");
 // Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
 electron_1.app.setName('flow-state');
 // Prevent multiple instances
@@ -43,6 +44,8 @@ function createWindow() {
     mainWindow.once('ready-to-show', () => {
         mainWindow?.show();
     });
+    // TASK-1786: Capture renderer logs to disk for post-mortem diagnostics
+    (0, logger_1.setupRendererLogging)(mainWindow);
     // Open external links in default browser
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
         electron_1.shell.openExternal(url);
@@ -95,6 +98,7 @@ function createWindow() {
 (0, http_1.registerHttpHandlers)();
 (0, window_1.registerWindowHandlers)();
 (0, oauth_1.registerOAuthHandlers)();
+(0, logger_1.registerLoggerIpc)();
 electron_1.ipcMain.handle('app:getVersion', () => electron_1.app.getVersion());
 // App lifecycle
 electron_1.app.whenReady().then(() => {

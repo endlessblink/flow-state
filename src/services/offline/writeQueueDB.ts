@@ -297,6 +297,38 @@ export async function deleteOperationsByType(
 }
 
 /**
+ * Wait until any operations of the given type for the given entity are no longer
+ * in 'syncing' state (i.e. their HTTP request has completed/failed). Used by the
+ * undo restore path so a CREATE doesn't race ahead of an in-flight DELETE.
+ *
+ * Returns true if the wait was satisfied within the timeout, false otherwise.
+ * Polls at `pollIntervalMs` (default 100ms) until status changes or timeout.
+ */
+export async function waitForInFlightOperations(
+  entityType: SyncEntityType,
+  entityId: string,
+  operationType: 'create' | 'update' | 'delete',
+  timeoutMs: number = 6000,
+  pollIntervalMs: number = 100
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    const operations = await getOperationsForEntity(entityType, entityId)
+    const inFlight = operations.filter(
+      op => op.operation === operationType && op.status === 'syncing'
+    )
+    if (inFlight.length === 0) return true
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs))
+  }
+
+  console.warn(
+    `[SYNC] waitForInFlightOperations timed out (${timeoutMs}ms) waiting for in-flight ${operationType} on ${entityType}/${entityId.slice(0, 8)}`
+  )
+  return false
+}
+
+/**
  * Get count of pending operations
  */
 export async function getPendingCount(): Promise<number> {

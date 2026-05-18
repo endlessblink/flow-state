@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useTaskStore, formatDateKey, parseDateKey, getTaskInstances } from '../tasks'
+import { realignInstancesToDate } from '../tasks/taskOperations'
 import type { Task } from '../tasks'
 
 // Mock the database composable
@@ -600,6 +601,41 @@ describe('TaskStore', () => {
       const updatedTask = store.tasks.find(t => t.id === task.id)
       expect(updatedTask?.dueDate).toBeDefined()
       expect(updatedTask?.instances?.length ?? 0).toBe(0)
+    })
+
+    describe('realignInstancesToDate (BUG-1786)', () => {
+      it('realigns existing non-recurring instances to the new date', () => {
+        const task = {
+          recurrence: undefined,
+          instances: [
+            { id: 'i1', scheduledDate: '2026-05-18', scheduledTime: '09:00', duration: 30 },
+            { id: 'i2', scheduledDate: '2026-05-18', scheduledTime: '14:00', duration: 60 },
+          ],
+        } as unknown as Task
+
+        const result = realignInstancesToDate(task, '2026-05-17')
+
+        expect(result).toHaveLength(2)
+        expect(result?.[0]).toMatchObject({ id: 'i1', scheduledDate: '2026-05-17', scheduledTime: '09:00', duration: 30 })
+        expect(result?.[1]).toMatchObject({ id: 'i2', scheduledDate: '2026-05-17', scheduledTime: '14:00', duration: 60 })
+      })
+
+      it('returns undefined for recurring tasks (recurrence engine owns instances)', () => {
+        const task = {
+          recurrence: { type: 'daily', interval: 1 },
+          instances: [{ id: 'i1', scheduledDate: '2026-05-18', scheduledTime: '09:00', duration: 30 }],
+        } as unknown as Task
+
+        expect(realignInstancesToDate(task, '2026-05-17')).toBeUndefined()
+      })
+
+      it('returns undefined when task has no instances (preserves BUG-1467: do not invent slots)', () => {
+        const task = { recurrence: undefined, instances: [] } as unknown as Task
+        expect(realignInstancesToDate(task, '2026-05-17')).toBeUndefined()
+
+        const taskNoInstancesField = { recurrence: undefined } as unknown as Task
+        expect(realignInstancesToDate(taskNoInstancesField, '2026-05-17')).toBeUndefined()
+      })
     })
 
     it('clears all instances when moved to no date', async () => {

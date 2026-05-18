@@ -1,9 +1,15 @@
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
+export interface ToastAction {
+    label: string
+    onClick: () => void
+}
+
 interface ToastOptions {
     duration?: number
     position?: 'top-right' | 'bottom-right' | 'top-center' | 'bottom-center'
+    action?: ToastAction
 }
 
 // Singleton state to avoid multiple containers
@@ -31,7 +37,7 @@ function getOrCreateContainer(): HTMLDivElement {
 export function useToast() {
     const showToast = (message: string, type: ToastType = 'info', options: ToastOptions = {}) => {
         const container = getOrCreateContainer()
-        const { duration = 3000 } = options
+        const { duration = 3000, action } = options
 
         const toast = document.createElement('div')
 
@@ -97,6 +103,56 @@ export function useToast() {
         toast.appendChild(iconSpan)
         toast.appendChild(messageSpan)
 
+        let removed = false
+        const removeToast = () => {
+            if (removed) return
+            removed = true
+            toast.style.animation = 'slideOut 0.2s ease-out'
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast)
+                }
+            }, 200)
+        }
+
+        // Optional action button — clicking it invokes the callback and dismisses the toast.
+        // Note: action handlers like Ctrl+Z's undo operate on the top of the operation stack,
+        // so if the user performs another op before clicking Undo, the most recent op is undone.
+        // This matches Gmail/VS Code "Undo Send" semantics.
+        if (action) {
+            const button = document.createElement('button')
+            button.type = 'button'
+            button.textContent = action.label
+            button.style.cssText = `
+        background: transparent;
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-left: 8px;
+        transition: background 0.15s ease;
+      `
+            button.addEventListener('mouseenter', () => {
+                button.style.background = 'rgba(255, 255, 255, 0.12)'
+            })
+            button.addEventListener('mouseleave', () => {
+                button.style.background = 'transparent'
+            })
+            button.addEventListener('click', (e) => {
+                e.stopPropagation()
+                try {
+                    action.onClick()
+                } catch (err) {
+                    console.error('[useToast] action.onClick threw:', err)
+                }
+                removeToast()
+            })
+            toast.appendChild(button)
+        }
+
         // Add animation styles if needed
         if (!document.querySelector('#toast-animations')) {
             const style = document.createElement('style')
@@ -117,15 +173,7 @@ export function useToast() {
         container.appendChild(toast)
 
         // Auto removal
-        setTimeout(() => {
-            toast.style.animation = 'slideOut 0.2s ease-out'
-            // Wait for animation to finish
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast)
-                }
-            }, 200)
-        }, duration)
+        setTimeout(removeToast, duration)
     }
 
     return { showToast }

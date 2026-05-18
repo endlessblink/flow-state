@@ -16,6 +16,7 @@ export interface ExternalCalendarEvent {
   description?: string
   calendarId: string
   color: string
+  htmlLink?: string  // Deep-link to source (Google Calendar event URL); undefined for iCal-only events
 }
 
 // ─── iCal Parser ───────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { formatDateKey } from '@/utils/dateUtils'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
+import { realignInstancesToDate } from '@/stores/tasks/taskOperations'
 import type { Task } from '@/stores/tasks'
 
 // Dispatch event to trigger brief flash animation on task card
@@ -46,9 +47,9 @@ export function useTaskContextMenuActions(
         // When emit('close') is called, parent sets props to null, making currentTask.value null
         const taskId = currentTask.value?.id
         const isBatch = isBatchOperation.value
-        // TASK-1362: Capture calendar instance info before menu closes
-        const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
-        const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
+        // BUG-1786: Snapshot the task itself so we can realign instances after
+        // close (currentTask.value becomes null once the menu emits close).
+        const taskSnapshot = currentTask.value as Task | null
 
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
@@ -63,11 +64,16 @@ export function useTaskContextMenuActions(
         // Handle custom date from date picker
         if (dateType === 'custom' && customDate) {
             try {
-                await taskStore.updateTaskWithUndo(taskId, { dueDate: customDate })
-                // TASK-1362: Also move calendar instance to new date
-                if (isCalendarEvent && calendarInstanceId) {
-                    await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: customDate })
-                }
+                // BUG-1786 + TASK-1362: Atomic write of dueDate AND realigned instances
+                // so readers that prefer instances over dueDate see the new date.
+                // Works for both canvas task nodes (no isCalendarEvent gate needed)
+                // and calendar event rows.
+                const customUpdates: Partial<Task> = { dueDate: customDate }
+                const customRealigned = taskSnapshot
+                    ? realignInstancesToDate(taskSnapshot, customDate)
+                    : undefined
+                if (customRealigned) customUpdates.instances = customRealigned
+                await taskStore.updateTaskWithUndo(taskId, customUpdates)
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
                 // Auto-route to matching canvas group (day-of-week groups, etc.).
@@ -140,11 +146,15 @@ export function useTaskContextMenuActions(
             try {
                 // Use ISO date format (YYYY-MM-DD) for Supabase compatibility
                 const formattedDate = formatDateKey(dueDate)
-                await taskStore.updateTaskWithUndo(taskId, { dueDate: formattedDate })
-                // TASK-1362: Also move calendar instance to the new date
-                if (isCalendarEvent && calendarInstanceId) {
-                    await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })
-                }
+                // BUG-1786 + TASK-1362: Atomic write of dueDate AND realigned instances.
+                // The old isCalendarEvent gate missed canvas task nodes; the helper
+                // covers both because it operates on the task's instances[] directly.
+                const presetUpdates: Partial<Task> = { dueDate: formattedDate }
+                const presetRealigned = taskSnapshot
+                    ? realignInstancesToDate(taskSnapshot, formattedDate)
+                    : undefined
+                if (presetRealigned) presetUpdates.instances = presetRealigned
+                await taskStore.updateTaskWithUndo(taskId, presetUpdates)
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
                 // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups).

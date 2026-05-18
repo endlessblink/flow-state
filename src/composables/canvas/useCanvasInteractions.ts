@@ -2,6 +2,7 @@ import { ref, nextTick, type Ref } from 'vue'
 import { type Node, type NodeDragEvent, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { realignInstancesToDate } from '@/stores/tasks/taskOperations'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
 import type { Task } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
@@ -856,6 +857,14 @@ export function useCanvasInteractions(deps?: {
                             if (task[taskKey] !== value) {
                                 dragUpdates[key] = value
                             }
+                        }
+
+                        // BUG-1786: Realign calendar instances when dueDate is changing,
+                        // so readers that prefer instances over dueDate (Board's
+                        // groupTasksByDate, day-rotation) see the new date.
+                        if (typeof dragUpdates.dueDate === 'string' && dragUpdates.dueDate) {
+                            const realigned = realignInstancesToDate(task, dragUpdates.dueDate)
+                            if (realigned) dragUpdates.instances = realigned
                         }
                     }
 

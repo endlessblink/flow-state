@@ -4,6 +4,7 @@ import type { CanvasGroup } from '@/types/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
+import { realignInstancesToDate } from '@/stores/tasks/taskOperations'
 import { formatDateKey } from '@/utils/dateUtils'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 
@@ -292,7 +293,12 @@ export function useTaskNodeActions(
 
             // Use updateTask directly (not updateTaskWithUndo) for INSTANT UI update
             // updateTaskWithUndo has saveState/dynamic imports that cause delay
-            taskStore.updateTask(props.task.id, { dueDate: newDueDate }, 'USER')
+            // BUG-1786: Also realign existing calendar instances so readers that
+            // prefer instances over dueDate see the new date.
+            const rescheduleUpdates: Partial<Task> = { dueDate: newDueDate }
+            const realignedInstances = realignInstancesToDate(props.task, newDueDate)
+            if (realignedInstances) rescheduleUpdates.instances = realignedInstances
+            taskStore.updateTask(props.task.id, rescheduleUpdates, 'USER')
 
             // Move to matching Smart Group if exists
             if (targetGroup) {

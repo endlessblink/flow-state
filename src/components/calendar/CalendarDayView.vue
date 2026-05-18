@@ -52,8 +52,10 @@ interface CalendarHelpers {
   formatEventTime: (event: CalendarEvent) => string
   isCurrentTimeSlot: (slot: TimeSlot) => boolean
   getTasksForSlot: (slot: TimeSlot) => CalendarEvent[]
-  isTaskPrimarySlot: (task: CalendarEvent, slot: TimeSlot) => boolean
-  getSlotTaskStyle: (task: CalendarEvent, slot: TimeSlot) => Record<string, string>
+  // Signature matches useCalendarDayView impl: (slot, event)
+  isTaskPrimarySlot: (slot: TimeSlot, task: CalendarEvent) => boolean
+  // Signature matches useCalendarDayView impl: (event) — single arg
+  getSlotTaskStyle: (task: CalendarEvent) => Record<string, string | number>
   getProjectVisual: (event: { projectId?: string }) => { type: 'color' | 'emoji'; content: string }
   getProjectName: (event: CalendarEvent) => string
   getProjectColor: (event: CalendarEvent) => string

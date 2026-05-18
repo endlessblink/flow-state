@@ -115,6 +115,22 @@ const createSlot = (dateString: string, hour: number): TimeSlot => ({
   date: dateString
 })
 
+// Build a rich tooltip string for an external (Google/iCal) event.
+// Multi-line text via \n renders in the browser's native title tooltip.
+// Mirrors the same helper in CalendarDayView.vue.
+const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; startTime: Date; endTime: Date; location?: string; description?: string; htmlLink?: string }): string => {
+  const fmt = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const timeRange = ext.isAllDay ? 'All day' : `${fmt(ext.startTime)} – ${fmt(ext.endTime)}`
+  const lines = [ext.title, timeRange]
+  if (ext.location) lines.push(`📍 ${ext.location}`)
+  if (ext.description) {
+    const desc = ext.description.length > 240 ? ext.description.slice(0, 240) + '…' : ext.description
+    lines.push('', desc)
+  }
+  if (ext.htmlLink) lines.push('', 'Click to open in Google Calendar')
+  return lines.join('\n')
+}
+
 // Group events by their starting cell for in-cell rendering (like day view)
 const eventsByCell = computed(() => {
   const map = new Map<string, WeekEvent[]>()

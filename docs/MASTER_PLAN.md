@@ -8,6 +8,50 @@
 
 ## Active Tasks
 
+### TASK-1789: Fix ~160 pre-existing type-check errors blocking CI (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Problem**: `npm run type-check` reports 166 errors across ~50 files (CanvasView, BoardView, PerformanceView, auth.ts, GroupNodeSimple, AISettingsTab, KanbanColumn, etc.). CI has been failing on the `check` job for at least 5 consecutive runs. The VPS deploy workflow runs separately from CI so deploys have not been blocked, but the red-CI state masks regressions any future PR might introduce.
+
+**Scope**: pure type-fix sweep. No behavior changes. Errors fall into known buckets — wrong vue-flow prop signatures on Canvas, missing null-guards on optional types, `Record<string, unknown>` mismatches on wrapper handlers, Pinia auth.ts typing drift, missing `from` field on NodeChange objects. Split into one PR per high-error file to keep blast radius small.
+
+**Why now**: with TASK-1785 landing clean type-wise (and the small companion fix to CalendarView/CalendarWeekView/CalendarDayView dropping 4 errors), every fix from this point should keep the bar green. Letting CI stay red trains the team to ignore the gate.
+
+**Top files by error count** (npm run type-check, 2026-05-18):
+- src/views/CanvasView.vue — 13
+- src/views/PerformanceView.vue — 12
+- src/stores/auth.ts — 12
+- src/components/settings/tabs/AISettingsTab.vue — 9
+- src/components/canvas/GroupNodeSimple.vue — 9
+- src/views/CalendarView.vue — 8
+- src/components/kanban/KanbanColumn.vue — 7
+
+**Out of scope**: no runtime/UX changes, no refactors, no behavior tweaks. Pure type annotations and minimal restructuring.
+
+---
+
+### TASK-1785: Calendar Shift+drag ripple-push reschedule mode (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-17)
+
+**Problem**: Dragging a calendar task to a later time only re-times that one task. When a meeting runs long or a block shifts, users have to manually re-time every later task on the day — N drags for one logical "everything moved later" action.
+
+**Goal**: Add a Shift modifier on calendar drag. Hold Shift + drag a task to a later time → every later task on the same day shifts forward by the same delta. Locked tasks are skipped. Crossing midnight spills into the next day. One drag = one undo step.
+
+**User-confirmed scope (v1)**:
+- Same day, all later tasks (not just colliders)
+- Spill into next day past midnight
+- Per-task `calendarLocked` field; ripple skips locked tasks (Push 2)
+- Live ghost-shift preview while Shift is held mid-drag
+- Negative delta (drag earlier) explicitly out of scope for v1
+
+**Status**: Push 1 + 1.5 shipped on `task-1785-ripple-shift` branch (PR #149). Includes pure ripple math + 15 unit tests, day + week view wiring (handlers shared via CalendarView), live ghost preview via `rippleGhostOffsets` map. Push 2 (Supabase migration + lock toggle UI) deferred.
+
+**Plan file**: `~/.claude/plans/yes-and-ask-me-flickering-river.md`
+
+---
+
 ### TASK-1773: Planning canvas interaction polish (🔄 IN PROGRESS)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS (opened 2026-05-01)

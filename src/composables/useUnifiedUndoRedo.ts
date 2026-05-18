@@ -30,51 +30,40 @@ export const useUnifiedUndoRedo = () => {
   const syncFromStore = () => {
     // Note: No longer needed with singleton pattern
     // Kept for backward compatibility
-    console.log('🔄 syncFromStore called - using singleton pattern')
   }
 
   // Task operations with undo support - Use proper VueUse pattern
   const deleteTaskWithUndo = async (taskId: string) => {
-    console.log('🗑️ deleteTaskWithUndo called for:', taskId)
     return await singletonUndo.deleteTaskWithUndo(taskId)
   }
 
   const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
-    console.log('🗑️ bulkDeleteTasksWithUndo called for:', taskIds.length, 'tasks')
     return await singletonUndo.bulkDeleteTasksWithUndo(taskIds)
   }
 
   const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
-    console.log('✏️ updateTaskWithUndo called for:', taskId, updates)
     return await singletonUndo.updateTaskWithUndo(taskId, updates)
   }
 
   const createTaskWithUndo = async (taskData: Partial<Task>) => {
-    console.log('➕ createTaskWithUndo called with:', taskData)
     return await singletonUndo.createTaskWithUndo(taskData)
   }
 
   // Move operations - Simplified for now, just perform the operation without undo
   // (Undo system is primarily for create/update/delete operations)
   const moveTaskWithUndo = async (taskId: string, newStatus: string) => {
-    console.log('📍 [CONSOLIDATED-V4] moveTaskWithUndo called for:', taskId, 'to:', newStatus)
-
     try {
       // Just perform the move operation
       await taskStore.moveTask(taskId, newStatus as Task['status']) // BUG-1051: AWAIT to ensure persistence
-      console.log(`✅ Task moved: ${taskId} to ${newStatus}`)
     } catch (error) {
       console.error('❌ Error moving task:', error)
     }
   }
 
   const moveTaskToProjectWithUndo = async (taskId: string, projectId: string) => {
-    console.log('🏢 [CONSOLIDATED-V4] moveTaskToProjectWithUndo called for:', taskId, 'to:', projectId)
-
     try {
       // Just perform the move operation
       taskStore.moveTaskToProject(taskId, projectId)
-      console.log(`✅ Task moved to project: ${taskId} to ${projectId}`)
     } catch (error) {
       console.error('❌ Error moving task to project:', error)
     }

@@ -1387,6 +1387,55 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
+### ~~TASK-1788~~: Extract canvas rotation handlers from CanvasView.vue into useCanvasRotationLayout composable (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-18) | **Opened**: 2026-05-18
+
+**Problem**: BUG-1786 (v1.4.33) and BUG-1787 (v1.4.34) both touched canvas rotation/render logic locked inside `src/views/CanvasView.vue`. The newly-added findNode null-retry and canvasSyncInProgress pre-acquire could only be tested via E2E because they were inside an SFC, not a composable.
+
+**Fix**: Pure refactor — extracted `applyCanonicalLayoutMoves`, `applyCanonicalTaskMoves` (with BUG-1787 null-retry), `refreshRenderedNodesFromModel`, `releaseOnDoubleNextTick`, `getVisualNodePosition`, `getRenderedNodeSize`, `getRenderedCanvasZoom`, `handleRotateDayGroups` (with BUG-1787 sync-lock pre-acquire), `handleTidyLayout`, `runDayGroupCatchup`, plus `useDayGroupRotation`/`useTidyLayout` initialization into new composable `src/composables/canvas/useCanvasRotationLayout.ts`. CanvasView.vue net diff: -249 lines. Added 7 new unit tests covering the previously-uncovered paths.
+
+**Files**:
+- New: `src/composables/canvas/useCanvasRotationLayout.ts` (~360 lines, moved from CanvasView.vue)
+- Modified: `src/views/CanvasView.vue` (-249 net lines)
+- New: `tests/unit/canvas/canvas-rotation-layout.test.ts` (7 cases)
+
+**Verification**: 184/184 unit tests pass. No new TS errors. Build clean.
+
+**Plan file**: `~/.claude/plans/mighty-petting-stearns.md`
+
+---
+
+### ~~BUG-1787~~: Canvas rotate-days makes tasks visually disappear from groups (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-17, shipped v1.4.34)
+
+**Problem**: Clicking the rotate-days toolbar button left tasks counted in their groups but visually rendered outside the group rectangle. Day-of-week groups rotated correctly, but Today/Tomorrow power-keyword groups were skipped, leaving stale `dueDate` on their children.
+
+**Root cause**: (1) `rotateDayGroups()` only iterated `keyword.category === 'day_of_week'` groups, skipping Today/Tomorrow `date`-category groups. (2) `handleRotateDayGroups` did NOT pre-acquire `canvasSyncInProgress=true` before calling `rotateDayGroups()` — the SMART-GROUP `dueDate` writes fired the sync watcher mid-rotation, leaving Vue Flow node positions stale. `applyCanonicalTaskMoves` then silently skipped tasks whose `findNode` returned null.
+
+**Fix**: (1) Extended `rotateDayGroups` to rotate Today/Tomorrow too (left "this week"/"this weekend"/"later" alone as span keywords). (2) `handleRotateDayGroups` sets `canvasSyncInProgress.value = true` BEFORE invoking `rotateDayGroups`. (3) `applyCanonicalTaskMoves` collects null-findNode tasks and retries on `nextTick`. Still-missing tasks log a `[BUG-1787]` warning.
+
+**Files**: `src/composables/canvas/useDayGroupRotation.ts`, `src/views/CanvasView.vue`, `tests/unit/canvas/day-group-today-tomorrow-rotation.test.ts` (new, 8 cases), `tests/e2e/canvas-rotate-render-bug-1787.spec.ts` (new, 2 cases)
+
+**Shipped in**: v1.4.34 (deployed via `deploy-electron-update.sh` 2026-05-17)
+
+---
+
+### ~~BUG-1786~~: Canvas "Move to Today" leaves tasks bucketed as Tomorrow when they carry a calendar instance (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-17, shipped v1.4.33)
+
+**Problem**: On Canvas (Electron), moving a task to Today via drag, right-click date menu, or overdue "Reschedule → Today" updated `task.dueDate` and (for drag) `parentId`, but never touched `task.instances[].scheduledDate`. Because `getTaskInstances` (`src/stores/tasks.ts:30`) makes any reader prefer `instances[]` over `dueDate`, Board view, smart-group matchers, and day-rotation continued to bucket the task as Tomorrow.
+
+**Fix**: Added `realignInstancesToDate(task, dateStr)` helper in `src/stores/tasks/taskOperations.ts`. Skips recurring tasks and tasks with no instances (preserves BUG-1467). Wired into three canvas writers so the new `dueDate` and realigned `instances` ship atomically in a single `updateTask` call.
+
+**Files**: `src/stores/tasks/taskOperations.ts`, `src/composables/canvas/useCanvasInteractions.ts:855` (drag), `src/composables/canvas/node/useTaskNodeActions.ts:295` (overdue reschedule), `src/composables/tasks/useTaskContextMenuActions.ts` (context menu — dropped `isCalendarEvent` gate), `src/stores/__tests__/tasks.test.ts` (3 new helper cases).
+
+**Shipped in**: v1.4.33 (deployed via `deploy-electron-update.sh` 2026-05-17)
+
+---
+
 ### ~~BUG-1784~~: Canvas Tidy button flips 9+ tasks into a messy 2-column staggered grid (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-05-09)

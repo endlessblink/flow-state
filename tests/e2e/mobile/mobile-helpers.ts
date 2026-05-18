@@ -38,6 +38,7 @@ export const MOBILE_PHONE_OPTIONS = {
   viewport: { width: 390, height: 844 },
   hasTouch: true,
   isMobile: true,
+  userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36',
 } as const
 
 /** Standard mobile test.use options for tablet viewport */
@@ -45,6 +46,7 @@ export const MOBILE_TABLET_OPTIONS = {
   viewport: { width: 768, height: 1024 },
   hasTouch: true,
   isMobile: true,
+  userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel Tablet) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
 } as const
 
 /** Register locator handlers for modals that may block interaction */

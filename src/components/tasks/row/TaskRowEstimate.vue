@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, triggerRef } from 'vue'
 import { Check } from 'lucide-vue-next'
 
 const props = defineProps<{

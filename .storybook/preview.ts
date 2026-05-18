@@ -4,6 +4,7 @@ import { setup } from '@storybook/vue3'
 import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { createI18n, type I18n } from 'vue-i18n'
+import { NMessageProvider } from 'naive-ui'
 import customTheme from './theme'
 import en from '../src/i18n/locales/en.json'
 import he from '../src/i18n/locales/he.json'
@@ -186,6 +187,11 @@ const preview: Preview = {
       }
       return story()
     },
+    // Some app shell components call Naive UI's useMessage(); stories need the provider too.
+    (story: any) => ({
+      components: { Story: story(), NMessageProvider },
+      template: '<NMessageProvider><Story /></NMessageProvider>',
+    }),
   ],
 }
 

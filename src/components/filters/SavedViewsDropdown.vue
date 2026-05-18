@@ -107,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, triggerRef } from 'vue'
 import { Bookmark, X, Plus, Check } from 'lucide-vue-next'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useSavedViews } from '@/composables/useSavedViews'

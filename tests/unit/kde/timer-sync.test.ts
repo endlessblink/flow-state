@@ -7,6 +7,13 @@
  * Source: packages/kde-widget/contents/ui/main.qml
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+const MAIN_QML = readFileSync(
+  resolve(__dirname, '../../../packages/kde-widget/contents/ui/main.qml'),
+  'utf-8'
+)
 
 // ---------------------------------------------------------------------------
 // Pure JS extraction of timer/sync logic from main.qml
@@ -19,9 +26,18 @@ function formatTimeDisplay(secondsRemaining: number): string {
   return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0')
 }
 
-// --- Poll interval logic (line 3820) ---
+// --- Poll interval logic (main.qml:3863) ---
+// TASK-1790: Idle cadence dropped from 30s → 5s so the widget picks up
+// sessions started by another device within ~5s instead of ~30s.
 function getPollInterval(hasActiveSession: boolean, sessionJustCompleted: boolean, isInTransition: boolean): number {
-  return (hasActiveSession || sessionJustCompleted || isInTransition) ? 2000 : 30000
+  return (hasActiveSession || sessionJustCompleted || isInTransition) ? 2000 : 5000
+}
+
+// --- Active-session URL builder (main.qml:4277) ---
+// TASK-1790: Defensive user_id filter. RLS enforces server-side, but matching the
+// write-path's user_id filter keeps reads/writes symmetric.
+function buildActiveSessionUrl(supabaseUrl: string, userId: string): string {
+  return supabaseUrl + '/rest/v1/timer_sessions?is_active=eq.true&user_id=eq.' + userId + '&select=*&order=updated_at.desc&limit=1'
 }
 
 // --- Session data parser: extracts fields from REST response row ---
@@ -114,8 +130,15 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(getPollInterval(true, false, false)).toBe(2000)
     })
 
-    it('1. poll interval is 30000ms when idle (no active session, no transition)', () => {
-      expect(getPollInterval(false, false, false)).toBe(30000)
+    it('1. poll interval is 5000ms when idle (TASK-1790: dropped from 30s for faster cross-device pickup)', () => {
+      expect(getPollInterval(false, false, false)).toBe(5000)
+    })
+
+    it('1. TASK-1790 regression: idle interval must never exceed 5s (or pickup latency reverts to 30s)', () => {
+      const idleInterval = getPollInterval(false, false, false)
+      expect(idleInterval).toBeLessThanOrEqual(5000)
+      // Hard floor so we don't accidentally hammer Supabase if someone "fixes" this to 1ms
+      expect(idleInterval).toBeGreaterThanOrEqual(2000)
     })
 
     it('1. poll interval is 2000ms during session transition (isInTransition)', () => {
@@ -125,17 +148,51 @@ describe('TASK-1652: KDE Timer Sync', () => {
     it('1. poll interval is 2000ms when sessionJustCompleted', () => {
       expect(getPollInterval(false, true, false)).toBe(2000)
     })
+
+    it('1. TASK-1790 source-of-truth: main.qml syncTimer interval ternary uses 5000 (not 30000)', () => {
+      // Regression guard: the helper above mirrors main.qml. If the QML drifts back
+      // to 30000 the helper test still passes, so we assert the QML source directly.
+      const match = MAIN_QML.match(/syncTimer[\s\S]*?interval:\s*\([^)]*hasActiveSession[^)]*\)\s*\?\s*(\d+)\s*:\s*(\d+)/)
+      expect(match, 'could not find syncTimer interval expression in main.qml').toBeTruthy()
+      const [, activeMs, idleMs] = match!
+      expect(Number(activeMs)).toBe(2000)
+      expect(Number(idleMs)).toBeLessThanOrEqual(5000)
+      expect(Number(idleMs)).toBeGreaterThanOrEqual(2000)
+    })
   })
 
   describe('fetchCurrentSession REST call shape', () => {
     it('2. fetchCurrentSession queries timer_sessions with is_active=eq.true', () => {
-      // Extract the URL construction from main.qml line 4230
       const supabaseUrl = 'http://127.0.0.1:54321'
-      const url = supabaseUrl + '/rest/v1/timer_sessions?is_active=eq.true&select=*&order=updated_at.desc&limit=1'
+      const userId = '717f5209-42d8-4bb9-8781-740107a384e5'
+      const url = buildActiveSessionUrl(supabaseUrl, userId)
       expect(url).toContain('/rest/v1/timer_sessions')
       expect(url).toContain('is_active=eq.true')
       expect(url).toContain('order=updated_at.desc')
       expect(url).toContain('limit=1')
+    })
+
+    it('2. TASK-1790 regression: active-session query MUST include user_id filter', () => {
+      // Without this filter the widget can fetch any user's active session in
+      // dev/multi-tenant setups (RLS catches it in prod, but reads should still
+      // be symmetric with writes which already filter by user_id).
+      const supabaseUrl = 'http://127.0.0.1:54321'
+      const userId = 'abc-123'
+      const url = buildActiveSessionUrl(supabaseUrl, userId)
+      expect(url).toMatch(/user_id=eq\.abc-123(\b|&)/)
+    })
+
+    it('2. TASK-1790 source-of-truth: main.qml fetchCurrentSession URL includes user_id filter', () => {
+      // The active-session SELECT URL in main.qml must include both is_active=eq.true
+      // AND a user_id filter built from root.userId. We don't pin the exact ordering
+      // or whitespace — only that both clauses appear within the function body and
+      // root.userId is interpolated into the user_id filter value.
+      const fnStart = MAIN_QML.indexOf('function fetchCurrentSession(')
+      expect(fnStart, 'fetchCurrentSession not found').toBeGreaterThan(-1)
+      // Slice the next ~2000 chars — enough to cover the URL construction lines.
+      const body = MAIN_QML.slice(fnStart, fnStart + 2000)
+      expect(body).toMatch(/timer_sessions\?[^"]*is_active=eq\.true/)
+      expect(body).toMatch(/user_id=eq\.["\s+]*\+?\s*root\.userId/)
     })
   })
 

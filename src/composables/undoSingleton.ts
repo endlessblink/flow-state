@@ -251,16 +251,20 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
         // BUG-1737: Block realtime echoes FIRST (sync, before any await)
         taskStore.addPendingWrite(taskId)
         await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
-        // BUG-1737: Cancel queue DELETE BEFORE enqueueing CREATE to prevent race
-        // (sync orchestrator's BUG-1534 logic cancels CREATEs when processing DELETEs)
+        // BUG-1737 + sync coherence fix: cancel queue DELETE BEFORE enqueueing CREATE,
+        // then wait for any in-flight (status='syncing') DELETE HTTP request to settle.
+        // Without this wait, the orphaned DELETE can hit Supabase AFTER our CREATE,
+        // leaving the row marked is_deleted=true. The orchestrator then takes up to
+        // a full 5s queue cycle to reconcile — the "15-20s after-undo lag" symptom.
         try {
-          const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
+          const { deleteOperationsByType, waitForInFlightOperations } = await import('@/services/offline/writeQueueDB')
           await deleteOperationsByType('task', taskId, 'delete')
+          await waitForInFlightOperations('task', taskId, 'delete', 6000)
         } catch (e) {
-          console.warn('[UNDO] Failed to cancel pending sync ops:', e)
+          console.warn('[UNDO] Failed to cancel/await pending sync ops:', e)
         }
-        await taskStore.createTask(deletedTask)
-        console.log('🔴 [UNDO] createTask completed')
+        await taskStore.restoreTaskFromUndo(deletedTask)
+        console.log('🔴 [UNDO] restoreTaskFromUndo completed')
       } else {
         console.error('❌ [UNDO] Could not find task in snapshot:', taskId)
       }
@@ -276,14 +280,15 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
           // BUG-1737: Block realtime echoes FIRST (sync, before any await)
           taskStore.addPendingWrite(taskId)
           await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
-          // BUG-1737: Cancel queue DELETE BEFORE enqueueing CREATE
+          // BUG-1737 + sync coherence: cancel pending DELETE, wait for in-flight to settle.
           try {
-            const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
+            const { deleteOperationsByType, waitForInFlightOperations } = await import('@/services/offline/writeQueueDB')
             await deleteOperationsByType('task', taskId, 'delete')
+            await waitForInFlightOperations('task', taskId, 'delete', 6000)
           } catch (e) {
-            console.warn('[UNDO] Failed to cancel pending sync ops:', e)
+            console.warn('[UNDO] Failed to cancel/await pending sync ops:', e)
           }
-          await taskStore.createTask(deletedTask)
+          await taskStore.restoreTaskFromUndo(deletedTask)
         }
       }
       break
@@ -592,6 +597,32 @@ const showUndoRedoToast = async (action: 'undo' | 'redo', description: string) =
   }
 }
 
+/**
+ * Show a delete-time toast with an "Undo" action button.
+ * Always shown on destructive operations — this is the primary on-screen
+ * restore affordance for users who don't know Ctrl+Z.
+ *
+ * Clicking Undo calls performUndo(), which operates on the top of the
+ * operation stack. If the user performed another op between delete and
+ * click, that newer op is undone instead — same semantics as Ctrl+Z.
+ */
+const showDeleteToast = (message: string) => {
+  try {
+    const { showToast } = useToast()
+    showToast(message, 'info', {
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          performUndo().catch(err => console.error('[UNDO] delete-toast undo failed:', err))
+        }
+      }
+    })
+  } catch (error) {
+    console.warn('⚠️ [UNDO] Could not show delete toast:', error)
+  }
+}
+
 // ✅ FIXED - Functions defined at module level (outside return object)
 // FIX: Made async to properly await restoreState which is an async function
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
@@ -891,6 +922,7 @@ const deleteTaskWithUndo = async (taskId: string) => {
     await taskStore.deleteTask(taskId, 'deleteTaskWithUndo')
     await nextTick()
     await commitOperation(handle)
+    showDeleteToast(`Deleted "${taskToDelete.title}"`)
   } catch (error) {
     console.error('❌ deleteTaskWithUndo failed:', error)
     throw error
@@ -932,6 +964,7 @@ const permanentlyDeleteTaskWithUndo = async (taskId: string) => {
     await nextTick()
     await commitOperation(handle)
     console.log('🔴 [UNDO] commitOperation completed, operationStack length:', operationStack.value.length)
+    showDeleteToast(`Deleted "${taskToDelete.title}"`)
   } catch (error) {
     console.error('❌ permanentlyDeleteTaskWithUndo failed:', error)
     throw error
@@ -1067,6 +1100,7 @@ const deleteGroupWithUndo = async (groupId: string) => {
     await canvasStore.deleteGroup(groupId)
     await nextTick()
     await commitOperation(handle)
+    showDeleteToast(`Deleted group "${groupToDelete.name}"`)
   } catch (error) {
     console.error('❌ deleteGroupWithUndo failed:', error)
     throw error
@@ -1097,6 +1131,7 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
 
     await nextTick()
     await commitOperation(handle)
+    showDeleteToast(`Deleted ${taskIds.length} task${taskIds.length > 1 ? 's' : ''}`)
   } catch (error) {
     console.error('❌ bulkDeleteTasksWithUndo failed:', error)
     throw error
@@ -1141,6 +1176,8 @@ const bulkMoveToInboxWithUndo = async (taskIds: string[]) => {
     unifiedState.value = snapshotAfter
     commit()
   }
+
+  showDeleteToast(`Removed ${taskIds.length} task${taskIds.length > 1 ? 's' : ''} from canvas`)
 }
 
 // TASK-1785: Shift+drag ripple-push reschedule on the calendar.
@@ -1205,6 +1242,7 @@ export function pushImageDeleteUndo(imageData: { id: string; imageUrl: string; p
   })
   if (operationStack.value.length > 30) operationStack.value.shift()
   redoOperationStack.value = [] // Clear redo on new operation
+  showDeleteToast('Deleted canvas image')
 }
 
 /**

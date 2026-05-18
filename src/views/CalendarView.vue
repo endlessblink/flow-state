@@ -706,7 +706,7 @@ onMounted(() => {
     router.replace({ path: '/calendar', query: {} })
   } else {
     // Scroll to current time on mount
-    // Use setTimeout like the watchers — bare nextTick fires before CalendarDayView's
+    // Use setTimeout like the watchers; Vue's microtask tick fires before CalendarDayView's
     // DOM is ready in WebKitGTK/Tauri, causing querySelector('.slots-container') to return null
     setTimeout(() => scrollToCurrentTime(), 150)
   }

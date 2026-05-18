@@ -1,14 +1,16 @@
 import { test, expect } from '../../fixtures/auth'
-import { MOBILE_PHONE_OPTIONS, registerModalHandlers, suppressOnboarding } from './mobile-helpers'
+import { MOBILE_PHONE_OPTIONS, getNavItemByLabel, registerModalHandlers, suppressOnboarding } from './mobile-helpers'
 
 test.describe('Mobile Timer View', () => {
+  test.describe.configure({ mode: 'serial' })
   test.use(MOBILE_PHONE_OPTIONS)
 
   test.beforeEach(async ({ page }) => {
     await registerModalHandlers(page)
     await suppressOnboarding(page)
-    await page.goto('/#/timer')
+    await page.goto('/#/tasks')
     await page.waitForLoadState('networkidle')
+    await getNavItemByLabel(page, 'Timer').click()
     await expect(page.locator('.mobile-timer-view')).toBeVisible({ timeout: 10000 })
 
     // Ensure timer is stopped (a previous test may have left it running via Supabase sync)

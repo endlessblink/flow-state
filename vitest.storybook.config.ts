@@ -13,8 +13,21 @@ const packageVersion = JSON.parse(
     readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf-8')
 ).version;
 
+const tauriStubPlugin = {
+    name: 'tauri-stub',
+    resolveId(id: string) {
+        if (id.startsWith('@tauri-apps/')) return '\0tauri-stub';
+    },
+    load(id: string) {
+        if (id === '\0tauri-stub') {
+            return 'export default {}; export const invoke = () => {}; export const getCurrentWindow = () => ({}); export const homeDir = () => ""; export const attachConsole = () => {}; export const open = () => {}; export const load = () => ({}); export const check = () => ({}); export const relaunch = () => {}; export const Command = class {}; export const fetch = globalThis.fetch; export const writeTextFile = () => {}; export const mkdir = () => {}; export const exists = () => false;';
+        }
+    }
+};
+
 export default defineConfig({
     plugins: [
+        tauriStubPlugin,
         vue(),
         storybookTest({
             configDir: path.join(dirname, '.storybook')

@@ -1,0 +1,177 @@
+<<<<<<< SEARCH
+<script setup lang="ts">
+interface Props {
+  isOpen: boolean
+  title?: string
+  description?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
+  variant?: 'default' | 'danger' | 'warning' | 'success'
+  closeOnOverlayClick?: boolean
+  closeOnEscape?: boolean
+  submitOnEnter?: boolean
+  showHeader?: boolean
+  showFooter?: boolean
+  showCloseButton?: boolean
+  showCancelButton?: boolean
+  showConfirmButton?: boolean
+  cancelText?: string
+  confirmText?: string
+  closeAriaLabel?: string
+  loading?: boolean
+  confirmDisabled?: boolean
+  titleClass?: string
+  descriptionClass?: string
+  bodyClass?: string
+  footerClass?: string
+  trapFocus?: boolean
+}
+
+// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
+defineOptions({ inheritAttrs: false })
+
+const props = withDefaults(defineProps<Props>(), {
+  title: undefined,
+  description: undefined,
+  size: 'md',
+  variant: 'default',
+  closeOnOverlayClick: true,
+  closeOnEscape: true,
+  submitOnEnter: true,
+  showHeader: true,
+  showFooter: false,
+  showCloseButton: true,
+  showCancelButton: true,
+  showConfirmButton: true,
+  cancelText: undefined,
+  confirmText: undefined,
+  closeAriaLabel: undefined,
+  loading: false,
+  confirmDisabled: false,
+  titleClass: '',
+  descriptionClass: '',
+  bodyClass: '',
+  footerClass: '',
+  trapFocus: true
+})
+
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { X } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import BaseButton from './BaseButton.vue'
+import { isTextAreaOrContentEditable } from '@/utils/dom'
+
+interface Props {
+  isOpen: boolean
+  title?: string
+  description?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
+  variant?: 'default' | 'danger' | 'warning' | 'success'
+  closeOnOverlayClick?: boolean
+  closeOnEscape?: boolean
+  submitOnEnter?: boolean
+  showHeader?: boolean
+  showFooter?: boolean
+  showCloseButton?: boolean
+  showCancelButton?: boolean
+  showConfirmButton?: boolean
+  cancelText?: string
+  confirmText?: string
+  closeAriaLabel?: string
+  loading?: boolean
+  confirmDisabled?: boolean
+  titleClass?: string
+  descriptionClass?: string
+  bodyClass?: string
+  footerClass?: string
+  trapFocus?: boolean
+}
+
+// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
+defineOptions({ inheritAttrs: false })
+
+const props = withDefaults(defineProps<Props>(), {
+  title: undefined,
+  description: undefined,
+  size: 'md',
+  variant: 'default',
+  closeOnOverlayClick: true,
+  closeOnEscape: true,
+  submitOnEnter: true,
+  showHeader: true,
+  showFooter: false,
+  showCloseButton: true,
+  showCancelButton: true,
+  showConfirmButton: true,
+  cancelText: undefined,
+  confirmText: undefined,
+  closeAriaLabel: undefined,
+  loading: false,
+  confirmDisabled: false,
+  titleClass: undefined,
+  descriptionClass: undefined,
+  bodyClass: undefined,
+  footerClass: undefined,
+  trapFocus: true
+})
+=======
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { X } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import BaseButton from './BaseButton.vue'
+import { isTextAreaOrContentEditable } from '@/utils/dom'
+
+interface Props {
+  isOpen: boolean
+  title?: string
+  description?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
+  variant?: 'default' | 'danger' | 'warning' | 'success'
+  closeOnOverlayClick?: boolean
+  closeOnEscape?: boolean
+  submitOnEnter?: boolean
+  showHeader?: boolean
+  showFooter?: boolean
+  showCloseButton?: boolean
+  showCancelButton?: boolean
+  showConfirmButton?: boolean
+  cancelText?: string
+  confirmText?: string
+  closeAriaLabel?: string
+  loading?: boolean
+  confirmDisabled?: boolean
+  titleClass?: string
+  descriptionClass?: string
+  bodyClass?: string
+  footerClass?: string
+  trapFocus?: boolean
+}
+
+// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
+defineOptions({ inheritAttrs: false })
+
+const props = withDefaults(defineProps<Props>(), {
+  title: undefined,
+  description: undefined,
+  size: 'md',
+  variant: 'default',
+  closeOnOverlayClick: true,
+  closeOnEscape: true,
+  submitOnEnter: true,
+  showHeader: true,
+  showFooter: false,
+  showCloseButton: true,
+  showCancelButton: true,
+  showConfirmButton: true,
+  cancelText: undefined,
+  confirmText: undefined,
+  closeAriaLabel: undefined,
+  loading: false,
+  confirmDisabled: false,
+  titleClass: undefined,
+  descriptionClass: undefined,
+  bodyClass: undefined,
+  footerClass: undefined,
+  trapFocus: true
+})
+>>>>>>> REPLACE

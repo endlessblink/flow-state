@@ -60,8 +60,6 @@ interface CalendarHelpers {
   getPriorityClass: (event: CalendarEvent) => string
   getPriorityLabel: (event: CalendarEvent) => string
   getTaskStatus: (event: CalendarEvent) => string
-  getStatusLabel: (event: CalendarEvent) => string
-  getStatusIcon: (status: string) => string
   positionedExternalEvents: ComputedRef<PositionedExternalEvent[]>
 }
 const {

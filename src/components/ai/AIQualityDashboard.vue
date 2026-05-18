@@ -45,7 +45,9 @@
     <div v-if="report" class="summary-cards">
       <div class="card glass score-card" :class="gradeClass">
         <h3>Overall Grade</h3>
-        <div class="grade-display">{{ report.grade }}</div>
+        <div class="grade-display">
+          {{ report.grade }}
+        </div>
         <p>{{ gradeLabel }}</p>
       </div>
 
@@ -67,7 +69,9 @@
 
       <div class="card glass stat-card">
         <h3>Provider</h3>
-        <div class="stat-value stat-value--small">{{ report.provider }}</div>
+        <div class="stat-value stat-value--small">
+          {{ report.provider }}
+        </div>
         <p>{{ formatTime(report.timestamp) }}</p>
       </div>
     </div>
@@ -129,7 +133,7 @@
               <span class="result-grade" :class="scoreColorClass(result.overallScore)">
                 {{ result.grade }}
               </span>
-              <span class="result-grade-dot" :class="gradeDotClass(result.grade)"></span>
+              <span class="result-grade-dot" :class="gradeDotClass(result.grade)" />
             </div>
           </div>
 

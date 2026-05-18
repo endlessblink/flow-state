@@ -13,8 +13,11 @@ const DEVICE_HEARTBEAT_INTERVAL_MS = 10000 // 10 seconds
 export const DEVICE_LEADER_TIMEOUT_MS = 30000 // 30 seconds
 // TASK-1009: Polling fallback for followers (mobile PWA Realtime WebSocket may fail)
 // BUG-1122: Also check for stale leadership and take over if needed
-// Polls every 3 seconds when not the leader to sync timer state
-const FOLLOWER_POLL_INTERVAL_MS = 3000
+// TASK-1790: Bumped from 3s to 15s and made the poll run continuously (even when no
+// session is loaded locally) so it serves as a Realtime safety net. At 15s the cost
+// is ~4 queries/min — well within BUG-1085's anti-spam intent, while restoring the
+// ability to detect sessions started by another device when Realtime misses the INSERT.
+const FOLLOWER_POLL_INTERVAL_MS = 15000
 
 /**
  * Row shape as returned by Supabase Realtime events
@@ -153,10 +156,11 @@ export function useTimerSync(deps: TimerSyncDeps) {
           pauseCountdown()
           currentSession.value = null
         }
-        // No session exists and no local state — stop polling.
-        // Realtime subscription handles new session detection from other devices.
-        // Without this, the poll runs every 3s against Supabase permanently after timer stop.
-        pauseFollowerPoll()
+        // TASK-1790: Don't pause here. The poll is the Realtime backstop and must
+        // keep running so we detect sessions started on another device when the
+        // postgres_changes INSERT is dropped (websocket disconnect, cold-start race,
+        // replication hiccup — all documented as expected conditions in BUG-1320).
+        // At 15s cadence the idle cost is acceptable.
         return
       }
 
@@ -252,7 +256,9 @@ export function useTimerSync(deps: TimerSyncDeps) {
         pauseFollowerPoll()
         setTimeout(() => {
           consecutiveFailures = 0
-          if (!isDeviceLeader.value && currentSession.value) {
+          // TASK-1790: Resume regardless of currentSession — the poll is the
+          // Realtime backstop and needs to run even when idle.
+          if (!isDeviceLeader.value) {
             resumeFollowerPoll()
           }
         }, 30_000)
@@ -638,18 +644,17 @@ export function useTimerSync(deps: TimerSyncDeps) {
         resumeFollowerPoll()
       }
     } else {
-      // No active session - rely on Realtime subscription to detect new sessions
-      // BUG-1085 FIX: Do NOT start follower poll when there's no session
-      // Previously, this was polling every 3 seconds indefinitely, causing:
-      // - Excessive API calls (even when timer isn't being used)
-      // - Console log spam
-      // - Potential rate limiting issues
-      // Realtime subscription handles detecting new sessions from other devices.
-      // Follower polling is only needed when we HAVE a session and are not the leader.
+      // TASK-1790: Start follower poll as the Realtime backstop.
+      // Bumped to 15s (FOLLOWER_POLL_INTERVAL_MS) so this is cheap (~4 queries/min)
+      // and only there to catch sessions that Realtime missed — cold-start race
+      // before the channel reaches SUBSCRIBED, or WS drops handled at
+      // useRealtimeSubscription.ts:168 (CLOSED/TIMED_OUT/CHANNEL_ERROR per BUG-1320).
+      // Without this, the Vue app stays at 25:00 forever when the KDE widget starts
+      // a timer and Realtime misses the INSERT.
       if (import.meta.env.DEV) {
-        console.log('🍅 [TIMER] No active session, waiting for Realtime to detect new sessions')
+        console.log('🍅 [TIMER] No active session at init, starting follower poll as Realtime backstop')
       }
-      // pauseFollowerPoll() is already the default state - don't start it here
+      resumeFollowerPoll()
     }
 
     // Set cross-tab callbacks

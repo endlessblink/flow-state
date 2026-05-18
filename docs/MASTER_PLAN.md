@@ -8,6 +8,26 @@
 
 ## Active Tasks
 
+### TASK-1790: Restore timer follower poll as Realtime backstop (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-05-18)
+
+**Problem**: KDE widget shows a running Pomodoro (e.g. 9m on task "לארגן משימות / טאבים") while the Vue/Electron app on the same machine shows idle `25:00`. Cross-device sync is broken.
+
+**Root cause**: Commit `f616303a` ("accumulated fixes — timer sync") removed `resumeFollowerPoll()` from two idle-transition sites in `src/stores/timer.ts` and made the no-active-session branch of `initializeSync()` in `src/composables/timer/useTimerSync.ts` rely **solely** on Supabase Realtime to detect sessions started by other devices. The same file (`src/composables/supabase/useRealtimeSubscription.ts:168`) explicitly handles `CLOSED`/`TIMED_OUT`/`CHANNEL_ERROR` as expected runtime conditions (BUG-1320). Any missed Realtime INSERT (cold-start race, WS drop, replication hiccup) leaves Vue permanently deaf — verified against VPS DB: matching session existed in `timer_sessions` with the right `user_id` and `task_id` while Vue showed idle.
+
+**Fix**:
+- `useTimerSync.ts:17` — bump `FOLLOWER_POLL_INTERVAL_MS` from 3000 to 15000 so continuous polling is cheap (~4 queries/min) and BUG-1085's anti-spam intent is preserved.
+- `useTimerSync.ts:~159` — don't auto-pause the poll on no-session; the poll IS the backstop.
+- `useTimerSync.ts:~640` — resume follower poll in init's no-session branch.
+- `useTimerSync.ts:~255` — drop `currentSession.value` requirement from the 30s backoff retry so idle polling resumes after network failures.
+- `timer.ts:~441, ~546` — restore `sync.resumeFollowerPoll()` on the two idle-transition paths f616303a stripped.
+- `packages/kde-widget/contents/ui/main.qml:4277` — defensive: add `&user_id=eq.<root.userId>` to widget's active-session SELECT (RLS already enforces server-side, this is hygiene).
+
+**Verification**: VPS DB confirms task `7009f622-e45f-428e-be41-f0e0900ee549` ("לארגן משימות / טאבים") had an active `timer_sessions` row during screenshot while Vue showed 25:00 idle.
+
+---
+
 ### TASK-1789: Fix ~160 pre-existing type-check errors blocking CI (📋 PLANNED)
 
 **Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)

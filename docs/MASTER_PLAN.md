@@ -1,12 +1,202 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: May 4, 2026
+> **Last Updated**: May 18, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
 ---
 
 ## Active Tasks
+
+### FEATURE-1791: Local-only MCP access for external AI agents (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-05-18)
+
+**Problem**: External local AI agents should be able to read FlowState context and eventually edit tasks/projects, but direct Supabase, IndexedDB, localStorage, or raw Pinia access would bypass workspace scoping, soft-delete/tombstone rules, offline write queue guarantees, realtime protections, and UI/domain invariants.
+
+**Goal**: Add safe local-only agent access using a thin stdio MCP server plus a FlowState-owned desktop bridge and command layer. Agents should start read-only, then graduate to dry-run writes with diffs, approval, idempotency, audit logging, and strict workspace isolation.
+
+**Architecture decision**: local stdio MCP first; no public API for this phase. MCP tools must call FlowState agent commands, which route through existing stores/domain actions. No service-role keys, raw SQL, direct IndexedDB/localStorage writes, direct `_rawTasks` mutation, or permanent delete tools.
+
+**Lane tasks**:
+1. TASK-1792 — Define local-agent threat model and safety rules
+2. TASK-1793 — Design FlowState Agent Command Layer
+3. TASK-1794 — Implement read-only agent command handlers
+4. TASK-1795 — Build local stdio MCP server skeleton
+5. TASK-1796 — Add Electron local agent bridge
+6. TASK-1797 — Connect MCP read tools to FlowState bridge
+7. TASK-1798 — Add workspace isolation validation
+8. TASK-1799 — Add local agent audit log
+9. TASK-1800 — Add agent settings and connected indicator
+10. TASK-1801 — Add dry-run write command layer
+11. TASK-1802 — Add safe write MCP tools
+12. TASK-1803 — Add in-app approval UI for agent writes
+13. TASK-1804 — Add idempotency and conflict handling
+14. TASK-1805 — Add local agent access test coverage
+15. TASK-1806 — Document MCP setup for local agents
+
+**Files**: `docs/architecture/local-agent-mcp.md`, `src/domain/agent/`, `electron/`, `tools/flowstate-mcp/`, `tests/unit/agent/`, `tests/e2e/agent/`
+
+---
+
+### TASK-1792: Define local-agent threat model and safety rules (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-05-18)
+
+**Problem**: Before exposing FlowState to external agents, the allowed access model, trust boundaries, and hard safety bans need to be explicit so later MCP/API work does not accidentally bypass app invariants.
+
+**Goal**: Create the canonical local-agent architecture/threat-model document covering transport choice, bridge boundaries, workspace isolation, write approval rules, audit logging, and forbidden direct access paths.
+
+**Acceptance criteria**:
+1. Documents stdio-first local MCP architecture and why public API is out of scope
+2. Defines hard bans: service-role keys, raw SQL, direct IndexedDB/localStorage, direct raw Pinia mutation, permanent delete
+3. Defines workspace scoping rules for personal vs shared workspaces
+4. Defines read-only phase and safe write graduation criteria
+5. Defines required testing categories before any write tool ships
+
+**Files**: `docs/architecture/local-agent-mcp.md`
+
+---
+
+### TASK-1793: Design FlowState Agent Command Layer (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Design typed command contracts under `src/domain/agent/` so MCP tools call app-level commands instead of database/storage internals.
+
+**Files**: `src/domain/agent/`, `docs/architecture/local-agent-mcp.md`
+
+---
+
+### TASK-1794: Implement read-only agent command handlers (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Implement read commands for context, workspaces, task search, task detail, projects, today, and sync status using app state/domain services.
+
+**Files**: `src/domain/agent/`, `tests/unit/agent/`
+
+---
+
+### TASK-1795: Build local stdio MCP server skeleton (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Add a thin Node/TypeScript stdio MCP server that exposes read-only FlowState tools and delegates all behavior to the FlowState bridge.
+
+**Files**: `tools/flowstate-mcp/`, `package.json`
+
+---
+
+### TASK-1796: Add Electron local agent bridge (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Add a desktop-only local bridge from the MCP server to the running FlowState app with explicit enablement and per-session authorization.
+
+**Files**: `electron/`, `src/types/`, `src/stores/settings.ts`
+
+---
+
+### TASK-1797: Connect MCP read tools to FlowState bridge (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Route MCP read tools through the bridge into the renderer/domain command layer and return structured, app-state-aware results.
+
+**Files**: `tools/flowstate-mcp/`, `electron/`, `src/domain/agent/`
+
+---
+
+### TASK-1798: Add workspace isolation validation (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Enforce explicit personal/shared workspace scoping in all agent commands and deny cross-workspace access.
+
+**Files**: `src/domain/agent/`, `tests/unit/agent/`
+
+---
+
+### TASK-1799: Add local agent audit log (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Log allowed, denied, dry-run, and write operations with agent, workspace, tool, affected IDs, result, and error metadata.
+
+**Files**: `src/domain/agent/`, `src/stores/`, `src/components/settings/`
+
+---
+
+### TASK-1800: Add agent settings and connected indicator (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Add settings to enable local agent access, choose read-only/write-enabled mode, and show active connected-agent status in the UI.
+
+**Files**: `src/stores/settings.ts`, `src/components/settings/`, `src/layouts/`
+
+---
+
+### TASK-1801: Add dry-run write command layer (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Add write command contracts that default to dry-run and return before/after diffs without exposing them as MCP tools yet.
+
+**Files**: `src/domain/agent/`, `tests/unit/agent/`
+
+---
+
+### TASK-1802: Add safe write MCP tools (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Expose create/update/complete/move/comment/soft-delete tools with dry-run defaults, idempotency keys, approval gates, and no permanent delete.
+
+**Files**: `tools/flowstate-mcp/`, `src/domain/agent/`, `electron/`
+
+---
+
+### TASK-1803: Add in-app approval UI for agent writes (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Show agent write requests with workspace, operation, affected records, diff, risk level, approve once, and deny controls.
+
+**Files**: `src/components/agent/`, `src/stores/agent/`
+
+---
+
+### TASK-1804: Add idempotency and conflict handling (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Prevent duplicate agent writes, surface offline/sync status, and respect existing pending-write/realtime protections.
+
+**Files**: `src/domain/agent/`, `src/composables/sync/`, `tests/unit/agent/`
+
+---
+
+### TASK-1805: Add local agent access test coverage (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Cover workspace isolation, dry-run non-mutation, soft-delete safety, invalid inputs, approval requirements, offline queue behavior, and MCP read flows.
+
+**Files**: `tests/unit/agent/`, `tests/e2e/agent/`, `tools/flowstate-mcp/`
+
+---
+
+### TASK-1806: Document MCP setup for local agents (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Goal**: Document how to enable local agent access and configure Claude, Codex, OpenCode, or other MCP-capable local agents.
+
+**Files**: `docs/agent-mcp-setup.md`, `docs/architecture/local-agent-mcp.md`
+
+---
 
 ### ~~TASK-1790~~: Restore timer follower poll as Realtime backstop (✅ DONE)
 

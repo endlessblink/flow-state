@@ -8,9 +8,9 @@
 
 ## Active Tasks
 
-### TASK-1790: Restore timer follower poll as Realtime backstop (🔄 IN PROGRESS)
+### ~~TASK-1790~~: Restore timer follower poll as Realtime backstop (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (shipped 2026-05-18, v1.4.37, commit 4b68d919)
 
 **Problem**: KDE widget shows a running Pomodoro (e.g. 9m on task "לארגן משימות / טאבים") while the Vue/Electron app on the same machine shows idle `25:00`. Cross-device sync is broken.
 

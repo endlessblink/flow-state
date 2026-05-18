@@ -192,6 +192,75 @@ describe('TASK-1790: follower poll as Realtime backstop', () => {
     })
   })
 
+  describe('Class-of-bug: idle Vue device picks up session started elsewhere', () => {
+    // The exact symptom from the TASK-1790 screenshot:
+    // - Vue boots with no active session (DB empty at init)
+    // - KDE widget starts a session AFTER Vue init
+    // - Realtime doesn't fire (or fires before subscription is ready)
+    // - Vue must rely on the follower poll to discover the new session
+    //
+    // This simulates that flow at the composable level so future refactors
+    // can't quietly break it.
+    it('follower poll discovers an externally-created session after idle init', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(null)
+      const currentSession = ref<PomodoroSession | null>(null)
+      const deps = makeDeps({
+        fetchActiveTimerSession: fetchMock,
+        currentSession,
+        isDeviceLeader: ref(false),
+        hasLoadedSession: ref(false),
+      })
+      useTimerSync(deps)
+
+      // 1. Init completes with no session (poll backstop must arm)
+      await flushAsync()
+      const followerPoll = intervals[FOLLOWER_POLL_INDEX]
+      expect(followerPoll.resume).toHaveBeenCalled()
+      expect(currentSession.value).toBeNull()
+
+      // 2. KDE widget writes a session to the DB. Realtime drops it.
+      //    The next poll cycle finds it.
+      const externalSession: PomodoroSession = {
+        id: 'cc0e8400-e29b-41d4-a716-446655440099',
+        taskId: '7009f622-e45f-428e-be41-f0e0900ee549',
+        startTime: new Date(),
+        duration: 1500,
+        remainingTime: 1461,
+        isActive: true,
+        isPaused: false,
+        isBreak: false,
+      }
+      fetchMock.mockResolvedValue(externalSession)
+
+      // 3. Tick the poll
+      await followerPoll.callback()
+
+      // 4. Vue side now sees the session — the symptom (`25:00` stuck) is gone
+      expect(currentSession.value).not.toBeNull()
+      expect(currentSession.value?.id).toBe(externalSession.id)
+      expect(currentSession.value?.isActive).toBe(true)
+    })
+
+    it('poll does NOT silently stop when DB is empty (regression catcher)', async () => {
+      // The bug: pauseFollowerPoll() was called when DB returned null, killing
+      // the backstop. This guards against any future "optimization" that
+      // re-introduces a self-pause path.
+      const deps = makeDeps({
+        fetchActiveTimerSession: vi.fn().mockResolvedValue(null),
+        isDeviceLeader: ref(false),
+      })
+      useTimerSync(deps)
+      const followerPoll = intervals[FOLLOWER_POLL_INDEX]
+
+      await followerPoll.callback()
+      await followerPoll.callback()
+      await followerPoll.callback()
+
+      // No pause across three idle ticks — poll must keep running.
+      expect(followerPoll.pause).not.toHaveBeenCalled()
+    })
+  })
+
   describe('timer.ts idle-transition sites: regression of f616303a', () => {
     it('source-of-truth: stopTimer path resumes follower poll after clearing currentSession', () => {
       // f616303a stripped `sync.resumeFollowerPoll()` here. Without it, a device

@@ -8,6 +8,70 @@
 
 ## Active Tasks
 
+### ~~TASK-1790~~: Restore timer follower poll as Realtime backstop (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (shipped 2026-05-18, v1.4.37, commit 4b68d919)
+
+**Problem**: KDE widget shows a running Pomodoro (e.g. 9m on task "לארגן משימות / טאבים") while the Vue/Electron app on the same machine shows idle `25:00`. Cross-device sync is broken.
+
+**Root cause**: Commit `f616303a` ("accumulated fixes — timer sync") removed `resumeFollowerPoll()` from two idle-transition sites in `src/stores/timer.ts` and made the no-active-session branch of `initializeSync()` in `src/composables/timer/useTimerSync.ts` rely **solely** on Supabase Realtime to detect sessions started by other devices. The same file (`src/composables/supabase/useRealtimeSubscription.ts:168`) explicitly handles `CLOSED`/`TIMED_OUT`/`CHANNEL_ERROR` as expected runtime conditions (BUG-1320). Any missed Realtime INSERT (cold-start race, WS drop, replication hiccup) leaves Vue permanently deaf — verified against VPS DB: matching session existed in `timer_sessions` with the right `user_id` and `task_id` while Vue showed idle.
+
+**Fix**:
+- `useTimerSync.ts:17` — bump `FOLLOWER_POLL_INTERVAL_MS` from 3000 to 15000 so continuous polling is cheap (~4 queries/min) and BUG-1085's anti-spam intent is preserved.
+- `useTimerSync.ts:~159` — don't auto-pause the poll on no-session; the poll IS the backstop.
+- `useTimerSync.ts:~640` — resume follower poll in init's no-session branch.
+- `useTimerSync.ts:~255` — drop `currentSession.value` requirement from the 30s backoff retry so idle polling resumes after network failures.
+- `timer.ts:~441, ~546` — restore `sync.resumeFollowerPoll()` on the two idle-transition paths f616303a stripped.
+- `packages/kde-widget/contents/ui/main.qml:4277` — defensive: add `&user_id=eq.<root.userId>` to widget's active-session SELECT (RLS already enforces server-side, this is hygiene).
+
+**Verification**: VPS DB confirms task `7009f622-e45f-428e-be41-f0e0900ee549` ("לארגן משימות / טאבים") had an active `timer_sessions` row during screenshot while Vue showed 25:00 idle.
+
+---
+
+### TASK-1789: Fix ~160 pre-existing type-check errors blocking CI (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+
+**Problem**: `npm run type-check` reports 166 errors across ~50 files (CanvasView, BoardView, PerformanceView, auth.ts, GroupNodeSimple, AISettingsTab, KanbanColumn, etc.). CI has been failing on the `check` job for at least 5 consecutive runs. The VPS deploy workflow runs separately from CI so deploys have not been blocked, but the red-CI state masks regressions any future PR might introduce.
+
+**Scope**: pure type-fix sweep. No behavior changes. Errors fall into known buckets — wrong vue-flow prop signatures on Canvas, missing null-guards on optional types, `Record<string, unknown>` mismatches on wrapper handlers, Pinia auth.ts typing drift, missing `from` field on NodeChange objects. Split into one PR per high-error file to keep blast radius small.
+
+**Why now**: with TASK-1785 landing clean type-wise (and the small companion fix to CalendarView/CalendarWeekView/CalendarDayView dropping 4 errors), every fix from this point should keep the bar green. Letting CI stay red trains the team to ignore the gate.
+
+**Top files by error count** (npm run type-check, 2026-05-18):
+- src/views/CanvasView.vue — 13
+- src/views/PerformanceView.vue — 12
+- src/stores/auth.ts — 12
+- src/components/settings/tabs/AISettingsTab.vue — 9
+- src/components/canvas/GroupNodeSimple.vue — 9
+- src/views/CalendarView.vue — 8
+- src/components/kanban/KanbanColumn.vue — 7
+
+**Out of scope**: no runtime/UX changes, no refactors, no behavior tweaks. Pure type annotations and minimal restructuring.
+
+---
+
+### TASK-1785: Calendar Shift+drag ripple-push reschedule mode (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-17)
+
+**Problem**: Dragging a calendar task to a later time only re-times that one task. When a meeting runs long or a block shifts, users have to manually re-time every later task on the day — N drags for one logical "everything moved later" action.
+
+**Goal**: Add a Shift modifier on calendar drag. Hold Shift + drag a task to a later time → every later task on the same day shifts forward by the same delta. Locked tasks are skipped. Crossing midnight spills into the next day. One drag = one undo step.
+
+**User-confirmed scope (v1)**:
+- Same day, all later tasks (not just colliders)
+- Spill into next day past midnight
+- Per-task `calendarLocked` field; ripple skips locked tasks (Push 2)
+- Live ghost-shift preview while Shift is held mid-drag
+- Negative delta (drag earlier) explicitly out of scope for v1
+
+**Status**: Push 1 + 1.5 shipped on `task-1785-ripple-shift` branch (PR #149). Includes pure ripple math + 15 unit tests, day + week view wiring (handlers shared via CalendarView), live ghost preview via `rippleGhostOffsets` map. Push 2 (Supabase migration + lock toggle UI) deferred.
+
+**Plan file**: `~/.claude/plans/yes-and-ask-me-flickering-river.md`
+
+---
+
 ### TASK-1773: Planning canvas interaction polish (🔄 IN PROGRESS)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS (opened 2026-05-01)
@@ -1386,6 +1450,55 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 ---
 
 ## Active Bugs (P0-P1)
+
+### ~~TASK-1788~~: Extract canvas rotation handlers from CanvasView.vue into useCanvasRotationLayout composable (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-18) | **Opened**: 2026-05-18
+
+**Problem**: BUG-1786 (v1.4.33) and BUG-1787 (v1.4.34) both touched canvas rotation/render logic locked inside `src/views/CanvasView.vue`. The newly-added findNode null-retry and canvasSyncInProgress pre-acquire could only be tested via E2E because they were inside an SFC, not a composable.
+
+**Fix**: Pure refactor — extracted `applyCanonicalLayoutMoves`, `applyCanonicalTaskMoves` (with BUG-1787 null-retry), `refreshRenderedNodesFromModel`, `releaseOnDoubleNextTick`, `getVisualNodePosition`, `getRenderedNodeSize`, `getRenderedCanvasZoom`, `handleRotateDayGroups` (with BUG-1787 sync-lock pre-acquire), `handleTidyLayout`, `runDayGroupCatchup`, plus `useDayGroupRotation`/`useTidyLayout` initialization into new composable `src/composables/canvas/useCanvasRotationLayout.ts`. CanvasView.vue net diff: -249 lines. Added 7 new unit tests covering the previously-uncovered paths.
+
+**Files**:
+- New: `src/composables/canvas/useCanvasRotationLayout.ts` (~360 lines, moved from CanvasView.vue)
+- Modified: `src/views/CanvasView.vue` (-249 net lines)
+- New: `tests/unit/canvas/canvas-rotation-layout.test.ts` (7 cases)
+
+**Verification**: 184/184 unit tests pass. No new TS errors. Build clean.
+
+**Plan file**: `~/.claude/plans/mighty-petting-stearns.md`
+
+---
+
+### ~~BUG-1787~~: Canvas rotate-days makes tasks visually disappear from groups (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-17, shipped v1.4.34)
+
+**Problem**: Clicking the rotate-days toolbar button left tasks counted in their groups but visually rendered outside the group rectangle. Day-of-week groups rotated correctly, but Today/Tomorrow power-keyword groups were skipped, leaving stale `dueDate` on their children.
+
+**Root cause**: (1) `rotateDayGroups()` only iterated `keyword.category === 'day_of_week'` groups, skipping Today/Tomorrow `date`-category groups. (2) `handleRotateDayGroups` did NOT pre-acquire `canvasSyncInProgress=true` before calling `rotateDayGroups()` — the SMART-GROUP `dueDate` writes fired the sync watcher mid-rotation, leaving Vue Flow node positions stale. `applyCanonicalTaskMoves` then silently skipped tasks whose `findNode` returned null.
+
+**Fix**: (1) Extended `rotateDayGroups` to rotate Today/Tomorrow too (left "this week"/"this weekend"/"later" alone as span keywords). (2) `handleRotateDayGroups` sets `canvasSyncInProgress.value = true` BEFORE invoking `rotateDayGroups`. (3) `applyCanonicalTaskMoves` collects null-findNode tasks and retries on `nextTick`. Still-missing tasks log a `[BUG-1787]` warning.
+
+**Files**: `src/composables/canvas/useDayGroupRotation.ts`, `src/views/CanvasView.vue`, `tests/unit/canvas/day-group-today-tomorrow-rotation.test.ts` (new, 8 cases), `tests/e2e/canvas-rotate-render-bug-1787.spec.ts` (new, 2 cases)
+
+**Shipped in**: v1.4.34 (deployed via `deploy-electron-update.sh` 2026-05-17)
+
+---
+
+### ~~BUG-1786~~: Canvas "Move to Today" leaves tasks bucketed as Tomorrow when they carry a calendar instance (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-17, shipped v1.4.33)
+
+**Problem**: On Canvas (Electron), moving a task to Today via drag, right-click date menu, or overdue "Reschedule → Today" updated `task.dueDate` and (for drag) `parentId`, but never touched `task.instances[].scheduledDate`. Because `getTaskInstances` (`src/stores/tasks.ts:30`) makes any reader prefer `instances[]` over `dueDate`, Board view, smart-group matchers, and day-rotation continued to bucket the task as Tomorrow.
+
+**Fix**: Added `realignInstancesToDate(task, dateStr)` helper in `src/stores/tasks/taskOperations.ts`. Skips recurring tasks and tasks with no instances (preserves BUG-1467). Wired into three canvas writers so the new `dueDate` and realigned `instances` ship atomically in a single `updateTask` call.
+
+**Files**: `src/stores/tasks/taskOperations.ts`, `src/composables/canvas/useCanvasInteractions.ts:855` (drag), `src/composables/canvas/node/useTaskNodeActions.ts:295` (overdue reschedule), `src/composables/tasks/useTaskContextMenuActions.ts` (context menu — dropped `isCalendarEvent` gate), `src/stores/__tests__/tasks.test.ts` (3 new helper cases).
+
+**Shipped in**: v1.4.33 (deployed via `deploy-electron-update.sh` 2026-05-17)
+
+---
 
 ### ~~BUG-1784~~: Canvas Tidy button flips 9+ tasks into a messy 2-column staggered grid (✅ DONE)
 

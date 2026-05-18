@@ -220,14 +220,11 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
   const { useCanvasUiStore } = await import('../stores/canvas/canvasUi')
   const canvasUiStore = useCanvasUiStore()
 
-  console.log(`🔄 [UNDO] Selective undo for: ${operation.type} (${operation.description})`)
-
   switch (operation.type) {
     case 'task-create': {
       // Undo creation = delete the created task
       const taskId = operation.affectedIds[0]
       if (taskId) {
-        console.log(`🔄 [UNDO] Removing created task: ${taskId}`)
         await taskStore.deleteTask(taskId, 'undo:revert-create')
         // Cancel only pending CREATEs — keep the DELETE we just enqueued
         try {
@@ -243,11 +240,8 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
     case 'task-delete': {
       // Undo deletion = restore the deleted task from snapshot
       const taskId = operation.affectedIds[0]
-      console.log('🔴 [UNDO] task-delete undo, looking for task:', taskId)
-      console.log('🔴 [UNDO] snapshotBefore has', snapshotBefore.tasks.length, 'tasks')
       const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
       if (deletedTask) {
-        console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
         // BUG-1737: Block realtime echoes FIRST (sync, before any await)
         taskStore.addPendingWrite(taskId)
         await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
@@ -260,7 +254,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
           console.warn('[UNDO] Failed to cancel pending sync ops:', e)
         }
         await taskStore.createTask(deletedTask)
-        console.log('🔴 [UNDO] createTask completed')
       } else {
         console.error('❌ [UNDO] Could not find task in snapshot:', taskId)
       }
@@ -272,7 +265,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       for (const taskId of operation.affectedIds) {
         const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
         if (deletedTask) {
-          console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
           // BUG-1737: Block realtime echoes FIRST (sync, before any await)
           taskStore.addPendingWrite(taskId)
           await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
@@ -297,7 +289,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
         const previousTask = snapshotBefore.tasks.find(t => t.id === taskId)
         const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
         if (previousTask && afterTask) {
-          console.log(`🔄 [UNDO] Restoring task state: ${previousTask.title}`)
           // Only restore the fields that actually differed between before and after
           const changedFields: Record<string, unknown> = {}
           for (const key of Object.keys(afterTask) as Array<keyof typeof afterTask>) {
@@ -318,7 +309,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
           }
         } else if (previousTask) {
           // afterTask missing (shouldn't happen for update/move) — fall back to full restore
-          console.log(`🔄 [UNDO] Fallback: restoring full task state: ${previousTask.title}`)
           await taskStore.updateTask(taskId, { ...previousTask }, 'USER')
         }
       }
@@ -329,7 +319,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       // Undo group creation = delete the created group
       const groupId = operation.affectedIds[0]
       if (groupId) {
-        console.log(`🔄 [UNDO] Removing created group: ${groupId}`)
         await canvasStore.deleteGroup(groupId)
       }
       break
@@ -340,7 +329,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       const groupId = operation.affectedIds[0]
       const deletedGroup = snapshotBefore.groups.find(g => g.id === groupId)
       if (deletedGroup) {
-        console.log(`🔄 [UNDO] Restoring deleted group: ${deletedGroup.name}`)
         await canvasStore.createGroup(deletedGroup)
       }
       break
@@ -352,7 +340,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       for (const groupId of operation.affectedIds) {
         const previousGroup = snapshotBefore.groups.find(g => g.id === groupId)
         if (previousGroup) {
-          console.log(`🔄 [UNDO] Restoring group state: ${previousGroup.name}`)
           await canvasStore.updateGroup(groupId, {
             ...previousGroup,
             position: previousGroup.position,
@@ -371,8 +358,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       if (imageData) {
         const { useCanvasImagesStore } = await import('@/stores/canvasImages')
         const store = useCanvasImagesStore()
-        const typedData = imageData as { id: string; imageUrl: string; position: { x: number; y: number } }
-        console.log(`🔄 [UNDO] Restoring canvas image: id=${typedData.id}, pos=(${typedData.position.x},${typedData.position.y}), url=${typedData.imageUrl.slice(0, 60)}...`)
         store.restoreCanvasImage(imageData as import('@/stores/canvas/types').CanvasImage)
       } else {
         console.error('❌ [UNDO] image-delete: no _imageData in snapshot!')
@@ -383,7 +368,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
     case 'legacy':
     default: {
       // Fall back to full-state restoration for legacy entries
-      console.log(`🔄 [UNDO] Legacy mode - restoring full state`)
       canvasStore.setGroups([...snapshotBefore.groups])
       await taskStore.restoreState(snapshotBefore.tasks)
       break
@@ -411,15 +395,12 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
   const { useCanvasUiStore } = await import('../stores/canvas/canvasUi')
   const canvasUiStore = useCanvasUiStore()
 
-  console.log(`🔁 [REDO] Selective redo for: ${operation.type} (${operation.description})`)
-
   switch (operation.type) {
     case 'task-create': {
       // Redo creation = recreate the task
       const taskId = operation.affectedIds[0]
       const createdTask = snapshotAfter.tasks.find(t => t.id === taskId)
       if (createdTask) {
-        console.log(`🔁 [REDO] Re-creating task: ${createdTask.title}`)
         await taskStore.createTask(createdTask)
         // Cancel only pending DELETEs — keep the CREATE we just enqueued
         try {
@@ -435,7 +416,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
     case 'task-delete': {
       // Redo deletion = delete the task again
       const taskId = operation.affectedIds[0]
-      console.log(`🔁 [REDO] Re-deleting task: ${taskId}`)
       await taskStore.deleteTask(taskId, 'redo:re-delete')
         // Cancel only pending CREATEs — keep the DELETE we just enqueued
         try {
@@ -450,7 +430,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
     case 'task-bulk-delete': {
       // Redo bulk deletion = delete all tasks again
       for (const taskId of operation.affectedIds) {
-        console.log(`🔁 [REDO] Re-deleting task: ${taskId}`)
         await taskStore.deleteTask(taskId, 'redo:re-delete')
         // Cancel only pending CREATEs — keep the DELETE we just enqueued
         try {
@@ -471,7 +450,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
         const beforeTask = snapshotBefore.tasks.find(t => t.id === taskId)
         const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
         if (afterTask && beforeTask) {
-          console.log(`🔁 [REDO] Re-applying task state: ${afterTask.title}`)
           // Only re-apply the fields that actually differed between before and after
           const changedFields: Record<string, unknown> = {}
           for (const key of Object.keys(afterTask) as Array<keyof typeof afterTask>) {
@@ -484,7 +462,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
           }
         } else if (afterTask) {
           // beforeTask missing (shouldn't happen for update/move) — fall back to full apply
-          console.log(`🔁 [REDO] Fallback: re-applying full task state: ${afterTask.title}`)
           await taskStore.updateTask(taskId, { ...afterTask }, 'USER')
         }
       }
@@ -496,7 +473,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       const groupId = operation.affectedIds[0]
       const createdGroup = snapshotAfter.groups.find(g => g.id === groupId)
       if (createdGroup) {
-        console.log(`🔁 [REDO] Re-creating group: ${createdGroup.name}`)
         await canvasStore.createGroup(createdGroup)
       }
       break
@@ -505,7 +481,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
     case 'group-delete': {
       // Redo group deletion = delete the group again
       const groupId = operation.affectedIds[0]
-      console.log(`🔁 [REDO] Re-deleting group: ${groupId}`)
       await canvasStore.deleteGroup(groupId)
       break
     }
@@ -516,7 +491,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       for (const groupId of operation.affectedIds) {
         const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
         if (afterGroup) {
-          console.log(`🔁 [REDO] Re-applying group state: ${afterGroup.name}`)
           await canvasStore.updateGroup(groupId, {
             ...afterGroup,
             position: afterGroup.position,
@@ -535,7 +509,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
         const { useCanvasImagesStore } = await import('@/stores/canvasImages')
         const store = useCanvasImagesStore()
         await store.removeCanvasImage((imageData as { id: string }).id)
-        console.log(`🔁 [REDO] Re-deleted canvas image: ${(imageData as { id: string }).id}`)
       }
       return true  // Early return — skip requestSync
     }
@@ -543,7 +516,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
     case 'legacy':
     default: {
       // Fall back to full-state restoration for legacy entries
-      console.log(`🔁 [REDO] Legacy mode - restoring full state`)
       canvasStore.setGroups([...snapshotAfter.groups])
       await taskStore.restoreState(snapshotAfter.tasks)
       break
@@ -597,11 +569,8 @@ const showUndoRedoToast = async (action: 'undo' | 'redo', description: string) =
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
 // BUG-309-B: Enhanced with operation-aware selective restoration
 const performUndo = async () => {
-  console.log('🔴 [UNDO] performUndo called, operationStack length:', operationStack.value.length)
-
   // BUG-309-B: Try operation-aware undo first
   if (useOperationAwareUndo && operationStack.value.length > 0) {
-    console.log('🔴 [UNDO] Using operation-aware undo')
     const operationSnapshot = operationStack.value.pop()!
     redoOperationStack.value.push(operationSnapshot)
 
@@ -818,9 +787,6 @@ const commitOperation = async (handle?: OperationHandle) => {
     commit()
   }
 
-  const operationDescription = handle.operation.description
-
-  console.log(`✅ [UNDO] Committed operation: ${operationDescription}`)
   return true
 }
 
@@ -902,8 +868,6 @@ const deleteTaskWithUndo = async (taskId: string) => {
  * Uses the same undo mechanism as soft delete - undo will recreate the task from snapshot
  */
 const permanentlyDeleteTaskWithUndo = async (taskId: string) => {
-  console.log('🔴 [UNDO] permanentlyDeleteTaskWithUndo called:', taskId)
-
   // Dynamic import
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
@@ -915,23 +879,17 @@ const permanentlyDeleteTaskWithUndo = async (taskId: string) => {
     return
   }
 
-  console.log('🔴 [UNDO] Task found, capturing snapshot before deletion:', taskToDelete.title)
-
   const handle = await beginOperation({
     type: 'task-delete',
     affectedIds: [taskId],
     description: `Permanently delete task: ${taskToDelete.title}`
   })
 
-  console.log('🔴 [UNDO] beginOperation completed, snapshot has', handle.before.tasks.length, 'tasks')
-
   try {
     await taskStore.permanentlyDeleteTask(taskId)
-    console.log('🔴 [UNDO] permanentlyDeleteTask completed')
 
     await nextTick()
     await commitOperation(handle)
-    console.log('🔴 [UNDO] commitOperation completed, operationStack length:', operationStack.value.length)
   } catch (error) {
     console.error('❌ permanentlyDeleteTaskWithUndo failed:', error)
     throw error
@@ -1143,6 +1101,52 @@ const bulkMoveToInboxWithUndo = async (taskIds: string[]) => {
   }
 }
 
+// TASK-1785: Shift+drag ripple-push reschedule on the calendar.
+// Pushes one combined undo entry that covers re-timing N tasks (the dragged task
+// plus every later same-day task that ripple-shifted with it).
+// Bypasses beginOperation/commitOperation deliberately — same reason as
+// bulkMoveToInboxWithUndo above (BUG-1739: drag-settling can steal pendingOperation).
+const rippleShiftWithUndo = async (
+  taskUpdates: Array<{ id: string; scheduledDate: string; scheduledTime: string; instanceId?: string }>,
+  description?: string
+) => {
+  if (taskUpdates.length === 0) return
+
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+
+  const affectedIds = taskUpdates.map(u => u.id)
+  const snapshotBefore = await captureCurrentState(affectedIds)
+
+  // Apply schedule updates in order. updateTaskWithSchedule is atomic per task
+  // and respects existing pending-write echo suppression.
+  for (const update of taskUpdates) {
+    await taskStore.updateTaskWithSchedule(update.id, {
+      scheduledDate: update.scheduledDate,
+      scheduledTime: update.scheduledTime,
+      instanceId: update.instanceId
+    })
+  }
+
+  await nextTick()
+  const snapshotAfter = await captureCurrentState(affectedIds)
+
+  const operation: UndoOperation = {
+    type: 'task-move',
+    affectedIds: [...affectedIds],
+    description: description ?? `Ripple shift ${taskUpdates.length} task${taskUpdates.length > 1 ? 's' : ''}`,
+    timestamp: Date.now()
+  }
+  operationStack.value.push({ operation, snapshotBefore, snapshotAfter })
+  if (operationStack.value.length > 30) operationStack.value.shift()
+  redoOperationStack.value = []
+
+  if (unifiedState && commit) {
+    unifiedState.value = snapshotAfter
+    commit()
+  }
+}
+
 // TASK-1690: Push an image deletion onto the global operation stack for Ctrl+Z support.
 // This is called by useCanvasHotkeys and CanvasView context menu after removing an image.
 export function pushImageDeleteUndo(imageData: { id: string; imageUrl: string; position: { x: number; y: number }; createdAt: string }) {
@@ -1223,6 +1227,7 @@ export function getUndoSystem() {
     permanentlyDeleteTaskWithUndo,
     bulkDeleteTasksWithUndo,
     bulkMoveToInboxWithUndo,
+    rippleShiftWithUndo,
     updateTaskWithUndo,
     createTaskWithUndo,
 

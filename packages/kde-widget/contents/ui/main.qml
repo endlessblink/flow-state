@@ -3855,12 +3855,15 @@ PlasmoidItem {
         }
     }
 
-    // Sync polling - adaptive: 2s when active session, 30s when idle
+    // Sync polling - adaptive: 2s when active session, 5s when idle
     Timer {
         id: syncTimer
         // BUG-1292: Keep 2s polling during session transitions (work→break, break→work)
         // BUG-1347: Use reactive isInTransition instead of impure Date.now() in binding
-        interval: (root.hasActiveSession || root.sessionJustCompleted || root.isInTransition) ? 2000 : 30000
+        // TASK-1790: Bumped idle cadence from 30s → 5s. Worst-case pickup of a session
+        // started in the Vue app drops from ~30s to ~5s. Cost is 12 q/min instead of 2 —
+        // still trivial for a single REST call.
+        interval: (root.hasActiveSession || root.sessionJustCompleted || root.isInTransition) ? 2000 : 5000
         running: root.isAuthenticated
         repeat: true
         onTriggered: root.fetchCurrentSession()
@@ -4274,7 +4277,10 @@ PlasmoidItem {
         if (root.debugLogging) console.log("[SYNC] Fetching current session... userId:", root.userId)
 
         var xhr = new XMLHttpRequest()
-        var url = root.supabaseUrl + "/rest/v1/timer_sessions?is_active=eq.true&select=*&order=updated_at.desc&limit=1"
+        // TASK-1790: Filter by user_id defensively. RLS enforces this server-side, but
+        // matching the write-path (which already filters by user_id) keeps reads and
+        // writes symmetric and avoids surprises in dev/multi-tenant setups.
+        var url = root.supabaseUrl + "/rest/v1/timer_sessions?is_active=eq.true&user_id=eq." + root.userId + "&select=*&order=updated_at.desc&limit=1"
 
         xhr.open("GET", url, true)
         xhr.setRequestHeader("apikey", root.supabaseKey)

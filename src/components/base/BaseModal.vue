@@ -102,8 +102,6 @@
 
 <script setup lang="ts">
 // BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
-defineOptions({ inheritAttrs: false })
-
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
@@ -135,6 +133,9 @@ interface Props {
   footerClass?: string
   trapFocus?: boolean
 }
+
+// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
+defineOptions({ inheritAttrs: false })
 
 const props = withDefaults(defineProps<Props>(), {
   title: undefined,

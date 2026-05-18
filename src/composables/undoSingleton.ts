@@ -244,16 +244,16 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       if (deletedTask) {
         // BUG-1737: Block realtime echoes FIRST (sync, before any await)
         taskStore.addPendingWrite(taskId)
-        await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
-        // BUG-1737: Cancel queue DELETE BEFORE enqueueing CREATE to prevent race
-        // (sync orchestrator's BUG-1534 logic cancels CREATEs when processing DELETEs)
-        try {
-          const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
-          await deleteOperationsByType('task', taskId, 'delete')
-        } catch (e) {
+        await taskStore.restoreTaskFromUndo(deletedTask)
+
+        // Remote cleanup must not block the visible restore. The queued restore update
+        // is idempotent and will run after any already-pending delete if cancellation is late.
+        void clearTombstoneForUndo(taskId)
+        void import('@/services/offline/writeQueueDB').then(({ deleteOperationsByType }) => {
+          return deleteOperationsByType('task', taskId, 'delete')
+        }).catch((e) => {
           console.warn('[UNDO] Failed to cancel pending sync ops:', e)
-        }
-        await taskStore.createTask(deletedTask)
+        })
       } else {
         console.error('❌ [UNDO] Could not find task in snapshot:', taskId)
       }
@@ -262,25 +262,27 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
 
     case 'task-bulk-delete': {
       // Undo bulk deletion = restore all deleted tasks
+      const restoredIds: string[] = []
       for (const taskId of operation.affectedIds) {
         const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
         if (deletedTask) {
           // BUG-1737: Block realtime echoes FIRST (sync, before any await)
           taskStore.addPendingWrite(taskId)
-          await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
-          // BUG-1737: Cancel queue DELETE BEFORE enqueueing CREATE
-          try {
-            const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
-            await deleteOperationsByType('task', taskId, 'delete')
-          } catch (e) {
-            console.warn('[UNDO] Failed to cancel pending sync ops:', e)
-          }
-          await taskStore.createTask(deletedTask)
+          restoredIds.push(taskId)
+          await taskStore.restoreTaskFromUndo(deletedTask)
         }
+      }
+
+      if (restoredIds.length > 0) {
+        for (const taskId of restoredIds) void clearTombstoneForUndo(taskId)
+        void import('@/services/offline/writeQueueDB').then(async ({ deleteOperationsByType }) => {
+          await Promise.all(restoredIds.map(taskId => deleteOperationsByType('task', taskId, 'delete')))
+        }).catch((e) => {
+          console.warn('[UNDO] Failed to cancel pending sync ops:', e)
+        })
       }
       break
     }
-
     case 'task-update':
     case 'task-move': {
       // Undo update/move = restore only the fields that actually changed in the original operation

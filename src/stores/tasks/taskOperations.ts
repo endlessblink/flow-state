@@ -273,6 +273,61 @@ export function useTaskOperations(
         }
     }
 
+    const restoreTaskFromUndo = async (taskData: Task) => {
+        const restoredTask: Task = {
+            ...taskData,
+            title: sanitizeTaskTitle(taskData.title),
+            _soft_deleted: false,
+            deletedAt: undefined,
+            updatedAt: new Date()
+        }
+
+        manualOperationInProgress.value = true
+        addPendingWrite(restoredTask.id)
+
+        try {
+            const existingIdx = _rawTasks.value.findIndex(t => t.id === restoredTask.id)
+            if (existingIdx !== -1) {
+                _rawTasks.value[existingIdx] = restoredTask
+            } else {
+                _rawTasks.value.push(restoredTask)
+            }
+
+            void cacheTasks([..._rawTasks.value])
+
+            const authStore = useAuthStore()
+            if (!authStore.isAuthenticated) {
+                await saveTasksToStorage(_rawTasks.value, 'undo-restoreTask')
+            }
+
+            const userId = authStore.user?.id
+            if (userId) {
+                const payload: Record<string, unknown> = {
+                    ...toSupabaseTask(restoredTask, userId),
+                    user_id: userId,
+                    is_deleted: false,
+                    deleted_at: null
+                }
+                delete payload.position_version
+
+                const syncOrchestrator = useSyncOrchestrator()
+                void syncOrchestrator.enqueue({
+                    entityType: 'task',
+                    operation: 'update',
+                    entityId: restoredTask.id,
+                    payload: JSON.parse(JSON.stringify(payload))
+                }).catch((error) => {
+                    console.warn(`⚠️ [UNDO] Failed to queue restore for ${restoredTask.id.slice(0, 8)}:`, error)
+                })
+            }
+
+            triggerCanvasSync()
+            return restoredTask
+        } finally {
+            manualOperationInProgress.value = false
+        }
+    }
+
     /**
      * BUG-1321: Bidirectional date field sync
      * When dueDate, scheduledDate, or instances change, keep the others in sync.
@@ -1612,6 +1667,7 @@ export function useTaskOperations(
 
     return {
         createTask,
+        restoreTaskFromUndo,
         updateTask,
         deleteTask,
         permanentlyDeleteTask,

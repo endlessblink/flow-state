@@ -108,12 +108,15 @@
       </div>
     </NPopover>
 
-    <!-- TASK-1075: Search Toggle Button -->
+  </div>
+
+  <!-- TASK-1075: Search Toggle Button -->
+  <div v-if="!isCollapsed" class="search-toggle-row">
     <button
-      v-if="!isCollapsed"
       class="search-toggle-btn"
       :class="{ active: isSearchExpanded || searchQuery }"
       title="Search tasks"
+      aria-label="Search tasks"
       @click="toggleSearch"
     >
       <Search :size="14" />
@@ -357,12 +360,13 @@ const handleTimeFilterSelect = (key: string) => {
 /* Inheriting styles from UnifiedInboxPanel to keep consistency */
 .inbox-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--glass-border);
   background: transparent;
   gap: var(--space-2);
-  height: 44px;
+  min-height: 44px;
   flex-shrink: 0;
   /* BUG-1078: Fill parent width; flex children use flex-shrink: 0 to prevent squishing */
   width: 100%;
@@ -666,6 +670,13 @@ const handleTimeFilterSelect = (key: string) => {
 }
 
 /* TASK-1075: Search Styles */
+.search-toggle-row {
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--border-light);
+}
+
 .search-toggle-btn {
   display: flex;
   align-items: center;
@@ -695,7 +706,7 @@ const handleTimeFilterSelect = (key: string) => {
 }
 
 .search-input-row {
-  padding: var(--space-2) var(--space-3);
+  padding: 0 var(--space-3) var(--space-2);
   border-bottom: 1px solid var(--border-light);
   background: var(--surface-ground);
 }

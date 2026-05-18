@@ -5,7 +5,6 @@
     :title="priorityTooltip"
     :aria-label="priorityTooltip"
     type="button"
-    tabindex="-1"
     @click.stop="$emit('cycle')"
   />
 </template>

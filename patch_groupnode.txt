@@ -1,0 +1,29 @@
+<<<<<<< SEARCH
+const section = computed(() => props.data?.section || props.data)
+const isCollapsed = computed(() => !!props.data?.isCollapsed)
+
+// BUG-225 FIX: Get color reactively from store instead of static props.data
+// This ensures color updates immediately when changed in the modal without page refresh
+const groupColor = computed(() => {
+  const groupId = props.data?.id
+  if (!groupId) return props.data?.color || '#3b82f6'
+  const storeGroup = canvasStore.groups.find(g => g.id === groupId)
+  return storeGroup?.color || props.data?.color || '#3b82f6'
+})
+=======
+const dataAsAny = computed(() => props.data as any)
+
+// Computed Properties
+// Ensure we handle both structure formats (direct props or nested in data)
+const section = computed(() => dataAsAny.value?.section || props.data)
+const isCollapsed = computed(() => !!dataAsAny.value?.isCollapsed)
+
+// BUG-225 FIX: Get color reactively from store instead of static props.data
+// This ensures color updates immediately when changed in the modal without page refresh
+const groupColor = computed(() => {
+  const groupId = dataAsAny.value?.id
+  if (!groupId) return dataAsAny.value?.color || '#3b82f6'
+  const storeGroup = canvasStore.groups.find(g => g.id === groupId)
+  return storeGroup?.color || dataAsAny.value?.color || '#3b82f6'
+})
+>>>>>>> REPLACE

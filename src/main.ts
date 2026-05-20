@@ -14,6 +14,7 @@ import { PiniaSharedState } from 'pinia-shared-state'
 import router from './router'
 import App from './App.vue'
 import i18n from './i18n'
+import { registerRendererAgentBridge } from './domain/agent/rendererBridge'
 
   // Early platform detection - must run BEFORE CSS import for proper fallback application
   // TASK-1718: Electron migration — detect Electron via preload's window.electronAPI
@@ -111,6 +112,7 @@ async function initializeApp() {
   app.use(pinia)
   app.use(router)
   app.use(i18n)
+  registerRendererAgentBridge()
 
   // Global error handler for extension compatibility
   app.config.errorHandler = (err, _vm, info) => {

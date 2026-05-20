@@ -42,6 +42,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
   oauthWaitForCallback: () => ipcRenderer.invoke('oauth:waitForCallback'),
   oauthCancel: () => ipcRenderer.invoke('oauth:cancel'),
 
+  // Local agent bridge (disabled by default; no token exposed to renderer)
+  agentGetStatus: () => ipcRenderer.invoke('agent:status'),
+  agentEnable: () => ipcRenderer.invoke('agent:enable'),
+  agentDisable: () => ipcRenderer.invoke('agent:disable'),
+  onAgentReadRequest: (callback: (payload: unknown) => Promise<unknown> | unknown) => {
+    ipcRenderer.on('agent:read-request', async (_event, payload: { requestId?: string }) => {
+      if (!payload.requestId) return
+      try {
+        const result = await callback(payload)
+        await ipcRenderer.invoke('agent:read-response', { requestId: payload.requestId, result })
+      } catch (error) {
+        await ipcRenderer.invoke('agent:read-response', {
+          requestId: payload.requestId,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+    })
+  },
+
   // Auto-updater events
   onUpdateAvailable: (callback: (info: unknown) => void) => {
     ipcRenderer.on('updater:available', (_event, info) => callback(info))
@@ -83,6 +102,10 @@ declare global {
       oauthStart: () => Promise<number>
       oauthWaitForCallback: () => Promise<string>
       oauthCancel: () => Promise<void>
+      agentGetStatus: () => Promise<unknown>
+      agentEnable: () => Promise<unknown>
+      agentDisable: () => Promise<unknown>
+      onAgentReadRequest: (callback: (payload: unknown) => Promise<unknown> | unknown) => void
       onUpdateAvailable: (callback: (info: unknown) => void) => void
       onUpdateDownloadProgress: (callback: (progress: unknown) => void) => void
       onUpdateDownloaded: (callback: () => void) => void

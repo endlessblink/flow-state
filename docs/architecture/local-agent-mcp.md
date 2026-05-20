@@ -1,8 +1,8 @@
 # Local Agent MCP Architecture
 
-**Status**: Draft for TASK-1792
+**Status**: Implemented locally through TASK-1806
 **Scope**: Local-only desktop agent access
-**Last updated**: 2026-05-18
+**Last updated**: 2026-05-20
 
 ## Decision
 
@@ -115,6 +115,59 @@ Initial MCP tools should be read-only:
 
 Read tools must exclude soft-deleted records by default and clearly report sync/offline status when relevant.
 
+## Local Setup
+
+FlowState's MCP server is launched by an external local agent over stdio:
+
+```bash
+npm run mcp:flowstate
+```
+
+For a quick tool-surface smoke test without attaching an agent:
+
+```bash
+npm run mcp:flowstate -- --list-tools
+```
+
+The desktop app owns the actual data bridge. The MCP process needs these environment variables, which are issued only when Local Agent Access is enabled inside the Electron app:
+
+```bash
+FLOWSTATE_AGENT_BRIDGE_URL=http://127.0.0.1:<session-port>
+FLOWSTATE_AGENT_BRIDGE_TOKEN=<session-token>
+```
+
+Do not hardcode these values. Do not store the token in a repo file. The token is per local bridge session and must remain outside the renderer UI and preload public API.
+
+Generic MCP client entry:
+
+```json
+{
+  "mcpServers": {
+    "flowstate": {
+      "command": "npm",
+      "args": ["run", "mcp:flowstate"],
+      "cwd": "/absolute/path/to/flow-state"
+    }
+  }
+}
+```
+
+Agent runtime requirements:
+
+- FlowState desktop app must be running.
+- Local Agent Access must be enabled in AI settings.
+- The MCP client must launch the stdio command from this repo.
+- Bridge traffic must stay on loopback HTTP only.
+- Tool calls should expect structured denial/error/conflict results and not retry blindly.
+
+Initial manual checks:
+
+1. Start FlowState desktop.
+2. Open AI settings and enable Local Agent Access.
+3. Run `npm run mcp:flowstate -- --list-tools` and confirm read plus dry-run write tools are listed.
+4. From an MCP client, call `flowstate_get_context` and confirm the returned workspace is the expected personal or active workspace.
+5. Call a write tool with `dryRun: true`, an explicit `workspace`, and an `idempotencyKey`; confirm it appears in the in-app approval queue instead of mutating data.
+
 ## Safe Write Graduation
 
 Write tools may be added only after read-only tools and workspace isolation tests are stable.
@@ -137,6 +190,8 @@ Required write behavior:
 - Destructive and bulk operations require in-app approval.
 - Permanent delete remains unavailable.
 - All writes go through existing FlowState actions and sync queue behavior.
+
+Current local implementation exposes write tools as dry-run previews only. Approval decisions are recorded in the local in-app queue; real mutation execution remains intentionally unavailable until a later task wires approval to existing store/domain actions.
 
 ## Approval Policy
 

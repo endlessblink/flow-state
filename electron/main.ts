@@ -9,6 +9,7 @@ import { registerHttpHandlers } from './ipc/http'
 import { registerWindowHandlers } from './ipc/window'
 import { registerUpdater } from './updater'
 import { registerOAuthHandlers } from './ipc/oauth'
+import { registerAgentBridgeHandlers } from './ipc/agentBridge'
 
 // Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
 app.setName('flow-state')
@@ -100,6 +101,7 @@ registerStoreHandlers()
 registerHttpHandlers()
 registerWindowHandlers()
 registerOAuthHandlers()
+registerAgentBridgeHandlers(() => mainWindow)
 ipcMain.handle('app:getVersion', () => app.getVersion())
 
 // App lifecycle

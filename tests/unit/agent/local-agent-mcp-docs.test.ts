@@ -8,7 +8,7 @@ const architectureDoc = readFileSync(join(root, 'docs/architecture/local-agent-m
 
 describe('local agent MCP planning docs', () => {
   it('tracks the local-only MCP lane and all planned sub-tasks', () => {
-    expect(masterPlan).toContain('FEATURE-1791: Local-only MCP access for external AI agents')
+    expect(masterPlan).toContain('FEATURE-1791~~: Local-only MCP access for external AI agents')
 
     for (let taskId = 1792; taskId <= 1806; taskId++) {
       expect(masterPlan, `TASK-${taskId} should be tracked in the MCP lane`).toContain(`TASK-${taskId}`)
@@ -20,6 +20,15 @@ describe('local agent MCP planning docs', () => {
     expect(architectureDoc).toContain('Preferred transport: stdio MCP')
     expect(architectureDoc).toContain('Public API access is out of scope for this phase')
     expect(architectureDoc).toContain('The MCP server is a protocol adapter')
+  })
+
+  it('documents local MCP setup without persisting bridge secrets', () => {
+    expect(architectureDoc).toContain('npm run mcp:flowstate')
+    expect(architectureDoc).toContain('FLOWSTATE_AGENT_BRIDGE_URL')
+    expect(architectureDoc).toContain('FLOWSTATE_AGENT_BRIDGE_TOKEN')
+    expect(architectureDoc).toContain('Do not hardcode these values')
+    expect(architectureDoc).toContain('Do not store the token in a repo file')
+    expect(architectureDoc).toContain('Local Agent Access must be enabled in AI settings')
   })
 
   it('preserves hard safety bans for agent access', () => {

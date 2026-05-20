@@ -1,6 +1,6 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: May 18, 2026
+> **Last Updated**: May 19, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
@@ -8,9 +8,9 @@
 
 ## Active Tasks
 
-### FEATURE-1791: Local-only MCP access for external AI agents (🔄 IN PROGRESS)
+### ~~FEATURE-1791~~: Local-only MCP access for external AI agents (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-20)
 
 **Problem**: External local AI agents should be able to read FlowState context and eventually edit tasks/projects, but direct Supabase, IndexedDB, localStorage, or raw Pinia access would bypass workspace scoping, soft-delete/tombstone rules, offline write queue guarantees, realtime protections, and UI/domain invariants.
 
@@ -18,30 +18,32 @@
 
 **Architecture decision**: local stdio MCP first; no public API for this phase. MCP tools must call FlowState agent commands, which route through existing stores/domain actions. No service-role keys, raw SQL, direct IndexedDB/localStorage writes, direct `_rawTasks` mutation, or permanent delete tools.
 
+**Resolution**: Completed the local-only MCP lane through read tools, dry-run write previews, Electron loopback bridge, workspace isolation, audit logging, settings/approval UI, idempotency/conflict handling, test coverage, and setup documentation. Real write execution after approval remains intentionally unavailable until a future task wires approved previews to existing app actions.
+
 **Lane tasks**:
-1. TASK-1792 — Define local-agent threat model and safety rules
-2. TASK-1793 — Design FlowState Agent Command Layer
-3. TASK-1794 — Implement read-only agent command handlers
-4. TASK-1795 — Build local stdio MCP server skeleton
-5. TASK-1796 — Add Electron local agent bridge
-6. TASK-1797 — Connect MCP read tools to FlowState bridge
-7. TASK-1798 — Add workspace isolation validation
-8. TASK-1799 — Add local agent audit log
-9. TASK-1800 — Add agent settings and connected indicator
-10. TASK-1801 — Add dry-run write command layer
-11. TASK-1802 — Add safe write MCP tools
-12. TASK-1803 — Add in-app approval UI for agent writes
-13. TASK-1804 — Add idempotency and conflict handling
-14. TASK-1805 — Add local agent access test coverage
-15. TASK-1806 — Document MCP setup for local agents
+1. ~~TASK-1792~~ — Define local-agent threat model and safety rules ✅ DONE
+2. ~~TASK-1793~~ — Design FlowState Agent Command Layer ✅ DONE
+3. ~~TASK-1794~~ — Implement read-only agent command handlers ✅ DONE
+4. ~~TASK-1795~~ — Build local stdio MCP server skeleton ✅ DONE
+5. ~~TASK-1796~~ — Add Electron local agent bridge ✅ DONE
+6. ~~TASK-1797~~ — Connect MCP read tools to FlowState bridge ✅ DONE
+7. ~~TASK-1798~~ — Add workspace isolation validation ✅ DONE
+8. ~~TASK-1799~~ — Add local agent audit log ✅ DONE
+9. ~~TASK-1800~~ — Add agent settings and connected indicator ✅ DONE
+10. ~~TASK-1801~~ — Add dry-run write command layer ✅ DONE
+11. ~~TASK-1802~~ — Add safe write MCP tools ✅ DONE
+12. ~~TASK-1803~~ — Add in-app approval UI for agent writes ✅ DONE
+13. ~~TASK-1804~~ — Add idempotency and conflict handling ✅ DONE
+14. ~~TASK-1805~~ — Add local agent access test coverage ✅ DONE
+15. ~~TASK-1806~~ — Document MCP setup for local agents ✅ DONE
 
 **Files**: `docs/architecture/local-agent-mcp.md`, `src/domain/agent/`, `electron/`, `tools/flowstate-mcp/`, `tests/unit/agent/`, `tests/e2e/agent/`
 
 ---
 
-### TASK-1792: Define local-agent threat model and safety rules (🔄 IN PROGRESS)
+### ~~TASK-1792~~: Define local-agent threat model and safety rules (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-18)
 
 **Problem**: Before exposing FlowState to external agents, the allowed access model, trust boundaries, and hard safety bans need to be explicit so later MCP/API work does not accidentally bypass app invariants.
 
@@ -56,145 +58,210 @@
 
 **Files**: `docs/architecture/local-agent-mcp.md`
 
+**Verification**: `tests/unit/agent/local-agent-mcp-docs.test.ts` locks the lane, stdio-first local-only decision, hard bans, and write graduation rules.
+
 ---
 
-### TASK-1793: Design FlowState Agent Command Layer (📋 PLANNED)
+### ~~TASK-1793~~: Design FlowState Agent Command Layer (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Design typed command contracts under `src/domain/agent/` so MCP tools call app-level commands instead of database/storage internals.
 
+**Acceptance criteria**:
+1. Defines read-only and write command names as typed contracts
+2. Defines workspace scope and resolved workspace result shapes
+3. Defines dry-run diff, audit summary, and command result contracts
+4. Defines per-command safety policies for dry-run, approval, idempotency, and destructive risk
+5. Exposes forbidden capabilities as runtime constants for MCP/bridge adapters to enforce
+
 **Files**: `src/domain/agent/`, `docs/architecture/local-agent-mcp.md`
+
+**Resolution**: Added `src/domain/agent/` with read-only/write command names, workspace scope contracts, command result/diff/audit shapes, forbidden capability constants, and per-command safety policies for dry-run, approval, idempotency, and destructive risk.
+
+**Verification**: `tests/unit/agent/agent-command-contracts.test.ts` locks the contract surface and safety policies.
 
 ---
 
-### TASK-1794: Implement read-only agent command handlers (📋 PLANNED)
+### ~~TASK-1794~~: Implement read-only agent command handlers (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Implement read commands for context, workspaces, task search, task detail, projects, today, and sync status using app state/domain services.
+
+**Resolution**: Added pure read handlers in `src/domain/agent/readHandlers.ts`. The handlers use injected safe app-state snapshots, resolve active/personal/shared workspace scope, exclude soft-deleted tasks by default, deny unavailable workspaces, and return structured audit metadata.
+
+**Verification**: `tests/unit/agent/agent-read-handlers.test.ts` covers personal workspace isolation, shared workspace scoping, unavailable workspace denial, soft-delete exclusion, today filtering, and sync status output.
 
 **Files**: `src/domain/agent/`, `tests/unit/agent/`
 
 ---
 
-### TASK-1795: Build local stdio MCP server skeleton (📋 PLANNED)
+### ~~TASK-1795~~: Build local stdio MCP server skeleton (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Add a thin Node/TypeScript stdio MCP server that exposes read-only FlowState tools and delegates all behavior to the FlowState bridge.
+
+**Resolution**: Added `tools/flowstate-mcp/` with a local stdio JSON-RPC server skeleton, read-only FlowState tool definitions, and `npm run mcp:flowstate`. Until the Electron bridge exists, tool calls return a structured `flowstate_bridge_unavailable` error instead of touching app data.
+
+**Verification**: `tests/unit/agent/flowstate-mcp-server.test.ts` locks read-only tool exposure, workspace-scoped schemas, initialize/tools-list responses, and bridge-unavailable behavior.
 
 **Files**: `tools/flowstate-mcp/`, `package.json`
 
 ---
 
-### TASK-1796: Add Electron local agent bridge (📋 PLANNED)
+### ~~TASK-1796~~: Add Electron local agent bridge (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Add a desktop-only local bridge from the MCP server to the running FlowState app with explicit enablement and per-session authorization.
+
+**Resolution**: Added Electron bridge state and IPC handlers. The bridge is disabled by default, uses stdio transport, generates an internal per-session token on enable, clears it on disable, and exposes only status/enable/disable to the renderer. The session token is reserved for future Electron-managed MCP launch and is not exposed through preload.
+
+**Verification**: `tests/unit/agent/electron-agent-bridge.test.ts` covers disabled default state, internal token issuance, token rotation, and renderer API token non-exposure.
 
 **Files**: `electron/`, `src/types/`, `src/stores/settings.ts`
 
 ---
 
-### TASK-1797: Connect MCP read tools to FlowState bridge (📋 PLANNED)
+### ~~TASK-1797~~: Connect MCP read tools to FlowState bridge (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Route MCP read tools through the bridge into the renderer/domain command layer and return structured, app-state-aware results.
+
+**Resolution**: MCP read tools now call a token-protected local Electron loopback bridge, which forwards requests to the renderer and dispatches only registered read-only FlowState agent commands against safe app-state snapshots. The bridge fails closed when env vars, token, renderer, command, or workspace scope are unavailable.
+
+**Verification**: `tests/unit/agent/flowstate-mcp-bridge-client.test.ts`, `tests/unit/agent/flowstate-mcp-server.test.ts`, and `tests/unit/agent/electron-agent-bridge.test.ts` cover bridge-unavailable behavior, bearer-token forwarding, read-only MCP delegation, and token non-exposure.
 
 **Files**: `tools/flowstate-mcp/`, `electron/`, `src/domain/agent/`
 
 ---
 
-### TASK-1798: Add workspace isolation validation (📋 PLANNED)
+### ~~TASK-1798~~: Add workspace isolation validation (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Enforce explicit personal/shared workspace scoping in all agent commands and deny cross-workspace access.
+
+**Resolution**: Hardened the renderer bridge so malformed workspace scopes are denied instead of silently falling back to the active workspace. Hardened the MCP bridge client so it only sends bridge traffic to local loopback HTTP URLs. Added regression coverage for personal/shared workspace separation, unavailable workspace denial, project leakage prevention, malformed scope denial, and non-loopback bridge rejection.
+
+**Verification**: `tests/unit/agent/agent-workspace-isolation.test.ts`, `tests/unit/agent/renderer-agent-bridge.test.ts`, and `tests/unit/agent/flowstate-mcp-bridge-client.test.ts` cover the isolation gates.
 
 **Files**: `src/domain/agent/`, `tests/unit/agent/`
 
 ---
 
-### TASK-1799: Add local agent audit log (📋 PLANNED)
+### ~~TASK-1799~~: Add local agent audit log (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Log allowed, denied, dry-run, and write operations with agent, workspace, tool, affected IDs, result, and error metadata.
+
+**Resolution**: Added a bounded local agent audit log under `src/domain/agent/auditLog.ts`, persisted client-side with metadata only. Renderer bridge read/denial paths now record request ID, actor, command, operation, status, requested/resolved workspace, affected entity IDs, and error metadata without storing task/project payload data.
+
+**Verification**: `tests/unit/agent/agent-audit-log.test.ts` covers metadata-only persistence, denied request logging, newest-first ordering, cap enforcement, and clearing. `tests/unit/agent/renderer-agent-bridge.test.ts` verifies malformed workspace denial is audited.
 
 **Files**: `src/domain/agent/`, `src/stores/`, `src/components/settings/`
 
 ---
 
-### TASK-1800: Add agent settings and connected indicator (📋 PLANNED)
+### ~~TASK-1800~~: Add agent settings and connected indicator (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Add settings to enable local agent access, choose read-only/write-enabled mode, and show active connected-agent status in the UI.
+
+**Resolution**: Added a Local Agent Access section to AI settings. It shows desktop-only availability, enabled/disabled/connected bridge status, read-only mode, locked write tools, audit entry count, and safe enable/disable/refresh actions through the Electron preload bridge without exposing the session token.
+
+**Verification**: `tests/unit/agent/local-agent-settings-section.test.ts` covers desktop-only guidance, connected read-only status, and enable/disable preload calls.
 
 **Files**: `src/stores/settings.ts`, `src/components/settings/`, `src/layouts/`
 
 ---
 
-### TASK-1801: Add dry-run write command layer (📋 PLANNED)
+### ~~TASK-1801~~: Add dry-run write command layer (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Add write command contracts that default to dry-run and return before/after diffs without exposing them as MCP tools yet.
+
+**Resolution**: Added `src/domain/agent/writeHandlers.ts` with dry-run-only handlers for create/update/complete/move/comment/soft-delete task commands. The handlers require dry-run mode and idempotency keys, resolve workspace scope, deny cross-workspace access, validate project scope, return before/after diffs, and never mutate the injected model.
+
+**Verification**: `tests/unit/agent/agent-write-handlers.test.ts` covers dry-run previews, idempotency/dry-run requirements, update/complete diffs, cross-workspace denial, project validation, comment preview, and soft-delete diffs.
 
 **Files**: `src/domain/agent/`, `tests/unit/agent/`
 
 ---
 
-### TASK-1802: Add safe write MCP tools (📋 PLANNED)
+### ~~TASK-1802~~: Add safe write MCP tools (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Expose create/update/complete/move/comment/soft-delete tools with dry-run defaults, idempotency keys, approval gates, and no permanent delete.
+
+**Resolution**: Added dry-run-only MCP write tool definitions for create/update/complete/move/comment/soft-delete task operations. Each write tool requires explicit workspace scope, `dryRun: true`, and an `idempotencyKey`; permanent/hard delete remains absent. The renderer bridge now routes registered write commands to the dry-run write handler layer and audits denials, while still refusing write calls without explicit workspace scope.
+
+**Verification**: `tests/unit/agent/flowstate-mcp-server.test.ts` verifies the MCP write surface and dry-run schema requirements. `tests/unit/agent/renderer-agent-bridge.test.ts` verifies write calls without workspace scope are denied and audited.
 
 **Files**: `tools/flowstate-mcp/`, `src/domain/agent/`, `electron/`
 
 ---
 
-### TASK-1803: Add in-app approval UI for agent writes (📋 PLANNED)
+### ~~TASK-1803~~: Add in-app approval UI for agent writes (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Show agent write requests with workspace, operation, affected records, diff, risk level, approve once, and deny controls.
 
-**Files**: `src/components/agent/`, `src/stores/agent/`
+**Resolution**: Added an ephemeral Pinia approval queue for successful dry-run write previews and a settings-panel approval UI that shows workspace, operation, risk level, affected entities, diffs, idempotency key, approve-once, deny, and recent decisions. The renderer bridge now queues successful MCP dry-run write requests for in-app review without executing real mutations.
+
+**Verification**: `tests/unit/agent/agent-approval-queue.test.ts`, `tests/unit/agent/local-agent-settings-section.test.ts`, and `tests/unit/agent/renderer-agent-bridge.test.ts` cover queueing, one-time decisions, settings UI rendering, and renderer bridge enqueue behavior. Full agent suite passed: 12 files, 50 tests. `npx eslint` passed on touched source files, `npx tsc -p electron/tsconfig.json --noEmit` passed, `git diff --check` passed, and `npm run electron:build` passed with existing Vite chunk warnings.
+
+**Files**: `src/components/agent/`, `src/components/settings/`, `src/stores/agent/`, `src/domain/agent/`, `tests/unit/agent/`
 
 ---
 
-### TASK-1804: Add idempotency and conflict handling (📋 PLANNED)
+### ~~TASK-1804~~: Add idempotency and conflict handling (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-19)
 
 **Goal**: Prevent duplicate agent writes, surface offline/sync status, and respect existing pending-write/realtime protections.
 
-**Files**: `src/domain/agent/`, `src/composables/sync/`, `tests/unit/agent/`
+**Resolution**: Added dry-run result fingerprints to approval requests so duplicate idempotency keys with identical write previews reuse the existing approval instead of creating duplicates. Reusing an idempotency key for a different preview now returns a `conflict` result and is audited. Dry-run writes that affect tasks already in the task store pending-write registry now return a `pending_write_conflict` instead of creating an approval, preserving existing realtime echo protections. Approval requests also capture and display sync status plus pending sync count at request time.
+
+**Verification**: `tests/unit/agent/agent-approval-queue.test.ts` covers duplicate idempotency and conflict detection. `tests/unit/agent/renderer-agent-bridge.test.ts` covers idempotency conflict responses and pending-write conflict responses. Full agent suite passed: 12 files, 54 tests. `npx eslint` passed on touched source files.
+
+**Files**: `src/domain/agent/`, `src/stores/agent/`, `src/components/agent/`, `tests/unit/agent/`
 
 ---
 
-### TASK-1805: Add local agent access test coverage (📋 PLANNED)
+### ~~TASK-1805~~: Add local agent access test coverage (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-20)
 
 **Goal**: Cover workspace isolation, dry-run non-mutation, soft-delete safety, invalid inputs, approval requirements, offline queue behavior, and MCP read flows.
 
-**Files**: `tests/unit/agent/`, `tests/e2e/agent/`, `tools/flowstate-mcp/`
+**Resolution**: Expanded the local agent test suite to cover additional safety edges across the stdio MCP adapter, local bridge client, read handlers, and approval/idempotency path. Added coverage for MCP dry-run write argument forwarding, bridge fail-closed behavior on request failures, conflict results being surfaced as MCP errors, and soft-deleted tasks never appearing in search results.
+
+**Verification**: Full agent suite passed: 12 files, 58 tests. `npx eslint` passed on touched source files, MCP tool listing smoke test passed, `npx tsc -p electron/tsconfig.json --noEmit` passed, `git diff --check` passed, and `npm run electron:build` passed with existing Vite chunk warnings.
+
+**Files**: `tests/unit/agent/`, `tools/flowstate-mcp/`, `src/domain/agent/`
 
 ---
 
-### TASK-1806: Document MCP setup for local agents (📋 PLANNED)
+### ~~TASK-1806~~: Document MCP setup for local agents (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED (opened 2026-05-18)
+**Priority**: P3 | **Status**: ✅ DONE (2026-05-20)
 
 **Goal**: Document how to enable local agent access and configure Claude, Codex, OpenCode, or other MCP-capable local agents.
 
-**Files**: `docs/agent-mcp-setup.md`, `docs/architecture/local-agent-mcp.md`
+**Resolution**: Updated `docs/architecture/local-agent-mcp.md` with local MCP setup instructions, smoke-test commands, required bridge environment variables, generic MCP client configuration, token handling rules, runtime requirements, manual checks, and current write-execution limitations.
+
+**Verification**: `tests/unit/agent/local-agent-mcp-docs.test.ts` verifies setup and secret-handling guidance remains documented. Full agent suite passed: 12 files, 59 tests. `npx eslint` passed on touched source files and `git diff --check` passed.
+
+**Files**: `docs/architecture/local-agent-mcp.md`, `tests/unit/agent/local-agent-mcp-docs.test.ts`
 
 ---
 

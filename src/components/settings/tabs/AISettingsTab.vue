@@ -6,6 +6,7 @@ import { useAIChat } from '@/composables/useAIChat'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useMemoryAssessment } from '@/composables/useMemoryAssessment'
 import { useSettingsStore } from '@/stores/settings'
+import LocalAgentSettingsSection from '../LocalAgentSettingsSection.vue'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import { PROVIDER_OPTIONS, GROQ_MODELS, OPENROUTER_MODELS, asIdLabel, filterFreeModels, type AIProviderKey } from '@/config/aiModels'
@@ -320,6 +321,8 @@ async function onClearMemories() {
         </button>
       </div>
     </SettingsSection>
+
+    <LocalAgentSettingsSection />
 
     <!-- TASK-1350: Groq API Key -->
     <SettingsSection title="Groq API Key">

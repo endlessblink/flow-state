@@ -102,14 +102,24 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
 
     for (const group of groups) {
       const keyword = detectPowerKeyword(group.name)
-      if (keyword?.category !== 'day_of_week') continue
+      if (keyword?.category !== 'day_of_week' && keyword?.category !== 'date') continue
+      if (keyword.category === 'date' && keyword.keyword !== 'today' && keyword.keyword !== 'tomorrow') continue
 
-      // keyword.value is the stringified JS day index (e.g. "1" for Monday)
-      const dayIndex = parseInt(keyword.value, 10)
-      if (isNaN(dayIndex) || dayIndex < 0 || dayIndex > 6) continue
+      const targetDate = (() => {
+        if (keyword.category === 'date') {
+          const date = new Date(useCurrentDay().value)
+          if (keyword.keyword === 'tomorrow') date.setDate(date.getDate() + 1)
+          return date
+        }
 
-      const nextDate = getNextOccurrence(dayIndex)
-      const nextDateStr = toDateString(nextDate)
+        // keyword.value is the stringified JS day index (e.g. "1" for Monday)
+        const dayIndex = parseInt(keyword.value, 10)
+        if (isNaN(dayIndex) || dayIndex < 0 || dayIndex > 6) return null
+        return getNextOccurrence(dayIndex)
+      })()
+      if (!targetDate) continue
+
+      const nextDateStr = toDateString(targetDate)
 
       // Update metadata-only for non-done tasks in this group
       const tasksInGroup = taskStore.rawTasks.filter(

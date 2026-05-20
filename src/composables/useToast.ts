@@ -4,6 +4,10 @@ export type ToastType = 'success' | 'error' | 'info' | 'warning'
 interface ToastOptions {
     duration?: number
     position?: 'top-right' | 'bottom-right' | 'top-center' | 'bottom-center'
+    action?: {
+        label: string
+        onClick: () => void
+    }
 }
 
 // Singleton state to avoid multiple containers
@@ -34,6 +38,7 @@ export function useToast() {
         const { duration = 3000 } = options
 
         const toast = document.createElement('div')
+        let removed = false
 
         // Icon selection
         let icon = 'ℹ️'
@@ -97,6 +102,44 @@ export function useToast() {
         toast.appendChild(iconSpan)
         toast.appendChild(messageSpan)
 
+        const removeToast = () => {
+            if (removed) return
+            removed = true
+            toast.style.animation = 'slideOut 0.2s ease-out'
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast)
+                }
+            }, 200)
+        }
+
+        if (options.action) {
+            const actionButton = document.createElement('button')
+            actionButton.type = 'button'
+            actionButton.textContent = options.action.label
+            actionButton.style.cssText = `
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        color: white;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 10px;
+      `
+            actionButton.addEventListener('click', (event) => {
+                event.stopPropagation()
+                try {
+                    options.action?.onClick()
+                } catch (error) {
+                    console.error('Toast action failed:', error)
+                } finally {
+                    removeToast()
+                }
+            })
+            toast.appendChild(actionButton)
+        }
+
         // Add animation styles if needed
         if (!document.querySelector('#toast-animations')) {
             const style = document.createElement('style')
@@ -117,15 +160,7 @@ export function useToast() {
         container.appendChild(toast)
 
         // Auto removal
-        setTimeout(() => {
-            toast.style.animation = 'slideOut 0.2s ease-out'
-            // Wait for animation to finish
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast)
-                }
-            }, 200)
-        }, duration)
+        setTimeout(removeToast, duration)
     }
 
     return { showToast }

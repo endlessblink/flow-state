@@ -2,10 +2,10 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: '.',
-  testMatch: ['canvas-geometry-local.spec.ts', 'canvas-rotate-render-bug-1787.spec.ts'],
+  testMatch: 'undo-delete-second-ctrlz-lag.spec.ts',
   fullyParallel: false,
   workers: 1,
-  reporter: [['list'], ['html', { open: 'never', outputFolder: '../../playwright-report/canvas-local' }]],
+  reporter: [['list'], ['html', { open: 'never', outputFolder: '../../playwright-report/undo-delete-lag' }]],
   use: {
     baseURL: 'http://127.0.0.1:5548',
     ...devices['Desktop Chrome'],

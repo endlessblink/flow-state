@@ -35,6 +35,9 @@ export const originalConsole = {
   error: console.error,
   info: console.info,
   debug: console.debug,
+  group: console.group,
+  groupCollapsed: console.groupCollapsed,
+  groupEnd: console.groupEnd,
 }
 
 // Default: all logs disabled
@@ -84,6 +87,9 @@ export function saveLogToggles(toggles: LogToggles): void {
 // Check if a log message should be filtered
 function shouldFilter(message: string): boolean {
   const msg = String(message)
+
+  if (/^\d+ (WARNING|ERROR)\(s\):$/.test(msg.trim())) return true
+  if (/^\s+\[[A-Z]\]\s+/.test(msg)) return true
 
   // Timer logs
   if (!logToggles.timer) {
@@ -202,6 +208,36 @@ function shouldFilter(message: string): boolean {
   // Suppress Canvas/Sync logs
   if (msg.includes('[SYNC]') ||
     msg.includes('[CANVAS]') ||
+    msg.includes('[CANVAS:') ||
+    msg.includes('[TASKS:POS]') ||
+    msg.includes('[TIME-BLOCK]') ||
+    msg.includes('[REMIND]') ||
+    msg.includes('[REALTIME]') ||
+    msg.includes('[INVARIANT]') ||
+    msg.includes('[MobileDetection]') ||
+    msg.includes('[ZOOM PERF]') ||
+    msg.includes('[SUPABASE-MAPPER]') ||
+    msg.includes('[SUPABASE-HISTOGRAM]') ||
+    msg.includes('[LEGACY-GROUP]') ||
+    msg.includes('[HIERARCHY]') ||
+    msg.includes('[NAV]') ||
+    msg.includes('[RECURRENCE-SCHEDULER]') ||
+    msg.includes('[Pipeline]') ||
+    msg.includes('[FlowState]') ||
+    msg.includes('[MAIN]') ||
+    msg.includes('[AUTH') ||
+    msg.includes('[TIMER]') ||
+    msg.includes('[DB]') ||
+    msg.includes('[VOICE]') ||
+    msg.includes('[WORKSPACE]') ||
+    msg.includes('[ORCHESTRATOR]') ||
+    msg.includes('[RECONCILE]') ||
+    msg.includes('[SafariITP]') ||
+    msg.includes('[APP-INIT]') ||
+    msg.includes('[GROUPS]') ||
+    msg.includes('[WorkProfile]') ||
+    msg.includes('[canvasViewport]') ||
+    msg.includes('[PERSISTENT-REF]') ||
     msg.includes('[TASK-') ||
     msg.includes('[BUG-') ||
     msg.includes('[VUE_FLOW') ||
@@ -237,7 +273,7 @@ function shouldFilter(message: string): boolean {
     msg.includes('🖱️') ||
     msg.includes('✂️')) {
     // Whitelist specific debugging strings even if they contain filtered emojis
-    if (msg.includes('[NANNY]') || msg.includes('[SHIELD]') || msg.includes('[LOCK]') || msg.includes('[DRAG-SHIELD]') || msg.includes('[CANVAS-STORE]') || msg.includes('[TASK-288-DEBUG]') || msg.includes('[BUG-1492')) {
+    if (msg.includes('[NANNY]') || msg.includes('[SHIELD]') || msg.includes('[LOCK]') || msg.includes('[DRAG-SHIELD]') || msg.includes('[TASK-288-DEBUG]')) {
       return false
     }
     return true
@@ -276,7 +312,9 @@ export function applyConsoleFiltering(): void {
     // In production, throttle high-frequency timer/sync warns to prevent log flooding
     const firstArg = String(args[0])
     if (shouldThrottleProdWarn(firstArg)) return
-    originalConsole.warn(...args)
+    if (!shouldFilter(firstArg)) {
+      originalConsole.warn(...args)
+    }
   }
 
   console.info = (...args: unknown[]) => {
@@ -291,6 +329,24 @@ export function applyConsoleFiltering(): void {
     if (!shouldFilter(firstArg)) {
       originalConsole.debug(...args)
     }
+  }
+
+  console.group = (...args: unknown[]) => {
+    const firstArg = String(args[0])
+    if (!shouldFilter(firstArg)) {
+      originalConsole.group(...args)
+    }
+  }
+
+  console.groupCollapsed = (...args: unknown[]) => {
+    const firstArg = String(args[0])
+    if (!shouldFilter(firstArg)) {
+      originalConsole.groupCollapsed(...args)
+    }
+  }
+
+  console.groupEnd = (...args: unknown[]) => {
+    originalConsole.groupEnd(...args)
   }
 
   // Intercept error logs to catch PouchDB "guardedConsole" errors
@@ -312,7 +368,8 @@ export function applyConsoleFiltering(): void {
       }))
     }
 
-    // NEVER filter console.error - errors must always be visible
+    if (shouldFilter(firstArg)) return
+
     originalConsole.error(...args)
   }
 }
@@ -324,6 +381,9 @@ export function restoreConsole(): void {
   console.error = originalConsole.error
   console.info = originalConsole.info
   console.debug = originalConsole.debug
+  console.group = originalConsole.group
+  console.groupCollapsed = originalConsole.groupCollapsed
+  console.groupEnd = originalConsole.groupEnd
 }
 
 // Get current toggles (reload from localStorage to ensure fresh data)

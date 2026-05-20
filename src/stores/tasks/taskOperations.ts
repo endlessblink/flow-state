@@ -18,6 +18,7 @@ import { useToast } from '@/composables/useToast'
 // TASK-1428: Keep IndexedDB read cache warm after offline mutations
 import { cacheTasks } from '@/services/offline/readCacheDB'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
+import { undoDebugLog, undoDebugMark, undoDebugMeasure } from '@/utils/undoDebug'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
@@ -88,6 +89,13 @@ export function useTaskOperations(
     }
 
     const createTask = async (taskData: Partial<Task>) => {
+        const debugTaskId = taskData.id || 'new'
+        undoDebugMark(`task-store:create:${debugTaskId}:start`)
+        undoDebugLog('taskStore.createTask start', {
+            taskId: debugTaskId,
+            title: taskData.title,
+            rawCount: _rawTasks.value.length,
+        })
         // TASK-061: Demo content guard - warn in dev mode
         if (taskData.title) {
             guardTaskCreation(taskData.title)
@@ -177,6 +185,13 @@ export function useTaskOperations(
             } else {
                 _rawTasks.value.push(newTask)
             }
+            undoDebugMark(`task-store:create:${taskId}:local-upsert`)
+            undoDebugLog('taskStore.createTask local upsert', {
+                taskId,
+                existingIdx,
+                rawCount: _rawTasks.value.length,
+                rawExists: _rawTasks.value.some(t => t.id === taskId),
+            })
 
             // BUG-1329: Register pending write to suppress Realtime echo.
             // Without this, the INSERT event from our own direct save bypasses
@@ -228,8 +243,10 @@ export function useTaskOperations(
                     payload: JSON.parse(JSON.stringify(payload)), // Strip all reactivity
                     baseVersion: 0
                 })
+                undoDebugMark(`task-store:create:${taskId}:queue-enqueued`)
             } catch (queueError) {
                 console.warn('[SYNC-QUEUE] Failed to queue create, falling back to direct save:', queueError)
+                undoDebugLog('taskStore.createTask queue failed', { taskId, queueError })
             }
 
             // TASK-1428: Update IndexedDB read cache BEFORE the direct save attempt.
@@ -242,8 +259,10 @@ export function useTaskOperations(
             try {
                 await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
                 console.log(`[BUG-1491] Direct save succeeded for task ${taskId.slice(0, 8)} "${newTask.title?.slice(0, 25)}"`)
+                undoDebugMark(`task-store:create:${taskId}:direct-save-success`)
             } catch (directSaveError) {
                 console.error(`[BUG-1491] Direct save FAILED for task ${taskId.slice(0, 8)} "${newTask.title?.slice(0, 25)}":`, directSaveError)
+                undoDebugLog('taskStore.createTask direct save failed', { taskId, directSaveError })
             }
 
             // Trigger canvas sync for Tauri reactivity
@@ -262,11 +281,23 @@ export function useTaskOperations(
                 }).catch(() => {})
             }
 
+            undoDebugMark(`task-store:create:${taskId}:end`)
+            undoDebugLog('taskStore.createTask end', {
+                taskId,
+                rawCount: _rawTasks.value.length,
+                rawExists: _rawTasks.value.some(t => t.id === taskId),
+                durationMs: undoDebugMeasure(
+                    `task-store:create:${taskId}`,
+                    `task-store:create:${taskId}:start`,
+                    `task-store:create:${taskId}:end`
+                ),
+            })
             return newTask
         } catch (error) {
             // Only reaches here if sync queue AND cache both failed (extremely unlikely)
             const index = _rawTasks.value.findIndex(t => t.id === taskId)
             if (index !== -1) _rawTasks.value.splice(index, 1)
+            undoDebugLog('taskStore.createTask rolled back', { taskId, error })
             throw error
         } finally {
             manualOperationInProgress.value = false
@@ -918,13 +949,22 @@ export function useTaskOperations(
     }
 
     const deleteTask = async (taskId: string, source: string = 'unknown') => {
+        undoDebugMark(`task-store:delete:${taskId}:start`)
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) {
             console.warn(`⚠️ Task not found for deletion: ${taskId} (source: ${source})`)
+            undoDebugLog('taskStore.deleteTask skipped: missing task', { taskId, source })
             return
         }
 
         const deletedTask = _rawTasks.value[index]
+        undoDebugLog('taskStore.deleteTask start', {
+            taskId,
+            source,
+            index,
+            deletedTask,
+            rawCount: _rawTasks.value.length,
+        })
         console.log(`🗑️ [DELETE] "${deletedTask.title?.slice(0, 30)}" (${taskId.slice(0, 8)}) — source: ${source}`)
         manualOperationInProgress.value = true
 
@@ -938,23 +978,17 @@ export function useTaskOperations(
             console.log(`[BUG-1451] deleteTask: ${taskId.slice(0, 8)} "${deletedTask.title?.slice(0, 20)}" spliced from _rawTasks`)
         }
         _rawTasks.value.splice(index, 1)
+        undoDebugMark(`task-store:delete:${taskId}:spliced`)
+        undoDebugLog('taskStore.deleteTask spliced', {
+            taskId,
+            rawCount: _rawTasks.value.length,
+            rawExists: _rawTasks.value.some(t => t.id === taskId),
+        })
 
-        // Save to localStorage immediately (for guest mode persistence)
-        try {
-            await saveTasksToStorage(_rawTasks.value, 'deleteTask')
-            // TASK-1428: Update IndexedDB read cache so offline reloads reflect the deletion
-            cacheTasks([..._rawTasks.value])
-        } catch (localSaveError) {
-            // localStorage save failed — rollback immediately
-            console.error(`❌ [DELETE] localStorage save failed, rolling back:`, localSaveError)
-            _rawTasks.value.splice(index, 0, deletedTask)
-            manualOperationInProgress.value = false
-            throw localSaveError
-        }
-
-        // BUG-1737: Single-write path — sync queue is the SOLE path to Supabase for deletes.
-        // Previously also called deleteTaskFromStorage() directly, creating a dual-write race
-        // where undo couldn't cleanly cancel both the queue DELETE and the direct DELETE.
+        // BUG-1737: Queue the delete immediately after the optimistic splice.
+        // Undo restore cancels queued DELETE ops before enqueueing CREATE; if this
+        // waits for local persistence, fast Ctrl+Z can restore first and the late
+        // DELETE queue entry removes the task again.
         try {
             const syncOrchestrator = useSyncOrchestrator()
             await syncOrchestrator.enqueue({
@@ -964,12 +998,45 @@ export function useTaskOperations(
                 payload: { id: taskId },
                 baseVersion: deletedTask.positionVersion || 0
             })
+            undoDebugMark(`task-store:delete:${taskId}:queue-enqueued`)
         } catch (queueError) {
             console.warn(`⚠️ [DELETE] Failed to queue delete for ${taskId.slice(0, 8)}, sync will retry:`, queueError)
+            undoDebugLog('taskStore.deleteTask queue failed', { taskId, queueError })
             const { showToast } = useToast()
             showToast('Delete will sync when connection restores', 'warning')
+        }
+
+        // Save to localStorage immediately (for guest mode persistence)
+        try {
+            await saveTasksToStorage(_rawTasks.value, 'deleteTask')
+            undoDebugMark(`task-store:delete:${taskId}:local-save`)
+            // TASK-1428: Update IndexedDB read cache so offline reloads reflect the deletion
+            cacheTasks([..._rawTasks.value])
+        } catch (localSaveError) {
+            // localStorage save failed — rollback immediately
+            console.error(`❌ [DELETE] localStorage save failed, rolling back:`, localSaveError)
+            _rawTasks.value.splice(index, 0, deletedTask)
+            manualOperationInProgress.value = false
+            undoDebugLog('taskStore.deleteTask local save failed and rolled back', { taskId, localSaveError })
+            throw localSaveError
+        }
+
+        try {
+            // BUG-1737: Single-write path — sync queue is the SOLE path to Supabase for deletes.
+            // Previously also called deleteTaskFromStorage() directly, creating a dual-write race.
         } finally {
             manualOperationInProgress.value = false
+            undoDebugMark(`task-store:delete:${taskId}:end`)
+            undoDebugLog('taskStore.deleteTask end', {
+                taskId,
+                rawCount: _rawTasks.value.length,
+                rawExists: _rawTasks.value.some(t => t.id === taskId),
+                durationMs: undoDebugMeasure(
+                    `task-store:delete:${taskId}`,
+                    `task-store:delete:${taskId}:start`,
+                    `task-store:delete:${taskId}:end`
+                ),
+            })
         }
 
         // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this

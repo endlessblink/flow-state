@@ -341,6 +341,7 @@ import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenu
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
 import { useTidyLayout } from '@/composables/canvas/useTidyLayout'
+import { canvasSyncInProgress } from '@/composables/canvas/useCanvasSync'
 import { useCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
@@ -429,10 +430,12 @@ function applyCanonicalTaskMoves(
 ) {
   const targetGroupPositions = new Map(groupMoves.map((move) => [move.groupId, move.position]))
   const positionChanges: Array<{ id: string; type: 'position'; position: { x: number; y: number }; dragging: false }> = []
+  const missing: typeof taskMoves = []
 
   for (const move of taskMoves) {
     const node = findNode(CanvasIds.taskNodeId(move.taskId))
     if (!node) {
+      missing.push(move)
       continue
     }
 
@@ -479,6 +482,22 @@ function applyCanonicalTaskMoves(
     applyNodeChanges(positionChanges)
   }
   setNodes(nodes.value)
+
+  if (missing.length > 0) {
+    nextTick(() => {
+      const stillMissing = missing.filter((move) => !findNode(CanvasIds.taskNodeId(move.taskId)))
+      if (stillMissing.length > 0) {
+        console.warn(
+          `[BUG-1787] ${stillMissing.length}/${missing.length} task nodes still not found after nextTick retry — these may render outside their group:`,
+          stillMissing.map((move) => move.taskId.slice(0, 8))
+        )
+      }
+      const found = missing.filter((move) => findNode(CanvasIds.taskNodeId(move.taskId)))
+      if (found.length > 0) {
+        applyCanonicalTaskMoves(found, groupMoves)
+      }
+    })
+  }
 }
 
 function refreshRenderedNodesFromModel() {
@@ -573,6 +592,7 @@ function handleRotateDayGroups() {
   // TASK-1756 v3: toolbar still bypasses lastRotationDate guard via { force: true }
   // on rotateDayGroups (dueDate/marker path). Physical rotation always produces
   // moves — the canonical primitive owns all geometry math now.
+  canvasSyncInProgress.value = true
   dayRotation.rotateDayGroups({ force: true })
   const { groupMoves, taskMoves, pendingWrites, release } = dayRotation.rotateDayGroupPositions()
   applyCanonicalLayoutMoves(groupMoves)

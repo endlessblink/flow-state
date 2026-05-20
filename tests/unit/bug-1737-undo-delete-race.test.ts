@@ -158,6 +158,17 @@ vi.mock('@/stores/workspace', () => ({
 
 import { setActivePinia, createPinia } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
+import { getUndoSystem } from '@/composables/undoSingleton'
+
+const deferred = <T = void>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
 
 describe('BUG-1737 — deleteTask: single-write path (no direct Supabase delete)', () => {
   beforeEach(() => {
@@ -175,5 +186,29 @@ describe('BUG-1737 — deleteTask: single-write path (no direct Supabase delete)
     await store.deleteTask(task.id)
 
     expect(mockDeleteTask).not.toHaveBeenCalled()
+  })
+
+  it('deleteTaskWithUndo commits delete undo before slow persistence finishes', async () => {
+    const store = useTaskStore()
+    const undo = getUndoSystem()
+    const task = await undo.createTaskWithUndo({ title: 'Fast Undo Race Task' })
+    const slowDeleteSave = deferred()
+
+    mockSaveTasks.mockImplementation((_payload: unknown, context?: string) => {
+      if (context === 'deleteTask') return slowDeleteSave.promise
+      return Promise.resolve(undefined)
+    })
+
+    const deletePromise = undo.deleteTaskWithUndo(task.id)
+
+    await vi.waitFor(() => {
+      expect(store.rawTasks.some(t => t.id === task.id)).toBe(false)
+    })
+
+    await undo.undo()
+
+    expect(store.rawTasks.some(t => t.id === task.id)).toBe(true)
+    slowDeleteSave.resolve()
+    await deletePromise
   })
 })

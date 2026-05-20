@@ -2,6 +2,7 @@
 // Handles Ctrl+Z (undo) and Ctrl+Y/Ctrl+Shift+Z (redo) shortcuts
 
 import type { Ref } from 'vue'
+import { describeUndoElement, undoDebugLog, undoDebugMark, undoDebugMeasure } from './undoDebug'
 
 interface KeyboardHandlerOptions {
   enabled?: boolean
@@ -115,6 +116,20 @@ export class SimpleGlobalKeyboardHandler {
 
     const { ctrlKey, metaKey, shiftKey, key } = event
     const hasModifier = ctrlKey || metaKey
+    const isUndoRedoKey = hasModifier && (key.toLowerCase() === 'z' || key.toLowerCase() === 'y')
+
+    if (isUndoRedoKey) {
+      undoDebugMark(`keyboard:${key.toLowerCase()}:start`)
+      undoDebugLog('keyboard event', {
+        key,
+        ctrlKey,
+        metaKey,
+        shiftKey,
+        target: describeUndoElement(event.target as Element | null),
+        activeElement: describeUndoElement(document.activeElement),
+        defaultPrevented: event.defaultPrevented,
+      })
+    }
 
     // Only process if we have a modifier key (Ctrl/Cmd)
     if (!hasModifier) return
@@ -122,6 +137,13 @@ export class SimpleGlobalKeyboardHandler {
     // Check if we should ignore this element (inputs, modals)
     const target = event.target as Element
     if (target && this.shouldIgnoreElement(target)) {
+      if (isUndoRedoKey) {
+        undoDebugLog('keyboard ignored by focused element', {
+          key,
+          target: describeUndoElement(target),
+          activeElement: describeUndoElement(document.activeElement),
+        })
+      }
       return
     }
 
@@ -129,9 +151,11 @@ export class SimpleGlobalKeyboardHandler {
     if (hasModifier && key.toLowerCase() === 'z') {
       if (shiftKey) {
         // Ctrl+Shift+Z = Redo
+        undoDebugLog('keyboard executing redo')
         this.executeRedo()
       } else {
         // Ctrl+Z = Undo
+        undoDebugLog('keyboard executing undo')
         this.executeUndo()
       }
 
@@ -143,6 +167,7 @@ export class SimpleGlobalKeyboardHandler {
 
     // Handle Ctrl+Y (Redo alternative)
     else if (hasModifier && key.toLowerCase() === 'y') {
+      undoDebugLog('keyboard executing redo via Ctrl+Y')
       this.executeRedo()
 
       if (this.preventDefault) {
@@ -173,20 +198,28 @@ export class SimpleGlobalKeyboardHandler {
    * Execute undo operation
    */
   private async executeUndo(): Promise<void> {
+    undoDebugMark('keyboard:undo:start')
     if (!this.undoRedo) {
       console.warn('⚠️ [UNDO] Undo system not initialized')
+      undoDebugLog('keyboard undo failed: system not initialized')
       return
     }
 
     try {
       // Check if undo is possible
       if (!this.undoRedo.canUndo?.value) {
+        undoDebugLog('keyboard undo skipped: canUndo=false')
         return // Nothing to undo - silent return
       }
 
       await this.undoRedo.undo()
+      undoDebugMark('keyboard:undo:end')
+      undoDebugLog('keyboard undo completed', {
+        durationMs: undoDebugMeasure('keyboard:undo', 'keyboard:undo:start', 'keyboard:undo:end'),
+      })
     } catch (error) {
       console.error('❌ [UNDO] Undo failed:', error)
+      undoDebugLog('keyboard undo threw', error)
     }
   }
 
@@ -194,20 +227,28 @@ export class SimpleGlobalKeyboardHandler {
    * Execute redo operation
    */
   private async executeRedo(): Promise<void> {
+    undoDebugMark('keyboard:redo:start')
     if (!this.undoRedo) {
+      undoDebugLog('keyboard redo failed: system not initialized')
       return
     }
 
     try {
       // Check if redo is possible
       if (!this.undoRedo.canRedo.value) {
+        undoDebugLog('keyboard redo skipped: canRedo=false')
         return
       }
 
       // Execute redo
       await this.undoRedo.redo()
+      undoDebugMark('keyboard:redo:end')
+      undoDebugLog('keyboard redo completed', {
+        durationMs: undoDebugMeasure('keyboard:redo', 'keyboard:redo:start', 'keyboard:redo:end'),
+      })
     } catch (error) {
       console.error('❌ Redo operation failed:', error)
+      undoDebugLog('keyboard redo threw', error)
     }
   }
 

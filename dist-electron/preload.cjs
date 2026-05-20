@@ -34,6 +34,26 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     oauthStart: () => electron_1.ipcRenderer.invoke('oauth:start'),
     oauthWaitForCallback: () => electron_1.ipcRenderer.invoke('oauth:waitForCallback'),
     oauthCancel: () => electron_1.ipcRenderer.invoke('oauth:cancel'),
+    // Local agent bridge (disabled by default; no token exposed to renderer)
+    agentGetStatus: () => electron_1.ipcRenderer.invoke('agent:status'),
+    agentEnable: () => electron_1.ipcRenderer.invoke('agent:enable'),
+    agentDisable: () => electron_1.ipcRenderer.invoke('agent:disable'),
+    onAgentReadRequest: (callback) => {
+        electron_1.ipcRenderer.on('agent:read-request', async (_event, payload) => {
+            if (!payload.requestId)
+                return;
+            try {
+                const result = await callback(payload);
+                await electron_1.ipcRenderer.invoke('agent:read-response', { requestId: payload.requestId, result });
+            }
+            catch (error) {
+                await electron_1.ipcRenderer.invoke('agent:read-response', {
+                    requestId: payload.requestId,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+            }
+        });
+    },
     // Auto-updater events
     onUpdateAvailable: (callback) => {
         electron_1.ipcRenderer.on('updater:available', (_event, info) => callback(info));

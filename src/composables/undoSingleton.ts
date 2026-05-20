@@ -11,6 +11,7 @@ import type { CanvasGroup } from '@/types/canvas'
 import { guardTaskCreation } from '../utils/demoContentGuard'
 import { useToast } from './useToast'
 import { supabase } from '@/services/auth/supabase'
+import { undoDebugLog, undoDebugMark, undoDebugMeasure } from '@/utils/undoDebug'
 
 interface UndoSystemState {
   canUndo: ComputedRef<boolean> | null
@@ -28,6 +29,10 @@ interface UndoSystemState {
 declare global {
   interface Window {
     __pomoFlowUndoSystem?: UndoSystemState
+    __UNDO_DEBUG__?: boolean
+    __inspectUndoTask?: (taskId: string) => Promise<Record<string, unknown>>
+    __undoQueueForTask?: (taskId: string) => Promise<unknown[]>
+    __undoDebugSnapshot?: () => Promise<Record<string, unknown>>
   }
 }
 
@@ -101,10 +106,94 @@ let redo: (() => void) | null = null
 let commit: (() => void) | null = null
 let clear: (() => void) | null = null
 
+const summarizeOperation = (snapshot: OperationSnapshot) => ({
+  type: snapshot.operation.type,
+  affectedIds: snapshot.operation.affectedIds,
+  description: snapshot.operation.description,
+  timestamp: snapshot.operation.timestamp,
+  beforeTasks: snapshot.snapshotBefore.tasks.length,
+  afterTasks: snapshot.snapshotAfter.tasks.length,
+})
+
+const summarizeStack = (stack: OperationSnapshot[]) => stack.map(summarizeOperation)
+
+const fallbackTitleFromDescription = (description: string): string | null => {
+  const title = description.replace(/^(Delete|Permanently delete|Bulk delete \d+) task:?\s*/i, '').trim()
+  return title && title !== 'Untitled Task' ? title : null
+}
+
+const taskWithUndoTitle = (task: Task, operation: UndoOperation): Task | null => {
+  const title = typeof task.title === 'string' ? task.title.trim() : ''
+  const restoredTitle = title && title !== 'Untitled Task'
+    ? title
+    : fallbackTitleFromDescription(operation.description)
+
+  if (!restoredTitle) return null
+  return { ...task, title: restoredTitle }
+}
+
+function installUndoDebugHelpers() {
+  if (typeof window === 'undefined') return
+
+  window.__undoQueueForTask = async (taskId: string) => {
+    const { getOperationsForEntity } = await import('@/services/offline/writeQueueDB')
+    return getOperationsForEntity('task', taskId)
+  }
+
+  window.__inspectUndoTask = async (taskId: string) => {
+    const { useTaskStore } = await import('../stores/tasks')
+    const taskStore = useTaskStore() as unknown as Record<string, unknown>
+    const rawTasks = Array.isArray(taskStore._rawTasks)
+      ? taskStore._rawTasks as Task[]
+      : Array.isArray(taskStore.rawTasks)
+        ? taskStore.rawTasks as Task[]
+        : []
+    const visibleTasks = Array.isArray(taskStore.tasks) ? taskStore.tasks as Task[] : []
+    const rawTask = rawTasks.find(task => task.id === taskId)
+    let queue: unknown[] | undefined
+    try {
+      queue = await window.__undoQueueForTask?.(taskId)
+    } catch (error) {
+      queue = [{ error: String(error) }]
+    }
+    const isPendingWrite = typeof taskStore.isPendingWrite === 'function'
+      ? (taskStore.isPendingWrite as (id: string) => boolean)(taskId)
+      : undefined
+
+    return {
+      taskId,
+      rawExists: Boolean(rawTask),
+      visibleExists: visibleTasks.some(task => task.id === taskId),
+      rawTask,
+      rawCount: rawTasks.length,
+      visibleCount: visibleTasks.length,
+      pendingWrite: isPendingWrite,
+      queue,
+      operationStack: summarizeStack(operationStack.value),
+      redoStack: summarizeStack(redoOperationStack.value),
+      activeElement: document.activeElement?.outerHTML?.slice(0, 300),
+      time: new Date().toISOString(),
+    }
+  }
+
+  window.__undoDebugSnapshot = async () => ({
+    operationStack: summarizeStack(operationStack.value),
+    redoStack: summarizeStack(redoOperationStack.value),
+    canUndo: canUndo?.value,
+    canRedo: canRedo?.value,
+    undoCount: undoCount?.value,
+    redoCount: redoCount?.value,
+    activeElement: document.activeElement?.outerHTML?.slice(0, 300),
+    time: new Date().toISOString(),
+  })
+}
+
 /**
  * Initialize the single refHistory instance
  */
 function initializeRefHistory() {
+  installUndoDebugHelpers()
+
   if (refHistoryInstance) {
     return
   }
@@ -199,6 +288,7 @@ function initializeRefHistory() {
  */
 async function clearTombstoneForUndo(taskId: string): Promise<void> {
   try {
+    if (!supabase) return
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return
     await supabase.from('tombstones').delete()
@@ -214,6 +304,13 @@ async function clearTombstoneForUndo(taskId: string): Promise<void> {
  */
 const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promise<boolean> => {
   const { operation, snapshotBefore, snapshotAfter } = operationSnapshot
+  const markBase = `selective:${operation.type}:${operation.affectedIds.join(',') || 'none'}`
+  undoDebugMark(`${markBase}:start`)
+  undoDebugLog('performSelectiveUndo start', {
+    operation: summarizeOperation(operationSnapshot),
+    stack: summarizeStack(operationStack.value),
+    redoStack: summarizeStack(redoOperationStack.value),
+  })
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
   const canvasStore = useCanvasStore()
@@ -242,20 +339,45 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       const taskId = operation.affectedIds[0]
       const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
       if (deletedTask) {
+        const restorableTask = taskWithUndoTitle(deletedTask, operation)
+        if (!restorableTask) {
+          console.warn('[UNDO] Skipping restore for task with missing title:', taskId)
+          undoDebugLog('task-delete restore skipped: missing title', { taskId, deletedTask, operation })
+          break
+        }
+        undoDebugMark(`restore:${taskId}:start`)
+        undoDebugLog('task-delete restore start', {
+          taskId,
+          deletedTask: restorableTask,
+          rawExistsBefore: taskStore.rawTasks?.some(task => task.id === taskId),
+          visibleExistsBefore: taskStore.tasks?.some(task => task.id === taskId),
+        })
         // BUG-1737: Block realtime echoes FIRST (sync, before any await)
         taskStore.addPendingWrite(taskId)
+        undoDebugMark(`restore:${taskId}:pending-write-added`)
         await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
+        undoDebugMark(`restore:${taskId}:tombstone-cleared`)
         // BUG-1737: Cancel queue DELETE BEFORE enqueueing CREATE to prevent race
         // (sync orchestrator's BUG-1534 logic cancels CREATEs when processing DELETEs)
         try {
           const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
           await deleteOperationsByType('task', taskId, 'delete')
+          undoDebugMark(`restore:${taskId}:delete-ops-cancelled`)
         } catch (e) {
           console.warn('[UNDO] Failed to cancel pending sync ops:', e)
+          undoDebugLog('task-delete delete op cancellation failed', e)
         }
-        await taskStore.createTask(deletedTask)
+        await taskStore.createTask(restorableTask)
+        undoDebugMark(`restore:${taskId}:end`)
+        undoDebugLog('task-delete restore end', {
+          taskId,
+          rawExistsAfter: taskStore.rawTasks?.some(task => task.id === taskId),
+          visibleExistsAfter: taskStore.tasks?.some(task => task.id === taskId),
+          durationMs: undoDebugMeasure(`restore:${taskId}`, `restore:${taskId}:start`, `restore:${taskId}:end`),
+        })
       } else {
         console.error('❌ [UNDO] Could not find task in snapshot:', taskId)
+        undoDebugLog('task-delete restore missing snapshot task', { taskId, snapshotTaskCount: snapshotBefore.tasks.length })
       }
       break
     }
@@ -265,17 +387,36 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       for (const taskId of operation.affectedIds) {
         const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
         if (deletedTask) {
+          const restorableTask = taskWithUndoTitle(deletedTask, operation)
+          if (!restorableTask) {
+            console.warn('[UNDO] Skipping restore for task with missing title:', taskId)
+            undoDebugLog('task-bulk-delete restore skipped: missing title', { taskId, deletedTask, operation })
+            continue
+          }
+          undoDebugMark(`restore:${taskId}:start`)
+          undoDebugLog('task-bulk-delete restore start', { taskId, deletedTask: restorableTask })
           // BUG-1737: Block realtime echoes FIRST (sync, before any await)
           taskStore.addPendingWrite(taskId)
+          undoDebugMark(`restore:${taskId}:pending-write-added`)
           await clearTombstoneForUndo(taskId) // TASK-1722: Remove tombstone so createTask isn't blocked
+          undoDebugMark(`restore:${taskId}:tombstone-cleared`)
           // BUG-1737: Cancel queue DELETE BEFORE enqueueing CREATE
           try {
             const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')
             await deleteOperationsByType('task', taskId, 'delete')
+            undoDebugMark(`restore:${taskId}:delete-ops-cancelled`)
           } catch (e) {
             console.warn('[UNDO] Failed to cancel pending sync ops:', e)
+            undoDebugLog('task-bulk-delete delete op cancellation failed', { taskId, error: e })
           }
-          await taskStore.createTask(deletedTask)
+          await taskStore.createTask(restorableTask)
+          undoDebugMark(`restore:${taskId}:end`)
+          undoDebugLog('task-bulk-delete restore end', {
+            taskId,
+            rawExistsAfter: taskStore.rawTasks?.some(task => task.id === taskId),
+            visibleExistsAfter: taskStore.tasks?.some(task => task.id === taskId),
+            durationMs: undoDebugMeasure(`restore:${taskId}`, `restore:${taskId}:start`, `restore:${taskId}:end`),
+          })
         }
       }
       break
@@ -380,6 +521,12 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
   } catch (error) {
     console.warn('⚠️ [UNDO] Could not request canvas sync:', error)
   }
+
+  undoDebugMark(`${markBase}:end`)
+  undoDebugLog('performSelectiveUndo end', {
+    operation: summarizeOperation(operationSnapshot),
+    durationMs: undoDebugMeasure(markBase, `${markBase}:start`, `${markBase}:end`),
+  })
 
   return true
 }
@@ -569,10 +716,22 @@ const showUndoRedoToast = async (action: 'undo' | 'redo', description: string) =
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
 // BUG-309-B: Enhanced with operation-aware selective restoration
 const performUndo = async () => {
+  undoDebugMark('performUndo:start')
+  undoDebugLog('performUndo start', {
+    operationStack: summarizeStack(operationStack.value),
+    redoStack: summarizeStack(redoOperationStack.value),
+    canUndo: canUndo?.value,
+  })
+
   // BUG-309-B: Try operation-aware undo first
   if (useOperationAwareUndo && operationStack.value.length > 0) {
     const operationSnapshot = operationStack.value.pop()!
     redoOperationStack.value.push(operationSnapshot)
+    undoDebugLog('performUndo popped operation', {
+      popped: summarizeOperation(operationSnapshot),
+      operationStack: summarizeStack(operationStack.value),
+      redoStack: summarizeStack(redoOperationStack.value),
+    })
 
     // BUG-336 FIX: Don't call refHistoryInstance.undo() here
     // The operation stack is the source of truth in operation-aware mode.
@@ -585,11 +744,22 @@ const performUndo = async () => {
       showUndoRedoToast('undo', operationSnapshot.operation.description)
     }
 
+    undoDebugMark('performUndo:end')
+    undoDebugLog('performUndo end', {
+      result,
+      durationMs: undoDebugMeasure('performUndo', 'performUndo:start', 'performUndo:end'),
+      operationStack: summarizeStack(operationStack.value),
+      redoStack: summarizeStack(redoOperationStack.value),
+    })
+
     return result
   }
 
   // Fall back to legacy full-state undo
-  if (!refHistoryInstance || !unifiedState) return false
+  if (!refHistoryInstance || !unifiedState) {
+    undoDebugLog('performUndo legacy skipped: ref history missing')
+    return false
+  }
   refHistoryInstance.undo()
 
   // After undo, unifiedState.value now contains the previous state
@@ -624,8 +794,14 @@ const performUndo = async () => {
     // TASK-140: Show toast notification for legacy undo
     showUndoRedoToast('undo', 'previous state')
 
+    undoDebugMark('performUndo:end')
+    undoDebugLog('performUndo legacy end', {
+      durationMs: undoDebugMeasure('performUndo', 'performUndo:start', 'performUndo:end'),
+    })
+
     return true
   }
+  undoDebugLog('performUndo returned false: no previous state')
   return false
 }
 
@@ -763,9 +939,13 @@ const beginOperation = async (operation: Omit<UndoOperation, 'timestamp'>): Prom
 const commitOperation = async (handle?: OperationHandle) => {
   if (!handle) {
     console.warn('⚠️ [UNDO] commitOperation called without beginOperation')
+    undoDebugLog('commitOperation skipped: missing handle')
     return false
   }
 
+  const markBase = `commit:${handle.operation.type}:${handle.operation.affectedIds.join(',') || 'none'}`
+  undoDebugMark(`${markBase}:start`)
+  undoDebugLog('commitOperation start', { operation: handle.operation })
   const snapshotAfter = await captureCurrentState(handle.operation.affectedIds)
 
   // Push to operation stack (limit capacity to 30 to bound memory usage)
@@ -787,6 +967,12 @@ const commitOperation = async (handle?: OperationHandle) => {
     commit()
   }
 
+  undoDebugMark(`${markBase}:end`)
+  undoDebugLog('commitOperation end', {
+    operation: handle.operation,
+    durationMs: undoDebugMeasure(markBase, `${markBase}:start`, `${markBase}:end`),
+    operationStack: summarizeStack(operationStack.value),
+  })
   return true
 }
 
@@ -836,6 +1022,7 @@ const saveState = async (_description?: string, _operation?: Omit<UndoOperation,
 
 // BUG-309-B: Operation-aware task operations
 const deleteTaskWithUndo = async (taskId: string) => {
+  undoDebugMark(`delete:${taskId}:with-undo:start`)
   // Dynamic import
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
@@ -844,8 +1031,17 @@ const deleteTaskWithUndo = async (taskId: string) => {
   const taskToDelete = taskSource.find(t => t.id === taskId)
   if (!taskToDelete) {
     console.warn('⚠️ Task not found for deletion:', taskId)
+    undoDebugLog('deleteTaskWithUndo skipped: task missing', { taskId })
     return
   }
+
+  undoDebugLog('deleteTaskWithUndo start', {
+    taskId,
+    taskToDelete,
+    rawCount: taskStore.rawTasks?.length,
+    visibleCount: taskStore.tasks?.length,
+    operationStack: summarizeStack(operationStack.value),
+  })
 
   const handle = await beginOperation({
     type: 'task-delete',
@@ -854,11 +1050,41 @@ const deleteTaskWithUndo = async (taskId: string) => {
   })
 
   try {
-    await taskStore.deleteTask(taskId, 'deleteTaskWithUndo')
+    undoDebugMark(`delete:${taskId}:store-delete:start`)
+    const deletePromise = taskStore.deleteTask(taskId, 'deleteTaskWithUndo')
+    undoDebugMark(`delete:${taskId}:store-delete:end`)
     await nextTick()
+
+    // Commit the undo entry as soon as the optimistic local splice is visible.
+    // Waiting for persistence/sync queue work lets a fast Ctrl+Z pop the previous
+    // operation (usually task-create) instead of this delete.
+    if (taskStore.rawTasks?.some(task => task.id === taskId)) {
+      await deletePromise
+      return
+    }
+
     await commitOperation(handle)
+    undoDebugMark(`delete:${taskId}:with-undo:end`)
+    undoDebugLog('deleteTaskWithUndo end', {
+      taskId,
+      rawExistsAfter: taskStore.rawTasks?.some(task => task.id === taskId),
+      visibleExistsAfter: taskStore.tasks?.some(task => task.id === taskId),
+      deleteDurationMs: undoDebugMeasure(
+        `delete:${taskId}:store-delete`,
+        `delete:${taskId}:store-delete:start`,
+        `delete:${taskId}:store-delete:end`
+      ),
+      totalDurationMs: undoDebugMeasure(
+        `delete:${taskId}:with-undo`,
+        `delete:${taskId}:with-undo:start`,
+        `delete:${taskId}:with-undo:end`
+      ),
+      operationStack: summarizeStack(operationStack.value),
+    })
+    await deletePromise
   } catch (error) {
     console.error('❌ deleteTaskWithUndo failed:', error)
+    undoDebugLog('deleteTaskWithUndo threw', { taskId, error })
     throw error
   }
 }
@@ -1033,9 +1259,17 @@ const deleteGroupWithUndo = async (groupId: string) => {
 
 // BUG-309-B: Operation-aware bulk delete
 const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
+  undoDebugMark(`bulk-delete:${taskIds.join(',')}:start`)
   // Dynamic import
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
+
+  undoDebugLog('bulkDeleteTasksWithUndo start', {
+    taskIds,
+    rawCount: taskStore.rawTasks?.length,
+    visibleCount: taskStore.tasks?.length,
+    operationStack: summarizeStack(operationStack.value),
+  })
 
   const handle = await beginOperation({
     type: 'task-bulk-delete',
@@ -1055,8 +1289,21 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
 
     await nextTick()
     await commitOperation(handle)
+    undoDebugMark(`bulk-delete:${taskIds.join(',')}:end`)
+    undoDebugLog('bulkDeleteTasksWithUndo end', {
+      taskIds,
+      rawExistingAfter: taskIds.filter(id => taskStore.rawTasks?.some(task => task.id === id)),
+      visibleExistingAfter: taskIds.filter(id => taskStore.tasks?.some(task => task.id === id)),
+      durationMs: undoDebugMeasure(
+        `bulk-delete:${taskIds.join(',')}`,
+        `bulk-delete:${taskIds.join(',')}:start`,
+        `bulk-delete:${taskIds.join(',')}:end`
+      ),
+      operationStack: summarizeStack(operationStack.value),
+    })
   } catch (error) {
     console.error('❌ bulkDeleteTasksWithUndo failed:', error)
+    undoDebugLog('bulkDeleteTasksWithUndo threw', { taskIds, error })
     throw error
   }
 }

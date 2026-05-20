@@ -8,6 +8,31 @@
 
 ## Active Tasks
 
+### TASK-1789: Fix ~160 pre-existing type-check errors blocking CI (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18) — **NEXT UP**
+
+**Problem**: `npm run type-check` reports ~166 errors across ~50 files (CanvasView, BoardView, PerformanceView, auth.ts, GroupNodeSimple, AISettingsTab, KanbanColumn, etc.). CI has been failing on the `check` job for 5+ consecutive runs. The VPS deploy workflow runs separately from CI so deploys aren't blocked, but the red-CI state masks regressions any future PR might introduce.
+
+**Scope**: pure type-fix sweep. No behavior changes. Errors fall into known buckets — wrong vue-flow prop signatures on Canvas, missing null-guards on optional types, `Record<string, unknown>` mismatches on wrapper handlers, Pinia auth.ts typing drift, missing `from` field on NodeChange objects. Split into one PR per high-error file to keep blast radius small.
+
+**Why now**: TASK-1785 (calendar ripple + lock) landed clean type-wise and dropped 4 errors. Every fix from here should keep the bar green. Letting CI stay red trains the team to ignore the gate.
+
+**Top files by error count** (npm run type-check, 2026-05-18):
+- src/views/CanvasView.vue — 13
+- src/views/PerformanceView.vue — 12
+- src/stores/auth.ts — 12
+- src/components/settings/tabs/AISettingsTab.vue — 9
+- src/components/canvas/GroupNodeSimple.vue — 9
+- src/views/CalendarView.vue — 8
+- src/components/kanban/KanbanColumn.vue — 7
+
+**First step on resume**: `npm run type-check 2>&1 | grep -oE "error TS[0-9]+" | sort | uniq -c | sort -rn` to confirm error-code distribution, then fix the highest-count file first.
+
+**Out of scope**: no runtime/UX changes, no refactors, no behavior tweaks. Pure type annotations and minimal restructuring.
+
+---
+
 ### ~~TASK-1790~~: Restore timer follower poll as Realtime backstop (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (shipped 2026-05-18, v1.4.37, commit 4b68d919)
@@ -25,29 +50,6 @@
 - `packages/kde-widget/contents/ui/main.qml:4277` — defensive: add `&user_id=eq.<root.userId>` to widget's active-session SELECT (RLS already enforces server-side, this is hygiene).
 
 **Verification**: VPS DB confirms task `7009f622-e45f-428e-be41-f0e0900ee549` ("לארגן משימות / טאבים") had an active `timer_sessions` row during screenshot while Vue showed 25:00 idle.
-
----
-
-### TASK-1789: Fix ~160 pre-existing type-check errors blocking CI (📋 PLANNED)
-
-**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-18)
-
-**Problem**: `npm run type-check` reports 166 errors across ~50 files (CanvasView, BoardView, PerformanceView, auth.ts, GroupNodeSimple, AISettingsTab, KanbanColumn, etc.). CI has been failing on the `check` job for at least 5 consecutive runs. The VPS deploy workflow runs separately from CI so deploys have not been blocked, but the red-CI state masks regressions any future PR might introduce.
-
-**Scope**: pure type-fix sweep. No behavior changes. Errors fall into known buckets — wrong vue-flow prop signatures on Canvas, missing null-guards on optional types, `Record<string, unknown>` mismatches on wrapper handlers, Pinia auth.ts typing drift, missing `from` field on NodeChange objects. Split into one PR per high-error file to keep blast radius small.
-
-**Why now**: with TASK-1785 landing clean type-wise (and the small companion fix to CalendarView/CalendarWeekView/CalendarDayView dropping 4 errors), every fix from this point should keep the bar green. Letting CI stay red trains the team to ignore the gate.
-
-**Top files by error count** (npm run type-check, 2026-05-18):
-- src/views/CanvasView.vue — 13
-- src/views/PerformanceView.vue — 12
-- src/stores/auth.ts — 12
-- src/components/settings/tabs/AISettingsTab.vue — 9
-- src/components/canvas/GroupNodeSimple.vue — 9
-- src/views/CalendarView.vue — 8
-- src/components/kanban/KanbanColumn.vue — 7
-
-**Out of scope**: no runtime/UX changes, no refactors, no behavior tweaks. Pure type annotations and minimal restructuring.
 
 ---
 

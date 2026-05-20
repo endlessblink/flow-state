@@ -211,4 +211,32 @@ describe('BUG-1737 — deleteTask: single-write path (no direct Supabase delete)
     slowDeleteSave.resolve()
     await deletePromise
   })
+
+  it('restores immediately across repeated fast delete undo cycles', async () => {
+    const store = useTaskStore()
+    const undo = getUndoSystem()
+    const task = await undo.createTaskWithUndo({ title: 'Repeated Fast Undo Task' })
+
+    for (let cycle = 0; cycle < 3; cycle++) {
+      const slowDeleteSave = deferred()
+      mockSaveTasks.mockImplementation((_payload: unknown, context?: string) => {
+        if (context === 'deleteTask') return slowDeleteSave.promise
+        return Promise.resolve(undefined)
+      })
+
+      const deletePromise = undo.deleteTaskWithUndo(task.id)
+
+      await vi.waitFor(() => {
+        expect(store.rawTasks.some(t => t.id === task.id)).toBe(false)
+      })
+
+      await undo.undo()
+
+      expect(store.rawTasks.some(t => t.id === task.id)).toBe(true)
+      expect(store.rawTasks.find(t => t.id === task.id)?.title).toBe('Repeated Fast Undo Task')
+
+      slowDeleteSave.resolve()
+      await deletePromise
+    }
+  })
 })

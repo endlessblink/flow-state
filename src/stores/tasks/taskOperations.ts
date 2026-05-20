@@ -965,7 +965,11 @@ export function useTaskOperations(
             deletedTask,
             rawCount: _rawTasks.value.length,
         })
-        console.log(`🗑️ [DELETE] "${deletedTask.title?.slice(0, 30)}" (${taskId.slice(0, 8)}) — source: ${source}`)
+        undoDebugLog('taskStore.deleteTask requested', {
+            taskId,
+            title: deletedTask.title,
+            source,
+        })
         manualOperationInProgress.value = true
 
         // BUG-1211 FIX: Mark as pending write BEFORE the delete so the realtime
@@ -974,9 +978,6 @@ export function useTaskOperations(
         addPendingWrite(taskId)
 
         // TASK-1159: Optimistic delete — splice from local state immediately for instant UI
-        if (import.meta.env.DEV) {
-            console.log(`[BUG-1451] deleteTask: ${taskId.slice(0, 8)} "${deletedTask.title?.slice(0, 20)}" spliced from _rawTasks`)
-        }
         _rawTasks.value.splice(index, 1)
         undoDebugMark(`task-store:delete:${taskId}:spliced`)
         undoDebugLog('taskStore.deleteTask spliced', {

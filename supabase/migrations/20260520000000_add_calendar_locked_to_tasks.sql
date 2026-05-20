@@ -1,0 +1,11 @@
+-- TASK-1785 Push 2: Calendar ripple-shift lock support
+-- Adds a per-task boolean so the Shift+drag ripple (useCalendarDayView.ts)
+-- can skip tasks the user has marked as time-locked. The Supabase mappers
+-- (src/utils/supabaseMappers.ts) write/read this column as task.calendarLocked.
+--
+-- Skip-protect semantics: a locked task can still be dragged by the user, but
+-- ripples triggered by OTHER tasks won't sweep it. DEFAULT false keeps existing
+-- rows behaving exactly as before.
+--
+-- Idempotent: safe to apply against environments where the column already exists.
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS calendar_locked BOOLEAN DEFAULT false;

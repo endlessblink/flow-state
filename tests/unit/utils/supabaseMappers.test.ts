@@ -114,6 +114,22 @@ describe('toSupabaseTask / fromSupabaseTask', () => {
     expect(roundTrip.estimatedPomodoros).toBe(task.estimatedPomodoros)
   })
 
+  it('TASK-1785 Push 2: calendarLocked round-trips via calendar_locked', () => {
+    const locked = toSupabaseTask(makeTask({ calendarLocked: true }), USER_ID)
+    expect(locked.calendar_locked).toBe(true)
+    expect(fromSupabaseTask(locked).calendarLocked).toBe(true)
+
+    const unlocked = toSupabaseTask(makeTask({ calendarLocked: false }), USER_ID)
+    expect(unlocked.calendar_locked).toBe(false)
+    expect(fromSupabaseTask(unlocked).calendarLocked).toBe(false)
+
+    // Undefined input defaults to false on the way to the DB (column has DEFAULT false)
+    const defaulted = toSupabaseTask(makeTask(), USER_ID)
+    expect(defaulted.calendar_locked).toBe(false)
+    // Missing DB column reads back as false
+    expect(fromSupabaseTask({ ...defaulted, calendar_locked: undefined }).calendarLocked).toBe(false)
+  })
+
   it('status mapping: todo → planned → todo', () => {
     const task = makeTask({ status: 'todo' })
     const supabase = toSupabaseTask(task, USER_ID)

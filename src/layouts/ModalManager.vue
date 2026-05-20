@@ -39,6 +39,7 @@
       :task="contextMenuTask"
       :selected-count="contextMenuSelectedCount"
       :selected-ids="contextMenuSelectedIds"
+      :context="contextMenuContext"
       :compact-mode="settingsStore.boardDensity === 'ultrathin'"
       @close="closeTaskContextMenu"
       @edit="(taskId: string) => {
@@ -218,6 +219,9 @@ const contextMenuY = ref(0)
 const contextMenuTask = ref<Task | null>(null)
 const contextMenuSelectedIds = ref<string[]>([])
 const contextMenuSelectedCount = ref(0)
+// TASK-1785 Push 2: surface the menu was opened from, so the calendar can show
+// the "Lock time on calendar" toggle while other surfaces hide it.
+const contextMenuContext = ref<'calendar' | 'board' | 'list' | 'canvas'>('list')
 
 const showProjectContextMenu = ref(false)
 const projectContextMenuX = ref(0)
@@ -752,6 +756,9 @@ const handleTaskContextMenu = (event: Event) => {
   } else {
     contextMenuTask.value = task
   }
+
+  // TASK-1785 Push 2: 'calendar' enables the lock toggle in the menu
+  contextMenuContext.value = isCalendarEvent ? 'calendar' : 'list'
 
   // TASK-1419: Pass multi-select info to context menu
   contextMenuSelectedIds.value = selectedIds || [task.id]

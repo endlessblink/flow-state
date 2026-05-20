@@ -46,6 +46,7 @@ const VALID_TASK_COLUMNS = new Set([
   'created_at', 'updated_at',
   'planning_notes', // TASK-1768: mini-canvas planning notes (jsonb)
   'mini_canvas_edges', // Mini-canvas user-drawn edges (jsonb)
+  'calendar_locked', // TASK-1785 Push 2: ripple-shift skip-protect flag (boolean)
 ])
 
 // --------------------------------------------------------------------------

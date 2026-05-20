@@ -151,6 +151,10 @@ export interface Task {
   // Marks a task clone created as a calendar history entry for a recurring task completion (read-only record)
   isCompletionRecord?: boolean
   isPinned?: boolean
+  // TASK-1785 Push 2: when true, calendar ripple-shift skips this task
+  // (it keeps its time while other tasks shift around it). Skip-protect only —
+  // the task can still be dragged directly by the user.
+  calendarLocked?: boolean
   // Workspace collaboration (Phase 1)
   workspaceId?: string | null
   assignedTo?: string | null
@@ -204,6 +208,7 @@ export interface CalendarEvent {
   instanceStatus?: 'scheduled' | 'completed' | 'skipped' // TASK-1285: Instance completion tracking
   taskStatus?: Task['status'] // TASK-1285: Parent task status for UI display
   isVirtual?: boolean // Display-only recurring event preview (no physical task)
+  calendarLocked?: boolean // TASK-1785 Push 2: ripple-shift skip-protect indicator
 }
 
 /** TASK-1418: Virtual recurring event for calendar preview (display-only, no physical task) */

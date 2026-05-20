@@ -156,6 +156,7 @@ export interface SupabaseTask {
     // "Done for now" feature - tracks when task was rescheduled via this feature
     done_for_now_until?: string | null
     is_pinned?: boolean
+    calendar_locked?: boolean
     is_completion_record?: boolean
     // Workspace collaboration
     workspace_id?: string | null
@@ -565,6 +566,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         done_for_now_until: sanitizeTimestamp(task.doneForNowUntil),
         is_completion_record: task.isCompletionRecord ?? false,
         is_pinned: task.isPinned ?? false,
+    calendar_locked: task.calendarLocked ?? false,
 
         // Workspace collaboration — only include when set (safe before migration adds columns)
         ...(task.workspaceId ? { workspace_id: task.workspaceId } : {}),
@@ -651,6 +653,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         doneForNowUntil: record.done_for_now_until || undefined,
         isCompletionRecord: record.is_completion_record ?? false,
         isPinned: record.is_pinned ?? false,
+    calendarLocked: record.calendar_locked ?? false,
 
         // Workspace collaboration
         workspaceId: record.workspace_id || null,

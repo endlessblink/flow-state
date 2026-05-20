@@ -51,9 +51,9 @@
 
 ---
 
-### TASK-1785: Calendar Shift+drag ripple-push reschedule mode (📋 PLANNED)
+### ~~TASK-1785~~: Calendar Shift+drag ripple-push reschedule mode (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-05-17)
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-21, Push 1 v1.4.37 + Push 2 v1.4.41)
 
 **Problem**: Dragging a calendar task to a later time only re-times that one task. When a meeting runs long or a block shifts, users have to manually re-time every later task on the day — N drags for one logical "everything moved later" action.
 
@@ -66,7 +66,11 @@
 - Live ghost-shift preview while Shift is held mid-drag
 - Negative delta (drag earlier) explicitly out of scope for v1
 
-**Status**: Push 1 + 1.5 shipped on `task-1785-ripple-shift` branch (PR #149). Includes pure ripple math + 15 unit tests, day + week view wiring (handlers shared via CalendarView), live ghost preview via `rippleGhostOffsets` map. Push 2 (Supabase migration + lock toggle UI) deferred.
+**Status**:
+- **Push 1 + 1.5** (PR #149, shipped v1.4.37): pure ripple math + 15 unit tests, day + week view wiring (handlers shared via CalendarView), live ghost preview via `rippleGhostOffsets` map.
+- **Push 2** (PR #152, shipped v1.4.41): per-task `calendarLocked` field. Migration `20260520000000_add_calendar_locked_to_tasks.sql` applied to local + production Supabase (682 rows defaulted false). Mapper round-trip + ripple skip-protect (`if (task.calendarLocked) continue`). "Lock time on calendar" toggle in calendar context menu only (gated by `context` prop in ModalManager). 🔒 corner indicator in day + week view. Tests: mapper round-trip + api-contract allowlist.
+
+**Out of scope (deferred)**: compress mode (Shift+drag earlier), bulk-lock, lock-from-board/list/canvas.
 
 **Plan file**: `~/.claude/plans/yes-and-ask-me-flickering-river.md`
 

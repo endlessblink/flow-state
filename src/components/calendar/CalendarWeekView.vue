@@ -312,7 +312,8 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
                   'selected': selectedEventIds?.has(event.id),
                   'status-done': getTaskStatus(event) === 'done',
                   'status-active': getTaskStatus(event) === 'todo',
-                  'week-event--virtual': event.isVirtual
+                  'week-event--virtual': event.isVirtual,
+                  'is-locked': event.calendarLocked
                 }"
                 :style="{ ...getWeekEventCellStyle(event), backgroundColor: event.isVirtual ? undefined : event.color }"
                 :title="getEventTooltip(event)"
@@ -734,6 +735,17 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
   right: 4px;
   font-size: 10px;
   opacity: 0.7;
+}
+
+/* TASK-1785 Push 2: ripple-shift lock indicator (mirrors day view) */
+.week-event.is-locked::after {
+  content: '\1F512'; /* 🔒 */
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  opacity: 0.65;
+  pointer-events: none;
 }
 
 /* TASK-1317: External calendar events */

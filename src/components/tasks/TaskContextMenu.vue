@@ -31,6 +31,12 @@
       <span class="menu-text">{{ currentTask?.isPinned ? 'Unpin' : 'Pin to Top' }}</span>
     </button>
 
+    <!-- TASK-1785 Push 2: Lock time on calendar (calendar context only) -->
+    <button v-if="!isBatchOperation && context === 'calendar'" class="menu-item" @click="toggleCalendarLock">
+      <component :is="currentTask?.calendarLocked ? LockOpen : Lock" :size="16" class="menu-icon" />
+      <span class="menu-text">{{ currentTask?.calendarLocked ? 'Unlock time' : 'Lock time on calendar' }}</span>
+    </button>
+
     <div class="menu-divider" />
 
     <!-- Due Date with submenu -->
@@ -239,6 +245,8 @@ import {
   Sparkles,
   Pin,
   PinOff,
+  Lock,
+  LockOpen,
   LayoutDashboard
 } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
@@ -271,6 +279,9 @@ interface Props {
   compactMode?: boolean
   selectedCount?: number
   selectedIds?: string[]
+  // TASK-1785 Push 2: where this menu was opened from. 'calendar' surfaces the
+  // "Lock time on calendar" toggle; other surfaces hide it (field is calendar-only).
+  context?: 'calendar' | 'board' | 'list' | 'canvas'
 }
 
 const props = defineProps<Props>()
@@ -636,6 +647,13 @@ const pinAsQuickTask = async () => {
 const togglePin = async () => {
   if (!currentTask.value) return
   await taskStore.updateTask(currentTask.value.id, { isPinned: !currentTask.value.isPinned })
+  emit('close')
+}
+
+// TASK-1785 Push 2: toggle calendar ripple-shift lock (skip-protect)
+const toggleCalendarLock = async () => {
+  if (!currentTask.value) return
+  await taskStore.updateTask(currentTask.value.id, { calendarLocked: !currentTask.value.calendarLocked })
   emit('close')
 }
 

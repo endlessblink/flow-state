@@ -263,7 +263,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
                 totalColumns: 1,
                 isDueDate: false,
                 instanceStatus: todayInstance?.status,
-                taskStatus: task.status
+                taskStatus: task.status,
+                calendarLocked: task.calendarLocked ?? false
               }
 
               events.push(event)
@@ -1046,8 +1047,11 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       const laterEvents: RippleLaterEvent[] = []
       for (const task of taskStore._rawTasks) {
         if (!task || task.deletedAt) continue
-        // Push 1: no calendarLocked field yet — every later task ripples.
-        // Push 2 will add: if (task.calendarLocked) continue
+        // TASK-1785 Push 2: skip-protect — locked tasks keep their time while
+        // other tasks ripple around them. The dragged task itself is never in
+        // this loop (it's the ripple source), so locking never blocks the user
+        // from moving a task deliberately.
+        if (task.calendarLocked) continue
         const instances = getTaskInstances(task)
         for (const inst of instances) {
           if (!inst?.id) continue

@@ -174,7 +174,8 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
                   dayIndex,
                   isDueDate: false,
                   instanceStatus: 'status' in instance ? (instance as { status?: 'scheduled' | 'completed' | 'skipped' }).status : undefined,
-                  taskStatus: task.status
+                  taskStatus: task.status,
+                  calendarLocked: task.calendarLocked ?? false
                 })
               }
             })

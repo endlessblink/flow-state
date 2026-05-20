@@ -203,7 +203,8 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
               'is-compact': calEvent.duration <= 30,
               'status-done': getTaskStatus(calEvent) === 'done',
               'status-active': getTaskStatus(calEvent) === 'todo',
-              'slot-task--virtual': calEvent.isVirtual
+              'slot-task--virtual': calEvent.isVirtual,
+              'is-locked': calEvent.calendarLocked
             }"
             :style="getSlotTaskStyle(calEvent)"
             :title="calEvent.isVirtual ? `Recurring — will be created on ${calEvent.startTime?.toISOString?.()?.slice(0, 10) || ''}` : undefined"
@@ -917,6 +918,18 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
   right: 4px;
   font-size: 10px;
   opacity: 0.7;
+}
+
+/* TASK-1785 Push 2: ripple-shift lock indicator — small lock glyph, top-right corner.
+   Does not block interaction (the task can still be dragged/edited). */
+.slot-task.is-locked::after {
+  content: '\1F512'; /* 🔒 */
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  opacity: 0.65;
+  pointer-events: none;
 }
 
 /* TASK-1317 + TASK-1283 + TASK-1496: External calendar events (read-only overlays, side-by-side positioning) */

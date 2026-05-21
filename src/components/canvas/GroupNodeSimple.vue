@@ -127,11 +127,18 @@ const isCollapsed = computed(() => !!props.data?.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh
+// TASK-1791b: legacy default group colors were indigo/blue, which clash with
+// the Warm Dark palette. Normalize them to a warm neutral at render time so
+// existing groups stop showing purple without a DB migration. Groups with a
+// deliberate custom color keep it.
+const LEGACY_DEFAULT_GROUP_COLORS = new Set(['#6366f1', '#3b82f6'])
+const WARM_DEFAULT_GROUP_COLOR = '#8B8178'
 const groupColor = computed(() => {
   const groupId = props.data?.id
-  if (!groupId) return props.data?.color || '#3b82f6'
-  const storeGroup = canvasStore.groups.find(g => g.id === groupId)
-  return storeGroup?.color || props.data?.color || '#3b82f6'
+  const storeGroup = groupId ? canvasStore.groups.find(g => g.id === groupId) : undefined
+  const raw = (storeGroup?.color || props.data?.color || '') as string
+  if (!raw || LEGACY_DEFAULT_GROUP_COLORS.has(raw.toLowerCase())) return WARM_DEFAULT_GROUP_COLOR
+  return raw
 })
 const taskCount = computed(() => {
   const data = props.data as Record<string, unknown> | undefined

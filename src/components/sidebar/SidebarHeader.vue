@@ -4,7 +4,7 @@
       <AppLogo size="md" />
       <span class="brand-text">FlowState</span>
     </div>
-    <BaseButton variant="secondary" size="md" @click="sidebar.openCreateProject">
+    <BaseButton variant="ghost" size="md" @click="sidebar.openCreateProject">
       <Plus :size="14" />
       {{ $t('sidebar.create_project') }}
     </BaseButton>

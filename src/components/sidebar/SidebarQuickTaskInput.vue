@@ -217,12 +217,15 @@ defineExpose({
 
 <style scoped>
 /* Quick Task Section */
+/* TASK-1791: quick-add is the primary daily action — resting brand accent
+   so it reads louder than the (now ghost) Create project button above it. */
 .quick-task-section {
   padding: var(--space-2);
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border);
+  background: var(--brand-primary-subtle);
+  border: 1px solid var(--brand-primary-dim);
   border-radius: var(--radius-lg);
   margin: var(--space-4) var(--space-6);
+  box-shadow: var(--brand-glow-sm);
 }
 
 .quick-task-row {

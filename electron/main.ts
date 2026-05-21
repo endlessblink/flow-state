@@ -53,6 +53,28 @@ function createWindow() {
     return { action: 'deny' }
   })
 
+  // Electron can consume renderer keydown events in some focused states. Keep
+  // Shift+F search available while preserving the renderer's input/modal guard.
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    const isSearchShortcut =
+      input.shift &&
+      !input.control &&
+      !input.meta &&
+      !input.alt &&
+      (input.key === 'F' || input.code === 'KeyF')
+
+    if (!isSearchShortcut) return
+
+    mainWindow?.webContents.executeJavaScript(`(() => {
+      const target = document.activeElement;
+      if (target?.closest?.('.quick-task-section')) return;
+      const tagName = target?.tagName;
+      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable) return;
+      if (target?.closest?.('[role="dialog"], .modal, .n-modal')) return;
+      window.dispatchEvent(new CustomEvent('open-search'));
+    })()`)
+  })
+
   // Catch plain <a href> clicks and any programmatic navigation that would
   // replace the app window. setWindowOpenHandler only fires for target="_blank"
   // and window.open(); will-navigate covers everything else.

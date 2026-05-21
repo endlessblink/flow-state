@@ -106,13 +106,9 @@ const currentTab = computed(() => {
 }
 
 .settings-modal {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-medium) 0%,
-    var(--glass-bg-heavy) 100%
-  );
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  /* OPAQUE — was a translucent glass gradient + blur(32px); blur removal made
+     it see-through and unreadable over page content (TASK-1791b). */
+  background: var(--glass-bg-solid);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-2xl);
   box-shadow:

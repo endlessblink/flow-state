@@ -136,16 +136,16 @@ button svg {
     color: var(--text-secondary) !important;
 }
 
-/* Tasks Container + drag-area — 10px gap between cards */
+/* Tasks Container + drag-area — give dense boards more breathing room */
 .kanban-column .tasks-container {
-    gap: 10px !important;
-    padding: var(--space-1) !important;
+    gap: 12px !important;
+    padding: var(--space-2) !important;
 }
 
 .kanban-column .drag-area {
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
+    gap: 12px !important;
 }
 
 /* Empty column state - minimal */
@@ -173,7 +173,7 @@ button svg {
    12px padding, 10px radius, 14px/500 title, 12px/400 metadata */
 .task-card {
     border-radius: 8px !important;
-    padding: 12px 14px !important;
+    padding: 14px 16px !important;
     background: rgba(35, 32, 55, 0.4) !important;
     min-height: unset !important;
     margin-bottom: 0 !important;
@@ -373,7 +373,7 @@ button svg {
 
 .task-card--comfortable {
     border-radius: 8px !important;
-    padding: 12px 14px !important;
+    padding: 14px 16px !important;
     min-height: unset !important;
 }
 
@@ -971,4 +971,3 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
     transform: scale(1);
   }
 }
-

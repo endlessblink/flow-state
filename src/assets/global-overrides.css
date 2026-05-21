@@ -1039,3 +1039,21 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
   --brand-focus-ring: 0 0 0 3px rgba(224, 122, 75, 0.35);
   --purple-glow-focus: 0 0 0 3px rgba(224, 122, 75, 0.35);
 }
+
+/* Floating overlays MUST be opaque (blur was removed app-wide). Safety net so
+   menus / dropdowns / popovers / select panels never let page content bleed
+   through and become unreadable. Inner items keep their own hover/active bg. */
+.context-menu,
+.select-dropdown,
+.base-popover,
+.dropdown-menu,
+.dropdown-content,
+.popover-content,
+.n-popover,
+.n-popover__content,
+.n-dropdown-menu,
+.n-base-select-menu,
+.n-popselect-menu,
+.n-date-panel {
+  background: var(--overlay-component-bg) !important;
+}

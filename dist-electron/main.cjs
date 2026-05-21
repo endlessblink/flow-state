@@ -49,13 +49,12 @@ function createWindow() {
         return { action: 'deny' };
     });
     // Electron can consume renderer keydown events in some focused states. Keep
-    // Shift+F search available while preserving the renderer's input/modal guard.
+    // search shortcuts available while preserving the renderer's input/modal guard.
     mainWindow.webContents.on('before-input-event', (_event, input) => {
+        const isSearchKey = input.key === 'F' || input.code === 'KeyF';
         const isSearchShortcut = input.shift &&
-            !input.control &&
-            !input.meta &&
             !input.alt &&
-            (input.key === 'F' || input.code === 'KeyF');
+            isSearchKey;
         if (!isSearchShortcut)
             return;
         mainWindow?.webContents.executeJavaScript(`(() => {

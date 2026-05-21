@@ -53,8 +53,11 @@ export function useAppShortcuts() {
             window.dispatchEvent(new CustomEvent('open-command-palette'))
         }
 
-        // Shift+F to open search (use event.code for Hebrew layout compatibility)
-        if (event.shiftKey && !event.ctrlKey && !event.metaKey && (event.key === 'F' || event.code === 'KeyF')) {
+        // Ctrl+Shift+F opens search. Shift+F remains supported for now, but
+        // Ctrl+Shift+F avoids Electron/desktop collisions and accidental typing.
+        const isSearchKey = event.key === 'F' || event.code === 'KeyF'
+        const isSearchShortcut = event.shiftKey && !event.altKey && isSearchKey
+        if (isSearchShortcut) {
             event.preventDefault()
             window.dispatchEvent(new CustomEvent('open-search'))
         }

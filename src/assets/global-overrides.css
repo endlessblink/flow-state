@@ -174,7 +174,7 @@ button svg {
 .task-card {
     border-radius: 8px !important;
     padding: 14px 16px !important;
-    background: rgba(35, 32, 55, 0.4) !important;
+    background: rgba(237, 230, 220, 0.05) !important;
     min-height: unset !important;
     margin-bottom: 0 !important;
 }

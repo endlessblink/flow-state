@@ -135,6 +135,12 @@
   --color-primary: var(--brand-primary);
   --color-primary-hover: var(--brand-hover);
 
+  /* Accent aliases — were UNDEFINED, so var(--accent-primary, #6366f1) fell
+     back to purple across canvas handles, AI toggle, etc. (TASK-1791b) */
+  --accent-primary: var(--brand-primary);
+  --accent-bg: var(--brand-primary-subtle);
+  --color-primary-alpha: var(--brand-primary-subtle);
+
   /* ===== SPACING SCALE ===== */
   /* Based on 0.25rem (4px) base unit */
   --space-0: 0;
@@ -277,7 +283,7 @@
   /* Scroll container background */
   --kanban-badge-bg: var(--glass-bg-heavy);
   /* Count badges */
-  --kanban-card-glass-bg: rgba(35, 32, 55, 0.7);
+  --kanban-card-glass-bg: rgba(42, 39, 35, 0.75);
   /* Purple-tinted semi-transparent card background */
   --kanban-card-footer-border: var(--glass-border-light);
   --kanban-card-tag-bg: var(--glass-bg-medium);
@@ -540,22 +546,22 @@
 
   /* Calendar-Specific Tokens */
   /* Purple - Calendar UI elements (filters, badges) */
-  --calendar-hover-bg: rgba(99, 102, 241, 0.02);
-  --calendar-hover-bg-medium: rgba(99, 102, 241, 0.05);
-  --calendar-creating-bg: rgba(99, 102, 241, 0.20);
-  --calendar-creating-bg-alt: rgba(139, 92, 246, 0.15);
-  --calendar-creating-border: rgba(99, 102, 241, 0.4);
-  --calendar-ghost-bg-start: rgba(99, 102, 241, 0.25);
-  --calendar-ghost-bg-end: rgba(79, 70, 229, 0.20);
-  --calendar-ghost-border: rgba(99, 102, 241, 0.6);
-  --calendar-ghost-shadow: 0 8px 16px rgba(99, 102, 241, 0.2), 0 0 20px rgba(99, 102, 241, 0.15);
-  --calendar-today-bg-start: rgba(99, 102, 241, 0.12);
-  --calendar-today-bg-end: rgba(79, 70, 229, 0.08);
-  --calendar-today-border: rgba(99, 102, 241, 0.2);
-  --calendar-today-glow: 0 0 16px rgba(99, 102, 241, 0.15);
-  --calendar-today-badge-start: rgba(99, 102, 241, 0.9);
-  --calendar-today-badge-end: rgba(79, 70, 229, 0.85);
-  --calendar-today-badge-shadow: 0 4px 8px rgba(99, 102, 241, 0.3), 0 0 12px rgba(99, 102, 241, 0.2);
+  --calendar-hover-bg: rgba(224, 122, 75, 0.02);
+  --calendar-hover-bg-medium: rgba(224, 122, 75, 0.05);
+  --calendar-creating-bg: rgba(224, 122, 75, 0.20);
+  --calendar-creating-bg-alt: rgba(224, 122, 75, 0.15);
+  --calendar-creating-border: rgba(224, 122, 75, 0.4);
+  --calendar-ghost-bg-start: rgba(224, 122, 75, 0.25);
+  --calendar-ghost-bg-end: rgba(201, 99, 58, 0.20);
+  --calendar-ghost-border: rgba(224, 122, 75, 0.6);
+  --calendar-ghost-shadow: 0 8px 16px rgba(224, 122, 75, 0.2), 0 0 20px rgba(224, 122, 75, 0.15);
+  --calendar-today-bg-start: rgba(224, 122, 75, 0.12);
+  --calendar-today-bg-end: rgba(201, 99, 58, 0.08);
+  --calendar-today-border: rgba(224, 122, 75, 0.2);
+  --calendar-today-glow: 0 0 16px rgba(224, 122, 75, 0.15);
+  --calendar-today-badge-start: rgba(224, 122, 75, 0.9);
+  --calendar-today-badge-end: rgba(201, 99, 58, 0.85);
+  --calendar-today-badge-shadow: 0 4px 8px rgba(224, 122, 75, 0.3), 0 0 12px rgba(224, 122, 75, 0.2);
 
   /* Green - Current time indicator */
   --calendar-current-time-bg-start: rgba(16, 185, 129, 0.12);
@@ -573,7 +579,7 @@
   --timer-glow-subtle: 0 0 24px rgba(251, 191, 36, 0.15);
   --timer-active-glow: 0 0 20px rgba(251, 191, 36, 0.4);
   --timer-active-glow-strong: 0 0 30px rgba(251, 191, 36, 0.6);
-  --timer-shadow-glow: 0 0 12px rgba(99, 102, 241, 0.6);
+  --timer-shadow-glow: 0 0 12px rgba(224, 122, 75, 0.6);
   --timer-active-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   --timer-active-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.25);
   --timer-shadow-complex: 0 12px 24px rgba(0, 0, 0, 0.24), 0 0 24px rgba(251, 191, 36, 0.15), inset 0 1px 0 var(--border-medium);
@@ -629,11 +635,12 @@
   /* Week view specific */
   --week-hover-bg: rgba(16, 185, 129, 0.02);
 
-  /* Additional glass opacity variations - purple-tinted */
-  --glass-bg-subtle: rgba(45, 40, 70, 0.02);
-  --glass-bg-weak: rgba(45, 40, 70, 0.04);
-  --glass-bg-tint: rgba(45, 40, 70, 0.10);
-  --glass-bg-soft: rgba(45, 40, 70, 0.18);
+  /* Additional glass opacity variations — warm (was a duplicate purple block
+     that overrode the warm definitions above; TASK-1791b) */
+  --glass-bg-subtle: rgba(237, 230, 220, 0.02);
+  --glass-bg-weak: rgba(237, 230, 220, 0.03);
+  --glass-bg-tint: rgba(237, 230, 220, 0.06);
+  --glass-bg-soft: rgba(237, 230, 220, 0.10);
   --glass-border-faint: rgba(255, 255, 255, 0.03);
   --glass-border-light: rgba(255, 255, 255, 0.06);
   --glass-border-medium: rgba(255, 255, 255, 0.16);
@@ -665,26 +672,26 @@
   --amber-bg-medium: rgba(251, 191, 36, 0.15);
   --amber-border-subtle: rgba(251, 191, 36, 0.2);
 
-  /* Purple interactive states (for buttons/UI) */
-  --purple-bg-subtle: rgba(139, 92, 246, 0.08);
-  --purple-bg-start: rgba(99, 102, 241, 0.16);
-  --purple-bg-end: rgba(79, 70, 229, 0.10);
-  --purple-border-subtle: rgba(139, 92, 246, 0.2);
-  --purple-border-light: rgba(99, 102, 241, 0.25);
-  --purple-border-medium: rgba(99, 102, 241, 0.3);
-  --purple-border-strong: rgba(99, 102, 241, 0.45);
-  --purple-border-active: rgba(99, 102, 241, 0.6);
-  --purple-glow-subtle: 0 0 0 2px rgba(99, 102, 241, 0.10);
-  --purple-glow-medium: 0 0 0 2px rgba(99, 102, 241, 0.12);
-  --purple-glow-focus: 0 0 0 3px rgba(59, 130, 246, 0.2);
-  --purple-shadow-subtle: 0 4px 12px rgba(99, 102, 241, 0.2);
-  --purple-shadow-medium: 0 4px 12px rgba(99, 102, 241, 0.25);
-  --purple-shadow-strong: rgba(99, 102, 241, 0.4);
-  --purple-shadow-deep: 0 8px 20px rgba(99, 102, 241, 0.35);
+  /* Interactive accent states (formerly purple) — now terracotta (TASK-1791b) */
+  --purple-bg-subtle: rgba(224, 122, 75, 0.08);
+  --purple-bg-start: rgba(224, 122, 75, 0.16);
+  --purple-bg-end: rgba(201, 99, 58, 0.10);
+  --purple-border-subtle: rgba(224, 122, 75, 0.2);
+  --purple-border-light: rgba(224, 122, 75, 0.25);
+  --purple-border-medium: rgba(224, 122, 75, 0.3);
+  --purple-border-strong: rgba(224, 122, 75, 0.45);
+  --purple-border-active: rgba(224, 122, 75, 0.6);
+  --purple-glow-subtle: 0 0 transparent;
+  --purple-glow-medium: 0 0 transparent;
+  --purple-glow-focus: 0 0 0 3px rgba(224, 122, 75, 0.35);
+  --purple-shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --purple-shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --purple-shadow-strong: rgba(0, 0, 0, 0.4);
+  --purple-shadow-deep: 0 8px 20px rgba(0, 0, 0, 0.35);
 
-  /* Purple gradients for buttons */
-  --purple-gradient-start: rgba(99, 102, 241, 0.9);
-  --purple-gradient-end: rgba(79, 70, 229, 0.85);
+  /* Accent gradients for buttons (formerly purple) — terracotta */
+  --purple-gradient-start: rgba(224, 122, 75, 0.9);
+  --purple-gradient-end: rgba(201, 99, 58, 0.85);
   --purple-gradient-hover-start: rgba(109, 112, 251, 0.95);
   --purple-gradient-hover-end: rgba(89, 80, 239, 0.9);
 

@@ -98,6 +98,10 @@
   --glass-border: rgba(237, 230, 220, 0.10);
   --glass-border-hover: rgba(237, 230, 220, 0.16);
   --glass-glow: transparent;
+  /* OPAQUE solid surface — used by modals/dialogs (BaseModal). Was only
+     defined in the .pwa-app block, so web modals had NO background and
+     content bled through (TASK-1791b). */
+  --glass-bg-solid: hsl(30, 8%, 14%);
 
   /* Canvas Node Backgrounds — warm charcoal (opaque for zoom visibility) */
   --canvas-task-bg: hsl(30, 8%, 13%);

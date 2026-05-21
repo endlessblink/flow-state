@@ -233,6 +233,14 @@ export function useTaskEditActions(
 
             const originalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
             const originalInstances = originalTask ? getTaskInstances(originalTask) : []
+            const originalDueDate = originalTask?.dueDate || ''
+            const editedDueDate = editedTask.value.dueDate || ''
+            const dueDateChanged = editedDueDate !== originalDueDate
+            const dueDateDivergesFromSchedule = Boolean(
+                dueDateChanged &&
+                editedTask.value.scheduledDate &&
+                editedDueDate !== editedTask.value.scheduledDate
+            )
 
             const hadOriginalSchedule = originalInstances.length > 0 ||
                 (originalTask?.scheduledDate && originalTask?.scheduledTime) ||
@@ -348,7 +356,7 @@ export function useTaskEditActions(
             getUndoSystem().saveState('After edit modal save').catch(() => { })
 
             // Handle instances
-            if (editedTask.value.scheduledDate && editedTask.value.scheduledTime) {
+            if (editedTask.value.scheduledDate && editedTask.value.scheduledTime && !dueDateDivergesFromSchedule) {
                 const existingInstances = props.task ? getTaskInstances(props.task) : []
                 const sameDayInstance = existingInstances.find((inst) =>
                     inst.scheduledDate && inst.scheduledDate === editedTask.value.scheduledDate

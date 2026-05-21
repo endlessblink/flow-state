@@ -11,6 +11,7 @@
       { 'is-flashing': isFlashing },
       density ? `task-card--${density}` : ''
     ]"
+    :style="projectAccentStyle"
     :tabindex="disabled ? -1 : 0"
     role="button"
     :aria-label="taskAriaLabel"
@@ -154,6 +155,13 @@ const {
   handleCardClick, handleCardDblClick, handleKeydown, handleFocus,
   handleBlur, handleRightClick, cycleStatus
 } = actions
+
+// TASK-1791: project identity on cards — left-edge color accent.
+// Color-type projects expose a hex; emoji-type projects have no color (no bar).
+const projectAccentStyle = computed(() => {
+  const color = props.task.projectId ? projectVisual.value?.color : undefined
+  return color ? { '--card-project-color': color } : {}
+})
 
 // Focus mode navigation
 const enterFocusMode = () => {

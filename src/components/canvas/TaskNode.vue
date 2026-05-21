@@ -56,6 +56,8 @@
         :has-schedule="!!hasSchedule"
         :show-duration="showDuration"
         :duration="task?.estimatedDuration"
+        :is-enough-for-today="isEnoughForToday"
+        :worked-minutes-today="workedMinutesToday"
         :duration-badge-class="durationBadgeClass"
         :duration-icon="durationIcon"
         :formatted-duration="formattedDuration"
@@ -67,6 +69,7 @@
         :recurrence-rule="task?.recurrenceRule"
         @reschedule="handleReschedule"
         @clear-done-for-now="handleClearDoneForNow"
+        @set-work-block="handleSetWorkBlock"
       />
     </div>
 
@@ -97,8 +100,10 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Position, Handle } from '@vue-flow/core'
 import type { Task } from '@/types/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import { useTaskNodeState } from '@/composables/canvas/node/useTaskNodeState'
 import { useTaskNodeActions } from '@/composables/canvas/node/useTaskNodeActions'
+import { useWorkBlockProgress } from '@/composables/tasks/useWorkBlockProgress'
 
 // Sub-components
 import TaskNodeHeader from './node/TaskNodeHeader.vue'
@@ -160,6 +165,7 @@ interface Props {
 }
 
 // State Logic - BUG-291: 'task' is reactive from store for instant updates
+const taskStore = useTaskStore()
 const {
   task,
   isLOD1,
@@ -177,6 +183,7 @@ const {
   durationIcon,
   formattedDuration
 } = useTaskNodeState(props)
+const { workedMinutesToday, isEnoughForToday } = useWorkBlockProgress(task)
 
 // Actions Logic
 const {
@@ -191,6 +198,12 @@ const {
   handleReschedule,
   handleClearDoneForNow
 } = useTaskNodeActions(props, emit)
+
+const handleSetWorkBlock = async (duration: number) => {
+  const currentTask = task.value
+  if (!currentTask?.id) return
+  await taskStore.updateTask(currentTask.id, { estimatedDuration: duration }, 'USER')
+}
 
 // TASK-262: Selection is handled via:
 // 1. @click="handleClick" on the template (for clicks that reach the component)

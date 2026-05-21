@@ -20,6 +20,40 @@ if (!gotLock) {
     process.exit(0);
 }
 let mainWindow = null;
+function openSearchInRenderer() {
+    if (!mainWindow || mainWindow.isDestroyed())
+        return;
+    mainWindow.webContents.executeJavaScript(`(() => {
+    const target = document.activeElement;
+    if (target?.closest?.('.quick-task-section')) return;
+    const tagName = target?.tagName;
+    if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable) return;
+    if (target?.closest?.('[role="dialog"], .modal, .n-modal')) return;
+    window.dispatchEvent(new CustomEvent('open-search'));
+  })()`);
+}
+function registerAppMenu() {
+    const menu = electron_1.Menu.buildFromTemplate([
+        {
+            label: 'Edit',
+            submenu: [
+                { role: 'undo' },
+                { role: 'redo' },
+                { type: 'separator' },
+                { role: 'cut' },
+                { role: 'copy' },
+                { role: 'paste' },
+                { type: 'separator' },
+                {
+                    label: 'Search Tasks',
+                    accelerator: 'CommandOrControl+Shift+F',
+                    click: openSearchInRenderer,
+                },
+            ],
+        },
+    ]);
+    electron_1.Menu.setApplicationMenu(menu);
+}
 function createWindow() {
     mainWindow = new electron_1.BrowserWindow({
         width: 1400,
@@ -37,6 +71,7 @@ function createWindow() {
         // Glass-like frame
         titleBarStyle: 'hiddenInset',
         backgroundColor: '#0f0d1a',
+        autoHideMenuBar: true,
         show: false,
     });
     // Show when ready to prevent white flash
@@ -57,14 +92,7 @@ function createWindow() {
             isSearchKey;
         if (!isSearchShortcut)
             return;
-        mainWindow?.webContents.executeJavaScript(`(() => {
-      const target = document.activeElement;
-      if (target?.closest?.('.quick-task-section')) return;
-      const tagName = target?.tagName;
-      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable) return;
-      if (target?.closest?.('[role="dialog"], .modal, .n-modal')) return;
-      window.dispatchEvent(new CustomEvent('open-search'));
-    })()`);
+        openSearchInRenderer();
     });
     // Catch plain <a href> clicks and any programmatic navigation that would
     // replace the app window. setWindowOpenHandler only fires for target="_blank"
@@ -116,6 +144,7 @@ function createWindow() {
 electron_1.ipcMain.handle('app:getVersion', () => electron_1.app.getVersion());
 // App lifecycle
 electron_1.app.whenReady().then(() => {
+    registerAppMenu();
     createWindow();
     (0, updater_1.registerUpdater)();
     electron_1.app.on('activate', () => {

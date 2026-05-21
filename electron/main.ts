@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Menu } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { registerShellHandlers } from './ipc/shell'
@@ -22,6 +22,43 @@ if (!gotLock) {
 
 let mainWindow: BrowserWindow | null = null
 
+function openSearchInRenderer() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+
+  mainWindow.webContents.executeJavaScript(`(() => {
+    const target = document.activeElement;
+    if (target?.closest?.('.quick-task-section')) return;
+    const tagName = target?.tagName;
+    if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable) return;
+    if (target?.closest?.('[role="dialog"], .modal, .n-modal')) return;
+    window.dispatchEvent(new CustomEvent('open-search'));
+  })()`)
+}
+
+function registerAppMenu() {
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { type: 'separator' },
+        {
+          label: 'Search Tasks',
+          accelerator: 'CommandOrControl+Shift+F',
+          click: openSearchInRenderer,
+        },
+      ],
+    },
+  ])
+
+  Menu.setApplicationMenu(menu)
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -39,6 +76,7 @@ function createWindow() {
     // Glass-like frame
     titleBarStyle: 'hiddenInset',
     backgroundColor: '#0f0d1a',
+    autoHideMenuBar: true,
     show: false,
   })
 
@@ -64,14 +102,7 @@ function createWindow() {
 
     if (!isSearchShortcut) return
 
-    mainWindow?.webContents.executeJavaScript(`(() => {
-      const target = document.activeElement;
-      if (target?.closest?.('.quick-task-section')) return;
-      const tagName = target?.tagName;
-      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable) return;
-      if (target?.closest?.('[role="dialog"], .modal, .n-modal')) return;
-      window.dispatchEvent(new CustomEvent('open-search'));
-    })()`)
+    openSearchInRenderer()
   })
 
   // Catch plain <a href> clicks and any programmatic navigation that would
@@ -125,6 +156,7 @@ ipcMain.handle('app:getVersion', () => app.getVersion())
 
 // App lifecycle
 app.whenReady().then(() => {
+  registerAppMenu()
   createWindow()
   registerUpdater()
 

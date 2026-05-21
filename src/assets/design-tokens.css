@@ -451,35 +451,34 @@
 
   /* ===== TIER 3: FUNCTIONAL COLORS (Context-specific) ===== */
 
-  /* Pomodoro States */
-  --color-work: #10b981;
-  /* Green - Active work, productivity */
-  --color-break: #f59e0b;
-  /* Orange - Breaks, attention */
-  --color-focus: #8b5cf6;
-  /* Purple - Deep work, meditation */
+  /* Pomodoro States — Warm Dark */
+  --color-work: #E07A4B;
+  /* Terracotta - active work (the signature accent) */
+  --color-break: #E0A03B;
+  /* Honey amber - breaks */
+  --color-focus: #C98A5E;
+  /* Warm clay - long break / deep work */
   --color-navigation: #3b82f6;
   /* Blue - Links, navigation */
   --color-neutral: #6b7280;
   /* Gray - Secondary elements */
 
   /* Interactive States - THE ONE unified system: OUTLINED + GLASS */
-  --state-active-border: rgba(78, 205, 196, 0.60);
-  /* Teal border when active */
-  --state-active-bg: rgba(78, 205, 196, 0.15);
-  /* Glass background tint */
-  --state-active-glass: blur(16px) saturate(180%);
-  /* Glass blur effect */
+  --state-active-border: rgba(224, 122, 75, 0.60);
+  /* Terracotta border when active */
+  --state-active-bg: rgba(224, 122, 75, 0.14);
+  /* Warm tint */
+  --state-active-glass: none;
+  /* flat (no blur) */
   --state-active-text: var(--text-primary);
   /* Text color for active states */
-  --state-hover-border: rgba(78, 205, 196, 0.40);
-  /* Teal border on hover */
-  --state-hover-bg: rgba(78, 205, 196, 0.10);
-  /* Subtle glass tint */
-  --state-hover-shadow: 0 8px 16px rgba(78, 205, 196, 0.25);
-  /* Dramatic shadow */
-  --state-hover-glow: 0 0 20px rgba(78, 205, 196, 0.20);
-  /* Glow effect */
+  --state-hover-border: rgba(224, 122, 75, 0.36);
+  /* Terracotta border on hover */
+  --state-hover-bg: rgba(237, 230, 220, 0.06);
+  /* Subtle warm tint */
+  --state-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  /* flat elevation, no colored glow */
+  --state-hover-glow: 0 0 transparent;
 
   /* Filter Selection Colors - Distinct colors for sidebar filters */
   --filter-today-bg: rgba(56, 189, 248, 0.15);

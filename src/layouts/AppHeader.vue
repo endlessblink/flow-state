@@ -570,12 +570,12 @@ const startLongBreak = async () => {
 }
 
 .timer-time {
-  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   min-width: 4rem;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.01em;
 }
 
 .timer-controls {
@@ -706,17 +706,17 @@ const startLongBreak = async () => {
   height: 20px;
   padding: 0 var(--space-1_5);
   margin-inline-start: var(--space-1_5);
-  background: linear-gradient(135deg, var(--color-blue), #8b5cf6);
+  background: var(--surface-tertiary);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   line-height: 1;
 }
 
 .view-tab.active .tab-badge {
-  background: linear-gradient(135deg, #60a5fa, #a78bfa);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  background: var(--brand-primary);
+  color: #1C1815;
 }
 
 /* AI TOGGLE BUTTON (TASK-1120) */
@@ -754,8 +754,8 @@ const startLongBreak = async () => {
   padding: 0 4px;
   font-size: var(--text-xs);
   font-weight: 700;
-  color: white;
-  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  color: #1C1815;
+  background: var(--brand-primary);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;

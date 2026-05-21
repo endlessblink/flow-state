@@ -68,17 +68,24 @@ import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme, type Global
 // Today: white text (no special indicator)
 // Selected: green stroke + green text, NO fill
 const themeOverrides: GlobalThemeOverrides = {
+  // Warm Dark — terracotta primary, warm surfaces (TASK-1791b)
+  common: {
+    primaryColor: '#E07A4B',
+    primaryColorHover: '#EB8C61',
+    primaryColorPressed: '#C9633A',
+    primaryColorSuppl: '#E07A4B',
+  },
   DatePicker: {
     itemColorActive: 'transparent', // NO fill on selected
-    itemColorHover: 'rgba(255, 255, 255, 0.08)',
-    itemTextColorActive: '#10b981', // Green text when selected
+    itemColorHover: 'rgba(237, 230, 220, 0.08)',
+    itemTextColorActive: '#E07A4B', // Terracotta text when selected
     itemBorderRadius: '6px',
-    panelHeaderDividerColor: 'rgba(255, 255, 255, 0.08)',
-    calendarTitleColorHover: 'rgba(255, 255, 255, 0.95)',
-    arrowColor: 'rgba(255, 255, 255, 0.45)',
+    panelHeaderDividerColor: 'rgba(237, 230, 220, 0.08)',
+    calendarTitleColorHover: 'rgba(237, 230, 220, 0.95)',
+    arrowColor: 'rgba(237, 230, 220, 0.45)',
   },
   Popover: {
-    color: 'rgb(28, 25, 45)', // Match --overlay-component-bg base RGB
+    color: 'rgb(38, 32, 28)', // warm espresso elevated
     borderRadius: '12px',
   },
 }
@@ -261,7 +268,7 @@ html, body, #app {
   width: 32px;
   height: 32px;
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--brand-primary, #4ECDC4);
+  border-top-color: var(--brand-primary, #E07A4B);
   border-radius: 50%;
   animation: app-spin 0.8s linear infinite;
 }

@@ -45,102 +45,90 @@
   --color-slate-800: 30, 41, 59;
   --color-slate-900: 15, 23, 42;
 
-  /* Brand Colors - Authentic Teal (matches themes.ts #4ECDC4) */
-  --teal-500: 174, 62%, 58%;
+  /* Brand Color — Warm Dark: Terracotta #E07A4B (TASK-1791b rebrand, was teal #4ECDC4) */
+  --teal-500: 19, 71%, 59%;    /* var name kept for cascade; value is now terracotta */
 
   /* Core Color Palette (HSL values for semantic tokens) */
   --red-500: 0, 84%, 60%;      /* #ef4444 - danger, errors, current time indicator */
   --green-500: 142, 71%, 45%;  /* #22c55e - success, completed */
   --blue-500: 217, 91%, 60%;   /* #3b82f6 - info, links */
-  --color-primary-50: 235, 252, 251;
-  --color-primary-100: 206, 247, 244;
-  --color-primary-200: 161, 240, 235;
-  --color-primary-300: 116, 233, 226;
-  --color-primary-400: 78, 220, 213;
-  --color-primary-500: 78, 205, 196;
-  /* Base #4ECDC4 */
-  --color-primary-600: 64, 180, 172;
-  --color-primary-700: 50, 140, 134;
-  --color-primary-800: 36, 100, 96;
-  --color-primary-900: 22, 60, 58;
+  /* Terracotta scale (was teal) */
+  --color-primary-50: 250, 240, 233;
+  --color-primary-100: 247, 224, 211;
+  --color-primary-200: 242, 197, 171;
+  --color-primary-300: 236, 166, 130;
+  --color-primary-400: 230, 140, 97;
+  --color-primary-500: 224, 122, 75;
+  /* Base #E07A4B (terracotta) */
+  --color-primary-600: 201, 99, 58;
+  --color-primary-700: 165, 78, 44;
+  --color-primary-800: 122, 57, 32;
+  --color-primary-900: 82, 39, 22;
   /* Pomodoro/Success Colors */
   --color-pomodoro-500: 239, 68, 68;
   --color-success-500: 74, 222, 128;
   --color-warning-500: 251, 191, 36;
 
-  /* App Background Gradient - Official Board View Palette */
-  --app-background-gradient: linear-gradient(135deg,
-      hsl(220, 13%, 9%) 0%,
-      hsl(240, 21%, 15%) 25%,
-      hsl(250, 24%, 12%) 50%,
-      hsl(260, 20%, 14%) 75%,
-      hsl(220, 13%, 11%) 100%);
+  /* App Background — Warm Dark: flat espresso (was purple/navy gradient) */
+  --app-background-gradient: hsl(26, 14%, 10%);   /* #1C1815 warm espresso */
 
   /* ===== TIER 2: SEMANTIC TOKENS (Theme-aware) ===== */
 
-  /* Surface Hierarchy - Purple-tinted to match app gradient */
-  --surface-primary: hsl(250, 29%, 16%);    /* rgb(35, 32, 52) - task cards, nav */
-  --surface-secondary: hsl(250, 30%, 12%);  /* rgb(28, 25, 45) - secondary elements */
-  --surface-tertiary: hsl(250, 25%, 20%);   /* rgb(45, 40, 65) - hover states */
-  --surface-elevated: hsl(250, 22%, 24%);   /* rgb(52, 47, 75) - elevated elements */
-  --surface-hover: rgba(45, 40, 70, 0.15);
-  --surface-active: rgba(45, 40, 70, 0.25);
+  /* Surface Hierarchy — warm espresso steps (was purple-tinted) */
+  --surface-primary: hsl(28, 16%, 14%);     /* #26201C - task cards, nav */
+  --surface-secondary: hsl(27, 16%, 11%);   /* #1F1A16 - secondary elements */
+  --surface-tertiary: hsl(28, 15%, 18%);    /* #312A24 - hover states */
+  --surface-elevated: hsl(28, 14%, 22%);    /* #3B332C - elevated elements */
+  --surface-hover: rgba(237, 230, 220, 0.05);
+  --surface-active: rgba(237, 230, 220, 0.09);
 
   /* Overlay - Modal backgrounds */
   --overlay-bg: rgba(0, 0, 0, 0.6);
 
-  /* Glass Surfaces - PURPLE-TINTED glass morphism (matches app gradient) */
-  --glass-bg-subtle: rgba(45, 40, 70, 0.02);
-  --glass-bg-weak: rgba(45, 40, 70, 0.04);
-  --glass-bg-light: rgba(45, 40, 70, 0.08);
-  --glass-bg-tint: rgba(45, 40, 70, 0.10);
-  --glass-bg-medium: rgba(45, 40, 70, 0.15);
-  --glass-bg-soft: rgba(45, 40, 70, 0.18);
-  --glass-bg-heavy: rgba(45, 40, 70, 0.25);
-  --glass-border: rgba(255, 255, 255, 0.10);
-  --glass-border-hover: rgba(255, 255, 255, 0.15);
-  --glass-glow: rgba(78, 205, 196, 0.08);
+  /* Warm flat "panel" surfaces — formerly glass morphism (blur removed in flat mode).
+     Warm off-white tints over espresso read as flat raised panels. */
+  --glass-bg-subtle: rgba(237, 230, 220, 0.02);
+  --glass-bg-weak: rgba(237, 230, 220, 0.03);
+  --glass-bg-light: rgba(237, 230, 220, 0.05);
+  --glass-bg-tint: rgba(237, 230, 220, 0.06);
+  --glass-bg-medium: rgba(237, 230, 220, 0.08);
+  --glass-bg-soft: rgba(237, 230, 220, 0.10);
+  --glass-bg-heavy: rgba(237, 230, 220, 0.14);
+  --glass-border: rgba(237, 230, 220, 0.10);
+  --glass-border-hover: rgba(237, 230, 220, 0.16);
+  --glass-glow: transparent;
 
-  /* Canvas Node Backgrounds - TASK-079 zoom visibility (purple-tinted) */
-  /* Adjust these to control canvas element brightness */
-  --canvas-task-bg: rgba(35, 32, 52, 0.95);
-  /* Task cards on canvas - purple-tinted */
-  --canvas-group-bg: rgba(38, 35, 55, 0.92);
-  /* Groups/sections on canvas - purple-tinted */
-  --canvas-task-border: rgba(255, 255, 255, 0.25);
-  /* Task border */
-  --canvas-group-border: rgba(255, 255, 255, 0.30);
-  /* Group border */
+  /* Canvas Node Backgrounds — warm espresso (opaque for zoom visibility) */
+  --canvas-task-bg: hsl(28, 16%, 14%);      /* #26201C */
+  --canvas-group-bg: hsl(28, 15%, 16%);     /* #2C2620 */
+  --canvas-task-border: rgba(237, 230, 220, 0.18);
+  --canvas-group-border: rgba(237, 230, 220, 0.24);
 
-  /* Text Hierarchy - Opacity modulation for premium dark mode */
-  /* Primary: full brightness for titles and key content */
-  --text-primary: rgba(241, 245, 249, 1.0);
-  /* Secondary: 80% for supporting text, metadata labels */
-  --text-secondary: rgba(241, 245, 249, 0.80);
-  /* Tertiary: 60% for timestamps, counts, secondary metadata */
-  --text-tertiary: rgba(241, 245, 249, 0.60);
-  /* Muted: 55% — actionable meta (dates, estimates, counts) must clear WCAG AA (~5.3:1 on cards). TASK-1791 raised from 0.45 (~4.07:1, failing). */
-  --text-muted: rgba(241, 245, 249, 0.55);
-  /* Subtle: 45% for decorative text, separators. TASK-1791 raised from 0.35. */
-  --text-subtle: rgba(241, 245, 249, 0.45);
-  /* Disabled: 25% for truly disabled content */
-  --text-disabled: rgba(241, 245, 249, 0.25);
+  /* Text Hierarchy — warm off-white #EDE6DC (was cool slate). Tiers per TASK-1791 (AA). */
+  --text-primary: rgba(237, 230, 220, 1.0);
+  --text-secondary: rgba(237, 230, 220, 0.80);
+  --text-tertiary: rgba(237, 230, 220, 0.62);
+  /* Muted 0.55 — actionable meta must clear WCAG AA (TASK-1791). */
+  --text-muted: rgba(237, 230, 220, 0.55);
+  /* Subtle 0.45 — decorative text, separators (TASK-1791). */
+  --text-subtle: rgba(237, 230, 220, 0.45);
+  --text-disabled: rgba(237, 230, 220, 0.25);
 
-  /* Border Colors - Edge definitions */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --border-interactive: rgba(255, 255, 255, 0.24);
-  --border-primary: rgba(255, 255, 255, 0.10);
-  --border-secondary: rgba(255, 255, 255, 0.14);
-  --border-hover: rgba(255, 255, 255, 0.20);
+  /* Border Colors — warm hairlines (was cool white) */
+  --border-subtle: rgba(237, 230, 220, 0.08);
+  --border-medium: rgba(237, 230, 220, 0.12);
+  --border-strong: rgba(237, 230, 220, 0.18);
+  --border-interactive: rgba(237, 230, 220, 0.24);
+  --border-primary: rgba(237, 230, 220, 0.10);
+  --border-secondary: rgba(237, 230, 220, 0.14);
+  --border-hover: rgba(237, 230, 220, 0.20);
 
-  /* Brand Colors - Semantic usage */
-  --brand-primary: hsl(var(--teal-500));
-  --brand-hover: hsl(var(--teal-400));
-  --brand-active: hsl(174, 62%, 53%);
-  --brand-primary-subtle: rgba(78, 205, 196, 0.1);
-  --brand-primary-dim: rgba(78, 205, 196, 0.3);
+  /* Brand — Terracotta #E07A4B (the single signature accent) */
+  --brand-primary: hsl(var(--teal-500));      /* #E07A4B */
+  --brand-hover: hsl(19, 78%, 65%);           /* #EB8C61 */
+  --brand-active: hsl(17, 55%, 51%);          /* #C9633A */
+  --brand-primary-subtle: rgba(224, 122, 75, 0.12);
+  --brand-primary-dim: rgba(224, 122, 75, 0.32);
 
   /* Legacy color alias for compatibility */
   --color-primary: var(--brand-primary);
@@ -845,8 +833,11 @@
   /* ===== TYPOGRAPHY SYSTEM ===== */
 
   /* Font Families */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-primary: 'Open Sans', var(--font-sans);
+  /* Warm Dark type — body: Inter (Latin) + Heebo (Hebrew, per-glyph fallback) */
+  --font-sans: 'Inter', 'Heebo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Display: Clash Display (Latin) + Rubik (Hebrew) — headings, eyebrows, timer */
+  --font-display: 'Clash Display', 'Rubik', var(--font-sans);
+  --font-primary: var(--font-sans);
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
 
   /* Type Scale (1.25 ratio - Major Third) */

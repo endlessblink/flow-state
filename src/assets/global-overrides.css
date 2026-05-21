@@ -971,3 +971,71 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
     transform: scale(1);
   }
 }
+
+/* =====================================================================
+   TASK-1791b — WARM DARK "FLAT MODE"
+   Loads last, so it wins. Neutralizes the AI-slop effects centrally:
+   - kills ALL glass blur (240 tokenized + 255 hardcoded) via global !important
+   - neutralizes decorative glow tokens to transparent (valid in shadow lists)
+   - keeps focus rings (recolored terracotta) for accessibility
+   Revert by deleting this block.
+   ===================================================================== */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+:root {
+  /* Blur tokens → 0 (defensive; rule above already neutralizes visually) */
+  --blur-xs: 0px;
+  --blur-sm: 0px;
+  --blur-regular: 0px;
+  --blur-md: 0px;
+  --blur-lg: 0px;
+  --blur-xl: 0px;
+  --overlay-component-backdrop: none;
+  --state-active-glass: none;
+
+  /* Decorative glows → transparent neutral (stays valid in box-shadow lists) */
+  --glass-glow: transparent;
+  --shadow-glow: 0 0 transparent;
+  --state-hover-glow: 0 0 transparent;
+  --state-selected-glow: 0 0 transparent;
+  --filter-today-glow: 0 0 transparent;
+  --filter-week-glow: 0 0 transparent;
+  --filter-tasks-glow: 0 0 transparent;
+  --filter-uncategorized-glow: 0 0 transparent;
+  --priority-high-glow: 0 0 transparent;
+  --priority-medium-glow: 0 0 transparent;
+  --priority-low-glow: 0 0 transparent;
+  --calendar-today-glow: 0 0 transparent;
+  --calendar-current-time-glow: 0 0 transparent;
+  --timer-glow-subtle: 0 0 transparent;
+  --timer-active-glow: 0 0 transparent;
+  --timer-active-glow-strong: 0 0 transparent;
+  --timer-shadow-glow: 0 0 transparent;
+  --timer-active-month-glow: 0 0 transparent;
+  --timer-work-stroke-glow: 0 0 transparent;
+  --timer-work-stroke-glow-intense: 0 0 transparent;
+  --timer-break-stroke-glow: 0 0 transparent;
+  --timer-break-stroke-glow-intense: 0 0 transparent;
+  --success-glow: 0 0 transparent;
+  --purple-glow-subtle: 0 0 transparent;
+  --purple-glow-medium: 0 0 transparent;
+  --blue-glow-subtle: 0 0 transparent;
+  --orange-glow-subtle: 0 0 transparent;
+  --brand-glow-sm: 0 0 transparent;
+  --danger-glow-sm: 0 0 transparent;
+  --warning-glow-sm: 0 0 transparent;
+  --blue-glow-sm: 0 0 transparent;
+  --project-indicator-glow-subtle: 0 0 transparent;
+  --project-indicator-glow-medium: 0 0 transparent;
+  --project-indicator-glow-strong: 0 0 transparent;
+  --brand-primary-glow: 0 0 transparent;
+
+  /* Focus rings KEPT (accessibility) — recolored terracotta */
+  --brand-focus-ring: 0 0 0 3px rgba(224, 122, 75, 0.35);
+  --purple-glow-focus: 0 0 0 3px rgba(224, 122, 75, 0.35);
+}

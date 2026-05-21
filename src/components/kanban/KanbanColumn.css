@@ -137,9 +137,9 @@
 }
 
 .add-first-task {
-    background: var(--purple-bg-start);
-    border: 1px solid var(--purple-border-medium);
-    color: var(--indigo-text);
+    background: var(--brand-primary-subtle);
+    border: 1px solid var(--brand-primary-dim);
+    color: var(--brand-primary);
     padding: 8px 16px;
     border-radius: var(--radius-lg);
     cursor: pointer;
@@ -152,11 +152,10 @@
 }
 
 .add-first-task:hover {
-    background: var(--calendar-ghost-bg-start);
-    border-color: var(--purple-border-strong);
+    background: var(--brand-primary-subtle);
+    border-color: var(--brand-primary);
     color: var(--text-primary);
     transform: translateY(-1px);
-    box-shadow: var(--purple-shadow-subtle);
 }
 
 /* Task Item Transitions */

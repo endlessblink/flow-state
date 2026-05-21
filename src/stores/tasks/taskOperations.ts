@@ -53,7 +53,7 @@ import { useSmartViews, type SmartView } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
 import { useAuthStore } from '../auth'
 // BUG-1757: Drop tasks out of smart day-group when user edits dueDate to a non-matching day
-import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
+import { calculatePositionInGroup, findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 
 export function useTaskOperations(
@@ -622,15 +622,15 @@ export function useTaskOperations(
                 }
             }
 
-            // BUG-1757: Drop task out of smart day-group when user edits dueDate to a
-            // non-matching day. Without this, useDayGroupRotation keeps overwriting the
-            // user's new date back to the group's date (SMART-GROUP source, line 112).
+            // BUG-1757/1790: Re-home canvas tasks when user edits dueDate.
+            // Without this, useDayGroupRotation keeps overwriting stale group dates,
+            // or the task keeps sitting outside the newly matching Today/day group.
             // Excludes SMART-GROUP source so the rotation itself is not cancelled.
             // Excludes freeform groups (no power keyword) — user may group by theme.
             if (
                 'dueDate' in updates &&
                 source !== 'SMART-GROUP' &&
-                task.parentId &&
+                (task.parentId || task.canvasPosition) &&
                 !('parentId' in updates)
             ) {
                 try {
@@ -640,13 +640,23 @@ export function useTaskOperations(
                     const parentIsSmart = parentGroup
                         ? !!detectPowerKeyword(parentGroup.name)
                         : false
+                    const taskIsOnCanvas = task.isInInbox === false || !!task.canvasPosition
 
-                    if (parentIsSmart) {
-                        const newDueDate = updates.dueDate
-                            ? normalizeDueDate(updates.dueDate as any)
-                            : undefined
+                    if (taskIsOnCanvas && (parentIsSmart || !task.parentId)) {
+                        const newDueDate = updates.dueDate ? normalizeDueDate(updates.dueDate as any) : undefined
                         const match = findMatchingGroupForDueDate(newDueDate, canvasStore.groups)
-                        if (match?.id !== task.parentId) {
+                        if (match && match.id !== task.parentId) {
+                            updates.parentId = match.id
+                            updates.canvasPosition = calculatePositionInGroup(
+                                match,
+                                _rawTasks.value.filter(t => t.id !== taskId)
+                            )
+                            updates.isInInbox = false
+                            updates.positionVersion = (task.positionVersion || 0) + 1
+                            console.log(
+                                `📅 [DUE-DATE-EDIT] "${task.title?.slice(0, 30)}" new dueDate ${newDueDate} moved to group "${match.name}"`
+                            )
+                        } else if (!match && parentIsSmart) {
                             updates.parentId = undefined
                             updates.canvasPosition = undefined
                             updates.isInInbox = true

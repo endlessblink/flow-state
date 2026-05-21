@@ -85,6 +85,9 @@
         <!-- FEATURE-1248: Quick Task Shortcuts -->
         <QuickTaskDropdown />
 
+        <!-- TASK-1791: separate wall clock from Pomodoro timer -->
+        <div class="control-divider" />
+
         <!-- POMODORO TIMER DISPLAY -->
         <div class="timer-container">
           <div class="timer-display" :class="{ 'timer-active': timerStore.isTimerActive, 'timer-break': timerStore.currentSession?.isBreak }">
@@ -124,7 +127,7 @@
                   title="Start 15-min long break"
                   @click="startLongBreak"
                 >
-                  <User :size="16" :stroke-width="1.5" class="meditation-stroke" />
+                  <Armchair :size="16" :stroke-width="1.5" class="meditation-stroke" />
                 </button>
               </div>
 
@@ -217,7 +220,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useSettingsStore } from '@/stores/settings'
 import { useUIStore } from '@/stores/ui'
-import { Timer, Play, Pause, Coffee, Square, User, Sparkles, Keyboard } from 'lucide-vue-next'
+import { Timer, Play, Pause, Coffee, Square, Armchair, Sparkles, Keyboard } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
@@ -494,7 +497,10 @@ const startLongBreak = async () => {
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-xl);
-  border: 1.5px solid transparent;
+  /* TASK-1791: visible resting border + tint so the idle timer reads as a
+     distinct unit, not just another header icon. Active/break states override. */
+  border: 1.5px solid var(--glass-border);
+  background: var(--glass-bg-subtle);
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 

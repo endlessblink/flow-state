@@ -14,6 +14,20 @@
     box-sizing: border-box;
 }
 
+/* TASK-1791: project identity — left-edge color accent.
+   Only renders when --card-project-color is set (color-type projects). */
+.task-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: var(--space-2);
+    bottom: var(--space-2);
+    width: 3px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: var(--card-project-color, transparent);
+    pointer-events: none;
+}
+
 /* Hover handled by global-overrides.css with !important */
 .task-card:hover {
     border-color: var(--glass-border);

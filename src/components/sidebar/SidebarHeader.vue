@@ -45,7 +45,9 @@ const sidebar = useSidebarManagement()
 <style scoped>
 .sidebar-header {
   padding: var(--space-10) var(--space-6) var(--space-6) var(--space-6);
-  background: var(--glass-bg-medium);
+  /* No shaded block — it created a hard edge "line" cutting across the
+     workspace switcher below. Inherit the sidebar surface instead. */
+  background: transparent;
 }
 
 .app-brand {

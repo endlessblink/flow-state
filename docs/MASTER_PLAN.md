@@ -8,9 +8,18 @@
 
 ## Active Tasks
 
-### TASK-1791: Design overhaul — fix critique findings across all views (🔄 IN PROGRESS)
+### TASK-1791: Design overhaul — fix critique findings across all views (👀 REVIEW)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (opened 2026-05-21) — branch `design-overhaul`, restore tag `pre-design-overhaul-2026-05-21`
+**Priority**: P2 | **Status**: 👀 REVIEW — all 5 phases implemented on branch `design-overhaul` (opened 2026-05-21). Pending: review → merge to master → Electron deploy. Restore tag `pre-design-overhaul-2026-05-21`.
+
+**Phases (all ✅ implemented, each its own commit):**
+- ✅ Phase 1: text contrast — `--text-muted` 0.45→0.55, `--text-subtle` 0.35→0.45 (WCAG AA)
+- ✅ Phase 2: project-color left accent on board cards (project identity in mixed-project views)
+- ✅ Phase 3: quick-add elevated to primary (brand accent), Create project demoted to ghost
+- ✅ Phase 4: clock/timer divider, idle-timer resting border, long-break icon User→Armchair
+- ✅ Phase 5: guiding inbox/canvas-group empty states; confirmed calendar empty inbox is filter behavior, not a bug
+
+Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tracked under TASK-1789).
 
 **Problem**: Whole-app design critique flagged 5 priority issues: (1) low-contrast actionable text (dates/estimates at 35-45% opacity), (2) color double-encoding (priority shown as both dots and pills; teal overloaded across brand/active/status/project), (3) no clear primary action (Create project louder than quick-add), (4) unlabeled 7-icon header soup with clock+timer jammed together, (5) weak/possibly-buggy empty states (Calendar filter-empty hides seeded tasks; canvas partially-populated groups have no add prompt).
 

@@ -119,10 +119,10 @@
   --text-secondary: rgba(241, 245, 249, 0.80);
   /* Tertiary: 60% for timestamps, counts, secondary metadata */
   --text-tertiary: rgba(241, 245, 249, 0.60);
-  /* Muted: 45% for placeholders, disabled-adjacent text */
-  --text-muted: rgba(241, 245, 249, 0.45);
-  /* Subtle: 35% for decorative text, separators */
-  --text-subtle: rgba(241, 245, 249, 0.35);
+  /* Muted: 55% — actionable meta (dates, estimates, counts) must clear WCAG AA (~5.3:1 on cards). TASK-1791 raised from 0.45 (~4.07:1, failing). */
+  --text-muted: rgba(241, 245, 249, 0.55);
+  /* Subtle: 45% for decorative text, separators. TASK-1791 raised from 0.35. */
+  --text-subtle: rgba(241, 245, 249, 0.45);
   /* Disabled: 25% for truly disabled content */
   --text-disabled: rgba(241, 245, 249, 0.25);
 

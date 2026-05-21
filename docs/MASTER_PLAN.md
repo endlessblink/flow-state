@@ -8,6 +8,23 @@
 
 ## Active Tasks
 
+### TASK-1791: Design overhaul — fix critique findings across all views (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (opened 2026-05-21) — branch `design-overhaul`, restore tag `pre-design-overhaul-2026-05-21`
+
+**Problem**: Whole-app design critique flagged 5 priority issues: (1) low-contrast actionable text (dates/estimates at 35-45% opacity), (2) color double-encoding (priority shown as both dots and pills; teal overloaded across brand/active/status/project), (3) no clear primary action (Create project louder than quick-add), (4) unlabeled 7-icon header soup with clock+timer jammed together, (5) weak/possibly-buggy empty states (Calendar filter-empty hides seeded tasks; canvas partially-populated groups have no add prompt).
+
+**Approach**: Safe phased overhaul, each phase checkpointed + screenshot-diffed against baseline. Restore via `git reset --hard pre-design-overhaul-2026-05-21`.
+- Phase 1: text contrast tokens (design-tokens.css)
+- Phase 2: color semantics — pills as single priority encoding, project identity on cards, teal=brand only (TaskCardStatus.vue, TaskRowPriority.vue, TaskRowProject.vue)
+- Phase 3: primary action — quick-add loudest, demote Create project (SidebarQuickTaskInput.vue, SidebarProjectsSection.vue)
+- Phase 4: header — group/label icons, separate clock from Pomodoro timer (AppHeader.vue)
+- Phase 5: empty/edge states + investigate Calendar default-filter bug (CalendarInboxList.vue, canvas)
+
+**Baseline screenshots**: `.dev/screenshots/critique-{board,canvas,calendar,tasks}.png`
+
+---
+
 ### TASK-1789: Fix ~160 pre-existing type-check errors blocking CI (📋 PLANNED)
 
 **Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18) — **NEXT UP**

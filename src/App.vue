@@ -85,7 +85,7 @@ const themeOverrides: GlobalThemeOverrides = {
     arrowColor: 'rgba(237, 230, 220, 0.45)',
   },
   Popover: {
-    color: 'rgb(38, 32, 28)', // warm espresso elevated
+    color: 'rgb(36, 34, 31)', // warm charcoal elevated
     borderRadius: '12px',
   },
 }

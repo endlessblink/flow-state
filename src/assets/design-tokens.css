@@ -51,7 +51,7 @@
   /* Core Color Palette (HSL values for semantic tokens) */
   --red-500: 0, 84%, 60%;      /* #ef4444 - danger, errors, current time indicator */
   --green-500: 142, 71%, 45%;  /* #22c55e - success, completed */
-  --blue-500: 217, 91%, 60%;   /* #3b82f6 - info, links */
+  --blue-500: 209, 33%, 56%;   /* muted slate-blue — harmonizes with warm brown (was harsh #3b82f6) */
   /* Terracotta scale (was teal) */
   --color-primary-50: 250, 240, 233;
   --color-primary-100: 247, 224, 211;
@@ -69,16 +69,17 @@
   --color-success-500: 74, 222, 128;
   --color-warning-500: 251, 191, 36;
 
-  /* App Background — Warm Dark: flat espresso (was purple/navy gradient) */
-  --app-background-gradient: hsl(26, 14%, 10%);   /* #1C1815 warm espresso */
+  /* App Background — Warm charcoal (low-saturation warm dark, not muddy brown).
+     Keeps warmth (hue ~30) but drops saturation so terracotta accent POPS. */
+  --app-background-gradient: hsl(30, 8%, 9%);
 
   /* ===== TIER 2: SEMANTIC TOKENS (Theme-aware) ===== */
 
-  /* Surface Hierarchy — warm espresso steps (was purple-tinted) */
-  --surface-primary: hsl(28, 16%, 14%);     /* #26201C - task cards, nav */
-  --surface-secondary: hsl(27, 16%, 11%);   /* #1F1A16 - secondary elements */
-  --surface-tertiary: hsl(28, 15%, 18%);    /* #312A24 - hover states */
-  --surface-elevated: hsl(28, 14%, 22%);    /* #3B332C - elevated elements */
+  /* Surface Hierarchy — warm charcoal steps */
+  --surface-primary: hsl(30, 8%, 13%);      /* task cards, nav */
+  --surface-secondary: hsl(30, 8%, 10.5%);  /* secondary elements */
+  --surface-tertiary: hsl(30, 7%, 17%);     /* hover states */
+  --surface-elevated: hsl(30, 7%, 21%);     /* elevated elements */
   --surface-hover: rgba(237, 230, 220, 0.05);
   --surface-active: rgba(237, 230, 220, 0.09);
 
@@ -98,9 +99,9 @@
   --glass-border-hover: rgba(237, 230, 220, 0.16);
   --glass-glow: transparent;
 
-  /* Canvas Node Backgrounds — warm espresso (opaque for zoom visibility) */
-  --canvas-task-bg: hsl(28, 16%, 14%);      /* #26201C */
-  --canvas-group-bg: hsl(28, 15%, 16%);     /* #2C2620 */
+  /* Canvas Node Backgrounds — warm charcoal (opaque for zoom visibility) */
+  --canvas-task-bg: hsl(30, 8%, 13%);
+  --canvas-group-bg: hsl(30, 7%, 15%);
   --canvas-task-border: rgba(237, 230, 220, 0.18);
   --canvas-group-border: rgba(237, 230, 220, 0.24);
 
@@ -321,9 +322,9 @@
   --priority-medium-text: #fb923c;
 
   /* Low priority (blue) */
-  --priority-low-bg: rgba(59, 130, 246, 0.2);
-  --priority-low-border: rgba(59, 130, 246, 0.5);
-  --priority-low-text: #60a5fa;
+  --priority-low-bg: rgba(106, 144, 180, 0.2);
+  --priority-low-border: rgba(106, 144, 180, 0.5);
+  --priority-low-text: #8FB0CE;
 
   /* ===== TASKCARD DUE DATE BADGE ===== */
   --due-date-bg: rgba(148, 163, 184, 0.15);
@@ -458,7 +459,7 @@
   /* Honey amber - breaks */
   --color-focus: #C98A5E;
   /* Warm clay - long break / deep work */
-  --color-navigation: #3b82f6;
+  --color-navigation: #6A90B4;
   /* Blue - Links, navigation */
   --color-neutral: #6b7280;
   /* Gray - Secondary elements */
@@ -516,13 +517,13 @@
   /* Red - Urgent tasks */
   --color-priority-medium: #f59e0b;
   /* Orange - Default priority */
-  --color-priority-low: #3b82f6;
+  --color-priority-low: #6A90B4;
   /* Blue - Low urgency */
 
   /* Priority backgrounds for calendar events */
   --priority-high-bg: rgba(239, 68, 68, 0.3);
   --priority-medium-bg: rgba(245, 158, 11, 0.3);
-  --priority-low-bg: rgba(59, 130, 246, 0.3);
+  --priority-low-bg: rgba(106, 144, 180, 0.3);
 
   /* Priority indicator glows */
   --priority-high-glow: 0 4px 8px rgba(239, 68, 68, 0.18), 0 0 12px rgba(239, 68, 68, 0.12);
@@ -688,12 +689,12 @@
   --purple-gradient-hover-end: rgba(89, 80, 239, 0.9);
 
   /* Blue/info states */
-  --blue-bg-subtle: rgba(59, 130, 246, 0.15);
+  --blue-bg-subtle: rgba(106, 144, 180, 0.15);
   --blue-bg-light: rgba(59, 130, 246, 0.1);
   --blue-bg-medium: rgba(59, 130, 246, 0.2);
   --blue-border-medium: rgba(59, 130, 246, 0.5);
   --blue-border-active: rgba(59, 130, 246, 0.8);
-  --blue-shadow: rgba(59, 130, 246, 0.3);
+  --blue-shadow: rgba(106, 144, 180, 0.3);
   --blue-glow-subtle: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
 
   /* Blue gradients for priority badges */
@@ -805,7 +806,7 @@
   /* Overlay backgrounds — OPAQUE warm espresso.
      Blur is removed app-wide (flat mode), so overlays/panels MUST be opaque
      or content behind bleeds through and becomes unreadable. */
-  --overlay-component-bg: rgba(38, 32, 28, 0.98);
+  --overlay-component-bg: rgba(36, 34, 31, 0.98);
   --overlay-component-bg-lighter: rgba(0, 0, 0, 0.4);
   --overlay-component-backdrop: none;
   --overlay-component-border: 1px solid rgba(237, 230, 220, 0.14);
@@ -815,8 +816,8 @@
   /* Inbox Panel — opaque (was 0.15 + blur; blur removal made it see-through) */
   --inbox-panel-opacity: 0.98;
   --inbox-panel-bg: rgba(38, 32, 28, var(--inbox-panel-opacity));
-  --glass-panel-bg: rgba(38, 32, 28, 0.98);
-  --dropdown-bg: rgba(38, 32, 28, 0.98);
+  --glass-panel-bg: rgba(36, 34, 31, 0.98);
+  --dropdown-bg: rgba(36, 34, 31, 0.98);
 
   /* Dropdown-specific tokens */
   --dropdown-trigger-height: 44px;
@@ -1014,7 +1015,7 @@
   --glass-bg-light: rgba(237, 230, 220, 0.05);
   --glass-bg-medium: rgba(237, 230, 220, 0.08);
   --glass-bg-heavy: rgba(237, 230, 220, 0.14);
-  --glass-bg-solid: hsl(28, 16%, 14%);
+  --glass-bg-solid: hsl(30, 8%, 13%);
   --glass-bg: rgba(237, 230, 220, 0.06);
 
   --glass-bg-subtle: rgba(237, 230, 220, 0.02);
@@ -1025,20 +1026,20 @@
   --state-active-glass: none;
 
   /* Canvas backgrounds — opaque warm */
-  --canvas-task-bg: hsl(28, 16%, 14%);
-  --canvas-group-bg: hsl(28, 15%, 16%);
+  --canvas-task-bg: hsl(30, 8%, 13%);
+  --canvas-group-bg: hsl(30, 7%, 15%);
 
   /* Overlay/panel backgrounds — OPAQUE warm (no blur to hide content behind) */
-  --overlay-component-bg: rgba(38, 32, 28, 0.98);
+  --overlay-component-bg: rgba(36, 34, 31, 0.98);
   --overlay-component-backdrop: none;
-  --dropdown-bg: rgba(38, 32, 28, 0.98);
-  --glass-panel-bg: rgba(38, 32, 28, 0.98);
-  --inbox-panel-bg: rgba(38, 32, 28, 0.98);
+  --dropdown-bg: rgba(36, 34, 31, 0.98);
+  --glass-panel-bg: rgba(36, 34, 31, 0.98);
+  --inbox-panel-bg: rgba(36, 34, 31, 0.98);
 
   /* Kanban backgrounds — warm */
   --kanban-column-bg: rgba(237, 230, 220, 0.04);
   --kanban-column-bg-hover: rgba(237, 230, 220, 0.08);
-  --kanban-card-glass-bg: hsl(28, 16%, 15%);
+  --kanban-card-glass-bg: hsl(30, 8%, 14%);
   --kanban-card-footer-border: var(--glass-border-light);
   --kanban-card-tag-bg: var(--glass-bg-medium);
   --kanban-card-tag-border: var(--glass-border);

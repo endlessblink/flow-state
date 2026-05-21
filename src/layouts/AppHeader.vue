@@ -426,12 +426,11 @@ const startLongBreak = async () => {
 }
 
 .title-main {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
   margin: 0;
   line-height: 1.1;
 }

@@ -59,6 +59,8 @@
     <!-- TASK-141: ADD SLOT FOR CHILD NODES (CRITICAL FOR VUE FLOW NESTING) -->
     <div v-if="!isCollapsed" class="section-body">
       <slot />
+      <!-- TASK-1791: guide users when a group has no tasks yet -->
+      <p v-if="taskCount === 0" class="section-empty-hint">Drag tasks here</p>
     </div>
 
     <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->
@@ -528,6 +530,20 @@ const handleResizeEnd = (event: unknown) => {
   position: relative;
   /* Ensure clicks on empty space are captured by the group, not the pane */
   pointer-events: auto;
+}
+
+/* TASK-1791: empty-group hint — non-interactive so it never blocks drops */
+.section-empty-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  pointer-events: none;
+  user-select: none;
 }
 
 .section-node.collapsed {

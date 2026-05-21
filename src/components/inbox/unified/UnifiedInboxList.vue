@@ -165,9 +165,9 @@ const emptySubtext = computed(() => {
     return 'Drag tasks to these groups on the Canvas.'
   }
   if (!props.areGlobalsFiltered) {
-    return 'All filtered tasks are already on the board/calendar'
+    return "You're all caught up — every task is already on the board or calendar."
   }
-  return 'No tasks match your current view filters'
+  return 'Nothing matches the active filters. Clear filters or switch projects to see more.'
 })
 
 // Expose scrollTo for parent usage

@@ -50,8 +50,8 @@ describe('BUG-1783: RecurrenceDeleteModal action button contrast', () => {
   it('Skip button has a tinted background gradient (not transparent default)', () => {
     const css = ruleBody('.action-btn--skip')
     expect(css).toMatch(/background:\s*linear-gradient/)
-    // Confirm the gradient uses the brand teal (78, 205, 196)
-    expect(css).toMatch(/rgba\(78,\s*205,\s*196/)
+    // Confirm the gradient uses the brand teal-green (45, 212, 191 — TASK-1791b rebrand)
+    expect(css).toMatch(/rgba\(45,\s*212,\s*191/)
   })
 
   it('Stop button has a tinted background gradient (not transparent default)', () => {

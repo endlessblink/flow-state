@@ -34,6 +34,31 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 
 ---
 
+### ~~BUG-1792~~: Canvas idle sync persisted stale group/task positions (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-22)
+
+**Problem**: Canvas groups and tasks could move without user dragging, then stay wrong after refresh. That meant a passive sync/render path was not just displaying stale geometry; it could replay stale Vue Flow/PositionManager coordinates into persistent store state.
+
+**Root cause**: `useCanvasSync.ts` treated existing Vue Flow node positions and `PositionManager` as authoritative during read/sync paths. `PositionManager` is an interaction-time cache, so idle syncs triggered by unrelated task/title/filter activity could reuse stale drag/frame coordinates instead of store/Supabase absolute coordinates.
+
+**Fix**: Make store/Supabase absolute coordinates authoritative for canvas read paths. Group nodes now read from `group.position`; task nodes read from `task.canvasPosition`; nested Vue Flow positions are derived with `toRelativePosition(absolutePos, getGroupAbsolutePosition(parentId, groups))`. Removed the idle sync block that preserved existing Vue Flow positions over freshly derived store positions.
+
+**Hardening**: `taskOperations.updateTask()` now strips forbidden geometry fields from `SYNC` and `SMART-GROUP` updates before persistence. These sources can still update metadata, but cannot mutate `parentId`, `canvasPosition`, `positionFormat`, or `positionVersion`.
+
+**Regression tests**: Added `tests/e2e/canvas-geometry-local.spec.ts` coverage for both group and task idle drift. The tests create canvas geometry, trigger unrelated idle sync activity, refresh, and assert positions are unchanged with no geometry write logs.
+
+**Verification**:
+- `./scripts/run-e2e.sh tests/e2e/canvas-geometry-local.spec.ts -g "idle sync activity and refresh do not persist (group|task) position changes" --project=chromium` passed.
+- `npm test -- --run tests/unit/geometry-invariants.test.ts tests/unit/sync-readonly.test.ts tests/unit/smartgroup-metadata.test.ts` passed.
+- `npm test -- --run tests/unit/stores/task-store-crud.test.ts tests/unit/geometry-invariants.test.ts tests/unit/sync-readonly.test.ts tests/unit/smartgroup-metadata.test.ts` passed.
+- `npm run build` passed.
+- `npm run electron:build` passed.
+
+**Files**: `src/composables/canvas/useCanvasSync.ts`, `src/stores/tasks/taskOperations.ts`, `tests/e2e/canvas-geometry-local.spec.ts`, `tests/unit/stores/task-store-crud.test.ts`, `tests/global-setup.ts`.
+
+---
+
 ### TASK-1789: Fix ~160 pre-existing type-check errors blocking CI (📋 PLANNED)
 
 **Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18) — **NEXT UP**

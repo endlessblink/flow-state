@@ -187,6 +187,58 @@ describe('Task Store — CRUD', () => {
     expect(updated?.updatedAt.getTime()).toBeGreaterThanOrEqual(originalUpdatedAt.getTime())
   })
 
+  it('blocks SYNC source from changing task canvas geometry', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Sync Geometry Guard',
+      parentId: 'group-a',
+      canvasPosition: { x: 100, y: 200 },
+      positionVersion: 3,
+    })
+
+    await store.updateTask(task.id, {
+      title: 'Metadata Still Allowed',
+      parentId: 'group-b',
+      canvasPosition: { x: 900, y: 1000 },
+      positionVersion: 99,
+    }, 'SYNC')
+
+    const updated = store._rawTasks.find(t => t.id === task.id)
+    expect(updated?.title).toBe('Metadata Still Allowed')
+    expect(updated?.parentId).toBe('group-a')
+    expect(updated?.canvasPosition).toEqual({ x: 100, y: 200 })
+    expect(updated?.positionVersion).toBe(3)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[GEOMETRY-GUARD]'), expect.any(Object))
+    warnSpy.mockRestore()
+  })
+
+  it('blocks SMART-GROUP source from changing task canvas geometry', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Smart Group Geometry Guard',
+      parentId: 'group-a',
+      canvasPosition: { x: 120, y: 240 },
+      positionVersion: 4,
+    })
+
+    await store.updateTask(task.id, {
+      dueDate: '2026-06-01',
+      parentId: undefined,
+      canvasPosition: { x: 1, y: 2 },
+      positionVersion: 100,
+    }, 'SMART-GROUP')
+
+    const updated = store._rawTasks.find(t => t.id === task.id)
+    expect(updated?.dueDate).toBe('2026-06-01')
+    expect(updated?.parentId).toBe('group-a')
+    expect(updated?.canvasPosition).toEqual({ x: 120, y: 240 })
+    expect(updated?.positionVersion).toBe(4)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[GEOMETRY-GUARD]'), expect.any(Object))
+    warnSpy.mockRestore()
+  })
+
   it('updates task status from todo to done', async () => {
     const store = useTaskStore()
     const task = await store.createTask({ title: 'Status Test' })

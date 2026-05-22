@@ -160,8 +160,20 @@ async function globalSetup(config: FullConfig) {
     localStorage.setItem('flowstate-welcome-seen', 'true')
   }, { authKey: storageKey, authVal: storageValue, settingsVal: settingsValue })
 
-  await page.goto(baseURL)
-  await page.waitForLoadState('networkidle')
+  let lastNavigationError: unknown
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+      await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined)
+      lastNavigationError = undefined
+      break
+    } catch (error) {
+      lastNavigationError = error
+      if (attempt < 3) await page.waitForTimeout(1000)
+    }
+  }
+
+  if (lastNavigationError) throw lastNavigationError
 
   // Save authenticated state
   const authDir = 'tests/.auth'

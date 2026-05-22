@@ -49,6 +49,36 @@ const isRealTaskTitle = (title: unknown): title is string =>
 // =============================================================================
 export type GeometryWriteSource = 'DRAG' | 'RECONCILE' | 'USER' | 'SYNC' | 'SMART-GROUP'
 
+const FORBIDDEN_GEOMETRY_SOURCES = new Set<GeometryWriteSource>(['SYNC', 'SMART-GROUP'])
+
+const sanitizeGeometryUpdates = (
+    updates: Partial<Task>,
+    source: GeometryWriteSource,
+    task: Task,
+    taskId: string
+) => {
+    const sanitized = { ...updates }
+    const attemptedGeometryChange = ('parentId' in sanitized && sanitized.parentId !== task.parentId) ||
+        ('canvasPosition' in sanitized && sanitized.canvasPosition !== undefined &&
+            (task.canvasPosition?.x !== sanitized.canvasPosition?.x ||
+                task.canvasPosition?.y !== sanitized.canvasPosition?.y))
+
+    if (FORBIDDEN_GEOMETRY_SOURCES.has(source) && attemptedGeometryChange) {
+        console.warn(`⚠️ [GEOMETRY-GUARD] Blocked '${source}' geometry update`, {
+            taskId: taskId.slice(0, 8),
+            taskTitle: task.title?.slice(0, 30),
+            parentIdChange: 'parentId' in sanitized,
+            positionChange: 'canvasPosition' in sanitized
+        })
+        delete sanitized.parentId
+        delete sanitized.canvasPosition
+        delete sanitized.positionFormat
+        delete sanitized.positionVersion
+    }
+
+    return sanitized
+}
+
 import { useSmartViews, type SmartView } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
 import { useAuthStore } from '../auth'
@@ -339,6 +369,10 @@ export function useTaskOperations(
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
+        const task = _rawTasks.value[index]
+        updates = sanitizeGeometryUpdates(updates, source, task, taskId)
+        if (Object.keys(updates).length === 0) return
+
         // BUG-060 FIX: Suppress watcher during manual update to prevent concurrent bulk saves
         // This prevents the "8 conflicts in bulk save" issue
         const wasManualInProgress = manualOperationInProgress.value
@@ -350,7 +384,6 @@ export function useTaskOperations(
         addPendingWrite(taskId)
 
         try {
-            const task = _rawTasks.value[index]
             // TASK-1177: Deep snapshot for rollback if all persistence paths fail
             // toRaw() strips Vue reactivity proxy before cloning (structuredClone can't handle Proxy)
             const previousTask = JSON.parse(JSON.stringify(toRaw(task)))
@@ -360,16 +393,6 @@ export function useTaskOperations(
                 ('canvasPosition' in updates && updates.canvasPosition !== undefined &&
                     (task.canvasPosition?.x !== updates.canvasPosition?.x ||
                         task.canvasPosition?.y !== updates.canvasPosition?.y))
-
-            // Warn if non-allowed sources try to change geometry
-            if (import.meta.env.DEV && hasGeometryChange && (source === 'SYNC' || source === 'SMART-GROUP')) {
-                console.warn(`⚠️ [GEOMETRY-DRIFT] Source '${source}' is changing geometry - this may cause position drift!`, {
-                    taskId: taskId.slice(0, 8),
-                    taskTitle: task.title?.slice(0, 30),
-                    parentIdChange: 'parentId' in updates,
-                    positionChange: 'canvasPosition' in updates
-                })
-            }
 
             // DRIFT LOGGING: Track when parentId or canvasPosition is changed
             // This helps identify non-drag flows that mutate hierarchy/positions

@@ -279,19 +279,12 @@ export function useCanvasSync() {
             for (const group of sortedGroups) {
                 const nodeId = CanvasIds.groupNodeId(group.id)
 
-                // TASK-213: Read from PositionManager (Authoritative Source)
-                const pmNode = positionManager.getPosition(group.id)
-
-                // BUG-1084 FIX v3: Actually implement the fallback to store when PM is empty
-                // This can happen on initial load before PM is populated, or if batchUpdate was rejected
+                // READ PATH: store/Supabase absolute coordinates are authoritative.
+                // PositionManager is only an interaction-time cache; using it here can
+                // replay stale drag/frame data during idle syncs and visually drift nodes.
                 let absolutePos: { x: number; y: number }
-                if (pmNode) {
-                    absolutePos = pmNode.position
-                } else if (group.position && typeof group.position.x === 'number' && typeof group.position.y === 'number') {
+                if (group.position && typeof group.position.x === 'number' && typeof group.position.y === 'number') {
                     absolutePos = { x: group.position.x, y: group.position.y }
-                    if (import.meta.env.DEV) {
-                        console.log(`[CANVAS:SYNC] Group ${group.id.slice(0, 8)} not in PM, using store position`)
-                    }
                 } else {
                     console.warn(`[CANVAS:SYNC] Group ${group.id.slice(0, 8)} has no valid position, skipping`)
                     continue
@@ -302,10 +295,11 @@ export function useCanvasSync() {
 
                 // Calculate Relative Position for Vue Flow
                 let vueFlowPos = absolutePos
-                // Only convert to relative if we have a valid, visible parent
+                // Only convert to relative if we have a valid, visible parent.
+                // Use store absolute positions, not PositionManager's interaction cache.
                 if (parentId && visibleGroupIds.has(parentId)) {
-                    const relative = positionManager.getRelativePosition(group.id)
-                    if (relative) vueFlowPos = relative
+                    const parentAbsolute = getGroupAbsolutePosition(parentId, groups)
+                    vueFlowPos = toRelativePosition(absolutePos, parentAbsolute)
                 }
 
                 const displayPos = sanitizePosition(vueFlowPos, { x: 100, y: 100 })
@@ -397,18 +391,11 @@ export function useCanvasSync() {
 
                 const nodeId = task.id
 
-                // TASK-213: Read from PositionManager (Authoritative Source)
-                const pmNode = positionManager.getPosition(task.id)
-
-                // BUG-1084 FIX v3: Actually implement fallback to store when PM is empty
+                // READ PATH: store/Supabase absolute coordinates are authoritative.
+                // PositionManager can be stale outside active interactions.
                 let absolutePos: { x: number; y: number }
-                if (pmNode) {
-                    absolutePos = pmNode.position
-                } else if (task.canvasPosition) {
+                if (task.canvasPosition) {
                     absolutePos = { x: task.canvasPosition.x, y: task.canvasPosition.y }
-                    if (import.meta.env.DEV) {
-                        console.log(`[CANVAS:SYNC] Task ${task.id.slice(0, 8)} not in PM, using store position`)
-                    }
                 } else {
                     continue // Already checked canvasPosition at loop start, but safety first
                 }
@@ -465,14 +452,9 @@ export function useCanvasSync() {
 
                 // Calculate Relative Position for Vue Flow
                 let vueFlowPos = absolutePos
-                // TASK-1289: Only convert to relative if parent is both visible AND in PositionManager
-                // (prevents double-offset when PM hasn't ingested parent group yet)
                 if (parentId && visibleGroupIds.has(parentId)) {
-                    const parentInPM = positionManager.getPosition(parentId)
-                    if (parentInPM) {
-                        const relative = positionManager.getRelativePosition(task.id)
-                        if (relative) vueFlowPos = relative
-                    }
+                    const parentAbsolute = getGroupAbsolutePosition(parentId, groups)
+                    vueFlowPos = toRelativePosition(absolutePos, parentAbsolute)
                 }
 
                 const displayPos = sanitizePosition(vueFlowPos, { x: 200, y: 200 })
@@ -721,19 +703,6 @@ export function useCanvasSync() {
                                 })
                             }
                         }
-                    }
-                }
-
-
-                // BUG-1504: Preserve Vue Flow positions for existing nodes
-                // When sync is triggered by data-only changes (title edit, status change),
-                // the recalculated position from store may be stale. Vue Flow's live position
-                // is authoritative for nodes that are already rendered.
-                const currentNodeMap = new Map(currentNodes.map(n => [n.id, n]))
-                for (const node of newNodes) {
-                    const existing = currentNodeMap.get(node.id)
-                    if (existing && existing.parentNode === node.parentNode) {
-                        node.position = existing.position
                     }
                 }
 

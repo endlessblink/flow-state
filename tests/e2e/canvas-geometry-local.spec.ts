@@ -167,8 +167,214 @@ const expectedWeekdayNames = (availableNames: string[], startFrom: number) => {
 }
 
 test.describe('local canvas geometry regressions', () => {
+  test.describe.configure({ mode: 'serial' })
+
   test.beforeEach(async ({ page }) => {
     await setupCanvas(page)
+  })
+
+  test('idle sync activity and refresh do not persist group position changes', async ({ page }) => {
+    const groupWriteLogs: string[] = []
+    page.on('console', (message) => {
+      const text = message.text()
+      if (text.includes('[GROUP-POS-WRITE]')) groupWriteLogs.push(text)
+    })
+
+    const createdIds = await page.evaluate(async () => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+      const canvasStore = pinia._s.get('canvas')!
+
+      const seeds = [
+        { name: 'Idle Drift Alpha', position: { x: 1440, y: 240, width: 360, height: 720 } },
+        { name: 'Idle Drift Beta', position: { x: 1920, y: 240, width: 360, height: 720 } },
+      ]
+
+      const ids: string[] = []
+      for (const seed of seeds) {
+        const group = await canvasStore.createGroup({
+          ...seed,
+          type: 'custom',
+          color: '#4ECDC4',
+          layout: 'freeform',
+        })
+        ids.push(group.id)
+      }
+
+      await canvasStore.requestSync?.('user:manual')
+      return ids
+    })
+
+    const readCreatedPositions = async () => page.evaluate((ids) => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const groups = root.__vue_app__._context.config.globalProperties.$pinia._s.get('canvas')!.groups || []
+      return ids.map((id: string) => {
+        const group = groups.find((candidate: any) => candidate.id === id)
+        return group ? {
+          id,
+          x: Math.round(group.position.x),
+          y: Math.round(group.position.y),
+          width: Math.round(group.position.width),
+          height: Math.round(group.position.height),
+          parentGroupId: group.parentGroupId ?? null,
+        } : null
+      })
+    }, createdIds)
+
+    try {
+      await page.waitForFunction((ids) => {
+        return ids.every((id: string) => document.querySelector(`[data-id="section-${id}"]`))
+      }, createdIds, { timeout: 15_000 })
+
+      const before = await readCreatedPositions()
+      expect(before.every(Boolean), JSON.stringify(before, null, 2)).toBe(true)
+
+      await page.evaluate(async () => {
+        const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+        const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+        const taskStore = pinia._s.get('tasks')!
+        const canvasStore = pinia._s.get('canvas')!
+        const task = taskStore.rawTasks?.[0] || taskStore.tasks?.[0]
+        if (task) {
+          await taskStore.updateTask(task.id, { title: `${task.title} idle-sync-ping` }, 'TEST')
+        }
+        await canvasStore.requestSync?.('user:manual')
+      })
+
+      await page.waitForTimeout(750)
+      expect(await readCreatedPositions()).toEqual(before)
+
+      await page.reload()
+      await setupCanvas(page)
+      await page.waitForFunction((ids) => {
+        const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
+        const groups = root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas')?.groups || []
+        return ids.every((id: string) => groups.some((group: any) => group.id === id))
+      }, createdIds, { timeout: 20_000 })
+
+      expect(await readCreatedPositions()).toEqual(before)
+      expect(groupWriteLogs, groupWriteLogs.join('\n')).toEqual([])
+    } finally {
+      await page.evaluate(async (ids) => {
+        const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
+        const canvasStore = root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas')
+        if (!canvasStore) return
+        for (const id of ids) await canvasStore.deleteGroup?.(id)
+      }, createdIds).catch(() => { /* page may be closed after assertion failure */ })
+    }
+  })
+
+  test('idle sync activity and refresh do not persist task position changes', async ({ page }) => {
+    const taskGeometryLogs: string[] = []
+    page.on('console', (message) => {
+      const text = message.text()
+      if (text.includes('[GEOMETRY-') && text.includes('pos:')) taskGeometryLogs.push(text)
+    })
+
+    await page.waitForFunction(() => {
+      const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
+      const canvasStore = root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas')
+      return (canvasStore?.groups?.length || canvasStore?.sections?.length || canvasStore?._rawGroups?.length || 0) > 0
+    }, { timeout: 20_000 })
+
+    const seed = await page.evaluate(async () => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+      const canvasStore = pinia._s.get('canvas')!
+      const taskStore = pinia._s.get('tasks')!
+      const today = new Date()
+      const dueDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+      const groups = canvasStore.groups || canvasStore.sections || canvasStore._rawGroups || []
+      const group = groups.find((candidate: any) => candidate.name === 'To Do') || groups[0]
+      if (!group?.position) throw new Error('Seeded canvas group not found')
+      const x = group.position.x + 32
+
+      const tasks = []
+      for (const item of [
+        { title: 'Idle Drift Task A', x, y: group.position.y + 160 },
+        { title: 'Idle Drift Task B', x, y: group.position.y + 340 },
+        { title: 'Idle Drift Task C', x, y: group.position.y + 520 },
+      ]) {
+        const task = await taskStore.createTask({
+          title: item.title,
+          status: 'todo',
+          priority: 'medium',
+          dueDate,
+          isInInbox: false,
+          parentId: group.id,
+          canvasPosition: { x: item.x, y: item.y },
+          positionFormat: 'absolute',
+        })
+        tasks.push(task.id)
+      }
+
+      await canvasStore.requestSync?.('user:manual')
+      return { groupId: group.id, taskIds: tasks }
+    })
+
+    const readSeedTaskPositions = async () => page.evaluate((taskIds) => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const taskStore = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const tasks = taskStore.rawTasks || taskStore.tasks || []
+      return taskIds.map((id: string) => {
+        const task = tasks.find((candidate: any) => candidate.id === id)
+        return task ? {
+          id,
+          parentId: task.parentId ?? null,
+          x: Math.round(task.canvasPosition?.x ?? NaN),
+          y: Math.round(task.canvasPosition?.y ?? NaN),
+        } : null
+      })
+    }, seed.taskIds)
+
+    try {
+      await page.waitForFunction((taskIds) => {
+        const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
+        const taskStore = root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('tasks')
+        const tasks = taskStore?.rawTasks || taskStore?.tasks || []
+        return taskIds.every((id: string) => tasks.some((task: any) => task.id === id && task.canvasPosition))
+      }, seed.taskIds, { timeout: 15_000 })
+
+      const before = await readSeedTaskPositions()
+      expect(before.every(Boolean), JSON.stringify(before, null, 2)).toBe(true)
+
+      await page.evaluate(async () => {
+        const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+        const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+        const taskStore = pinia._s.get('tasks')!
+        const canvasStore = pinia._s.get('canvas')!
+        const unrelated = (taskStore.rawTasks || taskStore.tasks || []).find((task: any) => !task.title?.startsWith('Idle Drift Task'))
+        if (unrelated) {
+          await taskStore.updateTask(unrelated.id, { title: `${unrelated.title} idle-task-sync-ping` }, 'TEST')
+        }
+        await canvasStore.requestSync?.('user:manual')
+      })
+
+      await page.waitForTimeout(750)
+      expect(await readSeedTaskPositions()).toEqual(before)
+
+      await page.reload()
+      await setupCanvas(page)
+      await page.waitForFunction((taskIds) => {
+        const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
+        const taskStore = root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('tasks')
+        const tasks = taskStore?.rawTasks || taskStore?.tasks || []
+        return taskIds.every((id: string) => tasks.some((task: any) => task.id === id))
+      }, seed.taskIds, { timeout: 20_000 })
+
+      expect(await readSeedTaskPositions()).toEqual(before)
+      expect(taskGeometryLogs, taskGeometryLogs.join('\n')).toEqual([])
+    } finally {
+      await page.evaluate(async (taskIds) => {
+        const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
+        const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
+        const taskStore = pinia?._s.get('tasks')
+        if (taskStore) {
+          for (const id of taskIds) await taskStore.deleteTask?.(id)
+        }
+      }, seed.taskIds).catch(() => { /* page may be closed after assertion failure */ })
+    }
   })
 
   test('tidy keeps compact groups and stacks tasks with vertical spacing', async ({ page }) => {

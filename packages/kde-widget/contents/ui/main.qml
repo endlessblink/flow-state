@@ -4980,14 +4980,18 @@ PlasmoidItem {
             url += "&position=not.is.null"
         }
 
-        // Apply todayOnly AND filter (combines with any dropdown filter)
+        // Apply todayOnly AND filter (combines with any dropdown filter).
+        // BUG: due_date is timestamptz (UTC); the old filter used a LOCAL date
+        // string with no timezone, so the UTC window didn't match the app's
+        // local-date "today" (useSmartViews.isTodayTask). For a UTC+N user a
+        // task due "today" (local midnight) is the previous day in UTC and was
+        // excluded. Fix: use the local day's start/end converted to UTC ISO.
         if (root.todayOnly) {
-            var td = new Date()
-            var y = td.getFullYear()
-            var m = String(td.getMonth() + 1).padStart(2, '0')
-            var d = String(td.getDate()).padStart(2, '0')
-            var ds = y + '-' + m + '-' + d
-            url += "&due_date=gte." + ds + "T00:00:00&due_date=lt." + ds + "T23:59:59"
+            var dayStart = new Date()
+            dayStart.setHours(0, 0, 0, 0)            // local midnight today
+            var dayEnd = new Date(dayStart)
+            dayEnd.setDate(dayEnd.getDate() + 1)     // local midnight tomorrow
+            url += "&due_date=gte." + dayStart.toISOString() + "&due_date=lt." + dayEnd.toISOString()
         }
 
         // Always exclude deleted tasks

@@ -49,7 +49,7 @@ function handleClick(taskId: string, title: string) {
 .suggestion-chip:hover {
   border-color: var(--brand-primary);
   color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.06);
+  background: rgba(45, 212, 191, 0.06);
 }
 
 .suggestion-chip:active {

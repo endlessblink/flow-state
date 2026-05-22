@@ -330,7 +330,7 @@ const slotLabels = ['Top priority', 'Second focus', 'One more thing']
 }
 
 .tb-timeline-block--0 {
-  background: rgba(78, 205, 196, 0.3);
+  background: rgba(45, 212, 191, 0.3);
   border: 1px solid var(--brand-primary);
 }
 
@@ -377,12 +377,12 @@ const slotLabels = ['Top priority', 'Second focus', 'One more thing']
 }
 
 .tb-start-button:hover {
-  background: rgba(78, 205, 196, 0.12);
+  background: rgba(45, 212, 191, 0.12);
 }
 
 @keyframes pulse-teal {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.4); }
-  50% { box-shadow: 0 0 20px 4px rgba(78, 205, 196, 0.2); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.4); }
+  50% { box-shadow: 0 0 20px 4px rgba(45, 212, 191, 0.2); }
 }
 
 @media (prefers-reduced-motion: reduce) {

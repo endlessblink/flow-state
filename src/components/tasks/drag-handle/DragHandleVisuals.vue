@@ -177,12 +177,12 @@ const getDotStyle = (index: number) => ({
   /* Color System — teal brand tokens from design-tokens.css */
   --primary-rgb: var(--color-primary-500); /* was blue 59,130,246 — now teal 78,205,196 */
   --primary-light-rgb: var(--color-primary-300); /* was blue-light 147,197,253 — now teal-300 116,233,226 */
-  --accent-rgb: 99, 102, 241;
+  --accent-rgb: 45, 212, 191; /* teal-green (was indigo 99,102,241) */
 
   /* State Colors */
   --state-dragging: rgba(var(--primary-rgb), 0.9); /* no token match for brand-primary at 0.9 */
-  --state-hover: var(--state-active-bg); /* rgba(78,205,196,0.15) */
-  --state-focus: var(--brand-primary-subtle); /* rgba(78,205,196,0.1) — closest to 0.12 */
+  --state-hover: var(--state-active-bg); /* rgba(45, 212, 191,0.15) */
+  --state-focus: var(--brand-primary-subtle); /* rgba(45, 212, 191,0.1) — closest to 0.12 */
   --state-active: rgba(var(--accent-rgb), 0.2); /* no token match — accent indigo */
 
   /* Blur Values - component-specific (includes blur() wrapper) */
@@ -275,7 +275,7 @@ const getDotStyle = (index: number) => ({
   transform: scale(0.95);
   background:
     linear-gradient(135deg, var(--glass-bg-medium) 0%, var(--state-active) 100%);
-  border-color: var(--state-active-border); /* rgba(78,205,196,0.60) — closest to 0.5 */
+  border-color: var(--state-active-border); /* rgba(45, 212, 191,0.60) — closest to 0.5 */
   box-shadow:
     var(--shadow-soft),
     var(--shadow-glow),
@@ -317,7 +317,7 @@ const getDotStyle = (index: number) => ({
 }
 
 .drag-handle__touch-area--active {
-  background-color: var(--brand-bg-dim); /* rgba(78,205,196,0.08) — closest to 0.05 */
+  background-color: var(--brand-bg-dim); /* rgba(45, 212, 191,0.08) — closest to 0.05 */
 }
 
 /* Grip Container */
@@ -415,7 +415,7 @@ const getDotStyle = (index: number) => ({
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  border: var(--space-0_5) solid var(--state-active-border); /* rgba(78,205,196,0.60) — closest to 0.5 */
+  border: var(--space-0_5) solid var(--state-active-border); /* rgba(45, 212, 191,0.60) — closest to 0.5 */
   opacity: 0;
   pointer-events: none;
 }
@@ -442,7 +442,7 @@ const getDotStyle = (index: number) => ({
 
 .drag-handle__indicator {
   position: absolute;
-  background: var(--brand-primary-dim); /* rgba(78,205,196,0.3) */
+  background: var(--brand-primary-dim); /* rgba(45, 212, 191,0.3) */
   border-radius: var(--radius-full);
   display: none; /* Hidden by default, simpler visual preferred for now */
 }

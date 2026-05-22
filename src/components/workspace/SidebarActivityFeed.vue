@@ -230,12 +230,12 @@ onUnmounted(() => {
 }
 
 .activity-icon.task_created {
-  background: rgba(78, 205, 196, 0.15);
+  background: rgba(45, 212, 191, 0.15);
   color: var(--brand-primary);
 }
 
 .activity-icon.task_completed {
-  background: rgba(78, 205, 196, 0.25);
+  background: rgba(45, 212, 191, 0.25);
   color: var(--brand-primary);
 }
 

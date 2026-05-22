@@ -227,6 +227,6 @@ watch(() => props.isEditing, (val) => {
   font-weight: var(--font-medium);
   padding: var(--space-0_5) var(--space-2);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.2);
 }
 </style>

@@ -295,9 +295,9 @@ async function handleSubmit() {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  /* Warm Dark: solid display type (was gradient-clip text — an AI-slop tell) */
+  font-family: var(--font-display);
+  color: var(--text-primary);
 }
 
 .form-subtitle {

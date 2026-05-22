@@ -84,9 +84,9 @@ const placeholderTexts = [
 
 .drop-zone--dragover {
   border: 2px solid var(--brand-primary);
-  background: rgba(78, 205, 196, 0.06);
+  background: rgba(45, 212, 191, 0.06);
   transform: scale(1.02);
-  box-shadow: 0 0 16px rgba(78, 205, 196, 0.15);
+  box-shadow: 0 0 16px rgba(45, 212, 191, 0.15);
 }
 
 .drop-zone--filled {

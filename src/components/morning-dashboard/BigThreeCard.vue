@@ -701,7 +701,7 @@ async function handleCreateTask() {
 }
 
 .create-button:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.12);
+  background: rgba(45, 212, 191, 0.12);
 }
 
 .create-button:disabled {
@@ -739,8 +739,8 @@ async function handleCreateTask() {
   background: conic-gradient(
     from var(--glow-angle, 0deg),
     transparent 0%,
-    rgba(78, 205, 196, 0.8) 10%,
-    rgba(78, 205, 196, 0) 40%
+    rgba(45, 212, 191, 0.8) 10%,
+    rgba(45, 212, 191, 0) 40%
   );
   animation: border-sweep 0.6s linear forwards;
   z-index: -1;
@@ -756,9 +756,9 @@ async function handleCreateTask() {
   inset: 0;
   border-radius: var(--radius-md);
   box-shadow:
-    0 0 12px rgba(78, 205, 196, 0.6),
-    0 0 24px rgba(78, 205, 196, 0.3),
-    inset 0 0 12px rgba(78, 205, 196, 0.1);
+    0 0 12px rgba(45, 212, 191, 0.6),
+    0 0 24px rgba(45, 212, 191, 0.3),
+    inset 0 0 12px rgba(45, 212, 191, 0.1);
   animation: glow-burst 0.8s ease-out forwards;
   pointer-events: none;
   z-index: 0;
@@ -781,23 +781,23 @@ async function handleCreateTask() {
 @keyframes glow-burst {
   0% {
     box-shadow:
-      0 0 0 rgba(78, 205, 196, 0),
-      0 0 0 rgba(78, 205, 196, 0),
-      inset 0 0 0 rgba(78, 205, 196, 0);
+      0 0 0 rgba(45, 212, 191, 0),
+      0 0 0 rgba(45, 212, 191, 0),
+      inset 0 0 0 rgba(45, 212, 191, 0);
     opacity: 0;
   }
   20% {
     box-shadow:
-      0 0 16px rgba(78, 205, 196, 0.7),
-      0 0 32px rgba(78, 205, 196, 0.4),
-      inset 0 0 16px rgba(78, 205, 196, 0.15);
+      0 0 16px rgba(45, 212, 191, 0.7),
+      0 0 32px rgba(45, 212, 191, 0.4),
+      inset 0 0 16px rgba(45, 212, 191, 0.15);
     opacity: 1;
   }
   100% {
     box-shadow:
-      0 0 2px rgba(78, 205, 196, 0.1),
-      0 0 4px rgba(78, 205, 196, 0.05),
-      inset 0 0 0 rgba(78, 205, 196, 0);
+      0 0 2px rgba(45, 212, 191, 0.1),
+      0 0 4px rgba(45, 212, 191, 0.05),
+      inset 0 0 0 rgba(45, 212, 191, 0);
     opacity: 0;
   }
 }
@@ -813,7 +813,7 @@ async function handleCreateTask() {
 /* Ghost classes for drag feedback */
 .ghost-card {
   opacity: 0.5;
-  background: rgba(78, 205, 196, 0.08) !important;
+  background: rgba(45, 212, 191, 0.08) !important;
   border: 2px dashed var(--brand-primary) !important;
   border-radius: var(--radius-md) !important;
 }
@@ -834,7 +834,7 @@ async function handleCreateTask() {
 
 .ghost-zone-item {
   opacity: 0.5;
-  background: rgba(78, 205, 196, 0.08) !important;
+  background: rgba(45, 212, 191, 0.08) !important;
   border: 2px dashed var(--brand-primary) !important;
   border-radius: var(--radius-md) !important;
   min-height: 48px;
@@ -865,12 +865,12 @@ async function handleCreateTask() {
 }
 
 .start-day-button--ready:hover {
-  background: rgba(78, 205, 196, 0.12);
+  background: rgba(45, 212, 191, 0.12);
 }
 
 @keyframes pulse-teal {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.4); }
-  50% { box-shadow: 0 0 20px 4px rgba(78, 205, 196, 0.2); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.4); }
+  50% { box-shadow: 0 0 20px 4px rgba(45, 212, 191, 0.2); }
 }
 
 @media (prefers-reduced-motion: reduce) {

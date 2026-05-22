@@ -368,7 +368,7 @@ const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
 .custom-checkbox.checked {
   background: var(--brand-primary);
   border-color: var(--brand-primary);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.4);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.4);
 }
 
 .custom-checkbox.checked .check-icon {

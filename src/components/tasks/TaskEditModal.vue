@@ -15,7 +15,7 @@
 
           <!-- Workspace Context Strip (workspace tasks only) -->
           <div v-if="isWorkspaceTask" class="workspace-strip">
-            <span class="ws-dot" :style="{ background: activeWorkspace?.color || '#4ECDC4' }" />
+            <span class="ws-dot" :style="{ background: activeWorkspace?.color || '#2DD4BF' }" />
             <span class="ws-name">{{ activeWorkspace?.name || 'Workspace' }}</span>
             <span class="ws-sep">&middot;</span>
             <span class="ws-meta">{{ wsRelativeTime(editedTask.createdAt) }}</span>
@@ -956,11 +956,11 @@ onUnmounted(() => {
 
 /* Enhanced primary button states */
 .btn-primary.btn-action:not(:disabled):hover {
-  background: rgba(78, 205, 196, 0.12);
+  background: rgba(45, 212, 191, 0.12);
   color: var(--brand-primary);
   border-color: var(--brand-primary);
   transform: translateY(-2px);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.25);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.25);
 }
 
 .btn-primary.btn-action:not(:disabled):active {

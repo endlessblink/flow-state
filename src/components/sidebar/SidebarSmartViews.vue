@@ -171,7 +171,7 @@ const handleStartQuickSort = () => {
 }
 
 .quick-sort-button-full:hover {
-  background: rgba(78, 205, 196, 0.12);
+  background: rgba(45, 212, 191, 0.12);
   transform: translateY(-1px);
 }
 

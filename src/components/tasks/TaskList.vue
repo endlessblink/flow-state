@@ -877,7 +877,7 @@ defineExpose({
 
 .task-group--drop-active {
   box-shadow: inset 0 0 0 1px var(--brand-primary);
-  background: rgba(78, 205, 196, 0.05);
+  background: rgba(45, 212, 191, 0.05);
 }
 
 .task-group:last-child {
@@ -961,7 +961,7 @@ defineExpose({
 
 .group-select-checkbox input[type="checkbox"]:checked {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.13);
+  background: rgba(45, 212, 191, 0.13);
 }
 
 .group-select-checkbox input[type="checkbox"]:checked::after {
@@ -978,7 +978,7 @@ defineExpose({
 
 .group-select-checkbox input[type="checkbox"]:indeterminate {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.13);
+  background: rgba(45, 212, 191, 0.13);
 }
 
 .group-select-checkbox input[type="checkbox"]:indeterminate::after {
@@ -1123,7 +1123,7 @@ defineExpose({
 
 .select-all-checkbox input[type="checkbox"]:checked {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.13);
+  background: rgba(45, 212, 191, 0.13);
 }
 
 .select-all-checkbox input[type="checkbox"]:checked::after {
@@ -1140,7 +1140,7 @@ defineExpose({
 
 .select-all-checkbox input[type="checkbox"]:indeterminate {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.13);
+  background: rgba(45, 212, 191, 0.13);
 }
 
 .select-all-checkbox input[type="checkbox"]:indeterminate::after {

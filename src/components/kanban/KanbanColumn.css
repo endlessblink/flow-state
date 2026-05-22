@@ -198,8 +198,8 @@
     pointer-events: none !important;
     opacity: 1 !important;
     background: rgba(45, 42, 68, 0.92) !important;
-    border: 1px solid var(--brand-primary, #4ECDC4) !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(78, 205, 196, 0.2) !important;
+    border: 1px solid var(--brand-primary, #2DD4BF) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(45, 212, 191, 0.2) !important;
     border-radius: 8px !important;
     transform: scale(1.02) !important;
     transition: none !important;

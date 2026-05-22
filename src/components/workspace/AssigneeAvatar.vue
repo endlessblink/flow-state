@@ -135,7 +135,7 @@ function hashUserId(id: string): number {
 // Colors use opacity to keep them subtle on dark surfaces.
 const AVATAR_PALETTE: Array<{ bg: string; text: string }> = [
   // teal (brand)
-  { bg: 'rgba(78, 205, 196, 0.18)', text: 'var(--brand-primary)' },
+  { bg: 'rgba(45, 212, 191, 0.18)', text: 'var(--brand-primary)' },
   // blue
   { bg: 'var(--blue-bg-subtle)', text: 'var(--color-info)' },
   // amber / in-progress
@@ -287,6 +287,6 @@ const presenceStatus = computed<PresenceStatus>(() => getUserPresenceStatus(prop
 .has-tooltip:hover .avatar-initials,
 .has-tooltip:hover .avatar-image,
 .has-tooltip:hover .avatar-fallback {
-  box-shadow: 0 0 0 2px var(--brand-primary-dim, rgba(78, 205, 196, 0.3));
+  box-shadow: 0 0 0 2px var(--brand-primary-dim, rgba(45, 212, 191, 0.3));
 }
 </style>

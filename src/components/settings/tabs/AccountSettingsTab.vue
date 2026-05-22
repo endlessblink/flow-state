@@ -1091,9 +1091,9 @@ const handleChangePassword = async () => {
 }
 
 .update-btn.primary:hover {
-  background: rgba(78, 205, 196, 0.12);
+  background: rgba(45, 212, 191, 0.12);
   transform: translateY(-2px);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.25);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.25);
 }
 
 .update-btn.primary:active {
@@ -1401,7 +1401,7 @@ const handleChangePassword = async () => {
 }
 
 .add-btn:hover {
-  background: rgba(78, 205, 196, 0.12);
+  background: rgba(45, 212, 191, 0.12);
   transform: translateY(-1px);
 }
 

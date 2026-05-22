@@ -442,7 +442,7 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
 }
 
 .time-slot.creating {
-  background: var(--brand-primary-subtle, rgba(78, 205, 196, 0.1));
+  background: var(--brand-primary-subtle, rgba(45, 212, 191, 0.1));
   border-color: var(--brand-primary);
 }
 

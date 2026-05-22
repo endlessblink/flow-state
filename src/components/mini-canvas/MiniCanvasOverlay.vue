@@ -29,7 +29,7 @@
             :zoom-on-scroll="true"
             fit-view-on-init
             :fit-view-params="{ padding: 0.4, maxZoom: 1 }"
-            :connection-line-style="{ stroke: '#4ECDC4', strokeWidth: 1.5 }"
+            :connection-line-style="{ stroke: '#2DD4BF', strokeWidth: 1.5 }"
             dir="rtl"
             @node-drag-stop="miniCanvas.onNodeDragStop"
             @pane-click="handlePaneClick"
@@ -540,7 +540,7 @@ onUnmounted(() => {
   width: 8px;
   height: 8px;
   background: var(--glass-border-strong, #555);
-  border: 1.5px solid var(--brand-primary, #4ECDC4);
+  border: 1.5px solid var(--brand-primary, #2DD4BF);
   opacity: 0;
   transition: opacity 150ms ease;
 }

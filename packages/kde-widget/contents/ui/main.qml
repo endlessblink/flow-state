@@ -22,11 +22,11 @@ PlasmoidItem {
     // For older versions, we rely on the full-screen overlay instead
 
     // ===== COLORS (matching main app design tokens) =====
-    readonly property color workColor: "#4ECDC4"      // Teal - matches AppHeader.vue
-    readonly property color breakColor: "#F59E0B"     // Orange/Amber - matches AppHeader.vue
-    readonly property color bgColor: "#232034"        // Purple-tinted: rgb(35, 32, 52) = --surface-primary
-    readonly property color textColor: "#E2E8F0"
-    readonly property color mutedColor: "#7E7590"     // Purple-tinted muted: hsl(250, 15%, 50%)
+    readonly property color workColor: "#2DD4BF"      // Teal-green — Warm Dark brand accent
+    readonly property color breakColor: "#F59E0B"     // Amber — break (matches app)
+    readonly property color bgColor: "#24211E"        // Warm charcoal — --surface-primary
+    readonly property color textColor: "#EDE6DC"      // Warm off-white
+    readonly property color mutedColor: "#8C857B"     // Warm muted gray
     readonly property color currentAccent: isWorkSession ? workColor : breakColor
 
     // ===== AUTHENTICATION STATE =====

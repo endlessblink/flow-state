@@ -321,7 +321,7 @@ onBeforeUnmount(() => {
 }
 
 .estimate-dropdown__apply:hover {
-  background: rgba(78, 205, 196, 0.15);
+  background: rgba(45, 212, 191, 0.15);
 }
 
 /* Dropdown transitions */

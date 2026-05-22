@@ -209,7 +209,7 @@ function cancelNaming() {
 
 // Pre-defined color palette for saved views
 const VIEW_COLORS = [
-  '#4ECDC4', // teal (brand primary)
+  '#2DD4BF', // teal (brand primary)
   '#FF6B6B', // coral
   '#A78BFA', // purple
   '#F59E0B', // amber

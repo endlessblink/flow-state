@@ -544,7 +544,7 @@ onMounted(() => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.12);
+  background: rgba(45, 212, 191, 0.12);
   color: var(--brand-primary);
 }
 

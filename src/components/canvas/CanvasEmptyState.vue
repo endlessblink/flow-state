@@ -202,7 +202,7 @@ function gridDotStyle(i: number): Record<string, string> {
   box-shadow:
     0 0 0 1px var(--glass-border-faint),
     0 24px 48px rgba(0, 0, 0, 0.28),
-    0 0 80px rgba(78, 205, 196, 0.04);
+    0 0 80px rgba(45, 212, 191, 0.04);
   animation: card-arrive 0.6s var(--spring-smooth) both;
 }
 
@@ -229,7 +229,7 @@ function gridDotStyle(i: number): Record<string, string> {
 
 /* Connector lines */
 .connector {
-  stroke: rgba(78, 205, 196, 0.25);
+  stroke: rgba(45, 212, 191, 0.25);
   stroke-width: 1.5;
   stroke-linecap: round;
   animation: line-draw 1.4s var(--spring-smooth) both;
@@ -245,8 +245,8 @@ function gridDotStyle(i: number): Record<string, string> {
 
 /* Node dots */
 .node-dot {
-  fill: rgba(78, 205, 196, 0.18);
-  stroke: rgba(78, 205, 196, 0.5);
+  fill: rgba(45, 212, 191, 0.18);
+  stroke: rgba(45, 212, 191, 0.5);
   stroke-width: 1;
   animation: node-pop 0.4s var(--spring-smooth) both;
 }
@@ -255,7 +255,7 @@ function gridDotStyle(i: number): Record<string, string> {
 .node-dot-3 { animation-delay: 0.75s; }
 
 .node-center {
-  fill: rgba(78, 205, 196, 0.28);
+  fill: rgba(45, 212, 191, 0.28);
   stroke: var(--brand-primary);
   stroke-width: 1.5;
   animation: node-pop 0.5s var(--spring-smooth) 0.45s both,
@@ -268,8 +268,8 @@ function gridDotStyle(i: number): Record<string, string> {
 }
 
 @keyframes node-pulse {
-  0%, 100% { fill: rgba(78, 205, 196, 0.28); }
-  50%       { fill: rgba(78, 205, 196, 0.45); }
+  0%, 100% { fill: rgba(45, 212, 191, 0.28); }
+  50%       { fill: rgba(45, 212, 191, 0.45); }
 }
 
 /* Task card rects */
@@ -288,8 +288,8 @@ function gridDotStyle(i: number): Record<string, string> {
 
 /* Check mark elements */
 .task-check-ring {
-  fill: rgba(78, 205, 196, 0.12);
-  stroke: rgba(78, 205, 196, 0.55);
+  fill: rgba(45, 212, 191, 0.12);
+  stroke: rgba(45, 212, 191, 0.55);
   stroke-width: 1.2;
 }
 
@@ -308,19 +308,19 @@ function gridDotStyle(i: number): Record<string, string> {
 .task-bar-sub-muted    { fill: var(--glass-border-faint); }
 
 /* Tag pills */
-.task-tag-a { fill: rgba(78, 205, 196, 0.18); stroke: rgba(78, 205, 196, 0.35); stroke-width: 0.8; }
+.task-tag-a { fill: rgba(45, 212, 191, 0.18); stroke: rgba(45, 212, 191, 0.35); stroke-width: 0.8; }
 .task-tag-b { fill: rgba(139, 92, 246, 0.18); stroke: rgba(139, 92, 246, 0.35); stroke-width: 0.8; }
 .task-tag-c { fill: rgba(99, 102, 241, 0.18); stroke: rgba(99, 102, 241, 0.35); stroke-width: 0.8; }
 
 /* Drag hint */
 .drag-hint-bg {
-  fill: rgba(78, 205, 196, 0.1);
-  stroke: rgba(78, 205, 196, 0.3);
+  fill: rgba(45, 212, 191, 0.1);
+  stroke: rgba(45, 212, 191, 0.3);
   stroke-width: 1;
 }
 
 .drag-hand {
-  fill: rgba(78, 205, 196, 0.7);
+  fill: rgba(45, 212, 191, 0.7);
 }
 
 /* Float animations for card groups */
@@ -383,7 +383,7 @@ function gridDotStyle(i: number): Record<string, string> {
   top: 18%; left: 12%;
   opacity: 0;
   animation-delay: 0s;
-  box-shadow: 0 0 8px rgba(78, 205, 196, 0.8);
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.8);
 }
 .sparkle-2 {
   width: 4px; height: 4px;
@@ -399,7 +399,7 @@ function gridDotStyle(i: number): Record<string, string> {
   bottom: 20%; left: 20%;
   opacity: 0;
   animation-delay: 1.8s;
-  box-shadow: 0 0 7px rgba(78, 205, 196, 0.7);
+  box-shadow: 0 0 7px rgba(45, 212, 191, 0.7);
 }
 .sparkle-4 {
   width: 3px; height: 3px;
@@ -507,16 +507,16 @@ function gridDotStyle(i: number): Record<string, string> {
 
 /* Primary: teal glass */
 .action-primary {
-  background: rgba(78, 205, 196, 0.08);
-  border: 1px solid rgba(78, 205, 196, 0.4);
+  background: rgba(45, 212, 191, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.4);
   color: var(--brand-primary);
 }
 
 .action-primary:hover {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.65);
+  background: rgba(45, 212, 191, 0.15);
+  border-color: rgba(45, 212, 191, 0.65);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(78, 205, 196, 0.2), 0 0 0 1px rgba(78, 205, 196, 0.2);
+  box-shadow: 0 6px 20px rgba(45, 212, 191, 0.2), 0 0 0 1px rgba(45, 212, 191, 0.2);
 }
 
 /* Secondary: purple glass */

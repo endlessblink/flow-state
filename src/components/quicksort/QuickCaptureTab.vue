@@ -461,10 +461,10 @@ function flyTaskToProject(title: string, projectId: string | undefined) {
     width: `${originRect.width}px`,
     height: `${originRect.height}px`,
     padding: '8px 16px',
-    background: 'rgba(78, 205, 196, 0.18)',
-    border: '1px solid rgba(78, 205, 196, 0.5)',
+    background: 'rgba(45, 212, 191, 0.18)',
+    border: '1px solid rgba(45, 212, 191, 0.5)',
     borderRadius: '10px',
-    color: '#4ECDC4',
+    color: '#2DD4BF',
     fontSize: '14px',
     fontWeight: '500',
     display: 'flex',
@@ -483,12 +483,12 @@ function flyTaskToProject(title: string, projectId: string | undefined) {
   const liftOff = ghost.animate([
     {
       transform: 'translateY(0) scale(1) rotate(0deg)',
-      boxShadow: '0 4px 16px rgba(78, 205, 196, 0.3)',
+      boxShadow: '0 4px 16px rgba(45, 212, 191, 0.3)',
       opacity: 1,
     },
     {
       transform: 'translateY(-8px) scale(1.05) rotate(-1deg)',
-      boxShadow: '0 12px 40px rgba(78, 205, 196, 0.5), 0 0 20px rgba(78, 205, 196, 0.3)',
+      boxShadow: '0 12px 40px rgba(45, 212, 191, 0.5), 0 0 20px rgba(45, 212, 191, 0.3)',
       opacity: 1,
     },
   ], {
@@ -510,7 +510,7 @@ function flyTaskToProject(title: string, projectId: string | undefined) {
     const flight = ghost.animate([
       {
         transform: 'translateY(-8px) scale(1.05) rotate(-1deg)',
-        boxShadow: '0 12px 40px rgba(78, 205, 196, 0.5), 0 0 20px rgba(78, 205, 196, 0.3)',
+        boxShadow: '0 12px 40px rgba(45, 212, 191, 0.5), 0 0 20px rgba(45, 212, 191, 0.3)',
         width: `${originRect.width}px`,
         height: `${originRect.height}px`,
         borderRadius: '10px',
@@ -521,7 +521,7 @@ function flyTaskToProject(title: string, projectId: string | undefined) {
       },
       {
         transform: `translate(${q1X}px, ${q1Y}px) scale(0.9) rotate(-3deg)`,
-        boxShadow: '0 16px 48px rgba(78, 205, 196, 0.6), 0 0 30px rgba(78, 205, 196, 0.4)',
+        boxShadow: '0 16px 48px rgba(45, 212, 191, 0.6), 0 0 30px rgba(45, 212, 191, 0.4)',
         width: `${originRect.width * 0.85}px`,
         height: `${originRect.height * 0.9}px`,
         borderRadius: '10px',
@@ -532,7 +532,7 @@ function flyTaskToProject(title: string, projectId: string | undefined) {
       },
       {
         transform: `translate(${midX}px, ${midY}px) scale(0.7) rotate(-2deg)`,
-        boxShadow: '0 20px 60px rgba(78, 205, 196, 0.7), 0 0 40px rgba(78, 205, 196, 0.5)',
+        boxShadow: '0 20px 60px rgba(45, 212, 191, 0.7), 0 0 40px rgba(45, 212, 191, 0.5)',
         width: `${originRect.width * 0.6}px`,
         height: `${originRect.height * 0.8}px`,
         borderRadius: '12px',
@@ -543,7 +543,7 @@ function flyTaskToProject(title: string, projectId: string | undefined) {
       },
       {
         transform: `translate(${q3X}px, ${q3Y}px) scale(0.45) rotate(0deg)`,
-        boxShadow: '0 10px 32px rgba(78, 205, 196, 0.5), 0 0 24px rgba(78, 205, 196, 0.3)',
+        boxShadow: '0 10px 32px rgba(45, 212, 191, 0.5), 0 0 24px rgba(45, 212, 191, 0.3)',
         width: '80px',
         height: '28px',
         borderRadius: '14px',
@@ -554,7 +554,7 @@ function flyTaskToProject(title: string, projectId: string | undefined) {
       },
       {
         transform: `translate(${dx}px, ${dy}px) scale(0.2) rotate(2deg)`,
-        boxShadow: '0 0 0 rgba(78, 205, 196, 0), 0 0 0 rgba(78, 205, 196, 0)',
+        boxShadow: '0 0 0 rgba(45, 212, 191, 0), 0 0 0 rgba(45, 212, 191, 0)',
         width: '40px',
         height: '20px',
         borderRadius: '10px',
@@ -612,8 +612,8 @@ function spawnTrailParticles(ox: number, oy: number, dx: number, dy: number, arc
         width: '6px',
         height: '6px',
         borderRadius: '50%',
-        background: '#4ECDC4',
-        boxShadow: '0 0 8px 2px rgba(78, 205, 196, 0.6)',
+        background: '#2DD4BF',
+        boxShadow: '0 0 8px 2px rgba(45, 212, 191, 0.6)',
         zIndex: '9999',
         pointerEvents: 'none',
         willChange: 'transform, opacity',
@@ -651,8 +651,8 @@ function spawnLandingBurst(cx: number, cy: number) {
       width: `${size}px`,
       height: `${size}px`,
       borderRadius: '50%',
-      background: '#4ECDC4',
-      boxShadow: '0 0 6px 1px rgba(78, 205, 196, 0.7)',
+      background: '#2DD4BF',
+      boxShadow: '0 0 6px 1px rgba(45, 212, 191, 0.7)',
       zIndex: '10001',
       pointerEvents: 'none',
       willChange: 'transform, opacity',
@@ -678,8 +678,8 @@ function spawnLandingBurst(cx: number, cy: number) {
     width: '30px',
     height: '30px',
     borderRadius: '50%',
-    border: '2px solid rgba(78, 205, 196, 0.8)',
-    background: 'rgba(78, 205, 196, 0.15)',
+    border: '2px solid rgba(45, 212, 191, 0.8)',
+    background: 'rgba(45, 212, 191, 0.15)',
     zIndex: '10001',
     pointerEvents: 'none',
     willChange: 'transform, opacity',
@@ -1196,8 +1196,8 @@ defineExpose({
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: var(--brand-primary-alpha-10, rgba(78, 205, 196, 0.1));
-  border: 1px solid var(--brand-primary-alpha-20, rgba(78, 205, 196, 0.2));
+  background: var(--brand-primary-alpha-10, rgba(45, 212, 191, 0.1));
+  border: 1px solid var(--brand-primary-alpha-20, rgba(45, 212, 191, 0.2));
   border-radius: var(--radius-md);
   color: var(--brand-primary);
   font-size: var(--text-xs);
@@ -1254,9 +1254,9 @@ defineExpose({
   gap: var(--space-1_5, 6px);
   padding: var(--space-2, 8px) var(--space-4, 16px);
   background: var(--glass-bg-soft, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--brand-primary, #4ECDC4);
+  border: 1px solid var(--brand-primary, #2DD4BF);
   border-radius: var(--radius-md, 8px);
-  color: var(--brand-primary, #4ECDC4);
+  color: var(--brand-primary, #2DD4BF);
   font-size: var(--text-sm, 14px);
   font-weight: var(--font-semibold, 600);
   cursor: pointer;
@@ -1269,7 +1269,7 @@ defineExpose({
 .capture-add-btn:hover:not(:disabled) {
   background: var(--glass-bg-medium, rgba(255, 255, 255, 0.1));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--brand-primary-alpha-20, rgba(78, 205, 196, 0.2));
+  box-shadow: 0 4px 12px var(--brand-primary-alpha-20, rgba(45, 212, 191, 0.2));
   color: var(--brand-hover, #3db8af);
   border-color: var(--brand-hover, #3db8af);
 }

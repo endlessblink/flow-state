@@ -68,17 +68,17 @@ import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme, type Global
 // Today: white text (no special indicator)
 // Selected: green stroke + green text, NO fill
 const themeOverrides: GlobalThemeOverrides = {
-  // Warm Dark — terracotta primary, warm surfaces (TASK-1791b)
+  // Warm Dark — teal-green primary, warm surfaces (TASK-1791b)
   common: {
-    primaryColor: '#E07A4B',
-    primaryColorHover: '#EB8C61',
-    primaryColorPressed: '#C9633A',
-    primaryColorSuppl: '#E07A4B',
+    primaryColor: '#2DD4BF',
+    primaryColorHover: '#5EEAD4',
+    primaryColorPressed: '#14B8A6',
+    primaryColorSuppl: '#2DD4BF',
   },
   DatePicker: {
     itemColorActive: 'transparent', // NO fill on selected
     itemColorHover: 'rgba(237, 230, 220, 0.08)',
-    itemTextColorActive: '#E07A4B', // Terracotta text when selected
+    itemTextColorActive: '#2DD4BF', // Teal-green text when selected
     itemBorderRadius: '6px',
     panelHeaderDividerColor: 'rgba(237, 230, 220, 0.08)',
     calendarTitleColorHover: 'rgba(237, 230, 220, 0.95)',
@@ -268,7 +268,7 @@ html, body, #app {
   width: 32px;
   height: 32px;
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--brand-primary, #E07A4B);
+  border-top-color: var(--brand-primary, #2DD4BF);
   border-radius: 50%;
   animation: app-spin 0.8s linear infinite;
 }

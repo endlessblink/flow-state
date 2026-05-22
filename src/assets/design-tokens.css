@@ -45,32 +45,32 @@
   --color-slate-800: 30, 41, 59;
   --color-slate-900: 15, 23, 42;
 
-  /* Brand Color — Warm Dark: Terracotta #E07A4B (TASK-1791b rebrand, was teal #4ECDC4) */
-  --teal-500: 19, 71%, 59%;    /* var name kept for cascade; value is now terracotta */
+  /* Brand Color — Warm Dark: Teal-green #2DD4BF (TASK-1791b rebrand, was teal #4ECDC4) */
+  --teal-500: 172, 66%, 50%;    /* var name kept for cascade; value is now teal-green */
 
   /* Core Color Palette (HSL values for semantic tokens) */
   --red-500: 0, 84%, 60%;      /* #ef4444 - danger, errors, current time indicator */
   --green-500: 142, 71%, 45%;  /* #22c55e - success, completed */
   --blue-500: 209, 33%, 56%;   /* muted slate-blue — harmonizes with warm brown (was harsh #3b82f6) */
-  /* Terracotta scale (was teal) */
-  --color-primary-50: 250, 240, 233;
-  --color-primary-100: 247, 224, 211;
-  --color-primary-200: 242, 197, 171;
-  --color-primary-300: 236, 166, 130;
-  --color-primary-400: 230, 140, 97;
-  --color-primary-500: 224, 122, 75;
-  /* Base #E07A4B (terracotta) */
-  --color-primary-600: 201, 99, 58;
-  --color-primary-700: 165, 78, 44;
-  --color-primary-800: 122, 57, 32;
-  --color-primary-900: 82, 39, 22;
+  /* Teal-green scale */
+  --color-primary-50: 230, 250, 247;
+  --color-primary-100: 204, 245, 238;
+  --color-primary-200: 153, 234, 221;
+  --color-primary-300: 102, 224, 204;
+  --color-primary-400: 64, 218, 197;
+  --color-primary-500: 45, 212, 191;
+  /* Base #2DD4BF (teal-green) */
+  --color-primary-600: 20, 184, 166;
+  --color-primary-700: 15, 140, 127;
+  --color-primary-800: 12, 100, 91;
+  --color-primary-900: 8, 60, 55;
   /* Pomodoro/Success Colors */
   --color-pomodoro-500: 239, 68, 68;
   --color-success-500: 74, 222, 128;
   --color-warning-500: 251, 191, 36;
 
   /* App Background — Warm charcoal (low-saturation warm dark, not muddy brown).
-     Keeps warmth (hue ~30) but drops saturation so terracotta accent POPS. */
+     Keeps warmth (hue ~30) but drops saturation so teal-green accent POPS. */
   --app-background-gradient: hsl(30, 8%, 9%);
 
   /* ===== TIER 2: SEMANTIC TOKENS (Theme-aware) ===== */
@@ -128,12 +128,12 @@
   --border-secondary: rgba(237, 230, 220, 0.14);
   --border-hover: rgba(237, 230, 220, 0.20);
 
-  /* Brand — Terracotta #E07A4B (the single signature accent) */
-  --brand-primary: hsl(var(--teal-500));      /* #E07A4B */
-  --brand-hover: hsl(19, 78%, 65%);           /* #EB8C61 */
-  --brand-active: hsl(17, 55%, 51%);          /* #C9633A */
-  --brand-primary-subtle: rgba(224, 122, 75, 0.12);
-  --brand-primary-dim: rgba(224, 122, 75, 0.32);
+  /* Brand — Teal-green #2DD4BF (the single signature accent) */
+  --brand-primary: hsl(var(--teal-500));      /* #2DD4BF */
+  --brand-hover: hsl(172, 70%, 62%);           /* #5EEAD4 */
+  --brand-active: hsl(173, 80%, 40%);          /* #14B8A6 */
+  --brand-primary-subtle: rgba(45, 212, 191, 0.12);
+  --brand-primary-dim: rgba(45, 212, 191, 0.32);
 
   /* Legacy color alias for compatibility */
   --color-primary: var(--brand-primary);
@@ -463,8 +463,8 @@
   /* ===== TIER 3: FUNCTIONAL COLORS (Context-specific) ===== */
 
   /* Pomodoro States — Warm Dark */
-  --color-work: #E07A4B;
-  /* Terracotta - active work (the signature accent) */
+  --color-work: #2DD4BF;
+  /* Teal-green - active work (the signature accent) */
   --color-break: #E0A03B;
   /* Honey amber - breaks */
   --color-focus: #C98A5E;
@@ -475,16 +475,16 @@
   /* Gray - Secondary elements */
 
   /* Interactive States - THE ONE unified system: OUTLINED + GLASS */
-  --state-active-border: rgba(224, 122, 75, 0.60);
-  /* Terracotta border when active */
-  --state-active-bg: rgba(224, 122, 75, 0.14);
+  --state-active-border: rgba(45, 212, 191, 0.60);
+  /* Teal-green border when active */
+  --state-active-bg: rgba(45, 212, 191, 0.14);
   /* Warm tint */
   --state-active-glass: none;
   /* flat (no blur) */
   --state-active-text: var(--text-primary);
   /* Text color for active states */
-  --state-hover-border: rgba(224, 122, 75, 0.36);
-  /* Terracotta border on hover */
+  --state-hover-border: rgba(45, 212, 191, 0.36);
+  /* Teal-green border on hover */
   --state-hover-bg: rgba(237, 230, 220, 0.06);
   /* Subtle warm tint */
   --state-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
@@ -550,22 +550,22 @@
 
   /* Calendar-Specific Tokens */
   /* Purple - Calendar UI elements (filters, badges) */
-  --calendar-hover-bg: rgba(224, 122, 75, 0.02);
-  --calendar-hover-bg-medium: rgba(224, 122, 75, 0.05);
-  --calendar-creating-bg: rgba(224, 122, 75, 0.20);
-  --calendar-creating-bg-alt: rgba(224, 122, 75, 0.15);
-  --calendar-creating-border: rgba(224, 122, 75, 0.4);
-  --calendar-ghost-bg-start: rgba(224, 122, 75, 0.25);
-  --calendar-ghost-bg-end: rgba(201, 99, 58, 0.20);
-  --calendar-ghost-border: rgba(224, 122, 75, 0.6);
-  --calendar-ghost-shadow: 0 8px 16px rgba(224, 122, 75, 0.2), 0 0 20px rgba(224, 122, 75, 0.15);
-  --calendar-today-bg-start: rgba(224, 122, 75, 0.12);
-  --calendar-today-bg-end: rgba(201, 99, 58, 0.08);
-  --calendar-today-border: rgba(224, 122, 75, 0.2);
-  --calendar-today-glow: 0 0 16px rgba(224, 122, 75, 0.15);
-  --calendar-today-badge-start: rgba(224, 122, 75, 0.9);
-  --calendar-today-badge-end: rgba(201, 99, 58, 0.85);
-  --calendar-today-badge-shadow: 0 4px 8px rgba(224, 122, 75, 0.3), 0 0 12px rgba(224, 122, 75, 0.2);
+  --calendar-hover-bg: rgba(45, 212, 191, 0.02);
+  --calendar-hover-bg-medium: rgba(45, 212, 191, 0.05);
+  --calendar-creating-bg: rgba(45, 212, 191, 0.20);
+  --calendar-creating-bg-alt: rgba(45, 212, 191, 0.15);
+  --calendar-creating-border: rgba(45, 212, 191, 0.4);
+  --calendar-ghost-bg-start: rgba(45, 212, 191, 0.25);
+  --calendar-ghost-bg-end: rgba(20, 184, 166, 0.20);
+  --calendar-ghost-border: rgba(45, 212, 191, 0.6);
+  --calendar-ghost-shadow: 0 8px 16px rgba(45, 212, 191, 0.2), 0 0 20px rgba(45, 212, 191, 0.15);
+  --calendar-today-bg-start: rgba(45, 212, 191, 0.12);
+  --calendar-today-bg-end: rgba(20, 184, 166, 0.08);
+  --calendar-today-border: rgba(45, 212, 191, 0.2);
+  --calendar-today-glow: 0 0 16px rgba(45, 212, 191, 0.15);
+  --calendar-today-badge-start: rgba(45, 212, 191, 0.9);
+  --calendar-today-badge-end: rgba(20, 184, 166, 0.85);
+  --calendar-today-badge-shadow: 0 4px 8px rgba(45, 212, 191, 0.3), 0 0 12px rgba(45, 212, 191, 0.2);
 
   /* Green - Current time indicator */
   --calendar-current-time-bg-start: rgba(16, 185, 129, 0.12);
@@ -583,7 +583,7 @@
   --timer-glow-subtle: 0 0 24px rgba(251, 191, 36, 0.15);
   --timer-active-glow: 0 0 20px rgba(251, 191, 36, 0.4);
   --timer-active-glow-strong: 0 0 30px rgba(251, 191, 36, 0.6);
-  --timer-shadow-glow: 0 0 12px rgba(224, 122, 75, 0.6);
+  --timer-shadow-glow: 0 0 12px rgba(45, 212, 191, 0.6);
   --timer-active-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   --timer-active-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.25);
   --timer-shadow-complex: 0 12px 24px rgba(0, 0, 0, 0.24), 0 0 24px rgba(251, 191, 36, 0.15), inset 0 1px 0 var(--border-medium);
@@ -676,26 +676,26 @@
   --amber-bg-medium: rgba(251, 191, 36, 0.15);
   --amber-border-subtle: rgba(251, 191, 36, 0.2);
 
-  /* Interactive accent states (formerly purple) — now terracotta (TASK-1791b) */
-  --purple-bg-subtle: rgba(224, 122, 75, 0.08);
-  --purple-bg-start: rgba(224, 122, 75, 0.16);
-  --purple-bg-end: rgba(201, 99, 58, 0.10);
-  --purple-border-subtle: rgba(224, 122, 75, 0.2);
-  --purple-border-light: rgba(224, 122, 75, 0.25);
-  --purple-border-medium: rgba(224, 122, 75, 0.3);
-  --purple-border-strong: rgba(224, 122, 75, 0.45);
-  --purple-border-active: rgba(224, 122, 75, 0.6);
+  /* Interactive accent states (formerly purple) — now teal-green (TASK-1791b) */
+  --purple-bg-subtle: rgba(45, 212, 191, 0.08);
+  --purple-bg-start: rgba(45, 212, 191, 0.16);
+  --purple-bg-end: rgba(20, 184, 166, 0.10);
+  --purple-border-subtle: rgba(45, 212, 191, 0.2);
+  --purple-border-light: rgba(45, 212, 191, 0.25);
+  --purple-border-medium: rgba(45, 212, 191, 0.3);
+  --purple-border-strong: rgba(45, 212, 191, 0.45);
+  --purple-border-active: rgba(45, 212, 191, 0.6);
   --purple-glow-subtle: 0 0 transparent;
   --purple-glow-medium: 0 0 transparent;
-  --purple-glow-focus: 0 0 0 3px rgba(224, 122, 75, 0.35);
+  --purple-glow-focus: 0 0 0 3px rgba(45, 212, 191, 0.35);
   --purple-shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.2);
   --purple-shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.25);
   --purple-shadow-strong: rgba(0, 0, 0, 0.4);
   --purple-shadow-deep: 0 8px 20px rgba(0, 0, 0, 0.35);
 
-  /* Accent gradients for buttons (formerly purple) — terracotta */
-  --purple-gradient-start: rgba(224, 122, 75, 0.9);
-  --purple-gradient-end: rgba(201, 99, 58, 0.85);
+  /* Accent gradients for buttons (formerly purple) — teal-green */
+  --purple-gradient-start: rgba(45, 212, 191, 0.9);
+  --purple-gradient-end: rgba(20, 184, 166, 0.85);
   --purple-gradient-hover-start: rgba(109, 112, 251, 0.95);
   --purple-gradient-hover-end: rgba(89, 80, 239, 0.9);
 

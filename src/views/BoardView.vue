@@ -28,7 +28,8 @@
         <button
           class="filter-toggle icon-only"
           :class="{ active: showFilters }"
-          title="Toggle filters"
+          :title="$t('calendar.toggle_filters')"
+          :aria-label="$t('calendar.toggle_filters')"
           @click="showFilters = !showFilters"
         >
           <SlidersHorizontal :size="20" :stroke-width="1.5" />
@@ -39,6 +40,7 @@
           class="done-column-toggle icon-only"
           :class="{ active: hideDoneTasks }"
           :title="hideDoneTasks ? 'Show done tasks' : 'Hide done tasks'"
+          :aria-label="hideDoneTasks ? 'Show done tasks' : 'Hide done tasks'"
           @click="handleToggleDoneColumn"
         >
           <CheckCircle v-if="hideDoneTasks" :size="20" :stroke-width="1.5" />

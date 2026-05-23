@@ -1740,9 +1740,9 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     height: 32
                     radius: 6
-                    color: Qt.rgba(0.22, 0.20, 0.35, 0.4)      // Purple-tinted input bg
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.72)
                     border.width: 1
-                    border.color: Qt.rgba(0.22, 0.20, 0.35, 0.6)  // Purple-tinted border
+                    border.color: Qt.rgba(1, 1, 1, 0.10)
 
                     TextInput {
                         id: loginEmailField
@@ -1784,9 +1784,9 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     height: 32
                     radius: 6
-                    color: Qt.rgba(0.22, 0.20, 0.35, 0.4)      // Purple-tinted input bg
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.72)
                     border.width: 1
-                    border.color: Qt.rgba(0.22, 0.20, 0.35, 0.6)  // Purple-tinted border
+                    border.color: Qt.rgba(1, 1, 1, 0.10)
 
                     TextInput {
                         id: loginPasswordField
@@ -1882,9 +1882,9 @@ PlasmoidItem {
                 Layout.topMargin: 4
                 spacing: 8
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(0.22, 0.20, 0.35, 0.6); anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.10); anchors.verticalCenter: parent.verticalCenter }
                 Text { text: "or"; font.pixelSize: 10; color: root.mutedColor }
-                Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(0.22, 0.20, 0.35, 0.6); anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.10); anchors.verticalCenter: parent.verticalCenter }
             }
 
             // ===== FEATURE-1202: Sign in with Google button =====
@@ -2293,7 +2293,7 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     height: 30
                     radius: 6
-                    color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                     border.width: 1
                     border.color: quickAddInput.activeFocus ? root.workColor : Qt.rgba(1, 1, 1, 0.10)
 
@@ -2336,7 +2336,7 @@ PlasmoidItem {
                     width: 80
                     height: 30
                     radius: 6
-                    color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                     border.width: 1
                     border.color: quickAddDueDateCombo.popup.visible ? root.workColor : Qt.rgba(1, 1, 1, 0.10)
 
@@ -2389,7 +2389,7 @@ PlasmoidItem {
                             padding: 2
 
                             background: Rectangle {
-                                color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                 border.width: 1
                                 border.color: Qt.rgba(1, 1, 1, 0.12)
                                 radius: 6
@@ -2740,7 +2740,7 @@ PlasmoidItem {
                             implicitWidth: 85
                             implicitHeight: 26
                             radius: 6
-                            color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                            color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                             border.width: 1
                             border.color: filterCombo.hovered ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.10)
                         }
@@ -2768,7 +2768,7 @@ PlasmoidItem {
                             width: filterCombo.width
                             padding: 2
                             background: Rectangle {
-                                color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                 border.width: 1
                                 border.color: Qt.rgba(1, 1, 1, 0.12)
                                 radius: 4
@@ -2833,7 +2833,7 @@ PlasmoidItem {
                             implicitWidth: 85
                             implicitHeight: 26
                             radius: 6
-                            color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                            color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                             border.width: 1
                             border.color: sortCombo.hovered ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.10)
                         }
@@ -2861,7 +2861,7 @@ PlasmoidItem {
                             width: sortCombo.width
                             padding: 2
                             background: Rectangle {
-                                color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                 border.width: 1
                                 border.color: Qt.rgba(1, 1, 1, 0.12)
                                 radius: 4
@@ -2917,7 +2917,7 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     height: 30
                     radius: 6
-                    color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                     border.width: 1
                     border.color: searchInput.activeFocus ? root.accentColor : Qt.rgba(1, 1, 1, 0.10)
 
@@ -3080,8 +3080,8 @@ PlasmoidItem {
                                 // TASK-1087: Highlight active task with accent glow
                                 // TASK-1429: Also highlight when editing
                                 color: isActiveTask ? Qt.rgba(root.currentAccent.r, root.currentAccent.g, root.currentAccent.b, 0.15)
-                                     : isEditing ? Qt.rgba(0.18, 0.16, 0.27, 0.5)
-                                     : Qt.rgba(0.18, 0.16, 0.27, 0.3)  // Purple-tinted task bg
+                                     : isEditing ? Qt.rgba(0.17, 0.15, 0.12, 0.58)
+                                     : Qt.rgba(0.15, 0.13, 0.11, 0.46)
                                 border.width: isActiveTask ? 2 : (isEditing ? 1 : 0)
                                 border.color: isActiveTask ? root.currentAccent
                                             : isEditing ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.3)
@@ -3309,7 +3309,7 @@ PlasmoidItem {
                                                 }
                                                 background: Rectangle {
                                                     radius: 4
-                                                    color: Qt.rgba(0.18, 0.16, 0.27, 0.6)
+                                                    color: Qt.rgba(0.13, 0.12, 0.10, 0.78)
                                                     border.width: 1
                                                     border.color: Qt.rgba(1, 1, 1, 0.1)
                                                 }
@@ -3325,7 +3325,7 @@ PlasmoidItem {
                                                     width: statusCombo.width
                                                     padding: 2
                                                     background: Rectangle {
-                                                        color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                                        color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                                         border.width: 1
                                                         border.color: Qt.rgba(1, 1, 1, 0.12)
                                                         radius: 4
@@ -3388,7 +3388,7 @@ PlasmoidItem {
                                                 }
                                                 background: Rectangle {
                                                     radius: 4
-                                                    color: Qt.rgba(0.18, 0.16, 0.27, 0.6)
+                                                    color: Qt.rgba(0.13, 0.12, 0.10, 0.78)
                                                     border.width: 1
                                                     border.color: Qt.rgba(1, 1, 1, 0.1)
                                                 }
@@ -3404,7 +3404,7 @@ PlasmoidItem {
                                                     width: priorityCombo.width
                                                     padding: 2
                                                     background: Rectangle {
-                                                        color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                                        color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                                         border.width: 1
                                                         border.color: Qt.rgba(1, 1, 1, 0.12)
                                                         radius: 4
@@ -3505,7 +3505,7 @@ PlasmoidItem {
 
                                             background: Rectangle {
                                                 radius: 4
-                                                color: Qt.rgba(0.18, 0.16, 0.27, 0.6)
+                                                color: Qt.rgba(0.13, 0.12, 0.10, 0.78)
                                                 border.width: 1
                                                 border.color: Qt.rgba(1, 1, 1, 0.1)
                                             }
@@ -3521,7 +3521,7 @@ PlasmoidItem {
                                                 width: dueDateCombo.width
                                                 padding: 2
                                                 background: Rectangle {
-                                                    color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                                    color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                                     border.width: 1
                                                     border.color: Qt.rgba(1, 1, 1, 0.12)
                                                     radius: 4

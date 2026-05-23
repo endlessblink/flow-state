@@ -6,7 +6,8 @@ import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useVueFlow } from '@vue-flow/core'
 import {
     sanitizePosition,
-    getGroupAbsolutePosition
+    getGroupAbsolutePosition,
+    toRelativePosition
 } from '@/utils/canvas/coordinates'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { positionManager } from '@/services/canvas/PositionManager'

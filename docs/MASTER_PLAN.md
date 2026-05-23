@@ -34,6 +34,42 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 
 ---
 
+### ~~BUG-1796~~: Canvas rendered zero nodes — `toRelativePosition` used but not imported (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-05-23)
+
+**Problem**: After v1.4.48, the app loaded but the Canvas was completely empty (no nodes, no groups) for users with parented canvas data, while the inbox panel listed tasks normally.
+
+**Root cause**: `src/composables/canvas/useCanvasSync.ts` calls `toRelativePosition(...)` at lines 302 (group nodes) and 457 (task nodes) but never imported it (exported from `src/utils/canvas/coordinates.ts:50`). Introduced by BUG-1792 (commit 9c92acc3). Both call sites only run for a node with a *visible parent*, so a nested group / task-in-group triggered `ReferenceError: toRelativePosition is not defined`. `syncStoreToCanvas` is `try { …build… setNodes() } finally {}` with no `catch`, so the throw skipped `setNodes()` entirely → empty canvas. Surfaced via Vue's effect error handler (logged, non-fatal) so no white screen.
+
+**Why it slipped through**: `npm run build` (Vite/esbuild) doesn't type-check; CI type-check is disabled by TASK-1789 (~160 errors). `vue-tsc` *does* flag it (`TS2304: Cannot find name 'toRelativePosition'`), ESLint does not (typescript-eslint disables `no-undef`). The e2e harness can't reproduce it: in-memory seeded groups get wiped by the DB realtime reload, so seeded parented nodes lose their parent before sync.
+
+**Fix**: Add `toRelativePosition` to the existing `@/utils/canvas/coordinates` import in `useCanvasSync.ts`.
+
+**Regression test**: `tests/unit/canvas/useCanvasSync-imports.test.ts` statically asserts every coordinates helper *called* in `useCanvasSync.ts` is imported. Verified it fails pre-fix (names `toRelativePosition`) and passes after. `geometry-invariants` + `sync-readonly` suites still green (54 tests).
+
+**Follow-up**: TASK-1789 (re-enable CI type-check) is the systemic guard for this class of bug.
+
+**Files**: `src/composables/canvas/useCanvasSync.ts`, `tests/unit/canvas/useCanvasSync-imports.test.ts`. Version bump 1.4.48 → 1.4.49.
+
+---
+
+### ~~BUG-1795~~: Null task title crashed Board and Canvas via TaskCardBadges (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-05-23)
+
+**Problem**: Electron app showed "Something went wrong — Cannot read properties of undefined (reading 'trim')" on the Board view, and the Canvas rendered empty (37 placed tasks, none visible).
+
+**Root cause**: `TaskCardBadges.vue` computed `hasTaskTitle` as `props.task.title.trim()`. A task with a `null`/`undefined` title threw during render. `TaskCard` (which renders `TaskCardBadges`) appears on the Board AND in the Canvas inbox panel (`UnifiedInboxList`), so one bad task took down both views. Render-side companion to the sync/DB defenses in BUG-1777/BUG-1779.
+
+**Fix**: Guard the computed — `(props.task.title ?? '').trim().length > 0`.
+
+**Regression test**: `tests/unit/components/task-card-badges-null-title.test.ts` mounts the component with `null` and `undefined` titles. Verified it fails on the pre-fix code (reproduces the exact throw) and passes after.
+
+**Files**: `src/components/kanban/card/TaskCardBadges.vue`, `tests/unit/components/task-card-badges-null-title.test.ts`. Version bump 1.4.47 → 1.4.48.
+
+---
+
 ### ~~BUG-1792~~: Canvas idle sync persisted stale group/task positions (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-05-22)

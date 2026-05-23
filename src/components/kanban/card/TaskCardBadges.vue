@@ -151,7 +151,7 @@ const taskStore = useTaskStore()
 const isPersonalWorkspace = computed(() => workspaceStore.isPersonalWorkspace)
 const isDurationPickerOpen = ref(false)
 const workBlockRef = ref<HTMLElement>()
-const hasTaskTitle = computed(() => props.task.title.trim().length > 0)
+const hasTaskTitle = computed(() => (props.task.title ?? '').trim().length > 0)
 const { workedMinutesToday, isEnoughForToday } = useWorkBlockProgress(() => props.task)
 
 const quickDurationOptions = [

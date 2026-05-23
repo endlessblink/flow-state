@@ -3506,6 +3506,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1283~~ | P1 | ✅ Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
 | ~~**TASK-1284**~~ | **P0** | ✅ **Add quick task creation to KDE Plasma widget (monorepo)** |
 | ~~**BUG-1793**~~ | **P2** | ✅ **KDE widget "Today" filter reset on reload (todayOnly not persisted)** |
+| ~~**BUG-1794**~~ | **P1** | ✅ **Electron app flickers signed-out then back in on window focus changes** |
 | TASK-292 | P3 | Canvas connection edge visuals (animations, gradients) |
 | TASK-310 | P2 | Automated SQL backup to cloud storage |
 | TASK-293 | P2 | Canvas viewport - center on Today + persist position |
@@ -3671,6 +3672,14 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Priority**: P2 | **Status**: ✅ DONE (2026-05-23) | **Depends On**: —
 **Description**: The widget's "Today" toggle (`todayOnly`) was a runtime-only QML property, not backed by `plasmoid.configuration`. It silently reset to `false` on every widget reload / plasmashell restart, so the list showed ALL non-done tasks (~59) instead of just tasks due today — appearing as a "completely different set" than the Electron app. The filter *logic* (`filterTasksForToday`/`taskMatchesToday`) was already correct and matches the app's `useSmartViews.isTodayTask` (verified against live production data: shows exactly the due-today tasks, overdue excluded by design).
 **Fix**: Added persisted `todayOnly` Bool key to `contents/config/main.xml`; initialize `property bool todayOnly: plasmoid.configuration.todayOnly` and write back on toggle in `main.qml`. Bumped widget `metadata.json` 1.1.0→1.1.1. Verified live via journal: Today-on fetch uses `limit=1000` + client filter and loads only the due-today count; choice now survives restarts.
+
+---
+
+#### ~~BUG-1794~~: Electron app flickers signed-out then back in on window focus changes (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-23) | **Depends On**: —
+**Description**: On the Electron desktop app, the UI intermittently flashed the login screen and then re-signed-in a few seconds later — a transient flicker, not a real logout. Root cause: `useRealtimeSubscription.ts` called `auth.refreshSession()` *unconditionally* on every `visibilitychange → visible` (BUG-1182). Electron fires focus/visibility changes far more often than a browser tab (window focus/blur/occlusion, OS notifications), so this redundant refresh ran on top of Supabase `autoRefreshToken` + the scheduled refresh in `auth.ts`. The resulting auth-event churn produced spurious `SIGNED_OUT` events, and the UI reads `isAuthenticated = !!user.value` with no debounce, so it flashed logged-out until the next refresh recovered the session.
+**Fix**: (A) Expiry-gate the wake-up refresh in `src/composables/supabase/useRealtimeSubscription.ts` — only `refreshSession()` when a real session is missing-expiry or within 120s of expiry; `autoRefreshToken` covers the rest. (B) Defense-in-depth in `src/stores/auth.ts`: a non-explicit `SIGNED_OUT` with no recoverable session now defers clearing `user`/`session` behind a 2s grace timer; a valid session re-appearing (SIGNED_IN/TOKEN_REFRESHED) cancels it, so no login-screen flash. Explicit user sign-out (`isSigningOut`) still clears immediately. Tests: `tests/unit/stores/auth-flow.test.ts` updated (#24 grace-period clear) + new #24b (transient SIGNED_OUT→SIGNED_IN stays signed in); 30/30 pass.
 
 ---
 

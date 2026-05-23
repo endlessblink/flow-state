@@ -105,7 +105,10 @@ PlasmoidItem {
     property string taskSortBy: "created_desc"
     // Filter options: "all", "todo", "in_progress", "today", "on_canvas"
     property string taskFilter: "all"
-    property bool todayOnly: false
+    // BUG-1793: backed by plasmoid.configuration so the "Today" filter survives
+    // widget reloads / plasmashell restarts (was a runtime-only prop that reset to
+    // false, silently showing ALL tasks instead of today's).
+    property bool todayOnly: plasmoid.configuration.todayOnly
     property string taskSearchQuery: ""
     property var displayTasks: []
 
@@ -2547,6 +2550,7 @@ PlasmoidItem {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             root.todayOnly = !root.todayOnly
+                            plasmoid.configuration.todayOnly = root.todayOnly  // BUG-1793: persist choice
                             root.fetchTasks()
                         }
                     }
@@ -4954,6 +4958,59 @@ PlasmoidItem {
         root.displayTasks = result
     }
 
+    function localDateString(date) {
+        var year = date.getFullYear()
+        var month = String(date.getMonth() + 1).padStart(2, '0')
+        var day = String(date.getDate()).padStart(2, '0')
+        return year + "-" + month + "-" + day
+    }
+
+    function normalizeTaskDate(value) {
+        if (!value || typeof value !== "string") return ""
+
+        var trimmed = value.trim()
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+        if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) return trimmed.substring(0, 10)
+
+        var parsed = new Date(trimmed)
+        if (!isNaN(parsed.getTime())) return localDateString(parsed)
+        return ""
+    }
+
+    function taskMatchesToday(task, todayStr) {
+        if (!task || task.status === "done") return false
+
+        if (normalizeTaskDate(task.due_date) === todayStr) return true
+
+        // Match Vue useSmartViews.isTodayTask(): instances are authoritative
+        // when present, then fall back to legacy scheduled_date.
+        if (task.instances && task.instances.length > 0) {
+            for (var i = 0; i < task.instances.length; i++) {
+                var inst = task.instances[i]
+                if (inst && normalizeTaskDate(inst.scheduledDate) === todayStr) return true
+            }
+            return false
+        }
+
+        if (normalizeTaskDate(task.scheduled_date) === todayStr) return true
+
+        if (!task.due_date && !task.scheduled_date && task.created_at) {
+            var createdAt = new Date(task.created_at)
+            if (!isNaN(createdAt.getTime()) && localDateString(createdAt) === todayStr) return true
+        }
+
+        return false
+    }
+
+    function filterTasksForToday(tasks) {
+        var todayStr = localDateString(new Date())
+        var result = []
+        for (var i = 0; i < tasks.length; i++) {
+            if (taskMatchesToday(tasks[i], todayStr)) result.push(tasks[i])
+        }
+        return result
+    }
+
     function fetchTasks() {
         if (!root.isAuthenticated) return
         taskListRefreshTimer.restart()
@@ -4963,7 +5020,7 @@ PlasmoidItem {
         var xhr = new XMLHttpRequest()
 
         // Build dynamic URL based on sort/filter options
-        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,position,parent_id,project_id,instances"
+        var url = root.supabaseUrl + "/rest/v1/tasks?select=*"
 
         // Apply filter
         if (root.taskFilter === "all") {
@@ -4980,19 +5037,8 @@ PlasmoidItem {
             url += "&position=not.is.null"
         }
 
-        // Apply todayOnly AND filter (combines with any dropdown filter).
-        // BUG: due_date is timestamptz (UTC); the old filter used a LOCAL date
-        // string with no timezone, so the UTC window didn't match the app's
-        // local-date "today" (useSmartViews.isTodayTask). For a UTC+N user a
-        // task due "today" (local midnight) is the previous day in UTC and was
-        // excluded. Fix: use the local day's start/end converted to UTC ISO.
-        if (root.todayOnly) {
-            var dayStart = new Date()
-            dayStart.setHours(0, 0, 0, 0)            // local midnight today
-            var dayEnd = new Date(dayStart)
-            dayEnd.setDate(dayEnd.getDate() + 1)     // local midnight tomorrow
-            url += "&due_date=gte." + dayStart.toISOString() + "&due_date=lt." + dayEnd.toISOString()
-        }
+        // Today filtering is client-side so it matches Vue useSmartViews.isTodayTask:
+        // due_date, instances[].scheduledDate, legacy scheduled_date, then created_at.
 
         // Always exclude deleted tasks
         url += "&is_deleted=eq.false"
@@ -5016,8 +5062,9 @@ PlasmoidItem {
             url += "&order=project_id.asc.nullslast,created_at.desc"
         }
 
-        // Limit results (TASK-1454: bumped from 20 to 100)
-        url += "&limit=100"
+        // Limit results (TASK-1454: bumped from 20 to 100). Today is filtered
+        // client-side, so fetch a wider page to avoid missing older scheduled tasks.
+        url += root.todayOnly ? "&limit=1000" : "&limit=100"
 
         if (root.debugLogging) console.log("[TASKS] Fetching with URL:", url)
 
@@ -5029,7 +5076,8 @@ PlasmoidItem {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 root.isLoadingTasks = false
                 if (xhr.status === 200) {
-                    root.tasks = JSON.parse(xhr.responseText)
+                    var loadedTasks = JSON.parse(xhr.responseText)
+                    root.tasks = root.todayOnly ? root.filterTasksForToday(loadedTasks) : loadedTasks
                     if (root.debugLogging) console.log("[TASKS] Loaded", root.tasks.length, "tasks")
                     // TASK-1454: Inject project group headers if project sort is active
                     if (root.taskSortBy === "project" && Object.keys(root.projects).length > 0) {

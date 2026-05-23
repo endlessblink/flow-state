@@ -3505,6 +3505,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
 | ~~TASK-1283~~ | P1 | ✅ Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
 | ~~**TASK-1284**~~ | **P0** | ✅ **Add quick task creation to KDE Plasma widget (monorepo)** |
+| ~~**BUG-1793**~~ | **P2** | ✅ **KDE widget "Today" filter reset on reload (todayOnly not persisted)** |
 | TASK-292 | P3 | Canvas connection edge visuals (animations, gradients) |
 | TASK-310 | P2 | Automated SQL backup to cloud storage |
 | TASK-293 | P2 | Canvas viewport - center on Today + persist position |
@@ -3664,6 +3665,14 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | Cross-tab workspace mismatch — Tab A workspace A, Tab B workspace B | MEDIUM | Add workspaceId to cross-tab protocol, ignore mismatches |
 | Invite chicken-and-egg — user can't join workspace they're not in | MEDIUM | Edge Function with service_role key |
 | Canvas parentId cross-workspace — task in workspace B references group in workspace A | LOW | App-level validation in drag handlers |
+
+#### ~~BUG-1793~~: KDE widget "Today" filter reset on reload (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-23) | **Depends On**: —
+**Description**: The widget's "Today" toggle (`todayOnly`) was a runtime-only QML property, not backed by `plasmoid.configuration`. It silently reset to `false` on every widget reload / plasmashell restart, so the list showed ALL non-done tasks (~59) instead of just tasks due today — appearing as a "completely different set" than the Electron app. The filter *logic* (`filterTasksForToday`/`taskMatchesToday`) was already correct and matches the app's `useSmartViews.isTodayTask` (verified against live production data: shows exactly the due-today tasks, overdue excluded by design).
+**Fix**: Added persisted `todayOnly` Bool key to `contents/config/main.xml`; initialize `property bool todayOnly: plasmoid.configuration.todayOnly` and write back on toggle in `main.qml`. Bumped widget `metadata.json` 1.1.0→1.1.1. Verified live via journal: Today-on fetch uses `limit=1000` + client filter and loads only the due-today count; choice now survives restarts.
+
+---
 
 #### ~~TASK-1533~~: Epic: Workspace Collaboration — Tracking Parent (✅ DONE)
 

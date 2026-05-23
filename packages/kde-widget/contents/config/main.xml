@@ -89,6 +89,11 @@
             <label>Show task list in popup</label>
             <default>true</default>
         </entry>
+        <!-- BUG-1793: persist the "Today" filter toggle across reloads/restarts -->
+        <entry name="todayOnly" type="Bool">
+            <label>Filter task list to tasks due today</label>
+            <default>false</default>
+        </entry>
         <entry name="showFullscreenBreak" type="Bool">
             <label>Show full-screen overlay on session complete</label>
             <default>true</default>

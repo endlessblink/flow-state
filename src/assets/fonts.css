@@ -1,0 +1,19 @@
+/* TASK-1791b: Self-hosted Clash Display (was loaded from api.fontshare.com).
+ * The production CSP (edge response header) only allows fonts.googleapis.com/gstatic.com,
+ * so the external fontshare stylesheet was blocked. Self-hosting under /fonts is covered by
+ * the CSP's 'self' source — no edge CSP change needed. Files: public/fonts/clash-display/.
+ * Fontshare license permits self-hosting. Weights match the design system's --font-display. */
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/clash-display/ClashDisplay-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/clash-display/ClashDisplay-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

@@ -473,10 +473,10 @@ const formatDueDate = (date: string | Date) => {
 }
 
 .mobile-task-item.timer-active .timer-btn {
-  background: rgba(78, 205, 196, 0.15);
+  background: rgba(45, 212, 191, 0.15);
   color: var(--brand-primary);
   border-color: var(--brand-primary);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.25);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.25);
   animation: pulse 2s infinite;
 }
 

@@ -90,8 +90,17 @@ export function registerUpdater() {
     if (win) win.webContents.send('updater:error', err.message)
   })
 
-  // Check for updates after 5s delay
+  // Check shortly after launch...
   setTimeout(() => {
     autoUpdater.checkForUpdates().catch(() => {})
   }, 5000)
+
+  // ...and re-check periodically. Without this the app only ever checked once
+  // at startup, so an update published while the app stayed open was never
+  // noticed until a manual relaunch (root cause of the 1.4.45 "didn't update"
+  // report). Re-check every 4 hours.
+  const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch(() => {})
+  }, RECHECK_INTERVAL_MS)
 }

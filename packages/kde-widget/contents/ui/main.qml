@@ -22,11 +22,11 @@ PlasmoidItem {
     // For older versions, we rely on the full-screen overlay instead
 
     // ===== COLORS (matching main app design tokens) =====
-    readonly property color workColor: "#4ECDC4"      // Teal - matches AppHeader.vue
-    readonly property color breakColor: "#F59E0B"     // Orange/Amber - matches AppHeader.vue
-    readonly property color bgColor: "#232034"        // Purple-tinted: rgb(35, 32, 52) = --surface-primary
-    readonly property color textColor: "#E2E8F0"
-    readonly property color mutedColor: "#7E7590"     // Purple-tinted muted: hsl(250, 15%, 50%)
+    readonly property color workColor: "#2DD4BF"      // Teal-green — Warm Dark brand accent
+    readonly property color breakColor: "#F59E0B"     // Amber — break (matches app)
+    readonly property color bgColor: "#24211E"        // Warm charcoal — --surface-primary
+    readonly property color textColor: "#EDE6DC"      // Warm off-white
+    readonly property color mutedColor: "#8C857B"     // Warm muted gray
     readonly property color currentAccent: isWorkSession ? workColor : breakColor
 
     // ===== AUTHENTICATION STATE =====
@@ -105,7 +105,10 @@ PlasmoidItem {
     property string taskSortBy: "created_desc"
     // Filter options: "all", "todo", "in_progress", "today", "on_canvas"
     property string taskFilter: "all"
-    property bool todayOnly: false
+    // BUG-1793: backed by plasmoid.configuration so the "Today" filter survives
+    // widget reloads / plasmashell restarts (was a runtime-only prop that reset to
+    // false, silently showing ALL tasks instead of today's).
+    property bool todayOnly: plasmoid.configuration.todayOnly
     property string taskSearchQuery: ""
     property var displayTasks: []
 
@@ -1737,9 +1740,9 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     height: 32
                     radius: 6
-                    color: Qt.rgba(0.22, 0.20, 0.35, 0.4)      // Purple-tinted input bg
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.72)
                     border.width: 1
-                    border.color: Qt.rgba(0.22, 0.20, 0.35, 0.6)  // Purple-tinted border
+                    border.color: Qt.rgba(1, 1, 1, 0.10)
 
                     TextInput {
                         id: loginEmailField
@@ -1781,9 +1784,9 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     height: 32
                     radius: 6
-                    color: Qt.rgba(0.22, 0.20, 0.35, 0.4)      // Purple-tinted input bg
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.72)
                     border.width: 1
-                    border.color: Qt.rgba(0.22, 0.20, 0.35, 0.6)  // Purple-tinted border
+                    border.color: Qt.rgba(1, 1, 1, 0.10)
 
                     TextInput {
                         id: loginPasswordField
@@ -1879,9 +1882,9 @@ PlasmoidItem {
                 Layout.topMargin: 4
                 spacing: 8
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(0.22, 0.20, 0.35, 0.6); anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.10); anchors.verticalCenter: parent.verticalCenter }
                 Text { text: "or"; font.pixelSize: 10; color: root.mutedColor }
-                Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(0.22, 0.20, 0.35, 0.6); anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.10); anchors.verticalCenter: parent.verticalCenter }
             }
 
             // ===== FEATURE-1202: Sign in with Google button =====
@@ -2290,7 +2293,7 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     height: 30
                     radius: 6
-                    color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                     border.width: 1
                     border.color: quickAddInput.activeFocus ? root.workColor : Qt.rgba(1, 1, 1, 0.10)
 
@@ -2333,7 +2336,7 @@ PlasmoidItem {
                     width: 80
                     height: 30
                     radius: 6
-                    color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                     border.width: 1
                     border.color: quickAddDueDateCombo.popup.visible ? root.workColor : Qt.rgba(1, 1, 1, 0.10)
 
@@ -2386,7 +2389,7 @@ PlasmoidItem {
                             padding: 2
 
                             background: Rectangle {
-                                color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                 border.width: 1
                                 border.color: Qt.rgba(1, 1, 1, 0.12)
                                 radius: 6
@@ -2547,6 +2550,7 @@ PlasmoidItem {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             root.todayOnly = !root.todayOnly
+                            plasmoid.configuration.todayOnly = root.todayOnly  // BUG-1793: persist choice
                             root.fetchTasks()
                         }
                     }
@@ -2736,7 +2740,7 @@ PlasmoidItem {
                             implicitWidth: 85
                             implicitHeight: 26
                             radius: 6
-                            color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                            color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                             border.width: 1
                             border.color: filterCombo.hovered ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.10)
                         }
@@ -2764,7 +2768,7 @@ PlasmoidItem {
                             width: filterCombo.width
                             padding: 2
                             background: Rectangle {
-                                color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                 border.width: 1
                                 border.color: Qt.rgba(1, 1, 1, 0.12)
                                 radius: 4
@@ -2829,7 +2833,7 @@ PlasmoidItem {
                             implicitWidth: 85
                             implicitHeight: 26
                             radius: 6
-                            color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                            color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                             border.width: 1
                             border.color: sortCombo.hovered ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.10)
                         }
@@ -2857,7 +2861,7 @@ PlasmoidItem {
                             width: sortCombo.width
                             padding: 2
                             background: Rectangle {
-                                color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                 border.width: 1
                                 border.color: Qt.rgba(1, 1, 1, 0.12)
                                 radius: 4
@@ -2913,7 +2917,7 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     height: 30
                     radius: 6
-                    color: Qt.rgba(0.11, 0.10, 0.18, 0.9)
+                    color: Qt.rgba(0.12, 0.11, 0.10, 0.92)
                     border.width: 1
                     border.color: searchInput.activeFocus ? root.accentColor : Qt.rgba(1, 1, 1, 0.10)
 
@@ -3076,8 +3080,8 @@ PlasmoidItem {
                                 // TASK-1087: Highlight active task with accent glow
                                 // TASK-1429: Also highlight when editing
                                 color: isActiveTask ? Qt.rgba(root.currentAccent.r, root.currentAccent.g, root.currentAccent.b, 0.15)
-                                     : isEditing ? Qt.rgba(0.18, 0.16, 0.27, 0.5)
-                                     : Qt.rgba(0.18, 0.16, 0.27, 0.3)  // Purple-tinted task bg
+                                     : isEditing ? Qt.rgba(0.17, 0.15, 0.12, 0.58)
+                                     : Qt.rgba(0.15, 0.13, 0.11, 0.46)
                                 border.width: isActiveTask ? 2 : (isEditing ? 1 : 0)
                                 border.color: isActiveTask ? root.currentAccent
                                             : isEditing ? Qt.rgba(root.workColor.r, root.workColor.g, root.workColor.b, 0.3)
@@ -3305,7 +3309,7 @@ PlasmoidItem {
                                                 }
                                                 background: Rectangle {
                                                     radius: 4
-                                                    color: Qt.rgba(0.18, 0.16, 0.27, 0.6)
+                                                    color: Qt.rgba(0.13, 0.12, 0.10, 0.78)
                                                     border.width: 1
                                                     border.color: Qt.rgba(1, 1, 1, 0.1)
                                                 }
@@ -3321,7 +3325,7 @@ PlasmoidItem {
                                                     width: statusCombo.width
                                                     padding: 2
                                                     background: Rectangle {
-                                                        color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                                        color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                                         border.width: 1
                                                         border.color: Qt.rgba(1, 1, 1, 0.12)
                                                         radius: 4
@@ -3384,7 +3388,7 @@ PlasmoidItem {
                                                 }
                                                 background: Rectangle {
                                                     radius: 4
-                                                    color: Qt.rgba(0.18, 0.16, 0.27, 0.6)
+                                                    color: Qt.rgba(0.13, 0.12, 0.10, 0.78)
                                                     border.width: 1
                                                     border.color: Qt.rgba(1, 1, 1, 0.1)
                                                 }
@@ -3400,7 +3404,7 @@ PlasmoidItem {
                                                     width: priorityCombo.width
                                                     padding: 2
                                                     background: Rectangle {
-                                                        color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                                        color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                                         border.width: 1
                                                         border.color: Qt.rgba(1, 1, 1, 0.12)
                                                         radius: 4
@@ -3501,7 +3505,7 @@ PlasmoidItem {
 
                                             background: Rectangle {
                                                 radius: 4
-                                                color: Qt.rgba(0.18, 0.16, 0.27, 0.6)
+                                                color: Qt.rgba(0.13, 0.12, 0.10, 0.78)
                                                 border.width: 1
                                                 border.color: Qt.rgba(1, 1, 1, 0.1)
                                             }
@@ -3517,7 +3521,7 @@ PlasmoidItem {
                                                 width: dueDateCombo.width
                                                 padding: 2
                                                 background: Rectangle {
-                                                    color: Qt.rgba(0.14, 0.12, 0.22, 0.95)
+                                                    color: Qt.rgba(0.13, 0.12, 0.10, 0.98)
                                                     border.width: 1
                                                     border.color: Qt.rgba(1, 1, 1, 0.12)
                                                     radius: 4
@@ -4954,6 +4958,59 @@ PlasmoidItem {
         root.displayTasks = result
     }
 
+    function localDateString(date) {
+        var year = date.getFullYear()
+        var month = String(date.getMonth() + 1).padStart(2, '0')
+        var day = String(date.getDate()).padStart(2, '0')
+        return year + "-" + month + "-" + day
+    }
+
+    function normalizeTaskDate(value) {
+        if (!value || typeof value !== "string") return ""
+
+        var trimmed = value.trim()
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+        if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) return trimmed.substring(0, 10)
+
+        var parsed = new Date(trimmed)
+        if (!isNaN(parsed.getTime())) return localDateString(parsed)
+        return ""
+    }
+
+    function taskMatchesToday(task, todayStr) {
+        if (!task || task.status === "done") return false
+
+        if (normalizeTaskDate(task.due_date) === todayStr) return true
+
+        // Match Vue useSmartViews.isTodayTask(): instances are authoritative
+        // when present, then fall back to legacy scheduled_date.
+        if (task.instances && task.instances.length > 0) {
+            for (var i = 0; i < task.instances.length; i++) {
+                var inst = task.instances[i]
+                if (inst && normalizeTaskDate(inst.scheduledDate) === todayStr) return true
+            }
+            return false
+        }
+
+        if (normalizeTaskDate(task.scheduled_date) === todayStr) return true
+
+        if (!task.due_date && !task.scheduled_date && task.created_at) {
+            var createdAt = new Date(task.created_at)
+            if (!isNaN(createdAt.getTime()) && localDateString(createdAt) === todayStr) return true
+        }
+
+        return false
+    }
+
+    function filterTasksForToday(tasks) {
+        var todayStr = localDateString(new Date())
+        var result = []
+        for (var i = 0; i < tasks.length; i++) {
+            if (taskMatchesToday(tasks[i], todayStr)) result.push(tasks[i])
+        }
+        return result
+    }
+
     function fetchTasks() {
         if (!root.isAuthenticated) return
         taskListRefreshTimer.restart()
@@ -4963,7 +5020,7 @@ PlasmoidItem {
         var xhr = new XMLHttpRequest()
 
         // Build dynamic URL based on sort/filter options
-        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,position,parent_id,project_id,instances"
+        var url = root.supabaseUrl + "/rest/v1/tasks?select=*"
 
         // Apply filter
         if (root.taskFilter === "all") {
@@ -4980,15 +5037,8 @@ PlasmoidItem {
             url += "&position=not.is.null"
         }
 
-        // Apply todayOnly AND filter (combines with any dropdown filter)
-        if (root.todayOnly) {
-            var td = new Date()
-            var y = td.getFullYear()
-            var m = String(td.getMonth() + 1).padStart(2, '0')
-            var d = String(td.getDate()).padStart(2, '0')
-            var ds = y + '-' + m + '-' + d
-            url += "&due_date=gte." + ds + "T00:00:00&due_date=lt." + ds + "T23:59:59"
-        }
+        // Today filtering is client-side so it matches Vue useSmartViews.isTodayTask:
+        // due_date, instances[].scheduledDate, legacy scheduled_date, then created_at.
 
         // Always exclude deleted tasks
         url += "&is_deleted=eq.false"
@@ -5012,8 +5062,9 @@ PlasmoidItem {
             url += "&order=project_id.asc.nullslast,created_at.desc"
         }
 
-        // Limit results (TASK-1454: bumped from 20 to 100)
-        url += "&limit=100"
+        // Limit results (TASK-1454: bumped from 20 to 100). Today is filtered
+        // client-side, so fetch a wider page to avoid missing older scheduled tasks.
+        url += root.todayOnly ? "&limit=1000" : "&limit=100"
 
         if (root.debugLogging) console.log("[TASKS] Fetching with URL:", url)
 
@@ -5025,7 +5076,8 @@ PlasmoidItem {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 root.isLoadingTasks = false
                 if (xhr.status === 200) {
-                    root.tasks = JSON.parse(xhr.responseText)
+                    var loadedTasks = JSON.parse(xhr.responseText)
+                    root.tasks = root.todayOnly ? root.filterTasksForToday(loadedTasks) : loadedTasks
                     if (root.debugLogging) console.log("[TASKS] Loaded", root.tasks.length, "tasks")
                     // TASK-1454: Inject project group headers if project sort is active
                     if (root.taskSortBy === "project" && Object.keys(root.projects).length > 0) {

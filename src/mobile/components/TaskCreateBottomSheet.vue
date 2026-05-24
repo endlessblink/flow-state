@@ -665,7 +665,7 @@ function autoResizeDesc(event: Event) {
 .chip.active {
   background: var(--state-active-bg);
   border-color: var(--state-hover-border);
-  color: var(--brand-primary, #4ECDC4);
+  color: var(--brand-primary, #2DD4BF);
 }
 
 .chip.clear {

@@ -143,9 +143,9 @@ const isDueDateOverdue = computed(() => {
 
 .candidate-card.focused {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.06);
+  background: rgba(45, 212, 191, 0.06);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(78, 205, 196, 0.15);
+  box-shadow: 0 2px 8px rgba(45, 212, 191, 0.15);
 }
 
 .candidate-card.disabled {

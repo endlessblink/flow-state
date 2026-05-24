@@ -279,9 +279,20 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
                 console.debug('👀 [REALTIME] App visible - checking connection health...')
 
-                // BUG-1182 FIX: Proactively refresh auth token on wake-up.
+                // BUG-1182 FIX: Refresh auth token on wake-up — but only when it's actually stale.
+                // TASK-1794: Electron fires visibilitychange far more often than a browser tab
+                // (window focus/blur/occlusion, OS notifications). An UNCONDITIONAL refreshSession()
+                // here races with Supabase's autoRefreshToken and the scheduled refresh in auth.ts.
+                // That auth-event churn produced a transient SIGNED_OUT → the login screen flashed
+                // and re-signed in a few seconds later. Only refresh a real session that is
+                // missing-expiry or within 120s of expiry; autoRefreshToken covers everything else.
                 try {
-                    await getSupabase().auth.refreshSession()
+                    const { data: { session: currentSession } } = await getSupabase().auth.getSession()
+                    const expiresAtMs = currentSession?.expires_at ? currentSession.expires_at * 1000 : 0
+                    const needsRefresh = !!currentSession && (!expiresAtMs || (expiresAtMs - Date.now()) < 120_000)
+                    if (needsRefresh) {
+                        await getSupabase().auth.refreshSession()
+                    }
                 } catch (e) {
                     console.warn('👀 [REALTIME] Token refresh on wake failed:', e)
                 }

@@ -59,6 +59,8 @@
     <!-- TASK-141: ADD SLOT FOR CHILD NODES (CRITICAL FOR VUE FLOW NESTING) -->
     <div v-if="!isCollapsed" class="section-body">
       <slot />
+      <!-- TASK-1791: guide users when a group has no tasks yet -->
+      <p v-if="taskCount === 0" class="section-empty-hint">Drag tasks here</p>
     </div>
 
     <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->
@@ -125,11 +127,18 @@ const isCollapsed = computed(() => !!props.data?.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh
+// TASK-1791b: legacy default group colors were indigo/blue, which clash with
+// the Warm Dark palette. Normalize them to a warm neutral at render time so
+// existing groups stop showing purple without a DB migration. Groups with a
+// deliberate custom color keep it.
+const LEGACY_DEFAULT_GROUP_COLORS = new Set(['#6366f1', '#3b82f6'])
+const WARM_DEFAULT_GROUP_COLOR = '#8B8178'
 const groupColor = computed(() => {
   const groupId = props.data?.id
-  if (!groupId) return props.data?.color || '#3b82f6'
-  const storeGroup = canvasStore.groups.find(g => g.id === groupId)
-  return storeGroup?.color || props.data?.color || '#3b82f6'
+  const storeGroup = groupId ? canvasStore.groups.find(g => g.id === groupId) : undefined
+  const raw = (storeGroup?.color || props.data?.color || '') as string
+  if (!raw || LEGACY_DEFAULT_GROUP_COLORS.has(raw.toLowerCase())) return WARM_DEFAULT_GROUP_COLOR
+  return raw
 })
 const taskCount = computed(() => {
   const data = props.data as Record<string, unknown> | undefined
@@ -528,6 +537,20 @@ const handleResizeEnd = (event: unknown) => {
   position: relative;
   /* Ensure clicks on empty space are captured by the group, not the pane */
   pointer-events: auto;
+}
+
+/* TASK-1791: empty-group hint — non-interactive so it never blocks drops */
+.section-empty-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  pointer-events: none;
+  user-select: none;
 }
 
 .section-node.collapsed {

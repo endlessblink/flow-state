@@ -184,8 +184,8 @@ const getProjectTaskCount = (projectId: string): number => {
 }
 
 .project-tree-item.is-selected :deep(.nav-item) {
-  background: var(--brand-primary-alpha-15, rgba(78, 205, 196, 0.15));
-  border-color: var(--brand-primary-alpha-30, rgba(78, 205, 196, 0.3));
+  background: var(--brand-primary-alpha-15, rgba(45, 212, 191, 0.15));
+  border-color: var(--brand-primary-alpha-30, rgba(45, 212, 191, 0.3));
 }
 
 .nested-children {

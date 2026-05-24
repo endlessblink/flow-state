@@ -877,7 +877,7 @@ defineExpose({
 
 .task-group--drop-active {
   box-shadow: inset 0 0 0 1px var(--brand-primary);
-  background: rgba(78, 205, 196, 0.05);
+  background: rgba(45, 212, 191, 0.05);
 }
 
 .task-group:last-child {
@@ -890,9 +890,9 @@ defineExpose({
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background-color: var(--glass-bg-heavy);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* OPAQUE — sticky header; blur removed (flat mode) so it must be solid
+     or rows scroll through it and overlap the labels (TASK-1791b). */
+  background-color: var(--surface-secondary);
   border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   transition: background-color var(--duration-fast) ease;
@@ -902,11 +902,11 @@ defineExpose({
 }
 
 .group-header:hover {
-  background-color: var(--surface-hover);
+  background-color: var(--surface-tertiary);
 }
 
 .group-header--drop-target {
-  background-color: rgba(78, 205, 196, 0.1);
+  background-color: var(--brand-primary-subtle);
   border-bottom-color: var(--brand-primary);
   box-shadow: inset 0 0 0 1px var(--brand-primary);
 }
@@ -961,7 +961,7 @@ defineExpose({
 
 .group-select-checkbox input[type="checkbox"]:checked {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.13);
+  background: rgba(45, 212, 191, 0.13);
 }
 
 .group-select-checkbox input[type="checkbox"]:checked::after {
@@ -978,7 +978,7 @@ defineExpose({
 
 .group-select-checkbox input[type="checkbox"]:indeterminate {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.13);
+  background: rgba(45, 212, 191, 0.13);
 }
 
 .group-select-checkbox input[type="checkbox"]:indeterminate::after {
@@ -1086,9 +1086,8 @@ defineExpose({
   position: sticky;
   top: 0;
   z-index: 3;
-  background: var(--glass-bg-heavy);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* OPAQUE — see .group-header note (TASK-1791b) */
+  background: var(--surface-primary);
   border-bottom: 1px solid var(--border-subtle);
   font-size: var(--text-xs);
   color: var(--text-muted);
@@ -1124,7 +1123,7 @@ defineExpose({
 
 .select-all-checkbox input[type="checkbox"]:checked {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.13);
+  background: rgba(45, 212, 191, 0.13);
 }
 
 .select-all-checkbox input[type="checkbox"]:checked::after {
@@ -1141,7 +1140,7 @@ defineExpose({
 
 .select-all-checkbox input[type="checkbox"]:indeterminate {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.13);
+  background: rgba(45, 212, 191, 0.13);
 }
 
 .select-all-checkbox input[type="checkbox"]:indeterminate::after {

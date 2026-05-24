@@ -36,6 +36,12 @@ export const useAuthStore = defineStore('auth', () => {
   // BUG-1352: Flag to prevent onAuthStateChange from re-establishing session during signOut
   let isSigningOut = false
 
+  // TASK-1794: Grace timer for transient SIGNED_OUT events. A failed/racing background refresh
+  // (frequent on Electron focus changes) can emit SIGNED_OUT with no session even though the
+  // session is still valid. Instead of clearing auth state synchronously (which flashes the
+  // login screen), we defer the clear; a valid session re-appearing cancels the timer.
+  let pendingSignOutTimer: ReturnType<typeof setTimeout> | null = null
+
   // BUG-339: Proactive token refresh timer
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -378,6 +384,15 @@ export const useAuthStore = defineStore('auth', () => {
             return
           }
 
+          // TASK-1794: A valid session arrived — cancel any pending grace-period sign-out clear.
+          // This is the common path for the Electron flicker: a spurious SIGNED_OUT is quickly
+          // followed by SIGNED_IN/TOKEN_REFRESHED, so we keep the user signed in with no flash.
+          if (newSession && pendingSignOutTimer) {
+            clearTimeout(pendingSignOutTimer)
+            pendingSignOutTimer = null
+            console.log(`👤 [AUTH:${currentTabId}] Cancelled pending sign-out — valid session restored`)
+          }
+
           // BUG-1056: Invalidate SWR cache when user changes to prevent stale data
           // This ensures cached guest data doesn't persist after sign-in
           invalidateCache.onAuthChange(newSession?.user?.id || null)
@@ -399,6 +414,35 @@ export const useAuthStore = defineStore('auth', () => {
                 scheduleTokenRefresh(currentSession.session.expires_at)
               }
               return // Don't process as sign-out
+            }
+
+            // TASK-1794: Storage has no session either, but a non-explicit SIGNED_OUT is often
+            // a transient artifact of a failed/racing background refresh (very common on Electron
+            // focus changes). If we currently believe the user is signed in, DON'T clear state
+            // synchronously — defer it behind a short grace period. A valid session re-appearing
+            // cancels this timer (see the newSession check above), so no login-screen flash.
+            if (user.value && !pendingSignOutTimer) {
+              console.log(`👤 [AUTH:${currentTabId}] Transient SIGNED_OUT — deferring clear for 2s grace period`)
+              pendingSignOutTimer = setTimeout(async () => {
+                pendingSignOutTimer = null
+                // Re-verify once more before committing to the sign-out
+                const { data: recheck } = await supabase.auth.getSession()
+                if (recheck.session) {
+                  console.log(`👤 [AUTH:${currentTabId}] Grace period: session recovered — staying signed in`)
+                  session.value = recheck.session
+                  user.value = recheck.session.user
+                  if (recheck.session.expires_at) {
+                    scheduleTokenRefresh(recheck.session.expires_at)
+                  }
+                  return
+                }
+                console.log(`👤 [AUTH:${currentTabId}] Grace period elapsed with no session — clearing auth state`)
+                session.value = null
+                user.value = null
+                handledSignInForUserId = null
+                appInitLoadComplete = false
+              }, 2000)
+              return // Don't clear synchronously
             }
           }
 
@@ -853,6 +897,13 @@ export const useAuthStore = defineStore('auth', () => {
       if (refreshTimer) {
         clearTimeout(refreshTimer)
         refreshTimer = null
+      }
+
+      // TASK-1794: Cancel any pending grace-period clear so it can't interfere with this
+      // explicit sign-out (it would re-check getSession and find nothing anyway, but be tidy).
+      if (pendingSignOutTimer) {
+        clearTimeout(pendingSignOutTimer)
+        pendingSignOutTimer = null
       }
 
       // BUG-1352: supabase.auth.signOut() still makes a server request even with

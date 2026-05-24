@@ -51,7 +51,7 @@ export function useCanvasResizeState() {
         height: '24px',
         borderRadius: '3px',
         background: 'rgba(255, 255, 255, 0.25)',
-        border: '1px solid rgba(99, 102, 241, 0.5)',
+        border: '1px solid rgba(224, 122, 75, 0.5)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',

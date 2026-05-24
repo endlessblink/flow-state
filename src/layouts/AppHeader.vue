@@ -85,6 +85,9 @@
         <!-- FEATURE-1248: Quick Task Shortcuts -->
         <QuickTaskDropdown />
 
+        <!-- TASK-1791: separate wall clock from Pomodoro timer -->
+        <div class="control-divider" />
+
         <!-- POMODORO TIMER DISPLAY -->
         <div class="timer-container">
           <div class="timer-display" :class="{ 'timer-active': timerStore.isTimerActive, 'timer-break': timerStore.currentSession?.isBreak }">
@@ -124,7 +127,7 @@
                   title="Start 15-min long break"
                   @click="startLongBreak"
                 >
-                  <User :size="16" :stroke-width="1.5" class="meditation-stroke" />
+                  <Armchair :size="16" :stroke-width="1.5" class="meditation-stroke" />
                 </button>
               </div>
 
@@ -217,7 +220,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useSettingsStore } from '@/stores/settings'
 import { useUIStore } from '@/stores/ui'
-import { Timer, Play, Pause, Coffee, Square, User, Sparkles, Keyboard } from 'lucide-vue-next'
+import { Timer, Play, Pause, Coffee, Square, Armchair, Sparkles, Keyboard } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
@@ -423,12 +426,11 @@ const startLongBreak = async () => {
 }
 
 .title-main {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
   margin: 0;
   line-height: 1.1;
 }
@@ -494,7 +496,10 @@ const startLongBreak = async () => {
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-xl);
-  border: 1.5px solid transparent;
+  /* TASK-1791: visible resting border + tint so the idle timer reads as a
+     distinct unit, not just another header icon. Active/break states override. */
+  border: 1.5px solid var(--glass-border);
+  background: var(--glass-bg-subtle);
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 
@@ -565,12 +570,12 @@ const startLongBreak = async () => {
 }
 
 .timer-time {
-  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   min-width: 4rem;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.01em;
 }
 
 .timer-controls {
@@ -701,17 +706,17 @@ const startLongBreak = async () => {
   height: 20px;
   padding: 0 var(--space-1_5);
   margin-inline-start: var(--space-1_5);
-  background: linear-gradient(135deg, var(--color-blue), #8b5cf6);
+  background: var(--surface-tertiary);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   line-height: 1;
 }
 
 .view-tab.active .tab-badge {
-  background: linear-gradient(135deg, #60a5fa, #a78bfa);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  background: var(--brand-primary);
+  color: #1C1815;
 }
 
 /* AI TOGGLE BUTTON (TASK-1120) */
@@ -749,8 +754,8 @@ const startLongBreak = async () => {
   padding: 0 4px;
   font-size: var(--text-xs);
   font-weight: 700;
-  color: white;
-  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  color: #1C1815;
+  background: var(--brand-primary);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;

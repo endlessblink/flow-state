@@ -470,7 +470,7 @@ defineExpose({
 }
 .provider-card.selected {
   border-color: var(--brand-primary);
-  background: var(--brand-bg-subtle, rgba(78, 205, 196, 0.06));
+  background: var(--brand-bg-subtle, rgba(45, 212, 191, 0.06));
 }
 
 .provider-badge {

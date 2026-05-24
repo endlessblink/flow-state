@@ -8,6 +8,93 @@
 
 ## Active Tasks
 
+### TASK-1791: Design overhaul — fix critique findings across all views (👀 REVIEW)
+
+**Priority**: P2 | **Status**: 👀 REVIEW — all 5 phases implemented on branch `design-overhaul` (opened 2026-05-21). Pending: review → merge to master → Electron deploy. Restore tag `pre-design-overhaul-2026-05-21`.
+
+**Phases (all ✅ implemented, each its own commit):**
+- ✅ Phase 1: text contrast — `--text-muted` 0.45→0.55, `--text-subtle` 0.35→0.45 (WCAG AA)
+- ✅ Phase 2: project-color left accent on board cards (project identity in mixed-project views)
+- ✅ Phase 3: quick-add elevated to primary (brand accent), Create project demoted to ghost
+- ✅ Phase 4: clock/timer divider, idle-timer resting border, long-break icon User→Armchair
+- ✅ Phase 5: guiding inbox/canvas-group empty states; confirmed calendar empty inbox is filter behavior, not a bug
+
+Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tracked under TASK-1789).
+
+**Problem**: Whole-app design critique flagged 5 priority issues: (1) low-contrast actionable text (dates/estimates at 35-45% opacity), (2) color double-encoding (priority shown as both dots and pills; teal overloaded across brand/active/status/project), (3) no clear primary action (Create project louder than quick-add), (4) unlabeled 7-icon header soup with clock+timer jammed together, (5) weak/possibly-buggy empty states (Calendar filter-empty hides seeded tasks; canvas partially-populated groups have no add prompt).
+
+**Approach**: Safe phased overhaul, each phase checkpointed + screenshot-diffed against baseline. Restore via `git reset --hard pre-design-overhaul-2026-05-21`.
+- Phase 1: text contrast tokens (design-tokens.css)
+- Phase 2: color semantics — pills as single priority encoding, project identity on cards, teal=brand only (TaskCardStatus.vue, TaskRowPriority.vue, TaskRowProject.vue)
+- Phase 3: primary action — quick-add loudest, demote Create project (SidebarQuickTaskInput.vue, SidebarProjectsSection.vue)
+- Phase 4: header — group/label icons, separate clock from Pomodoro timer (AppHeader.vue)
+- Phase 5: empty/edge states + investigate Calendar default-filter bug (CalendarInboxList.vue, canvas)
+
+**Baseline screenshots**: `.dev/screenshots/critique-{board,canvas,calendar,tasks}.png`
+
+---
+
+### ~~BUG-1796~~: Canvas rendered zero nodes — `toRelativePosition` used but not imported (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-05-23)
+
+**Problem**: After v1.4.48, the app loaded but the Canvas was completely empty (no nodes, no groups) for users with parented canvas data, while the inbox panel listed tasks normally.
+
+**Root cause**: `src/composables/canvas/useCanvasSync.ts` calls `toRelativePosition(...)` at lines 302 (group nodes) and 457 (task nodes) but never imported it (exported from `src/utils/canvas/coordinates.ts:50`). Introduced by BUG-1792 (commit 9c92acc3). Both call sites only run for a node with a *visible parent*, so a nested group / task-in-group triggered `ReferenceError: toRelativePosition is not defined`. `syncStoreToCanvas` is `try { …build… setNodes() } finally {}` with no `catch`, so the throw skipped `setNodes()` entirely → empty canvas. Surfaced via Vue's effect error handler (logged, non-fatal) so no white screen.
+
+**Why it slipped through**: `npm run build` (Vite/esbuild) doesn't type-check; CI type-check is disabled by TASK-1789 (~160 errors). `vue-tsc` *does* flag it (`TS2304: Cannot find name 'toRelativePosition'`), ESLint does not (typescript-eslint disables `no-undef`). The e2e harness can't reproduce it: in-memory seeded groups get wiped by the DB realtime reload, so seeded parented nodes lose their parent before sync.
+
+**Fix**: Add `toRelativePosition` to the existing `@/utils/canvas/coordinates` import in `useCanvasSync.ts`.
+
+**Regression test**: `tests/unit/canvas/useCanvasSync-imports.test.ts` statically asserts every coordinates helper *called* in `useCanvasSync.ts` is imported. Verified it fails pre-fix (names `toRelativePosition`) and passes after. `geometry-invariants` + `sync-readonly` suites still green (54 tests).
+
+**Follow-up**: TASK-1789 (re-enable CI type-check) is the systemic guard for this class of bug.
+
+**Files**: `src/composables/canvas/useCanvasSync.ts`, `tests/unit/canvas/useCanvasSync-imports.test.ts`. Version bump 1.4.48 → 1.4.49.
+
+---
+
+### ~~BUG-1795~~: Null task title crashed Board and Canvas via TaskCardBadges (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-05-23)
+
+**Problem**: Electron app showed "Something went wrong — Cannot read properties of undefined (reading 'trim')" on the Board view, and the Canvas rendered empty (37 placed tasks, none visible).
+
+**Root cause**: `TaskCardBadges.vue` computed `hasTaskTitle` as `props.task.title.trim()`. A task with a `null`/`undefined` title threw during render. `TaskCard` (which renders `TaskCardBadges`) appears on the Board AND in the Canvas inbox panel (`UnifiedInboxList`), so one bad task took down both views. Render-side companion to the sync/DB defenses in BUG-1777/BUG-1779.
+
+**Fix**: Guard the computed — `(props.task.title ?? '').trim().length > 0`.
+
+**Regression test**: `tests/unit/components/task-card-badges-null-title.test.ts` mounts the component with `null` and `undefined` titles. Verified it fails on the pre-fix code (reproduces the exact throw) and passes after.
+
+**Files**: `src/components/kanban/card/TaskCardBadges.vue`, `tests/unit/components/task-card-badges-null-title.test.ts`. Version bump 1.4.47 → 1.4.48.
+
+---
+
+### ~~BUG-1792~~: Canvas idle sync persisted stale group/task positions (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-22)
+
+**Problem**: Canvas groups and tasks could move without user dragging, then stay wrong after refresh. That meant a passive sync/render path was not just displaying stale geometry; it could replay stale Vue Flow/PositionManager coordinates into persistent store state.
+
+**Root cause**: `useCanvasSync.ts` treated existing Vue Flow node positions and `PositionManager` as authoritative during read/sync paths. `PositionManager` is an interaction-time cache, so idle syncs triggered by unrelated task/title/filter activity could reuse stale drag/frame coordinates instead of store/Supabase absolute coordinates.
+
+**Fix**: Make store/Supabase absolute coordinates authoritative for canvas read paths. Group nodes now read from `group.position`; task nodes read from `task.canvasPosition`; nested Vue Flow positions are derived with `toRelativePosition(absolutePos, getGroupAbsolutePosition(parentId, groups))`. Removed the idle sync block that preserved existing Vue Flow positions over freshly derived store positions.
+
+**Hardening**: `taskOperations.updateTask()` now strips forbidden geometry fields from `SYNC` and `SMART-GROUP` updates before persistence. These sources can still update metadata, but cannot mutate `parentId`, `canvasPosition`, `positionFormat`, or `positionVersion`.
+
+**Regression tests**: Added `tests/e2e/canvas-geometry-local.spec.ts` coverage for both group and task idle drift. The tests create canvas geometry, trigger unrelated idle sync activity, refresh, and assert positions are unchanged with no geometry write logs.
+
+**Verification**:
+- `./scripts/run-e2e.sh tests/e2e/canvas-geometry-local.spec.ts -g "idle sync activity and refresh do not persist (group|task) position changes" --project=chromium` passed.
+- `npm test -- --run tests/unit/geometry-invariants.test.ts tests/unit/sync-readonly.test.ts tests/unit/smartgroup-metadata.test.ts` passed.
+- `npm test -- --run tests/unit/stores/task-store-crud.test.ts tests/unit/geometry-invariants.test.ts tests/unit/sync-readonly.test.ts tests/unit/smartgroup-metadata.test.ts` passed.
+- `npm run build` passed.
+- `npm run electron:build` passed.
+
+**Files**: `src/composables/canvas/useCanvasSync.ts`, `src/stores/tasks/taskOperations.ts`, `tests/e2e/canvas-geometry-local.spec.ts`, `tests/unit/stores/task-store-crud.test.ts`, `tests/global-setup.ts`.
+
+---
+
 ### TASK-1789: Fix ~160 pre-existing type-check errors blocking CI (📋 PLANNED)
 
 **Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-05-18) — **NEXT UP**
@@ -3454,6 +3541,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
 | ~~TASK-1283~~ | P1 | ✅ Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
 | ~~**TASK-1284**~~ | **P0** | ✅ **Add quick task creation to KDE Plasma widget (monorepo)** |
+| ~~**BUG-1793**~~ | **P2** | ✅ **KDE widget "Today" filter reset on reload (todayOnly not persisted)** |
+| ~~**BUG-1794**~~ | **P1** | ✅ **Electron app flickers signed-out then back in on window focus changes** |
 | TASK-292 | P3 | Canvas connection edge visuals (animations, gradients) |
 | TASK-310 | P2 | Automated SQL backup to cloud storage |
 | TASK-293 | P2 | Canvas viewport - center on Today + persist position |
@@ -3613,6 +3702,22 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | Cross-tab workspace mismatch — Tab A workspace A, Tab B workspace B | MEDIUM | Add workspaceId to cross-tab protocol, ignore mismatches |
 | Invite chicken-and-egg — user can't join workspace they're not in | MEDIUM | Edge Function with service_role key |
 | Canvas parentId cross-workspace — task in workspace B references group in workspace A | LOW | App-level validation in drag handlers |
+
+#### ~~BUG-1793~~: KDE widget "Today" filter reset on reload (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-23) | **Depends On**: —
+**Description**: The widget's "Today" toggle (`todayOnly`) was a runtime-only QML property, not backed by `plasmoid.configuration`. It silently reset to `false` on every widget reload / plasmashell restart, so the list showed ALL non-done tasks (~59) instead of just tasks due today — appearing as a "completely different set" than the Electron app. The filter *logic* (`filterTasksForToday`/`taskMatchesToday`) was already correct and matches the app's `useSmartViews.isTodayTask` (verified against live production data: shows exactly the due-today tasks, overdue excluded by design).
+**Fix**: Added persisted `todayOnly` Bool key to `contents/config/main.xml`; initialize `property bool todayOnly: plasmoid.configuration.todayOnly` and write back on toggle in `main.qml`. Bumped widget `metadata.json` 1.1.0→1.1.1. Verified live via journal: Today-on fetch uses `limit=1000` + client filter and loads only the due-today count; choice now survives restarts.
+
+---
+
+#### ~~BUG-1794~~: Electron app flickers signed-out then back in on window focus changes (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-23) | **Depends On**: —
+**Description**: On the Electron desktop app, the UI intermittently flashed the login screen and then re-signed-in a few seconds later — a transient flicker, not a real logout. Root cause: `useRealtimeSubscription.ts` called `auth.refreshSession()` *unconditionally* on every `visibilitychange → visible` (BUG-1182). Electron fires focus/visibility changes far more often than a browser tab (window focus/blur/occlusion, OS notifications), so this redundant refresh ran on top of Supabase `autoRefreshToken` + the scheduled refresh in `auth.ts`. The resulting auth-event churn produced spurious `SIGNED_OUT` events, and the UI reads `isAuthenticated = !!user.value` with no debounce, so it flashed logged-out until the next refresh recovered the session.
+**Fix**: (A) Expiry-gate the wake-up refresh in `src/composables/supabase/useRealtimeSubscription.ts` — only `refreshSession()` when a real session is missing-expiry or within 120s of expiry; `autoRefreshToken` covers the rest. (B) Defense-in-depth in `src/stores/auth.ts`: a non-explicit `SIGNED_OUT` with no recoverable session now defers clearing `user`/`session` behind a 2s grace timer; a valid session re-appearing (SIGNED_IN/TOKEN_REFRESHED) cancels it, so no login-screen flash. Explicit user sign-out (`isSigningOut`) still clears immediately. Tests: `tests/unit/stores/auth-flow.test.ts` updated (#24 grace-period clear) + new #24b (transient SIGNED_OUT→SIGNED_IN stays signed in); 30/30 pass.
+
+---
 
 #### ~~TASK-1533~~: Epic: Workspace Collaboration — Tracking Parent (✅ DONE)
 

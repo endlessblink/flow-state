@@ -11,7 +11,7 @@
         "Icon": "chronometer",
         "Id": "com.pomoflow.widget",
         "Name": "PomoFlow Timer",
-        "Version": "1.1.0",
+        "Version": "1.1.1",
         "Website": "https://github.com/pomoflow",
         "License": "GPL-2.0-or-later"
     },

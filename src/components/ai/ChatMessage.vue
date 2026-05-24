@@ -1640,10 +1640,10 @@ async function saveSchedule() {
 }
 
 .day-select-btn.day-selected {
-  background: rgba(78, 205, 196, 0.15);
+  background: rgba(45, 212, 191, 0.15);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.25);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.25);
 }
 
 .schedule-save-btn {
@@ -1663,7 +1663,7 @@ async function saveSchedule() {
 }
 
 .schedule-save-btn:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.12);
+  background: rgba(45, 212, 191, 0.12);
   color: var(--brand-primary);
 }
 

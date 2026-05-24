@@ -119,8 +119,8 @@ const ruleDescription = computed(() => {
   box-sizing: content-box;
   border: 1px solid var(--brand-primary);
   box-shadow:
-    0 8px 16px rgba(78, 205, 196, 0.1),
-    0 0 20px rgba(78, 205, 196, 0.05);
+    0 8px 16px rgba(45, 212, 191, 0.1),
+    0 0 20px rgba(45, 212, 191, 0.05);
 }
 
 .task-title-label {
@@ -166,15 +166,15 @@ const ruleDescription = computed(() => {
 
 .action-btn--skip {
   /* Full-saturation border + subtle tinted fill so the brand colour reads at a glance. */
-  background: linear-gradient(180deg, rgba(78, 205, 196, 0.12) 0%, rgba(78, 205, 196, 0.06) 100%);
+  background: linear-gradient(180deg, rgba(45, 212, 191, 0.12) 0%, rgba(45, 212, 191, 0.06) 100%);
   border: 1px solid var(--brand-primary);
-  box-shadow: 0 0 0 1px rgba(78, 205, 196, 0.18) inset;
+  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.18) inset;
 }
 
 .action-btn--skip:hover {
-  background: linear-gradient(180deg, rgba(78, 205, 196, 0.22) 0%, rgba(78, 205, 196, 0.12) 100%);
+  background: linear-gradient(180deg, rgba(45, 212, 191, 0.22) 0%, rgba(45, 212, 191, 0.12) 100%);
   border-color: var(--brand-primary);
-  box-shadow: 0 4px 16px rgba(78, 205, 196, 0.18), 0 0 0 1px rgba(78, 205, 196, 0.28) inset;
+  box-shadow: 0 4px 16px rgba(45, 212, 191, 0.18), 0 0 0 1px rgba(45, 212, 191, 0.28) inset;
 }
 
 .action-btn--stop {

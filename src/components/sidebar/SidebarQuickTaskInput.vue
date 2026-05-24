@@ -217,10 +217,13 @@ defineExpose({
 
 <style scoped>
 /* Quick Task Section */
+/* Quick-add is the primary daily action — signalled by a terracotta border
+   only (consistent neutral fill with the workspace switcher above it, so the
+   stacked boxes don't read as different-colored blocks). */
 .quick-task-section {
   padding: var(--space-2);
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary-dim);
   border-radius: var(--radius-lg);
   margin: var(--space-4) var(--space-6);
 }

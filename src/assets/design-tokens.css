@@ -45,106 +45,105 @@
   --color-slate-800: 30, 41, 59;
   --color-slate-900: 15, 23, 42;
 
-  /* Brand Colors - Authentic Teal (matches themes.ts #4ECDC4) */
-  --teal-500: 174, 62%, 58%;
+  /* Brand Color — Warm Dark: Teal-green #2DD4BF (TASK-1791b rebrand, was teal #4ECDC4) */
+  --teal-500: 172, 66%, 50%;    /* var name kept for cascade; value is now teal-green */
 
   /* Core Color Palette (HSL values for semantic tokens) */
   --red-500: 0, 84%, 60%;      /* #ef4444 - danger, errors, current time indicator */
   --green-500: 142, 71%, 45%;  /* #22c55e - success, completed */
-  --blue-500: 217, 91%, 60%;   /* #3b82f6 - info, links */
-  --color-primary-50: 235, 252, 251;
-  --color-primary-100: 206, 247, 244;
-  --color-primary-200: 161, 240, 235;
-  --color-primary-300: 116, 233, 226;
-  --color-primary-400: 78, 220, 213;
-  --color-primary-500: 78, 205, 196;
-  /* Base #4ECDC4 */
-  --color-primary-600: 64, 180, 172;
-  --color-primary-700: 50, 140, 134;
-  --color-primary-800: 36, 100, 96;
-  --color-primary-900: 22, 60, 58;
+  --blue-500: 209, 33%, 56%;   /* muted slate-blue — harmonizes with warm brown (was harsh #3b82f6) */
+  /* Teal-green scale */
+  --color-primary-50: 230, 250, 247;
+  --color-primary-100: 204, 245, 238;
+  --color-primary-200: 153, 234, 221;
+  --color-primary-300: 102, 224, 204;
+  --color-primary-400: 64, 218, 197;
+  --color-primary-500: 45, 212, 191;
+  /* Base #2DD4BF (teal-green) */
+  --color-primary-600: 20, 184, 166;
+  --color-primary-700: 15, 140, 127;
+  --color-primary-800: 12, 100, 91;
+  --color-primary-900: 8, 60, 55;
   /* Pomodoro/Success Colors */
   --color-pomodoro-500: 239, 68, 68;
   --color-success-500: 74, 222, 128;
   --color-warning-500: 251, 191, 36;
 
-  /* App Background Gradient - Official Board View Palette */
-  --app-background-gradient: linear-gradient(135deg,
-      hsl(220, 13%, 9%) 0%,
-      hsl(240, 21%, 15%) 25%,
-      hsl(250, 24%, 12%) 50%,
-      hsl(260, 20%, 14%) 75%,
-      hsl(220, 13%, 11%) 100%);
+  /* App Background — Warm charcoal (low-saturation warm dark, not muddy brown).
+     Keeps warmth (hue ~30) but drops saturation so teal-green accent POPS. */
+  --app-background-gradient: hsl(30, 8%, 9%);
 
   /* ===== TIER 2: SEMANTIC TOKENS (Theme-aware) ===== */
 
-  /* Surface Hierarchy - Purple-tinted to match app gradient */
-  --surface-primary: hsl(250, 29%, 16%);    /* rgb(35, 32, 52) - task cards, nav */
-  --surface-secondary: hsl(250, 30%, 12%);  /* rgb(28, 25, 45) - secondary elements */
-  --surface-tertiary: hsl(250, 25%, 20%);   /* rgb(45, 40, 65) - hover states */
-  --surface-elevated: hsl(250, 22%, 24%);   /* rgb(52, 47, 75) - elevated elements */
-  --surface-hover: rgba(45, 40, 70, 0.15);
-  --surface-active: rgba(45, 40, 70, 0.25);
+  /* Surface Hierarchy — warm charcoal steps */
+  --surface-primary: hsl(30, 8%, 13%);      /* task cards, nav */
+  --surface-secondary: hsl(30, 8%, 10.5%);  /* secondary elements */
+  --surface-tertiary: hsl(30, 7%, 17%);     /* hover states */
+  --surface-elevated: hsl(30, 7%, 21%);     /* elevated elements */
+  --surface-hover: rgba(237, 230, 220, 0.05);
+  --surface-active: rgba(237, 230, 220, 0.09);
 
   /* Overlay - Modal backgrounds */
   --overlay-bg: rgba(0, 0, 0, 0.6);
 
-  /* Glass Surfaces - PURPLE-TINTED glass morphism (matches app gradient) */
-  --glass-bg-subtle: rgba(45, 40, 70, 0.02);
-  --glass-bg-weak: rgba(45, 40, 70, 0.04);
-  --glass-bg-light: rgba(45, 40, 70, 0.08);
-  --glass-bg-tint: rgba(45, 40, 70, 0.10);
-  --glass-bg-medium: rgba(45, 40, 70, 0.15);
-  --glass-bg-soft: rgba(45, 40, 70, 0.18);
-  --glass-bg-heavy: rgba(45, 40, 70, 0.25);
-  --glass-border: rgba(255, 255, 255, 0.10);
-  --glass-border-hover: rgba(255, 255, 255, 0.15);
-  --glass-glow: rgba(78, 205, 196, 0.08);
+  /* Warm flat "panel" surfaces — formerly glass morphism (blur removed in flat mode).
+     Warm off-white tints over espresso read as flat raised panels. */
+  --glass-bg-subtle: rgba(237, 230, 220, 0.02);
+  --glass-bg-weak: rgba(237, 230, 220, 0.03);
+  --glass-bg-light: rgba(237, 230, 220, 0.05);
+  --glass-bg-tint: rgba(237, 230, 220, 0.06);
+  --glass-bg-medium: rgba(237, 230, 220, 0.08);
+  --glass-bg-soft: rgba(237, 230, 220, 0.10);
+  --glass-bg-heavy: rgba(237, 230, 220, 0.14);
+  --glass-border: rgba(237, 230, 220, 0.10);
+  --glass-border-hover: rgba(237, 230, 220, 0.16);
+  --glass-glow: transparent;
+  /* OPAQUE solid surface — used by modals/dialogs (BaseModal). Was only
+     defined in the .pwa-app block, so web modals had NO background and
+     content bled through (TASK-1791b). */
+  --glass-bg-solid: hsl(30, 8%, 14%);
 
-  /* Canvas Node Backgrounds - TASK-079 zoom visibility (purple-tinted) */
-  /* Adjust these to control canvas element brightness */
-  --canvas-task-bg: rgba(35, 32, 52, 0.95);
-  /* Task cards on canvas - purple-tinted */
-  --canvas-group-bg: rgba(38, 35, 55, 0.92);
-  /* Groups/sections on canvas - purple-tinted */
-  --canvas-task-border: rgba(255, 255, 255, 0.25);
-  /* Task border */
-  --canvas-group-border: rgba(255, 255, 255, 0.30);
-  /* Group border */
+  /* Canvas Node Backgrounds — warm charcoal (opaque for zoom visibility) */
+  --canvas-task-bg: hsl(30, 8%, 13%);
+  --canvas-group-bg: hsl(30, 7%, 15%);
+  --canvas-task-border: rgba(237, 230, 220, 0.18);
+  --canvas-group-border: rgba(237, 230, 220, 0.24);
 
-  /* Text Hierarchy - Opacity modulation for premium dark mode */
-  /* Primary: full brightness for titles and key content */
-  --text-primary: rgba(241, 245, 249, 1.0);
-  /* Secondary: 80% for supporting text, metadata labels */
-  --text-secondary: rgba(241, 245, 249, 0.80);
-  /* Tertiary: 60% for timestamps, counts, secondary metadata */
-  --text-tertiary: rgba(241, 245, 249, 0.60);
-  /* Muted: 45% for placeholders, disabled-adjacent text */
-  --text-muted: rgba(241, 245, 249, 0.45);
-  /* Subtle: 35% for decorative text, separators */
-  --text-subtle: rgba(241, 245, 249, 0.35);
-  /* Disabled: 25% for truly disabled content */
-  --text-disabled: rgba(241, 245, 249, 0.25);
+  /* Text Hierarchy — warm off-white #EDE6DC (was cool slate). Tiers per TASK-1791 (AA). */
+  --text-primary: rgba(237, 230, 220, 1.0);
+  --text-secondary: rgba(237, 230, 220, 0.80);
+  --text-tertiary: rgba(237, 230, 220, 0.62);
+  /* Muted 0.55 — actionable meta must clear WCAG AA (TASK-1791). */
+  --text-muted: rgba(237, 230, 220, 0.55);
+  /* Subtle 0.45 — decorative text, separators (TASK-1791). */
+  --text-subtle: rgba(237, 230, 220, 0.45);
+  --text-disabled: rgba(237, 230, 220, 0.25);
 
-  /* Border Colors - Edge definitions */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --border-interactive: rgba(255, 255, 255, 0.24);
-  --border-primary: rgba(255, 255, 255, 0.10);
-  --border-secondary: rgba(255, 255, 255, 0.14);
-  --border-hover: rgba(255, 255, 255, 0.20);
+  /* Border Colors — warm hairlines (was cool white) */
+  --border-subtle: rgba(237, 230, 220, 0.08);
+  --border-medium: rgba(237, 230, 220, 0.12);
+  --border-strong: rgba(237, 230, 220, 0.18);
+  --border-interactive: rgba(237, 230, 220, 0.24);
+  --border-primary: rgba(237, 230, 220, 0.10);
+  --border-secondary: rgba(237, 230, 220, 0.14);
+  --border-hover: rgba(237, 230, 220, 0.20);
 
-  /* Brand Colors - Semantic usage */
-  --brand-primary: hsl(var(--teal-500));
-  --brand-hover: hsl(var(--teal-400));
-  --brand-active: hsl(174, 62%, 53%);
-  --brand-primary-subtle: rgba(78, 205, 196, 0.1);
-  --brand-primary-dim: rgba(78, 205, 196, 0.3);
+  /* Brand — Teal-green #2DD4BF (the single signature accent) */
+  --brand-primary: hsl(var(--teal-500));      /* #2DD4BF */
+  --brand-hover: hsl(172, 70%, 62%);           /* #5EEAD4 */
+  --brand-active: hsl(173, 80%, 40%);          /* #14B8A6 */
+  --brand-primary-subtle: rgba(45, 212, 191, 0.12);
+  --brand-primary-dim: rgba(45, 212, 191, 0.32);
 
   /* Legacy color alias for compatibility */
   --color-primary: var(--brand-primary);
   --color-primary-hover: var(--brand-hover);
+
+  /* Accent aliases — were UNDEFINED, so var(--accent-primary, #6366f1) fell
+     back to purple across canvas handles, AI toggle, etc. (TASK-1791b) */
+  --accent-primary: var(--brand-primary);
+  --accent-bg: var(--brand-primary-subtle);
+  --color-primary-alpha: var(--brand-primary-subtle);
 
   /* ===== SPACING SCALE ===== */
   /* Based on 0.25rem (4px) base unit */
@@ -288,7 +287,7 @@
   /* Scroll container background */
   --kanban-badge-bg: var(--glass-bg-heavy);
   /* Count badges */
-  --kanban-card-glass-bg: rgba(35, 32, 55, 0.7);
+  --kanban-card-glass-bg: rgba(42, 39, 35, 0.75);
   /* Purple-tinted semi-transparent card background */
   --kanban-card-footer-border: var(--glass-border-light);
   --kanban-card-tag-bg: var(--glass-bg-medium);
@@ -333,9 +332,9 @@
   --priority-medium-text: #fb923c;
 
   /* Low priority (blue) */
-  --priority-low-bg: rgba(59, 130, 246, 0.2);
-  --priority-low-border: rgba(59, 130, 246, 0.5);
-  --priority-low-text: #60a5fa;
+  --priority-low-bg: rgba(106, 144, 180, 0.2);
+  --priority-low-border: rgba(106, 144, 180, 0.5);
+  --priority-low-text: #8FB0CE;
 
   /* ===== TASKCARD DUE DATE BADGE ===== */
   --due-date-bg: rgba(148, 163, 184, 0.15);
@@ -463,35 +462,34 @@
 
   /* ===== TIER 3: FUNCTIONAL COLORS (Context-specific) ===== */
 
-  /* Pomodoro States */
-  --color-work: #10b981;
-  /* Green - Active work, productivity */
-  --color-break: #f59e0b;
-  /* Orange - Breaks, attention */
-  --color-focus: #8b5cf6;
-  /* Purple - Deep work, meditation */
-  --color-navigation: #3b82f6;
+  /* Pomodoro States — Warm Dark */
+  --color-work: #2DD4BF;
+  /* Teal-green - active work (the signature accent) */
+  --color-break: #E0A03B;
+  /* Honey amber - breaks */
+  --color-focus: #C98A5E;
+  /* Warm clay - long break / deep work */
+  --color-navigation: #6A90B4;
   /* Blue - Links, navigation */
   --color-neutral: #6b7280;
   /* Gray - Secondary elements */
 
   /* Interactive States - THE ONE unified system: OUTLINED + GLASS */
-  --state-active-border: rgba(78, 205, 196, 0.60);
-  /* Teal border when active */
-  --state-active-bg: rgba(78, 205, 196, 0.15);
-  /* Glass background tint */
-  --state-active-glass: blur(16px) saturate(180%);
-  /* Glass blur effect */
+  --state-active-border: rgba(45, 212, 191, 0.60);
+  /* Teal-green border when active */
+  --state-active-bg: rgba(45, 212, 191, 0.14);
+  /* Warm tint */
+  --state-active-glass: none;
+  /* flat (no blur) */
   --state-active-text: var(--text-primary);
   /* Text color for active states */
-  --state-hover-border: rgba(78, 205, 196, 0.40);
-  /* Teal border on hover */
-  --state-hover-bg: rgba(78, 205, 196, 0.10);
-  /* Subtle glass tint */
-  --state-hover-shadow: 0 8px 16px rgba(78, 205, 196, 0.25);
-  /* Dramatic shadow */
-  --state-hover-glow: 0 0 20px rgba(78, 205, 196, 0.20);
-  /* Glow effect */
+  --state-hover-border: rgba(45, 212, 191, 0.36);
+  /* Teal-green border on hover */
+  --state-hover-bg: rgba(237, 230, 220, 0.06);
+  /* Subtle warm tint */
+  --state-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  /* flat elevation, no colored glow */
+  --state-hover-glow: 0 0 transparent;
 
   /* Filter Selection Colors - Distinct colors for sidebar filters */
   --filter-today-bg: rgba(56, 189, 248, 0.15);
@@ -529,13 +527,13 @@
   /* Red - Urgent tasks */
   --color-priority-medium: #f59e0b;
   /* Orange - Default priority */
-  --color-priority-low: #3b82f6;
+  --color-priority-low: #6A90B4;
   /* Blue - Low urgency */
 
   /* Priority backgrounds for calendar events */
   --priority-high-bg: rgba(239, 68, 68, 0.3);
   --priority-medium-bg: rgba(245, 158, 11, 0.3);
-  --priority-low-bg: rgba(59, 130, 246, 0.3);
+  --priority-low-bg: rgba(106, 144, 180, 0.3);
 
   /* Priority indicator glows */
   --priority-high-glow: 0 4px 8px rgba(239, 68, 68, 0.18), 0 0 12px rgba(239, 68, 68, 0.12);
@@ -552,22 +550,22 @@
 
   /* Calendar-Specific Tokens */
   /* Purple - Calendar UI elements (filters, badges) */
-  --calendar-hover-bg: rgba(99, 102, 241, 0.02);
-  --calendar-hover-bg-medium: rgba(99, 102, 241, 0.05);
-  --calendar-creating-bg: rgba(99, 102, 241, 0.20);
-  --calendar-creating-bg-alt: rgba(139, 92, 246, 0.15);
-  --calendar-creating-border: rgba(99, 102, 241, 0.4);
-  --calendar-ghost-bg-start: rgba(99, 102, 241, 0.25);
-  --calendar-ghost-bg-end: rgba(79, 70, 229, 0.20);
-  --calendar-ghost-border: rgba(99, 102, 241, 0.6);
-  --calendar-ghost-shadow: 0 8px 16px rgba(99, 102, 241, 0.2), 0 0 20px rgba(99, 102, 241, 0.15);
-  --calendar-today-bg-start: rgba(99, 102, 241, 0.12);
-  --calendar-today-bg-end: rgba(79, 70, 229, 0.08);
-  --calendar-today-border: rgba(99, 102, 241, 0.2);
-  --calendar-today-glow: 0 0 16px rgba(99, 102, 241, 0.15);
-  --calendar-today-badge-start: rgba(99, 102, 241, 0.9);
-  --calendar-today-badge-end: rgba(79, 70, 229, 0.85);
-  --calendar-today-badge-shadow: 0 4px 8px rgba(99, 102, 241, 0.3), 0 0 12px rgba(99, 102, 241, 0.2);
+  --calendar-hover-bg: rgba(45, 212, 191, 0.02);
+  --calendar-hover-bg-medium: rgba(45, 212, 191, 0.05);
+  --calendar-creating-bg: rgba(45, 212, 191, 0.20);
+  --calendar-creating-bg-alt: rgba(45, 212, 191, 0.15);
+  --calendar-creating-border: rgba(45, 212, 191, 0.4);
+  --calendar-ghost-bg-start: rgba(45, 212, 191, 0.25);
+  --calendar-ghost-bg-end: rgba(20, 184, 166, 0.20);
+  --calendar-ghost-border: rgba(45, 212, 191, 0.6);
+  --calendar-ghost-shadow: 0 8px 16px rgba(45, 212, 191, 0.2), 0 0 20px rgba(45, 212, 191, 0.15);
+  --calendar-today-bg-start: rgba(45, 212, 191, 0.12);
+  --calendar-today-bg-end: rgba(20, 184, 166, 0.08);
+  --calendar-today-border: rgba(45, 212, 191, 0.2);
+  --calendar-today-glow: 0 0 16px rgba(45, 212, 191, 0.15);
+  --calendar-today-badge-start: rgba(45, 212, 191, 0.9);
+  --calendar-today-badge-end: rgba(20, 184, 166, 0.85);
+  --calendar-today-badge-shadow: 0 4px 8px rgba(45, 212, 191, 0.3), 0 0 12px rgba(45, 212, 191, 0.2);
 
   /* Green - Current time indicator */
   --calendar-current-time-bg-start: rgba(16, 185, 129, 0.12);
@@ -585,7 +583,7 @@
   --timer-glow-subtle: 0 0 24px rgba(251, 191, 36, 0.15);
   --timer-active-glow: 0 0 20px rgba(251, 191, 36, 0.4);
   --timer-active-glow-strong: 0 0 30px rgba(251, 191, 36, 0.6);
-  --timer-shadow-glow: 0 0 12px rgba(99, 102, 241, 0.6);
+  --timer-shadow-glow: 0 0 12px rgba(45, 212, 191, 0.6);
   --timer-active-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   --timer-active-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.25);
   --timer-shadow-complex: 0 12px 24px rgba(0, 0, 0, 0.24), 0 0 24px rgba(251, 191, 36, 0.15), inset 0 1px 0 var(--border-medium);
@@ -641,11 +639,12 @@
   /* Week view specific */
   --week-hover-bg: rgba(16, 185, 129, 0.02);
 
-  /* Additional glass opacity variations - purple-tinted */
-  --glass-bg-subtle: rgba(45, 40, 70, 0.02);
-  --glass-bg-weak: rgba(45, 40, 70, 0.04);
-  --glass-bg-tint: rgba(45, 40, 70, 0.10);
-  --glass-bg-soft: rgba(45, 40, 70, 0.18);
+  /* Additional glass opacity variations — warm (was a duplicate purple block
+     that overrode the warm definitions above; TASK-1791b) */
+  --glass-bg-subtle: rgba(237, 230, 220, 0.02);
+  --glass-bg-weak: rgba(237, 230, 220, 0.03);
+  --glass-bg-tint: rgba(237, 230, 220, 0.06);
+  --glass-bg-soft: rgba(237, 230, 220, 0.10);
   --glass-border-faint: rgba(255, 255, 255, 0.03);
   --glass-border-light: rgba(255, 255, 255, 0.06);
   --glass-border-medium: rgba(255, 255, 255, 0.16);
@@ -677,36 +676,36 @@
   --amber-bg-medium: rgba(251, 191, 36, 0.15);
   --amber-border-subtle: rgba(251, 191, 36, 0.2);
 
-  /* Purple interactive states (for buttons/UI) */
-  --purple-bg-subtle: rgba(139, 92, 246, 0.08);
-  --purple-bg-start: rgba(99, 102, 241, 0.16);
-  --purple-bg-end: rgba(79, 70, 229, 0.10);
-  --purple-border-subtle: rgba(139, 92, 246, 0.2);
-  --purple-border-light: rgba(99, 102, 241, 0.25);
-  --purple-border-medium: rgba(99, 102, 241, 0.3);
-  --purple-border-strong: rgba(99, 102, 241, 0.45);
-  --purple-border-active: rgba(99, 102, 241, 0.6);
-  --purple-glow-subtle: 0 0 0 2px rgba(99, 102, 241, 0.10);
-  --purple-glow-medium: 0 0 0 2px rgba(99, 102, 241, 0.12);
-  --purple-glow-focus: 0 0 0 3px rgba(59, 130, 246, 0.2);
-  --purple-shadow-subtle: 0 4px 12px rgba(99, 102, 241, 0.2);
-  --purple-shadow-medium: 0 4px 12px rgba(99, 102, 241, 0.25);
-  --purple-shadow-strong: rgba(99, 102, 241, 0.4);
-  --purple-shadow-deep: 0 8px 20px rgba(99, 102, 241, 0.35);
+  /* Interactive accent states (formerly purple) — now teal-green (TASK-1791b) */
+  --purple-bg-subtle: rgba(45, 212, 191, 0.08);
+  --purple-bg-start: rgba(45, 212, 191, 0.16);
+  --purple-bg-end: rgba(20, 184, 166, 0.10);
+  --purple-border-subtle: rgba(45, 212, 191, 0.2);
+  --purple-border-light: rgba(45, 212, 191, 0.25);
+  --purple-border-medium: rgba(45, 212, 191, 0.3);
+  --purple-border-strong: rgba(45, 212, 191, 0.45);
+  --purple-border-active: rgba(45, 212, 191, 0.6);
+  --purple-glow-subtle: 0 0 transparent;
+  --purple-glow-medium: 0 0 transparent;
+  --purple-glow-focus: 0 0 0 3px rgba(45, 212, 191, 0.35);
+  --purple-shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --purple-shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --purple-shadow-strong: rgba(0, 0, 0, 0.4);
+  --purple-shadow-deep: 0 8px 20px rgba(0, 0, 0, 0.35);
 
-  /* Purple gradients for buttons */
-  --purple-gradient-start: rgba(99, 102, 241, 0.9);
-  --purple-gradient-end: rgba(79, 70, 229, 0.85);
+  /* Accent gradients for buttons (formerly purple) — teal-green */
+  --purple-gradient-start: rgba(45, 212, 191, 0.9);
+  --purple-gradient-end: rgba(20, 184, 166, 0.85);
   --purple-gradient-hover-start: rgba(109, 112, 251, 0.95);
   --purple-gradient-hover-end: rgba(89, 80, 239, 0.9);
 
   /* Blue/info states */
-  --blue-bg-subtle: rgba(59, 130, 246, 0.15);
+  --blue-bg-subtle: rgba(106, 144, 180, 0.15);
   --blue-bg-light: rgba(59, 130, 246, 0.1);
   --blue-bg-medium: rgba(59, 130, 246, 0.2);
   --blue-border-medium: rgba(59, 130, 246, 0.5);
   --blue-border-active: rgba(59, 130, 246, 0.8);
-  --blue-shadow: rgba(59, 130, 246, 0.3);
+  --blue-shadow: rgba(106, 144, 180, 0.3);
   --blue-glow-subtle: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
 
   /* Blue gradients for priority badges */
@@ -815,21 +814,21 @@
   /* Dropdowns, Modals, Context Menus - Dark Glass Morphism */
   /* MANDATORY: Use CustomSelect.vue, ContextMenu.vue, BaseModal.vue */
 
-  /* Overlay backgrounds - Purple-tinted glass morphism */
-  --overlay-component-bg: rgba(28, 25, 45, 0.92);
+  /* Overlay backgrounds — OPAQUE warm espresso.
+     Blur is removed app-wide (flat mode), so overlays/panels MUST be opaque
+     or content behind bleeds through and becomes unreadable. */
+  --overlay-component-bg: rgba(36, 34, 31, 0.98);
   --overlay-component-bg-lighter: rgba(0, 0, 0, 0.4);
-  --overlay-component-backdrop: blur(20px);
-  --overlay-component-border: 1px solid rgba(255, 255, 255, 0.15);
-  --overlay-component-border-color: rgba(255, 255, 255, 0.15);
+  --overlay-component-backdrop: none;
+  --overlay-component-border: 1px solid rgba(237, 230, 220, 0.14);
+  --overlay-component-border-color: rgba(237, 230, 220, 0.14);
   --overlay-component-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3);
 
-  /* Inbox Panel Customization - User Controlled */
-  --inbox-panel-opacity: 0.15;
-  --inbox-panel-bg: rgba(28, 25, 45, var(--inbox-panel-opacity));
-  --glass-panel-bg: rgba(28, 25, 45, 0.6);
-  /* Semi-transparent headers/panels */
-  --dropdown-bg: rgba(28, 25, 45, 0.9);
-  /* Opaque-ish dropdowns */
+  /* Inbox Panel — opaque (was 0.15 + blur; blur removal made it see-through) */
+  --inbox-panel-opacity: 0.98;
+  --inbox-panel-bg: rgba(38, 32, 28, var(--inbox-panel-opacity));
+  --glass-panel-bg: rgba(36, 34, 31, 0.98);
+  --dropdown-bg: rgba(36, 34, 31, 0.98);
 
   /* Dropdown-specific tokens */
   --dropdown-trigger-height: 44px;
@@ -845,8 +844,11 @@
   /* ===== TYPOGRAPHY SYSTEM ===== */
 
   /* Font Families */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-primary: 'Open Sans', var(--font-sans);
+  /* Warm Dark type — body: Inter (Latin) + Heebo (Hebrew, per-glyph fallback) */
+  --font-sans: 'Inter', 'Heebo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Display: Clash Display (Latin) + Rubik (Hebrew) — headings, eyebrows, timer */
+  --font-display: 'Clash Display', 'Rubik', var(--font-sans);
+  --font-primary: var(--font-sans);
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
 
   /* Type Scale (1.25 ratio - Major Third) */
@@ -1020,39 +1022,35 @@
 
 .tauri-app,
 .pwa-app {
-  /* PURPLE-TINTED glass morphism - matching app gradient palette */
-  --glass-bg-light: rgba(45, 40, 70, 0.08);
-  --glass-bg-medium: rgba(45, 40, 70, 0.15);
-  --glass-bg-heavy: rgba(45, 40, 70, 0.25);
-  --glass-bg-solid: rgba(28, 25, 45, 0.95);
-  --glass-bg: rgba(35, 32, 55, 0.35);
+  /* Warm Dark — flat warm tints (blur removed; opaque where panels float over content) */
+  --glass-bg-light: rgba(237, 230, 220, 0.05);
+  --glass-bg-medium: rgba(237, 230, 220, 0.08);
+  --glass-bg-heavy: rgba(237, 230, 220, 0.14);
+  --glass-bg-solid: hsl(30, 8%, 13%);
+  --glass-bg: rgba(237, 230, 220, 0.06);
 
-  /* Shared glass variants - purple-tinted */
-  --glass-bg-subtle: rgba(45, 40, 70, 0.02);
-  --glass-bg-weak: rgba(45, 40, 70, 0.04);
-  --glass-bg-tint: rgba(45, 40, 70, 0.10);
-  --glass-bg-soft: rgba(45, 40, 70, 0.18);
+  --glass-bg-subtle: rgba(237, 230, 220, 0.02);
+  --glass-bg-weak: rgba(237, 230, 220, 0.03);
+  --glass-bg-tint: rgba(237, 230, 220, 0.06);
+  --glass-bg-soft: rgba(237, 230, 220, 0.10);
 
-  /* State active glass - Match web exactly */
-  --state-active-glass: blur(16px) saturate(180%);
+  --state-active-glass: none;
 
-  /* Canvas backgrounds - purple-tinted */
-  --canvas-task-bg: rgba(35, 32, 52, 0.95);
-  --canvas-group-bg: rgba(38, 35, 55, 0.92);
+  /* Canvas backgrounds — opaque warm */
+  --canvas-task-bg: hsl(30, 8%, 13%);
+  --canvas-group-bg: hsl(30, 7%, 15%);
 
-  /* Overlay components - Purple-tinted glass (matching web) */
-  --overlay-component-bg: rgba(28, 25, 45, 0.92);
-  --overlay-component-backdrop: blur(20px);
+  /* Overlay/panel backgrounds — OPAQUE warm (no blur to hide content behind) */
+  --overlay-component-bg: rgba(36, 34, 31, 0.98);
+  --overlay-component-backdrop: none;
+  --dropdown-bg: rgba(36, 34, 31, 0.98);
+  --glass-panel-bg: rgba(36, 34, 31, 0.98);
+  --inbox-panel-bg: rgba(36, 34, 31, 0.98);
 
-  /* Dropdown/panel backgrounds - Purple-tinted glass */
-  --dropdown-bg: rgba(28, 25, 45, 0.9);
-  --glass-panel-bg: rgba(28, 25, 45, 0.6);
-  --inbox-panel-bg: rgba(28, 25, 45, 0.15);
-
-  /* Kanban backgrounds - purple-tinted */
-  --kanban-column-bg: rgba(45, 40, 70, 0.15);
-  --kanban-column-bg-hover: rgba(45, 40, 70, 0.25);
-  --kanban-card-glass-bg: rgba(35, 32, 55, 0.7);
+  /* Kanban backgrounds — warm */
+  --kanban-column-bg: rgba(237, 230, 220, 0.04);
+  --kanban-column-bg-hover: rgba(237, 230, 220, 0.08);
+  --kanban-card-glass-bg: hsl(30, 8%, 14%);
   --kanban-card-footer-border: var(--glass-border-light);
   --kanban-card-tag-bg: var(--glass-bg-medium);
   --kanban-card-tag-border: var(--glass-border);

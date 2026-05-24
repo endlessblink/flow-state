@@ -57,8 +57,8 @@ const formattedDuration = computed(() => {
 }
 
 .summary-chip:hover {
-  background: rgba(78, 205, 196, 0.1);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.2);
+  background: rgba(45, 212, 191, 0.1);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.2);
 }
 
 .chip-icon {

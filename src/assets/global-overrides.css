@@ -136,16 +136,16 @@ button svg {
     color: var(--text-secondary) !important;
 }
 
-/* Tasks Container + drag-area — 10px gap between cards */
+/* Tasks Container + drag-area — give dense boards more breathing room */
 .kanban-column .tasks-container {
-    gap: 10px !important;
-    padding: var(--space-1) !important;
+    gap: 12px !important;
+    padding: var(--space-2) !important;
 }
 
 .kanban-column .drag-area {
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
+    gap: 12px !important;
 }
 
 /* Empty column state - minimal */
@@ -173,8 +173,8 @@ button svg {
    12px padding, 10px radius, 14px/500 title, 12px/400 metadata */
 .task-card {
     border-radius: 8px !important;
-    padding: 12px 14px !important;
-    background: rgba(35, 32, 55, 0.4) !important;
+    padding: 14px 16px !important;
+    background: rgba(237, 230, 220, 0.05) !important;
     min-height: unset !important;
     margin-bottom: 0 !important;
 }
@@ -373,7 +373,7 @@ button svg {
 
 .task-card--comfortable {
     border-radius: 8px !important;
-    padding: 12px 14px !important;
+    padding: 14px 16px !important;
     min-height: unset !important;
 }
 
@@ -972,3 +972,88 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
   }
 }
 
+/* =====================================================================
+   TASK-1791b — WARM DARK "FLAT MODE"
+   Loads last, so it wins. Neutralizes the AI-slop effects centrally:
+   - kills ALL glass blur (240 tokenized + 255 hardcoded) via global !important
+   - neutralizes decorative glow tokens to transparent (valid in shadow lists)
+   - keeps focus rings (recolored terracotta) for accessibility
+   Revert by deleting this block.
+   ===================================================================== */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+:root {
+  /* Blur tokens → 0 (defensive; rule above already neutralizes visually) */
+  --blur-xs: 0px;
+  --blur-sm: 0px;
+  --blur-regular: 0px;
+  --blur-md: 0px;
+  --blur-lg: 0px;
+  --blur-xl: 0px;
+  --overlay-component-backdrop: none;
+  --state-active-glass: none;
+
+  /* Decorative glows → transparent neutral (stays valid in box-shadow lists) */
+  --glass-glow: transparent;
+  --shadow-glow: 0 0 transparent;
+  --state-hover-glow: 0 0 transparent;
+  --state-selected-glow: 0 0 transparent;
+  --filter-today-glow: 0 0 transparent;
+  --filter-week-glow: 0 0 transparent;
+  --filter-tasks-glow: 0 0 transparent;
+  --filter-uncategorized-glow: 0 0 transparent;
+  --priority-high-glow: 0 0 transparent;
+  --priority-medium-glow: 0 0 transparent;
+  --priority-low-glow: 0 0 transparent;
+  --calendar-today-glow: 0 0 transparent;
+  --calendar-current-time-glow: 0 0 transparent;
+  --timer-glow-subtle: 0 0 transparent;
+  --timer-active-glow: 0 0 transparent;
+  --timer-active-glow-strong: 0 0 transparent;
+  --timer-shadow-glow: 0 0 transparent;
+  --timer-active-month-glow: 0 0 transparent;
+  --timer-work-stroke-glow: 0 0 transparent;
+  --timer-work-stroke-glow-intense: 0 0 transparent;
+  --timer-break-stroke-glow: 0 0 transparent;
+  --timer-break-stroke-glow-intense: 0 0 transparent;
+  --success-glow: 0 0 transparent;
+  --purple-glow-subtle: 0 0 transparent;
+  --purple-glow-medium: 0 0 transparent;
+  --blue-glow-subtle: 0 0 transparent;
+  --orange-glow-subtle: 0 0 transparent;
+  --brand-glow-sm: 0 0 transparent;
+  --danger-glow-sm: 0 0 transparent;
+  --warning-glow-sm: 0 0 transparent;
+  --blue-glow-sm: 0 0 transparent;
+  --project-indicator-glow-subtle: 0 0 transparent;
+  --project-indicator-glow-medium: 0 0 transparent;
+  --project-indicator-glow-strong: 0 0 transparent;
+  --brand-primary-glow: 0 0 transparent;
+
+  /* Focus rings KEPT (accessibility) — recolored terracotta */
+  --brand-focus-ring: 0 0 0 3px rgba(224, 122, 75, 0.35);
+  --purple-glow-focus: 0 0 0 3px rgba(224, 122, 75, 0.35);
+}
+
+/* Floating overlays MUST be opaque (blur was removed app-wide). Safety net so
+   menus / dropdowns / popovers / select panels never let page content bleed
+   through and become unreadable. Inner items keep their own hover/active bg. */
+.context-menu,
+.select-dropdown,
+.base-popover,
+.dropdown-menu,
+.dropdown-content,
+.popover-content,
+.n-popover,
+.n-popover__content,
+.n-dropdown-menu,
+.n-base-select-menu,
+.n-popselect-menu,
+.n-date-panel {
+  background: var(--overlay-component-bg) !important;
+}

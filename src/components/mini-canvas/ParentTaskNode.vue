@@ -44,12 +44,12 @@ const truncatedDescription = computed(() => {
   background: var(--glass-bg-medium, rgba(30, 30, 40, 0.8));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 2px solid var(--brand-primary, #4ECDC4);
+  border: 2px solid var(--brand-primary, #2DD4BF);
   border-radius: var(--radius-xl, 16px);
   padding: var(--space-4, 16px) var(--space-5, 20px);
   min-width: 240px;
   max-width: 360px;
-  box-shadow: 0 0 30px rgba(78, 205, 196, 0.15), 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 30px rgba(45, 212, 191, 0.15), 0 4px 20px rgba(0, 0, 0, 0.3);
   text-align: center;
 }
 
@@ -72,9 +72,9 @@ const truncatedDescription = computed(() => {
   border-radius: 999px;
   display: inline-block;
   margin-bottom: var(--space-2, 8px);
-  color: var(--brand-primary, #4ECDC4);
-  background: rgba(78, 205, 196, 0.1);
-  border: 1px solid rgba(78, 205, 196, 0.2);
+  color: var(--brand-primary, #2DD4BF);
+  background: rgba(45, 212, 191, 0.1);
+  border: 1px solid rgba(45, 212, 191, 0.2);
 }
 
 .parent-status.done {

@@ -4,7 +4,7 @@
       <AppLogo size="md" />
       <span class="brand-text">FlowState</span>
     </div>
-    <BaseButton variant="secondary" size="md" @click="sidebar.openCreateProject">
+    <BaseButton variant="ghost" size="md" @click="sidebar.openCreateProject">
       <Plus :size="14" />
       {{ $t('sidebar.create_project') }}
     </BaseButton>
@@ -45,7 +45,9 @@ const sidebar = useSidebarManagement()
 <style scoped>
 .sidebar-header {
   padding: var(--space-10) var(--space-6) var(--space-6) var(--space-6);
-  background: var(--glass-bg-medium);
+  /* No shaded block — it created a hard edge "line" cutting across the
+     workspace switcher below. Inherit the sidebar surface instead. */
+  background: transparent;
 }
 
 .app-brand {

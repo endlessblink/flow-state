@@ -613,9 +613,13 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     expect(store.session?.access_token).toBe('access-token-xyz')
   })
 
-  it('24. SIGNED_OUT event clears user and session', async () => {
+  it('24. SIGNED_OUT event clears user and session (after grace period)', async () => {
+    // TASK-1794: A transient SIGNED_OUT (no recoverable session) is NOT cleared
+    // synchronously — it is deferred behind a 2s grace timer to avoid flashing the
+    // login screen on Electron focus-change refresh races. With no session recovered,
+    // the timer elapses and clears auth state.
     const session = buildMockSession()
-    // First call for initialize, second call for SIGNED_OUT double-check (returns null = real signout)
+    // initialize → has session; every subsequent getSession (double-check + grace recheck) → null
     mockGetSession
       .mockResolvedValueOnce({ data: { session }, error: null })
       .mockResolvedValue({ data: { session: null }, error: null })
@@ -628,8 +632,40 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     fireAuthStateChange('SIGNED_OUT', null)
     await flushPromises()
 
+    // Grace period: still signed in immediately after the transient SIGNED_OUT
+    expect(store.user).not.toBeNull()
+
+    // Advance past the 2s grace timer; recheck finds no session → state cleared
+    await vi.advanceTimersByTimeAsync(2100)
+
     expect(store.user).toBeNull()
     expect(store.session).toBeNull()
+  })
+
+  it('24b. transient SIGNED_OUT followed by SIGNED_IN keeps user signed in (no flicker)', async () => {
+    // TASK-1794: The Electron flicker path — a spurious SIGNED_OUT is quickly followed
+    // by a valid session event, which must cancel the pending clear with no logout flash.
+    const session = buildMockSession()
+    mockGetSession
+      .mockResolvedValueOnce({ data: { session }, error: null })
+      .mockResolvedValue({ data: { session: null }, error: null })
+
+    const store = useAuthStore()
+    await store.initialize()
+    expect(store.isAuthenticated).toBe(true)
+
+    fireAuthStateChange('SIGNED_OUT', null)
+    await flushPromises()
+    expect(store.user).not.toBeNull() // deferred, not cleared
+
+    // Valid session re-appears before the grace timer fires → cancels the pending clear
+    fireAuthStateChange('TOKEN_REFRESHED', session)
+    await flushPromises()
+
+    // Even after the grace window, the user stays signed in
+    await vi.advanceTimersByTimeAsync(2100)
+    expect(store.user).not.toBeNull()
+    expect(store.session?.access_token).toBe('access-token-xyz')
   })
 
   it('25. retryInitialization resets failure state and allows fresh attempt', async () => {

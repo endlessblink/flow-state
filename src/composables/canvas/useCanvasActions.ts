@@ -106,7 +106,7 @@ export function useCanvasActions(
             const ghostSection: CanvasSection = {
                 id: sectionId,
                 name: (event.node.data?.name as string) || 'Unknown Group (Ghost)',
-                color: (event.node.data?.color as string) || '#6366f1',
+                color: (event.node.data?.color as string) || '#8B8178',
                 position: { x: 0, y: 0, width: CANVAS.DEFAULT_GROUP_WIDTH, height: CANVAS.DEFAULT_GROUP_HEIGHT },
                 isCollapsed: false,
                 type: 'custom',
@@ -218,7 +218,7 @@ export function useCanvasActions(
             name: 'New Group',
             type: 'custom',
             position: groupPosition,
-            color: '#6366f1', // Default indigo color
+            color: '#8B8178', // Default warm-neutral group color
             layout: 'freeform',
             isVisible: true,
             isCollapsed: false

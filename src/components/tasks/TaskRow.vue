@@ -116,7 +116,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const { t } = useI18n()
 defineEmits<{
   select: [taskId: string]
   toggleComplete: [taskId: string]
@@ -127,7 +126,7 @@ defineEmits<{
   updateProject: [taskId: string, projectId: string | null]
   updateDueDate: [taskId: string, dueDate: string | null]
 }>()
-
+const { t } = useI18n()
 const statusOptions = computed(() => [
   { label: t('task.status_todo'), value: 'todo' },
   { label: t('task.status_done'), value: 'done' }
@@ -339,7 +338,8 @@ onUnmounted(() => {
   transition: all var(--duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.task-row:hover .task-row__actions {
+.task-row:hover .task-row__actions,
+.task-row:focus-within .task-row__actions {
   opacity: 1;
 }
 

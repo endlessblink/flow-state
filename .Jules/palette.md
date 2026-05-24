@@ -1,0 +1,3 @@
+## 2024-05-18 - Hover-Revealed Actions Keyboard Accessibility
+**Learning:** Actions that are revealed only on hover (like in Kanban cards or list rows) are entirely inaccessible to keyboard users if they have `tabindex="-1"`. Furthermore, even if natively focusable, they remain invisible during keyboard navigation unless their parent container responds to the focus state.
+**Action:** Remove `tabindex="-1"` from hover-revealed action buttons so they are naturally in the tab order. Additionally, update the parent container's CSS to reveal these actions on `:focus-within` alongside `:hover` (e.g., `.card:hover .actions, .card:focus-within .actions { opacity: 1; }`), ensuring they become visible when a keyboard user tabs into them.

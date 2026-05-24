@@ -20,7 +20,7 @@
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, CalendarDays } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2}  from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
 import type Renderer from 'markdown-it/lib/renderer.mjs'

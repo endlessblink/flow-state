@@ -12,8 +12,9 @@
         <ChevronDown v-if="!isCollapsed" :size="14" />
         <ChevronRight v-else :size="14" />
       </button>
-      <input dir="auto"
+      <input
         v-model="sectionName"
+        dir="auto"
         class="section-name-input"
         placeholder="Group name..."
         :disabled="isCollapsed"
@@ -99,7 +100,7 @@ import { NPopover, NDatePicker } from 'naive-ui'
 // Define Props
 const props = defineProps<{
   id: string
-  data: unknown
+  data: Record<string, any>
   selected?: boolean
   dragging?: boolean
 }>()

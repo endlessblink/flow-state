@@ -1,3 +1,6 @@
+/* Self-hosted @font-face (Clash Display) — must precede other rules (CSS @import ordering) */
+@import './fonts.css';
+
 /* Import design tokens FIRST - provides all CSS custom properties */
 @import './design-tokens.css';
 

@@ -51,7 +51,7 @@
           >
             <div class="result-content" dir="auto">
               <!-- eslint-disable-next-line vue/no-v-html -->
-              <div class="result-title" v-html="highlightMatch(task.title)" />
+              <div class="result-title" v-html="highlightMatch(getTaskTitle(task))" />
               <div class="result-meta">
                 <span v-if="task.projectName" class="result-project">{{ task.projectName }}</span>
                 <span class="result-status" :class="`status--${task.status}`">{{ formatStatus(task.status) }}</span>
@@ -177,9 +177,9 @@ const filteredTasks = computed(() => {
   return allTasks.filter(task => {
     // Text search (skip if no query)
     if (query) {
-      const titleMatch = task.title.toLowerCase().includes(query)
+      const titleMatch = getTaskTitle(task).toLowerCase().includes(query)
       const projectMatch = (task.projectId && taskStore.projects) ?
-        taskStore.projects.find(p => p.id === task.projectId)?.name.toLowerCase().includes(query) :
+        (taskStore.projects.find(p => p.id === task.projectId)?.name ?? '').toLowerCase().includes(query) :
         false
       const statusMatch = task.status?.toLowerCase().includes(query)
       if (!titleMatch && !projectMatch && !statusMatch) return false
@@ -284,6 +284,10 @@ const handleTaskRightClick = (event: MouseEvent, task: Task) => {
 // Utility functions
 const highlightMatch = (text: string) => {
   return highlightMatchSafe(text, searchQuery.value)
+}
+
+const getTaskTitle = (task: Task) => {
+  return task.title?.trim() || 'Untitled task'
 }
 
 const getTaskCountForProject = (projectId: string) => {

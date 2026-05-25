@@ -611,31 +611,10 @@ export function useTaskOperations(
                         updates.recurringInstances = []
                     }
 
-                    // ================================================================
-                    // AUTO-ARCHIVE: Move done tasks off canvas to inbox
-                    // ================================================================
-                    // INTENTIONAL GEOMETRY INVARIANT EXCEPTION (TASK-255)
-                    //
-                    // This clears canvasPosition and parentId, which are geometry
-                    // properties normally restricted to drag handlers only.
-                    // This is ALLOWED because:
-                    //   1. Done tasks must leave the canvas — keeping them causes
-                    //      position/sync drift and visual clutter
-                    //   2. The write is always triggered by an explicit status change
-                    //      (user or sync marking task as 'done'), not by background sync
-                    //   3. The direction is always "remove from canvas" (clear), never
-                    //      "move to a new position" — so it cannot cause position drift
-                    // ================================================================
-                    if (task.canvasPosition) {
-                        updates.canvasPosition = undefined
-                        updates.isInInbox = true
-                        updates.parentId = undefined
-                        // BUG-1410: Force position version increment for auto-archive
-                        // hasGeometryChange was computed BEFORE auto-archive ran, so positionVersion
-                        // wouldn't be incremented. This ensures sync handlers respect the clear.
-                        updates.positionVersion = (task.positionVersion || 0) + 1
-                        console.log(`📦 [DONE-ARCHIVE] Task "${task.title?.slice(0, 30)}" moved off canvas to inbox`)
-                    }
+                    // Keep canvas geometry untouched when marking done. Hiding done
+                    // tasks is a view/filter concern; status updates must not clear
+                    // canvasPosition or parentId because that forces a full canvas
+                    // re-sync and can shift unrelated nodes.
                 }
                 // Clear completedAt when status changes FROM 'done' (task reopened)
                 else if (wasDone && isNowNotDone) {
@@ -718,13 +697,12 @@ export function useTaskOperations(
             _rawTasks.value[freshIndex] = {
                 ...task,
                 ...syncedUpdates,
-                // BUG-1410: syncedUpdates.positionVersion takes priority when auto-archive set it
-                // (hasGeometryChange was computed before auto-archive, so newVersion would be stale)
+                // Explicit positionVersion updates take priority over the derived geometry version.
                 positionVersion: syncedUpdates.positionVersion ?? newVersion,
                 updatedAt: new Date()
             }
 
-            // BUG-1369: Force canvas sync when task is auto-archived off canvas.
+            // Force canvas sync when a user action explicitly removes a task from canvas.
             // triggerCanvasSync() increments canvasUiSyncRequest which tells the canvas
             // orchestrator to re-evaluate visible nodes. Without this, the node stays
             // rendered even after canvasPosition is cleared, because updateTask() never
@@ -746,7 +724,7 @@ export function useTaskOperations(
                 // Whole-document LWW overwrites concurrent edits on other devices.
                 // e.g. phone edits title, desktop edits description → last save wipes the other.
                 // Solution: collect all changed keys from updates (includes derived mutations
-                // like completedAt when status→done, canvasPosition on auto-archive, etc.)
+                // like completedAt when status→done or explicit canvas removal.
                 // plus syncedUpdates (date field sync may add dueDate derived from instances).
                 // Only include those keys in the DB payload so Supabase only writes changed columns.
                 const changedKeys = new Set([
@@ -799,7 +777,7 @@ export function useTaskOperations(
                     payload.project_id = isValidUUID(updatedTask.projectId) ? updatedTask.projectId : null
                 }
                 // BUG-1365: Also check if canvasPosition was explicitly set in the updates object.
-                // During auto-archive (line ~458), canvasPosition is set to undefined to clear it.
+                // During explicit canvas removal, canvasPosition is set to undefined to clear it.
                 // Without 'canvasPosition' in updates check, the sync queue never sends position: null
                 // to the DB, so after refresh the task reappears on canvas with its old position.
                 if (changedKeys.has('canvasPosition')) {

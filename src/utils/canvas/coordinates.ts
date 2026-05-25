@@ -26,6 +26,7 @@
 import type { Node } from '@vue-flow/core'
 import type { Task } from '@/types/tasks'
 import type { CanvasGroup } from '@/stores/canvas/types'
+import { CANVAS } from '@/constants/canvas'
 
 export interface Position {
   x: number
@@ -252,6 +253,22 @@ export function roundPosition(pos: Position, decimals: number = 0): Position {
   return {
     x: Math.round(pos.x * factor) / factor,
     y: Math.round(pos.y * factor) / factor
+  }
+}
+
+/**
+ * Align a position with Vue Flow's configured snap grid.
+ * Use this for user-created canvas positions so the first drag does not jump.
+ */
+export function snapPositionToGrid(pos: Position, gridSize: number = CANVAS.GRID_SNAP_SIZE): Position {
+  const snap = (value: number) => {
+    const snapped = Math.round(value / gridSize) * gridSize
+    return Object.is(snapped, -0) ? 0 : snapped
+  }
+
+  return {
+    x: snap(pos.x),
+    y: snap(pos.y)
   }
 }
 

@@ -78,7 +78,28 @@
     />
 
     <Handle
-      id="group-target"
+      id="group-target-top"
+      type="target"
+      :position="Position.Top"
+      connectable
+      class="handle-target group-link-handle"
+    />
+    <Handle
+      id="group-target-right"
+      type="target"
+      :position="Position.Right"
+      connectable
+      class="handle-target group-link-handle"
+    />
+    <Handle
+      id="group-target-bottom"
+      type="target"
+      :position="Position.Bottom"
+      connectable
+      class="handle-target group-link-handle"
+    />
+    <Handle
+      id="group-target-left"
       type="target"
       :position="Position.Left"
       connectable
@@ -742,4 +763,23 @@ const handleResizeEnd = (event: unknown) => {
 }
 
 /* TASK-290: Resize handle styles moved to canvas-view-overrides.css for global control */
+
+.group-link-handle {
+  width: 9px;
+  height: 9px;
+  opacity: 0;
+  border: 1px solid var(--accent-primary);
+  background: var(--surface-primary);
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+}
+
+:global(body.connecting-active) .group-link-handle,
+.section-node:hover .group-link-handle {
+  opacity: 0.45;
+}
+
+:global(body.connecting-active) .group-link-handle:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
 </style>

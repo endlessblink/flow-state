@@ -8,7 +8,7 @@ import { useCanvasContextMenus } from './useCanvasContextMenus'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import { isPointInBounds } from '@/utils/canvas/spatialContainment'
-import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
+import { getGroupAbsolutePosition, snapPositionToGrid } from '@/utils/canvas/coordinates'
 import { useCanvasSectionProperties } from './useCanvasSectionProperties'
 import type { CanvasGroup } from '@/types/canvas'
 
@@ -186,6 +186,7 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
                 y: event.clientY
             })
             const { x, y } = flowCoords
+            const snappedDropPosition = snapPositionToGrid({ x, y })
 
             // BUG-1530: Detect if the drop position lands inside a canvas group.
             // If so, set parentId and inherit group properties (dueDate, priority, etc.)
@@ -245,11 +246,11 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
             // AWAIT the task update before calling syncNodes
             // Otherwise syncNodes runs with stale task data
             await taskStore.updateTask(taskId, {
-                canvasPosition: { x, y },
+                canvasPosition: snappedDropPosition,
+                isInInbox: false,
                 ...(targetGroup ? {
                     parentId: targetGroup.id,
                     ...(linkedParentTaskId ? { parentTaskId: linkedParentTaskId } : {}),
-                    isInInbox: false
                 } : {}),
                 ...groupProps
             })

@@ -57,6 +57,7 @@ export type UndoOperationType =
   | 'group-delete'
   | 'group-update'
   | 'group-resize'
+  | 'canvas-connection'
   | 'image-delete'  // TASK-1690: Canvas image deletion (undo restores image)
   | 'legacy' // For backward compatibility with entries that don't have metadata
 
@@ -350,6 +351,23 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       break
     }
 
+    case 'canvas-connection': {
+      for (const groupId of operation.affectedIds) {
+        const previousGroup = snapshotBefore.groups.find(g => g.id === groupId)
+        if (previousGroup) {
+          await canvasStore.updateGroup(groupId, { linkedParentTaskId: previousGroup.linkedParentTaskId ?? null })
+        }
+      }
+
+      for (const taskId of operation.affectedIds) {
+        const previousTask = snapshotBefore.tasks.find(t => t.id === taskId)
+        if (previousTask) {
+          await taskStore.updateTask(taskId, { parentTaskId: previousTask.parentTaskId ?? null }, 'USER')
+        }
+      }
+      break
+    }
+
     case 'image-delete': {
       // TASK-1690: Undo image deletion = restore the image from snapshot
       // TASK-1722: Return early — images are managed outside task/group sync,
@@ -496,6 +514,23 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
             position: afterGroup.position,
             parentGroupId: afterGroup.parentGroupId
           })
+        }
+      }
+      break
+    }
+
+    case 'canvas-connection': {
+      for (const groupId of operation.affectedIds) {
+        const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
+        if (afterGroup) {
+          await canvasStore.updateGroup(groupId, { linkedParentTaskId: afterGroup.linkedParentTaskId ?? null })
+        }
+      }
+
+      for (const taskId of operation.affectedIds) {
+        const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
+        if (afterTask) {
+          await taskStore.updateTask(taskId, { parentTaskId: afterTask.parentTaskId ?? null }, 'USER')
         }
       }
       break
@@ -1006,6 +1041,27 @@ const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup
   }
 }
 
+const canvasConnectionWithUndo = async (
+  description: string,
+  affectedIds: string[],
+  applyConnectionChange: () => Promise<void>
+) => {
+  const handle = await beginOperation({
+    type: 'canvas-connection',
+    affectedIds: [...new Set(affectedIds)],
+    description
+  })
+
+  try {
+    await applyConnectionChange()
+    await nextTick()
+    await commitOperation(handle)
+  } catch (error) {
+    console.error('❌ canvasConnectionWithUndo failed:', error)
+    throw error
+  }
+}
+
 const deleteGroupWithUndo = async (groupId: string) => {
   const canvasStore = useCanvasStore()
 
@@ -1235,6 +1291,7 @@ export function getUndoSystem() {
     createGroupWithUndo,
     updateGroupWithUndo,
     deleteGroupWithUndo,
+    canvasConnectionWithUndo,
 
     // BUG-309-B: Debugging/inspection
     getOperationStack: () => [...operationStack.value],

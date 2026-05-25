@@ -140,6 +140,7 @@
           @pane-click="handlePaneClick"
           @pane-context-menu="handlePaneContextMenu"
           @node-context-menu="handleNodeContextMenu"
+          @edge-click="handleEdgeClick"
           @edge-context-menu="handleEdgeContextMenu"
           @edge-double-click="handleEdgeDoubleClick"
           @connect="handleConnect"
@@ -614,7 +615,7 @@ const {
   handleGroupCreated, handleGroupUpdated,
   handleGroupEditSave, confirmDeleteGroup, confirmBulkDelete, handleConnect, handleConnectStart, handleConnectEnd,
   handleEdgesChange, handleNodesChange,
-  handleNodeContextMenu, handleEdgeContextMenu, handleEdgeDoubleClick,
+  handleNodeContextMenu, handleEdgeClick, handleEdgeContextMenu, handleEdgeDoubleClick,
   handleNodeClick, handleSelectionChange,
   screenToFlowCoordinate,
 

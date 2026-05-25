@@ -6,6 +6,7 @@ import type { EdgeMouseEvent, Edge } from '@vue-flow/core'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import { getAllDescendantGroupIds } from '@/utils/canvas/storeHelpers'
+import { getUndoSystem } from '@/composables/undoSingleton'
 
 interface ConnectionDeps {
     syncEdges: (options?: { force?: boolean }) => void
@@ -36,6 +37,7 @@ export function useCanvasConnections(
 ) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
+    const undoSystem = getUndoSystem()
 
     const linkTaskToGroup = async (parentTaskId: string, groupNodeId: string) => {
         const { id: groupId } = CanvasIds.parseNodeId(groupNodeId)
@@ -43,7 +45,6 @@ export function useCanvasConnections(
         const parentTask = taskStore.tasks.find(t => t.id === parentTaskId)
         if (!group || !parentTask?.canvasPosition) return
 
-        await canvasStore.updateGroup(groupId, { linkedParentTaskId: parentTaskId })
         const linkedGroupIds = new Set(getAllDescendantGroupIds(groupId, canvasStore.groups))
 
         const childTasks = taskStore.tasks.filter(task =>
@@ -56,8 +57,15 @@ export function useCanvasConnections(
             !task.isPinned
         )
 
-        await Promise.all(
-            childTasks.map(task => taskStore.updateTaskWithUndo(task.id, { parentTaskId }))
+        await undoSystem.canvasConnectionWithUndo(
+            `Connect task to group: ${parentTask.title} -> ${group.name}`,
+            [groupId, ...childTasks.map(task => task.id)],
+            async () => {
+                await canvasStore.updateGroup(groupId, { linkedParentTaskId: parentTaskId })
+                await Promise.all(
+                    childTasks.map(task => taskStore.updateTask(task.id, { parentTaskId }))
+                )
+            }
         )
 
         deps.syncEdges({ force: true })
@@ -69,7 +77,6 @@ export function useCanvasConnections(
         if (!group?.linkedParentTaskId) return
 
         const linkedParentTaskId = parentTaskId || group.linkedParentTaskId
-        await canvasStore.updateGroup(groupId, { linkedParentTaskId: null })
         const linkedGroupIds = new Set(getAllDescendantGroupIds(groupId, canvasStore.groups))
 
         const childTasks = taskStore.tasks.filter(task =>
@@ -78,8 +85,15 @@ export function useCanvasConnections(
             task.parentTaskId === linkedParentTaskId
         )
 
-        await Promise.all(
-            childTasks.map(task => taskStore.updateTaskWithUndo(task.id, { parentTaskId: null }))
+        await undoSystem.canvasConnectionWithUndo(
+            `Disconnect task from group: ${group.name}`,
+            [groupId, ...childTasks.map(task => task.id)],
+            async () => {
+                await canvasStore.updateGroup(groupId, { linkedParentTaskId: null })
+                await Promise.all(
+                    childTasks.map(task => taskStore.updateTask(task.id, { parentTaskId: null }))
+                )
+            }
         )
 
         deps.syncEdges({ force: true })
@@ -261,6 +275,21 @@ export function useCanvasConnections(
         deps.closeNodeContextMenu()
     }
 
+    const handleEdgeClick = (event: EdgeMouseEvent) => {
+        const mouseEvent = event.event as MouseEvent
+        event.event.preventDefault()
+        event.event.stopPropagation()
+
+        const { x, y } = getViewportCoordinates(mouseEvent)
+        state.edgeContextMenuX.value = x
+        state.edgeContextMenuY.value = y
+        state.selectedEdge.value = event.edge
+        state.showEdgeContextMenu.value = true
+
+        deps.closeCanvasContextMenu()
+        deps.closeNodeContextMenu()
+    }
+
     const closeEdgeContextMenu = () => {
         state.showEdgeContextMenu.value = false
         state.selectedEdge.value = null
@@ -299,6 +328,7 @@ export function useCanvasConnections(
         handleConnectEnd,
         handleConnect,
         disconnectEdge,
+        handleEdgeClick,
         handleEdgeContextMenu,
         handleEdgeDoubleClick,
         closeEdgeContextMenu

@@ -163,13 +163,39 @@ function readJsonBody(req) {
 /** YYYY-MM-DD from a timestamptz string (contract returns date-only). */
 const toDateOnly = (ts) => (typeof ts === 'string' ? ts.slice(0, 10) : null)
 
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
+
+function localDateOnly(date = new Date()) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function nextDateOnly(dateOnly) {
+  const [y, m, d] = dateOnly.split('-').map(Number)
+  return localDateOnly(new Date(y, m - 1, d + 1))
+}
+
+function isValidDateOnly(dateOnly) {
+  if (!DATE_ONLY_RE.test(dateOnly)) return false
+  const [y, m, d] = dateOnly.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d
+}
+
 // --- Route handlers ---------------------------------------------------------
 
 async function handleGetTasks(url, res) {
   const { supabase, userId } = ctx
-  const statusParam = url.searchParams.get('status') // 'todo' | 'done' | null
+  const statusParam = url.searchParams.get('status') // 'todo' | 'open' | 'done' | null
+  const dueParam = url.searchParams.get('due') // 'today' | 'overdue' | 'open' | YYYY-MM-DD | null
   const limitParam = Number(url.searchParams.get('limit'))
   const limit = Math.min(Number.isFinite(limitParam) && limitParam > 0 ? limitParam : 25, 25)
+
+  if (statusParam && statusParam !== 'todo' && statusParam !== 'open' && statusParam !== 'done') {
+    return send(res, 400, { error: 'status must be todo|open|done' })
+  }
 
   let query = supabase
     .from('tasks')
@@ -182,6 +208,20 @@ async function handleGetTasks(url, res) {
   // status=done → done; status=todo or omitted → all open (non-done)
   if (statusParam === 'done') query = query.eq('status', 'done')
   else query = query.neq('status', 'done')
+
+  if (dueParam) {
+    if (dueParam === 'open') {
+      query = query.is('due_date', null)
+    } else if (dueParam === 'overdue') {
+      query = query.lt('due_date', localDateOnly())
+    } else {
+      const dueDate = dueParam === 'today' ? localDateOnly() : dueParam
+      if (!isValidDateOnly(dueDate)) {
+        return send(res, 400, { error: 'due must be today|overdue|open|YYYY-MM-DD' })
+      }
+      query = query.gte('due_date', dueDate).lt('due_date', nextDateOnly(dueDate))
+    }
+  }
 
   const { data, error } = await query
   if (error) return send(res, 500, { error: error.message })
@@ -282,6 +322,30 @@ async function handlePatchTask(id, req, res) {
   send(res, 200, { ok: true })
 }
 
+async function handleDeleteTask(id, res) {
+  const { supabase, userId } = ctx
+  // Verify first so callers get a stable 404 for unknown, cross-user, or already-deleted ids.
+  const { data: existing, error: findErr } = await supabase
+    .from('tasks')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .maybeSingle()
+  if (findErr) return send(res, 500, { error: findErr.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('tasks')
+    .update({ is_deleted: true, deleted_at: now, updated_at: now })
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+  if (error) return send(res, 500, { error: error.message })
+  send(res, 200, { ok: true })
+}
+
 // --- Server -----------------------------------------------------------------
 
 const server = http.createServer(async (req, res) => {
@@ -312,9 +376,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && path === '/api/tasks') {
       return await handleCreateTask(req, res)
     }
-    const patchMatch = path.match(/^\/api\/tasks\/([^/]+)$/)
-    if (req.method === 'PATCH' && patchMatch) {
-      return await handlePatchTask(decodeURIComponent(patchMatch[1]), req, res)
+    const taskMatch = path.match(/^\/api\/tasks\/([^/]+)$/)
+    if (req.method === 'PATCH' && taskMatch) {
+      return await handlePatchTask(decodeURIComponent(taskMatch[1]), req, res)
+    }
+    if (req.method === 'DELETE' && taskMatch) {
+      return await handleDeleteTask(decodeURIComponent(taskMatch[1]), res)
     }
 
     send(res, 404, { error: 'not found' })

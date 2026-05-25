@@ -15,6 +15,9 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useVueFlow, type Edge } from '@vue-flow/core'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
+import { getAllDescendantGroupIds } from '@/utils/canvas/storeHelpers'
+import { isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 
 interface EdgeSyncDeps {
     recentlyRemovedEdges: Ref<Set<string>>
@@ -40,6 +43,67 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
         }
 
         return null
+    }
+
+    const getClosestGroupTargetHandle = (sourceTask: Task, groupId: string): string => {
+        const group = canvasStore.groups.find(g => g.id === groupId)
+        if (!group?.position || !sourceTask.canvasPosition) return 'group-target-left'
+
+        const groupPos = getGroupAbsolutePosition(groupId, canvasStore.groups)
+        const sourceCenter = {
+            x: sourceTask.canvasPosition.x + 140,
+            y: sourceTask.canvasPosition.y + 40
+        }
+
+        if (sourceCenter.x < groupPos.x) return 'group-target-left'
+        if (sourceCenter.x > groupPos.x + group.position.width) return 'group-target-right'
+        if (sourceCenter.y < groupPos.y) return 'group-target-top'
+        return 'group-target-bottom'
+    }
+
+    const taskIsVisuallyInsideGroupTree = (task: Task, groupId: string): boolean => {
+        if (!task.canvasPosition) return false
+
+        const linkedGroupIds = getAllDescendantGroupIds(groupId, canvasStore.groups)
+        if (task.parentId && linkedGroupIds.includes(task.parentId)) return true
+
+        return linkedGroupIds.some(id => {
+            const group = canvasStore.groups.find(g => g.id === id)
+            if (!group?.position) return false
+
+            return isNodeCompletelyInside(
+                { position: task.canvasPosition },
+                {
+                    position: getGroupAbsolutePosition(id, canvasStore.groups),
+                    width: group.position.width,
+                    height: group.position.height
+                },
+                0
+            )
+        })
+    }
+
+    const isImpliedByLinkedGroup = (task: Task): boolean => {
+        if (!task.parentTaskId) return false
+
+        return canvasStore.groups.some(group =>
+            group.linkedParentTaskId === task.parentTaskId &&
+            taskIsVisuallyInsideGroupTree(task, group.id)
+        )
+    }
+
+    const edgeSignature = (edge: Edge): string => {
+        return JSON.stringify({
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            sourceHandle: edge.sourceHandle || null,
+            targetHandle: edge.targetHandle || null,
+            type: edge.type || null,
+            animated: edge.animated || false,
+            markerEnd: edge.markerEnd || null,
+            style: edge.style || null
+        })
     }
 
     /**
@@ -75,6 +139,8 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
                     id: edgeId,
                     source: group.linkedParentTaskId,
                     target: groupNodeId,
+                    sourceHandle: 'source',
+                    targetHandle: getClosestGroupTargetHandle(parentTask, group.id),
                     type: 'default',
                     animated: false,
                     style: {
@@ -98,7 +164,8 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
                 if (!parentTask?.canvasPosition) continue
 
                 // A linked group edge already represents these child relationships visually.
-                if (task.parentId && getLinkedParentForGroup(task.parentId) === task.parentTaskId) continue
+                if (getLinkedParentForGroup(task.parentId) === task.parentTaskId) continue
+                if (isImpliedByLinkedGroup(task)) continue
 
                 // Skip group nodes - edges are only between tasks
                 if (CanvasIds.isGroupNode(task.parentTaskId) || CanvasIds.isGroupNode(task.id)) continue
@@ -127,11 +194,12 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
             // Idempotence check: only update if edges changed
             const currentEdgeIds = new Set(currentEdges.value.map(e => e.id))
             const newEdgeIds = new Set(newEdges.map(e => e.id))
+            const currentSignatures = new Map(currentEdges.value.map(e => [e.id, edgeSignature(e)]))
 
             const hasChanges =
                 currentEdges.value.length !== newEdges.length ||
                 [...currentEdgeIds].some(id => !newEdgeIds.has(id)) ||
-                [...newEdgeIds].some(id => !currentEdgeIds.has(id))
+                newEdges.some(edge => currentSignatures.get(edge.id) !== edgeSignature(edge))
 
             if (hasChanges) {
                 console.debug('[EdgeSync] Syncing edges', {

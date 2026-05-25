@@ -51,5 +51,11 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     minimize: () => electron_1.ipcRenderer.invoke('window:minimize'),
     maximize: () => electron_1.ipcRenderer.invoke('window:maximize'),
     close: () => electron_1.ipcRenderer.invoke('window:close'),
+    // Local Task API (Life OS) — TASK-1797
+    setLocalApiSession: (session) => electron_1.ipcRenderer.invoke('localApi:setSession', session),
+    clearLocalApiSession: () => electron_1.ipcRenderer.invoke('localApi:clearSession'),
+    setLocalApiEnabled: (enabled) => electron_1.ipcRenderer.invoke('localApi:setEnabled', enabled),
+    getLocalApiToken: () => electron_1.ipcRenderer.invoke('localApi:getToken'),
+    getLocalApiStatus: () => electron_1.ipcRenderer.invoke('localApi:status'),
 });
 //# sourceMappingURL=preload.js.map

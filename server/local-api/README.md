@@ -66,8 +66,9 @@ until the app forwards a session (and after sign-out).
 { "ok": true }
 ```
 
-### `GET /api/tasks?status=todo&limit=25`
-`status` optional (`todo` | `done`; omitted = all open). Capped at 25 items.
+### `GET /api/tasks?status=todo&due=today&limit=25`
+`status` optional (`todo` / `open` | `done`; omitted = all open). `due` optional
+(`today` | `overdue` | `open` for no due date | `YYYY-MM-DD`). Capped at 25 items.
 ```json
 { "tasks": [
   { "id": "uuid", "title": "Draft Q3 plan", "status": "todo",
@@ -97,6 +98,15 @@ and (unless `progress` is given) `progress: 100`.
 { "error": "not found" }
 ```
 
+### `DELETE /api/tasks/:id`
+Soft-deletes a task for the current user (`is_deleted=true`, `deleted_at=now`).
+```json
+// 200
+{ "ok": true }
+// 404 (unknown, cross-user, or already deleted id)
+{ "error": "not found" }
+```
+
 Every response is JSON. Errors are `{ "error": "<message>" }` — the handler
 never throws past itself.
 
@@ -110,9 +120,12 @@ const BASE = 'http://127.0.0.1:5577'
 const TOKEN = process.env.FLOW_STATE_API_TOKEN // from FlowState Settings (token mode)
 const headers = { 'Content-Type': 'application/json', ...(TOKEN && { Authorization: `Bearer ${TOKEN}` }) }
 
-export async function getTasks(status?: 'todo' | 'done') {
-  const q = status ? `?status=${status}` : ''
-  const r = await fetch(`${BASE}/api/tasks${q}`, { headers })
+export async function getTasks(opts: { status?: 'todo' | 'open' | 'done'; due?: 'today' | 'overdue' | 'open' | string } = {}) {
+  const q = new URLSearchParams()
+  if (opts.status) q.set('status', opts.status)
+  if (opts.due) q.set('due', opts.due)
+  const suffix = q.size ? `?${q}` : ''
+  const r = await fetch(`${BASE}/api/tasks${suffix}`, { headers })
   return (await r.json()).tasks as Array<{ id: string; title: string; status: string; priority: string | null; dueDate: string | null; projectId: string | null }>
 }
 
@@ -123,6 +136,11 @@ export async function createTask(input: { title: string; description?: string; p
 
 export async function updateTask(id: string, patch: { status?: 'todo' | 'done'; title?: string; priority?: 'low' | 'medium' | 'high' | null; dueDate?: string; progress?: number }) {
   const r = await fetch(`${BASE}/api/tasks/${id}`, { method: 'PATCH', headers, body: JSON.stringify(patch) })
+  return r.json() // { ok: true } or { error }
+}
+
+export async function deleteTask(id: string) {
+  const r = await fetch(`${BASE}/api/tasks/${id}`, { method: 'DELETE', headers })
   return r.json() // { ok: true } or { error }
 }
 ```

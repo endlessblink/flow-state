@@ -17,6 +17,7 @@ import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { findMatchingGroupForDueDate, calculatePositionInGroup } from './useSmartGroupMatcher'
 import { pushImageDeleteUndo } from '@/composables/undoSingleton'
 import { useVueFlow } from '@vue-flow/core'
+import { snapPositionToGrid } from '@/utils/canvas/coordinates'
 
 
 
@@ -85,7 +86,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 return
             }
 
-            quickTaskPosition.value = flowCoords
+            quickTaskPosition.value = snapPositionToGrid(flowCoords)
             deps.closeCanvasContextMenu()
             isQuickTaskCreateOpen.value = true
 
@@ -130,6 +131,10 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             const minY = groupY + padding + 40 // +40 for header
             const maxY = groupY + groupHeight - CANVAS.DEFAULT_TASK_HEIGHT - padding
 
+            absolutePos = snapPositionToGrid({
+                x: Math.max(minX, Math.min(absolutePos.x, maxX)),
+                y: Math.max(minY, Math.min(absolutePos.y, maxY))
+            })
             absolutePos.x = Math.max(minX, Math.min(absolutePos.x, maxX))
             absolutePos.y = Math.max(minY, Math.min(absolutePos.y, maxY))
         } else {
@@ -256,8 +261,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         // Store position with parent task connection info
         quickTaskPosition.value = {
-            x: centeredX,
-            y: centeredY,
+            ...snapPositionToGrid({ x: centeredX, y: centeredY }),
             parentTaskId  // This will create the connection when task is created
         }
 

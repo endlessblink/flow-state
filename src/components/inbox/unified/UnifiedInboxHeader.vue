@@ -160,6 +160,7 @@
     :tasks="baseTasks"
     :projects="rootProjects"
     :on-canvas-count="onCanvasCount"
+    :search-query="searchQuery"
     @update:sort-by="$emit('update:sortBy', $event)"
     @update:sort-direction="$emit('update:sort-direction', $event)"
     @update:unscheduled-only="$emit('update:unscheduled-only', $event)"
@@ -167,6 +168,7 @@
     @update:selected-priorities="$emit('update:selected-priorities', $event)"
     @update:selected-projects="$emit('update:selected-projects', $event)"
     @update:selected-durations="$emit('update:selected-durations', $event)"
+    @update:search-query="$emit('update:searchQuery', $event)"
     @clear-all="$emit('clearAll')"
   />
 </template>

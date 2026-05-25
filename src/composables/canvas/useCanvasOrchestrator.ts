@@ -268,7 +268,10 @@ export function useCanvasOrchestrator() {
         if (!options?.force && !canAcceptRemoteUpdate.value) {
             return
         }
-        edgeSync.syncEdges(tasksWithCanvasPosition.value)
+        const visibleEdgeTasks = taskStore.hideCanvasDoneTasks
+            ? tasksWithCanvasPosition.value.filter(task => task.status !== 'done')
+            : tasksWithCanvasPosition.value
+        edgeSync.syncEdges(visibleEdgeTasks)
     }
 
     // Batched edge sync to coalesce multiple updates

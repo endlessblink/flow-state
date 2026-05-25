@@ -13,7 +13,7 @@ import { useCanvasResizeCalculation } from './useCanvasResizeCalculation'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getDeepestContainingGroup, DEFAULT_TASK_WIDTH, DEFAULT_TASK_HEIGHT, isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 import { useNodeSync } from './useNodeSync'
-import { canvasSyncInProgress } from './useCanvasSync'
+import { canvasSyncInProgress, canvasSyncSettlingUntil } from './useCanvasSync'
 import { useNodeStateManager, NodeState } from './state-machine'
 import { storeToRefs } from 'pinia'
 import { getGroupAbsolutePosition, toAbsolutePosition } from '@/utils/canvas/coordinates'
@@ -523,7 +523,7 @@ export function useCanvasInteractions(deps?: {
         // BUG-1061 FIX #5: Skip if triggered by setNodes() during canvas sync
         // Vue Flow may fire nodeDragStop when setNodes() updates node positions programmatically.
         // This creates a reactive loop: drag → Smart Group update → sync → setNodes → drag fires again.
-        if (canvasSyncInProgress.value) {
+        if (canvasSyncInProgress.value || Date.now() < canvasSyncSettlingUntil.value) {
             if (import.meta.env.DEV) {
                 console.log('[CANVAS:INTERACT] Drag stop blocked - triggered during canvas sync')
             }

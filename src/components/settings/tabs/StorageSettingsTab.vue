@@ -13,7 +13,8 @@ import {
   CloudLightning,
   RefreshCw,
   Cloud,
-  HardDrive
+  HardDrive,
+  Trash2
 } from 'lucide-vue-next'
 import useBackupSystem from '@/composables/useBackupSystem'
 import SettingsSection from '../SettingsSection.vue'
@@ -226,7 +227,19 @@ const handleGoldenRestore = async (index: number) => {
 const taskStore = useTaskStore()
 const isCleaningUp = ref(false)
 const isClearingSyncQueue = ref(false)
+const isClearingDoneTasks = ref(false)
+const doneTaskCleanupCutoff = ref('')
 const cleanupResult = ref<{ success: boolean; message: string } | null>(null)
+
+const doneTasksBeforeCutoff = computed(() => {
+  if (!doneTaskCleanupCutoff.value) return []
+
+  return taskStore.rawTasks.filter(task =>
+    task.status === 'done' &&
+    !!task.dueDate &&
+    task.dueDate <= doneTaskCleanupCutoff.value
+  )
+})
 
 const handleCleanupTasks = async () => {
   isCleaningUp.value = true
@@ -265,6 +278,48 @@ const handleClearSyncQueue = async () => {
     }
   } finally {
     isClearingSyncQueue.value = false
+  }
+}
+
+const handleClearDoneTasksBeforeCutoff = async () => {
+  if (!doneTaskCleanupCutoff.value) {
+    cleanupResult.value = {
+      success: false,
+      message: 'Choose a cutoff due date first'
+    }
+    return
+  }
+
+  const tasksToDelete = doneTasksBeforeCutoff.value
+  if (!tasksToDelete.length) {
+    cleanupResult.value = {
+      success: true,
+      message: 'No done tasks found on or before that due date'
+    }
+    return
+  }
+
+  const confirmed = confirm(
+    `This will remove ${tasksToDelete.length} done task(s) due on or before ${doneTaskCleanupCutoff.value}. ` +
+    'They will be soft-deleted and can be recovered from backups/trash paths. Continue?'
+  )
+  if (!confirmed) return
+
+  isClearingDoneTasks.value = true
+  cleanupResult.value = null
+  try {
+    await taskStore.bulkDeleteTasks(tasksToDelete.map(task => task.id))
+    cleanupResult.value = {
+      success: true,
+      message: `Removed ${tasksToDelete.length} done task(s) due on or before ${doneTaskCleanupCutoff.value}`
+    }
+  } catch (e) {
+    cleanupResult.value = {
+      success: false,
+      message: `Error: ${e instanceof Error ? e.message : 'Unknown error'}`
+    }
+  } finally {
+    isClearingDoneTasks.value = false
   }
 }
 
@@ -622,6 +677,29 @@ onMounted(async () => {
             <RotateCcw :size="16" />
             {{ isClearingSyncQueue ? 'Clearing...' : 'Clear Sync Queue' }}
           </button>
+        </div>
+
+        <div class="done-cleanup-panel">
+          <div class="done-cleanup-copy">
+            <span class="done-cleanup-title">Remove done tasks by due date</span>
+            <span class="done-cleanup-desc">
+              Soft-delete completed tasks with a due date on or before the selected date.
+            </span>
+          </div>
+          <div class="done-cleanup-controls">
+            <label class="done-cleanup-field">
+              <span>Cutoff due date</span>
+              <input v-model="doneTaskCleanupCutoff" type="date">
+            </label>
+            <button
+              class="cleanup-btn danger"
+              :disabled="isClearingDoneTasks || !doneTaskCleanupCutoff || doneTasksBeforeCutoff.length === 0"
+              @click="handleClearDoneTasksBeforeCutoff"
+            >
+              <Trash2 :size="16" />
+              {{ isClearingDoneTasks ? 'Removing...' : `Remove ${doneTasksBeforeCutoff.length} Done` }}
+            </button>
+          </div>
         </div>
         <p v-if="cleanupResult" class="cleanup-result" :class="{ success: cleanupResult.success }">
           {{ cleanupResult.message }}
@@ -1280,6 +1358,65 @@ onMounted(async () => {
 .cleanup-btn.secondary:hover:not(:disabled) {
   background: var(--glass-bg-strong);
   border-color: var(--glass-border-strong);
+}
+
+.cleanup-btn.danger {
+  background: var(--color-danger);
+}
+
+.cleanup-btn.danger:hover:not(:disabled) {
+  background: var(--danger-fg);
+}
+
+.done-cleanup-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+}
+
+.done-cleanup-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.done-cleanup-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.done-cleanup-desc {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.done-cleanup-controls {
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.done-cleanup-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.done-cleanup-field input {
+  min-width: 160px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
 }
 
 .cleanup-result {

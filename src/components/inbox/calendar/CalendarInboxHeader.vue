@@ -171,7 +171,7 @@ defineProps<{
   selectedDurations: Set<DurationCategory>
   hideDoneTasks: boolean
   baseTasks: Task[]
-  rootProjects: unknown[]
+  rootProjects: any[]
   searchQuery: string // TASK-1075
   sortBy?: SortByType // TASK-1303
   sortDirection?: SortDirection // TASK-1412

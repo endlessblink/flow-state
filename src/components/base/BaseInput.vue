@@ -9,11 +9,11 @@
       <slot name="prefix" />
 
       <input
+        :dir="inputDir"
         :id="inputId"
         ref="inputRef"
         v-model="localValue"
         :type="type"
-        :dir="inputDir"
         :placeholder="placeholder"
         :disabled="disabled"
         :required="required"

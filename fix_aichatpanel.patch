@@ -1,9 +1,0 @@
---- src/components/ai/AIChatPanel.vue
-+++ src/components/ai/AIChatPanel.vue
-@@ -836,3 +836,5 @@
-                   >
--                    <OverflowTooltip class="chat-history-title" :text="conv.title" style="flex: 1; min-width: 0">{{ conv.title }}</OverflowTooltip>
-+                    <OverflowTooltip class="chat-history-title" :text="conv.title" style="flex: 1; min-width: 0">
-+                      {{ conv.title }}
-+                    </OverflowTooltip>
-                     <span class="chat-history-date">{{ formatRelativeDate(conv.updatedAt) }}</span>

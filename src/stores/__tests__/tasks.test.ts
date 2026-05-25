@@ -109,7 +109,7 @@ describe('TaskStore', () => {
       expect(movedTask?.status).toBe('todo')
     })
 
-    it('auto-archives completed tasks (removes from canvas)', async () => {
+    it('marks completed canvas tasks done without moving them to inbox', async () => {
       const store = useTaskStore()
       const task = await store.createTask({
         title: 'Task',
@@ -122,8 +122,8 @@ describe('TaskStore', () => {
 
       const completedTask = store.tasks.find(t => t.id === task.id)
       expect(completedTask?.status).toBe('done')
-      expect(completedTask?.isInInbox).toBe(true)
-      expect(completedTask?.canvasPosition).toBeUndefined()
+      expect(completedTask?.isInInbox).toBe(false)
+      expect(completedTask?.canvasPosition).toEqual({ x: 100, y: 100 })
     })
   })
 

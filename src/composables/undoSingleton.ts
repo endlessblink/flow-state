@@ -825,6 +825,14 @@ const commitOperation = async (handle?: OperationHandle) => {
   return true
 }
 
+const promoteOperationToTop = (timestamp: number) => {
+  const index = operationStack.value.findIndex(entry => entry.operation.timestamp === timestamp)
+  if (index < 0 || index === operationStack.value.length - 1) return
+
+  const [entry] = operationStack.value.splice(index, 1)
+  operationStack.value.push(entry)
+}
+
 // UPDATED: Now saves both tasks AND groups (ISSUE-008 fix)
 // BUG-309-B: Enhanced to support operation metadata for selective restoration
 const saveState = async (_description?: string, _operation?: Omit<UndoOperation, 'timestamp'>) => {
@@ -1056,6 +1064,11 @@ const canvasConnectionWithUndo = async (
     await applyConnectionChange()
     await nextTick()
     await commitOperation(handle)
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => promoteOperationToTop(handle.operation.timestamp), 0)
+      window.setTimeout(() => promoteOperationToTop(handle.operation.timestamp), 250)
+      window.setTimeout(() => promoteOperationToTop(handle.operation.timestamp), 750)
+    }
   } catch (error) {
     console.error('❌ canvasConnectionWithUndo failed:', error)
     throw error

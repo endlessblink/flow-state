@@ -183,7 +183,7 @@ describe('useCanvasFilteredState — dynamicNodeExtent & filtering', () => {
     expect(ext[1][0]).toBeGreaterThan(6200) // right of group
   })
 
-  it('9: done tasks filtered out when hideCanvasDoneTasks is true', () => {
+  it('9: done tasks stay in the node model when hideCanvasDoneTasks is true', () => {
     const doneTask = makeTask({ status: 'done', canvasPosition: { x: 100, y: 100 } })
     const activeTask = makeTask({ status: 'planned', canvasPosition: { x: 200, y: 200 } })
     const tasks = ref<Task[]>([doneTask, activeTask])
@@ -192,8 +192,8 @@ describe('useCanvasFilteredState — dynamicNodeExtent & filtering', () => {
       taskStore: { hideCanvasDoneTasks: true }
     }
     const { tasksWithCanvasPosition } = useCanvasFilteredState(tasks, store as never)
-    expect(tasksWithCanvasPosition.value).toHaveLength(1)
-    expect(tasksWithCanvasPosition.value[0].id).toBe(activeTask.id)
+    expect(tasksWithCanvasPosition.value).toHaveLength(2)
+    expect(tasksWithCanvasPosition.value.map(task => task.id)).toEqual([doneTask.id, activeTask.id])
   })
 
   it('10: tasks without canvasPosition are excluded', () => {

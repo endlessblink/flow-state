@@ -13,6 +13,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 describe('Sync Layer Read-Only Contract (TASK-240)', () => {
     beforeEach(() => {
@@ -93,6 +95,13 @@ describe('Sync Contract Invariants', () => {
 
         // Document the contract exists
         expect(true).toBe(true);
+    });
+
+    it('should not mutate task store from useCanvasSync', () => {
+        const source = readFileSync(resolve(process.cwd(), 'src/composables/canvas/useCanvasSync.ts'), 'utf8');
+
+        expect(source).not.toContain('taskStore.updateTask(');
+        expect(source).not.toContain("'RECONCILE'");
     });
 
     it('should have one-time reconciliation guard', () => {

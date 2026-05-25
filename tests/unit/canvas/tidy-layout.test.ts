@@ -210,10 +210,9 @@ describe('useTidyLayout', () => {
     )
   })
 
-  it('uses at most two measured-width overflow columns for dense groups', () => {
-    // Tidy is vertical-first: dense groups may use two columns, but never a wide
-    // horizontal grid. Column spacing must use rendered card width so Hebrew
-    // cards do not overlap.
+  it('keeps dense groups in one measured-height vertical stack', () => {
+    // User preference: Tidy must not move tasks into side-by-side columns. It
+    // should stack from the header with measured heights and tight gaps.
     const today = makeGroup('Today', 0)
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
     const tasks = Array.from({ length: 18 }, (_, i) => ({
@@ -231,11 +230,12 @@ describe('useTidyLayout', () => {
     release()
 
     expect(taskMoves.length).toBe(18)
-    expect(taskMoves.slice(0, 8).every((move) => move.position.x === 20)).toBe(true)
-    expect(taskMoves.slice(8).every((move) => move.position.x === 320)).toBe(true)
-    expect(taskMoves[8].position.y).toBe(taskMoves[0].position.y)
-    expect(Math.max(...new Set(taskMoves.map((move) => move.position.x)).values())).toBe(320)
-    expect(groupMoves[0].size.width).toBe(700)
+    expect(taskMoves.every((move) => move.position.x === 20)).toBe(true)
+    for (let i = 1; i < taskMoves.length; i++) {
+      expect(taskMoves[i].position.y).toBeGreaterThan(taskMoves[i - 1].position.y)
+      expect(taskMoves[i].position.y - taskMoves[i - 1].position.y).toBeLessThanOrEqual(128)
+    }
+    expect(groupMoves[0].size.width).toBe(400)
     expect(groupMoves[0].size.height).toBeGreaterThan(1000)
   })
 

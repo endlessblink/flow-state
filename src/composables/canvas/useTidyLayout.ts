@@ -25,6 +25,7 @@ import {
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
 
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
@@ -67,24 +68,57 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     let pendingGroupMoves: GroupMove[] = []
     let pendingTaskMoves: TaskMove[] = []
 
-    // TASK-1756 v10: re-home orphans first. Prior buggy versions of
-    // rotation/tidy wrote task positions that fell outside their parents'
-    // new bounds → BUG-1203 cleared parentId on those tasks. Tidy should
-    // heal that state by reattaching orphans whose dueDate matches an
-    // existing day-group, so the next step can restack them canonically.
+    // TASK-1798: pull tasks into the group they belong to before restacking.
+    //
+    // Pass 1 — date association (primary). A task due "today" belongs in the
+    // Today group, tomorrow → Tomorrow, a weekday date → that day-group —
+    // regardless of where it currently sits. This widens the old orphan-only
+    // re-home (which only healed BUG-1203 orphans) to EVERY dated task, so a
+    // task stranded in the wrong day-group gets moved to the matching one.
+    // Undated tasks are left alone (findMatchingGroupForDueDate would default
+    // them to Today, which would wrongly hoover every undated task in).
+    const dateClaimed = new Set<string>()
     let rehomedCount = 0
     for (const task of taskStore.rawTasks) {
-      if (task.parentId) continue
       if (!task.canvasPosition) continue // inbox-only, skip
       if (!task.dueDate) continue
       const match = findMatchingGroupForDueDate(task.dueDate, canvasStore.groups)
-      if (match) {
-        taskStore.updateTask(task.id, { parentId: match.id }, 'DRAG')
-        rehomedCount++
-      }
+      if (!match) continue
+      dateClaimed.add(task.id)
+      if (match.id === task.parentId) continue
+      taskStore.updateTask(task.id, { parentId: match.id }, 'DRAG')
+      rehomedCount++
     }
     if (rehomedCount > 0) {
-      console.log('[TIDY] Re-homed', rehomedCount, 'orphaned tasks into matching day-groups')
+      console.log('[TIDY] Date-homed', rehomedCount, 'tasks into matching day/smart groups')
+    }
+
+    // Pass 2 — spatial adoption (fallback for custom groups). Custom-named
+    // groups have no date, so the only association is containment: adopt any
+    // task whose center sits inside a custom group's bounds. Date-claimed tasks
+    // are skipped so the date rule always wins. Positions are absolute (visual
+    // position preferred; canvasPosition is stored absolute by every drag/Tidy
+    // write), so getDeepestContainingGroup works directly.
+    const customGroups = canvasStore.groups.filter(
+      (g) => g.position && g.isVisible !== false && !detectPowerKeyword(g.name)
+    )
+    let adoptedCount = 0
+    if (customGroups.length > 0) {
+      for (const task of taskStore.rawTasks) {
+        if (!task.canvasPosition) continue // inbox-only, skip
+        if (dateClaimed.has(task.id)) continue
+        const absPos = options.getNodePosition?.(task.id) ?? task.canvasPosition
+        const size = options.getNodeSize?.(task.id)
+        const spatialTask = { position: absPos, width: size?.width, height: size?.height }
+        const containing = getDeepestContainingGroup(spatialTask, customGroups)
+        if (containing && containing.id !== task.parentId) {
+          taskStore.updateTask(task.id, { parentId: containing.id }, 'DRAG')
+          adoptedCount++
+        }
+      }
+    }
+    if (adoptedCount > 0) {
+      console.log('[TIDY] Spatially adopted', adoptedCount, 'loose tasks into custom groups')
     }
 
     // Collect every group with a position. Day-of-week / smart / custom — all
@@ -149,7 +183,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       .map((i) => i.group.id)
 
     const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds, {
-      taskPositioning: 'compactFromCurrentTop',
+      // TASK-1798: stack from directly under the header so tasks sitting low in
+      // a group rise to the top. 'compactFromCurrentTop' anchored the stack at
+      // the current topmost task, so low tasks stayed low — the user's bug.
+      taskPositioning: 'fromHeader',
       // Tidy must never silently flip the user's single-column arrangement
       // into a 2-column overflow grid. Group height grows as needed.
       maxTasksPerColumn: null,

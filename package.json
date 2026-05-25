@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.4.49",
+  "version": "1.4.52",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://github.com/endlessblink/flow-state",
   "repository": {
@@ -15,6 +15,7 @@
   "scripts": {
     "predev": "bash scripts/predev-port-check.sh",
     "dev": "bash scripts/start-dev.sh",
+    "api": "node server/local-api/server.cjs",
     "sync:doppler": "bash scripts/sync-doppler.sh",
     "generate:keys": "node scripts/generate-supabase-keys.cjs",
     "setup:doppler": "bash scripts/setup-doppler.sh",
@@ -35,7 +36,7 @@
     "tauri:rebuild": "bash scripts/sync-doppler.sh && npm run tauri build && ./src-tauri/target/release/flow-state",
     "tauri:install": "bash scripts/build-and-install.sh",
     "tauri:run": "./src-tauri/target/release/flow-state",
-    "electron:build-main": "tsc -p electron/tsconfig.json && mv dist-electron/main.js dist-electron/main.cjs && mv dist-electron/preload.js dist-electron/preload.cjs && node -e \"const fs=require('fs'); const pkg=require('./package.json'); fs.writeFileSync('dist-electron/package.json', JSON.stringify({ name: pkg.name, version: pkg.version, main: 'main.cjs', type: 'commonjs' }));\"",
+    "electron:build-main": "tsc -p electron/tsconfig.json && mv dist-electron/main.js dist-electron/main.cjs && mv dist-electron/preload.js dist-electron/preload.cjs && node -e \"const fs=require('fs'); const pkg=require('./package.json'); fs.writeFileSync('dist-electron/package.json', JSON.stringify({ name: pkg.name, version: pkg.version, main: 'main.cjs', type: 'commonjs' }));\" && node_modules/.bin/esbuild server/local-api/server.cjs --bundle --platform=node --target=node20 --outfile=dist-electron/local-api-server.cjs",
     "electron:dev": "VITE_DEV_SERVER_URL=http://localhost:5546 npm run electron:build-main && electron dist-electron/main.cjs --no-sandbox",
     "electron:build": "ELECTRON_BUILD=true npm run build && npm run electron:build-main && electron-builder --config electron-builder.yml",
     "electron:preview": "ELECTRON_BUILD=true npm run build && npm run electron:build-main && electron dist-electron/main.cjs --no-sandbox",
@@ -313,6 +314,7 @@
     "dotenv": "^17.2.3",
     "electron": "^41.0.3",
     "electron-builder": "^26.8.1",
+    "esbuild": "^0.25.12",
     "eslint": "^8.55.0",
     "eslint-plugin-storybook": "^10.1.11",
     "eslint-plugin-vue": "^9.19.2",

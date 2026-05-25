@@ -8,9 +8,59 @@
 
 ## Active Tasks
 
-### TASK-1791: Design overhaul — fix critique findings across all views (👀 REVIEW)
+### ~~BUG-1799~~: Electron realtime storm + sync double-write + blank-title resurrection (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW — all 5 phases implemented on branch `design-overhaul` (opened 2026-05-21). Pending: review → merge to master → Electron deploy. Restore tag `pre-design-overhaul-2026-05-21`.
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-25) — deployed v1.4.51 to VPS auto-updater; user confirmed the realtime/sync console issues are resolved on the updated Electron build.
+
+**Problem** (from production Electron console): (1) endless `📡 [REALTIME] Connection dropped (CHANNEL_ERROR)`→`(CLOSED)` loop; (2) `⚠️ [SYNC] LWW: Server wins … DISCARDED (delta 2–7s)` spam for tasks AND groups + 1–1.5s update latency (`[BUG-291]`); (3) `🛠️ [TASK-TITLE-REPAIR] … (permanentlyDeleteTask)` blank titles; (4) downstream `[NODE-SYNC] Conflict detected` bursts.
+
+**Root causes** (verified vs source + supabase-js + local DB): (1) **Realtime** — supabase-js dedupes channels by topic, so re-entrant `setupSubscription()` re-binds `postgres_changes` listeners (events handled N×) + competes with realtime-js's own rejoinTimer, and `retryCount` was reset to 0 on every Electron `visibilitychange`/`online` tick → no backoff → storm. (2) **Double-write** — `updateTask`/`updateGroup` enqueue a sync op AND then unconditionally direct-save; the direct save's fresh `updated_at` (now) out-timestamps the queued op → false `position_version` conflict → LWW "server wins" discards a duplicate. (3) **Resurrection** — LWW writeback `updateTaskFromSync(id, data, false)` ADDS a task when absent (`tasks.ts:248`), re-adding a locally-deleted task with a sanitized blank title.
+
+**Fix**: (1) `useRealtimeSubscription.ts` — `isConnecting` single-flight guard + single cancellable `reconnectTimer` (collapses CHANNEL_ERROR+CLOSED double-schedule), tear down stale channel before re-create, stop resetting `retryCount` outside SUBSCRIBED, visibility/online only reconnect when dead & not already connecting/scheduled. (2) Sync queue becomes the single writer: completed the task queue payload with the 7 fields it was missing (`planning_notes, connection_types, depends_on, column_id, calendar_locked, notification_prefs, parent_task_id` + `total_pomodoros`) mirroring `toSupabaseTask`, then removed the unconditional direct save in `taskOperations.ts` (kept enqueue-failure fallback); made the group `saveGroupToStorage` a fallback-only in `canvasGroups.ts`. Queue keeps `position_version` optimistic lock + field-level merge. (3) `useSyncOrchestrator.ts` writeback honors `serverData.is_deleted` and skips re-adding tasks absent from `rawTasks`.
+
+**Files**: `src/composables/supabase/useRealtimeSubscription.ts`, `src/stores/tasks/taskOperations.ts`, `src/stores/canvas/canvasGroups.ts`, `src/composables/sync/useSyncOrchestrator.ts`. Plan: `~/.claude/plans/stateful-scribbling-thompson.md`.
+
+**Verified**: vue-tsc 0 new errors on the 4 files (166 pre-existing elsewhere, TASK-1789); lint clean; 82/82 unit+integration pass (`sync-retry-strategy`, `task-sync-flow`, `task-rollback`, `task-completeness`, `sync-readonly`, `realtime-drag-race`); production build green. Deployed v1.4.51 (`FlowState-1.4.51-x86_64.AppImage`) to VPS; `https://in-theflow.com/updates/electron/latest-linux.yml` → 1.4.51. User confirmed resolved on the updated Electron build (2026-05-25).
+
+---
+
+### ~~TASK-1798~~: Canvas Tidy pulls tasks into matching group + stacks at top (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-24)
+
+**Problem**: The Canvas **Tidy** button didn't pull tasks into the group they belong to, and didn't move group members to the top. Tasks sitting low stayed low; a task due today stuck in another group was never moved into Today.
+
+**Root cause** (`src/composables/canvas/useTidyLayout.ts`): (1) restacked with `taskPositioning: 'compactFromCurrentTop'`, which anchored the stack at the current topmost task instead of the header; (2) the re-home pass only touched orphans (`if (task.parentId) continue`) and only restacked `parentId === group.id` tasks — so dated tasks in the wrong group / loose tasks inside custom groups were never adopted.
+
+**Fix**: (1) switched Tidy to `taskPositioning: 'fromHeader'` (tasks stack at `groupY + HEADER 50 + PADDING 20`). (2) Date-association pass now runs over **all** dated tasks (dropped the orphan guard) and re-parents each into its `findMatchingGroupForDueDate` group (today→Today, etc.); undated tasks are left alone. (3) Spatial-adoption fallback adopts loose tasks whose center sits inside a **custom** group's bounds via `getDeepestContainingGroup`, skipping date-claimed tasks so the date rule wins. All writes use the `'DRAG'` origin (within Single-Writer geometry invariant; `useCanvasSync.ts` untouched).
+
+**Follow-up (v1.4.52)**: v1.4.50 still overflowed — tasks pulled into Today stacked from the top but spilled out the bottom because group height was summed from raw task heights independently of the grid-snapped position loop, so the box under-sized and clipped tail tasks (worse as more tasks piled in). Fixed in `useCanonicalDayGroupLayout.ts` by deriving group height from the tasks' ACTUAL placed footprint (`maxTaskBottomRelative + GROUP_PADDING`, floored at `DAY_GROUP_HEIGHT`) instead of a parallel sum — the box now always contains its tasks.
+
+**Files**: `src/composables/canvas/useTidyLayout.ts`, `src/composables/canvas/useCanonicalDayGroupLayout.ts`, `tests/unit/canvas/tidy-layout.test.ts`, `tests/unit/canvas/canonical-layout.test.ts`.
+
+**Verified**: `tests/unit/canvas/` 124 pass (incl. new overflow-regression test with 13 tall tasks exceeding the height floor); lint clean. Shipped v1.4.52 to Electron auto-updater.
+
+---
+
+### TASK-1797: Localhost-only task API sidecar for Life OS Advisor (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (opened 2026-05-24)
+
+**Problem**: Life OS Advisor (separate local app) needs to read FlowState tasks for context and create/update them on explicit user approval, without depending on the desktop app being open.
+
+**Approach**: Standalone Node `http` sidecar (`server/local-api/server.cjs`, zero new deps — reuses `@supabase/supabase-js`) that talks to the same Supabase `tasks` table via the service-role key, scoped to `FLOW_STATE_USER_ID`. Additive — UI keeps syncing via realtime. Binds 127.0.0.1 only, rejects non-loopback Host, optional `FLOW_STATE_API_TOKEN` bearer. Default port 5577 (`FLOW_STATE_API_PORT`). URL from `SUPABASE_URL || VITE_SUPABASE_URL`, key `SUPABASE_SERVICE_ROLE_KEY` (or `SUPABASE_SERVICE_KEY`). Run via `doppler run -- npm run api`.
+
+**Endpoints**: `GET /api/health`, `GET /api/tasks?status=&limit=` (≤25, fields id/title/status/priority/dueDate/projectId), `POST /api/tasks`, `PATCH /api/tasks/:id`. App↔DB status map: `todo→planned` / `done→done` (self-contained copy of `toDbStatus`, since `supabaseMappers.ts` imports Pinia and can't load in plain Node).
+
+**Files**: `server/local-api/server.cjs` (new), `server/local-api/README.md` (new), `package.json` (`api` script). Plan: `~/.claude/plans/linked-wobbling-blanket.md`.
+
+**Verified (HTTP layer, no DB)**: health→`{ok:true}`, missing bearer→401, non-loopback Host→403, POST missing title→400, POST bad priority→400, unknown route→404, DB error→JSON `{error}` (handler never throws). **Pending (needs real creds, user-run)**: live GET/POST/PATCH round-trip + realtime appearing in the app UI. Run: `FLOW_STATE_USER_ID=<id> doppler run -- npm run api`.
+
+---
+
+### ~~TASK-1791~~: Design overhaul — fix critique findings across all views (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-25) — shipped to production. Rebased onto master and merged via PR #157, deployed to in-theflow.com (web) + Electron auto-updater (1.4.50). Follow-up PR #158 self-hosted the Clash Display font (was blocked by the edge CSP). Restore tag `pre-design-overhaul-2026-05-21`.
 
 **Phases (all ✅ implemented, each its own commit):**
 - ✅ Phase 1: text contrast — `--text-muted` 0.45→0.55, `--text-subtle` 0.35→0.45 (WCAG AA)

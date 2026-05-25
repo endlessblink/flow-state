@@ -40,6 +40,7 @@ import { useTidyLayout } from '@/composables/canvas/useTidyLayout'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import type { CanvasGroup } from '@/types/canvas'
+import { formatDateKey } from '@/utils/dateUtils'
 
 let counter = 0
 function makeGroup(name: string, x: number, y = 0): CanvasGroup {
@@ -187,21 +188,24 @@ describe('useTidyLayout', () => {
     const { taskMoves, release } = tidyDayGroups()
     release()
 
+    // TASK-1798: Tidy now stacks from directly under the header (y = 0 + HEADER
+    // 50 + PADDING 20 = 70), not from the current topmost task. So the low task
+    // rises to the top instead of staying at y=500.
     expect(taskMoves.map((move) => move.taskId)).toEqual(['task-high', 'task-low'])
     expect(taskMoves[0]?.parentId).toBe(mon.id)
-    expect(taskMoves[0]?.position).toEqual({ x: 20, y: 100 })
-    expect(taskMoves[1]?.position).toEqual({ x: 20, y: 212 })
+    expect(taskMoves[0]?.position).toEqual({ x: 20, y: 70 })
+    expect(taskMoves[1]?.position).toEqual({ x: 20, y: 182 })
     expect(updateTask).toHaveBeenCalledTimes(2)
     expect(updateTask).toHaveBeenNthCalledWith(
       1,
       'task-high',
-      { canvasPosition: { x: 20, y: 100 } },
+      { canvasPosition: { x: 20, y: 70 } },
       'DRAG'
     )
     expect(updateTask).toHaveBeenNthCalledWith(
       2,
       'task-low',
-      { canvasPosition: { x: 20, y: 212 } },
+      { canvasPosition: { x: 20, y: 182 } },
       'DRAG'
     )
   })
@@ -238,5 +242,60 @@ describe('useTidyLayout', () => {
     expect(groupMoves[0].size.width).toBe(400)
     const lastMoveY = taskMoves[taskMoves.length - 1].position.y
     expect(groupMoves[0].size.height).toBeGreaterThanOrEqual(lastMoveY)
+  })
+
+  it('pulls a task due today into the Today group even when parented elsewhere (TASK-1798)', () => {
+    // Date association: a task whose due date is today belongs in the Today
+    // group, regardless of which group it currently lives in.
+    const today = makeGroup('Today', 0)
+    const mon = makeGroup('Monday', 500)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, mon])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'task-due-today',
+        parentId: mon.id, // currently in the WRONG group
+        dueDate: formatDateKey(new Date()),
+        canvasPosition: { x: 520, y: 120 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { release } = tidyDayGroups()
+    release()
+
+    // First write re-homes the task into Today.
+    expect(updateTask).toHaveBeenCalledWith(
+      'task-due-today',
+      { parentId: today.id },
+      'DRAG'
+    )
+  })
+
+  it('spatially adopts a loose task sitting inside a custom group (TASK-1798)', () => {
+    // Custom groups have no date, so containment is the only association:
+    // a loose (unparented) task whose center sits inside the custom group's
+    // bounds gets adopted into it.
+    const custom = makeGroup('Project Work', 200) // bounds x:200..500, y:0..200
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([custom])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'task-loose',
+        parentId: undefined,
+        // center = (300 + 220/2, 80 + 100/2) = (410, 130) — inside the group.
+        canvasPosition: { x: 300, y: 80 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { release } = tidyDayGroups()
+    release()
+
+    expect(updateTask).toHaveBeenCalledWith(
+      'task-loose',
+      { parentId: custom.id },
+      'DRAG'
+    )
   })
 })

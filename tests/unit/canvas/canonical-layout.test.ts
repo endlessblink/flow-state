@@ -210,6 +210,32 @@ describe('computeCanonicalLayout', () => {
     expect(lastTaskBottom).toBeLessThanOrEqual(groupBottom)
   })
 
+  it('grows the group tall enough to contain many tall, grid-snapped tasks (TASK-1798 overflow)', () => {
+    // Regression: with the old code the group height was summed from raw task
+    // heights, but task Y is grid-snapped UP each step. With many tall cards the
+    // real footprint drifted below the group's bottom edge and tasks overflowed.
+    // Single column (maxTasksPerColumn: null, like Tidy) + tall measured cards.
+    const tasks = Array.from({ length: 13 }, (_, i) => tk(`t${i}`, 'a', i * 200))
+    const taskSizes = new Map(tasks.map((t) => [t.id, { width: 220, height: 140 }]))
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks, taskSizes },
+    ]
+    const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, ['a'], {
+      taskPositioning: 'fromHeader',
+      maxTasksPerColumn: null,
+    })
+
+    const group = groupMoves[0]
+    const groupBottom = group.position.y + group.size.height
+    // Every task's measured bottom edge must sit inside the group box.
+    for (const move of taskMoves) {
+      const bottom = move.position.y + 140
+      expect(bottom).toBeLessThanOrEqual(groupBottom)
+    }
+    // Content clearly exceeds the 1000px floor, so this exercises real growth.
+    expect(group.size.height).toBeGreaterThan(CANVAS.DAY_GROUP_HEIGHT)
+  })
+
   it('skips orderedIds that have no matching input (defensive)', () => {
     const inputs: DayGroupInput[] = [
       { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [] },

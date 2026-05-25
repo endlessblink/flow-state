@@ -124,34 +124,12 @@ export function computeCanonicalLayout(
     const groupWidth = taskLayout === 'horizontal'
       ? taskCount > 1 ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
       : hasOverflow ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
-    const columnHeights = [0, 0]
-    for (let t = 0; t < sortedTasks.length; t++) {
-      const task = sortedTasks[t]
-      const column = taskLayout === 'horizontal'
-        ? t % 2
-        : t < maxPerColumn ? 0 : 1
-      const size = dg.taskSizes?.get(task.id)
-      const taskHeight = Math.max(1, size?.height ?? CANVAS.DEFAULT_TASK_HEIGHT)
-      columnHeights[column] += taskHeight
-      const isColumnEnd = taskLayout === 'horizontal'
-        ? t + 2 >= sortedTasks.length
-        : column === 0
-          ? t === Math.min(sortedTasks.length, maxPerColumn) - 1
-          : t === sortedTasks.length - 1
-      if (!isColumnEnd) columnHeights[column] += CANVAS.TASK_MARGIN
-    }
-    const requiredHeight = CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING + Math.max(...columnHeights) + CANVAS.GROUP_PADDING
-    const groupHeight = Math.max(CANVAS.DAY_GROUP_HEIGHT, requiredHeight)
-
-    groupMoves.push({
-      nodeId: `section-${dg.group.id}`,
-      groupId: dg.group.id,
-      position: { x: groupX, y: groupY },
-      size: { width: groupWidth, height: groupHeight },
-    })
-
-    nextGroupX += groupWidth + groupGutter
-
+    // Place tasks first, then size the group to the tasks' ACTUAL footprint.
+    // BUG (TASK-1798): group height used to be summed from raw task heights,
+    // independently of the position loop. But positions are grid-snapped UP each
+    // step (snapToGridFrom), so the real footprint drifts below that sum and the
+    // group clipped its tail tasks — overflow that grew with task count. Deriving
+    // height from where tasks truly land keeps the box self-consistent.
     const defaultFirstTaskY = groupY + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING
     const currentTopY = Math.min(...sortedTasks.map((task) => dg.taskPositions?.get(task.id)?.y ?? task.canvasPosition?.y ?? defaultFirstTaskY))
     const currentTopRelativeY = Number.isFinite(currentTopY) ? currentTopY - dg.visualPos.y : CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING
@@ -161,21 +139,26 @@ export function computeCanonicalLayout(
       : defaultFirstTaskY
     const nextTaskYByColumn = [firstTaskY, firstTaskY]
 
+    let maxTaskBottomRelative = 0
     for (let t = 0; t < sortedTasks.length; t++) {
       const task = sortedTasks[t]
       const currentTaskPosition = dg.taskPositions?.get(task.id) ?? task.canvasPosition ?? {
         x: dg.visualPos.x + CANVAS.GROUP_PADDING,
         y: dg.visualPos.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
       }
+      const taskHeight = Math.max(1, dg.taskSizes?.get(task.id)?.height ?? CANVAS.DEFAULT_TASK_HEIGHT)
+
       if (taskPositioning === 'preserveRelative') {
+        const posY = groupY + (currentTaskPosition.y - dg.visualPos.y)
         taskMoves.push({
           taskId: task.id,
           parentId: dg.group.id,
           position: {
             x: groupX + (currentTaskPosition.x - dg.visualPos.x),
-            y: groupY + (currentTaskPosition.y - dg.visualPos.y),
+            y: posY,
           },
         })
+        maxTaskBottomRelative = Math.max(maxTaskBottomRelative, posY - groupY + taskHeight)
         continue
       }
 
@@ -183,7 +166,6 @@ export function computeCanonicalLayout(
       const column = taskLayout === 'horizontal'
         ? t % maxHorizontalColumns
         : t < maxPerColumn ? 0 : 1
-      const taskSize = dg.taskSizes?.get(task.id)
 
       const taskX =
         groupX +
@@ -196,8 +178,25 @@ export function computeCanonicalLayout(
         parentId: dg.group.id,
         position: { x: taskX, y: taskY },
       })
-      nextTaskYByColumn[column] = taskY + Math.max(1, taskSize?.height ?? CANVAS.DEFAULT_TASK_HEIGHT) + CANVAS.TASK_MARGIN
+      nextTaskYByColumn[column] = taskY + taskHeight + CANVAS.TASK_MARGIN
+      maxTaskBottomRelative = Math.max(maxTaskBottomRelative, taskY - groupY + taskHeight)
     }
+
+    // Size the group to contain its tasks (+ bottom padding), floored at the
+    // canonical minimum height. Empty groups keep the minimum.
+    const contentHeight = sortedTasks.length > 0
+      ? maxTaskBottomRelative + CANVAS.GROUP_PADDING
+      : CANVAS.DAY_GROUP_HEIGHT
+    const groupHeight = Math.max(CANVAS.DAY_GROUP_HEIGHT, contentHeight)
+
+    groupMoves.push({
+      nodeId: `section-${dg.group.id}`,
+      groupId: dg.group.id,
+      position: { x: groupX, y: groupY },
+      size: { width: groupWidth, height: groupHeight },
+    })
+
+    nextGroupX += groupWidth + groupGutter
   }
 
   return { groupMoves, taskMoves }

@@ -55,10 +55,11 @@ export interface CanonicalLayoutOptions {
   /**
    * Vertical-mode column threshold. Default = CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN.
    * Pass `null` to disable overflow entirely (always single column, group grows
-   * as tall as needed). Tidy uses `null` so it never surprises users with a
-   * 2-column grid when they have arranged tasks vertically.
+   * as tall as needed).
    */
   maxTasksPerColumn?: number | null
+  /** Maximum overflow columns for dense vertical layouts. Default preserves legacy 2-column behavior. */
+  maxColumns?: number
 }
 
 /**
@@ -118,12 +119,24 @@ export function computeCanonicalLayout(
       ? Number.POSITIVE_INFINITY
       : options.maxTasksPerColumn ?? CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN
     const hasOverflow = taskLayout === 'vertical' && taskCount > maxPerColumn
+    const maxColumns = Math.max(1, options.maxColumns ?? 2)
+    const columnCount = taskLayout === 'horizontal'
+      ? Math.min(maxColumns, Math.max(1, taskCount))
+      : hasOverflow
+        ? Math.min(maxColumns, Math.ceil(taskCount / maxPerColumn))
+        : 1
 
     const groupX = nextGroupX
     const groupY = originY
-    const groupWidth = taskLayout === 'horizontal'
-      ? taskCount > 1 ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
-      : hasOverflow ? CANVAS.DAY_GROUP_WIDTH_2COL : CANVAS.DAY_GROUP_WIDTH_1COL
+    const overflowWidth =
+      CANVAS.GROUP_PADDING * 2 +
+      columnCount * CANVAS.DEFAULT_TASK_WIDTH +
+      Math.max(0, columnCount - 1) * CANVAS.DAY_GROUP_COLUMN_GAP
+    const groupWidth = columnCount === 1
+      ? CANVAS.DAY_GROUP_WIDTH_1COL
+      : columnCount === 2
+        ? CANVAS.DAY_GROUP_WIDTH_2COL
+        : Math.max(CANVAS.DAY_GROUP_WIDTH_2COL, overflowWidth)
     // Place tasks first, then size the group to the tasks' ACTUAL footprint.
     // BUG (TASK-1798): group height used to be summed from raw task heights,
     // independently of the position loop. But positions are grid-snapped UP each
@@ -137,7 +150,7 @@ export function computeCanonicalLayout(
     const firstTaskY = taskPositioning === 'compactFromCurrentTop'
       ? groupY + compactStartRelativeY
       : defaultFirstTaskY
-    const nextTaskYByColumn = [firstTaskY, firstTaskY]
+    const nextTaskYByColumn = Array.from({ length: columnCount }, () => firstTaskY)
 
     let maxTaskBottomRelative = 0
     for (let t = 0; t < sortedTasks.length; t++) {
@@ -162,10 +175,9 @@ export function computeCanonicalLayout(
         continue
       }
 
-      const maxHorizontalColumns = 2
       const column = taskLayout === 'horizontal'
-        ? t % maxHorizontalColumns
-        : t < maxPerColumn ? 0 : 1
+        ? t % columnCount
+        : hasOverflow ? Math.floor(t / maxPerColumn) : 0
 
       const taskX =
         groupX +

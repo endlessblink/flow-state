@@ -210,14 +210,13 @@ describe('useTidyLayout', () => {
     )
   })
 
-  it('keeps 9+ tasks in a single vertical column instead of overflowing to a 2-column grid', () => {
-    // Regression: image 1 had 9 tasks in Today arranged vertically by the user.
-    // Tidy used to flip this to a 2-column staggered grid (image 2) because the
-    // hard-coded `DAY_GROUP_MAX_TASKS_PER_COLUMN = 8` threshold fired. Tidy now
-    // passes `maxTasksPerColumn: null` so the column never overflows.
+  it('uses dynamic overflow columns for dense groups so Tidy does not create a huge vertical stack', () => {
+    // Regression: 18+ tasks in Today made the group unusably tall when Tidy
+    // capped dense groups at two columns. Explicit Tidy should compact enough
+    // columns to keep the real canvas usable.
     const today = makeGroup('Today', 0)
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
-    const tasks = Array.from({ length: 9 }, (_, i) => ({
+    const tasks = Array.from({ length: 18 }, (_, i) => ({
       id: `task-${i}`,
       parentId: today.id,
       canvasPosition: { x: 30, y: 100 + i * 110 },
@@ -229,19 +228,16 @@ describe('useTidyLayout', () => {
     const { groupMoves, taskMoves, release } = tidyDayGroups()
     release()
 
-    expect(taskMoves.length).toBe(9)
-    // Every task is in column 0 (x === GROUP_PADDING).
-    for (const move of taskMoves) {
-      expect(move.position.x).toBe(20)
-    }
-    // Y values are strictly monotonically increasing — no column 1 starting at top.
-    for (let i = 1; i < taskMoves.length; i++) {
-      expect(taskMoves[i].position.y).toBeGreaterThan(taskMoves[i - 1].position.y)
-    }
-    // Group keeps the single-column width and grows tall enough to contain all tasks.
-    expect(groupMoves[0].size.width).toBe(400)
-    const lastMoveY = taskMoves[taskMoves.length - 1].position.y
-    expect(groupMoves[0].size.height).toBeGreaterThanOrEqual(lastMoveY)
+    expect(taskMoves.length).toBe(18)
+    expect(taskMoves.slice(0, 5).every((move) => move.position.x === 20)).toBe(true)
+    expect(taskMoves.slice(5, 10).every((move) => move.position.x === 260)).toBe(true)
+    expect(taskMoves.slice(10, 15).every((move) => move.position.x === 500)).toBe(true)
+    expect(taskMoves.slice(15).every((move) => move.position.x === 740)).toBe(true)
+    expect(taskMoves[5].position.y).toBe(taskMoves[0].position.y)
+    expect(taskMoves[10].position.y).toBe(taskMoves[0].position.y)
+    expect(taskMoves[15].position.y).toBe(taskMoves[0].position.y)
+    expect(groupMoves[0].size.width).toBe(980)
+    expect(groupMoves[0].size.height).toBe(1000)
   })
 
   it('pulls a task due today into the Today group even when parented elsewhere (TASK-1798)', () => {

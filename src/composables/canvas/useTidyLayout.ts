@@ -26,6 +26,9 @@ import {
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
+import { CANVAS } from '@/constants/canvas'
+
+const TIDY_MAX_TASKS_PER_COLUMN = 5
 
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
@@ -187,9 +190,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       // a group rise to the top. 'compactFromCurrentTop' anchored the stack at
       // the current topmost task, so low tasks stayed low — the user's bug.
       taskPositioning: 'fromHeader',
-      // Tidy must never silently flip the user's single-column arrangement
-      // into a 2-column overflow grid. Group height grows as needed.
-      maxTasksPerColumn: null,
+      // Explicit Tidy should make dense day groups usable. A single column turns
+      // Today into a huge vertical stack; use tighter Tidy-only overflow columns.
+      maxTasksPerColumn: TIDY_MAX_TASKS_PER_COLUMN,
+      maxColumns: 4,
     })
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves

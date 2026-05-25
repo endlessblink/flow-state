@@ -103,6 +103,13 @@
       @close="showBatchEditModal = false; batchEditTaskIds = []"
       @applied="handleBatchEditApplied"
     />
+
+    <QuickTaskCreateModal
+      :is-open="showCreateModal"
+      :inherited-props="createTaskDefaults"
+      @cancel="closeCreateModal"
+      @create="handleCreateTaskFromModal"
+    />
   </div>
 </template>
 
@@ -120,6 +127,7 @@ import TaskList from '@/components/tasks/TaskList.vue'
 import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
+import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
@@ -128,6 +136,14 @@ import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete
 
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import type { Task, GroupByType, TaskGroup } from '@/types/tasks'
+
+type CreateTaskDefaults = {
+  dueDate?: string
+  priority?: 'low' | 'medium' | 'high'
+  status?: string
+  projectId?: string
+  estimatedDuration?: number
+}
 
 // Mobile Detection
 const { isMobile } = useMobileDetection()
@@ -159,6 +175,8 @@ const taskListRef = ref<InstanceType<typeof TaskList> | null>(null)
 // Modal State
 const showEditModal = ref(false)
 const selectedTask = ref<Task | null>(null)
+const showCreateModal = ref(false)
+const createTaskDefaults = ref<CreateTaskDefaults | null>(null)
 const showContextMenu = ref(false)
 const contextMenuX = ref(0)
 const contextMenuY = ref(0)
@@ -509,9 +527,14 @@ const closeEditModal = () => {
   selectedTask.value = null
 }
 
+const closeCreateModal = () => {
+  showCreateModal.value = false
+  createTaskDefaults.value = null
+}
+
 const handleAddTaskToGroup = async (groupKey: string, groupByMode: string) => {
   // Build partial task with pre-filled group property
-  const taskDefaults: Partial<Task> = { title: '' }
+  const taskDefaults: CreateTaskDefaults = {}
 
   if (groupByMode === 'project') {
     taskDefaults.projectId = (groupKey === 'uncategorized' || groupKey === '__no_project__') ? undefined : groupKey
@@ -546,12 +569,24 @@ const handleAddTaskToGroup = async (groupKey: string, groupByMode: string) => {
     }
   }
 
-  // createTask returns the new Task object directly
-  const newTask = await taskStore.createTask(taskDefaults)
-  if (newTask) {
-    selectedTask.value = newTask
-    showEditModal.value = true
-  }
+  createTaskDefaults.value = taskDefaults
+  showCreateModal.value = true
+}
+
+const handleCreateTaskFromModal = async (data: {
+  title: string
+  description: string
+  status: string
+  priority: 'low' | 'medium' | 'high'
+  dueDate?: string
+  projectId?: string
+}) => {
+  await taskStore.createTask({
+    ...createTaskDefaults.value,
+    ...data,
+    status: data.status as Task['status']
+  })
+  closeCreateModal()
 }
 
 const handleContextMenu = (event: MouseEvent, task: Task) => {

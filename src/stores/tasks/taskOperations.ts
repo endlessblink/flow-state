@@ -37,6 +37,9 @@ const FALLBACK_TASK_TITLE = 'Untitled Task'
 const isRealTaskTitle = (title: unknown): title is string =>
     typeof title === 'string' && title.trim().length > 0 && title.trim() !== FALLBACK_TASK_TITLE
 
+const hasTaskTitle = (title: unknown): title is string =>
+    typeof title === 'string' && title.trim().length > 0
+
 // =============================================================================
 // GEOMETRY WRITE SOURCE (TASK-255 Geometry Invariants)
 // =============================================================================
@@ -118,10 +121,12 @@ export function useTaskOperations(
     }
 
     const createTask = async (taskData: Partial<Task>) => {
-        // TASK-061: Demo content guard - warn in dev mode
-        if (taskData.title) {
-            guardTaskCreation(taskData.title)
+        if (!hasTaskTitle(taskData.title)) {
+            throw new Error('Task title is required')
         }
+
+        // TASK-061: Demo content guard - warn in dev mode
+        guardTaskCreation(taskData.title)
 
         // BUG-336: Preserve task ID if provided (needed for undo restore)
         const taskId = taskData.id || crypto.randomUUID()

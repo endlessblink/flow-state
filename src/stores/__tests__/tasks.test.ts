@@ -39,16 +39,12 @@ describe('TaskStore', () => {
       expect(task.projectId).toBe('uncategorized')
     })
 
-    it('sanitizes blank titles when creating tasks', async () => {
+    it('rejects blank titles when creating tasks', async () => {
       const store = useTaskStore()
 
-      const emptyTitleTask = await store.createTask({ title: '' })
-      const whitespaceTitleTask = await store.createTask({ title: '   ' })
-
-      expect(emptyTitleTask.title).toBe('Untitled Task')
-      expect(whitespaceTitleTask.title).toBe('Untitled Task')
-      expect(store.tasks.find(t => t.id === emptyTitleTask.id)?.title).toBe('Untitled Task')
-      expect(store.tasks.find(t => t.id === whitespaceTitleTask.id)?.title).toBe('Untitled Task')
+      await expect(store.createTask({ title: '' })).rejects.toThrow('Task title is required')
+      await expect(store.createTask({ title: '   ' })).rejects.toThrow('Task title is required')
+      expect(store.tasks).toHaveLength(0)
     })
 
     it('creates a task with scheduled date and time as instance', async () => {

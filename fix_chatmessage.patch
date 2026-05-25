@@ -1,0 +1,7 @@
+--- src/components/ai/ChatMessage.vue
++++ src/components/ai/ChatMessage.vue
+@@ -22,3 +22,3 @@
+ <script setup lang="ts">
+-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, CalendarDays } from 'lucide-vue-next'
++import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2 } from 'lucide-vue-next'
+ import { ref, computed } from 'vue'

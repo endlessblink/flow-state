@@ -1,0 +1,22 @@
+--- src/components/canvas/CanvasModals.vue
++++ src/components/canvas/CanvasModals.vue
+@@ -37,8 +37,8 @@
+     :group="modals.selectedGroup"
+     :position="modals.groupModalPosition"
+     @close="modals.closeGroupModal"
+-    @created="(group) => $emit('handleGroupCreated', group)"
+-    @updated="(group) => $emit('handleGroupUpdated', group)"
++    @created="(group) => $emit('handleGroupCreated', group as any)"
++    @updated="(group) => $emit('handleGroupUpdated', group as any)"
+   />
+
+   <!-- Group Edit Modal -->
+@@ -46,7 +46,7 @@
+     :section="modals.selectedSectionForEdit"
+     :position="modals.groupEditModalPosition"
+     @close="modals.closeGroupEditModal"
+-    @save="(updated) => $emit('handleGroupEditSave', updated)"
++    @save="(updated) => $emit('handleGroupEditSave', updated as any)"
+   />
+
+   <!-- Delete Confirmation Modals -->

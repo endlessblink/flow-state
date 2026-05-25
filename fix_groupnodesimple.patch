@@ -1,0 +1,11 @@
+--- src/components/canvas/GroupNodeSimple.vue
++++ src/components/canvas/GroupNodeSimple.vue
+@@ -101,7 +101,7 @@
+ // Define Props
+ const props = defineProps<{
+   id: string
+-  data: unknown
++  data: any
+   selected?: boolean
+   dragging?: boolean
+ }>()

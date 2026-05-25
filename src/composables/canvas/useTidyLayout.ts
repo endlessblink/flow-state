@@ -28,8 +28,6 @@ import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
 import { CANVAS } from '@/constants/canvas'
 
-const TIDY_MAX_TASKS_PER_COLUMN = 5
-
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
   getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
@@ -191,9 +189,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       // the current topmost task, so low tasks stayed low — the user's bug.
       taskPositioning: 'fromHeader',
       // Explicit Tidy should make dense day groups usable. A single column turns
-      // Today into a huge vertical stack; use tighter Tidy-only overflow columns.
-      maxTasksPerColumn: TIDY_MAX_TASKS_PER_COLUMN,
-      maxColumns: 4,
+      // Today into a huge vertical stack, but keep the layout vertical-first:
+      // at most two cards side by side, with measured card widths preventing overlap.
+      maxTasksPerColumn: CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN,
+      maxColumns: 2,
     })
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves

@@ -125,12 +125,16 @@ export function computeCanonicalLayout(
       : hasOverflow
         ? Math.min(maxColumns, Math.ceil(taskCount / maxPerColumn))
         : 1
+    const measuredTaskWidth = Math.max(
+      CANVAS.DEFAULT_TASK_WIDTH,
+      ...sortedTasks.map((task) => dg.taskSizes?.get(task.id)?.width ?? 0)
+    )
 
     const groupX = nextGroupX
     const groupY = originY
     const overflowWidth =
       CANVAS.GROUP_PADDING * 2 +
-      columnCount * CANVAS.DEFAULT_TASK_WIDTH +
+      columnCount * measuredTaskWidth +
       Math.max(0, columnCount - 1) * CANVAS.DAY_GROUP_COLUMN_GAP
     const groupWidth = columnCount === 1
       ? CANVAS.DAY_GROUP_WIDTH_1COL
@@ -177,12 +181,12 @@ export function computeCanonicalLayout(
 
       const column = taskLayout === 'horizontal'
         ? t % columnCount
-        : hasOverflow ? Math.floor(t / maxPerColumn) : 0
+        : hasOverflow ? Math.min(columnCount - 1, Math.floor(t / maxPerColumn)) : 0
 
       const taskX =
         groupX +
         CANVAS.GROUP_PADDING +
-        column * (CANVAS.DEFAULT_TASK_WIDTH + CANVAS.DAY_GROUP_COLUMN_GAP)
+        column * (measuredTaskWidth + CANVAS.DAY_GROUP_COLUMN_GAP)
       const taskY = snapToGridFrom(nextTaskYByColumn[column], firstTaskY)
 
       taskMoves.push({

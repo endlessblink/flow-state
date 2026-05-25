@@ -210,10 +210,10 @@ describe('useTidyLayout', () => {
     )
   })
 
-  it('uses dynamic overflow columns for dense groups so Tidy does not create a huge vertical stack', () => {
-    // Regression: 18+ tasks in Today made the group unusably tall when Tidy
-    // capped dense groups at two columns. Explicit Tidy should compact enough
-    // columns to keep the real canvas usable.
+  it('uses at most two measured-width overflow columns for dense groups', () => {
+    // Tidy is vertical-first: dense groups may use two columns, but never a wide
+    // horizontal grid. Column spacing must use rendered card width so Hebrew
+    // cards do not overlap.
     const today = makeGroup('Today', 0)
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
     const tasks = Array.from({ length: 18 }, (_, i) => ({
@@ -224,20 +224,19 @@ describe('useTidyLayout', () => {
     })) as any
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(tasks)
 
-    const { tidyDayGroups } = useTidyLayout()
+    const { tidyDayGroups } = useTidyLayout({
+      getNodeSize: (nodeId) => nodeId.startsWith('task-') ? { width: 280, height: 100 } : undefined,
+    })
     const { groupMoves, taskMoves, release } = tidyDayGroups()
     release()
 
     expect(taskMoves.length).toBe(18)
-    expect(taskMoves.slice(0, 5).every((move) => move.position.x === 20)).toBe(true)
-    expect(taskMoves.slice(5, 10).every((move) => move.position.x === 260)).toBe(true)
-    expect(taskMoves.slice(10, 15).every((move) => move.position.x === 500)).toBe(true)
-    expect(taskMoves.slice(15).every((move) => move.position.x === 740)).toBe(true)
-    expect(taskMoves[5].position.y).toBe(taskMoves[0].position.y)
-    expect(taskMoves[10].position.y).toBe(taskMoves[0].position.y)
-    expect(taskMoves[15].position.y).toBe(taskMoves[0].position.y)
-    expect(groupMoves[0].size.width).toBe(980)
-    expect(groupMoves[0].size.height).toBe(1000)
+    expect(taskMoves.slice(0, 8).every((move) => move.position.x === 20)).toBe(true)
+    expect(taskMoves.slice(8).every((move) => move.position.x === 320)).toBe(true)
+    expect(taskMoves[8].position.y).toBe(taskMoves[0].position.y)
+    expect(Math.max(...new Set(taskMoves.map((move) => move.position.x)).values())).toBe(320)
+    expect(groupMoves[0].size.width).toBe(700)
+    expect(groupMoves[0].size.height).toBeGreaterThan(1000)
   })
 
   it('pulls a task due today into the Today group even when parented elsewhere (TASK-1798)', () => {

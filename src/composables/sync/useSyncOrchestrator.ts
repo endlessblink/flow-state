@@ -545,11 +545,30 @@ async function processOperation(operation: WriteOperation): Promise<void> {
             console.log(`[SYNC] Skipping LWW writeback for ${operation.entityId.slice(0, 8)} — pending write (local data is fresher)`)
           }
         } else {
-          const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
-          const mappedTask = fromSupabaseTask(result.serverData as unknown as Parameters<typeof fromSupabaseTask>[0])
-          taskStore.updateTaskFromSync(operation.entityId, mappedTask, false)
-          if (import.meta.env.DEV) {
-            console.log(`[SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+          // BUG-1799: Never let an LWW writeback resurrect a locally-deleted task.
+          // updateTaskFromSync ADDS a task when it's absent from the store (idx === -1), so for a
+          // task the user already deleted, a stale queued update's writeback would re-add it —
+          // and a blank server title gets sanitized to "Untitled Task". Honor the server tombstone,
+          // and skip re-adding tasks that are no longer present locally. rawTasks is the unfiltered
+          // list (view filters must not make a present task look deleted).
+          const serverIsDeleted = (result.serverData as { is_deleted?: boolean }).is_deleted === true
+          const existsLocally = taskStore.rawTasks.some(t => t.id === operation.entityId)
+          if (serverIsDeleted) {
+            taskStore.updateTaskFromSync(operation.entityId, null, true)
+            if (import.meta.env.DEV) {
+              console.log(`[SYNC] LWW: server tombstone applied (removed) for ${operation.entityId.slice(0, 8)}`)
+            }
+          } else if (!existsLocally) {
+            if (import.meta.env.DEV) {
+              console.log(`[SYNC] Skipping LWW writeback for ${operation.entityId.slice(0, 8)} — not present locally (deleted); not resurrecting`)
+            }
+          } else {
+            const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
+            const mappedTask = fromSupabaseTask(result.serverData as unknown as Parameters<typeof fromSupabaseTask>[0])
+            taskStore.updateTaskFromSync(operation.entityId, mappedTask, false)
+            if (import.meta.env.DEV) {
+              console.log(`[SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+            }
           }
         }
       } catch (e) {

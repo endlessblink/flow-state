@@ -52,10 +52,22 @@
 
         <div class="control-divider" />
 
+        <button
+          class="control-icon-btn search-btn"
+          title="Search tasks (Ctrl+Shift+F)"
+          aria-label="Search tasks"
+          @click="openSearch"
+        >
+          <Search :size="18" />
+        </button>
+
+        <div class="control-divider" />
+
         <!-- TASK-1319: Keyboard Shortcuts Help -->
         <button
-          class="help-btn"
+          class="control-icon-btn help-btn"
           title="Keyboard Shortcuts (?)"
+          aria-label="Keyboard shortcuts"
           @click="uiStore.toggleShortcutsPanel()"
         >
           <Keyboard :size="18" />
@@ -220,7 +232,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useSettingsStore } from '@/stores/settings'
 import { useUIStore } from '@/stores/ui'
-import { Timer, Play, Pause, Coffee, Square, Armchair, Sparkles, Keyboard } from 'lucide-vue-next'
+import { Timer, Play, Pause, Coffee, Square, Armchair, Sparkles, Keyboard, Search } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
@@ -368,6 +380,10 @@ const pageTitleInfo = computed<PageTitleInfo>(() => {
 const uncategorizedCount = computed(() => {
   return taskStore.getUncategorizedTaskCount()
 })
+
+const openSearch = () => {
+  window.dispatchEvent(new CustomEvent('open-search'))
+}
 
 // Timer methods
 const startQuickTimer = async () => {
@@ -775,8 +791,8 @@ const startLongBreak = async () => {
   margin: 0 var(--space-2);
 }
 
-/* HELP BUTTON (TASK-1319) */
-.help-btn {
+/* CONTROL ICON BUTTONS */
+.control-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -790,9 +806,14 @@ const startLongBreak = async () => {
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 
-.help-btn:hover {
+.control-icon-btn:hover {
   color: var(--brand-primary);
   background: var(--state-hover-bg);
+}
+
+.control-icon-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
 }
 
 /* TASK-1435: Active Task Glass Pill */

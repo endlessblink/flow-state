@@ -76,6 +76,14 @@
       @resize="handleResize"
       @resize-end="handleResizeEnd"
     />
+
+    <Handle
+      id="group-target"
+      type="target"
+      :position="Position.Left"
+      connectable
+      class="handle-target group-link-handle"
+    />
   </div>
 </template>
 
@@ -87,7 +95,7 @@ import '@vue-flow/node-resizer/dist/style.css'
 // TASK-072: Import useNode for reactive node data from Vue Flow state
 // TASK-072: Use reactive node data if needed
 // BUG-043: Import Position for edge resize handles
-import { Position } from '@vue-flow/core'
+import { Position, Handle } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 // TASK-167: Direct import to ensure latest logic
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
@@ -142,7 +150,7 @@ const groupColor = computed(() => {
 })
 const taskCount = computed(() => {
   const data = props.data as Record<string, unknown> | undefined
-  const groupId = (data?.id as string) || props.id.replace(/^section-/, '')
+  const groupId = (data?.id as string | undefined) || props.id?.replace(/^section-/, '')
   if (!groupId) return 0
 
   // Read from reactive store computeds instead of stale node.data snapshot.
@@ -249,7 +257,8 @@ const updateName = () => {
 
 const toggleCollapse = () => {
   // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
-  const groupId = props.data?.id || props.id.replace('section-', '')
+  const groupId = props.data?.id || props.id?.replace('section-', '')
+  if (!groupId) return
   canvasStore.toggleSectionCollapse(groupId)
 }
 

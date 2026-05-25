@@ -208,6 +208,20 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
                     cur.position.width * cur.position.height < smallest.position.width * smallest.position.height ? cur : smallest
                 )
                 : null
+            const linkedParentTaskId = (() => {
+                let currentId = targetGroup?.id || null
+                const visited = new Set<string>()
+
+                while (currentId && !visited.has(currentId)) {
+                    visited.add(currentId)
+                    const group = allGroups.find(g => g.id === currentId)
+                    if (!group) return null
+                    if (group.linkedParentTaskId) return group.linkedParentTaskId
+                    currentId = group.parentGroupId || null
+                }
+
+                return null
+            })()
             const groupProps: Record<string, unknown> = {}
             if (import.meta.env.DEV) {
                 console.log('[BUG-1530:handleDrop]', {
@@ -232,7 +246,11 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
             // Otherwise syncNodes runs with stale task data
             await taskStore.updateTask(taskId, {
                 canvasPosition: { x, y },
-                ...(targetGroup ? { parentId: targetGroup.id, isInInbox: false } : {}),
+                ...(targetGroup ? {
+                    parentId: targetGroup.id,
+                    ...(linkedParentTaskId ? { parentTaskId: linkedParentTaskId } : {}),
+                    isInInbox: false
+                } : {}),
                 ...groupProps
             })
 

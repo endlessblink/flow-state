@@ -42,19 +42,23 @@
 
 ---
 
-### TASK-1797: Localhost-only task API sidecar for Life OS Advisor (🔄 IN PROGRESS)
+### TASK-1797: Local task API for Life OS Advisor (Electron-integrated, token-based) (👀 REVIEW)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (opened 2026-05-24)
+**Priority**: P2 | **Status**: 👀 REVIEW (opened 2026-05-24) — implemented + verified locally; pending in-app round-trip + ship.
 
-**Problem**: Life OS Advisor (separate local app) needs to read FlowState tasks for context and create/update them on explicit user approval, without depending on the desktop app being open.
+**Problem**: Life OS Advisor (separate local app) needs to read FlowState tasks for context and create/update them on explicit user approval, over a tiny localhost API.
 
-**Approach**: Standalone Node `http` sidecar (`server/local-api/server.cjs`, zero new deps — reuses `@supabase/supabase-js`) that talks to the same Supabase `tasks` table via the service-role key, scoped to `FLOW_STATE_USER_ID`. Additive — UI keeps syncing via realtime. Binds 127.0.0.1 only, rejects non-loopback Host, optional `FLOW_STATE_API_TOKEN` bearer. Default port 5577 (`FLOW_STATE_API_PORT`). URL from `SUPABASE_URL || VITE_SUPABASE_URL`, key `SUPABASE_SERVICE_ROLE_KEY` (or `SUPABASE_SERVICE_KEY`). Run via `doppler run -- npm run api`.
+**Approach**: Node `http` sidecar (`server/local-api/server.cjs`, zero new runtime deps — reuses `@supabase/supabase-js`) over the same Supabase `tasks` table. Additive; UI keeps syncing via realtime. Two modes:
+- **Token mode (shipped)**: Electron auto-spawns the sidecar via `utilityProcess` when enabled in Settings; renderer forwards the logged-in session (anon key + user JWT) so all queries are RLS-scoped. No service-role key shipped. Off by default; random per-machine bearer shown in Settings.
+- **Service-role mode (standalone)**: `doppler run -- npm run api` for headless/app-closed use on your own machine; never bundled.
 
-**Endpoints**: `GET /api/health`, `GET /api/tasks?status=&limit=` (≤25, fields id/title/status/priority/dueDate/projectId), `POST /api/tasks`, `PATCH /api/tasks/:id`. App↔DB status map: `todo→planned` / `done→done` (self-contained copy of `toDbStatus`, since `supabaseMappers.ts` imports Pinia and can't load in plain Node).
+Binds 127.0.0.1 only, rejects non-loopback Host (403), bearer required in token mode, no CORS headers. Default port 5577.
 
-**Files**: `server/local-api/server.cjs` (new), `server/local-api/README.md` (new), `package.json` (`api` script). Plan: `~/.claude/plans/linked-wobbling-blanket.md`.
+**Endpoints**: `GET /api/health`, `GET /api/tasks?status=&limit=` (≤25, fields id/title/status/priority/dueDate/projectId), `POST /api/tasks`, `PATCH /api/tasks/:id`. App↔DB status map `todo→planned`/`done` (self-contained copy of `toDbStatus`, since `supabaseMappers.ts` imports Pinia).
 
-**Verified (HTTP layer, no DB)**: health→`{ok:true}`, missing bearer→401, non-loopback Host→403, POST missing title→400, POST bad priority→400, unknown route→404, DB error→JSON `{error}` (handler never throws). **Pending (needs real creds, user-run)**: live GET/POST/PATCH round-trip + realtime appearing in the app UI. Run: `FLOW_STATE_USER_ID=<id> doppler run -- npm run api`.
+**Files**: `server/local-api/server.cjs` + `README.md`, `electron/ipc/localApi.ts` (new), `electron/main.ts`, `electron/preload.ts`, `src/composables/useLocalApiBridge.ts` (new), `src/stores/auth.ts`, `src/services/auth/supabase.ts`, `src/components/settings/tabs/AccountSettingsTab.vue`, `package.json` (`api` script + esbuild bundle in `electron:build-main` + esbuild devDep). Plan: `~/.claude/plans/linked-wobbling-blanket.md`.
+
+**Verified**: (1) `setSession` RLS-scoping in plain Node — anon→0 rows, with-session→only the user's rows; (2) full token-mode integration through a real Electron `utilityProcess` + bundled sidecar — pre-session 503, post-session correct RLS-scoped reads, POST 200; (3) HTTP layer (health/401/403/400/404/DB-error→JSON); (4) esbuild bundles supabase-js self-contained (537KB); (5) standalone service-role mode boots (no regression); (6) no new type/lint errors. **Pending (user-run)**: `npm run electron:dev` → sign in → enable in Settings → curl with bearer → POST shows in UI via realtime. Then ship per rules 6/7 (version bump + Electron deploy).
 
 ---
 

@@ -89,6 +89,21 @@ function collectDescendantTasks(rootId: string, tasks: Task[], groups: CanvasGro
     return descendants
 }
 
+function getLinkedParentTaskIdForGroup(groupId: string | null | undefined, groups: CanvasGroup[]): string | null {
+    let currentId = groupId || null
+    const visited = new Set<string>()
+
+    while (currentId && !visited.has(currentId)) {
+        visited.add(currentId)
+        const group = groups.find(g => g.id === currentId)
+        if (!group) return null
+        if (group.linkedParentTaskId) return group.linkedParentTaskId
+        currentId = group.parentGroupId || null
+    }
+
+    return null
+}
+
 // =============================================================================
 // GROUP PARENT UPDATE HELPER
 // =============================================================================
@@ -817,6 +832,14 @@ export function useCanvasInteractions(deps?: {
                         parentId: newParentId ?? undefined,
                         canvasPosition: absolutePos,
                         positionFormat: 'absolute'
+                    }
+
+                    const newLinkedParentTaskId = getLinkedParentTaskIdForGroup(newParentId, taskAllGroups)
+                    const oldLinkedParentTaskId = getLinkedParentTaskIdForGroup(oldParentId, taskAllGroups)
+                    if (newLinkedParentTaskId) {
+                        dragUpdates.parentTaskId = newLinkedParentTaskId
+                    } else if (oldLinkedParentTaskId && task.parentTaskId === oldLinkedParentTaskId) {
+                        dragUpdates.parentTaskId = null
                     }
 
                     if (import.meta.env.DEV) {

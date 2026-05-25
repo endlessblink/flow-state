@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Menu, globalShortcut } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { registerShellHandlers } from './ipc/shell'
@@ -9,6 +9,7 @@ import { registerHttpHandlers } from './ipc/http'
 import { registerWindowHandlers } from './ipc/window'
 import { registerUpdater } from './updater'
 import { registerOAuthHandlers } from './ipc/oauth'
+import { registerLocalApiHandlers, shutdownLocalApi } from './ipc/localApi'
 
 // Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
 app.setName('flow-state')
@@ -35,6 +36,16 @@ function openSearchInRenderer() {
   })()`)
 }
 
+function toggleMainWindowDevTools() {
+  const webContents = mainWindow?.webContents
+  if (!webContents || webContents.isDestroyed()) return
+  if (webContents.isDevToolsOpened()) {
+    webContents.closeDevTools()
+  } else {
+    webContents.openDevTools({ mode: 'detach' })
+  }
+}
+
 function registerAppMenu() {
   const menu = Menu.buildFromTemplate([
     {
@@ -51,6 +62,18 @@ function registerAppMenu() {
           label: 'Search Tasks',
           accelerator: 'CommandOrControl+Shift+F',
           click: openSearchInRenderer,
+        },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'CommandOrControl+Shift+I',
+          click: toggleMainWindowDevTools,
         },
       ],
     },
@@ -94,14 +117,22 @@ function createWindow() {
   // Electron can consume renderer keydown events in some focused states. Keep
   // search shortcuts available while preserving the renderer's input/modal guard.
   mainWindow.webContents.on('before-input-event', (_event, input) => {
-    const isSearchKey = input.key === 'F' || input.code === 'KeyF'
+    const key = input.key.toLowerCase()
+    if (input.control && input.shift && (key === 'i' || input.code === 'KeyI')) {
+      toggleMainWindowDevTools()
+      return
+    }
+
+    const isSearchKey = key === 'f' || input.code === 'KeyF'
     const isSearchShortcut =
+      (input.control || input.meta) &&
       input.shift &&
       !input.alt &&
       isSearchKey
 
     if (!isSearchShortcut) return
 
+    _event.preventDefault()
     openSearchInRenderer()
   })
 
@@ -152,12 +183,14 @@ registerStoreHandlers()
 registerHttpHandlers()
 registerWindowHandlers()
 registerOAuthHandlers()
+registerLocalApiHandlers()
 ipcMain.handle('app:getVersion', () => app.getVersion())
 
 // App lifecycle
 app.whenReady().then(() => {
   registerAppMenu()
   createWindow()
+  globalShortcut.register('CommandOrControl+Shift+I', toggleMainWindowDevTools)
   registerUpdater()
 
   app.on('activate', () => {
@@ -165,6 +198,11 @@ app.whenReady().then(() => {
       createWindow()
     }
   })
+})
+
+app.on('before-quit', () => {
+  globalShortcut.unregister('CommandOrControl+Shift+I')
+  shutdownLocalApi()
 })
 
 app.on('window-all-closed', () => {

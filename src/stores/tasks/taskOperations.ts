@@ -777,6 +777,8 @@ export function useTaskOperations(
                 }
                 if (changedKeys.has('completedPomodoros')) {
                     payload.completed_pomodoros = updatedTask.completedPomodoros
+                    // BUG-1799: toSupabaseTask sets total_pomodoros from completedPomodoros too.
+                    payload.total_pomodoros = updatedTask.completedPomodoros
                 }
                 if (changedKeys.has('isInInbox')) {
                     payload.is_in_inbox = updatedTask.isInInbox
@@ -889,6 +891,35 @@ export function useTaskOperations(
                 if (changedKeys.has('isPinned')) {
                     payload.is_pinned = updatedTask.isPinned ?? false
                 }
+                // BUG-1799: These fields were previously persisted ONLY by the now-removed
+                // unconditional direct save. Mirror toSupabaseTask (supabaseMappers.ts) exactly so
+                // the sync queue is a complete single writer and no field silently stops syncing.
+                if (changedKeys.has('planningNotes') && updatedTask.planningNotes !== undefined) {
+                    payload.planning_notes = JSON.parse(JSON.stringify(updatedTask.planningNotes || []))
+                }
+                if (changedKeys.has('connectionTypes')) {
+                    payload.connection_types = updatedTask.connectionTypes
+                        ? JSON.parse(JSON.stringify(updatedTask.connectionTypes))
+                        : null
+                }
+                if (changedKeys.has('notificationPreferences')) {
+                    payload.notification_prefs = updatedTask.notificationPreferences
+                        ? JSON.parse(JSON.stringify(updatedTask.notificationPreferences))
+                        : null
+                }
+                if (changedKeys.has('dependsOn')) {
+                    const validDeps = (updatedTask.dependsOn || []).filter(id => isValidUUID(id))
+                    payload.depends_on = validDeps.length > 0 ? validDeps : null
+                }
+                if (changedKeys.has('columnId')) {
+                    payload.column_id = updatedTask.columnId || null
+                }
+                if (changedKeys.has('calendarLocked')) {
+                    payload.calendar_locked = updatedTask.calendarLocked ?? false
+                }
+                if (changedKeys.has('parentTaskId')) {
+                    payload.parent_task_id = isValidUUID(updatedTask.parentTaskId) ? updatedTask.parentTaskId : null
+                }
 
                 await syncOrchestrator.enqueue({
                     entityType: 'task',
@@ -912,26 +943,16 @@ export function useTaskOperations(
                 }
             }
 
-            // BUG-1207: Direct save to Supabase (VPS is primary persistence).
-            // The sync queue above is a backup for offline/failure scenarios.
-            // Direct save ensures changes hit VPS immediately without waiting for queue interval.
-            // Echo protection: pendingWrites (300s/5min, see PENDING_WRITE_TIMEOUT_MS) prevents
-            // the realtime echo from this save from reverting local state.
-            try {
-                await saveSpecificTasks([updatedTask], `updateTask-direct-${taskId}`)
-                persisted = true
-                if (import.meta.env.DEV && syncedUpdates.status) {
-                    console.log(`[BUG-1451] updateTask: ${taskId.slice(0, 8)} status→${syncedUpdates.status} PERSISTED to Supabase`)
-                }
-            } catch (directSaveError) {
-                // Direct save failed - sync queue will retry. Don't throw, change is queued.
-                console.warn(`[TASK] Direct save failed for ${taskId}, sync queue will retry:`, directSaveError)
-                if (persisted) {
-                    // At least sync queue succeeded — show reassuring toast
-                    const { showToast } = useToast()
-                    showToast('Changes saved locally, will sync when connection restores', 'warning')
-                }
-            }
+            // BUG-1799: Removed the unconditional direct save that used to run here.
+            // It double-wrote every edit (queue + direct save), and the direct save's fresh
+            // `updated_at` (toSupabaseTask stamps now) out-timestamped the queued op → guaranteed
+            // false position_version conflict → LWW "server wins" log spam + ~1s latency + the
+            // delete-vs-queued-update blank-title resurrection. The sync queue above is now the
+            // single writer: it flushes immediately when online (enqueue → processQueue), retains
+            // position_version optimistic locking + field-level merge, and carries every field
+            // (see the complete payload above). Offline/enqueue failure falls back to the direct
+            // save in the catch block above. Echo protection is already set via addPendingWrite()
+            // at the top of updateTask — independent of this removed save.
 
             // TASK-1177: If ALL persistence paths failed, rollback optimistic update
             // Re-find by ID (index may have shifted if another task was deleted concurrently)

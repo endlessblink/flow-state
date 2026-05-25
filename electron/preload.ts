@@ -60,6 +60,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimize: () => ipcRenderer.invoke('window:minimize'),
   maximize: () => ipcRenderer.invoke('window:maximize'),
   close: () => ipcRenderer.invoke('window:close'),
+
+  // Local Task API (Life OS) — TASK-1797
+  setLocalApiSession: (session: unknown) => ipcRenderer.invoke('localApi:setSession', session),
+  clearLocalApiSession: () => ipcRenderer.invoke('localApi:clearSession'),
+  setLocalApiEnabled: (enabled: boolean) => ipcRenderer.invoke('localApi:setEnabled', enabled),
+  getLocalApiToken: () => ipcRenderer.invoke('localApi:getToken'),
+  getLocalApiStatus: () => ipcRenderer.invoke('localApi:status'),
 })
 
 // Type declaration for the renderer
@@ -92,6 +99,11 @@ declare global {
       minimize: () => Promise<void>
       maximize: () => Promise<void>
       close: () => Promise<void>
+      setLocalApiSession: (session: unknown) => Promise<{ ok: boolean }>
+      clearLocalApiSession: () => Promise<{ ok: boolean }>
+      setLocalApiEnabled: (enabled: boolean) => Promise<{ ok: boolean; enabled: boolean }>
+      getLocalApiToken: () => Promise<string>
+      getLocalApiStatus: () => Promise<{ enabled: boolean; running: boolean; listening: boolean; port: number }>
     }
   }
 }

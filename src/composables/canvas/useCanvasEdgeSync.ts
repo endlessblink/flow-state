@@ -12,6 +12,7 @@
 
 import { type Ref, ref } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
+import { useCanvasStore } from '@/stores/canvas'
 import { useVueFlow, type Edge } from '@vue-flow/core'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 
@@ -21,9 +22,25 @@ interface EdgeSyncDeps {
 
 export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
     const taskStore = useTaskStore()
+    const canvasStore = useCanvasStore()
     const { setEdges, edges: currentEdges } = useVueFlow()
 
     const isSyncing = ref(false)
+
+    const getLinkedParentForGroup = (groupId: string | undefined | null): string | null => {
+        let currentId = groupId || null
+        const visited = new Set<string>()
+
+        while (currentId && !visited.has(currentId)) {
+            visited.add(currentId)
+            const group = canvasStore.groups.find(g => g.id === currentId)
+            if (!group) return null
+            if (group.linkedParentTaskId) return group.linkedParentTaskId
+            currentId = group.parentGroupId || null
+        }
+
+        return null
+    }
 
     /**
      * Build edges from task.parentTaskId and sync to Vue Flow.
@@ -44,6 +61,30 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
             // CRITICAL: Only include tasks that are actually being synced/displayed
             // This prevents creating edges to nodes that are filtered out (e.g. done/overdue)
             const taskMap = new Map(tasks.map((t: Task) => [t.id, t]))
+            for (const group of canvasStore.groups) {
+                if (!group.linkedParentTaskId) continue
+
+                const parentTask = taskMap.get(group.linkedParentTaskId)
+                if (!parentTask?.canvasPosition) continue
+
+                const groupNodeId = CanvasIds.groupNodeId(group.id)
+                const edgeId = CanvasIds.edgeId(group.linkedParentTaskId, groupNodeId)
+                if (deps.recentlyRemovedEdges.value.has(edgeId)) continue
+
+                newEdges.push({
+                    id: edgeId,
+                    source: group.linkedParentTaskId,
+                    target: groupNodeId,
+                    type: 'default',
+                    animated: false,
+                    style: {
+                        stroke: 'var(--accent-primary)',
+                        strokeWidth: 2.5,
+                        strokeDasharray: '8 5'
+                    },
+                    markerEnd: 'arrowhead'
+                })
+            }
 
             for (const task of tasks) {
                 // Skip tasks without canvas position (not on canvas)
@@ -55,6 +96,9 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
                 // Check if parent task exists and is on canvas
                 const parentTask = taskMap.get(task.parentTaskId)
                 if (!parentTask?.canvasPosition) continue
+
+                // A linked group edge already represents these child relationships visually.
+                if (task.parentId && getLinkedParentForGroup(task.parentId) === task.parentTaskId) continue
 
                 // Skip group nodes - edges are only between tasks
                 if (CanvasIds.isGroupNode(task.parentTaskId) || CanvasIds.isGroupNode(task.id)) continue

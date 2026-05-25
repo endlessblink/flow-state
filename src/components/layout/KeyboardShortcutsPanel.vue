@@ -144,7 +144,7 @@ const categories: ShortcutCategory[] = [
       { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo', searchTerms: 'forward repeat' },
       { keys: ['Ctrl', 'N'], description: 'New task', searchTerms: 'create add' },
       { keys: ['Ctrl', 'K'], description: 'Command palette', searchTerms: 'quick action menu' },
-      { keys: ['Shift', 'F'], description: 'Search', searchTerms: 'find lookup' },
+      { keys: ['Ctrl', 'Shift', 'F'], description: 'Search', searchTerms: 'find lookup' },
       { keys: ['Ctrl', 'E'], description: 'Edit selected task', searchTerms: 'modify change' },
       { keys: ['Alt', 'N'], description: 'Quick task create', searchTerms: 'add new fast' },
       { keys: ['Shift', 'Del'], description: 'Delete selected', searchTerms: 'remove trash' },

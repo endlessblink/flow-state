@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
-import { LogOut, Key, Eye, EyeOff, Check, AlertCircle, Loader2, CheckCircle, Download, RefreshCw, ExternalLink, Info, Plus, Trash2, Calendar } from 'lucide-vue-next'
+import { LogOut, Key, Eye, EyeOff, Check, Copy, AlertCircle, Loader2, CheckCircle, Download, RefreshCw, ExternalLink, Info, Plus, Trash2, Calendar } from 'lucide-vue-next'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import { supabase } from '@/services/auth/supabase'
@@ -97,6 +97,52 @@ const openWebsite = () => {
 const openGithub = () => {
   openExternal(EXTERNAL_URLS.GITHUB_REPO)
 }
+
+// ── Local Task API (Life OS) — TASK-1797 ──
+// Electron only: spawns a localhost-only sidecar that exposes the user's tasks
+// to another local app (e.g. Life OS Advisor), scoped to this account via the
+// logged-in session (RLS). Off by default.
+const localApiEnabled = ref(false)
+const localApiPort = ref(5577)
+const localApiRunning = ref(false)
+const localApiToken = ref('')
+const localApiCopied = ref(false)
+const showLocalApi = computed(() => isElectron())
+
+const refreshLocalApiStatus = async () => {
+  const api = (window as unknown as { electronAPI?: Record<string, (...a: unknown[]) => Promise<unknown>> }).electronAPI
+  if (!api?.getLocalApiStatus) return
+  try {
+    const s = (await api.getLocalApiStatus()) as { enabled: boolean; running: boolean; port: number }
+    localApiEnabled.value = !!s.enabled
+    localApiRunning.value = !!s.running
+    localApiPort.value = s.port || 5577
+    localApiToken.value = (await api.getLocalApiToken()) as string
+  } catch {
+    /* ignore */
+  }
+}
+
+const toggleLocalApi = async (val: boolean) => {
+  const api = (window as unknown as { electronAPI?: Record<string, (...a: unknown[]) => Promise<unknown>> }).electronAPI
+  if (!api?.setLocalApiEnabled) return
+  await api.setLocalApiEnabled(val)
+  await refreshLocalApiStatus()
+}
+
+const copyLocalApiToken = async () => {
+  try {
+    await navigator.clipboard.writeText(localApiToken.value)
+    localApiCopied.value = true
+    setTimeout(() => (localApiCopied.value = false), 1500)
+  } catch {
+    /* ignore */
+  }
+}
+
+onMounted(() => {
+  if (showLocalApi.value) refreshLocalApiStatus()
+})
 
 // ── Integrations section ──
 const newCalName = ref('')
@@ -432,6 +478,36 @@ const handleChangePassword = async () => {
             :value="settingsStore.autoUpdateEnabled"
             @update="(val: boolean) => settingsStore.updateSetting('autoUpdateEnabled', val)"
           />
+        </div>
+      </div>
+    </SettingsSection>
+
+    <!-- TASK-1797: Local Task API (Life OS) — Electron only -->
+    <SettingsSection v-if="showLocalApi" title="Local Task API (Life OS)">
+      <p class="section-description">
+        Let another local app (e.g. Life OS Advisor) read and update your tasks over a
+        localhost-only API while FlowState is open. Scoped to your account; nothing leaves your machine.
+      </p>
+      <SettingsToggle
+        label="Enable Local Task API"
+        :description="localApiRunning ? `Running on http://127.0.0.1:${localApiPort}` : `Listens on http://127.0.0.1:${localApiPort} when signed in`"
+        :value="localApiEnabled"
+        @update="toggleLocalApi"
+      />
+      <div v-if="localApiEnabled" class="local-api-token">
+        <label class="cal-field-label">Access token — paste into Life OS as the Bearer token</label>
+        <div class="password-input-wrapper">
+          <input
+            :value="localApiToken"
+            readonly
+            type="text"
+            class="form-input"
+            @focus="(e) => (e.target as HTMLInputElement).select()"
+          >
+          <button class="toggle-visibility" :title="localApiCopied ? 'Copied!' : 'Copy'" @click="copyLocalApiToken">
+            <Check v-if="localApiCopied" :size="16" />
+            <Copy v-else :size="16" />
+          </button>
         </div>
       </div>
     </SettingsSection>
@@ -1114,6 +1190,14 @@ const handleChangePassword = async () => {
 .auto-update-toggle {
   padding-top: var(--space-3);
   border-top: 1px solid var(--glass-border);
+}
+
+/* TASK-1797: Local Task API token field */
+.local-api-token {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .links-section {

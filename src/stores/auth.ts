@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { supabase, consumePendingProviderTokens, type User, type Session, type AuthError } from '@/services/auth/supabase'
+import { syncLocalApiSession } from '@/composables/useLocalApiBridge'
 import { clearGuestData, clearGuestSessionId } from '@/utils/guestModeStorage'
 import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
 import { invalidateCache } from '@/composables/useSupabaseDatabase'
@@ -13,6 +14,10 @@ export const useAuthStore = defineStore('auth', () => {
   // State
   const user = ref<User | null>(null)
   const session = ref<Session | null>(null)
+  // TASK-1797: Keep the Electron Local Task API sidecar's session in sync with
+  // ours (no-op outside Electron / when the API is disabled). Fires on sign-in,
+  // token refresh, and sign-out.
+  watch(session, (s) => syncLocalApiSession(s), { immediate: true })
   const isLoading = ref(false)
   const error = ref<AuthError | null>(null)
   const isInitialized = ref(false)

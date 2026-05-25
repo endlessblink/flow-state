@@ -19,7 +19,7 @@ export interface RealtimePayload {
 }
 
 export function useRealtimeSubscription(ctx: DatabaseContext) {
-    const { authStore, handleError } = ctx
+    const { authStore } = ctx
 
     const initRealtimeSubscription = (
         onProjectChange: (payload: RealtimePayload) => void,
@@ -55,6 +55,14 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         let isExplicitlyClosed = false
         const _heartbeatInterval: ReturnType<typeof setInterval> | null = null
         let isRemovingChannel = false // Guard against recursive removeChannel calls (BUG-1088)
+        // BUG-1799: Single-flight guard. setupSubscription is invoked from 4 places (initial,
+        // retry timer, visibility, online). supabase-js dedupes channels by topic, so re-entrant
+        // calls re-run channel.on(...) → DUPLICATE postgres_changes bindings (events handled N×)
+        // and spawn competing reconnects. isConnecting collapses concurrent setup into one.
+        let isConnecting = false
+        // BUG-1799: Single pending reconnect handle. Both terminal statuses (CHANNEL_ERROR then
+        // CLOSED) fire per failure; without this they each schedule a reconnect (double-schedule).
+        let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
         // cleanup previous channel (scoped to this call-site's currentChannel ref only,
         // not a nuclear removeAllChannels that would tear down other subscriptions)
@@ -74,15 +82,39 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         const setupSubscription = async () => {
             if (isExplicitlyClosed) return
 
+            // BUG-1799: Single-flight — never let two setups run concurrently. Re-entrant calls
+            // would re-bind postgres_changes listeners on the deduped channel and spawn competing
+            // reconnects (the root of the CHANNEL_ERROR/CLOSED storm under Electron focus churn).
+            if (isConnecting) {
+                console.debug('📡 [REALTIME] setupSubscription already in progress — skipping concurrent call')
+                return
+            }
+            isConnecting = true
+
             // connection guard
             const { data: { session: freshSession } } = await getSupabase().auth.getSession()
             if (!freshSession?.access_token) {
                 console.warn('📡 [REALTIME] No auth token available, aborting setup')
+                isConnecting = false
                 return
             }
             getSupabase().realtime.setAuth(freshSession.access_token)
 
             console.debug(`📡 [REALTIME] Connecting to channel: ${channelName} (Attempt ${retryCount + 1})`)
+
+            // BUG-1799: Remove any existing channel before creating a new one. supabase-js reuses
+            // a channel with the same topic, so without an explicit teardown we re-add duplicate
+            // postgres_changes bindings onto the same channel (each event then fires N handlers).
+            if (currentChannel && !isRemovingChannel) {
+                isRemovingChannel = true
+                try {
+                    await getSupabase().removeChannel(currentChannel)
+                } catch (removeErr) {
+                    console.warn('📡 [REALTIME] Failed to remove stale channel before reconnect:', removeErr)
+                } finally {
+                    isRemovingChannel = false
+                }
+            }
 
             const channel = getSupabase().channel(channelName)
             currentChannel = channel
@@ -173,6 +205,14 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
                     if (isExplicitlyClosed) return
 
+                    // BUG-1799: Both terminal statuses (CHANNEL_ERROR then CLOSED) fire per failure.
+                    // If a reconnect is already scheduled, ignore the duplicate so we don't stack
+                    // multiple competing reconnect timers (and so backoff advances by one, not two).
+                    if (reconnectTimer) {
+                        console.debug('📡 [REALTIME] Reconnect already scheduled — ignoring duplicate terminal status')
+                        return
+                    }
+
                     // BUG-1088: Guard against recursive removeChannel calls that cause stack overflow
                     if (isRemovingChannel) {
                         console.debug('📡 [REALTIME] Skipping duplicate removeChannel (recursion guard)')
@@ -214,7 +254,9 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                         console.debug(`📡 [REALTIME] Reconnecting in ${delay.toFixed(0)}ms (fast retry ${retryCount + 1}/${FAST_RETRY_LIMIT})...`)
                     }
 
-                    setTimeout(() => {
+                    reconnectTimer = setTimeout(() => {
+                        // BUG-1799: clear the handle first so the next failure can schedule again.
+                        reconnectTimer = null
                         // Cancellation token: abort if a newer initRealtimeSubscription
                         // call has already claimed the channel (workspace switch, re-init, etc.)
                         if (myGeneration !== subscriptionGeneration) {
@@ -248,6 +290,10 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     }, delay)
                 }
             })
+
+            // BUG-1799: Setup (binding + subscribe initiation) is complete. Subsequent
+            // SUBSCRIBED/error transitions are handled by the callback above and reconnectTimer.
+            isConnecting = false
         }
 
         // Start initial connection
@@ -298,21 +344,16 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                 }
 
                 const state = currentChannel?.state
+                const isDead = !currentChannel || state === 'closed' || state === 'errored'
 
-                if (!currentChannel || state === 'closed' || state === 'errored') {
-                    console.debug('👀 [REALTIME] Connection dead on resume. Force reconnecting...')
-                    // BUG-1088: Guard against recursive removeChannel calls
-                    if (currentChannel && !isRemovingChannel) {
-                        isRemovingChannel = true
-                        try {
-                            await getSupabase().removeChannel(currentChannel)
-                        } catch (removeErr) {
-                            console.warn('👀 [REALTIME] Failed to remove channel (continuing anyway):', removeErr)
-                        } finally {
-                            isRemovingChannel = false
-                        }
-                    }
-                    retryCount = 0
+                // BUG-1799: Only reconnect when genuinely dead AND no reconnect is already in
+                // flight (isConnecting) or scheduled (reconnectTimer). Electron fires
+                // visibilitychange constantly (focus/blur/occlusion) — without these guards every
+                // tick forced a reconnect and reset retryCount, defeating backoff and re-binding
+                // listeners. setupSubscription now tears down the stale channel itself, so the
+                // manual removeChannel here is gone. retryCount is NOT reset — only SUBSCRIBED resets it.
+                if (isDead && !isConnecting && reconnectTimer === null) {
+                    console.debug('👀 [REALTIME] Connection dead on resume. Reconnecting...')
                     setupSubscription()
 
                     // BUG-1207 FIX: Skip recovery reload if user was recently active.
@@ -324,8 +365,8 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     } else if (onRecovery) {
                         console.debug(`👀 [REALTIME] Skipping recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
                     }
-                } else {
-                    // Pulse check - verify we are actually connected
+                } else if (isDead) {
+                    console.debug('👀 [REALTIME] Connection dead but reconnect already in progress/scheduled — skipping')
                 }
             }
         }
@@ -334,9 +375,15 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         // ONLINE RESUME
         // BUG-1209: Add same cooldown as visibility handler to prevent clobbering in-flight drags
         const onOnline = async () => {
-            console.debug('🌐 [REALTIME] Online event detected. Reconnecting...')
-            retryCount = 0
-            setupSubscription()
+            console.debug('🌐 [REALTIME] Online event detected.')
+            // BUG-1799: Only force a reconnect when the channel is actually dead and no reconnect
+            // is already in flight/scheduled. Do not reset retryCount here (only SUBSCRIBED does).
+            const state = currentChannel?.state
+            const isDead = !currentChannel || state === 'closed' || state === 'errored'
+            if (isDead && !isConnecting && reconnectTimer === null) {
+                console.debug('🌐 [REALTIME] Reconnecting after online event...')
+                setupSubscription()
+            }
             const timeSinceInteraction = Date.now() - lastUserInteraction
             if (onRecovery && timeSinceInteraction > RECOVERY_COOLDOWN_MS) {
                 // BUG-1206 FIX (Fix 3): Check modal state before online recovery too
@@ -363,6 +410,11 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             unsubscribe: async () => {
                 console.debug('📡 [REALTIME] Unsubscribing explicitly.')
                 isExplicitlyClosed = true
+                // BUG-1799: Cancel any pending reconnect so it can't resurrect the channel.
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer)
+                    reconnectTimer = null
+                }
                 // BUG-1088: Guard against recursive removeChannel calls
                 if (currentChannel && !isRemovingChannel) {
                     isRemovingChannel = true

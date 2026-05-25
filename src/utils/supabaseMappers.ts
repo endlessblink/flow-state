@@ -180,6 +180,7 @@ export interface SupabaseGroup {
     collapsed_height?: number
 
     parent_group_id?: string | null
+    linked_parent_task_id?: string | null
 
     filters_json?: import('../types/canvas').GroupFilter | null
     is_power_mode?: boolean
@@ -353,6 +354,7 @@ export function toSupabaseGroup(group: CanvasGroup, userId: string): SupabaseGro
         collapsed_height: group.collapsedHeight,
 
         parent_group_id: sanitizedParentGroupId,
+        linked_parent_task_id: sanitizeUUID(group.linkedParentTaskId),
 
         filters_json: group.filters,
         is_power_mode: group.isPowerMode,
@@ -388,6 +390,7 @@ export function fromSupabaseGroup(record: SupabaseGroup): CanvasGroup {
         collapsedHeight: record.collapsed_height,
 
         parentGroupId: record.parent_group_id, // TASK-138: Using current DB field name
+        linkedParentTaskId: record.linked_parent_task_id || null,
 
         filters: record.filters_json,
         isPowerMode: record.is_power_mode,

@@ -798,15 +798,20 @@ const handleRecurrenceDeleteEvent = (e: Event) => {
   showRecurrenceDeleteModal.value = true
 }
 
+const handleOpenCommandPalette = () => { commandPaletteRef.value?.open() }
+const handleOpenSearch = () => { showSearchModal.value = true }
+const handleOpenQuickTaskCreate = () => { showQuickTaskCreate.value = true }
+const handleOpenShortcutsPanel = () => { uiStore.toggleShortcutsPanel() }
+
 onMounted(() => {
   window.addEventListener('open-task-edit', handleOpenTaskEdit)
   window.addEventListener('task-context-menu', handleTaskContextMenu as unknown as EventListener)
   window.addEventListener('project-context-menu', handleProjectContextMenu)
-  window.addEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
-  window.addEventListener('open-search', () => { showSearchModal.value = true })
-  window.addEventListener('open-quick-task-create', () => { showQuickTaskCreate.value = true })
+  window.addEventListener('open-command-palette', handleOpenCommandPalette)
+  window.addEventListener('open-search', handleOpenSearch)
+  window.addEventListener('open-quick-task-create', handleOpenQuickTaskCreate)
   window.addEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
-  window.addEventListener('open-shortcuts-panel', () => { uiStore.toggleShortcutsPanel() })
+  window.addEventListener('open-shortcuts-panel', handleOpenShortcutsPanel)
   window.addEventListener('recurrence-delete-requested', handleRecurrenceDeleteEvent)
 })
 
@@ -814,11 +819,11 @@ onUnmounted(() => {
   window.removeEventListener('open-task-edit', handleOpenTaskEdit)
   window.removeEventListener('task-context-menu', handleTaskContextMenu as unknown as EventListener)
   window.removeEventListener('project-context-menu', handleProjectContextMenu)
-  window.removeEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
-  window.removeEventListener('open-search', () => { showSearchModal.value = true })
-  window.removeEventListener('open-quick-task-create', () => { showQuickTaskCreate.value = true })
+  window.removeEventListener('open-command-palette', handleOpenCommandPalette)
+  window.removeEventListener('open-search', handleOpenSearch)
+  window.removeEventListener('open-quick-task-create', handleOpenQuickTaskCreate)
   window.removeEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
-  window.removeEventListener('open-shortcuts-panel', () => { uiStore.toggleShortcutsPanel() })
+  window.removeEventListener('open-shortcuts-panel', handleOpenShortcutsPanel)
   window.removeEventListener('recurrence-delete-requested', handleRecurrenceDeleteEvent)
 })
 

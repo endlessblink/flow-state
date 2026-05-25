@@ -16,18 +16,30 @@
           xmlns="http://www.w3.org/2000/svg"
         >
           <!-- Connecting lines -->
-          <line class="connector connector-1" x1="80" y1="72"
-x2="160"
-y2="100"
-stroke-dasharray="4 3" />
-          <line class="connector connector-2" x1="240" y1="68"
-x2="160"
-y2="100"
-stroke-dasharray="4 3" />
-          <line class="connector connector-3" x1="160" y1="100"
-x2="160"
-y2="148"
-stroke-dasharray="4 3" />
+          <line
+            class="connector connector-1"
+            x1="80"
+            y1="72"
+            x2="160"
+            y2="100"
+            stroke-dasharray="4 3"
+          />
+          <line
+            class="connector connector-2"
+            x1="240"
+            y1="68"
+            x2="160"
+            y2="100"
+            stroke-dasharray="4 3"
+          />
+          <line
+            class="connector connector-3"
+            x1="160"
+            y1="100"
+            x2="160"
+            y2="148"
+            stroke-dasharray="4 3"
+          />
 
           <!-- Dot nodes at line intersections -->
           <circle class="node-dot node-dot-1" cx="80" cy="72" r="4" />

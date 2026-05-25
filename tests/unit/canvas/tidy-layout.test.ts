@@ -40,7 +40,6 @@ import { useTidyLayout } from '@/composables/canvas/useTidyLayout'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import type { CanvasGroup } from '@/types/canvas'
-import { formatDateKey } from '@/utils/dateUtils'
 
 let counter = 0
 function makeGroup(name: string, x: number, y = 0): CanvasGroup {
@@ -239,38 +238,33 @@ describe('useTidyLayout', () => {
     expect(groupMoves[0].size.height).toBeGreaterThan(1000)
   })
 
-  it('pulls a task due today into the Today group even when parented elsewhere (TASK-1798)', () => {
-    // Date association: a task whose due date is today belongs in the Today
-    // group, regardless of which group it currently lives in.
+  it('does not reparent tasks by due date during tidy', () => {
+    // Tidy is layout-only. Due-date moves belong to explicit move/drag flows,
+    // otherwise tasks appear to vanish from the user's current group.
     const today = makeGroup('Today', 0)
     const mon = makeGroup('Monday', 500)
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, mon])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
       {
         id: 'task-due-today',
-        parentId: mon.id, // currently in the WRONG group
-        dueDate: formatDateKey(new Date()),
+        parentId: mon.id,
+        dueDate: '2026-05-04',
         canvasPosition: { x: 520, y: 120 },
         createdAt: '2026-04-01T00:00:00Z',
       },
     ] as any)
 
     const { tidyDayGroups } = useTidyLayout()
-    const { release } = tidyDayGroups()
+    const { taskMoves, release } = tidyDayGroups()
     release()
 
-    // First write re-homes the task into Today.
-    expect(updateTask).toHaveBeenCalledWith(
-      'task-due-today',
-      { parentId: today.id },
-      'DRAG'
-    )
+    expect(taskMoves[0]?.parentId).toBe(mon.id)
+    expect(updateTask).not.toHaveBeenCalledWith('task-due-today', { parentId: today.id }, 'DRAG')
   })
 
-  it('spatially adopts a loose task sitting inside a custom group (TASK-1798)', () => {
-    // Custom groups have no date, so containment is the only association:
-    // a loose (unparented) task whose center sits inside the custom group's
-    // bounds gets adopted into it.
+  it('does not spatially adopt loose tasks during tidy', () => {
+    // Tidy must not mutate parentId based on current geometry. A task sitting
+    // over a group but not parented to it stays unparented.
     const custom = makeGroup('Project Work', 200) // bounds x:200..500, y:0..200
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([custom])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
@@ -284,13 +278,10 @@ describe('useTidyLayout', () => {
     ] as any)
 
     const { tidyDayGroups } = useTidyLayout()
-    const { release } = tidyDayGroups()
+    const { taskMoves, release } = tidyDayGroups()
     release()
 
-    expect(updateTask).toHaveBeenCalledWith(
-      'task-loose',
-      { parentId: custom.id },
-      'DRAG'
-    )
+    expect(taskMoves).toEqual([])
+    expect(updateTask).not.toHaveBeenCalledWith('task-loose', { parentId: custom.id }, 'DRAG')
   })
 })

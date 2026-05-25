@@ -42,6 +42,23 @@ keywords:
 
 ### Understanding position vs computedPosition
 
+### FlowState Rule: Absolute Store, Relative Vue Flow
+
+FlowState stores `task.canvasPosition` and `group.position` as absolute world/canvas coordinates. Vue Flow nodes are only a display projection.
+
+- Store/DB/Pinia/PositionManager writes: absolute coordinates.
+- Vue Flow root nodes: `position` is absolute.
+- Vue Flow child nodes with `parentNode`: `position` must be relative to the direct parent.
+- Vue Flow `computedPosition` is the absolute visual position and is preferred for persistence after drag.
+- Every `setNodes()`/sync/reload path must convert parented task/group absolute store positions to parent-relative Vue Flow positions.
+- Every drag/programmatic write must persist absolute positions back to the store.
+
+Never feed absolute `task.canvasPosition` directly into a child node's `position` while also setting `parentNode`. That causes exactly the FlowState Electron/reload symptom: tasks appear outside their group or drift after restart/update.
+
+### FlowState Rule: Tidy Must Not Reparent
+
+The Canvas `Tidy` command is layout-only. It must not change `task.parentId`, date-home tasks, spatially adopt tasks, clear parents, or move tasks between groups. Reparenting belongs only to explicit drag/drop or dedicated move commands. Tidy side effects can make tasks appear removed from the user's current group and then sync/restart can detach them.
+
 **node.position (Stored in State)**
 *   For root nodes: position = absolute coordinates on the canvas
 *   For child nodes (with parentNode set): position = relative to parent's top-left corner

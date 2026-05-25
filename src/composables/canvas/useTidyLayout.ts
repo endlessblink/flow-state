@@ -23,9 +23,7 @@ import {
   type GroupMove,
   type TaskMove,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
-import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
-import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
 
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
@@ -68,58 +66,9 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     let pendingGroupMoves: GroupMove[] = []
     let pendingTaskMoves: TaskMove[] = []
 
-    // TASK-1798: pull tasks into the group they belong to before restacking.
-    //
-    // Pass 1 — date association (primary). A task due "today" belongs in the
-    // Today group, tomorrow → Tomorrow, a weekday date → that day-group —
-    // regardless of where it currently sits. This widens the old orphan-only
-    // re-home (which only healed BUG-1203 orphans) to EVERY dated task, so a
-    // task stranded in the wrong day-group gets moved to the matching one.
-    // Undated tasks are left alone (findMatchingGroupForDueDate would default
-    // them to Today, which would wrongly hoover every undated task in).
-    const dateClaimed = new Set<string>()
-    let rehomedCount = 0
-    for (const task of taskStore.rawTasks) {
-      if (!task.canvasPosition) continue // inbox-only, skip
-      if (!task.dueDate) continue
-      const match = findMatchingGroupForDueDate(task.dueDate, canvasStore.groups)
-      if (!match) continue
-      dateClaimed.add(task.id)
-      if (match.id === task.parentId) continue
-      taskStore.updateTask(task.id, { parentId: match.id }, 'DRAG')
-      rehomedCount++
-    }
-    if (rehomedCount > 0) {
-      console.log('[TIDY] Date-homed', rehomedCount, 'tasks into matching day/smart groups')
-    }
-
-    // Pass 2 — spatial adoption (fallback for custom groups). Custom-named
-    // groups have no date, so the only association is containment: adopt any
-    // task whose center sits inside a custom group's bounds. Date-claimed tasks
-    // are skipped so the date rule always wins. Positions are absolute (visual
-    // position preferred; canvasPosition is stored absolute by every drag/Tidy
-    // write), so getDeepestContainingGroup works directly.
-    const customGroups = canvasStore.groups.filter(
-      (g) => g.position && g.isVisible !== false && !detectPowerKeyword(g.name)
-    )
-    let adoptedCount = 0
-    if (customGroups.length > 0) {
-      for (const task of taskStore.rawTasks) {
-        if (!task.canvasPosition) continue // inbox-only, skip
-        if (dateClaimed.has(task.id)) continue
-        const absPos = options.getNodePosition?.(task.id) ?? task.canvasPosition
-        const size = options.getNodeSize?.(task.id)
-        const spatialTask = { position: absPos, width: size?.width, height: size?.height }
-        const containing = getDeepestContainingGroup(spatialTask, customGroups)
-        if (containing && containing.id !== task.parentId) {
-          taskStore.updateTask(task.id, { parentId: containing.id }, 'DRAG')
-          adoptedCount++
-        }
-      }
-    }
-    if (adoptedCount > 0) {
-      console.log('[TIDY] Spatially adopted', adoptedCount, 'loose tasks into custom groups')
-    }
+    // Tidy is layout-only. It must not change task.parentId, date-home tasks,
+    // spatially adopt tasks, or clear parents. Reparenting belongs to explicit
+    // drag/drop; doing it here made tasks appear removed from user-arranged groups.
 
     // Collect every group with a position. Day-of-week / smart / custom — all
     // get the canonical single-row treatment so the Tidy button always does

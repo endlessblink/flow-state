@@ -362,7 +362,7 @@ const nodeTypes = {
 }
 
 // FEATURE-1048: Day group auto-rotation at midnight
-const { findNode, updateNode, setNodes, applyNodeChanges, getViewport } = useVueFlow()
+const { findNode, getNodes, setNodes, getViewport } = useVueFlow()
 
 // TASK-1756 v10: Vue Flow dimension bookkeeping uses the top-level
 // `width` / `height` fields on the node. Setting only `style.width` (px)
@@ -370,129 +370,98 @@ const { findNode, updateNode, setNodes, applyNodeChanges, getViewport } = useVue
 // NodeResizer + spatial validation see stale dimensions → overlap + detach.
 // Pass BOTH the top-level fields (numbers) AND the style (px strings) for
 // GroupNodeSimple, which reads off `node.style` in its template.
-function applyCanonicalLayoutMoves(
-  groupMoves: Array<{ nodeId: string; position: { x: number; y: number }; size: { width: number; height: number } }>
-) {
-  console.log('[CANONICAL-LAYOUT:VF] Applying', groupMoves.length, 'group moves')
-  for (const move of groupMoves) {
-    const node = findNode(move.nodeId)
-    if (!node) {
-      continue
-    }
-    console.log(`[CANONICAL-LAYOUT:VF] ${move.nodeId}: x=${Math.round(node.position.x)} → ${Math.round(move.position.x)}, w=${Math.round(move.size.width)}, h=${Math.round(move.size.height)}`)
-    updateNode(move.nodeId, {
-      width: move.size.width,
-      height: move.size.height,
-      style: {
-        width: `${move.size.width}px`,
-        height: `${move.size.height}px`,
-      },
-    })
-    updateNode(move.nodeId, { position: move.position })
-    nodes.value = nodes.value.map((candidate) => candidate.id === move.nodeId
-      ? {
-          ...candidate,
-          position: move.position,
-          computedPosition: {
-            ...(candidate.computedPosition ?? {}),
-            x: move.position.x,
-            y: move.position.y,
-          },
-          width: move.size.width,
-          height: move.size.height,
-          dimensions: {
-            ...(candidate.dimensions ?? {}),
-            width: move.size.width,
-            height: move.size.height,
-          },
-          style: {
-            ...(candidate.style ?? {}),
-            width: `${move.size.width}px`,
-            height: `${move.size.height}px`,
-          },
-        }
-      : candidate)
-  }
-  const positionChanges = groupMoves.map((move) => ({
-    id: move.nodeId,
-    type: 'position',
-    position: move.position,
-    dragging: false,
-  }))
-  applyNodeChanges(positionChanges)
-  handleNodesChange(positionChanges as any)
-  setNodes(nodes.value)
-}
-
-function applyCanonicalTaskMoves(
+function applyCanonicalMoves(
+  groupMoves: Array<{ nodeId: string; groupId: string; position: { x: number; y: number }; size: { width: number; height: number } }>,
   taskMoves: Array<{ taskId: string; parentId: string; position: { x: number; y: number } }>,
-  groupMoves: Array<{ groupId: string; position: { x: number; y: number } }>
 ) {
-  const targetGroupPositions = new Map(groupMoves.map((move) => [move.groupId, move.position]))
-  const positionChanges: Array<{ id: string; type: 'position'; position: { x: number; y: number }; dragging: false }> = []
-
-  for (const move of taskMoves) {
-    const node = findNode(CanvasIds.taskNodeId(move.taskId))
-    if (!node) {
-      continue
-    }
-
-    const parentAbsPos =
-      targetGroupPositions.get(move.parentId) ??
-      (() => {
-        const parentNode = findNode(CanvasIds.groupNodeId(move.parentId))
-        return parentNode ? { x: parentNode.position.x, y: parentNode.position.y } : undefined
-      })() ??
-      (() => {
-        const parentGroup = canvasStore.groups.find((group) => group.id === move.parentId)
-        return parentGroup?.position ? { x: parentGroup.position.x, y: parentGroup.position.y } : undefined
-      })()
-
-    if (!parentAbsPos) {
-      continue
-    }
-
-    const taskNodeId = CanvasIds.taskNodeId(move.taskId)
-    const relativePosition = {
-      x: move.position.x - parentAbsPos.x,
-      y: move.position.y - parentAbsPos.y,
-    }
-
-    updateNode(taskNodeId, {
-      position: relativePosition,
-      parentNode: CanvasIds.groupNodeId(move.parentId),
-    })
-    positionChanges.push({ id: taskNodeId, type: 'position', position: relativePosition, dragging: false })
-    nodes.value = nodes.value.map((candidate) => candidate.id === taskNodeId
-      ? {
-          ...candidate,
-          position: relativePosition,
-          computedPosition: {
-            ...(candidate.computedPosition ?? {}),
-            x: move.position.x,
-            y: move.position.y,
-          },
-          parentNode: CanvasIds.groupNodeId(move.parentId),
-        }
-      : candidate)
-  }
-  if (positionChanges.length > 0) {
-    applyNodeChanges(positionChanges)
-  }
-  setNodes(nodes.value)
-}
-
-function refreshRenderedNodesFromModel() {
-  const refreshedNodes = nodes.value.map((node) => ({ ...node }))
-  setNodes([])
-  nextTick(() => {
-    nodes.value = refreshedNodes
-    setNodes(refreshedNodes)
+  console.log('[CANONICAL-LAYOUT:VF] Applying atomic layout', {
+    groupMoves: groupMoves.length,
+    taskMoves: taskMoves.length,
   })
+
+  const groupMovesByNodeId = new Map(groupMoves.map((move) => [move.nodeId, move]))
+  const targetGroupPositions = new Map(groupMoves.map((move) => [move.groupId, move.position]))
+  const taskMovesByNodeId = new Map(taskMoves.map((move) => [CanvasIds.taskNodeId(move.taskId), move]))
+  const currentNodes = (getNodes.value?.length ? getNodes.value : nodes.value) as Array<Record<string, any>>
+  const originalIndex = new Map(currentNodes.map((node, index) => [node.id, index]))
+
+  const updatedNodes = currentNodes.map((node) => {
+    const groupMove = groupMovesByNodeId.get(node.id)
+    if (groupMove) {
+      console.log(`[CANONICAL-LAYOUT:VF] ${node.id}: x=${Math.round(node.position.x)} -> ${Math.round(groupMove.position.x)}, w=${Math.round(groupMove.size.width)}, h=${Math.round(groupMove.size.height)}`)
+      return {
+        ...node,
+        position: groupMove.position,
+        computedPosition: {
+          ...(node.computedPosition ?? {}),
+          x: groupMove.position.x,
+          y: groupMove.position.y,
+        },
+        width: groupMove.size.width,
+        height: groupMove.size.height,
+        dimensions: {
+          ...(node.dimensions ?? {}),
+          width: groupMove.size.width,
+          height: groupMove.size.height,
+        },
+        style: {
+          ...(node.style ?? {}),
+          width: `${groupMove.size.width}px`,
+          height: `${groupMove.size.height}px`,
+        },
+      }
+    }
+
+    const taskMove = taskMovesByNodeId.get(node.id)
+    if (taskMove) {
+      const parentNodeId = CanvasIds.groupNodeId(taskMove.parentId)
+      const parentAbsPos =
+        targetGroupPositions.get(taskMove.parentId) ??
+        (() => {
+          const updatedParent = groupMovesByNodeId.get(parentNodeId)
+          if (updatedParent) return updatedParent.position
+          const parentNode = currentNodes.find((candidate) => candidate.id === parentNodeId)
+          return parentNode ? { x: parentNode.position.x, y: parentNode.position.y } : undefined
+        })() ??
+        (() => {
+          const parentGroup = canvasStore.groups.find((group) => group.id === taskMove.parentId)
+          return parentGroup?.position ? { x: parentGroup.position.x, y: parentGroup.position.y } : undefined
+        })()
+
+      if (!parentAbsPos) return node
+
+      const relativePosition = {
+        x: taskMove.position.x - parentAbsPos.x,
+        y: taskMove.position.y - parentAbsPos.y,
+      }
+
+      return {
+        ...node,
+        position: relativePosition,
+        computedPosition: {
+          ...(node.computedPosition ?? {}),
+          x: taskMove.position.x,
+          y: taskMove.position.y,
+        },
+        parentNode: parentNodeId,
+      }
+    }
+
+    return node
+  }).sort((a, b) => {
+    if (a.id === b.parentNode) return -1
+    if (b.id === a.parentNode) return 1
+    if (a.parentNode && !b.parentNode) return 1
+    if (!a.parentNode && b.parentNode) return -1
+    return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
+  })
+
+  nodes.value = updatedNodes as any
+  setNodes(updatedNodes as any)
 }
 
 const dayRotation = useDayGroupRotation({
-  onMoves: applyCanonicalLayoutMoves,
+  onMoves: (groupMoves) => applyCanonicalMoves(groupMoves, []),
   getNodePosition: (nodeId: string) => getVisualNodePosition(nodeId),
   getNodeSize: (nodeId: string) => getRenderedNodeSize(nodeId),
 })
@@ -576,11 +545,9 @@ function handleRotateDayGroups() {
   // moves — the canonical primitive owns all geometry math now.
   dayRotation.rotateDayGroups({ force: true })
   const { groupMoves, taskMoves, pendingWrites, release } = dayRotation.rotateDayGroupPositions()
-  applyCanonicalLayoutMoves(groupMoves)
-  applyCanonicalTaskMoves(taskMoves, groupMoves)
+  applyCanonicalMoves(groupMoves, taskMoves)
   releaseOnDoubleNextTick(release, () => {
     syncNodes(undefined, { force: true })
-    refreshRenderedNodesFromModel()
   }, pendingWrites)
 }
 
@@ -588,11 +555,9 @@ function handleTidyLayout() {
   // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
   // (user's left-to-right order preserved) and restack tasks inside them.
   const { groupMoves, taskMoves, pendingWrites, release } = tidyLayout.tidyDayGroups()
-  applyCanonicalLayoutMoves(groupMoves)
-  applyCanonicalTaskMoves(taskMoves, groupMoves)
+  applyCanonicalMoves(groupMoves, taskMoves)
   releaseOnDoubleNextTick(release, () => {
     syncNodes(undefined, { force: true })
-    refreshRenderedNodesFromModel()
   }, pendingWrites)
 }
 
@@ -646,7 +611,7 @@ function runDayGroupCatchup() {
   // preserved. The explicit Tidy button (handleTidyLayout) still applies full
   // canonical layout on user request.
   const { taskMoves, release } = dayRotation.runCatchupIfNeeded()
-  if (taskMoves.length > 0) applyCanonicalTaskMoves(taskMoves, [])
+  if (taskMoves.length > 0) applyCanonicalMoves([], taskMoves)
   releaseOnDoubleNextTick(release)
 }
 watch(isVueFlowReady, (ready) => { if (ready) runDayGroupCatchup() }, { immediate: true })

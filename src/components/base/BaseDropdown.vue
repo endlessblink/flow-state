@@ -5,11 +5,16 @@
       class="dropdown-trigger"
       :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
       :disabled="disabled"
+      role="combobox"
+      aria-haspopup="listbox"
+      :aria-expanded="isOpen"
+      :aria-controls="listboxId"
+      :aria-activedescendant="isOpen && focusedIndex >= 0 ? `${listboxId}-option-${focusedIndex}` : undefined"
       @click="toggleDropdown"
-      @keydown.down.prevent="openAndFocusFirst"
-      @keydown.up.prevent="openAndFocusLast"
-      @keydown.enter.prevent="toggleDropdown"
-      @keydown.space.prevent="toggleDropdown"
+      @keydown.down.prevent="isOpen ? focusNext() : openAndFocusFirst()"
+      @keydown.up.prevent="isOpen ? focusPrevious() : openAndFocusLast()"
+      @keydown.enter.prevent="isOpen ? selectFocused() : toggleDropdown()"
+      @keydown.space.prevent="isOpen ? selectFocused() : toggleDropdown()"
       @keydown.esc="closeDropdown"
     >
       <slot name="trigger" :selected="selectedOption" :is-open="isOpen">
@@ -28,16 +33,14 @@
       @close="closeDropdown"
     >
       <ul
+        :id="listboxId"
         class="dropdown-list"
         role="listbox"
-        @keydown.down.prevent="focusNext"
-        @keydown.up.prevent="focusPrevious"
-        @keydown.enter.prevent="selectFocused"
-        @keydown.esc="closeDropdown"
       >
         <li
           v-for="(option, index) in options"
           :key="getOptionValue(option)"
+          :id="`${listboxId}-option-${index}`"
           class="dropdown-option"
           :class="{
             'is-selected': isSelected(option),
@@ -68,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useId } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
 import BasePopover from './BasePopover.vue'
 import type { Component } from 'vue'
@@ -100,6 +103,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[]]
 }>()
 
+const listboxId = useId()
 const triggerElement = ref<HTMLElement>()
 const isOpen = ref(false)
 const focusedIndex = ref(0)

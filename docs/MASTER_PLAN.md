@@ -8,6 +8,20 @@
 
 ## Active Tasks
 
+### ~~BUG-1801~~: Background timer fetch showed noisy generic sync error (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-26) — shipping in v1.4.62.
+
+**Problem**: The app could show `Sync Error(fetchActiveTimerSession): An unexpected error occurred` from the background timer poll, even though this is a transient Supabase/PostgREST fetch-layer failure and the timer read path safely returns `null`.
+
+**Root cause**: The shared Supabase retry/error helper recognized explicit network messages (`Failed to fetch`, `AbortError`, timeout, etc.) but not Supabase's generic collapsed message `An unexpected error occurred` with status `0`, so the 15s active-timer poll surfaced a visible sync warning.
+
+**Fix**: Centralized transient sync classification in `_infrastructure.ts`, treats the generic status-0 message as transient for `fetchActiveTimerSession`, retries it, and suppresses visible notifications while still recording the last sync message for diagnostics.
+
+**Regression tests**: `tests/unit/composables/supabase-infrastructure.test.ts` covers retry behavior and notification suppression for the generic active-timer fetch failure.
+
+---
+
 ### ~~BUG-1800~~: Canvas Tidy/Rotate left phantom vertical gaps and could stale-lock tasks (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-05-26)

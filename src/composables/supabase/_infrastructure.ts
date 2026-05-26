@@ -214,6 +214,27 @@ export interface TaskIdAvailability {
 export function createDatabaseHelpers(
     lastSyncError: Ref<string | null>
 ) {
+    const isTransientSyncError = (message: string, status: unknown, context: string): boolean => {
+        const lowerMsg = message.toLowerCase()
+        const isNetworkLike = message.includes('Failed to fetch') ||
+            lowerMsg.includes('networkerror') ||
+            message.includes('Network Error') ||
+            message.includes('Service Unavailable') ||
+            message.includes('AbortError') ||
+            lowerMsg.includes('timeout') ||
+            message.includes('aborted') ||
+            message.includes('Content-Length')
+
+        if (isNetworkLike) return true
+
+        // Supabase/postgrest-js can collapse fetch-layer failures into this generic
+        // message. Treat it as transient for background timer reads so the 15s poll
+        // does not raise visible sync errors during short VPS/network hiccups.
+        return context === 'fetchActiveTimerSession' &&
+            lowerMsg === 'an unexpected error occurred' &&
+            (status === undefined || status === null || status === 0 || status === '0')
+    }
+
     /**
      * Helper to execute Supabase operations with transient error retries (e.g. clock skew, 401/403 restarts)
      * TASK-329: Added exponential backoff and auth resilience
@@ -258,8 +279,7 @@ export function createDatabaseHelpers(
                 // 3. Network / Connection / Timeout Errors
                 // BUG-352: Also catch AbortError (from fetch timeout) and timeout strings
                 // BUG-1311: Firefox/Zen reports "NetworkError" (no space), Chrome reports "Network Error" (space)
-                const lowerMsg = message.toLowerCase()
-                if (message.includes('Failed to fetch') || lowerMsg.includes('networkerror') || message.includes('Network Error') || message.includes('Service Unavailable') || message.includes('AbortError') || lowerMsg.includes('timeout') || message.includes('aborted') || message.includes('Content-Length')) {
+                if (isTransientSyncError(message, status, context)) {
                     console.warn(`🌐 [NETWORK-RETRY] ${context} failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
                     await new Promise(resolve => setTimeout(resolve, delay))
                     continue
@@ -292,14 +312,10 @@ export function createDatabaseHelpers(
         const err = error instanceof Error ? error : new Error(finalMessage)
 
         // BUG-352: Suppress notifications for transient network errors (common on mobile WiFi/cell handoffs)
-        const lowerMsg = message.toLowerCase()
-        const isTransientNetwork = message.includes('Failed to fetch') ||
-            lowerMsg.includes('networkerror') ||
-            message.includes('Network Error') ||
-            message.includes('AbortError') ||
-            lowerMsg.includes('timeout') ||
-            message.includes('aborted') ||
-            message.includes('Content-Length')
+        const status = typeof error === 'object' && error !== null
+            ? (error as { status?: number | string; code?: number | string }).status ?? (error as { code?: number | string }).code
+            : undefined
+        const isTransientNetwork = isTransientSyncError(message, status, context)
 
         errorHandler.report({
             error: err,

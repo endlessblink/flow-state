@@ -14,11 +14,11 @@
 
 **Problem**: The current pass fixed task-to-group connection undo/redo and a field-clearing redo asymmetry, but the user goal is broader: every undo/redo flow for every action must work at least three consecutive times. That broader claim is not proven yet.
 
-**Current verified pass**: Task-to-group Canvas links are now group-level only (`CanvasGroup.linkedParentTaskId`) and no longer rewrite child tasks' `parentTaskId` on link, unlink, drop, or drag-settle. `canvas-connection` undo/redo restores only group link state. `bulkMoveToInboxWithUndo` now restores and re-clears `canvasPosition` for three undo/redo cycles. Group create/delete/resize undo/redo now preserves group IDs across three consecutive cycles, preventing snapshot restores from recreating groups under new IDs. Shipped to Electron updater as v1.4.64.
+**Current verified pass**: Task-to-group Canvas links are now group-level only (`CanvasGroup.linkedParentTaskId`) and no longer rewrite child tasks' `parentTaskId` on link, unlink, drop, or drag-settle. `canvas-connection` undo/redo restores only group link state. `bulkMoveToInboxWithUndo` now restores and re-clears `canvasPosition` for three undo/redo cycles. Group create/delete/resize undo/redo now preserves group IDs across three consecutive cycles, preventing snapshot restores from recreating groups under new IDs. Task create/update/delete/permanent delete/bulk delete now have direct three-cycle regression coverage. Shipped to Electron updater as v1.4.65.
 
-**Remaining work**: Inventory every app undo/redo action surface, add or update three-cycle regression tests for each action, and only mark done after the full matrix passes. Include task create/update/delete/bulk delete, task-task connection/disconnect, canvas image delete, quick sort local undo/redo, keyboard shortcuts, and any modal/context-menu entry points that bypass the singleton.
+**Remaining work**: Inventory every app undo/redo action surface, add or update three-cycle regression tests for each action, and only mark done after the full matrix passes. Include task-task connection/disconnect, canvas image delete, quick sort local undo/redo, keyboard shortcuts, and any modal/context-menu entry points that bypass the singleton.
 
-**Files in current pass**: `src/composables/canvas/useCanvasConnections.ts`, `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasInteractions.ts`, `src/composables/undoSingleton.ts`, `src/stores/canvas/canvasGroups.ts`, `tests/unit/canvas-connection-undo.test.ts`, `tests/unit/undo-selective-restore.test.ts`.
+**Files in current pass**: `src/composables/canvas/useCanvasConnections.ts`, `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasInteractions.ts`, `src/composables/undoSingleton.ts`, `src/stores/canvas/canvasGroups.ts`, `tests/unit/canvas-connection-undo.test.ts`, `tests/unit/undo-selective-restore.test.ts`, `tests/unit/undo-task-operations.test.ts`.
 
 ---
 

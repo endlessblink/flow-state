@@ -221,9 +221,11 @@ function initializeRefHistory() {
  */
 async function clearTombstoneForUndo(taskId: string): Promise<void> {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    const sb = supabase
+    if (!sb?.auth) return
+    const { data: { session } } = await sb.auth.getSession()
     if (!session?.user) return
-    await supabase.from('tombstones').delete()
+    await sb.from('tombstones').delete()
       .eq('entity_type', 'task').eq('entity_id', taskId).eq('user_id', session.user.id)
   } catch (e) {
     console.warn('[UNDO] Tombstone cleanup error:', e)

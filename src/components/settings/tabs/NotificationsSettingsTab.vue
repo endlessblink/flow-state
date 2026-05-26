@@ -14,7 +14,7 @@ const { isSubscribed, subscribe, canUsePush } = usePushSubscription()
 const timeBlockSettings = computed(() => settingsStore.timeBlockNotifications)
 const pushSettings = computed(() => settingsStore.pushNotifications)
 
-const isTauri = ref(!!(window as Record<string, unknown>).electronAPI)
+const isTauri = ref(!!(window as unknown as Record<string, unknown>).electronAPI)
 
 // Push notification settings helpers
 function updatePushMasterToggle(val: boolean) {
@@ -66,37 +66,37 @@ function updateQuietHoursEnabled(val: boolean) {
   })
 }
 
-function updateQuietHoursStart(val: number) {
+function updateQuietHoursStart(val: string | number) {
   settingsStore.updateSetting('pushNotifications', {
     ...settingsStore.pushNotifications,
     quietHours: {
       ...settingsStore.pushNotifications.quietHours,
-      startHour: val
+      startHour: Number(val)
     }
   })
 }
 
-function updateQuietHoursEnd(val: number) {
+function updateQuietHoursEnd(val: string | number) {
   settingsStore.updateSetting('pushNotifications', {
     ...settingsStore.pushNotifications,
     quietHours: {
       ...settingsStore.pushNotifications.quietHours,
-      endHour: val
+      endHour: Number(val)
     }
   })
 }
 
-function updateCooldown(val: number) {
+function updateCooldown(val: string | number) {
   settingsStore.updateSetting('pushNotifications', {
     ...settingsStore.pushNotifications,
-    cooldownMinutes: val
+    cooldownMinutes: Number(val)
   })
 }
 
-function updateDailyDigestHour(val: number) {
+function updateDailyDigestHour(val: string | number) {
   settingsStore.updateSetting('pushNotifications', {
     ...settingsStore.pushNotifications,
-    dailyDigestHour: val
+    dailyDigestHour: Number(val)
   })
 }
 

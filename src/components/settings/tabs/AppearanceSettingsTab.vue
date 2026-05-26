@@ -52,7 +52,7 @@ const weekStartOptions = computed(() => [
         :description="t('settings.start_of_week_description')"
         :options="weekStartOptions"
         :value="settingsStore.weekStartsOn"
-        @update="val => settingsStore.updateSetting('weekStartsOn', val)"
+        @update="val => settingsStore.updateSetting('weekStartsOn', val as 0 | 1)"
       />
     </SettingsSection>
 

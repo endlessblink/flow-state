@@ -43,9 +43,16 @@ const {
 const isRestoring = ref(false)
 const validationInfo = ref<Awaited<ReturnType<typeof getGoldenBackupValidation>> | null>(null)
 const shadowSnapshot = ref<any | null>(null)
-const showValidation = ref(false)
 const isScanningShadow = ref(false)
-const goldenRotation = ref<unknown[]>([])
+type GoldenBackupSummary = {
+  id: string
+  timestamp: string | number
+  metadata?: {
+    taskCount?: number
+  }
+}
+
+const goldenRotation = ref<GoldenBackupSummary[]>([])
 
 // Tauri mode state (only shown in Tauri desktop app)
 const showTauriMode = computed(() => isTauri())
@@ -331,7 +338,7 @@ const handleClearDoneTasksBeforeCutoff = async () => {
 onMounted(async () => {
     // Initial checks
     validationInfo.value = await getGoldenBackupValidation()
-    goldenRotation.value = getGoldenBackups()
+    goldenRotation.value = getGoldenBackups() as unknown as GoldenBackupSummary[]
     checkShadowHub()
     await loadLocalBackupPolicy()
 })
@@ -657,12 +664,12 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div v-if="validationInfo?.warnings?.length > 0" class="detailed-warnings">
+        <div v-if="(validationInfo?.warnings?.length ?? 0) > 0" class="detailed-warnings">
           <p class="warning-title">
             Smart Filtering (for top peak):
           </p>
           <ul>
-            <li v-for="(warn, i) in validationInfo.warnings" :key="i">
+            <li v-for="(warn, i) in validationInfo?.warnings ?? []" :key="i">
               {{ warn }}
             </li>
           </ul>

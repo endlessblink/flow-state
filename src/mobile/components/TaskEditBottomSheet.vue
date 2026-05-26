@@ -131,14 +131,6 @@
                 </button>
                 <button
                   class="pill"
-                  :class="{ active: editedStatus === 'in-progress' }"
-                  @click="editedStatus = 'in-progress'"
-                >
-                  <Clock :size="16" />
-                  In Progress
-                </button>
-                <button
-                  class="pill"
                   :class="{ active: editedStatus === 'done' }"
                   @click="editedStatus = 'done'"
                 >
@@ -202,7 +194,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import {
   Flag, CalendarDays, X, Check,
-  Circle, CheckCircle2, Clock, Inbox
+  Circle, CheckCircle2, Inbox
 } from 'lucide-vue-next'
 import { useProjectStore } from '@/stores/projects'
 import type { Task, Project } from '@/types/tasks'

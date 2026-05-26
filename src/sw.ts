@@ -146,10 +146,12 @@ interface TimerCompleteMessage {
 }
 
 interface NotificationData {
-  sessionId: string
-  wasBreak: boolean
-  taskId: string
+  sessionId?: string
+  wasBreak?: boolean
+  taskId?: string
   taskName?: string
+  type?: string
+  url?: string
 }
 
 interface NotificationAction {
@@ -389,7 +391,7 @@ self.addEventListener('push', (event) => {
 
   console.log('[SW] Push received:', payload.type, payload.tag)
 
-  const options: NotificationOptions & { actions?: NotificationAction[] } = {
+  const options: NotificationOptions & { actions?: NotificationAction[]; vibrate?: number[] } = {
     body: payload.body,
     icon: '/icons/pwa-192x192.png',
     badge: '/icons/pwa-64x64.png',

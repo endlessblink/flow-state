@@ -37,7 +37,7 @@ const handleConnectGoogle = async () => {
   try {
     await googleCalendar.connect()
   } catch (e: unknown) {
-    googleCalendarError.value = e.message
+    googleCalendarError.value = e instanceof Error ? e.message : String(e)
   } finally {
     googleCalendarLoading.value = false
   }
@@ -51,7 +51,7 @@ const handleFetchGoogleCalendars = async () => {
     // Auto-save selected calendars to settings
     settingsStore.updateSetting('googleCalendars', availableGoogleCalendars.value)
   } catch (e: unknown) {
-    googleCalendarError.value = e.message
+    googleCalendarError.value = e instanceof Error ? e.message : String(e)
   } finally {
     googleCalendarLoading.value = false
   }

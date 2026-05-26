@@ -277,9 +277,9 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   const optimizeForLargeLists = <T>(items: T[]) => {
     if (items.length > 1000) {
       // For very large lists, use more aggressive debouncing
-      return createDebounced(<R>(fn: () => R) => fn(), 500)
+      return createDebounced(((fn: () => unknown) => fn()) as (...args: unknown[]) => unknown, 500)
     }
-    return createDebounced(<R>(fn: () => R) => fn(), debounceDelay)
+    return createDebounced(((fn: () => unknown) => fn()) as (...args: unknown[]) => unknown, debounceDelay)
   }
 
   const optimizeForAnimations = <T>(fn: T) => {

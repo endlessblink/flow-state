@@ -493,9 +493,9 @@ const applyGroupTransfer = (taskId: string, group: TaskGroup) => {
     const projectId = (group.key === 'uncategorized' || group.key === '__no_project__') ? null : group.key
     emit('moveTask', taskId, projectId, null)
   } else if (props.groupBy === 'status') {
-    emit('updateTask', taskId, { status: group.key as Parameters<typeof emit>[2]['status'] })
+    emit('updateTask', taskId, { status: group.key as Task['status'] })
   } else if (props.groupBy === 'priority') {
-    emit('updateTask', taskId, { priority: group.key as Parameters<typeof emit>[2]['priority'] })
+    emit('updateTask', taskId, { priority: group.key as Task['priority'] })
   } else if (props.groupBy === 'dueDate') {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())

@@ -541,7 +541,7 @@ const handleAddTaskToGroup = async (groupKey: string, groupByMode: string) => {
   } else if (groupByMode === 'status') {
     taskDefaults.status = groupKey as Task['status']
   } else if (groupByMode === 'priority') {
-    taskDefaults.priority = groupKey as Task['priority']
+    taskDefaults.priority = (groupKey === 'no_priority' ? undefined : groupKey) as CreateTaskDefaults['priority']
   } else if (groupByMode === 'dueDate') {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())

@@ -14,8 +14,8 @@ vi.mock('@/composables/useDateTransition', () => ({
 }))
 
 describe('Date Transition Logic (TASK-082)', () => {
-    let canvasStore: unknown
-    let taskStore: unknown
+    let canvasStore: ReturnType<typeof useCanvasStore>
+    let taskStore: ReturnType<typeof useTaskStore>
 
     beforeEach(() => {
         setActivePinia(createPinia())
@@ -45,7 +45,7 @@ describe('Date Transition Logic (TASK-082)', () => {
 
         // Add groups to store
         // Note: Adjust based on actual store structure (groups vs sections)
-        canvasStore.sections = [todayGroup, overdueGroup]
+        ;(canvasStore as unknown as { sections: unknown[] }).sections = [todayGroup, overdueGroup]
 
         // 2. Setup Task in "Today" group
         const taskInToday = {
@@ -64,7 +64,7 @@ describe('Date Transition Logic (TASK-082)', () => {
         }
 
         // Initialize tasks
-        taskStore.tasks = [taskInToday, taskOutside]
+        ;(taskStore as unknown as { tasks: unknown[] }).tasks = [taskInToday, taskOutside]
 
         // 3. Trigger the logic
         // We recreate the logic here since it lives in CanvasView.vue (which is hard to mount purely)

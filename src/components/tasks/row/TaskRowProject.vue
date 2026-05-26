@@ -9,7 +9,7 @@
       @click="toggleDropdown($event)"
     >
       <ProjectEmojiIcon
-        :emoji="visual.content"
+        :emoji="visual.content || ''"
         size="xs"
       />
     </span>
@@ -23,7 +23,7 @@
     >
       <div
         class="project-css-circle"
-        :style="{ '--project-color': visual.color }"
+        :style="{ '--project-color': visual.color || 'var(--color-primary)' }"
       />
     </span>
     <!-- Uncategorized: Show subtle question mark -->
@@ -92,8 +92,13 @@ import { Check } from 'lucide-vue-next'
 import { useProjectStore } from '@/stores/projects'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
+type ProjectVisual =
+  | { type: 'emoji'; content: string }
+  | { type: 'css-circle'; color: string }
+  | { type: string; content?: string; color?: string }
+
 defineProps<{
-  visual: unknown
+  visual: ProjectVisual
   projectDisplayName: string
   currentProjectId?: string | null
 }>()

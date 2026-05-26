@@ -91,10 +91,10 @@ import './KanbanColumn.css'
 
 interface Props {
   title: string
-  status: Task['status']
+  status: string
   tasks: Task[]
   wipLimit?: number
-  columnType?: 'status' | 'priority' | 'date' | 'category'
+  columnType?: 'status' | 'priority' | 'date' | 'category' | 'list'
   swimlaneId?: string
 }
 
@@ -105,13 +105,25 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 defineEmits<{
-  addTask: [status: Task['status']]
+  addTask: [status: string]
+  moveTask: [taskId: string, targetKey: string]
   selectTask: [taskId: string]
   startTimer: [taskId: string]
   editTask: [taskId: string]
   deleteTask: [taskId: string]
   contextMenu: [event: MouseEvent, task: Task]
 }>()
+
+type SortableDragEvent = DragEvent & {
+  item?: HTMLElement
+  originalEvent?: MouseEvent
+}
+
+type SortableChangeEvent = {
+  added?: { element: Task }
+  removed?: { element: Task }
+  moved?: { element: Task }
+}
 
 // BUG-1193: Track drag state to prevent reactive overwrites during drag
 const isDragActive = ref(false)
@@ -160,11 +172,12 @@ const dragGroup = 'tasks'
 // BUG-1516c: Also expose dragData so handleNativeDrop can read singleton (WebKitGTK/Tauri fix)
 const { startDrag, endDrag: endGlobalDrag, dragData } = useDragAndDrop()
 
-const onDragStart = (evt: DragEvent) => {
+const onDragStart = (evt: SortableDragEvent) => {
   isDragActive.value = true
 
   // Bridge to global drag state so sidebar can receive drops
-  const taskId = evt.item?.dataset?.taskId || evt.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
+  const taskElement = evt.item?.querySelector?.('[data-task-id]') as HTMLElement | null | undefined
+  const taskId = evt.item?.dataset?.taskId || taskElement?.dataset?.taskId
   const taskTitle = evt.item?.querySelector?.('.task-title')?.textContent?.trim() || ''
   if (taskId) {
     startDrag({
@@ -176,7 +189,7 @@ const onDragStart = (evt: DragEvent) => {
   }
 }
 
-const onDragEnd = (evt: DragEvent) => {
+const onDragEnd = (evt: SortableDragEvent) => {
   isDragActive.value = false
 
   // Check if dropped on a sidebar project (SortableJS forceFallback doesn't fire
@@ -188,7 +201,8 @@ const onDragEnd = (evt: DragEvent) => {
       const navItem = (el as HTMLElement).closest('[data-drop-project-id]') as HTMLElement | null
       if (navItem) {
         const projectId = navItem.dataset.dropProjectId
-        const taskId = evt.item?.dataset?.taskId || evt.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
+        const taskElement = evt.item?.querySelector?.('[data-task-id]') as HTMLElement | null | undefined
+        const taskId = evt.item?.dataset?.taskId || taskElement?.dataset?.taskId
         if (projectId && taskId) {
           taskStore.moveTaskToProject(taskId, projectId)
         }
@@ -274,7 +288,7 @@ const handleNativeDrop = async (event: DragEvent) => {
 
     for (const taskId of ids) {
       if (props.columnType === 'status') {
-        await taskStore.moveTaskWithUndo(taskId, props.status)
+        await taskStore.moveTaskWithUndo(taskId, props.status as Task['status'])
       }
       // Clear inbox flag regardless of column type so task leaves the inbox
       await taskStore.updateTask(taskId, { isInInbox: false })
@@ -326,7 +340,7 @@ const persistOrderForColumn = () => {
   })
 }
 
-const handleDragChange = async (event: { added?: { element: Task }; removed?: { element: Task } }) => {
+const handleDragChange = async (event: SortableChangeEvent) => {
   if (event.added) {
     try {
       const taskId = event.added.element.id
@@ -344,7 +358,7 @@ const handleDragChange = async (event: { added?: { element: Task }; removed?: { 
         taskStore.moveTaskToDate(taskId, props.status)
       } else {
         // Status columns (default): update task status
-        await taskStore.moveTaskWithUndo(taskId, props.status)
+        await taskStore.moveTaskWithUndo(taskId, props.status as Task['status'])
       }
 
       // BUG-1335: When task is dropped in a different swimlane (project),

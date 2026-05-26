@@ -272,7 +272,7 @@ const handleClickOutside = (event: MouseEvent) => {
 
 // Toggle logic (wired through event mapping in template but we need to define toggleSort manually since it manipulates ref from composable)
 const toggleSort = () => {
-   const sortOptions: Array<'newest' | 'priority' | 'dueDate'> = ['newest', 'priority', 'dueDate']
+   const sortOptions: Array<'newest' | 'priority' | 'dueDate' | 'canvasOrder'> = ['newest', 'priority', 'dueDate', 'canvasOrder']
    const currentIndex = sortOptions.indexOf(sortBy.value)
    sortBy.value = sortOptions[(currentIndex + 1) % sortOptions.length]
 }

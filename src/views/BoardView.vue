@@ -70,7 +70,7 @@
             @start-timer="handleStartTimer"
             @edit-task="handleEditTask"
             @delete-task="handleDeleteTask"
-            @move-task="handleMoveTask"
+            @move-task="handleListMoveTask"
             @add-task="handleAddTask"
             @context-menu="handleContextMenu"
           />
@@ -89,7 +89,7 @@
             @edit="handleEditTask"
             @update-task="handleListUpdateTask"
             @context-menu="handleContextMenu"
-            @move-task="handleMoveTask"
+            @move-task="handleListMoveTask"
             @delete-selected="handleDeleteSelected"
             @add-task-to-group="handleAddTaskToGroup"
           />
@@ -264,6 +264,13 @@ const {
   moveTask: handleMoveTask,
   addSubtask: _handleAddSubtaskFromMenu
 } = useBoardActions({ taskStore, timerStore })
+
+const handleListMoveTask = (taskId: string, targetProjectId: string | null, targetParentId: string | null) => {
+  return taskStore.updateTask(taskId, {
+    projectId: targetProjectId ?? '',
+    parentTaskId: targetParentId
+  })
+}
 
 // TASK-243: Use hideDoneTasks from store instead of separate showDoneColumn
 const { hideDoneTasks } = storeToRefs(taskStore)

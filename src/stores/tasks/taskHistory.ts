@@ -68,7 +68,7 @@ export function useTaskHistory(
                 try {
                     const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
                     const useUnifiedUndoRedo = await getUndoRedoComposable()
-                    const { moveTaskWithUndo } = useUnifiedUndoRedo()
+                    const { moveTaskWithUndo } = useUnifiedUndoRedo() as { moveTaskWithUndo: (taskId: string, status: Task['status']) => Promise<unknown> }
                     return await moveTaskWithUndo(taskId, newStatus)
                 } catch {
                     // Fallback handled in original code

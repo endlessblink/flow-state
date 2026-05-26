@@ -275,7 +275,7 @@ export async function getCachedTasksWithPendingWrites(): Promise<Task[] | null> 
   let mapPayloadToTask: ((payload: Record<string, unknown>) => Task) | null = null
   try {
     const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
-    mapPayloadToTask = (payload) => fromSupabaseTask(payload as import('@/utils/supabaseMappers').SupabaseTask)
+    mapPayloadToTask = (payload) => fromSupabaseTask(payload as unknown as import('@/utils/supabaseMappers').SupabaseTask)
   } catch (e) {
     console.warn('[READ-CACHE] TASK-1428: Could not load mapper, using raw payloads:', e)
   }
@@ -362,7 +362,7 @@ export async function getCachedGroupsWithPendingWrites(): Promise<CanvasGroup[] 
   let mapPayloadToGroup: ((payload: Record<string, unknown>) => CanvasGroup) | null = null
   try {
     const { fromSupabaseGroup } = await import('@/utils/supabaseMappers')
-    mapPayloadToGroup = (payload) => fromSupabaseGroup(payload as import('@/utils/supabaseMappers').SupabaseGroup)
+    mapPayloadToGroup = (payload) => fromSupabaseGroup(payload as unknown as import('@/utils/supabaseMappers').SupabaseGroup)
   } catch (e) {
     console.warn('[READ-CACHE] TASK-1428: Could not load group mapper:', e)
   }

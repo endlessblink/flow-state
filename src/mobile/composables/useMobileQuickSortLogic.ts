@@ -36,7 +36,7 @@ export function useMobileQuickSortLogic() {
   } = useQuickSort()
 
   // AI Command stubs (QuickSort AI removed in TASK-1465)
-  const aiState = ref<'idle'>('idle')
+  const aiState = ref<'idle' | 'preview' | 'error'>('idle')
   const aiAction = ref('')
   const aiError = ref<string | null>(null)
   const isAIBusy = ref(false)

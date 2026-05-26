@@ -165,13 +165,18 @@ interface Props {
   totalSubtasks: number
   isAllSubtasksCompleted: boolean
   isExpanded?: boolean
-  titleAlignmentClasses: unknown
-  projectVisual: unknown
+  titleAlignmentClasses: string | Record<string, boolean>
+  projectVisual: ProjectVisual
   projectDisplayName: string
   statusOptions: Array<{ label: string, value: string }>
   disableNativeDrag?: boolean
   isInlineEditing?: boolean
 }
+
+type ProjectVisual =
+  | { type: 'emoji'; content: string }
+  | { type: 'css-circle'; color: string }
+  | { type: string; content?: string; color?: string }
 
 const props = withDefaults(defineProps<Props>(), {
   selectionMode: false,
@@ -235,4 +240,3 @@ const isTimerActive = computed(() => {
 
 
 </script>
-

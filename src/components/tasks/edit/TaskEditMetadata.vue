@@ -79,7 +79,7 @@
           :options="durationOptions"
           class="inline-select"
           compact
-          @update:model-value="estimatedDuration = $event"
+          @update:model-value="estimatedDuration = $event === null ? null : Number($event)"
         />
       </div>
     </div>
@@ -175,8 +175,11 @@ const taskStore = useTaskStore()
 const showDueDatePicker = ref(false)
 
 const estimatedDuration = computed({
-  get: () => props.modelValue.estimatedDuration,
-  set: (val) => emit('update:modelValue', { ...props.modelValue, estimatedDuration: val as number })
+  get: () => props.modelValue.estimatedDuration ?? null,
+  set: (val: string | number | null) => emit('update:modelValue', {
+    ...props.modelValue,
+    estimatedDuration: val === null || val === '' ? undefined : Number(val)
+  })
 })
 
 const durationOptions = [

@@ -101,6 +101,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       if (task.parentId) continue
 
       const absPos = options.getNodePosition?.(task.id) ?? task.canvasPosition
+      if (!absPos) continue
       const size = options.getNodeSize?.(task.id)
       const spatialTask = { position: absPos, width: size?.width, height: size?.height }
       const containing =

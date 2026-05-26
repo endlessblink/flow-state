@@ -22,7 +22,7 @@ export function detectPlatform(): Platform {
 
   // Electron detection — preload.ts exposes window.electronAPI
   if (
-    typeof (window as Record<string, unknown>).electronAPI !== 'undefined'
+    typeof (window as unknown as Record<string, unknown>).electronAPI !== 'undefined'
   ) {
     _detectedPlatform = 'electron'
     return _detectedPlatform

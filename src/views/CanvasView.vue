@@ -116,17 +116,17 @@
           :nodes-draggable="!control && !meta && !shift"
           :selection-on-drag="shift"
           :multi-selection-key-code="['Control', 'Meta', 'Shift']"
-          snap-to-grid
+          :snap-to-grid="false"
           :snap-grid="[16, 16]"
           :node-extent="dynamicNodeExtent"
           :min-zoom="0.05"
           :max-zoom="4.0"
           :fit-view-on-init="false"
-          connection-mode="loose"
+          :connection-mode="looseConnectionMode"
           :connection-radius="30"
           :zoom-scroll-sensitivity="1.0"
           :zoom-activation-key-code="null"
-          :delete-key-code="false"
+          :delete-key-code="disabledDeleteKey"
           prevent-scrolling
           :default-viewport="initialViewport"
           dir="ltr"
@@ -309,7 +309,7 @@
 
 <script setup lang="ts">
 import { ref, markRaw, nextTick, onMounted, onUnmounted, watch } from 'vue'
-import { VueFlow, useVueFlow, type NodeMouseEvent } from '@vue-flow/core'
+import { VueFlow, useVueFlow, type NodeMouseEvent, type NodeTypesObject } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -362,12 +362,14 @@ const nodeTypes = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple),
   imageNode: markRaw(ImageNode),
-}
+} as any
+const looseConnectionMode = 'loose' as any
+const disabledDeleteKey = false as any
 
 // FEATURE-1048: Day group auto-rotation at midnight
 const { findNode, getNodes, setNodes, getViewport } = useVueFlow()
 
-type CanvasNodeRecord = Record<string, unknown> & {
+type CanvasNodeRecord = {
   id: string
   type?: string
   position?: { x: number; y: number }
@@ -379,6 +381,7 @@ type CanvasNodeRecord = Record<string, unknown> & {
   height?: number
   style?: Record<string, unknown>
   data?: Record<string, unknown>
+  [key: string]: unknown
 }
 
 function toPublicVueFlowNode(node: CanvasNodeRecord) {
@@ -414,7 +417,7 @@ function applyCanonicalMoves(
   const groupMovesByNodeId = new Map(groupMoves.map((move) => [move.nodeId, move]))
   const targetGroupPositions = new Map(groupMoves.map((move) => [move.groupId, move.position]))
   const taskMovesByNodeId = new Map(taskMoves.map((move) => [CanvasIds.taskNodeId(move.taskId), move]))
-  const currentNodes = (getNodes.value?.length ? getNodes.value : nodes.value) as CanvasNodeRecord[]
+  const currentNodes = (getNodes.value?.length ? getNodes.value : nodes.value) as unknown as CanvasNodeRecord[]
   const originalIndex = new Map(currentNodes.map((node, index) => [node.id, index]))
 
   const updatedNodes = currentNodes.map((node) => {
@@ -503,7 +506,7 @@ function getVisualNodePosition(nodeId: string): { x: number; y: number } | undef
 
   const computedPosition = node.computedPosition
   if (Number.isFinite(computedPosition?.x) && Number.isFinite(computedPosition?.y)) {
-    return { x: computedPosition.x, y: computedPosition.y }
+    return { x: computedPosition!.x, y: computedPosition!.y }
   }
 
   if (node.parentNode) {
@@ -535,7 +538,7 @@ function getRenderedNodeSize(nodeId: string) {
   const node = findNode(nodeId) as CanvasNodeRecord | undefined
   const width = node?.dimensions?.width ?? node?.measured?.width ?? node?.width
   const height = node?.dimensions?.height ?? node?.measured?.height ?? node?.height
-  return Number.isFinite(width) && Number.isFinite(height) ? { width, height } : undefined
+  return Number.isFinite(width) && Number.isFinite(height) ? { width: width as number, height: height as number } : undefined
 }
 
 function getRenderedCanvasZoom() {
@@ -636,7 +639,7 @@ function logPostTidySanity(
 
 function getCanvasNodeSnapshot(limit = 12) {
   const domNodes = Array.from(document.querySelectorAll('.vue-flow__node')) as HTMLElement[]
-  const vfNodes = getNodes.value as CanvasNodeRecord[]
+  const vfNodes = getNodes.value as unknown as CanvasNodeRecord[]
   const vfById = new Map(vfNodes.map((node) => [node.id, node]))
   return domNodes.slice(0, limit).map((el) => {
     const id = el.getAttribute('data-id') ?? ''
@@ -662,7 +665,7 @@ function getCanvasNodeSnapshot(limit = 12) {
 function getCanvasNudgeSnapshot(taskIds?: string[]) {
   const viewportElement = document.querySelector('.vue-flow__viewport') as HTMLElement | null
   const viewportStyle = viewportElement ? getComputedStyle(viewportElement) : null
-  const vfNodes = getNodes.value as CanvasNodeRecord[]
+  const vfNodes = getNodes.value as unknown as CanvasNodeRecord[]
   const vfById = new Map(vfNodes.map((node) => [node.id, node]))
   const ids = taskIds?.length
     ? taskIds
@@ -762,7 +765,7 @@ function getTodayTaskDebugSnapshot() {
 
 function getRenderedTaskGapMetrics(taskIds: string[]) {
   const zoom = getRenderedCanvasZoom()
-  const vfNodes = getNodes.value as CanvasNodeRecord[]
+  const vfNodes = getNodes.value as unknown as CanvasNodeRecord[]
   const vfById = new Map(vfNodes.map((node) => [node.id, node]))
 
   return taskIds

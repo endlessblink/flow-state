@@ -126,11 +126,19 @@ import { getDayGroupDate, formatDayGroupSuffix } from '@/utils/dayGroupDate'
 import { useCurrentDay } from '@/composables/useCurrentDay'
 // TASK-166: Date picker for bi-directional day group editing
 import { NPopover, NDatePicker } from 'naive-ui'
+import type { CanvasGroup } from '@/types/canvas'
+
+type GroupNodeData = Partial<CanvasGroup> & {
+  section?: CanvasGroup
+  isCollapsed?: boolean
+  width?: number
+  height?: number
+}
 
 // Define Props
 const props = defineProps<{
   id: string
-  data: unknown
+  data: GroupNodeData
   selected?: boolean
   dragging?: boolean
 }>()
@@ -151,7 +159,7 @@ const canvasStore = useCanvasStore()
 
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
-const section = computed(() => props.data?.section || props.data)
+const section = computed<GroupNodeData>(() => props.data.section || props.data)
 const isCollapsed = computed(() => !!props.data?.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data
@@ -267,7 +275,7 @@ const dayOfWeekDateSuffix = computed(() => {
 
 // Watch for external name changes
 watch(() => props.data.name, (newName) => {
-  sectionName.value = newName
+  sectionName.value = newName || ''
 })
 
 const updateName = () => {

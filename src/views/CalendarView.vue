@@ -207,6 +207,7 @@ import QuickTaskCreate from '@/components/tasks/QuickTaskCreate.vue'
 
 
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
+import type { CalendarEvent, WeekEvent } from '@/types/tasks'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 
 interface SortableEvent {
@@ -400,17 +401,17 @@ const { monthDays, handleMonthDragStart: _rawMonthDragStart, handleMonthDrop, ha
 // FEATURE-1336b: Bridge calendar drag events to global useDragAndDrop for sidebar drops
 const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
-const handleEventDragStart = (event: DragEvent, calendarEvent: Record<string, unknown>) => {
+const handleEventDragStart = (event: DragEvent, calendarEvent: CalendarEvent | WeekEvent) => {
   _rawEventDragStart(event, calendarEvent)
   // Unified ghost pill — composable now handles startGlobalDrag with event
 }
 
-const handleEventDragEnd = (event: DragEvent, calendarEvent: Record<string, unknown>) => {
+const handleEventDragEnd = (event: DragEvent, calendarEvent: CalendarEvent | WeekEvent) => {
   _rawEventDragEnd(event, calendarEvent)
   // endGlobalDrag is called inside the composable's handleEventDragEnd
 }
 
-const handleMonthDragStart = (event: DragEvent, calendarEvent: Record<string, unknown> & { taskId?: string; title?: string }) => {
+const handleMonthDragStart = (event: DragEvent, calendarEvent: CalendarEvent) => {
   _rawMonthDragStart(event, calendarEvent)
   if (calendarEvent.taskId) {
     // Unified ghost pill — pass event for setDragImage

@@ -63,6 +63,7 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
 
     const taskIsVisuallyInsideGroupTree = (task: Task, groupId: string): boolean => {
         if (!task.canvasPosition) return false
+        const taskPosition = task.canvasPosition
 
         const linkedGroupIds = getAllDescendantGroupIds(groupId, canvasStore.groups)
         if (task.parentId && linkedGroupIds.includes(task.parentId)) return true
@@ -71,10 +72,13 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
             const group = canvasStore.groups.find(g => g.id === id)
             if (!group?.position) return false
 
+            const groupAbsolutePosition = getGroupAbsolutePosition(id, canvasStore.groups)
+            if (!groupAbsolutePosition) return false
+
             return isNodeCompletelyInside(
-                { position: task.canvasPosition },
+                { position: taskPosition },
                 {
-                    position: getGroupAbsolutePosition(id, canvasStore.groups),
+                    position: groupAbsolutePosition,
                     width: group.position.width,
                     height: group.position.height
                 },

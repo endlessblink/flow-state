@@ -8,194 +8,194 @@
       aria-label="Quick create task"
       @click.self="$emit('close')"
     >
-    <div class="quick-create-modal">
-      <!-- Task Title Input with AI Assist -->
-      <span class="section-label">Title</span>
-      <div class="title-row">
+      <div class="quick-create-modal">
+        <!-- Task Title Input with AI Assist -->
+        <span class="section-label">Title</span>
+        <div class="title-row">
+          <input
+            ref="titleInput"
+            v-model="taskTitle"
+            type="text"
+            placeholder="Task name"
+            aria-label="Task name"
+            class="title-input"
+            :class="[titleAlignmentClasses]"
+            :style="titleAlignmentStyles"
+            dir="auto"
+            @keydown.enter="handleCreate"
+            @keydown.esc="$emit('close')"
+            @paste="handlePaste"
+          >
+          <button
+            ref="aiAssistBtnRef"
+            class="ai-assist-btn"
+            :disabled="!taskTitle.trim()"
+            title="AI Assist"
+            @click="openAIAssist"
+          >
+            <Sparkles :size="14" />
+          </button>
+        </div>
+
+        <!-- TASK-1325: URL scraping feedback -->
+        <div v-if="isScraping" class="url-scraping-feedback">
+          <Globe :size="16" class="scraping-icon" />
+          <span class="scraping-status">Fetching page info...</span>
+          <button class="scraping-cancel" type="button" @click="cancelScraping">
+            <X :size="14" />
+          </button>
+        </div>
+
+        <!-- Description Input -->
+        <span class="section-label">Description <span class="field-optional">optional</span></span>
         <input
-          ref="titleInput"
-          v-model="taskTitle"
+          v-model="taskDescription"
           type="text"
-          placeholder="Task name"
-          aria-label="Task name"
-          class="title-input"
-          :class="[titleAlignmentClasses]"
-          :style="titleAlignmentStyles"
+          placeholder="Description"
+          aria-label="Task description"
+          class="description-input"
+          :class="[descAlignmentClasses]"
+          :style="descAlignmentStyles"
           dir="auto"
           @keydown.enter="handleCreate"
           @keydown.esc="$emit('close')"
-          @paste="handlePaste"
         >
-        <button
-          ref="aiAssistBtnRef"
-          class="ai-assist-btn"
-          :disabled="!taskTitle.trim()"
-          title="AI Assist"
-          @click="openAIAssist"
-        >
-          <Sparkles :size="14" />
-        </button>
-      </div>
 
-      <!-- TASK-1325: URL scraping feedback -->
-      <div v-if="isScraping" class="url-scraping-feedback">
-        <Globe :size="16" class="scraping-icon" />
-        <span class="scraping-status">Fetching page info...</span>
-        <button class="scraping-cancel" type="button" @click="cancelScraping">
-          <X :size="14" />
-        </button>
-      </div>
-
-      <!-- Description Input -->
-      <span class="section-label">Description <span class="field-optional">optional</span></span>
-      <input
-        v-model="taskDescription"
-        type="text"
-        placeholder="Description"
-        aria-label="Task description"
-        class="description-input"
-        :class="[descAlignmentClasses]"
-        :style="descAlignmentStyles"
-        dir="auto"
-        @keydown.enter="handleCreate"
-        @keydown.esc="$emit('close')"
-      >
-
-      <!-- Schedule Section -->
-      <span class="section-label">Schedule</span>
-      <div class="date-time-row">
-        <!-- Date Picker -->
-        <div class="date-picker-section">
-          <div class="date-display" @click="openDatePicker">
-            <Calendar :size="14" />
-            <span>{{ formattedDate }}</span>
-            <input
-              ref="dateInputRef"
-              type="date"
-              class="date-input-hidden"
-              :value="localDate"
-              aria-label="Due date"
-              @change="updateDate"
-            >
-          </div>
-          <!-- Quick Date Shortcuts -->
-          <div class="quick-date-shortcuts">
-            <button
-              type="button"
-              class="quick-date-btn"
-              :class="{ active: isToday }"
-              @click="setToday"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              class="quick-date-btn"
-              :class="{ active: isTomorrow }"
-              @click="setTomorrow"
-            >
-              Tomorrow
-            </button>
-            <button
-              type="button"
-              class="quick-date-btn"
-              :class="{ active: isWeekend }"
-              @click="setWeekend"
-            >
-              Weekend
-            </button>
-          </div>
-        </div>
-
-        <!-- Optional Time Input -->
-        <div class="time-section">
-          <div class="time-toggle">
-            <Clock :size="14" />
-            <label class="toggle-label">
+        <!-- Schedule Section -->
+        <span class="section-label">Schedule</span>
+        <div class="date-time-row">
+          <!-- Date Picker -->
+          <div class="date-picker-section">
+            <div class="date-display" @click="openDatePicker">
+              <Calendar :size="14" />
+              <span>{{ formattedDate }}</span>
               <input
-                v-model="hasTime"
-                type="checkbox"
-                class="toggle-checkbox"
+                ref="dateInputRef"
+                type="date"
+                class="date-input-hidden"
+                :value="localDate"
+                aria-label="Due date"
+                @change="updateDate"
               >
-              <span class="toggle-text">Set time</span>
-            </label>
+            </div>
+            <!-- Quick Date Shortcuts -->
+            <div class="quick-date-shortcuts">
+              <button
+                type="button"
+                class="quick-date-btn"
+                :class="{ active: isToday }"
+                @click="setToday"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                class="quick-date-btn"
+                :class="{ active: isTomorrow }"
+                @click="setTomorrow"
+              >
+                Tomorrow
+              </button>
+              <button
+                type="button"
+                class="quick-date-btn"
+                :class="{ active: isWeekend }"
+                @click="setWeekend"
+              >
+                Weekend
+              </button>
+            </div>
           </div>
-          <div v-if="hasTime" class="time-inputs">
-            <input
-              v-model="localStartTime"
-              type="time"
-              class="time-input"
-              aria-label="Start time"
-            >
-            <span class="time-separator">-</span>
-            <input
-              v-model="localEndTime"
-              type="time"
-              class="time-input"
-              aria-label="End time"
-            >
+
+          <!-- Optional Time Input -->
+          <div class="time-section">
+            <div class="time-toggle">
+              <Clock :size="14" />
+              <label class="toggle-label">
+                <input
+                  v-model="hasTime"
+                  type="checkbox"
+                  class="toggle-checkbox"
+                >
+                <span class="toggle-text">Set time</span>
+              </label>
+            </div>
+            <div v-if="hasTime" class="time-inputs">
+              <input
+                v-model="localStartTime"
+                type="time"
+                class="time-input"
+                aria-label="Start time"
+              >
+              <span class="time-separator">-</span>
+              <input
+                v-model="localEndTime"
+                type="time"
+                class="time-input"
+                aria-label="End time"
+              >
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Details Section -->
-      <span class="section-label">Details</span>
-      <div class="properties-row">
-        <!-- Priority Dropdown -->
-        <div class="property-select">
-          <Flag :size="14" class="property-icon" />
-          <CustomSelect
-            v-model="priority"
-            :options="priorityOptions"
-            class="compact-select"
-          />
+        <!-- Details Section -->
+        <span class="section-label">Details</span>
+        <div class="properties-row">
+          <!-- Priority Dropdown -->
+          <div class="property-select">
+            <Flag :size="14" class="property-icon" />
+            <CustomSelect
+              v-model="priority"
+              :options="priorityOptions"
+              class="compact-select"
+            />
+          </div>
+
+          <!-- Duration dropdown -->
+          <div class="property-select">
+            <Clock :size="14" class="property-icon" />
+            <CustomSelect
+              v-model="duration"
+              :options="durationOptions"
+              class="compact-select"
+            />
+          </div>
+
+          <!-- Project Dropdown -->
+          <div class="property-select">
+            <Inbox :size="14" class="property-icon" />
+            <CustomSelect
+              v-model="projectId"
+              :options="projectOptions"
+              class="compact-select"
+            />
+          </div>
         </div>
 
-        <!-- Duration dropdown -->
-        <div class="property-select">
-          <Clock :size="14" class="property-icon" />
-          <CustomSelect
-            v-model="duration"
-            :options="durationOptions"
-            class="compact-select"
-          />
+        <!-- Actions -->
+        <div class="actions-row">
+          <button class="cancel-btn" @click="$emit('close')">
+            Cancel
+          </button>
+          <button class="create-btn" :disabled="!taskTitle.trim()" @click="handleCreate">
+            Add task
+          </button>
         </div>
 
-        <!-- Project Dropdown -->
-        <div class="property-select">
-          <Inbox :size="14" class="property-icon" />
-          <CustomSelect
-            v-model="projectId"
-            :options="projectOptions"
-            class="compact-select"
-          />
-        </div>
+        <!-- AI Assist Popover -->
+        <AITaskAssistPopover
+          :is-visible="showAIAssist"
+          :task="aiAssistTaskProxy"
+          :x="aiAssistPosition.x"
+          :y="aiAssistPosition.y"
+          context="quick-create"
+          @close="showAIAssist = false"
+          @accept-priority="handleAIAcceptPriority"
+          @accept-date="handleAIAcceptDate"
+          @accept-title="handleAIAcceptTitle"
+        />
       </div>
-
-      <!-- Actions -->
-      <div class="actions-row">
-        <button class="cancel-btn" @click="$emit('close')">
-          Cancel
-        </button>
-        <button class="create-btn" :disabled="!taskTitle.trim()" @click="handleCreate">
-          Add task
-        </button>
-      </div>
-
-      <!-- AI Assist Popover -->
-      <AITaskAssistPopover
-        :is-visible="showAIAssist"
-        :task="aiAssistTaskProxy"
-        :x="aiAssistPosition.x"
-        :y="aiAssistPosition.y"
-        context="quick-create"
-        @close="showAIAssist = false"
-        @accept-priority="handleAIAcceptPriority"
-        @accept-date="handleAIAcceptDate"
-        @accept-title="handleAIAcceptTitle"
-      />
     </div>
-  </div>
   </Teleport>
 </template>
 
@@ -422,7 +422,7 @@ const handleCreate = async () => {
     instanceData.scheduledTime = schedTime
   }
 
-  const task = await taskStore.createTask({
+  const task = await taskStore.createTaskWithUndo({
     title: taskTitle.value.trim(),
     description: taskDescription.value.trim(),
     priority: priority.value,

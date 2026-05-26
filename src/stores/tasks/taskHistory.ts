@@ -63,6 +63,7 @@ export function useTaskHistory(
         return {
             createTaskWithUndo: async (taskData: Partial<Task>) => undoHistory.createTaskWithUndo(taskData),
             updateTaskWithUndo: async (taskId: string, updates: Partial<Task>) => undoHistory.updateTaskWithUndo(taskId, updates),
+            bulkUpdateTasksWithUndo: async (taskUpdates: Array<{ id: string; updates: Partial<Task> }>, description?: string) => undoHistory.bulkUpdateTasksWithUndo(taskUpdates, description),
             deleteTaskWithUndo: async (taskId: string) => undoHistory.deleteTaskWithUndo(taskId),
             moveTaskWithUndo: async (taskId: string, newStatus: Task['status']) => {
                 try {

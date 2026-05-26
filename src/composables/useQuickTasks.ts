@@ -75,12 +75,12 @@ export function useQuickTasks() {
         )
         if (existing) {
             if (!existing.isPinned) {
-                await taskStore.updateTask(existing.id, { isPinned: true })
+                await taskStore.updateTaskWithUndo(existing.id, { isPinned: true })
             }
             return
         }
 
-        await taskStore.createTask({
+        await taskStore.createTaskWithUndo({
             title: trimmed,
             description: opts?.description || '',
             projectId: opts?.projectId || undefined,
@@ -93,12 +93,12 @@ export function useQuickTasks() {
     const unpinTask = async (taskId: string) => {
         const task = taskStore.tasks.find(t => t.id === taskId)
         if (!task || !task.isPinned) return
-        await taskStore.updateTask(taskId, { isPinned: false })
+        await taskStore.updateTaskWithUndo(taskId, { isPinned: false })
     }
 
     const pinFromTask = async (task: Task) => {
         if (task.isPinned) return
-        await taskStore.updateTask(task.id, { isPinned: true })
+        await taskStore.updateTaskWithUndo(task.id, { isPinned: true })
     }
 
     // --- Frequent Tasks (client-side from task store) ---

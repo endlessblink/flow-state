@@ -30,8 +30,6 @@
         >
           <CalendarDays :size="16" />
         </button>
-
-
       </div>
 
       <!-- Content Area -->
@@ -152,7 +150,7 @@ const { isMobile } = useMobileDetection()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const settingsStore = useSettingsStore()
-const { bulkDeleteTasksWithUndo } = useUnifiedUndoRedo()
+const { bulkDeleteTasksWithUndo, createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
 const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
 // Extract only reactive state refs, not computed properties
@@ -581,7 +579,7 @@ const handleCreateTaskFromModal = async (data: {
   dueDate?: string
   projectId?: string
 }) => {
-  await taskStore.createTask({
+  await createTaskWithUndo({
     ...createTaskDefaults.value,
     ...data,
     status: data.status as Task['status']
@@ -621,7 +619,7 @@ const handleToggleComplete = async (taskId: string) => {
     }
     const newStatus = task.status === 'done' ? 'todo' : 'done'
     // BUG-1051: AWAIT to ensure persistence
-    await taskStore.updateTask(taskId, { status: newStatus })
+    await updateTaskWithUndo(taskId, { status: newStatus })
   }
 }
 
@@ -630,7 +628,7 @@ const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
     return
   }
   // BUG-1051: AWAIT to ensure persistence
-  await taskStore.updateTask(taskId, updates)
+  await updateTaskWithUndo(taskId, updates)
 }
 
 // TASK-1520: recurrence-aware delete via global composable
@@ -701,7 +699,7 @@ const handleCollapseAll = () => {
 const handleMoveTask = async (taskId: string, targetProjectId: string | null, targetParentId: string | null) => {
   // Move task to be a subtask of another task
   // BUG-1051: AWAIT to ensure persistence
-  await taskStore.updateTask(taskId, {
+  await updateTaskWithUndo(taskId, {
     projectId: targetProjectId || undefined,
     parentTaskId: targetParentId || undefined
   })

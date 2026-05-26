@@ -266,7 +266,7 @@ const {
 } = useBoardActions({ taskStore, timerStore })
 
 const handleListMoveTask = (taskId: string, targetProjectId: string | null, targetParentId: string | null) => {
-  return taskStore.updateTask(taskId, {
+  return taskStore.updateTaskWithUndo(taskId, {
     projectId: targetProjectId ?? '',
     parentTaskId: targetParentId
   })
@@ -334,7 +334,7 @@ const listViewGroups = computed(() => {
 
 // TASK-1334: Handle inline task updates from list view
 const handleListUpdateTask = (taskId: string, updates: Partial<Task>) => {
-  taskStore.updateTask(taskId, updates)
+  return taskStore.updateTaskWithUndo(taskId, updates)
 }
 
 // Event handlers for TaskList in list view mode
@@ -347,7 +347,7 @@ const handleToggleComplete = async (taskId: string) => {
     return
   }
   const newStatus = task.status === 'done' ? 'todo' : 'done'
-  await taskStore.updateTask(taskId, { status: newStatus })
+  await taskStore.updateTaskWithUndo(taskId, { status: newStatus })
 }
 
 const handleDeleteSelected = (taskIds: string[]) => {

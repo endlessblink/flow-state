@@ -2,7 +2,6 @@ import { ref, type Ref, type ComputedRef } from 'vue'
 import { useTaskStore, type Task, type Subtask, type TaskInstance } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
-import { getUndoSystem } from '@/composables/undoSingleton'
 import { useToast } from '@/composables/useToast'
 import type { SimpleRecurrenceRule } from '@/types/tasks'
 import { RecurrencePattern, EndCondition } from '@/types/recurrence'
@@ -305,12 +304,6 @@ export function useTaskEditActions(
                 updates.recurrenceRule = undefined
             }
 
-            // BUG-291 FIX: Use direct updateTask for INSTANT feedback
-            // The old flow blocked UI for 2-3 seconds due to:
-            // - 3 dynamic imports in updateTaskWithUndo
-            // - 2 undo state saves
-            // - Instance/subtask operations with same pattern
-            // Now we: Update store → Close modal → Background ops
             console.time('⚡ [BUG-291] Task update')
 
             // BUG-1097 FIX: Ensure dueDate is included in updates
@@ -321,7 +314,7 @@ export function useTaskEditActions(
             // BUG-1206 FIX: Await updateTask to ensure store + sync queue are updated
             // before closing the modal. updateTask no longer rolls back on direct save failure
             // (sync queue retries), so this won't block the UI on network errors.
-            await taskStore.updateTask(editedTask.value.id, updates as Partial<Task>)
+            await taskStore.updateTaskWithUndo(editedTask.value.id, updates as Partial<Task>)
 
             console.timeEnd('⚡ [BUG-291] Task update')
 
@@ -351,9 +344,6 @@ export function useTaskEditActions(
 
             // === BACKGROUND OPERATIONS (fire-and-forget) ===
             // These run after modal closes - user doesn't wait for them
-
-            // Fire-and-forget: Save undo state in background
-            getUndoSystem().saveState('After edit modal save').catch(() => { })
 
             // Handle instances
             if (editedTask.value.scheduledDate && editedTask.value.scheduledTime && !dueDateDivergesFromSchedule) {

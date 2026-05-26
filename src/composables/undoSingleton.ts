@@ -1002,6 +1002,41 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
   await commitOperation(handle)
 }
 
+const bulkUpdateTasksWithUndo = async (
+  taskUpdates: Array<{ id: string; updates: Partial<Task> }>,
+  description?: string
+) => {
+  const uniqueUpdates = taskUpdates.filter((update, index, allUpdates) =>
+    update.id && allUpdates.findIndex(candidate => candidate.id === update.id) === index
+  )
+  if (uniqueUpdates.length === 0) return
+
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+  const affectedIds = uniqueUpdates.map(update => update.id)
+  const isPositionUpdate = uniqueUpdates.some(({ updates }) =>
+    'canvasPosition' in updates || 'parentId' in updates
+  )
+  const operationType: UndoOperationType = isPositionUpdate ? 'task-move' : 'task-update'
+
+  const handle = await beginOperation({
+    type: operationType,
+    affectedIds,
+    description: description ?? `Bulk update ${uniqueUpdates.length} task${uniqueUpdates.length > 1 ? 's' : ''}`
+  })
+
+  try {
+    for (const { id, updates } of uniqueUpdates) {
+      await taskStore.updateTask(id, updates)
+    }
+    await nextTick()
+    await commitOperation(handle)
+  } catch (error) {
+    console.error('❌ bulkUpdateTasksWithUndo failed:', error)
+    throw error
+  }
+}
+
 const createTaskWithUndo = async (taskData: Partial<Task>) => {
   // TASK-061: Demo content guard - defense in depth (also checked in taskStore.createTask)
   if (taskData.title) {
@@ -1410,6 +1445,7 @@ export function getUndoSystem() {
     bulkMoveToInboxWithUndo,
     rippleShiftWithUndo,
     updateTaskWithUndo,
+    bulkUpdateTasksWithUndo,
     createTaskWithUndo,
 
     // Group operations with undo (ISSUE-008 fix / BUG-008 fix)

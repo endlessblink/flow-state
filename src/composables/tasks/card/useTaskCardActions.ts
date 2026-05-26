@@ -130,7 +130,7 @@ export function useTaskCardActions(
         const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length]
 
         emit('select', props.task.id)
-        taskStore.updateTask(props.task.id, { status: nextStatus })
+        taskStore.updateTaskWithUndo(props.task.id, { status: nextStatus })
     }
 
     return {

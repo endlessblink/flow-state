@@ -4,13 +4,10 @@
 // VERSION: Singleton-Consolidation-v1 - 2025-10-23T06:56:00Z
 
 import { computed } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import { getUndoSystem } from './undoSingleton'
 
 export const useUnifiedUndoRedo = () => {
-  const taskStore = useTaskStore()
-
   // DELEGATE to singleton system exclusively
   const singletonUndo = getUndoSystem()
 
@@ -43,6 +40,10 @@ export const useUnifiedUndoRedo = () => {
 
   const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
     return await singletonUndo.updateTaskWithUndo(taskId, updates)
+  }
+
+  const bulkUpdateTasksWithUndo = async (taskUpdates: Array<{ id: string; updates: Partial<Task> }>, description?: string) => {
+    return await singletonUndo.bulkUpdateTasksWithUndo(taskUpdates, description)
   }
 
   const createTaskWithUndo = async (taskData: Partial<Task>) => {
@@ -84,6 +85,7 @@ export const useUnifiedUndoRedo = () => {
     deleteTaskWithUndo,
     bulkDeleteTasksWithUndo,
     updateTaskWithUndo,
+    bulkUpdateTasksWithUndo,
     createTaskWithUndo,
     moveTaskWithUndo,
     moveTaskToProjectWithUndo

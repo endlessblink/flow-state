@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { useTaskStore } from '@/stores/tasks'
 import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 import { useMorningDashboard, type TaskPoolGroup, type TimeBlock } from '@/composables/useMorningDashboard'
 import BigThreeSlot from './BigThreeSlot.vue'
 import TaskPoolCard from './TaskPoolCard.vue'
-import TimeBlockPicker from './TimeBlockPicker.vue'
 import MorningTimeBlockCalendar from './MorningTimeBlockCalendar.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
@@ -109,11 +108,6 @@ const searchResults = computed(() => {
       dueDate: t.dueDate ?? '',
       projectId: t.projectId ?? '',
     }))
-})
-
-const hasAnyTasks = computed(() => {
-  if (searchResults.value) return searchResults.value.length > 0
-  return visibleGroups.value.length > 0
 })
 
 // --- Drop zone models ---
@@ -262,7 +256,7 @@ async function handleCreateTask() {
   const title = newTaskTitle.value.trim()
   if (!title) return
   const todayStr = new Date().toISOString().slice(0, 10)
-  await taskStore.createTask({ title, dueDate: todayStr, status: 'todo' })
+  await taskStore.createTaskWithUndo({ title, dueDate: todayStr, status: 'todo' })
   newTaskTitle.value = ''
 }
 
@@ -273,7 +267,9 @@ async function handleCreateTask() {
     <!-- Stage 1: Pick tasks -->
     <template v-if="stage === 'pick'">
       <div class="card-header">
-        <h2 class="card-title">Today's Big 3</h2>
+        <h2 class="card-title">
+          Today's Big 3
+        </h2>
         <span class="card-subtitle">Click a task or drag it into a focus zone</span>
       </div>
 
@@ -306,8 +302,8 @@ async function handleCreateTask() {
                   ghost-class="ghost-card"
                   chosen-class="chosen-card"
                   drag-class="drag-card"
-                  :force-fallback="true"
-                  :fallback-on-body="true"
+                  force-fallback
+                  fallback-on-body
                   fallback-class="sortable-fallback"
                   :fallback-tolerance="5"
                   tag="div"
@@ -354,8 +350,8 @@ async function handleCreateTask() {
                   ghost-class="ghost-card"
                   chosen-class="chosen-card"
                   drag-class="drag-card"
-                  :force-fallback="true"
-                  :fallback-on-body="true"
+                  force-fallback
+                  fallback-on-body
                   fallback-class="sortable-fallback"
                   :fallback-tolerance="5"
                   tag="div"
@@ -427,7 +423,7 @@ async function handleCreateTask() {
             <!-- Filled/completed slot -->
             <BigThreeSlot
               v-if="slot.title.trim()"
-              :slot="slot"
+              v-bind="{ slot }"
               :index="index"
               @clear="handleClear"
             />
@@ -440,8 +436,8 @@ async function handleCreateTask() {
               item-key="id"
               :animation="0"
               ghost-class="ghost-zone-item"
-              :force-fallback="true"
-              :fallback-on-body="true"
+              force-fallback
+              fallback-on-body
               fallback-class="sortable-fallback"
               :fallback-tolerance="5"
               tag="div"
@@ -449,11 +445,13 @@ async function handleCreateTask() {
               @change="(evt: any) => onZoneChange(index, evt)"
             >
               <template #item="{ element }">
-                <div class="zone-temp-item">{{ element.title }}</div>
+                <div class="zone-temp-item">
+                  {{ element.title }}
+                </div>
               </template>
               <template #header>
                 <BigThreeSlot
-                  :slot="slot"
+                  v-bind="{ slot }"
                   :index="index"
                 />
               </template>

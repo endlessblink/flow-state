@@ -290,6 +290,46 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }
   })
 
+  it('undoes and redoes an atomic bulk task update three consecutive times', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const taskA = createMockTask({
+      id: 'task-bulk-update-a',
+      title: 'Bulk update A',
+      status: 'todo',
+      priority: 'low'
+    })
+    const taskB = createMockTask({
+      id: 'task-bulk-update-b',
+      title: 'Bulk update B',
+      status: 'todo',
+      priority: 'medium'
+    })
+    taskStore._rawTasks.push(taskA, taskB)
+
+    await undoSystem.bulkUpdateTasksWithUndo([
+      { id: taskA.id, updates: { status: 'done', priority: 'high' } },
+      { id: taskB.id, updates: { status: 'done', priority: 'high' } }
+    ], 'Bulk mark done and high priority')
+
+    expect(undoSystem.getOperationStack()).toHaveLength(1)
+    expect(undoSystem.getOperationStack()[0]?.operation.affectedIds).toEqual([taskA.id, taskB.id])
+    expect(taskStore._rawTasks.find(candidate => candidate.id === taskA.id)).toMatchObject({ status: 'done', priority: 'high' })
+    expect(taskStore._rawTasks.find(candidate => candidate.id === taskB.id)).toMatchObject({ status: 'done', priority: 'high' })
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      expect(taskStore._rawTasks.find(candidate => candidate.id === taskA.id)).toMatchObject({ status: 'todo', priority: 'low' })
+      expect(taskStore._rawTasks.find(candidate => candidate.id === taskB.id)).toMatchObject({ status: 'todo', priority: 'medium' })
+
+      await undoSystem.redo()
+
+      expect(taskStore._rawTasks.find(candidate => candidate.id === taskA.id)).toMatchObject({ status: 'done', priority: 'high' })
+      expect(taskStore._rawTasks.find(candidate => candidate.id === taskB.id)).toMatchObject({ status: 'done', priority: 'high' })
+    }
+  })
+
   it('undoes and redoes task deletion three consecutive times with the same restored task id', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()

@@ -202,7 +202,7 @@ const {
 const handleSetWorkBlock = async (duration: number) => {
   const currentTask = task.value
   if (!currentTask?.id) return
-  await taskStore.updateTask(currentTask.id, { estimatedDuration: duration }, 'USER')
+  await taskStore.updateTaskWithUndo(currentTask.id, { estimatedDuration: duration })
 }
 
 // TASK-262: Selection is handled via:

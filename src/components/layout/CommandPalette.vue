@@ -1,14 +1,20 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="isOpen" class="command-palette-overlay" role="dialog" @click="handleBackdropClick">
+      <div
+        v-if="isOpen"
+        class="command-palette-overlay"
+        role="dialog"
+        @click="handleBackdropClick"
+      >
         <div class="command-palette-modal" @click.stop>
           <!-- Quick Add Input (Primary Focus) -->
           <div class="quick-add-section">
             <Plus :size="20" class="add-icon" />
-            <input dir="auto"
+            <input
               ref="taskInputRef"
               v-model="taskTitle"
+              dir="auto"
               type="text"
               placeholder="Add a task..."
               class="task-input"
@@ -133,7 +139,7 @@ const createTask = async () => {
     newTask.dueDate = todayStr
   }
 
-  await taskStore.createTask(newTask)
+  await taskStore.createTaskWithUndo(newTask)
   close()
 }
 
@@ -159,7 +165,7 @@ const createAndContinue = async () => {
     newTask.dueDate = todayStr
   }
 
-  await taskStore.createTask(newTask)
+  await taskStore.createTaskWithUndo(newTask)
 
   // Reset only task title, keep other options
   taskTitle.value = ''

@@ -1,12 +1,26 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: May 4, 2026
+> **Last Updated**: May 26, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
 ---
 
 ## Active Tasks
+
+### ~~BUG-1802~~: Supabase REST outage blanked localhost canvas and surfaced sync errors (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-05-26) — localhost fixed; shipping in v1.4.62.
+
+**Problem**: Localhost started showing `Sync Error(fetchTasks): An unexpected error occurred` and `Sync Error(saveTasks): An unexpected error occurred`; Canvas could load blank because cached tasks referenced groups while the group fetch returned HTTP 500.
+
+**Root cause**: VPS `supabase-rest` had exited, so Kong could not resolve its `rest` upstream and returned HTTP 500 for every `/rest/v1/*` route. On the client, `useCanvasSync` deferred all parented tasks when `groups.length === 0`, which is correct for a partial group load but blanked the canvas when the entire groups request failed.
+
+**Fix**: Restarted `supabase-rest` on the VPS and verified `tasks`/`groups` REST queries returned 200 with no fresh Kong REST 500/DNS errors. Hardened Canvas so, when groups are entirely unavailable, parented tasks render as root fallback nodes using their absolute coordinates; a later successful group load re-parents them without writing the fallback to storage. Kept write failures visible while suppressing generic transient read-fetch noise.
+
+**Regression tests**: Added local Canvas E2E coverage for cached parented tasks remaining visible when group loading fails, plus Supabase infrastructure unit coverage that suppresses generic read fetch failures but still surfaces mutation failures.
+
+---
 
 ### ~~BUG-1801~~: Background timer fetch showed noisy generic sync error (✅ DONE)
 
@@ -16,9 +30,9 @@
 
 **Root cause**: The shared Supabase retry/error helper recognized explicit network messages (`Failed to fetch`, `AbortError`, timeout, etc.) but not Supabase's generic collapsed message `An unexpected error occurred` with status `0`, so the 15s active-timer poll surfaced a visible sync warning.
 
-**Fix**: Centralized transient sync classification in `_infrastructure.ts`, treats the generic status-0 message as transient for `fetchActiveTimerSession`, retries it, and suppresses visible notifications while still recording the last sync message for diagnostics.
+**Fix**: Centralized transient sync classification in `_infrastructure.ts`, treats the generic collapsed message as transient for read fetches, retries it, and suppresses both visible notifications and user-facing last-sync state for those fetch-only failures.
 
-**Regression tests**: `tests/unit/composables/supabase-infrastructure.test.ts` covers retry behavior and notification suppression for the generic active-timer fetch failure.
+**Regression tests**: `tests/unit/composables/supabase-infrastructure.test.ts` covers retry behavior, notification/state suppression for generic read fetch failures, and confirms mutation failures still surface.
 
 ---
 

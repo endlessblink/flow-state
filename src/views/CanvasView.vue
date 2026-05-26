@@ -659,6 +659,71 @@ function getCanvasNodeSnapshot(limit = 12) {
   })
 }
 
+function getCanvasNudgeSnapshot(taskIds?: string[]) {
+  const viewportElement = document.querySelector('.vue-flow__viewport') as HTMLElement | null
+  const viewportStyle = viewportElement ? getComputedStyle(viewportElement) : null
+  const vfNodes = getNodes.value as CanvasNodeRecord[]
+  const vfById = new Map(vfNodes.map((node) => [node.id, node]))
+  const ids = taskIds?.length
+    ? taskIds
+    : taskStore.rawTasks
+      .filter((task) => task.canvasPosition)
+      .slice(0, 8)
+      .map((task) => task.id)
+
+  return {
+    viewport: {
+      vueFlow: getViewport(),
+      store: { ...canvasStore.viewport },
+      domTransform: viewportStyle?.transform ?? null,
+    },
+    groups: canvasStore.groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      parentGroupId: group.parentGroupId ?? null,
+      position: group.position ? { ...group.position } : null,
+    })),
+    tasks: ids.map((id) => {
+      const task = taskStore.rawTasks.find((candidate) => candidate.id === id)
+      const node = vfById.get(id)
+      const taskElement = document.querySelector(`[data-task-id="${CSS.escape(id)}"]`) as HTMLElement | null
+        ?? document.querySelector(`[data-id="${CSS.escape(id)}"]`) as HTMLElement | null
+      const nodeElement = taskElement?.closest('.vue-flow__node') as HTMLElement | null
+        ?? document.querySelector(`.vue-flow__node[data-id="${CSS.escape(id)}"]`) as HTMLElement | null
+      const rect = nodeElement?.getBoundingClientRect()
+
+      return {
+        id,
+        title: task?.title?.slice(0, 60) ?? null,
+        status: task?.status ?? null,
+        parentId: task?.parentId ?? null,
+        storePosition: task?.canvasPosition ? { ...task.canvasPosition } : null,
+        positionVersion: task?.positionVersion ?? null,
+        vueFlow: node ? {
+          parentNode: node.parentNode ?? null,
+          hidden: node.hidden === true,
+          position: node.position ? { ...node.position } : null,
+          computedPosition: node.computedPosition ? { ...node.computedPosition } : null,
+          dimensions: node.dimensions ? { ...node.dimensions } : null,
+        } : null,
+        dom: rect ? {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+          transform: nodeElement?.style.transform || null,
+        } : null,
+      }
+    }),
+  }
+}
+
+function logCanvasNudgeSnapshot(taskIds?: string[]) {
+  const snapshot = getCanvasNudgeSnapshot(taskIds)
+  console.warn('[CANVAS-NUDGE-SNAPSHOT]', JSON.stringify(snapshot))
+  return snapshot
+}
+
 function getTodayTaskDebugSnapshot() {
   const todayGroup = canvasStore.groups.find((group) =>
     group.name === 'Today' || (group as { type?: string }).type === 'today'
@@ -1109,6 +1174,8 @@ if (process.env.NODE_ENV === 'development' || (window as unknown as Record<strin
     debugTidyPlanOnlyToClipboard,
     getTodayTaskDebugSnapshot,
     getCanvasNodeSnapshot,
+    getCanvasNudgeSnapshot,
+    logCanvasNudgeSnapshot,
     getTidyLockSummary,
     // Debug Access to Singletons
     get positionManager() { return import('../services/canvas/PositionManager').then(m => m.positionManager) },

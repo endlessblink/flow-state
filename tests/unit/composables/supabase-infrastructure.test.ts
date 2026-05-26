@@ -49,17 +49,50 @@ describe('Supabase database infrastructure', () => {
     expect(operation).toHaveBeenCalledTimes(3)
   })
 
-  it('does not show visible notifications for generic active timer fetch failures', async () => {
+  it('does not surface generic active timer fetch failures in user-facing sync state', async () => {
     const lastSyncError = ref<string | null>(null)
     const { createDatabaseHelpers } = await import('@/composables/supabase/_infrastructure')
     const { handleError } = createDatabaseHelpers(lastSyncError)
 
     handleError({ message: 'An unexpected error occurred', status: 0 }, 'fetchActiveTimerSession')
 
+    expect(reportMock).not.toHaveBeenCalled()
+    expect(lastSyncError.value).toBeNull()
+  })
+
+  it('suppresses punctuated generic active timer fetch failures from Electron', async () => {
+    const lastSyncError = ref<string | null>(null)
+    const { createDatabaseHelpers } = await import('@/composables/supabase/_infrastructure')
+    const { handleError } = createDatabaseHelpers(lastSyncError)
+
+    handleError({ message: 'An unexpected error occurred.', code: 'unexpected_failure' }, 'fetchActiveTimerSession')
+
+    expect(reportMock).not.toHaveBeenCalled()
+    expect(lastSyncError.value).toBeNull()
+  })
+
+  it('suppresses generic fetchTasks failures in user-facing sync state', async () => {
+    const lastSyncError = ref<string | null>(null)
+    const { createDatabaseHelpers } = await import('@/composables/supabase/_infrastructure')
+    const { handleError } = createDatabaseHelpers(lastSyncError)
+
+    handleError({ message: 'An unexpected error occurred' }, 'fetchTasks')
+
+    expect(reportMock).not.toHaveBeenCalled()
+    expect(lastSyncError.value).toBeNull()
+  })
+
+  it('still surfaces generic mutation failures', async () => {
+    const lastSyncError = ref<string | null>(null)
+    const { createDatabaseHelpers } = await import('@/composables/supabase/_infrastructure')
+    const { handleError } = createDatabaseHelpers(lastSyncError)
+
+    handleError({ message: 'An unexpected error occurred' }, 'saveTask')
+
     expect(reportMock).toHaveBeenCalledWith(expect.objectContaining({
-      message: 'Sync Error(fetchActiveTimerSession): An unexpected error occurred',
-      severity: 'WARNING',
-      showNotification: false
+      message: 'Sync Error(saveTask): An unexpected error occurred',
+      severity: 'ERROR',
+      showNotification: true
     }))
     expect(lastSyncError.value).toBe('An unexpected error occurred')
   })

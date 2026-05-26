@@ -22,6 +22,7 @@ import { positionManager } from '@/services/canvas/PositionManager'
 import { DRAG_SETTLE_TIMEOUT_MS, RESIZE_SETTLE_TIMEOUT_MS } from '@/config/timing'
 import { lockManager } from '@/services/canvas/LockManager'
 import { getPlatformDiagnostics } from '@/utils/contextMenuCoordinates'
+import { traceCanvasDoneDragStop, traceCanvasDoneNodes } from '@/utils/canvas/doneTrace'
 
 // =============================================================================
 // DESCENDANT COLLECTION HELPERS (BUG #1 FIX)
@@ -503,6 +504,8 @@ export function useCanvasInteractions(deps?: {
      * 5. For groups: also sync child tasks AND child groups
      */
     const onNodeDragStop = async (event: NodeDragEvent) => {
+        traceCanvasDoneDragStop(event.nodes)
+
         // BUG-1328: Log drag end diagnostic for cursor drift detection
         if (import.meta.env.DEV && dragDiagStartPos && event.nodes.length > 0) {
             const node = event.nodes[0]
@@ -562,6 +565,7 @@ export function useCanvasInteractions(deps?: {
                 return [node.id, snapped]
             })
         )
+        traceCanvasDoneNodes('drag-stop:position-snapshot-source-nodes', involvedNodes)
 
         try {
 

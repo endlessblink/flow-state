@@ -1,5 +1,5 @@
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
-import { type Ref, toRaw } from 'vue'
+import { nextTick, type Ref, toRaw } from 'vue'
 import { type Task, type Subtask, type TaskInstance, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 // TASK-1158: Canvas sync via shared bridge (breaks circular dependency)
 import { canvasUiSyncRequest } from '../canvasTaskBridge'
@@ -18,6 +18,12 @@ import { useToast } from '@/composables/useToast'
 // TASK-1428: Keep IndexedDB read cache warm after offline mutations
 import { cacheTasks } from '@/services/offline/readCacheDB'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
+import {
+    beginCanvasDoneTrace,
+    getCanvasDoneTraceTaskIds,
+    traceCanvasDone,
+    traceCanvasDoneTasks
+} from '@/utils/canvas/doneTrace'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
@@ -378,6 +384,11 @@ export function useTaskOperations(
         updates = sanitizeGeometryUpdates(updates, source, task, taskId)
         if (Object.keys(updates).length === 0) return
 
+        const isMarkingDone = updates.status === 'done' && task.status !== 'done'
+        if (isMarkingDone) {
+            beginCanvasDoneTrace(taskId, _rawTasks.value)
+        }
+
         // BUG-060 FIX: Suppress watcher during manual update to prevent concurrent bulk saves
         // This prevents the "8 conflicts in bulk save" issue
         const wasManualInProgress = manualOperationInProgress.value
@@ -420,6 +431,27 @@ export function useTaskOperations(
                         })
                     }
                 }
+            }
+
+            if (getCanvasDoneTraceTaskIds().includes(taskId) && hasGeometryChange) {
+                traceCanvasDone('updateTask:geometry-write', {
+                    taskId,
+                    source,
+                    updates: {
+                        parentId: 'parentId' in updates ? updates.parentId ?? null : undefined,
+                        canvasPosition: updates.canvasPosition
+                            ? { x: Math.round(updates.canvasPosition.x), y: Math.round(updates.canvasPosition.y) }
+                            : updates.canvasPosition,
+                        positionVersion: updates.positionVersion ?? null,
+                    },
+                    before: {
+                        canvasPosition: task.canvasPosition
+                            ? { x: Math.round(task.canvasPosition.x), y: Math.round(task.canvasPosition.y) }
+                            : null,
+                        parentId: task.parentId ?? null,
+                        positionVersion: task.positionVersion ?? null,
+                    },
+                })
             }
 
             // BUG-045 FIX: Removed auto-archive behavior
@@ -705,6 +737,14 @@ export function useTaskOperations(
                 // Explicit positionVersion updates take priority over the derived geometry version.
                 positionVersion: syncedUpdates.positionVersion ?? newVersion,
                 updatedAt: new Date()
+            }
+
+            if (isMarkingDone || getCanvasDoneTraceTaskIds().includes(taskId)) {
+                traceCanvasDoneTasks('updateTask:after-store-write', _rawTasks.value)
+                nextTick(() => {
+                    traceCanvasDoneTasks('updateTask:after-nextTick-1', _rawTasks.value)
+                    nextTick(() => traceCanvasDoneTasks('updateTask:after-nextTick-2', _rawTasks.value))
+                })
             }
 
             // Force canvas sync when a user action explicitly removes a task from canvas.

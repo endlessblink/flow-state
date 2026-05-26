@@ -216,6 +216,7 @@ export function createDatabaseHelpers(
 ) {
     const isTransientSyncError = (message: string, status: unknown, context: string): boolean => {
         const lowerMsg = message.toLowerCase()
+        const isReadContext = context.startsWith('fetch')
         const isNetworkLike = message.includes('Failed to fetch') ||
             lowerMsg.includes('networkerror') ||
             message.includes('Network Error') ||
@@ -228,11 +229,10 @@ export function createDatabaseHelpers(
         if (isNetworkLike) return true
 
         // Supabase/postgrest-js can collapse fetch-layer failures into this generic
-        // message. Treat it as transient for background timer reads so the 15s poll
-        // does not raise visible sync errors during short VPS/network hiccups.
-        return context === 'fetchActiveTimerSession' &&
-            lowerMsg === 'an unexpected error occurred' &&
-            (status === undefined || status === null || status === 0 || status === '0')
+        // message. Treat it as transient for read fetches so refresh/poll paths
+        // don't raise visible sync errors during short VPS/network hiccups.
+        const normalizedMsg = lowerMsg.replace(/[.!?\s]+$/g, '')
+        return isReadContext && normalizedMsg === 'an unexpected error occurred'
     }
 
     /**
@@ -316,6 +316,13 @@ export function createDatabaseHelpers(
             ? (error as { status?: number | string; code?: number | string }).status ?? (error as { code?: number | string }).code
             : undefined
         const isTransientNetwork = isTransientSyncError(message, status, context)
+
+        if (isTransientNetwork && context.startsWith('fetch')) {
+            if (import.meta.env.DEV) {
+                console.warn(`[SYNC] Suppressed transient ${context} error: ${finalMessage}`)
+            }
+            return
+        }
 
         errorHandler.report({
             error: err,

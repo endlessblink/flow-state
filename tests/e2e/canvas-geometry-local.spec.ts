@@ -151,6 +151,20 @@ const readTaskEdgeGaps = async (page: Page, ids: string[]) => page.evaluate((ids
   }
 }, ids)
 
+const readRenderedTaskPositions = async (page: Page, ids: string[]) => page.evaluate((ids) => {
+  return ids.map((id) => {
+    const element = document.querySelector(`[data-id="${id}"]`) as HTMLElement | null
+    const rect = element?.getBoundingClientRect()
+    if (!rect) return null
+    return {
+      id,
+      left: Math.round(rect.left),
+      top: Math.round(rect.top),
+      hidden: element.closest('.vue-flow__node')?.classList.contains('hidden') ?? false,
+    }
+  })
+}, ids)
+
 const dayIdByIndex = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 const dayNameByIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -367,6 +381,134 @@ test.describe('local canvas geometry regressions', () => {
         for (const id of taskIds) await taskStore.deleteTask?.(id)
       }, seed.taskIds).catch(() => { /* page may be closed after assertion failure */ })
     }
+  })
+
+  test('marking a canvas task done does not shift sibling task geometry', async ({ page }) => {
+    const traceLogs: string[] = []
+    page.on('console', (message) => {
+      const text = message.text()
+      if (text.includes('[CANVAS-DONE-TRACE]')) traceLogs.push(text)
+    })
+
+    await seedCanvas(page, [
+      { id: 'done-shift-group', name: 'Done Shift Group', x: 1000, y: 300, width: 420, height: 900 },
+    ], [
+      { id: 'done-shift-a', title: 'Done Shift A', parentId: 'done-shift-group', x: 1024, y: 420 },
+      { id: 'done-shift-b', title: 'Done Shift B', parentId: 'done-shift-group', x: 1024, y: 560 },
+      { id: 'done-shift-c', title: 'Done Shift C', parentId: 'done-shift-group', x: 1024, y: 700 },
+    ])
+
+    const trackedIds = ['done-shift-a', 'done-shift-b', 'done-shift-c']
+    const beforeStore = await readGeometry(page)
+    const beforeTasks = beforeStore.tasks
+      .filter((task) => trackedIds.includes(task.id))
+      .sort((a, b) => a.id.localeCompare(b.id))
+    const beforeRendered = await readRenderedTaskPositions(page, trackedIds)
+
+    await page.evaluate(async () => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+      const taskStore = pinia._s.get('tasks')!
+      const canvasStore = pinia._s.get('canvas')!
+
+      await taskStore.updateTask('done-shift-b', { status: 'done' }, 'USER')
+      await canvasStore.requestSync?.('user:context-menu')
+    })
+
+    await page.waitForTimeout(1000)
+
+    const afterStore = await readGeometry(page)
+    const afterTasks = afterStore.tasks
+      .filter((task) => trackedIds.includes(task.id))
+      .sort((a, b) => a.id.localeCompare(b.id))
+    const afterRendered = await readRenderedTaskPositions(page, trackedIds)
+    const beforeTaskGeometry = beforeTasks.map((task) => ({
+      id: task.id,
+      canvasPosition: task.canvasPosition,
+      parentId: task.parentId,
+      isInInbox: task.isInInbox,
+      positionVersion: task.positionVersion,
+    }))
+    const afterTaskGeometry = afterTasks.map((task) => ({
+      id: task.id,
+      canvasPosition: task.canvasPosition,
+      parentId: task.parentId,
+      isInInbox: task.isInInbox,
+      positionVersion: task.positionVersion,
+    }))
+
+    expect(afterTaskGeometry, JSON.stringify({ beforeTaskGeometry, afterTaskGeometry, traceLogs }, null, 2)).toEqual(beforeTaskGeometry)
+    expect(afterRendered[0], JSON.stringify({ beforeRendered, afterRendered, traceLogs }, null, 2)).toEqual(beforeRendered[0])
+    expect(afterRendered[2], JSON.stringify({ beforeRendered, afterRendered, traceLogs }, null, 2)).toEqual(beforeRendered[2])
+    expect(afterRendered[1], JSON.stringify({ beforeRendered, afterRendered, traceLogs }, null, 2)).toBeNull()
+    expect(traceLogs.some((line) => line.includes('drag-stop:start')), traceLogs.join('\n')).toBe(false)
+  })
+
+  test('canvas remains visible when group loading fails after cached tasks load', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'missing-groups-root', name: 'Missing Groups Root', x: 1000, y: 300, width: 420, height: 900 },
+    ], [
+      { id: 'missing-groups-a', title: 'Missing Groups A', parentId: 'missing-groups-root', x: 1024, y: 420 },
+      { id: 'missing-groups-b', title: 'Missing Groups B', parentId: 'missing-groups-root', x: 1024, y: 560 },
+    ])
+
+    await page.evaluate(async () => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+      const canvasStore = pinia._s.get('canvas')!
+
+      canvasStore.setGroups([], true)
+      await canvasStore.requestSync?.('test:groups-unavailable')
+    })
+
+    await page.waitForTimeout(500)
+
+    const rendered = await readRenderedTaskPositions(page, ['missing-groups-a', 'missing-groups-b'])
+    expect(rendered.every(Boolean), JSON.stringify(rendered, null, 2)).toBe(true)
+  })
+
+  test('moving one grouped canvas task does not shift sibling task geometry', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'drag-shift-group', name: 'Drag Shift Group', x: 1000, y: 300, width: 420, height: 900 },
+    ], [
+      { id: 'drag-shift-a', title: 'Drag Shift A', parentId: 'drag-shift-group', x: 1024, y: 420 },
+      { id: 'drag-shift-b', title: 'Drag Shift B', parentId: 'drag-shift-group', x: 1024, y: 560 },
+      { id: 'drag-shift-c', title: 'Drag Shift C', parentId: 'drag-shift-group', x: 1024, y: 700 },
+    ])
+
+    const trackedIds = ['drag-shift-a', 'drag-shift-b', 'drag-shift-c']
+    const beforeRendered = await readRenderedTaskPositions(page, trackedIds)
+    await page.evaluate(async () => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+      const taskStore = pinia._s.get('tasks')!
+      const canvasUiStore = pinia._s.get('canvasUi')!
+
+      await taskStore.updateTask('drag-shift-b', {
+        canvasPosition: { x: 1120, y: 592 },
+        positionFormat: 'absolute',
+      }, 'DRAG')
+      canvasUiStore.requestSync?.('user:manual')
+    })
+    await page.waitForTimeout(1000)
+
+    const afterRendered = await readRenderedTaskPositions(page, trackedIds)
+    const afterStore = await readGeometry(page)
+    const movedStore = afterStore.tasks.find((task) => task.id === 'drag-shift-b')
+    const siblingStore = afterStore.tasks
+      .filter((task) => task.id === 'drag-shift-a' || task.id === 'drag-shift-c')
+      .sort((a, b) => a.id.localeCompare(b.id))
+
+    expect(movedStore, JSON.stringify({ afterStore, beforeRendered, afterRendered }, null, 2)).toEqual(
+      expect.objectContaining({ id: 'drag-shift-b', x: 1120, y: 592, parentId: 'drag-shift-group' })
+    )
+    expect(afterRendered[0], JSON.stringify({ afterStore, beforeRendered, afterRendered }, null, 2)).toEqual(beforeRendered[0])
+    expect(afterRendered[2], JSON.stringify({ afterStore, beforeRendered, afterRendered }, null, 2)).toEqual(beforeRendered[2])
+    expect(afterRendered[1], JSON.stringify({ afterStore, beforeRendered, afterRendered }, null, 2)).not.toEqual(beforeRendered[1])
+    expect(siblingStore).toEqual([
+      expect.objectContaining({ id: 'drag-shift-a', x: 1024, y: 420, parentId: 'drag-shift-group' }),
+      expect.objectContaining({ id: 'drag-shift-c', x: 1024, y: 700, parentId: 'drag-shift-group' }),
+    ])
   })
 
   test('tidy keeps compact groups and stacks tasks with vertical spacing', async ({ page }) => {

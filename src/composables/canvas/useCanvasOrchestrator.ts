@@ -44,6 +44,7 @@ import { useCanvasZoom } from './useCanvasZoom' // Keeping for cleanup hooks
 import { useCanvasAlignment } from './useCanvasAlignment'
 import { useCanvasConnections } from './useCanvasConnections'
 import { useCanvasEdgeSync } from './useCanvasEdgeSync'
+import { traceCanvasDone, traceCanvasDoneTasks } from '@/utils/canvas/doneTrace'
 
 // Helper for error boundaries
 const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) => {
@@ -232,6 +233,13 @@ export function useCanvasOrchestrator() {
         try {
             const t0 = performance.now()
             const tasksToSync = tasks || tasksWithCanvasPosition.value
+            traceCanvasDone('orchestrator:syncNodes:before', {
+                force: options?.force === true,
+                taskCount: tasksToSync.length,
+                canAcceptRemoteUpdate: canAcceptRemoteUpdate.value,
+                opState: opCurrentType.value
+            })
+            traceCanvasDoneTasks('orchestrator:syncNodes:tasks', tasksToSync)
             persistence.syncStoreToCanvas(tasksToSync)
             const syncMs = performance.now() - t0
             if (import.meta.env.DEV && zoomPerfActive) {
@@ -695,6 +703,7 @@ export function useCanvasOrchestrator() {
     watch(() => taskStore.hideCanvasDoneTasks, () => {
         if (!isInitialized.value) return
         if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:hideCanvasDoneTasks', viewport.value?.zoom ?? 1)
+        traceCanvasDone('watcher:hideCanvasDoneTasks')
         batchedSyncNodes()
     })
     watch(() => taskStore.hideCanvasOverdueTasks, () => {
@@ -735,6 +744,7 @@ export function useCanvasOrchestrator() {
     // canvasUiSyncRequest is incremented by taskOperations.ts after task create/delete
     watch(canvasUiSyncRequest, () => {
         if (!isInitialized.value) return
+        traceCanvasDone('watcher:canvasUiSyncRequest')
         batchedSyncNodes(undefined, { force: true })
     })
 
@@ -748,6 +758,9 @@ export function useCanvasOrchestrator() {
         // Skip during initialization - onMounted handles initial sync
         if (!isInitialized.value) return
         if (isSyncingFromWatcher) return
+        traceCanvasDone('watcher:taskIds', {
+            taskSignature: tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|')
+        })
         isSyncingFromWatcher = true
         try {
             if (persistence.isSyncing.value) return
@@ -758,6 +771,13 @@ export function useCanvasOrchestrator() {
         } finally {
             isSyncingFromWatcher = false
         }
+    })
+
+    watch(() => tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|'), () => {
+        if (!isInitialized.value) return
+        traceCanvasDone('watcher:taskGeometryStatusSignature', {
+            taskSignature: tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|')
+        })
     })
 
     // CRITICAL FIX: Watch for group changes (e.g. creation/deletion/remote sync)

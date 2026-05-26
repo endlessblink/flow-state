@@ -13,6 +13,7 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
+import { traceCanvasDone, traceCanvasDoneNodes, traceCanvasDoneTasks } from '@/utils/canvas/doneTrace'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -99,7 +100,7 @@ export function useCanvasSync() {
     const { nodeVersionMap, aggregatedTaskCountByGroupId, taskCountByGroupId } = storeToRefs(canvasStore)
     const taskStore = useTaskStore()
     const canvasImagesStore = useCanvasImagesStore()
-    const { getNodes, setNodes } = useVueFlow()
+    const { getNodes, setNodes, updateNode } = useVueFlow()
 
     // Alias to module-level ref for backward compatibility
     const isSyncing = canvasSyncInProgress
@@ -183,6 +184,9 @@ export function useCanvasSync() {
                 .filter(t => t.canvasPosition)
             const groups = canvasStore.groups || []
             const currentNodes = getNodes.value
+
+            traceCanvasDoneTasks('syncStoreToCanvas:input-store', tasksToSync)
+            traceCanvasDoneNodes('syncStoreToCanvas:before-build-current-vueflow', currentNodes)
 
             // BUG-1084 FIX v2: Instead of skipping entire sync, we'll skip individual tasks
             // whose parent groups haven't loaded yet. This allows root tasks to display
@@ -353,6 +357,14 @@ export function useCanvasSync() {
                         color: group.color || '#3b82f6',
                         width: groupWidth,
                         height: groupHeight,
+                        storePosition: group.position
+                            ? {
+                                x: group.position.x,
+                                y: group.position.y,
+                                width: group.position.width,
+                                height: group.position.height,
+                            }
+                            : null,
                         collapsed: group.isCollapsed || false,
                         // Pass BOTH counts - component decides which to show
                         directTaskCount,
@@ -439,10 +451,21 @@ export function useCanvasSync() {
                     parentId = null
                 }
 
+                // If the entire group fetch failed, render parented tasks as root nodes
+                // using their absolute coordinates. A later successful group load will
+                // re-parent them without writing this fallback back to storage.
+                if (parentId && groups.length === 0) {
+                    if (import.meta.env.DEV) {
+                        console.warn(`[CANVAS:SYNC] Groups unavailable; rendering task ${task.id.slice(0, 8)}... as root fallback`, {
+                            parentId: parentId.slice(0, 8)
+                        })
+                    }
+                    parentId = null
+                }
+
                 // BUG-1084 FIX v2: SKIP tasks whose parent group isn't loaded yet
-                // Instead of treating as root (which causes JUMP when parent loads),
-                // we defer rendering until parent group is available. The watcher on
-                // groups.length will trigger another sync when groups load.
+                // when some groups did load. This avoids a visual jump if only a
+                // subset of groups is temporarily unavailable.
                 if (parentId && !visibleGroupIds.has(parentId)) {
                     if (import.meta.env.DEV) {
                         console.log(`[CANVAS:SYNC] Task ${task.id.slice(0, 8)}... (${task.title?.slice(0, 20)}) deferred - parent ${parentId?.slice(0, 8)} not loaded yet`, {
@@ -545,7 +568,80 @@ export function useCanvasSync() {
                 return false
             }
 
+            const samePosition = (
+                a: { x?: number; y?: number } | null | undefined,
+                b: { x?: number; y?: number } | null | undefined
+            ) => {
+                if (!a && !b) return true
+                if (!a || !b) return false
+                return a.x === b.x && a.y === b.y
+            }
+
+            const nodeGeometrySourceUnchanged = (nodeA: Record<string, any>, nodeB: Record<string, any>) => {
+                if (nodeA.type === 'taskNode') {
+                    const taskA = nodeA.data?.task
+                    const taskB = nodeB.data?.task
+                    return Boolean(taskA && taskB) &&
+                        samePosition(taskA.canvasPosition, taskB.canvasPosition) &&
+                        (taskA.parentId ?? null) === (taskB.parentId ?? null)
+                }
+
+                if (nodeA.type === 'sectionNode') {
+                    const storePositionA = nodeA.data?.storePosition
+                    const storePositionB = nodeB.data?.storePosition
+                    return samePosition(storePositionA ?? nodeA.position, storePositionB ?? nodeB.position) &&
+                        (storePositionA?.width ?? nodeA.data?.width) === (storePositionB?.width ?? nodeB.data?.width) &&
+                        (storePositionA?.height ?? nodeA.data?.height) === (storePositionB?.height ?? nodeB.data?.height) &&
+                        nodeA.data?.width === nodeB.data?.width &&
+                        nodeA.data?.height === nodeB.data?.height &&
+                        (nodeA.data?.parentGroupId ?? null) === (nodeB.data?.parentGroupId ?? null)
+                }
+
+                return samePosition(nodeA.position, nodeB.position)
+            }
+
+            const canPatchNodesInPlace = (a: Array<Record<string, any>>, b: Array<Record<string, any>>) => {
+                if (a.length !== b.length) {
+                    traceCanvasDone('syncStoreToCanvas:patch-skip', { reason: 'length', newCount: a.length, currentCount: b.length })
+                    return false
+                }
+                const bMap = new Map(b.map((n: Record<string, any>) => [n.id, n]))
+
+                return a.every((nodeA) => {
+                    const nodeB = bMap.get(nodeA.id)
+                    if (!nodeB) {
+                        traceCanvasDone('syncStoreToCanvas:patch-skip', { reason: 'missing-node', id: nodeA.id })
+                        return false
+                    }
+                    if (nodeA.type !== nodeB.type) {
+                        traceCanvasDone('syncStoreToCanvas:patch-skip', { reason: 'type', id: nodeA.id, next: nodeA.type, current: nodeB.type })
+                        return false
+                    }
+                    if (nodeA.parentNode !== nodeB.parentNode) {
+                        traceCanvasDone('syncStoreToCanvas:patch-skip', { reason: 'parent', id: nodeA.id, next: nodeA.parentNode, current: nodeB.parentNode })
+                        return false
+                    }
+                    return true
+                })
+            }
+
+            const nodeGeometrySourceChanged = (nodeA: Record<string, any>, nodeB: Record<string, any>) => {
+                return !nodeGeometrySourceUnchanged(nodeA, nodeB)
+            }
+
+            const patchableNodeChanged = (nodeA: Record<string, any>, nodeB: Record<string, any>) => {
+                if (nodeA.hidden !== nodeB.hidden) return true
+                if (nodeA.zIndex !== nodeB.zIndex) return true
+                if (nodeA.selected !== nodeB.selected) return true
+                if (nodeGeometrySourceChanged(nodeA, nodeB)) return true
+                if (JSON.stringify(nodeA.data ?? null) !== JSON.stringify(nodeB.data ?? null)) return true
+                return false
+            }
+
             if (isDifferent(newNodes, currentNodes)) {
+                traceCanvasDoneNodes('syncStoreToCanvas:before-setNodes-new', newNodes)
+                traceCanvasDoneNodes('syncStoreToCanvas:before-setNodes-current', currentNodes)
+
                 if (import.meta.env.DEV) {
                     const taskNodesNew = newNodes.filter((n: any) => n.type === 'taskNode')
                     console.log(`[BUG-1492:SYNC-SETNODES] About to setNodes`, {
@@ -696,7 +792,39 @@ export function useCanvasSync() {
                 }
 
                 canvasSyncSettlingUntil.value = Date.now() + 250
+                if (canPatchNodesInPlace(newNodes, currentNodes)) {
+                    const currentNodeMap = new Map(currentNodes.map((node: Record<string, any>) => [node.id, node]))
+                    for (const node of newNodes) {
+                        const currentNode = currentNodeMap.get(node.id)
+                        if (currentNode && patchableNodeChanged(node, currentNode)) {
+                            const patch: Record<string, unknown> = {
+                                data: node.data,
+                                hidden: node.hidden,
+                                zIndex: node.zIndex,
+                                selected: node.selected,
+                            }
+
+                            if (nodeGeometrySourceChanged(node, currentNode)) {
+                                patch.position = node.position
+                                if (node.width !== undefined) patch.width = node.width
+                                if (node.height !== undefined) patch.height = node.height
+                                if (node.dimensions !== undefined) patch.dimensions = node.dimensions
+                                if (node.style !== undefined) patch.style = node.style
+                            }
+
+                            updateNode(node.id, patch)
+                        }
+                    }
+                    traceCanvasDoneNodes('syncStoreToCanvas:after-in-place-patch-immediate', getNodes.value)
+                    return
+                }
+
                 setNodes(newNodes as any)
+                traceCanvasDoneNodes('syncStoreToCanvas:after-setNodes-immediate', getNodes.value)
+                nextTick(() => {
+                    traceCanvasDoneNodes('syncStoreToCanvas:after-setNodes-nextTick-1', getNodes.value)
+                    nextTick(() => traceCanvasDoneNodes('syncStoreToCanvas:after-setNodes-nextTick-2', getNodes.value))
+                })
 
                 // ================================================================
                 // INVARIANT VALIDATION (Dev Only)

@@ -25,6 +25,7 @@ import {
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
+import { getUndoSystem } from '@/composables/undoSingleton'
 
 function findColumnContainingGroup(
   task: { position: { x: number; y: number }; width?: number; height?: number },
@@ -223,40 +224,60 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
     }
 
-    // Apply store + PositionManager writes. Caller applies Vue Flow moves.
-    try {
-      for (const gm of groupMoves) {
-        const input = inputs.find((i) => i.group.id === gm.groupId)
-        if (!input?.group.position) continue
-        canvasStore.updateGroup(gm.groupId, {
-          position: {
-            ...input.group.position,
-            x: gm.position.x,
-            y: gm.position.y,
-            width: gm.size.width,
-            height: gm.size.height,
-          },
-        })
-        positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
+    const affectedIds = [...new Set([
+      ...groupMoves.map((move) => move.groupId),
+      ...taskMoves.map((move) => move.taskId),
+    ])]
+    const undoSystem = getUndoSystem()
+    const undoHandlePromise = affectedIds.length > 0
+      ? undoSystem.beginOperation({
+        type: 'canvas-geometry',
+        affectedIds,
+        description: `Tidy ${affectedIds.length} canvas item${affectedIds.length === 1 ? '' : 's'}`
+      })
+      : Promise.resolve(null)
+
+    // Caller applies Vue Flow moves immediately. Store writes wait until the
+    // undo snapshot is captured, then releaseOnDoubleNextTick waits on them.
+    const pendingWritesWithUndo = undoHandlePromise.then(async (undoHandle) => {
+      try {
+        for (const gm of groupMoves) {
+          const input = inputs.find((i) => i.group.id === gm.groupId)
+          if (!input?.group.position) continue
+          canvasStore.updateGroup(gm.groupId, {
+            position: {
+              ...input.group.position,
+              x: gm.position.x,
+              y: gm.position.y,
+              width: gm.size.width,
+              height: gm.size.height,
+            },
+          })
+          positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
+        }
+        for (const tm of taskMoves) {
+          const adoptedParentId = adoptedParents.get(tm.taskId)
+          pendingWrites.push(taskStore.updateTask(
+            tm.taskId,
+            adoptedParentId
+              ? { parentId: adoptedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
+              : { canvasPosition: tm.position, positionFormat: 'absolute' },
+            'DRAG'
+          ))
+          positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
+        }
+        await Promise.all(pendingWrites)
+        if (undoHandle && (groupMoves.length > 0 || taskMoves.length > 0)) {
+          await undoSystem.commitOperation(undoHandle)
+        }
+      } catch (err) {
+        release()
+        throw err
       }
-      for (const tm of taskMoves) {
-        const adoptedParentId = adoptedParents.get(tm.taskId)
-        pendingWrites.push(taskStore.updateTask(
-          tm.taskId,
-          adoptedParentId
-            ? { parentId: adoptedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
-            : { canvasPosition: tm.position, positionFormat: 'absolute' },
-          'DRAG'
-        ))
-        positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
-      }
-    } catch (err) {
-      release()
-      throw err
-    }
+    })
 
     console.log('[TIDY] Wrote', groupMoves.length, 'group moves +', taskMoves.length, 'task moves')
-    return { groupMoves, taskMoves, pendingWrites: Promise.all(pendingWrites).then(() => undefined), release }
+    return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
   }
 
   return { tidyDayGroups, planTidyDayGroups }

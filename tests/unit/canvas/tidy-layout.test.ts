@@ -39,6 +39,8 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
 import { useTidyLayout } from '@/composables/canvas/useTidyLayout'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { lockManager } from '@/services/canvas/LockManager'
+import { positionManager } from '@/services/canvas/PositionManager'
 import type { CanvasGroup } from '@/types/canvas'
 
 let counter = 0
@@ -73,6 +75,7 @@ describe('useTidyLayout', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    positionManager.clear()
     vi.useRealTimers()
   })
 
@@ -117,6 +120,36 @@ describe('useTidyLayout', () => {
     expect(updatedIds).toContain(tue.id)
   })
 
+  it('ignores hidden groups instead of moving saved off-canvas state', () => {
+    const visible = makeGroup('Project Work', 200)
+    const hidden = { ...makeGroup('Hidden Archive', 900), isVisible: false }
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([visible, hidden])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'hidden-task',
+        parentId: hidden.id,
+        canvasPosition: { x: 920, y: 160 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { groupMoves, taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(groupMoves.map((move) => move.groupId)).toEqual([visible.id])
+    expect(taskMoves).toEqual([])
+    expect(updateGroup).toHaveBeenCalledTimes(1)
+    expect(updateGroup).toHaveBeenCalledWith(
+      visible.id,
+      expect.objectContaining({ position: expect.any(Object) })
+    )
+    expect(updateGroup).not.toHaveBeenCalledWith(
+      hidden.id,
+      expect.objectContaining({ position: expect.any(Object) })
+    )
+  })
+
   it('is safe with zero day-groups on canvas', () => {
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
@@ -141,6 +174,31 @@ describe('useTidyLayout', () => {
 
     expect(mockCanvasSyncInProgress.value).toBe(true)
     release()
+    expect(mockCanvasSyncInProgress.value).toBe(false)
+  })
+
+  it('releases Tidy position locks so tasks remain draggable afterwards', () => {
+    const today = makeGroup('Today', 0)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'task-after-tidy',
+        parentId: today.id,
+        canvasPosition: { x: 30, y: 100 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { release } = tidyDayGroups()
+
+    expect(lockManager.getLockOwner(today.id)).toBe('user-drag')
+    expect(lockManager.getLockOwner('task-after-tidy')).toBe('user-drag')
+
+    release()
+
+    expect(lockManager.isLocked(today.id)).toBe(false)
+    expect(lockManager.isLocked('task-after-tidy')).toBe(false)
     expect(mockCanvasSyncInProgress.value).toBe(false)
   })
 
@@ -198,13 +256,13 @@ describe('useTidyLayout', () => {
     expect(updateTask).toHaveBeenNthCalledWith(
       1,
       'task-high',
-      { canvasPosition: { x: 20, y: 70 } },
+      { canvasPosition: { x: 20, y: 70 }, positionFormat: 'absolute' },
       'DRAG'
     )
     expect(updateTask).toHaveBeenNthCalledWith(
       2,
       'task-low',
-      { canvasPosition: { x: 20, y: 182 } },
+      { canvasPosition: { x: 20, y: 182 }, positionFormat: 'absolute' },
       'DRAG'
     )
   })
@@ -238,6 +296,101 @@ describe('useTidyLayout', () => {
     expect(groupMoves[0].size.height).toBeGreaterThan(1000)
   })
 
+  it('uses measured task heights so visible gaps stay compact for varied cards', () => {
+    const today = makeGroup('Today', 0)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    const tasks = [
+      {
+        id: 'short-card',
+        parentId: today.id,
+        canvasPosition: { x: 30, y: 100 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+      {
+        id: 'tall-card',
+        parentId: today.id,
+        canvasPosition: { x: 30, y: 200 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+      {
+        id: 'medium-card',
+        parentId: today.id,
+        canvasPosition: { x: 30, y: 300 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any
+    const heights = new Map([
+      ['short-card', 112],
+      ['tall-card', 176],
+      ['medium-card', 144],
+    ])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(tasks)
+
+    const { tidyDayGroups } = useTidyLayout({
+      getNodeSize: (nodeId) => heights.has(nodeId)
+        ? { width: 280, height: heights.get(nodeId)! }
+        : undefined,
+    })
+    const { taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves.map((move) => move.taskId)).toEqual(['short-card', 'tall-card', 'medium-card'])
+
+    const visualGaps = taskMoves.slice(1).map((move, index) => {
+      const previous = taskMoves[index]
+      return move.position.y - (previous.position.y + heights.get(previous.taskId)!)
+    })
+    expect(visualGaps.every((gap) => gap >= 10 && gap <= 24)).toBe(true)
+    expect(taskMoves[1].position.y - taskMoves[0].position.y).not.toBe(
+      taskMoves[2].position.y - taskMoves[1].position.y
+    )
+  })
+
+  it('does not leave blank rows for done tasks hidden on canvas', () => {
+    const today = makeGroup('Today', 0)
+    taskStore.hideCanvasDoneTasks = true
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'active-top',
+        parentId: today.id,
+        status: 'todo',
+        canvasPosition: { x: 30, y: 100 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+      {
+        id: 'hidden-done',
+        parentId: today.id,
+        status: 'done',
+        canvasPosition: { x: 30, y: 200 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+      {
+        id: 'active-bottom',
+        parentId: today.id,
+        status: 'todo',
+        canvasPosition: { x: 30, y: 300 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout({
+      getNodeSize: (nodeId) => nodeId.startsWith('active-')
+        ? { width: 280, height: 80 }
+        : undefined,
+    })
+    const { taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves.map((move) => move.taskId)).toEqual(['active-top', 'active-bottom'])
+    expect(taskMoves.map((move) => move.position.y)).toEqual([70, 166])
+    expect(updateTask).not.toHaveBeenCalledWith(
+      'hidden-done',
+      expect.anything(),
+      'DRAG'
+    )
+  })
+
   it('does not reparent tasks by due date during tidy', () => {
     // Tidy is layout-only. Due-date moves belong to explicit move/drag flows,
     // otherwise tasks appear to vanish from the user's current group.
@@ -262,9 +415,10 @@ describe('useTidyLayout', () => {
     expect(updateTask).not.toHaveBeenCalledWith('task-due-today', { parentId: today.id }, 'DRAG')
   })
 
-  it('does not spatially adopt loose tasks during tidy', () => {
-    // Tidy must not mutate parentId based on current geometry. A task sitting
-    // over a group but not parented to it stays unparented.
+  it('spatially adopts loose tasks sitting inside visible groups during tidy', () => {
+    // A loose task visibly sitting inside a group needs membership before Tidy
+    // can stack it with the group. Already-parented tasks are covered by the
+    // due-date test above and are not moved between groups.
     const custom = makeGroup('Project Work', 200) // bounds x:200..500, y:0..200
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([custom])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
@@ -281,7 +435,36 @@ describe('useTidyLayout', () => {
     const { taskMoves, release } = tidyDayGroups()
     release()
 
-    expect(taskMoves).toEqual([])
-    expect(updateTask).not.toHaveBeenCalledWith('task-loose', { parentId: custom.id }, 'DRAG')
+    expect(taskMoves[0]?.parentId).toBe(custom.id)
+    expect(updateTask).toHaveBeenCalledWith(
+      'task-loose',
+      { parentId: custom.id, canvasPosition: { x: 220, y: 70 }, positionFormat: 'absolute' },
+      'DRAG'
+    )
+  })
+
+  it('adopts loose tasks below a group when they are visibly in its column', () => {
+    const custom = makeGroup('Project Work', 200, 0)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([custom])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'task-below',
+        parentId: undefined,
+        canvasPosition: { x: 220, y: 520 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves[0]?.parentId).toBe(custom.id)
+    expect(taskMoves[0]?.position).toEqual({ x: 220, y: 70 })
+    expect(updateTask).toHaveBeenCalledWith(
+      'task-below',
+      { parentId: custom.id, canvasPosition: { x: 220, y: 70 }, positionFormat: 'absolute' },
+      'DRAG'
+    )
   })
 })

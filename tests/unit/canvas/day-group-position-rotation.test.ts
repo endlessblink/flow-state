@@ -318,10 +318,10 @@ describe('rotateDayGroupPositions()', () => {
   })
 
   // --------------------------------------------------------------------------
-  // Test 4: Child tasks move with parent group
+  // Test 4: Child tasks restack with parent group
   // --------------------------------------------------------------------------
 
-  it('4: child tasks preserve their group-relative offset during rotation', () => {
+  it('4: child tasks restack from the header during rotation', () => {
     const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
 
@@ -337,21 +337,22 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Wed (today) → slot0. The child keeps its previous +20,+80 offset.
+    // Wed (today) → slot0. Rotate now follows Tidy semantics: tasks are
+    // compacted from directly below the header instead of preserving old gaps.
     const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
     const childCall = taskCalls.find(([id]) => id === 'child-1')
 
     expect(childCall).toBeDefined()
     expect(childCall![1].canvasPosition.x).toBe(20)
-    expect(childCall![1].canvasPosition.y).toBe(80)
+    expect(childCall![1].canvasPosition.y).toBe(70)
     expect(childCall![2]).toBe('DRAG')
   })
 
   // --------------------------------------------------------------------------
-  // Test 4b: Child tasks — example from spec (delta 350,0)
+  // Test 4b: Child tasks — canonical slot + header stack
   // --------------------------------------------------------------------------
 
-  it('4b: child of non-today group preserves its group-relative offset', () => {
+  it('4b: child of non-today group restacks into its canonical slot', () => {
     const mon = makeGroup({ id: 'grp-mon', name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
     const wed = makeGroup({ id: 'grp-wed', name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
 
@@ -367,13 +368,53 @@ describe('rotateDayGroupPositions()', () => {
     const { rotateDayGroupPositions } = useDayGroupRotation()
     rotateDayGroupPositions().release()
 
-    // Mon → slot1. The child keeps its previous +100,+50 offset.
+    // Mon → slot1. Rotate uses canonical width 400 + 16 gutter, then group padding.
     const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
     const childCall = taskCalls.find(([id]) => id === 'child-mon')
 
     expect(childCall).toBeDefined()
-    expect(childCall![1].canvasPosition.x).toBe(516)
-    expect(childCall![1].canvasPosition.y).toBe(50)
+    expect(childCall![1].canvasPosition.x).toBe(436)
+    expect(childCall![1].canvasPosition.y).toBe(70)
+  })
+
+  it('4c: rotate does not leave blank rows for done tasks hidden on canvas', () => {
+    const today = makeGroup({ id: 'grp-today', name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const tomorrow = makeGroup({ id: 'grp-tomorrow', name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
+    taskStore.hideCanvasDoneTasks = true
+
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      makeTask({
+        id: 'active-top',
+        parentId: today.id,
+        status: 'planned',
+        canvasPosition: { x: 30, y: 100 },
+      }),
+      makeTask({
+        id: 'hidden-done',
+        parentId: today.id,
+        status: 'done',
+        canvasPosition: { x: 30, y: 200 },
+      }),
+      makeTask({
+        id: 'active-bottom',
+        parentId: today.id,
+        status: 'planned',
+        canvasPosition: { x: 30, y: 300 },
+      }),
+    ])
+
+    const { rotateDayGroupPositions } = useDayGroupRotation({
+      getNodeSize: (nodeId) => nodeId.startsWith('active-')
+        ? { width: 280, height: 80 }
+        : undefined,
+    })
+    rotateDayGroupPositions().release()
+
+    const taskCalls = updateTask.mock.calls as Array<[string, { canvasPosition: { x: number; y: number } }, string]>
+    const movedIds = taskCalls.map(([id]) => id)
+    expect(movedIds).toEqual(['active-top', 'active-bottom'])
+    expect(taskCalls.map(([, update]) => update.canvasPosition.y)).toEqual([70, 166])
   })
 
   // --------------------------------------------------------------------------

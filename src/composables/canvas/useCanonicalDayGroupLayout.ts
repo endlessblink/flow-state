@@ -52,6 +52,7 @@ export interface CanonicalLayoutResult {
 export interface CanonicalLayoutOptions {
   taskLayout?: 'vertical' | 'horizontal'
   taskPositioning?: 'fromHeader' | 'compactFromCurrentTop' | 'preserveRelative'
+  taskSpacing?: 'contentGap' | 'equalRows'
   /**
    * Vertical-mode column threshold. Default = CANVAS.DAY_GROUP_MAX_TASKS_PER_COLUMN.
    * Pass `null` to disable overflow entirely (always single column, group grows
@@ -97,6 +98,12 @@ export function computeCanonicalLayout(
   const groupGutter = CANVAS.DAY_GROUP_SPACING - CANVAS.DAY_GROUP_WIDTH_1COL
   const snapToGridFrom = (value: number, origin: number) =>
     origin + Math.ceil((value - origin) / CANVAS.GRID_SNAP_SIZE) * CANVAS.GRID_SNAP_SIZE
+  const getCreatedTime = (task: Task) => {
+    if (!task.createdAt) return 0
+    return task.createdAt instanceof Date
+      ? task.createdAt.getTime()
+      : Date.parse(task.createdAt)
+  }
   let nextGroupX = originX
 
   for (let i = 0; i < orderedIds.length; i++) {
@@ -110,8 +117,8 @@ export function computeCanonicalLayout(
       const ay = dg.taskPositions?.get(a.id)?.y ?? a.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
       const by = dg.taskPositions?.get(b.id)?.y ?? b.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
       if (ay !== by) return ay - by
-      const at = a.createdAt ? Date.parse(a.createdAt) : 0
-      const bt = b.createdAt ? Date.parse(b.createdAt) : 0
+      const at = getCreatedTime(a)
+      const bt = getCreatedTime(b)
       return at - bt
     })
     const taskCount = sortedTasks.length
@@ -128,6 +135,14 @@ export function computeCanonicalLayout(
     const measuredTaskWidth = Math.max(
       CANVAS.DEFAULT_TASK_WIDTH,
       ...sortedTasks.map((task) => dg.taskSizes?.get(task.id)?.width ?? 0)
+    )
+    const taskHeights = new Map(sortedTasks.map((task) => [
+      task.id,
+      normalizeTaskHeight(dg.taskSizes?.get(task.id)?.height),
+    ]))
+    const rowPitch = snapToGridFrom(
+      Math.max(CANVAS.DEFAULT_TASK_HEIGHT, ...taskHeights.values()) + CANVAS.TASK_MARGIN,
+      0
     )
 
     const groupX = nextGroupX
@@ -163,7 +178,7 @@ export function computeCanonicalLayout(
         x: dg.visualPos.x + CANVAS.GROUP_PADDING,
         y: dg.visualPos.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
       }
-      const taskHeight = Math.max(1, dg.taskSizes?.get(task.id)?.height ?? CANVAS.DEFAULT_TASK_HEIGHT)
+      const taskHeight = taskHeights.get(task.id) ?? CANVAS.DEFAULT_TASK_HEIGHT
 
       if (taskPositioning === 'preserveRelative') {
         const posY = groupY + (currentTaskPosition.y - dg.visualPos.y)
@@ -187,14 +202,18 @@ export function computeCanonicalLayout(
         groupX +
         CANVAS.GROUP_PADDING +
         column * (measuredTaskWidth + CANVAS.DAY_GROUP_COLUMN_GAP)
-      const taskY = snapToGridFrom(nextTaskYByColumn[column], firstTaskY)
+      const taskY = options.taskSpacing === 'equalRows'
+        ? firstTaskY + rowPitch * (taskLayout === 'horizontal' ? Math.floor(t / columnCount) : hasOverflow ? t % maxPerColumn : t)
+        : snapToGridFrom(nextTaskYByColumn[column], firstTaskY)
 
       taskMoves.push({
         taskId: task.id,
         parentId: dg.group.id,
         position: { x: taskX, y: taskY },
       })
-      nextTaskYByColumn[column] = taskY + taskHeight + CANVAS.TASK_MARGIN
+      nextTaskYByColumn[column] = options.taskSpacing === 'equalRows'
+        ? taskY + rowPitch
+        : taskY + taskHeight + CANVAS.TASK_MARGIN
       maxTaskBottomRelative = Math.max(maxTaskBottomRelative, taskY - groupY + taskHeight)
     }
 
@@ -216,4 +235,15 @@ export function computeCanonicalLayout(
   }
 
   return { groupMoves, taskMoves }
+}
+
+function normalizeTaskHeight(measuredHeight?: number) {
+  if (!Number.isFinite(measuredHeight) || measuredHeight == null) {
+    return CANVAS.DEFAULT_TASK_HEIGHT
+  }
+
+  // Real task cards can be shorter than DEFAULT_TASK_HEIGHT. Preserve valid
+  // measured heights so Tidy keeps visual gaps compact; only reject obviously
+  // broken DOM measurements.
+  return measuredHeight >= 24 ? measuredHeight : CANVAS.DEFAULT_TASK_HEIGHT
 }

@@ -44,7 +44,6 @@ import { useCanvasZoom } from './useCanvasZoom' // Keeping for cleanup hooks
 import { useCanvasAlignment } from './useCanvasAlignment'
 import { useCanvasConnections } from './useCanvasConnections'
 import { useCanvasEdgeSync } from './useCanvasEdgeSync'
-import { useCanvasAutoPlacement } from './useCanvasAutoPlacement'
 
 // Helper for error boundaries
 const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) => {
@@ -70,7 +69,6 @@ const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) =
 // - CanvasView remounts for any reason
 // Reconciliation should only happen on FIRST load, not repeatedly.
 let hasReconciledThisSession = false
-let hasAutoPlacedThisSession = false
 
 export function useCanvasOrchestrator() {
     const canvasStore = useCanvasStore()
@@ -82,8 +80,6 @@ export function useCanvasOrchestrator() {
 
     // Store cleanup functions for onUnmounted - must be registered synchronously
     const positionManagerUnsubscribe = ref<(() => void) | null>(null)
-
-    const { autoPlaceEligibleTasks } = useCanvasAutoPlacement()
 
     // --- 1. Core State & Vue Flow (Via useCanvasCore) ---
     const {
@@ -541,7 +537,6 @@ export function useCanvasOrchestrator() {
                     // Auto-place disabled: tasks should only appear on canvas via explicit user action
                     // (context menu "Canvas Group", due-date auto-routing, or drag-and-drop)
                     // Previously: autoPlaceEligibleTasks() ran here on every app load
-                    hasAutoPlacedThisSession = true
 
                     // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)
                     canvasStore.recalculateAllTaskCounts(taskStore.tasks)
@@ -918,7 +913,10 @@ export function useCanvasOrchestrator() {
                 if (c.type === 'remove' && c.id?.startsWith('img-')) return false
                 return true
             })
-            applyNodeChanges(filtered as import('@vue-flow/core').NodeChange[])
+            const nextNodes = applyNodeChanges(filtered as import('@vue-flow/core').NodeChange[])
+            if (Array.isArray(nextNodes)) {
+                nodes.value = [...nextNodes]
+            }
         },
         handleEdgesChange: applyEdgeChanges,
         handleConnect: (params: import('@vue-flow/core').Connection) => {

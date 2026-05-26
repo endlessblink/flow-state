@@ -24,12 +24,53 @@ import {
   type TaskMove,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
+
+function findColumnContainingGroup(
+  task: { position: { x: number; y: number }; width?: number; height?: number },
+  groups: Array<{ id: string; position?: { x: number; y: number; width?: number; height?: number } }>
+) {
+  const taskWidth = task.width ?? 220
+  const centerX = task.position.x + taskWidth / 2
+  const candidates = groups.filter((group) => {
+    if (!group.position) return false
+    const width = group.position.width ?? 400
+    return centerX >= group.position.x
+      && centerX <= group.position.x + width
+      && task.position.y >= group.position.y
+  })
+
+  if (candidates.length === 0) return null
+  return candidates.reduce((closest, current) => {
+    const closestDistance = Math.abs(task.position.y - (closest.position?.y ?? 0))
+    const currentDistance = Math.abs(task.position.y - (current.position?.y ?? 0))
+    return currentDistance < closestDistance ? current : closest
+  })
+}
 
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
   getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
   /** Read a Vue Flow node's current rendered dimensions. */
   getNodeSize?: (nodeId: string) => { width: number; height: number } | undefined
+  /** Return false when a task node is currently hidden/not rendered on canvas. */
+  isTaskVisible?: (taskId: string) => boolean | undefined
+}
+
+interface TidyPlan {
+  inputs: DayGroupInput[]
+  groupMoves: GroupMove[]
+  taskMoves: TaskMove[]
+  adoptedParents: Map<string, string>
+}
+
+function isOverdue(dueDate?: string | null) {
+  if (!dueDate) return false
+  const due = new Date(dueDate)
+  if (!Number.isFinite(due.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return due < today
 }
 
 export function useTidyLayout(options: TidyLayoutOptions = {}) {
@@ -37,49 +78,45 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
   const taskStore = useTaskStore()
   const settingsStore = useSettingsStore()
 
-  /**
-   * Lay out smart + day-of-week groups in a canonical single row. Restacks
-   * tasks vertically inside each group.
-   */
-  function tidyDayGroups(): {
-    groupMoves: GroupMove[]
-    taskMoves: TaskMove[]
-    pendingWrites: Promise<void>
-    release: () => void
-  } {
-    console.log('[TIDY] Tidying day-group layout...')
-
-    canvasSyncInProgress.value = true
-    let released = false
-    const release = () => {
-      if (released) return
-      released = true
-      for (const gm of pendingGroupMoves) {
-        positionManager.releasePositionLock(gm.groupId, 'user-drag')
-      }
-      for (const tm of pendingTaskMoves) {
-        positionManager.releasePositionLock(tm.taskId, 'user-drag')
-      }
-      canvasSyncInProgress.value = false
-    }
-    const pendingWrites: Promise<unknown>[] = []
-    let pendingGroupMoves: GroupMove[] = []
-    let pendingTaskMoves: TaskMove[] = []
-
-    // Tidy is layout-only. It must not change task.parentId, date-home tasks,
-    // spatially adopt tasks, or clear parents. Reparenting belongs to explicit
-    // drag/drop; doing it here made tasks appear removed from user-arranged groups.
-
-    // Collect every group with a position. Day-of-week / smart / custom — all
-    // get the canonical single-row treatment so the Tidy button always does
+  function planTidyDayGroups(): TidyPlan {
+    // Collect every visible group with a position. Day-of-week / smart / custom
+    // all get the canonical single-row treatment so the Tidy button always does
     // something visible regardless of the user's group naming.
-    const inputs: DayGroupInput[] = []
-    for (const group of canvasStore.groups) {
-      if (!group.position) continue
+    const visibleGroups = canvasStore.groups.filter((group) => group.position && group.isVisible !== false)
 
+    // Tidy should not move already-parented tasks between groups by due date or
+    // geometry. It can safely repair loose canvas tasks that are visibly inside
+    // a group, because otherwise the user sees them in the group but Tidy has no
+    // membership to stack.
+    const layoutTasks = taskStore.rawTasks.filter((task) => {
+      if (!task.canvasPosition) return false
+      if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
+      if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
+      if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
+      return options.isTaskVisible?.(task.id) !== false
+    })
+
+    const adoptedParents = new Map<string, string>()
+    for (const task of layoutTasks) {
+      if (task.parentId) continue
+
+      const absPos = options.getNodePosition?.(task.id) ?? task.canvasPosition
+      const size = options.getNodeSize?.(task.id)
+      const spatialTask = { position: absPos, width: size?.width, height: size?.height }
+      const containing =
+        getDeepestContainingGroup(spatialTask, visibleGroups) ??
+        findColumnContainingGroup(spatialTask, visibleGroups)
+      if (containing) adoptedParents.set(task.id, containing.id)
+    }
+    if (adoptedParents.size > 0) {
+      console.log('[TIDY] Adopted', adoptedParents.size, 'loose tasks into containing groups')
+    }
+
+    const inputs: DayGroupInput[] = []
+    for (const group of visibleGroups) {
       const vfPos = options.getNodePosition?.(`section-${group.id}`)
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
-      const tasks = taskStore.rawTasks.filter((t) => t.parentId === group.id)
+      const tasks = layoutTasks.filter((t) => (adoptedParents.get(t.id) ?? t.parentId) === group.id)
       const taskSizes = new Map<string, { width: number; height: number }>()
       const taskPositions = new Map<string, { x: number; y: number }>()
       for (const task of tasks) {
@@ -92,8 +129,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     }
 
     if (inputs.length === 0) {
-      release()
-      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
+      return { inputs: [], groupMoves: [], taskMoves: [], adoptedParents }
     }
 
     // Tidy must complement Rotate, not overwrite it. Smart/day groups follow
@@ -139,9 +175,52 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       // Tidy is vertical-first: keep the user's preferred single-column stack.
       // The group may grow tall, but cards should never jump into side-by-side columns.
       maxTasksPerColumn: null,
+      // Use measured card heights so the visible blank space between cards is
+      // consistent. Equal top-edge rows look uneven when cards have different
+      // rendered heights.
+      taskSpacing: 'contentGap',
     })
+
+    return { inputs, groupMoves, taskMoves, adoptedParents }
+  }
+
+  /**
+   * Lay out smart + day-of-week groups in a canonical single row. Restacks
+   * tasks vertically inside each group.
+   */
+  function tidyDayGroups(): {
+    groupMoves: GroupMove[]
+    taskMoves: TaskMove[]
+    pendingWrites: Promise<void>
+    release: () => void
+  } {
+    console.log('[TIDY] Tidying day-group layout...')
+
+    canvasSyncInProgress.value = true
+    let released = false
+    let pendingGroupMoves: GroupMove[] = []
+    let pendingTaskMoves: TaskMove[] = []
+    const release = () => {
+      if (released) return
+      released = true
+      for (const gm of pendingGroupMoves) {
+        positionManager.releasePositionLock(gm.groupId, 'user-drag')
+      }
+      for (const tm of pendingTaskMoves) {
+        positionManager.releasePositionLock(tm.taskId, 'user-drag')
+      }
+      canvasSyncInProgress.value = false
+    }
+
+    const pendingWrites: Promise<unknown>[] = []
+    const { inputs, groupMoves, taskMoves, adoptedParents } = planTidyDayGroups()
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves
+
+    if (inputs.length === 0) {
+      release()
+      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
+    }
 
     // Apply store + PositionManager writes. Caller applies Vue Flow moves.
     try {
@@ -160,7 +239,14 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
         positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
       }
       for (const tm of taskMoves) {
-        pendingWrites.push(taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG'))
+        const adoptedParentId = adoptedParents.get(tm.taskId)
+        pendingWrites.push(taskStore.updateTask(
+          tm.taskId,
+          adoptedParentId
+            ? { parentId: adoptedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
+            : { canvasPosition: tm.position, positionFormat: 'absolute' },
+          'DRAG'
+        ))
         positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
       }
     } catch (err) {
@@ -172,5 +258,5 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     return { groupMoves, taskMoves, pendingWrites: Promise.all(pendingWrites).then(() => undefined), release }
   }
 
-  return { tidyDayGroups }
+  return { tidyDayGroups, planTidyDayGroups }
 }

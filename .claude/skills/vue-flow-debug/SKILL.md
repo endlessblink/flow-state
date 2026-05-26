@@ -55,9 +55,19 @@ FlowState stores `task.canvasPosition` and `group.position` as absolute world/ca
 
 Never feed absolute `task.canvasPosition` directly into a child node's `position` while also setting `parentNode`. That causes exactly the FlowState Electron/reload symptom: tasks appear outside their group or drift after restart/update.
 
-### FlowState Rule: Tidy Must Not Reparent
+### FlowState Rule: Programmatic Layout Must Stack Visible Nodes Only
 
-The Canvas `Tidy` command is layout-only. It must not change `task.parentId`, date-home tasks, spatially adopt tasks, clear parents, or move tasks between groups. Reparenting belongs only to explicit drag/drop or dedicated move commands. Tidy side effects can make tasks appear removed from the user's current group and then sync/restart can detach them.
+Canvas `Tidy` and explicit `Rotate day groups` must use the same layout concept:
+
+- Stack from the group header, not from each task's previous Y.
+- Use measured rendered task heights and a small content gap; do not use equal top-edge rows for variable-height cards.
+- Build the stack from tasks currently visible on the canvas. Hidden done/overdue/filtered/pinned/completion-record tasks must not consume invisible rows, or users see unexplained blank gaps.
+- Keep day/smart groups single-column unless the user explicitly asks for columns.
+- Persist store coordinates as absolute `canvasPosition`, then project Vue Flow child nodes as parent-relative.
+- Do not set `computedPosition`; it is internal/derived. Strip Vue Flow internal fields before `setNodes`.
+- After programmatic reparent/restack, use one atomic `setNodes(...)`, wait for Vue Flow to settle, force a clean store→Vue Flow sync, and release PositionManager/LockManager locks.
+
+Tidy may repair loose tasks that visibly sit inside/below a group column, but it must not move already-parented tasks between groups by due date or geometry. Due-date moves belong to explicit move/rotation metadata flows, not generic Tidy.
 
 **node.position (Stored in State)**
 *   For root nodes: position = absolute coordinates on the canvas

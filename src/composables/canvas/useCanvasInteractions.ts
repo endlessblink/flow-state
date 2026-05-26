@@ -289,7 +289,22 @@ function computeNodeAbsolutePosition(
     node: Node,
     allGroups: CanvasGroup[]
 ): { x: number; y: number } {
-    // First try computedPosition - this is the most reliable if available
+    // For parented nodes, node.position is the live relative position during
+    // controlled dragging. computedPosition can lag one frame behind and cause
+    // drag-stop to save the pre-drag absolute position, making the card snap back.
+    if (node.parentNode) {
+        const parentId = node.parentNode.startsWith('section-')
+            ? node.parentNode.replace('section-', '')
+            : node.parentNode
+
+        const parentAbsolute = getGroupAbsolutePosition(parentId, allGroups)
+        const absolute = toAbsolutePosition(node.position, parentAbsolute)
+
+        return { x: absolute.x, y: absolute.y }
+    }
+
+    // Root nodes can use computedPosition when Vue Flow supplies it; otherwise
+    // their position is already absolute.
     const vfNode = node as { computedPosition?: { x: number; y: number } }
     if (vfNode.computedPosition &&
         typeof vfNode.computedPosition.x === 'number' &&
@@ -302,21 +317,7 @@ function computeNodeAbsolutePosition(
         }
     }
 
-    // If no parentNode, position is already absolute
-    if (!node.parentNode) {
-        return { x: node.position.x, y: node.position.y }
-    }
-
-    // Has parentNode - position is RELATIVE to parent
-    // We need to compute absolute by adding parent's absolute position
-    const parentId = node.parentNode.startsWith('section-')
-        ? node.parentNode.replace('section-', '')
-        : node.parentNode
-
-    const parentAbsolute = getGroupAbsolutePosition(parentId, allGroups)
-    const absolute = toAbsolutePosition(node.position, parentAbsolute)
-
-    return { x: absolute.x, y: absolute.y }
+    return { x: node.position.x, y: node.position.y }
 }
 
 export interface SelectionBox {
@@ -948,29 +949,30 @@ export function useCanvasInteractions(deps?: {
 
         } finally {
             // BUG-1492: If a newer drag has started, do NOT touch state — it belongs to the new drag.
-            if (mySequence !== dragSequence) {
+            const isStaleHandler = mySequence !== dragSequence
+            if (isStaleHandler) {
                 if (import.meta.env.DEV) console.log(`[BUG-1492:DRAG-FINALLY] Stale handler (seq ${mySequence} vs ${dragSequence}), skipping cleanup`)
-                return
-            }
-            // BUG-1209: Set isDragging=false AFTER all async saves complete,
-            // so realtime handlers don't overwrite positions mid-save.
-            if (import.meta.env.DEV) {
-                console.log(`[BUG-1492:DRAG-FINALLY] callId=${callId}`, {
-                    involvedNodes: involvedNodes.map(n => n.id.slice(0, 12)),
-                    opState: opState.value.type
+            } else {
+                // BUG-1209: Set isDragging=false AFTER all async saves complete,
+                // so realtime handlers don't overwrite positions mid-save.
+                if (import.meta.env.DEV) {
+                    console.log(`[BUG-1492:DRAG-FINALLY] callId=${callId}`, {
+                        involvedNodes: involvedNodes.map(n => n.id.slice(0, 12)),
+                        opState: opState.value.type
+                    })
+                }
+                canvasStore.isDragging = false
+                // BUG-1492: Transition to 'drag-settling' BEFORE releasing locks.
+                // This closes a micro-tick gap where PositionManager accepts stale
+                // remote-sync updates between lock release and settling state.
+                endDrag(involvedNodes.map(n => n.id))
+                // TASK-213: Release Locks
+                // FIX: Use raw ID (not Vue Flow node ID) to match the ID used during acquire
+                involvedNodes.forEach(node => {
+                    const { id: rawId } = CanvasIds.parseNodeId(node.id)
+                    lockManager.release(rawId, 'user-drag')
                 })
             }
-            canvasStore.isDragging = false
-            // BUG-1492: Transition to 'drag-settling' BEFORE releasing locks.
-            // This closes a micro-tick gap where PositionManager accepts stale
-            // remote-sync updates between lock release and settling state.
-            endDrag(involvedNodes.map(n => n.id))
-            // TASK-213: Release Locks
-            // FIX: Use raw ID (not Vue Flow node ID) to match the ID used during acquire
-            involvedNodes.forEach(node => {
-                const { id: rawId } = CanvasIds.parseNodeId(node.id)
-                lockManager.release(rawId, 'user-drag')
-            })
         }
     }
 

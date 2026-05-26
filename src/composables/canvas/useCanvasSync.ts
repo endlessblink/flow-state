@@ -13,7 +13,6 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
-import { DEFAULT_TASK_WIDTH, DEFAULT_TASK_HEIGHT } from '@/utils/canvas/spatialContainment'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -326,12 +325,20 @@ export function useCanvasSync() {
                 // ensures child groups (higher depth) are always on top of parent groups
                 const depth = (group as any)._depth || 0
                 const zIndex = 11 + (depth * 10) // Base group Z is 10 (CANVAS.Z_INDEX_GROUP)
+                const groupWidth = group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH
+                const groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
 
                 newNodes.push({
                     id: nodeId,
                     type: 'sectionNode',
                     position: displayPos,
                     parentNode: parentNodeId,
+                    width: groupWidth,
+                    height: groupHeight,
+                    dimensions: {
+                        width: groupWidth,
+                        height: groupHeight,
+                    },
                     zIndex, // Explicit zIndex bonus
                     // FIX: Removed extent: 'parent' so groups can be dragged OUT of their parent.
                     // With extent: 'parent', Vue Flow constrains movement to parent bounds,
@@ -344,8 +351,8 @@ export function useCanvasSync() {
                         label: group.name || 'Group',
                         name: group.name || 'Group',
                         color: group.color || '#3b82f6',
-                        width: group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH,
-                        height: group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT,
+                        width: groupWidth,
+                        height: groupHeight,
                         collapsed: group.isCollapsed || false,
                         // Pass BOTH counts - component decides which to show
                         directTaskCount,
@@ -357,8 +364,8 @@ export function useCanvasSync() {
                         taskCount: aggregatedTaskCount
                     },
                     style: {
-                        width: `${group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH}px`,
-                        height: `${group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT}px`
+                        width: `${groupWidth}px`,
+                        height: `${groupHeight}px`
                     }
                 })
             }
@@ -450,6 +457,8 @@ export function useCanvasSync() {
                     type: 'taskNode',
                     position: displayPos,
                     parentNode: parentId ? CanvasIds.groupNodeId(parentId) : undefined,
+                    draggable: true,
+                    selectable: true,
                     hidden: shouldHideDone && task.status === 'done',
                     // FIX: Removed extent: 'parent' so tasks can be dragged OUT of groups.
                     // With extent: 'parent', Vue Flow constrains movement to parent bounds,

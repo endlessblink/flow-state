@@ -142,9 +142,9 @@ describe('computeCanonicalLayout', () => {
         visualPos: { x: 0, y: 0 },
         tasks: [t1, t2, t3],
         taskSizes: new Map([
-          ['t1', { width: 220, height: 64 }],
+          ['t1', { width: 220, height: 120 }],
           ['t2', { width: 220, height: 132 }],
-          ['t3', { width: 220, height: 84 }],
+          ['t3', { width: 220, height: 104 }],
         ]),
       },
     ]
@@ -152,9 +152,109 @@ describe('computeCanonicalLayout', () => {
 
     expect(taskMoves.map((t) => t.position.y)).toEqual([
       70,
-      150,
-      294,
+      214,
+      358,
     ])
+  })
+
+  it('uses small-but-valid measured heights so compact cards stay close together', () => {
+    const t1 = tk('t1', 'a', 100)
+    const t2 = tk('t2', 'a', 200)
+    const t3 = tk('t3', 'a', 300)
+    const inputs: DayGroupInput[] = [
+      {
+        group: grp('a', 'A', 0, 0),
+        visualPos: { x: 0, y: 0 },
+        tasks: [t1, t2, t3],
+        taskSizes: new Map([
+          ['t1', { width: 220, height: 48 }],
+          ['t2', { width: 220, height: 64 }],
+          ['t3', { width: 220, height: 56 }],
+        ]),
+      },
+    ]
+
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'])
+
+    expect(taskMoves.map((t) => t.position.y)).toEqual([
+      70,
+      134,
+      214,
+    ])
+  })
+
+  it('floors implausibly tiny measured heights so cards do not collapse together', () => {
+    const t1 = tk('t1', 'a', 100)
+    const t2 = tk('t2', 'a', 200)
+    const t3 = tk('t3', 'a', 300)
+    const inputs: DayGroupInput[] = [
+      {
+        group: grp('a', 'A', 0, 0),
+        visualPos: { x: 0, y: 0 },
+        tasks: [t1, t2, t3],
+        taskSizes: new Map([
+          ['t1', { width: 220, height: 1 }],
+          ['t2', { width: 220, height: 1 }],
+          ['t3', { width: 220, height: 1 }],
+        ]),
+      },
+    ]
+
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'])
+
+    expect(taskMoves.map((t) => t.position.y)).toEqual([70, 182, 294])
+  })
+
+  it('can place varied-height cards on an equal top-to-top row pitch', () => {
+    const t1 = tk('t1', 'a', 100)
+    const t2 = tk('t2', 'a', 200)
+    const t3 = tk('t3', 'a', 300)
+    const inputs: DayGroupInput[] = [
+      {
+        group: grp('a', 'A', 0, 0),
+        visualPos: { x: 0, y: 0 },
+        tasks: [t1, t2, t3],
+        taskSizes: new Map([
+          ['t1', { width: 220, height: 120 }],
+          ['t2', { width: 220, height: 132 }],
+          ['t3', { width: 220, height: 104 }],
+        ]),
+      },
+    ]
+
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'], { taskSpacing: 'equalRows' })
+
+    expect(taskMoves.map((t) => t.position.y)).toEqual([70, 214, 358])
+    expect(taskMoves[1].position.y - taskMoves[0].position.y).toBe(144)
+    expect(taskMoves[2].position.y - taskMoves[1].position.y).toBe(144)
+  })
+
+  it('keeps visual gaps consistent even when varied-height cards have uneven top edges', () => {
+    const t1 = tk('t1', 'a', 100)
+    const t2 = tk('t2', 'a', 200)
+    const t3 = tk('t3', 'a', 300)
+    const taskSizes = new Map([
+      ['t1', { width: 220, height: 80 }],
+      ['t2', { width: 220, height: 160 }],
+      ['t3', { width: 220, height: 112 }],
+    ])
+    const inputs: DayGroupInput[] = [
+      {
+        group: grp('a', 'A', 0, 0),
+        visualPos: { x: 0, y: 0 },
+        tasks: [t1, t2, t3],
+        taskSizes,
+      },
+    ]
+
+    const { taskMoves } = computeCanonicalLayout(inputs, ['a'], { taskSpacing: 'contentGap' })
+
+    expect(taskMoves[1].position.y - taskMoves[0].position.y).toBe(96)
+    expect(taskMoves[2].position.y - taskMoves[1].position.y).toBe(176)
+    const firstGap = taskMoves[1].position.y - (taskMoves[0].position.y + 80)
+    const secondGap = taskMoves[2].position.y - (taskMoves[1].position.y + 160)
+    expect(firstGap).toBe(16)
+    expect(secondGap).toBe(16)
   })
 
   it('can compact tasks from their current top instead of teleporting them to the header', () => {

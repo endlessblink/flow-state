@@ -8,6 +8,24 @@
 
 ## Active Tasks
 
+### ~~BUG-1800~~: Canvas Tidy/Rotate left phantom vertical gaps and could stale-lock tasks (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-26)
+
+**Problem**: Canvas **Tidy** and **Rotate day groups** moved groups but still left large unexplained blank gaps inside Today. Earlier Tidy attempts also made tasks feel locked after the programmatic layout ran.
+
+**Root causes**: (1) Tidy/Rotate stacked from `rawTasks`, so done/filtered/hidden canvas tasks still consumed invisible rows. The visible cards looked uneven because the hidden cards were being laid out between them. (2) Rotate still used `taskPositioning: 'preserveRelative'`, carrying old Y gaps forward instead of compacting like Tidy. (3) Vue Flow controlled-mode updates were fed internal fields (`computedPosition`, stale dimensions) or stale in-place arrays, which could desync dragging after reparent/restack. (4) The forced post-layout sync rebuilt group nodes without top-level `width`/`height`/`dimensions`, so Vue Flow bounds could revert to stale sizes.
+
+**Fix**: Tidy and explicit Rotate now share the same layout concept: operate on visible canvas tasks only, measure rendered card heights, stack from the group header with compact consistent visual gaps, keep single-column day groups, release layout locks after writes settle, and force a clean store→Vue Flow projection. Programmatic Vue Flow application strips internal fields, uses one atomic `setNodes(...)`, converts child positions to parent-relative values, leaves `extent` unset, and keeps tasks draggable/selectable.
+
+**Regression tests**: Added/updated focused unit coverage for hidden done tasks not consuming blank rows in both Tidy and Rotate, measured-height compact gaps, group dimension preservation after forced sync, controlled-mode node publishing after `applyNodeChanges`, lock release after Tidy, and no manual `computedPosition` stamping in the apply path.
+
+**Files**: `src/composables/canvas/useTidyLayout.ts`, `src/composables/canvas/useDayGroupRotation.ts`, `src/composables/canvas/useCanonicalDayGroupLayout.ts`, `src/views/CanvasView.vue`, `src/composables/canvas/useCanvasSync.ts`, `src/composables/canvas/useCanvasOrchestrator.ts`, `src/composables/canvas/useCanvasInteractions.ts`, `src/components/canvas/CanvasToolbar.vue`, `tests/unit/canvas/tidy-layout.test.ts`, `tests/unit/canvas/day-group-position-rotation.test.ts`, `tests/unit/canvas/canonical-layout.test.ts`, `tests/unit/canvas/tidy-atomic-apply.test.ts`.
+
+**Verified**: User confirmed the populated signed-in localhost canvas now visually works after Tidy. Focused regression suite passed: `npm test -- --run tests/unit/canvas/day-group-position-rotation.test.ts tests/unit/canvas/tidy-layout.test.ts tests/unit/canvas/canonical-layout.test.ts tests/unit/canvas/tidy-atomic-apply.test.ts` → 53/53. Targeted source ESLint has 0 errors; remaining output is existing `no-explicit-any` warnings in canvas sync/interaction files.
+
+---
+
 ### ~~BUG-1799~~: Electron realtime storm + sync double-write + blank-title resurrection (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-05-25) — deployed v1.4.51 to VPS auto-updater; user confirmed the realtime/sync console issues are resolved on the updated Electron build.

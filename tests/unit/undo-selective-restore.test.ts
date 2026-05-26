@@ -109,7 +109,7 @@ vi.mock('@/stores/canvas/canvasUi', () => ({
 // ============================================================================
 
 import { useTaskStore } from '@/stores/tasks'
-import { getUndoSystem } from '@/composables/undoSingleton'
+import { getUndoSystem, resetUndoSystem } from '@/composables/undoSingleton'
 import { createMockTask } from '../factories/index'
 
 // ============================================================================
@@ -234,6 +234,7 @@ describe('performSelectiveUndo field-comparison logic (BUG-1739)', () => {
 
 describe('bulkMoveToInboxWithUndo undo restores canvasPosition (BUG-1739 e2e)', () => {
   beforeEach(() => {
+    resetUndoSystem()
     setActivePinia(createPinia())
     vi.clearAllMocks()
     // Allow persistence to succeed silently
@@ -242,10 +243,11 @@ describe('bulkMoveToInboxWithUndo undo restores canvasPosition (BUG-1739 e2e)', 
   })
 
   afterEach(() => {
+    resetUndoSystem()
     vi.restoreAllMocks()
   })
 
-  it('restores canvasPosition after undo when it was cleared to undefined', async () => {
+  it('restores and clears canvasPosition across three undo/redo cycles when it was cleared to undefined', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()
 
@@ -275,12 +277,22 @@ describe('bulkMoveToInboxWithUndo undo restores canvasPosition (BUG-1739 e2e)', 
     // canvasPosition may be undefined or absent — either way it's not {x:300,y:400}
     expect(afterMove?.canvasPosition).not.toEqual({ x: 300, y: 400 })
 
-    // Undo — should restore the original canvasPosition
-    await undoSystem.undo()
+    for (let i = 0; i < 3; i += 1) {
+      // Undo — should restore the original canvasPosition
+      await undoSystem.undo()
 
-    const afterUndo = taskStore._rawTasks.find(t => t.id === taskId)
-    expect(afterUndo).toBeDefined()
-    expect(afterUndo?.canvasPosition).toEqual({ x: 300, y: 400 })
-    expect(afterUndo?.isInInbox).toBe(false)
+      const afterUndo = taskStore._rawTasks.find(t => t.id === taskId)
+      expect(afterUndo).toBeDefined()
+      expect(afterUndo?.canvasPosition).toEqual({ x: 300, y: 400 })
+      expect(afterUndo?.isInInbox).toBe(false)
+
+      // Redo — should clear canvasPosition again, even though undefined is stripped from snapshots
+      await undoSystem.redo()
+
+      const afterRedo = taskStore._rawTasks.find(t => t.id === taskId)
+      expect(afterRedo).toBeDefined()
+      expect(afterRedo?.canvasPosition).toBeUndefined()
+      expect(afterRedo?.isInInbox).toBe(true)
+    }
   })
 })

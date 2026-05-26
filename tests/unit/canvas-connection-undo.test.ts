@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import { ref } from 'vue'
 import type { CanvasGroup } from '@/types/canvas'
 
 const mockEnqueue = vi.fn()
@@ -95,11 +96,11 @@ vi.mock('@/stores/canvas/canvasUi', () => ({
 
 import { useTaskStore } from '@/stores/tasks'
 import { getUndoSystem, resetUndoSystem } from '@/composables/undoSingleton'
+import { useCanvasConnections } from '@/composables/canvas/useCanvasConnections'
 import { createMockTask } from '../factories'
 
-describe('canvas connection undo ordering', () => {
+describe('canvas connection undo', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
     resetUndoSystem()
     setActivePinia(createPinia())
     vi.clearAllMocks()
@@ -116,27 +117,110 @@ describe('canvas connection undo ordering', () => {
   })
 
   afterEach(() => {
-    vi.useRealTimers()
     resetUndoSystem()
     vi.restoreAllMocks()
   })
 
-  it('undoes the canvas connection before a later incidental task update', async () => {
+  const makeConnections = (syncEdges = vi.fn()) => useCanvasConnections(
+    {
+      syncEdges,
+      closeCanvasContextMenu: vi.fn(),
+      closeEdgeContextMenu: vi.fn(),
+      closeNodeContextMenu: vi.fn(),
+      withVueFlowErrorBoundary: (_name, fn) => fn
+    },
+    {
+      isConnecting: ref(false),
+      recentlyRemovedEdges: ref(new Set<string>()),
+      showEdgeContextMenu: ref(false),
+      edgeContextMenuX: ref(0),
+      edgeContextMenuY: ref(0),
+      selectedEdge: ref(null),
+      pendingConnectionSource: ref(null),
+      connectionWasSuccessful: ref(false)
+    }
+  )
+
+  it('links a task to a group without rewriting child task hierarchy', async () => {
+    const taskStore = useTaskStore()
+    const syncEdges = vi.fn()
+    const connections = makeConnections(syncEdges)
+
+    const parent = createMockTask({
+      id: 'parent-task',
+      title: 'Parent task',
+      canvasPosition: { x: -240, y: 20 }
+    })
+    const child = createMockTask({
+      id: 'child-task',
+      title: 'Child task',
+      parentId: 'group-1',
+      parentTaskId: null,
+      canvasPosition: { x: 40, y: 40 }
+    })
+
+    taskStore._rawTasks.push(parent, child)
+
+    await connections.handleConnect({ source: 'parent-task', target: 'section-group-1' })
+
+    expect(mockGroups[0].linkedParentTaskId).toBe('parent-task')
+    expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBeNull()
+    expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentId).toBe('group-1')
+    expect(syncEdges).toHaveBeenCalledWith({ force: true })
+  })
+
+  it('undoes and redoes a group-level connection three consecutive times without moving child tasks out of the group', async () => {
+    const taskStore = useTaskStore()
+    const connections = makeConnections()
+    const undoSystem = getUndoSystem()
+
+    const parent = createMockTask({
+      id: 'parent-task',
+      title: 'Parent task',
+      canvasPosition: { x: -240, y: 20 }
+    })
+    const child = createMockTask({
+      id: 'child-task',
+      title: 'Child task',
+      parentId: 'group-1',
+      parentTaskId: null,
+      canvasPosition: { x: 40, y: 40 }
+    })
+
+    taskStore._rawTasks.push(parent, child)
+
+    await connections.handleConnect({ source: 'parent-task', target: 'section-group-1' })
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      expect(mockGroups[0].linkedParentTaskId).toBeNull()
+      expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentId).toBe('group-1')
+      expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBeNull()
+
+      await undoSystem.redo()
+
+      expect(mockGroups[0].linkedParentTaskId).toBe('parent-task')
+      expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentId).toBe('group-1')
+      expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBeNull()
+    }
+  })
+
+  it('undoes the canvas connection without touching a later incidental task update', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()
 
     const parent = createMockTask({ id: 'parent-task', title: 'Parent task' })
-    const child = createMockTask({ id: 'child-task', title: 'Child task', parentTaskId: null })
+    const child = createMockTask({ id: 'child-task', title: 'Child task', parentId: 'group-1', parentTaskId: null })
     const incidental = createMockTask({ id: 'incidental-task', title: 'Incidental task' })
 
     taskStore._rawTasks.push(parent, child, incidental)
 
     await undoSystem.canvasConnectionWithUndo(
       'Connect task to group: Parent task -> Linked Group',
-      ['group-1', 'child-task'],
+      ['group-1'],
       async () => {
         mockGroups[0] = { ...mockGroups[0], linkedParentTaskId: 'parent-task' }
-        await taskStore.updateTask('child-task', { parentTaskId: 'parent-task' })
       }
     )
 
@@ -144,14 +228,14 @@ describe('canvas connection undo ordering', () => {
 
     expect(undoSystem.getOperationStack().at(-1)?.operation.type).toBe('task-update')
 
-    await vi.runAllTimersAsync()
+    await undoSystem.undo()
 
-    expect(undoSystem.getOperationStack().at(-1)?.operation.type).toBe('canvas-connection')
+    expect(taskStore._rawTasks.find(task => task.id === 'incidental-task')?.title).toBe('Incidental task')
 
     await undoSystem.undo()
 
     expect(mockGroups[0].linkedParentTaskId).toBeNull()
+    expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentId).toBe('group-1')
     expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBeNull()
-    expect(taskStore._rawTasks.find(task => task.id === 'incidental-task')?.title).toBe('Later incidental update')
   })
 })

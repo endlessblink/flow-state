@@ -8,6 +8,20 @@
 
 ## Active Tasks
 
+### BUG-1803: Complete undo/redo action audit across Canvas and task workflows (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: The current pass fixed task-to-group connection undo/redo and a field-clearing redo asymmetry, but the user goal is broader: every undo/redo flow for every action must work at least three consecutive times. That broader claim is not proven yet.
+
+**Current verified pass**: Task-to-group Canvas links are now group-level only (`CanvasGroup.linkedParentTaskId`) and no longer rewrite child tasks' `parentTaskId` on link, unlink, drop, or drag-settle. `canvas-connection` undo/redo restores only group link state. `bulkMoveToInboxWithUndo` now restores and re-clears `canvasPosition` for three undo/redo cycles. Shipped to Electron updater as v1.4.63.
+
+**Remaining work**: Inventory every app undo/redo action surface, add or update three-cycle regression tests for each action, and only mark done after the full matrix passes. Include task create/update/delete/bulk delete, task-task connection/disconnect, group create/update/delete/resize, canvas image delete, quick sort local undo/redo, keyboard shortcuts, and any modal/context-menu entry points that bypass the singleton.
+
+**Files in current pass**: `src/composables/canvas/useCanvasConnections.ts`, `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasInteractions.ts`, `src/composables/undoSingleton.ts`, `tests/unit/canvas-connection-undo.test.ts`, `tests/unit/undo-selective-restore.test.ts`.
+
+---
+
 ### ~~BUG-1802~~: Supabase REST outage blanked localhost canvas and surfaced sync errors (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-05-26) — localhost fixed; shipping in v1.4.62.

@@ -80,6 +80,27 @@ interface OperationSnapshot {
   snapshotAfter: UnifiedUndoState   // State after the operation (for redo)
 }
 
+const computeChangedFields = (
+  sourceTask: Task,
+  comparisonTask: Task
+): Record<string, unknown> => {
+  const changedFields: Record<string, unknown> = {}
+
+  for (const key of Object.keys(sourceTask) as Array<keyof typeof sourceTask>) {
+    if (JSON.stringify(sourceTask[key]) !== JSON.stringify((comparisonTask as typeof sourceTask)[key])) {
+      changedFields[key] = sourceTask[key]
+    }
+  }
+
+  for (const key of Object.keys(comparisonTask) as Array<keyof typeof comparisonTask>) {
+    if (!(key in sourceTask) && !(key in changedFields)) {
+      changedFields[key as string] = undefined
+    }
+  }
+
+  return changedFields
+}
+
 // Separate operation history that parallels VueUse's refHistory
 // This allows us to associate metadata with each history entry
 // TASK-1722 FIX: Use Vue ref so computed() properties (canUndo, canRedo, etc.) react to mutations
@@ -290,21 +311,7 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
         const previousTask = snapshotBefore.tasks.find(t => t.id === taskId)
         const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
         if (previousTask && afterTask) {
-          // Only restore the fields that actually differed between before and after
-          const changedFields: Record<string, unknown> = {}
-          for (const key of Object.keys(afterTask) as Array<keyof typeof afterTask>) {
-            if (JSON.stringify(afterTask[key]) !== JSON.stringify((previousTask as typeof afterTask)[key])) {
-              changedFields[key] = (previousTask as typeof afterTask)[key]
-            }
-          }
-          // BUG-1739: Also detect fields that were REMOVED by the operation
-          // (exist in previousTask but stripped from afterTask by JSON.stringify(undefined))
-          // e.g. canvasPosition cleared to undefined → key disappears after safeClone
-          for (const key of Object.keys(previousTask) as Array<keyof typeof previousTask>) {
-            if (!(key in afterTask) && !(key in changedFields)) {
-              changedFields[key as string] = previousTask[key]
-            }
-          }
+          const changedFields = computeChangedFields(previousTask, afterTask)
           if (Object.keys(changedFields).length > 0) {
             await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'USER') // BUG-1051: AWAIT to ensure persistence
           }
@@ -356,13 +363,6 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
         const previousGroup = snapshotBefore.groups.find(g => g.id === groupId)
         if (previousGroup) {
           await canvasStore.updateGroup(groupId, { linkedParentTaskId: previousGroup.linkedParentTaskId ?? null })
-        }
-      }
-
-      for (const taskId of operation.affectedIds) {
-        const previousTask = snapshotBefore.tasks.find(t => t.id === taskId)
-        if (previousTask) {
-          await taskStore.updateTask(taskId, { parentTaskId: previousTask.parentTaskId ?? null }, 'USER')
         }
       }
       break
@@ -468,13 +468,7 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
         const beforeTask = snapshotBefore.tasks.find(t => t.id === taskId)
         const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
         if (afterTask && beforeTask) {
-          // Only re-apply the fields that actually differed between before and after
-          const changedFields: Record<string, unknown> = {}
-          for (const key of Object.keys(afterTask) as Array<keyof typeof afterTask>) {
-            if (JSON.stringify(afterTask[key]) !== JSON.stringify((beforeTask as typeof afterTask)[key])) {
-              changedFields[key] = afterTask[key]
-            }
-          }
+          const changedFields = computeChangedFields(afterTask, beforeTask)
           if (Object.keys(changedFields).length > 0) {
             await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'USER') // BUG-1051: AWAIT to ensure persistence
           }
@@ -524,13 +518,6 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
         const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
         if (afterGroup) {
           await canvasStore.updateGroup(groupId, { linkedParentTaskId: afterGroup.linkedParentTaskId ?? null })
-        }
-      }
-
-      for (const taskId of operation.affectedIds) {
-        const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
-        if (afterTask) {
-          await taskStore.updateTask(taskId, { parentTaskId: afterTask.parentTaskId ?? null }, 'USER')
         }
       }
       break
@@ -825,14 +812,6 @@ const commitOperation = async (handle?: OperationHandle) => {
   return true
 }
 
-const promoteOperationToTop = (timestamp: number) => {
-  const index = operationStack.value.findIndex(entry => entry.operation.timestamp === timestamp)
-  if (index < 0 || index === operationStack.value.length - 1) return
-
-  const [entry] = operationStack.value.splice(index, 1)
-  operationStack.value.push(entry)
-}
-
 // UPDATED: Now saves both tasks AND groups (ISSUE-008 fix)
 // BUG-309-B: Enhanced to support operation metadata for selective restoration
 const saveState = async (_description?: string, _operation?: Omit<UndoOperation, 'timestamp'>) => {
@@ -1064,11 +1043,6 @@ const canvasConnectionWithUndo = async (
     await applyConnectionChange()
     await nextTick()
     await commitOperation(handle)
-    if (typeof window !== 'undefined') {
-      window.setTimeout(() => promoteOperationToTop(handle.operation.timestamp), 0)
-      window.setTimeout(() => promoteOperationToTop(handle.operation.timestamp), 250)
-      window.setTimeout(() => promoteOperationToTop(handle.operation.timestamp), 750)
-    }
   } catch (error) {
     console.error('❌ canvasConnectionWithUndo failed:', error)
     throw error

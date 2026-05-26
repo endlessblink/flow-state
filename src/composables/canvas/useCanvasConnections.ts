@@ -5,7 +5,6 @@ import { useCanvasStore } from '@/stores/canvas'
 import type { EdgeMouseEvent, Edge } from '@vue-flow/core'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
-import { getAllDescendantGroupIds } from '@/utils/canvas/storeHelpers'
 import { getUndoSystem } from '@/composables/undoSingleton'
 
 interface ConnectionDeps {
@@ -45,26 +44,11 @@ export function useCanvasConnections(
         const parentTask = taskStore.tasks.find(t => t.id === parentTaskId)
         if (!group || !parentTask?.canvasPosition) return
 
-        const linkedGroupIds = new Set(getAllDescendantGroupIds(groupId, canvasStore.groups))
-
-        const childTasks = taskStore.tasks.filter(task =>
-            task.id !== parentTaskId &&
-            !!task.parentId &&
-            linkedGroupIds.has(task.parentId) &&
-            task.canvasPosition &&
-            !task._soft_deleted &&
-            !task.isCompletionRecord &&
-            !task.isPinned
-        )
-
         await undoSystem.canvasConnectionWithUndo(
             `Connect task to group: ${parentTask.title} -> ${group.name}`,
-            [groupId, ...childTasks.map(task => task.id)],
+            [groupId],
             async () => {
                 await canvasStore.updateGroup(groupId, { linkedParentTaskId: parentTaskId })
-                await Promise.all(
-                    childTasks.map(task => taskStore.updateTask(task.id, { parentTaskId }))
-                )
             }
         )
 
@@ -76,23 +60,11 @@ export function useCanvasConnections(
         const group = canvasStore.groups.find(g => g.id === groupId)
         if (!group?.linkedParentTaskId) return
 
-        const linkedParentTaskId = parentTaskId || group.linkedParentTaskId
-        const linkedGroupIds = new Set(getAllDescendantGroupIds(groupId, canvasStore.groups))
-
-        const childTasks = taskStore.tasks.filter(task =>
-            !!task.parentId &&
-            linkedGroupIds.has(task.parentId) &&
-            task.parentTaskId === linkedParentTaskId
-        )
-
         await undoSystem.canvasConnectionWithUndo(
             `Disconnect task from group: ${group.name}`,
-            [groupId, ...childTasks.map(task => task.id)],
+            [groupId],
             async () => {
                 await canvasStore.updateGroup(groupId, { linkedParentTaskId: null })
-                await Promise.all(
-                    childTasks.map(task => taskStore.updateTask(task.id, { parentTaskId: null }))
-                )
             }
         )
 

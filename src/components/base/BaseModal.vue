@@ -101,6 +101,40 @@
 </template>
 
 <script setup lang="ts">
+const props = withDefaults(defineProps<Props>(), {
+  title: undefined,
+  description: undefined,
+  size: 'md',
+  variant: 'default',
+  closeOnOverlayClick: true,
+  closeOnEscape: true,
+  submitOnEnter: true,
+  showHeader: true,
+  showFooter: false,
+  showCloseButton: true,
+  showCancelButton: true,
+  showConfirmButton: true,
+  cancelText: undefined,
+  confirmText: undefined,
+  closeAriaLabel: undefined,
+  loading: false,
+  confirmDisabled: false,
+  titleClass: undefined,
+  descriptionClass: undefined,
+  bodyClass: undefined,
+  footerClass: undefined,
+  trapFocus: true
+})
+
+const emit = defineEmits<{
+  close: []
+  cancel: []
+  confirm: []
+  open: []
+  afterOpen: []
+  afterClose: []
+}>()
+
 // BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
 defineOptions({ inheritAttrs: false })
 
@@ -135,40 +169,6 @@ interface Props {
   footerClass?: string
   trapFocus?: boolean
 }
-
-const props = withDefaults(defineProps<Props>(), {
-  title: undefined,
-  description: undefined,
-  size: 'md',
-  variant: 'default',
-  closeOnOverlayClick: true,
-  closeOnEscape: true,
-  submitOnEnter: true,
-  showHeader: true,
-  showFooter: false,
-  showCloseButton: true,
-  showCancelButton: true,
-  showConfirmButton: true,
-  cancelText: undefined,
-  confirmText: undefined,
-  closeAriaLabel: undefined,
-  loading: false,
-  confirmDisabled: false,
-  titleClass: undefined,
-  descriptionClass: undefined,
-  bodyClass: undefined,
-  footerClass: undefined,
-  trapFocus: true
-})
-
-const emit = defineEmits<{
-  close: []
-  cancel: []
-  confirm: []
-  open: []
-  afterOpen: []
-  afterClose: []
-}>()
 
 const { t } = useI18n()
 

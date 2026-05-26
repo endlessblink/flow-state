@@ -195,6 +195,12 @@ export function useCanvasConnections(
         console.log('[BUG-1407:CONNECT] Found tasks:', { sourceTask: !!sourceTask, targetTask: !!targetTask, sourcePos: !!sourceTask?.canvasPosition, targetPos: !!targetTask?.canvasPosition })
 
         if (sourceTask && targetTask && sourceTask.canvasPosition && targetTask.canvasPosition) {
+            if (targetTask.parentTaskId === source) {
+                console.log('[BUG-1407:CONNECT] Ignored: task edge already exists', { source, target })
+                deps.syncEdges({ force: true })
+                return
+            }
+
             // SUBTASK MODEL: Connection makes target a direct child of source (nested hierarchy)
             // Allow re-parenting: if target already has a parent, update to new parent
             if (targetTask.parentTaskId) {
@@ -222,10 +228,16 @@ export function useCanvasConnections(
 
         if (CanvasIds.isTaskNode(source) && CanvasIds.isGroupNode(target)) {
             await unlinkTaskFromGroup(target, source)
-        } else if (targetTask && targetTask.parentTaskId) {
+        } else if (targetTask?.parentTaskId === source) {
             // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
             await taskStore.updateTaskWithUndo(targetTask.id, { parentTaskId: null })
             deps.syncEdges({ force: true })
+        } else if (targetTask?.parentTaskId) {
+            console.warn('[BUG-1407:DISCONNECT] Rejected: edge source does not match target parent', {
+                source,
+                target,
+                parentTaskId: targetTask.parentTaskId
+            })
         }
 
         deps.closeEdgeContextMenu()
@@ -288,10 +300,16 @@ export function useCanvasConnections(
 
         if (CanvasIds.isTaskNode(source) && CanvasIds.isGroupNode(target)) {
             await unlinkTaskFromGroup(target, source)
-        } else if (targetTask && targetTask.parentTaskId) {
+        } else if (targetTask?.parentTaskId === source) {
             // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
             await taskStore.updateTaskWithUndo(targetTask.id, { parentTaskId: null })
             deps.syncEdges({ force: true })
+        } else if (targetTask?.parentTaskId) {
+            console.warn('[BUG-1407:DISCONNECT] Rejected: edge source does not match target parent', {
+                source,
+                target,
+                parentTaskId: targetTask.parentTaskId
+            })
         }
     }
 

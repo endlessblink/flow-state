@@ -134,7 +134,18 @@ describe('canvas connection undo', () => {
     vi.restoreAllMocks()
   })
 
-  const makeConnections = (syncEdges = vi.fn()) => useCanvasConnections(
+  const makeConnectionState = () => ({
+    isConnecting: ref(false),
+    recentlyRemovedEdges: ref(new Set<string>()),
+    showEdgeContextMenu: ref(false),
+    edgeContextMenuX: ref(0),
+    edgeContextMenuY: ref(0),
+    selectedEdge: ref(null),
+    pendingConnectionSource: ref(null),
+    connectionWasSuccessful: ref(false)
+  })
+
+  const makeConnections = (syncEdges = vi.fn(), connectionState = makeConnectionState()) => useCanvasConnections(
     {
       syncEdges,
       closeCanvasContextMenu: vi.fn(),
@@ -142,16 +153,7 @@ describe('canvas connection undo', () => {
       closeNodeContextMenu: vi.fn(),
       withVueFlowErrorBoundary: (_name, fn) => fn
     },
-    {
-      isConnecting: ref(false),
-      recentlyRemovedEdges: ref(new Set<string>()),
-      showEdgeContextMenu: ref(false),
-      edgeContextMenuX: ref(0),
-      edgeContextMenuY: ref(0),
-      selectedEdge: ref(null),
-      pendingConnectionSource: ref(null),
-      connectionWasSuccessful: ref(false)
-    }
+    connectionState
   )
 
   it('links a task to a group without rewriting child task hierarchy', async () => {
@@ -250,6 +252,141 @@ describe('canvas connection undo', () => {
     expect(mockGroups[0].linkedParentTaskId).toBeNull()
     expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentId).toBe('group-1')
     expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBeNull()
+  })
+
+  it('undoes and redoes a task-to-task connection three consecutive times', async () => {
+    const taskStore = useTaskStore()
+    const connections = makeConnections()
+    const undoSystem = getUndoSystem()
+
+    const parent = createMockTask({
+      id: 'parent-task',
+      title: 'Parent task',
+      canvasPosition: { x: 0, y: 0 }
+    })
+    const child = createMockTask({
+      id: 'child-task',
+      title: 'Child task',
+      parentTaskId: null,
+      canvasPosition: { x: 260, y: 0 }
+    })
+
+    taskStore._rawTasks.push(parent, child)
+
+    await connections.handleConnect({ source: 'parent-task', target: 'child-task' })
+
+    expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBe('parent-task')
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBeNull()
+
+      await undoSystem.redo()
+
+      expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBe('parent-task')
+    }
+  })
+
+  it('undoes and redoes a task-to-task disconnect three consecutive times', async () => {
+    const taskStore = useTaskStore()
+    const connectionState = makeConnectionState()
+    const connections = makeConnections(vi.fn(), connectionState)
+    const undoSystem = getUndoSystem()
+
+    const parent = createMockTask({
+      id: 'parent-task',
+      title: 'Parent task',
+      canvasPosition: { x: 0, y: 0 }
+    })
+    const child = createMockTask({
+      id: 'child-task',
+      title: 'Child task',
+      parentTaskId: 'parent-task',
+      canvasPosition: { x: 260, y: 0 }
+    })
+
+    taskStore._rawTasks.push(parent, child)
+    connectionState.selectedEdge.value = {
+      id: 'e-parent-task-child-task',
+      source: 'parent-task',
+      target: 'child-task'
+    } as never
+
+    await connections.disconnectEdge()
+
+    expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBeNull()
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBe('parent-task')
+
+      await undoSystem.redo()
+
+      expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBeNull()
+    }
+  })
+
+  it('does not create an undo entry for an already-existing task connection', async () => {
+    const taskStore = useTaskStore()
+    const connections = makeConnections()
+    const undoSystem = getUndoSystem()
+
+    taskStore._rawTasks.push(
+      createMockTask({
+        id: 'parent-task',
+        title: 'Parent task',
+        canvasPosition: { x: 0, y: 0 }
+      }),
+      createMockTask({
+        id: 'child-task',
+        title: 'Child task',
+        parentTaskId: 'parent-task',
+        canvasPosition: { x: 260, y: 0 }
+      })
+    )
+
+    await connections.handleConnect({ source: 'parent-task', target: 'child-task' })
+
+    expect(undoSystem.getOperationStack()).toHaveLength(0)
+    expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBe('parent-task')
+  })
+
+  it('does not disconnect a task edge when the edge source is not the target parent', async () => {
+    const taskStore = useTaskStore()
+    const connectionState = makeConnectionState()
+    const connections = makeConnections(vi.fn(), connectionState)
+    const undoSystem = getUndoSystem()
+
+    taskStore._rawTasks.push(
+      createMockTask({
+        id: 'actual-parent',
+        title: 'Actual parent',
+        canvasPosition: { x: 0, y: 0 }
+      }),
+      createMockTask({
+        id: 'stale-parent',
+        title: 'Stale parent',
+        canvasPosition: { x: 0, y: 160 }
+      }),
+      createMockTask({
+        id: 'child-task',
+        title: 'Child task',
+        parentTaskId: 'actual-parent',
+        canvasPosition: { x: 260, y: 0 }
+      })
+    )
+    connectionState.selectedEdge.value = {
+      id: 'e-stale-parent-child-task',
+      source: 'stale-parent',
+      target: 'child-task'
+    } as never
+
+    await connections.disconnectEdge()
+
+    expect(undoSystem.getOperationStack()).toHaveLength(0)
+    expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBe('actual-parent')
   })
 
   it('undoes and redoes group creation three consecutive times without changing the created group id', async () => {

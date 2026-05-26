@@ -346,7 +346,8 @@ const handleRecurrenceSkip = async () => {
     if (isPermanent) {
       // BUG-1508: Permanent delete — chain is cleared inside permanentlyDeleteTask,
       // so the scheduler cannot recreate this occurrence after the hard delete.
-      await taskStore.permanentlyDeleteTask(taskId)
+      const { getUndoSystem } = await import('@/composables/undoSingleton')
+      await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
     } else {
       await taskStore.skipRecurringOccurrence(taskId)
     }
@@ -367,7 +368,8 @@ const handleRecurrenceStop = async () => {
       // BUG-1508: For permanent delete, use permanentlyDeleteTask which clears the
       // recurrence chain first (via clearRecurrenceChain) then hard-deletes.
       // This stops future occurrences AND prevents recreation by the scheduler.
-      await taskStore.permanentlyDeleteTask(taskId)
+      const { getUndoSystem } = await import('@/composables/undoSingleton')
+      await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
     } else {
       await taskStore.stopRecurrence(taskId)
     }
@@ -383,11 +385,8 @@ const handleRecurrenceRemoveFromCanvas = async () => {
   if (!taskId) return
 
   try {
-    await taskStore.updateTask(taskId, {
-      canvasPosition: undefined,
-      parentId: undefined,
-      isInInbox: true
-    })
+    const { getUndoSystem } = await import('@/composables/undoSingleton')
+    await getUndoSystem().bulkMoveToInboxWithUndo([taskId])
   } catch (error) {
     console.error('[ModalManager] Remove recurring task from canvas failed:', error)
   }

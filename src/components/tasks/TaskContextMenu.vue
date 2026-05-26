@@ -620,7 +620,7 @@ const handleDoneFully = async () => {
   const { showToast } = useToast()
   try {
     // Done fully = just mark as done (existing behavior handles recurrence clone + archive)
-    await taskStore.moveTask(taskId, 'done')
+    await taskStore.updateTaskWithUndo(taskId, { status: 'done' })
     showToast('Task completed permanently', 'success', { duration: 2000 })
   } catch (error) {
     console.error('Error in done-fully:', error)
@@ -646,14 +646,14 @@ const pinAsQuickTask = async () => {
 // Toggle pin to top
 const togglePin = async () => {
   if (!currentTask.value) return
-  await taskStore.updateTask(currentTask.value.id, { isPinned: !currentTask.value.isPinned })
+  await taskStore.updateTaskWithUndo(currentTask.value.id, { isPinned: !currentTask.value.isPinned })
   emit('close')
 }
 
 // TASK-1785 Push 2: toggle calendar ripple-shift lock (skip-protect)
 const toggleCalendarLock = async () => {
   if (!currentTask.value) return
-  await taskStore.updateTask(currentTask.value.id, { calendarLocked: !currentTask.value.calendarLocked })
+  await taskStore.updateTaskWithUndo(currentTask.value.id, { calendarLocked: !currentTask.value.calendarLocked })
   emit('close')
 }
 
@@ -752,7 +752,7 @@ const handleAIAcceptPriority = (priority: string, duration: number) => {
 const handleAIAcceptBreakdown = async (tasks: Array<{ title: string; priority?: string }>) => {
   for (const t of tasks) {
     const validPriority = ['low', 'medium', 'high'].includes(t.priority || '') ? t.priority as 'low' | 'medium' | 'high' : 'medium'
-    await taskStore.createTask({
+    await taskStore.createTaskWithUndo({
       title: t.title,
       priority: validPriority,
       status: 'todo'

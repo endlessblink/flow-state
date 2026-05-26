@@ -1,7 +1,7 @@
 <template>
   <div
     class="section-node"
-    :class="[`section-type-${section.type}`, { 'collapsed': isCollapsed, 'is-dragging': dragging }]"
+    :class="[`section-type-${section?.type || 'default'}`, { 'collapsed': isCollapsed, 'is-dragging': dragging }]"
     :style="{ borderColor: groupColor, backgroundColor: groupColor + '25' }"
     @contextmenu.prevent="handleContextMenu"
   >
@@ -122,8 +122,9 @@ const canvasStore = useCanvasStore()
 
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
-const section = computed(() => props.data?.section || props.data)
-const isCollapsed = computed(() => !!props.data?.isCollapsed)
+const dataRecord = computed(() => props.data as Record<string, unknown> | undefined)
+const section = computed(() => (dataRecord.value?.section || dataRecord.value) as Record<string, unknown> | undefined)
+const isCollapsed = computed(() => !!dataRecord.value?.isCollapsed)
 
 // BUG-225 FIX: Get color reactively from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh
@@ -134,14 +135,14 @@ const isCollapsed = computed(() => !!props.data?.isCollapsed)
 const LEGACY_DEFAULT_GROUP_COLORS = new Set(['#6366f1', '#3b82f6'])
 const WARM_DEFAULT_GROUP_COLOR = '#8B8178'
 const groupColor = computed(() => {
-  const groupId = props.data?.id
+  const groupId = dataRecord.value?.id as string | undefined
   const storeGroup = groupId ? canvasStore.groups.find(g => g.id === groupId) : undefined
-  const raw = (storeGroup?.color || props.data?.color || '') as string
+  const raw = (storeGroup?.color || dataRecord.value?.color || '') as string
   if (!raw || LEGACY_DEFAULT_GROUP_COLORS.has(raw.toLowerCase())) return WARM_DEFAULT_GROUP_COLOR
   return raw
 })
 const taskCount = computed(() => {
-  const data = props.data as Record<string, unknown> | undefined
+  const data = dataRecord.value
   const groupId = (data?.id as string) || props.id.replace(/^section-/, '')
   if (!groupId) return 0
 
@@ -156,7 +157,7 @@ const taskCount = computed(() => {
 })
 
 // Local State
-const sectionName = ref(props.data?.name || '')
+const sectionName = ref((dataRecord.value?.name as string) || '')
 
 // TASK-1756: Reactive "today" — shared across all group nodes; flips at midnight.
 const today = useCurrentDay()
@@ -237,19 +238,19 @@ const dayOfWeekDateSuffix = computed(() => {
 })
 
 // Watch for external name changes
-watch(() => props.data.name, (newName) => {
-  sectionName.value = newName
+watch(() => dataRecord.value?.name, (newName) => {
+  sectionName.value = newName as string || ''
 })
 
 const updateName = () => {
-  if (sectionName.value !== props.data.name) {
+  if (sectionName.value !== dataRecord.value?.name) {
     emit('update', { name: sectionName.value })
   }
 }
 
 const toggleCollapse = () => {
   // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
-  const groupId = props.data?.id || props.id.replace('section-', '')
+  const groupId = (dataRecord.value?.id as string) || props.id.replace('section-', '')
   canvasStore.toggleSectionCollapse(groupId)
 }
 

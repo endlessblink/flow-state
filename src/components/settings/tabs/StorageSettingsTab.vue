@@ -230,6 +230,7 @@ const isClearingSyncQueue = ref(false)
 const isClearingDoneTasks = ref(false)
 const doneTaskCleanupCutoff = ref('')
 const cleanupResult = ref<{ success: boolean; message: string } | null>(null)
+const doneCleanupResult = ref<{ success: boolean; message: string } | null>(null)
 
 const doneTasksBeforeCutoff = computed(() => {
   if (!doneTaskCleanupCutoff.value) return []
@@ -244,6 +245,7 @@ const doneTasksBeforeCutoff = computed(() => {
 const handleCleanupTasks = async () => {
   isCleaningUp.value = true
   cleanupResult.value = null
+  doneCleanupResult.value = null
   try {
     const fixed = await taskStore.cleanupCorruptedTasks()
     cleanupResult.value = {
@@ -265,6 +267,7 @@ const handleClearSyncQueue = async () => {
 
   isClearingSyncQueue.value = true
   cleanupResult.value = null
+  doneCleanupResult.value = null
   try {
     await clearAllOperations()
     cleanupResult.value = {
@@ -282,8 +285,10 @@ const handleClearSyncQueue = async () => {
 }
 
 const handleClearDoneTasksBeforeCutoff = async () => {
+  cleanupResult.value = null
+
   if (!doneTaskCleanupCutoff.value) {
-    cleanupResult.value = {
+    doneCleanupResult.value = {
       success: false,
       message: 'Choose a cutoff due date first'
     }
@@ -292,7 +297,7 @@ const handleClearDoneTasksBeforeCutoff = async () => {
 
   const tasksToDelete = doneTasksBeforeCutoff.value
   if (!tasksToDelete.length) {
-    cleanupResult.value = {
+    doneCleanupResult.value = {
       success: true,
       message: 'No done tasks found on or before that due date'
     }
@@ -306,15 +311,15 @@ const handleClearDoneTasksBeforeCutoff = async () => {
   if (!confirmed) return
 
   isClearingDoneTasks.value = true
-  cleanupResult.value = null
+  doneCleanupResult.value = null
   try {
     await taskStore.bulkDeleteTasks(tasksToDelete.map(task => task.id))
-    cleanupResult.value = {
+    doneCleanupResult.value = {
       success: true,
       message: `Removed ${tasksToDelete.length} done task(s) due on or before ${doneTaskCleanupCutoff.value}`
     }
   } catch (e) {
-    cleanupResult.value = {
+    doneCleanupResult.value = {
       success: false,
       message: `Error: ${e instanceof Error ? e.message : 'Unknown error'}`
     }
@@ -394,6 +399,34 @@ onMounted(async () => {
         <p class="mode-help-text">
           <AlertTriangle :size="14" />
           Changing modes requires an app restart. Your data will not be lost.
+        </p>
+      </div>
+    </SettingsSection>
+
+    <SettingsSection title="Task Cleanup">
+      <div class="done-cleanup-panel">
+        <div class="done-cleanup-copy">
+          <span class="done-cleanup-title">Remove done tasks by due date</span>
+          <span class="done-cleanup-desc">
+            Soft-delete completed tasks with a due date on or before the selected date.
+          </span>
+        </div>
+        <div class="done-cleanup-controls">
+          <label class="done-cleanup-field">
+            <span>Cutoff due date</span>
+            <input v-model="doneTaskCleanupCutoff" type="date">
+          </label>
+          <button
+            class="cleanup-btn danger"
+            :disabled="isClearingDoneTasks || !doneTaskCleanupCutoff || doneTasksBeforeCutoff.length === 0"
+            @click="handleClearDoneTasksBeforeCutoff"
+          >
+            <Trash2 :size="16" />
+            {{ isClearingDoneTasks ? 'Removing...' : `Remove ${doneTasksBeforeCutoff.length} Done` }}
+          </button>
+        </div>
+        <p v-if="doneCleanupResult" class="cleanup-result" :class="{ success: doneCleanupResult.success }">
+          {{ doneCleanupResult.message }}
         </p>
       </div>
     </SettingsSection>
@@ -679,28 +712,6 @@ onMounted(async () => {
           </button>
         </div>
 
-        <div class="done-cleanup-panel">
-          <div class="done-cleanup-copy">
-            <span class="done-cleanup-title">Remove done tasks by due date</span>
-            <span class="done-cleanup-desc">
-              Soft-delete completed tasks with a due date on or before the selected date.
-            </span>
-          </div>
-          <div class="done-cleanup-controls">
-            <label class="done-cleanup-field">
-              <span>Cutoff due date</span>
-              <input v-model="doneTaskCleanupCutoff" type="date">
-            </label>
-            <button
-              class="cleanup-btn danger"
-              :disabled="isClearingDoneTasks || !doneTaskCleanupCutoff || doneTasksBeforeCutoff.length === 0"
-              @click="handleClearDoneTasksBeforeCutoff"
-            >
-              <Trash2 :size="16" />
-              {{ isClearingDoneTasks ? 'Removing...' : `Remove ${doneTasksBeforeCutoff.length} Done` }}
-            </button>
-          </div>
-        </div>
         <p v-if="cleanupResult" class="cleanup-result" :class="{ success: cleanupResult.success }">
           {{ cleanupResult.message }}
         </p>
@@ -1400,6 +1411,7 @@ onMounted(async () => {
   align-items: end;
   gap: var(--space-3);
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .done-cleanup-field {
@@ -1408,10 +1420,11 @@ onMounted(async () => {
   gap: var(--space-1);
   font-size: var(--text-xs);
   color: var(--text-secondary);
+  min-width: min(100%, 160px);
 }
 
 .done-cleanup-field input {
-  min-width: 160px;
+  width: 100%;
   padding: var(--space-2) var(--space-3);
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
@@ -1419,7 +1432,31 @@ onMounted(async () => {
   color: var(--text-primary);
 }
 
+.done-cleanup-controls .cleanup-btn {
+  min-height: 38px;
+  min-width: 0;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+}
+
+@media (max-width: 520px) {
+  .done-cleanup-controls,
+  .done-cleanup-controls .cleanup-btn {
+    width: 100%;
+  }
+
+  .done-cleanup-field {
+    width: 100%;
+  }
+
+  .done-cleanup-controls .cleanup-btn {
+    justify-content: center;
+  }
+}
+
 .cleanup-result {
+  margin: 0;
   font-size: var(--text-sm);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);

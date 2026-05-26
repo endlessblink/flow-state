@@ -101,6 +101,7 @@ vi.mock('@/services/trash/TrashService', () => ({
 
 import { useTaskStore } from '@/stores/tasks'
 import { getUndoSystem, resetUndoSystem } from '@/composables/undoSingleton'
+import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { createMockTask } from '../factories'
 
 describe('task operation undo/redo three-cycle invariants', () => {
@@ -179,6 +180,65 @@ describe('task operation undo/redo three-cycle invariants', () => {
       expect(afterRedo).toBeDefined()
       expect(afterRedo?.title).toBe('After update')
       expect(afterRedo?.priority).toBe('high')
+    }
+  })
+
+  it('undoes and redoes the public moveTaskWithUndo status wrapper three consecutive times', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const task = createMockTask({
+      id: 'task-status-move-cycle',
+      title: 'Status move cycle',
+      status: 'todo'
+    })
+    taskStore._rawTasks.push(task)
+
+    await taskStore.moveTaskWithUndo(task.id, 'done')
+
+    expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)?.status).toBe('done')
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      const afterUndo = taskStore._rawTasks.find(candidate => candidate.id === task.id)
+      expect(afterUndo).toBeDefined()
+      expect(afterUndo?.status).toBe('todo')
+
+      await undoSystem.redo()
+
+      const afterRedo = taskStore._rawTasks.find(candidate => candidate.id === task.id)
+      expect(afterRedo).toBeDefined()
+      expect(afterRedo?.status).toBe('done')
+    }
+  })
+
+  it('undoes and redoes the public moveTaskToProjectWithUndo wrapper three consecutive times', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const { moveTaskToProjectWithUndo } = useUnifiedUndoRedo()
+    const task = createMockTask({
+      id: 'task-project-move-cycle',
+      title: 'Project move cycle',
+      projectId: 'project-before'
+    })
+    taskStore._rawTasks.push(task)
+
+    await moveTaskToProjectWithUndo(task.id, 'project-after')
+
+    expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)?.projectId).toBe('project-after')
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      const afterUndo = taskStore._rawTasks.find(candidate => candidate.id === task.id)
+      expect(afterUndo).toBeDefined()
+      expect(afterUndo?.projectId).toBe('project-before')
+
+      await undoSystem.redo()
+
+      const afterRedo = taskStore._rawTasks.find(candidate => candidate.id === task.id)
+      expect(afterRedo).toBeDefined()
+      expect(afterRedo?.projectId).toBe('project-after')
     }
   })
 

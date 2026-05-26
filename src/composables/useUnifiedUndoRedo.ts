@@ -49,24 +49,12 @@ export const useUnifiedUndoRedo = () => {
     return await singletonUndo.createTaskWithUndo(taskData)
   }
 
-  // Move operations - Simplified for now, just perform the operation without undo
-  // (Undo system is primarily for create/update/delete operations)
   const moveTaskWithUndo = async (taskId: string, newStatus: string) => {
-    try {
-      // Just perform the move operation
-      await taskStore.moveTask(taskId, newStatus as Task['status']) // BUG-1051: AWAIT to ensure persistence
-    } catch (error) {
-      console.error('❌ Error moving task:', error)
-    }
+    return await singletonUndo.updateTaskWithUndo(taskId, { status: newStatus as Task['status'] })
   }
 
   const moveTaskToProjectWithUndo = async (taskId: string, projectId: string) => {
-    try {
-      // Just perform the move operation
-      taskStore.moveTaskToProject(taskId, projectId)
-    } catch (error) {
-      console.error('❌ Error moving task to project:', error)
-    }
+    return await singletonUndo.updateTaskWithUndo(taskId, { projectId })
   }
 
   // Computed properties for UI state

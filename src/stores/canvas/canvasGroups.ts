@@ -45,11 +45,11 @@ export const useCanvasGroups = (
         _rawGroups.value = [...newGroups]
     }
 
-    const createGroup = async (groupData: Omit<CanvasGroup, 'id'>) => {
+    const createGroup = async (groupData: Omit<CanvasGroup, 'id'> | CanvasGroup) => {
         applySmartGroupNormalizations(groupData)
         const newGroup: CanvasGroup = {
             ...groupData,
-            id: crypto.randomUUID(), // TASK-1183: Use proper UUID for Supabase compatibility
+            id: 'id' in groupData && groupData.id ? groupData.id : crypto.randomUUID(), // TASK-1183: Use proper UUID for Supabase compatibility
             isVisible: true,
             isCollapsed: false,
             // BUG-1127 FIX: Preserve parentGroupId for nested groups

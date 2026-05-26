@@ -81,11 +81,24 @@ vi.mock('@/stores/canvas', () => ({
     selectedNodeIds: [],
     setSelectedNodes: vi.fn(),
     setGroups: vi.fn((groups: CanvasGroup[]) => { mockGroups = groups }),
+    createGroup: vi.fn(async (groupData: Omit<CanvasGroup, 'id'> | CanvasGroup) => {
+      const newGroup = {
+        ...groupData,
+        id: 'id' in groupData && groupData.id ? groupData.id : `group-${mockGroups.length + 1}`,
+        isVisible: true,
+        isCollapsed: false
+      } as CanvasGroup
+      mockGroups.push(newGroup)
+      return newGroup
+    }),
     updateGroup: vi.fn(async (groupId: string, updates: Partial<CanvasGroup>) => {
       const index = mockGroups.findIndex(group => group.id === groupId)
       if (index >= 0) {
         mockGroups[index] = { ...mockGroups[index], ...updates }
       }
+    }),
+    deleteGroup: vi.fn(async (groupId: string) => {
+      mockGroups = mockGroups.filter(group => group.id !== groupId)
     })
   })
 }))
@@ -237,5 +250,76 @@ describe('canvas connection undo', () => {
     expect(mockGroups[0].linkedParentTaskId).toBeNull()
     expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentId).toBe('group-1')
     expect(taskStore._rawTasks.find(task => task.id === 'child-task')?.parentTaskId).toBeNull()
+  })
+
+  it('undoes and redoes group creation three consecutive times without changing the created group id', async () => {
+    const undoSystem = getUndoSystem()
+
+    const createdGroup = await undoSystem.createGroupWithUndo({
+      name: 'Created Group',
+      type: 'custom',
+      position: { x: 120, y: 140, width: 300, height: 240 },
+      isVisible: true
+    })
+
+    expect(createdGroup?.id).toBe('group-2')
+    expect(mockGroups.some(group => group.id === createdGroup?.id)).toBe(true)
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      expect(mockGroups.some(group => group.id === createdGroup?.id)).toBe(false)
+
+      await undoSystem.redo()
+
+      const restoredGroup = mockGroups.find(group => group.id === createdGroup?.id)
+      expect(restoredGroup).toBeDefined()
+      expect(restoredGroup?.name).toBe('Created Group')
+      expect(restoredGroup?.position).toEqual({ x: 120, y: 140, width: 300, height: 240 })
+    }
+  })
+
+  it('undoes and redoes group deletion three consecutive times using the original group id', async () => {
+    const undoSystem = getUndoSystem()
+
+    await undoSystem.deleteGroupWithUndo('group-1')
+
+    expect(mockGroups.some(group => group.id === 'group-1')).toBe(false)
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      const restoredGroup = mockGroups.find(group => group.id === 'group-1')
+      expect(restoredGroup).toBeDefined()
+      expect(restoredGroup?.name).toBe('Linked Group')
+
+      await undoSystem.redo()
+
+      expect(mockGroups.some(group => group.id === 'group-1')).toBe(false)
+    }
+  })
+
+  it('undoes and redoes group resize three consecutive times without changing group identity', async () => {
+    const undoSystem = getUndoSystem()
+
+    await undoSystem.updateGroupWithUndo('group-1', {
+      position: { x: 0, y: 0, width: 520, height: 360 }
+    })
+
+    expect(mockGroups.find(group => group.id === 'group-1')?.position).toEqual({ x: 0, y: 0, width: 520, height: 360 })
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      const afterUndo = mockGroups.find(group => group.id === 'group-1')
+      expect(afterUndo).toBeDefined()
+      expect(afterUndo?.position).toEqual({ x: 0, y: 0, width: 400, height: 400 })
+
+      await undoSystem.redo()
+
+      const afterRedo = mockGroups.find(group => group.id === 'group-1')
+      expect(afterRedo).toBeDefined()
+      expect(afterRedo?.position).toEqual({ x: 0, y: 0, width: 520, height: 360 })
+    }
   })
 })

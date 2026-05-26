@@ -10,7 +10,6 @@ import { useMagicKeys, useWindowSize } from '@vueuse/core'
 
 import resourceManager from '../../utils/canvas/resourceManager'
 import { getUndoSystem } from '@/composables/undoSingleton'
-import { reconcileTaskParentsByContainment } from '@/utils/canvas/spatialContainment'
 import { logHierarchySummary } from '@/utils/canvas/invariants'
 import { useCanvasOperationState } from './useCanvasOperationState'
 
@@ -60,16 +59,6 @@ const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) =
         }
     }
 }
-
-// =============================================================================
-// DRIFT FIX: Module-level flag to ensure reconciliation runs only ONCE per browser session
-// =============================================================================
-// This prevents parent drift when:
-// - Tab visibility changes (focus/unfocus)
-// - Auth token refreshes (TOKEN_REFRESHED event)
-// - CanvasView remounts for any reason
-// Reconciliation should only happen on FIRST load, not repeatedly.
-let hasReconciledThisSession = false
 
 export function useCanvasOrchestrator() {
     const canvasStore = useCanvasStore()
@@ -512,36 +501,11 @@ export function useCanvasOrchestrator() {
                         console.log('✅ [ORCHESTRATOR] Initialization complete')
                     }
 
-                    // CONTAINMENT RECONCILIATION: Fix legacy tasks with incorrect parentId
-                    // DRIFT FIX: Only run ONCE per browser session to prevent repeated parent changes
-                    // This guards against remounts from: tab focus, auth refresh, route changes
-                    // BUG-1084 FIX: Also guard against empty groups - reconciliation needs groups to determine containment
-                    // RACE FIX: Moved from onMounted into init watcher so reconciliation runs AFTER
-                    // both stores are fully loaded — prevents incorrect parentId from partial task data
-                    if (!hasReconciledThisSession && canvasStore.groups.length > 0) {
-                        hasReconciledThisSession = true
-                        if (import.meta.env.DEV) {
-                            console.log('🔧 [ORCHESTRATOR] Starting ONE-TIME reconciliation with', taskStore.tasks.length, 'tasks')
-                        }
-                        await reconcileTaskParentsByContainment(
-                            taskStore.tasks,
-                            canvasStore.groups,
-                            async (taskId, updates) => {
-                                // Update store (will auto-sync to Supabase via existing persistence)
-                                // GEOMETRY WRITER: One-time reconciliation only (TASK-255)
-                                if (import.meta.env.DEV) {
-                                    console.log(`🔧[RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
-                                }
-                                taskStore.updateTask(taskId, updates, 'RECONCILE')
-                            },
-                            { writeToDb: true, silent: false }
-                        )
-                    } else if (hasReconciledThisSession) {
-                        if (import.meta.env.DEV) {
-                            console.log('⏭️ [ORCHESTRATOR] Skipping reconciliation - already ran this session')
-                        }
-                    }
-
+                    // Startup must be a read/projection path. Rewriting parentId from spatial
+                    // containment on each browser session made hard refreshes and Electron
+                    // update restarts capable of changing canvas topology from partially
+                    // loaded or mixed local/remote geometry. Parent changes now belong only
+                    // to explicit drag/drop flows.
                     // Auto-place disabled: tasks should only appear on canvas via explicit user action
                     // (context menu "Canvas Group", due-date auto-routing, or drag-and-drop)
                     // Previously: autoPlaceEligibleTasks() ran here on every app load

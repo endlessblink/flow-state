@@ -91,7 +91,7 @@ const wpProviderOptions = PROVIDER_OPTIONS.map(opt => {
 })
 
 const wpModelOptions = computed(() => {
-  switch (settingsStore.weeklyPlanProvider) {
+  switch (settingsStore.aiPreferredProvider) {
     case 'ollama':
       return availableOllamaModels.value.map(m => ({ id: m, label: m }))
     case 'groq':
@@ -104,14 +104,14 @@ const wpModelOptions = computed(() => {
 })
 
 function onWpProviderChange(provider: AIProviderKey) {
-  settingsStore.updateSetting('weeklyPlanProvider', provider)
+  settingsStore.updateSetting('aiPreferredProvider', provider as 'auto' | 'groq' | 'ollama' | 'openrouter')
   // Reset model when provider changes
-  settingsStore.updateSetting('weeklyPlanModel', '')
+  settingsStore.updateSetting('aiPremiumModel', '')
 }
 
 function onWpModelChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value
-  settingsStore.updateSetting('weeklyPlanModel', value || '')
+  settingsStore.updateSetting('aiPremiumModel', value || '')
 }
 
 // ── TASK-1350: Groq API Key Management ──
@@ -260,7 +260,7 @@ async function onClearMemories() {
   if (!confirm('Clear all memory observations? The AI will need to re-learn patterns.')) return
   isClearingMemories.value = true
   try {
-    await savePreferences({ memoryGraph: [] } as unknown as import('@/composables/useWorkProfile').WorkProfileData)
+    await savePreferences({ memoryGraph: [] } as unknown as import('@/utils/supabaseMappers').WorkProfile)
   } finally {
     isClearingMemories.value = false
   }
@@ -403,7 +403,7 @@ async function onClearMemories() {
           v-for="opt in wpProviderOptions"
           :key="opt.key"
           class="provider-chip"
-          :class="{ active: settingsStore.weeklyPlanProvider === opt.key }"
+          :class="{ active: settingsStore.aiPreferredProvider === opt.key }"
           @click="onWpProviderChange(opt.key)"
         >
           <span class="provider-chip-label">{{ opt.label }}</span>
@@ -412,7 +412,7 @@ async function onClearMemories() {
       </div>
 
       <!-- Model selector (when not auto) -->
-      <div v-if="settingsStore.weeklyPlanProvider !== 'auto'" class="model-selector">
+      <div v-if="settingsStore.aiPreferredProvider !== 'auto'" class="model-selector">
         <label class="model-selector-label">Model</label>
         <button
           class="free-filter-btn"
@@ -424,7 +424,7 @@ async function onClearMemories() {
         <div class="model-select-wrapper">
           <select
             class="model-select"
-            :value="settingsStore.weeklyPlanModel || ''"
+            :value="settingsStore.aiPremiumModel || ''"
             @change="onWpModelChange"
           >
             <option value="">
@@ -440,7 +440,7 @@ async function onClearMemories() {
           </select>
         </div>
         <button
-          v-if="settingsStore.weeklyPlanProvider === 'ollama'"
+          v-if="settingsStore.aiPreferredProvider === 'ollama'"
           class="refresh-models-btn"
           title="Refresh local models"
           @click="refreshOllamaModels()"

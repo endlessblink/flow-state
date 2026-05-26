@@ -311,12 +311,12 @@ const handleConnectStart = (event: { nodeId?: string | null; handleId?: string |
   connectionWasSuccessful.value = false
 }
 
-const handleConnectEnd = (event: MouseEvent | TouchEvent) => {
+const handleConnectEnd = (event?: MouseEvent | TouchEvent | Event) => {
   const sourceId = pendingConnectionSource.value
 
   setTimeout(() => {
     if (sourceId && !connectionWasSuccessful.value) {
-      const position = getFlowPositionFromEvent(event)
+      const position = getFlowPositionFromEvent(event as MouseEvent | TouchEvent)
       if (position) {
         pendingFocusSubtaskId.value = miniCanvas.createConnectedSubtask(sourceId, position, pendingConnectionSourceHandle.value) || null
       }

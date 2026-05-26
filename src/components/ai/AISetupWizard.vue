@@ -25,7 +25,9 @@
 
           <!-- ═══ Step 1: Choose Provider ═══ -->
           <div v-if="step === 1" class="step-content">
-            <h2 class="step-title">Set up AI</h2>
+            <h2 class="step-title">
+              Set up AI
+            </h2>
             <p class="step-desc">
               FlowState uses AI for smart suggestions, task analysis, and chat.
               Choose how you'd like to power it.
@@ -37,7 +39,9 @@
                 :class="{ selected: chosenProvider === 'groq' }"
                 @click="chosenProvider = 'groq'"
               >
-                <div class="provider-badge recommended">Recommended</div>
+                <div class="provider-badge recommended">
+                  Recommended
+                </div>
                 <Zap :size="22" class="provider-icon" />
                 <span class="provider-name">Groq Cloud</span>
                 <span class="provider-detail">
@@ -70,7 +74,9 @@
 
           <!-- ═══ Step 2a: Groq Setup ═══ -->
           <div v-if="step === 2 && chosenProvider === 'groq'" class="step-content">
-            <h2 class="step-title">Connect Groq</h2>
+            <h2 class="step-title">
+              Connect Groq
+            </h2>
             <p class="step-desc">
               Groq offers free AI API access with generous daily limits.
               Create a free account and paste your API key below.
@@ -90,14 +96,14 @@
               <label class="field-label">API Key</label>
               <div class="input-row">
                 <input
-                  :type="showKey ? 'text' : 'password'"
                   v-model="apiKey"
+                  :type="showKey ? 'text' : 'password'"
                   placeholder="gsk_..."
                   class="text-input"
                   spellcheck="false"
                   autocomplete="off"
-                />
-                <button class="icon-btn" @click="showKey = !showKey" :title="showKey ? 'Hide' : 'Show'">
+                >
+                <button class="icon-btn" :title="showKey ? 'Hide' : 'Show'" @click="showKey = !showKey">
                   <EyeOff v-if="showKey" :size="16" />
                   <Eye v-else :size="16" />
                 </button>
@@ -128,7 +134,9 @@
 
           <!-- ═══ Step 2b: Ollama Setup ═══ -->
           <div v-if="step === 2 && chosenProvider === 'ollama'" class="step-content">
-            <h2 class="step-title">Connect Ollama</h2>
+            <h2 class="step-title">
+              Connect Ollama
+            </h2>
             <p class="step-desc">
               Ollama runs AI models locally on your machine.
               Make sure Ollama is installed and running.
@@ -142,7 +150,9 @@
             </div>
 
             <div v-if="!ollamaDetected" class="ollama-steps">
-              <p class="setup-instruction">To set up Ollama:</p>
+              <p class="setup-instruction">
+                To set up Ollama:
+              </p>
               <ol class="setup-list">
                 <li>
                   Install from
@@ -179,7 +189,9 @@
             <div class="confirm-icon">
               <CheckCircle2 :size="40" />
             </div>
-            <h2 class="step-title">AI is ready!</h2>
+            <h2 class="step-title">
+              AI is ready!
+            </h2>
             <p class="step-desc">
               <template v-if="chosenProvider === 'groq'">
                 Groq Cloud is configured. FlowState will use Llama 3.3 70B for AI features.

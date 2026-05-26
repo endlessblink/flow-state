@@ -12,8 +12,9 @@
         <ChevronDown v-if="!isCollapsed" :size="14" />
         <ChevronRight v-else :size="14" />
       </button>
-      <input dir="auto"
+      <input
         v-model="sectionName"
+        dir="auto"
         class="section-name-input"
         placeholder="Group name..."
         :disabled="isCollapsed"
@@ -60,7 +61,9 @@
     <div v-if="!isCollapsed" class="section-body">
       <slot />
       <!-- TASK-1791: guide users when a group has no tasks yet -->
-      <p v-if="taskCount === 0" class="section-empty-hint">Drag tasks here</p>
+      <p v-if="taskCount === 0" class="section-empty-hint">
+        Drag tasks here
+      </p>
     </div>
 
     <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->

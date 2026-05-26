@@ -394,9 +394,9 @@ watch(() => quickCapture.defaultTabOnOpen.value, (defaultTab) => {
 
 const {
   currentTask, currentTaskId, uncategorizedTasks, progress, isComplete,
-  isTaskDirty, canUndo, currentStreak,
+  isTaskDirty, canUndo, canRedo, currentStreak,
   startSession, endSession, categorizeTask, saveTask,
-  markTaskDone, markDoneAndDeleteTask, skipTask, undoLastCategorization, tryResumeSession
+  markTaskDone, markDoneAndDeleteTask, skipTask, undoLastCategorization, redoLastCategorization, tryResumeSession
 } = useQuickSort()
 
 // Reset touch tracking when task changes
@@ -457,6 +457,8 @@ function handleSkip() {
 }
 
 function handleUndo() { if (canUndo) undoLastCategorization() }
+
+function handleRedo() { if (canRedo) redoLastCategorization() }
 
 function handleMarkDone() {
   if (!currentTask.value) return
@@ -567,18 +569,29 @@ function shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
 
 function handleGlobalKeydown(event: KeyboardEvent) {
   if (shouldIgnoreKeyEvent(event)) return
+  const key = event.key.toLowerCase()
   if (event.key === 'Escape') {
     event.preventDefault()
     if (showEditPanel.value) { showEditPanel.value = false; return }
     handleExit()
   }
-  if ((event.ctrlKey || event.metaKey) && event.key === 'z') { event.preventDefault(); event.stopImmediatePropagation(); handleUndo() }
+  if ((event.ctrlKey || event.metaKey) && key === 'z') {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    if (event.shiftKey) handleRedo()
+    else handleUndo()
+  }
+  if ((event.ctrlKey || event.metaKey) && key === 'y') {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    handleRedo()
+  }
   if (activeTab.value !== 'sort') return
 
-  if (event.key === 'd' || event.key === 'D') { event.preventDefault(); handleMarkDone() }
-  if ((event.key === 's' || event.key === 'S') && !event.ctrlKey && !event.metaKey) { event.preventDefault(); handleSave() }
+  if (key === 'd') { event.preventDefault(); handleMarkDone() }
+  if (key === 's' && !event.ctrlKey && !event.metaKey) { event.preventDefault(); handleSave() }
   if (event.key === ' ') { event.preventDefault(); handleSkip() }
-  if (event.key === 'e' || event.key === 'E') { event.preventDefault(); handleEditTask() }
+  if (key === 'e') { event.preventDefault(); handleEditTask() }
   if (event.key === 'Delete') { event.preventDefault(); requestDelete() }
   if (event.key === 'ArrowRight') { event.preventDefault(); handleSave() }
   if (event.key === 'ArrowLeft') { event.preventDefault(); requestDelete() }

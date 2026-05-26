@@ -242,6 +242,54 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }
   })
 
+  it('undoes and redoes a Kanban-style multi-field drop update three consecutive times', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const task = createMockTask({
+      id: 'task-kanban-drop-cycle',
+      title: 'Kanban drop cycle',
+      status: 'todo',
+      isInInbox: true,
+      projectId: 'project-before',
+      priority: 'low'
+    })
+    taskStore._rawTasks.push(task)
+
+    await taskStore.updateTaskWithUndo(task.id, {
+      status: 'done',
+      isInInbox: false,
+      projectId: 'project-after',
+      priority: 'high'
+    })
+
+    expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)).toMatchObject({
+      status: 'done',
+      isInInbox: false,
+      projectId: 'project-after',
+      priority: 'high'
+    })
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)).toMatchObject({
+        status: 'todo',
+        isInInbox: true,
+        projectId: 'project-before',
+        priority: 'low'
+      })
+
+      await undoSystem.redo()
+
+      expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)).toMatchObject({
+        status: 'done',
+        isInInbox: false,
+        projectId: 'project-after',
+        priority: 'high'
+      })
+    }
+  })
+
   it('undoes and redoes task deletion three consecutive times with the same restored task id', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()

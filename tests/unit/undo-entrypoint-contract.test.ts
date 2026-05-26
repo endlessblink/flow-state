@@ -31,4 +31,14 @@ describe('undo-aware modal and context-menu entry points', () => {
     expect(source).not.toContain('await taskStore.permanentlyDeleteTask(taskId)')
     expect(source).not.toContain('await taskStore.updateTask(taskId, {\n      canvasPosition: undefined')
   })
+
+  it('keeps Kanban drop mutations on undo-aware APIs', () => {
+    const source = readSource('src/components/kanban/KanbanColumn.vue')
+
+    expect(source).toContain('await taskStore.updateTaskWithUndo(taskId, {')
+    expect(source).not.toContain('await taskStore.updateTask(taskId, { isInInbox: false })')
+    expect(source).not.toContain('taskStore.moveTaskToProject(taskId')
+    expect(source).not.toContain('taskStore.moveTaskToPriority(taskId')
+    expect(source).not.toContain('taskStore.moveTaskToDate(taskId')
+  })
 })

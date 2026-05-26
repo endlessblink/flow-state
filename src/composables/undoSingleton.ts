@@ -1157,6 +1157,36 @@ const canvasGeometryWithUndo = async (
   }
 }
 
+const pushCanvasGeometryUndoSnapshot = (
+  description: string,
+  affectedIds: string[],
+  snapshotBefore: UnifiedUndoState,
+  snapshotAfter: UnifiedUndoState
+) => {
+  const uniqueAffectedIds = [...new Set(affectedIds)]
+  if (uniqueAffectedIds.length === 0) return false
+
+  operationStack.value.push({
+    operation: {
+      type: 'canvas-geometry',
+      affectedIds: uniqueAffectedIds,
+      description,
+      timestamp: Date.now()
+    },
+    snapshotBefore,
+    snapshotAfter
+  })
+  if (operationStack.value.length > 30) operationStack.value.shift()
+  redoOperationStack.value = []
+
+  if (unifiedState && commit) {
+    unifiedState.value = snapshotAfter
+    commit()
+  }
+
+  return true
+}
+
 const deleteGroupWithUndo = async (groupId: string) => {
   const canvasStore = useCanvasStore()
 
@@ -1388,6 +1418,7 @@ export function getUndoSystem() {
     deleteGroupWithUndo,
     canvasConnectionWithUndo,
     canvasGeometryWithUndo,
+    pushCanvasGeometryUndoSnapshot,
 
     // BUG-309-B: Debugging/inspection
     getOperationStack: () => [...operationStack.value],

@@ -169,4 +169,57 @@ describe('canvas geometry undo', () => {
       expect(mockGroups[0].position).toEqual({ x: 120, y: 140, width: 360, height: 220 })
     }
   })
+
+  it('undoes and redoes a synchronous layout snapshot three consecutive times', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const task = createMockTask({
+      id: 'task-layout-snapshot',
+      title: 'Layout snapshot task',
+      parentId: 'group-geometry',
+      canvasPosition: { x: 80, y: 90 },
+      positionFormat: 'absolute'
+    })
+    taskStore._rawTasks.push(task)
+
+    const snapshotBefore = JSON.parse(JSON.stringify({
+      tasks: taskStore._rawTasks.filter(candidate => candidate.id === task.id),
+      groups: mockGroups
+    }))
+
+    await taskStore.updateTask(task.id, {
+      canvasPosition: { x: 240, y: 260 },
+      positionFormat: 'absolute'
+    }, 'DRAG')
+    mockGroups[0] = {
+      ...mockGroups[0],
+      position: { x: 200, y: 220, width: 420, height: 300 }
+    }
+
+    const snapshotAfter = JSON.parse(JSON.stringify({
+      tasks: taskStore._rawTasks.filter(candidate => candidate.id === task.id),
+      groups: mockGroups
+    }))
+
+    undoSystem.pushCanvasGeometryUndoSnapshot(
+      'Synchronous layout snapshot',
+      [task.id, 'group-geometry'],
+      snapshotBefore,
+      snapshotAfter
+    )
+
+    for (let i = 0; i < 3; i += 1) {
+      await undoSystem.undo()
+
+      const afterUndo = taskStore._rawTasks.find(candidate => candidate.id === task.id)
+      expect(afterUndo?.canvasPosition).toEqual({ x: 80, y: 90 })
+      expect(mockGroups[0].position).toEqual({ x: 10, y: 20, width: 300, height: 200 })
+
+      await undoSystem.redo()
+
+      const afterRedo = taskStore._rawTasks.find(candidate => candidate.id === task.id)
+      expect(afterRedo?.canvasPosition).toEqual({ x: 240, y: 260 })
+      expect(mockGroups[0].position).toEqual({ x: 200, y: 220, width: 420, height: 300 })
+    }
+  })
 })

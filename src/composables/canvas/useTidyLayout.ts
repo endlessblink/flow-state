@@ -27,6 +27,18 @@ import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
 import { getUndoSystem } from '@/composables/undoSingleton'
 
+function cloneCanvasGeometrySnapshot(
+  tasks: unknown[],
+  groups: unknown[],
+  affectedIds: string[]
+) {
+  const ids = new Set(affectedIds)
+  return JSON.parse(JSON.stringify({
+    tasks: tasks.filter((task) => ids.has((task as { id: string }).id)),
+    groups,
+  }))
+}
+
 function findColumnContainingGroup(
   task: { position: { x: number; y: number }; width?: number; height?: number },
   groups: Array<{ id: string; position?: { x: number; y: number; width?: number; height?: number } }>
@@ -229,50 +241,50 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       ...taskMoves.map((move) => move.taskId),
     ])]
     const undoSystem = getUndoSystem()
-    const undoHandlePromise = affectedIds.length > 0
-      ? undoSystem.beginOperation({
-        type: 'canvas-geometry',
-        affectedIds,
-        description: `Tidy ${affectedIds.length} canvas item${affectedIds.length === 1 ? '' : 's'}`
-      })
-      : Promise.resolve(null)
+    const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
 
-    // Caller applies Vue Flow moves immediately. Store writes wait until the
-    // undo snapshot is captured, then releaseOnDoubleNextTick waits on them.
-    const pendingWritesWithUndo = undoHandlePromise.then(async (undoHandle) => {
-      try {
-        for (const gm of groupMoves) {
-          const input = inputs.find((i) => i.group.id === gm.groupId)
-          if (!input?.group.position) continue
-          canvasStore.updateGroup(gm.groupId, {
-            position: {
-              ...input.group.position,
-              x: gm.position.x,
-              y: gm.position.y,
-              width: gm.size.width,
-              height: gm.size.height,
-            },
-          })
-          positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
-        }
-        for (const tm of taskMoves) {
-          const adoptedParentId = adoptedParents.get(tm.taskId)
-          pendingWrites.push(taskStore.updateTask(
-            tm.taskId,
-            adoptedParentId
-              ? { parentId: adoptedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
-              : { canvasPosition: tm.position, positionFormat: 'absolute' },
-            'DRAG'
-          ))
-          positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
-        }
-        await Promise.all(pendingWrites)
-        if (undoHandle && (groupMoves.length > 0 || taskMoves.length > 0)) {
-          await undoSystem.commitOperation(undoHandle)
-        }
-      } catch (err) {
-        release()
-        throw err
+    // Apply store + PositionManager writes synchronously. Caller applies Vue
+    // Flow moves immediately after this function returns.
+    try {
+      for (const gm of groupMoves) {
+        const input = inputs.find((i) => i.group.id === gm.groupId)
+        if (!input?.group.position) continue
+        canvasStore.updateGroup(gm.groupId, {
+          position: {
+            ...input.group.position,
+            x: gm.position.x,
+            y: gm.position.y,
+            width: gm.size.width,
+            height: gm.size.height,
+          },
+        })
+        positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
+      }
+      for (const tm of taskMoves) {
+        const adoptedParentId = adoptedParents.get(tm.taskId)
+        pendingWrites.push(taskStore.updateTask(
+          tm.taskId,
+          adoptedParentId
+            ? { parentId: adoptedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
+            : { canvasPosition: tm.position, positionFormat: 'absolute' },
+          'DRAG'
+        ))
+        positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
+      }
+    } catch (err) {
+      release()
+      throw err
+    }
+
+    const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
+      if (groupMoves.length > 0 || taskMoves.length > 0) {
+        const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+        undoSystem.pushCanvasGeometryUndoSnapshot(
+          `Tidy ${affectedIds.length} canvas item${affectedIds.length === 1 ? '' : 's'}`,
+          affectedIds,
+          snapshotBefore,
+          snapshotAfter
+        )
       }
     })
 

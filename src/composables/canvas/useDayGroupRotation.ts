@@ -30,6 +30,19 @@ import {
   type GroupMove,
   type TaskMove,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
+import { getUndoSystem } from '@/composables/undoSingleton'
+
+function cloneCanvasGeometrySnapshot(
+  tasks: unknown[],
+  groups: unknown[],
+  affectedIds: string[]
+) {
+  const ids = new Set(affectedIds)
+  return JSON.parse(JSON.stringify({
+    tasks: tasks.filter((task) => ids.has((task as { id: string }).id)),
+    groups,
+  }))
+}
 
 // TASK-1756: persisted "last rotation YYYY-MM-DD" — prevents double-rotation
 // when mount catch-up, midnight setTimeout, and visibility/focus all fire on
@@ -312,8 +325,15 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves
 
-    // Apply STORE + PositionManager writes here. The caller applies Vue Flow
-    // moves via updateNode with both position AND style (width/height).
+    const affectedIds = [...new Set([
+      ...groupMoves.map((move) => move.groupId),
+      ...taskMoves.map((move) => move.taskId),
+    ])]
+    const undoSystem = getUndoSystem()
+    const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+
+    // Apply STORE + PositionManager writes synchronously. The caller applies
+    // Vue Flow moves via updateNode with both position AND style (width/height).
     try {
       for (const gm of groupMoves) {
         const storePos = inputs.find((i) => i.group.id === gm.groupId)?.group.position
@@ -343,7 +363,19 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       throw err
     }
 
-    return { groupMoves, taskMoves, pendingWrites: Promise.all(pendingWrites).then(() => undefined), release }
+    const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
+      if (groupMoves.length > 0 || taskMoves.length > 0) {
+        const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+        undoSystem.pushCanvasGeometryUndoSnapshot(
+          `Rotate ${affectedIds.length} canvas day item${affectedIds.length === 1 ? '' : 's'}`,
+          affectedIds,
+          snapshotBefore,
+          snapshotAfter
+        )
+      }
+    })
+
+    return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
   }
 
   function dismissBanner() {

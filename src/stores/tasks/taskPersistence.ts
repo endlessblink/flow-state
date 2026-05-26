@@ -303,11 +303,55 @@ export function useTaskPersistence(
                     invalidTasks.map(t => `${t.title}: ${JSON.stringify(t.canvasPosition)}`))
             }
 
+            // Electron updates/restarts and hard refreshes can happen before the
+            // offline sync queue has flushed a recent drag. Groups already merge
+            // newer IndexedDB geometry on reload; do the same for tasks so a
+            // restart cannot combine fresh group positions with stale task
+            // positions from Supabase.
+            const cachedTasks = (await getCachedTasks().catch(() => [])) ?? []
+            const cachedById = new Map<string, Task>()
+            for (const cachedTask of cachedTasks) {
+                const existing = cachedById.get(cachedTask.id)
+                const existingTime = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0
+                const cachedTime = cachedTask.updatedAt ? new Date(cachedTask.updatedAt).getTime() : 0
+                const existingVersion = existing?.positionVersion ?? 0
+                const cachedVersion = cachedTask.positionVersion ?? 0
+                if (!existing || cachedVersion > existingVersion || (cachedVersion === existingVersion && cachedTime > existingTime)) {
+                    cachedById.set(cachedTask.id, cachedTask)
+                }
+            }
+
+            const locallyNewerGeometryIds = new Set<string>()
+            const geometryMergedLoadedTasks = loadedTasks.map((remoteTask) => {
+                const cachedTask = cachedById.get(remoteTask.id)
+                if (!cachedTask) return remoteTask
+
+                const cachedVersion = cachedTask.positionVersion ?? 0
+                const remoteVersion = remoteTask.positionVersion ?? 0
+                const cachedTime = cachedTask.updatedAt ? new Date(cachedTask.updatedAt).getTime() : 0
+                const remoteTime = remoteTask.updatedAt ? new Date(remoteTask.updatedAt).getTime() : 0
+                const cachedIsNewer = cachedVersion > remoteVersion || (cachedVersion === remoteVersion && cachedTime > remoteTime)
+                if (!cachedIsNewer) return remoteTask
+
+                if (import.meta.env.DEV) {
+                    console.log(`[TASK-LOAD] Preserving newer local canvas geometry for "${remoteTask.title?.slice(0, 30)}"`)
+                }
+                locallyNewerGeometryIds.add(remoteTask.id)
+                return {
+                    ...remoteTask,
+                    canvasPosition: cachedTask.canvasPosition,
+                    parentId: cachedTask.parentId,
+                    positionFormat: cachedTask.positionFormat ?? remoteTask.positionFormat,
+                    positionVersion: cachedVersion,
+                    updatedAt: cachedTask.updatedAt ?? remoteTask.updatedAt,
+                }
+            })
+
             // BUG-169 FIX: Safety guard - don't overwrite existing tasks with empty array
             // This prevents data loss from race conditions during auth propagation
             // TASK-1177: Extended from 10 seconds to 60 seconds for better protection
             // Exception: workspace switches to an empty workspace are legitimate
-            if (loadedTasks.length === 0 && _rawTasks.value.length > 0) {
+            if (geometryMergedLoadedTasks.length === 0 && _rawTasks.value.length > 0) {
                 if (wsStore.isSwitchingWorkspace) {
                     console.log(`🔄 [TASK-LOAD] Workspace switch — clearing ${_rawTasks.value.length} tasks for new workspace context`)
                 } else {
@@ -330,7 +374,7 @@ export function useTaskPersistence(
             // ================================================================
             // Uses centralized helper for consistent detection across all layers
             // A duplicate here means the bug is at the database level
-            logSupabaseTaskIdHistogram(loadedTasks, 'loadFromDatabase')
+            logSupabaseTaskIdHistogram(geometryMergedLoadedTasks, 'loadFromDatabase')
 
             // ================================================================
             // SMART MERGE STRATEGY (BUG-FIX)
@@ -340,7 +384,7 @@ export function useTaskPersistence(
             // recent optimistic updates that haven't persisted to DB yet due to connection drop.
 
             // 1. Index remote tasks
-            const remoteMap = new Map(loadedTasks.map(t => [t.id, t]))
+            const remoteMap = new Map(geometryMergedLoadedTasks.map(t => [t.id, t]))
             const mergedTasks: Task[] = []
 
             // 2. Process existing local tasks (Preserve optimistic, Handle Remote Deletes)
@@ -457,7 +501,7 @@ export function useTaskPersistence(
                     const RECENT_CREATE_WINDOW_MS = 30_000
                     const localCreatedAt = localTask.createdAt ? new Date(localTask.createdAt).getTime() : 0
                     const isRecentlyCreated = (Date.now() - localCreatedAt) < RECENT_CREATE_WINDOW_MS
-                    if (loadedTasks.length > 0 && !isRecentlyCreated) {
+                    if (geometryMergedLoadedTasks.length > 0 && !isRecentlyCreated) {
                         if (import.meta.env.DEV) {
                             console.log(`🗑️ [SMART-MERGE] Dropping stale local-only task "${localTask.title?.slice(0, 15)}" - not in DB and not recently created`)
                         }
@@ -552,6 +596,35 @@ export function useTaskPersistence(
 
             // BUG-1411: Cache merged tasks to IndexedDB for offline loading
             cacheTasks(mergedTasks)
+
+            // If local cache had fresher geometry than the remote load, queue a
+            // writeback so Supabase catches up after restart instead of leaving
+            // the next cold start dependent on IndexedDB again.
+            for (const taskId of locallyNewerGeometryIds) {
+                const task = mergedTasks.find(t => t.id === taskId)
+                if (!task) continue
+                Promise.all([
+                    import('@/composables/sync/useSyncOrchestrator'),
+                    import('@/utils/supabaseMappers'),
+                    import('@/stores/auth')
+                ]).then(([{ useSyncOrchestrator }, { toSupabaseTask }, { useAuthStore }]) => {
+                    const sync = useSyncOrchestrator()
+                    const userId = useAuthStore().user?.id
+                    if (!userId) return
+                    const payload = toSupabaseTask(task, userId)
+                    sync.enqueue({
+                        entityType: 'task',
+                        operation: 'update',
+                        entityId: task.id,
+                        payload: JSON.parse(JSON.stringify(payload)),
+                        baseVersion: task.positionVersion ?? 0
+                    }).catch(e => {
+                        console.warn(`[TASK-LOAD] Failed to queue geometry catch-up for "${task.title?.slice(0, 15)}":`, e)
+                    })
+                }).catch(() => {
+                    // Sync orchestrator not available; cached geometry is still preserved locally.
+                })
+            }
 
         } catch (error) {
             console.error('❌ [SUPABASE] Load failed:', error)

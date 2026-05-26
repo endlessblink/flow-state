@@ -78,10 +78,27 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[]) =>
     await canvasStore.requestSync?.('user:manual')
   }, { groups, tasks })
 
-  await page.waitForFunction(({ groups, tasks }) => {
-    return groups.every((group) => document.querySelector(`[data-id="section-${group.id}"]`))
-      && tasks.every((task) => document.querySelector(`[data-id="${task.id}"]`))
-  }, { groups, tasks }, { timeout: 15_000 })
+  await expect.poll(async () => {
+    try {
+      return await page.evaluate(({ groups, tasks }) => {
+        const hasNodes = groups.every((group) => document.querySelector(`[data-id="section-${group.id}"]`))
+          && tasks.every((task) => document.querySelector(`[data-id="${task.id}"]`))
+        if (!hasNodes) {
+          const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
+          const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
+          pinia?._s.get('canvas')?.requestSync?.('user:manual')
+          pinia?._s.get('canvasUi')?.requestSync?.('user:manual')
+        }
+        return hasNodes
+      }, { groups, tasks })
+    } catch (error) {
+      if (String(error).includes('Execution context was destroyed')) return false
+      throw error
+    }
+  }, {
+    timeout: 15_000,
+    message: `Expected seeded canvas nodes to render for groups=${groups.map((group) => group.id).join(',')} tasks=${tasks.map((task) => task.id).join(',')}`,
+  }).toBe(true)
 }
 
 const clickToolbar = async (page: Page, titlePattern: RegExp) => {
@@ -164,6 +181,49 @@ const readRenderedTaskPositions = async (page: Page, ids: string[]) => page.eval
     }
   })
 }, ids)
+
+const readRenderedNodePositions = async (page: Page, ids: string[]) => page.evaluate((ids) => {
+  return ids.map((id) => {
+    const element = document.querySelector(`.vue-flow__node[data-id="${CSS.escape(id)}"]`) as HTMLElement | null
+    const rect = element?.getBoundingClientRect()
+    if (!rect) return null
+    return {
+      id,
+      left: Math.round(rect.left),
+      top: Math.round(rect.top),
+      transform: element.style.transform || null,
+    }
+  })
+}, ids)
+
+const dragRenderedNode = async (page: Page, id: string, dx: number, dy: number) => {
+  const node = page.locator(`.vue-flow__node[data-id="${id}"]`)
+  const box = await node.boundingBox({ timeout: 10_000 })
+  expect(box, `Node not found for drag: ${id}`).not.toBeNull()
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + Math.min(box!.height / 2, 60))
+  await page.mouse.down()
+  await page.mouse.move(box!.x + box!.width / 2 + dx, box!.y + Math.min(box!.height / 2, 60) + dy, { steps: 16 })
+  await page.mouse.up()
+}
+
+const dragInboxTaskToCanvas = async (page: Page, title: string, targetSelector = '.canvas-container') => {
+  const card = page.locator('.unified-inbox-panel .task-card').filter({ hasText: title })
+  const target = page.locator(targetSelector)
+  const targetBox = await target.boundingBox({ timeout: 10_000 })
+  expect(targetBox, `Canvas drop target not found: ${targetSelector}`).not.toBeNull()
+  await card.dragTo(target, {
+    force: true,
+    targetPosition: {
+      x: targetBox!.width * 0.5,
+      y: Math.min(targetBox!.height * 0.35, 220),
+    },
+  })
+}
+
+const readCanvasViewportTransform = async (page: Page) => page.evaluate(() => {
+  const viewport = document.querySelector<HTMLElement>('.vue-flow__viewport')
+  return viewport?.style.transform || null
+})
 
 const dayIdByIndex = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 const dayNameByIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -285,6 +345,10 @@ test.describe('local canvas geometry regressions', () => {
       if (text.includes('[GEOMETRY-') && text.includes('pos:')) taskGeometryLogs.push(text)
     })
 
+    await seedCanvas(page, [
+      { id: 'idle-drift-task-group', name: 'Idle Drift Task Group', x: 1040, y: 260, width: 360, height: 720 },
+    ], [])
+
     await page.waitForFunction(() => {
       const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
       const canvasStore = root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas')
@@ -391,11 +455,11 @@ test.describe('local canvas geometry regressions', () => {
     })
 
     await seedCanvas(page, [
-      { id: 'done-shift-group', name: 'Done Shift Group', x: 1000, y: 300, width: 420, height: 900 },
+      { id: 'done-shift-group', name: 'Done Shift Group', x: 180, y: 160, width: 420, height: 900 },
     ], [
-      { id: 'done-shift-a', title: 'Done Shift A', parentId: 'done-shift-group', x: 1024, y: 420 },
-      { id: 'done-shift-b', title: 'Done Shift B', parentId: 'done-shift-group', x: 1024, y: 560 },
-      { id: 'done-shift-c', title: 'Done Shift C', parentId: 'done-shift-group', x: 1024, y: 700 },
+      { id: 'done-shift-a', title: 'Done Shift A', parentId: 'done-shift-group', x: 244, y: 252 },
+      { id: 'done-shift-b', title: 'Done Shift B', parentId: 'done-shift-group', x: 244, y: 396 },
+      { id: 'done-shift-c', title: 'Done Shift C', parentId: 'done-shift-group', x: 244, y: 540 },
     ])
 
     const trackedIds = ['done-shift-a', 'done-shift-b', 'done-shift-c']
@@ -509,6 +573,197 @@ test.describe('local canvas geometry regressions', () => {
       expect.objectContaining({ id: 'drag-shift-a', x: 1024, y: 420, parentId: 'drag-shift-group' }),
       expect.objectContaining({ id: 'drag-shift-c', x: 1024, y: 700, parentId: 'drag-shift-group' }),
     ])
+  })
+
+  test('dragging one root canvas task does not nudge unrelated nodes', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'root-drag-g1', name: 'Root Drag G1', x: 760, y: 160, width: 420, height: 900 },
+      { id: 'root-drag-g2', name: 'Root Drag G2', x: 1180, y: 160, width: 420, height: 900 },
+    ], [
+      { id: 'root-drag-a', title: 'Root Drag A', parentId: '', x: 244, y: 252 },
+      { id: 'root-drag-b', title: 'Root Drag B', parentId: '', x: 244, y: 396 },
+      { id: 'root-drag-c', title: 'Root Drag C', parentId: '', x: 244, y: 540 },
+      { id: 'root-drag-grouped', title: 'Root Drag Grouped', parentId: 'root-drag-g1', x: 824, y: 252 },
+    ])
+
+    const stableIds = [
+      'section-root-drag-g1',
+      'section-root-drag-g2',
+      'root-drag-a',
+      'root-drag-c',
+      'root-drag-grouped',
+    ]
+    const beforeRendered = await readRenderedNodePositions(page, stableIds)
+    const beforeViewport = await readCanvasViewportTransform(page)
+
+    await dragRenderedNode(page, 'root-drag-b', 96, 32)
+    await page.waitForTimeout(1000)
+
+    const afterRendered = await readRenderedNodePositions(page, stableIds)
+    const afterViewport = await readCanvasViewportTransform(page)
+    const afterStore = await readGeometry(page)
+    const movedTask = afterStore.tasks.find((task) => task.id === 'root-drag-b')
+
+    expect(movedTask, JSON.stringify({ afterStore, beforeRendered, afterRendered }, null, 2)).toEqual(expect.objectContaining({
+      id: 'root-drag-b',
+    }))
+    expect(movedTask?.parentId ?? '', JSON.stringify(movedTask, null, 2)).toBe('')
+    expect(movedTask!.x, JSON.stringify(movedTask, null, 2)).not.toBe(244)
+    expect(movedTask!.y, JSON.stringify(movedTask, null, 2)).not.toBe(396)
+    expect(movedTask!.x % 16, JSON.stringify(movedTask, null, 2)).toBe(0)
+    expect(movedTask!.y % 16, JSON.stringify(movedTask, null, 2)).toBe(0)
+    expect(afterViewport, JSON.stringify({ beforeViewport, afterViewport }, null, 2)).toEqual(beforeViewport)
+    expect(afterRendered, JSON.stringify({ beforeRendered, afterRendered, beforeViewport, afterViewport }, null, 2)).toEqual(beforeRendered)
+  })
+
+  test('dragging one group does not nudge unrelated canvas nodes', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'group-drag-g1', name: 'Group Drag G1', x: 180, y: 160, width: 420, height: 900 },
+      { id: 'group-drag-g2', name: 'Group Drag G2', x: 760, y: 160, width: 420, height: 900 },
+    ], [
+      { id: 'group-drag-child-a', title: 'Group Drag Child A', parentId: 'group-drag-g1', x: 244, y: 252 },
+      { id: 'group-drag-child-b', title: 'Group Drag Child B', parentId: 'group-drag-g1', x: 244, y: 396 },
+      { id: 'group-drag-other', title: 'Group Drag Other', parentId: 'group-drag-g2', x: 824, y: 252 },
+      { id: 'group-drag-root', title: 'Group Drag Root', parentId: '', x: 1220, y: 252 },
+    ])
+
+    const stableIds = [
+      'section-group-drag-g2',
+      'group-drag-other',
+      'group-drag-root',
+    ]
+    const childIds = [
+      'group-drag-child-a',
+      'group-drag-child-b',
+    ]
+    const beforeStableRendered = await readRenderedNodePositions(page, stableIds)
+    const beforeViewport = await readCanvasViewportTransform(page)
+    const beforeChildRendered = (await readRenderedNodePositions(page, childIds))
+      .map((node) => node ? { id: node.id, transform: node.transform } : node)
+
+    await dragRenderedNode(page, 'section-group-drag-g1', 96, 32)
+    await page.waitForTimeout(1000)
+
+    const afterStableRendered = await readRenderedNodePositions(page, stableIds)
+    const afterViewport = await readCanvasViewportTransform(page)
+    const afterChildRendered = (await readRenderedNodePositions(page, childIds))
+      .map((node) => node ? { id: node.id, transform: node.transform } : node)
+    const afterStore = await readGeometry(page)
+    const movedGroup = afterStore.groups.find((group) => group.id === 'group-drag-g1')
+
+    expect(movedGroup, JSON.stringify({ afterStore, beforeStableRendered, afterStableRendered }, null, 2)).toEqual(expect.objectContaining({
+      id: 'group-drag-g1',
+    }))
+    expect(movedGroup!.x, JSON.stringify(movedGroup, null, 2)).not.toBe(180)
+    expect(movedGroup!.y, JSON.stringify(movedGroup, null, 2)).not.toBe(160)
+    expect(afterViewport, JSON.stringify({ beforeViewport, afterViewport }, null, 2)).toEqual(beforeViewport)
+    expect(afterStableRendered, JSON.stringify({ beforeStableRendered, afterStableRendered, beforeViewport, afterViewport }, null, 2)).toEqual(beforeStableRendered)
+    expect(afterChildRendered, JSON.stringify({ beforeChildRendered, afterChildRendered }, null, 2)).not.toEqual(beforeChildRendered)
+  })
+
+  test('topology sync after dragging one grouped task does not nudge unrelated nodes', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'nudge-sync-g1', name: 'Nudge Sync G1', x: 180, y: 160, width: 420, height: 900 },
+      { id: 'nudge-sync-g2', name: 'Nudge Sync G2', x: 760, y: 160, width: 420, height: 900 },
+    ], [
+      { id: 'nudge-sync-a', title: 'Nudge Sync A', parentId: 'nudge-sync-g1', x: 244, y: 252 },
+      { id: 'nudge-sync-b', title: 'Nudge Sync B', parentId: 'nudge-sync-g1', x: 244, y: 396 },
+      { id: 'nudge-sync-c', title: 'Nudge Sync C', parentId: 'nudge-sync-g2', x: 824, y: 252 },
+      { id: 'nudge-sync-root', title: 'Nudge Sync Root', parentId: '', x: 1220, y: 252 },
+    ])
+
+    const stableIds = [
+      'section-nudge-sync-g1',
+      'section-nudge-sync-g2',
+      'nudge-sync-a',
+      'nudge-sync-c',
+      'nudge-sync-root',
+    ]
+    const beforeRendered = (await readRenderedNodePositions(page, stableIds))
+      .map((node) => node ? { id: node.id, transform: node.transform } : node)
+
+    await dragRenderedNode(page, 'nudge-sync-b', 96, 32)
+    await page.waitForTimeout(800)
+
+    const afterDragStore = await readGeometry(page)
+    const movedTask = afterDragStore.tasks.find((task) => task.id === 'nudge-sync-b')
+    expect(movedTask, JSON.stringify(afterDragStore, null, 2)).toEqual(expect.objectContaining({
+      id: 'nudge-sync-b',
+      parentId: 'nudge-sync-g1',
+    }))
+    expect(movedTask!.x % 16, JSON.stringify(movedTask, null, 2)).toBe(0)
+    expect(movedTask!.y % 16, JSON.stringify(movedTask, null, 2)).toBe(0)
+
+    await page.evaluate(async () => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+      const taskStore = pinia._s.get('tasks')!
+      await taskStore.createTask({
+        id: 'nudge-sync-new',
+        title: 'Nudge Sync New',
+        status: 'todo',
+        priority: 'medium',
+        isInInbox: false,
+        canvasPosition: { x: 1220, y: 440 },
+        positionFormat: 'absolute',
+      })
+    })
+    await page.waitForTimeout(1200)
+
+    const afterRendered = (await readRenderedNodePositions(page, stableIds))
+      .map((node) => node ? { id: node.id, transform: node.transform } : node)
+    expect(afterRendered, JSON.stringify({ beforeRendered, afterRendered }, null, 2)).toEqual(beforeRendered)
+  })
+
+  test('dragging an inbox task onto the canvas does not nudge existing nodes', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'inbox-drop-g1', name: 'Inbox Drop G1', x: 180, y: 160, width: 420, height: 900 },
+      { id: 'inbox-drop-g2', name: 'Inbox Drop G2', x: 760, y: 160, width: 420, height: 900 },
+    ], [
+      { id: 'inbox-drop-a', title: 'Inbox Drop A', parentId: 'inbox-drop-g1', x: 244, y: 252 },
+      { id: 'inbox-drop-b', title: 'Inbox Drop B', parentId: 'inbox-drop-g1', x: 244, y: 396 },
+      { id: 'inbox-drop-c', title: 'Inbox Drop C', parentId: 'inbox-drop-g2', x: 824, y: 252 },
+      { id: 'inbox-drop-root', title: 'Inbox Drop Root', parentId: '', x: 1220, y: 252 },
+    ])
+
+    await page.evaluate(async () => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+      const taskStore = pinia._s.get('tasks')!
+      await taskStore.createTask({
+        id: 'inbox-drop-new',
+        title: 'Inbox Drop New',
+        status: 'todo',
+        priority: 'medium',
+        isInInbox: true,
+      })
+    })
+
+    const expandInboxButton = page.getByRole('button', { name: /expand inbox/i })
+    if (await expandInboxButton.isVisible().catch(() => false)) {
+      await expandInboxButton.click()
+    }
+    await expect(page.locator('.unified-inbox-panel .task-card').filter({ hasText: 'Inbox Drop New' })).toBeVisible()
+
+    const stableIds = [
+      'section-inbox-drop-g1',
+      'section-inbox-drop-g2',
+      'inbox-drop-a',
+      'inbox-drop-b',
+      'inbox-drop-c',
+      'inbox-drop-root',
+    ]
+    const beforeRendered = await readRenderedNodePositions(page, stableIds)
+    const beforeViewport = await readCanvasViewportTransform(page)
+
+    await dragInboxTaskToCanvas(page, 'Inbox Drop New', '.vue-flow__node[data-id="section-inbox-drop-g1"]')
+    await page.waitForTimeout(1200)
+
+    await expect(page.locator('.vue-flow__node[data-id="inbox-drop-new"]')).toBeVisible()
+    const afterRendered = await readRenderedNodePositions(page, stableIds)
+    const afterViewport = await readCanvasViewportTransform(page)
+    expect(afterViewport, JSON.stringify({ beforeViewport, afterViewport }, null, 2)).toEqual(beforeViewport)
+    expect(afterRendered, JSON.stringify({ beforeRendered, afterRendered, beforeViewport, afterViewport }, null, 2)).toEqual(beforeRendered)
   })
 
   test('tidy keeps compact groups and stacks tasks with vertical spacing', async ({ page }) => {

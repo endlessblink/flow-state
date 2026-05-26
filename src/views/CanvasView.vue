@@ -113,6 +113,7 @@
           :pan-on-scroll="false"
           zoom-on-pinch
           :pan-on-drag="!shift && !control && !meta"
+          :auto-pan-on-node-drag="false"
           :nodes-draggable="!control && !meta && !shift"
           :selection-on-drag="shift"
           :multi-selection-key-code="['Control', 'Meta', 'Shift']"
@@ -309,7 +310,7 @@
 
 <script setup lang="ts">
 import { ref, markRaw, nextTick, onMounted, onUnmounted, watch } from 'vue'
-import { VueFlow, useVueFlow, type NodeMouseEvent, type NodeTypesObject } from '@vue-flow/core'
+import { ConnectionMode, VueFlow, useVueFlow, type NodeMouseEvent, type NodeTypesObject } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -362,9 +363,9 @@ const nodeTypes = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple),
   imageNode: markRaw(ImageNode),
-} as any
-const looseConnectionMode = 'loose' as any
-const disabledDeleteKey = false as any
+} as unknown as NodeTypesObject
+const looseConnectionMode = ConnectionMode.Loose
+const disabledDeleteKey = null
 
 // FEATURE-1048: Day group auto-rotation at midnight
 const { findNode, getNodes, setNodes, getViewport } = useVueFlow()

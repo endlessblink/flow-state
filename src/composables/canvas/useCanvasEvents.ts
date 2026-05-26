@@ -16,7 +16,7 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
     const { endDrag: endGlobalDrag, dragData: activeDragData } = useDragAndDrop()
-    const { screenToFlowCoordinate, setNodes, getNodes, findNode } = useVueFlow()
+    const { screenToFlowCoordinate, findNode } = useVueFlow()
 
     // BUG-1530: Section properties for dueDate inheritance when dropping onto a canvas group
     const { getSectionProperties } = useCanvasSectionProperties({
@@ -251,14 +251,9 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
                 syncNodes(undefined, { force: true })
             }
 
-            // Wait for v-model to sync nodes.value to Vue Flow's internal state
-            await nextTick()
-
-            // CRITICAL - Use setNodes() to force Vue Flow to reinitialize
-            const currentNodes = getNodes.value
-            setNodes(currentNodes)
-
-            // Double nextTick() for Vue Flow parent-child discovery
+            // Double nextTick() for Vue Flow parent-child discovery. Do not feed
+            // getNodes.value back into setNodes(); those are Vue Flow internal
+            // node objects and can re-normalize unrelated canvas geometry.
             await nextTick()
             await nextTick()
 

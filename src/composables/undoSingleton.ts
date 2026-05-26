@@ -58,6 +58,7 @@ export type UndoOperationType =
   | 'group-update'
   | 'group-resize'
   | 'canvas-connection'
+  | 'canvas-geometry'
   | 'image-delete'  // TASK-1690: Canvas image deletion (undo restores image)
   | 'legacy' // For backward compatibility with entries that don't have metadata
 
@@ -370,6 +371,32 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       break
     }
 
+    case 'canvas-geometry': {
+      for (const taskId of operation.affectedIds) {
+        const previousTask = snapshotBefore.tasks.find(t => t.id === taskId)
+        const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
+        if (previousTask && afterTask) {
+          const changedFields = computeChangedFields(previousTask, afterTask)
+          if (Object.keys(changedFields).length > 0) {
+            await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'DRAG')
+          }
+        }
+      }
+
+      for (const groupId of operation.affectedIds) {
+        const previousGroup = snapshotBefore.groups.find(g => g.id === groupId)
+        const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
+        if (previousGroup && afterGroup) {
+          await canvasStore.updateGroup(groupId, {
+            ...previousGroup,
+            position: previousGroup.position,
+            parentGroupId: previousGroup.parentGroupId
+          })
+        }
+      }
+      break
+    }
+
     case 'image-delete': {
       // TASK-1690: Undo image deletion = restore the image from snapshot
       // TASK-1722: Return early — images are managed outside task/group sync,
@@ -520,6 +547,32 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
         const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
         if (afterGroup) {
           await canvasStore.updateGroup(groupId, { linkedParentTaskId: afterGroup.linkedParentTaskId ?? null })
+        }
+      }
+      break
+    }
+
+    case 'canvas-geometry': {
+      for (const taskId of operation.affectedIds) {
+        const beforeTask = snapshotBefore.tasks.find(t => t.id === taskId)
+        const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
+        if (afterTask && beforeTask) {
+          const changedFields = computeChangedFields(afterTask, beforeTask)
+          if (Object.keys(changedFields).length > 0) {
+            await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'DRAG')
+          }
+        }
+      }
+
+      for (const groupId of operation.affectedIds) {
+        const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
+        const beforeGroup = snapshotBefore.groups.find(g => g.id === groupId)
+        if (afterGroup && beforeGroup) {
+          await canvasStore.updateGroup(groupId, {
+            ...afterGroup,
+            position: afterGroup.position,
+            parentGroupId: afterGroup.parentGroupId
+          })
         }
       }
       break
@@ -1051,6 +1104,59 @@ const canvasConnectionWithUndo = async (
   }
 }
 
+const canvasGeometryWithUndo = async (
+  description: string,
+  affectedIds: string[],
+  applyGeometryChange: () => Promise<boolean | void>
+) => {
+  const uniqueAffectedIds = [...new Set(affectedIds)]
+  if (uniqueAffectedIds.length === 0) {
+    await applyGeometryChange()
+    return
+  }
+
+  const handle = await beginOperation({
+    type: 'canvas-geometry',
+    affectedIds: uniqueAffectedIds,
+    description
+  })
+
+  try {
+    const changed = await applyGeometryChange()
+    if (changed === false) return
+
+    await nextTick()
+    const snapshotAfter = await captureCurrentState(uniqueAffectedIds)
+    const tasksChanged = handle.before.tasks.some(beforeTask => {
+      const afterTask = snapshotAfter.tasks.find(task => task.id === beforeTask.id)
+      return afterTask && Object.keys(computeChangedFields(beforeTask, afterTask)).length > 0
+    })
+    const groupsChanged = handle.before.groups.some(beforeGroup => {
+      if (!uniqueAffectedIds.includes(beforeGroup.id)) return false
+      const afterGroup = snapshotAfter.groups.find(group => group.id === beforeGroup.id)
+      return afterGroup && JSON.stringify(beforeGroup) !== JSON.stringify(afterGroup)
+    })
+
+    if (!tasksChanged && !groupsChanged) return
+
+    operationStack.value.push({
+      operation: handle.operation,
+      snapshotBefore: handle.before,
+      snapshotAfter
+    })
+    if (operationStack.value.length > 30) operationStack.value.shift()
+    redoOperationStack.value = []
+
+    if (unifiedState && commit) {
+      unifiedState.value = snapshotAfter
+      commit()
+    }
+  } catch (error) {
+    console.error('❌ canvasGeometryWithUndo failed:', error)
+    throw error
+  }
+}
+
 const deleteGroupWithUndo = async (groupId: string) => {
   const canvasStore = useCanvasStore()
 
@@ -1281,6 +1387,7 @@ export function getUndoSystem() {
     updateGroupWithUndo,
     deleteGroupWithUndo,
     canvasConnectionWithUndo,
+    canvasGeometryWithUndo,
 
     // BUG-309-B: Debugging/inspection
     getOperationStack: () => [...operationStack.value],

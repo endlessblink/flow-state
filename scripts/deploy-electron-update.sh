@@ -90,8 +90,10 @@ fi
 # Step 3: Package with electron-builder
 echo -e "\n${YELLOW}[3/4] Packaging with electron-builder...${NC}"
 if [ "$DRY_RUN" = true ]; then
+  echo -e "${CYAN}  [DRY RUN] Would run: npm run electron:patch-builder${NC}"
   echo -e "${CYAN}  [DRY RUN] Would run: npx electron-builder --config electron-builder.yml --linux${NC}"
 else
+  npm run electron:patch-builder
   npx electron-builder --config electron-builder.yml --linux
 fi
 

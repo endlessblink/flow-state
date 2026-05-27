@@ -154,14 +154,14 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
           ? { ...inst, scheduledDate: targetDate }
           : inst
       )
-      await taskStore.updateTask(taskId, {
+      await taskStore.updateTaskWithUndo(taskId, {
         instances: updatedInstances
       })
     } else {
       // BUG-1325: Create an explicit instance instead of using legacy scheduledDate fields.
       // This is an explicit user action (month view drag), so it SHOULD create calendar visibility.
       const scheduledTime = existingTask.scheduledTime || '09:00'
-      await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
+      await taskStore.updateTaskWithUndo(taskId, {
         instances: [{
           id: `instance-${taskId}-${Date.now()}`,
           scheduledDate: targetDate,

@@ -398,12 +398,15 @@ const taskStore = useTaskStore()
  * Recalculate order values for all tasks in localTasks based on their current array position.
  * Uses simple integer indexing (0, 1, 2, ...) and persists via updateTask.
  */
-const persistOrderForColumn = () => {
-  allTasks.value.forEach((task, index) => {
-    if (task.order !== index) {
-      taskStore.updateTask(task.id, { order: index })
-    }
-  })
+const persistOrderForColumn = async () => {
+  const orderUpdates = allTasks.value
+    .map((task, index) => ({ task, index }))
+    .filter(({ task, index }) => task.order !== index)
+    .map(({ task, index }) => ({ id: task.id, updates: { order: index } }))
+
+  if (orderUpdates.length > 0) {
+    await taskStore.bulkUpdateTasksWithUndo(orderUpdates, 'Reorder kanban column')
+  }
 }
 
 const handleDragChange = async (event: SortableChangeEvent) => {
@@ -415,7 +418,7 @@ const handleDragChange = async (event: SortableChangeEvent) => {
       await taskStore.updateTaskWithUndo(taskId, getColumnDropUpdates(task))
 
       // Persist order for all tasks in this column after cross-column move
-      persistOrderForColumn()
+      await persistOrderForColumn()
     } catch (error) {
       console.error('Failed to move task:', error)
       window.dispatchEvent(new CustomEvent('flowstate:error', {
@@ -426,7 +429,7 @@ const handleDragChange = async (event: SortableChangeEvent) => {
 
   if (event.moved) {
     // Within-column reorder: persist new order values
-    persistOrderForColumn()
+    await persistOrderForColumn()
   }
 }
 

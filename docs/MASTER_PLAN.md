@@ -5209,6 +5209,84 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
+## Partner Collaboration Roadmap — Shared Task OS
+
+### FEATURE-1805: Partner collaboration — shared task operating system (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Make FlowState usable as a shared daily operating system for two people: shared projects, tasks, board/calendar planning, assignment, comments, activity, and realtime updates. This is intentionally not a full Notion clone; docs/databases/pages are out of scope unless later proven necessary.
+
+**Existing foundation**: Workspace tables/RLS/invites/members, workspace switcher, task assignment, presence, activity feed, workspace-aware task/project/group queries, and realtime filters already exist. The work is to harden and complete the shared-workspace experience.
+
+**Non-goals for first release**:
+- Full Notion-style page/database/block editor
+- Public team/organization product surface
+- Shared Canvas as the first milestone
+- Complex granular permissions beyond owner/admin/member/viewer basics
+
+#### Phase 1: Shared workspace hardening MVP
+
+**Priority**: P1 | **Target**: 2-4 weeks
+
+**Scope**:
+- Verify workspace create/invite/accept/switch flows end-to-end in Electron.
+- Ensure task/project loads, writes, realtime updates, and offline queue operations are always scoped by `workspaceId`.
+- Make Board usable for shared workspaces: create/edit/delete/move tasks, project grouping, assignment filter, and partner visibility.
+- Keep Canvas personal-only during this phase; redirect behavior is acceptable.
+- Add focused RLS, sync-queue, realtime, and workspace-switch regression coverage.
+
+**Acceptance criteria**:
+- User and partner can both see and mutate the same shared workspace tasks.
+- Personal tasks never appear in shared workspace, and shared tasks never appear in personal workspace.
+- Simultaneous edits do not duplicate, resurrect, or silently discard tasks in normal Board workflows.
+- Electron build ships the feature behind existing workspace UI.
+
+#### Phase 2: Shared planning workflow
+
+**Priority**: P1 | **Target**: 2-3 weeks after Phase 1
+
+**Scope**:
+- Make Calendar safe and useful in shared workspaces.
+- Support assignment, unassigned work, and "mine/all" filters across Board and Calendar.
+- Add task comments and activity feed polish for real partner handoff.
+- Add notifications or visible badges for partner changes where low-risk.
+
+**Acceptance criteria**:
+- Both users can plan shared work on Board and Calendar without losing updates.
+- Comments/activity make it clear who changed what recently.
+- Shared planning remains reliable through reloads, Electron restarts, and realtime reconnects.
+
+#### Phase 3: Daily-use reliability pass
+
+**Priority**: P1 | **Target**: 2-3 weeks after Phase 2
+
+**Scope**:
+- Stress-test sync, offline recovery, conflict behavior, workspace switching, tombstones, and undo/redo in shared workspaces.
+- Add regression tests around the historically risky paths: LWW conflicts, deletion/undo, realtime reconnect, cached stale data, and workspace cache isolation.
+- Tighten role behavior: owner/admin/member/viewer permissions should match RLS and UI affordances.
+- Build and deploy through the Electron updater flow.
+
+**Acceptance criteria**:
+- Shared task OS is safe enough for daily use by two people.
+- Known sync/realtime failure modes have direct regression coverage.
+- `npm run electron:build` passes and updater manifest is verified after release.
+
+#### Phase 4: Shared Canvas evaluation
+
+**Priority**: P2 | **Status**: 📋 PLANNED, defer until Phases 1-3 are stable
+
+**Scope**:
+- Decide whether shared Canvas is actually needed after daily task collaboration is working.
+- If needed, design shared Canvas around explicit workspace geometry ownership, conflict handling, and realtime update safety.
+- Do not enable shared Canvas by default until geometry sync has strong tests.
+
+**Acceptance criteria**:
+- A clear go/no-go decision exists for shared Canvas.
+- If implemented, Canvas group/task positions do not jump, overwrite, or cross-leak between users/workspaces.
+
+---
+
 ## Formatting Guide
 
 **Task Format**: `### TASK-XXX: Title (STATUS)` with `🔄 IN PROGRESS`, `✅ DONE`, `📋 PLANNED`

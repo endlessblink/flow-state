@@ -3,7 +3,7 @@ import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
-import type { CalendarEvent, DragGhost } from '@/types/tasks'
+import type { CalendarEvent, DragGhost, TaskInstance } from '@/types/tasks'
 import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
 import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
@@ -133,6 +133,74 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     if (rippleGhostOffsets.value.size > 0) {
       rippleGhostOffsets.value = new Map()
     }
+  }
+
+  const scheduleTaskWithUndo = async (
+    taskId: string,
+    scheduledDate: string,
+    scheduledTime: string,
+    instanceId?: string
+  ) => {
+    const task = taskStore.getTask(taskId)
+    if (!task) return
+
+    const updates: Partial<typeof task> = {
+      scheduledDate,
+      scheduledTime
+    }
+
+    if (instanceId && task.instances) {
+      const instances = task.instances.map(instance =>
+        instance.id === instanceId
+          ? { ...instance, scheduledDate, scheduledTime, updatedAt: new Date() }
+          : instance
+      )
+      if (instances.some(instance => instance.id === instanceId)) {
+        updates.instances = instances
+      }
+    }
+
+    await taskStore.updateTaskWithUndo(taskId, updates)
+  }
+
+  const createScheduledInstanceWithUndo = async (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => {
+    const task = taskStore.getTask(taskId)
+    if (!task) return
+
+    const newInstance: TaskInstance = {
+      id: Date.now().toString(),
+      ...instanceData
+    }
+    const isRecurring = task.recurrence || instanceData.isRecurring
+    const instances = isRecurring
+      ? [...(task.instances || []), newInstance]
+      : [newInstance]
+
+    await taskStore.updateTaskWithUndo(taskId, {
+      instances,
+      isInInbox: false
+    })
+  }
+
+  const updateInstanceDurationWithUndo = async (
+    taskId: string,
+    instanceId: string | undefined,
+    updates: Partial<TaskInstance>,
+    taskUpdates: Partial<typeof taskStore.rawTasks[number]> = {}
+  ) => {
+    const task = taskStore.getTask(taskId)
+    if (!task) return
+
+    const instances = instanceId && task.instances
+      ? task.instances.map(instance =>
+        instance.id === instanceId ? { ...instance, ...updates } : instance
+      )
+      : undefined
+
+    await taskStore.updateTaskWithUndo(taskId, {
+      ...taskUpdates,
+      ...(instances ? { instances } : {})
+    })
   }
 
   // Drag state for visual feedback
@@ -842,28 +910,15 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
             }
           }
         } else {
-          await taskStore.updateTaskWithSchedule(taskId, {
-            scheduledDate: slot.date,
-            scheduledTime: timeStr,
-            instanceId: instanceToUpdate?.id
-          })
+          await scheduleTaskWithUndo(taskId, slot.date, timeStr, parsedData.instanceId || instanceToUpdate?.id)
         }
       } else {
         // Drag from inbox or other sources
-        // Create task instance and update task to remove from inbox
-        // BUG-1321: await for proper sync queue + echo protection
-        const instance = await taskStore.createTaskInstance(taskId, {
+        // Create task instance and remove from inbox as one undoable user action.
+        await createScheduledInstanceWithUndo(taskId, {
           scheduledDate: slot.date,
           scheduledTime: timeStr
         })
-
-        // BUG-FIX: Clear isInInbox when task is scheduled on calendar.
-        // The filter-only approach (!isScheduledOnCalendar) has gaps:
-        // pinned tasks bypass it, and non-instance scheduling paths miss it.
-        // Belt-and-suspenders: set the flag AND rely on the filter.
-        if (instance) {
-          await taskStore.updateTask(taskId, { isInInbox: false })
-        }
       }
     } catch (_error) {
       // Fall through to cleanup
@@ -951,7 +1006,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         // Duplicate mode: create a copy of the task with the final schedule
         const originalTask = taskStore.getTask(calendarEvent.taskId)
         if (originalTask) {
-          taskStore.createTask({
+          await taskStore.createTaskWithUndo({
             title: originalTask.title,
             description: originalTask.description,
             instances: [{
@@ -1218,42 +1273,20 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
       // Commit final values to store (async, after cleanup)
       if (direction === 'bottom') {
-        await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
-          estimatedDuration: finalDuration
-        })
-
-        // Update instance if present
-        const task = taskStore._rawTasks.find(t => t.id === calendarEvent.taskId)
-        if (task?.instances && task.instances.length > 0) {
-          const todayInstance = task.instances.find(instance =>
-            instance && instance.scheduledDate === currentDate.value.toISOString().split('T')[0]
-          )
-          if (todayInstance && todayInstance.id) {
-            taskStore.updateTaskInstance(calendarEvent.taskId, todayInstance.id, {
-              duration: finalDuration
-            })
-          }
-        }
+        await updateInstanceDurationWithUndo(
+          calendarEvent.taskId,
+          calendarEvent.instanceId,
+          { duration: finalDuration },
+          { estimatedDuration: finalDuration }
+        )
       } else {
         // Top resize - update both start time and duration
-        await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
-          scheduledTime: finalStartTime,
-          estimatedDuration: finalDuration
-        })
-
-        // Update instance if present
-        const task = taskStore._rawTasks.find(t => t.id === calendarEvent.taskId)
-        if (task?.instances && task.instances.length > 0) {
-          const todayInstance = task.instances.find(instance =>
-            instance && instance.scheduledDate === currentDate.value.toISOString().split('T')[0]
-          )
-          if (todayInstance && todayInstance.id) {
-            taskStore.updateTaskInstance(calendarEvent.taskId, todayInstance.id, {
-              scheduledTime: finalStartTime,
-              duration: finalDuration
-            })
-          }
-        }
+        await updateInstanceDurationWithUndo(
+          calendarEvent.taskId,
+          calendarEvent.instanceId,
+          { scheduledTime: finalStartTime, duration: finalDuration },
+          { scheduledTime: finalStartTime, estimatedDuration: finalDuration }
+        )
       }
     }
 

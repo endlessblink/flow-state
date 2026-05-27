@@ -150,14 +150,18 @@ export function useCalendarCore() {
       return
     }
 
-    await taskStore.moveTask(task.id, nextStatus) // BUG-1051: AWAIT to ensure persistence
+    const instances = nextStatus === 'done' && calendarEvent.instanceId && task.instances
+      ? task.instances.map(instance =>
+        instance.id === calendarEvent.instanceId
+          ? { ...instance, status: 'completed' as const }
+          : instance
+      )
+      : undefined
 
-    // TASK-1285: Mark instance as completed when task cycles to done
-    if (nextStatus === 'done' && calendarEvent.instanceId) {
-      taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
-        status: 'completed'
-      })
-    }
+    await taskStore.updateTaskWithUndo(task.id, {
+      status: nextStatus,
+      ...(instances ? { instances } : {})
+    })
   }
 
   // === PROJECT UTILITIES ===

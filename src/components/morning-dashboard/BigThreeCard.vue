@@ -302,8 +302,8 @@ async function handleCreateTask() {
                   ghost-class="ghost-card"
                   chosen-class="chosen-card"
                   drag-class="drag-card"
-                  force-fallback
-                  fallback-on-body
+                  :force-fallback="true"
+                  :fallback-on-body="true"
                   fallback-class="sortable-fallback"
                   :fallback-tolerance="5"
                   tag="div"
@@ -350,8 +350,8 @@ async function handleCreateTask() {
                   ghost-class="ghost-card"
                   chosen-class="chosen-card"
                   drag-class="drag-card"
-                  force-fallback
-                  fallback-on-body
+                  :force-fallback="true"
+                  :fallback-on-body="true"
                   fallback-class="sortable-fallback"
                   :fallback-tolerance="5"
                   tag="div"
@@ -436,8 +436,8 @@ async function handleCreateTask() {
               item-key="id"
               :animation="0"
               ghost-class="ghost-zone-item"
-              force-fallback
-              fallback-on-body
+              :force-fallback="true"
+              :fallback-on-body="true"
               fallback-class="sortable-fallback"
               :fallback-tolerance="5"
               tag="div"

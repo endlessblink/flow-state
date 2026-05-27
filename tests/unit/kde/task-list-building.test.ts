@@ -30,6 +30,9 @@ interface PinnedTask {
   id: string
   title: string
   project_id?: string
+  priority?: 'high' | 'medium' | 'low' | ''
+  due_date?: string
+  status?: string
 }
 
 interface ProjectInfo {
@@ -87,15 +90,6 @@ function buildNannyTaskListFromTasks(
   const pinnedTitles: Record<string, boolean> = {}
   const maxItems = 15
 
-  function findTaskByTitle(title: string): KdeTask | null {
-    for (const task of allTasks) {
-      if (task.title && task.title.toLowerCase() === title.toLowerCase()) {
-        return task
-      }
-    }
-    return null
-  }
-
   function getProjectInfo(projectId?: string): ProjectInfo {
     if (!projectId || !context.projects[projectId]) return { name: '', color: '' }
     return context.projects[projectId]
@@ -104,16 +98,16 @@ function buildNannyTaskListFromTasks(
   // 1. Add pinned tasks first
   for (let i = 0; i < context.pinnedTasks.length && combined.length < maxItems; i++) {
     const pin = context.pinnedTasks[i]
+    if (pin.status === 'done') continue
     if (context.nannyHiddenToday[pin.id]) continue
 
-    const matchedTask = findTaskByTitle(pin.title)
-    const proj = getProjectInfo(pin.project_id || (matchedTask ? matchedTask.project_id : ''))
-    const prio = matchedTask ? matchedTask.priority || '' : ''
-    const dueDate = matchedTask ? matchedTask.due_date || '' : ''
+    const proj = getProjectInfo(pin.project_id || '')
+    const prio = pin.priority || ''
+    const dueDate = pin.due_date || ''
 
     combined.push({
       title: pin.title,
-      taskId: matchedTask ? matchedTask.id : pin.id,
+      taskId: pin.id,
       pinId: pin.id,
       isPinned: true,
       source: 'pinned',
@@ -332,6 +326,22 @@ describe('TASK-1655: KDE Task List Building', () => {
     const taskItems = result.filter(item => !item.isHeader)
     expect(taskItems.length).toBe(1)
     expect(taskItems[0].title).toBe('Active task')
+  })
+
+  it('8. Done pinned tasks are excluded even if the pinned cache is stale', () => {
+    const ctx = {
+      ...defaultContext(),
+      pinnedTasks: [
+        { id: 'p1', title: 'Completed pin', status: 'done' },
+        { id: 'p2', title: 'Active pin', status: 'planned' },
+      ]
+    }
+
+    const result = buildNannyTaskListFromTasks([], ctx, TODAY)
+
+    const taskItems = result.filter(item => !item.isHeader)
+    expect(taskItems.length).toBe(1)
+    expect(taskItems[0].title).toBe('Active pin')
   })
 
   it('9. Today-only filter: only due_date=today included', () => {

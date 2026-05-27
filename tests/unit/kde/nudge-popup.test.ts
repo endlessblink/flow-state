@@ -48,6 +48,12 @@ interface NannyState {
   nannyLastSessionEndTime: number
   nannyQuietToday: boolean
   nannyQuietDate: number
+  nudgePopupVisible?: boolean
+  nannyPopupVisible?: boolean
+  tasks?: Array<{ id: string }>
+  pinnedTasks?: Array<{ id: string }>
+  nannyAllTasks?: Array<{ id: string }>
+  nannyHiddenToday?: Record<string, boolean>
 }
 
 function snooze30m(state: NannyState, now: number): NannyState {
@@ -75,6 +81,34 @@ function stopToday(state: NannyState, today: Date): NannyState {
     ...state,
     nannyQuietToday: true,
     nannyQuietDate: dayOfYear,
+  }
+}
+
+function recordTaskCompletionActivity(state: NannyState, taskId: string, now: number): NannyState {
+  const withoutTask = (items: Array<{ id: string }> = []) => items.filter(item => item.id !== taskId)
+
+  return {
+    ...state,
+    nudgePopupVisible: false,
+    nannyPopupVisible: false,
+    nannyLastNotifyTime: now,
+    nannyLastSessionEndTime: now,
+    tasks: withoutTask(state.tasks),
+    pinnedTasks: withoutTask(state.pinnedTasks),
+    nannyAllTasks: withoutTask(state.nannyAllTasks),
+    nannyHiddenToday: {
+      ...(state.nannyHiddenToday || {}),
+      [taskId]: true,
+    },
+  }
+}
+
+function restoreTaskAfterCompletionFailure(state: NannyState, taskId: string): NannyState {
+  const hidden = { ...(state.nannyHiddenToday || {}) }
+  delete hidden[taskId]
+  return {
+    ...state,
+    nannyHiddenToday: hidden,
   }
 }
 
@@ -243,6 +277,66 @@ describe('TASK-1654: KDE Nudge Popup Logic', () => {
     it('10. unknown tone falls back to gentle pool', () => {
       const msg = selectNudgeMessage('unknown-tone', 0)
       expect(NANNY_GENTLE_MESSAGES).toContain(msg)
+    })
+  })
+
+  describe('Task completion suppression', () => {
+    it('11. marking a task done dismisses both reminder popups', () => {
+      const result = recordTaskCompletionActivity({
+        nannyLastNotifyTime: 0,
+        nannyLastSessionEndTime: 0,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        nudgePopupVisible: true,
+        nannyPopupVisible: true,
+      }, 'task-1', 1700000000000)
+
+      expect(result.nudgePopupVisible).toBe(false)
+      expect(result.nannyPopupVisible).toBe(false)
+    })
+
+    it('11. marking a task done resets nudge timing so the next nanny tick is blocked', () => {
+      const now = 1700000000000
+      const result = recordTaskCompletionActivity({
+        nannyLastNotifyTime: 0,
+        nannyLastSessionEndTime: 0,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+      }, 'task-1', now)
+
+      expect(result.nannyLastNotifyTime).toBe(now)
+      expect(result.nannyLastSessionEndTime).toBe(now)
+    })
+
+    it('11. marking a task done removes it from every reminder cache immediately', () => {
+      const result = recordTaskCompletionActivity({
+        nannyLastNotifyTime: 0,
+        nannyLastSessionEndTime: 0,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        tasks: [{ id: 'task-1' }, { id: 'task-2' }],
+        pinnedTasks: [{ id: 'task-1' }],
+        nannyAllTasks: [{ id: 'task-1' }, { id: 'task-3' }],
+        nannyHiddenToday: {},
+      }, 'task-1', 1700000000000)
+
+      expect(result.tasks?.map(item => item.id)).toEqual(['task-2'])
+      expect(result.pinnedTasks).toEqual([])
+      expect(result.nannyAllTasks?.map(item => item.id)).toEqual(['task-3'])
+      expect(result.nannyHiddenToday?.['task-1']).toBe(true)
+    })
+
+    it('11. failed completion restores the task from the hidden-for-today guard', () => {
+      const result = restoreTaskAfterCompletionFailure({
+        nannyLastNotifyTime: 0,
+        nannyLastSessionEndTime: 0,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        nannyHiddenToday: { 'task-1': true, 'task-2': true },
+      }, 'task-1')
+
+      expect(result.nannyHiddenToday?.['task-1']).toBeUndefined()
+      expect(result.nannyHiddenToday?.['task-2']).toBe(true)
     })
   })
 })

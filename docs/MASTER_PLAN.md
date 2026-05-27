@@ -1,12 +1,26 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: May 26, 2026
+> **Last Updated**: May 27, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
 ---
 
 ## Active Tasks
+
+### ~~BUG-1805~~: KDE nanny nudge resurfaced after marking a task done (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-27)
+
+**Problem**: In the KDE widget, marking a task done could immediately let the nanny/nudge reminder resurface or keep the completed task in reminder-backed caches. The mark-done path only refreshed the visible task list, leaving popup state, idle timing, pinned tasks, and the unfiltered nanny task cache stale.
+
+**Fix**: `markTaskDone()` now treats completion as user activity: it dismisses nanny/nudge popups, resets the reminder timing gates, removes the task optimistically from visible/pinned/nanny caches, hides it from same-day reminder rebuilding, PATCHes `completed_at`/`updated_at`, and refreshes all reminder task caches after Supabase confirms. Failed PATCHes remove the hidden guard and refresh caches so the task is restored instead of silently disappearing. The nanny list builder also excludes stale done pinned entries defensively.
+
+**Regression tests**: KDE unit coverage now verifies mark-done popup dismissal, nudge timing reset, immediate cache removal, failed-completion hidden-guard rollback, and stale done pinned task exclusion. Full KDE unit suite passes.
+
+**Files**: `packages/kde-widget/contents/ui/main.qml`, `tests/unit/kde/nudge-popup.test.ts`, `tests/unit/kde/task-list-building.test.ts`.
+
+---
 
 ### ~~BUG-1804~~: Canvas refresh/update reload could mix fresh group geometry with stale task geometry (✅ DONE)
 
@@ -3559,6 +3573,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1452**~~ | **P2** | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05) |
 | ~~**TASK-1460**~~ | **P2** | ✅ **KDE Widget — Bump task limit to 100 + group by project** (✅ DONE 2026-03-06) |
 | ~~**BUG-1461**~~ | **P1** | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06) |
+| ~~**BUG-1805**~~ | **P1** | ✅ **KDE nanny nudge resurfaced after marking a task done** (✅ DONE 2026-05-27) |
 | ~~**TASK-1484**~~ | **P3** | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08) |
 | ~~**TASK-1496**~~ | **P2** | ✅ **Non-obstructive overflow tooltips on all truncated text app-wide** (✅ DONE 2026-03-09) |
 | **BUG-1498** | **P2** | 🔄 **Taskbar nanny not triggering after 5min idle without active task (INQUIRY-1489 regression)** |

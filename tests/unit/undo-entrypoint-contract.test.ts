@@ -135,4 +135,49 @@ describe('undo-aware modal and context-menu entry points', () => {
     expect(miniCanvas).toContain('taskStore.updateTaskWithUndo(task.id, { miniCanvasEdges: [...existing, edge] } as Partial<Task>)')
     expect(miniCanvas).not.toContain('taskStore.updateTask(task.id,')
   })
+
+  it('keeps calendar scheduling, resizing, and date moves undo-aware', () => {
+    const dayView = readSource('src/composables/calendar/useCalendarDayView.ts')
+    const weekView = readSource('src/composables/calendar/useCalendarWeekView.ts')
+    const monthView = readSource('src/composables/calendar/useCalendarMonthView.ts')
+    const vueCalView = readSource('src/views/CalendarViewVueCal.vue')
+    const calendarCore = readSource('src/composables/useCalendarCore.ts')
+    const contextMenuActions = readSource('src/composables/tasks/useTaskContextMenuActions.ts')
+
+    expect(dayView).toContain('await taskStore.updateTaskWithUndo(taskId, updates)')
+    expect(dayView).toContain('await taskStore.updateTaskWithUndo(taskId, {')
+    expect(dayView).toContain('await taskStore.createTaskWithUndo({')
+    expect(dayView).not.toContain('await taskStore.updateTask(taskId, { isInInbox: false })')
+    expect(dayView).not.toContain('taskStore.createTask({')
+    expect(dayView).not.toContain('taskStore.updateTaskInstance(calendarEvent.taskId')
+
+    expect(weekView).toContain('await taskStore.updateTaskWithUndo(taskId, {')
+    expect(weekView).toContain('await taskStore.createTaskWithUndo({')
+    expect(weekView).not.toContain('taskStore.createTask({')
+    expect(weekView).not.toContain('taskStore.updateTaskInstance(calendarEvent.taskId')
+
+    expect(monthView).toContain('await taskStore.updateTaskWithUndo(taskId, {')
+    expect(monthView).not.toContain('await taskStore.updateTask(taskId, {')
+
+    expect(vueCalView).toContain('await taskStore.updateTaskWithUndo(event.id, {')
+    expect(vueCalView).not.toContain('await taskStore.updateTask(event.id, {')
+
+    expect(calendarCore).toContain('await taskStore.updateTaskWithUndo(task.id, {')
+    expect(calendarCore).not.toContain('await taskStore.moveTask(task.id, nextStatus)')
+    expect(calendarCore).not.toContain('taskStore.updateTaskInstance(calendarEvent.taskId')
+
+    expect(contextMenuActions).toContain('await updateDueDateWithCalendarInstance(taskId,')
+    expect(contextMenuActions).not.toContain('await taskStore.updateTaskInstance(taskId, calendarInstanceId')
+  })
+
+  it('keeps drag reorder persistence atomic and undo-aware', () => {
+    const kanbanColumn = readSource('src/components/kanban/KanbanColumn.vue')
+    const taskList = readSource('src/components/tasks/TaskList.vue')
+
+    expect(kanbanColumn).toContain("await taskStore.bulkUpdateTasksWithUndo(orderUpdates, 'Reorder kanban column')")
+    expect(kanbanColumn).not.toContain('taskStore.updateTask(task.id, { order: index })')
+
+    expect(taskList).toContain("await taskStore.bulkUpdateTasksWithUndo(orderUpdates, 'Reorder task group')")
+    expect(taskList).not.toContain('taskStore.updateTask(t.id, { order: i })')
+  })
 })

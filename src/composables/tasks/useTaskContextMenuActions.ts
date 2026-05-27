@@ -34,6 +34,22 @@ export function useTaskContextMenuActions(
     const currentTask = computed(() => props.contextTask || props.task)
     const isBatchOperation = computed(() => (props.selectedCount || 0) > 1)
 
+    const updateDueDateWithCalendarInstance = async (taskId: string, dueDate: string, calendarInstanceId?: string) => {
+        const task = taskStore.getTask(taskId)
+        const instances = calendarInstanceId && task?.instances
+            ? task.instances.map(instance =>
+                instance.id === calendarInstanceId
+                    ? { ...instance, scheduledDate: dueDate }
+                    : instance
+            )
+            : undefined
+
+        await taskStore.updateTaskWithUndo(taskId, {
+            dueDate,
+            ...(instances ? { instances } : {})
+        })
+    }
+
     const handleEdit = () => {
         if (currentTask.value && !isBatchOperation.value) {
             emit('edit', currentTask.value.id)
@@ -63,11 +79,7 @@ export function useTaskContextMenuActions(
         // Handle custom date from date picker
         if (dateType === 'custom' && customDate) {
             try {
-                await taskStore.updateTaskWithUndo(taskId, { dueDate: customDate })
-                // TASK-1362: Also move calendar instance to new date
-                if (isCalendarEvent && calendarInstanceId) {
-                    await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: customDate })
-                }
+                await updateDueDateWithCalendarInstance(taskId, customDate, isCalendarEvent ? calendarInstanceId : undefined)
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
                 // Auto-route to matching canvas group (day-of-week groups, etc.).
@@ -140,11 +152,7 @@ export function useTaskContextMenuActions(
             try {
                 // Use ISO date format (YYYY-MM-DD) for Supabase compatibility
                 const formattedDate = formatDateKey(dueDate)
-                await taskStore.updateTaskWithUndo(taskId, { dueDate: formattedDate })
-                // TASK-1362: Also move calendar instance to the new date
-                if (isCalendarEvent && calendarInstanceId) {
-                    await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })
-                }
+                await updateDueDateWithCalendarInstance(taskId, formattedDate, isCalendarEvent ? calendarInstanceId : undefined)
                 canvasStore.requestSync('user:context-menu')
                 flashTaskCard(taskId)
                 // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups).

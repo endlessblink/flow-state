@@ -264,9 +264,10 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const dayColumnWidth = 100 / weekDays.value.length
 
     // TASK-1521: Override position with drag preview while dragging (preview-then-commit)
-    const isBeingDragged = weekDragPreview.value?.taskId === event.taskId && weekDragPreview.value?.isDragging
-    const previewSlot = isBeingDragged ? weekDragPreview.value!.previewSlot : event.startSlot
-    const previewDayIndex = isBeingDragged ? weekDragPreview.value!.previewDayIndex : event.dayIndex
+    const activePreview = weekDragPreview.value
+    const isBeingDragged = activePreview?.taskId === event.taskId && activePreview.isDragging
+    const previewSlot = isBeingDragged ? activePreview.previewSlot : event.startSlot
+    const previewDayIndex = isBeingDragged ? activePreview.previewDayIndex : event.dayIndex
 
     // Calculate column positioning within the day
     const eventWidthWithinDay = dayColumnWidth / event.totalColumns

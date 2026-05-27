@@ -11,9 +11,9 @@ import { randomBytes } from 'crypto'
  * session to it. The sidecar uses the anon key + that user's JWT, so every
  * query is RLS-scoped — no service-role key is ever shipped.
  *
- * Off by default; only spawned once the user enables it in Settings. A random
- * per-machine bearer token is generated and shown in Settings so the user can
- * paste it into Life OS Advisor.
+ * Task mutation/read endpoints stay off by default; the sidecar still starts
+ * when Electron has a signed-in session so the KDE widget can read the active
+ * timer over localhost without waiting for cloud realtime.
  */
 
 const DEFAULT_PORT = 5577
@@ -128,21 +128,18 @@ export function registerLocalApiHandlers() {
   // Persist (ensures a token exists on first run).
   saveConfig(config)
 
-  if (config.enabled) startChild()
-
   ipcMain.handle('localApi:setSession', (_e, session: SessionMessage) => {
     if (!session || !session.accessToken || !session.userId) return { ok: false }
     latestSession = session
-    if (config.enabled) {
-      startChild()
-      pushSession()
-    }
+    startChild()
+    pushSession()
     return { ok: true }
   })
 
   ipcMain.handle('localApi:clearSession', () => {
     latestSession = null
     if (child && listening) child.postMessage({ type: 'clear' })
+    if (!config.enabled) stopChild()
     return { ok: true }
   })
 
@@ -152,7 +149,7 @@ export function registerLocalApiHandlers() {
     if (config.enabled) {
       startChild()
       pushSession()
-    } else {
+    } else if (!latestSession) {
       stopChild()
     }
     return { ok: true, enabled: config.enabled }
@@ -162,8 +159,8 @@ export function registerLocalApiHandlers() {
 
   ipcMain.handle('localApi:status', () => ({
     enabled: config.enabled,
-    running: !!child,
-    listening,
+    running: config.enabled && !!child,
+    listening: config.enabled && listening,
     port: config.port,
   }))
 }

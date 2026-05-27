@@ -40,6 +40,10 @@ function buildActiveSessionUrl(supabaseUrl: string, userId: string): string {
   return supabaseUrl + '/rest/v1/timer_sessions?is_active=eq.true&user_id=eq.' + userId + '&select=*&order=updated_at.desc&limit=1'
 }
 
+function buildLocalTimerUrl(localApiUrl = 'http://127.0.0.1:5577'): string {
+  return localApiUrl + '/api/timer/current'
+}
+
 // --- Session data parser: extracts fields from REST response row ---
 interface SessionRow {
   id: string
@@ -162,6 +166,17 @@ describe('TASK-1652: KDE Timer Sync', () => {
   })
 
   describe('fetchCurrentSession REST call shape', () => {
+    it('2. checks Electron localhost timer bridge before falling back to Supabase', () => {
+      const localUrl = buildLocalTimerUrl()
+      expect(localUrl).toBe('http://127.0.0.1:5577/api/timer/current')
+
+      const fnStart = MAIN_QML.indexOf('function fetchCurrentSession(')
+      expect(fnStart, 'fetchCurrentSession not found').toBeGreaterThan(-1)
+      const body = MAIN_QML.slice(fnStart, fnStart + 500)
+      expect(body).toContain('fetchLocalCurrentSession(fetchSupabaseCurrentSession)')
+      expect(MAIN_QML).toContain('root.localApiUrl + "/api/timer/current"')
+    })
+
     it('2. fetchCurrentSession queries timer_sessions with is_active=eq.true', () => {
       const supabaseUrl = 'http://127.0.0.1:54321'
       const userId = '717f5209-42d8-4bb9-8781-740107a384e5'

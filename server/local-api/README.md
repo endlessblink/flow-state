@@ -2,20 +2,22 @@
 
 A tiny **localhost-only** HTTP API so another local app (Life OS Advisor) can
 read FlowState tasks for context and create/update them on explicit user
-approval. It reads/writes the **same Supabase `tasks` table** the app already
-uses, so the running UI keeps syncing live via its realtime subscription. No new
-runtime deps — Node's `http` + the existing `@supabase/supabase-js`.
+approval. It also exposes a read-only active timer snapshot for the KDE widget,
+so timers started in the Electron app are visible locally without waiting for
+cloud realtime. No new runtime deps — Node's `http` + the existing
+`@supabase/supabase-js`.
 
 It runs in one of two modes:
 
 ### Token mode (default in the desktop app) — recommended
 
-The Electron desktop app auto-spawns this sidecar as a `utilityProcess` when you
-enable it in **Settings → Account → Local Task API (Life OS)**. The app forwards
-your logged-in Supabase session (anon key + your access-token JWT), so every
-query is **RLS-scoped to you** — no service-role key, nothing secret shipped.
-Settings shows the port and a per-machine **bearer token**; paste that token into
-Life OS. The sidecar is **off by default** and only listens while the app is open.
+The Electron desktop app auto-spawns this sidecar as a `utilityProcess` while
+you are signed in so the KDE widget can read the timer bridge. Task endpoints
+remain disabled for external apps until you enable **Settings → Account → Local
+Task API (Life OS)**. The app forwards your logged-in Supabase session (anon key
++ your access-token JWT), so every query is **RLS-scoped to you** — no
+service-role key, nothing secret shipped. Settings shows the port and a
+per-machine **bearer token**; paste that token into Life OS.
 
 You don't run anything by hand for this mode — just toggle it on in Settings.
 
@@ -64,6 +66,24 @@ until the app forwards a session (and after sign-out).
 ### `GET /api/health`
 ```json
 { "ok": true }
+```
+
+### `GET /api/timer/current`
+Loopback-only read endpoint used by the KDE widget. It does not require the Life
+OS bearer token, but it does require the Electron app to be signed in and to have
+forwarded a session to the sidecar.
+
+```json
+// active
+{ "active": true, "session": {
+  "id": "uuid", "task_id": "uuid-or-general", "duration": 1500,
+  "remaining_time": 1461, "is_active": true, "is_paused": false,
+  "is_break": false, "device_leader_id": "electron-device-id",
+  "device_leader_last_seen": "2026-05-27T10:15:00.000Z"
+} }
+
+// inactive
+{ "active": false, "session": null }
 ```
 
 ### `GET /api/tasks?status=todo&due=today&limit=25`

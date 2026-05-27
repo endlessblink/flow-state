@@ -4,8 +4,9 @@
  *
  * A tiny, localhost-only HTTP surface so another local app (Life OS Advisor)
  * can read FlowState tasks for context and create/update them on explicit
- * user approval. Additive: writes go to the same Supabase `tasks` table the
- * Vue app already subscribes to via realtime, so the UI keeps syncing.
+ * user approval. It also exposes a read-only active timer snapshot for the KDE
+ * widget over loopback so desktop timer state is live even when cloud realtime
+ * is delayed.
  *
  * Transport: Node's built-in `http` (no Express/Fastify). Reuses
  * `@supabase/supabase-js` (bundled by esbuild for the packaged app).
@@ -346,6 +347,23 @@ async function handleDeleteTask(id, res) {
   send(res, 200, { ok: true })
 }
 
+async function handleGetCurrentTimer(res) {
+  const { supabase, userId } = ctx
+  const { data, error } = await supabase
+    .from('timer_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) return send(res, 500, { error: error.message })
+  if (!data) return send(res, 200, { active: false, session: null })
+
+  send(res, 200, { active: true, session: data })
+}
+
 // --- Server -----------------------------------------------------------------
 
 const server = http.createServer(async (req, res) => {
@@ -354,21 +372,26 @@ const server = http.createServer(async (req, res) => {
     if (!isLoopbackHost(req.headers.host)) {
       return send(res, 403, { error: 'forbidden host' })
     }
-    if (TOKEN) {
-      const auth = req.headers.authorization || ''
-      if (auth !== `Bearer ${TOKEN}`) return send(res, 401, { error: 'unauthorized' })
-    }
-
     const url = new URL(req.url, `http://${req.headers.host}`)
     const path = url.pathname
 
-    // Health is always available, even before a session arrives.
+    // Health and the KDE timer snapshot are loopback-only and intentionally do
+    // not require the Life OS bearer token. Task routes below remain protected.
     if (req.method === 'GET' && path === '/api/health') {
       return send(res, 200, { ok: true })
     }
 
     // Data routes require an auth context (token mode: until the app signs in).
     if (!ctx) return send(res, 503, { error: 'not signed in' })
+
+    if (req.method === 'GET' && path === '/api/timer/current') {
+      return await handleGetCurrentTimer(res)
+    }
+
+    if (TOKEN) {
+      const auth = req.headers.authorization || ''
+      if (auth !== `Bearer ${TOKEN}`) return send(res, 401, { error: 'unauthorized' })
+    }
 
     if (req.method === 'GET' && path === '/api/tasks') {
       return await handleGetTasks(url, res)

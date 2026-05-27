@@ -177,6 +177,17 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(MAIN_QML).toContain('root.localApiUrl + "/api/timer/current"')
     })
 
+    it('2. applies active localhost timer payloads and falls back to Supabase on local misses', () => {
+      const localFnStart = MAIN_QML.indexOf('function fetchLocalCurrentSession(')
+      expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)
+      const body = MAIN_QML.slice(localFnStart, localFnStart + 2500)
+
+      expect(body).toContain('root.localApiUrl + "/api/timer/current"')
+      expect(body).toContain('body.active && body.session')
+      expect(body).toContain('applyFetchedSession(body.session, "local-api")')
+      expect(body).toContain('fallback()')
+    })
+
     it('2. fetchCurrentSession queries timer_sessions with is_active=eq.true', () => {
       const supabaseUrl = 'http://127.0.0.1:54321'
       const userId = '717f5209-42d8-4bb9-8781-740107a384e5'

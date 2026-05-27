@@ -48,12 +48,15 @@ interface NannyState {
   nannyLastSessionEndTime: number
   nannyQuietToday: boolean
   nannyQuietDate: number
+  isAuthenticated?: boolean
+  userId?: string
   nudgePopupVisible?: boolean
   nannyPopupVisible?: boolean
   tasks?: Array<{ id: string }>
   pinnedTasks?: Array<{ id: string }>
   nannyAllTasks?: Array<{ id: string }>
   nannyHiddenToday?: Record<string, boolean>
+  refreshCalls?: string[]
 }
 
 function snooze30m(state: NannyState, now: number): NannyState {
@@ -110,6 +113,66 @@ function restoreTaskAfterCompletionFailure(state: NannyState, taskId: string): N
     ...state,
     nannyHiddenToday: hidden,
   }
+}
+
+interface MarkDoneRequest {
+  method: 'PATCH'
+  url: string
+  body: {
+    status: 'done'
+    completed_at: string
+    updated_at: string
+  }
+}
+
+interface MarkDoneResult {
+  state: NannyState
+  request?: MarkDoneRequest
+}
+
+function markTaskDoneModel(
+  state: NannyState,
+  taskId: string | undefined,
+  now: number,
+  isoNow = '2026-05-27T10:00:00.000Z'
+): MarkDoneResult {
+  if (!state.isAuthenticated || !taskId) return { state }
+
+  const nextState = recordTaskCompletionActivity(state, taskId, now)
+
+  return {
+    state: nextState,
+    request: {
+      method: 'PATCH',
+      url: `/rest/v1/tasks?id=eq.${taskId}&user_id=eq.${state.userId}`,
+      body: {
+        status: 'done',
+        completed_at: isoNow,
+        updated_at: isoNow,
+      },
+    },
+  }
+}
+
+function refreshTaskReminderCachesModel(state: NannyState): NannyState {
+  return {
+    ...state,
+    refreshCalls: [
+      ...(state.refreshCalls || []),
+      'fetchTasks',
+      'fetchPinnedTasks',
+      'fetchNannyTasks',
+      'buildNannyTaskList',
+    ],
+  }
+}
+
+function completeMarkDoneSuccessfully(state: NannyState): NannyState {
+  return refreshTaskReminderCachesModel(state)
+}
+
+function failMarkDone(state: NannyState, taskId: string): NannyState {
+  return refreshTaskReminderCachesModel(restoreTaskAfterCompletionFailure(state, taskId))
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +344,48 @@ describe('TASK-1654: KDE Nudge Popup Logic', () => {
   })
 
   describe('Task completion suppression', () => {
+    it('11. unauthenticated mark-done does not mutate reminder state or send a request', () => {
+      const state: NannyState = {
+        isAuthenticated: false,
+        nannyLastNotifyTime: 1,
+        nannyLastSessionEndTime: 2,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        nudgePopupVisible: true,
+        nannyPopupVisible: true,
+        tasks: [{ id: 'task-1' }],
+        pinnedTasks: [{ id: 'task-1' }],
+        nannyAllTasks: [{ id: 'task-1' }],
+        nannyHiddenToday: {},
+      }
+
+      const result = markTaskDoneModel(state, 'task-1', 1700000000000)
+
+      expect(result.request).toBeUndefined()
+      expect(result.state).toEqual(state)
+    })
+
+    it('11. missing task id does not mutate reminder state or send a request', () => {
+      const state: NannyState = {
+        isAuthenticated: true,
+        nannyLastNotifyTime: 1,
+        nannyLastSessionEndTime: 2,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        nudgePopupVisible: true,
+        nannyPopupVisible: true,
+        tasks: [{ id: 'task-1' }],
+        pinnedTasks: [{ id: 'task-1' }],
+        nannyAllTasks: [{ id: 'task-1' }],
+        nannyHiddenToday: {},
+      }
+
+      const result = markTaskDoneModel(state, '', 1700000000000)
+
+      expect(result.request).toBeUndefined()
+      expect(result.state).toEqual(state)
+    })
+
     it('11. marking a task done dismisses both reminder popups', () => {
       const result = recordTaskCompletionActivity({
         nannyLastNotifyTime: 0,
@@ -308,21 +413,71 @@ describe('TASK-1654: KDE Nudge Popup Logic', () => {
       expect(result.nannyLastSessionEndTime).toBe(now)
     })
 
-    it('11. marking a task done removes it from every reminder cache immediately', () => {
+    it('11. marking a task done removes it from every reminder cache immediately, including duplicates', () => {
       const result = recordTaskCompletionActivity({
         nannyLastNotifyTime: 0,
         nannyLastSessionEndTime: 0,
         nannyQuietToday: false,
         nannyQuietDate: -1,
-        tasks: [{ id: 'task-1' }, { id: 'task-2' }],
-        pinnedTasks: [{ id: 'task-1' }],
-        nannyAllTasks: [{ id: 'task-1' }, { id: 'task-3' }],
+        tasks: [{ id: 'task-1' }, { id: 'task-2' }, { id: 'task-1' }],
+        pinnedTasks: [{ id: 'task-1' }, { id: 'task-4' }],
+        nannyAllTasks: [{ id: 'task-1' }, { id: 'task-3' }, { id: 'task-1' }],
         nannyHiddenToday: {},
       }, 'task-1', 1700000000000)
 
       expect(result.tasks?.map(item => item.id)).toEqual(['task-2'])
-      expect(result.pinnedTasks).toEqual([])
+      expect(result.pinnedTasks?.map(item => item.id)).toEqual(['task-4'])
       expect(result.nannyAllTasks?.map(item => item.id)).toEqual(['task-3'])
+      expect(result.nannyHiddenToday?.['task-1']).toBe(true)
+    })
+
+    it('11. mark-done PATCH is scoped to the signed-in user and writes completion timestamps', () => {
+      const result = markTaskDoneModel({
+        isAuthenticated: true,
+        userId: 'user-123',
+        nannyLastNotifyTime: 0,
+        nannyLastSessionEndTime: 0,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        tasks: [{ id: 'task-1' }],
+        pinnedTasks: [{ id: 'task-1' }],
+        nannyAllTasks: [{ id: 'task-1' }],
+        nannyHiddenToday: {},
+      }, 'task-1', 1700000000000, '2026-05-27T10:00:00.000Z')
+
+      expect(result.request).toEqual({
+        method: 'PATCH',
+        url: '/rest/v1/tasks?id=eq.task-1&user_id=eq.user-123',
+        body: {
+          status: 'done',
+          completed_at: '2026-05-27T10:00:00.000Z',
+          updated_at: '2026-05-27T10:00:00.000Z',
+        },
+      })
+    })
+
+    it('11. successful completion refreshes every task source that can feed reminders', () => {
+      const marked = markTaskDoneModel({
+        isAuthenticated: true,
+        userId: 'user-123',
+        nannyLastNotifyTime: 0,
+        nannyLastSessionEndTime: 0,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        tasks: [{ id: 'task-1' }],
+        pinnedTasks: [{ id: 'task-1' }],
+        nannyAllTasks: [{ id: 'task-1' }],
+        nannyHiddenToday: {},
+      }, 'task-1', 1700000000000).state
+
+      const result = completeMarkDoneSuccessfully(marked)
+
+      expect(result.refreshCalls).toEqual([
+        'fetchTasks',
+        'fetchPinnedTasks',
+        'fetchNannyTasks',
+        'buildNannyTaskList',
+      ])
       expect(result.nannyHiddenToday?.['task-1']).toBe(true)
     })
 
@@ -337,6 +492,32 @@ describe('TASK-1654: KDE Nudge Popup Logic', () => {
 
       expect(result.nannyHiddenToday?.['task-1']).toBeUndefined()
       expect(result.nannyHiddenToday?.['task-2']).toBe(true)
+    })
+
+    it('11. failed completion refreshes caches after removing only the failed task guard', () => {
+      const marked = markTaskDoneModel({
+        isAuthenticated: true,
+        userId: 'user-123',
+        nannyLastNotifyTime: 0,
+        nannyLastSessionEndTime: 0,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        tasks: [{ id: 'task-1' }, { id: 'task-2' }],
+        pinnedTasks: [{ id: 'task-1' }],
+        nannyAllTasks: [{ id: 'task-1' }],
+        nannyHiddenToday: { 'task-2': true },
+      }, 'task-1', 1700000000000).state
+
+      const result = failMarkDone(marked, 'task-1')
+
+      expect(result.nannyHiddenToday?.['task-1']).toBeUndefined()
+      expect(result.nannyHiddenToday?.['task-2']).toBe(true)
+      expect(result.refreshCalls).toEqual([
+        'fetchTasks',
+        'fetchPinnedTasks',
+        'fetchNannyTasks',
+        'buildNannyTaskList',
+      ])
     })
   })
 })

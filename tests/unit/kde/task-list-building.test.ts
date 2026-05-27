@@ -344,6 +344,59 @@ describe('TASK-1655: KDE Task List Building', () => {
     expect(taskItems[0].title).toBe('Active pin')
   })
 
+  it('8. Hidden pinned tasks are excluded even if they are still present in the pinned cache', () => {
+    const ctx = {
+      ...defaultContext(),
+      pinnedTasks: [
+        { id: 'p1', title: 'Completed from popup', status: 'planned' },
+        { id: 'p2', title: 'Still active', status: 'planned' },
+      ],
+      nannyHiddenToday: { p1: true }
+    }
+
+    const result = buildNannyTaskListFromTasks([], ctx, TODAY)
+
+    const taskItems = result.filter(item => !item.isHeader)
+    expect(taskItems.length).toBe(1)
+    expect(taskItems[0].title).toBe('Still active')
+  })
+
+  it('8. Completed task is excluded from both stale pinned and unfiltered nanny task caches', () => {
+    const tasks: KdeTask[] = [
+      { id: 't1', title: 'Done in popup', status: 'done', due_date: `${TODAY}T10:00:00Z` },
+      { id: 't2', title: 'Active today', status: 'planned', due_date: `${TODAY}T10:00:00Z` },
+    ]
+    const ctx = {
+      ...defaultContext(),
+      pinnedTasks: [
+        { id: 't1', title: 'Done in popup', status: 'done', due_date: `${TODAY}T10:00:00Z` },
+      ]
+    }
+
+    const result = buildNannyTaskListFromTasks(tasks, ctx, TODAY)
+
+    const taskItems = result.filter(item => !item.isHeader)
+    expect(taskItems.map(item => item.title)).toEqual(['Active today'])
+  })
+
+  it('8. Pinned task suppresses the matching recent task so a task cannot reappear twice', () => {
+    const tasks: KdeTask[] = [
+      { id: 't1', title: 'Pinned duplicate', status: 'planned', due_date: `${TODAY}T10:00:00Z` },
+    ]
+    const ctx = {
+      ...defaultContext(),
+      pinnedTasks: [
+        { id: 't1', title: 'Pinned duplicate', status: 'planned', due_date: `${TODAY}T10:00:00Z` },
+      ]
+    }
+
+    const result = buildNannyTaskListFromTasks(tasks, ctx, TODAY)
+
+    const taskItems = result.filter(item => !item.isHeader)
+    expect(taskItems.length).toBe(1)
+    expect(taskItems[0].source).toBe('pinned')
+  })
+
   it('9. Today-only filter: only due_date=today included', () => {
     const tasks: KdeTask[] = [
       { id: 't1', title: 'Today task', due_date: `${TODAY}T10:00:00Z` },

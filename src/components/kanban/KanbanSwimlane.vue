@@ -37,7 +37,7 @@
     <div v-if="!isCollapsed" ref="scrollContainer" class="table-scroll-container">
       <div class="swimlane-body">
         <!-- Status View Columns -->
-        <template v-if="currentViewType === 'status'">
+        <template v-if="currentViewType as any === 'status'">
           <KanbanColumn
             v-for="column in statusColumns"
             :key="column.key"
@@ -63,7 +63,7 @@
             v-for="column in dateColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="tasksByDate[column.key]"
             column-type="date"
             :swimlane-id="project.id"
@@ -84,7 +84,7 @@
             v-for="column in categoryColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="tasksByCategory[column.key] || []"
             column-type="category"
             swimlane-id="category"
@@ -105,7 +105,7 @@
             v-for="column in priorityColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="tasksByPriority[column.key]"
             column-type="priority"
             :swimlane-id="project.id"

@@ -12,7 +12,9 @@
           <div class="celebration-icon">🎉</div>
           <h2 class="celebration-title">All tasks complete!</h2>
           <p class="celebration-subtitle">Great day! You crushed your Big 3.</p>
-          <router-link to="/" class="flow-link">View full board →</router-link>
+          <router-link to="/" class="flow-link">
+      View full board →
+    </router-link>
         </div>
       </Transition>
 
@@ -52,7 +54,9 @@
           </TransitionGroup>
         </div>
 
-        <router-link to="/" class="flow-link">View full board →</router-link>
+        <router-link to="/" class="flow-link">
+      View full board →
+    </router-link>
       </template>
     </div>
   </div>

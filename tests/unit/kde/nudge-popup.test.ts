@@ -52,9 +52,9 @@ interface NannyState {
   userId?: string
   nudgePopupVisible?: boolean
   nannyPopupVisible?: boolean
-  tasks?: Array<{ id: string }>
-  pinnedTasks?: Array<{ id: string }>
-  nannyAllTasks?: Array<{ id: string }>
+  tasks?: Array<{ id: string; title?: string; status?: string; due_date?: string; isHeader?: boolean }>
+  pinnedTasks?: Array<{ id: string; title?: string; status?: string; due_date?: string; isHeader?: boolean }>
+  nannyAllTasks?: Array<{ id: string; title?: string; status?: string; due_date?: string; isHeader?: boolean }>
   nannyHiddenToday?: Record<string, boolean>
   refreshCalls?: string[]
 }
@@ -173,6 +173,44 @@ function completeMarkDoneSuccessfully(state: NannyState): NannyState {
 
 function failMarkDone(state: NannyState, taskId: string): NannyState {
   return refreshTaskReminderCachesModel(restoreTaskAfterCompletionFailure(state, taskId))
+}
+
+function normalizeTaskDate(value: string | undefined): string {
+  if (!value) return ''
+  const trimmed = value.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+  if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) return trimmed.substring(0, 10)
+
+  const parsed = new Date(trimmed)
+  if (!Number.isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear()
+    const month = String(parsed.getMonth() + 1).padStart(2, '0')
+    const day = String(parsed.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  return ''
+}
+
+function isTaskReminderActionable(
+  task: { id: string; title?: string; status?: string; due_date?: string; isHeader?: boolean } | undefined,
+  hiddenToday: Record<string, boolean>,
+  todayStr: string
+): boolean {
+  if (!task || task.isHeader || !task.id || !task.title) return false
+  if (task.status === 'done' || hiddenToday[task.id]) return false
+  return normalizeTaskDate(task.due_date) === todayStr
+}
+
+function hasActionableNannyTasks(state: NannyState, todayStr: string): boolean {
+  const hiddenToday = state.nannyHiddenToday || {}
+
+  for (const pin of state.pinnedTasks || []) {
+    if (pin?.id && pin.title && pin.status !== 'done' && !hiddenToday[pin.id]) return true
+  }
+
+  const allTasks = (state.nannyAllTasks?.length || 0) > 0 ? state.nannyAllTasks : state.tasks
+  return (allTasks || []).some(task => isTaskReminderActionable(task, hiddenToday, todayStr))
 }
 
 // ---------------------------------------------------------------------------
@@ -518,6 +556,43 @@ describe('TASK-1654: KDE Nudge Popup Logic', () => {
         'fetchNannyTasks',
         'buildNannyTaskList',
       ])
+    })
+
+    it('11. nudge is blocked after the final actionable reminder task is completed', () => {
+      const marked = markTaskDoneModel({
+        isAuthenticated: true,
+        userId: 'user-1',
+        nannyLastNotifyTime: 0,
+        nannyLastSessionEndTime: 0,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        tasks: [{ id: 'task-1', title: 'Done in popup', status: 'planned', due_date: '2026-05-27T10:00:00Z' }],
+        pinnedTasks: [{ id: 'task-1', title: 'Done in popup', status: 'planned' }],
+        nannyAllTasks: [{ id: 'task-1', title: 'Done in popup', status: 'planned', due_date: '2026-05-27T10:00:00Z' }],
+        nannyHiddenToday: {},
+      }, 'task-1', 1700000000000)
+
+      expect(hasActionableNannyTasks(marked.state, '2026-05-27')).toBe(false)
+    })
+
+    it('11. nudge remains allowed when another visible pinned reminder task exists', () => {
+      const marked = markTaskDoneModel({
+        isAuthenticated: true,
+        userId: 'user-1',
+        nannyLastNotifyTime: 0,
+        nannyLastSessionEndTime: 0,
+        nannyQuietToday: false,
+        nannyQuietDate: -1,
+        tasks: [{ id: 'task-1', title: 'Done in popup', status: 'planned', due_date: '2026-05-27T10:00:00Z' }],
+        pinnedTasks: [
+          { id: 'task-1', title: 'Done in popup', status: 'planned' },
+          { id: 'task-2', title: 'Still pinned', status: 'planned' },
+        ],
+        nannyAllTasks: [{ id: 'task-1', title: 'Done in popup', status: 'planned', due_date: '2026-05-27T10:00:00Z' }],
+        nannyHiddenToday: {},
+      }, 'task-1', 1700000000000)
+
+      expect(hasActionableNannyTasks(marked.state, '2026-05-27')).toBe(true)
     })
   })
 })

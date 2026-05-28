@@ -269,6 +269,11 @@ PlasmoidItem {
 
     // ===== NUDGE: Simple reminder popup (separate from nanny task picker) =====
     function sendNannyNotification() {
+        if (!root.hasActionableNannyTasks()) {
+            console.log("[NUDGE] Suppressed: no actionable reminder tasks")
+            return
+        }
+
         var tone = plasmoid.configuration.nannyTone || "gentle"
         var messages = tone === "direct" ? root.nannyDirectMessages : root.nannyGentleMessages
         var msg = messages[Math.floor(Math.random() * messages.length)]
@@ -3988,9 +3993,19 @@ PlasmoidItem {
             // Check we haven't notified within the interval
             if (root.nannyLastNotifyTime > 0 && (now - root.nannyLastNotifyTime) < intervalMs) { console.log("[NUDGE] Blocked: already notified recently"); return }
 
-            // All conditions met - send nudge
-            console.log("[NUDGE] All gates passed — showing nudge!")
-            root.sendNannyNotification()
+            // All timing/session gates passed. Refresh the reminder-backed task
+            // cache before interrupting so a just-completed task, a completed
+            // final task, or a stale failed cache cannot produce a phantom nudge.
+            root.fetchNannyTasks(function() {
+                root.buildNannyTaskList()
+                if (!root.hasActionableNannyTasks()) {
+                    console.log("[NUDGE] Blocked: no actionable reminder tasks")
+                    return
+                }
+
+                console.log("[NUDGE] All gates passed — showing nudge!")
+                root.sendNannyNotification()
+            })
         }
     }
 
@@ -4864,6 +4879,28 @@ PlasmoidItem {
         console.log("[NUDGE] Suppressed after task completion:", taskId)
     }
 
+    function isTaskReminderActionable(task) {
+        if (!task || task.isHeader || !task.id || !task.title) return false
+        if (task.status === "done" || root.nannyHiddenToday[task.id]) return false
+
+        var todayStr = root.localDateString(new Date())
+        return root.normalizeTaskDate(task.due_date) === todayStr
+    }
+
+    function hasActionableNannyTasks() {
+        for (var i = 0; i < root.pinnedTasks.length; i++) {
+            var pin = root.pinnedTasks[i]
+            if (pin && pin.id && pin.title && pin.status !== "done" && !root.nannyHiddenToday[pin.id]) return true
+        }
+
+        var allTasks = root.nannyAllTasks.length > 0 ? root.nannyAllTasks : root.tasks
+        for (var j = 0; j < allTasks.length; j++) {
+            if (root.isTaskReminderActionable(allTasks[j])) return true
+        }
+
+        return false
+    }
+
     function removeTaskFromReminderCaches(taskId) {
         function withoutTaskId(items) {
             var kept = []
@@ -5575,7 +5612,7 @@ PlasmoidItem {
         }
 
         var xhr = new XMLHttpRequest()
-        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,project_id&status=neq.done&is_deleted=eq.false&order=due_date.asc.nullslast,created_at.desc&limit=100"
+        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,project_id&user_id=eq." + root.userId + "&status=neq.done&is_deleted=eq.false&order=due_date.asc.nullslast,created_at.desc&limit=100"
         xhr.open("GET", url, true)
         xhr.setRequestHeader("apikey", root.supabaseKey)
         xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)

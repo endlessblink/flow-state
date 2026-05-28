@@ -1,12 +1,28 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: May 27, 2026
+> **Last Updated**: May 28, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
 ---
 
 ## Active Tasks
+
+### ~~BUG-1806~~: Mark-done can still trigger phantom nudge state (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-28)
+
+**Problem**: After the first KDE mark-done cleanup, the generic nudge timer could still interrupt later because its final gate only checked idle/session timing. It did not prove there was an actionable reminder task after the completed task was hidden/refreshed.
+
+**Fix**: The KDE nudge path is now task-backed. The timer refreshes the unfiltered nanny task cache, rebuilds the reminder list, and only calls `sendNannyNotification()` when `hasActionableNannyTasks()` finds a non-hidden, non-done pinned task or a non-hidden, non-done task due today. `sendNannyNotification()` has the same guard defensively, and the nanny REST query is scoped by `user_id`.
+
+**Regression tests**: KDE unit coverage now verifies the final actionable reminder task blocks future nudges, while another visible pinned task still allows reminders. Canvas mark-done E2E now waits for initial Vue Flow transform settling and verifies mark-done does not move sibling task geometry.
+
+**Verified**: `npm test -- --run tests/unit/kde/nudge-popup.test.ts tests/unit/kde/nanny-gates.test.ts tests/unit/kde/task-list-building.test.ts` (59/59), `npm test -- --run tests/unit/kde` (151/151), focused Playwright mark-done canvas regression, `npm run type-check`, `npm run electron:build`, `./scripts/deploy-electron-update.sh`; public updater manifest shows `1.4.78`.
+
+**Files**: `packages/kde-widget/contents/ui/main.qml`, `tests/unit/kde/nudge-popup.test.ts`, `tests/e2e/canvas-geometry-local.spec.ts`.
+
+---
 
 ### ~~BUG-1805~~: KDE nanny nudge resurfaced after marking a task done (✅ DONE)
 
@@ -3573,6 +3589,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1452**~~ | **P2** | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05) |
 | ~~**TASK-1460**~~ | **P2** | ✅ **KDE Widget — Bump task limit to 100 + group by project** (✅ DONE 2026-03-06) |
 | ~~**BUG-1461**~~ | **P1** | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06) |
+| ~~**BUG-1806**~~ | **P1** | ✅ **Mark-done can still trigger phantom nudge state** (✅ DONE 2026-05-28, shipped v1.4.78) |
 | ~~**BUG-1805**~~ | **P1** | ✅ **KDE nanny nudge resurfaced after marking a task done** (✅ DONE 2026-05-27) |
 | ~~**TASK-1484**~~ | **P3** | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08) |
 | ~~**TASK-1496**~~ | **P2** | ✅ **Non-obstructive overflow tooltips on all truncated text app-wide** (✅ DONE 2026-03-09) |

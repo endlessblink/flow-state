@@ -28,7 +28,9 @@ const setupCanvas = async (page: Page) => {
   await page.waitForFunction(() => {
     const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, unknown> } } } } } } | null
     const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
-    return !!pinia?._s.get('tasks') && !!pinia?._s.get('canvas') && !!pinia?._s.get('settings')
+    const taskStore = pinia?._s.get('tasks') as { _hasInitializedOnce?: boolean } | undefined
+    const canvasStore = pinia?._s.get('canvas') as { _hasInitializedOnce?: boolean } | undefined
+    return !!taskStore?._hasInitializedOnce && !!canvasStore?._hasInitializedOnce && !!pinia?._s.get('settings')
   }, { timeout: 30_000 })
 }
 
@@ -99,6 +101,21 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[]) =>
     timeout: 15_000,
     message: `Expected seeded canvas nodes to render for groups=${groups.map((group) => group.id).join(',')} tasks=${tasks.map((task) => task.id).join(',')}`,
   }).toBe(true)
+
+  await page.waitForFunction(() => {
+    const pane = document.querySelector<HTMLElement>('.vue-flow__transformationpane')
+    if (!pane) return false
+    const transform = window.getComputedStyle(pane).transform
+    const now = performance.now()
+    const state = window as typeof window & {
+      __flowstateCanvasTransformIdle?: { transform: string; since: number }
+    }
+    if (!state.__flowstateCanvasTransformIdle || state.__flowstateCanvasTransformIdle.transform !== transform) {
+      state.__flowstateCanvasTransformIdle = { transform, since: now }
+      return false
+    }
+    return now - state.__flowstateCanvasTransformIdle.since >= 250
+  }, { timeout: 5_000 })
 }
 
 const clickToolbar = async (page: Page, titlePattern: RegExp) => {
@@ -170,14 +187,14 @@ const readTaskEdgeGaps = async (page: Page, ids: string[]) => page.evaluate((ids
 
 const readRenderedTaskPositions = async (page: Page, ids: string[]) => page.evaluate((ids) => {
   return ids.map((id) => {
-    const element = document.querySelector(`[data-id="${id}"]`) as HTMLElement | null
+    const element = document.querySelector(`.vue-flow__node[data-id="${CSS.escape(id)}"]`) as HTMLElement | null
     const rect = element?.getBoundingClientRect()
     if (!rect) return null
     return {
       id,
       left: Math.round(rect.left),
       top: Math.round(rect.top),
-      hidden: element.closest('.vue-flow__node')?.classList.contains('hidden') ?? false,
+      hidden: element.classList.contains('hidden'),
     }
   })
 }, ids)
@@ -221,9 +238,80 @@ const dragInboxTaskToCanvas = async (page: Page, title: string, targetSelector =
 }
 
 const readCanvasViewportTransform = async (page: Page) => page.evaluate(() => {
-  const viewport = document.querySelector<HTMLElement>('.vue-flow__viewport')
-  return viewport?.style.transform || null
+  const viewport = document.querySelector<HTMLElement>('.vue-flow__transformationpane')
+  return viewport ? window.getComputedStyle(viewport).transform : null
 })
+
+const readCanvasViewportSnapshot = async (page: Page) => page.evaluate(() => {
+  const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
+  const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
+  const canvasStore = pinia?._s.get('canvas')
+  const viewport = document.querySelector<HTMLElement>('.vue-flow__viewport')
+  const transformationPane = document.querySelector<HTMLElement>('.vue-flow__transformationpane')
+  const pane = document.querySelector<HTMLElement>('.vue-flow')
+  const container = document.querySelector<HTMLElement>('.canvas-container')
+
+  return {
+    domTransform: viewport?.style.transform || null,
+    transformationPaneTransform: transformationPane ? window.getComputedStyle(transformationPane).transform : null,
+    storeViewport: canvasStore?.viewport
+      ? {
+        x: Math.round(canvasStore.viewport.x),
+        y: Math.round(canvasStore.viewport.y),
+        zoom: Number(canvasStore.viewport.zoom?.toFixed?.(3) ?? canvasStore.viewport.zoom),
+      }
+      : null,
+    windowScroll: { x: Math.round(window.scrollX), y: Math.round(window.scrollY) },
+    paneScroll: pane ? { left: Math.round(pane.scrollLeft), top: Math.round(pane.scrollTop) } : null,
+    containerScroll: container ? { left: Math.round(container.scrollLeft), top: Math.round(container.scrollTop) } : null,
+  }
+})
+
+const readCanvasNodeSnapshot = async (page: Page, ids: string[]) => page.evaluate((ids) => {
+  return ids.map((id) => {
+    const node = document.querySelector<HTMLElement>(`.vue-flow__node[data-id="${CSS.escape(id)}"]`)
+    const rect = node?.getBoundingClientRect()
+    const style = node ? window.getComputedStyle(node) : null
+    const ancestors: Array<{ className: string; transform: string; rect: { left: number; top: number; width: number; height: number } }> = []
+    let parent = node?.parentElement ?? null
+    while (parent && ancestors.length < 8) {
+      const parentStyle = window.getComputedStyle(parent)
+      const parentRect = parent.getBoundingClientRect()
+      ancestors.push({
+        className: String(parent.className || parent.tagName),
+        transform: parentStyle.transform,
+        rect: {
+          left: Math.round(parentRect.left),
+          top: Math.round(parentRect.top),
+          width: Math.round(parentRect.width),
+          height: Math.round(parentRect.height),
+        },
+      })
+      parent = parent.parentElement
+    }
+    return {
+      id,
+      rect: rect
+        ? {
+          left: Math.round(rect.left),
+          top: Math.round(rect.top),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        }
+        : null,
+      style: style
+        ? {
+          transform: style.transform,
+          display: style.display,
+          visibility: style.visibility,
+          position: style.position,
+        }
+        : null,
+      className: node?.className ?? null,
+      ancestors,
+    }
+  })
+}, ids)
 
 const dayIdByIndex = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 const dayNameByIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -468,6 +556,8 @@ test.describe('local canvas geometry regressions', () => {
       .filter((task) => trackedIds.includes(task.id))
       .sort((a, b) => a.id.localeCompare(b.id))
     const beforeRendered = await readRenderedTaskPositions(page, trackedIds)
+    const beforeViewport = await readCanvasViewportSnapshot(page)
+    const beforeNodes = await readCanvasNodeSnapshot(page, ['section-done-shift-group', ...trackedIds])
 
     await page.evaluate(async () => {
       const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
@@ -486,6 +576,8 @@ test.describe('local canvas geometry regressions', () => {
       .filter((task) => trackedIds.includes(task.id))
       .sort((a, b) => a.id.localeCompare(b.id))
     const afterRendered = await readRenderedTaskPositions(page, trackedIds)
+    const afterViewport = await readCanvasViewportSnapshot(page)
+    const afterNodes = await readCanvasNodeSnapshot(page, ['section-done-shift-group', ...trackedIds])
     const beforeTaskGeometry = beforeTasks.map((task) => ({
       id: task.id,
       canvasPosition: task.canvasPosition,
@@ -501,9 +593,9 @@ test.describe('local canvas geometry regressions', () => {
       positionVersion: task.positionVersion,
     }))
 
-    expect(afterTaskGeometry, JSON.stringify({ beforeTaskGeometry, afterTaskGeometry, traceLogs }, null, 2)).toEqual(beforeTaskGeometry)
-    expect(afterRendered[0], JSON.stringify({ beforeRendered, afterRendered, traceLogs }, null, 2)).toEqual(beforeRendered[0])
-    expect(afterRendered[2], JSON.stringify({ beforeRendered, afterRendered, traceLogs }, null, 2)).toEqual(beforeRendered[2])
+    expect(afterTaskGeometry, JSON.stringify({ beforeTaskGeometry, afterTaskGeometry, beforeViewport, afterViewport, beforeNodes, afterNodes, traceLogs }, null, 2)).toEqual(beforeTaskGeometry)
+    expect(afterRendered[0], JSON.stringify({ beforeRendered, afterRendered, beforeViewport, afterViewport, beforeNodes, afterNodes, traceLogs }, null, 2)).toEqual(beforeRendered[0])
+    expect(afterRendered[2], JSON.stringify({ beforeRendered, afterRendered, beforeViewport, afterViewport, beforeNodes, afterNodes, traceLogs }, null, 2)).toEqual(beforeRendered[2])
     expect(afterRendered[1], JSON.stringify({ beforeRendered, afterRendered, traceLogs }, null, 2)).toBeNull()
     expect(traceLogs.some((line) => line.includes('drag-stop:start')), traceLogs.join('\n')).toBe(false)
   })

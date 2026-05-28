@@ -155,7 +155,8 @@
     "sync_external": "סנכרן לוחות חיצוניים",
     "day": "יום",
     "week": "שבוע",
-    "month": "חודש"
+    "month": "חודש",
+    "view_options": "אפשרויות תצוגה"
   },
   "google_calendar": {
     "title": "יומן Google",

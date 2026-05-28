@@ -155,7 +155,8 @@
     "sync_external": "Sync external calendars",
     "day": "Day",
     "week": "Week",
-    "month": "Month"
+    "month": "Month",
+    "view_options": "View options"
   },
   "google_calendar": {
     "title": "Google Calendar",

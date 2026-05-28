@@ -74,7 +74,7 @@ const toggleViewOptions = () => {
         ref="viewOptionsTriggerRef"
         class="view-options-trigger"
         :class="{ active: showViewOptions || showFilters || hideCalendarDoneTasks || showFutureRecurring }"
-        title="View options"
+        :title="$t('calendar.view_options')" :aria-label="$t('calendar.view_options')" :aria-expanded="showViewOptions"
         @click="toggleViewOptions"
       >
         <MoreVertical :size="16" :stroke-width="1.5" />

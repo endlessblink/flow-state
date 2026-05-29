@@ -31,9 +31,9 @@ describe('getDayGroupDate()', () => {
     expect(toDateString(d)).toBe('2026-04-17')
   })
 
-  it('Friday group on a Friday WITH Today smart-group resolves to next Friday', () => {
+  it('Friday group on a Friday WITH Today smart-group still resolves to today', () => {
     const d = getDayGroupDate(5, FRIDAY_2026_04_17, true)
-    expect(toDateString(d)).toBe('2026-04-24')
+    expect(toDateString(d)).toBe('2026-04-17')
   })
 
   it('Saturday group on a Friday resolves to tomorrow (no smart group)', () => {
@@ -41,10 +41,15 @@ describe('getDayGroupDate()', () => {
     expect(toDateString(d)).toBe('2026-04-18')
   })
 
-  it('Saturday group on a Friday with Today/Tomorrow smart-group skips a week', () => {
-    // Tomorrow (Sat) is already covered by Tomorrow smart-group → show next Saturday
+  it('Saturday group on a Friday with Today/Tomorrow smart-group still resolves to tomorrow', () => {
     const d = getDayGroupDate(6, FRIDAY_2026_04_17, true)
-    expect(toDateString(d)).toBe('2026-04-25')
+    expect(toDateString(d)).toBe('2026-04-18')
+  })
+
+  it('Saturday group on a Saturday with Today/Tomorrow smart-group resolves to today', () => {
+    const saturday = new Date(2026, 3, 18, 12, 0, 0, 0)
+    const d = getDayGroupDate(6, saturday, true)
+    expect(toDateString(d)).toBe('2026-04-18')
   })
 
   it('Sunday group on a Friday resolves to Apr 19 (2 days out)', () => {

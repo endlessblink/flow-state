@@ -847,6 +847,22 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 
 ---
 
+### ~~BUG-1794~~: Rotate day groups sends same-day Saturday tasks to next Saturday (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-29)
+
+**Problem**: Pressing **Rotate day groups** with Today/Tomorrow smart groups present could resolve the current weekday group to next week. A Saturday group on Saturday wrote task `dueDate` to next Saturday instead of today.
+
+**Fix**: `getDayGroupDate()` now treats weekday groups as the literal next occurrence including today, regardless of Today/Tomorrow groups. Today/Tomorrow still win automatic placement through matcher specificity instead of forcing weekday groups a week forward.
+
+**Verified**: `npm run test -- tests/unit/canvas/day-group-date-suffix.test.ts tests/unit/canvas/day-group-catchup.test.ts tests/unit/canvas/smart-group-matcher.test.ts tests/unit/canvas/day-group-position-rotation.test.ts` (41/41), `npm run type-check`, `npx eslint src/utils/dayGroupDate.ts`, `npm run electron:build` for v1.4.79. Full `npm run lint` still reports repo-wide pre-existing lint debt; touched source file is clean.
+
+**Release status**: v1.4.79 artifacts built locally (`release/latest-linux.yml` points at 1.4.79). VPS updater deploy was blocked by approval policy for live production upload; public manifest still reports 1.4.78 until explicit deployment approval is given.
+
+**Files**: `src/utils/dayGroupDate.ts`, `tests/unit/canvas/day-group-date-suffix.test.ts`, `tests/unit/canvas/day-group-catchup.test.ts`, `tests/unit/canvas/smart-group-matcher.test.ts`.
+
+---
+
 ### ~~TASK-1756~~: Canvas day group date rotation + dynamic Today/Tomorrow dates (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-19)
@@ -879,9 +895,9 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 - Visual position rotation still pending from prior pass (Vue Flow controlled-mode blocker).
 - Possible regression interacting with BUG-1757 fix (dueDate edit leaving task in old group).
 
-**Previous scope (2026-04-11, now partial)**:
+**Previous scope (2026-04-11, now partial; corrected by BUG-1794 on 2026-05-29)**:
 - Today/Tomorrow smart groups show dynamic date suffixes (e.g., "Today / 11.4.26")
-- Day-of-week groups skip dates covered by Today/Tomorrow
+- Day-of-week groups no longer skip dates covered by Today/Tomorrow; placement priority handles overlaps.
 - Rotation button (CalendarClock icon) in canvas toolbar
 - Midnight auto-rotation updates task dueDates, respects weekStartsOn
 - Visual position rotation pending — algorithm works but Vue Flow controlled-mode prevents visual updates

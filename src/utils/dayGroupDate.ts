@@ -6,11 +6,8 @@
  * weekday — otherwise the visible label and the task dueDate disagree.
  *
  * Rules:
- *   - If today IS the target weekday and no Today/Tomorrow smart-group
- *     covers today, resolve to TODAY (daysUntil = 0).
- *   - If a Today/Tomorrow smart-group already covers today or tomorrow
- *     (daysUntil 0 or 1), skip to next week.
- *   - Otherwise, return the next upcoming occurrence within 0..6 days.
+ *   - If today IS the target weekday, resolve to TODAY (daysUntil = 0).
+ *   - Otherwise, return the next upcoming occurrence within 1..6 days.
  */
 
 /**
@@ -18,21 +15,19 @@
  *
  * @param dayIndex - JS day-of-week index (0=Sun … 6=Sat)
  * @param now - Reference "today" — typically `new Date()`
- * @param hasTodayOrTomorrow - Whether a Today/Tomorrow smart-group exists on canvas
+ * @param _hasTodayOrTomorrow - Legacy argument retained for call-site compatibility.
+ *   Today/Tomorrow groups no longer shift weekday targets; placement priority
+ *   decides which group receives tasks when dates overlap.
  */
 export function getDayGroupDate(
   dayIndex: number,
   now: Date,
-  hasTodayOrTomorrow: boolean
+  _hasTodayOrTomorrow: boolean
 ): Date {
   const today = new Date(now)
   today.setHours(0, 0, 0, 0)
 
-  let daysUntil = (dayIndex - today.getDay() + 7) % 7
-
-  if (hasTodayOrTomorrow && daysUntil <= 1) {
-    daysUntil += 7
-  }
+  const daysUntil = (dayIndex - today.getDay() + 7) % 7
 
   const result = new Date(today)
   result.setDate(result.getDate() + daysUntil)

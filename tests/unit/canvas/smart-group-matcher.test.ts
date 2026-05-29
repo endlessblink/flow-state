@@ -129,31 +129,27 @@ describe('findMatchingGroupForDueDate — day-of-week exact date matching', () =
         expect(match).toBeNull()
     })
 
-    it('Today + Tomorrow smart groups shift the day-of-week target by 2 days', () => {
-        // With Today and Tomorrow smart groups present, day-of-week groups skip
-        // today and tomorrow: Tuesday from Sunday becomes 2026-04-21 → skip to
-        // +7 because day-of-week offset adds 7 when daysUntil <= 1, so Tuesday
-        // stays at +2 days (not shifted by 2 — the rule only applies when
-        // daysUntil is 0 or 1).
+    it('Today + Tomorrow smart groups do not shift a future day-of-week target', () => {
+        // Tuesday from Sunday stays 2026-04-21 even when Today/Tomorrow exist.
+        // Overlap cases are handled by smart-group sort priority, not by
+        // changing the weekday target date.
         const today = dayGroup('g-today', 'Today')
         const tomorrow = dayGroup('g-tomorrow', 'Tomorrow')
         const tuesday = dayGroup('g-tue', 'Tuesday')
-        // Tuesday = +2 days (Sunday + 2 = Tuesday 21.4). daysUntil=2, not <=1,
-        // so no +7 shift. Match at 21.4.
+        // Tuesday = +2 days (Sunday + 2 = Tuesday 21.4). Match at 21.4.
         expect(findMatchingGroupForDueDate('2026-04-21', [today, tomorrow, tuesday])?.id).toBe('g-tue')
         // 28.4 still doesn't match
         expect(findMatchingGroupForDueDate('2026-04-28', [today, tomorrow, tuesday])).toBeNull()
     })
 
-    it('with Today+Tomorrow, a Sunday weekday group targets next-week Sunday (not today)', () => {
-        // The daysUntil<=1 + hasTodayOrTomorrow rule ADDS 7 — so Sunday from
-        // Sunday becomes next Sunday (26.4). A dueDate of today routes to the
-        // Today smart group (sort-tier 1). A dueDate of 26.4 routes to the
-        // Sunday weekday group.
+    it('with Today+Tomorrow, today still routes to Today before the same-day weekday group', () => {
+        // Day-of-week groups no longer skip Today/Tomorrow by adding a week.
+        // Overlaps are resolved by specificity: Today/Tomorrow sort before
+        // weekday groups, so today's due date still lands in Today.
         const today = dayGroup('g-today', 'Today')
         const tomorrow = dayGroup('g-tomorrow', 'Tomorrow')
         const sunday = dayGroup('g-sun', 'Sunday')
         expect(findMatchingGroupForDueDate('2026-04-19', [today, tomorrow, sunday])?.id).toBe('g-today')
-        expect(findMatchingGroupForDueDate('2026-04-26', [today, tomorrow, sunday])?.id).toBe('g-sun')
+        expect(findMatchingGroupForDueDate('2026-04-26', [today, tomorrow, sunday])).toBeNull()
     })
 })

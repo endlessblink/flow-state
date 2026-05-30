@@ -855,9 +855,9 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 
 **Fix**: `getDayGroupDate()` now treats weekday groups as the literal next occurrence including today, regardless of Today/Tomorrow groups. Today/Tomorrow still win automatic placement through matcher specificity instead of forcing weekday groups a week forward.
 
-**Verified**: `npm run test -- tests/unit/canvas/day-group-date-suffix.test.ts tests/unit/canvas/day-group-catchup.test.ts tests/unit/canvas/smart-group-matcher.test.ts tests/unit/canvas/day-group-position-rotation.test.ts` (41/41), `npm run type-check`, `npx eslint src/utils/dayGroupDate.ts`, `npm run electron:build` for v1.4.79. Full `npm run lint` still reports repo-wide pre-existing lint debt; touched source file is clean.
+**Verified**: `npm run test -- tests/unit/canvas/day-group-date-suffix.test.ts tests/unit/canvas/day-group-catchup.test.ts tests/unit/canvas/smart-group-matcher.test.ts tests/unit/canvas/day-group-position-rotation.test.ts` (41/41), `npm run type-check`, `npx eslint src/utils/dayGroupDate.ts`, `npm run electron:build` for v1.4.79, `./scripts/deploy-electron-update.sh --notes "Fix rotate day groups keeping same-day Saturday tasks on today"`, public updater manifest check. Full `npm run lint` still reports repo-wide pre-existing lint debt; touched source file is clean.
 
-**Release status**: v1.4.79 artifacts built locally (`release/latest-linux.yml` points at 1.4.79). VPS updater deploy was blocked by approval policy for live production upload; public manifest still reports 1.4.78 until explicit deployment approval is given.
+**Release status**: v1.4.79 deployed to the Electron updater. `https://in-theflow.com/updates/electron/latest-linux.yml` returns `version: 1.4.79`.
 
 **Files**: `src/utils/dayGroupDate.ts`, `tests/unit/canvas/day-group-date-suffix.test.ts`, `tests/unit/canvas/day-group-catchup.test.ts`, `tests/unit/canvas/smart-group-matcher.test.ts`.
 

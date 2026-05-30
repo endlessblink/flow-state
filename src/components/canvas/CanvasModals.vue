@@ -37,8 +37,8 @@
     :group="modals.selectedGroup"
     :position="modals.groupModalPosition"
     @close="modals.closeGroupModal"
-    @created="(group: any) => $emit('handleGroupCreated' as any, group)"
-    @updated="(group: any) => $emit('handleGroupUpdated' as any, group)"
+    @created="(group: any) => $emit('handleGroupCreated', group)"
+    @updated="(group: any) => $emit('handleGroupUpdated', group)"
   />
 
   <!-- Group Edit Modal -->
@@ -98,9 +98,9 @@ const emit = defineEmits<{
   (e: 'handleQuickTaskCreate', data: QuickTaskData): void
   (e: 'handleBatchEditApplied'): void
   (e: 'handleSectionSettingsSave', settings: Record<string, unknown>): void
-  (e: 'handleGroupCreated', group: Record<string, unknown>): void
-  (e: 'handleGroupUpdated', group: Record<string, unknown>): void
-  (e: 'handleGroupEditSave', updatedSection: Record<string, unknown>): void
+  (e: 'handleGroupCreated', group: any): void
+  (e: 'handleGroupUpdated', group: any): void
+  (e: 'handleGroupEditSave', updatedSection: any): void
   (e: 'confirmDeleteGroup'): void
   (e: 'confirmBulkDelete'): void
 }>()

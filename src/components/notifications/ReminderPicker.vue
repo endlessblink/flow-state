@@ -28,7 +28,10 @@
         <!-- Header -->
         <div class="popover-header">
           <span class="popover-title">Reminders</span>
-          <button class="close-btn" @click="popoverVisible = false">
+          <button
+            class="close-btn"
+            :aria-label="$t('common.close')"
+            @click="popoverVisible = false">
             <X :size="14" />
           </button>
         </div>

@@ -18,7 +18,10 @@
             Batch Edit
           </h2>
         </div>
-        <button class="close-btn" @click="$emit('close')">
+        <button
+            class="close-btn"
+            :aria-label="$t('common.close')"
+            @click="$emit('close')">
           <X :size="16" />
         </button>
       </div>

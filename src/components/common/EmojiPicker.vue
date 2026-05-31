@@ -4,7 +4,10 @@
       <div class="emoji-picker" @click.stop>
         <div class="emoji-picker-header">
           <h3>Choose Project Color</h3>
-          <button class="close-btn" @click="closePicker">
+          <button
+            class="close-btn"
+            :aria-label="$t('common.close')"
+            @click="closePicker">
             ×
           </button>
         </div>

@@ -8,6 +8,34 @@
 
 ## Active Tasks
 
+### BUG-1807: Canvas nudge — all nodes shift on inbox drop (Electron) (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-05-31)
+
+**Problem**: On the Electron desktop build, dragging a task from the canvas inbox onto the canvas makes every rendered canvas node shift together for a frame, then settle — the "nudge". Earlier fixes (autoPanOnNodeDrag, setNodes refeed) addressed node-drag and viewport nudges but not the inbox-drop case.
+
+**Root cause**: `useCanvasSync.syncStoreToCanvas` only had an in-place patch path for equal node counts. Adding a node (inbox→canvas drop) changed the count (N→N+1), forcing a full `setNodes()` that replaces the entire reactive node array. Vue Flow then re-parses every node (position/dimensions). Chromium's keyed reuse hides this, but Electron's GPU compositor re-rasterizes all node layers → visible collective shift.
+
+**Fix**: Added an incremental add/remove path in `syncStoreToCanvas`. When the only structural change is added/removed nodes and surviving nodes keep their type/parent, it patches changed survivors with `updateNode`, removes deletions with `removeNodes`, and appends new nodes with `addNodes` (groups first for parent-before-child). Existing node instances are never re-mounted → no compositor reflow → no nudge. Falls back to full `setNodes()` when topology actually changes.
+
+**Regression tests**: New `tests/e2e/canvas-inbox-nudge.spec.ts` fires a real HTML5 drop and samples every existing node's screen rect + the viewport transform across animation frames, asserting no drift and a stable viewport. (Note: headless Chromium cannot reproduce the Electron-only compositor shift, so this guards behavior/no-regression; the actual nudge is verified on the deployed Electron build.)
+
+**v1.4.80 attempt (did NOT fix)**: Shipped incremental `addNodes` instead of full `setNodes` on count change. Kept (safe perf improvement) but not the culprit — paint profiling showed it identical to the old path (337 vs 341 paints).
+
+**Root cause (FOUND, v1.4.81)**: The shift is invisible to layout APIs (`getBoundingClientRect` = 0px drift), so it's a **GPU-compositor repaint**. Using CDP `LayerTree.layerPainted` profiling, the inbox drop produced ~341 paints; disabling `.task-node.is-recently-created` dropped that to **32** — a 90% reduction. The culprit is the `animate-creation` keyframes in `TaskNode.vue`: a 2s `transform: scale(0.6→1.1→…→1)` bounce that fires when a node mounts with `createdAt < 5s` (exactly a just-created task dragged from the inbox). **Accurate mechanism** (corrected — the card is NOT glass; `.task-node` has `backdrop-filter` removed per BUG-1216): the transform pane uses `transform-style: preserve-3d` (text-crispness fix, BUG-041/1408); animating a child's `transform: scale()` inside that shared 3D context forces the browser to re-rasterize the **entire** context every frame (→ the observed full-viewport 1280×720 repaint), and on Electron's GPU compositor that full re-raster lands sub-pixel-shifted → the whole canvas appears to shift together. The scale also violated the BUG-1328 invariant ("no transform on the node root"). (An earlier note here said "backdrop-filter re-sample" — that was wrong; the fix is identical regardless.)
+
+**Fix (v1.4.81 → hardened in v1.4.82)**: Rewrote `animate-creation`. v1.4.81 removed `scale()` (paints 341→146). v1.4.82 made it **opacity-only** (removed `filter: brightness` and the animated `box-shadow` too — `filter` on a glass card also re-composites the backdrop), 0.45s. Paints during drop: 341 → **36** (near the 32 "no animation" floor). Zero transform, zero filter, zero geometry change → nothing can re-sample the backdrop or shift.
+
+**Regression tests**: `tests/unit/canvas/creation-animation-no-transform.test.ts` asserts the keyframes contain no `scale()`/`transform`. `tests/e2e/canvas-inbox-nudge.spec.ts` guards no node/viewport drift on real drop.
+
+**Verified**: `vue-tsc` clean, 171/171 canvas unit tests, e2e passes, CDP paint count 341→146. Shipping to Electron updater as **v1.4.82**. **Awaiting user confirmation on desktop** that the canvas no longer shifts.
+
+**Files**: `src/components/canvas/TaskNode.vue` (fix), `src/composables/canvas/useCanvasSync.ts` (v1.4.80 perf), `tests/unit/canvas/creation-animation-no-transform.test.ts`, `tests/e2e/canvas-inbox-nudge.spec.ts`.
+
+**Related follow-up (not part of this bug)**: `task-flash-green/red/amber/blue` keyframes in `TaskNode.vue` also use `transform: scale(1.02)` on the glass card. They fire on the `task-action-flash` event (explicit date/status edits), NOT on inbox drop, so they don't affect BUG-1807. But they're the same latent class (scale on a backdrop-filter card → Electron compositor shift) and should likely be made transform-free too if a similar nudge is ever reported on date/status edits. `transition: all` on `GroupNodeSimple`/`CanvasGroup`/`ImageNode` roots is a related concern (animates transform on glass).
+
+---
+
 ### ~~BUG-1806~~: Mark-done can still trigger phantom nudge state (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-05-28)

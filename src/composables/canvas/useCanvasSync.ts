@@ -100,7 +100,7 @@ export function useCanvasSync() {
     const { nodeVersionMap, aggregatedTaskCountByGroupId, taskCountByGroupId } = storeToRefs(canvasStore)
     const taskStore = useTaskStore()
     const canvasImagesStore = useCanvasImagesStore()
-    const { getNodes, setNodes, updateNode } = useVueFlow()
+    const { getNodes, setNodes, updateNode, addNodes, removeNodes } = useVueFlow()
 
     // Alias to module-level ref for backward compatibility
     const isSyncing = canvasSyncInProgress
@@ -816,6 +816,89 @@ export function useCanvasSync() {
                         }
                     }
                     traceCanvasDoneNodes('syncStoreToCanvas:after-in-place-patch-immediate', getNodes.value)
+                    return
+                }
+
+                // ================================================================
+                // INCREMENTAL ADD/REMOVE PATH (anti-nudge)
+                // ================================================================
+                // When the only structural change is added/removed nodes (e.g. an
+                // inbox task dropped onto the canvas, or a task removed), a full
+                // setNodes() re-mounts EVERY node. Vue Flow then briefly renders
+                // parented children at their raw relative position before the
+                // parent offset resolves, so the whole canvas appears to "nudge".
+                //
+                // Instead, keep existing node instances untouched and only
+                // add/remove the deltas + patch the few changed survivors. This
+                // preserves node identity, so no re-mount and no nudge.
+                const currentNodeById = new Map(currentNodes.map((node: Record<string, any>) => [node.id, node]))
+                const newNodeById = new Map(newNodes.map((node: Record<string, any>) => [node.id, node]))
+                const addedNodes = newNodes.filter((node) => !currentNodeById.has(node.id))
+                const removedNodes = currentNodes.filter((node: Record<string, any>) => !newNodeById.has(node.id))
+                const survivingNodes = newNodes.filter((node) => currentNodeById.has(node.id))
+
+                // Survivors must not change topology (type/parent) — those need a rebuild.
+                const survivorsTopologyStable = survivingNodes.every((node) => {
+                    const currentNode = currentNodeById.get(node.id)
+                    return Boolean(currentNode) &&
+                        currentNode!.type === node.type &&
+                        (currentNode!.parentNode ?? null) === (node.parentNode ?? null)
+                })
+                // Every added node's parent must already exist (rendered or freshly added),
+                // so Vue Flow can resolve parent-before-child without reordering.
+                const addedParentsResolvable = addedNodes.every((node) =>
+                    !node.parentNode || currentNodeById.has(node.parentNode) || newNodeById.has(node.parentNode)
+                )
+                // A removed node must not still be the parent of a surviving/added node.
+                const removedSafe = removedNodes.every((removed: Record<string, any>) =>
+                    !newNodes.some((node) => (node.parentNode ?? null) === removed.id)
+                )
+
+                if (
+                    (addedNodes.length > 0 || removedNodes.length > 0) &&
+                    survivorsTopologyStable &&
+                    addedParentsResolvable &&
+                    removedSafe
+                ) {
+                    // 1. Patch only the survivors whose data/geometry actually changed.
+                    for (const node of survivingNodes) {
+                        const currentNode = currentNodeById.get(node.id)
+                        if (currentNode && patchableNodeChanged(node, currentNode)) {
+                            const patch: Record<string, unknown> = {
+                                data: node.data,
+                                hidden: node.hidden,
+                                zIndex: node.zIndex,
+                                selected: node.selected,
+                            }
+
+                            if (nodeGeometrySourceChanged(node, currentNode)) {
+                                patch.position = node.position
+                                if (node.width !== undefined) patch.width = node.width
+                                if (node.height !== undefined) patch.height = node.height
+                                if (node.dimensions !== undefined) patch.dimensions = node.dimensions
+                                if (node.style !== undefined) patch.style = node.style
+                            }
+
+                            updateNode(node.id, patch)
+                        }
+                    }
+
+                    // 2. Remove deleted nodes (children already proven absent).
+                    if (removedNodes.length > 0) {
+                        removeNodes(removedNodes.map((node: Record<string, any>) => node.id), false, false)
+                    }
+
+                    // 3. Add new nodes, groups first so a child's parent is present.
+                    if (addedNodes.length > 0) {
+                        const orderedAdds = [...addedNodes].sort((a, b) => {
+                            const aGroup = a.type === 'sectionNode' ? 0 : 1
+                            const bGroup = b.type === 'sectionNode' ? 0 : 1
+                            return aGroup - bGroup
+                        })
+                        addNodes(orderedAdds as any)
+                    }
+
+                    traceCanvasDoneNodes('syncStoreToCanvas:after-incremental-add-remove', getNodes.value)
                     return
                 }
 

@@ -7,7 +7,8 @@
           <button
             class="close-btn"
             :aria-label="$t('common.close')"
-            @click="closePicker">
+            @click="closePicker"
+          >
             ×
           </button>
         </div>

@@ -6,233 +6,234 @@
       @click="$emit('close')"
       @keydown="handleKeydown"
     >
-    <div class="modal-content" @click.stop>
-      <!-- Header -->
-      <div class="modal-header">
-        <div class="header-left">
-          <div class="count-badge">
-            <CheckSquare :size="16" :stroke-width="2" />
-            <span>Editing {{ taskIds.length }} tasks</span>
+      <div class="modal-content" @click.stop>
+        <!-- Header -->
+        <div class="modal-header">
+          <div class="header-left">
+            <div class="count-badge">
+              <CheckSquare :size="16" :stroke-width="2" />
+              <span>Editing {{ taskIds.length }} tasks</span>
+            </div>
+            <h2 class="modal-title">
+              Batch Edit
+            </h2>
           </div>
-          <h2 class="modal-title">
-            Batch Edit
-          </h2>
-        </div>
-        <button
+          <button
             class="close-btn"
             :aria-label="$t('common.close')"
-            @click="$emit('close')">
-          <X :size="16" />
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <!-- Quick Actions -->
-        <section class="quick-actions-section">
-          <div class="section-label">
-            Quick Actions
-          </div>
-          <div class="quick-actions-grid">
-            <button
-              class="quick-action-btn status-done"
-              title="Mark all selected tasks as done"
-              @click="applyQuickAction('markDone')"
-            >
-              <CheckCircle :size="18" :stroke-width="2" />
-              <span>Mark as Done</span>
-            </button>
-            <button
-              class="quick-action-btn priority-high"
-              title="Set all to high priority"
-              @click="applyQuickAction('highPriority')"
-            >
-              <Zap :size="18" :stroke-width="2" />
-              <span>High Priority</span>
-            </button>
-            <button
-              class="quick-action-btn danger"
-              title="Delete all selected tasks"
-              @click="applyQuickAction('deleteAll')"
-            >
-              <Trash2 :size="18" :stroke-width="2" />
-              <span>Delete All</span>
-            </button>
-          </div>
-        </section>
-
-        <!-- Field Selectors -->
-        <section class="field-selectors-section">
-          <div class="section-label">
-            Select Fields to Change
-          </div>
-
-          <!-- Status Field -->
-          <div class="field-selector">
-            <label class="field-checkbox">
-              <input
-                v-model="fieldChanges.status.enabled"
-                type="checkbox"
-              >
-              <span class="checkbox-label">Change Status</span>
-            </label>
-            <div v-if="fieldChanges.status.enabled" class="field-input-wrapper">
-              <CustomSelect
-                :model-value="fieldChanges.status.value || ''"
-                :options="statusOptions"
-                placeholder="Select status..."
-                @update:model-value="(val) => fieldChanges.status.value = val as Task['status']"
-              />
-            </div>
-          </div>
-
-          <!-- Priority Field -->
-          <div class="field-selector">
-            <label class="field-checkbox">
-              <input
-                v-model="fieldChanges.priority.enabled"
-                type="checkbox"
-              >
-              <span class="checkbox-label">Change Priority</span>
-            </label>
-            <div v-if="fieldChanges.priority.enabled" class="field-input-wrapper">
-              <CustomSelect
-                :model-value="fieldChanges.priority.value || ''"
-                :options="priorityOptions"
-                placeholder="Select priority..."
-                @update:model-value="(val) => fieldChanges.priority.value = val as Task['priority']"
-              />
-            </div>
-          </div>
-
-          <!-- Project Field -->
-          <div class="field-selector">
-            <label class="field-checkbox">
-              <input
-                v-model="fieldChanges.projectId.enabled"
-                type="checkbox"
-              >
-              <span class="checkbox-label">Move to Project</span>
-            </label>
-            <div v-if="fieldChanges.projectId.enabled" class="field-input-wrapper">
-              <CustomSelect
-                :model-value="fieldChanges.projectId.value || ''"
-                :options="projectOptions"
-                placeholder="Select project..."
-                @update:model-value="(val) => fieldChanges.projectId.value = String(val)"
-              />
-            </div>
-          </div>
-
-          <!-- Due Date Field -->
-          <div class="field-selector">
-            <label class="field-checkbox">
-              <input
-                v-model="fieldChanges.dueDate.enabled"
-                type="checkbox"
-              >
-              <span class="checkbox-label">Set Due Date</span>
-            </label>
-            <div v-if="fieldChanges.dueDate.enabled" class="field-input-wrapper">
-              <input
-                v-model="fieldChanges.dueDate.value"
-                type="date"
-                class="field-input"
-              >
-            </div>
-          </div>
-
-          <!-- Estimated Duration Field -->
-          <div class="field-selector">
-            <label class="field-checkbox">
-              <input
-                v-model="fieldChanges.estimatedDuration.enabled"
-                type="checkbox"
-              >
-              <span class="checkbox-label">Set Duration</span>
-            </label>
-            <div v-if="fieldChanges.estimatedDuration.enabled" class="field-input-wrapper">
-              <input
-                v-model.number="fieldChanges.estimatedDuration.value"
-                type="number"
-                min="15"
-                step="15"
-                class="field-input"
-                placeholder="60"
-              >
-              <span class="input-unit">minutes</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- Preview Section -->
-        <section v-if="hasChanges" class="preview-section">
-          <button class="section-toggle" type="button" @click="showPreview = !showPreview">
-            <ChevronDown :size="14" class="chevron-icon" :class="[{ rotated: showPreview }]" />
-            <span class="section-label">Preview Changes</span>
+            @click="$emit('close')"
+          >
+            <X :size="16" />
           </button>
+        </div>
 
-          <div v-show="showPreview" class="preview-list">
-            <div
-              v-for="task in selectedTasks"
-              :key="task.id"
-              class="preview-item"
-            >
-              <div class="task-name">
-                {{ task.title }}
+        <div class="modal-body">
+          <!-- Quick Actions -->
+          <section class="quick-actions-section">
+            <div class="section-label">
+              Quick Actions
+            </div>
+            <div class="quick-actions-grid">
+              <button
+                class="quick-action-btn status-done"
+                title="Mark all selected tasks as done"
+                @click="applyQuickAction('markDone')"
+              >
+                <CheckCircle :size="18" :stroke-width="2" />
+                <span>Mark as Done</span>
+              </button>
+              <button
+                class="quick-action-btn priority-high"
+                title="Set all to high priority"
+                @click="applyQuickAction('highPriority')"
+              >
+                <Zap :size="18" :stroke-width="2" />
+                <span>High Priority</span>
+              </button>
+              <button
+                class="quick-action-btn danger"
+                title="Delete all selected tasks"
+                @click="applyQuickAction('deleteAll')"
+              >
+                <Trash2 :size="18" :stroke-width="2" />
+                <span>Delete All</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Field Selectors -->
+          <section class="field-selectors-section">
+            <div class="section-label">
+              Select Fields to Change
+            </div>
+
+            <!-- Status Field -->
+            <div class="field-selector">
+              <label class="field-checkbox">
+                <input
+                  v-model="fieldChanges.status.enabled"
+                  type="checkbox"
+                >
+                <span class="checkbox-label">Change Status</span>
+              </label>
+              <div v-if="fieldChanges.status.enabled" class="field-input-wrapper">
+                <CustomSelect
+                  :model-value="fieldChanges.status.value || ''"
+                  :options="statusOptions"
+                  placeholder="Select status..."
+                  @update:model-value="(val) => fieldChanges.status.value = val as Task['status']"
+                />
               </div>
-              <div class="changes-list">
-                <div v-if="fieldChanges.status.enabled" class="change-item">
-                  <span class="field-name">Status:</span>
-                  <span class="old-value">{{ task.status }}</span>
-                  <span class="arrow">→</span>
-                  <span class="new-value">{{ fieldChanges.status.value }}</span>
+            </div>
+
+            <!-- Priority Field -->
+            <div class="field-selector">
+              <label class="field-checkbox">
+                <input
+                  v-model="fieldChanges.priority.enabled"
+                  type="checkbox"
+                >
+                <span class="checkbox-label">Change Priority</span>
+              </label>
+              <div v-if="fieldChanges.priority.enabled" class="field-input-wrapper">
+                <CustomSelect
+                  :model-value="fieldChanges.priority.value || ''"
+                  :options="priorityOptions"
+                  placeholder="Select priority..."
+                  @update:model-value="(val) => fieldChanges.priority.value = val as Task['priority']"
+                />
+              </div>
+            </div>
+
+            <!-- Project Field -->
+            <div class="field-selector">
+              <label class="field-checkbox">
+                <input
+                  v-model="fieldChanges.projectId.enabled"
+                  type="checkbox"
+                >
+                <span class="checkbox-label">Move to Project</span>
+              </label>
+              <div v-if="fieldChanges.projectId.enabled" class="field-input-wrapper">
+                <CustomSelect
+                  :model-value="fieldChanges.projectId.value || ''"
+                  :options="projectOptions"
+                  placeholder="Select project..."
+                  @update:model-value="(val) => fieldChanges.projectId.value = String(val)"
+                />
+              </div>
+            </div>
+
+            <!-- Due Date Field -->
+            <div class="field-selector">
+              <label class="field-checkbox">
+                <input
+                  v-model="fieldChanges.dueDate.enabled"
+                  type="checkbox"
+                >
+                <span class="checkbox-label">Set Due Date</span>
+              </label>
+              <div v-if="fieldChanges.dueDate.enabled" class="field-input-wrapper">
+                <input
+                  v-model="fieldChanges.dueDate.value"
+                  type="date"
+                  class="field-input"
+                >
+              </div>
+            </div>
+
+            <!-- Estimated Duration Field -->
+            <div class="field-selector">
+              <label class="field-checkbox">
+                <input
+                  v-model="fieldChanges.estimatedDuration.enabled"
+                  type="checkbox"
+                >
+                <span class="checkbox-label">Set Duration</span>
+              </label>
+              <div v-if="fieldChanges.estimatedDuration.enabled" class="field-input-wrapper">
+                <input
+                  v-model.number="fieldChanges.estimatedDuration.value"
+                  type="number"
+                  min="15"
+                  step="15"
+                  class="field-input"
+                  placeholder="60"
+                >
+                <span class="input-unit">minutes</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Preview Section -->
+          <section v-if="hasChanges" class="preview-section">
+            <button class="section-toggle" type="button" @click="showPreview = !showPreview">
+              <ChevronDown :size="14" class="chevron-icon" :class="[{ rotated: showPreview }]" />
+              <span class="section-label">Preview Changes</span>
+            </button>
+
+            <div v-show="showPreview" class="preview-list">
+              <div
+                v-for="task in selectedTasks"
+                :key="task.id"
+                class="preview-item"
+              >
+                <div class="task-name">
+                  {{ task.title }}
                 </div>
-                <div v-if="fieldChanges.priority.enabled" class="change-item">
-                  <span class="field-name">Priority:</span>
-                  <span class="old-value">{{ task.priority }}</span>
-                  <span class="arrow">→</span>
-                  <span class="new-value">{{ fieldChanges.priority.value }}</span>
-                </div>
-                <div v-if="fieldChanges.projectId.enabled" class="change-item">
-                  <span class="field-name">Project:</span>
-                  <span class="old-value">{{ getProjectName(task.projectId) }}</span>
-                  <span class="arrow">→</span>
-                  <span class="new-value">{{ getProjectName(fieldChanges.projectId.value) }}</span>
-                </div>
-                <div v-if="fieldChanges.dueDate.enabled" class="change-item">
-                  <span class="field-name">Due:</span>
-                  <span class="old-value">{{ task.dueDate || 'None' }}</span>
-                  <span class="arrow">→</span>
-                  <span class="new-value">{{ fieldChanges.dueDate.value }}</span>
-                </div>
-                <div v-if="fieldChanges.estimatedDuration.enabled" class="change-item">
-                  <span class="field-name">Duration:</span>
-                  <span class="old-value">{{ task.estimatedDuration || 'None' }}m</span>
-                  <span class="arrow">→</span>
-                  <span class="new-value">{{ fieldChanges.estimatedDuration.value }}m</span>
+                <div class="changes-list">
+                  <div v-if="fieldChanges.status.enabled" class="change-item">
+                    <span class="field-name">Status:</span>
+                    <span class="old-value">{{ task.status }}</span>
+                    <span class="arrow">→</span>
+                    <span class="new-value">{{ fieldChanges.status.value }}</span>
+                  </div>
+                  <div v-if="fieldChanges.priority.enabled" class="change-item">
+                    <span class="field-name">Priority:</span>
+                    <span class="old-value">{{ task.priority }}</span>
+                    <span class="arrow">→</span>
+                    <span class="new-value">{{ fieldChanges.priority.value }}</span>
+                  </div>
+                  <div v-if="fieldChanges.projectId.enabled" class="change-item">
+                    <span class="field-name">Project:</span>
+                    <span class="old-value">{{ getProjectName(task.projectId) }}</span>
+                    <span class="arrow">→</span>
+                    <span class="new-value">{{ getProjectName(fieldChanges.projectId.value) }}</span>
+                  </div>
+                  <div v-if="fieldChanges.dueDate.enabled" class="change-item">
+                    <span class="field-name">Due:</span>
+                    <span class="old-value">{{ task.dueDate || 'None' }}</span>
+                    <span class="arrow">→</span>
+                    <span class="new-value">{{ fieldChanges.dueDate.value }}</span>
+                  </div>
+                  <div v-if="fieldChanges.estimatedDuration.enabled" class="change-item">
+                    <span class="field-name">Duration:</span>
+                    <span class="old-value">{{ task.estimatedDuration || 'None' }}m</span>
+                    <span class="arrow">→</span>
+                    <span class="new-value">{{ fieldChanges.estimatedDuration.value }}m</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
 
-      <!-- Footer -->
-      <div class="modal-footer">
-        <button class="cancel-btn" @click="$emit('close')">
-          Cancel
-        </button>
-        <button
-          class="apply-btn"
-          :disabled="!hasChanges"
-          @click="applyChanges"
-        >
-          <Zap :size="16" :stroke-width="2" />
-          Apply to {{ taskIds.length }} Tasks
-        </button>
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button class="cancel-btn" @click="$emit('close')">
+            Cancel
+          </button>
+          <button
+            class="apply-btn"
+            :disabled="!hasChanges"
+            @click="applyChanges"
+          >
+            <Zap :size="16" :stroke-width="2" />
+            Apply to {{ taskIds.length }} Tasks
+          </button>
+        </div>
       </div>
     </div>
-  </div>
   </Teleport>
 </template>
 

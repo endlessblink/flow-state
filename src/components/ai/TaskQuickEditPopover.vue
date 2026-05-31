@@ -207,9 +207,10 @@ function close() {
     <div v-if="task" class="quick-edit-popover">
       <!-- Close Button -->
       <button
-            class="close-btn"
-            :aria-label="$t('common.close')"
-            @click="close">
+        class="close-btn"
+        :aria-label="$t('common.close')"
+        @click="close"
+      >
         <X :size="14" />
       </button>
 

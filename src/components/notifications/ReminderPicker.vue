@@ -31,7 +31,8 @@
           <button
             class="close-btn"
             :aria-label="$t('common.close')"
-            @click="popoverVisible = false">
+            @click="popoverVisible = false"
+          >
             <X :size="14" />
           </button>
         </div>

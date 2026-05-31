@@ -24,7 +24,8 @@
           <button
             class="close-btn"
             :aria-label="$t('common.close')"
-            @click="$emit('close')">
+            @click="$emit('close')"
+          >
             <X :size="16" />
           </button>
         </div>

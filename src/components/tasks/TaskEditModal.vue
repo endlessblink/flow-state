@@ -9,9 +9,10 @@
               Edit Task
             </h2>
             <button
-            class="close-btn"
-            :aria-label="$t('common.close')"
-            @click="handleCloseRequest">
+              class="close-btn"
+              :aria-label="$t('common.close')"
+              @click="handleCloseRequest"
+            >
               <X :size="16" />
             </button>
           </div>
@@ -67,8 +68,17 @@
                       :class="{ active: isDateActive(pill) }"
                       type="button"
                       @click="setQuickDate(pill)"
-                    >{{ pill.label }}</button>
-                    <button v-if="editedTask.dueDate" class="due-pill due-clear" type="button" @click="editedTask.dueDate = ''">×</button>
+                    >
+                      {{ pill.label }}
+                    </button>
+                    <button
+                      v-if="editedTask.dueDate"
+                      class="due-pill due-clear"
+                      type="button"
+                      @click="editedTask.dueDate = ''"
+                    >
+                      ×
+                    </button>
                   </div>
                 </div>
               </div>

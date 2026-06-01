@@ -5,6 +5,10 @@
       class="dropdown-trigger"
       :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
       :disabled="disabled"
+      role="combobox"
+      aria-haspopup="listbox"
+      :aria-expanded="isOpen"
+      :aria-controls="listboxId"
       @click="toggleDropdown"
       @keydown.down.prevent="openAndFocusFirst"
       @keydown.up.prevent="openAndFocusLast"
@@ -28,6 +32,7 @@
       @close="closeDropdown"
     >
       <ul
+        :id="listboxId"
         class="dropdown-list"
         role="listbox"
         @keydown.down.prevent="focusNext"
@@ -68,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useId } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
 import BasePopover from './BasePopover.vue'
 import type { Component } from 'vue'
@@ -95,6 +100,8 @@ const props = withDefaults(defineProps<Props>(), {
   multiple: false,
   searchable: false
 })
+
+const listboxId = useId()
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[]]

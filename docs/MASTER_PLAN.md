@@ -8,6 +8,29 @@
 
 ## Active Tasks
 
+### ~~BUG-1810~~: Inbox "3 Days" filter shows far-future recurring tasks (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ **DONE** (2026-06-01)
+
+**Problem**: With the inbox time filter set to **3 Days**, a recurring task displaying a far-future date (e.g. "Jun 8", 7 days out) still appeared — making the filter look broken.
+
+**Root cause**: Display/filter mismatch, not a filter bug. The filter (`isNext3DaysTask`, `src/composables/useSmartViews.ts`) treats calendar **instances** as authoritative (BUG-1188) and correctly matched the task via a near-term instance. But the task card (`UnifiedInboxTaskCard.vue`) used the master `dueDate` first and only fell back to instances when `dueDate` was absent — so it showed the far-future master date while the task surfaced via a near-term instance.
+
+**Fix**: Card now honors the same instance-authoritative rule as the filter. Extracted badge logic to a pure, testable `dueStatus.ts`; the badge shows the **representative instance** (soonest upcoming ≥ today, else latest overdue) instead of the master `dueDate` when instances exist. Also fixed a latent gap: a past representative instance is now labeled "Overdue", not "future".
+
+**Files**: `src/components/inbox/unified/dueStatus.ts` (new), `src/components/inbox/unified/UnifiedInboxTaskCard.vue`, `src/components/inbox/unified/__tests__/dueStatus.spec.ts` (new, 9 tests).
+
+---
+
+### TASK-1809: Shift-drag to reorder tasks within a canvas column (🔄 IN PROGRESS)
+
+**Goal**: Let users reorder a task inside a day/smart canvas column by holding **Shift** while dragging. On a Shift-drop, the column restacks cleanly from the header down — the dragged card takes the slot its drop-Y lands in and the rest shift down (insert-and-shift). Non-Shift drops keep today's free placement, unchanged.
+
+**Approach**: Reuse the tested `computeCanonicalLayout` primitive (`useCanonicalDayGroupLayout.ts`) scoped to a single group. Tasks already order by Y, so the dropped card's new Y decides its slot.
+- `useTidyLayout.ts`: add pure `planReorderColumn(groupId)` + `reorderColumn(groupId)` (store writes + position locks + undo snapshot, mirrors `tidyDayGroups`).
+- `CanvasView.vue`: wrap `@node-drag-stop` — read `event.event.shiftKey`, await the normal drag save, then run `reorderColumn` on the dropped task's group via `applyCanonicalMoves` + `syncNodes({force})`.
+- Stays inside the single sanctioned geometry writer (drag handler + Tidy primitive) → no sync-loop/invariant violation.
+
 ### BUG-1807: Canvas nudge — all nodes shift on inbox drop (Electron) (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-05-31)
@@ -32,7 +55,25 @@
 
 **Files**: `src/components/canvas/TaskNode.vue` (fix), `src/composables/canvas/useCanvasSync.ts` (v1.4.80 perf), `tests/unit/canvas/creation-animation-no-transform.test.ts`, `tests/e2e/canvas-inbox-nudge.spec.ts`.
 
-**Related follow-up (not part of this bug)**: `task-flash-green/red/amber/blue` keyframes in `TaskNode.vue` also use `transform: scale(1.02)` on the glass card. They fire on the `task-action-flash` event (explicit date/status edits), NOT on inbox drop, so they don't affect BUG-1807. But they're the same latent class (scale on a backdrop-filter card → Electron compositor shift) and should likely be made transform-free too if a similar nudge is ever reported on date/status edits. `transition: all` on `GroupNodeSimple`/`CanvasGroup`/`ImageNode` roots is a related concern (animates transform on glass).
+**Related follow-up (not part of this bug)**: `task-flash-green/red/amber/blue` keyframes in `TaskNode.vue` also use `transform: scale(1.02)` on the glass card. They fire on the `task-action-flash` event (explicit date/status edits), NOT on inbox drop, so they don't affect BUG-1807. But they're the same latent class (scale on a backdrop-filter card → Electron compositor shift) and should likely be made transform-free too if a similar nudge is ever reported on date/status edits. `transition: all` on `GroupNodeSimple`/`CanvasGroup`/`ImageNode` roots is a related concern (animates transform on glass). → **Surfaced as BUG-1808.**
+
+---
+
+### BUG-1808: Canvas nudge on date edit (overdue → today / context-menu reschedule) (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-06-01)
+
+**Problem**: On the Electron desktop build, rescheduling a task to a new date — e.g. picking **Today** from the canvas context menu / overdue reschedule — makes every canvas node nudge/shift together for a frame, exactly like BUG-1807 but triggered by a date edit instead of an inbox drop.
+
+**Root cause**: The `task-action-flash-*` keyframes in `TaskNode.vue` (fired via the `task-action-flash` event by `useTaskContextMenuActions.setDueDate`) animated `transform: scale(1)→scale(1.02)→scale(1)` on the `.task-node` card. Same compositor-shift class BUG-1807 identified: a `transform` inside the shared `preserve-3d` context forces a full re-rasterization, which Electron's GPU compositor lands sub-pixel-shifted → the whole canvas appears to shift. This was the exact "related follow-up" BUG-1807 predicted.
+
+**Fix**: Made all four `task-flash-{green,red,amber,blue}` keyframes transform-free — the brightness + box-shadow glow pulse carries the feedback, no `scale()`. The OverdueBadge reschedule path (`useTaskNodeActions.handleReschedule`) does not flash and only performs a legitimate single-node reparent into the matching smart group; the group root (`.section-node`) is already transform-free with backdrop-filter removed, so it is not a nudge source.
+
+**Regression tests**: Extended `tests/unit/canvas/creation-animation-no-transform.test.ts` with a `BUG-1808` block asserting none of the four flash keyframes contain `scale()`/`transform`. 6/6 pass.
+
+**Files**: `src/components/canvas/TaskNode.vue` (flash keyframes), `tests/unit/canvas/creation-animation-no-transform.test.ts`.
+
+**Awaiting**: Electron build + deploy and user confirmation on desktop that the date-edit nudge is gone.
 
 ---
 

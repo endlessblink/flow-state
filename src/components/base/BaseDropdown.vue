@@ -101,11 +101,11 @@ const props = withDefaults(defineProps<Props>(), {
   searchable: false
 })
 
-const listboxId = useId()
-
 const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[]]
 }>()
+
+const listboxId = useId()
 
 const triggerElement = ref<HTMLElement>()
 const isOpen = ref(false)

@@ -37,3 +37,32 @@ describe('BUG-1807: creation animation must be transform-free', () => {
     expect(body, 'creation animation must not animate filter on a glass card (BUG-1807)').not.toMatch(/\bfilter\s*:/)
   })
 })
+
+/**
+ * BUG-1808 regression: the task-action-flash keyframes (fired on date/status
+ * edits, e.g. rescheduling overdue → today via the context menu) must NOT use a
+ * `transform: scale()` either. Same compositor-shift class as the creation
+ * animation — a scale on the glass card made every other node nudge when the
+ * flash fired. MASTER_PLAN BUG-1807 predicted this exact regression. The flash
+ * must carry its feedback via box-shadow/brightness only, no transform.
+ */
+describe('BUG-1808: task-flash keyframes must be transform-free', () => {
+  const source = readFileSync(
+    resolve(__dirname, '../../../src/components/canvas/TaskNode.vue'),
+    'utf-8'
+  )
+
+  const flashKeyframes = ['green', 'red', 'amber', 'blue']
+
+  for (const color of flashKeyframes) {
+    it(`task-flash-${color} does not animate scale()/transform`, () => {
+      const match = source.match(
+        new RegExp(`@keyframes\\s+task-flash-${color}\\s*\\{([\\s\\S]*?)\\n\\}`)
+      )
+      expect(match, `task-flash-${color} keyframes not found in TaskNode.vue`).not.toBeNull()
+      const body = match?.[1] ?? ''
+      expect(body, `task-flash-${color} must not use scale() — it nudges the canvas on Electron`).not.toMatch(/scale\s*\(/)
+      expect(body, `task-flash-${color} must not animate transform on the glass card (BUG-1808)`).not.toMatch(/\btransform\s*:/)
+    })
+  }
+})

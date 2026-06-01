@@ -504,31 +504,40 @@ onUnmounted(() => {
   animation: task-flash-blue 0.6s ease-out !important;
 }
 
+/*
+ * BUG-1808: These flash keyframes previously bounced the card with transform: scale(1.02).
+ * Per the BUG-1807 analysis (see @keyframes animate-creation above), a transform on this
+ * backdrop-composited glass card forces Electron to re-rasterize the surrounding 3D context,
+ * making every other node appear to shift ("the nudge"). The flash fires on date edits
+ * (e.g. rescheduling overdue → today via the context menu), so the nudge surfaced exactly
+ * where MASTER_PLAN BUG-1807 predicted. The flash is now transform-free: the brightness +
+ * box-shadow glow pulse carries the feedback, no scale → no compositor shift.
+ */
 @keyframes task-flash-green {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-success); }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-success); }
   50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-success); }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
 }
 
 @keyframes task-flash-red {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-danger); }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-danger); }
   50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-danger); }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
 }
 
 @keyframes task-flash-amber {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-orange); }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-orange); }
   50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-orange); }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
 }
 
 @keyframes task-flash-blue {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-blue); }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-blue); }
   50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-blue); }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
 }
 </style>

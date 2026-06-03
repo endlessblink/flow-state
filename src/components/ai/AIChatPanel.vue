@@ -870,6 +870,7 @@ onUnmounted(() => {
           <button
             class="header-btn close-btn"
             title="Close (Ctrl+/ or Esc)"
+            aria-label="Close"
             @click="closePanel"
           >
             <X :size="18" />

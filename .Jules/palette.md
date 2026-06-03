@@ -1,0 +1,3 @@
+## 2026-06-03 - Added missing aria-labels to scattered close buttons
+**Learning:** Found several floating `.close-btn` implementations scattered throughout utility popovers and modals (e.g. `SettingsModal`, `TaskQuickEditPopover`, `AIChatPanel`, `SyncErrorPopover`) that contained an `<X>` icon but lacked `aria-label` attributes for screen readers. Using `title` is insufficient for robust accessibility on icon-only buttons.
+**Action:** Always ensure any button that exclusively uses an icon component includes an explicit `aria-label` (e.g., `aria-label="Close"` or `:aria-label="$t('close')"` depending on i18n support) to be properly interpreted by screen readers.

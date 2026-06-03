@@ -765,6 +765,23 @@ export function useCanvasOrchestrator() {
         }
     })
 
+    // Collapse fix: re-sync when any group's collapsed state flips. updateGroup
+    // does not bump syncTrigger and the groups watcher above only fires on
+    // length change, so without this a collapse/expand never refreshes node data
+    // (child task/group nodes would never hide). Mirrors the task-signature
+    // watcher pattern above.
+    watch(() => canvasStore.groups.map(g => `${g.id}:${g.isCollapsed ? 1 : 0}`).join('|'), () => {
+        if (!isInitialized.value) return
+        if (isSyncingFromWatcher) return
+        isSyncingFromWatcher = true
+        try {
+            if (persistence.isSyncing.value) return
+            batchedSyncNodes()
+        } finally {
+            isSyncingFromWatcher = false
+        }
+    })
+
     // TASK-1690: Watch for canvas image additions/removals to inject imageNode nodes
     watch(() => canvasImagesStore.images.length, () => {
         if (!isInitialized.value) return

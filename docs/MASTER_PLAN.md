@@ -8,6 +8,22 @@
 
 ## Active Tasks
 
+### ~~BUG-1813~~: Canvas group collapse (minimize) does nothing (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ **DONE** (2026-06-04)
+
+**Problem**: Clicking a canvas group's collapse chevron didn't minimize the group (reported on Electron). The store toggled `isCollapsed`, but the group never visually collapsed and contained tasks stayed visible.
+
+**Root cause (two layers)**: (1) `GroupNodeSimple.vue` read `props.data.isCollapsed`, but `useCanvasSync` writes the node field as `collapsed` — so the read was always `false`. (2) Deeper: `updateGroup` never bumps `syncTrigger` and the orchestrator only re-syncs groups on `groups.length` change, so a collapse never refreshed node data at all — and nothing ever hid the child task/group nodes (only `done` tasks were hidden). Platform-agnostic; not Electron-specific.
+
+**Fix**: (a) `GroupNodeSimple` now reads collapse state reactively from the store group (same approach as `groupColor`/BUG-225), so the header reacts immediately. (b) `useCanvasOrchestrator` watches a per-group collapse signature and re-syncs on change. (c) `useCanvasSync` hides task nodes and nested child-group nodes whose parent/ancestor group is collapsed (`isUnderCollapsedAncestor`).
+
+**Verified visually**: `tests/e2e/canvas-collapse-local.spec.ts` drives the chevron and asserts collapse (header dashed + body hidden + child task hidden) and expand (restored), with before/after screenshots. Typecheck clean; 154 canvas unit tests pass.
+
+**Files**: `src/components/canvas/GroupNodeSimple.vue`, `src/composables/canvas/useCanvasOrchestrator.ts`, `src/composables/canvas/useCanvasSync.ts`, `tests/e2e/canvas-collapse-local.spec.ts`, `tests/e2e/playwright.collapse-local.config.ts`.
+
+---
+
 ### TASK-1812: Lanes — sprint-style cross-project goals for tasks (🔄 IN PROGRESS)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-06-03)

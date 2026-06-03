@@ -202,7 +202,19 @@ const canvasStore = useCanvasStore()
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
 const section = computed<GroupNodeData>(() => props.data.section || props.data)
-const isCollapsed = computed(() => !!props.data?.isCollapsed)
+// Collapse state must be read reactively from the STORE, not from Vue Flow node
+// data. Toggling collapse (canvasStore.toggleSectionCollapse → updateGroup) does
+// NOT bump syncTrigger and the orchestrator only re-syncs groups on length
+// change, so node `data.collapsed` is never refreshed — the group never visually
+// collapsed. Reading the live store group (same approach as `groupColor`,
+// BUG-225) makes the chevron/body react immediately. Node data is a fallback for
+// ghost nodes not present in the store.
+const isCollapsed = computed(() => {
+  const groupId = props.data?.id
+  const storeGroup = groupId ? canvasStore.groups.find(g => g.id === groupId) : undefined
+  const d = props.data as GroupNodeData & { collapsed?: boolean }
+  return !!(storeGroup?.isCollapsed ?? d?.collapsed ?? d?.isCollapsed ?? d?.section?.isCollapsed)
+})
 
 // BUG-225 FIX: Get color from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh

@@ -273,6 +273,23 @@ export function useCanvasSync() {
             // Create a Set of visible group IDs for fast lookup
             const visibleGroupIds = new Set(groups.map(g => g.id))
 
+            // Collapse fix: a collapsed group must hide the task/group nodes nested
+            // under it. Walk the parentGroupId chain from a node's parent; if the
+            // direct parent OR any ancestor is collapsed, the node is hidden.
+            const groupById = new Map(groups.map(g => [g.id, g]))
+            const isUnderCollapsedAncestor = (startParentId: string | null | undefined): boolean => {
+                let pid: string | null | undefined = startParentId
+                const seen = new Set<string>()
+                while (pid && !seen.has(pid)) {
+                    seen.add(pid)
+                    const g = groupById.get(pid)
+                    if (!g) break
+                    if (g.isCollapsed) return true
+                    pid = g.parentGroupId || null
+                }
+                return false
+            }
+
             for (const group of sortedGroups) {
                 const nodeId = CanvasIds.groupNodeId(group.id)
 
@@ -337,6 +354,11 @@ export function useCanvasSync() {
                     type: 'sectionNode',
                     position: displayPos,
                     parentNode: parentNodeId,
+                    // A nested child group hides when an ANCESTOR is collapsed.
+                    // The group's own collapsed state shrinks it (header only) but
+                    // does not hide the node itself. Use the store parentGroupId
+                    // chain, not Vue Flow's reset parentId.
+                    hidden: isUnderCollapsedAncestor(group.parentGroupId),
                     width: groupWidth,
                     height: groupHeight,
                     dimensions: {
@@ -482,7 +504,7 @@ export function useCanvasSync() {
                     parentNode: parentId ? CanvasIds.groupNodeId(parentId) : undefined,
                     draggable: true,
                     selectable: true,
-                    hidden: shouldHideDone && task.status === 'done',
+                    hidden: (shouldHideDone && task.status === 'done') || isUnderCollapsedAncestor(task.parentId),
                     // FIX: Removed extent: 'parent' so tasks can be dragged OUT of groups.
                     // With extent: 'parent', Vue Flow constrains movement to parent bounds,
                     // preventing tasks from being dragged outside. Without it, tasks can be

@@ -72,6 +72,8 @@
         :view-mode="viewMode"
         :external-calendar-enabled="externalCalendar.hasEnabledCalendars.value || googleCalendar.isConnected.value"
         :external-calendar-loading="externalCalendar.isLoading.value || googleCalendar.isLoading.value"
+        :google-connected="googleCalendar.isConnected.value"
+        :show-google-events="googleCalendar.showGoogleEvents.value"
         @previous-day="previousDay"
         @next-day="nextDay"
         @go-to-today="goToToday"
@@ -79,8 +81,6 @@
         @toggle-future-recurring="showFutureRecurring = !showFutureRecurring; taskStore.persistFilters()"
         @update:view-mode="viewMode = $event"
         @sync-external-calendar="syncAllExternalCalendars"
-        :google-connected="googleCalendar.isConnected.value"
-        :show-google-events="googleCalendar.showGoogleEvents.value"
         @toggle-google-events="googleCalendar.showGoogleEvents.value = !googleCalendar.showGoogleEvents.value"
         @sync-google-calendar="googleCalendar.syncNow"
       />
@@ -250,7 +250,7 @@ const handleReloadPage = () => {
   window.location.reload()
 }
 
-// Extract reactive refs from store
+// Extract live refs from store
 // TASK-076: Use calendar-specific done filter
 const { hideCalendarDoneTasks, showFutureRecurring } = storeToRefs(taskStore)
 
@@ -649,7 +649,7 @@ const handleDropCapture = (e: Event) => {
 // The dragend event fires on the source element and bubbles to document on EVERY drag end.
 // BUG-1361: Also clean up global drag state (ghost pill, body class) because
 // when inbox tasks are dropped on calendar, the source card may be removed from DOM
-// by reactive filtering before @dragend fires, leaving ghost pills stuck on screen.
+// by live filtering before @dragend fires, leaving ghost pills stuck on screen.
 const handleGlobalDragEnd = () => {
   // BUG-1351: Replace entire object for guaranteed prop reactivity
   dragGhost.value = { visible: false, title: '', duration: 30, slotIndex: 0 }
@@ -707,7 +707,7 @@ onMounted(() => {
     router.replace({ path: '/calendar', query: {} })
   } else {
     // Scroll to current time on mount
-    // Use setTimeout like the watchers — bare nextTick fires before CalendarDayView's
+    // Use setTimeout like the watchers; a bare Vue tick fires before CalendarDayView's
     // DOM is ready in WebKitGTK/Tauri, causing querySelector('.slots-container') to return null
     setTimeout(() => scrollToCurrentTime(), 150)
   }

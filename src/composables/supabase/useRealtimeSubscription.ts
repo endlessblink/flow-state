@@ -28,7 +28,8 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         onNotificationChange?: (payload: RealtimePayload) => void,
         onGroupChange?: (payload: RealtimePayload) => void,
         onRecovery?: () => Promise<void>, // Callback to reload data after recovery
-        workspaceId?: string | null       // Workspace collaboration: null = personal
+        workspaceId?: string | null,      // Workspace collaboration: null = personal
+        onLaneChange?: (payload: RealtimePayload) => void // TASK-1812: lane realtime
     ) => {
         const userId = authStore.user?.id
         if (!userId) return null
@@ -47,6 +48,9 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             ? `workspace_id=eq.${workspaceId}`
             : `user_id=eq.${userId}`
         const groupFilter = workspaceId
+            ? `workspace_id=eq.${workspaceId}`
+            : `user_id=eq.${userId}`
+        const laneFilter = workspaceId
             ? `workspace_id=eq.${workspaceId}`
             : `user_id=eq.${userId}`
 
@@ -187,6 +191,20 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                             })
                         }
                         onGroupChange(payload)
+                    })
+            }
+
+            if (onLaneChange) {
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'lanes', filter: laneFilter },
+                    (payload: RealtimePayload) => {
+                        if (import.meta.env.DEV) {
+                            console.debug('📡 [REALTIME] LANE event received:', {
+                                eventType: payload.eventType,
+                                id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
+                                name: payload.new?.name || payload.old?.name
+                            })
+                        }
+                        if (payload.table === 'lanes') onLaneChange(payload)
                     })
             }
 

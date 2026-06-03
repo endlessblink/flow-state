@@ -1,7 +1,7 @@
 <template>
   <div ref="triggerWrapperRef" class="task-row__priority" @click.stop>
     <span
-      ref="triggerRef"
+      ref="triggerElRef"
       class="task-row__priority-badge task-row__priority-badge--clickable"
       :class="{
         'task-row__priority-badge--high': priority === 'high',
@@ -60,7 +60,7 @@ const { t } = useI18n()
 
 const isOpen = ref(false)
 const triggerWrapperRef = ref<HTMLElement>()
-const triggerRef = ref<HTMLElement>()
+const triggerElRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
 
 // Fixed positioning for teleported dropdown
@@ -71,8 +71,8 @@ const dropdownStyle = ref<Record<string, string>>({
 })
 
 const calculateDropdownPosition = () => {
-  if (!triggerRef.value) return
-  const rect = triggerRef.value.getBoundingClientRect()
+  if (!triggerElRef.value) return
+  const rect = triggerElRef.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const dropdownHeight = 4 * 36 + 16 // 4 options * ~36px + padding
   const spaceBelow = viewportHeight - rect.bottom

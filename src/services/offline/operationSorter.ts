@@ -32,10 +32,11 @@ const OPERATION_PRIORITY: Record<SyncOperationType, number> = {
  */
 const ENTITY_PRIORITY: Record<SyncEntityType, number> = {
   project: 1,
-  group: 2,
-  task: 3,
-  timer_session: 4,
-  quick_sort_session: 5
+  lane: 2,
+  group: 3,
+  task: 4,
+  timer_session: 5,
+  quick_sort_session: 6
 }
 
 /**

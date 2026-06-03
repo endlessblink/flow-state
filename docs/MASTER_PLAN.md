@@ -8,6 +8,30 @@
 
 ## Active Tasks
 
+### TASK-1812: Lanes — sprint-style cross-project goals for tasks (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-06-03)
+
+**Goal**: Add a new first-class **Lane** entity — a sprint-like path toward a goal that pulls in tasks from *different* projects. A task belongs to at most one lane (nullable `laneId` FK, not a join table). v1 is a named bucket + view: `Lane = { id, name, color }` (no dates/progress/lifecycle yet). Lane is orthogonal to project (a task keeps its single `projectId`).
+
+**Approach**: `Lane` mirrors `Project` through the whole stack (type → mapper → DB module → store → sync queue → realtime → UI). Lane is **pure metadata** — never touches canvas geometry (`canvasPosition`/`parentId`/`position_version`); rides the normal task-update sync path and plain `updated_at` LWW (not the position-version path). Highest risk: `lane_id` must round-trip in both `toSupabaseTask`/`fromSupabaseTask` or realtime echo nulls it every save (same class as the documented `parentId` bug, `supabaseMappers.ts:532-539`).
+
+**Files**: `src/types/tasks.ts`, `src/types/sync.ts`, `src/utils/supabaseMappers.ts`, new `src/composables/supabase/useLanesDatabase.ts`, `src/composables/supabase/index.ts`, `src/composables/supabase/_tombstone.ts`, `src/composables/sync/useSyncOrchestrator.ts`, `src/composables/supabase/useRealtimeSubscription.ts`, `src/composables/app/useAppInitialization.ts`, new `src/stores/lanes.ts`, `src/views/AllTasksView.vue`, new `src/views/LaneView.vue`, new `src/components/sidebar/SidebarLanesSection.vue`, `src/layouts/AppSidebar.vue`, `src/router/index.ts`, `src/components/tasks/edit/TaskEditMetadata.vue`, new `supabase/migrations/20260603000000_lanes.sql`. Plan: `~/.claude/plans/check-work-lanes-in-wiggly-dragonfly.md`.
+
+**Progress (2026-06-03)**: Implementation complete + verified locally. ✅ vue-tsc clean, ✅ full unit suite 2342 pass (incl. 6 new lane mapper round-trip tests proving the realtime-echo safety), ✅ contract tests updated (lanes table + lane_id column), ✅ `npm run build` succeeds, ✅ migration applied to LOCAL DB (table + RLS + `lane_id` FK `ON DELETE SET NULL` + realtime publication verified), ✅ E2E `tests/e2e/lanes.spec.ts` 4/4 pass (chromium+webkit): cross-project lane view, group-by-lane, sidebar create→route. **Pending (needs user approval — NOT done):** (1) apply migration to PRODUCTION Supabase, (2) deploy web + Electron build.
+
+### TASK-1811: Group header button — apply group due date / properties to its tasks (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-06-01)
+
+**Goal**: Add an icon button to canvas group headers that applies the group's resolved due date to every task inside the group. Two separate actions in a small popover: "Set due date on all tasks" (due date only) and "Apply all group properties" (due date + priority + status + project). Button shows **only** on groups with a resolvable due date (power-keyword `Today`/`Tomorrow`/weekday groups, or `assignOnDrop.dueDate`). Overwrites existing task dates.
+
+**Approach**: Reuse `getSectionProperties(group, allGroups)` (`useCanvasSectionProperties.ts:147`) — the same resolver used on drop — as the single source of truth for the group's date. Metadata-only (`dueDate`/`priority`/`status`/`projectId`), never geometry, so it respects the Canvas Geometry Invariants. Apply via `taskStore.bulkUpdateTasksWithUndo` (one undo entry). Wiring mirrors the existing `@collect`/`collectTasksForSection` path: `GroupNodeSimple.vue` emit → `CanvasView.vue` → `useCanvasOrchestrator.ts` → new `applyGroupPropsToTasks(groupId, mode)` in `useCanvasTaskActions.ts`. Children enumerated from `taskStore._rawTasks` (the `.tasks` getter applies smart-view filters), skipping done/soft-deleted/completion-record/pinned.
+
+**Files**: `src/components/canvas/GroupNodeSimple.vue`, `src/views/CanvasView.vue`, `src/composables/canvas/useCanvasOrchestrator.ts`, `src/composables/canvas/useCanvasTaskActions.ts`, new unit test under `tests/unit/canvas/`.
+
+---
+
 ### ~~BUG-1810~~: Inbox "3 Days" filter shows far-future recurring tasks (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ **DONE** (2026-06-01)

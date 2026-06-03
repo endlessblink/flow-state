@@ -116,6 +116,7 @@ import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
+import { useLaneStore } from '@/stores/lanes'
 import { useTimerStore } from '@/stores/timer'
 import { useSettingsStore } from '@/stores/settings'
 import { useMobileDetection } from '@/composables/useMobileDetection'
@@ -141,6 +142,7 @@ type CreateTaskDefaults = {
   status?: string
   projectId?: string
   estimatedDuration?: number
+  laneId?: string | null
 }
 
 // Mobile Detection
@@ -148,6 +150,7 @@ const { isMobile } = useMobileDetection()
 
 // Stores
 const taskStore = useTaskStore()
+const laneStore = useLaneStore()
 const timerStore = useTimerStore()
 const settingsStore = useSettingsStore()
 const { bulkDeleteTasksWithUndo, createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
@@ -403,6 +406,40 @@ const groupedTasks = computed((): TaskGroup[] => {
         })
       }
     })
+  } else if (groupBy.value === 'lane') {
+    // TASK-1812: Group by lane (sprint-style cross-project goal). Flat, no hierarchy.
+    const laneMap = new Map<string, Task[]>()
+    tasks.forEach(task => {
+      const key = task.laneId || ''
+      if (!laneMap.has(key)) laneMap.set(key, [])
+      laneMap.get(key)!.push(task)
+    })
+    // Lanes in store order; only those with tasks
+    laneStore.lanes.forEach(lane => {
+      const laneTasks = laneMap.get(lane.id)
+      if (laneTasks && laneTasks.length > 0) {
+        groups.push({
+          key: lane.id,
+          title: lane.name,
+          color: lane.color,
+          tasks: laneTasks,
+          parentTasks: getRootTasks(laneTasks)
+        })
+      }
+    })
+    // Tasks with no lane (or pointing at a missing lane) bucket to the top
+    const noLane = laneMap.get('') || []
+    laneMap.forEach((laneTasks, key) => {
+      if (key !== '' && !laneStore.getLaneById(key)) noLane.push(...laneTasks)
+    })
+    if (noLane.length > 0) {
+      groups.unshift({
+        key: 'no-lane',
+        title: 'No Lane',
+        tasks: noLane,
+        parentTasks: getRootTasks(noLane)
+      })
+    }
   } else if (groupBy.value === 'dueDate') {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -536,6 +573,9 @@ const handleAddTaskToGroup = async (groupKey: string, groupByMode: string) => {
 
   if (groupByMode === 'project') {
     taskDefaults.projectId = (groupKey === 'uncategorized' || groupKey === '__no_project__') ? undefined : groupKey
+  } else if (groupByMode === 'lane') {
+    // TASK-1812: new task inherits the lane group it was added under
+    taskDefaults.laneId = groupKey === 'no-lane' ? null : groupKey
   } else if (groupByMode === 'status') {
     taskDefaults.status = groupKey as Task['status']
   } else if (groupByMode === 'priority') {

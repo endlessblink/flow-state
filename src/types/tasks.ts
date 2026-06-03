@@ -158,6 +158,9 @@ export interface Task {
   // Workspace collaboration (Phase 1)
   workspaceId?: string | null
   assignedTo?: string | null
+  // TASK-1812: Lane membership — sprint-style cross-project goal. A task belongs
+  // to at most one lane (nullable). Orthogonal to projectId; lane is pure metadata.
+  laneId?: string | null
 }
 
 export interface Project {
@@ -171,6 +174,19 @@ export interface Project {
   createdAt: Date
   updatedAt: Date
   // Workspace collaboration
+  workspaceId?: string | null
+}
+
+// TASK-1812: Lane — a sprint-like, cross-project goal. Tasks reference a lane
+// via Task.laneId; a lane deliberately spans multiple projects. v1 is a named
+// bucket (name + color); dates/progress/lifecycle are intentionally deferred.
+export interface Lane {
+  id: string
+  name: string
+  color: string
+  createdAt: Date
+  updatedAt: Date
+  // Workspace collaboration (mirrors Project)
   workspaceId?: string | null
 }
 
@@ -262,7 +278,7 @@ export interface UpdateTaskData extends Partial<CreateTaskData> {
 }
 
 // TASK-1334: Group By types for All Tasks view
-export type GroupByType = 'none' | 'project' | 'status' | 'priority' | 'dueDate'
+export type GroupByType = 'none' | 'project' | 'status' | 'priority' | 'dueDate' | 'lane'
 
 export interface TaskGroup {
   key: string

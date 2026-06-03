@@ -984,6 +984,10 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = true
       error.value = null
 
+      if (!supabase) {
+        throw new Error('Supabase is not configured for this build. Rebuild Electron with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+      }
+
       // FEATURE-1202: Branch on Tauri vs PWA
       // Tauri uses localhost redirect + system browser (can't do in-WebView redirect)
       // PWA uses standard OAuth redirect in same window

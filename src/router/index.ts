@@ -125,6 +125,14 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      // TASK-1812: Lane view — tasks for one sprint-style lane across all projects
+      path: '/lane/:laneId',
+      name: 'lane',
+      component: () => import('@/views/LaneView.vue'),
+      props: true,
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/today-flow',
       name: 'today-flow',
       component: () => import('@/views/TodayFlowView.vue'),

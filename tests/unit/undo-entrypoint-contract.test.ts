@@ -32,6 +32,23 @@ describe('undo-aware modal and context-menu entry points', () => {
     expect(source).not.toContain('await taskStore.updateTask(taskId, {\n      canvasPosition: undefined')
   })
 
+  it('routes canvas-origin permanent task delete through the canvas-safe bulk delete path', () => {
+    const canvasView = readSource('src/views/CanvasView.vue')
+    const modalManager = readSource('src/layouts/ModalManager.vue')
+    const canvasTaskActions = readSource('src/composables/canvas/useCanvasTaskActions.ts')
+    const canvasHotkeys = readSource('src/composables/canvas/useCanvasHotkeys.ts')
+
+    expect(canvasView).toContain("detail: { event, task, context: 'canvas' }")
+    expect(canvasTaskActions).toContain("detail: { taskId: task.id, permanent: false, context: 'canvas' }")
+    expect(canvasHotkeys).toContain("detail: { taskId: task.id, permanent: permanentDelete, context: 'canvas' }")
+
+    expect(modalManager).toContain('const canvasSafeDeleteTaskWithUndo = async (taskId: string) => {')
+    expect(modalManager).toContain('await undoRedoActions.bulkDeleteTasksWithUndo([taskId])')
+    expect(modalManager).toContain("if (contextMenuContext.value === 'canvas') {")
+    expect(modalManager).toContain("if (isPermanent && context === 'canvas') {")
+    expect(modalManager).toContain("recurrenceDeleteContext.value = context === 'canvas' ? 'canvas' : 'list'")
+  })
+
   it('keeps Kanban drop mutations on undo-aware APIs', () => {
     const source = readSource('src/components/kanban/KanbanColumn.vue')
 

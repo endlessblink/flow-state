@@ -409,6 +409,11 @@ export function useCanvasOrchestrator() {
         actions.collectOverdueTasksNearGroup(sectionId)
     }
 
+    // TASK-1811: Apply group due date / properties to the tasks inside a group
+    const applyGroupPropsToTasks = (groupId: string, mode: 'dueDate' | 'all') => {
+        actions.applyGroupPropsToTasks(groupId, mode)
+    }
+
     // TASK-1222: Collect overdue tasks and arrange near a group
     const collectOverdueTasksNearGroup = (sectionId: string) => {
         actions.collectOverdueTasksNearGroup(sectionId)
@@ -849,6 +854,7 @@ export function useCanvasOrchestrator() {
         ...smartGroups,
         collectTasksForSection,
         collectOverdueTasksNearGroup,
+        applyGroupPropsToTasks,
         ...connections,
 
         // Interaction Handlers

@@ -188,7 +188,7 @@ const getColumnDropUpdates = (task: Task): Partial<Task> => {
   }
 }
 
-// BUG-1193: Track drag state to prevent reactive overwrites during drag
+// BUG-1193: Track drag state to prevent store overwrites during drag
 const isDragActive = ref(false)
 
 // TASK-1160: Progressive rendering — limit rendered tasks per column
@@ -217,7 +217,7 @@ const localTasks = computed({
 
 watch(() => props.tasks, (newTasks) => {
   // BUG-1193: Don't overwrite allTasks during active drag operation
-  // vuedraggable manages the array during drag - reactive updates cause desync
+  // vuedraggable manages the array during drag - live updates cause desync
   // where the wrong task element gets associated with the drag ghost
   if (!isDragActive.value) {
     allTasks.value = [...newTasks]
@@ -228,7 +228,7 @@ const hasMore = computed(() => !isExpanded.value && allTasks.value.length > COLU
 const hiddenCount = computed(() => Math.max(0, allTasks.value.length - COLUMN_RENDER_LIMIT))
 
 // BUG-1335: Use a shared drag group across all swimlanes so tasks can be dragged
-// between projects. Static string avoids SortableJS re-init on reactive changes.
+// between projects. Static string avoids SortableJS re-init on live changes.
 const dragGroup = 'tasks'
 
 // FEATURE-1336b: Bridge vuedraggable drag to global useDragAndDrop for sidebar drops

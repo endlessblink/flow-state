@@ -292,5 +292,138 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
   }
 
-  return { tidyDayGroups, planTidyDayGroups }
+  /**
+   * TASK-1809: Plan a single-column restack for ONE group. Pure — no mutations.
+   *
+   * Used by Shift-drag reorder: tasks inside the target group are re-stacked
+   * from the header down in their current Y order, so a card dropped higher up
+   * rises to the top and the rest shift down (insert-and-shift). Reuses
+   * computeCanonicalLayout but scoped to the single group, so neither the group
+   * nor its siblings move on X — only the group's height grows to fit.
+   */
+  function planReorderColumn(groupId: string): {
+    input: DayGroupInput | null
+    groupMoves: GroupMove[]
+    taskMoves: TaskMove[]
+  } {
+    const group = canvasStore.groups.find((g) => g.id === groupId)
+    if (!group?.position) return { input: null, groupMoves: [], taskMoves: [] }
+
+    const layoutTasks = taskStore.rawTasks.filter((task) => {
+      if (task.parentId !== groupId) return false
+      if (!task.canvasPosition) return false
+      if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
+      if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
+      if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
+      return options.isTaskVisible?.(task.id) !== false
+    })
+
+    // Nothing to reorder with fewer than 2 cards.
+    if (layoutTasks.length < 2) return { input: null, groupMoves: [], taskMoves: [] }
+
+    const vfPos = options.getNodePosition?.(`section-${groupId}`)
+    const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
+    const taskSizes = new Map<string, { width: number; height: number }>()
+    const taskPositions = new Map<string, { x: number; y: number }>()
+    for (const task of layoutTasks) {
+      const size = options.getNodeSize?.(task.id)
+      if (size) taskSizes.set(task.id, size)
+      const position = options.getNodePosition?.(task.id)
+      if (position) taskPositions.set(task.id, position)
+    }
+
+    const input: DayGroupInput = { group, visualPos, tasks: layoutTasks, taskSizes, taskPositions }
+    const { groupMoves, taskMoves } = computeCanonicalLayout([input], [groupId], {
+      taskPositioning: 'fromHeader',
+      maxTasksPerColumn: null,
+      taskSpacing: 'contentGap',
+    })
+    return { input, groupMoves, taskMoves }
+  }
+
+  /**
+   * TASK-1809: Apply a single-column restack for ONE group (Shift-drag reorder).
+   * Same move-application contract as tidyDayGroups: returns moves + pendingWrites
+   * + release; the caller applies Vue Flow moves and invokes release() on nextTick.
+   */
+  function reorderColumn(groupId: string): {
+    groupMoves: GroupMove[]
+    taskMoves: TaskMove[]
+    pendingWrites: Promise<void>
+    release: () => void
+  } {
+    canvasSyncInProgress.value = true
+    let released = false
+    let pendingGroupMoves: GroupMove[] = []
+    let pendingTaskMoves: TaskMove[] = []
+    const release = () => {
+      if (released) return
+      released = true
+      for (const gm of pendingGroupMoves) {
+        positionManager.releasePositionLock(gm.groupId, 'user-drag')
+      }
+      for (const tm of pendingTaskMoves) {
+        positionManager.releasePositionLock(tm.taskId, 'user-drag')
+      }
+      canvasSyncInProgress.value = false
+    }
+
+    const { input, groupMoves, taskMoves } = planReorderColumn(groupId)
+    pendingGroupMoves = groupMoves
+    pendingTaskMoves = taskMoves
+
+    if (!input || taskMoves.length === 0) {
+      release()
+      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
+    }
+
+    const affectedIds = [...new Set([
+      ...groupMoves.map((move) => move.groupId),
+      ...taskMoves.map((move) => move.taskId),
+    ])]
+    const undoSystem = getUndoSystem()
+    const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+
+    const pendingWrites: Promise<unknown>[] = []
+    try {
+      for (const gm of groupMoves) {
+        if (!input.group.position) continue
+        canvasStore.updateGroup(gm.groupId, {
+          position: {
+            ...input.group.position,
+            x: gm.position.x,
+            y: gm.position.y,
+            width: gm.size.width,
+            height: gm.size.height,
+          },
+        })
+        positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
+      }
+      for (const tm of taskMoves) {
+        pendingWrites.push(taskStore.updateTask(
+          tm.taskId,
+          { canvasPosition: tm.position, positionFormat: 'absolute' },
+          'DRAG'
+        ))
+        positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
+      }
+    } catch (err) {
+      release()
+      throw err
+    }
+
+    const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
+      const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+      undoSystem.pushCanvasGeometryUndoSnapshot(
+        `Reorder ${taskMoves.length} task${taskMoves.length === 1 ? '' : 's'}`,
+        affectedIds,
+        snapshotBefore,
+        snapshotAfter
+      )
+    })
+
+    return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
+  }
+
+  return { tidyDayGroups, planTidyDayGroups, reorderColumn, planReorderColumn }
 }

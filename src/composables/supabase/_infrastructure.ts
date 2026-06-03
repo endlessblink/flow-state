@@ -163,6 +163,7 @@ export const swrCache = new SWRCache()
 export const invalidateCache = {
     tasks: () => swrCache.invalidatePrefix('tasks:'),
     projects: () => swrCache.invalidatePrefix('projects:'),
+    lanes: () => swrCache.invalidatePrefix('lanes:'),
     groups: () => swrCache.invalidatePrefix('groups:'),
     all: () => swrCache.clear(),
     // BUG-1056: Expose user change check for auth state changes

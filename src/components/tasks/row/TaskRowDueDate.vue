@@ -1,7 +1,7 @@
 <template>
   <div ref="triggerWrapperRef" class="task-row__due-date" @click.stop>
     <span
-      ref="triggerRef"
+      ref="triggerElRef"
       class="task-row__due-date-trigger"
       :class="dueDateClass"
       title="Click to change due date"
@@ -58,7 +58,7 @@ const emit = defineEmits<{
 
 const isOpen = ref(false)
 const triggerWrapperRef = ref<HTMLElement>()
-const triggerRef = ref<HTMLElement>()
+const triggerElRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
 const dateInputRef = ref<HTMLInputElement>()
 
@@ -70,8 +70,8 @@ const dropdownStyle = ref<Record<string, string>>({
 })
 
 const calculateDropdownPosition = () => {
-  if (!triggerRef.value) return
-  const rect = triggerRef.value.getBoundingClientRect()
+  if (!triggerElRef.value) return
+  const rect = triggerElRef.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const dropdownHeight = 5 * 36 + 16 // 5 options * ~36px + padding
   const spaceBelow = viewportHeight - rect.bottom

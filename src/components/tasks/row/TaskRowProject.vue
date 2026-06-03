@@ -3,7 +3,7 @@
     <!-- Categorized: Show emoji -->
     <span
       v-if="visual.type === 'emoji'"
-      ref="triggerRef"
+      ref="triggerElRef"
       class="project-emoji-badge project-visual--emoji"
       :title="`Project: ${projectDisplayName}`"
       @click="toggleDropdown($event)"
@@ -16,7 +16,7 @@
     <!-- Categorized: Show color circle -->
     <span
       v-else-if="visual.type === 'css-circle'"
-      ref="triggerRef"
+      ref="triggerElRef"
       class="project-emoji-badge project-visual--css-circle"
       :title="`Project: ${projectDisplayName}`"
       @click="toggleDropdown($event)"
@@ -29,7 +29,7 @@
     <!-- Uncategorized: Show subtle question mark -->
     <span
       v-else
-      ref="triggerRef"
+      ref="triggerElRef"
       class="project-placeholder"
       title="Click to assign a project"
       @click="toggleDropdown($event)"
@@ -110,7 +110,7 @@ const emit = defineEmits<{
 const projectStore = useProjectStore()
 const isOpen = ref(false)
 const triggerWrapperRef = ref<HTMLElement>()
-const triggerRef = ref<HTMLElement>()
+const triggerElRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
 
 const projects = computed(() => projectStore.projects)
@@ -123,8 +123,8 @@ const dropdownStyle = ref<Record<string, string>>({
 })
 
 const calculateDropdownPosition = (clickEvent?: MouseEvent) => {
-  if (!triggerRef.value) return
-  const rect = triggerRef.value.getBoundingClientRect()
+  if (!triggerElRef.value) return
+  const rect = triggerElRef.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const dropdownHeight = Math.min((projects.value.length + 1) * 36 + 16, 256)
 

@@ -344,4 +344,45 @@ describe('computeCanonicalLayout', () => {
     expect(groupMoves.length).toBe(1)
     expect(groupMoves[0].groupId).toBe('a')
   })
+
+  // TASK-1809: Shift-drag reorder relies on the primitive stacking tasks by
+  // their current Y order from the header down. A card dropped above another
+  // (smaller Y) must take the top slot and push the rest down.
+  describe('single-column reorder (TASK-1809)', () => {
+    it('restacks tasks in ascending drop-Y order from the header, regardless of input order', () => {
+      // Input order is t1, t2, t3 but their drop Y positions are interleaved:
+      // t3 was dropped highest (y=110), so it must land in the first slot.
+      const taskPositions = new Map<string, { x: number; y: number }>([
+        ['t1', { x: 20, y: 400 }],
+        ['t2', { x: 20, y: 250 }],
+        ['t3', { x: 20, y: 110 }],
+      ])
+      const input: DayGroupInput = {
+        group: grp('day', 'Today', 0, 0),
+        visualPos: { x: 0, y: 0 },
+        tasks: [tk('t1', 'day', 400), tk('t2', 'day', 250), tk('t3', 'day', 110)],
+        taskPositions,
+      }
+      const { taskMoves } = computeCanonicalLayout([input], ['day'], {
+        taskPositioning: 'fromHeader',
+        maxTasksPerColumn: null,
+        taskSpacing: 'contentGap',
+      })
+
+      // Order follows ascending drop-Y: t3 (110) → t2 (250) → t1 (400).
+      expect(taskMoves.map((m) => m.taskId)).toEqual(['t3', 't2', 't1'])
+
+      // Stacked top-to-bottom with no overlap.
+      const ys = taskMoves.map((m) => m.position.y)
+      expect(ys[0]).toBeLessThan(ys[1])
+      expect(ys[1]).toBeLessThan(ys[2])
+
+      // First card anchors just under the header (fromHeader, not the old top).
+      expect(ys[0]).toBe(CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING)
+
+      // Single column — no side-by-side overflow.
+      const xs = new Set(taskMoves.map((m) => m.position.x))
+      expect(xs.size).toBe(1)
+    })
+  })
 })

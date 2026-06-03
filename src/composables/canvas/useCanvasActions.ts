@@ -296,6 +296,7 @@ export function useCanvasActions(
         cancelBulkDelete: taskActions.cancelBulkDelete,
         arrangeDoneTasksInGrid: taskActions.arrangeDoneTasksInGrid,
         collectOverdueTasksNearGroup: taskActions.collectOverdueTasksNearGroup,
+        applyGroupPropsToTasks: taskActions.applyGroupPropsToTasks,
 
         isQuickTaskCreateOpen: taskActions.isQuickTaskCreateOpen,
         quickTaskPosition: taskActions.quickTaskPosition,

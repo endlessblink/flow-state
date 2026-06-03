@@ -14,10 +14,11 @@ import {
   toSupabaseTask, fromSupabaseTask,
   toSupabaseGroup, fromSupabaseGroup,
   toSupabaseProject, fromSupabaseProject,
+  toSupabaseLane, fromSupabaseLane,
   toSupabaseTimerSession, fromSupabaseTimerSession,
   toDbStatus,
 } from '@/utils/supabaseMappers'
-import type { Task, Project } from '@/types/tasks'
+import type { Task, Project, Lane } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
 import type { PomodoroSession } from '@/stores/timer'
 import { UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
@@ -381,5 +382,63 @@ describe('toSupabaseTimerSession / fromSupabaseTimerSession', () => {
     const result = toSupabaseTimerSession(session, USER_ID, 'device-1')
     // Timestamp IDs are considered valid (backwards compat)
     expect(result.id).toBe('1234567890123')
+  })
+})
+
+// ── TASK-1812: Lanes ─────────────────────────────────────────────────
+
+function makeLane(overrides: Partial<Lane> = {}): Lane {
+  return {
+    id: '990e8400-e29b-41d4-a716-446655440004',
+    name: 'v2 Launch',
+    color: '#4ECDC4',
+    createdAt: new Date('2026-01-01T00:00:00Z'),
+    updatedAt: new Date('2026-04-01T12:00:00Z'),
+    ...overrides,
+  }
+}
+
+describe('toSupabaseLane / fromSupabaseLane', () => {
+  it('round-trips core fields', () => {
+    const lane = makeLane()
+    const supabase = toSupabaseLane(lane, USER_ID)
+    expect(supabase.user_id).toBe(USER_ID)
+    expect(supabase.name).toBe('v2 Launch')
+    expect(supabase.color).toBe('#4ECDC4')
+    const roundTrip = fromSupabaseLane(supabase)
+    expect(roundTrip.id).toBe(lane.id)
+    expect(roundTrip.name).toBe(lane.name)
+    expect(roundTrip.color).toBe(lane.color)
+  })
+
+  it('defaults empty name to "Unnamed Lane"', () => {
+    const supabase = toSupabaseLane(makeLane({ name: '' }), USER_ID)
+    expect(supabase.name).toBe('Unnamed Lane')
+  })
+
+  it('fromSupabaseLane defaults missing color', () => {
+    const lane = fromSupabaseLane({ id: 'x', user_id: USER_ID, name: 'L', color: undefined })
+    expect(lane.color).toBe('#4ECDC4')
+  })
+})
+
+describe('TASK-1812: task lane_id round-trip (realtime-echo safety)', () => {
+  it('preserves laneId through toSupabaseTask → fromSupabaseTask', () => {
+    const laneId = '990e8400-e29b-41d4-a716-446655440004'
+    const supabase = toSupabaseTask(makeTask({ laneId }), USER_ID)
+    expect(supabase.lane_id).toBe(laneId)
+    // CRITICAL: realtime echo must NOT null out laneId
+    expect(fromSupabaseTask(supabase).laneId).toBe(laneId)
+  })
+
+  it('clears laneId when explicitly null (unassign)', () => {
+    const supabase = toSupabaseTask(makeTask({ laneId: null }), USER_ID)
+    expect(supabase.lane_id).toBeNull()
+    expect(fromSupabaseTask(supabase).laneId).toBeNull()
+  })
+
+  it('reads null laneId from a record with no lane_id column (pre-migration DB)', () => {
+    const supabase = toSupabaseTask(makeTask(), USER_ID)
+    expect(fromSupabaseTask({ ...supabase, lane_id: undefined }).laneId).toBeNull()
   })
 })

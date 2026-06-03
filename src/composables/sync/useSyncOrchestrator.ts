@@ -287,6 +287,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
     task: 'tasks',
     group: 'groups',
     project: 'projects',
+    lane: 'lanes',
     timer_session: 'timer_sessions',
     quick_sort_session: 'quick_sort_sessions'
   }
@@ -319,7 +320,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         // is_deleted=true. Merging these defaults ensures the upsert always resets the
         // deletion state, so fetchTasks (.eq('is_deleted', false)) sees the task on refresh.
         // Only apply to tables that have is_deleted/deleted_at columns (tasks, groups, projects).
-        const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project']
+        const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project', 'lane']
         const softDeleteDefaults = softDeleteTables.includes(entityType)
           ? { is_deleted: false, deleted_at: null }
           : {}
@@ -443,7 +444,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         //
         // Tables with soft-delete support (have is_deleted + deleted_at columns).
         // timer_sessions and quick_sort_sessions do NOT have these columns — hard DELETE instead.
-        const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project']
+        const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project', 'lane']
 
         if (softDeleteTables.includes(entityType)) {
           result = await supabase!

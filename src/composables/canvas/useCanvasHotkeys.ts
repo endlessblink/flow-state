@@ -91,7 +91,7 @@ export function useCanvasHotkeys(
             const task = rawTasks.find(t => t.id === taskItems[0].id)
             if (task?.recurrenceRule) {
                 window.dispatchEvent(new CustomEvent('recurrence-delete-requested', {
-                    detail: { taskId: task.id, permanent: permanentDelete }
+                    detail: { taskId: task.id, permanent: permanentDelete, context: 'canvas' }
                 }))
                 return
             }

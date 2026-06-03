@@ -136,7 +136,7 @@
           @node-double-click="handleNodeDoubleClick"
           @node-drag-start="handleNodeDragStart"
           @node-drag="handleNodeDrag"
-          @node-drag-stop="handleNodeDragStop"
+          @node-drag-stop="handleNodeDragStopWithReorder"
           @nodes-change="handleNodesChange"
           @edges-change="handleEdgesChange"
           @selection-change="handleSelectionChange"
@@ -168,6 +168,7 @@
               :dragging="nodeProps.dragging"
               @update="(data) => handleSectionUpdate(nodeProps.id, data)"
               @collect="collectTasksForSection"
+              @apply-group-props="(payload) => applyGroupPropsToTasks(payload.groupId, payload.mode)"
               @context-menu="handleSectionContextMenu"
               @open-settings="handleOpenSectionSettings"
               @resize-start="handleSectionResizeStart"
@@ -310,7 +311,7 @@
 
 <script setup lang="ts">
 import { ref, markRaw, nextTick, onMounted, onUnmounted, watch } from 'vue'
-import { ConnectionMode, VueFlow, useVueFlow, type NodeMouseEvent, type NodeTypesObject } from '@vue-flow/core'
+import { ConnectionMode, VueFlow, useVueFlow, type NodeMouseEvent, type NodeDragEvent, type NodeTypesObject } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -961,9 +962,47 @@ const {
   selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
   alignLeft, alignRight, alignTop, alignBottom, alignCenterHorizontal, alignCenterVertical,
   distributeHorizontal, distributeVertical, arrangeInRow, arrangeInColumn, arrangeInGrid,
-  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, collectOverdueTasksNearGroup, disconnectEdge,
+  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, collectOverdueTasksNearGroup, applyGroupPropsToTasks, disconnectEdge,
   syncNodes
 } = orchestrator
+
+// TASK-1809: Alt-drag to reorder tasks within a canvas column.
+// Wrap the normal drag-stop save. When the user held Alt while dropping a
+// task inside a group, restack that one column (insert-and-shift) so the
+// dropped card takes the slot its drop-Y landed in and the rest shift down.
+// Plain (non-Alt) drops are untouched — they keep free placement.
+// (Shift is reserved by Vue Flow for multi-selection, so Alt is the trigger.)
+async function handleNodeDragStopWithReorder(event: NodeDragEvent) {
+  const altHeld =
+    typeof MouseEvent !== 'undefined' &&
+    event?.event instanceof MouseEvent &&
+    event.event.altKey === true
+
+  // Always run the normal drag save first (single sanctioned geometry writer).
+  await handleNodeDragStop(event)
+  if (!altHeld) return
+
+  // Find the dropped task node (skip group/image nodes) and its current group.
+  const droppedTaskNode = (event?.nodes ?? []).find(
+    (node) => !CanvasIds.isGroupNode(node.id) && node.type !== 'imageNode'
+  )
+  if (!droppedTaskNode) return
+
+  const task = taskStore.getTask(droppedTaskNode.id)
+  const groupId = task?.parentId
+  if (!groupId) return
+
+  const result = tidyLayout.reorderColumn(groupId)
+  if (result.taskMoves.length === 0) {
+    result.release()
+    return
+  }
+
+  applyCanonicalMoves(result.groupMoves, result.taskMoves)
+  releaseOnDoubleNextTick(result.release, () => {
+    syncNodes(undefined, { force: true })
+  }, result.pendingWrites)
+}
 
 // TASK-1756 v3: run day-group catchup once Vue Flow is fully ready (findNode
 // works) and whenever the reactive "today" flips (midnight, focus, online,
@@ -1073,7 +1112,7 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
     if (event) event.preventDefault()
     // Dispatch global event for ModalManager to handle (shared TaskContextMenu)
     window.dispatchEvent(new CustomEvent('task-context-menu', {
-        detail: { event, task }
+        detail: { event, task, context: 'canvas' }
     }))
 }
 

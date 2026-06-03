@@ -14,16 +14,11 @@ import { useSettingsStore, type ExternalCalendarConfig, type GoogleCalendarConfi
 import { EXTERNAL_URLS } from '@/config/urls'
 import { openExternal } from '@/utils/openExternal'
 import { useGoogleCalendar } from '@/composables/calendar/useGoogleCalendar'
-import { useI18n } from 'vue-i18n'
-
-const emit = defineEmits<{ closeModal: [] }>()
-
 declare const __APP_VERSION__: string
 
 const authStore = useAuthStore()
 const settingsStore = useSettingsStore()
 
-const { t } = useI18n()
 const googleCalendar = useGoogleCalendar()
 
 // Google Calendar: fetch calendars when connecting
@@ -244,7 +239,7 @@ const canChangePassword = computed(() => true)
 
 const handleSignOut = async () => {
   await authStore.signOut()
-  // BUG-1352: Force full page reload to reset all reactive state to guest mode.
+  // BUG-1352: Force full page reload to reset all live state to guest mode.
   // Just closing the modal leaves stale data in composables, watchers, and views
   // that don't properly react to the auth→guest transition.
   window.location.reload()
@@ -581,7 +576,9 @@ const handleChangePassword = async () => {
 
           <!-- Calendar list -->
           <div v-if="settingsStore.googleCalendars.length > 0" class="calendar-list">
-            <p class="section-description">{{ $t('google_calendar.select_calendars') }}</p>
+            <p class="section-description">
+              {{ $t('google_calendar.select_calendars') }}
+            </p>
             <div
               v-for="cal in settingsStore.googleCalendars"
               :key="cal.id"

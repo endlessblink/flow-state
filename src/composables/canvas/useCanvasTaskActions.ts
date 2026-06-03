@@ -386,7 +386,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             const task = rawTasks.find(t => t.id === items[0].id)
             if (task?.recurrenceRule) {
                 window.dispatchEvent(new CustomEvent('recurrence-delete-requested', {
-                    detail: { taskId: task.id, permanent: false }
+                    detail: { taskId: task.id, permanent: false, context: 'canvas' }
                 }))
                 deps.closeCanvasContextMenu()
                 return
@@ -827,6 +827,64 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         }
     }
 
+    // TASK-1811: Apply a group's resolved due date (or all its assignable
+    // properties) to every task currently inside the group. Metadata-only —
+    // never touches position/parentId/canvasPosition (Canvas Geometry Invariants).
+    const applyGroupPropsToTasks = async (groupId: string, mode: 'dueDate' | 'all' = 'dueDate') => {
+        const toast = useToast()
+
+        const allGroups = canvasStore._rawGroups || []
+        const group = allGroups.find(g => g.id === groupId)
+        if (!group) {
+            toast.showToast('Group not found', 'error')
+            return { success: false, count: 0 }
+        }
+
+        // getSectionProperties is the single source of truth for the group's
+        // resolved due date (power keywords + assignOnDrop), shared with drop logic.
+        const resolved = getSectionProperties(group as CanvasSection, allGroups as CanvasSection[])
+        if (!resolved.dueDate) {
+            toast.showToast('This group has no due date to apply', 'info')
+            return { success: false, count: 0 }
+        }
+
+        const updates: Partial<Task> = mode === 'dueDate'
+            ? { dueDate: resolved.dueDate }
+            : { ...resolved }
+
+        // Enumerate children from _rawTasks (taskStore.tasks applies smart-view
+        // filters). Mirror the group task-count filter: skip done/deleted/pinned.
+        const children = taskStore._rawTasks.filter(t =>
+            t.parentId === groupId &&
+            !t._soft_deleted &&
+            t.status !== 'done' &&
+            !t.isCompletionRecord &&
+            !t.isPinned
+        )
+
+        if (children.length === 0) {
+            toast.showToast('No tasks in this group', 'info')
+            return { success: true, count: 0 }
+        }
+
+        const label = mode === 'dueDate'
+            ? `Set due date on ${children.length} task${children.length === 1 ? '' : 's'}`
+            : `Apply group properties to ${children.length} task${children.length === 1 ? '' : 's'}`
+
+        try {
+            await taskStore.bulkUpdateTasksWithUndo(
+                children.map(t => ({ id: t.id, updates: { ...updates } })),
+                label
+            )
+            toast.showToast(label, 'success')
+            return { success: true, count: children.length }
+        } catch (error) {
+            console.error('[ASYNC-ERROR] applyGroupPropsToTasks failed', error)
+            toast.showToast('Failed to apply group properties', 'error')
+            return { success: false, count: 0 }
+        }
+    }
+
     return {
         isQuickTaskCreateOpen,
         quickTaskPosition,
@@ -844,6 +902,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         confirmBulkDelete,
         cancelBulkDelete,
         arrangeDoneTasksInGrid,
-        collectOverdueTasksNearGroup
+        collectOverdueTasksNearGroup,
+        applyGroupPropsToTasks
     }
 }

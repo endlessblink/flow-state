@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router'
 import { useTimerStore } from '@/stores/timer'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
+import { useLaneStore } from '@/stores/lanes'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notifications'
@@ -13,7 +14,7 @@ import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { clearGuestData, clearStaleGuestTasks, getOrCreateGuestSessionId } from '@/utils/guestModeStorage'
 // BUG-FIX: Import mappers to properly convert realtime data
-import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, type SupabaseTask, type SupabaseProject, type SupabaseGroup } from '@/utils/supabaseMappers'
+import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, fromSupabaseLane, type SupabaseTask, type SupabaseProject, type SupabaseGroup, type SupabaseLane } from '@/utils/supabaseMappers'
 // TASK-1177: Offline-first sync system
 import type { RealtimePayload } from '@/composables/supabase/useRealtimeSubscription'
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
@@ -31,6 +32,7 @@ export function useAppInitialization() {
     const timerStore = useTimerStore()
     const taskStore = useTaskStore()
     const projectStore = useProjectStore()
+    const laneStore = useLaneStore()
     const canvasStore = useCanvasStore()
     const uiStore = useUIStore()
     const notificationStore = useNotificationStore()
@@ -45,6 +47,28 @@ export function useAppInitialization() {
     // BUG-1339: Signal that initial data load has completed (tasks, projects, canvas)
     // Views should NOT render content until this is true to prevent blank-on-first-load
     const isDataReady = ref(false)
+
+    const reloadCoreData = async () => {
+        await Promise.all([
+            taskStore.loadFromDatabase(),
+            projectStore.loadProjectsFromDatabase(),
+            laneStore.loadLanesFromDatabase(),
+            canvasStore.loadFromDatabase()
+        ])
+    }
+
+    // TASK-1812: Lane realtime handler. Lane is pure metadata (no geometry),
+    // so it has no drag/resize lock.
+    const onLaneChange = (payload: RealtimePayload) => {
+        const laneStoreLocal = useLaneStore()
+        const { eventType, new: newDoc, old: oldDoc } = payload
+        if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
+            laneStoreLocal.removeLaneFromSync(newDoc?.id || oldDoc?.id)
+        } else if (newDoc) {
+            const mappedLane = fromSupabaseLane(newDoc as SupabaseLane)
+            laneStoreLocal.updateLaneFromSync(mappedLane.id, mappedLane)
+        }
+    }
 
     onMounted(async () => {
         // MARK: SESSION START for stability guards
@@ -179,6 +203,11 @@ export function useAppInitialization() {
                 console.warn('[MAIN] Failed to load workspaces:', e)
             }
         }
+
+        // TASK-1812: Load lanes once on startup. Covers guest/offline (localStorage)
+        // since the authed background refresh below only runs when online; for
+        // authed+online it reloads idempotently (loadInFlightPromise-guarded).
+        laneStore.loadLanesFromDatabase().catch(e => console.warn('[LANES] Initial load failed:', e))
 
         // 1. Initial Load from Supabase
 
@@ -326,11 +355,7 @@ export function useAppInitialization() {
             const backgroundRefresh = async () => {
                 try {
                     invalidateCache.all()
-                    await Promise.all([
-                        taskStore.loadFromDatabase(),
-                        projectStore.loadProjectsFromDatabase(),
-                        canvasStore.loadFromDatabase()
-                    ])
+                    await reloadCoreData()
 
                     // TASK-1428: Re-apply unsynced offline changes that Supabase doesn't know about yet
                     await reapplyPendingWrites()
@@ -375,11 +400,7 @@ export function useAppInitialization() {
                                 if (taskStore._rawTasks.length === 0 && authStore.isAuthenticated) {
                                     console.log('🔄 [BUG-1339] Delayed retry: invalidating cache and reloading...')
                                     invalidateCache.all()
-                                    await Promise.all([
-                                        taskStore.loadFromDatabase(),
-                                        projectStore.loadProjectsFromDatabase(),
-                                        canvasStore.loadFromDatabase()
-                                    ])
+                                    await reloadCoreData()
                                     await reapplyPendingWrites()
                                     console.log(`✅ [BUG-1339] Delayed retry loaded ${taskStore._rawTasks.length} tasks`)
                                 }
@@ -395,11 +416,7 @@ export function useAppInitialization() {
                         window.removeEventListener('online', onBackOnline)
                         try {
                             invalidateCache.all()
-                            await Promise.all([
-                                taskStore.loadFromDatabase(),
-                                projectStore.loadProjectsFromDatabase(),
-                                canvasStore.loadFromDatabase()
-                            ])
+                            await reloadCoreData()
                             const { useSyncStatusStore } = await import('@/stores/syncStatus')
                             useSyncStatusStore().clearCacheMode()
                             console.log('✅ [CACHE-FIRST] Successfully reloaded from Supabase after reconnection')
@@ -424,11 +441,7 @@ export function useAppInitialization() {
                 window.removeEventListener('online', onBackOnline)
                 try {
                     invalidateCache.all()
-                    await Promise.all([
-                        taskStore.loadFromDatabase(),
-                        projectStore.loadProjectsFromDatabase(),
-                        canvasStore.loadFromDatabase()
-                    ])
+                    await reloadCoreData()
                     try {
                         const { useSyncStatusStore } = await import('@/stores/syncStatus')
                         useSyncStatusStore().clearCacheMode()
@@ -738,11 +751,7 @@ export function useAppInitialization() {
         // This fixes intermittent "0 tasks" issue when initial load fails due to stale token
         const onRecovery = async () => {
             console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
-            await Promise.all([
-                taskStore.loadFromDatabase(),
-                projectStore.loadProjectsFromDatabase(),
-                canvasStore.loadFromDatabase()
-            ])
+            await reloadCoreData()
             // BUG-1411: Clear offline cache mode — we're back online with fresh data
             try {
                 const { useSyncStatusStore } = await import('@/stores/syncStatus')
@@ -753,7 +762,7 @@ export function useAppInitialization() {
             timerStore.resyncFromDatabase()
         }
 
-        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId)
+        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId, onLaneChange)
         activeChannel.value = channel
         realtimeInitialized.value = !!channel
 
@@ -854,15 +863,11 @@ export function useAppInitialization() {
 
             const onRecovery = async () => {
                 console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
-                await Promise.all([
-                    taskStore.loadFromDatabase(),
-                    projectStore.loadProjectsFromDatabase(),
-                    canvasStore.loadFromDatabase()
-                ])
+                await reloadCoreData()
             }
 
             const timerHandler = timerStore.handleRemoteTimerUpdate
-            const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId)
+            const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId, onLaneChange)
 
             if (channel) {
                 activeChannel.value = channel
@@ -955,15 +960,11 @@ export function useAppInitialization() {
 
         const onRecovery = async () => {
             console.log('🔄 [APP-INIT] Reloading data after auth recovery (workspace switch)...')
-            await Promise.all([
-                taskStore.loadFromDatabase(),
-                projectStore.loadProjectsFromDatabase(),
-                canvasStore.loadFromDatabase()
-            ])
+            await reloadCoreData()
         }
 
         const timerHandler = timerStore.handleRemoteTimerUpdate
-        const channel = initRealtime(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, newWsId)
+        const channel = initRealtime(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, newWsId, onLaneChange)
 
         if (channel) {
             activeChannel.value = channel
@@ -972,11 +973,7 @@ export function useAppInitialization() {
 
         // BUG-1673: Reload data for the new workspace context
         // Without this, tasks loaded for the previous workspace remain stale
-        await Promise.all([
-            taskStore.loadFromDatabase(),
-            projectStore.loadProjectsFromDatabase(),
-            canvasStore.loadFromDatabase()
-        ])
+        await reloadCoreData()
     })
 
     // TASK-1338: Handle SW push notification click actions

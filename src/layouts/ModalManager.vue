@@ -219,9 +219,10 @@ const contextMenuY = ref(0)
 const contextMenuTask = ref<Task | null>(null)
 const contextMenuSelectedIds = ref<string[]>([])
 const contextMenuSelectedCount = ref(0)
+type TaskMenuContext = 'calendar' | 'board' | 'list' | 'canvas'
 // TASK-1785 Push 2: surface the menu was opened from, so the calendar can show
 // the "Lock time on calendar" toggle while other surfaces hide it.
-const contextMenuContext = ref<'calendar' | 'board' | 'list' | 'canvas'>('list')
+const contextMenuContext = ref<TaskMenuContext>('list')
 
 const showProjectContextMenu = ref(false)
 const projectContextMenuX = ref(0)
@@ -247,6 +248,7 @@ const recurrenceDeleteTaskRule = ref<import('@/types/tasks').SimpleRecurrenceRul
 // Track whether the pending action is a permanent delete
 const recurrenceDeleteIsPermanent = ref(false)
 const recurrenceDeleteShowCanvasRemove = ref(false)
+const recurrenceDeleteContext = ref<TaskMenuContext>('list')
 
 // Methods
 const openEditTask = (task: Task) => {
@@ -260,6 +262,19 @@ const closeTaskContextMenu = () => {
   // TASK-1419: Do NOT clear selectedIds/selectedCount here.
   // Batch handlers fire AFTER close (composable emits 'close' before batch events
   // per BUG-1095). IDs are overwritten on next open in handleTaskContextMenu.
+}
+
+const canvasSafeDeleteTaskWithUndo = async (taskId: string) => {
+  try {
+    const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+    const undoRedoActions = useUnifiedUndoRedo()
+    await undoRedoActions.bulkDeleteTasksWithUndo([taskId])
+    showTaskContextMenu.value = false
+  } catch (error) {
+    console.error('[ModalManager] Canvas-safe task delete failed:', error)
+    message.error('Failed to delete task from canvas')
+    throw error
+  }
 }
 
 const confirmDeleteTask = async (task: Task) => {
@@ -297,6 +312,7 @@ const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendar
     recurrenceDeleteTaskRule.value = task.recurrenceRule
     recurrenceDeleteIsPermanent.value = false
     recurrenceDeleteShowCanvasRemove.value = !!task.canvasPosition
+    recurrenceDeleteContext.value = contextMenuContext.value
     showRecurrenceDeleteModal.value = true
   } else {
     confirmDeleteTask(task)
@@ -317,6 +333,7 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
     recurrenceDeleteTaskRule.value = task.recurrenceRule
     recurrenceDeleteIsPermanent.value = true
     recurrenceDeleteShowCanvasRemove.value = !!task.canvasPosition
+    recurrenceDeleteContext.value = contextMenuContext.value
     showRecurrenceDeleteModal.value = true
     return
   }
@@ -327,6 +344,11 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
     'Use this only when you do not want the task recoverable from trash.'
   ]
   confirmAction.value = async () => {
+    if (contextMenuContext.value === 'canvas') {
+      await canvasSafeDeleteTaskWithUndo(task.id)
+      return
+    }
+
     const { getUndoSystem } = await import('@/composables/undoSingleton')
     await getUndoSystem().permanentlyDeleteTaskWithUndo(task.id)
     showTaskContextMenu.value = false
@@ -338,11 +360,18 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
 const handleRecurrenceSkip = async () => {
   const taskId = recurrenceDeleteTaskId.value
   const isPermanent = recurrenceDeleteIsPermanent.value
+  const context = recurrenceDeleteContext.value
   showRecurrenceDeleteModal.value = false
   recurrenceDeleteTaskId.value = null
+  recurrenceDeleteContext.value = 'list'
   if (!taskId) return
 
   try {
+    if (isPermanent && context === 'canvas') {
+      await canvasSafeDeleteTaskWithUndo(taskId)
+      return
+    }
+
     if (isPermanent) {
       // BUG-1508: Permanent delete — chain is cleared inside permanentlyDeleteTask,
       // so the scheduler cannot recreate this occurrence after the hard delete.
@@ -359,11 +388,18 @@ const handleRecurrenceSkip = async () => {
 const handleRecurrenceStop = async () => {
   const taskId = recurrenceDeleteTaskId.value
   const isPermanent = recurrenceDeleteIsPermanent.value
+  const context = recurrenceDeleteContext.value
   showRecurrenceDeleteModal.value = false
   recurrenceDeleteTaskId.value = null
+  recurrenceDeleteContext.value = 'list'
   if (!taskId) return
 
   try {
+    if (isPermanent && context === 'canvas') {
+      await canvasSafeDeleteTaskWithUndo(taskId)
+      return
+    }
+
     if (isPermanent) {
       // BUG-1508: For permanent delete, use permanentlyDeleteTask which clears the
       // recurrence chain first (via clearRecurrenceChain) then hard-deletes.
@@ -382,6 +418,7 @@ const handleRecurrenceRemoveFromCanvas = async () => {
   const taskId = recurrenceDeleteTaskId.value
   showRecurrenceDeleteModal.value = false
   recurrenceDeleteTaskId.value = null
+  recurrenceDeleteContext.value = 'list'
   if (!taskId) return
 
   try {
@@ -463,15 +500,6 @@ const handleQuickTaskCreate = async (data: {
     closeQuickTaskCreate()
   } catch (error) {
     console.error('Failed to create task:', error)
-  }
-}
-
-const handleMoveToSection = (taskId: string) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
-  if (task) {
-    selectedTaskForSection.value = task
-    showSectionSelectionModal.value = true
-    showTaskContextMenu.value = false
   }
 }
 
@@ -599,6 +627,7 @@ const handleBatchDeleteSelected = () => {
     recurrenceDeleteTaskRule.value = first.recurrenceRule ?? null
     recurrenceDeleteIsPermanent.value = false
     recurrenceDeleteShowCanvasRemove.value = !!first.canvasPosition
+    recurrenceDeleteContext.value = contextMenuContext.value
     showRecurrenceDeleteModal.value = true
     return
   }
@@ -689,6 +718,7 @@ const handleConfirmDeleteSelected = () => {
     recurrenceDeleteTaskRule.value = task.recurrenceRule ?? null
     recurrenceDeleteIsPermanent.value = false
     recurrenceDeleteShowCanvasRemove.value = !!task.canvasPosition
+    recurrenceDeleteContext.value = 'list'
     showRecurrenceDeleteModal.value = true
     return
   }
@@ -702,6 +732,7 @@ const handleConfirmDeleteSelected = () => {
     recurrenceDeleteTaskRule.value = first.recurrenceRule ?? null
     recurrenceDeleteIsPermanent.value = false
     recurrenceDeleteShowCanvasRemove.value = !!first.canvasPosition
+    recurrenceDeleteContext.value = 'list'
     showRecurrenceDeleteModal.value = true
     return
   }
@@ -744,7 +775,7 @@ const handleOpenTaskEdit = (event: Event) => {
 
 const handleTaskContextMenu = (event: Event) => {
   const customEvent = event as CustomEvent
-  const { event: mouseEvent, task, instanceId, isCalendarEvent, selectedIds, selectedCount } = customEvent.detail
+  const { event: mouseEvent, task, instanceId, isCalendarEvent, selectedIds, selectedCount, context } = customEvent.detail
 
   if (isCalendarEvent && instanceId) {
     contextMenuTask.value = {
@@ -756,8 +787,13 @@ const handleTaskContextMenu = (event: Event) => {
     contextMenuTask.value = task
   }
 
-  // TASK-1785 Push 2: 'calendar' enables the lock toggle in the menu
-  contextMenuContext.value = isCalendarEvent ? 'calendar' : 'list'
+  // TASK-1785 Push 2: 'calendar' enables the lock toggle in the menu.
+  // Canvas passes its origin so permanent delete can use the canvas-safe path.
+  contextMenuContext.value = isCalendarEvent
+    ? 'calendar'
+    : context === 'canvas' || context === 'board' || context === 'list'
+      ? context
+      : 'list'
 
   // TASK-1419: Pass multi-select info to context menu
   contextMenuSelectedIds.value = selectedIds || [task.id]
@@ -784,7 +820,7 @@ const handleProjectContextMenu = (event: Event) => {
 
 // TASK-1520 follow-up: Global listener for recurrence-aware deletes from any component
 const handleRecurrenceDeleteEvent = (e: Event) => {
-  const { taskId, permanent } = (e as CustomEvent).detail
+  const { taskId, permanent, context } = (e as CustomEvent).detail
   const allTasks = taskStore.rawTasks || taskStore.tasks
   const task = allTasks.find(t => t.id === taskId)
   if (!task) return
@@ -794,6 +830,7 @@ const handleRecurrenceDeleteEvent = (e: Event) => {
   recurrenceDeleteTaskRule.value = task.recurrenceRule ?? null
   recurrenceDeleteIsPermanent.value = permanent ?? false
   recurrenceDeleteShowCanvasRemove.value = !!task.canvasPosition
+  recurrenceDeleteContext.value = context === 'canvas' ? 'canvas' : 'list'
   showRecurrenceDeleteModal.value = true
 }
 

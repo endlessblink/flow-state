@@ -16,6 +16,7 @@
         <SidebarSmartViews />
         <SidebarDurationSection />
         <SidebarProjectsSection />
+        <SidebarLanesSection />
       </div>
 
       <SidebarActivityFeed />
@@ -34,6 +35,7 @@ import SidebarQuickTaskInput from '@/components/sidebar/SidebarQuickTaskInput.vu
 import SidebarSmartViews from '@/components/sidebar/SidebarSmartViews.vue'
 import SidebarDurationSection from '@/components/sidebar/SidebarDurationSection.vue'
 import SidebarProjectsSection from '@/components/sidebar/SidebarProjectsSection.vue'
+import SidebarLanesSection from '@/components/sidebar/SidebarLanesSection.vue'
 import SidebarUserFooter from '@/components/sidebar/SidebarUserFooter.vue'
 import SidebarActivityFeed from '@/components/workspace/SidebarActivityFeed.vue'
 

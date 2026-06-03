@@ -1,11 +1,20 @@
 <template>
   <div v-if="isOpen" class="settings-overlay" @click="$emit('close')">
-    <div class="settings-modal" :class="{ 'wide-mode': activeTab === 'ai-quality' }" :dir="direction" @click.stop>
+    <div
+      class="settings-modal"
+      :class="{ 'wide-mode': activeTab === 'ai-quality' }"
+      :dir="direction"
+      @click.stop
+    >
       <header class="settings-header">
         <h2 class="settings-title">
           {{ $t('settings.title') }}
-</h2>
-        <button class="close-btn" :aria-label="$t('close')" @click="$emit('close')">
+        </h2>
+        <button
+          class="close-btn"
+          :aria-label="$t('close')"
+          @click="$emit('close')"
+        >
           <X :size="16" />
         </button>
       </header>

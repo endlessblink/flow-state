@@ -1650,3 +1650,51 @@ export function buildNativeToolsBehaviorPrompt(): string {
     '- NEVER show raw IDs, JSON, or technical details to the user',
   ].join('\n')
 }
+
+/**
+ * Build a tool-usage prompt for TEXT-based tool calling (TASK-1814).
+ * Used for the subscription bridge brains (claude/codex CLIs) which cannot do
+ * native/MCP function-calling — they must emit `tool_name({...})` as text, which
+ * the ReAct loop parses via parseTextToolCalls(). Lists every tool + its params
+ * so the model emits correct calls instead of narrating ("MCP tools should...").
+ */
+export function buildTextToolsBehaviorPrompt(): string {
+  const toolList = AI_TOOLS.map(tool => {
+    const props = (tool.parameters?.properties || {}) as Record<string, unknown>
+    const required = tool.parameters?.required || []
+    const params = Object.keys(props)
+      .map(p => (required.includes(p) ? p : `${p}?`))
+      .join(', ')
+    const conf = tool.requiresConfirmation ? ' [add "confirmed": true]' : ''
+    const desc = (tool.description || '').split('.')[0]
+    return `- ${tool.name}(${params})${conf} — ${desc}`
+  }).join('\n')
+
+  return [
+    '## TOOL USE — you act THROUGH the FlowState app (no native/MCP tools).',
+    '',
+    'You are wired into FlowState: every tool call you emit IS executed against the user\'s REAL task database, and the results are returned to you. You DO have full access to the user\'s tasks through these tool calls. NEVER claim you lack access, NEVER ask where tasks are stored, NEVER suggest other apps (Google Tasks, Obsidian, etc.) — the tasks are right here and your calls reach them.',
+    '',
+    'To act, output a line containing EXACTLY one tool call in this format (and nothing else):',
+    'tool_name({"param": "value"})',
+    '',
+    'STRICT RULES:',
+    '- When the user asks about their tasks / overdue / schedule / projects, OR asks to create, change, complete, or delete something — your FIRST output MUST be the tool-call line and NOTHING else. Do NOT explain, do NOT say "let me check" / "I will", do NOT mention "MCP" or "tools". Just emit the call.',
+    '- After the tool results are returned to you, write your final answer in the user\'s language. Do not call more tools unless clearly needed.',
+    '- Arguments must be valid JSON with double quotes.',
+    '- To complete/finish a task, use mark_task_done with a title fragment (no UUID needed).',
+    '- For destructive tools, add "confirmed": true.',
+    `- At most ${MAX_TOOLS_PER_RESPONSE} tool calls.`,
+    '- For greetings or general questions, just answer normally — no tool call.',
+    '',
+    'Available tools (param? = optional):',
+    toolList,
+    '',
+    'EXAMPLES:',
+    'User: "what are my overdue tasks?"  ->  get_overdue_tasks({})',
+    'User: "show my tasks"  ->  list_tasks({})',
+    'User: "find the task about Reuital"  ->  search_tasks({"query": "Reuital"})',
+    'User: "mark the Reuital task done"  ->  mark_task_done({"task": "Reuital"})',
+    'User: "create a task to call the bank tomorrow"  ->  create_task({"title": "Call the bank", "dueDate": "tomorrow"})',
+  ].join('\n')
+}

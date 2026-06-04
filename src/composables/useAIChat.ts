@@ -30,6 +30,7 @@ import {
   executeTool,
   buildOpenAITools,
   buildNativeToolsBehaviorPrompt,
+  buildTextToolsBehaviorPrompt,
   MAX_TOOLS_PER_RESPONSE,
   AI_TOOLS,
   type ToolCall,
@@ -411,6 +412,22 @@ export function useAIChat() {
   }
 
   /**
+   * TASK-1814: True when the active chat brain is the subscription bridge
+   * (claude/codex CLIs) — either explicitly selected, or auto-mode with the
+   * subscription enabled (where the bridge is first in the provider order).
+   * These brains need the text tool-call protocol, not native function-calling.
+   */
+  function isBridgeActive(): boolean {
+    if (selectedProvider.value === 'bridge') return true
+    if (selectedProvider.value !== 'auto') return false
+    try {
+      return useSettingsStore().aiUseSubscription !== false
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * Build the system prompt with context awareness.
    * Includes timer state, task statistics, and additional context.
    */
@@ -440,7 +457,13 @@ export function useAIChat() {
       '11. Tool results are YOUR internal context — not the user\'s output. The user sees rich cards for data. Your text should ADD insight, not repeat raw data.',
       '12. If you have the data from tools, DO NOT call more tools "just to be thorough." One tool call per question unless clearly insufficient.',
       '',
-      buildNativeToolsBehaviorPrompt(),
+      // TASK-1814: subscription bridge brains (claude/codex CLIs) can't do native
+      // function-calling — give them the text tool-call protocol instead. Applies
+      // when the bridge is explicitly selected OR auto-mode with subscription on
+      // (where the bridge is the active brain).
+      isBridgeActive()
+        ? buildTextToolsBehaviorPrompt()
+        : buildNativeToolsBehaviorPrompt(),
       ''
     ]
 

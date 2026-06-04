@@ -1526,6 +1526,40 @@ export function parseToolCalls(content: string): ToolCall[] {
 }
 
 /**
+ * Parse TEXT-based tool calls of the form `tool_name({...})` (TASK-1814).
+ * Used for bridge brains (claude/codex CLIs) that emit tool calls as text rather
+ * than native function-calls. Falls back to parseToolCalls() for JSON-style calls.
+ * Exported so it can be unit-tested against real brain output.
+ */
+export function parseTextToolCalls(content: string): ToolCall[] {
+  const calls: ToolCall[] = []
+  const toolNames = AI_TOOLS.map(t => t.name)
+
+  for (const name of toolNames) {
+    // Match: tool_name() or tool_name({...}) or tool_name(anything-without-paren)
+    const pattern = new RegExp(`\\b${name}\\s*\\(([^)]*)\\)`, 'g')
+    let match
+    while ((match = pattern.exec(content)) !== null) {
+      let parameters: Record<string, unknown> = {}
+      const argsStr = match[1].trim()
+      if (argsStr) {
+        try { parameters = JSON.parse(argsStr) } catch { /* defaults */ }
+      }
+      if (!calls.some(c => c.tool === name)) {
+        calls.push({ tool: name, parameters })
+      }
+    }
+  }
+
+  // Fallback: JSON-format tool calls ({ "tool": ..., "parameters": ... })
+  if (calls.length === 0) {
+    calls.push(...parseToolCalls(content))
+  }
+
+  return calls.slice(0, MAX_TOOLS_PER_RESPONSE)
+}
+
+/**
  * Build the tools description for the system prompt.
  */
 export function buildToolsPrompt(): string {

@@ -26,11 +26,11 @@ import { useSettingsStore } from '@/stores/settings'
 import { tauriFetch } from '@/services/ai/utils/tauriHttp'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import {
-  parseToolCalls,
   executeTool,
   buildOpenAITools,
   buildNativeToolsBehaviorPrompt,
   buildTextToolsBehaviorPrompt,
+  parseTextToolCalls,
   MAX_TOOLS_PER_RESPONSE,
   AI_TOOLS,
   type ToolCall,
@@ -291,46 +291,8 @@ export function useAIChat() {
 
   // ============================================================================
   // Text-Based Tool Call Helpers (Fallback for models that don't use native API)
+  // parseTextToolCalls now lives in services/ai/tools.ts (exported + unit-tested).
   // ============================================================================
-
-  /**
-   * Parse tool calls from model text output.
-   * Detects patterns like: tool_name(), tool_name({...}), tool_name(param1, param2)
-   * Used as fallback when model doesn't use native function calling.
-   */
-  function parseTextToolCalls(content: string): ToolCall[] {
-    const calls: ToolCall[] = []
-    const toolNames = AI_TOOLS.map(t => t.name)
-
-    for (const name of toolNames) {
-      // Match: tool_name() or tool_name({...}) or tool_name(anything)
-      const pattern = new RegExp(`\\b${name}\\s*\\(([^)]*)\\)`, 'g')
-      let match
-      while ((match = pattern.exec(content)) !== null) {
-        let parameters: Record<string, unknown> = {}
-        const argsStr = match[1].trim()
-        if (argsStr) {
-          try {
-            parameters = JSON.parse(argsStr)
-          } catch {
-            // Not JSON args — tool will use defaults
-          }
-        }
-        // Avoid duplicates
-        if (!calls.some(c => c.tool === name)) {
-          calls.push({ tool: name, parameters })
-        }
-      }
-    }
-
-    // Also try the existing parseToolCalls for JSON-format tool calls
-    if (calls.length === 0) {
-      const jsonCalls = parseToolCalls(content)
-      calls.push(...jsonCalls)
-    }
-
-    return calls.slice(0, MAX_TOOLS_PER_RESPONSE)
-  }
 
   /**
    * Strip text-based tool call patterns from displayed message content.

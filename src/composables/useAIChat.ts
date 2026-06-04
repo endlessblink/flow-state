@@ -820,7 +820,7 @@ export function useAIChat() {
       const formatterMessages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name and state the key fact.\n\n${routed.formatDirective}${userScheduleNote}`,
+          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.\n\nWHEN RANKING BY PRIORITY/URGENCY: for each task give a SHORT reason it matters *right now* — the real-world consequence of delaying it, a dependency it blocks, or a hard deadline. "Overdue" or "3 days late" alone is NOT a reason — explain why lateness hurts here (e.g. "blocks the launch", "the meeting is tomorrow", "the window closes Friday"). If the data doesn't reveal why, infer the most likely stakes from the task title and say so briefly. Lead with the single most important task and one line on why it beats the others.\n\n${routed.formatDirective}${userScheduleNote}`,
         },
         {
           role: 'user',

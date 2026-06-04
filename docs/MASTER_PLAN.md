@@ -8,6 +8,14 @@
 
 ## Active Tasks
 
+### ~~TASK-1809~~: Hold F2 + drag to reorder tasks within a canvas column (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ **DONE** (2026-06-04, v1.4.89)
+
+Hold **F2** while dragging a task inside a day/smart column → the column restacks (insert-and-shift): the dropped card takes the slot its drop-Y lands in, the rest shift down. Plain drops keep free placement. F2 chosen because Shift/Control/Meta disable node dragging and Alt is grabbed by KDE's window-move gesture.
+
+Reuses `computeCanonicalLayout` scoped to one group (`useTidyLayout.reorderColumn`/`planReorderColumn`). **Instant paint (TASK-1809b):** `reorderColumn` is split into a synchronous plan+group-geometry+moves part and a deferred `commit()`; the `CanvasView` wrapper paints via `applyCanonicalMoves` in the drop frame, then `await`s the drag save and calls `commit()` so reorder writes win last-write-wins. Same-column path detected via `getDeepestContainingGroup`; cross-group falls back to await-then-reorder. Shipped on top of the 1.4.88 group-collapse line as 1.4.89 (web + electron). Tests: `tidy-layout.test.ts` (reorderColumn split) + `canonical-layout.test.ts` (insert-shift).
+
 ### ~~BUG-1813~~: Canvas group collapse (minimize) does nothing (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ **DONE** (2026-06-04)

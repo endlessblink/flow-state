@@ -351,6 +351,7 @@ import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
 import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/canvasImageUpload'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
 import { lockManager } from '@/services/canvas/LockManager'
 
 const taskStore = useTaskStore()
@@ -966,42 +967,104 @@ const {
   syncNodes
 } = orchestrator
 
-// TASK-1809: Alt-drag to reorder tasks within a canvas column.
-// Wrap the normal drag-stop save. When the user held Alt while dropping a
+// TASK-1809: tracks whether the reorder key (F2) is currently held. Updated by
+// window keydown/keyup listeners (registered in onMounted) and reset on blur so
+// a key released while the window is unfocused can't leave reorder armed.
+const reorderKeyHeld = ref(false)
+function onReorderKeyDown(e: KeyboardEvent) {
+  if (e.key === 'F2') reorderKeyHeld.value = true
+}
+function onReorderKeyUp(e: KeyboardEvent) {
+  if (e.key === 'F2') reorderKeyHeld.value = false
+}
+function onWindowBlurResetReorderKey() {
+  reorderKeyHeld.value = false
+}
+
+// TASK-1809: hold F2 + drag to reorder tasks within a canvas column.
+// Wrap the normal drag-stop save. When the user held F2 while dropping a
 // task inside a group, restack that one column (insert-and-shift) so the
 // dropped card takes the slot its drop-Y landed in and the rest shift down.
-// Plain (non-Alt) drops are untouched — they keep free placement.
-// (Shift is reserved by Vue Flow for multi-selection, so Alt is the trigger.)
+// Plain drops (F2 not held) are untouched — they keep free placement.
+// Why F2 and not a mouse modifier: Shift/Control/Meta disable node dragging
+// (:nodes-draggable="!control && !meta && !shift") and Shift is Vue Flow's
+// multi-select; Alt is grabbed by KDE's window-move gesture in Electron. F2 is
+// outside all of those, so the node still drags and no WM/selection conflict.
 async function handleNodeDragStopWithReorder(event: NodeDragEvent) {
-  const altHeld =
-    typeof MouseEvent !== 'undefined' &&
-    event?.event instanceof MouseEvent &&
-    event.event.altKey === true
+  const reorderHeld = reorderKeyHeld.value
 
-  // Always run the normal drag save first (single sanctioned geometry writer).
-  await handleNodeDragStop(event)
-  if (!altHeld) return
-
-  // Find the dropped task node (skip group/image nodes) and its current group.
-  const droppedTaskNode = (event?.nodes ?? []).find(
-    (node) => !CanvasIds.isGroupNode(node.id) && node.type !== 'imageNode'
-  )
-  if (!droppedTaskNode) return
-
-  const task = taskStore.getTask(droppedTaskNode.id)
-  const groupId = task?.parentId
-  if (!groupId) return
-
-  const result = tidyLayout.reorderColumn(groupId)
-  if (result.taskMoves.length === 0) {
-    result.release()
+  // Plain drag (F2 not held): unchanged single-writer behavior.
+  if (!reorderHeld) {
+    await handleNodeDragStop(event)
     return
   }
 
+  // Find the dropped task node (skip group/image nodes).
+  const droppedTaskNode = (event?.nodes ?? []).find(
+    (node) => !CanvasIds.isGroupNode(node.id) && node.type !== 'imageNode'
+  )
+  const task = droppedTaskNode ? taskStore.getTask(droppedTaskNode.id) : undefined
+  const currentParentId = task?.parentId ?? null
+
+  // Same-column detection (synchronous): the node's live `parentNode` still
+  // points at the old group here (Vue Flow re-parents later), so use spatial
+  // containment. Same column iff the drop is still inside the current parent.
+  const allGroups = canvasStore._rawGroups || canvasStore.groups || []
+  const absPos = droppedTaskNode?.computedPosition ?? droppedTaskNode?.position
+  const containingGroup = droppedTaskNode && absPos
+    ? getDeepestContainingGroup(
+        {
+          position: absPos,
+          width: (droppedTaskNode as unknown as { width?: number }).width,
+          height: (droppedTaskNode as unknown as { height?: number }).height,
+        },
+        allGroups
+      )
+    : null
+  const sameColumn = !!currentParentId && containingGroup?.id === currentParentId
+
+  if (!droppedTaskNode || !sameColumn) {
+    // Cross-group / not-contained F2 drop (rare): persist the re-parent first,
+    // then reorder the destination column. A slight delay here is acceptable.
+    await handleNodeDragStop(event)
+    const destGroupId = taskStore.getTask(droppedTaskNode?.id ?? '')?.parentId
+    if (!destGroupId) return
+    const result = tidyLayout.reorderColumn(destGroupId)
+    if (result.taskMoves.length === 0) {
+      result.release()
+      return
+    }
+    applyCanonicalMoves(result.groupMoves, result.taskMoves)
+    const pendingWrites = result.commit()
+    releaseOnDoubleNextTick(result.release, () => {
+      syncNodes(undefined, { force: true })
+    }, pendingWrites)
+    return
+  }
+
+  // Same-column instant path. Start the drag save but DON'T await yet: its
+  // synchronous prefix passes the canvasSyncInProgress guard while the flag is
+  // still false, then suspends. reorderColumn (below) flips the flag — so it
+  // MUST run after handleNodeDragStop has started.
+  const dragDone = handleNodeDragStop(event)
+
+  const result = tidyLayout.reorderColumn(currentParentId)
+  if (result.taskMoves.length === 0) {
+    result.release()
+    await dragDone
+    return
+  }
+
+  // Instant paint — synchronous Vue Flow update in the drop frame.
   applyCanonicalMoves(result.groupMoves, result.taskMoves)
+
+  // Let the drag handler's (pre-reorder) write land first, THEN commit the
+  // reorder writes so they win the last-write-wins race on persistence.
+  await dragDone
+  const pendingWrites = result.commit()
   releaseOnDoubleNextTick(result.release, () => {
     syncNodes(undefined, { force: true })
-  }, result.pendingWrites)
+  }, pendingWrites)
 }
 
 // TASK-1756 v3: run day-group catchup once Vue Flow is fully ready (findNode
@@ -1199,10 +1262,18 @@ const handleCanvasPaste = async (e: ClipboardEvent) => {
 onMounted(() => {
   document.addEventListener('paste', handleCanvasPaste)
   window.addEventListener('image-node-context-menu', handleImageContextMenu)
+  // TASK-1809: track F2 held state for drag-to-reorder (no preventDefault — F2
+  // has no default to suppress and we don't want to interfere with typing).
+  window.addEventListener('keydown', onReorderKeyDown)
+  window.addEventListener('keyup', onReorderKeyUp)
+  window.addEventListener('blur', onWindowBlurResetReorderKey)
 })
 onUnmounted(() => {
   document.removeEventListener('paste', handleCanvasPaste)
   window.removeEventListener('image-node-context-menu', handleImageContextMenu)
+  window.removeEventListener('keydown', onReorderKeyDown)
+  window.removeEventListener('keyup', onReorderKeyUp)
+  window.removeEventListener('blur', onWindowBlurResetReorderKey)
 })
 
 // Expose for testing purposes (Fundamental Stability)

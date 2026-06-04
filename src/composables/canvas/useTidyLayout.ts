@@ -342,14 +342,23 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
   }
 
   /**
-   * TASK-1809: Apply a single-column restack for ONE group (Shift-drag reorder).
-   * Same move-application contract as tidyDayGroups: returns moves + pendingWrites
-   * + release; the caller applies Vue Flow moves and invokes release() on nextTick.
+   * TASK-1809b: Apply a single-column restack for ONE group (F2-drag reorder),
+   * split so the visual paint is INSTANT and the task persistence is deferred.
+   *
+   * Synchronous part: set `canvasSyncInProgress`, plan, apply GROUP geometry
+   * (height — not raced by a task drag), acquire group lock, capture the undo
+   * "before" snapshot, and return the moves. The caller paints these moves via
+   * `applyCanonicalMoves` immediately.
+   *
+   * Deferred `commit()`: writes each TASK's `canvasPosition` (and PositionManager
+   * entry). The wrapper calls `commit()` AFTER awaiting the drag handler's own
+   * write, so reorder's `updated_at` lands last and wins the last-write-wins race
+   * — otherwise a refresh would revert the card to its raw drop position.
    */
   function reorderColumn(groupId: string): {
     groupMoves: GroupMove[]
     taskMoves: TaskMove[]
-    pendingWrites: Promise<void>
+    commit: () => Promise<void>
     release: () => void
   } {
     canvasSyncInProgress.value = true
@@ -374,7 +383,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
 
     if (!input || taskMoves.length === 0) {
       release()
-      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
+      return { groupMoves: [], taskMoves: [], commit: () => Promise.resolve(), release }
     }
 
     const affectedIds = [...new Set([
@@ -384,7 +393,8 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     const undoSystem = getUndoSystem()
     const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
 
-    const pendingWrites: Promise<unknown>[] = []
+    // Group geometry is local-store only and not raced by a task drag — apply it
+    // synchronously so the painted group box matches the restack immediately.
     try {
       for (const gm of groupMoves) {
         if (!input.group.position) continue
@@ -399,30 +409,38 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
         })
         positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
       }
+    } catch (err) {
+      release()
+      throw err
+    }
+
+    let committed = false
+    const commit = (): Promise<void> => {
+      if (committed) return Promise.resolve()
+      committed = true
+      const pendingWrites: Promise<unknown>[] = []
       for (const tm of taskMoves) {
         pendingWrites.push(taskStore.updateTask(
           tm.taskId,
           { canvasPosition: tm.position, positionFormat: 'absolute' },
           'DRAG'
         ))
+        // PositionManager updated here (after the drag handler's write) so the
+        // reorder position is the authoritative one during subsequent syncs.
         positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
       }
-    } catch (err) {
-      release()
-      throw err
+      return Promise.all(pendingWrites).then(() => {
+        const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+        undoSystem.pushCanvasGeometryUndoSnapshot(
+          `Reorder ${taskMoves.length} task${taskMoves.length === 1 ? '' : 's'}`,
+          affectedIds,
+          snapshotBefore,
+          snapshotAfter
+        )
+      })
     }
 
-    const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
-      const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
-      undoSystem.pushCanvasGeometryUndoSnapshot(
-        `Reorder ${taskMoves.length} task${taskMoves.length === 1 ? '' : 's'}`,
-        affectedIds,
-        snapshotBefore,
-        snapshotAfter
-      )
-    })
-
-    return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
+    return { groupMoves, taskMoves, commit, release }
   }
 
   return { tidyDayGroups, planTidyDayGroups, reorderColumn, planReorderColumn }

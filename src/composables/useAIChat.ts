@@ -646,7 +646,11 @@ export function useAIChat() {
     await maybeShowScheduleOnboarding()
 
     // ── Deterministic pipeline: route intent BEFORE ReAct ──────────────
-    const routed = await routeIntent(trimmedContent, taskStore.tasks, entityMemory)
+    // TASK-1814: skip the LLM intent-classification round-trip for bridge brains
+    // (each CLI call is ~6s) — keyword routing is instant and falls back to ReAct.
+    const routed = await routeIntent(trimmedContent, taskStore.tasks, entityMemory, {
+      skipLLMClassification: isBridgeActive(),
+    })
 
     if (routed.type !== 'freeform') {
       return sendMessageDeterministic(trimmedContent, routed, options)

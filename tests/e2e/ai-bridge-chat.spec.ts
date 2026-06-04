@@ -79,4 +79,58 @@ test.describe('AI chat e2e via subscription bridge', () => {
     expect(healthHits).toBeGreaterThan(0)        // bridge was selected
     expect(chatCalls).toBeGreaterThanOrEqual(2)  // ReAct drove a tool-call through the bridge
   })
+
+  test('Hebrew query: bridge tool-call executes and renders a card', async ({ page }) => {
+    await page.route('**/ai-bridge/health', (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, brains: { claude: true, codex: true } }) }))
+    await page.route('**/ai-bridge/v1/chat', async (r) => {
+      let body: { brain?: string; stream?: boolean; messages?: { content?: string }[] } = {}
+      try { body = r.request().postDataJSON() } catch { /* ignore */ }
+      const brain = body.brain || 'claude'
+      if (body.stream === false) {
+        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ brain, model: brain, content: 'freeform' }) })
+      }
+      const sawResults = /You now have all the data|Tool results:/i.test(JSON.stringify(body.messages || []))
+      const payload = sawResults
+        ? sse({ delta: 'אלו המשימות הפעילות שלך.' }, { done: true, brain, model: brain })
+        : sse({ delta: 'list_tasks({})' }, { done: true, brain, model: brain })
+      await r.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' }, body: payload })
+    })
+
+    await page.goto('/#/ai')
+    const input = page.locator('.chat-input')
+    await expect(input).toBeVisible({ timeout: 15000 })
+    await input.fill('תראה לי את כל המשימות שלי')
+    await page.locator('.send-btn').click()
+
+    // A Hebrew query must still drive tool execution → an interactive card renders.
+    await expect(page.locator('.tool-result-card').first()).toBeVisible({ timeout: 25000 })
+  })
+
+  test('bridge failure is handled gracefully (no crash, input recovers)', async ({ page }) => {
+    let crashed = false
+    page.on('pageerror', () => { crashed = true })
+    await page.route('**/ai-bridge/health', (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, brains: { claude: true, codex: true } }) }))
+    // Brain token dead → 502 brain_unavailable (and JSON path errors too).
+    await page.route('**/ai-bridge/v1/chat', (r) =>
+      r.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'brain_unavailable', reason: 'auth' }) }))
+    // Cloud fallbacks (Groq/OpenRouter via the edge proxy) also fail fast, so the
+    // router exhausts all providers quickly rather than hanging on the network.
+    await page.route('**/functions/v1/**', (r) =>
+      r.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'unavailable' }) }))
+
+    await page.goto('/#/ai')
+    const input = page.locator('.chat-input')
+    await expect(input).toBeVisible({ timeout: 15000 })
+    await input.fill('Help me figure out what matters most right now')
+    await page.locator('.send-btn').click()
+
+    // The app must NOT crash — the chat view stays mounted and usable throughout.
+    await expect(input).toBeVisible({ timeout: 10000 })
+    // …and the input recovers (no permanent "can't send" lock) once providers are
+    // exhausted. Generous headroom: all-providers-down exhausts the retry chain.
+    await expect(input).toBeEnabled({ timeout: 60000 })
+    expect(crashed).toBe(false)
+  })
 })

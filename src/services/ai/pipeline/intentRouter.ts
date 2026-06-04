@@ -571,6 +571,7 @@ export async function routeIntent(
   userMessage: string,
   tasks: TaskLike[],
   entityMemory: EntityMemory,
+  opts: { skipLLMClassification?: boolean } = {},
 ): Promise<RoutedIntent> {
   const detected = detectLanguage(userMessage)
   const language = resolveLanguage(detected)
@@ -584,6 +585,14 @@ export async function routeIntent(
       formatDirective: FORMAT_DIRECTIVES.greeting,
       skipLLM: true,
     }
+  }
+
+  // ── 1b. TASK-1814: subscription bridge brains are a per-call CLI process
+  // (~6s each), so the extra LLM intent-classification round-trip is too costly.
+  // Use instant local keyword routing instead — it falls back to ReAct for
+  // anything it can't classify, exactly like the LLM path does.
+  if (opts.skipLLMClassification) {
+    return routeIntentByKeywords(userMessage, tasks, entityMemory)
   }
 
   // ── 2. LLM classification ─────────────────────────────────────────────

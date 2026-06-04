@@ -467,4 +467,61 @@ describe('useTidyLayout', () => {
       'DRAG'
     )
   })
+
+  // TASK-1809b: reorderColumn must return moves synchronously (for instant paint)
+  // and defer task persistence into commit(), so the wrapper can let the drag
+  // handler's write land first and reorder still wins last-write-wins.
+  describe('reorderColumn (TASK-1809b instant-paint split)', () => {
+    it('returns task moves synchronously WITHOUT writing tasks until commit()', () => {
+      const today = makeGroup('Today', 0, 0)
+      vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+      vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+        { id: 'a', parentId: today.id, canvasPosition: { x: 20, y: 400 }, createdAt: '2026-04-01T00:00:00Z' },
+        { id: 'b', parentId: today.id, canvasPosition: { x: 20, y: 110 }, createdAt: '2026-04-01T00:00:00Z' },
+      ] as any)
+
+      const { reorderColumn } = useTidyLayout()
+      const result = reorderColumn(today.id)
+
+      // Moves available immediately for applyCanonicalMoves (instant paint).
+      expect(result.taskMoves.length).toBe(2)
+      // Lowest-Y card sorts to the top slot.
+      expect(result.taskMoves[0].taskId).toBe('b')
+      // Sync flag held until release().
+      expect(mockCanvasSyncInProgress.value).toBe(true)
+      // NO task write yet — persistence is deferred to commit().
+      expect(updateTask).not.toHaveBeenCalled()
+
+      result.release()
+      expect(mockCanvasSyncInProgress.value).toBe(false)
+    })
+
+    it('commit() persists each reordered task and is idempotent', async () => {
+      const today = makeGroup('Today', 0, 0)
+      vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+      vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+        { id: 'a', parentId: today.id, canvasPosition: { x: 20, y: 400 }, createdAt: '2026-04-01T00:00:00Z' },
+        { id: 'b', parentId: today.id, canvasPosition: { x: 20, y: 110 }, createdAt: '2026-04-01T00:00:00Z' },
+      ] as any)
+      updateTask.mockResolvedValue(undefined)
+
+      const { reorderColumn } = useTidyLayout()
+      const result = reorderColumn(today.id)
+      expect(updateTask).not.toHaveBeenCalled()
+
+      await result.commit()
+      expect(updateTask).toHaveBeenCalledTimes(2)
+      expect(updateTask).toHaveBeenCalledWith(
+        'b',
+        { canvasPosition: result.taskMoves[0].position, positionFormat: 'absolute' },
+        'DRAG'
+      )
+
+      // Idempotent: a second commit() does not double-write.
+      await result.commit()
+      expect(updateTask).toHaveBeenCalledTimes(2)
+
+      result.release()
+    })
+  })
 })

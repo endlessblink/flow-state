@@ -62,13 +62,15 @@
 
 ---
 
-### TASK-1809: Shift-drag to reorder tasks within a canvas column (🔄 IN PROGRESS)
+### TASK-1809: Hold F2 + drag to reorder tasks within a canvas column (🔄 IN PROGRESS)
 
-**Goal**: Let users reorder a task inside a day/smart canvas column by holding **Shift** while dragging. On a Shift-drop, the column restacks cleanly from the header down — the dragged card takes the slot its drop-Y lands in and the rest shift down (insert-and-shift). Non-Shift drops keep today's free placement, unchanged.
+**Goal**: Let users reorder a task inside a day/smart canvas column by holding **F2** while dragging. On an F2-drop, the column restacks cleanly from the header down — the dragged card takes the slot its drop-Y lands in and the rest shift down (insert-and-shift). Plain drops (F2 not held) keep free placement, unchanged.
+
+**Trigger key choice**: Shift/Control/Meta all disable node dragging (`:nodes-draggable="!control && !meta && !shift"`) and Shift is Vue Flow's multi-select; Alt is grabbed by KDE's window-move gesture in the Electron build. **F2** is outside all of those — node stays draggable, no WM/selection conflict, no browser default to suppress.
 
 **Approach**: Reuse the tested `computeCanonicalLayout` primitive (`useCanonicalDayGroupLayout.ts`) scoped to a single group. Tasks already order by Y, so the dropped card's new Y decides its slot.
 - `useTidyLayout.ts`: add pure `planReorderColumn(groupId)` + `reorderColumn(groupId)` (store writes + position locks + undo snapshot, mirrors `tidyDayGroups`).
-- `CanvasView.vue`: wrap `@node-drag-stop` — read `event.event.shiftKey`, await the normal drag save, then run `reorderColumn` on the dropped task's group via `applyCanonicalMoves` + `syncNodes({force})`.
+- `CanvasView.vue`: window keydown/keyup/blur listeners track `reorderKeyHeld` (F2); wrap `@node-drag-stop` — if held, await the normal drag save, then run `reorderColumn` on the dropped task's group via `applyCanonicalMoves` + `syncNodes({force})`.
 - Stays inside the single sanctioned geometry writer (drag handler + Tidy primitive) → no sync-loop/invariant violation.
 
 ### BUG-1807: Canvas nudge — all nodes shift on inbox drop (Electron) (🔄 IN PROGRESS)

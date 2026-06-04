@@ -102,8 +102,9 @@
     </div>
 
     <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->
-    <!-- TASK-290: Always render NodeResizer, use CSS to show/hide on hover -->
+    <!-- Collapsed groups must not leave a selected resize overlay covering nearby nodes. -->
     <NodeResizer
+      v-if="!isCollapsed"
       is-visible
       :min-width="200"
       :min-height="80"
@@ -692,9 +693,18 @@ const handleResizeEnd = (event: unknown) => {
   border-radius: var(--radius-lg);
 }
 
-/* Hide Vue Flow handles when collapsed */
-.section-node.collapsed .vue-flow__handle {
-  display: none;
+/* Keep handles measurable while collapsed so existing edges keep a stable
+   anchor, but make them non-interactive unless the user is actively connecting. */
+.section-node.collapsed .group-link-handle {
+  opacity: 0;
+  pointer-events: none;
+  transform: none;
+}
+
+:global(body.connecting-active) .section-node.collapsed .group-link-handle,
+.section-node.collapsed:hover .group-link-handle {
+  opacity: 0.35;
+  pointer-events: auto;
 }
 
 /* TASK-073: Collapsed + selected state with accent outline */

@@ -347,7 +347,9 @@ export function useCanvasSync() {
                 const depth = (group as any)._depth || 0
                 const zIndex = 11 + (depth * 10) // Base group Z is 10 (CANVAS.Z_INDEX_GROUP)
                 const groupWidth = group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH
-                const groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
+                const storedGroupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
+                const isCollapsed = Boolean(group.isCollapsed)
+                const groupHeight = isCollapsed ? CANVAS.DAY_GROUP_HEADER_HEIGHT : storedGroupHeight
 
                 newNodes.push({
                     id: nodeId,
@@ -387,7 +389,7 @@ export function useCanvasSync() {
                                 height: group.position.height,
                             }
                             : null,
-                        collapsed: group.isCollapsed || false,
+                        collapsed: isCollapsed,
                         // Pass BOTH counts - component decides which to show
                         directTaskCount,
                         aggregatedTaskCount,

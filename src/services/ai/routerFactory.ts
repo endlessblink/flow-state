@@ -22,6 +22,9 @@ import { classifyComplexity } from './complexityClassifier'
 let sharedRouter: AIRouter | null = null
 let initPromise: Promise<void> | null = null
 let configuredApiKey: string | undefined = undefined
+// TASK-1814: track bridge config so the router rebuilds when the user toggles
+// the subscription brain on/off or switches between Claude and Codex.
+let configuredBridgeKey: string | undefined = undefined
 
 // ── Context Cache (30s TTL) ──
 let cachedContext: string | null = null
@@ -156,8 +159,13 @@ export async function getSharedRouter(): Promise<AIRouter> {
   const settingsStore = useSettingsStore()
   const currentApiKey = settingsStore.groqApiKey || undefined
 
-  // If API key changed since last init, reset the router
-  if (sharedRouter && currentApiKey !== configuredApiKey) {
+  // TASK-1814: subscription bridge config (brain + on/off)
+  const useBridge = settingsStore.aiUseSubscription !== false
+  const bridgeBrain = settingsStore.aiBrain === 'codex' ? 'codex' : 'claude'
+  const bridgeKey = useBridge ? bridgeBrain : 'off'
+
+  // If API key OR bridge config changed since last init, reset the router
+  if (sharedRouter && (currentApiKey !== configuredApiKey || bridgeKey !== configuredBridgeKey)) {
     sharedRouter.dispose()
     sharedRouter = null
     initPromise = null
@@ -168,11 +176,17 @@ export async function getSharedRouter(): Promise<AIRouter> {
 
   if (!sharedRouter) {
     configuredApiKey = currentApiKey
+    configuredBridgeKey = bridgeKey
+    // Bridge first (best brain) when enabled; always keep cloud + local as fallback.
+    const providers = useBridge
+      ? ['bridge', 'groq', 'ollama', 'openrouter'] as const
+      : ['groq', 'ollama', 'openrouter'] as const
     const rawRouter = createAIRouter({
-      providers: ['groq', 'ollama', 'openrouter'],
+      providers: [...providers],
       preferLocal: false,
       debug: false,
       groqApiKey: currentApiKey,
+      bridgeBrain,
     })
     initPromise = rawRouter.initialize()
     // Wrap the raw router with context-aware behavior
@@ -193,6 +207,7 @@ export function resetSharedRouter(): void {
     sharedRouter = null
     initPromise = null
     configuredApiKey = undefined
+    configuredBridgeKey = undefined
     cachedContext = null
     cachedContextTimestamp = 0
   }

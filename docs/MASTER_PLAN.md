@@ -8,6 +8,31 @@
 
 ## Active Tasks
 
+### TASK-1814: Subscription-powered AI brain (Claude/Codex CLI bridge) + overwhelm-reorder & smart-lanes flows (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-06-04)
+
+**Why**: Current in-app AI is "not usable" — verified by running the exact app prompts (`useAITaskAssist`) on the default model (Ollama llama3.2 3B) against real tasks: English breakdown returned prose not JSON (→ "could not be parsed" error), Hebrew breakdown returned nonsense words in a medical-prep task, smart-suggest gave "15 min to plan a weekend trip, confidence 1.0". Three root causes: weak brain, shallow prompts (title-only, no workload context), and the requested "overwhelmed → reorder my day" flow does not exist at all.
+
+**Approach**: Add a subscription-based brain via a tiny auth-gated **AI bridge** on the VPS that wraps the local `claude` / `codex` CLIs (no per-token API billing). Claude and Codex are equal, switchable per AI action. New router provider `'bridge'`, auto-selected when reachable, transparent **Groq-free fallback** when a brain's token is dead so AI never hard-fails. Then deepen prompts + build the two flagship flows.
+
+**Architecture (decided + verified)**:
+- VPS has `claude` 2.1.111 + `codex` 0.133 installed; 16GB RAM free.
+- Claude re-authed via `claude setup-token` → `CLAUDE_CODE_OAUTH_TOKEN` stored root-only at `/root/.flowstate-ai-bridge.env` (verified: `claude -p` → OK).
+- Codex existing `~/.codex/auth.json` still valid (verified: `codex exec` → OK, model gpt-5.5). No re-login needed.
+- Bridge auth: Supabase HS256 JWT, CORS-locked to app origin, per-user rate limit, binds 127.0.0.1 behind Caddy `/ai-bridge`.
+
+**Progress (2026-06-04) — Phase 1 COMPLETE (deployed, untested end-to-end)**:
+- Bridge server `infra/ai-bridge/server.mjs` (zero-dep Node): HS256 *or* Supabase `/auth/v1/user` token validation, multi-origin CORS (prod same-origin + localhost dev + Electron `null`), per-user rate limit, Groq-fallback on dead brain. Local-tested with stub brain (no quota): health/routing/400/401/rate-limit all pass.
+- **Deployed to VPS**: systemd `ai-bridge.service` active, env at `/root/.flowstate-ai-bridge.env`, Caddy route `in-theflow.com/ai-bridge/*` → `127.0.0.1:8788` (validated + reloaded). Public verified: `/ai-bridge/health` → both brains; unauth `/v1/chat` → 401; CORS echo for localhost + null confirmed.
+- **App wired**: `bridgeClient.ts` + `bridgeProvider.ts`, `'bridge'` added to `AIProviderType`/`RouterProviderType`, router creates+prefers bridge (incl. complex-tier), settings `aiUseSubscription`/`aiBrain` + Settings UI brain-selector (Claude default, Codex switchable). vue-tsc clean on touched files; full unit suite **2348 pass**.
+- **NOT yet verified**: a real authenticated `claude -p`/`codex exec --json` round-trip through the bridge (avoided burning subscription quota — validates on first in-app use; codex JSON parser is tolerant + has plain-text fallback).
+- **Pending**: user end-to-end test → web+Electron deploy (version bump per rules 6/7) → Phase 2 overwhelm-reorder → Phase 3 smart-lanes. Work is uncommitted (current branch unrelated; needs its own branch off master).
+
+**Files**: new `infra/ai-bridge/{server.mjs,ai-bridge.service,README.md}`, new `src/services/ai/proxy/bridgeClient.ts`, new `src/services/ai/providers/bridgeProvider.ts`, `src/services/ai/types.ts`, `src/services/ai/router.ts`, `src/services/ai/routerFactory.ts`, `src/stores/settings.ts`, `src/components/settings/tabs/AISettingsTab.vue`; VPS `/etc/caddy/Caddyfile` (ai-bridge route).
+
+---
+
 ### ~~TASK-1809~~: Hold F2 + drag to reorder tasks within a canvas column (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ **DONE** (2026-06-04, v1.4.89)
@@ -76,8 +101,10 @@ Reuses `computeCanonicalLayout` scoped to one group (`useTidyLayout.reorderColum
 
 **Approach**: Reuse the tested `computeCanonicalLayout` primitive (`useCanonicalDayGroupLayout.ts`) scoped to a single group. Tasks already order by Y, so the dropped card's new Y decides its slot.
 - `useTidyLayout.ts`: add pure `planReorderColumn(groupId)` + `reorderColumn(groupId)` (store writes + position locks + undo snapshot, mirrors `tidyDayGroups`).
-- `CanvasView.vue`: wrap `@node-drag-stop` — read `event.event.shiftKey`, await the normal drag save, then run `reorderColumn` on the dropped task's group via `applyCanonicalMoves` + `syncNodes({force})`.
+- `CanvasView.vue`: window keydown/keyup/blur listeners track `reorderKeyHeld` (F2); wrap `@node-drag-stop` — if held, run `reorderColumn` on the dropped task's group via `applyCanonicalMoves` + `syncNodes({force})`.
 - Stays inside the single sanctioned geometry writer (drag handler + Tidy primitive) → no sync-loop/invariant violation.
+
+**Perf (TASK-1809b — instant paint)**: First version awaited the drag handler's Supabase write (~1–2s on VPS, BUG-1051) *before* painting the restack → 2–4s lag. Fixed by splitting `reorderColumn` into a synchronous part (plan + group geometry + moves) and a deferred `commit()` (task `updateTask` writes + PositionManager + undo). The wrapper now: starts the drag save without awaiting (its sync prefix passes the `canvasSyncInProgress` guard first), runs `reorderColumn` + `applyCanonicalMoves` **synchronously** (instant paint), then `await dragDone` → `commit()` so reorder's writes land last and win LWW (a refresh keeps the reordered slot). Same-column drops use this instant path (detected via `getDeepestContainingGroup`); rare cross-group drops fall back to await-then-reorder. Covered by `tidy-layout.test.ts` reorderColumn tests.
 
 ### BUG-1807: Canvas nudge — all nodes shift on inbox drop (Electron) (🔄 IN PROGRESS)
 

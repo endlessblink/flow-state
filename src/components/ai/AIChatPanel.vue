@@ -48,6 +48,7 @@ const {
   availableOllamaModels,
   isLoadingModels,
   setProvider,
+  selectBrain,
   setModel,
   refreshOllamaModels,
   closePanel,
@@ -416,6 +417,10 @@ const displayModelName = computed(() => {
 
 const providerLabel = computed(() => {
   const p = activeProvider.value
+  // TASK-1814: subscription bridge shows the active brain
+  if (p === 'bridge' || selectedProvider.value === 'bridge') {
+    return selectedModel.value === 'codex' ? 'Codex' : 'Claude'
+  }
   if (p === 'ollama') return 'Local'
   if (p === 'groq') return 'Groq'
   if (p === 'openrouter') return 'OpenRouter'
@@ -427,6 +432,8 @@ const headerBadgeText = computed(() => {
   if (!label) return ''
   // Auto mode — just show the detected provider
   if (selectedProvider.value === 'auto') return label
+  // TASK-1814: bridge badge is just the brain name
+  if (selectedProvider.value === 'bridge') return label
   // Specific provider selected with a model
   if (displayModelName.value) return `${label} \u00B7 ${displayModelName.value}`
   // Specific provider but no model selected — show provider only
@@ -604,6 +611,21 @@ onUnmounted(() => {
                 <div class="settings-section">
                   <label class="settings-label">Provider</label>
                   <div class="provider-options">
+                    <!-- TASK-1814: subscription brains (Claude / Codex) -->
+                    <button
+                      class="provider-option"
+                      :class="{ active: selectedProvider === 'bridge' && selectedModel === 'claude' }"
+                      @click="selectBrain('claude')"
+                    >
+                      Claude
+                    </button>
+                    <button
+                      class="provider-option"
+                      :class="{ active: selectedProvider === 'bridge' && selectedModel === 'codex' }"
+                      @click="selectBrain('codex')"
+                    >
+                      Codex
+                    </button>
                     <button
                       class="provider-option"
                       :class="{ active: selectedProvider === 'auto' }"
@@ -1271,8 +1293,9 @@ onUnmounted(() => {
 }
 
 .provider-option.active {
-  background: var(--color-focus);
-  color: white;
+  background: var(--state-active-bg);
+  color: var(--brand-primary);
+  box-shadow: inset 0 0 0 1px var(--state-active-border);
 }
 
 /* ============================================================================

@@ -11,9 +11,31 @@ import SettingsToggle from '../SettingsToggle.vue'
 import { PROVIDER_OPTIONS, GROQ_MODELS, OPENROUTER_MODELS, asIdLabel, filterFreeModels, type AIProviderKey } from '@/config/aiModels'
 import { tauriFetch } from '@/services/ai/utils/tauriHttp'
 import { resetSharedRouter } from '@/services/ai/routerFactory'
+import { isBridgeAvailable } from '@/services/ai/proxy/bridgeClient'
 
 const { usageSummary, weekUsage, monthUsage, hasUsageData, pricingCatalog, clearUsageData } = useAIUsageTracking()
 const settingsStore = useSettingsStore()
+
+// ── TASK-1814: Subscription brain (Claude/Codex via VPS bridge) ──
+const BRAIN_OPTIONS = [
+  { key: 'claude' as const, label: 'Claude', desc: 'Claude Code subscription' },
+  { key: 'codex' as const, label: 'Codex', desc: 'ChatGPT / GPT subscription' },
+]
+const bridgeStatus = ref<'checking' | 'online' | 'offline'>('checking')
+async function checkBridge() {
+  bridgeStatus.value = 'checking'
+  bridgeStatus.value = (await isBridgeAvailable()) ? 'online' : 'offline'
+}
+function setBrain(brain: 'claude' | 'codex') {
+  settingsStore.updateSetting('aiBrain', brain)
+  resetSharedRouter()
+}
+function onToggleSubscription(v: boolean) {
+  settingsStore.updateSetting('aiUseSubscription', v)
+  resetSharedRouter()
+  if (v) void checkBridge()
+}
+void checkBridge()
 const { profile, loadProfile, savePreferences, computeCapacityMetrics, resetLearnedData } = useWorkProfile()
 
 // ── TASK-1356: Memory Health Assessment ──
@@ -269,6 +291,50 @@ async function onClearMemories() {
 
 <template>
   <div class="ai-settings-tab">
+    <!-- TASK-1814: Subscription brain (Claude/Codex) -->
+    <SettingsSection title="AI Brain (Subscription)">
+      <p class="section-desc">
+        Use your Claude and Codex subscriptions as the AI brain — far better results than the free
+        models, with no per-token API cost. Switch brains anytime; every AI action uses your choice.
+        If the brain is ever unavailable, AI automatically falls back to the free provider.
+      </p>
+
+      <SettingsToggle
+        label="Use my subscription (Claude / Codex)"
+        :value="settingsStore.aiUseSubscription"
+        @update="onToggleSubscription"
+      />
+
+      <template v-if="settingsStore.aiUseSubscription">
+        <div class="provider-chips" style="margin-top: 12px;">
+          <button
+            v-for="opt in BRAIN_OPTIONS"
+            :key="opt.key"
+            class="provider-chip"
+            :class="{ active: settingsStore.aiBrain === opt.key }"
+            @click="setBrain(opt.key)"
+          >
+            <span class="provider-chip-label">{{ opt.label }}</span>
+            <span class="provider-chip-desc">{{ opt.desc }}</span>
+          </button>
+        </div>
+
+        <div class="bridge-status" style="margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+          <CheckCircle2 v-if="bridgeStatus === 'online'" :size="15" style="color: var(--color-success, #34d399);" />
+          <AlertCircle v-else-if="bridgeStatus === 'offline'" :size="15" style="color: var(--color-warning, #fbbf24);" />
+          <Loader2 v-else :size="15" class="spin" />
+          <span>
+            <template v-if="bridgeStatus === 'online'">Connected — using your subscription brain.</template>
+            <template v-else-if="bridgeStatus === 'offline'">Bridge unreachable — falling back to the free provider.</template>
+            <template v-else>Checking connection…</template>
+          </span>
+          <button class="refresh-models-btn" title="Re-check" @click="checkBridge()">
+            <RefreshCw :size="13" />
+          </button>
+        </div>
+      </template>
+    </SettingsSection>
+
     <!-- Default Provider & Model -->
     <SettingsSection title="Default Provider & Model">
       <p class="section-desc">

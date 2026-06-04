@@ -43,6 +43,9 @@ import { createGroqProxyProvider } from './providers/groqProxy'
 import { createOpenRouterProxyProvider } from './providers/openrouterProxy'
 // TASK-1350: Direct Groq provider for BYOK (user provides own API key)
 import { createGroqProvider } from './providers/groq'
+// TASK-1814: Subscription brains (Claude/Codex CLIs) via the VPS bridge
+import { createBridgeProvider } from './providers/bridgeProvider'
+import type { BridgeBrain } from './proxy/bridgeClient'
 
 // ============================================================================
 // Task Types - Determine routing strategy
@@ -68,7 +71,7 @@ export type TaskType =
  * - groq: Fast cloud inference via proxy (Llama, Mixtral)
  * - openrouter: Premium models via proxy (Claude, GPT-4, etc.)
  */
-export type RouterProviderType = 'ollama' | 'groq' | 'openrouter'
+export type RouterProviderType = 'ollama' | 'groq' | 'openrouter' | 'bridge'
 
 // ============================================================================
 // Router Configuration
@@ -101,6 +104,9 @@ export interface RouterConfig {
 
   /** TASK-1350: Groq API key for direct BYOK access (no proxy needed) */
   groqApiKey?: string
+
+  /** TASK-1814: Active subscription brain for the bridge provider ('claude'|'codex') */
+  bridgeBrain?: BridgeBrain
 }
 
 /**
@@ -170,6 +176,8 @@ const PROVIDER_PRICING: Record<RouterProviderType, { input: number; output: numb
   ollama: getDefaultPricing('ollama'),
   groq: getDefaultPricing('groq'),
   openrouter: getDefaultPricing('openrouter'),
+  // TASK-1814: subscription brains are flat-rate (no per-token cost)
+  bridge: { input: 0, output: 0 },
 }
 
 // ============================================================================
@@ -305,6 +313,9 @@ export class AIRouter {
 
       case 'openrouter':
         return await this.createOpenRouterProvider()
+
+      case 'bridge':
+        return await this.createBridgeProviderInstance()
 
       default:
         this.log(`Unknown provider type: ${providerType}`)
@@ -593,12 +604,33 @@ export class AIRouter {
    * Get default model for a provider type.
    */
   private getDefaultModelForProvider(providerType: RouterProviderType): string {
+    // TASK-1814: bridge "model" is the active brain name
+    if (providerType === 'bridge') return this.config.bridgeBrain ?? 'claude'
     // Use centralized registry for defaults
     if (providerType === 'ollama' || providerType === 'groq' || providerType === 'openrouter') {
       return getDefaultModel(providerType)
     }
     // Fallback for unknown provider types
     return 'llama3.2'
+  }
+
+  /**
+   * TASK-1814: Create the subscription bridge provider (Claude/Codex CLIs).
+   * Fails gracefully (returns null) so the router falls back to cloud providers.
+   */
+  private async createBridgeProviderInstance(): Promise<AIProvider | null> {
+    try {
+      const provider = createBridgeProvider({ brain: this.config.bridgeBrain ?? 'claude' })
+      const ok = await provider.initialize()
+      if (!ok) {
+        this.log('Bridge provider not reachable; skipping')
+        return null
+      }
+      return provider
+    } catch (error) {
+      this.log('Bridge provider creation failed', error)
+      return null
+    }
   }
 
   /**
@@ -670,6 +702,18 @@ export class AIRouter {
       if (provider) return provider
       // Forced provider not available — fall through to auto-routing
       this.log(`Forced provider ${options.forceProvider} not available, falling back to auto-routing`)
+    }
+
+    // TASK-1814: subscription bridge (Claude/Codex) is the best brain — prefer it for complex.
+    if (options.complexityTier === 'complex') {
+      const bridgeProvider = this.providers.get('bridge')
+      if (bridgeProvider) {
+        const health = await this.getProviderHealth('bridge')
+        if (health.isHealthy) {
+          this.log('Smart routing: complex query → bridge')
+          return bridgeProvider
+        }
+      }
     }
 
     // TASK-1500: Smart routing — escalate complex queries to OpenRouter premium

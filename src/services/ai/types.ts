@@ -14,7 +14,7 @@
 /**
  * Supported AI providers.
  */
-export type AIProviderType = 'ollama' | 'openai' | 'groq'
+export type AIProviderType = 'ollama' | 'openai' | 'groq' | 'bridge'
 
 /**
  * Provider connection status.

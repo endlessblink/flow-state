@@ -21,7 +21,8 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useTimerStore } from '@/stores/timer'
 import { useAIEventTracking } from '@/composables/useAIEventTracking'
 import { type TaskType, type RouterProviderType } from '@/services/ai'
-import { getSharedRouter } from '@/services/ai/routerFactory'
+import { getSharedRouter, resetSharedRouter } from '@/services/ai/routerFactory'
+import { useSettingsStore } from '@/stores/settings'
 import { tauriFetch } from '@/services/ai/utils/tauriHttp'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import {
@@ -203,7 +204,9 @@ function abortReAct() {
 }
 
 // Provider/model selection state
-const selectedProvider = ref<'ollama' | 'groq' | 'openrouter' | 'auto'>('auto')
+// TASK-1814: 'bridge' = subscription brain (Claude/Codex CLIs). selectedModel
+// holds the brain id ('claude' | 'codex') when provider is 'bridge'.
+const selectedProvider = ref<'ollama' | 'groq' | 'openrouter' | 'auto' | 'bridge'>('auto')
 const selectedModel = ref<string | null>(null)
 const availableOllamaModels = ref<string[]>([])
 const isLoadingModels = ref(false)
@@ -1752,7 +1755,15 @@ export function useAIChat() {
    * Set the active provider (auto, groq, or ollama).
    * Persists the selection to localStorage via the store.
    */
-  async function setProvider(provider: 'ollama' | 'groq' | 'openrouter' | 'auto') {
+  async function setProvider(provider: 'ollama' | 'groq' | 'openrouter' | 'auto' | 'bridge') {
+    // TASK-1814: bridge is brain-keyed — delegate to selectBrain
+    if (provider === 'bridge') {
+      const remembered = providerModelMemory.value['bridge']
+      const brain = remembered === 'codex' ? 'codex' : remembered === 'claude' ? 'claude' : undefined
+      selectBrain(brain ?? (useSettingsStore().aiBrain === 'codex' ? 'codex' : 'claude'))
+      return
+    }
+
     // Save current model for the outgoing provider
     providerModelMemory.value[selectedProvider.value] = selectedModel.value
 
@@ -1798,6 +1809,26 @@ export function useAIChat() {
   }
 
   /**
+   * TASK-1814: Select the subscription brain (Claude or Codex) for this chat.
+   * Routes all chat through the bridge provider with the chosen brain. Enables
+   * the subscription if it was off and rebuilds the router so 'bridge' is active.
+   */
+  function selectBrain(brain: 'claude' | 'codex') {
+    providerModelMemory.value[selectedProvider.value] = selectedModel.value
+    selectedProvider.value = 'bridge'
+    selectedModel.value = brain
+    providerModelMemory.value['bridge'] = brain
+    activeProviderRef.value = 'bridge'
+
+    const settings = useSettingsStore()
+    settings.updateSetting('aiUseSubscription', true)
+    settings.updateSetting('aiBrain', brain)
+    resetSharedRouter() // rebuild router so the bridge provider is included + uses the new brain
+
+    store.updatePersistedSettings({ provider: 'bridge', model: brain })
+  }
+
+  /**
    * Initialize the AI chat system.
    * Loads persisted provider/model settings from store.
    */
@@ -1807,7 +1838,7 @@ export function useAIChat() {
     // Load persisted settings
     const savedSettings = store.getPersistedSettings()
     if (savedSettings) {
-      if (['ollama', 'groq', 'openrouter', 'auto'].includes(savedSettings.provider)) {
+      if (['ollama', 'groq', 'openrouter', 'auto', 'bridge'].includes(savedSettings.provider)) {
         selectedProvider.value = savedSettings.provider as typeof selectedProvider.value
       }
       if (savedSettings.model) {
@@ -1866,6 +1897,7 @@ export function useAIChat() {
     pendingSuggestionCount,
     error,
     activeProvider: activeProviderRef,
+    selectBrain,
 
     // Provider/model selection
     selectedProvider,

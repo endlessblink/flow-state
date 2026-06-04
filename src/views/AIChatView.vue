@@ -72,6 +72,7 @@ const {
   availableOllamaModels,
   isLoadingModels,
   setProvider,
+  selectBrain,
   setModel,
   refreshOllamaModels,
   sendMessage,
@@ -500,6 +501,21 @@ onUnmounted(() => {
           <div class="settings-group">
             <label class="settings-label">Provider</label>
             <div class="provider-options">
+              <!-- TASK-1814: subscription brains (Claude / Codex) — the preferred default -->
+              <button
+                class="provider-option"
+                :class="{ active: selectedProvider === 'bridge' && selectedModel === 'claude' }"
+                @click="selectBrain('claude')"
+              >
+                Claude
+              </button>
+              <button
+                class="provider-option"
+                :class="{ active: selectedProvider === 'bridge' && selectedModel === 'codex' }"
+                @click="selectBrain('codex')"
+              >
+                Codex
+              </button>
               <button
                 class="provider-option"
                 :class="{ active: selectedProvider === 'auto' }"
@@ -743,18 +759,19 @@ onUnmounted(() => {
   gap: var(--space-2);
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  border: none;
-  background: var(--accent-primary);
-  color: white;
+  border: 1px solid var(--state-active-border);
+  background: var(--state-active-bg);
+  color: var(--brand-primary);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
-  transition: background var(--duration-fast) ease;
+  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
 }
 
 .new-chat-btn:hover {
-  background: var(--accent-hover);
+  background: rgba(45, 212, 191, 0.20);
+  border-color: var(--brand-primary);
 }
 
 /* ============================================================================
@@ -1159,8 +1176,9 @@ onUnmounted(() => {
 }
 
 .provider-option.active {
-  background: var(--accent-primary);
-  color: white;
+  background: var(--state-active-bg);
+  color: var(--brand-primary);
+  box-shadow: inset 0 0 0 1px var(--state-active-border);
 }
 
 .personality-toggle {
@@ -1193,13 +1211,15 @@ onUnmounted(() => {
 }
 
 .personality-option.active {
-  background: var(--accent-primary);
-  color: white;
+  background: var(--state-active-bg);
+  color: var(--brand-primary);
+  box-shadow: inset 0 0 0 1px var(--state-active-border);
 }
 
 .grid-handler-option.active {
-  background: linear-gradient(135deg, #00ff88, #06b6d4);
-  color: #0a0a0f;
+  background: var(--state-active-bg);
+  color: var(--brand-primary);
+  box-shadow: inset 0 0 0 1px var(--state-active-border);
   text-shadow: none;
 }
 

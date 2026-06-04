@@ -96,6 +96,10 @@ export function useChatPresentation(options: UseChatPresentationOptions) {
   // Provider Display
   const providerLabel = computed(() => {
     const p = activeProvider.value
+    // TASK-1814: subscription bridge shows the active brain, not "bridge"
+    if (p === 'bridge' || selectedProvider.value === 'bridge') {
+      return selectedModel.value === 'codex' ? 'Codex' : 'Claude'
+    }
     if (p === 'ollama') return 'Local'
     if (p === 'groq') return 'Groq'
     if (p === 'openrouter') return 'OpenRouter'
@@ -114,6 +118,8 @@ export function useChatPresentation(options: UseChatPresentationOptions) {
     const label = providerLabel.value
     if (!label) return ''
     if (selectedProvider.value === 'auto') return label
+    // TASK-1814: bridge badge is just the brain name (e.g. "Claude") \u2014 no model suffix
+    if (selectedProvider.value === 'bridge') return label
     if (displayModelName.value) return `${label} \u00B7 ${displayModelName.value}`
     return label
   })

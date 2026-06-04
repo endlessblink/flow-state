@@ -1,0 +1,23 @@
+[Unit]
+Description=FlowState AI Bridge (claude/codex subscription brain)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Secrets + config (root-only): CLAUDE_CODE_OAUTH_TOKEN, SUPABASE_URL,
+# SUPABASE_ANON_KEY, AI_BRIDGE_ALLOWED_ORIGIN, optional AI_BRIDGE_RPM/PORT.
+EnvironmentFile=/root/.flowstate-ai-bridge.env
+# HOME so claude finds its config and codex finds ~/.codex/auth.json
+Environment=HOME=/root
+Environment=NODE_ENV=production
+WorkingDirectory=/opt/flowstate-ai-bridge
+ExecStart=/usr/bin/node /opt/flowstate-ai-bridge/server.mjs
+Restart=on-failure
+RestartSec=3
+# Hardening (the CLIs still need network + /tmp + home)
+NoNewPrivileges=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

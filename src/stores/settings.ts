@@ -98,6 +98,10 @@ export interface AppSettings {
     aiSetupComplete: boolean
     aiPreferredProvider: 'auto' | 'groq' | 'ollama' | 'openrouter'
 
+    // TASK-1814: Subscription brain via VPS bridge (Claude/Codex CLIs)
+    aiUseSubscription: boolean
+    aiBrain: 'claude' | 'codex'
+
     // FEATURE-1162: Saved Views / Smart Filters
     savedViews: SavedView[]
 
@@ -288,6 +292,10 @@ export const useSettingsStore = defineStore('settings', {
         aiSetupComplete: false,
         aiPreferredProvider: 'auto' as 'auto' | 'groq' | 'ollama' | 'openrouter',
 
+        // TASK-1814: subscription brain on by default; Claude is the default brain
+        aiUseSubscription: _persisted?.aiUseSubscription ?? true,
+        aiBrain: (_persisted?.aiBrain ?? 'claude') as 'claude' | 'codex',
+
         // FEATURE-1162: Saved Views defaults
         savedViews: [],
 
@@ -451,6 +459,13 @@ export const useSettingsStore = defineStore('settings', {
                     }
                     if (this.$state.aiPreferredProvider === undefined) {
                         this.$state.aiPreferredProvider = 'auto'
+                    }
+                    // TASK-1814: Backfill subscription brain fields
+                    if (this.$state.aiUseSubscription === undefined) {
+                        this.$state.aiUseSubscription = true
+                    }
+                    if (this.$state.aiBrain === undefined) {
+                        this.$state.aiBrain = 'claude'
                     }
                     // Backfill day group position rotation
                     if (this.$state.enableDayGroupPositionRotation === undefined) {

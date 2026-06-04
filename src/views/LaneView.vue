@@ -17,20 +17,49 @@
       <button class="btn-secondary" @click="goBack">Back to all tasks</button>
     </div>
 
-    <!-- Task list (cross-project, flat) -->
-    <div v-else class="tasks-container" @dragover.prevent>
-      <TaskList
-        :tasks="laneTasks"
-        :groups="laneGroups"
-        group-by="none"
-        :empty-message="`No tasks in “${lane.name}” yet. Assign a lane to tasks from the task editor.`"
-        @select="handleSelectTask"
-        @toggle-complete="handleToggleComplete"
-        @start-timer="handleStartTimer"
-        @edit="handleEditTask"
-        @update-task="handleUpdateTask"
-      />
-    </div>
+    <template v-else>
+      <!-- Add affordances: create new + pull in existing (keyboard-first) -->
+      <div class="lane-actions">
+        <input
+          v-model="newTaskTitle"
+          class="lane-add-input"
+          :aria-label="`Add a task to ${lane.name} lane`"
+          placeholder="+ Add a task…"
+          @keydown.enter="addNewTask"
+          @keydown.esc="newTaskTitle = ''"
+        >
+        <BaseButton
+          variant="secondary"
+          aria-label="Add existing tasks to this lane"
+          @click="showAddExisting = true"
+        >
+          <Plus :size="14" /> Add existing tasks
+        </BaseButton>
+      </div>
+
+      <!-- Task list (cross-project, flat) -->
+      <div class="tasks-container" @dragover.prevent>
+        <TaskList
+          :tasks="laneTasks"
+          :groups="laneGroups"
+          group-by="none"
+          :empty-message="`No tasks in “${lane.name}” yet — add one above, or pull in existing tasks.`"
+          @select="handleSelectTask"
+          @toggle-complete="handleToggleComplete"
+          @start-timer="handleStartTimer"
+          @edit="handleEditTask"
+          @update-task="handleUpdateTask"
+        />
+      </div>
+    </template>
+
+    <!-- Add existing tasks picker -->
+    <LaneAddTasksModal
+      :is-open="showAddExisting"
+      :lane-id="props.laneId"
+      @add="assignExisting"
+      @close="showAddExisting = false"
+    />
 
     <!-- Task Edit Modal -->
     <TaskEditModal
@@ -44,13 +73,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, Route } from 'lucide-vue-next'
+import { ArrowLeft, Route, Plus } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import { useLaneStore } from '@/stores/lanes'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import TaskList from '@/components/tasks/TaskList.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
+import LaneAddTasksModal from '@/components/lanes/LaneAddTasksModal.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
 import type { Task, TaskGroup } from '@/types/tasks'
 
 const props = defineProps<{ laneId: string }>()
@@ -59,7 +90,7 @@ const router = useRouter()
 const taskStore = useTaskStore()
 const laneStore = useLaneStore()
 const timerStore = useTimerStore()
-const { updateTaskWithUndo } = useUnifiedUndoRedo()
+const { updateTaskWithUndo, createTaskWithUndo, bulkUpdateTasksWithUndo } = useUnifiedUndoRedo()
 
 const lane = computed(() => laneStore.getLaneById(props.laneId))
 const laneColor = computed(() => {
@@ -83,6 +114,27 @@ const laneGroups = computed<TaskGroup[]>(() => {
     parentTasks: getRootTasks(laneTasks.value)
   }]
 })
+
+// --- Add tasks to this lane ---
+const newTaskTitle = ref('')
+const showAddExisting = ref(false)
+
+const addNewTask = async () => {
+  const title = newTaskTitle.value.trim()
+  if (!title) return
+  newTaskTitle.value = ''
+  // Lane is the organizing axis; projectId falls back to Uncategorized in createTask.
+  await createTaskWithUndo({ title, status: 'todo', laneId: props.laneId })
+}
+
+const assignExisting = async (ids: string[]) => {
+  showAddExisting.value = false
+  if (!ids.length) return
+  await bulkUpdateTasksWithUndo(
+    ids.map(id => ({ id, updates: { laneId: props.laneId } })),
+    'Add tasks to lane'
+  )
+}
 
 // --- Handlers (minimal subset mirroring AllTasksView) ---
 const showEditModal = ref(false)
@@ -182,6 +234,34 @@ const goBack = () => {
 .lane-count {
   font-size: var(--text-sm);
   color: var(--text-muted);
+}
+
+.lane-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.lane-add-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-base);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  transition: border-color var(--duration-fast);
+}
+
+.lane-add-input::placeholder {
+  color: var(--text-muted);
+}
+
+.lane-add-input:focus {
+  outline: none;
+  border-color: var(--brand-primary);
 }
 
 .tasks-container {

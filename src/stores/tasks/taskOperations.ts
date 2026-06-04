@@ -821,6 +821,12 @@ export function useTaskOperations(
                 if (changedKeys.has('projectId') && updatedTask.projectId !== undefined) {
                     payload.project_id = isValidUUID(updatedTask.projectId) ? updatedTask.projectId : null
                 }
+                // TASK-1812: Lane membership — selective payload must carry lane_id or
+                // assigning/clearing a lane via updateTask() never reaches the sync queue
+                // (queue-payload field-completeness trap). Nullable = unassign.
+                if (changedKeys.has('laneId')) {
+                    payload.lane_id = isValidUUID(updatedTask.laneId) ? updatedTask.laneId : null
+                }
                 // BUG-1365: Also check if canvasPosition was explicitly set in the updates object.
                 // During explicit canvas removal, canvasPosition is set to undefined to clear it.
                 // Without 'canvasPosition' in updates check, the sync queue never sends position: null

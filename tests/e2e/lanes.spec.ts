@@ -12,7 +12,9 @@ import { createClient } from '@supabase/supabase-js'
 import { TEST_TASKS } from '../fixtures/test-ids'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
-const LANE_ID = 'cccccccc-cccc-cccc-cccc-cccccccccc01'
+// Valid UUID v4 (version nibble 4, variant nibble 8) — the app's isValidUUID/sanitizeUUID
+// reject non-v4 ids and would null out lane_id on write. Real lanes use crypto.randomUUID().
+const LANE_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccc01'
 const LANE_NAME = 'v2 Launch'
 
 test.describe('TASK-1812: Lanes — cross-project goals', () => {
@@ -84,5 +86,64 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
       })
       await admin.from('lanes').delete().eq('name', 'Sprint Alpha')
     }
+  })
+
+  test('add tasks to a lane: quick-add (new) + picker (existing, cross-project)', async ({ page }) => {
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    expect(serviceRoleKey).toBeTruthy()
+    const admin = createClient(SUPABASE_URL, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { data: users } = await admin.auth.admin.listUsers()
+    const userId = users!.users!.find(u => u.email === 'playwright@test.flowstate')!.id
+
+    // Seed an EMPTY lane and ensure the two target tasks aren't in it
+    await admin.from('lanes').upsert({ id: LANE_ID, user_id: userId, name: LANE_NAME, color: '#4ECDC4' })
+    await admin.from('tasks').update({ lane_id: null })
+      .in('id', [TEST_TASKS.designLandingPage.id, TEST_TASKS.buyGroceries.id])
+
+    await page.goto(`/#/lane/${LANE_ID}`)
+    await expect(page.getByRole('heading', { name: LANE_NAME })).toBeVisible({ timeout: 15000 })
+
+    // ── A. Quick-add a NEW task into the lane ─────────────────────────────────
+    const quickAdd = page.getByRole('textbox', { name: `Add a task to ${LANE_NAME} lane` })
+    await expect(quickAdd).toBeVisible()
+    await quickAdd.fill('Draft launch checklist')
+    await quickAdd.press('Enter')
+    await expect(page.getByText('Draft launch checklist')).toBeVisible({ timeout: 10000 })
+
+    // ── B. Add EXISTING tasks from two different projects via the picker ──────
+    await page.getByRole('button', { name: 'Add existing tasks to this lane' }).click()
+    const search = page.getByPlaceholder('Search tasks…')
+    await expect(search).toBeVisible()
+    await search.fill(TEST_TASKS.designLandingPage.title)
+    await page.locator('.task-row', { hasText: TEST_TASKS.designLandingPage.title })
+      .getByRole('checkbox').check()
+    await search.fill(TEST_TASKS.buyGroceries.title)
+    await page.locator('.task-row', { hasText: TEST_TASKS.buyGroceries.title })
+      .getByRole('checkbox').check()
+    await page.getByRole('button', { name: 'Add 2 to lane' }).click()
+
+    // Both cross-project tasks now appear in the lane
+    await expect(page.getByText(TEST_TASKS.designLandingPage.title)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(TEST_TASKS.buyGroceries.title)).toBeVisible()
+
+    // Persisted to DB — poll (offline-first sync flushes asynchronously).
+    // >= 3 in the lane: the quick-add new task + the 2 picked existing tasks.
+    await expect.poll(async () => {
+      const { data } = await admin.from('tasks').select('id').eq('lane_id', LANE_ID)
+      return data?.length ?? 0
+    }, { timeout: 15000 }).toBeGreaterThanOrEqual(3)
+
+    const { data: assigned } = await admin.from('tasks').select('id')
+      .eq('lane_id', LANE_ID)
+      .in('id', [TEST_TASKS.designLandingPage.id, TEST_TASKS.buyGroceries.id])
+    expect(assigned?.length).toBe(2)
+
+    // Cleanup
+    await admin.from('tasks').update({ lane_id: null })
+      .in('id', [TEST_TASKS.designLandingPage.id, TEST_TASKS.buyGroceries.id])
+    await admin.from('tasks').delete().eq('user_id', userId).eq('title', 'Draft launch checklist')
+    await admin.from('lanes').delete().eq('id', LANE_ID)
   })
 })

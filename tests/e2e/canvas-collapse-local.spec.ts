@@ -21,10 +21,11 @@ const setupCanvas = async (page: Page) => {
 
 const GROUP = { id: 'group-collapse-test', name: 'Collapse Me', x: 200, y: 120, width: 400, height: 600 }
 const TASK = { id: 'task-collapse-1', title: 'Child task', parentId: GROUP.id, x: 240, y: 220 }
+const UNPARENTED_INSIDE_TASK = { id: 'task-collapse-unparented-inside', title: 'Unparented inside task', x: 260, y: 360 }
 const PARENT_TASK = { id: 'task-collapse-parent', title: 'Parent task', x: 40, y: 150 }
 
 const seedCanvas = async (page: Page) => {
-  await page.evaluate(async ({ GROUP, TASK, PARENT_TASK }) => {
+  await page.evaluate(async ({ GROUP, TASK, UNPARENTED_INSIDE_TASK, PARENT_TASK }) => {
     const root = document.querySelector('#app') as any
     const pinia = root.__vue_app__._context.config.globalProperties.$pinia
     const taskStore = pinia._s.get('tasks')!
@@ -47,8 +48,13 @@ const seedCanvas = async (page: Page) => {
       isInInbox: false, parentId: TASK.parentId,
       canvasPosition: { x: TASK.x, y: TASK.y }, positionFormat: 'absolute',
     })
+    await taskStore.createTask({
+      id: UNPARENTED_INSIDE_TASK.id, title: UNPARENTED_INSIDE_TASK.title, status: 'todo', priority: 'medium',
+      isInInbox: false, parentId: null,
+      canvasPosition: { x: UNPARENTED_INSIDE_TASK.x, y: UNPARENTED_INSIDE_TASK.y }, positionFormat: 'absolute',
+    })
     await canvasStore.requestSync?.('user:manual')
-  }, { GROUP, TASK, PARENT_TASK })
+  }, { GROUP, TASK, UNPARENTED_INSIDE_TASK, PARENT_TASK })
 
   await expect.poll(async () => page.evaluate((id) =>
     !!document.querySelector(`[data-id="section-${id}"]`), GROUP.id), { timeout: 15_000 }).toBe(true)
@@ -64,6 +70,9 @@ const readState = (page: Page) => page.evaluate((id) => {
   const childEl = document.querySelector(`[data-id="task-collapse-1"]`) as HTMLElement | null
   const childVisible = !!childEl && childEl.offsetParent !== null && !childEl.hidden
     && getComputedStyle(childEl).display !== 'none' && getComputedStyle(childEl).visibility !== 'hidden'
+  const unparentedInsideEl = document.querySelector(`[data-id="task-collapse-unparented-inside"]`) as HTMLElement | null
+  const unparentedInsideVisible = !!unparentedInsideEl && unparentedInsideEl.offsetParent !== null && !unparentedInsideEl.hidden
+    && getComputedStyle(unparentedInsideEl).display !== 'none' && getComputedStyle(unparentedInsideEl).visibility !== 'hidden'
   const groupBox = nodeEl?.getBoundingClientRect()
   const parentNode = document.querySelector(`[data-id="task-collapse-parent"]`) as HTMLElement | null
   const edge = document.querySelector(`[aria-label="Edge from task-collapse-parent to section-${id}"]`)
@@ -74,6 +83,7 @@ const readState = (page: Page) => page.evaluate((id) => {
     domHasCollapsedClass: !!sectionNode?.classList.contains('collapsed'),
     bodyVisible: !!nodeEl?.querySelector('.section-body'),
     childVisible,
+    unparentedInsideVisible,
     groupHeight: groupBox?.height ?? null,
     resizeControlCount: nodeEl?.querySelectorAll('.vue-flow__resize-control').length ?? 0,
     edgeVisible: !!edge,
@@ -94,6 +104,7 @@ test('group collapse preserves cable target and allows selecting another node', 
   expect(before.storeIsCollapsed).toBe(false)
   expect(before.bodyVisible).toBe(true)
   expect(before.childVisible).toBe(true)
+  expect(before.unparentedInsideVisible).toBe(true)
 
   // Click the collapse chevron inside the group header
   await page.evaluate((id) => {
@@ -115,6 +126,10 @@ test('group collapse preserves cable target and allows selecting another node', 
   expect(after.bodyVisible).toBe(false)
   // ...and the contained task must be hidden (the whole point of minimizing)
   expect(after.childVisible).toBe(false)
+  // A task can be visually inside a group even when its persisted parentId is
+  // stale/null; collapse must hide the visible contents, not only strict
+  // parent-chain descendants.
+  expect(after.unparentedInsideVisible).toBe(false)
   // The cable target must still be measurable; display:none handles break
   // existing group edge anchors.
   expect(after.edgeVisible).toBe(true)
@@ -142,4 +157,5 @@ test('group collapse preserves cable target and allows selecting another node', 
   expect(reExpanded.storeIsCollapsed).toBe(false)
   expect(reExpanded.bodyVisible).toBe(true)
   expect(reExpanded.childVisible).toBe(true)
+  expect(reExpanded.unparentedInsideVisible).toBe(true)
 })

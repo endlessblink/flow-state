@@ -289,6 +289,21 @@ export function useCanvasSync() {
                 }
                 return false
             }
+            const isInsideCollapsedGroupBounds = (position: { x: number; y: number }): boolean => {
+                const taskCenterX = position.x + CANVAS.DEFAULT_TASK_WIDTH / 2
+                const taskCenterY = position.y + CANVAS.DEFAULT_TASK_HEIGHT / 2
+                return groups.some((group) => {
+                    if (!group.isCollapsed || !group.position) return false
+                    const groupX = group.position.x
+                    const groupY = group.position.y
+                    const groupWidth = group.position.width || CANVAS.DEFAULT_GROUP_WIDTH
+                    const groupHeight = group.position.height || CANVAS.DEFAULT_GROUP_HEIGHT
+                    return taskCenterX >= groupX &&
+                        taskCenterX <= groupX + groupWidth &&
+                        taskCenterY >= groupY &&
+                        taskCenterY <= groupY + groupHeight
+                })
+            }
 
             for (const group of sortedGroups) {
                 const nodeId = CanvasIds.groupNodeId(group.id)
@@ -505,7 +520,7 @@ export function useCanvasSync() {
                     parentNode: parentId ? CanvasIds.groupNodeId(parentId) : undefined,
                     draggable: true,
                     selectable: true,
-                    hidden: (shouldHideDone && task.status === 'done') || isUnderCollapsedAncestor(task.parentId),
+                    hidden: (shouldHideDone && task.status === 'done') || isUnderCollapsedAncestor(task.parentId) || isInsideCollapsedGroupBounds(absolutePos),
                     // FIX: Removed extent: 'parent' so tasks can be dragged OUT of groups.
                     // With extent: 'parent', Vue Flow constrains movement to parent bounds,
                     // preventing tasks from being dragged outside. Without it, tasks can be

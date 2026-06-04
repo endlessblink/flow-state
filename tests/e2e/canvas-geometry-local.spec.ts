@@ -28,9 +28,8 @@ const setupCanvas = async (page: Page) => {
   await page.waitForFunction(() => {
     const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, unknown> } } } } } } | null
     const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
-    const taskStore = pinia?._s.get('tasks') as { _hasInitializedOnce?: boolean } | undefined
-    const canvasStore = pinia?._s.get('canvas') as { _hasInitializedOnce?: boolean } | undefined
-    return !!taskStore?._hasInitializedOnce && !!canvasStore?._hasInitializedOnce && !!pinia?._s.get('settings')
+    return !!pinia?._s.get('tasks') && !!pinia?._s.get('canvas') && !!pinia?._s.get('settings')
+      && !!document.querySelector('.vue-flow__pane')
   }, { timeout: 30_000 })
 }
 

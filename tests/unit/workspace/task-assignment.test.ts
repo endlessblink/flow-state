@@ -47,6 +47,7 @@ vi.mock('@/stores/auth', () => ({
 vi.mock('@/stores/tasks', () => ({
   useTaskStore: () => ({
     updateTask: mockUpdateTask,
+    updateTaskWithUndo: mockUpdateTask,
   }),
 }))
 

@@ -30,8 +30,6 @@
         >
           <CalendarDays :size="16" />
         </button>
-
-
       </div>
 
       <!-- Content Area -->
@@ -103,6 +101,13 @@
       @close="showBatchEditModal = false; batchEditTaskIds = []"
       @applied="handleBatchEditApplied"
     />
+
+    <QuickTaskCreateModal
+      :is-open="showCreateModal"
+      :inherited-props="createTaskDefaults"
+      @cancel="closeCreateModal"
+      @create="handleCreateTaskFromModal"
+    />
   </div>
 </template>
 
@@ -111,6 +116,7 @@ import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
+import { useLaneStore } from '@/stores/lanes'
 import { useTimerStore } from '@/stores/timer'
 import { useSettingsStore } from '@/stores/settings'
 import { useMobileDetection } from '@/composables/useMobileDetection'
@@ -120,6 +126,7 @@ import TaskList from '@/components/tasks/TaskList.vue'
 import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
+import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
@@ -129,14 +136,24 @@ import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import type { Task, GroupByType, TaskGroup } from '@/types/tasks'
 
+type CreateTaskDefaults = {
+  dueDate?: string
+  priority?: 'low' | 'medium' | 'high'
+  status?: string
+  projectId?: string
+  estimatedDuration?: number
+  laneId?: string | null
+}
+
 // Mobile Detection
 const { isMobile } = useMobileDetection()
 
 // Stores
 const taskStore = useTaskStore()
+const laneStore = useLaneStore()
 const timerStore = useTimerStore()
 const settingsStore = useSettingsStore()
-const { bulkDeleteTasksWithUndo } = useUnifiedUndoRedo()
+const { bulkDeleteTasksWithUndo, createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
 const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 
 // Extract only reactive state refs, not computed properties
@@ -159,6 +176,8 @@ const taskListRef = ref<InstanceType<typeof TaskList> | null>(null)
 // Modal State
 const showEditModal = ref(false)
 const selectedTask = ref<Task | null>(null)
+const showCreateModal = ref(false)
+const createTaskDefaults = ref<CreateTaskDefaults | null>(null)
 const showContextMenu = ref(false)
 const contextMenuX = ref(0)
 const contextMenuY = ref(0)
@@ -387,6 +406,40 @@ const groupedTasks = computed((): TaskGroup[] => {
         })
       }
     })
+  } else if (groupBy.value === 'lane') {
+    // TASK-1812: Group by lane (sprint-style cross-project goal). Flat, no hierarchy.
+    const laneMap = new Map<string, Task[]>()
+    tasks.forEach(task => {
+      const key = task.laneId || ''
+      if (!laneMap.has(key)) laneMap.set(key, [])
+      laneMap.get(key)!.push(task)
+    })
+    // Lanes in store order; only those with tasks
+    laneStore.lanes.forEach(lane => {
+      const laneTasks = laneMap.get(lane.id)
+      if (laneTasks && laneTasks.length > 0) {
+        groups.push({
+          key: lane.id,
+          title: lane.name,
+          color: lane.color,
+          tasks: laneTasks,
+          parentTasks: getRootTasks(laneTasks)
+        })
+      }
+    })
+    // Tasks with no lane (or pointing at a missing lane) bucket to the top
+    const noLane = laneMap.get('') || []
+    laneMap.forEach((laneTasks, key) => {
+      if (key !== '' && !laneStore.getLaneById(key)) noLane.push(...laneTasks)
+    })
+    if (noLane.length > 0) {
+      groups.unshift({
+        key: 'no-lane',
+        title: 'No Lane',
+        tasks: noLane,
+        parentTasks: getRootTasks(noLane)
+      })
+    }
   } else if (groupBy.value === 'dueDate') {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -509,16 +562,24 @@ const closeEditModal = () => {
   selectedTask.value = null
 }
 
+const closeCreateModal = () => {
+  showCreateModal.value = false
+  createTaskDefaults.value = null
+}
+
 const handleAddTaskToGroup = async (groupKey: string, groupByMode: string) => {
   // Build partial task with pre-filled group property
-  const taskDefaults: Partial<Task> = { title: '' }
+  const taskDefaults: CreateTaskDefaults = {}
 
   if (groupByMode === 'project') {
     taskDefaults.projectId = (groupKey === 'uncategorized' || groupKey === '__no_project__') ? undefined : groupKey
+  } else if (groupByMode === 'lane') {
+    // TASK-1812: new task inherits the lane group it was added under
+    taskDefaults.laneId = groupKey === 'no-lane' ? null : groupKey
   } else if (groupByMode === 'status') {
     taskDefaults.status = groupKey as Task['status']
   } else if (groupByMode === 'priority') {
-    taskDefaults.priority = groupKey as Task['priority']
+    taskDefaults.priority = (groupKey === 'no_priority' ? undefined : groupKey) as CreateTaskDefaults['priority']
   } else if (groupByMode === 'dueDate') {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -546,12 +607,24 @@ const handleAddTaskToGroup = async (groupKey: string, groupByMode: string) => {
     }
   }
 
-  // createTask returns the new Task object directly
-  const newTask = await taskStore.createTask(taskDefaults)
-  if (newTask) {
-    selectedTask.value = newTask
-    showEditModal.value = true
-  }
+  createTaskDefaults.value = taskDefaults
+  showCreateModal.value = true
+}
+
+const handleCreateTaskFromModal = async (data: {
+  title: string
+  description: string
+  status: string
+  priority: 'low' | 'medium' | 'high'
+  dueDate?: string
+  projectId?: string
+}) => {
+  await createTaskWithUndo({
+    ...createTaskDefaults.value,
+    ...data,
+    status: data.status as Task['status']
+  })
+  closeCreateModal()
 }
 
 const handleContextMenu = (event: MouseEvent, task: Task) => {
@@ -586,7 +659,7 @@ const handleToggleComplete = async (taskId: string) => {
     }
     const newStatus = task.status === 'done' ? 'todo' : 'done'
     // BUG-1051: AWAIT to ensure persistence
-    await taskStore.updateTask(taskId, { status: newStatus })
+    await updateTaskWithUndo(taskId, { status: newStatus })
   }
 }
 
@@ -595,7 +668,7 @@ const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
     return
   }
   // BUG-1051: AWAIT to ensure persistence
-  await taskStore.updateTask(taskId, updates)
+  await updateTaskWithUndo(taskId, updates)
 }
 
 // TASK-1520: recurrence-aware delete via global composable
@@ -666,7 +739,7 @@ const handleCollapseAll = () => {
 const handleMoveTask = async (taskId: string, targetProjectId: string | null, targetParentId: string | null) => {
   // Move task to be a subtask of another task
   // BUG-1051: AWAIT to ensure persistence
-  await taskStore.updateTask(taskId, {
+  await updateTaskWithUndo(taskId, {
     projectId: targetProjectId || undefined,
     parentTaskId: targetParentId || undefined
   })

@@ -50,6 +50,7 @@ import {
   __getLastRotationDateForTest,
   __setLastRotationDateForTest
 } from '@/composables/canvas/useDayGroupRotation'
+import { __forceRefreshCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
@@ -175,6 +176,33 @@ describe('useDayGroupRotation — catch-up guard', () => {
     rotateDayGroups({ force: true })
 
     expect(updateTask).toHaveBeenCalledTimes(1)
+  })
+
+  it('4b: forced toolbar rotation keeps a same-day Saturday task on today even with Today/Tomorrow groups', () => {
+    const saturday = new Date(2026, 3, 18, 10, 0, 0, 0)
+    vi.setSystemTime(saturday)
+    __forceRefreshCurrentDay()
+
+    const today = makeGroup({ name: 'Today' })
+    const tomorrow = makeGroup({ name: 'Tomorrow' })
+    const sat = makeGroup({ name: 'Saturday' })
+    const task = makeTask({ id: 'sat-task', parentId: sat.id, dueDate: '2026-04-17' })
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow, sat])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([task])
+
+    const { rotateDayGroups } = useDayGroupRotation()
+    rotateDayGroups({ force: true })
+
+    expect(updateTask).toHaveBeenCalledWith(
+      'sat-task',
+      { dueDate: '2026-04-18' },
+      'SMART-GROUP'
+    )
+    expect(updateTask).not.toHaveBeenCalledWith(
+      'sat-task',
+      { dueDate: '2026-04-25' },
+      'SMART-GROUP'
+    )
   })
 
   it('5: feature flag off → no rotation, no marker write', () => {

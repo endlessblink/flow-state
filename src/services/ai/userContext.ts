@@ -25,7 +25,7 @@ import type { MemoryObservation } from '@/utils/supabaseMappers'
  * @returns Context string to append to system prompts, or empty string if unavailable
  */
 export async function getAIUserContext(
-  feature: 'quicksort' | 'taskassist' | 'chat' = 'chat'
+  feature: 'quicksort' | 'taskassist' | 'chat' | 'weeklyplan' = 'chat'
 ): Promise<string> {
   const sections: string[] = []
   const settingsStore = useSettingsStore()

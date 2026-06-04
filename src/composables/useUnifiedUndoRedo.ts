@@ -4,13 +4,10 @@
 // VERSION: Singleton-Consolidation-v1 - 2025-10-23T06:56:00Z
 
 import { computed } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import { getUndoSystem } from './undoSingleton'
 
 export const useUnifiedUndoRedo = () => {
-  const taskStore = useTaskStore()
-
   // DELEGATE to singleton system exclusively
   const singletonUndo = getUndoSystem()
 
@@ -45,28 +42,20 @@ export const useUnifiedUndoRedo = () => {
     return await singletonUndo.updateTaskWithUndo(taskId, updates)
   }
 
+  const bulkUpdateTasksWithUndo = async (taskUpdates: Array<{ id: string; updates: Partial<Task> }>, description?: string) => {
+    return await singletonUndo.bulkUpdateTasksWithUndo(taskUpdates, description)
+  }
+
   const createTaskWithUndo = async (taskData: Partial<Task>) => {
     return await singletonUndo.createTaskWithUndo(taskData)
   }
 
-  // Move operations - Simplified for now, just perform the operation without undo
-  // (Undo system is primarily for create/update/delete operations)
   const moveTaskWithUndo = async (taskId: string, newStatus: string) => {
-    try {
-      // Just perform the move operation
-      await taskStore.moveTask(taskId, newStatus as Task['status']) // BUG-1051: AWAIT to ensure persistence
-    } catch (error) {
-      console.error('❌ Error moving task:', error)
-    }
+    return await singletonUndo.updateTaskWithUndo(taskId, { status: newStatus as Task['status'] })
   }
 
   const moveTaskToProjectWithUndo = async (taskId: string, projectId: string) => {
-    try {
-      // Just perform the move operation
-      taskStore.moveTaskToProject(taskId, projectId)
-    } catch (error) {
-      console.error('❌ Error moving task to project:', error)
-    }
+    return await singletonUndo.updateTaskWithUndo(taskId, { projectId })
   }
 
   // Computed properties for UI state
@@ -96,6 +85,7 @@ export const useUnifiedUndoRedo = () => {
     deleteTaskWithUndo,
     bulkDeleteTasksWithUndo,
     updateTaskWithUndo,
+    bulkUpdateTasksWithUndo,
     createTaskWithUndo,
     moveTaskWithUndo,
     moveTaskToProjectWithUndo

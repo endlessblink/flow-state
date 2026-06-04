@@ -287,6 +287,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
     task: 'tasks',
     group: 'groups',
     project: 'projects',
+    lane: 'lanes',
     timer_session: 'timer_sessions',
     quick_sort_session: 'quick_sort_sessions'
   }
@@ -319,7 +320,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         // is_deleted=true. Merging these defaults ensures the upsert always resets the
         // deletion state, so fetchTasks (.eq('is_deleted', false)) sees the task on refresh.
         // Only apply to tables that have is_deleted/deleted_at columns (tasks, groups, projects).
-        const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project']
+        const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project', 'lane']
         const softDeleteDefaults = softDeleteTables.includes(entityType)
           ? { is_deleted: false, deleted_at: null }
           : {}
@@ -443,7 +444,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         //
         // Tables with soft-delete support (have is_deleted + deleted_at columns).
         // timer_sessions and quick_sort_sessions do NOT have these columns — hard DELETE instead.
-        const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project']
+        const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project', 'lane']
 
         if (softDeleteTables.includes(entityType)) {
           result = await supabase!
@@ -545,11 +546,30 @@ async function processOperation(operation: WriteOperation): Promise<void> {
             console.log(`[SYNC] Skipping LWW writeback for ${operation.entityId.slice(0, 8)} — pending write (local data is fresher)`)
           }
         } else {
-          const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
-          const mappedTask = fromSupabaseTask(result.serverData as unknown as Parameters<typeof fromSupabaseTask>[0])
-          taskStore.updateTaskFromSync(operation.entityId, mappedTask, false)
-          if (import.meta.env.DEV) {
-            console.log(`[SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+          // BUG-1799: Never let an LWW writeback resurrect a locally-deleted task.
+          // updateTaskFromSync ADDS a task when it's absent from the store (idx === -1), so for a
+          // task the user already deleted, a stale queued update's writeback would re-add it —
+          // and a blank server title gets sanitized to "Untitled Task". Honor the server tombstone,
+          // and skip re-adding tasks that are no longer present locally. rawTasks is the unfiltered
+          // list (view filters must not make a present task look deleted).
+          const serverIsDeleted = (result.serverData as { is_deleted?: boolean }).is_deleted === true
+          const existsLocally = taskStore.rawTasks.some(t => t.id === operation.entityId)
+          if (serverIsDeleted) {
+            taskStore.updateTaskFromSync(operation.entityId, null, true)
+            if (import.meta.env.DEV) {
+              console.log(`[SYNC] LWW: server tombstone applied (removed) for ${operation.entityId.slice(0, 8)}`)
+            }
+          } else if (!existsLocally) {
+            if (import.meta.env.DEV) {
+              console.log(`[SYNC] Skipping LWW writeback for ${operation.entityId.slice(0, 8)} — not present locally (deleted); not resurrecting`)
+            }
+          } else {
+            const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
+            const mappedTask = fromSupabaseTask(result.serverData as unknown as Parameters<typeof fromSupabaseTask>[0])
+            taskStore.updateTaskFromSync(operation.entityId, mappedTask, false)
+            if (import.meta.env.DEV) {
+              console.log(`[SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+            }
           }
         }
       } catch (e) {

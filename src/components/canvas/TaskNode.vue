@@ -202,7 +202,7 @@ const {
 const handleSetWorkBlock = async (duration: number) => {
   const currentTask = task.value
   if (!currentTask?.id) return
-  await taskStore.updateTask(currentTask.id, { estimatedDuration: duration }, 'USER')
+  await taskStore.updateTaskWithUndo(currentTask.id, { estimatedDuration: duration })
 }
 
 // TASK-262: Selection is handled via:
@@ -357,33 +357,30 @@ onUnmounted(() => {
 
 /* Creation Pulse Animation - Gentle feedback when task is first added to canvas */
 .task-node.is-recently-created {
-  animation: animate-creation 2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* BUG-1807: minimal, compositor-safe entrance (see @keyframes note) */
+  animation: animate-creation 0.45s ease-out;
   z-index: 50; /* Ensure it stays above others while animating */
 }
 
+/* BUG-1807: The original entrance bounced the card with transform: scale() (plus
+ * filter: brightness() and a large animated box-shadow). The Vue Flow transform
+ * pane uses `transform-style: preserve-3d` (text-crispness fix, BUG-041/1408), so
+ * every node shares one 3D rendering context. Animating a child's `transform`
+ * (the scale) forces the browser to re-rasterize that ENTIRE 3D context each frame
+ * (CDP showed a full-viewport repaint); on Electron's GPU compositor that full
+ * re-raster lands sub-pixel-shifted, so dropping a just-created task made the whole
+ * canvas appear to shift/shimmer ("the nudge"). The scale also violated the BUG-1328
+ * invariant ("NO transform on the node root").
+ *
+ * The entrance is now opacity-only: no transform (so the 3D context is never
+ * re-rasterized) and no filter — nothing that can shift neighbouring nodes.
+ * Verified with CDP LayerTree paint profiling: drop paints 341 -> ~36. */
 @keyframes animate-creation {
   0% {
-    transform: scale(0.6) translateZ(0);
-    box-shadow: 0 0 0 0 var(--brand-primary);
-    filter: brightness(1.5);
-  }
-  20% {
-    transform: scale(1.1) translateZ(0);
-    box-shadow: 0 0 var(--space-10) var(--space-2_5) var(--brand-primary);
-    filter: brightness(1.2);
-  }
-  40% {
-    transform: scale(0.95) translateZ(0);
-    box-shadow: 0 0 var(--space-5) var(--space-1_25) var(--brand-primary);
-  }
-  60% {
-    transform: scale(1.02) translateZ(0);
-    box-shadow: 0 0 var(--space-3_75) var(--space-0_5) var(--brand-primary);
+    opacity: 0.4;
   }
   100% {
-    transform: scale(1) translateZ(0);
-    box-shadow: var(--shadow-md);
-    filter: brightness(1);
+    opacity: 1;
   }
 }
 
@@ -507,31 +504,40 @@ onUnmounted(() => {
   animation: task-flash-blue 0.6s ease-out !important;
 }
 
+/*
+ * BUG-1808: These flash keyframes previously bounced the card with transform: scale(1.02).
+ * Per the BUG-1807 analysis (see @keyframes animate-creation above), a transform on this
+ * backdrop-composited glass card forces Electron to re-rasterize the surrounding 3D context,
+ * making every other node appear to shift ("the nudge"). The flash fires on date edits
+ * (e.g. rescheduling overdue → today via the context menu), so the nudge surfaced exactly
+ * where MASTER_PLAN BUG-1807 predicted. The flash is now transform-free: the brightness +
+ * box-shadow glow pulse carries the feedback, no scale → no compositor shift.
+ */
 @keyframes task-flash-green {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-success); }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-success); }
   50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-success); }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
 }
 
 @keyframes task-flash-red {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-danger); }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-danger); }
   50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-danger); }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
 }
 
 @keyframes task-flash-amber {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-orange); }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-orange); }
   50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-orange); }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
 }
 
 @keyframes task-flash-blue {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-blue); }
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
+  25% { filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-blue); }
   50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-blue); }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
 }
 </style>

@@ -241,13 +241,23 @@ describe('Task Store — CRUD', () => {
 
   it('updates task status from todo to done', async () => {
     const store = useTaskStore()
-    const task = await store.createTask({ title: 'Status Test' })
+    const task = await store.createTask({
+      title: 'Status Test',
+      isInInbox: false,
+      parentId: 'group-a',
+      canvasPosition: { x: 120, y: 240 },
+      positionVersion: 4,
+    })
     expect(task.status).toBe('todo')
 
     await store.updateTask(task.id, { status: 'done' })
 
     const updated = store._rawTasks.find(t => t.id === task.id)
     expect(updated?.status).toBe('done')
+    expect(updated?.isInInbox).toBe(false)
+    expect(updated?.parentId).toBe('group-a')
+    expect(updated?.canvasPosition).toEqual({ x: 120, y: 240 })
+    expect(updated?.positionVersion).toBe(4)
   })
 
   it('updates task priority', async () => {

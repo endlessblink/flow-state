@@ -72,6 +72,8 @@
         :view-mode="viewMode"
         :external-calendar-enabled="externalCalendar.hasEnabledCalendars.value || googleCalendar.isConnected.value"
         :external-calendar-loading="externalCalendar.isLoading.value || googleCalendar.isLoading.value"
+        :google-connected="googleCalendar.isConnected.value"
+        :show-google-events="googleCalendar.showGoogleEvents.value"
         @previous-day="previousDay"
         @next-day="nextDay"
         @go-to-today="goToToday"
@@ -79,8 +81,6 @@
         @toggle-future-recurring="showFutureRecurring = !showFutureRecurring; taskStore.persistFilters()"
         @update:view-mode="viewMode = $event"
         @sync-external-calendar="syncAllExternalCalendars"
-        :google-connected="googleCalendar.isConnected.value"
-        :show-google-events="googleCalendar.showGoogleEvents.value"
         @toggle-google-events="googleCalendar.showGoogleEvents.value = !googleCalendar.showGoogleEvents.value"
         @sync-google-calendar="googleCalendar.syncNow"
       />
@@ -207,6 +207,7 @@ import QuickTaskCreate from '@/components/tasks/QuickTaskCreate.vue'
 
 
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
+import type { CalendarEvent, WeekEvent } from '@/types/tasks'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 
 interface SortableEvent {
@@ -249,7 +250,7 @@ const handleReloadPage = () => {
   window.location.reload()
 }
 
-// Extract reactive refs from store
+// Extract live refs from store
 // TASK-076: Use calendar-specific done filter
 const { hideCalendarDoneTasks, showFutureRecurring } = storeToRefs(taskStore)
 
@@ -400,17 +401,17 @@ const { monthDays, handleMonthDragStart: _rawMonthDragStart, handleMonthDrop, ha
 // FEATURE-1336b: Bridge calendar drag events to global useDragAndDrop for sidebar drops
 const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
-const handleEventDragStart = (event: DragEvent, calendarEvent: Record<string, unknown>) => {
+const handleEventDragStart = (event: DragEvent, calendarEvent: CalendarEvent | WeekEvent) => {
   _rawEventDragStart(event, calendarEvent)
   // Unified ghost pill — composable now handles startGlobalDrag with event
 }
 
-const handleEventDragEnd = (event: DragEvent, calendarEvent: Record<string, unknown>) => {
+const handleEventDragEnd = (event: DragEvent, calendarEvent: CalendarEvent | WeekEvent) => {
   _rawEventDragEnd(event, calendarEvent)
   // endGlobalDrag is called inside the composable's handleEventDragEnd
 }
 
-const handleMonthDragStart = (event: DragEvent, calendarEvent: Record<string, unknown> & { taskId?: string; title?: string }) => {
+const handleMonthDragStart = (event: DragEvent, calendarEvent: CalendarEvent) => {
   _rawMonthDragStart(event, calendarEvent)
   if (calendarEvent.taskId) {
     // Unified ghost pill — pass event for setDragImage
@@ -648,7 +649,7 @@ const handleDropCapture = (e: Event) => {
 // The dragend event fires on the source element and bubbles to document on EVERY drag end.
 // BUG-1361: Also clean up global drag state (ghost pill, body class) because
 // when inbox tasks are dropped on calendar, the source card may be removed from DOM
-// by reactive filtering before @dragend fires, leaving ghost pills stuck on screen.
+// by live filtering before @dragend fires, leaving ghost pills stuck on screen.
 const handleGlobalDragEnd = () => {
   // BUG-1351: Replace entire object for guaranteed prop reactivity
   dragGhost.value = { visible: false, title: '', duration: 30, slotIndex: 0 }
@@ -706,7 +707,7 @@ onMounted(() => {
     router.replace({ path: '/calendar', query: {} })
   } else {
     // Scroll to current time on mount
-    // Use setTimeout like the watchers — bare nextTick fires before CalendarDayView's
+    // Use setTimeout like the watchers; a bare Vue tick fires before CalendarDayView's
     // DOM is ready in WebKitGTK/Tauri, causing querySelector('.slots-container') to return null
     setTimeout(() => scrollToCurrentTime(), 150)
   }

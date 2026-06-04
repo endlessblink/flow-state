@@ -3,33 +3,33 @@
     <!-- Categorized: Show emoji -->
     <span
       v-if="visual.type === 'emoji'"
-      ref="triggerRef"
+      ref="triggerElRef"
       class="project-emoji-badge project-visual--emoji"
       :title="`Project: ${projectDisplayName}`"
       @click="toggleDropdown($event)"
     >
       <ProjectEmojiIcon
-        :emoji="visual.content"
+        :emoji="visual.content || ''"
         size="xs"
       />
     </span>
     <!-- Categorized: Show color circle -->
     <span
       v-else-if="visual.type === 'css-circle'"
-      ref="triggerRef"
+      ref="triggerElRef"
       class="project-emoji-badge project-visual--css-circle"
       :title="`Project: ${projectDisplayName}`"
       @click="toggleDropdown($event)"
     >
       <div
         class="project-css-circle"
-        :style="{ '--project-color': visual.color }"
+        :style="{ '--project-color': visual.color || 'var(--color-primary)' }"
       />
     </span>
     <!-- Uncategorized: Show subtle question mark -->
     <span
       v-else
-      ref="triggerRef"
+      ref="triggerElRef"
       class="project-placeholder"
       title="Click to assign a project"
       @click="toggleDropdown($event)"
@@ -92,8 +92,13 @@ import { Check } from 'lucide-vue-next'
 import { useProjectStore } from '@/stores/projects'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
+type ProjectVisual =
+  | { type: 'emoji'; content: string }
+  | { type: 'css-circle'; color: string }
+  | { type: string; content?: string; color?: string }
+
 defineProps<{
-  visual: unknown
+  visual: ProjectVisual
   projectDisplayName: string
   currentProjectId?: string | null
 }>()
@@ -105,7 +110,7 @@ const emit = defineEmits<{
 const projectStore = useProjectStore()
 const isOpen = ref(false)
 const triggerWrapperRef = ref<HTMLElement>()
-const triggerRef = ref<HTMLElement>()
+const triggerElRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
 
 const projects = computed(() => projectStore.projects)
@@ -118,8 +123,8 @@ const dropdownStyle = ref<Record<string, string>>({
 })
 
 const calculateDropdownPosition = (clickEvent?: MouseEvent) => {
-  if (!triggerRef.value) return
-  const rect = triggerRef.value.getBoundingClientRect()
+  if (!triggerElRef.value) return
+  const rect = triggerElRef.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const dropdownHeight = Math.min((projects.value.length + 1) * 36 + 16, 256)
 

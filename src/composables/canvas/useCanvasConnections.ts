@@ -1,9 +1,11 @@
 
 import { type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
+import { useCanvasStore } from '@/stores/canvas'
 import type { EdgeMouseEvent, Edge } from '@vue-flow/core'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
+import { getUndoSystem } from '@/composables/undoSingleton'
 
 interface ConnectionDeps {
     syncEdges: (options?: { force?: boolean }) => void
@@ -33,6 +35,41 @@ export function useCanvasConnections(
     state: ConnectionState
 ) {
     const taskStore = useTaskStore()
+    const canvasStore = useCanvasStore()
+    const undoSystem = getUndoSystem()
+
+    const linkTaskToGroup = async (parentTaskId: string, groupNodeId: string) => {
+        const { id: groupId } = CanvasIds.parseNodeId(groupNodeId)
+        const group = canvasStore.groups.find(g => g.id === groupId)
+        const parentTask = taskStore.tasks.find(t => t.id === parentTaskId)
+        if (!group || !parentTask?.canvasPosition) return
+
+        await undoSystem.canvasConnectionWithUndo(
+            `Connect task to group: ${parentTask.title} -> ${group.name}`,
+            [groupId],
+            async () => {
+                await canvasStore.updateGroup(groupId, { linkedParentTaskId: parentTaskId })
+            }
+        )
+
+        deps.syncEdges({ force: true })
+    }
+
+    const unlinkTaskFromGroup = async (groupNodeId: string, parentTaskId?: string) => {
+        const { id: groupId } = CanvasIds.parseNodeId(groupNodeId)
+        const group = canvasStore.groups.find(g => g.id === groupId)
+        if (!group?.linkedParentTaskId) return
+
+        await undoSystem.canvasConnectionWithUndo(
+            `Disconnect task from group: ${group.name}`,
+            [groupId],
+            async () => {
+                await canvasStore.updateGroup(groupId, { linkedParentTaskId: null })
+            }
+        )
+
+        deps.syncEdges({ force: true })
+    }
 
     const handleConnectStart = (event: { nodeId?: string; handleId?: string | null; handleType?: string }) => {
         console.log('[BUG-1407:CONNECT] Connection started from node:', event.nodeId, 'handle:', event.handleId)
@@ -54,10 +91,38 @@ export function useCanvasConnections(
 
     const handleConnectEnd = (event?: MouseEvent | TouchEvent | { nodeId?: string; handleId?: string; handleType?: string }) => {
         const sourceTaskId = state.pendingConnectionSource?.value
-        const wasSuccessful = state.connectionWasSuccessful?.value
 
         // Use setTimeout to ensure onConnect has time to fire first
-        setTimeout(() => {
+        setTimeout(async () => {
+            const wasSuccessful = state.connectionWasSuccessful?.value
+
+            if (
+                sourceTaskId &&
+                !wasSuccessful &&
+                event &&
+                'clientX' in event
+            ) {
+                const elementAtDrop = document.elementFromPoint(
+                    (event as MouseEvent).clientX,
+                    (event as MouseEvent).clientY
+                ) as HTMLElement | null
+                const groupNode = elementAtDrop?.closest('[data-id^="section-"]') as HTMLElement | null
+                const groupNodeId = groupNode?.dataset.id
+
+                if (groupNodeId) {
+                    await linkTaskToGroup(sourceTaskId, groupNodeId)
+                    state.isConnecting.value = false
+                    if (state.pendingConnectionSource) {
+                        state.pendingConnectionSource.value = null
+                    }
+                    if (state.connectionWasSuccessful) {
+                        state.connectionWasSuccessful.value = false
+                    }
+                    document.body.classList.remove('connecting-active')
+                    return
+                }
+            }
+
             // Drag-to-create: Only trigger if:
             // 1. We have a source task ID
             // 2. Connection was NOT successful (dropped on empty space)
@@ -111,8 +176,13 @@ export function useCanvasConnections(
             state.recentlyRemovedEdges.value.delete(potentialEdgeId)
         }
 
+        if (CanvasIds.isTaskNode(source) && CanvasIds.isGroupNode(target)) {
+            await linkTaskToGroup(source, target)
+            return
+        }
+
         if (CanvasIds.isGroupNode(source) || CanvasIds.isGroupNode(target)) {
-            console.warn('[BUG-1407:CONNECT] Rejected: source or target is a group node')
+            console.warn('[BUG-1407:CONNECT] Rejected: unsupported group connection')
             return
         }
         if (source === target) {
@@ -125,6 +195,12 @@ export function useCanvasConnections(
         console.log('[BUG-1407:CONNECT] Found tasks:', { sourceTask: !!sourceTask, targetTask: !!targetTask, sourcePos: !!sourceTask?.canvasPosition, targetPos: !!targetTask?.canvasPosition })
 
         if (sourceTask && targetTask && sourceTask.canvasPosition && targetTask.canvasPosition) {
+            if (targetTask.parentTaskId === source) {
+                console.log('[BUG-1407:CONNECT] Ignored: task edge already exists', { source, target })
+                deps.syncEdges({ force: true })
+                return
+            }
+
             // SUBTASK MODEL: Connection makes target a direct child of source (nested hierarchy)
             // Allow re-parenting: if target already has a parent, update to new parent
             if (targetTask.parentTaskId) {
@@ -141,7 +217,7 @@ export function useCanvasConnections(
     const disconnectEdge = async () => {
         if (!state.selectedEdge.value) return
 
-        const { target, id: edgeId } = state.selectedEdge.value
+        const { source, target, id: edgeId } = state.selectedEdge.value
         const targetTask = taskStore.tasks.find(t => t.id === target)
 
         state.recentlyRemovedEdges.value.add(edgeId)
@@ -150,10 +226,18 @@ export function useCanvasConnections(
             state.recentlyRemovedEdges.value.delete(edgeId)
         }, 2000)
 
-        // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
-        if (targetTask && targetTask.parentTaskId) {
+        if (CanvasIds.isTaskNode(source) && CanvasIds.isGroupNode(target)) {
+            await unlinkTaskFromGroup(target, source)
+        } else if (targetTask?.parentTaskId === source) {
+            // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
             await taskStore.updateTaskWithUndo(targetTask.id, { parentTaskId: null })
             deps.syncEdges({ force: true })
+        } else if (targetTask?.parentTaskId) {
+            console.warn('[BUG-1407:DISCONNECT] Rejected: edge source does not match target parent', {
+                source,
+                target,
+                parentTaskId: targetTask.parentTaskId
+            })
         }
 
         deps.closeEdgeContextMenu()
@@ -165,6 +249,21 @@ export function useCanvasConnections(
         event.event.stopPropagation()
 
         // BUG-1096: Use normalized coordinates for Tauri compatibility
+        const { x, y } = getViewportCoordinates(mouseEvent)
+        state.edgeContextMenuX.value = x
+        state.edgeContextMenuY.value = y
+        state.selectedEdge.value = event.edge
+        state.showEdgeContextMenu.value = true
+
+        deps.closeCanvasContextMenu()
+        deps.closeNodeContextMenu()
+    }
+
+    const handleEdgeClick = (event: EdgeMouseEvent) => {
+        const mouseEvent = event.event as MouseEvent
+        event.event.preventDefault()
+        event.event.stopPropagation()
+
         const { x, y } = getViewportCoordinates(mouseEvent)
         state.edgeContextMenuX.value = x
         state.edgeContextMenuY.value = y
@@ -190,7 +289,7 @@ export function useCanvasConnections(
         const edge = event.edge
         if (!edge) return
 
-        const { target, id: edgeId } = edge
+        const { source, target, id: edgeId } = edge
         const targetTask = taskStore.tasks.find(t => t.id === target)
 
         // Add to recently removed to prevent zombie edge reappearing
@@ -199,10 +298,18 @@ export function useCanvasConnections(
             state.recentlyRemovedEdges.value.delete(edgeId)
         }, 2000)
 
-        // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
-        if (targetTask && targetTask.parentTaskId) {
+        if (CanvasIds.isTaskNode(source) && CanvasIds.isGroupNode(target)) {
+            await unlinkTaskFromGroup(target, source)
+        } else if (targetTask?.parentTaskId === source) {
+            // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
             await taskStore.updateTaskWithUndo(targetTask.id, { parentTaskId: null })
             deps.syncEdges({ force: true })
+        } else if (targetTask?.parentTaskId) {
+            console.warn('[BUG-1407:DISCONNECT] Rejected: edge source does not match target parent', {
+                source,
+                target,
+                parentTaskId: targetTask.parentTaskId
+            })
         }
     }
 
@@ -211,6 +318,7 @@ export function useCanvasConnections(
         handleConnectEnd,
         handleConnect,
         disconnectEdge,
+        handleEdgeClick,
         handleEdgeContextMenu,
         handleEdgeDoubleClick,
         closeEdgeContextMenu

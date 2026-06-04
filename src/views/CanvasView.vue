@@ -78,6 +78,8 @@
         @create-group="handleToolbarCreateGroup"
         @rotate-day-groups="handleRotateDayGroups"
         @tidy-layout="handleTidyLayout"
+        @debug-tidy-plan="debugTidyPlanOnlyToClipboard"
+        @debug-tidy-apply="debugTidyLayoutToClipboard"
       />
 
       <!-- Canvas Container -->
@@ -111,20 +113,21 @@
           :pan-on-scroll="false"
           zoom-on-pinch
           :pan-on-drag="!shift && !control && !meta"
+          :auto-pan-on-node-drag="false"
           :nodes-draggable="!control && !meta && !shift"
           :selection-on-drag="shift"
           :multi-selection-key-code="['Control', 'Meta', 'Shift']"
-          snap-to-grid
+          :snap-to-grid="false"
           :snap-grid="[16, 16]"
           :node-extent="dynamicNodeExtent"
           :min-zoom="0.05"
           :max-zoom="4.0"
           :fit-view-on-init="false"
-          connection-mode="loose"
+          :connection-mode="looseConnectionMode"
           :connection-radius="30"
           :zoom-scroll-sensitivity="1.0"
           :zoom-activation-key-code="null"
-          :delete-key-code="false"
+          :delete-key-code="disabledDeleteKey"
           prevent-scrolling
           :default-viewport="initialViewport"
           dir="ltr"
@@ -133,13 +136,14 @@
           @node-double-click="handleNodeDoubleClick"
           @node-drag-start="handleNodeDragStart"
           @node-drag="handleNodeDrag"
-          @node-drag-stop="handleNodeDragStop"
+          @node-drag-stop="handleNodeDragStopWithReorder"
           @nodes-change="handleNodesChange"
           @edges-change="handleEdgesChange"
           @selection-change="handleSelectionChange"
           @pane-click="handlePaneClick"
           @pane-context-menu="handlePaneContextMenu"
           @node-context-menu="handleNodeContextMenu"
+          @edge-click="handleEdgeClick"
           @edge-context-menu="handleEdgeContextMenu"
           @edge-double-click="handleEdgeDoubleClick"
           @connect="handleConnect"
@@ -164,6 +168,7 @@
               :dragging="nodeProps.dragging"
               @update="(data) => handleSectionUpdate(nodeProps.id, data)"
               @collect="collectTasksForSection"
+              @apply-group-props="(payload) => applyGroupPropsToTasks(payload.groupId, payload.mode)"
               @context-menu="handleSectionContextMenu"
               @open-settings="handleOpenSectionSettings"
               @resize-start="handleSectionResizeStart"
@@ -306,7 +311,7 @@
 
 <script setup lang="ts">
 import { ref, markRaw, nextTick, onMounted, onUnmounted, watch } from 'vue'
-import { VueFlow, useVueFlow, type NodeMouseEvent } from '@vue-flow/core'
+import { ConnectionMode, VueFlow, useVueFlow, type NodeMouseEvent, type NodeDragEvent, type NodeTypesObject } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -346,6 +351,7 @@ import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
 import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/canvasImageUpload'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { lockManager } from '@/services/canvas/LockManager'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -358,10 +364,42 @@ const nodeTypes = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple),
   imageNode: markRaw(ImageNode),
-}
+} as unknown as NodeTypesObject
+const looseConnectionMode = ConnectionMode.Loose
+const disabledDeleteKey = null
 
 // FEATURE-1048: Day group auto-rotation at midnight
-const { findNode, updateNode, setNodes, applyNodeChanges, getViewport } = useVueFlow()
+const { findNode, getNodes, setNodes, getViewport } = useVueFlow()
+
+type CanvasNodeRecord = {
+  id: string
+  type?: string
+  position?: { x: number; y: number }
+  parentNode?: string
+  computedPosition?: { x: number; y: number; z?: number }
+  dimensions?: { width?: number; height?: number }
+  measured?: { width?: number; height?: number }
+  width?: number
+  height?: number
+  style?: Record<string, unknown>
+  data?: Record<string, unknown>
+  [key: string]: unknown
+}
+
+function toPublicVueFlowNode(node: CanvasNodeRecord) {
+  const {
+    computedPosition: _computedPosition,
+    handleBounds: _handleBounds,
+    initialized: _initialized,
+    isParent: _isParent,
+    measured: _measured,
+    selected: _selected,
+    dragging: _dragging,
+    resizing: _resizing,
+    ...publicNode
+  } = node
+  return publicNode
+}
 
 // TASK-1756 v10: Vue Flow dimension bookkeeping uses the top-level
 // `width` / `height` fields on the node. Setting only `style.width` (px)
@@ -369,144 +407,112 @@ const { findNode, updateNode, setNodes, applyNodeChanges, getViewport } = useVue
 // NodeResizer + spatial validation see stale dimensions → overlap + detach.
 // Pass BOTH the top-level fields (numbers) AND the style (px strings) for
 // GroupNodeSimple, which reads off `node.style` in its template.
-function applyCanonicalLayoutMoves(
-  groupMoves: Array<{ nodeId: string; position: { x: number; y: number }; size: { width: number; height: number } }>
-) {
-  console.log('[CANONICAL-LAYOUT:VF] Applying', groupMoves.length, 'group moves')
-  for (const move of groupMoves) {
-    const node = findNode(move.nodeId)
-    if (!node) {
-      continue
-    }
-    console.log(`[CANONICAL-LAYOUT:VF] ${move.nodeId}: x=${Math.round(node.position.x)} → ${Math.round(move.position.x)}, w=${Math.round(move.size.width)}, h=${Math.round(move.size.height)}`)
-    updateNode(move.nodeId, {
-      width: move.size.width,
-      height: move.size.height,
-      style: {
-        width: `${move.size.width}px`,
-        height: `${move.size.height}px`,
-      },
-    })
-    updateNode(move.nodeId, { position: move.position })
-    nodes.value = nodes.value.map((candidate) => candidate.id === move.nodeId
-      ? {
-          ...candidate,
-          position: move.position,
-          computedPosition: {
-            ...(candidate.computedPosition ?? {}),
-            x: move.position.x,
-            y: move.position.y,
-          },
-          width: move.size.width,
-          height: move.size.height,
-          dimensions: {
-            ...(candidate.dimensions ?? {}),
-            width: move.size.width,
-            height: move.size.height,
-          },
-          style: {
-            ...(candidate.style ?? {}),
-            width: `${move.size.width}px`,
-            height: `${move.size.height}px`,
-          },
-        }
-      : candidate)
-  }
-  const positionChanges = groupMoves.map((move) => ({
-    id: move.nodeId,
-    type: 'position',
-    position: move.position,
-    dragging: false,
-  }))
-  applyNodeChanges(positionChanges)
-  handleNodesChange(positionChanges as any)
-  setNodes(nodes.value)
-}
-
-function applyCanonicalTaskMoves(
+function applyCanonicalMoves(
+  groupMoves: Array<{ nodeId: string; groupId: string; position: { x: number; y: number }; size: { width: number; height: number } }>,
   taskMoves: Array<{ taskId: string; parentId: string; position: { x: number; y: number } }>,
-  groupMoves: Array<{ groupId: string; position: { x: number; y: number } }>
 ) {
-  const targetGroupPositions = new Map(groupMoves.map((move) => [move.groupId, move.position]))
-  const positionChanges: Array<{ id: string; type: 'position'; position: { x: number; y: number }; dragging: false }> = []
-
-  for (const move of taskMoves) {
-    const node = findNode(CanvasIds.taskNodeId(move.taskId))
-    if (!node) {
-      continue
-    }
-
-    const parentAbsPos =
-      targetGroupPositions.get(move.parentId) ??
-      (() => {
-        const parentNode = findNode(CanvasIds.groupNodeId(move.parentId))
-        return parentNode ? { x: parentNode.position.x, y: parentNode.position.y } : undefined
-      })() ??
-      (() => {
-        const parentGroup = canvasStore.groups.find((group) => group.id === move.parentId)
-        return parentGroup?.position ? { x: parentGroup.position.x, y: parentGroup.position.y } : undefined
-      })()
-
-    if (!parentAbsPos) {
-      continue
-    }
-
-    const taskNodeId = CanvasIds.taskNodeId(move.taskId)
-    const relativePosition = {
-      x: move.position.x - parentAbsPos.x,
-      y: move.position.y - parentAbsPos.y,
-    }
-
-    updateNode(taskNodeId, {
-      position: relativePosition,
-      parentNode: CanvasIds.groupNodeId(move.parentId),
-    })
-    positionChanges.push({ id: taskNodeId, type: 'position', position: relativePosition, dragging: false })
-    nodes.value = nodes.value.map((candidate) => candidate.id === taskNodeId
-      ? {
-          ...candidate,
-          position: relativePosition,
-          computedPosition: {
-            ...(candidate.computedPosition ?? {}),
-            x: move.position.x,
-            y: move.position.y,
-          },
-          parentNode: CanvasIds.groupNodeId(move.parentId),
-        }
-      : candidate)
-  }
-  if (positionChanges.length > 0) {
-    applyNodeChanges(positionChanges)
-  }
-  setNodes(nodes.value)
-}
-
-function refreshRenderedNodesFromModel() {
-  const refreshedNodes = nodes.value.map((node) => ({ ...node }))
-  setNodes([])
-  nextTick(() => {
-    nodes.value = refreshedNodes
-    setNodes(refreshedNodes)
+  console.log('[CANONICAL-LAYOUT:VF] Applying atomic layout', {
+    groupMoves: groupMoves.length,
+    taskMoves: taskMoves.length,
   })
+
+  const groupMovesByNodeId = new Map(groupMoves.map((move) => [move.nodeId, move]))
+  const targetGroupPositions = new Map(groupMoves.map((move) => [move.groupId, move.position]))
+  const taskMovesByNodeId = new Map(taskMoves.map((move) => [CanvasIds.taskNodeId(move.taskId), move]))
+  const currentNodes = (getNodes.value?.length ? getNodes.value : nodes.value) as unknown as CanvasNodeRecord[]
+  const originalIndex = new Map(currentNodes.map((node, index) => [node.id, index]))
+
+  const updatedNodes = currentNodes.map((node) => {
+    const groupMove = groupMovesByNodeId.get(node.id)
+    if (groupMove) {
+      console.log(`[CANONICAL-LAYOUT:VF] ${node.id}: x=${Math.round(node.position?.x ?? 0)} -> ${Math.round(groupMove.position.x)}, w=${Math.round(groupMove.size.width)}, h=${Math.round(groupMove.size.height)}`)
+      return {
+        ...node,
+        position: groupMove.position,
+        width: groupMove.size.width,
+        height: groupMove.size.height,
+        dimensions: {
+          ...(node.dimensions ?? {}),
+          width: groupMove.size.width,
+          height: groupMove.size.height,
+        },
+        style: {
+          ...(node.style ?? {}),
+          width: `${groupMove.size.width}px`,
+          height: `${groupMove.size.height}px`,
+        },
+      }
+    }
+
+    const taskMove = taskMovesByNodeId.get(node.id)
+    if (taskMove) {
+      const parentNodeId = CanvasIds.groupNodeId(taskMove.parentId)
+      const parentAbsPos =
+        targetGroupPositions.get(taskMove.parentId) ??
+        (() => {
+          const updatedParent = groupMovesByNodeId.get(parentNodeId)
+          if (updatedParent) return updatedParent.position
+          const parentNode = currentNodes.find((candidate) => candidate.id === parentNodeId)
+          return parentNode?.position ? { x: parentNode.position.x, y: parentNode.position.y } : undefined
+        })() ??
+        (() => {
+          const parentGroup = canvasStore.groups.find((group) => group.id === taskMove.parentId)
+          return parentGroup?.position ? { x: parentGroup.position.x, y: parentGroup.position.y } : undefined
+        })()
+
+      if (!parentAbsPos) return node
+
+      const relativePosition = {
+        x: taskMove.position.x - parentAbsPos.x,
+        y: taskMove.position.y - parentAbsPos.y,
+      }
+
+      return {
+        ...node,
+        position: relativePosition,
+        parentNode: parentNodeId,
+        extent: undefined,
+        expandParent: false,
+        draggable: true,
+        selectable: true,
+      }
+    }
+
+    return node
+  }).sort((a, b) => {
+    if (a.id === b.parentNode) return -1
+    if (b.id === a.parentNode) return 1
+    if (a.parentNode && !b.parentNode) return 1
+    if (!a.parentNode && b.parentNode) return -1
+    return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
+  })
+
+  setNodes(updatedNodes.map(toPublicVueFlowNode) as Parameters<typeof setNodes>[0])
 }
 
 const dayRotation = useDayGroupRotation({
-  onMoves: applyCanonicalLayoutMoves,
+  onMoves: (groupMoves) => applyCanonicalMoves(groupMoves, []),
   getNodePosition: (nodeId: string) => getVisualNodePosition(nodeId),
   getNodeSize: (nodeId: string) => getRenderedNodeSize(nodeId),
+  isTaskVisible: (taskId: string) => {
+    const node = findNode(CanvasIds.taskNodeId(taskId)) as CanvasNodeRecord | undefined
+    if (node) return node.hidden !== true
+    const taskElement = document.querySelector(`[data-task-id="${CSS.escape(taskId)}"]`)
+    return taskElement != null
+  },
 })
 
 function getVisualNodePosition(nodeId: string): { x: number; y: number } | undefined {
-  const node = findNode(nodeId) as any
+  const node = findNode(nodeId) as CanvasNodeRecord | undefined
   if (!node?.position) return undefined
 
   const computedPosition = node.computedPosition
   if (Number.isFinite(computedPosition?.x) && Number.isFinite(computedPosition?.y)) {
-    return { x: computedPosition.x, y: computedPosition.y }
+    return { x: computedPosition!.x, y: computedPosition!.y }
   }
 
   if (node.parentNode) {
-    const parentNode = findNode(node.parentNode) as any
+    const parentNode = findNode(node.parentNode) as CanvasNodeRecord | undefined
     if (parentNode?.position) {
       return {
         x: parentNode.position.x + node.position.x,
@@ -525,16 +531,16 @@ function getRenderedNodeSize(nodeId: string) {
   if (rect && rect.width > 0 && rect.height > 0) {
     const zoom = getRenderedCanvasZoom()
     const measured = {
-      width: Math.max(rect.width / zoom, element.scrollWidth, element.offsetWidth),
-      height: Math.max(rect.height / zoom, element.scrollHeight, element.offsetHeight),
+      width: Math.max(rect.width / zoom, element?.scrollWidth ?? 0, element?.offsetWidth ?? 0),
+      height: Math.max(rect.height / zoom, element?.scrollHeight ?? 0, element?.offsetHeight ?? 0),
     }
     return measured
   }
 
-  const node = findNode(nodeId) as any
+  const node = findNode(nodeId) as CanvasNodeRecord | undefined
   const width = node?.dimensions?.width ?? node?.measured?.width ?? node?.width
   const height = node?.dimensions?.height ?? node?.measured?.height ?? node?.height
-  return Number.isFinite(width) && Number.isFinite(height) ? { width, height } : undefined
+  return Number.isFinite(width) && Number.isFinite(height) ? { width: width as number, height: height as number } : undefined
 }
 
 function getRenderedCanvasZoom() {
@@ -549,6 +555,12 @@ function getRenderedCanvasZoom() {
 const tidyLayout = useTidyLayout({
   getNodePosition: (nodeId: string) => getVisualNodePosition(nodeId),
   getNodeSize: (nodeId: string) => getRenderedNodeSize(nodeId),
+  isTaskVisible: (taskId: string) => {
+    const node = findNode(CanvasIds.taskNodeId(taskId)) as CanvasNodeRecord | undefined
+    if (node) return node.hidden !== true
+    const taskElement = document.querySelector(`[data-task-id="${CSS.escape(taskId)}"]`)
+    return taskElement != null
+  },
 })
 
 // TASK-1756 v10: Vue Flow's dimension + bounds bookkeeping lags Vue's
@@ -575,11 +587,9 @@ function handleRotateDayGroups() {
   // moves — the canonical primitive owns all geometry math now.
   dayRotation.rotateDayGroups({ force: true })
   const { groupMoves, taskMoves, pendingWrites, release } = dayRotation.rotateDayGroupPositions()
-  applyCanonicalLayoutMoves(groupMoves)
-  applyCanonicalTaskMoves(taskMoves, groupMoves)
+  applyCanonicalMoves(groupMoves, taskMoves)
   releaseOnDoubleNextTick(release, () => {
     syncNodes(undefined, { force: true })
-    refreshRenderedNodesFromModel()
   }, pendingWrites)
 }
 
@@ -587,12 +597,342 @@ function handleTidyLayout() {
   // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
   // (user's left-to-right order preserved) and restack tasks inside them.
   const { groupMoves, taskMoves, pendingWrites, release } = tidyLayout.tidyDayGroups()
-  applyCanonicalLayoutMoves(groupMoves)
-  applyCanonicalTaskMoves(taskMoves, groupMoves)
+  applyCanonicalMoves(groupMoves, taskMoves)
+  // Tidy has two sources to settle: the immediate Vue Flow move and the
+  // optimistic store write. After both have settled, force the read path to
+  // rebuild Vue Flow nodes from the now-current absolute store geometry. This
+  // prevents stale child `position` / `computedPosition` state from surviving
+  // a programmatic reparent/restack.
   releaseOnDoubleNextTick(release, () => {
     syncNodes(undefined, { force: true })
-    refreshRenderedNodesFromModel()
+    if (import.meta.env.DEV) {
+      nextTick(() => nextTick(() => logPostTidySanity(groupMoves, taskMoves)))
+    }
   }, pendingWrites)
+}
+
+function logPostTidySanity(
+  groupMoves: Array<{ groupId: string }>,
+  taskMoves: Array<{ taskId: string }>
+) {
+  const today = getTodayTaskDebugSnapshot()
+  const lockedGroups = groupMoves
+    .map((move) => move.groupId)
+    .filter((id) => lockManager.isLocked(id))
+  const lockedTasks = taskMoves
+    .map((move) => move.taskId)
+    .filter((id) => lockManager.isLocked(id))
+  const summary = {
+    renderedGapStats: today.renderedGapStats,
+    lockedGroups,
+    lockedTasks,
+    ok: today.renderedGapStats.compact
+      && today.renderedGapStats.consistent
+      && lockedGroups.length === 0
+      && lockedTasks.length === 0,
+  }
+
+  if (summary.ok) {
+    console.log('[TIDY:SANITY]', summary)
+  } else {
+    console.warn('[TIDY:SANITY]', summary)
+  }
+}
+
+function getCanvasNodeSnapshot(limit = 12) {
+  const domNodes = Array.from(document.querySelectorAll('.vue-flow__node')) as HTMLElement[]
+  const vfNodes = getNodes.value as unknown as CanvasNodeRecord[]
+  const vfById = new Map(vfNodes.map((node) => [node.id, node]))
+  return domNodes.slice(0, limit).map((el) => {
+    const id = el.getAttribute('data-id') ?? ''
+    const rect = el.getBoundingClientRect()
+    const vfNode = vfById.get(id)
+    return {
+      id,
+      type: vfNode?.type,
+      parentNode: vfNode?.parentNode ?? null,
+      nodePosition: vfNode?.position ? { ...vfNode.position } : null,
+      computedPosition: vfNode?.computedPosition ? { ...vfNode.computedPosition } : null,
+      transform: el.getAttribute('style')?.match(/translate\(([^)]+)\)/)?.[1] ?? null,
+      rect: {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      },
+    }
+  })
+}
+
+function getCanvasNudgeSnapshot(taskIds?: string[]) {
+  const viewportElement = document.querySelector('.vue-flow__viewport') as HTMLElement | null
+  const viewportStyle = viewportElement ? getComputedStyle(viewportElement) : null
+  const vfNodes = getNodes.value as unknown as CanvasNodeRecord[]
+  const vfById = new Map(vfNodes.map((node) => [node.id, node]))
+  const ids = taskIds?.length
+    ? taskIds
+    : taskStore.rawTasks
+      .filter((task) => task.canvasPosition)
+      .slice(0, 8)
+      .map((task) => task.id)
+
+  return {
+    viewport: {
+      vueFlow: getViewport(),
+      store: { ...canvasStore.viewport },
+      domTransform: viewportStyle?.transform ?? null,
+    },
+    groups: canvasStore.groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      parentGroupId: group.parentGroupId ?? null,
+      position: group.position ? { ...group.position } : null,
+    })),
+    tasks: ids.map((id) => {
+      const task = taskStore.rawTasks.find((candidate) => candidate.id === id)
+      const node = vfById.get(id)
+      const taskElement = document.querySelector(`[data-task-id="${CSS.escape(id)}"]`) as HTMLElement | null
+        ?? document.querySelector(`[data-id="${CSS.escape(id)}"]`) as HTMLElement | null
+      const nodeElement = taskElement?.closest('.vue-flow__node') as HTMLElement | null
+        ?? document.querySelector(`.vue-flow__node[data-id="${CSS.escape(id)}"]`) as HTMLElement | null
+      const rect = nodeElement?.getBoundingClientRect()
+
+      return {
+        id,
+        title: task?.title?.slice(0, 60) ?? null,
+        status: task?.status ?? null,
+        parentId: task?.parentId ?? null,
+        storePosition: task?.canvasPosition ? { ...task.canvasPosition } : null,
+        positionVersion: task?.positionVersion ?? null,
+        vueFlow: node ? {
+          parentNode: node.parentNode ?? null,
+          hidden: node.hidden === true,
+          position: node.position ? { ...node.position } : null,
+          computedPosition: node.computedPosition ? { ...node.computedPosition } : null,
+          dimensions: node.dimensions ? { ...node.dimensions } : null,
+        } : null,
+        dom: rect ? {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+          transform: nodeElement?.style.transform || null,
+        } : null,
+      }
+    }),
+  }
+}
+
+function logCanvasNudgeSnapshot(taskIds?: string[]) {
+  const snapshot = getCanvasNudgeSnapshot(taskIds)
+  console.warn('[CANVAS-NUDGE-SNAPSHOT]', JSON.stringify(snapshot))
+  return snapshot
+}
+
+function getTodayTaskDebugSnapshot() {
+  const todayGroup = canvasStore.groups.find((group) =>
+    group.name === 'Today' || (group as { type?: string }).type === 'today'
+  )
+  const tasks = todayGroup
+    ? taskStore.rawTasks
+      .filter((task) => task.parentId === todayGroup.id && task.canvasPosition)
+      .sort((a, b) => (a.canvasPosition?.y ?? 0) - (b.canvasPosition?.y ?? 0))
+    : []
+  const renderedTasks = getRenderedTaskGapMetrics(tasks.map((task) => task.id))
+  const renderedGaps = renderedTasks.slice(1).map((task, index) =>
+    Math.round(task.visualTop - renderedTasks[index].visualBottom)
+  )
+
+  return {
+    todayGroup: todayGroup ? {
+      id: todayGroup.id,
+      name: todayGroup.name,
+      position: todayGroup.position ? { ...todayGroup.position } : null,
+    } : null,
+    count: tasks.length,
+    tasks: tasks.map((task) => ({
+      id: task.id,
+      title: task.title?.slice(0, 60),
+      parentId: task.parentId ?? null,
+      canvasPosition: task.canvasPosition ? { ...task.canvasPosition } : null,
+    })),
+    yDeltas: tasks.slice(1).map((task, index) =>
+      Math.round((task.canvasPosition?.y ?? 0) - (tasks[index].canvasPosition?.y ?? 0))
+    ),
+    renderedTasks,
+    renderedGaps,
+    renderedGapStats: summarizeRenderedGaps(renderedGaps),
+  }
+}
+
+function getRenderedTaskGapMetrics(taskIds: string[]) {
+  const zoom = getRenderedCanvasZoom()
+  const vfNodes = getNodes.value as unknown as CanvasNodeRecord[]
+  const vfById = new Map(vfNodes.map((node) => [node.id, node]))
+
+  return taskIds
+    .map((taskId) => {
+      const taskElement = document.querySelector(`[data-task-id="${CSS.escape(taskId)}"]`) as HTMLElement | null
+      const nodeElement = taskElement?.closest('.vue-flow__node') as HTMLElement | null
+      const rect = taskElement?.getBoundingClientRect()
+      const vfNode = vfById.get(taskId)
+      const computedY = vfNode?.computedPosition?.y
+      const positionY = vfNode?.position?.y
+      const visualTop = Number.isFinite(computedY)
+        ? computedY
+        : Number.isFinite(positionY)
+          ? positionY
+          : null
+      const renderedHeight = rect && zoom > 0
+        ? rect.height / zoom
+        : null
+
+      return {
+        id: taskId,
+        visualTop: visualTop ?? 0,
+        visualBottom: visualTop != null && renderedHeight != null ? visualTop + renderedHeight : 0,
+        renderedHeight: renderedHeight != null ? Math.round(renderedHeight) : null,
+        screenRect: rect ? {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        } : null,
+        nodeTransform: nodeElement?.getAttribute('style')?.match(/translate\(([^)]+)\)/)?.[1] ?? null,
+      }
+    })
+    .sort((a, b) => a.visualTop - b.visualTop)
+}
+
+function summarizeRenderedGaps(gaps: number[]) {
+  if (gaps.length === 0) {
+    return {
+      count: 0,
+      min: null,
+      max: null,
+      average: null,
+      spread: null,
+      compact: true,
+      consistent: true,
+    }
+  }
+
+  const min = Math.min(...gaps)
+  const max = Math.max(...gaps)
+  const average = gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length
+  return {
+    count: gaps.length,
+    min,
+    max,
+    average: Math.round(average),
+    spread: max - min,
+    compact: max <= 32,
+    consistent: max - min <= 16,
+  }
+}
+
+async function debugTidyLayout() {
+  const before = getTidyDebugReadOnlySnapshot()
+  const result = tidyLayout.tidyDayGroups()
+  const planned = {
+    groupMoves: result.groupMoves.map((move) => ({
+      groupId: move.groupId,
+      nodeId: move.nodeId,
+      position: move.position,
+      size: move.size,
+    })),
+    taskMoves: result.taskMoves.map((move) => ({
+      taskId: move.taskId,
+      parentId: move.parentId,
+      position: move.position,
+    })),
+  }
+  applyCanonicalMoves(result.groupMoves, result.taskMoves)
+  await Promise.resolve(result.pendingWrites)
+  await nextTick()
+  await nextTick()
+  result.release()
+  syncNodes(undefined, { force: true })
+  await nextTick()
+  await nextTick()
+  const after = getTidyDebugReadOnlySnapshot()
+  const summary = { planned, before, after }
+  ;(window as unknown as Record<string, unknown>).__POMO_FLOW_LAST_TIDY_DEBUG__ = summary
+  console.log('[TIDY:DEBUG]', summary)
+  console.log('[TIDY:DEBUG:JSON]', JSON.stringify(summary, null, 2))
+  return summary
+}
+
+async function debugTidyLayoutToClipboard() {
+  const summary = await debugTidyLayout()
+  const json = JSON.stringify(summary, null, 2)
+  try {
+    await navigator.clipboard?.writeText(json)
+    console.log('[TIDY:DEBUG:COPIED]', 'Copied Tidy debug JSON to clipboard')
+  } catch (err) {
+    console.warn('[TIDY:DEBUG:COPY-FAILED]', err)
+  }
+  return json
+}
+
+function getTidyDebugReadOnlySnapshot() {
+  const lockSummary = getTidyLockSummary()
+  return {
+    today: getTodayTaskDebugSnapshot(),
+    nodes: getCanvasNodeSnapshot(),
+    locks: lockSummary,
+    stores: {
+      groups: canvasStore.groups.length,
+      rawTasks: taskStore.rawTasks.length,
+      tasks: taskStore.tasks.length,
+      canvasReady: isCanvasReady.value,
+      vueFlowReady: isVueFlowReady.value,
+    },
+  }
+}
+
+function getTidyLockSummary() {
+  const groupIds = canvasStore.groups.map((group) => group.id)
+  const taskIds = taskStore.rawTasks
+    .filter((task) => task.canvasPosition)
+    .map((task) => task.id)
+  const lockedGroups = groupIds.filter((id) => lockManager.isLocked(id))
+  const lockedTasks = taskIds.filter((id) => lockManager.isLocked(id))
+
+  return {
+    lockedGroups,
+    lockedTasks,
+    lockedCount: lockedGroups.length + lockedTasks.length,
+  }
+}
+
+async function debugTidyPlanOnlyToClipboard() {
+  const before = getTidyDebugReadOnlySnapshot()
+  const result = tidyLayout.planTidyDayGroups()
+  const planned = {
+    groupMoves: result.groupMoves.map((move) => ({
+      groupId: move.groupId,
+      nodeId: move.nodeId,
+      position: move.position,
+      size: move.size,
+    })),
+    taskMoves: result.taskMoves.map((move) => ({
+      taskId: move.taskId,
+      parentId: move.parentId,
+      position: move.position,
+    })),
+  }
+  const summary = { planned, before }
+  const json = JSON.stringify(summary, null, 2)
+  ;(window as unknown as Record<string, unknown>).__POMO_FLOW_LAST_TIDY_PLAN__ = summary
+  console.log('[TIDY:PLAN:JSON]', json)
+  try {
+    await navigator.clipboard?.writeText(json)
+    console.log('[TIDY:PLAN:COPIED]', 'Copied Tidy plan JSON to clipboard')
+  } catch (err) {
+    console.warn('[TIDY:PLAN:COPY-FAILED]', err)
+  }
+  return json
 }
 
 // Initialize Orchestrator
@@ -614,7 +954,7 @@ const {
   handleGroupCreated, handleGroupUpdated,
   handleGroupEditSave, confirmDeleteGroup, confirmBulkDelete, handleConnect, handleConnectStart, handleConnectEnd,
   handleEdgesChange, handleNodesChange,
-  handleNodeContextMenu, handleEdgeContextMenu, handleEdgeDoubleClick,
+  handleNodeContextMenu, handleEdgeClick, handleEdgeContextMenu, handleEdgeDoubleClick,
   handleNodeClick, handleSelectionChange,
   screenToFlowCoordinate,
 
@@ -622,9 +962,47 @@ const {
   selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
   alignLeft, alignRight, alignTop, alignBottom, alignCenterHorizontal, alignCenterVertical,
   distributeHorizontal, distributeVertical, arrangeInRow, arrangeInColumn, arrangeInGrid,
-  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, collectOverdueTasksNearGroup, disconnectEdge,
+  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, collectOverdueTasksNearGroup, applyGroupPropsToTasks, disconnectEdge,
   syncNodes
 } = orchestrator
+
+// TASK-1809: Alt-drag to reorder tasks within a canvas column.
+// Wrap the normal drag-stop save. When the user held Alt while dropping a
+// task inside a group, restack that one column (insert-and-shift) so the
+// dropped card takes the slot its drop-Y landed in and the rest shift down.
+// Plain (non-Alt) drops are untouched — they keep free placement.
+// (Shift is reserved by Vue Flow for multi-selection, so Alt is the trigger.)
+async function handleNodeDragStopWithReorder(event: NodeDragEvent) {
+  const altHeld =
+    typeof MouseEvent !== 'undefined' &&
+    event?.event instanceof MouseEvent &&
+    event.event.altKey === true
+
+  // Always run the normal drag save first (single sanctioned geometry writer).
+  await handleNodeDragStop(event)
+  if (!altHeld) return
+
+  // Find the dropped task node (skip group/image nodes) and its current group.
+  const droppedTaskNode = (event?.nodes ?? []).find(
+    (node) => !CanvasIds.isGroupNode(node.id) && node.type !== 'imageNode'
+  )
+  if (!droppedTaskNode) return
+
+  const task = taskStore.getTask(droppedTaskNode.id)
+  const groupId = task?.parentId
+  if (!groupId) return
+
+  const result = tidyLayout.reorderColumn(groupId)
+  if (result.taskMoves.length === 0) {
+    result.release()
+    return
+  }
+
+  applyCanonicalMoves(result.groupMoves, result.taskMoves)
+  releaseOnDoubleNextTick(result.release, () => {
+    syncNodes(undefined, { force: true })
+  }, result.pendingWrites)
+}
 
 // TASK-1756 v3: run day-group catchup once Vue Flow is fully ready (findNode
 // works) and whenever the reactive "today" flips (midnight, focus, online,
@@ -645,7 +1023,7 @@ function runDayGroupCatchup() {
   // preserved. The explicit Tidy button (handleTidyLayout) still applies full
   // canonical layout on user request.
   const { taskMoves, release } = dayRotation.runCatchupIfNeeded()
-  if (taskMoves.length > 0) applyCanonicalTaskMoves(taskMoves, [])
+  if (taskMoves.length > 0) applyCanonicalMoves([], taskMoves)
   releaseOnDoubleNextTick(release)
 }
 watch(isVueFlowReady, (ready) => { if (ready) runDayGroupCatchup() }, { immediate: true })
@@ -734,7 +1112,7 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
     if (event) event.preventDefault()
     // Dispatch global event for ModalManager to handle (shared TaskContextMenu)
     window.dispatchEvent(new CustomEvent('task-context-menu', {
-        detail: { event, task }
+        detail: { event, task, context: 'canvas' }
     }))
 }
 
@@ -834,6 +1212,14 @@ if (process.env.NODE_ENV === 'development' || (window as unknown as Record<strin
     canvasStore,
     taskStore,
     uiStore,
+    debugTidyLayout,
+    debugTidyLayoutToClipboard,
+    debugTidyPlanOnlyToClipboard,
+    getTodayTaskDebugSnapshot,
+    getCanvasNodeSnapshot,
+    getCanvasNudgeSnapshot,
+    logCanvasNudgeSnapshot,
+    getTidyLockSummary,
     // Debug Access to Singletons
     get positionManager() { return import('../services/canvas/PositionManager').then(m => m.positionManager) },
     get lockManager() { return import('../services/canvas/LockManager').then(m => m.lockManager) }

@@ -19,6 +19,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import type { Task } from '@/types/tasks'
+import { getCachedTasks } from '@/services/offline/readCacheDB'
 
 // ── Module-level mocks ──────────────────────────────────────────────
 
@@ -125,6 +126,7 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     vi.clearAllMocks()
     setActivePinia(createPinia())
     mockIsSwitchingWorkspace = false
+    vi.mocked(getCachedTasks).mockResolvedValue([])
 
     // Dynamic import after mocks are set up
     const mod = await import('@/stores/tasks')
@@ -416,5 +418,68 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     const found = store._rawTasks.find(t => t.id === remoteOnly.id)
     expect(found).toBeDefined()
     expect(found?.title).toBe('New From Server')
+  })
+
+  it('preserves newer cached canvas geometry on cold reload after updater restart', async () => {
+    const store = useTaskStore()
+    const taskId = crypto.randomUUID()
+    const remoteTask = makeTask({
+      id: taskId,
+      title: 'Canvas Task',
+      canvasPosition: { x: 100, y: 120 },
+      parentId: 'old-group',
+      positionFormat: 'absolute',
+      positionVersion: 3,
+      updatedAt: new Date('2026-05-26T10:00:00Z'),
+    })
+    const cachedTask = makeTask({
+      ...remoteTask,
+      canvasPosition: { x: 640, y: 720 },
+      parentId: 'new-group',
+      positionVersion: 4,
+      updatedAt: new Date('2026-05-26T10:01:00Z'),
+    })
+
+    store._rawTasks.length = 0
+    mockFetchTasks.mockResolvedValue([remoteTask])
+    vi.mocked(getCachedTasks).mockResolvedValue([cachedTask])
+
+    await store.loadFromDatabase()
+
+    const result = store._rawTasks.find(t => t.id === taskId)
+    expect(result?.canvasPosition).toEqual({ x: 640, y: 720 })
+    expect(result?.parentId).toBe('new-group')
+    expect(result?.positionVersion).toBe(4)
+  })
+
+  it('keeps remote canvas geometry when cached geometry is older', async () => {
+    const store = useTaskStore()
+    const taskId = crypto.randomUUID()
+    const remoteTask = makeTask({
+      id: taskId,
+      title: 'Remote Canvas Task',
+      canvasPosition: { x: 300, y: 320 },
+      parentId: 'remote-group',
+      positionVersion: 7,
+      updatedAt: new Date('2026-05-26T10:02:00Z'),
+    })
+    const cachedTask = makeTask({
+      ...remoteTask,
+      canvasPosition: { x: 20, y: 40 },
+      parentId: 'cached-group',
+      positionVersion: 6,
+      updatedAt: new Date('2026-05-26T10:01:00Z'),
+    })
+
+    store._rawTasks.length = 0
+    mockFetchTasks.mockResolvedValue([remoteTask])
+    vi.mocked(getCachedTasks).mockResolvedValue([cachedTask])
+
+    await store.loadFromDatabase()
+
+    const result = store._rawTasks.find(t => t.id === taskId)
+    expect(result?.canvasPosition).toEqual({ x: 300, y: 320 })
+    expect(result?.parentId).toBe('remote-group')
+    expect(result?.positionVersion).toBe(7)
   })
 })

@@ -45,11 +45,11 @@ export const useCanvasGroups = (
         _rawGroups.value = [...newGroups]
     }
 
-    const createGroup = async (groupData: Omit<CanvasGroup, 'id'>) => {
+    const createGroup = async (groupData: Omit<CanvasGroup, 'id'> | CanvasGroup) => {
         applySmartGroupNormalizations(groupData)
         const newGroup: CanvasGroup = {
             ...groupData,
-            id: crypto.randomUUID(), // TASK-1183: Use proper UUID for Supabase compatibility
+            id: 'id' in groupData && groupData.id ? groupData.id : crypto.randomUUID(), // TASK-1183: Use proper UUID for Supabase compatibility
             isVisible: true,
             isCollapsed: false,
             // BUG-1127 FIX: Preserve parentGroupId for nested groups
@@ -130,7 +130,8 @@ export const useCanvasGroups = (
             // TASK-1428: Update IndexedDB read cache after update
             cacheGroups([..._rawGroups.value])
 
-            // TASK-1428: Queue for offline-first sync
+            // TASK-1428: Queue for offline-first sync (BUG-1799: single writer)
+            let queued = false
             try {
                 const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
                 const syncOrchestrator = useSyncOrchestrator()
@@ -147,13 +148,21 @@ export const useCanvasGroups = (
                             payload: JSON.parse(JSON.stringify(payload)),
                             baseVersion: _rawGroups.value[index].positionVersion || 0
                         })
+                        queued = true
                     }
                 }
             } catch (queueError) {
                 console.warn('[SYNC-QUEUE] Failed to queue group update:', queueError)
             }
 
-            await persistence.saveGroupToStorage(_rawGroups.value[index])
+            // BUG-1799: Only direct-save as a fallback when the queue did NOT take the write
+            // (guest mode / no userId / enqueue failure). Previously this ran unconditionally on
+            // top of the enqueue — the second write's fresh `updated_at` out-timestamped the queued
+            // op and bumped position_version → LWW "server wins" spam for groups. The enqueue uses
+            // the same whole-object toSupabaseGroup mapper, so it is a complete writer.
+            if (!queued) {
+                await persistence.saveGroupToStorage(_rawGroups.value[index])
+            }
         }
     }
 

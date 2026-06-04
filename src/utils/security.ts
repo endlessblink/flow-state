@@ -8,9 +8,11 @@ import DOMPurify from 'dompurify'
  * @param query The search query
  * @returns Safe HTML string with highlighted matches
  */
-export const highlightMatchSafe = (text: string, query: string): string => {
+export const highlightMatchSafe = (text: string | null | undefined, query: string): string => {
+  const safeText = String(text ?? '')
+
   // Sanitize the text first to prevent XSS by escaping HTML entities
-  const escapedText = text
+  const escapedText = safeText
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")

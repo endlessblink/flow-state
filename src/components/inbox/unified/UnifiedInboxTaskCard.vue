@@ -114,6 +114,7 @@ import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useTimerStore } from '@/stores/timer'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
+import { computeDueStatus } from './dueStatus'
 
 const props = defineProps<{
   task: Task
@@ -155,56 +156,12 @@ const isTimerActive = computed(() => {
 
 const isDone = computed(() => props.task.status === 'done')
 
-// Helpers
-
-
-// ADHD-friendly: Human-readable date formatting
-const formatHumanDate = (dateStr: string) => {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('en', { month: 'short', day: 'numeric' })
-}
-
 // BUG-1191: Due status with reactive date dependency
+// BUG-1810: badge logic extracted to ./dueStatus for unit testing
 const dueStatus = computed(() => {
-  const task = props.task
   // BUG-1191: Reactive dependency - ensures re-evaluation at midnight
-  const _todayTrigger = reactiveToday.value
-  // BUG-1321: Use local date (not UTC) to avoid timezone-related overdue false positives
-  const _now = new Date()
-  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
-
-  if (task.dueDate) {
-    // Extract just the date part (handles ISO strings with time)
-    const dueDateOnly = task.dueDate.split('T')[0]
-
-    if (dueDateOnly < today) {
-      // ADHD-friendly: Show simple "Overdue" with human-readable date
-      return { type: 'overdue', text: `Overdue ${formatHumanDate(dueDateOnly)}` }
-    } else if (dueDateOnly === today) {
-      return { type: 'today', text: 'Today' }
-    } else if (dueDateOnly === new Date(Date.now() + 86400000).toISOString().split('T')[0]) {
-      return { type: 'tomorrow', text: 'Tomorrow' }
-    } else {
-      return { type: 'future', text: formatHumanDate(dueDateOnly) }
-    }
-  }
-
-  const effectiveDate = task.scheduledDate ||
-    (task.instances?.length && task.instances.find(inst => inst.scheduledDate)?.scheduledDate)
-
-  if (effectiveDate) {
-    const effectiveDateOnly = effectiveDate.split('T')[0]
-
-    if (effectiveDateOnly === today) {
-      return { type: 'scheduled-today', text: 'Today' }
-    } else if (effectiveDateOnly === new Date(Date.now() + 86400000).toISOString().split('T')[0]) {
-      return { type: 'scheduled-tomorrow', text: 'Tomorrow' }
-    } else {
-      return { type: 'scheduled-future', text: formatHumanDate(effectiveDateOnly) }
-    }
-  }
-
-  return null
+  void reactiveToday.value
+  return computeDueStatus(props.task, new Date())
 })
 </script>
 

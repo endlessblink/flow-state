@@ -234,7 +234,11 @@ if (_pendingOAuthTokens && supabaseClient) {
     })
 }
 
-export const supabase = supabaseClient as SupabaseClient | null
+export const supabase = supabaseClient as SupabaseClient
+
+// TASK-1797: Resolved URL + anon key, forwarded to the Electron Local API
+// sidecar (token mode) so it can talk to Supabase as the logged-in user.
+export const supabaseConfig = { url: supabaseUrl, anonKey: supabaseAnonKey }
 
 // TASK-1283: Consume pending Google provider tokens (called once by auth store after sign-in)
 export function consumePendingProviderTokens(): { provider_token: string; provider_refresh_token?: string } | null {

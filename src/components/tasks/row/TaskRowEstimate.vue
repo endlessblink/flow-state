@@ -1,7 +1,7 @@
 <template>
   <div ref="triggerWrapperRef" class="task-row__estimate" @click.stop>
     <span
-      ref="triggerRef"
+      ref="triggerElRef"
       class="task-row__estimate-trigger"
       :class="{ 'task-row__estimate-trigger--empty': !estimatedDuration }"
       title="Click to set time estimate"
@@ -67,7 +67,7 @@ const emit = defineEmits<{
 
 const isOpen = ref(false)
 const triggerWrapperRef = ref<HTMLElement>()
-const triggerRef = ref<HTMLElement>()
+const triggerElRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
 const customInputRef = ref<HTMLInputElement>()
 const customMinutes = ref('')
@@ -79,8 +79,8 @@ const dropdownStyle = ref<Record<string, string>>({
 })
 
 const calculateDropdownPosition = () => {
-  if (!triggerRef.value) return
-  const rect = triggerRef.value.getBoundingClientRect()
+  if (!triggerElRef.value) return
+  const rect = triggerElRef.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const dropdownHeight = 8 * 36 + 16
   const spaceBelow = viewportHeight - rect.bottom

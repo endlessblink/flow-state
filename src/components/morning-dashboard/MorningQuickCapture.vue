@@ -10,7 +10,7 @@ async function handleSubmit() {
   const trimmed = inputValue.value.trim()
   if (!trimmed) return
 
-  await taskStore.createTask({ title: trimmed, status: 'todo' })
+  await taskStore.createTaskWithUndo({ title: trimmed, status: 'todo' })
   inputValue.value = ''
 }
 
@@ -25,13 +25,14 @@ function handleKeydown(e: KeyboardEvent) {
 <template>
   <div class="morning-quick-capture">
     <Plus :size="16" class="capture-icon" />
-    <input dir="auto"
+    <input
       v-model="inputValue"
+      dir="auto"
       class="capture-input"
       type="text"
       placeholder="Quick capture a task..."
       @keydown="handleKeydown"
-    />
+    >
   </div>
 </template>
 

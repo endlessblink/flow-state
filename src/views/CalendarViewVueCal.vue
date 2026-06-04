@@ -153,7 +153,7 @@ const handleEventDragDrop = async (event: VueCalEvent, _originalEvent: unknown) 
   } else {
     // Regular task update
     // BUG-1051: AWAIT to ensure persistence
-    await taskStore.updateTask(event.id, {
+    await taskStore.updateTaskWithUndo(event.id, {
       scheduledDate: dateStr,
       scheduledTime: timeStr
     })
@@ -168,7 +168,7 @@ const handleEventResize = async (event: VueCalEvent, _originalEvent: unknown) =>
   const duration = Math.round((end.getTime() - start.getTime()) / 60000)
 
   // BUG-1051: AWAIT to ensure persistence
-  await taskStore.updateTask(event.id, {
+  await taskStore.updateTaskWithUndo(event.id, {
     estimatedDuration: duration
   })
 }

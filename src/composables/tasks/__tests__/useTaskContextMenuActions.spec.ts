@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTaskContextMenuActions } from '../useTaskContextMenuActions'
+import type { Task } from '@/types/tasks'
 
 const createTaskWithUndo = vi.fn()
 const updateTaskWithUndo = vi.fn()
@@ -61,7 +62,7 @@ describe('useTaskContextMenuActions duplicateTask', () => {
         // Added by ModalManager for calendar-origin context menu calls
         instanceId: 'inst-1',
         isCalendarEvent: true
-      } as unknown,
+      } as unknown as Task,
       contextTask: null,
       selectedCount: 1
     }
@@ -86,4 +87,3 @@ describe('useTaskContextMenuActions duplicateTask', () => {
     expect(emit).toHaveBeenCalledWith('close')
   })
 })
-

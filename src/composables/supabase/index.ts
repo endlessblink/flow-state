@@ -7,6 +7,7 @@ import {
 import { useTombstoneDatabase } from './_tombstone'
 import { useTasksDatabase } from './useTasksDatabase'
 import { useProjectsDatabase } from './useProjectsDatabase'
+import { useLanesDatabase } from './useLanesDatabase'
 import { useGroupsDatabase } from './useGroupsDatabase'
 import { useNotificationsDatabase } from './useNotificationsDatabase'
 import { useTimerDatabase } from './useTimerDatabase'
@@ -37,6 +38,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const tombstone = useTombstoneDatabase(ctx)
     const tasks = useTasksDatabase(ctx)
     const projects = useProjectsDatabase(ctx)
+    const lanes = useLanesDatabase(ctx)
     const groups = useGroupsDatabase(ctx)
     const notifications = useNotificationsDatabase(ctx)
     const timer = useTimerDatabase(ctx)
@@ -50,6 +52,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         isSyncing,
         lastSyncError,
         ...projects,
+        // TASK-1812: Lanes
+        ...lanes,
         ...tasks,
         ...groups,
         // TASK-317: Tombstone functions

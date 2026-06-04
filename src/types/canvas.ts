@@ -66,6 +66,8 @@ export interface CanvasGroup {
     collectFilter?: CollectFilterSettings
     // TASK-072: Nested groups support - optional parent group ID
     parentGroupId?: string | null
+    // Parent task linked to this group; direct tasks inside the group inherit it as parentTaskId.
+    linkedParentTaskId?: string | null
     updatedAt?: string
     isPinned?: boolean
     positionVersion?: number // Version for conflict resolution

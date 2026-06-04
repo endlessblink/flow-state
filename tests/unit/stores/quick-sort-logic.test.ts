@@ -279,4 +279,82 @@ describe('TASK-1662: Quick Sort Logic', () => {
     expect(data!.processedTaskIds).toEqual(['t1', 't2'])
     expect(data!.currentTaskId).toBe('t3')
   })
+
+  it('11. Undo/redo cycles three consecutive times across all Quick Sort action types', async () => {
+    const { useQuickSortStore } = await import('@/stores/quickSort')
+    const qs = useQuickSortStore()
+
+    qs.startSession()
+
+    const actions = [
+      {
+        id: 'cycle-categorize',
+        type: 'CATEGORIZE_TASK' as const,
+        taskId: 'task-categorize',
+        oldProjectId: null,
+        newProjectId: 'project-next',
+        timestamp: Date.now()
+      },
+      {
+        id: 'cycle-done',
+        type: 'MARK_DONE' as const,
+        taskId: 'task-done',
+        oldStatus: 'todo' as const,
+        newStatus: 'done' as const,
+        timestamp: Date.now()
+      },
+      {
+        id: 'cycle-done-delete',
+        type: 'MARK_DONE_AND_DELETE' as const,
+        taskId: 'task-done-delete',
+        oldStatus: 'todo' as const,
+        newStatus: 'done' as const,
+        timestamp: Date.now()
+      },
+      {
+        id: 'cycle-save',
+        type: 'SAVE_TASK' as const,
+        taskId: 'task-save',
+        oldDescription: 'before',
+        newDescription: 'after',
+        timestamp: Date.now()
+      }
+    ]
+
+    actions.forEach(action => qs.recordAction(action))
+
+    expect(qs.undoStack.map(action => action.id)).toEqual(actions.map(action => action.id))
+    expect(qs.redoStack).toEqual([])
+    expect(qs.tasksSortedInSession).toBe(actions.length)
+
+    for (let i = 0; i < 3; i += 1) {
+      const undone: string[] = []
+      for (const action of [...actions].reverse()) {
+        const result = qs.undo()
+        expect(result).toEqual(action)
+        undone.push(result!.id)
+      }
+
+      expect(undone).toEqual([...actions].reverse().map(action => action.id))
+      expect(qs.undoStack).toEqual([])
+      expect(qs.redoStack.map(action => action.id)).toEqual([...actions].reverse().map(action => action.id))
+      expect(qs.tasksSortedInSession).toBe(0)
+      expect(qs.canUndo).toBe(false)
+      expect(qs.canRedo).toBe(true)
+
+      const redone: string[] = []
+      for (const action of actions) {
+        const result = qs.redo()
+        expect(result).toEqual(action)
+        redone.push(result!.id)
+      }
+
+      expect(redone).toEqual(actions.map(action => action.id))
+      expect(qs.undoStack.map(action => action.id)).toEqual(actions.map(action => action.id))
+      expect(qs.redoStack).toEqual([])
+      expect(qs.tasksSortedInSession).toBe(actions.length)
+      expect(qs.canUndo).toBe(true)
+      expect(qs.canRedo).toBe(false)
+    }
+  })
 })

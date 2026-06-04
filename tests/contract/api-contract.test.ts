@@ -47,6 +47,7 @@ const VALID_TASK_COLUMNS = new Set([
   'planning_notes', // TASK-1768: mini-canvas planning notes (jsonb)
   'mini_canvas_edges', // Mini-canvas user-drawn edges (jsonb)
   'calendar_locked', // TASK-1785 Push 2: ripple-shift skip-protect flag (boolean)
+  'lane_id', // TASK-1812: sprint-style cross-project lane membership (nullable FK)
 ])
 
 // --------------------------------------------------------------------------
@@ -202,7 +203,7 @@ describe('TASK-1586: API Contract Tests — supabaseMappers.ts', () => {
     // Extract all single-quoted string values (the table names, right-hand side of key: 'value')
     const valueMatches = [...tableMapBlock.matchAll(/:\s*'([a-z_]+)'/g)].map(m => m[1])
 
-    const validTableNames = ['tasks', 'groups', 'projects', 'timer_sessions', 'quick_sort_sessions']
+    const validTableNames = ['tasks', 'groups', 'projects', 'lanes', 'timer_sessions', 'quick_sort_sessions']
     for (const tableName of validTableNames) {
       expect(
         valueMatches,

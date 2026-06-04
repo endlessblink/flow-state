@@ -68,7 +68,11 @@ export class SimpleGlobalKeyboardHandler {
    * Check if an element or its parents should be ignored
    */
   private shouldIgnoreElement(target: Element): boolean {
-    const element = target as HTMLElement
+    if (!(target instanceof HTMLElement)) {
+      return false
+    }
+
+    const element = target
 
     // 🔧 FIX: Allow Enter key events on quick task input to pass through
     // Check if this is the quick task input field
@@ -107,6 +111,10 @@ export class SimpleGlobalKeyboardHandler {
     return false
   }
 
+  private shouldDeferUndoRedoToActiveView(): boolean {
+    return !!document.querySelector('.quick-sort-view')
+  }
+
   /**
    * Handle keyboard events
    */
@@ -127,6 +135,8 @@ export class SimpleGlobalKeyboardHandler {
 
     // Handle Ctrl+Z (Undo) and Ctrl+Shift+Z (Redo)
     if (hasModifier && key.toLowerCase() === 'z') {
+      if (this.shouldDeferUndoRedoToActiveView()) return
+
       if (shiftKey) {
         // Ctrl+Shift+Z = Redo
         this.executeRedo()
@@ -143,6 +153,8 @@ export class SimpleGlobalKeyboardHandler {
 
     // Handle Ctrl+Y (Redo alternative)
     else if (hasModifier && key.toLowerCase() === 'y') {
+      if (this.shouldDeferUndoRedoToActiveView()) return
+
       this.executeRedo()
 
       if (this.preventDefault) {

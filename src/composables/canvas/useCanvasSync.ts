@@ -13,7 +13,7 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
-import { isNodeCompletelyInside, DEFAULT_TASK_WIDTH, DEFAULT_TASK_HEIGHT } from '@/utils/canvas/spatialContainment'
+import { traceCanvasDone, traceCanvasDoneNodes, traceCanvasDoneTasks } from '@/utils/canvas/doneTrace'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -70,13 +70,13 @@ function sortGroupsByHierarchy<T extends HierarchicalGroup>(groups: T[]): Array<
 // When setNodes() is called during sync, Vue Flow may fire onNodeDragStop spuriously.
 // useCanvasInteractions checks this flag to skip processing during sync operations.
 const canvasSyncInProgress = ref(false)
+const canvasSyncSettlingUntil = ref(0)
 
-// BUG-1203: Guard flag to prevent re-sync loop when writing back stale parentId corrections.
-// When true, the store update from reconciliation should not trigger another sync cycle.
+// Legacy guard retained for imports; sync is read-only and must not write parent fixes.
 const isWritingBackStaleParents = ref(false)
 
 // Export for useCanvasInteractions to check
-export { canvasSyncInProgress, isWritingBackStaleParents }
+export { canvasSyncInProgress, canvasSyncSettlingUntil, isWritingBackStaleParents }
 
 /**
  * Canvas Sync Composable
@@ -100,7 +100,7 @@ export function useCanvasSync() {
     const { nodeVersionMap, aggregatedTaskCountByGroupId, taskCountByGroupId } = storeToRefs(canvasStore)
     const taskStore = useTaskStore()
     const canvasImagesStore = useCanvasImagesStore()
-    const { getNodes, setNodes } = useVueFlow()
+    const { getNodes, setNodes, updateNode, addNodes, removeNodes } = useVueFlow()
 
     // Alias to module-level ref for backward compatibility
     const isSyncing = canvasSyncInProgress
@@ -172,15 +172,9 @@ export function useCanvasSync() {
      */
     const syncStoreToCanvas = (tasks?: Task[]) => {
         if (isSyncing.value) return
-        // BUG-1203: Skip re-sync triggered by stale parentId write-back.
-        // The write-back updates the task store, which fires watchers that call syncStoreToCanvas.
-        // Without this guard, we'd get an infinite loop: sync → detect stale → write-back → sync → ...
+        // Legacy guard retained for compatibility. Sync itself is read-only.
         if (isWritingBackStaleParents.value) return
         isSyncing.value = true
-
-        // BUG-1203: Collect stale parentId detections for deferred cleanup.
-        // Declared outside try so it's accessible in the post-sync cleanup below.
-        const staleParentCleanups: Array<{taskId: string, oldParentId: string}> = []
 
         try {
             // BUG-1176 FIX: Filter out done tasks when hideCanvasDoneTasks is enabled
@@ -188,9 +182,11 @@ export function useCanvasSync() {
             const shouldHideDone = taskStore.hideCanvasDoneTasks
             const tasksToSync = (tasks || taskStore.tasks)
                 .filter(t => t.canvasPosition)
-                .filter(t => !shouldHideDone || t.status !== 'done')
             const groups = canvasStore.groups || []
             const currentNodes = getNodes.value
+
+            traceCanvasDoneTasks('syncStoreToCanvas:input-store', tasksToSync)
+            traceCanvasDoneNodes('syncStoreToCanvas:before-build-current-vueflow', currentNodes)
 
             // BUG-1084 FIX v2: Instead of skipping entire sync, we'll skip individual tasks
             // whose parent groups haven't loaded yet. This allows root tasks to display
@@ -277,6 +273,23 @@ export function useCanvasSync() {
             // Create a Set of visible group IDs for fast lookup
             const visibleGroupIds = new Set(groups.map(g => g.id))
 
+            // Collapse fix: a collapsed group must hide the task/group nodes nested
+            // under it. Walk the parentGroupId chain from a node's parent; if the
+            // direct parent OR any ancestor is collapsed, the node is hidden.
+            const groupById = new Map(groups.map(g => [g.id, g]))
+            const isUnderCollapsedAncestor = (startParentId: string | null | undefined): boolean => {
+                let pid: string | null | undefined = startParentId
+                const seen = new Set<string>()
+                while (pid && !seen.has(pid)) {
+                    seen.add(pid)
+                    const g = groupById.get(pid)
+                    if (!g) break
+                    if (g.isCollapsed) return true
+                    pid = g.parentGroupId || null
+                }
+                return false
+            }
+
             for (const group of sortedGroups) {
                 const nodeId = CanvasIds.groupNodeId(group.id)
 
@@ -333,12 +346,25 @@ export function useCanvasSync() {
                 // ensures child groups (higher depth) are always on top of parent groups
                 const depth = (group as any)._depth || 0
                 const zIndex = 11 + (depth * 10) // Base group Z is 10 (CANVAS.Z_INDEX_GROUP)
+                const groupWidth = group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH
+                const groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
 
                 newNodes.push({
                     id: nodeId,
                     type: 'sectionNode',
                     position: displayPos,
                     parentNode: parentNodeId,
+                    // A nested child group hides when an ANCESTOR is collapsed.
+                    // The group's own collapsed state shrinks it (header only) but
+                    // does not hide the node itself. Use the store parentGroupId
+                    // chain, not Vue Flow's reset parentId.
+                    hidden: isUnderCollapsedAncestor(group.parentGroupId),
+                    width: groupWidth,
+                    height: groupHeight,
+                    dimensions: {
+                        width: groupWidth,
+                        height: groupHeight,
+                    },
                     zIndex, // Explicit zIndex bonus
                     // FIX: Removed extent: 'parent' so groups can be dragged OUT of their parent.
                     // With extent: 'parent', Vue Flow constrains movement to parent bounds,
@@ -351,8 +377,16 @@ export function useCanvasSync() {
                         label: group.name || 'Group',
                         name: group.name || 'Group',
                         color: group.color || '#3b82f6',
-                        width: group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH,
-                        height: group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT,
+                        width: groupWidth,
+                        height: groupHeight,
+                        storePosition: group.position
+                            ? {
+                                x: group.position.x,
+                                y: group.position.y,
+                                width: group.position.width,
+                                height: group.position.height,
+                            }
+                            : null,
                         collapsed: group.isCollapsed || false,
                         // Pass BOTH counts - component decides which to show
                         directTaskCount,
@@ -364,8 +398,8 @@ export function useCanvasSync() {
                         taskCount: aggregatedTaskCount
                     },
                     style: {
-                        width: `${group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH}px`,
-                        height: `${group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT}px`
+                        width: `${groupWidth}px`,
+                        height: `${groupHeight}px`
                     }
                 })
             }
@@ -408,45 +442,18 @@ export function useCanvasSync() {
                 // PM is only authoritative for x/y position during drag operations.
                 let parentId = (task.parentId && task.parentId !== 'NONE') ? task.parentId : null
 
-                // BUG-1191 FIX: Validate parentId spatially before using it
-                // Tasks with stale parentId (pointing to group they're outside of) would be dragged with wrong group
-                // BUG-1738 FIX: Skip parentId validation when groups haven't loaded yet.
-                // During workspace switch, groups = [] temporarily. Without this guard,
-                // every task's parentId would be cleared because no group can be found.
+                // Sync is a read-only projection. Trust the stored parentId when
+                // the parent group exists; geometry correction belongs to explicit
+                // drag/drop flows, not reload/Tidy sync. Spatial cleanup here made
+                // grouped tasks detach/disappear after programmatic layout changes.
                 if (parentId && groups.length > 0) {
                     const parentGroup = groups.find(g => g.id === parentId)
-                    if (parentGroup) {
-                        const parentAbsolutePos = getGroupAbsolutePosition(parentId, groups)
-                        const parentBounds = {
-                            position: parentAbsolutePos,
-                            width: parentGroup.position.width,
-                            height: parentGroup.position.height
-                        }
-                        const taskSpatial = {
-                            position: absolutePos,
-                            width: DEFAULT_TASK_WIDTH,
-                            height: DEFAULT_TASK_HEIGHT
-                        }
-                        // Use 0 padding to be permissive (only check center containment)
-                        if (!isNodeCompletelyInside(taskSpatial, parentBounds, 0)) {
-                            if (import.meta.env.DEV) {
-                                if (import.meta.env.DEV) {
-                                console.warn(`[BUG-1203] Task "${task.title?.slice(0, 25)}" has stale parentId ${parentId.slice(0, 8)} - not spatially inside. Clearing.`)
-                            }
-                            }
-                            // BUG-1203: Queue deferred store cleanup to eliminate split-brain
-                            staleParentCleanups.push({ taskId: task.id, oldParentId: parentId })
-                            parentId = null
-                        }
-                    } else {
-                        // Parent group doesn't exist - clear parentId
+                    if (!parentGroup) {
+                        // Parent group doesn't exist in this workspace/view, so render as root.
+                        // Do not write this correction back from sync.
                         if (import.meta.env.DEV) {
-                            if (import.meta.env.DEV) {
-                            console.warn(`[BUG-1203] Task "${task.title?.slice(0, 25)}" parentId ${parentId.slice(0, 8)} not found. Clearing.`)
+                            console.warn(`[CANVAS:SYNC] Task "${task.title?.slice(0, 25)}" parentId ${parentId.slice(0, 8)} not found. Rendering as root.`)
                         }
-                        }
-                        // BUG-1203: Queue deferred store cleanup
-                        staleParentCleanups.push({ taskId: task.id, oldParentId: parentId })
                         parentId = null
                     }
                 }
@@ -466,10 +473,21 @@ export function useCanvasSync() {
                     parentId = null
                 }
 
+                // If the entire group fetch failed, render parented tasks as root nodes
+                // using their absolute coordinates. A later successful group load will
+                // re-parent them without writing this fallback back to storage.
+                if (parentId && groups.length === 0) {
+                    if (import.meta.env.DEV) {
+                        console.warn(`[CANVAS:SYNC] Groups unavailable; rendering task ${task.id.slice(0, 8)}... as root fallback`, {
+                            parentId: parentId.slice(0, 8)
+                        })
+                    }
+                    parentId = null
+                }
+
                 // BUG-1084 FIX v2: SKIP tasks whose parent group isn't loaded yet
-                // Instead of treating as root (which causes JUMP when parent loads),
-                // we defer rendering until parent group is available. The watcher on
-                // groups.length will trigger another sync when groups load.
+                // when some groups did load. This avoids a visual jump if only a
+                // subset of groups is temporarily unavailable.
                 if (parentId && !visibleGroupIds.has(parentId)) {
                     if (import.meta.env.DEV) {
                         console.log(`[CANVAS:SYNC] Task ${task.id.slice(0, 8)}... (${task.title?.slice(0, 20)}) deferred - parent ${parentId?.slice(0, 8)} not loaded yet`, {
@@ -484,6 +502,9 @@ export function useCanvasSync() {
                     type: 'taskNode',
                     position: displayPos,
                     parentNode: parentId ? CanvasIds.groupNodeId(parentId) : undefined,
+                    draggable: true,
+                    selectable: true,
+                    hidden: (shouldHideDone && task.status === 'done') || isUnderCollapsedAncestor(task.parentId),
                     // FIX: Removed extent: 'parent' so tasks can be dragged OUT of groups.
                     // With extent: 'parent', Vue Flow constrains movement to parent bounds,
                     // preventing tasks from being dragged outside. Without it, tasks can be
@@ -538,6 +559,8 @@ export function useCanvasSync() {
                     // Check Parent
                     if (nodeA.parentNode !== nodeB.parentNode) return true
 
+                    if (nodeA.hidden !== nodeB.hidden) return true
+
                     // Check Dimensions (for groups)
                     if (nodeA.data?.width !== nodeB.data?.width ||
                         nodeA.data?.height !== nodeB.data?.height) return true
@@ -567,7 +590,80 @@ export function useCanvasSync() {
                 return false
             }
 
+            const samePosition = (
+                a: { x?: number; y?: number } | null | undefined,
+                b: { x?: number; y?: number } | null | undefined
+            ) => {
+                if (!a && !b) return true
+                if (!a || !b) return false
+                return a.x === b.x && a.y === b.y
+            }
+
+            const nodeGeometrySourceUnchanged = (nodeA: Record<string, any>, nodeB: Record<string, any>) => {
+                if (nodeA.type === 'taskNode') {
+                    const taskA = nodeA.data?.task
+                    const taskB = nodeB.data?.task
+                    return Boolean(taskA && taskB) &&
+                        samePosition(taskA.canvasPosition, taskB.canvasPosition) &&
+                        (taskA.parentId ?? null) === (taskB.parentId ?? null)
+                }
+
+                if (nodeA.type === 'sectionNode') {
+                    const storePositionA = nodeA.data?.storePosition
+                    const storePositionB = nodeB.data?.storePosition
+                    return samePosition(storePositionA ?? nodeA.position, storePositionB ?? nodeB.position) &&
+                        (storePositionA?.width ?? nodeA.data?.width) === (storePositionB?.width ?? nodeB.data?.width) &&
+                        (storePositionA?.height ?? nodeA.data?.height) === (storePositionB?.height ?? nodeB.data?.height) &&
+                        nodeA.data?.width === nodeB.data?.width &&
+                        nodeA.data?.height === nodeB.data?.height &&
+                        (nodeA.data?.parentGroupId ?? null) === (nodeB.data?.parentGroupId ?? null)
+                }
+
+                return samePosition(nodeA.position, nodeB.position)
+            }
+
+            const canPatchNodesInPlace = (a: Array<Record<string, any>>, b: Array<Record<string, any>>) => {
+                if (a.length !== b.length) {
+                    traceCanvasDone('syncStoreToCanvas:patch-skip', { reason: 'length', newCount: a.length, currentCount: b.length })
+                    return false
+                }
+                const bMap = new Map(b.map((n: Record<string, any>) => [n.id, n]))
+
+                return a.every((nodeA) => {
+                    const nodeB = bMap.get(nodeA.id)
+                    if (!nodeB) {
+                        traceCanvasDone('syncStoreToCanvas:patch-skip', { reason: 'missing-node', id: nodeA.id })
+                        return false
+                    }
+                    if (nodeA.type !== nodeB.type) {
+                        traceCanvasDone('syncStoreToCanvas:patch-skip', { reason: 'type', id: nodeA.id, next: nodeA.type, current: nodeB.type })
+                        return false
+                    }
+                    if (nodeA.parentNode !== nodeB.parentNode) {
+                        traceCanvasDone('syncStoreToCanvas:patch-skip', { reason: 'parent', id: nodeA.id, next: nodeA.parentNode, current: nodeB.parentNode })
+                        return false
+                    }
+                    return true
+                })
+            }
+
+            const nodeGeometrySourceChanged = (nodeA: Record<string, any>, nodeB: Record<string, any>) => {
+                return !nodeGeometrySourceUnchanged(nodeA, nodeB)
+            }
+
+            const patchableNodeChanged = (nodeA: Record<string, any>, nodeB: Record<string, any>) => {
+                if (nodeA.hidden !== nodeB.hidden) return true
+                if (nodeA.zIndex !== nodeB.zIndex) return true
+                if (nodeA.selected !== nodeB.selected) return true
+                if (nodeGeometrySourceChanged(nodeA, nodeB)) return true
+                if (JSON.stringify(nodeA.data ?? null) !== JSON.stringify(nodeB.data ?? null)) return true
+                return false
+            }
+
             if (isDifferent(newNodes, currentNodes)) {
+                traceCanvasDoneNodes('syncStoreToCanvas:before-setNodes-new', newNodes)
+                traceCanvasDoneNodes('syncStoreToCanvas:before-setNodes-current', currentNodes)
+
                 if (import.meta.env.DEV) {
                     const taskNodesNew = newNodes.filter((n: any) => n.type === 'taskNode')
                     console.log(`[BUG-1492:SYNC-SETNODES] About to setNodes`, {
@@ -717,7 +813,123 @@ export function useCanvasSync() {
                     }
                 }
 
+                canvasSyncSettlingUntil.value = Date.now() + 250
+                if (canPatchNodesInPlace(newNodes, currentNodes)) {
+                    const currentNodeMap = new Map(currentNodes.map((node: Record<string, any>) => [node.id, node]))
+                    for (const node of newNodes) {
+                        const currentNode = currentNodeMap.get(node.id)
+                        if (currentNode && patchableNodeChanged(node, currentNode)) {
+                            const patch: Record<string, unknown> = {
+                                data: node.data,
+                                hidden: node.hidden,
+                                zIndex: node.zIndex,
+                                selected: node.selected,
+                            }
+
+                            if (nodeGeometrySourceChanged(node, currentNode)) {
+                                patch.position = node.position
+                                if (node.width !== undefined) patch.width = node.width
+                                if (node.height !== undefined) patch.height = node.height
+                                if (node.dimensions !== undefined) patch.dimensions = node.dimensions
+                                if (node.style !== undefined) patch.style = node.style
+                            }
+
+                            updateNode(node.id, patch)
+                        }
+                    }
+                    traceCanvasDoneNodes('syncStoreToCanvas:after-in-place-patch-immediate', getNodes.value)
+                    return
+                }
+
+                // ================================================================
+                // INCREMENTAL ADD/REMOVE PATH (anti-nudge)
+                // ================================================================
+                // When the only structural change is added/removed nodes (e.g. an
+                // inbox task dropped onto the canvas, or a task removed), a full
+                // setNodes() re-mounts EVERY node. Vue Flow then briefly renders
+                // parented children at their raw relative position before the
+                // parent offset resolves, so the whole canvas appears to "nudge".
+                //
+                // Instead, keep existing node instances untouched and only
+                // add/remove the deltas + patch the few changed survivors. This
+                // preserves node identity, so no re-mount and no nudge.
+                const currentNodeById = new Map(currentNodes.map((node: Record<string, any>) => [node.id, node]))
+                const newNodeById = new Map(newNodes.map((node: Record<string, any>) => [node.id, node]))
+                const addedNodes = newNodes.filter((node) => !currentNodeById.has(node.id))
+                const removedNodes = currentNodes.filter((node: Record<string, any>) => !newNodeById.has(node.id))
+                const survivingNodes = newNodes.filter((node) => currentNodeById.has(node.id))
+
+                // Survivors must not change topology (type/parent) — those need a rebuild.
+                const survivorsTopologyStable = survivingNodes.every((node) => {
+                    const currentNode = currentNodeById.get(node.id)
+                    return Boolean(currentNode) &&
+                        currentNode!.type === node.type &&
+                        (currentNode!.parentNode ?? null) === (node.parentNode ?? null)
+                })
+                // Every added node's parent must already exist (rendered or freshly added),
+                // so Vue Flow can resolve parent-before-child without reordering.
+                const addedParentsResolvable = addedNodes.every((node) =>
+                    !node.parentNode || currentNodeById.has(node.parentNode) || newNodeById.has(node.parentNode)
+                )
+                // A removed node must not still be the parent of a surviving/added node.
+                const removedSafe = removedNodes.every((removed: Record<string, any>) =>
+                    !newNodes.some((node) => (node.parentNode ?? null) === removed.id)
+                )
+
+                if (
+                    (addedNodes.length > 0 || removedNodes.length > 0) &&
+                    survivorsTopologyStable &&
+                    addedParentsResolvable &&
+                    removedSafe
+                ) {
+                    // 1. Patch only the survivors whose data/geometry actually changed.
+                    for (const node of survivingNodes) {
+                        const currentNode = currentNodeById.get(node.id)
+                        if (currentNode && patchableNodeChanged(node, currentNode)) {
+                            const patch: Record<string, unknown> = {
+                                data: node.data,
+                                hidden: node.hidden,
+                                zIndex: node.zIndex,
+                                selected: node.selected,
+                            }
+
+                            if (nodeGeometrySourceChanged(node, currentNode)) {
+                                patch.position = node.position
+                                if (node.width !== undefined) patch.width = node.width
+                                if (node.height !== undefined) patch.height = node.height
+                                if (node.dimensions !== undefined) patch.dimensions = node.dimensions
+                                if (node.style !== undefined) patch.style = node.style
+                            }
+
+                            updateNode(node.id, patch)
+                        }
+                    }
+
+                    // 2. Remove deleted nodes (children already proven absent).
+                    if (removedNodes.length > 0) {
+                        removeNodes(removedNodes.map((node: Record<string, any>) => node.id), false, false)
+                    }
+
+                    // 3. Add new nodes, groups first so a child's parent is present.
+                    if (addedNodes.length > 0) {
+                        const orderedAdds = [...addedNodes].sort((a, b) => {
+                            const aGroup = a.type === 'sectionNode' ? 0 : 1
+                            const bGroup = b.type === 'sectionNode' ? 0 : 1
+                            return aGroup - bGroup
+                        })
+                        addNodes(orderedAdds as any)
+                    }
+
+                    traceCanvasDoneNodes('syncStoreToCanvas:after-incremental-add-remove', getNodes.value)
+                    return
+                }
+
                 setNodes(newNodes as any)
+                traceCanvasDoneNodes('syncStoreToCanvas:after-setNodes-immediate', getNodes.value)
+                nextTick(() => {
+                    traceCanvasDoneNodes('syncStoreToCanvas:after-setNodes-nextTick-1', getNodes.value)
+                    nextTick(() => traceCanvasDoneNodes('syncStoreToCanvas:after-setNodes-nextTick-2', getNodes.value))
+                })
 
                 // ================================================================
                 // INVARIANT VALIDATION (Dev Only)
@@ -766,36 +978,6 @@ export function useCanvasSync() {
             isSyncing.value = false
         }
 
-        // BUG-1203: Deferred write-back for stale parentId corrections.
-        // This is an explicit exception to the read-only invariant (TASK-255) for
-        // corruption repair only. Without write-back, stale parentIds persist forever
-        // if the task is never manually dragged.
-        //
-        // Guard: isWritingBackStaleParents prevents re-sync loop. The orchestrator
-        // watches the task store, so updating parentId would trigger another sync.
-        // The guard causes syncStoreToCanvas to early-return during write-back.
-        if (staleParentCleanups.length > 0 && !isWritingBackStaleParents.value) {
-            if (import.meta.env.DEV) {
-                for (const { taskId, oldParentId } of staleParentCleanups) {
-                    console.warn(`[BUG-1203] Stale parentId detected: task ${taskId.slice(0, 8)}... had parentId ${oldParentId.slice(0, 8)} but is outside group bounds. Writing back correction.`)
-                }
-            }
-
-            // Defer until after current sync completes and Vue has flushed
-            nextTick(() => {
-                isWritingBackStaleParents.value = true
-                const writePromises = staleParentCleanups.map(({ taskId }) =>
-                    taskStore.updateTask(taskId, { parentId: undefined }, 'RECONCILE')
-                )
-                Promise.all(writePromises)
-                    .catch(err => {
-                        console.error('[BUG-1203] Failed to write back stale parentId corrections:', err)
-                    })
-                    .finally(() => {
-                        isWritingBackStaleParents.value = false
-                    })
-            })
-        }
     }
 
     /**

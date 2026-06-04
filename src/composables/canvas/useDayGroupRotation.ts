@@ -30,6 +30,19 @@ import {
   type GroupMove,
   type TaskMove,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
+import { getUndoSystem } from '@/composables/undoSingleton'
+
+function cloneCanvasGeometrySnapshot(
+  tasks: unknown[],
+  groups: unknown[],
+  affectedIds: string[]
+) {
+  const ids = new Set(affectedIds)
+  return JSON.parse(JSON.stringify({
+    tasks: tasks.filter((task) => ids.has((task as { id: string }).id)),
+    groups,
+  }))
+}
 
 // TASK-1756: persisted "last rotation YYYY-MM-DD" — prevents double-rotation
 // when mount catch-up, midnight setTimeout, and visibility/focus all fire on
@@ -58,6 +71,17 @@ export interface DayGroupRotationOptions {
   getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
   /** Read a Vue Flow node's current rendered dimensions for stable task stacking. */
   getNodeSize?: (nodeId: string) => { width: number; height: number } | undefined
+  /** Return false when a task node is currently hidden/not rendered on canvas. */
+  isTaskVisible?: (taskId: string) => boolean | undefined
+}
+
+function isOverdue(dueDate?: string | null) {
+  if (!dueDate) return false
+  const due = new Date(dueDate)
+  if (!Number.isFinite(due.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return due < today
 }
 
 export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
@@ -200,6 +224,14 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       keyword: string
       dayIndex: number | null
     }
+    const layoutTasks = taskStore.rawTasks.filter((task) => {
+      if (!task.canvasPosition) return false
+      if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
+      if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
+      if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
+      return options.isTaskVisible?.(task.id) !== false
+    })
+
     const inputs: WithKeyword[] = []
     for (const group of groups) {
       const keyword = detectPowerKeyword(group.name)
@@ -210,7 +242,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
 
       const vfPos = options.getNodePosition?.(`section-${group.id}`)
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
-      const tasks = taskStore.rawTasks.filter((t) => t.parentId === group.id)
+      const tasks = layoutTasks.filter((t) => t.parentId === group.id)
       const taskSizes = new Map<string, { width: number; height: number }>()
       const taskPositions = new Map<string, { x: number; y: number }>()
       for (const task of tasks) {
@@ -265,8 +297,8 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       if (a.category === 'date') return -1
       if (b.category === 'date') return 1
       // Both day_of_week — sort by distance from startFrom.
-      const aDay = a.dayIndex!
-      const bDay = b.dayIndex!
+      const aDay = a.dayIndex ?? 0
+      const bDay = b.dayIndex ?? 0
       const aNorm = (aDay - weekStart + 7) % 7
       const bNorm = (bDay - weekStart + 7) % 7
       const startNorm = (startFrom - weekStart + 7) % 7
@@ -284,13 +316,24 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     const { groupMoves, taskMoves } = computeCanonicalLayout(
       inputs.map((i) => ({ group: i.group, visualPos: i.visualPos, tasks: i.tasks, taskSizes: i.taskSizes, taskPositions: i.taskPositions })),
       orderedIds,
-      { taskPositioning: 'preserveRelative' }
+      {
+        taskPositioning: 'fromHeader',
+        maxTasksPerColumn: null,
+        taskSpacing: 'contentGap',
+      }
     )
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves
 
-    // Apply STORE + PositionManager writes here. The caller applies Vue Flow
-    // moves via updateNode with both position AND style (width/height).
+    const affectedIds = [...new Set([
+      ...groupMoves.map((move) => move.groupId),
+      ...taskMoves.map((move) => move.taskId),
+    ])]
+    const undoSystem = getUndoSystem()
+    const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+
+    // Apply STORE + PositionManager writes synchronously. The caller applies
+    // Vue Flow moves via updateNode with both position AND style (width/height).
     try {
       for (const gm of groupMoves) {
         const storePos = inputs.find((i) => i.group.id === gm.groupId)?.group.position
@@ -312,7 +355,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
         )
       }
       for (const tm of taskMoves) {
-        pendingWrites.push(taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG'))
+        pendingWrites.push(taskStore.updateTask(tm.taskId, { canvasPosition: tm.position, positionFormat: 'absolute' }, 'DRAG'))
         positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
       }
     } catch (err) {
@@ -320,7 +363,19 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       throw err
     }
 
-    return { groupMoves, taskMoves, pendingWrites: Promise.all(pendingWrites).then(() => undefined), release }
+    const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
+      if (groupMoves.length > 0 || taskMoves.length > 0) {
+        const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+        undoSystem.pushCanvasGeometryUndoSnapshot(
+          `Rotate ${affectedIds.length} canvas day item${affectedIds.length === 1 ? '' : 's'}`,
+          affectedIds,
+          snapshotBefore,
+          snapshotAfter
+        )
+      }
+    })
+
+    return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
   }
 
   function dismissBanner() {

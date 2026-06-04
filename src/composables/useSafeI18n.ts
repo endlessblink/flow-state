@@ -116,7 +116,10 @@ const currentLocale = ref('en')
  * Get nested value from object using dot notation
  */
 function getNestedValue(obj: Messages, path: string): string {
-  const value = path.split('.').reduce((acc, key) => acc?.[key], obj)
+  const value = path.split('.').reduce<unknown>((acc, key) => {
+    if (!acc || typeof acc !== 'object') return undefined
+    return (acc as Record<string, unknown>)[key]
+  }, obj)
   return typeof value === 'string' ? value : path
 }
 

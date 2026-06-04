@@ -159,7 +159,7 @@ interface Props {
   currentFilter?: 'today' | 'week' | null
   density?: 'ultrathin' | 'compact' | 'comfortable' | 'spacious'
   showDoneColumn?: boolean
-  viewType?: 'priority' | 'date' | 'category' | 'list'
+  viewType?: 'status' | 'priority' | 'date' | 'category' | 'list'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -175,7 +175,7 @@ const emit = defineEmits<{
   editTask: [taskId: string]
   deleteTask: [taskId: string]
   moveTask: [taskId: string, newStatus: Task['status']]
-  addTask: [payload: { columnKey: string, projectId: string, viewType: 'priority' | 'date' | 'category' | 'list' }]
+  addTask: [payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' | 'category' | 'list' }]
   contextMenu: [event: MouseEvent, task: Task]
   groupContextMenu: [event: MouseEvent, project: Project]
 }>()
@@ -197,7 +197,7 @@ const currentViewType = computed(() => props.viewType || 'priority')
 
 // Column definitions
 const statusColumns = computed(() => {
-  const columns = [
+  const columns: { key: Task['status']; label: string }[] = [
     { key: 'todo', label: t('kanban.todo') }
   ]
   if (props.showDoneColumn) columns.push({ key: 'done', label: t('kanban.done') })

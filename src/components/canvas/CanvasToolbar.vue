@@ -80,13 +80,31 @@
         >
           <LayoutGrid :size="14" />
         </button>
+        <button
+          v-if="showTidyDebug"
+          class="toolbar-btn"
+          title="Copy Tidy debug plan"
+          aria-label="Copy Tidy debug plan"
+          @click="$emit('debugTidyPlan')"
+        >
+          <ClipboardList :size="14" />
+        </button>
+        <button
+          v-if="showTidyDebug"
+          class="toolbar-btn"
+          title="Apply Tidy and copy before/after debug"
+          aria-label="Apply Tidy and copy debug"
+          @click="$emit('debugTidyApply')"
+        >
+          <ClipboardCheck :size="14" />
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock, LayoutGrid } from 'lucide-vue-next'
+import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock, LayoutGrid, ClipboardList, ClipboardCheck } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
 defineEmits<{
@@ -94,9 +112,12 @@ defineEmits<{
   (e: 'createGroup', event: MouseEvent): void
   (e: 'rotateDayGroups'): void
   (e: 'tidyLayout'): void
+  (e: 'debugTidyPlan'): void
+  (e: 'debugTidyApply'): void
 }>()
 
 const taskStore = useTaskStore()
+const showTidyDebug = import.meta.env.DEV
 </script>
 
 <style scoped>

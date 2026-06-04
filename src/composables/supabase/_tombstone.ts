@@ -6,7 +6,7 @@ export function useTombstoneDatabase(ctx: DatabaseContext) {
     // TASK-317: Record tombstone for permanent deletions
     // Tombstones prevent zombie data resurrection during backup restore
     // TASK-344: Task tombstones are now permanent (expires_at = NULL)
-    const recordTombstone = async (entityType: 'task' | 'group' | 'project', entityId: string): Promise<void> => {
+    const recordTombstone = async (entityType: 'task' | 'group' | 'project' | 'lane', entityId: string): Promise<void> => {
         const userId = getUserIdSafe()
         if (!userId) {
             console.debug('⏭️ [GUEST] Skipping recordTombstone - not authenticated')

@@ -251,6 +251,8 @@ export function useQuickSort() {
   }
 
   async function markTaskDone(taskId: string) {
+    const oldStatus = taskStore.rawTasks.find(task => task.id === taskId)?.status ?? 'todo'
+
     // Mark task as done - AWAIT to ensure persistence (BUG-1051)
     await taskStore.updateTask(taskId, { status: 'done' })
 
@@ -258,10 +260,12 @@ export function useQuickSort() {
       id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: 'MARK_DONE',
       taskId,
-      oldProjectId: undefined,
-      newProjectId: undefined,
-      timestamp: Date.now()
-    }
+      oldStatus,
+      newStatus: 'done',
+    oldProjectId: undefined,
+    newProjectId: undefined,
+    timestamp: Date.now()
+  }
 
     quickSortStore.recordAction(action)
     addProcessedId(taskId)
@@ -273,12 +277,14 @@ export function useQuickSort() {
     const taskToDelete = taskStore._rawTasks.find(t => t.id === taskId)
 
     const action: CategoryAction = {
-      id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'MARK_DONE_AND_DELETE',
-      taskId,
-      oldProjectId: undefined,
-      newProjectId: undefined,
-      deletedTask: taskToDelete ? { ...taskToDelete } : undefined,
+    id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    type: 'MARK_DONE_AND_DELETE',
+    taskId,
+    oldStatus: taskToDelete?.status ?? 'todo',
+    newStatus: 'done',
+    oldProjectId: undefined,
+    newProjectId: undefined,
+    deletedTask: taskToDelete ? { ...taskToDelete } : undefined,
       timestamp: Date.now()
     }
 
@@ -358,9 +364,18 @@ export function useQuickSort() {
     } else if (action.type === 'CATEGORIZE_TASK') {
       // Reapply project assignment - AWAIT to ensure persistence (BUG-1051)
       await taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
+    } else if (action.type === 'MARK_DONE') {
+      await taskStore.updateTask(action.taskId, {
+        status: action.newStatus ?? 'done',
+        projectId: action.newProjectId
+      })
+      addProcessedId(action.taskId)
+      advanceToNextTask()
     } else {
-      // MARK_DONE or MARK_DONE_AND_DELETE
-      await taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
+      if (taskStore.rawTasks.some(task => task.id === action.taskId && !task._soft_deleted)) {
+        await taskStore.updateTask(action.taskId, { status: action.newStatus ?? 'done' })
+        await taskStore.deleteTask(action.taskId, 'quicksort-redo')
+      }
       addProcessedId(action.taskId)
       advanceToNextTask()
     }

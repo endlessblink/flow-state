@@ -10,7 +10,6 @@ import { useMagicKeys, useWindowSize } from '@vueuse/core'
 
 import resourceManager from '../../utils/canvas/resourceManager'
 import { getUndoSystem } from '@/composables/undoSingleton'
-import { reconcileTaskParentsByContainment } from '@/utils/canvas/spatialContainment'
 import { logHierarchySummary } from '@/utils/canvas/invariants'
 import { useCanvasOperationState } from './useCanvasOperationState'
 
@@ -44,7 +43,7 @@ import { useCanvasZoom } from './useCanvasZoom' // Keeping for cleanup hooks
 import { useCanvasAlignment } from './useCanvasAlignment'
 import { useCanvasConnections } from './useCanvasConnections'
 import { useCanvasEdgeSync } from './useCanvasEdgeSync'
-import { useCanvasAutoPlacement } from './useCanvasAutoPlacement'
+import { traceCanvasDone, traceCanvasDoneTasks } from '@/utils/canvas/doneTrace'
 
 // Helper for error boundaries
 const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) => {
@@ -61,17 +60,6 @@ const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) =
     }
 }
 
-// =============================================================================
-// DRIFT FIX: Module-level flag to ensure reconciliation runs only ONCE per browser session
-// =============================================================================
-// This prevents parent drift when:
-// - Tab visibility changes (focus/unfocus)
-// - Auth token refreshes (TOKEN_REFRESHED event)
-// - CanvasView remounts for any reason
-// Reconciliation should only happen on FIRST load, not repeatedly.
-let hasReconciledThisSession = false
-let hasAutoPlacedThisSession = false
-
 export function useCanvasOrchestrator() {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
@@ -82,8 +70,6 @@ export function useCanvasOrchestrator() {
 
     // Store cleanup functions for onUnmounted - must be registered synchronously
     const positionManagerUnsubscribe = ref<(() => void) | null>(null)
-
-    const { autoPlaceEligibleTasks } = useCanvasAutoPlacement()
 
     // --- 1. Core State & Vue Flow (Via useCanvasCore) ---
     const {
@@ -236,6 +222,13 @@ export function useCanvasOrchestrator() {
         try {
             const t0 = performance.now()
             const tasksToSync = tasks || tasksWithCanvasPosition.value
+            traceCanvasDone('orchestrator:syncNodes:before', {
+                force: options?.force === true,
+                taskCount: tasksToSync.length,
+                canAcceptRemoteUpdate: canAcceptRemoteUpdate.value,
+                opState: opCurrentType.value
+            })
+            traceCanvasDoneTasks('orchestrator:syncNodes:tasks', tasksToSync)
             persistence.syncStoreToCanvas(tasksToSync)
             const syncMs = performance.now() - t0
             if (import.meta.env.DEV && zoomPerfActive) {
@@ -268,7 +261,10 @@ export function useCanvasOrchestrator() {
         if (!options?.force && !canAcceptRemoteUpdate.value) {
             return
         }
-        edgeSync.syncEdges(tasksWithCanvasPosition.value)
+        const visibleEdgeTasks = taskStore.hideCanvasDoneTasks
+            ? tasksWithCanvasPosition.value.filter(task => task.status !== 'done')
+            : tasksWithCanvasPosition.value
+        edgeSync.syncEdges(visibleEdgeTasks)
     }
 
     // Batched edge sync to coalesce multiple updates
@@ -413,6 +409,11 @@ export function useCanvasOrchestrator() {
         actions.collectOverdueTasksNearGroup(sectionId)
     }
 
+    // TASK-1811: Apply group due date / properties to the tasks inside a group
+    const applyGroupPropsToTasks = (groupId: string, mode: 'dueDate' | 'all') => {
+        actions.applyGroupPropsToTasks(groupId, mode)
+    }
+
     // TASK-1222: Collect overdue tasks and arrange near a group
     const collectOverdueTasksNearGroup = (sectionId: string) => {
         actions.collectOverdueTasksNearGroup(sectionId)
@@ -505,40 +506,14 @@ export function useCanvasOrchestrator() {
                         console.log('✅ [ORCHESTRATOR] Initialization complete')
                     }
 
-                    // CONTAINMENT RECONCILIATION: Fix legacy tasks with incorrect parentId
-                    // DRIFT FIX: Only run ONCE per browser session to prevent repeated parent changes
-                    // This guards against remounts from: tab focus, auth refresh, route changes
-                    // BUG-1084 FIX: Also guard against empty groups - reconciliation needs groups to determine containment
-                    // RACE FIX: Moved from onMounted into init watcher so reconciliation runs AFTER
-                    // both stores are fully loaded — prevents incorrect parentId from partial task data
-                    if (!hasReconciledThisSession && canvasStore.groups.length > 0) {
-                        hasReconciledThisSession = true
-                        if (import.meta.env.DEV) {
-                            console.log('🔧 [ORCHESTRATOR] Starting ONE-TIME reconciliation with', taskStore.tasks.length, 'tasks')
-                        }
-                        await reconcileTaskParentsByContainment(
-                            taskStore.tasks,
-                            canvasStore.groups,
-                            async (taskId, updates) => {
-                                // Update store (will auto-sync to Supabase via existing persistence)
-                                // GEOMETRY WRITER: One-time reconciliation only (TASK-255)
-                                if (import.meta.env.DEV) {
-                                    console.log(`🔧[RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
-                                }
-                                taskStore.updateTask(taskId, updates, 'RECONCILE')
-                            },
-                            { writeToDb: true, silent: false }
-                        )
-                    } else if (hasReconciledThisSession) {
-                        if (import.meta.env.DEV) {
-                            console.log('⏭️ [ORCHESTRATOR] Skipping reconciliation - already ran this session')
-                        }
-                    }
-
+                    // Startup must be a read/projection path. Rewriting parentId from spatial
+                    // containment on each browser session made hard refreshes and Electron
+                    // update restarts capable of changing canvas topology from partially
+                    // loaded or mixed local/remote geometry. Parent changes now belong only
+                    // to explicit drag/drop flows.
                     // Auto-place disabled: tasks should only appear on canvas via explicit user action
                     // (context menu "Canvas Group", due-date auto-routing, or drag-and-drop)
                     // Previously: autoPlaceEligibleTasks() ran here on every app load
-                    hasAutoPlacedThisSession = true
 
                     // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)
                     canvasStore.recalculateAllTaskCounts(taskStore.tasks)
@@ -697,6 +672,7 @@ export function useCanvasOrchestrator() {
     watch(() => taskStore.hideCanvasDoneTasks, () => {
         if (!isInitialized.value) return
         if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:hideCanvasDoneTasks', viewport.value?.zoom ?? 1)
+        traceCanvasDone('watcher:hideCanvasDoneTasks')
         batchedSyncNodes()
     })
     watch(() => taskStore.hideCanvasOverdueTasks, () => {
@@ -737,6 +713,7 @@ export function useCanvasOrchestrator() {
     // canvasUiSyncRequest is incremented by taskOperations.ts after task create/delete
     watch(canvasUiSyncRequest, () => {
         if (!isInitialized.value) return
+        traceCanvasDone('watcher:canvasUiSyncRequest')
         batchedSyncNodes(undefined, { force: true })
     })
 
@@ -750,6 +727,9 @@ export function useCanvasOrchestrator() {
         // Skip during initialization - onMounted handles initial sync
         if (!isInitialized.value) return
         if (isSyncingFromWatcher) return
+        traceCanvasDone('watcher:taskIds', {
+            taskSignature: tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|')
+        })
         isSyncingFromWatcher = true
         try {
             if (persistence.isSyncing.value) return
@@ -762,6 +742,13 @@ export function useCanvasOrchestrator() {
         }
     })
 
+    watch(() => tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|'), () => {
+        if (!isInitialized.value) return
+        traceCanvasDone('watcher:taskGeometryStatusSignature', {
+            taskSignature: tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|')
+        })
+    })
+
     // CRITICAL FIX: Watch for group changes (e.g. creation/deletion/remote sync)
     watch(() => canvasStore.groups.length, () => {
         // Skip during initialization - onMounted handles initial sync
@@ -772,6 +759,23 @@ export function useCanvasOrchestrator() {
             if (persistence.isSyncing.value) return
             if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:groups.length', viewport.value?.zoom ?? 1)
             canvasStore.recalculateAllTaskCounts(taskStore.tasks)
+            batchedSyncNodes()
+        } finally {
+            isSyncingFromWatcher = false
+        }
+    })
+
+    // Collapse fix: re-sync when any group's collapsed state flips. updateGroup
+    // does not bump syncTrigger and the groups watcher above only fires on
+    // length change, so without this a collapse/expand never refreshes node data
+    // (child task/group nodes would never hide). Mirrors the task-signature
+    // watcher pattern above.
+    watch(() => canvasStore.groups.map(g => `${g.id}:${g.isCollapsed ? 1 : 0}`).join('|'), () => {
+        if (!isInitialized.value) return
+        if (isSyncingFromWatcher) return
+        isSyncingFromWatcher = true
+        try {
+            if (persistence.isSyncing.value) return
             batchedSyncNodes()
         } finally {
             isSyncingFromWatcher = false
@@ -867,6 +871,7 @@ export function useCanvasOrchestrator() {
         ...smartGroups,
         collectTasksForSection,
         collectOverdueTasksNearGroup,
+        applyGroupPropsToTasks,
         ...connections,
 
         // Interaction Handlers
@@ -915,7 +920,10 @@ export function useCanvasOrchestrator() {
                 if (c.type === 'remove' && c.id?.startsWith('img-')) return false
                 return true
             })
-            applyNodeChanges(filtered as import('@vue-flow/core').NodeChange[])
+            const nextNodes = applyNodeChanges(filtered as import('@vue-flow/core').NodeChange[])
+            if (Array.isArray(nextNodes)) {
+                nodes.value = [...nextNodes]
+            }
         },
         handleEdgesChange: applyEdgeChanges,
         handleConnect: (params: import('@vue-flow/core').Connection) => {

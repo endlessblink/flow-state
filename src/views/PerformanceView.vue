@@ -65,7 +65,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(result, key) in results" :key="key">
+              <tr v-for="[key, result] in resultRows" :key="key">
                 <td class="test-name">
                   {{ result.name }}
                 </td>
@@ -138,6 +138,7 @@ import { Zap, Save } from 'lucide-vue-next' // Import icons
 import type { BenchmarkResult, BenchmarkSuite } from '@/utils/performanceBenchmark'
 
 const results = ref<Partial<BenchmarkSuite>>({})
+const resultRows = computed(() => Object.entries(results.value).filter((entry): entry is [string, BenchmarkResult] => Boolean(entry[1])))
 const isRunning = ref(false) // Renamed from isBenchmarkRunning
 const currentProgress = ref(0)
 const hasResults = computed(() => Object.keys(results.value).length > 0)
@@ -245,13 +246,13 @@ const getStatusLabel = (result: BenchmarkResult) => {
 
 const recommendations = computed(() => {
   const recs = []
-  if (results.value?.canvasPerformance?.averageTime > 50) {
+  if ((results.value?.canvasPerformance?.averageTime ?? 0) > 50) {
     recs.push({ type: 'Canvas', message: 'High latency detected with many nodes. Consider LOD optimization.' })
   }
-  if (results.value?.memoryEfficiency?.memoryUsage > 200 * 1024 * 1024) {
+  if ((results.value?.memoryEfficiency?.memoryUsage ?? 0) > 200 * 1024 * 1024) {
     recs.push({ type: 'Memory', message: 'Memory usage is elevated. Check for leaks in node pooling.' })
   }
-  if (results.value?.renderPerformance?.averageTime > 20) {
+  if ((results.value?.renderPerformance?.averageTime ?? 0) > 20) {
     recs.push({ type: 'Render', message: 'Main thread is taking too long for UI updates. Review watcher complexity.' })
   }
   return recs

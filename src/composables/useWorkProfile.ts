@@ -4,6 +4,8 @@ import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import type { WorkProfile, MemoryObservation } from '@/utils/supabaseMappers'
 
+export type WorkProfileData = WorkProfile
+
 const cachedProfile = ref<WorkProfile | null>(null)
 const isLoading = ref(false)
 
@@ -96,6 +98,7 @@ export function useWorkProfile() {
         pomodoroMap.set(date, { minutes: 0, tasks: new Set() })
       }
       const dayData = pomodoroMap.get(date)
+      if (!dayData) continue
       dayData.minutes += Math.round(entry.duration / 60)
       if (entry.taskId) dayData.tasks.add(entry.taskId)
 

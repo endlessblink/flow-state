@@ -1,7 +1,7 @@
 import { computed, ref, onUnmounted, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
-import type { WeekEvent } from '@/types/tasks'
+import type { TaskInstance, WeekEvent } from '@/types/tasks'
 import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
 import { CALENDAR_SLOT_HEIGHT_PX } from '@/constants/calendar'
@@ -89,6 +89,27 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
 
   onUnmounted(cleanupAllListeners)
   // ------------------------------------------
+
+  const updateTaskInstanceFieldsWithUndo = async (
+    taskId: string,
+    instanceId: string | undefined,
+    instanceUpdates: Partial<TaskInstance>,
+    taskUpdates: Partial<typeof taskStore.rawTasks[number]> = {}
+  ) => {
+    const task = taskStore.getTask(taskId)
+    if (!task) return
+
+    const instances = instanceId && task.instances
+      ? task.instances.map(instance =>
+        instance.id === instanceId ? { ...instance, ...instanceUpdates } : instance
+      )
+      : undefined
+
+    await taskStore.updateTaskWithUndo(taskId, {
+      ...taskUpdates,
+      ...(instances ? { instances } : {})
+    })
+  }
 
   const workingHours = Array.from({ length: 17 }, (_, i) => i + 6) // 6 AM to 10 PM
   const dragMode = ref<string | null>(null)
@@ -243,9 +264,10 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const dayColumnWidth = 100 / weekDays.value.length
 
     // TASK-1521: Override position with drag preview while dragging (preview-then-commit)
-    const isBeingDragged = weekDragPreview.value?.taskId === event.taskId && weekDragPreview.value?.isDragging
-    const previewSlot = isBeingDragged ? weekDragPreview.value!.previewSlot : event.startSlot
-    const previewDayIndex = isBeingDragged ? weekDragPreview.value!.previewDayIndex : event.dayIndex
+    const activePreview = weekDragPreview.value
+    const isBeingDragged = activePreview?.taskId === event.taskId && activePreview.isDragging
+    const previewSlot = isBeingDragged ? activePreview.previewSlot : event.startSlot
+    const previewDayIndex = isBeingDragged ? activePreview.previewDayIndex : event.dayIndex
 
     // Calculate column positioning within the day
     const eventWidthWithinDay = dayColumnWidth / event.totalColumns
@@ -355,7 +377,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
         // Duplicate mode: create a copy with the final schedule
         const originalTask = taskStore.getTask(calendarEvent.taskId)
         if (originalTask) {
-          taskStore.createTask({
+          await taskStore.createTaskWithUndo({
             title: originalTask.title,
             description: originalTask.description,
             instances: [{
@@ -483,16 +505,12 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
 
       // Commit final values to store (async, after visual cleanup)
       if (direction === 'bottom') {
-        await taskStore.updateTask(calendarEvent.taskId, {
-          estimatedDuration: finalDuration
-        })
-
-        // Update instance duration if present
-        if (calendarEvent.instanceId) {
-          taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
-            duration: finalDuration
-          })
-        }
+        await updateTaskInstanceFieldsWithUndo(
+          calendarEvent.taskId,
+          calendarEvent.instanceId,
+          { duration: finalDuration },
+          { estimatedDuration: finalDuration }
+        )
       } else {
         const newHour = Math.floor(finalStartSlot / 2) + WORKING_HOURS_OFFSET
         const newMinute = (finalStartSlot % 2) * 30
@@ -500,18 +518,12 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
         if (newHour >= WORKING_HOURS_OFFSET && newHour < 23) {
           const newScheduledTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`
 
-          // Update instance if present (instance-based tasks); fall back to legacy task fields
-          if (calendarEvent.instanceId) {
-            await taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
-              scheduledTime: newScheduledTime,
-              duration: finalDuration
-            })
-          } else {
-            await taskStore.updateTask(calendarEvent.taskId, {
-              scheduledTime: newScheduledTime,
-              estimatedDuration: finalDuration
-            })
-          }
+          await updateTaskInstanceFieldsWithUndo(
+            calendarEvent.taskId,
+            calendarEvent.instanceId,
+            { scheduledTime: newScheduledTime, duration: finalDuration },
+            { scheduledTime: newScheduledTime, estimatedDuration: finalDuration }
+          )
         }
       }
     }
@@ -574,7 +586,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
       scheduledTime: timeStr,
       duration: task.estimatedDuration || 60
     }
-    await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
+    await taskStore.updateTaskWithUndo(taskId, {
       instances: [newInstance],
       isInInbox: false
     })

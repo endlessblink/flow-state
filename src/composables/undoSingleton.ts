@@ -57,6 +57,8 @@ export type UndoOperationType =
   | 'group-delete'
   | 'group-update'
   | 'group-resize'
+  | 'canvas-connection'
+  | 'canvas-geometry'
   | 'image-delete'  // TASK-1690: Canvas image deletion (undo restores image)
   | 'legacy' // For backward compatibility with entries that don't have metadata
 
@@ -77,6 +79,27 @@ interface OperationSnapshot {
   operation: UndoOperation
   snapshotBefore: UnifiedUndoState  // State before the operation (for undo)
   snapshotAfter: UnifiedUndoState   // State after the operation (for redo)
+}
+
+const computeChangedFields = (
+  sourceTask: Task,
+  comparisonTask: Task
+): Record<string, unknown> => {
+  const changedFields: Record<string, unknown> = {}
+
+  for (const key of Object.keys(sourceTask) as Array<keyof typeof sourceTask>) {
+    if (JSON.stringify(sourceTask[key]) !== JSON.stringify((comparisonTask as typeof sourceTask)[key])) {
+      changedFields[key] = sourceTask[key]
+    }
+  }
+
+  for (const key of Object.keys(comparisonTask) as Array<keyof typeof comparisonTask>) {
+    if (!(key in sourceTask) && !(key in changedFields)) {
+      changedFields[key as string] = undefined
+    }
+  }
+
+  return changedFields
 }
 
 // Separate operation history that parallels VueUse's refHistory
@@ -199,9 +222,11 @@ function initializeRefHistory() {
  */
 async function clearTombstoneForUndo(taskId: string): Promise<void> {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    const sb = supabase
+    if (!sb?.auth) return
+    const { data: { session } } = await sb.auth.getSession()
     if (!session?.user) return
-    await supabase.from('tombstones').delete()
+    await sb.from('tombstones').delete()
       .eq('entity_type', 'task').eq('entity_id', taskId).eq('user_id', session.user.id)
   } catch (e) {
     console.warn('[UNDO] Tombstone cleanup error:', e)
@@ -289,21 +314,7 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
         const previousTask = snapshotBefore.tasks.find(t => t.id === taskId)
         const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
         if (previousTask && afterTask) {
-          // Only restore the fields that actually differed between before and after
-          const changedFields: Record<string, unknown> = {}
-          for (const key of Object.keys(afterTask) as Array<keyof typeof afterTask>) {
-            if (JSON.stringify(afterTask[key]) !== JSON.stringify((previousTask as typeof afterTask)[key])) {
-              changedFields[key] = (previousTask as typeof afterTask)[key]
-            }
-          }
-          // BUG-1739: Also detect fields that were REMOVED by the operation
-          // (exist in previousTask but stripped from afterTask by JSON.stringify(undefined))
-          // e.g. canvasPosition cleared to undefined → key disappears after safeClone
-          for (const key of Object.keys(previousTask) as Array<keyof typeof previousTask>) {
-            if (!(key in afterTask) && !(key in changedFields)) {
-              changedFields[key as string] = previousTask[key]
-            }
-          }
+          const changedFields = computeChangedFields(previousTask, afterTask)
           if (Object.keys(changedFields).length > 0) {
             await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'USER') // BUG-1051: AWAIT to ensure persistence
           }
@@ -340,6 +351,42 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       for (const groupId of operation.affectedIds) {
         const previousGroup = snapshotBefore.groups.find(g => g.id === groupId)
         if (previousGroup) {
+          await canvasStore.updateGroup(groupId, {
+            ...previousGroup,
+            position: previousGroup.position,
+            parentGroupId: previousGroup.parentGroupId
+          })
+        }
+      }
+      break
+    }
+
+    case 'canvas-connection': {
+      for (const groupId of operation.affectedIds) {
+        const previousGroup = snapshotBefore.groups.find(g => g.id === groupId)
+        if (previousGroup) {
+          await canvasStore.updateGroup(groupId, { linkedParentTaskId: previousGroup.linkedParentTaskId ?? null })
+        }
+      }
+      break
+    }
+
+    case 'canvas-geometry': {
+      for (const taskId of operation.affectedIds) {
+        const previousTask = snapshotBefore.tasks.find(t => t.id === taskId)
+        const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
+        if (previousTask && afterTask) {
+          const changedFields = computeChangedFields(previousTask, afterTask)
+          if (Object.keys(changedFields).length > 0) {
+            await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'DRAG')
+          }
+        }
+      }
+
+      for (const groupId of operation.affectedIds) {
+        const previousGroup = snapshotBefore.groups.find(g => g.id === groupId)
+        const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
+        if (previousGroup && afterGroup) {
           await canvasStore.updateGroup(groupId, {
             ...previousGroup,
             position: previousGroup.position,
@@ -450,13 +497,7 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
         const beforeTask = snapshotBefore.tasks.find(t => t.id === taskId)
         const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
         if (afterTask && beforeTask) {
-          // Only re-apply the fields that actually differed between before and after
-          const changedFields: Record<string, unknown> = {}
-          for (const key of Object.keys(afterTask) as Array<keyof typeof afterTask>) {
-            if (JSON.stringify(afterTask[key]) !== JSON.stringify((beforeTask as typeof afterTask)[key])) {
-              changedFields[key] = afterTask[key]
-            }
-          }
+          const changedFields = computeChangedFields(afterTask, beforeTask)
           if (Object.keys(changedFields).length > 0) {
             await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'USER') // BUG-1051: AWAIT to ensure persistence
           }
@@ -491,6 +532,42 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       for (const groupId of operation.affectedIds) {
         const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
         if (afterGroup) {
+          await canvasStore.updateGroup(groupId, {
+            ...afterGroup,
+            position: afterGroup.position,
+            parentGroupId: afterGroup.parentGroupId
+          })
+        }
+      }
+      break
+    }
+
+    case 'canvas-connection': {
+      for (const groupId of operation.affectedIds) {
+        const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
+        if (afterGroup) {
+          await canvasStore.updateGroup(groupId, { linkedParentTaskId: afterGroup.linkedParentTaskId ?? null })
+        }
+      }
+      break
+    }
+
+    case 'canvas-geometry': {
+      for (const taskId of operation.affectedIds) {
+        const beforeTask = snapshotBefore.tasks.find(t => t.id === taskId)
+        const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
+        if (afterTask && beforeTask) {
+          const changedFields = computeChangedFields(afterTask, beforeTask)
+          if (Object.keys(changedFields).length > 0) {
+            await taskStore.updateTask(taskId, changedFields as Partial<Task>, 'DRAG')
+          }
+        }
+      }
+
+      for (const groupId of operation.affectedIds) {
+        const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
+        const beforeGroup = snapshotBefore.groups.find(g => g.id === groupId)
+        if (afterGroup && beforeGroup) {
           await canvasStore.updateGroup(groupId, {
             ...afterGroup,
             position: afterGroup.position,
@@ -925,6 +1002,41 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
   await commitOperation(handle)
 }
 
+const bulkUpdateTasksWithUndo = async (
+  taskUpdates: Array<{ id: string; updates: Partial<Task> }>,
+  description?: string
+) => {
+  const uniqueUpdates = taskUpdates.filter((update, index, allUpdates) =>
+    update.id && allUpdates.findIndex(candidate => candidate.id === update.id) === index
+  )
+  if (uniqueUpdates.length === 0) return
+
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+  const affectedIds = uniqueUpdates.map(update => update.id)
+  const isPositionUpdate = uniqueUpdates.some(({ updates }) =>
+    'canvasPosition' in updates || 'parentId' in updates
+  )
+  const operationType: UndoOperationType = isPositionUpdate ? 'task-move' : 'task-update'
+
+  const handle = await beginOperation({
+    type: operationType,
+    affectedIds,
+    description: description ?? `Bulk update ${uniqueUpdates.length} task${uniqueUpdates.length > 1 ? 's' : ''}`
+  })
+
+  try {
+    for (const { id, updates } of uniqueUpdates) {
+      await taskStore.updateTask(id, updates)
+    }
+    await nextTick()
+    await commitOperation(handle)
+  } catch (error) {
+    console.error('❌ bulkUpdateTasksWithUndo failed:', error)
+    throw error
+  }
+}
+
 const createTaskWithUndo = async (taskData: Partial<Task>) => {
   // TASK-061: Demo content guard - defense in depth (also checked in taskStore.createTask)
   if (taskData.title) {
@@ -1004,6 +1116,110 @@ const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup
     console.error('❌ updateGroupWithUndo failed:', error)
     throw error
   }
+}
+
+const canvasConnectionWithUndo = async (
+  description: string,
+  affectedIds: string[],
+  applyConnectionChange: () => Promise<void>
+) => {
+  const handle = await beginOperation({
+    type: 'canvas-connection',
+    affectedIds: [...new Set(affectedIds)],
+    description
+  })
+
+  try {
+    await applyConnectionChange()
+    await nextTick()
+    await commitOperation(handle)
+  } catch (error) {
+    console.error('❌ canvasConnectionWithUndo failed:', error)
+    throw error
+  }
+}
+
+const canvasGeometryWithUndo = async (
+  description: string,
+  affectedIds: string[],
+  applyGeometryChange: () => Promise<boolean | void>
+) => {
+  const uniqueAffectedIds = [...new Set(affectedIds)]
+  if (uniqueAffectedIds.length === 0) {
+    await applyGeometryChange()
+    return
+  }
+
+  const handle = await beginOperation({
+    type: 'canvas-geometry',
+    affectedIds: uniqueAffectedIds,
+    description
+  })
+
+  try {
+    const changed = await applyGeometryChange()
+    if (changed === false) return
+
+    await nextTick()
+    const snapshotAfter = await captureCurrentState(uniqueAffectedIds)
+    const tasksChanged = handle.before.tasks.some(beforeTask => {
+      const afterTask = snapshotAfter.tasks.find(task => task.id === beforeTask.id)
+      return afterTask && Object.keys(computeChangedFields(beforeTask, afterTask)).length > 0
+    })
+    const groupsChanged = handle.before.groups.some(beforeGroup => {
+      if (!uniqueAffectedIds.includes(beforeGroup.id)) return false
+      const afterGroup = snapshotAfter.groups.find(group => group.id === beforeGroup.id)
+      return afterGroup && JSON.stringify(beforeGroup) !== JSON.stringify(afterGroup)
+    })
+
+    if (!tasksChanged && !groupsChanged) return
+
+    operationStack.value.push({
+      operation: handle.operation,
+      snapshotBefore: handle.before,
+      snapshotAfter
+    })
+    if (operationStack.value.length > 30) operationStack.value.shift()
+    redoOperationStack.value = []
+
+    if (unifiedState && commit) {
+      unifiedState.value = snapshotAfter
+      commit()
+    }
+  } catch (error) {
+    console.error('❌ canvasGeometryWithUndo failed:', error)
+    throw error
+  }
+}
+
+const pushCanvasGeometryUndoSnapshot = (
+  description: string,
+  affectedIds: string[],
+  snapshotBefore: UnifiedUndoState,
+  snapshotAfter: UnifiedUndoState
+) => {
+  const uniqueAffectedIds = [...new Set(affectedIds)]
+  if (uniqueAffectedIds.length === 0) return false
+
+  operationStack.value.push({
+    operation: {
+      type: 'canvas-geometry',
+      affectedIds: uniqueAffectedIds,
+      description,
+      timestamp: Date.now()
+    },
+    snapshotBefore,
+    snapshotAfter
+  })
+  if (operationStack.value.length > 30) operationStack.value.shift()
+  redoOperationStack.value = []
+
+  if (unifiedState && commit) {
+    unifiedState.value = snapshotAfter
+    commit()
+  }
+
+  return true
 }
 
 const deleteGroupWithUndo = async (groupId: string) => {
@@ -1229,12 +1445,16 @@ export function getUndoSystem() {
     bulkMoveToInboxWithUndo,
     rippleShiftWithUndo,
     updateTaskWithUndo,
+    bulkUpdateTasksWithUndo,
     createTaskWithUndo,
 
     // Group operations with undo (ISSUE-008 fix / BUG-008 fix)
     createGroupWithUndo,
     updateGroupWithUndo,
     deleteGroupWithUndo,
+    canvasConnectionWithUndo,
+    canvasGeometryWithUndo,
+    pushCanvasGeometryUndoSnapshot,
 
     // BUG-309-B: Debugging/inspection
     getOperationStack: () => [...operationStack.value],

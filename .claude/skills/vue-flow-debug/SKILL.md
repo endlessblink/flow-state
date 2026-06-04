@@ -42,6 +42,33 @@ keywords:
 
 ### Understanding position vs computedPosition
 
+### FlowState Rule: Absolute Store, Relative Vue Flow
+
+FlowState stores `task.canvasPosition` and `group.position` as absolute world/canvas coordinates. Vue Flow nodes are only a display projection.
+
+- Store/DB/Pinia/PositionManager writes: absolute coordinates.
+- Vue Flow root nodes: `position` is absolute.
+- Vue Flow child nodes with `parentNode`: `position` must be relative to the direct parent.
+- Vue Flow `computedPosition` is the absolute visual position and is preferred for persistence after drag.
+- Every `setNodes()`/sync/reload path must convert parented task/group absolute store positions to parent-relative Vue Flow positions.
+- Every drag/programmatic write must persist absolute positions back to the store.
+
+Never feed absolute `task.canvasPosition` directly into a child node's `position` while also setting `parentNode`. That causes exactly the FlowState Electron/reload symptom: tasks appear outside their group or drift after restart/update.
+
+### FlowState Rule: Programmatic Layout Must Stack Visible Nodes Only
+
+Canvas `Tidy` and explicit `Rotate day groups` must use the same layout concept:
+
+- Stack from the group header, not from each task's previous Y.
+- Use measured rendered task heights and a small content gap; do not use equal top-edge rows for variable-height cards.
+- Build the stack from tasks currently visible on the canvas. Hidden done/overdue/filtered/pinned/completion-record tasks must not consume invisible rows, or users see unexplained blank gaps.
+- Keep day/smart groups single-column unless the user explicitly asks for columns.
+- Persist store coordinates as absolute `canvasPosition`, then project Vue Flow child nodes as parent-relative.
+- Do not set `computedPosition`; it is internal/derived. Strip Vue Flow internal fields before `setNodes`.
+- After programmatic reparent/restack, use one atomic `setNodes(...)`, wait for Vue Flow to settle, force a clean store→Vue Flow sync, and release PositionManager/LockManager locks.
+
+Tidy may repair loose tasks that visibly sit inside/below a group column, but it must not move already-parented tasks between groups by due date or geometry. Due-date moves belong to explicit move/rotation metadata flows, not generic Tidy.
+
 **node.position (Stored in State)**
 *   For root nodes: position = absolute coordinates on the canvas
 *   For child nodes (with parentNode set): position = relative to parent's top-left corner

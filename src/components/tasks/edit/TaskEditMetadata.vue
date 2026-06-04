@@ -79,7 +79,7 @@
           :options="durationOptions"
           class="inline-select"
           compact
-          @update:model-value="estimatedDuration = $event"
+          @update:model-value="estimatedDuration = $event === null ? null : Number($event)"
         />
       </div>
     </div>
@@ -142,6 +142,18 @@
           @update:model-value="updateProject"
         />
       </div>
+
+      <!-- Lane (TASK-1812: sprint-style cross-project goal) -->
+      <div class="metadata-field metadata-field--dropdown">
+        <component :is="Route" :size="14" />
+        <span class="field-label">Lane</span>
+        <CustomSelect
+          :model-value="modelValue.laneId || ''"
+          :options="laneOptions"
+          compact
+          @update:model-value="updateLane"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -150,10 +162,11 @@
 import { computed, ref } from 'vue'
 import {
   Calendar, TimerReset, Flag, Zap, Circle,
-  CheckCircle, Layers, FolderOpen
+  CheckCircle, Layers, FolderOpen, Route
 } from 'lucide-vue-next'
 import { NPopover, NDatePicker } from 'naive-ui'
 import { type Task, useTaskStore } from '@/stores/tasks'
+import { useLaneStore } from '@/stores/lanes'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import SectionSelector from '@/components/canvas/SectionSelector.vue'
 
@@ -171,12 +184,16 @@ const emit = defineEmits<{
 }>()
 
 const taskStore = useTaskStore()
+const laneStore = useLaneStore()
 
 const showDueDatePicker = ref(false)
 
 const estimatedDuration = computed({
-  get: () => props.modelValue.estimatedDuration,
-  set: (val) => emit('update:modelValue', { ...props.modelValue, estimatedDuration: val as number })
+  get: () => props.modelValue.estimatedDuration ?? null,
+  set: (val: string | number | null) => emit('update:modelValue', {
+    ...props.modelValue,
+    estimatedDuration: val === null || val === '' ? undefined : Number(val)
+  })
 })
 
 const durationOptions = [
@@ -195,6 +212,15 @@ const projectOptions = computed(() => [
   ...taskStore.projects.map(p => ({
     label: `${p.emoji || '•'} ${p.name}`,
     value: p.id
+  }))
+])
+
+// TASK-1812: Lane options — leading "No Lane" entry to clear membership
+const laneOptions = computed(() => [
+  { label: 'No Lane', value: '' },
+  ...laneStore.lanes.map(l => ({
+    label: l.name,
+    value: l.id
   }))
 ])
 
@@ -317,6 +343,11 @@ const updateStatus = (value: string | number) => {
 
 const updateProject = (value: string | number) => {
   const newTask = { ...props.modelValue, projectId: String(value) || '' }
+  emit('update:modelValue', newTask)
+}
+
+const updateLane = (value: string | number) => {
+  const newTask = { ...props.modelValue, laneId: String(value) || null }
   emit('update:modelValue', newTask)
 }
 

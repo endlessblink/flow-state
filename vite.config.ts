@@ -55,11 +55,11 @@ export default defineConfig(({ mode }) => ({
       }
     },
     vue(),
-    // PWA Plugin - ROAD-004 (disabled for Tauri builds - service workers don't work with tauri:// protocol)
+    // PWA Plugin - ROAD-004 (disabled for desktop builds - service workers don't work with file:// / tauri:// protocols)
     // BUG-336: Use `disable` option instead of conditional inclusion to provide proper stub modules
     // TASK-1009: Switched to injectManifest for custom timer notification handlers
     VitePWA({
-      disable: isTauri || isCapacitor, // Provides empty stub modules for virtual:pwa-register imports
+      disable: isTauri || isCapacitor || isElectron, // Provides empty stub modules for virtual:pwa-register imports
       strategies: 'injectManifest', // TASK-1009: Use custom SW for notification actions
       srcDir: 'src',
       filename: 'sw.ts',

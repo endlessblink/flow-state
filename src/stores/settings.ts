@@ -69,6 +69,10 @@ export interface AppSettings {
     aiPremiumModel: string
     aiMonthlyBudgetCents: number
 
+    // TASK-1327: Weekly plan model override
+    weeklyPlanProvider: 'auto' | 'groq' | 'ollama' | 'openrouter'
+    weeklyPlanModel: string
+
     // TASK-1219: Time block progress notifications
     timeBlockNotifications: TimeBlockNotificationSettings
 
@@ -258,6 +262,8 @@ export const useSettingsStore = defineStore('settings', {
         aiSmartRouting: _persisted?.aiSmartRouting ?? false,
         aiPremiumModel: _persisted?.aiPremiumModel ?? 'anthropic/claude-sonnet-4-6',
         aiMonthlyBudgetCents: _persisted?.aiMonthlyBudgetCents ?? 500,
+        weeklyPlanProvider: _persisted?.weeklyPlanProvider ?? 'auto',
+        weeklyPlanModel: _persisted?.weeklyPlanModel ?? '',
 
         // TASK-1219: Time block notification defaults
         timeBlockNotifications: { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS },

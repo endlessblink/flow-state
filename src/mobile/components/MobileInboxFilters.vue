@@ -70,7 +70,7 @@ defineProps<{
   viewMode: ViewMode
   activeTimeFilter: TimeFilterType
   groupBy: GroupByType
-  sortBy: 'newest' | 'priority' | 'dueDate'
+  sortBy: 'newest' | 'priority' | 'dueDate' | 'canvasOrder'
   hideDoneTasks: boolean
   showGroupByDropdown: boolean
   groupByLabel: string

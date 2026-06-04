@@ -70,7 +70,7 @@
             @start-timer="handleStartTimer"
             @edit-task="handleEditTask"
             @delete-task="handleDeleteTask"
-            @move-task="handleMoveTask"
+            @move-task="handleListMoveTask"
             @add-task="handleAddTask"
             @context-menu="handleContextMenu"
           />
@@ -89,7 +89,7 @@
             @edit="handleEditTask"
             @update-task="handleListUpdateTask"
             @context-menu="handleContextMenu"
-            @move-task="handleMoveTask"
+            @move-task="handleListMoveTask"
             @delete-selected="handleDeleteSelected"
             @add-task-to-group="handleAddTaskToGroup"
           />
@@ -265,6 +265,13 @@ const {
   addSubtask: _handleAddSubtaskFromMenu
 } = useBoardActions({ taskStore, timerStore })
 
+const handleListMoveTask = (taskId: string, targetProjectId: string | null, targetParentId: string | null) => {
+  return taskStore.updateTaskWithUndo(taskId, {
+    projectId: targetProjectId ?? '',
+    parentTaskId: targetParentId
+  })
+}
+
 // TASK-243: Use hideDoneTasks from store instead of separate showDoneColumn
 const { hideDoneTasks } = storeToRefs(taskStore)
 const handleToggleDoneColumn = () => taskStore.toggleHideDoneTasks()
@@ -327,7 +334,7 @@ const listViewGroups = computed(() => {
 
 // TASK-1334: Handle inline task updates from list view
 const handleListUpdateTask = (taskId: string, updates: Partial<Task>) => {
-  taskStore.updateTask(taskId, updates)
+  return taskStore.updateTaskWithUndo(taskId, updates)
 }
 
 // Event handlers for TaskList in list view mode
@@ -340,7 +347,7 @@ const handleToggleComplete = async (taskId: string) => {
     return
   }
   const newStatus = task.status === 'done' ? 'todo' : 'done'
-  await taskStore.updateTask(taskId, { status: newStatus })
+  await taskStore.updateTaskWithUndo(taskId, { status: newStatus })
 }
 
 const handleDeleteSelected = (taskIds: string[]) => {

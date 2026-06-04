@@ -60,6 +60,8 @@ Both have `shouldIgnoreElement` guards that suppress shortcuts when input/textar
 
 Read `docs/sop/canvas/CANVAS-POSITION-SYSTEM.md` for the full invariants. Key rules:
 - Only drag handlers may change `parentId`, `canvasPosition`, `position`
+- `task.canvasPosition` / `group.position` are absolute world coordinates in store/DB; Vue Flow child node `position` is parent-relative. Convert absolute → relative on every node-build/reload/sync path, and persist absolute from `computedPosition`/recursive parent walk on writes.
+- Tidy is layout-only. It must never change `task.parentId`, date-home tasks, spatially adopt tasks, or clear parents; those side effects make tasks look removed and can cause reload drift.
 - `useCanvasSync.ts` is READ-ONLY — must NEVER call `updateTask()` or `updateGroup()`
 - `useCanvasOverdueCollector.ts` is QUARANTINED — do NOT re-enable (causes position drift)
 - Dynamic node extent (`useCanvasFilteredState.ts`) must include BOTH task AND group positions, or groups near boundaries hit invisible walls (BUG-1310)

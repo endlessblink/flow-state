@@ -23,14 +23,67 @@ import {
   type GroupMove,
   type TaskMove,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
-import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
+import { getUndoSystem } from '@/composables/undoSingleton'
+
+function cloneCanvasGeometrySnapshot(
+  tasks: unknown[],
+  groups: unknown[],
+  affectedIds: string[]
+) {
+  const ids = new Set(affectedIds)
+  return JSON.parse(JSON.stringify({
+    tasks: tasks.filter((task) => ids.has((task as { id: string }).id)),
+    groups,
+  }))
+}
+
+function findColumnContainingGroup(
+  task: { position: { x: number; y: number }; width?: number; height?: number },
+  groups: Array<{ id: string; position?: { x: number; y: number; width?: number; height?: number } }>
+) {
+  const taskWidth = task.width ?? 220
+  const centerX = task.position.x + taskWidth / 2
+  const candidates = groups.filter((group) => {
+    if (!group.position) return false
+    const width = group.position.width ?? 400
+    return centerX >= group.position.x
+      && centerX <= group.position.x + width
+      && task.position.y >= group.position.y
+  })
+
+  if (candidates.length === 0) return null
+  return candidates.reduce((closest, current) => {
+    const closestDistance = Math.abs(task.position.y - (closest.position?.y ?? 0))
+    const currentDistance = Math.abs(task.position.y - (current.position?.y ?? 0))
+    return currentDistance < closestDistance ? current : closest
+  })
+}
 
 export interface TidyLayoutOptions {
   /** Read a Vue Flow node's current visual position. */
   getNodePosition?: (nodeId: string) => { x: number; y: number } | undefined
   /** Read a Vue Flow node's current rendered dimensions. */
   getNodeSize?: (nodeId: string) => { width: number; height: number } | undefined
+  /** Return false when a task node is currently hidden/not rendered on canvas. */
+  isTaskVisible?: (taskId: string) => boolean | undefined
+}
+
+interface TidyPlan {
+  inputs: DayGroupInput[]
+  groupMoves: GroupMove[]
+  taskMoves: TaskMove[]
+  adoptedParents: Map<string, string>
+}
+
+function isOverdue(dueDate?: string | null) {
+  if (!dueDate) return false
+  const due = new Date(dueDate)
+  if (!Number.isFinite(due.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return due < today
 }
 
 export function useTidyLayout(options: TidyLayoutOptions = {}) {
@@ -38,65 +91,46 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
   const taskStore = useTaskStore()
   const settingsStore = useSettingsStore()
 
-  /**
-   * Lay out smart + day-of-week groups in a canonical single row. Restacks
-   * tasks vertically inside each group.
-   */
-  function tidyDayGroups(): {
-    groupMoves: GroupMove[]
-    taskMoves: TaskMove[]
-    pendingWrites: Promise<void>
-    release: () => void
-  } {
-    console.log('[TIDY] Tidying day-group layout...')
-
-    canvasSyncInProgress.value = true
-    let released = false
-    const release = () => {
-      if (released) return
-      released = true
-      for (const gm of pendingGroupMoves) {
-        positionManager.releasePositionLock(gm.groupId, 'user-drag')
-      }
-      for (const tm of pendingTaskMoves) {
-        positionManager.releasePositionLock(tm.taskId, 'user-drag')
-      }
-      canvasSyncInProgress.value = false
-    }
-    const pendingWrites: Promise<unknown>[] = []
-    let pendingGroupMoves: GroupMove[] = []
-    let pendingTaskMoves: TaskMove[] = []
-
-    // TASK-1756 v10: re-home orphans first. Prior buggy versions of
-    // rotation/tidy wrote task positions that fell outside their parents'
-    // new bounds → BUG-1203 cleared parentId on those tasks. Tidy should
-    // heal that state by reattaching orphans whose dueDate matches an
-    // existing day-group, so the next step can restack them canonically.
-    let rehomedCount = 0
-    for (const task of taskStore.rawTasks) {
-      if (task.parentId) continue
-      if (!task.canvasPosition) continue // inbox-only, skip
-      if (!task.dueDate) continue
-      const match = findMatchingGroupForDueDate(task.dueDate, canvasStore.groups)
-      if (match) {
-        taskStore.updateTask(task.id, { parentId: match.id }, 'DRAG')
-        rehomedCount++
-      }
-    }
-    if (rehomedCount > 0) {
-      console.log('[TIDY] Re-homed', rehomedCount, 'orphaned tasks into matching day-groups')
-    }
-
-    // Collect every group with a position. Day-of-week / smart / custom — all
-    // get the canonical single-row treatment so the Tidy button always does
+  function planTidyDayGroups(): TidyPlan {
+    // Collect every visible group with a position. Day-of-week / smart / custom
+    // all get the canonical single-row treatment so the Tidy button always does
     // something visible regardless of the user's group naming.
-    const inputs: DayGroupInput[] = []
-    for (const group of canvasStore.groups) {
-      if (!group.position) continue
+    const visibleGroups = canvasStore.groups.filter((group) => group.position && group.isVisible !== false)
 
+    // Tidy should not move already-parented tasks between groups by due date or
+    // geometry. It can safely repair loose canvas tasks that are visibly inside
+    // a group, because otherwise the user sees them in the group but Tidy has no
+    // membership to stack.
+    const layoutTasks = taskStore.rawTasks.filter((task) => {
+      if (!task.canvasPosition) return false
+      if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
+      if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
+      if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
+      return options.isTaskVisible?.(task.id) !== false
+    })
+
+    const adoptedParents = new Map<string, string>()
+    for (const task of layoutTasks) {
+      if (task.parentId) continue
+
+      const absPos = options.getNodePosition?.(task.id) ?? task.canvasPosition
+      if (!absPos) continue
+      const size = options.getNodeSize?.(task.id)
+      const spatialTask = { position: absPos, width: size?.width, height: size?.height }
+      const containing =
+        getDeepestContainingGroup(spatialTask, visibleGroups) ??
+        findColumnContainingGroup(spatialTask, visibleGroups)
+      if (containing) adoptedParents.set(task.id, containing.id)
+    }
+    if (adoptedParents.size > 0) {
+      console.log('[TIDY] Adopted', adoptedParents.size, 'loose tasks into containing groups')
+    }
+
+    const inputs: DayGroupInput[] = []
+    for (const group of visibleGroups) {
       const vfPos = options.getNodePosition?.(`section-${group.id}`)
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
-      const tasks = taskStore.rawTasks.filter((t) => t.parentId === group.id)
+      const tasks = layoutTasks.filter((t) => (adoptedParents.get(t.id) ?? t.parentId) === group.id)
       const taskSizes = new Map<string, { width: number; height: number }>()
       const taskPositions = new Map<string, { x: number; y: number }>()
       for (const task of tasks) {
@@ -109,8 +143,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     }
 
     if (inputs.length === 0) {
-      release()
-      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
+      return { inputs: [], groupMoves: [], taskMoves: [], adoptedParents }
     }
 
     // Tidy must complement Rotate, not overwrite it. Smart/day groups follow
@@ -149,15 +182,69 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       .map((i) => i.group.id)
 
     const { groupMoves, taskMoves } = computeCanonicalLayout(inputs, orderedIds, {
-      taskPositioning: 'compactFromCurrentTop',
-      // Tidy must never silently flip the user's single-column arrangement
-      // into a 2-column overflow grid. Group height grows as needed.
+      // TASK-1798: stack from directly under the header so tasks sitting low in
+      // a group rise to the top. 'compactFromCurrentTop' anchored the stack at
+      // the current topmost task, so low tasks stayed low — the user's bug.
+      taskPositioning: 'fromHeader',
+      // Tidy is vertical-first: keep the user's preferred single-column stack.
+      // The group may grow tall, but cards should never jump into side-by-side columns.
       maxTasksPerColumn: null,
+      // Use measured card heights so the visible blank space between cards is
+      // consistent. Equal top-edge rows look uneven when cards have different
+      // rendered heights.
+      taskSpacing: 'contentGap',
     })
+
+    return { inputs, groupMoves, taskMoves, adoptedParents }
+  }
+
+  /**
+   * Lay out smart + day-of-week groups in a canonical single row. Restacks
+   * tasks vertically inside each group.
+   */
+  function tidyDayGroups(): {
+    groupMoves: GroupMove[]
+    taskMoves: TaskMove[]
+    pendingWrites: Promise<void>
+    release: () => void
+  } {
+    console.log('[TIDY] Tidying day-group layout...')
+
+    canvasSyncInProgress.value = true
+    let released = false
+    let pendingGroupMoves: GroupMove[] = []
+    let pendingTaskMoves: TaskMove[] = []
+    const release = () => {
+      if (released) return
+      released = true
+      for (const gm of pendingGroupMoves) {
+        positionManager.releasePositionLock(gm.groupId, 'user-drag')
+      }
+      for (const tm of pendingTaskMoves) {
+        positionManager.releasePositionLock(tm.taskId, 'user-drag')
+      }
+      canvasSyncInProgress.value = false
+    }
+
+    const pendingWrites: Promise<unknown>[] = []
+    const { inputs, groupMoves, taskMoves, adoptedParents } = planTidyDayGroups()
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves
 
-    // Apply store + PositionManager writes. Caller applies Vue Flow moves.
+    if (inputs.length === 0) {
+      release()
+      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
+    }
+
+    const affectedIds = [...new Set([
+      ...groupMoves.map((move) => move.groupId),
+      ...taskMoves.map((move) => move.taskId),
+    ])]
+    const undoSystem = getUndoSystem()
+    const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+
+    // Apply store + PositionManager writes synchronously. Caller applies Vue
+    // Flow moves immediately after this function returns.
     try {
       for (const gm of groupMoves) {
         const input = inputs.find((i) => i.group.id === gm.groupId)
@@ -174,7 +261,14 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
         positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
       }
       for (const tm of taskMoves) {
-        pendingWrites.push(taskStore.updateTask(tm.taskId, { canvasPosition: tm.position }, 'DRAG'))
+        const adoptedParentId = adoptedParents.get(tm.taskId)
+        pendingWrites.push(taskStore.updateTask(
+          tm.taskId,
+          adoptedParentId
+            ? { parentId: adoptedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
+            : { canvasPosition: tm.position, positionFormat: 'absolute' },
+          'DRAG'
+        ))
         positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
       }
     } catch (err) {
@@ -182,9 +276,154 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       throw err
     }
 
+    const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
+      if (groupMoves.length > 0 || taskMoves.length > 0) {
+        const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+        undoSystem.pushCanvasGeometryUndoSnapshot(
+          `Tidy ${affectedIds.length} canvas item${affectedIds.length === 1 ? '' : 's'}`,
+          affectedIds,
+          snapshotBefore,
+          snapshotAfter
+        )
+      }
+    })
+
     console.log('[TIDY] Wrote', groupMoves.length, 'group moves +', taskMoves.length, 'task moves')
-    return { groupMoves, taskMoves, pendingWrites: Promise.all(pendingWrites).then(() => undefined), release }
+    return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
   }
 
-  return { tidyDayGroups }
+  /**
+   * TASK-1809: Plan a single-column restack for ONE group. Pure — no mutations.
+   *
+   * Used by Shift-drag reorder: tasks inside the target group are re-stacked
+   * from the header down in their current Y order, so a card dropped higher up
+   * rises to the top and the rest shift down (insert-and-shift). Reuses
+   * computeCanonicalLayout but scoped to the single group, so neither the group
+   * nor its siblings move on X — only the group's height grows to fit.
+   */
+  function planReorderColumn(groupId: string): {
+    input: DayGroupInput | null
+    groupMoves: GroupMove[]
+    taskMoves: TaskMove[]
+  } {
+    const group = canvasStore.groups.find((g) => g.id === groupId)
+    if (!group?.position) return { input: null, groupMoves: [], taskMoves: [] }
+
+    const layoutTasks = taskStore.rawTasks.filter((task) => {
+      if (task.parentId !== groupId) return false
+      if (!task.canvasPosition) return false
+      if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
+      if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
+      if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
+      return options.isTaskVisible?.(task.id) !== false
+    })
+
+    // Nothing to reorder with fewer than 2 cards.
+    if (layoutTasks.length < 2) return { input: null, groupMoves: [], taskMoves: [] }
+
+    const vfPos = options.getNodePosition?.(`section-${groupId}`)
+    const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
+    const taskSizes = new Map<string, { width: number; height: number }>()
+    const taskPositions = new Map<string, { x: number; y: number }>()
+    for (const task of layoutTasks) {
+      const size = options.getNodeSize?.(task.id)
+      if (size) taskSizes.set(task.id, size)
+      const position = options.getNodePosition?.(task.id)
+      if (position) taskPositions.set(task.id, position)
+    }
+
+    const input: DayGroupInput = { group, visualPos, tasks: layoutTasks, taskSizes, taskPositions }
+    const { groupMoves, taskMoves } = computeCanonicalLayout([input], [groupId], {
+      taskPositioning: 'fromHeader',
+      maxTasksPerColumn: null,
+      taskSpacing: 'contentGap',
+    })
+    return { input, groupMoves, taskMoves }
+  }
+
+  /**
+   * TASK-1809: Apply a single-column restack for ONE group (Shift-drag reorder).
+   * Same move-application contract as tidyDayGroups: returns moves + pendingWrites
+   * + release; the caller applies Vue Flow moves and invokes release() on nextTick.
+   */
+  function reorderColumn(groupId: string): {
+    groupMoves: GroupMove[]
+    taskMoves: TaskMove[]
+    pendingWrites: Promise<void>
+    release: () => void
+  } {
+    canvasSyncInProgress.value = true
+    let released = false
+    let pendingGroupMoves: GroupMove[] = []
+    let pendingTaskMoves: TaskMove[] = []
+    const release = () => {
+      if (released) return
+      released = true
+      for (const gm of pendingGroupMoves) {
+        positionManager.releasePositionLock(gm.groupId, 'user-drag')
+      }
+      for (const tm of pendingTaskMoves) {
+        positionManager.releasePositionLock(tm.taskId, 'user-drag')
+      }
+      canvasSyncInProgress.value = false
+    }
+
+    const { input, groupMoves, taskMoves } = planReorderColumn(groupId)
+    pendingGroupMoves = groupMoves
+    pendingTaskMoves = taskMoves
+
+    if (!input || taskMoves.length === 0) {
+      release()
+      return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
+    }
+
+    const affectedIds = [...new Set([
+      ...groupMoves.map((move) => move.groupId),
+      ...taskMoves.map((move) => move.taskId),
+    ])]
+    const undoSystem = getUndoSystem()
+    const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+
+    const pendingWrites: Promise<unknown>[] = []
+    try {
+      for (const gm of groupMoves) {
+        if (!input.group.position) continue
+        canvasStore.updateGroup(gm.groupId, {
+          position: {
+            ...input.group.position,
+            x: gm.position.x,
+            y: gm.position.y,
+            width: gm.size.width,
+            height: gm.size.height,
+          },
+        })
+        positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
+      }
+      for (const tm of taskMoves) {
+        pendingWrites.push(taskStore.updateTask(
+          tm.taskId,
+          { canvasPosition: tm.position, positionFormat: 'absolute' },
+          'DRAG'
+        ))
+        positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
+      }
+    } catch (err) {
+      release()
+      throw err
+    }
+
+    const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
+      const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+      undoSystem.pushCanvasGeometryUndoSnapshot(
+        `Reorder ${taskMoves.length} task${taskMoves.length === 1 ? '' : 's'}`,
+        affectedIds,
+        snapshotBefore,
+        snapshotAfter
+      )
+    })
+
+    return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
+  }
+
+  return { tidyDayGroups, planTidyDayGroups, reorderColumn, planReorderColumn }
 }

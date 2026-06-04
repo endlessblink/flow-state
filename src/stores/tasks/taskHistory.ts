@@ -63,22 +63,20 @@ export function useTaskHistory(
         return {
             createTaskWithUndo: async (taskData: Partial<Task>) => undoHistory.createTaskWithUndo(taskData),
             updateTaskWithUndo: async (taskId: string, updates: Partial<Task>) => undoHistory.updateTaskWithUndo(taskId, updates),
+            bulkUpdateTasksWithUndo: async (taskUpdates: Array<{ id: string; updates: Partial<Task> }>, description?: string) => undoHistory.bulkUpdateTasksWithUndo(taskUpdates, description),
             deleteTaskWithUndo: async (taskId: string) => undoHistory.deleteTaskWithUndo(taskId),
             moveTaskWithUndo: async (taskId: string, newStatus: Task['status']) => {
                 try {
                     const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
                     const useUnifiedUndoRedo = await getUndoRedoComposable()
-                    const { moveTaskWithUndo } = useUnifiedUndoRedo()
+                    const { moveTaskWithUndo } = useUnifiedUndoRedo() as { moveTaskWithUndo: (taskId: string, status: Task['status']) => Promise<unknown> }
                     return await moveTaskWithUndo(taskId, newStatus)
                 } catch {
                     // Fallback handled in original code
                 }
             },
             bulkDeleteTasksWithUndo: async (taskIds: string[]) => {
-                // Bulk delete is special, we use the atomic version
-                const { useTaskStore } = await import('../tasks')
-                const store = useTaskStore()
-                await store.bulkDeleteTasks(taskIds)
+                return undoHistory.bulkDeleteTasksWithUndo(taskIds)
             },
             startTaskNowWithUndo: async (taskId: string) => {
                 console.log('📋 startTaskNowWithUndo called for task:', taskId)

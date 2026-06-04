@@ -85,16 +85,17 @@ import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
+import { formatDateKey } from '@/utils/dateUtils'
 import { Plus } from 'lucide-vue-next'
 
 import './KanbanColumn.css'
 
 interface Props {
   title: string
-  status: Task['status']
+  status: string
   tasks: Task[]
   wipLimit?: number
-  columnType?: 'status' | 'priority' | 'date' | 'category'
+  columnType?: 'status' | 'priority' | 'date' | 'category' | 'list'
   swimlaneId?: string
 }
 
@@ -105,7 +106,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 defineEmits<{
-  addTask: [status: Task['status']]
+  addTask: [status: string]
+  moveTask: [taskId: string, targetKey: string]
   selectTask: [taskId: string]
   startTimer: [taskId: string]
   editTask: [taskId: string]
@@ -113,7 +115,80 @@ defineEmits<{
   contextMenu: [event: MouseEvent, task: Task]
 }>()
 
-// BUG-1193: Track drag state to prevent reactive overwrites during drag
+type SortableDragEvent = DragEvent & {
+  item?: HTMLElement
+  originalEvent?: MouseEvent
+}
+
+type SortableChangeEvent = {
+  added?: { element: Task }
+  removed?: { element: Task }
+  moved?: { element: Task }
+}
+
+const getDateColumnUpdates = (dateColumn: string): Partial<Task> => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  if (dateColumn === 'inbox') return { instances: [], dueDate: undefined, isInInbox: true }
+  if (dateColumn === 'noDate') return { instances: [], dueDate: undefined }
+
+  let target: Date | null = null
+  switch (dateColumn) {
+    case 'overdue': target = new Date(today); target.setDate(today.getDate() - 1); break
+    case 'today': target = today; break
+    case 'tomorrow': target = new Date(today); target.setDate(today.getDate() + 1); break
+    case 'thisWeek': target = new Date(today); target.setDate(today.getDate() + (7 - today.getDay())); break
+    case 'nextWeek': target = new Date(today); target.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7)); break
+    case 'later': target = new Date(today); target.setDate(today.getDate() + 30); break
+  }
+
+  return target ? { dueDate: formatDateKey(target) } : {}
+}
+
+const getSwimlaneUpdates = (task: Task): Partial<Task> => {
+  if (
+    props.columnType === 'category' ||
+    props.swimlaneId === 'default' ||
+    props.swimlaneId === '__date__' ||
+    props.swimlaneId === '__category__'
+  ) {
+    return {}
+  }
+
+  const currentProjectId = task.projectId || ''
+  return currentProjectId === props.swimlaneId ? {} : { projectId: props.swimlaneId }
+}
+
+const getColumnDropUpdates = (task: Task): Partial<Task> => {
+  const swimlaneUpdates = getSwimlaneUpdates(task)
+
+  if (props.columnType === 'category') {
+    const targetProjectId = props.status === 'uncategorized' ? '' : props.status
+    return { projectId: targetProjectId }
+  }
+
+  if (props.columnType === 'priority') {
+    return {
+      priority: props.status === 'no_priority' ? null : props.status as Task['priority'],
+      ...swimlaneUpdates
+    }
+  }
+
+  if (props.columnType === 'date') {
+    return {
+      ...getDateColumnUpdates(props.status),
+      ...swimlaneUpdates
+    }
+  }
+
+  return {
+    status: props.status as Task['status'],
+    ...swimlaneUpdates
+  }
+}
+
+// BUG-1193: Track drag state to prevent store overwrites during drag
 const isDragActive = ref(false)
 
 // TASK-1160: Progressive rendering — limit rendered tasks per column
@@ -142,7 +217,7 @@ const localTasks = computed({
 
 watch(() => props.tasks, (newTasks) => {
   // BUG-1193: Don't overwrite allTasks during active drag operation
-  // vuedraggable manages the array during drag - reactive updates cause desync
+  // vuedraggable manages the array during drag - live updates cause desync
   // where the wrong task element gets associated with the drag ghost
   if (!isDragActive.value) {
     allTasks.value = [...newTasks]
@@ -153,18 +228,19 @@ const hasMore = computed(() => !isExpanded.value && allTasks.value.length > COLU
 const hiddenCount = computed(() => Math.max(0, allTasks.value.length - COLUMN_RENDER_LIMIT))
 
 // BUG-1335: Use a shared drag group across all swimlanes so tasks can be dragged
-// between projects. Static string avoids SortableJS re-init on reactive changes.
+// between projects. Static string avoids SortableJS re-init on live changes.
 const dragGroup = 'tasks'
 
 // FEATURE-1336b: Bridge vuedraggable drag to global useDragAndDrop for sidebar drops
 // BUG-1516c: Also expose dragData so handleNativeDrop can read singleton (WebKitGTK/Tauri fix)
 const { startDrag, endDrag: endGlobalDrag, dragData } = useDragAndDrop()
 
-const onDragStart = (evt: DragEvent) => {
+const onDragStart = (evt: SortableDragEvent) => {
   isDragActive.value = true
 
   // Bridge to global drag state so sidebar can receive drops
-  const taskId = evt.item?.dataset?.taskId || evt.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
+  const taskElement = evt.item?.querySelector?.('[data-task-id]') as HTMLElement | null | undefined
+  const taskId = evt.item?.dataset?.taskId || taskElement?.dataset?.taskId
   const taskTitle = evt.item?.querySelector?.('.task-title')?.textContent?.trim() || ''
   if (taskId) {
     startDrag({
@@ -176,7 +252,7 @@ const onDragStart = (evt: DragEvent) => {
   }
 }
 
-const onDragEnd = (evt: DragEvent) => {
+const onDragEnd = async (evt: SortableDragEvent) => {
   isDragActive.value = false
 
   // Check if dropped on a sidebar project (SortableJS forceFallback doesn't fire
@@ -188,9 +264,10 @@ const onDragEnd = (evt: DragEvent) => {
       const navItem = (el as HTMLElement).closest('[data-drop-project-id]') as HTMLElement | null
       if (navItem) {
         const projectId = navItem.dataset.dropProjectId
-        const taskId = evt.item?.dataset?.taskId || evt.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
+        const taskElement = evt.item?.querySelector?.('[data-task-id]') as HTMLElement | null | undefined
+        const taskId = evt.item?.dataset?.taskId || taskElement?.dataset?.taskId
         if (projectId && taskId) {
-          taskStore.moveTaskToProject(taskId, projectId)
+          await taskStore.updateTaskWithUndo(taskId, { projectId })
         }
         break
       }
@@ -235,11 +312,12 @@ const handleNativeDrop = async (event: DragEvent) => {
   // dataTransfer.getData() returns empty string). Fall back to dataTransfer for browser.
   let data: { taskId?: string; taskIds?: string[]; fromInbox?: boolean } | null = null
   if (dragData.value && dragData.value.source !== 'kanban') {
+    const dragPayload = dragData.value as typeof dragData.value & { fromInbox?: boolean }
     // Singleton has data from a non-SortableJS drag (inbox uses HTML5 native drag)
     data = {
       taskId: dragData.value.taskId,
       taskIds: dragData.value.taskIds,
-      fromInbox: dragData.value.source === 'sidebar' || !!(dragData.value as any).fromInbox
+      fromInbox: dragData.value.source === 'sidebar' || !!dragPayload.fromInbox
     }
     // For inbox drags, check if the drag was specifically from inbox by looking at the
     // dataTransfer type hint — inbox sets fromInbox in the JSON payload
@@ -273,11 +351,13 @@ const handleNativeDrop = async (event: DragEvent) => {
     if (ids.length === 0) return
 
     for (const taskId of ids) {
-      if (props.columnType === 'status') {
-        await taskStore.moveTaskWithUndo(taskId, props.status)
-      }
-      // Clear inbox flag regardless of column type so task leaves the inbox
-      await taskStore.updateTask(taskId, { isInInbox: false })
+      const task = taskStore.rawTasks.find(candidate => candidate.id === taskId)
+      if (!task) continue
+
+      await taskStore.updateTaskWithUndo(taskId, {
+        ...getColumnDropUpdates(task),
+        isInInbox: false
+      })
     }
   } catch (e) {
     console.error('[KanbanColumn] Native drop from inbox failed:', e)
@@ -318,46 +398,27 @@ const taskStore = useTaskStore()
  * Recalculate order values for all tasks in localTasks based on their current array position.
  * Uses simple integer indexing (0, 1, 2, ...) and persists via updateTask.
  */
-const persistOrderForColumn = () => {
-  allTasks.value.forEach((task, index) => {
-    if (task.order !== index) {
-      taskStore.updateTask(task.id, { order: index })
-    }
-  })
+const persistOrderForColumn = async () => {
+  const orderUpdates = allTasks.value
+    .map((task, index) => ({ task, index }))
+    .filter(({ task, index }) => task.order !== index)
+    .map(({ task, index }) => ({ id: task.id, updates: { order: index } }))
+
+  if (orderUpdates.length > 0) {
+    await taskStore.bulkUpdateTasksWithUndo(orderUpdates, 'Reorder kanban column')
+  }
 }
 
-const handleDragChange = async (event: { added?: { element: Task }; removed?: { element: Task } }) => {
+const handleDragChange = async (event: SortableChangeEvent) => {
   if (event.added) {
     try {
       const taskId = event.added.element.id
       const task = event.added.element as Task
 
-      if (props.columnType === 'category') {
-        // FEATURE-1336: Category columns: move task to target project
-        const targetProjectId = props.status as string
-        taskStore.moveTaskToProject(taskId, targetProjectId === 'uncategorized' ? '' : targetProjectId)
-      } else if (props.columnType === 'priority') {
-        // Priority columns: update task priority
-        taskStore.moveTaskToPriority(taskId, props.status as 'high' | 'medium' | 'low')
-      } else if (props.columnType === 'date') {
-        // Date columns: update task due date
-        taskStore.moveTaskToDate(taskId, props.status)
-      } else {
-        // Status columns (default): update task status
-        await taskStore.moveTaskWithUndo(taskId, props.status)
-      }
-
-      // BUG-1335: When task is dropped in a different swimlane (project),
-      // also update the task's projectId to match the target swimlane
-      if (props.columnType !== 'category' && props.swimlaneId !== 'default' && props.swimlaneId !== '__date__' && props.swimlaneId !== '__category__') {
-        const currentProjectId = task.projectId || ''
-        if (currentProjectId !== props.swimlaneId) {
-          taskStore.moveTaskToProject(taskId, props.swimlaneId)
-        }
-      }
+      await taskStore.updateTaskWithUndo(taskId, getColumnDropUpdates(task))
 
       // Persist order for all tasks in this column after cross-column move
-      persistOrderForColumn()
+      await persistOrderForColumn()
     } catch (error) {
       console.error('Failed to move task:', error)
       window.dispatchEvent(new CustomEvent('flowstate:error', {
@@ -368,7 +429,7 @@ const handleDragChange = async (event: { added?: { element: Task }; removed?: { 
 
   if (event.moved) {
     // Within-column reorder: persist new order values
-    persistOrderForColumn()
+    await persistOrderForColumn()
   }
 }
 

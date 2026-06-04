@@ -140,7 +140,7 @@
           <CheckCircle :size="14" class="property-icon" />
           <CustomSelect
             v-model="status"
-            :options="(statusOptions as { label: string; value: string | number }[])"
+            :options="(statusOptions as readonly { label: string; value: string | number }[] as unknown as { label: string; value: string | number }[])"
             class="compact-select"
           />
         </div>

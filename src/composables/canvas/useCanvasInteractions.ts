@@ -13,7 +13,7 @@ import { useCanvasResizeCalculation } from './useCanvasResizeCalculation'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getDeepestContainingGroup, DEFAULT_TASK_WIDTH, DEFAULT_TASK_HEIGHT, isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 import { useNodeSync } from './useNodeSync'
-import { canvasSyncInProgress } from './useCanvasSync'
+import { canvasSyncInProgress, canvasSyncSettlingUntil } from './useCanvasSync'
 import { useNodeStateManager, NodeState } from './state-machine'
 import { storeToRefs } from 'pinia'
 import { getGroupAbsolutePosition, toAbsolutePosition } from '@/utils/canvas/coordinates'
@@ -22,6 +22,8 @@ import { positionManager } from '@/services/canvas/PositionManager'
 import { DRAG_SETTLE_TIMEOUT_MS, RESIZE_SETTLE_TIMEOUT_MS } from '@/config/timing'
 import { lockManager } from '@/services/canvas/LockManager'
 import { getPlatformDiagnostics } from '@/utils/contextMenuCoordinates'
+import { traceCanvasDoneDragStop, traceCanvasDoneNodes } from '@/utils/canvas/doneTrace'
+import { getUndoSystem } from '@/composables/undoSingleton'
 
 // =============================================================================
 // DESCENDANT COLLECTION HELPERS (BUG #1 FIX)
@@ -274,7 +276,22 @@ function computeNodeAbsolutePosition(
     node: Node,
     allGroups: CanvasGroup[]
 ): { x: number; y: number } {
-    // First try computedPosition - this is the most reliable if available
+    // For parented nodes, node.position is the live relative position during
+    // controlled dragging. computedPosition can lag one frame behind and cause
+    // drag-stop to save the pre-drag absolute position, making the card snap back.
+    if (node.parentNode) {
+        const parentId = node.parentNode.startsWith('section-')
+            ? node.parentNode.replace('section-', '')
+            : node.parentNode
+
+        const parentAbsolute = getGroupAbsolutePosition(parentId, allGroups)
+        const absolute = toAbsolutePosition(node.position, parentAbsolute)
+
+        return { x: absolute.x, y: absolute.y }
+    }
+
+    // Root nodes can use computedPosition when Vue Flow supplies it; otherwise
+    // their position is already absolute.
     const vfNode = node as { computedPosition?: { x: number; y: number } }
     if (vfNode.computedPosition &&
         typeof vfNode.computedPosition.x === 'number' &&
@@ -287,21 +304,7 @@ function computeNodeAbsolutePosition(
         }
     }
 
-    // If no parentNode, position is already absolute
-    if (!node.parentNode) {
-        return { x: node.position.x, y: node.position.y }
-    }
-
-    // Has parentNode - position is RELATIVE to parent
-    // We need to compute absolute by adding parent's absolute position
-    const parentId = node.parentNode.startsWith('section-')
-        ? node.parentNode.replace('section-', '')
-        : node.parentNode
-
-    const parentAbsolute = getGroupAbsolutePosition(parentId, allGroups)
-    const absolute = toAbsolutePosition(node.position, parentAbsolute)
-
-    return { x: absolute.x, y: absolute.y }
+    return { x: node.position.x, y: node.position.y }
 }
 
 export interface SelectionBox {
@@ -459,6 +462,24 @@ export function useCanvasInteractions(deps?: {
     // useNodeSync expects Ref<Map> from storeToRefs for proper reactivity
     const { syncNodePosition } = useNodeSync(nodeVersionMap)
 
+    const getDragUndoAffectedIds = (involvedNodes: Node[]): string[] => {
+        const affectedIds = new Set<string>()
+        const allGroups = canvasStore._rawGroups || canvasStore.groups || []
+
+        for (const node of involvedNodes) {
+            if (CanvasIds.isGroupNode(node.id)) {
+                const { id: groupId } = CanvasIds.parseNodeId(node.id)
+                affectedIds.add(groupId)
+                collectDescendantGroups(groupId, allGroups).forEach(group => affectedIds.add(group.id))
+                collectDescendantTasks(groupId, taskStore.tasks, allGroups).forEach(task => affectedIds.add(task.id))
+            } else if (node.type === 'taskNode') {
+                affectedIds.add(node.id)
+            }
+        }
+
+        return [...affectedIds]
+    }
+
     /**
      * Handle drag stop - save new absolute positions to DB
      *
@@ -487,6 +508,8 @@ export function useCanvasInteractions(deps?: {
      * 5. For groups: also sync child tasks AND child groups
      */
     const onNodeDragStop = async (event: NodeDragEvent) => {
+        traceCanvasDoneDragStop(event.nodes)
+
         // BUG-1328: Log drag end diagnostic for cursor drift detection
         if (import.meta.env.DEV && dragDiagStartPos && event.nodes.length > 0) {
             const node = event.nodes[0]
@@ -508,7 +531,7 @@ export function useCanvasInteractions(deps?: {
         // BUG-1061 FIX #5: Skip if triggered by setNodes() during canvas sync
         // Vue Flow may fire nodeDragStop when setNodes() updates node positions programmatically.
         // This creates a reactive loop: drag → Smart Group update → sync → setNodes → drag fires again.
-        if (canvasSyncInProgress.value) {
+        if (canvasSyncInProgress.value || Date.now() < canvasSyncSettlingUntil.value) {
             if (import.meta.env.DEV) {
                 console.log('[CANVAS:INTERACT] Drag stop blocked - triggered during canvas sync')
             }
@@ -546,6 +569,18 @@ export function useCanvasInteractions(deps?: {
                 return [node.id, snapped]
             })
         )
+        traceCanvasDoneNodes('drag-stop:position-snapshot-source-nodes', involvedNodes)
+
+        const dragUndoAffectedIds = getDragUndoAffectedIds(involvedNodes)
+        const undoSystem = getUndoSystem()
+        const geometryUndoHandle = dragUndoAffectedIds.length > 0
+            ? await undoSystem.beginOperation({
+                type: 'canvas-geometry',
+                affectedIds: dragUndoAffectedIds,
+                description: `Move ${dragUndoAffectedIds.length} canvas item${dragUndoAffectedIds.length === 1 ? '' : 's'}`
+            })
+            : null
+        let persistedGeometry = false
 
         try {
 
@@ -614,6 +649,7 @@ export function useCanvasInteractions(deps?: {
                         parentGroupId: parentResult.newParentId,
                         positionFormat: 'absolute',
                     })
+                    persistedGeometry = true
 
                     // TASK-213: Update PositionManager
                     positionManager.updatePosition(groupId, absolutePos, 'user-drag', parentResult.newParentId)
@@ -761,6 +797,7 @@ export function useCanvasInteractions(deps?: {
                                             canvasPosition: absolutePos,
                                             positionFormat: 'absolute'
                                         }, 'DRAG-FOLLOW-PARENT' as Parameters<typeof taskStore.updateTask>[2])
+                                        persistedGeometry = true
                                         positionManager.updatePosition(task.id, absolutePos, 'user-drag', oldParentId)
                                     } finally {
                                         // BUG-1209: Delay clearing pendingWrite to catch realtime echo
@@ -905,6 +942,7 @@ export function useCanvasInteractions(deps?: {
                     try {
                         // SINGLE atomic save with all updates
                         await taskStore.updateTask(task.id, dragUpdates, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                        persistedGeometry = true
                     } finally {
                         // BUG-1209: Delay clearing pendingWrite by 3s so the Supabase realtime echo
                         // (arriving 100ms-2s later) is still blocked by isPendingWrite().
@@ -925,29 +963,34 @@ export function useCanvasInteractions(deps?: {
 
         } finally {
             // BUG-1492: If a newer drag has started, do NOT touch state — it belongs to the new drag.
-            if (mySequence !== dragSequence) {
+            const isStaleHandler = mySequence !== dragSequence
+            if (isStaleHandler) {
                 if (import.meta.env.DEV) console.log(`[BUG-1492:DRAG-FINALLY] Stale handler (seq ${mySequence} vs ${dragSequence}), skipping cleanup`)
-                return
-            }
-            // BUG-1209: Set isDragging=false AFTER all async saves complete,
-            // so realtime handlers don't overwrite positions mid-save.
-            if (import.meta.env.DEV) {
-                console.log(`[BUG-1492:DRAG-FINALLY] callId=${callId}`, {
-                    involvedNodes: involvedNodes.map(n => n.id.slice(0, 12)),
-                    opState: opState.value.type
+            } else {
+                // BUG-1209: Set isDragging=false AFTER all async saves complete,
+                // so realtime handlers don't overwrite positions mid-save.
+                if (import.meta.env.DEV) {
+                    console.log(`[BUG-1492:DRAG-FINALLY] callId=${callId}`, {
+                        involvedNodes: involvedNodes.map(n => n.id.slice(0, 12)),
+                        opState: opState.value.type
+                    })
+                }
+                canvasStore.isDragging = false
+                // BUG-1492: Transition to 'drag-settling' BEFORE releasing locks.
+                // This closes a micro-tick gap where PositionManager accepts stale
+                // remote-sync updates between lock release and settling state.
+                endDrag(involvedNodes.map(n => n.id))
+                // TASK-213: Release Locks
+                // FIX: Use raw ID (not Vue Flow node ID) to match the ID used during acquire
+                involvedNodes.forEach(node => {
+                    const { id: rawId } = CanvasIds.parseNodeId(node.id)
+                    lockManager.release(rawId, 'user-drag')
                 })
+
+                if (persistedGeometry && geometryUndoHandle) {
+                    await undoSystem.commitOperation(geometryUndoHandle)
+                }
             }
-            canvasStore.isDragging = false
-            // BUG-1492: Transition to 'drag-settling' BEFORE releasing locks.
-            // This closes a micro-tick gap where PositionManager accepts stale
-            // remote-sync updates between lock release and settling state.
-            endDrag(involvedNodes.map(n => n.id))
-            // TASK-213: Release Locks
-            // FIX: Use raw ID (not Vue Flow node ID) to match the ID used during acquire
-            involvedNodes.forEach(node => {
-                const { id: rawId } = CanvasIds.parseNodeId(node.id)
-                lockManager.release(rawId, 'user-drag')
-            })
         }
     }
 
@@ -1075,6 +1118,20 @@ export function useCanvasInteractions(deps?: {
         const deltaY = newY - resizeState.value.startY
 
         const absPos = { x: newX, y: newY }
+        const resizeAffectedIds = new Set<string>([sectionId])
+        const descendantGroupsBeforeResize = collectDescendantGroups(sectionId, canvasStore.groups)
+        descendantGroupsBeforeResize.forEach(group => resizeAffectedIds.add(group.id))
+        const resizeGroupIds = new Set([sectionId, ...descendantGroupsBeforeResize.map(group => group.id)])
+        taskStore.tasks
+            .filter(task => task.parentId && resizeGroupIds.has(task.parentId))
+            .forEach(task => resizeAffectedIds.add(task.id))
+        const undoSystem = getUndoSystem()
+        const resizeUndoHandle = await undoSystem.beginOperation({
+            type: 'canvas-geometry',
+            affectedIds: [...resizeAffectedIds],
+            description: `Resize canvas group: ${section.name}`
+        })
+        let persistedResizeGeometry = false
 
         // 1. Optimistic Store Update (Absolute)
         canvasStore.updateGroup(sectionId, {
@@ -1085,6 +1142,7 @@ export function useCanvasInteractions(deps?: {
             },
             positionFormat: 'absolute'
         })
+        persistedResizeGeometry = true
 
         // 2. Optimistic DB Sync
         // We find the Vue Flow node to pass to key logic
@@ -1160,7 +1218,8 @@ export function useCanvasInteractions(deps?: {
                         console.log(`[BUG-1191] Task "${task.title?.slice(0, 25)}" outside resized group "${resizedGroup.name}". Clearing parentId.`)
                     }
                     // Clear parentId in store and DB
-                    taskStore.updateTask(task.id, { parentId: undefined, positionFormat: 'absolute' }, 'DRAG' as Parameters<typeof taskStore.updateTask>[2])
+                    await taskStore.updateTask(task.id, { parentId: undefined, positionFormat: 'absolute' }, 'DRAG' as Parameters<typeof taskStore.updateTask>[2])
+                    persistedResizeGeometry = true
                     // Fix Vue Flow node
                     const taskNode = findNode(task.id)
                     if (taskNode) {
@@ -1179,6 +1238,10 @@ export function useCanvasInteractions(deps?: {
         Object.keys(resizeState.value.childStartPositions).forEach(childId => {
             lockManager.release(childId, 'user-resize')
         })
+
+        if (persistedResizeGeometry) {
+            await undoSystem.commitOperation(resizeUndoHandle)
+        }
 
         setTimeout(() => isResizeSettling.value = false, RESIZE_SETTLE_TIMEOUT_MS)
     }

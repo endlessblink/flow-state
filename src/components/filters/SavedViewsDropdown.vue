@@ -2,7 +2,7 @@
   <div ref="wrapperRef" class="saved-views-dropdown">
     <!-- Trigger Button -->
     <button
-      ref="triggerRef"
+      ref="triggerElRef"
       type="button"
       class="saved-views-trigger"
       :class="{ 'has-active': activeViewId !== null }"
@@ -10,7 +10,14 @@
       @click="toggleDropdown"
     >
       <Bookmark :size="14" />
-      <OverflowTooltip v-if="activeViewId" :text="activeViewName" class="trigger-label" style="flex: 1; min-width: 0">{{ activeViewName }}</OverflowTooltip>
+      <OverflowTooltip
+        v-if="activeViewId"
+        :text="activeViewName"
+        class="trigger-label"
+        style="flex: 1; min-width: 0"
+      >
+        {{ activeViewName }}
+      </OverflowTooltip>
     </button>
 
     <!-- Dropdown Panel (Teleported) -->
@@ -41,7 +48,9 @@
                 class="view-color-dot"
                 :style="{ background: view.color || 'var(--brand-primary)' }"
               />
-              <OverflowTooltip :text="view.name" class="view-name">{{ view.name }}</OverflowTooltip>
+              <OverflowTooltip :text="view.name" class="view-name">
+                {{ view.name }}
+              </OverflowTooltip>
               <span
                 role="button"
                 tabindex="0"
@@ -76,16 +85,17 @@
 
           <!-- Name Input -->
           <div v-else class="name-input-row">
-            <input dir="auto"
+            <input
               ref="nameInputRef"
               v-model="newViewName"
+              dir="auto"
               class="name-input"
               type="text"
               placeholder="View name..."
               maxlength="40"
               @keydown.enter="confirmSave"
               @keydown.esc="cancelNaming"
-            />
+            >
             <button
               class="confirm-btn"
               :disabled="!newViewName.trim()"
@@ -123,7 +133,7 @@ const {
 
 // Dropdown state
 const wrapperRef = ref<HTMLElement>()
-const triggerRef = ref<HTMLButtonElement>()
+const triggerElRef = ref<HTMLButtonElement>()
 const dropdownRef = ref<HTMLElement>()
 const nameInputRef = ref<HTMLInputElement>()
 const isOpen = ref(false)
@@ -153,9 +163,9 @@ const activeViewName = computed(() => {
 
 // Panel position calculation
 function calculatePanelPosition() {
-  if (!triggerRef.value) return
+  if (!triggerElRef.value) return
 
-  const rect = triggerRef.value.getBoundingClientRect()
+  const rect = triggerElRef.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const panelHeight = 320 // Estimated max height
   const spaceBelow = viewportHeight - rect.bottom

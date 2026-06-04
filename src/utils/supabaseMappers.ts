@@ -1,5 +1,5 @@
 
-import { type Task, type Project, type Subtask, type PlanningNote, type MiniCanvasEdge, type TaskInstance, type TaskRecurrence, type RecurringTaskInstance, type NotificationPreferences, UNCATEGORIZED_PROJECT_ID } from '../types/tasks'
+import { type Task, type Project, type Lane, type Subtask, type PlanningNote, type MiniCanvasEdge, type TaskInstance, type TaskRecurrence, type RecurringTaskInstance, type NotificationPreferences, UNCATEGORIZED_PROJECT_ID } from '../types/tasks'
 import type { ScheduledNotification } from '../types/recurrence'
 import type { CanvasGroup } from '../types/canvas'
 import type { AppSettings } from '../stores/settings'
@@ -93,10 +93,25 @@ export interface SupabaseProject {
     workspace_id?: string | null
 }
 
+// TASK-1812: Lane — sprint-style cross-project goal
+export interface SupabaseLane {
+    id: string
+    user_id: string
+    name: string
+    color?: string
+    is_deleted?: boolean
+    deleted_at?: string | null
+    created_at?: string
+    updated_at?: string
+    // Workspace collaboration
+    workspace_id?: string | null
+}
+
 export interface SupabaseTask {
     id: string
     user_id: string
     project_id?: string | null
+    lane_id?: string | null
     title: string
     description?: string
     status: string
@@ -180,6 +195,7 @@ export interface SupabaseGroup {
     collapsed_height?: number
 
     parent_group_id?: string | null
+    linked_parent_task_id?: string | null
 
     filters_json?: import('../types/canvas').GroupFilter | null
     is_power_mode?: boolean
@@ -353,6 +369,7 @@ export function toSupabaseGroup(group: CanvasGroup, userId: string): SupabaseGro
         collapsed_height: group.collapsedHeight,
 
         parent_group_id: sanitizedParentGroupId,
+        linked_parent_task_id: sanitizeUUID(group.linkedParentTaskId),
 
         filters_json: group.filters,
         is_power_mode: group.isPowerMode,
@@ -388,6 +405,7 @@ export function fromSupabaseGroup(record: SupabaseGroup): CanvasGroup {
         collapsedHeight: record.collapsed_height,
 
         parentGroupId: record.parent_group_id, // TASK-138: Using current DB field name
+        linkedParentTaskId: record.linked_parent_task_id || null,
 
         filters: record.filters_json,
         isPowerMode: record.is_power_mode,
@@ -457,6 +475,40 @@ export function fromSupabaseProject(record: SupabaseProject): Project {
         emoji: record.color_type === 'emoji' ? record.color : undefined,
         viewType: (record.view_type as Project['viewType']) || 'status',
         parentId: record.parent_id || null,
+        createdAt: new Date(record.created_at || Date.now()),
+        updatedAt: new Date(record.updated_at || Date.now()),
+        workspaceId: record.workspace_id || null,
+    }
+}
+
+// TASK-1812: Lane mappers — mirror Project, minus colorType/viewType/parentId/order.
+export function toSupabaseLane(lane: Lane, userId: string): SupabaseLane {
+    const primaryColor = Array.isArray(lane.color) ? lane.color[0] : lane.color
+    const sanitizedName = lane.name || 'Unnamed Lane'
+    if (!lane.name) {
+        console.warn(`[SUPABASE-MAPPER] Lane "${lane.id}" had null/empty name, defaulting to "Unnamed Lane"`)
+    }
+    return {
+        id: lane.id,
+        user_id: userId,
+        name: sanitizedName,
+        color: primaryColor,
+        is_deleted: (lane as Lane & { isDeleted?: boolean }).isDeleted || false,
+        deleted_at: (lane as Lane & { deletedAt?: string | Date }).deletedAt
+            ? new Date((lane as Lane & { deletedAt?: string | Date }).deletedAt as string | Date).toISOString()
+            : null,
+        created_at: lane.createdAt instanceof Date ? lane.createdAt.toISOString() : lane.createdAt,
+        // Workspace collaboration — only include when set (safe before migration)
+        ...((lane as Lane & { workspaceId?: string | null }).workspaceId ? { workspace_id: (lane as Lane & { workspaceId?: string | null }).workspaceId } : {}),
+        updated_at: new Date().toISOString()
+    }
+}
+
+export function fromSupabaseLane(record: SupabaseLane): Lane {
+    return {
+        id: record.id,
+        name: record.name,
+        color: record.color || '#4ECDC4',
         createdAt: new Date(record.created_at || Date.now()),
         updatedAt: new Date(record.updated_at || Date.now()),
         workspaceId: record.workspace_id || null,
@@ -572,6 +624,11 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         ...(task.workspaceId ? { workspace_id: task.workspaceId } : {}),
         ...(task.assignedTo ? { assigned_to: sanitizeUUID(task.assignedTo) } : {}),
 
+        // TASK-1812: Lane membership. Conditional-spread so a client hitting a DB
+        // without the lane_id column (pre-migration) doesn't 400. When the task is
+        // unassigned from a lane (laneId === null), send explicit null to clear it.
+        ...(task.laneId !== undefined ? { lane_id: sanitizeUUID(task.laneId) } : {}),
+
         created_at: sanitizeTimestamp(task.createdAt) || now,
         updated_at: now,
 
@@ -603,6 +660,8 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
 
         projectId: record.project_id || UNCATEGORIZED_PROJECT_ID,
         parentTaskId: record.parent_task_id || null,
+        // TASK-1812: Lane membership. Must be read here or realtime echo nulls laneId every save.
+        laneId: record.lane_id ?? null,
 
         completedPomodoros: record.completed_pomodoros || 0,
         estimatedPomodoros: record.estimated_pomodoros || 1,

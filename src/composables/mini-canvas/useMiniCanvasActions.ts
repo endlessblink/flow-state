@@ -33,7 +33,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     }
 
     const updated = [...(task.subtasks || []), subtask]
-    taskStore.updateTask(task.id, { subtasks: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { subtasks: updated } as Partial<Task>)
     return subtask.id
   }
 
@@ -44,7 +44,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     const updated = (task.subtasks || []).map(s =>
       s.id === subtaskId ? { ...s, canvasPosition: position, updatedAt: new Date() } : s
     )
-    taskStore.updateTask(task.id, { subtasks: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { subtasks: updated } as Partial<Task>)
   }
 
   const updateSubtaskTitle = (subtaskId: string, title: string) => {
@@ -54,7 +54,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     const updated = (task.subtasks || []).map(s =>
       s.id === subtaskId ? { ...s, title, updatedAt: new Date() } : s
     )
-    taskStore.updateTask(task.id, { subtasks: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { subtasks: updated } as Partial<Task>)
   }
 
   const toggleSubtaskCompletion = (subtaskId: string) => {
@@ -64,7 +64,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     const updated = (task.subtasks || []).map(s =>
       s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted, updatedAt: new Date() } : s
     )
-    taskStore.updateTask(task.id, { subtasks: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { subtasks: updated } as Partial<Task>)
   }
 
   const updateSubtaskDescription = (subtaskId: string, description: string) => {
@@ -74,7 +74,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     const updated = (task.subtasks || []).map(s =>
       s.id === subtaskId ? { ...s, description, updatedAt: new Date() } : s
     )
-    taskStore.updateTask(task.id, { subtasks: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { subtasks: updated } as Partial<Task>)
   }
 
   const deleteSubtask = (subtaskId: string) => {
@@ -82,7 +82,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     if (!task) return
 
     const updated = (task.subtasks || []).filter(s => s.id !== subtaskId)
-    taskStore.updateTask(task.id, { subtasks: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { subtasks: updated } as Partial<Task>)
   }
 
   // ── Planning Note Actions ──
@@ -102,7 +102,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     }
 
     const updated = [...(task.planningNotes || []), note]
-    taskStore.updateTask(task.id, { planningNotes: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { planningNotes: updated } as Partial<Task>)
     return note.id
   }
 
@@ -113,7 +113,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     const updated = (task.planningNotes || []).map(n =>
       n.id === noteId ? { ...n, canvasPosition: position, updatedAt: new Date().toISOString() } : n
     )
-    taskStore.updateTask(task.id, { planningNotes: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { planningNotes: updated } as Partial<Task>)
   }
 
   const updateNoteTitle = (noteId: string, title: string) => {
@@ -123,7 +123,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     const updated = (task.planningNotes || []).map(n =>
       n.id === noteId ? { ...n, title, updatedAt: new Date().toISOString() } : n
     )
-    taskStore.updateTask(task.id, { planningNotes: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { planningNotes: updated } as Partial<Task>)
   }
 
   const updateNoteDescription = (noteId: string, description: string) => {
@@ -133,7 +133,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     const updated = (task.planningNotes || []).map(n =>
       n.id === noteId ? { ...n, description, updatedAt: new Date().toISOString() } : n
     )
-    taskStore.updateTask(task.id, { planningNotes: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { planningNotes: updated } as Partial<Task>)
   }
 
   const deleteNote = (noteId: string) => {
@@ -141,7 +141,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     if (!task) return
 
     const updated = (task.planningNotes || []).filter(n => n.id !== noteId)
-    taskStore.updateTask(task.id, { planningNotes: updated } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { planningNotes: updated } as Partial<Task>)
   }
 
   // ── Mini-Canvas User-Drawn Edge Actions ──
@@ -153,7 +153,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     const existing = task.miniCanvasEdges ?? []
     if (existing.some(e => e.id === edge.id)) return
 
-    taskStore.updateTask(task.id, { miniCanvasEdges: [...existing, edge] } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { miniCanvasEdges: [...existing, edge] } as Partial<Task>)
   }
 
   const removeMiniCanvasEdge = (edgeId: string) => {
@@ -161,7 +161,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     if (!task || !task.miniCanvasEdges?.length) return
 
     const next = task.miniCanvasEdges.filter(e => e.id !== edgeId)
-    taskStore.updateTask(task.id, { miniCanvasEdges: next } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { miniCanvasEdges: next } as Partial<Task>)
   }
 
   const removeMiniCanvasEdgesForNode = (nodeId: string) => {
@@ -171,7 +171,7 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     const next = task.miniCanvasEdges.filter(e => e.source !== nodeId && e.target !== nodeId)
     if (next.length === task.miniCanvasEdges.length) return
 
-    taskStore.updateTask(task.id, { miniCanvasEdges: next } as Partial<Task>)
+    taskStore.updateTaskWithUndo(task.id, { miniCanvasEdges: next } as Partial<Task>)
   }
 
   return {

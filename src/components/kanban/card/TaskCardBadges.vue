@@ -168,7 +168,7 @@ const toggleDurationPicker = () => {
 
 const setWorkBlock = async (duration: number) => {
   isDurationPickerOpen.value = false
-  await taskStore.updateTask(props.task.id, { estimatedDuration: duration })
+  await taskStore.updateTaskWithUndo(props.task.id, { estimatedDuration: duration })
 }
 
 const workBlockLabel = computed(() => {

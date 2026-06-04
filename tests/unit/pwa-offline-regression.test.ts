@@ -115,7 +115,8 @@ describe('PWA Offline Configuration (regression)', () => {
     )
 
     it('filters out deleted tasks defensively', () => {
-      expect(logicFile).toContain('!t.isDeleted')
+      expect(logicFile).toContain('!t._soft_deleted')
+      expect(logicFile).toContain('isDeleted')
     })
   })
 })

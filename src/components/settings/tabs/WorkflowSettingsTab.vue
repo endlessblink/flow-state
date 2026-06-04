@@ -36,7 +36,7 @@ const boardDensities = [
         description="Adjust the vertical and horizontal spacing of cards."
         :options="boardDensities"
         :value="settingsStore.boardDensity"
-        @update="val => settingsStore.updateSetting('boardDensity', val)"
+        @update="val => settingsStore.updateSetting('boardDensity', val as 'comfortable' | 'compact' | 'ultrathin')"
       />
     </SettingsSection>
 
@@ -46,7 +46,7 @@ const boardDensities = [
         description="When dropping tasks on power groups (Today, High Priority, etc.)"
         :options="powerGroupModes"
         :value="settingsStore.powerGroupOverrideMode"
-        @update="val => settingsStore.updateSetting('powerGroupOverrideMode', val)"
+        @update="val => settingsStore.updateSetting('powerGroupOverrideMode', val as 'always' | 'only_empty' | 'ask')"
       />
     </SettingsSection>
 

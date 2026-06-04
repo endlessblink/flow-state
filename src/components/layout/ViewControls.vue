@@ -125,7 +125,8 @@ const groupByOptions = computed(() => [
   { label: t('filters.group_project'), value: 'project' },
   { label: t('filters.group_status'), value: 'status' },
   { label: t('filters.group_priority'), value: 'priority' },
-  { label: t('filters.group_due_date'), value: 'dueDate' }
+  { label: t('filters.group_due_date'), value: 'dueDate' },
+  { label: 'Lane', value: 'lane' }
 ])
 
 const filterOptions = computed(() => [

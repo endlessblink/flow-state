@@ -163,6 +163,7 @@ export const swrCache = new SWRCache()
 export const invalidateCache = {
     tasks: () => swrCache.invalidatePrefix('tasks:'),
     projects: () => swrCache.invalidatePrefix('projects:'),
+    lanes: () => swrCache.invalidatePrefix('lanes:'),
     groups: () => swrCache.invalidatePrefix('groups:'),
     all: () => swrCache.clear(),
     // BUG-1056: Expose user change check for auth state changes
@@ -214,6 +215,27 @@ export interface TaskIdAvailability {
 export function createDatabaseHelpers(
     lastSyncError: Ref<string | null>
 ) {
+    const isTransientSyncError = (message: string, status: unknown, context: string): boolean => {
+        const lowerMsg = message.toLowerCase()
+        const isReadContext = context.startsWith('fetch')
+        const isNetworkLike = message.includes('Failed to fetch') ||
+            lowerMsg.includes('networkerror') ||
+            message.includes('Network Error') ||
+            message.includes('Service Unavailable') ||
+            message.includes('AbortError') ||
+            lowerMsg.includes('timeout') ||
+            message.includes('aborted') ||
+            message.includes('Content-Length')
+
+        if (isNetworkLike) return true
+
+        // Supabase/postgrest-js can collapse fetch-layer failures into this generic
+        // message. Treat it as transient for read fetches so refresh/poll paths
+        // don't raise visible sync errors during short VPS/network hiccups.
+        const normalizedMsg = lowerMsg.replace(/[.!?\s]+$/g, '')
+        return isReadContext && normalizedMsg === 'an unexpected error occurred'
+    }
+
     /**
      * Helper to execute Supabase operations with transient error retries (e.g. clock skew, 401/403 restarts)
      * TASK-329: Added exponential backoff and auth resilience
@@ -258,8 +280,7 @@ export function createDatabaseHelpers(
                 // 3. Network / Connection / Timeout Errors
                 // BUG-352: Also catch AbortError (from fetch timeout) and timeout strings
                 // BUG-1311: Firefox/Zen reports "NetworkError" (no space), Chrome reports "Network Error" (space)
-                const lowerMsg = message.toLowerCase()
-                if (message.includes('Failed to fetch') || lowerMsg.includes('networkerror') || message.includes('Network Error') || message.includes('Service Unavailable') || message.includes('AbortError') || lowerMsg.includes('timeout') || message.includes('aborted') || message.includes('Content-Length')) {
+                if (isTransientSyncError(message, status, context)) {
                     console.warn(`🌐 [NETWORK-RETRY] ${context} failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
                     await new Promise(resolve => setTimeout(resolve, delay))
                     continue
@@ -292,14 +313,17 @@ export function createDatabaseHelpers(
         const err = error instanceof Error ? error : new Error(finalMessage)
 
         // BUG-352: Suppress notifications for transient network errors (common on mobile WiFi/cell handoffs)
-        const lowerMsg = message.toLowerCase()
-        const isTransientNetwork = message.includes('Failed to fetch') ||
-            lowerMsg.includes('networkerror') ||
-            message.includes('Network Error') ||
-            message.includes('AbortError') ||
-            lowerMsg.includes('timeout') ||
-            message.includes('aborted') ||
-            message.includes('Content-Length')
+        const status = typeof error === 'object' && error !== null
+            ? (error as { status?: number | string; code?: number | string }).status ?? (error as { code?: number | string }).code
+            : undefined
+        const isTransientNetwork = isTransientSyncError(message, status, context)
+
+        if (isTransientNetwork && context.startsWith('fetch')) {
+            if (import.meta.env.DEV) {
+                console.warn(`[SYNC] Suppressed transient ${context} error: ${finalMessage}`)
+            }
+            return
+        }
 
         errorHandler.report({
             error: err,

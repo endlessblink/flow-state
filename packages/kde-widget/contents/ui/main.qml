@@ -168,6 +168,7 @@ PlasmoidItem {
     // ===== SUPABASE CONFIG (hardcoded for PomoFlow) =====
     readonly property string supabaseUrl: plasmoid.configuration.supabaseUrl || "http://127.0.0.1:54321"
     readonly property string supabaseKey: plasmoid.configuration.supabaseAnonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODMzMzkxMjR9.quujL-cYcPusBhirDQFq9p-iTN0hRwjY2GLx6XUtYDg"
+    readonly property string localApiUrl: "http://127.0.0.1:5577"
 
     // ===== BUG-1112: STATIC DATASOURCE FOR SHELL COMMANDS (Plasma 6) =====
     // In Plasma 6, DataSource moved to org.kde.plasma.plasma5support
@@ -268,6 +269,11 @@ PlasmoidItem {
 
     // ===== NUDGE: Simple reminder popup (separate from nanny task picker) =====
     function sendNannyNotification() {
+        if (!root.hasActionableNannyTasks()) {
+            console.log("[NUDGE] Suppressed: no actionable reminder tasks")
+            return
+        }
+
         var tone = plasmoid.configuration.nannyTone || "gentle"
         var messages = tone === "direct" ? root.nannyDirectMessages : root.nannyGentleMessages
         var msg = messages[Math.floor(Math.random() * messages.length)]
@@ -3987,9 +3993,19 @@ PlasmoidItem {
             // Check we haven't notified within the interval
             if (root.nannyLastNotifyTime > 0 && (now - root.nannyLastNotifyTime) < intervalMs) { console.log("[NUDGE] Blocked: already notified recently"); return }
 
-            // All conditions met - send nudge
-            console.log("[NUDGE] All gates passed — showing nudge!")
-            root.sendNannyNotification()
+            // All timing/session gates passed. Refresh the reminder-backed task
+            // cache before interrupting so a just-completed task, a completed
+            // final task, or a stale failed cache cannot produce a phantom nudge.
+            root.fetchNannyTasks(function() {
+                root.buildNannyTaskList()
+                if (!root.hasActionableNannyTasks()) {
+                    console.log("[NUDGE] Blocked: no actionable reminder tasks")
+                    return
+                }
+
+                console.log("[NUDGE] All gates passed — showing nudge!")
+                root.sendNannyNotification()
+            })
         }
     }
 
@@ -4272,12 +4288,137 @@ PlasmoidItem {
         xhr.send()
     }
 
+    function applyFetchedSession(s, source) {
+        if (root.debugLogging) console.log("[SYNC] Session (" + source + "):", s.id, "remaining:", s.remaining_time, "leader:", s.device_leader_id, "task:", s.task_id)
+        root.currentSessionId = s.id
+        var newTaskId = s.task_id || ""
+        if (newTaskId !== root.currentTaskId) {
+            root._cachedActiveTaskId = ""
+            root._cachedActiveTaskName = ""
+        }
+        root.currentTaskId = newTaskId  // TASK-1087: Track active task
+        root.totalSeconds = s.duration
+        root.isWorkSession = !s.is_break
+        root.hasActiveSession = true
+        root.sessionJustCompleted = false  // Clear completion state when active session found
+
+        // BUG-1462: Auto-dismiss overlay + notification when new session detected (e.g. from notify.sh button)
+        if (fullScreenOverlay.visible) {
+            fullScreenOverlay.visible = false
+            root.dismissSystemNotification()
+            console.log("[SYNC] Auto-dismissed overlay — new session detected")
+        }
+
+        // BUG-1122: Check for stale leadership and take over if needed
+        var widgetIsLeader = s.device_leader_id === "kde-widget"
+        var leaderIsStale = false
+        var driftSeconds = 0
+
+        if (s.device_leader_last_seen) {
+            var lastSeen = new Date(s.device_leader_last_seen).getTime()
+            var now = Date.now()
+            driftSeconds = Math.floor((now - lastSeen) / 1000)
+            // 30 seconds timeout - matches DEVICE_LEADER_TIMEOUT_MS in timer.ts
+            leaderIsStale = driftSeconds > 30
+        }
+
+        // Widget becomes leader if: explicitly the leader, leader is stale, or no leader
+        var shouldBeLeader = widgetIsLeader || leaderIsStale || !s.device_leader_id
+
+        if (shouldBeLeader && !widgetIsLeader && leaderIsStale) {
+            // Claim leadership from stale leader
+            console.log("[SYNC] Claiming leadership - stale by", driftSeconds, "seconds")
+            patchSession({
+                device_leader_id: "kde-widget",
+                device_leader_last_seen: new Date().toISOString()
+            })
+        }
+
+        root.isDeviceLeader = shouldBeLeader
+
+        if (shouldBeLeader) {
+            // Widget is leader - only update if we're not actively counting
+            // This prevents sync from overwriting our local countdown
+            if (!root.isRunning) {
+                root.secondsRemaining = s.remaining_time
+            }
+        } else {
+            // Widget is follower - use DB value with drift correction
+            var baseTime = s.remaining_time
+
+            // TASK-1009 FIX: Apply drift correction based on leader's last heartbeat
+            if (s.device_leader_last_seen && !s.is_paused && driftSeconds > 0) {
+                // Apply drift correction (cap at 120 seconds to avoid huge jumps)
+                if (driftSeconds < 120) {
+                    baseTime = Math.max(0, baseTime - driftSeconds)
+                    if (root.debugLogging) console.log("[SYNC] Drift correction applied:", driftSeconds, "seconds, new time:", baseTime)
+                }
+            }
+
+            root.secondsRemaining = baseTime
+        }
+
+        root.isRunning = s.is_active && !s.is_paused
+        root.writeActiveTaskFile()
+    }
+
+    function handleNoActiveSession() {
+        // BUG-1292: Don't clear state during transition - notify.sh curl may still be in flight
+        if (root.sessionJustCompleted || root.isInTransition) {
+            if (root.debugLogging) console.log("[SYNC] No session during transition - waiting for new session")
+        } else if (root.hasActiveSession && root.isRunning && root.currentSessionId && !root.checkingCompletion) {
+            // BUG: Follower completion detection
+            // We had a running session but polling found nothing active
+            // Check if it completed naturally (another device finished it) vs manual stop
+            console.log("[SYNC] Active session disappeared - checking if completed by another device")
+            checkSessionCompletion(root.currentSessionId, root.isWorkSession)
+            // Don't clear state here - checkSessionCompletion will handle it
+        } else {
+            // Only update nanny timestamp on actual transition (had session → no session)
+            if (root.hasActiveSession) {
+                root.nannyLastSessionEndTime = Date.now()  // TASK-1424
+            }
+            root.hasActiveSession = false
+            root.currentSessionId = ""
+            root.currentTaskId = ""  // TASK-1087: Clear active task
+            root._cachedActiveTaskId = ""
+            root._cachedActiveTaskName = ""
+            root.isRunning = false
+            root.isDeviceLeader = false
+            root.writeActiveTaskFile()
+        }
+    }
+
+    function fetchLocalCurrentSession(fallback) {
+        var xhr = new XMLHttpRequest()
+        xhr.open("GET", root.localApiUrl + "/api/timer/current", true)
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            if (xhr.status === 200) {
+                var body = JSON.parse(xhr.responseText)
+                if (body.active && body.session) {
+                    applyFetchedSession(body.session, "local-api")
+                } else {
+                    handleNoActiveSession()
+                }
+                return
+            }
+            // Electron is closed, not signed in yet, or the sidecar is unavailable.
+            fallback()
+        }
+        xhr.send()
+    }
+
     function fetchCurrentSession() {
         if (!root.isAuthenticated) {
             if (root.debugLogging) console.log("[SYNC] Not authenticated, skipping fetch")
             return
         }
 
+        fetchLocalCurrentSession(fetchSupabaseCurrentSession)
+    }
+
+    function fetchSupabaseCurrentSession() {
         if (root.debugLogging) console.log("[SYNC] Fetching current session... userId:", root.userId)
 
         var xhr = new XMLHttpRequest()
@@ -4312,103 +4453,9 @@ PlasmoidItem {
             var sessions = JSON.parse(xhr.responseText)
             if (root.debugLogging) console.log("[SYNC] Found", sessions.length, "active sessions")
             if (sessions.length > 0) {
-                var s = sessions[0]
-                if (root.debugLogging) console.log("[SYNC] Session:", s.id, "remaining:", s.remaining_time, "leader:", s.device_leader_id, "task:", s.task_id)
-                root.currentSessionId = s.id
-                var newTaskId = s.task_id || ""
-                if (newTaskId !== root.currentTaskId) {
-                    root._cachedActiveTaskId = ""
-                    root._cachedActiveTaskName = ""
-                }
-                root.currentTaskId = newTaskId  // TASK-1087: Track active task
-                root.totalSeconds = s.duration
-                root.isWorkSession = !s.is_break
-                root.hasActiveSession = true
-                root.sessionJustCompleted = false  // Clear completion state when active session found
-
-                // BUG-1462: Auto-dismiss overlay + notification when new session detected (e.g. from notify.sh button)
-                if (fullScreenOverlay.visible) {
-                    fullScreenOverlay.visible = false
-                    root.dismissSystemNotification()
-                    console.log("[SYNC] Auto-dismissed overlay — new session detected")
-                }
-
-                // BUG-1122: Check for stale leadership and take over if needed
-                var widgetIsLeader = s.device_leader_id === "kde-widget"
-                var leaderIsStale = false
-                var driftSeconds = 0
-
-                if (s.device_leader_last_seen) {
-                    var lastSeen = new Date(s.device_leader_last_seen).getTime()
-                    var now = Date.now()
-                    driftSeconds = Math.floor((now - lastSeen) / 1000)
-                    // 30 seconds timeout - matches DEVICE_LEADER_TIMEOUT_MS in timer.ts
-                    leaderIsStale = driftSeconds > 30
-                }
-
-                // Widget becomes leader if: explicitly the leader, leader is stale, or no leader
-                var shouldBeLeader = widgetIsLeader || leaderIsStale || !s.device_leader_id
-
-                if (shouldBeLeader && !widgetIsLeader && leaderIsStale) {
-                    // Claim leadership from stale leader
-                    console.log("[SYNC] Claiming leadership - stale by", driftSeconds, "seconds")
-                    patchSession({
-                        device_leader_id: "kde-widget",
-                        device_leader_last_seen: new Date().toISOString()
-                    })
-                }
-
-                root.isDeviceLeader = shouldBeLeader
-
-                if (shouldBeLeader) {
-                    // Widget is leader - only update if we're not actively counting
-                    // This prevents sync from overwriting our local countdown
-                    if (!root.isRunning) {
-                        root.secondsRemaining = s.remaining_time
-                    }
-                } else {
-                    // Widget is follower - use DB value with drift correction
-                    var baseTime = s.remaining_time
-
-                    // TASK-1009 FIX: Apply drift correction based on leader's last heartbeat
-                    if (s.device_leader_last_seen && !s.is_paused && driftSeconds > 0) {
-                        // Apply drift correction (cap at 120 seconds to avoid huge jumps)
-                        if (driftSeconds < 120) {
-                            baseTime = Math.max(0, baseTime - driftSeconds)
-                            if (root.debugLogging) console.log("[SYNC] Drift correction applied:", driftSeconds, "seconds, new time:", baseTime)
-                        }
-                    }
-
-                    root.secondsRemaining = baseTime
-                }
-
-                root.isRunning = s.is_active && !s.is_paused
-                root.writeActiveTaskFile()
+                applyFetchedSession(sessions[0], "supabase")
             } else {
-                // BUG-1292: Don't clear state during transition - notify.sh curl may still be in flight
-                if (root.sessionJustCompleted || root.isInTransition) {
-                    if (root.debugLogging) console.log("[SYNC] No session during transition - waiting for new session")
-                } else if (root.hasActiveSession && root.isRunning && root.currentSessionId && !root.checkingCompletion) {
-                    // BUG: Follower completion detection
-                    // We had a running session but polling found nothing active
-                    // Check if it completed naturally (another device finished it) vs manual stop
-                    console.log("[SYNC] Active session disappeared - checking if completed by another device")
-                    checkSessionCompletion(root.currentSessionId, root.isWorkSession)
-                    // Don't clear state here - checkSessionCompletion will handle it
-                } else {
-                    // Only update nanny timestamp on actual transition (had session → no session)
-                    if (root.hasActiveSession) {
-                        root.nannyLastSessionEndTime = Date.now()  // TASK-1424
-                    }
-                    root.hasActiveSession = false
-                    root.currentSessionId = ""
-                    root.currentTaskId = ""  // TASK-1087: Clear active task
-                    root._cachedActiveTaskId = ""
-                    root._cachedActiveTaskName = ""
-                    root.isRunning = false
-                    root.isDeviceLeader = false
-                    root.writeActiveTaskFile()
-                }
+                handleNoActiveSession()
             }
         }
         xhr.send()
@@ -4792,8 +4839,10 @@ PlasmoidItem {
 
         console.log("[TASKS] Marking task done:", taskId)
 
+        root.recordTaskCompletionActivity(taskId)
+
         var xhr = new XMLHttpRequest()
-        var url = root.supabaseUrl + "/rest/v1/tasks?id=eq." + taskId
+        var url = root.supabaseUrl + "/rest/v1/tasks?id=eq." + taskId + "&user_id=eq." + root.userId
 
         xhr.open("PATCH", url, true)
         xhr.setRequestHeader("apikey", root.supabaseKey)
@@ -4804,15 +4853,83 @@ PlasmoidItem {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200 || xhr.status === 204) {
                     console.log("[TASKS] Task marked done successfully")
-                    // Refresh task list to remove the completed task
-                    root.fetchTasks()
+                    root.refreshTaskReminderCaches()
                 } else {
                     console.log("[TASKS] Error marking done:", xhr.status, xhr.responseText)
+                    root.restoreTaskAfterCompletionFailure(taskId)
                 }
             }
         }
 
-        xhr.send(JSON.stringify({ status: "done" }))
+        xhr.send(JSON.stringify({
+            status: "done",
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }))
+    }
+
+    function recordTaskCompletionActivity(taskId) {
+        var now = Date.now()
+        nudgePopup.visible = false
+        nannyPopup.visible = false
+        root.nannyLastNotifyTime = now
+        root.nannyLastSessionEndTime = now
+        root.removeTaskFromReminderCaches(taskId)
+        root.buildNannyTaskList()
+        console.log("[NUDGE] Suppressed after task completion:", taskId)
+    }
+
+    function isTaskReminderActionable(task) {
+        if (!task || task.isHeader || !task.id || !task.title) return false
+        if (task.status === "done" || root.nannyHiddenToday[task.id]) return false
+
+        var todayStr = root.localDateString(new Date())
+        return root.normalizeTaskDate(task.due_date) === todayStr
+    }
+
+    function hasActionableNannyTasks() {
+        for (var i = 0; i < root.pinnedTasks.length; i++) {
+            var pin = root.pinnedTasks[i]
+            if (pin && pin.id && pin.title && pin.status !== "done" && !root.nannyHiddenToday[pin.id]) return true
+        }
+
+        var allTasks = root.nannyAllTasks.length > 0 ? root.nannyAllTasks : root.tasks
+        for (var j = 0; j < allTasks.length; j++) {
+            if (root.isTaskReminderActionable(allTasks[j])) return true
+        }
+
+        return false
+    }
+
+    function removeTaskFromReminderCaches(taskId) {
+        function withoutTaskId(items) {
+            var kept = []
+            for (var i = 0; i < items.length; i++) {
+                if (!items[i] || items[i].id !== taskId) kept.push(items[i])
+            }
+            return kept
+        }
+
+        root.tasks = withoutTaskId(root.tasks)
+        root.pinnedTasks = withoutTaskId(root.pinnedTasks)
+        root.nannyAllTasks = withoutTaskId(root.nannyAllTasks)
+        var hidden = root.nannyHiddenToday
+        hidden[taskId] = true
+        root.nannyHiddenToday = hidden
+    }
+
+    function refreshTaskReminderCaches() {
+        // Refresh every task cache that can feed visible task rows or reminders.
+        root.fetchTasks()
+        root.fetchPinnedTasks()
+        root.fetchNannyTasks(function() { root.buildNannyTaskList() })
+    }
+
+    function restoreTaskAfterCompletionFailure(taskId) {
+        var hidden = root.nannyHiddenToday
+        delete hidden[taskId]
+        root.nannyHiddenToday = hidden
+        root.refreshTaskReminderCaches()
     }
 
     // ===== TASK-1429: SAVE INLINE TASK EDIT =====
@@ -5495,7 +5612,7 @@ PlasmoidItem {
         }
 
         var xhr = new XMLHttpRequest()
-        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,project_id&status=neq.done&is_deleted=eq.false&order=due_date.asc.nullslast,created_at.desc&limit=100"
+        var url = root.supabaseUrl + "/rest/v1/tasks?select=id,title,status,priority,due_date,project_id&user_id=eq." + root.userId + "&status=neq.done&is_deleted=eq.false&order=due_date.asc.nullslast,created_at.desc&limit=100"
         xhr.open("GET", url, true)
         xhr.setRequestHeader("apikey", root.supabaseKey)
         xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
@@ -5658,6 +5775,7 @@ PlasmoidItem {
         // 1. Add pinned tasks first. TASK-1772: pins ARE real tasks, so they carry priority/due_date directly.
         for (var i = 0; i < root.pinnedTasks.length && combined.length < maxItems; i++) {
             var pin = root.pinnedTasks[i]
+            if (pin.status === "done") continue
             // Skip if hidden today
             if (root.nannyHiddenToday[pin.id]) continue
 

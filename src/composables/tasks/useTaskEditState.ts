@@ -1,5 +1,6 @@
 import { ref, watch, nextTick, computed, type Ref } from 'vue'
 import { type Task, useTaskStore } from '@/stores/tasks'
+import type { TaskRecurrence } from '@/types/recurrence'
 
 export function useTaskEditState(
     props: { isOpen: boolean; task: Task | null },
@@ -27,7 +28,7 @@ export function useTaskEditState(
             endCondition: { type: 'never' },
             exceptions: [],
             generatedInstances: []
-        } as unknown,
+        } as TaskRecurrence,
         createdAt: new Date(),
         updatedAt: new Date()
     })

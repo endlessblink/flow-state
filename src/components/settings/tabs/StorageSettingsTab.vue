@@ -13,7 +13,8 @@ import {
   CloudLightning,
   RefreshCw,
   Cloud,
-  HardDrive
+  HardDrive,
+  Trash2
 } from 'lucide-vue-next'
 import useBackupSystem from '@/composables/useBackupSystem'
 import SettingsSection from '../SettingsSection.vue'
@@ -42,9 +43,16 @@ const {
 const isRestoring = ref(false)
 const validationInfo = ref<Awaited<ReturnType<typeof getGoldenBackupValidation>> | null>(null)
 const shadowSnapshot = ref<any | null>(null)
-const showValidation = ref(false)
 const isScanningShadow = ref(false)
-const goldenRotation = ref<unknown[]>([])
+type GoldenBackupSummary = {
+  id: string
+  timestamp: string | number
+  metadata?: {
+    taskCount?: number
+  }
+}
+
+const goldenRotation = ref<GoldenBackupSummary[]>([])
 
 // Tauri mode state (only shown in Tauri desktop app)
 const showTauriMode = computed(() => isTauri())
@@ -226,11 +234,25 @@ const handleGoldenRestore = async (index: number) => {
 const taskStore = useTaskStore()
 const isCleaningUp = ref(false)
 const isClearingSyncQueue = ref(false)
+const isClearingDoneTasks = ref(false)
+const doneTaskCleanupCutoff = ref('')
 const cleanupResult = ref<{ success: boolean; message: string } | null>(null)
+const doneCleanupResult = ref<{ success: boolean; message: string } | null>(null)
+
+const doneTasksBeforeCutoff = computed(() => {
+  if (!doneTaskCleanupCutoff.value) return []
+
+  return taskStore.rawTasks.filter(task =>
+    task.status === 'done' &&
+    !!task.dueDate &&
+    task.dueDate <= doneTaskCleanupCutoff.value
+  )
+})
 
 const handleCleanupTasks = async () => {
   isCleaningUp.value = true
   cleanupResult.value = null
+  doneCleanupResult.value = null
   try {
     const fixed = await taskStore.cleanupCorruptedTasks()
     cleanupResult.value = {
@@ -252,6 +274,7 @@ const handleClearSyncQueue = async () => {
 
   isClearingSyncQueue.value = true
   cleanupResult.value = null
+  doneCleanupResult.value = null
   try {
     await clearAllOperations()
     cleanupResult.value = {
@@ -268,10 +291,54 @@ const handleClearSyncQueue = async () => {
   }
 }
 
+const handleClearDoneTasksBeforeCutoff = async () => {
+  cleanupResult.value = null
+
+  if (!doneTaskCleanupCutoff.value) {
+    doneCleanupResult.value = {
+      success: false,
+      message: 'Choose a cutoff due date first'
+    }
+    return
+  }
+
+  const tasksToDelete = doneTasksBeforeCutoff.value
+  if (!tasksToDelete.length) {
+    doneCleanupResult.value = {
+      success: true,
+      message: 'No done tasks found on or before that due date'
+    }
+    return
+  }
+
+  const confirmed = confirm(
+    `This will remove ${tasksToDelete.length} done task(s) due on or before ${doneTaskCleanupCutoff.value}. ` +
+    'They will be soft-deleted and can be recovered from backups/trash paths. Continue?'
+  )
+  if (!confirmed) return
+
+  isClearingDoneTasks.value = true
+  doneCleanupResult.value = null
+  try {
+    await taskStore.bulkDeleteTasks(tasksToDelete.map(task => task.id))
+    doneCleanupResult.value = {
+      success: true,
+      message: `Removed ${tasksToDelete.length} done task(s) due on or before ${doneTaskCleanupCutoff.value}`
+    }
+  } catch (e) {
+    doneCleanupResult.value = {
+      success: false,
+      message: `Error: ${e instanceof Error ? e.message : 'Unknown error'}`
+    }
+  } finally {
+    isClearingDoneTasks.value = false
+  }
+}
+
 onMounted(async () => {
     // Initial checks
     validationInfo.value = await getGoldenBackupValidation()
-    goldenRotation.value = getGoldenBackups()
+    goldenRotation.value = getGoldenBackups() as unknown as GoldenBackupSummary[]
     checkShadowHub()
     await loadLocalBackupPolicy()
 })
@@ -339,6 +406,34 @@ onMounted(async () => {
         <p class="mode-help-text">
           <AlertTriangle :size="14" />
           Changing modes requires an app restart. Your data will not be lost.
+        </p>
+      </div>
+    </SettingsSection>
+
+    <SettingsSection title="Task Cleanup">
+      <div class="done-cleanup-panel">
+        <div class="done-cleanup-copy">
+          <span class="done-cleanup-title">Remove done tasks by due date</span>
+          <span class="done-cleanup-desc">
+            Soft-delete completed tasks with a due date on or before the selected date.
+          </span>
+        </div>
+        <div class="done-cleanup-controls">
+          <label class="done-cleanup-field">
+            <span>Cutoff due date</span>
+            <input v-model="doneTaskCleanupCutoff" type="date">
+          </label>
+          <button
+            class="cleanup-btn danger"
+            :disabled="isClearingDoneTasks || !doneTaskCleanupCutoff || doneTasksBeforeCutoff.length === 0"
+            @click="handleClearDoneTasksBeforeCutoff"
+          >
+            <Trash2 :size="16" />
+            {{ isClearingDoneTasks ? 'Removing...' : `Remove ${doneTasksBeforeCutoff.length} Done` }}
+          </button>
+        </div>
+        <p v-if="doneCleanupResult" class="cleanup-result" :class="{ success: doneCleanupResult.success }">
+          {{ doneCleanupResult.message }}
         </p>
       </div>
     </SettingsSection>
@@ -569,12 +664,12 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div v-if="validationInfo?.warnings?.length > 0" class="detailed-warnings">
+        <div v-if="(validationInfo?.warnings?.length ?? 0) > 0" class="detailed-warnings">
           <p class="warning-title">
             Smart Filtering (for top peak):
           </p>
           <ul>
-            <li v-for="(warn, i) in validationInfo.warnings" :key="i">
+            <li v-for="(warn, i) in validationInfo?.warnings ?? []" :key="i">
               {{ warn }}
             </li>
           </ul>
@@ -623,6 +718,7 @@ onMounted(async () => {
             {{ isClearingSyncQueue ? 'Clearing...' : 'Clear Sync Queue' }}
           </button>
         </div>
+
         <p v-if="cleanupResult" class="cleanup-result" :class="{ success: cleanupResult.success }">
           {{ cleanupResult.message }}
         </p>
@@ -1282,7 +1378,92 @@ onMounted(async () => {
   border-color: var(--glass-border-strong);
 }
 
+.cleanup-btn.danger {
+  background: var(--color-danger);
+}
+
+.cleanup-btn.danger:hover:not(:disabled) {
+  background: var(--danger-fg);
+}
+
+.done-cleanup-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+}
+
+.done-cleanup-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.done-cleanup-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.done-cleanup-desc {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.done-cleanup-controls {
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.done-cleanup-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  min-width: min(100%, 160px);
+}
+
+.done-cleanup-field input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+
+.done-cleanup-controls .cleanup-btn {
+  min-height: 38px;
+  min-width: 0;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+}
+
+@media (max-width: 520px) {
+  .done-cleanup-controls,
+  .done-cleanup-controls .cleanup-btn {
+    width: 100%;
+  }
+
+  .done-cleanup-field {
+    width: 100%;
+  }
+
+  .done-cleanup-controls .cleanup-btn {
+    justify-content: center;
+  }
+}
+
 .cleanup-result {
+  margin: 0;
   font-size: var(--text-sm);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);

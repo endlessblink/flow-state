@@ -1,5 +1,5 @@
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
-import { type Ref, toRaw } from 'vue'
+import { nextTick, type Ref, toRaw } from 'vue'
 import { type Task, type Subtask, type TaskInstance, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 // TASK-1158: Canvas sync via shared bridge (breaks circular dependency)
 import { canvasUiSyncRequest } from '../canvasTaskBridge'
@@ -18,6 +18,12 @@ import { useToast } from '@/composables/useToast'
 // TASK-1428: Keep IndexedDB read cache warm after offline mutations
 import { cacheTasks } from '@/services/offline/readCacheDB'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
+import {
+    beginCanvasDoneTrace,
+    getCanvasDoneTraceTaskIds,
+    traceCanvasDone,
+    traceCanvasDoneTasks
+} from '@/utils/canvas/doneTrace'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
@@ -36,6 +42,9 @@ const FALLBACK_TASK_TITLE = 'Untitled Task'
 
 const isRealTaskTitle = (title: unknown): title is string =>
     typeof title === 'string' && title.trim().length > 0 && title.trim() !== FALLBACK_TASK_TITLE
+
+const hasTaskTitle = (title: unknown): title is string =>
+    typeof title === 'string' && title.trim().length > 0
 
 // =============================================================================
 // GEOMETRY WRITE SOURCE (TASK-255 Geometry Invariants)
@@ -118,10 +127,12 @@ export function useTaskOperations(
     }
 
     const createTask = async (taskData: Partial<Task>) => {
-        // TASK-061: Demo content guard - warn in dev mode
-        if (taskData.title) {
-            guardTaskCreation(taskData.title)
+        if (!hasTaskTitle(taskData.title)) {
+            throw new Error('Task title is required')
         }
+
+        // TASK-061: Demo content guard - warn in dev mode
+        guardTaskCreation(taskData.title)
 
         // BUG-336: Preserve task ID if provided (needed for undo restore)
         const taskId = taskData.id || crypto.randomUUID()
@@ -373,6 +384,11 @@ export function useTaskOperations(
         updates = sanitizeGeometryUpdates(updates, source, task, taskId)
         if (Object.keys(updates).length === 0) return
 
+        const isMarkingDone = updates.status === 'done' && task.status !== 'done'
+        if (isMarkingDone) {
+            beginCanvasDoneTrace(taskId, _rawTasks.value)
+        }
+
         // BUG-060 FIX: Suppress watcher during manual update to prevent concurrent bulk saves
         // This prevents the "8 conflicts in bulk save" issue
         const wasManualInProgress = manualOperationInProgress.value
@@ -415,6 +431,27 @@ export function useTaskOperations(
                         })
                     }
                 }
+            }
+
+            if (getCanvasDoneTraceTaskIds().includes(taskId) && hasGeometryChange) {
+                traceCanvasDone('updateTask:geometry-write', {
+                    taskId,
+                    source,
+                    updates: {
+                        parentId: 'parentId' in updates ? updates.parentId ?? null : undefined,
+                        canvasPosition: updates.canvasPosition
+                            ? { x: Math.round(updates.canvasPosition.x), y: Math.round(updates.canvasPosition.y) }
+                            : updates.canvasPosition,
+                        positionVersion: updates.positionVersion ?? null,
+                    },
+                    before: {
+                        canvasPosition: task.canvasPosition
+                            ? { x: Math.round(task.canvasPosition.x), y: Math.round(task.canvasPosition.y) }
+                            : null,
+                        parentId: task.parentId ?? null,
+                        positionVersion: task.positionVersion ?? null,
+                    },
+                })
             }
 
             // BUG-045 FIX: Removed auto-archive behavior
@@ -611,31 +648,10 @@ export function useTaskOperations(
                         updates.recurringInstances = []
                     }
 
-                    // ================================================================
-                    // AUTO-ARCHIVE: Move done tasks off canvas to inbox
-                    // ================================================================
-                    // INTENTIONAL GEOMETRY INVARIANT EXCEPTION (TASK-255)
-                    //
-                    // This clears canvasPosition and parentId, which are geometry
-                    // properties normally restricted to drag handlers only.
-                    // This is ALLOWED because:
-                    //   1. Done tasks must leave the canvas — keeping them causes
-                    //      position/sync drift and visual clutter
-                    //   2. The write is always triggered by an explicit status change
-                    //      (user or sync marking task as 'done'), not by background sync
-                    //   3. The direction is always "remove from canvas" (clear), never
-                    //      "move to a new position" — so it cannot cause position drift
-                    // ================================================================
-                    if (task.canvasPosition) {
-                        updates.canvasPosition = undefined
-                        updates.isInInbox = true
-                        updates.parentId = undefined
-                        // BUG-1410: Force position version increment for auto-archive
-                        // hasGeometryChange was computed BEFORE auto-archive ran, so positionVersion
-                        // wouldn't be incremented. This ensures sync handlers respect the clear.
-                        updates.positionVersion = (task.positionVersion || 0) + 1
-                        console.log(`📦 [DONE-ARCHIVE] Task "${task.title?.slice(0, 30)}" moved off canvas to inbox`)
-                    }
+                    // Keep canvas geometry untouched when marking done. Hiding done
+                    // tasks is a view/filter concern; status updates must not clear
+                    // canvasPosition or parentId because that forces a full canvas
+                    // re-sync and can shift unrelated nodes.
                 }
                 // Clear completedAt when status changes FROM 'done' (task reopened)
                 else if (wasDone && isNowNotDone) {
@@ -718,13 +734,20 @@ export function useTaskOperations(
             _rawTasks.value[freshIndex] = {
                 ...task,
                 ...syncedUpdates,
-                // BUG-1410: syncedUpdates.positionVersion takes priority when auto-archive set it
-                // (hasGeometryChange was computed before auto-archive, so newVersion would be stale)
+                // Explicit positionVersion updates take priority over the derived geometry version.
                 positionVersion: syncedUpdates.positionVersion ?? newVersion,
                 updatedAt: new Date()
             }
 
-            // BUG-1369: Force canvas sync when task is auto-archived off canvas.
+            if (isMarkingDone || getCanvasDoneTraceTaskIds().includes(taskId)) {
+                traceCanvasDoneTasks('updateTask:after-store-write', _rawTasks.value)
+                nextTick(() => {
+                    traceCanvasDoneTasks('updateTask:after-nextTick-1', _rawTasks.value)
+                    nextTick(() => traceCanvasDoneTasks('updateTask:after-nextTick-2', _rawTasks.value))
+                })
+            }
+
+            // Force canvas sync when a user action explicitly removes a task from canvas.
             // triggerCanvasSync() increments canvasUiSyncRequest which tells the canvas
             // orchestrator to re-evaluate visible nodes. Without this, the node stays
             // rendered even after canvasPosition is cleared, because updateTask() never
@@ -746,7 +769,7 @@ export function useTaskOperations(
                 // Whole-document LWW overwrites concurrent edits on other devices.
                 // e.g. phone edits title, desktop edits description → last save wipes the other.
                 // Solution: collect all changed keys from updates (includes derived mutations
-                // like completedAt when status→done, canvasPosition on auto-archive, etc.)
+                // like completedAt when status→done or explicit canvas removal.
                 // plus syncedUpdates (date field sync may add dueDate derived from instances).
                 // Only include those keys in the DB payload so Supabase only writes changed columns.
                 const changedKeys = new Set([
@@ -777,6 +800,8 @@ export function useTaskOperations(
                 }
                 if (changedKeys.has('completedPomodoros')) {
                     payload.completed_pomodoros = updatedTask.completedPomodoros
+                    // BUG-1799: toSupabaseTask sets total_pomodoros from completedPomodoros too.
+                    payload.total_pomodoros = updatedTask.completedPomodoros
                 }
                 if (changedKeys.has('isInInbox')) {
                     payload.is_in_inbox = updatedTask.isInInbox
@@ -797,7 +822,7 @@ export function useTaskOperations(
                     payload.project_id = isValidUUID(updatedTask.projectId) ? updatedTask.projectId : null
                 }
                 // BUG-1365: Also check if canvasPosition was explicitly set in the updates object.
-                // During auto-archive (line ~458), canvasPosition is set to undefined to clear it.
+                // During explicit canvas removal, canvasPosition is set to undefined to clear it.
                 // Without 'canvasPosition' in updates check, the sync queue never sends position: null
                 // to the DB, so after refresh the task reappears on canvas with its old position.
                 if (changedKeys.has('canvasPosition')) {
@@ -889,6 +914,35 @@ export function useTaskOperations(
                 if (changedKeys.has('isPinned')) {
                     payload.is_pinned = updatedTask.isPinned ?? false
                 }
+                // BUG-1799: These fields were previously persisted ONLY by the now-removed
+                // unconditional direct save. Mirror toSupabaseTask (supabaseMappers.ts) exactly so
+                // the sync queue is a complete single writer and no field silently stops syncing.
+                if (changedKeys.has('planningNotes') && updatedTask.planningNotes !== undefined) {
+                    payload.planning_notes = JSON.parse(JSON.stringify(updatedTask.planningNotes || []))
+                }
+                if (changedKeys.has('connectionTypes')) {
+                    payload.connection_types = updatedTask.connectionTypes
+                        ? JSON.parse(JSON.stringify(updatedTask.connectionTypes))
+                        : null
+                }
+                if (changedKeys.has('notificationPreferences')) {
+                    payload.notification_prefs = updatedTask.notificationPreferences
+                        ? JSON.parse(JSON.stringify(updatedTask.notificationPreferences))
+                        : null
+                }
+                if (changedKeys.has('dependsOn')) {
+                    const validDeps = (updatedTask.dependsOn || []).filter(id => isValidUUID(id))
+                    payload.depends_on = validDeps.length > 0 ? validDeps : null
+                }
+                if (changedKeys.has('columnId')) {
+                    payload.column_id = updatedTask.columnId || null
+                }
+                if (changedKeys.has('calendarLocked')) {
+                    payload.calendar_locked = updatedTask.calendarLocked ?? false
+                }
+                if (changedKeys.has('parentTaskId')) {
+                    payload.parent_task_id = isValidUUID(updatedTask.parentTaskId) ? updatedTask.parentTaskId : null
+                }
 
                 await syncOrchestrator.enqueue({
                     entityType: 'task',
@@ -912,26 +966,16 @@ export function useTaskOperations(
                 }
             }
 
-            // BUG-1207: Direct save to Supabase (VPS is primary persistence).
-            // The sync queue above is a backup for offline/failure scenarios.
-            // Direct save ensures changes hit VPS immediately without waiting for queue interval.
-            // Echo protection: pendingWrites (300s/5min, see PENDING_WRITE_TIMEOUT_MS) prevents
-            // the realtime echo from this save from reverting local state.
-            try {
-                await saveSpecificTasks([updatedTask], `updateTask-direct-${taskId}`)
-                persisted = true
-                if (import.meta.env.DEV && syncedUpdates.status) {
-                    console.log(`[BUG-1451] updateTask: ${taskId.slice(0, 8)} status→${syncedUpdates.status} PERSISTED to Supabase`)
-                }
-            } catch (directSaveError) {
-                // Direct save failed - sync queue will retry. Don't throw, change is queued.
-                console.warn(`[TASK] Direct save failed for ${taskId}, sync queue will retry:`, directSaveError)
-                if (persisted) {
-                    // At least sync queue succeeded — show reassuring toast
-                    const { showToast } = useToast()
-                    showToast('Changes saved locally, will sync when connection restores', 'warning')
-                }
-            }
+            // BUG-1799: Removed the unconditional direct save that used to run here.
+            // It double-wrote every edit (queue + direct save), and the direct save's fresh
+            // `updated_at` (toSupabaseTask stamps now) out-timestamped the queued op → guaranteed
+            // false position_version conflict → LWW "server wins" log spam + ~1s latency + the
+            // delete-vs-queued-update blank-title resurrection. The sync queue above is now the
+            // single writer: it flushes immediately when online (enqueue → processQueue), retains
+            // position_version optimistic locking + field-level merge, and carries every field
+            // (see the complete payload above). Offline/enqueue failure falls back to the direct
+            // save in the catch block above. Echo protection is already set via addPendingWrite()
+            // at the top of updateTask — independent of this removed save.
 
             // TASK-1177: If ALL persistence paths failed, rollback optimistic update
             // Re-find by ID (index may have shifted if another task was deleted concurrently)

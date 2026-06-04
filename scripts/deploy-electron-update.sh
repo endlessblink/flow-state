@@ -50,26 +50,7 @@ VERSION=$(node -p "require('./package.json').version")
 echo -e "${CYAN}=== FlowState Electron Deploy v${VERSION} ===${NC}"
 echo -e "Notes: ${NOTES:-'(none)'}"
 
-has_vite_supabase_env_file() {
-  local file
-  for file in "$PROJECT_DIR/.env.production" "$PROJECT_DIR/.env.local" "$PROJECT_DIR/.env"; do
-    if [ -f "$file" ] \
-      && grep -Eq '^VITE_SUPABASE_URL=' "$file" \
-      && grep -Eq '^VITE_SUPABASE_ANON_KEY=' "$file"; then
-      return 0
-    fi
-  done
-  return 1
-}
-
-if [ -z "${VITE_SUPABASE_URL:-}" ] || [ -z "${VITE_SUPABASE_ANON_KEY:-}" ]; then
-  if ! has_vite_supabase_env_file; then
-    echo -e "${RED}ERROR: Electron build is missing Supabase Vite env.${NC}"
-    echo -e "${RED}Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, or provide .env.production/.env.local.${NC}"
-    echo -e "${RED}Refusing to build a no-auth Electron release.${NC}"
-    exit 1
-  fi
-fi
+node "$PROJECT_DIR/scripts/validate-electron-vite-env.cjs"
 
 # Step 1: Build frontend
 echo -e "\n${YELLOW}[1/4] Building Vue frontend...${NC}"
@@ -90,8 +71,10 @@ fi
 # Step 3: Package with electron-builder
 echo -e "\n${YELLOW}[3/4] Packaging with electron-builder...${NC}"
 if [ "$DRY_RUN" = true ]; then
+  echo -e "${CYAN}  [DRY RUN] Would run: npm run electron:patch-builder${NC}"
   echo -e "${CYAN}  [DRY RUN] Would run: npx electron-builder --config electron-builder.yml --linux${NC}"
 else
+  npm run electron:patch-builder
   npx electron-builder --config electron-builder.yml --linux
 fi
 

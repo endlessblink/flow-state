@@ -68,6 +68,7 @@ verification_results.json
 
 # Test results (generated)
 test-results/
+playwright-report/
 playwright-report/data/
 
 # Debug images
@@ -166,3 +167,4 @@ watchpost/.claude/
 watchpost/.omc/
 release/
 .dev-debug-electron.mjs
+.omx/

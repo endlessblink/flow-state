@@ -8,12 +8,20 @@
     <!-- Section Header -->
     <div class="section-header" :style="{ background: groupColor + '20' }">
       <div class="section-color-dot" :style="{ background: groupColor }" />
-      <button class="collapse-btn" :title="isCollapsed ? 'Expand group' : 'Collapse group'" @click="toggleCollapse">
+      <button
+        class="collapse-btn nodrag nopan"
+        :title="isCollapsed ? 'Expand group' : 'Collapse group'"
+        @pointerdown.stop
+        @mousedown.stop
+        @touchstart.stop
+        @click.stop.prevent="toggleCollapse"
+      >
         <ChevronDown v-if="!isCollapsed" :size="14" />
         <ChevronRight v-else :size="14" />
       </button>
-      <input dir="auto"
+      <input
         v-model="sectionName"
+        dir="auto"
         class="section-name-input"
         placeholder="Group name..."
         :disabled="isCollapsed"
@@ -48,6 +56,34 @@
           />
         </NPopover>
 
+        <!-- TASK-1811: Apply the group's resolved due date to its tasks. -->
+        <!-- Only shown when the group has a resolvable due date. -->
+        <NPopover
+          v-if="hasResolvableDueDate && !isCollapsed"
+          trigger="click"
+          placement="bottom-end"
+          :show="showApplyMenu"
+          @update:show="showApplyMenu = $event"
+        >
+          <template #trigger>
+            <button
+              class="apply-due-btn"
+              :title="`Apply ${resolvedDueDate} to tasks in this group`"
+              @click.stop="showApplyMenu = true"
+            >
+              <CalendarCheck :size="13" />
+            </button>
+          </template>
+          <div class="apply-menu">
+            <button class="apply-option" @click.stop="applyGroupProps('dueDate')">
+              Set due date on all tasks
+            </button>
+            <button class="apply-option" @click.stop="applyGroupProps('all')">
+              Apply all group properties
+            </button>
+          </div>
+        </NPopover>
+
         <!-- TASK-068: All actions moved to context menu for cleaner header -->
         <div class="section-count" :class="{ 'has-tasks': taskCount > 0 }">
           {{ taskCount }}
@@ -60,7 +96,9 @@
     <div v-if="!isCollapsed" class="section-body">
       <slot />
       <!-- TASK-1791: guide users when a group has no tasks yet -->
-      <p v-if="taskCount === 0" class="section-empty-hint">Drag tasks here</p>
+      <p v-if="taskCount === 0" class="section-empty-hint">
+        Drag tasks here
+      </p>
     </div>
 
     <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->
@@ -76,18 +114,47 @@
       @resize="handleResize"
       @resize-end="handleResizeEnd"
     />
+
+    <Handle
+      id="group-target-top"
+      type="target"
+      :position="Position.Top"
+      connectable
+      class="handle-target group-link-handle"
+    />
+    <Handle
+      id="group-target-right"
+      type="target"
+      :position="Position.Right"
+      connectable
+      class="handle-target group-link-handle"
+    />
+    <Handle
+      id="group-target-bottom"
+      type="target"
+      :position="Position.Bottom"
+      connectable
+      class="handle-target group-link-handle"
+    />
+    <Handle
+      id="group-target-left"
+      type="target"
+      :position="Position.Left"
+      connectable
+      class="handle-target group-link-handle"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { ChevronDown, ChevronRight } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, CalendarCheck } from 'lucide-vue-next'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import '@vue-flow/node-resizer/dist/style.css'
-// TASK-072: Import useNode for reactive node data from Vue Flow state
-// TASK-072: Use reactive node data if needed
+// TASK-072: Import useNode for live node data from Vue Flow state
+// TASK-072: Use live node data if needed
 // BUG-043: Import Position for edge resize handles
-import { Position } from '@vue-flow/core'
+import { Position, Handle } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 // TASK-167: Direct import to ensure latest logic
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
@@ -97,11 +164,22 @@ import { getDayGroupDate, formatDayGroupSuffix } from '@/utils/dayGroupDate'
 import { useCurrentDay } from '@/composables/useCurrentDay'
 // TASK-166: Date picker for bi-directional day group editing
 import { NPopover, NDatePicker } from 'naive-ui'
+import type { CanvasGroup } from '@/types/canvas'
+// TASK-1811: Resolve the group's effective due date to apply to its tasks
+import { useTaskStore } from '@/stores/tasks'
+import { useCanvasSectionProperties } from '@/composables/canvas/useCanvasSectionProperties'
+
+type GroupNodeData = Partial<CanvasGroup> & {
+  section?: CanvasGroup
+  isCollapsed?: boolean
+  width?: number
+  height?: number
+}
 
 // Define Props
 const props = defineProps<{
   id: string
-  data: unknown
+  data: GroupNodeData
   selected?: boolean
   dragging?: boolean
 }>()
@@ -112,6 +190,7 @@ const emit = defineEmits([
   'collect',
   'contextMenu',
   'open-settings',
+  'applyGroupProps',
   'resizeStart',
   'resize',
   'resizeEnd'
@@ -122,10 +201,22 @@ const canvasStore = useCanvasStore()
 
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
-const section = computed(() => props.data?.section || props.data)
-const isCollapsed = computed(() => !!props.data?.isCollapsed)
+const section = computed<GroupNodeData>(() => props.data.section || props.data)
+// Collapse state must be read reactively from the STORE, not from Vue Flow node
+// data. Toggling collapse (canvasStore.toggleSectionCollapse → updateGroup) does
+// NOT bump syncTrigger and the orchestrator only re-syncs groups on length
+// change, so node `data.collapsed` is never refreshed — the group never visually
+// collapsed. Reading the live store group (same approach as `groupColor`,
+// BUG-225) makes the chevron/body react immediately. Node data is a fallback for
+// ghost nodes not present in the store.
+const isCollapsed = computed(() => {
+  const groupId = props.data?.id
+  const storeGroup = groupId ? canvasStore.groups.find(g => g.id === groupId) : undefined
+  const d = props.data as GroupNodeData & { collapsed?: boolean }
+  return !!(storeGroup?.isCollapsed ?? d?.collapsed ?? d?.isCollapsed ?? d?.section?.isCollapsed)
+})
 
-// BUG-225 FIX: Get color reactively from store instead of static props.data
+// BUG-225 FIX: Get color from store instead of static props.data
 // This ensures color updates immediately when changed in the modal without page refresh
 // TASK-1791b: legacy default group colors were indigo/blue, which clash with
 // the Warm Dark palette. Normalize them to a warm neutral at render time so
@@ -142,10 +233,10 @@ const groupColor = computed(() => {
 })
 const taskCount = computed(() => {
   const data = props.data as Record<string, unknown> | undefined
-  const groupId = (data?.id as string) || props.id.replace(/^section-/, '')
+  const groupId = (data?.id as string | undefined) || props.id?.replace(/^section-/, '')
   if (!groupId) return 0
 
-  // Read from reactive store computeds instead of stale node.data snapshot.
+  // Read from store computeds instead of stale node.data snapshot.
   // Root groups show aggregated count (includes descendants); child groups
   // show direct count only.
   const isRootGroup = !data?.parentGroupId || data.parentGroupId === 'NONE'
@@ -201,7 +292,7 @@ const handleDateSelect = (timestamp: number | null) => {
 
 // TASK-130 / TASK-1756: Compute upcoming date for day-of-week, Today, and
 // Tomorrow groups using the shared helper so header matches rotation dueDate.
-// Depends on the reactive `today` ref → the suffix re-renders at midnight.
+// Depends on the live `today` ref so the suffix re-renders at midnight.
 const dayOfWeekDateSuffix = computed(() => {
   const currentName = sectionName.value
   if (!currentName) return null
@@ -236,9 +327,35 @@ const dayOfWeekDateSuffix = computed(() => {
   return formatDayGroupSuffix(getDayGroupDate(targetDayIndex, now, hasTodayOrTomorrow))
 })
 
+// TASK-1811: "Apply due date to tasks" affordance.
+// Resolve the group's effective due date via the SAME resolver used on drop,
+// reading from the store group object (carries assignOnDrop) by id lookup —
+// mirrors the groupColor pattern above.
+const { getSectionProperties } = useCanvasSectionProperties({
+  taskStore: useTaskStore(),
+  getAllContainingSections: () => []  // unused by getSectionProperties
+})
+const storeGroup = computed(() => {
+  const groupId = props.data?.id
+  return groupId ? canvasStore.groups.find(g => g.id === groupId) || null : null
+})
+const resolvedDueDate = computed(() => {
+  if (!storeGroup.value) return ''
+  return getSectionProperties(storeGroup.value as CanvasGroup, canvasStore.groups as CanvasGroup[]).dueDate || ''
+})
+const hasResolvableDueDate = computed(() => !!resolvedDueDate.value)
+const showApplyMenu = ref(false)
+
+const applyGroupProps = (mode: 'dueDate' | 'all') => {
+  const groupId = props.data?.id
+  if (!groupId) return
+  emit('applyGroupProps', { groupId, mode })
+  showApplyMenu.value = false
+}
+
 // Watch for external name changes
 watch(() => props.data.name, (newName) => {
-  sectionName.value = newName
+  sectionName.value = newName || ''
 })
 
 const updateName = () => {
@@ -249,7 +366,8 @@ const updateName = () => {
 
 const toggleCollapse = () => {
   // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
-  const groupId = props.data?.id || props.id.replace('section-', '')
+  const groupId = props.data?.id || props.id?.replace('section-', '')
+  if (!groupId) return
   canvasStore.toggleSectionCollapse(groupId)
 }
 
@@ -681,6 +799,56 @@ const handleResizeEnd = (event: unknown) => {
   color: var(--text-primary);
 }
 
+/* TASK-1811: Apply-due-date button + menu */
+.apply-due-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg-light);
+  border: var(--space-0_5) solid var(--glass-border);
+  color: var(--text-muted);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  flex-shrink: 0;
+}
+
+.apply-due-btn:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
+  border-color: var(--glass-border-hover);
+}
+
+.apply-due-btn:active {
+  transform: scale(0.95);
+}
+
+.apply-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.apply-option {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: start;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+}
+
+.apply-option:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
+}
+
 .power-toggle-btn {
   display: flex;
   align-items: center;
@@ -733,4 +901,23 @@ const handleResizeEnd = (event: unknown) => {
 }
 
 /* TASK-290: Resize handle styles moved to canvas-view-overrides.css for global control */
+
+.group-link-handle {
+  width: 9px;
+  height: 9px;
+  opacity: 0;
+  border: 1px solid var(--accent-primary);
+  background: var(--surface-primary);
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+}
+
+:global(body.connecting-active) .group-link-handle,
+.section-node:hover .group-link-handle {
+  opacity: 0.45;
+}
+
+:global(body.connecting-active) .group-link-handle:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
 </style>

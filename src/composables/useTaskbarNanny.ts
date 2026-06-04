@@ -13,7 +13,7 @@ export interface TaskbarNannyOptions {
  */
 export function useTaskbarNanny(options: TaskbarNannyOptions = {}) {
   const testOverride = typeof window !== 'undefined'
-    ? (window as Record<string, unknown>).__NANNY_THRESHOLD_MINUTES as number | undefined
+    ? (window as unknown as Record<string, unknown>).__NANNY_THRESHOLD_MINUTES as number | undefined
     : undefined
   const {
     thresholdMinutes = testOverride ?? 5,

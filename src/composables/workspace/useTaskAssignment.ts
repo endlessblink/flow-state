@@ -42,7 +42,7 @@ export async function assignTask(
   userId: string | null
 ): Promise<void> {
   const taskStore = useTaskStore()
-  await taskStore.updateTask(taskId, { assignedTo: userId ?? null })
+  await taskStore.updateTaskWithUndo(taskId, { assignedTo: userId ?? null })
 }
 
 // ============================================================================

@@ -1,5 +1,10 @@
 <template>
-  <div class="task-list" :class="[`task-list--${density}`]" @dragover.prevent @dragstart.capture="augmentDragWithSelection">
+  <div
+    class="task-list"
+    :class="[`task-list--${density}`]"
+    @dragover.prevent
+    @dragstart.capture="augmentDragWithSelection"
+  >
     <!-- Column Headers / Bulk Actions Bar -->
     <div class="column-headers" :class="{ 'column-headers--selection': selectionMode }">
       <!-- Select-all checkbox always visible -->
@@ -265,6 +270,9 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  emptyMessage: '',
+  sortBy: undefined,
+  sortDirection: undefined,
   density: 'comfortable'
 })
 
@@ -493,9 +501,9 @@ const applyGroupTransfer = (taskId: string, group: TaskGroup) => {
     const projectId = (group.key === 'uncategorized' || group.key === '__no_project__') ? null : group.key
     emit('moveTask', taskId, projectId, null)
   } else if (props.groupBy === 'status') {
-    emit('updateTask', taskId, { status: group.key as Parameters<typeof emit>[2]['status'] })
+    emit('updateTask', taskId, { status: group.key as Task['status'] })
   } else if (props.groupBy === 'priority') {
-    emit('updateTask', taskId, { priority: group.key as Parameters<typeof emit>[2]['priority'] })
+    emit('updateTask', taskId, { priority: group.key as Task['priority'] })
   } else if (props.groupBy === 'dueDate') {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -567,7 +575,7 @@ const onGroupDragLeave = (event: DragEvent) => {
   }
 }
 
-const onGroupDrop = (event: DragEvent, group: TaskGroup) => {
+const onGroupDrop = async (event: DragEvent, group: TaskGroup) => {
   const taskIds = resolveDragTaskIds(event)
   const insertIdx = dropIndicator.value.insertIndex
 
@@ -590,12 +598,14 @@ const onGroupDrop = (event: DragEvent, group: TaskGroup) => {
   const draggedTasks = taskIds.map(id => ({ id } as Task))
   groupTasks.splice(insertIdx, 0, ...draggedTasks)
   const allTasks = props.tasks
-  groupTasks.forEach((t, i) => {
-    const fullTask = allTasks.find(at => at.id === t.id)
-    if (!fullTask || fullTask.order !== i) {
-      taskStore.updateTask(t.id, { order: i })
-    }
-  })
+  const orderUpdates = groupTasks
+    .map((t, i) => ({ task: allTasks.find(at => at.id === t.id), id: t.id, order: i }))
+    .filter(({ task, order }) => !task || task.order !== order)
+    .map(({ id, order }) => ({ id, updates: { order } }))
+
+  if (orderUpdates.length > 0) {
+    await taskStore.bulkUpdateTasksWithUndo(orderUpdates, 'Reorder task group')
+  }
 
   emit('reorder')
   endDrag()

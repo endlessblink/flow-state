@@ -12,7 +12,7 @@
 /**
  * Entity types that can be synced
  */
-export type SyncEntityType = 'task' | 'group' | 'project' | 'timer_session' | 'quick_sort_session'
+export type SyncEntityType = 'task' | 'group' | 'project' | 'lane' | 'timer_session' | 'quick_sort_session'
 
 /**
  * Operation types for sync queue

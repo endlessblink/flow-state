@@ -54,6 +54,7 @@ import BaseBadge from '@/components/base/BaseBadge.vue'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useTaskStore } from '@/stores/tasks'
+import type { Task } from '@/types/tasks'
 
 interface Props {
   active?: boolean
@@ -160,7 +161,7 @@ const handleDrop = async (event: DragEvent) => {
     if (props.dropType === 'date') {
       updates.dueDate = calculateTargetDate()
     } else if (props.dropType === 'duration') {
-      updates.estimatedDuration = props.dropValue === -1 ? null : props.dropValue
+      updates.estimatedDuration = props.dropValue === -1 ? undefined : Number(props.dropValue)
     }
 
     if (store.updateTaskWithUndo) {

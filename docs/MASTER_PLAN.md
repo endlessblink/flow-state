@@ -1,6 +1,6 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: May 4, 2026
+> **Last Updated**: May 28, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
@@ -8,9 +8,276 @@
 
 ## Active Tasks
 
-### TASK-1791: Design overhaul — fix critique findings across all views (👀 REVIEW)
+### ~~BUG-1813~~: Canvas group collapse (minimize) does nothing (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW — all 5 phases implemented on branch `design-overhaul` (opened 2026-05-21). Pending: review → merge to master → Electron deploy. Restore tag `pre-design-overhaul-2026-05-21`.
+**Priority**: P1 | **Status**: ✅ **DONE** (2026-06-04)
+
+**Problem**: Clicking a canvas group's collapse chevron didn't minimize the group (reported on Electron). The store toggled `isCollapsed`, but the group never visually collapsed and contained tasks stayed visible.
+
+**Root cause (two layers)**: (1) `GroupNodeSimple.vue` read `props.data.isCollapsed`, but `useCanvasSync` writes the node field as `collapsed` — so the read was always `false`. (2) Deeper: `updateGroup` never bumps `syncTrigger` and the orchestrator only re-syncs groups on `groups.length` change, so a collapse never refreshed node data at all — and nothing ever hid the child task/group nodes (only `done` tasks were hidden). Platform-agnostic; not Electron-specific.
+
+**Fix**: (a) `GroupNodeSimple` now reads collapse state reactively from the store group (same approach as `groupColor`/BUG-225), so the header reacts immediately. (b) `useCanvasOrchestrator` watches a per-group collapse signature and re-syncs on change. (c) `useCanvasSync` hides task nodes and nested child-group nodes whose parent/ancestor group is collapsed (`isUnderCollapsedAncestor`).
+
+**Verified visually**: `tests/e2e/canvas-collapse-local.spec.ts` drives the chevron and asserts collapse (header dashed + body hidden + child task hidden) and expand (restored), with before/after screenshots. Typecheck clean; 154 canvas unit tests pass.
+
+**Files**: `src/components/canvas/GroupNodeSimple.vue`, `src/composables/canvas/useCanvasOrchestrator.ts`, `src/composables/canvas/useCanvasSync.ts`, `tests/e2e/canvas-collapse-local.spec.ts`, `tests/e2e/playwright.collapse-local.config.ts`.
+
+---
+
+### ~~TASK-1812~~: Lanes — sprint-style cross-project goals for tasks (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-06-04) — shipped to production (prod Supabase migrated + verified; Electron v1.4.84 deployed, `latest-linux.yml` live)
+
+**Goal**: Add a new first-class **Lane** entity — a sprint-like path toward a goal that pulls in tasks from *different* projects. A task belongs to at most one lane (nullable `laneId` FK, not a join table). v1 is a named bucket + view: `Lane = { id, name, color }` (no dates/progress/lifecycle yet). Lane is orthogonal to project (a task keeps its single `projectId`).
+
+**Approach**: `Lane` mirrors `Project` through the whole stack (type → mapper → DB module → store → sync queue → realtime → UI). Lane is **pure metadata** — never touches canvas geometry (`canvasPosition`/`parentId`/`position_version`); rides the normal task-update sync path and plain `updated_at` LWW (not the position-version path). Highest risk: `lane_id` must round-trip in both `toSupabaseTask`/`fromSupabaseTask` or realtime echo nulls it every save (same class as the documented `parentId` bug, `supabaseMappers.ts:532-539`).
+
+**Files**: `src/types/tasks.ts`, `src/types/sync.ts`, `src/utils/supabaseMappers.ts`, new `src/composables/supabase/useLanesDatabase.ts`, `src/composables/supabase/index.ts`, `src/composables/supabase/_tombstone.ts`, `src/composables/sync/useSyncOrchestrator.ts`, `src/composables/supabase/useRealtimeSubscription.ts`, `src/composables/app/useAppInitialization.ts`, new `src/stores/lanes.ts`, `src/views/AllTasksView.vue`, new `src/views/LaneView.vue`, new `src/components/sidebar/SidebarLanesSection.vue`, `src/layouts/AppSidebar.vue`, `src/router/index.ts`, `src/components/tasks/edit/TaskEditMetadata.vue`, new `supabase/migrations/20260603000000_lanes.sql`. Plan: `~/.claude/plans/check-work-lanes-in-wiggly-dragonfly.md`.
+
+**Progress (2026-06-03)**: Implementation complete + verified locally. ✅ vue-tsc clean, ✅ full unit suite 2342 pass (incl. 6 new lane mapper round-trip tests proving the realtime-echo safety), ✅ contract tests updated (lanes table + lane_id column), ✅ `npm run build` succeeds, ✅ migration applied to LOCAL DB (table + RLS + `lane_id` FK `ON DELETE SET NULL` + realtime publication verified), ✅ E2E `tests/e2e/lanes.spec.ts` 4/4 pass (chromium+webkit): cross-project lane view, group-by-lane, sidebar create→route. **Pending (needs user approval — NOT done):** (1) apply migration to PRODUCTION Supabase, (2) deploy web + Electron build.
+
+### TASK-1811: Group header button — apply group due date / properties to its tasks (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-06-01)
+
+**Goal**: Add an icon button to canvas group headers that applies the group's resolved due date to every task inside the group. Two separate actions in a small popover: "Set due date on all tasks" (due date only) and "Apply all group properties" (due date + priority + status + project). Button shows **only** on groups with a resolvable due date (power-keyword `Today`/`Tomorrow`/weekday groups, or `assignOnDrop.dueDate`). Overwrites existing task dates.
+
+**Approach**: Reuse `getSectionProperties(group, allGroups)` (`useCanvasSectionProperties.ts:147`) — the same resolver used on drop — as the single source of truth for the group's date. Metadata-only (`dueDate`/`priority`/`status`/`projectId`), never geometry, so it respects the Canvas Geometry Invariants. Apply via `taskStore.bulkUpdateTasksWithUndo` (one undo entry). Wiring mirrors the existing `@collect`/`collectTasksForSection` path: `GroupNodeSimple.vue` emit → `CanvasView.vue` → `useCanvasOrchestrator.ts` → new `applyGroupPropsToTasks(groupId, mode)` in `useCanvasTaskActions.ts`. Children enumerated from `taskStore._rawTasks` (the `.tasks` getter applies smart-view filters), skipping done/soft-deleted/completion-record/pinned.
+
+**Files**: `src/components/canvas/GroupNodeSimple.vue`, `src/views/CanvasView.vue`, `src/composables/canvas/useCanvasOrchestrator.ts`, `src/composables/canvas/useCanvasTaskActions.ts`, new unit test under `tests/unit/canvas/`.
+
+---
+
+### ~~BUG-1810~~: Inbox "3 Days" filter shows far-future recurring tasks (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ **DONE** (2026-06-01)
+
+**Problem**: With the inbox time filter set to **3 Days**, a recurring task displaying a far-future date (e.g. "Jun 8", 7 days out) still appeared — making the filter look broken.
+
+**Root cause**: Display/filter mismatch, not a filter bug. The filter (`isNext3DaysTask`, `src/composables/useSmartViews.ts`) treats calendar **instances** as authoritative (BUG-1188) and correctly matched the task via a near-term instance. But the task card (`UnifiedInboxTaskCard.vue`) used the master `dueDate` first and only fell back to instances when `dueDate` was absent — so it showed the far-future master date while the task surfaced via a near-term instance.
+
+**Fix**: Card now honors the same instance-authoritative rule as the filter. Extracted badge logic to a pure, testable `dueStatus.ts`; the badge shows the **representative instance** (soonest upcoming ≥ today, else latest overdue) instead of the master `dueDate` when instances exist. Also fixed a latent gap: a past representative instance is now labeled "Overdue", not "future".
+
+**Files**: `src/components/inbox/unified/dueStatus.ts` (new), `src/components/inbox/unified/UnifiedInboxTaskCard.vue`, `src/components/inbox/unified/__tests__/dueStatus.spec.ts` (new, 9 tests).
+
+---
+
+### TASK-1809: Shift-drag to reorder tasks within a canvas column (🔄 IN PROGRESS)
+
+**Goal**: Let users reorder a task inside a day/smart canvas column by holding **Shift** while dragging. On a Shift-drop, the column restacks cleanly from the header down — the dragged card takes the slot its drop-Y lands in and the rest shift down (insert-and-shift). Non-Shift drops keep today's free placement, unchanged.
+
+**Approach**: Reuse the tested `computeCanonicalLayout` primitive (`useCanonicalDayGroupLayout.ts`) scoped to a single group. Tasks already order by Y, so the dropped card's new Y decides its slot.
+- `useTidyLayout.ts`: add pure `planReorderColumn(groupId)` + `reorderColumn(groupId)` (store writes + position locks + undo snapshot, mirrors `tidyDayGroups`).
+- `CanvasView.vue`: wrap `@node-drag-stop` — read `event.event.shiftKey`, await the normal drag save, then run `reorderColumn` on the dropped task's group via `applyCanonicalMoves` + `syncNodes({force})`.
+- Stays inside the single sanctioned geometry writer (drag handler + Tidy primitive) → no sync-loop/invariant violation.
+
+### BUG-1807: Canvas nudge — all nodes shift on inbox drop (Electron) (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-05-31)
+
+**Problem**: On the Electron desktop build, dragging a task from the canvas inbox onto the canvas makes every rendered canvas node shift together for a frame, then settle — the "nudge". Earlier fixes (autoPanOnNodeDrag, setNodes refeed) addressed node-drag and viewport nudges but not the inbox-drop case.
+
+**Root cause**: `useCanvasSync.syncStoreToCanvas` only had an in-place patch path for equal node counts. Adding a node (inbox→canvas drop) changed the count (N→N+1), forcing a full `setNodes()` that replaces the entire reactive node array. Vue Flow then re-parses every node (position/dimensions). Chromium's keyed reuse hides this, but Electron's GPU compositor re-rasterizes all node layers → visible collective shift.
+
+**Fix**: Added an incremental add/remove path in `syncStoreToCanvas`. When the only structural change is added/removed nodes and surviving nodes keep their type/parent, it patches changed survivors with `updateNode`, removes deletions with `removeNodes`, and appends new nodes with `addNodes` (groups first for parent-before-child). Existing node instances are never re-mounted → no compositor reflow → no nudge. Falls back to full `setNodes()` when topology actually changes.
+
+**Regression tests**: New `tests/e2e/canvas-inbox-nudge.spec.ts` fires a real HTML5 drop and samples every existing node's screen rect + the viewport transform across animation frames, asserting no drift and a stable viewport. (Note: headless Chromium cannot reproduce the Electron-only compositor shift, so this guards behavior/no-regression; the actual nudge is verified on the deployed Electron build.)
+
+**v1.4.80 attempt (did NOT fix)**: Shipped incremental `addNodes` instead of full `setNodes` on count change. Kept (safe perf improvement) but not the culprit — paint profiling showed it identical to the old path (337 vs 341 paints).
+
+**Root cause (FOUND, v1.4.81)**: The shift is invisible to layout APIs (`getBoundingClientRect` = 0px drift), so it's a **GPU-compositor repaint**. Using CDP `LayerTree.layerPainted` profiling, the inbox drop produced ~341 paints; disabling `.task-node.is-recently-created` dropped that to **32** — a 90% reduction. The culprit is the `animate-creation` keyframes in `TaskNode.vue`: a 2s `transform: scale(0.6→1.1→…→1)` bounce that fires when a node mounts with `createdAt < 5s` (exactly a just-created task dragged from the inbox). **Accurate mechanism** (corrected — the card is NOT glass; `.task-node` has `backdrop-filter` removed per BUG-1216): the transform pane uses `transform-style: preserve-3d` (text-crispness fix, BUG-041/1408); animating a child's `transform: scale()` inside that shared 3D context forces the browser to re-rasterize the **entire** context every frame (→ the observed full-viewport 1280×720 repaint), and on Electron's GPU compositor that full re-raster lands sub-pixel-shifted → the whole canvas appears to shift together. The scale also violated the BUG-1328 invariant ("no transform on the node root"). (An earlier note here said "backdrop-filter re-sample" — that was wrong; the fix is identical regardless.)
+
+**Fix (v1.4.81 → hardened in v1.4.82)**: Rewrote `animate-creation`. v1.4.81 removed `scale()` (paints 341→146). v1.4.82 made it **opacity-only** (removed `filter: brightness` and the animated `box-shadow` too — `filter` on a glass card also re-composites the backdrop), 0.45s. Paints during drop: 341 → **36** (near the 32 "no animation" floor). Zero transform, zero filter, zero geometry change → nothing can re-sample the backdrop or shift.
+
+**Regression tests**: `tests/unit/canvas/creation-animation-no-transform.test.ts` asserts the keyframes contain no `scale()`/`transform`. `tests/e2e/canvas-inbox-nudge.spec.ts` guards no node/viewport drift on real drop.
+
+**Verified**: `vue-tsc` clean, 171/171 canvas unit tests, e2e passes, CDP paint count 341→146. Shipping to Electron updater as **v1.4.82**. **Awaiting user confirmation on desktop** that the canvas no longer shifts.
+
+**Files**: `src/components/canvas/TaskNode.vue` (fix), `src/composables/canvas/useCanvasSync.ts` (v1.4.80 perf), `tests/unit/canvas/creation-animation-no-transform.test.ts`, `tests/e2e/canvas-inbox-nudge.spec.ts`.
+
+**Related follow-up (not part of this bug)**: `task-flash-green/red/amber/blue` keyframes in `TaskNode.vue` also use `transform: scale(1.02)` on the glass card. They fire on the `task-action-flash` event (explicit date/status edits), NOT on inbox drop, so they don't affect BUG-1807. But they're the same latent class (scale on a backdrop-filter card → Electron compositor shift) and should likely be made transform-free too if a similar nudge is ever reported on date/status edits. `transition: all` on `GroupNodeSimple`/`CanvasGroup`/`ImageNode` roots is a related concern (animates transform on glass). → **Surfaced as BUG-1808.**
+
+---
+
+### BUG-1808: Canvas nudge on date edit (overdue → today / context-menu reschedule) (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-06-01)
+
+**Problem**: On the Electron desktop build, rescheduling a task to a new date — e.g. picking **Today** from the canvas context menu / overdue reschedule — makes every canvas node nudge/shift together for a frame, exactly like BUG-1807 but triggered by a date edit instead of an inbox drop.
+
+**Root cause**: The `task-action-flash-*` keyframes in `TaskNode.vue` (fired via the `task-action-flash` event by `useTaskContextMenuActions.setDueDate`) animated `transform: scale(1)→scale(1.02)→scale(1)` on the `.task-node` card. Same compositor-shift class BUG-1807 identified: a `transform` inside the shared `preserve-3d` context forces a full re-rasterization, which Electron's GPU compositor lands sub-pixel-shifted → the whole canvas appears to shift. This was the exact "related follow-up" BUG-1807 predicted.
+
+**Fix**: Made all four `task-flash-{green,red,amber,blue}` keyframes transform-free — the brightness + box-shadow glow pulse carries the feedback, no `scale()`. The OverdueBadge reschedule path (`useTaskNodeActions.handleReschedule`) does not flash and only performs a legitimate single-node reparent into the matching smart group; the group root (`.section-node`) is already transform-free with backdrop-filter removed, so it is not a nudge source.
+
+**Regression tests**: Extended `tests/unit/canvas/creation-animation-no-transform.test.ts` with a `BUG-1808` block asserting none of the four flash keyframes contain `scale()`/`transform`. 6/6 pass.
+
+**Files**: `src/components/canvas/TaskNode.vue` (flash keyframes), `tests/unit/canvas/creation-animation-no-transform.test.ts`.
+
+**Awaiting**: Electron build + deploy and user confirmation on desktop that the date-edit nudge is gone.
+
+---
+
+### ~~BUG-1806~~: Mark-done can still trigger phantom nudge state (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-28)
+
+**Problem**: After the first KDE mark-done cleanup, the generic nudge timer could still interrupt later because its final gate only checked idle/session timing. It did not prove there was an actionable reminder task after the completed task was hidden/refreshed.
+
+**Fix**: The KDE nudge path is now task-backed. The timer refreshes the unfiltered nanny task cache, rebuilds the reminder list, and only calls `sendNannyNotification()` when `hasActionableNannyTasks()` finds a non-hidden, non-done pinned task or a non-hidden, non-done task due today. `sendNannyNotification()` has the same guard defensively, and the nanny REST query is scoped by `user_id`.
+
+**Regression tests**: KDE unit coverage now verifies the final actionable reminder task blocks future nudges, while another visible pinned task still allows reminders. Canvas mark-done E2E now waits for initial Vue Flow transform settling and verifies mark-done does not move sibling task geometry.
+
+**Verified**: `npm test -- --run tests/unit/kde/nudge-popup.test.ts tests/unit/kde/nanny-gates.test.ts tests/unit/kde/task-list-building.test.ts` (59/59), `npm test -- --run tests/unit/kde` (151/151), focused Playwright mark-done canvas regression, `npm run type-check`, `npm run electron:build`, `./scripts/deploy-electron-update.sh`; public updater manifest shows `1.4.78`.
+
+**Files**: `packages/kde-widget/contents/ui/main.qml`, `tests/unit/kde/nudge-popup.test.ts`, `tests/e2e/canvas-geometry-local.spec.ts`.
+
+---
+
+### ~~BUG-1805~~: KDE nanny nudge resurfaced after marking a task done (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-27)
+
+**Problem**: In the KDE widget, marking a task done could immediately let the nanny/nudge reminder resurface or keep the completed task in reminder-backed caches. The mark-done path only refreshed the visible task list, leaving popup state, idle timing, pinned tasks, and the unfiltered nanny task cache stale.
+
+**Fix**: `markTaskDone()` now treats completion as user activity: it dismisses nanny/nudge popups, resets the reminder timing gates, removes the task optimistically from visible/pinned/nanny caches, hides it from same-day reminder rebuilding, PATCHes `completed_at`/`updated_at`, and refreshes all reminder task caches after Supabase confirms. Failed PATCHes remove the hidden guard and refresh caches so the task is restored instead of silently disappearing. The nanny list builder also excludes stale done pinned entries defensively.
+
+**Regression tests**: KDE unit coverage now verifies mark-done popup dismissal, nudge timing reset, immediate cache removal, failed-completion hidden-guard rollback, and stale done pinned task exclusion. Full KDE unit suite passes.
+
+**Files**: `packages/kde-widget/contents/ui/main.qml`, `tests/unit/kde/nudge-popup.test.ts`, `tests/unit/kde/task-list-building.test.ts`.
+
+---
+
+### ~~BUG-1804~~: Canvas refresh/update reload could mix fresh group geometry with stale task geometry (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-05-26)
+
+**Problem**: After Electron updates, hard refreshes, or other cold reloads, the Canvas could appear rearranged even though the user did not ask for layout changes.
+
+**Root cause**: Group reload already preferred newer IndexedDB/local geometry when the offline sync queue had not yet flushed to Supabase, but task reload always started from Supabase when the in-memory store was empty. A restart could therefore combine fresh local group positions with stale remote task positions. Startup also still ran an automatic containment reconciliation path that could rewrite `parentId` during reload based on partially mixed geometry.
+
+**Fix**: Task load now mirrors group load: if IndexedDB has newer canvas geometry by `positionVersion`/`updatedAt`, it preserves local `canvasPosition`, `parentId`, `positionFormat`, and version, then queues a catch-up write so Supabase converges. Canvas startup no longer writes parent topology from spatial reconciliation; parent changes are limited to explicit drag/drop flows.
+
+**Regression tests**: Added Smart Merge coverage for newer cached task geometry winning on cold reload and older cached geometry losing to remote. Existing Canvas E2E nudge coverage now verifies root task drag, group drag, grouped-task topology sync, and inbox drop do not move unrelated nodes or the viewport.
+
+**Files**: `src/stores/tasks/taskPersistence.ts`, `src/composables/canvas/useCanvasOrchestrator.ts`, `tests/unit/stores/smart-merge.test.ts`, `tests/e2e/canvas-geometry-local.spec.ts`.
+
+### ~~BUG-1803~~: Complete undo/redo action audit across Canvas and task workflows (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-05-26)
+
+**Problem**: The current pass fixed task-to-group connection undo/redo and a field-clearing redo asymmetry, but the user goal is broader: every undo/redo flow for every action must work at least three consecutive times. That broader claim is not proven yet.
+
+**Current verified pass**: Task-to-group Canvas links are now group-level only (`CanvasGroup.linkedParentTaskId`) and no longer rewrite child tasks' `parentTaskId` on link, unlink, drop, or drag-settle. `canvas-connection` undo/redo restores only group link state. Task-to-task Canvas connect/disconnect now has direct three-cycle undo/redo coverage, ignores duplicate connects without adding undo entries, and refuses stale-edge disconnects whose source is not the target task's current parent. Canvas task/group drag and group resize now commit a single `canvas-geometry` undo entry after the drag/resize operation settles; mixed task/group geometry restores across three undo/redo cycles. The Tidy layout toolbar command and physical day-group rotation now preserve their synchronous CanvasView contract while recording explicit before/after `canvas-geometry` snapshots after pending task writes finish; both snapshot-backed geometry entries restore across three undo/redo cycles. Keyboard undo/redo now routes app-level shortcuts through the singleton, defers while Quick Sort owns the active view, and preserves native input undo. Quick Sort keyboard redo now handles Ctrl/Cmd+Y and Ctrl/Cmd+Shift+Z, and composable redo re-applies `MARK_DONE` status plus `MARK_DONE_AND_DELETE` deletion for three consecutive cycles. Context-menu/modal entry points now use undo-aware APIs for pin, calendar lock, done fully, AI breakdown task creation, recurrence permanent delete, and recurring remove-from-canvas. `bulkMoveToInboxWithUndo` now restores and re-clears `canvasPosition` for three undo/redo cycles. Group create/delete/resize undo/redo now preserves group IDs across three consecutive cycles, preventing snapshot restores from recreating groups under new IDs. Task create/update/delete/permanent delete/bulk delete, public Kanban/status move, public project move wrappers, and Kanban multi-field drops now have direct three-cycle regression coverage. Kanban status/priority/date/category/sidebar-project drops route through undo-aware APIs instead of plain task mutations. Board list-mode updates, All Tasks create/update/move/complete flows, Batch Edit quick/bulk updates, direct edit-modal saves, quick task creation, command-palette creation, task-card status/duration edits, task assignment, Morning Dashboard quick creation, pinned quick-task changes, mini-canvas edits, calendar drag/resize/date moves, and grouped reorder persistence now route through undo-aware APIs with regression/source-contract coverage. Canvas image delete now has direct three-cycle regression coverage and verifies restored images do not duplicate. Quick Sort local undo/redo now has direct three-cycle coverage across categorize, mark done, mark done/delete, and save actions. Canvas drag/drop regression coverage now proves root task drag, group drag, grouped-task topology sync, and inbox-to-canvas drop do not nudge unrelated rendered nodes or viewport transform. Shipped to Electron updater as v1.4.77.
+
+**Completion note**: Remaining layout/system-maintenance writes were reviewed as intentional non-user undo boundaries (initial auto-placement, migration/reconcile writes, metadata-only day-group date rotation). User-facing undoable mutations now have direct regression coverage or source-contract coverage.
+
+**Files in current pass**: `src/components/canvas/TaskNode.vue`, `src/components/kanban/KanbanColumn.vue`, `src/components/kanban/card/TaskCardBadges.vue`, `src/components/layout/CommandPalette.vue`, `src/components/morning-dashboard/BigThreeCard.vue`, `src/components/morning-dashboard/MorningQuickCapture.vue`, `src/components/tasks/BatchEditModal.vue`, `src/components/tasks/QuickTaskCreate.vue`, `src/components/tasks/TaskContextMenu.vue`, `src/components/tasks/TaskList.vue`, `src/composables/calendar/useCalendarDayView.ts`, `src/composables/calendar/useCalendarMonthView.ts`, `src/composables/calendar/useCalendarWeekView.ts`, `src/composables/canvas/useCanvasConnections.ts`, `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasInteractions.ts`, `src/composables/canvas/useDayGroupRotation.ts`, `src/composables/canvas/useTidyLayout.ts`, `src/composables/mini-canvas/useMiniCanvasActions.ts`, `src/composables/tasks/card/useTaskCardActions.ts`, `src/composables/tasks/useTaskContextMenuActions.ts`, `src/composables/tasks/useTaskEditActions.ts`, `src/composables/useCalendarCore.ts`, `src/composables/useQuickSort.ts`, `src/composables/useQuickTasks.ts`, `src/composables/useUnifiedUndoRedo.ts`, `src/composables/undoSingleton.ts`, `src/composables/workspace/useTaskAssignment.ts`, `src/layouts/ModalManager.vue`, `src/stores/canvas/canvasGroups.ts`, `src/stores/tasks/taskHistory.ts`, `src/utils/globalKeyboardHandlerSimple.ts`, `src/views/AllTasksView.vue`, `src/views/BoardView.vue`, `src/views/CalendarViewVueCal.vue`, `src/views/CanvasView.vue`, `src/views/QuickSortView.vue`, `tests/e2e/canvas-geometry-local.spec.ts`, `tests/unit/canvas-connection-undo.test.ts`, `tests/unit/canvas-geometry-undo.test.ts`, `tests/unit/global-keyboard-undo-redo.test.ts`, `tests/unit/use-quick-sort-undo-redo.test.ts`, `tests/unit/undo-entrypoint-contract.test.ts`, `tests/unit/undo-selective-restore.test.ts`, `tests/unit/undo-task-operations.test.ts`, `tests/unit/undo-image-delete.test.ts`.
+
+---
+
+### ~~BUG-1802~~: Supabase REST outage blanked localhost canvas and surfaced sync errors (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-05-26) — localhost fixed; shipping in v1.4.62.
+
+**Problem**: Localhost started showing `Sync Error(fetchTasks): An unexpected error occurred` and `Sync Error(saveTasks): An unexpected error occurred`; Canvas could load blank because cached tasks referenced groups while the group fetch returned HTTP 500.
+
+**Root cause**: VPS `supabase-rest` had exited, so Kong could not resolve its `rest` upstream and returned HTTP 500 for every `/rest/v1/*` route. On the client, `useCanvasSync` deferred all parented tasks when `groups.length === 0`, which is correct for a partial group load but blanked the canvas when the entire groups request failed.
+
+**Fix**: Restarted `supabase-rest` on the VPS and verified `tasks`/`groups` REST queries returned 200 with no fresh Kong REST 500/DNS errors. Hardened Canvas so, when groups are entirely unavailable, parented tasks render as root fallback nodes using their absolute coordinates; a later successful group load re-parents them without writing the fallback to storage. Kept write failures visible while suppressing generic transient read-fetch noise.
+
+**Regression tests**: Added local Canvas E2E coverage for cached parented tasks remaining visible when group loading fails, plus Supabase infrastructure unit coverage that suppresses generic read fetch failures but still surfaces mutation failures.
+
+---
+
+### ~~BUG-1801~~: Background timer fetch showed noisy generic sync error (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-26) — shipping in v1.4.62.
+
+**Problem**: The app could show `Sync Error(fetchActiveTimerSession): An unexpected error occurred` from the background timer poll, even though this is a transient Supabase/PostgREST fetch-layer failure and the timer read path safely returns `null`.
+
+**Root cause**: The shared Supabase retry/error helper recognized explicit network messages (`Failed to fetch`, `AbortError`, timeout, etc.) but not Supabase's generic collapsed message `An unexpected error occurred` with status `0`, so the 15s active-timer poll surfaced a visible sync warning.
+
+**Fix**: Centralized transient sync classification in `_infrastructure.ts`, treats the generic collapsed message as transient for read fetches, retries it, and suppresses both visible notifications and user-facing last-sync state for those fetch-only failures.
+
+**Regression tests**: `tests/unit/composables/supabase-infrastructure.test.ts` covers retry behavior, notification/state suppression for generic read fetch failures, and confirms mutation failures still surface.
+
+---
+
+### ~~BUG-1800~~: Canvas Tidy/Rotate left phantom vertical gaps and could stale-lock tasks (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-26)
+
+**Problem**: Canvas **Tidy** and **Rotate day groups** moved groups but still left large unexplained blank gaps inside Today. Earlier Tidy attempts also made tasks feel locked after the programmatic layout ran.
+
+**Root causes**: (1) Tidy/Rotate stacked from `rawTasks`, so done/filtered/hidden canvas tasks still consumed invisible rows. The visible cards looked uneven because the hidden cards were being laid out between them. (2) Rotate still used `taskPositioning: 'preserveRelative'`, carrying old Y gaps forward instead of compacting like Tidy. (3) Vue Flow controlled-mode updates were fed internal fields (`computedPosition`, stale dimensions) or stale in-place arrays, which could desync dragging after reparent/restack. (4) The forced post-layout sync rebuilt group nodes without top-level `width`/`height`/`dimensions`, so Vue Flow bounds could revert to stale sizes.
+
+**Fix**: Tidy and explicit Rotate now share the same layout concept: operate on visible canvas tasks only, measure rendered card heights, stack from the group header with compact consistent visual gaps, keep single-column day groups, release layout locks after writes settle, and force a clean store→Vue Flow projection. Programmatic Vue Flow application strips internal fields, uses one atomic `setNodes(...)`, converts child positions to parent-relative values, leaves `extent` unset, and keeps tasks draggable/selectable.
+
+**Regression tests**: Added/updated focused unit coverage for hidden done tasks not consuming blank rows in both Tidy and Rotate, measured-height compact gaps, group dimension preservation after forced sync, controlled-mode node publishing after `applyNodeChanges`, lock release after Tidy, and no manual `computedPosition` stamping in the apply path.
+
+**Files**: `src/composables/canvas/useTidyLayout.ts`, `src/composables/canvas/useDayGroupRotation.ts`, `src/composables/canvas/useCanonicalDayGroupLayout.ts`, `src/views/CanvasView.vue`, `src/composables/canvas/useCanvasSync.ts`, `src/composables/canvas/useCanvasOrchestrator.ts`, `src/composables/canvas/useCanvasInteractions.ts`, `src/components/canvas/CanvasToolbar.vue`, `tests/unit/canvas/tidy-layout.test.ts`, `tests/unit/canvas/day-group-position-rotation.test.ts`, `tests/unit/canvas/canonical-layout.test.ts`, `tests/unit/canvas/tidy-atomic-apply.test.ts`.
+
+**Verified**: User confirmed the populated signed-in localhost canvas now visually works after Tidy. Focused regression suite passed: `npm test -- --run tests/unit/canvas/day-group-position-rotation.test.ts tests/unit/canvas/tidy-layout.test.ts tests/unit/canvas/canonical-layout.test.ts tests/unit/canvas/tidy-atomic-apply.test.ts` → 53/53. Targeted source ESLint has 0 errors; remaining output is existing `no-explicit-any` warnings in canvas sync/interaction files.
+
+---
+
+### ~~BUG-1799~~: Electron realtime storm + sync double-write + blank-title resurrection (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-25) — deployed v1.4.51 to VPS auto-updater; user confirmed the realtime/sync console issues are resolved on the updated Electron build.
+
+**Problem** (from production Electron console): (1) endless `📡 [REALTIME] Connection dropped (CHANNEL_ERROR)`→`(CLOSED)` loop; (2) `⚠️ [SYNC] LWW: Server wins … DISCARDED (delta 2–7s)` spam for tasks AND groups + 1–1.5s update latency (`[BUG-291]`); (3) `🛠️ [TASK-TITLE-REPAIR] … (permanentlyDeleteTask)` blank titles; (4) downstream `[NODE-SYNC] Conflict detected` bursts.
+
+**Root causes** (verified vs source + supabase-js + local DB): (1) **Realtime** — supabase-js dedupes channels by topic, so re-entrant `setupSubscription()` re-binds `postgres_changes` listeners (events handled N×) + competes with realtime-js's own rejoinTimer, and `retryCount` was reset to 0 on every Electron `visibilitychange`/`online` tick → no backoff → storm. (2) **Double-write** — `updateTask`/`updateGroup` enqueue a sync op AND then unconditionally direct-save; the direct save's fresh `updated_at` (now) out-timestamps the queued op → false `position_version` conflict → LWW "server wins" discards a duplicate. (3) **Resurrection** — LWW writeback `updateTaskFromSync(id, data, false)` ADDS a task when absent (`tasks.ts:248`), re-adding a locally-deleted task with a sanitized blank title.
+
+**Fix**: (1) `useRealtimeSubscription.ts` — `isConnecting` single-flight guard + single cancellable `reconnectTimer` (collapses CHANNEL_ERROR+CLOSED double-schedule), tear down stale channel before re-create, stop resetting `retryCount` outside SUBSCRIBED, visibility/online only reconnect when dead & not already connecting/scheduled. (2) Sync queue becomes the single writer: completed the task queue payload with the 7 fields it was missing (`planning_notes, connection_types, depends_on, column_id, calendar_locked, notification_prefs, parent_task_id` + `total_pomodoros`) mirroring `toSupabaseTask`, then removed the unconditional direct save in `taskOperations.ts` (kept enqueue-failure fallback); made the group `saveGroupToStorage` a fallback-only in `canvasGroups.ts`. Queue keeps `position_version` optimistic lock + field-level merge. (3) `useSyncOrchestrator.ts` writeback honors `serverData.is_deleted` and skips re-adding tasks absent from `rawTasks`.
+
+**Files**: `src/composables/supabase/useRealtimeSubscription.ts`, `src/stores/tasks/taskOperations.ts`, `src/stores/canvas/canvasGroups.ts`, `src/composables/sync/useSyncOrchestrator.ts`. Plan: `~/.claude/plans/stateful-scribbling-thompson.md`.
+
+**Verified**: vue-tsc 0 new errors on the 4 files (166 pre-existing elsewhere, TASK-1789); lint clean; 82/82 unit+integration pass (`sync-retry-strategy`, `task-sync-flow`, `task-rollback`, `task-completeness`, `sync-readonly`, `realtime-drag-race`); production build green. Deployed v1.4.51 (`FlowState-1.4.51-x86_64.AppImage`) to VPS; `https://in-theflow.com/updates/electron/latest-linux.yml` → 1.4.51. User confirmed resolved on the updated Electron build (2026-05-25).
+
+---
+
+### ~~TASK-1798~~: Canvas Tidy pulls tasks into matching group + stacks at top (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-24)
+
+**Problem**: The Canvas **Tidy** button didn't pull tasks into the group they belong to, and didn't move group members to the top. Tasks sitting low stayed low; a task due today stuck in another group was never moved into Today.
+
+**Root cause** (`src/composables/canvas/useTidyLayout.ts`): (1) restacked with `taskPositioning: 'compactFromCurrentTop'`, which anchored the stack at the current topmost task instead of the header; (2) the re-home pass only touched orphans (`if (task.parentId) continue`) and only restacked `parentId === group.id` tasks — so dated tasks in the wrong group / loose tasks inside custom groups were never adopted.
+
+**Fix**: (1) switched Tidy to `taskPositioning: 'fromHeader'` (tasks stack at `groupY + HEADER 50 + PADDING 20`). (2) Date-association pass now runs over **all** dated tasks (dropped the orphan guard) and re-parents each into its `findMatchingGroupForDueDate` group (today→Today, etc.); undated tasks are left alone. (3) Spatial-adoption fallback adopts loose tasks whose center sits inside a **custom** group's bounds via `getDeepestContainingGroup`, skipping date-claimed tasks so the date rule wins. All writes use the `'DRAG'` origin (within Single-Writer geometry invariant; `useCanvasSync.ts` untouched).
+
+**Follow-up (v1.4.52)**: v1.4.50 still overflowed — tasks pulled into Today stacked from the top but spilled out the bottom because group height was summed from raw task heights independently of the grid-snapped position loop, so the box under-sized and clipped tail tasks (worse as more tasks piled in). Fixed in `useCanonicalDayGroupLayout.ts` by deriving group height from the tasks' ACTUAL placed footprint (`maxTaskBottomRelative + GROUP_PADDING`, floored at `DAY_GROUP_HEIGHT`) instead of a parallel sum — the box now always contains its tasks.
+
+**Files**: `src/composables/canvas/useTidyLayout.ts`, `src/composables/canvas/useCanonicalDayGroupLayout.ts`, `tests/unit/canvas/tidy-layout.test.ts`, `tests/unit/canvas/canonical-layout.test.ts`.
+
+**Verified**: `tests/unit/canvas/` 124 pass (incl. new overflow-regression test with 13 tall tasks exceeding the height floor); lint clean. Shipped v1.4.52 to Electron auto-updater.
+
+---
+
+### TASK-1797: Local task API for Life OS Advisor (Electron-integrated, token-based) (👀 REVIEW)
+
+**Priority**: P2 | **Status**: 👀 REVIEW (opened 2026-05-24) — implemented + verified locally; pending in-app round-trip + ship.
+
+**Problem**: Life OS Advisor (separate local app) needs to read FlowState tasks for context and create/update them on explicit user approval, over a tiny localhost API.
+
+**Approach**: Node `http` sidecar (`server/local-api/server.cjs`, zero new runtime deps — reuses `@supabase/supabase-js`) over the same Supabase `tasks` table. Additive; UI keeps syncing via realtime. Two modes:
+- **Token mode (shipped)**: Electron auto-spawns the sidecar via `utilityProcess` when enabled in Settings; renderer forwards the logged-in session (anon key + user JWT) so all queries are RLS-scoped. No service-role key shipped. Off by default; random per-machine bearer shown in Settings.
+- **Service-role mode (standalone)**: `doppler run -- npm run api` for headless/app-closed use on your own machine; never bundled.
+
+Binds 127.0.0.1 only, rejects non-loopback Host (403), bearer required in token mode, no CORS headers. Default port 5577.
+
+**Endpoints**: `GET /api/health`, `GET /api/tasks?status=&limit=` (≤25, fields id/title/status/priority/dueDate/projectId), `POST /api/tasks`, `PATCH /api/tasks/:id`. App↔DB status map `todo→planned`/`done` (self-contained copy of `toDbStatus`, since `supabaseMappers.ts` imports Pinia).
+
+**Files**: `server/local-api/server.cjs` + `README.md`, `electron/ipc/localApi.ts` (new), `electron/main.ts`, `electron/preload.ts`, `src/composables/useLocalApiBridge.ts` (new), `src/stores/auth.ts`, `src/services/auth/supabase.ts`, `src/components/settings/tabs/AccountSettingsTab.vue`, `package.json` (`api` script + esbuild bundle in `electron:build-main` + esbuild devDep). Plan: `~/.claude/plans/linked-wobbling-blanket.md`.
+
+**Verified**: (1) `setSession` RLS-scoping in plain Node — anon→0 rows, with-session→only the user's rows; (2) full token-mode integration through a real Electron `utilityProcess` + bundled sidecar — pre-session 503, post-session correct RLS-scoped reads, POST 200; (3) HTTP layer (health/401/403/400/404/DB-error→JSON); (4) esbuild bundles supabase-js self-contained (537KB); (5) standalone service-role mode boots (no regression); (6) no new type/lint errors. **Pending (user-run)**: `npm run electron:dev` → sign in → enable in Settings → curl with bearer → POST shows in UI via realtime. Then ship per rules 6/7 (version bump + Electron deploy).
+
+---
+
+### ~~TASK-1791~~: Design overhaul — fix critique findings across all views (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-05-25) — shipped to production. Rebased onto master and merged via PR #157, deployed to in-theflow.com (web) + Electron auto-updater (1.4.50). Follow-up PR #158 self-hosted the Clash Display font (was blocked by the edge CSP). Restore tag `pre-design-overhaul-2026-05-21`.
 
 **Phases (all ✅ implemented, each its own commit):**
 - ✅ Phase 1: text contrast — `--text-muted` 0.45→0.55, `--text-subtle` 0.35→0.45 (WCAG AA)
@@ -689,6 +956,22 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 
 ---
 
+### ~~BUG-1794~~: Rotate day groups sends same-day Saturday tasks to next Saturday (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-05-29)
+
+**Problem**: Pressing **Rotate day groups** with Today/Tomorrow smart groups present could resolve the current weekday group to next week. A Saturday group on Saturday wrote task `dueDate` to next Saturday instead of today.
+
+**Fix**: `getDayGroupDate()` now treats weekday groups as the literal next occurrence including today, regardless of Today/Tomorrow groups. Today/Tomorrow still win automatic placement through matcher specificity instead of forcing weekday groups a week forward.
+
+**Verified**: `npm run test -- tests/unit/canvas/day-group-date-suffix.test.ts tests/unit/canvas/day-group-catchup.test.ts tests/unit/canvas/smart-group-matcher.test.ts tests/unit/canvas/day-group-position-rotation.test.ts` (41/41), `npm run type-check`, `npx eslint src/utils/dayGroupDate.ts`, `npm run electron:build` for v1.4.79, `./scripts/deploy-electron-update.sh --notes "Fix rotate day groups keeping same-day Saturday tasks on today"`, public updater manifest check. Full `npm run lint` still reports repo-wide pre-existing lint debt; touched source file is clean.
+
+**Release status**: v1.4.79 deployed to the Electron updater. `https://in-theflow.com/updates/electron/latest-linux.yml` returns `version: 1.4.79`.
+
+**Files**: `src/utils/dayGroupDate.ts`, `tests/unit/canvas/day-group-date-suffix.test.ts`, `tests/unit/canvas/day-group-catchup.test.ts`, `tests/unit/canvas/smart-group-matcher.test.ts`.
+
+---
+
 ### ~~TASK-1756~~: Canvas day group date rotation + dynamic Today/Tomorrow dates (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-19)
@@ -721,9 +1004,9 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 - Visual position rotation still pending from prior pass (Vue Flow controlled-mode blocker).
 - Possible regression interacting with BUG-1757 fix (dueDate edit leaving task in old group).
 
-**Previous scope (2026-04-11, now partial)**:
+**Previous scope (2026-04-11, now partial; corrected by BUG-1794 on 2026-05-29)**:
 - Today/Tomorrow smart groups show dynamic date suffixes (e.g., "Today / 11.4.26")
-- Day-of-week groups skip dates covered by Today/Tomorrow
+- Day-of-week groups no longer skip dates covered by Today/Tomorrow; placement priority handles overlaps.
 - Rotation button (CalendarClock icon) in canvas toolbar
 - Midnight auto-rotation updates task dueDates, respects weekStartsOn
 - Visual position rotation pending — algorithm works but Vue Flow controlled-mode prevents visual updates
@@ -3431,6 +3714,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1452**~~ | **P2** | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05) |
 | ~~**TASK-1460**~~ | **P2** | ✅ **KDE Widget — Bump task limit to 100 + group by project** (✅ DONE 2026-03-06) |
 | ~~**BUG-1461**~~ | **P1** | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06) |
+| ~~**BUG-1806**~~ | **P1** | ✅ **Mark-done can still trigger phantom nudge state** (✅ DONE 2026-05-28, shipped v1.4.78) |
+| ~~**BUG-1805**~~ | **P1** | ✅ **KDE nanny nudge resurfaced after marking a task done** (✅ DONE 2026-05-27) |
 | ~~**TASK-1484**~~ | **P3** | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08) |
 | ~~**TASK-1496**~~ | **P2** | ✅ **Non-obstructive overflow tooltips on all truncated text app-wide** (✅ DONE 2026-03-09) |
 | **BUG-1498** | **P2** | 🔄 **Taskbar nanny not triggering after 5min idle without active task (INQUIRY-1489 regression)** |
@@ -5063,6 +5348,84 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 3. Skip on WebKit if it's a known platform limitation
 
 **Files**: `tests/e2e/crud-workflows.spec.ts`
+
+---
+
+## Partner Collaboration Roadmap — Shared Task OS
+
+### FEATURE-1805: Partner collaboration — shared task operating system (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED
+
+**Goal**: Make FlowState usable as a shared daily operating system for two people: shared projects, tasks, board/calendar planning, assignment, comments, activity, and realtime updates. This is intentionally not a full Notion clone; docs/databases/pages are out of scope unless later proven necessary.
+
+**Existing foundation**: Workspace tables/RLS/invites/members, workspace switcher, task assignment, presence, activity feed, workspace-aware task/project/group queries, and realtime filters already exist. The work is to harden and complete the shared-workspace experience.
+
+**Non-goals for first release**:
+- Full Notion-style page/database/block editor
+- Public team/organization product surface
+- Shared Canvas as the first milestone
+- Complex granular permissions beyond owner/admin/member/viewer basics
+
+#### Phase 1: Shared workspace hardening MVP
+
+**Priority**: P1 | **Target**: 2-4 weeks
+
+**Scope**:
+- Verify workspace create/invite/accept/switch flows end-to-end in Electron.
+- Ensure task/project loads, writes, realtime updates, and offline queue operations are always scoped by `workspaceId`.
+- Make Board usable for shared workspaces: create/edit/delete/move tasks, project grouping, assignment filter, and partner visibility.
+- Keep Canvas personal-only during this phase; redirect behavior is acceptable.
+- Add focused RLS, sync-queue, realtime, and workspace-switch regression coverage.
+
+**Acceptance criteria**:
+- User and partner can both see and mutate the same shared workspace tasks.
+- Personal tasks never appear in shared workspace, and shared tasks never appear in personal workspace.
+- Simultaneous edits do not duplicate, resurrect, or silently discard tasks in normal Board workflows.
+- Electron build ships the feature behind existing workspace UI.
+
+#### Phase 2: Shared planning workflow
+
+**Priority**: P1 | **Target**: 2-3 weeks after Phase 1
+
+**Scope**:
+- Make Calendar safe and useful in shared workspaces.
+- Support assignment, unassigned work, and "mine/all" filters across Board and Calendar.
+- Add task comments and activity feed polish for real partner handoff.
+- Add notifications or visible badges for partner changes where low-risk.
+
+**Acceptance criteria**:
+- Both users can plan shared work on Board and Calendar without losing updates.
+- Comments/activity make it clear who changed what recently.
+- Shared planning remains reliable through reloads, Electron restarts, and realtime reconnects.
+
+#### Phase 3: Daily-use reliability pass
+
+**Priority**: P1 | **Target**: 2-3 weeks after Phase 2
+
+**Scope**:
+- Stress-test sync, offline recovery, conflict behavior, workspace switching, tombstones, and undo/redo in shared workspaces.
+- Add regression tests around the historically risky paths: LWW conflicts, deletion/undo, realtime reconnect, cached stale data, and workspace cache isolation.
+- Tighten role behavior: owner/admin/member/viewer permissions should match RLS and UI affordances.
+- Build and deploy through the Electron updater flow.
+
+**Acceptance criteria**:
+- Shared task OS is safe enough for daily use by two people.
+- Known sync/realtime failure modes have direct regression coverage.
+- `npm run electron:build` passes and updater manifest is verified after release.
+
+#### Phase 4: Shared Canvas evaluation
+
+**Priority**: P2 | **Status**: 📋 PLANNED, defer until Phases 1-3 are stable
+
+**Scope**:
+- Decide whether shared Canvas is actually needed after daily task collaboration is working.
+- If needed, design shared Canvas around explicit workspace geometry ownership, conflict handling, and realtime update safety.
+- Do not enable shared Canvas by default until geometry sync has strong tests.
+
+**Acceptance criteria**:
+- A clear go/no-go decision exists for shared Canvas.
+- If implemented, Canvas group/task positions do not jump, overwrite, or cross-leak between users/workspaces.
 
 ---
 

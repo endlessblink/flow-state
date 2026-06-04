@@ -151,7 +151,7 @@ const actions = useTaskRowActions(
     hasSubtasks: state.hasSubtasks.value, 
     isExpanded: state.isExpanded.value 
   }, 
-  emit, 
+  emit as (event: string, ...args: any[]) => void,
   state
 )
 

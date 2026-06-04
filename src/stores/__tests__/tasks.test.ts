@@ -39,16 +39,12 @@ describe('TaskStore', () => {
       expect(task.projectId).toBe('uncategorized')
     })
 
-    it('sanitizes blank titles when creating tasks', async () => {
+    it('rejects blank titles when creating tasks', async () => {
       const store = useTaskStore()
 
-      const emptyTitleTask = await store.createTask({ title: '' })
-      const whitespaceTitleTask = await store.createTask({ title: '   ' })
-
-      expect(emptyTitleTask.title).toBe('Untitled Task')
-      expect(whitespaceTitleTask.title).toBe('Untitled Task')
-      expect(store.tasks.find(t => t.id === emptyTitleTask.id)?.title).toBe('Untitled Task')
-      expect(store.tasks.find(t => t.id === whitespaceTitleTask.id)?.title).toBe('Untitled Task')
+      await expect(store.createTask({ title: '' })).rejects.toThrow('Task title is required')
+      await expect(store.createTask({ title: '   ' })).rejects.toThrow('Task title is required')
+      expect(store.tasks).toHaveLength(0)
     })
 
     it('creates a task with scheduled date and time as instance', async () => {
@@ -113,7 +109,7 @@ describe('TaskStore', () => {
       expect(movedTask?.status).toBe('todo')
     })
 
-    it('auto-archives completed tasks (removes from canvas)', async () => {
+    it('marks completed canvas tasks done without moving them to inbox', async () => {
       const store = useTaskStore()
       const task = await store.createTask({
         title: 'Task',
@@ -126,8 +122,8 @@ describe('TaskStore', () => {
 
       const completedTask = store.tasks.find(t => t.id === task.id)
       expect(completedTask?.status).toBe('done')
-      expect(completedTask?.isInInbox).toBe(true)
-      expect(completedTask?.canvasPosition).toBeUndefined()
+      expect(completedTask?.isInInbox).toBe(false)
+      expect(completedTask?.canvasPosition).toEqual({ x: 100, y: 100 })
     })
   })
 

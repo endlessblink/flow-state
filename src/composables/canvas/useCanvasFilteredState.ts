@@ -49,12 +49,10 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
         let tasks = filteredTasks.value
         if (!Array.isArray(tasks)) return []
 
-        // 1. Filter out Done tasks if enabled in store
-        if (canvasStore.taskStore?.hideCanvasDoneTasks) {
-            tasks = tasks.filter(t => t.status !== 'done')
-        }
+        // Keep done canvas tasks in the node model. useCanvasSync marks them
+        // hidden instead of removing them, preserving Vue Flow parent/position state.
 
-        // 2. Filter out Overdue tasks if enabled
+        // Filter out Overdue tasks if enabled
         if (canvasStore.taskStore?.hideCanvasOverdueTasks) {
             const today = new Date()
             today.setHours(0, 0, 0, 0)

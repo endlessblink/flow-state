@@ -21,9 +21,10 @@ const setupCanvas = async (page: Page) => {
 
 const GROUP = { id: 'group-collapse-test', name: 'Collapse Me', x: 200, y: 120, width: 400, height: 600 }
 const TASK = { id: 'task-collapse-1', title: 'Child task', parentId: GROUP.id, x: 240, y: 220 }
+const PARENT_TASK = { id: 'task-collapse-parent', title: 'Parent task', x: 40, y: 150 }
 
 const seedCanvas = async (page: Page) => {
-  await page.evaluate(async ({ GROUP, TASK }) => {
+  await page.evaluate(async ({ GROUP, TASK, PARENT_TASK }) => {
     const root = document.querySelector('#app') as any
     const pinia = root.__vue_app__._context.config.globalProperties.$pinia
     const taskStore = pinia._s.get('tasks')!
@@ -33,16 +34,21 @@ const seedCanvas = async (page: Page) => {
     canvasStore.setViewport?.({ x: 0, y: 0, zoom: 1 })
     canvasStore.setGroups([{
       id: GROUP.id, name: GROUP.name, type: 'custom', isVisible: true, isCollapsed: false,
-      parentGroupId: null, positionVersion: 1, positionFormat: 'absolute',
+      parentGroupId: null, linkedParentTaskId: PARENT_TASK.id, positionVersion: 1, positionFormat: 'absolute',
       position: { x: GROUP.x, y: GROUP.y, width: GROUP.width, height: GROUP.height },
     }], true)
+    await taskStore.createTask({
+      id: PARENT_TASK.id, title: PARENT_TASK.title, status: 'todo', priority: 'medium',
+      isInInbox: false, parentId: null,
+      canvasPosition: { x: PARENT_TASK.x, y: PARENT_TASK.y }, positionFormat: 'absolute',
+    })
     await taskStore.createTask({
       id: TASK.id, title: TASK.title, status: 'todo', priority: 'medium',
       isInInbox: false, parentId: TASK.parentId,
       canvasPosition: { x: TASK.x, y: TASK.y }, positionFormat: 'absolute',
     })
     await canvasStore.requestSync?.('user:manual')
-  }, { GROUP, TASK })
+  }, { GROUP, TASK, PARENT_TASK })
 
   await expect.poll(async () => page.evaluate((id) =>
     !!document.querySelector(`[data-id="section-${id}"]`), GROUP.id), { timeout: 15_000 }).toBe(true)
@@ -58,15 +64,26 @@ const readState = (page: Page) => page.evaluate((id) => {
   const childEl = document.querySelector(`[data-id="task-collapse-1"]`) as HTMLElement | null
   const childVisible = !!childEl && childEl.offsetParent !== null && !childEl.hidden
     && getComputedStyle(childEl).display !== 'none' && getComputedStyle(childEl).visibility !== 'hidden'
+  const groupBox = nodeEl?.getBoundingClientRect()
+  const parentNode = document.querySelector(`[data-id="task-collapse-parent"]`) as HTMLElement | null
+  const edge = document.querySelector(`[aria-label="Edge from task-collapse-parent to section-${id}"]`)
+  const groupHandle = nodeEl?.querySelector('.group-link-handle') as HTMLElement | null
+  const handleStyle = groupHandle ? getComputedStyle(groupHandle) : null
   return {
     storeIsCollapsed: !!group?.isCollapsed,
     domHasCollapsedClass: !!sectionNode?.classList.contains('collapsed'),
     bodyVisible: !!nodeEl?.querySelector('.section-body'),
     childVisible,
+    groupHeight: groupBox?.height ?? null,
+    resizeControlCount: nodeEl?.querySelectorAll('.vue-flow__resize-control').length ?? 0,
+    edgeVisible: !!edge,
+    groupHandleDisplay: handleStyle?.display ?? null,
+    parentSelected: !!parentNode?.classList.contains('selected'),
+    groupSelected: !!nodeEl?.classList.contains('selected'),
   }
 }, GROUP.id)
 
-test('group collapse chevron actually minimizes the group', async ({ page }) => {
+test('group collapse preserves cable target and allows selecting another node', async ({ page }) => {
   await setupCanvas(page)
   await seedCanvas(page)
 
@@ -98,6 +115,20 @@ test('group collapse chevron actually minimizes the group', async ({ page }) => 
   expect(after.bodyVisible).toBe(false)
   // ...and the contained task must be hidden (the whole point of minimizing)
   expect(after.childVisible).toBe(false)
+  // The cable target must still be measurable; display:none handles break
+  // existing group edge anchors.
+  expect(after.edgeVisible).toBe(true)
+  expect(after.groupHandleDisplay).not.toBe('none')
+  // A collapsed selected group must not leave its resize overlay stretched over
+  // the old expanded bounds, which was intercepting clicks on nearby nodes.
+  expect(after.resizeControlCount).toBe(0)
+  expect(after.groupHeight).not.toBeNull()
+  expect(after.groupHeight!).toBeLessThan(80)
+
+  await page.locator(`[data-id="${PARENT_TASK.id}"]`).click({ position: { x: 20, y: 20 } })
+  const afterParentClick = await readState(page)
+  expect(afterParentClick.parentSelected).toBe(true)
+  expect(afterParentClick.groupSelected).toBe(false)
 
   // Expand again — must restore body + child task
   await page.evaluate((id) => {

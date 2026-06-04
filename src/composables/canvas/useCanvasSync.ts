@@ -347,7 +347,8 @@ export function useCanvasSync() {
                 const depth = (group as any)._depth || 0
                 const zIndex = 11 + (depth * 10) // Base group Z is 10 (CANVAS.Z_INDEX_GROUP)
                 const groupWidth = group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH
-                const groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
+                const storedGroupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
+                const groupHeight = group.isCollapsed ? CANVAS.DAY_GROUP_HEADER_HEIGHT : storedGroupHeight
 
                 newNodes.push({
                     id: nodeId,
@@ -384,7 +385,7 @@ export function useCanvasSync() {
                                 x: group.position.x,
                                 y: group.position.y,
                                 width: group.position.width,
-                                height: group.position.height,
+                                height: storedGroupHeight,
                             }
                             : null,
                         collapsed: group.isCollapsed || false,

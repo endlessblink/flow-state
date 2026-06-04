@@ -24,9 +24,9 @@
 
 ---
 
-### TASK-1812: Lanes — sprint-style cross-project goals for tasks (🔄 IN PROGRESS)
+### ~~TASK-1812~~: Lanes — sprint-style cross-project goals for tasks (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-06-03)
+**Priority**: P2 | **Status**: ✅ DONE (2026-06-04) — shipped to production (prod Supabase migrated + verified; Electron v1.4.84 deployed, `latest-linux.yml` live)
 
 **Goal**: Add a new first-class **Lane** entity — a sprint-like path toward a goal that pulls in tasks from *different* projects. A task belongs to at most one lane (nullable `laneId` FK, not a join table). v1 is a named bucket + view: `Lane = { id, name, color }` (no dates/progress/lifecycle yet). Lane is orthogonal to project (a task keeps its single `projectId`).
 

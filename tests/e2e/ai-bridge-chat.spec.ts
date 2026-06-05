@@ -63,6 +63,7 @@ test.describe('AI chat e2e via subscription bridge', () => {
     })
 
     await page.goto('/#/ai')
+    await page.locator('.new-chat-btn').first().click({ timeout: 10000 }).catch(() => {})
 
     const input = page.locator('.chat-input')
     await expect(input).toBeVisible({ timeout: 15000 })
@@ -98,6 +99,7 @@ test.describe('AI chat e2e via subscription bridge', () => {
     })
 
     await page.goto('/#/ai')
+    await page.locator('.new-chat-btn').first().click({ timeout: 10000 }).catch(() => {})
     const input = page.locator('.chat-input')
     await expect(input).toBeVisible({ timeout: 15000 })
     await input.fill('תראה לי את כל המשימות שלי')
@@ -123,17 +125,20 @@ test.describe('AI chat e2e via subscription bridge', () => {
     })
 
     await page.goto('/#/ai')
+    // Fresh conversation so the (reused) user's history doesn't collide with this query.
+    await page.locator('.new-chat-btn').first().click({ timeout: 10000 }).catch(() => {})
     const input = page.locator('.chat-input')
     await expect(input).toBeVisible({ timeout: 15000 })
-    await input.fill('what should I work on?')
+    const uniqueQuery = 'placeholder-loading-check unique query 9f3a'
+    await input.fill(uniqueQuery)
     await page.locator('.send-btn').click()
 
     // 1) Input clears immediately (the press is acknowledged)
     await expect(input).toHaveValue('', { timeout: 3000 })
-    // 2) The user's message is echoed into the thread
-    await expect(page.getByText('what should I work on?')).toBeVisible({ timeout: 5000 })
+    // 2) The user's message is echoed into the visible thread
+    await expect(page.locator('.chat-messages .message-user').last()).toContainText('unique query 9f3a', { timeout: 5000 })
     // 3) A clear "loading" indicator appears while the model works
-    await expect(page.locator('.thinking-indicator')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('.thinking-indicator').first()).toBeVisible({ timeout: 5000 })
   })
 
   test('bridge failure is handled gracefully (no crash, input recovers)', async ({ page }) => {

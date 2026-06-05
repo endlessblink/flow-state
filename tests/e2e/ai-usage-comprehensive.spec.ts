@@ -39,6 +39,13 @@ function stubBridge(page: Page, opts: { toolCall?: string; answer?: string } = {
   return { calls: () => chatCalls }
 }
 
+// Start a clean conversation — the test user is reused, so its chat history
+// persists across tests/runs; without this, leak/count assertions see old messages.
+async function freshChat(page: Page) {
+  await page.locator('.new-chat-btn').first().click({ timeout: 10000 }).catch(() => {})
+  await expect(page.locator('.chat-input')).toBeVisible({ timeout: 15000 })
+}
+
 async function send(page: Page, text: string) {
   const input = page.locator('.chat-input')
   await expect(input).toBeVisible({ timeout: 15000 })
@@ -52,6 +59,7 @@ test.describe('AI usage — comprehensive', () => {
   test('read query renders a task card AND does not leak raw tool-call text', async ({ page }) => {
     stubBridge(page, { toolCall: 'list_tasks({})', answer: 'Your active tasks are listed below.' })
     await page.goto('/#/ai')
+    await freshChat(page)
     await send(page, 'show me everything I should look at')
 
     await expect(page.locator('.tool-result-card', { hasText: 'Design landing page' })).toBeVisible({ timeout: 25000 })
@@ -64,6 +72,7 @@ test.describe('AI usage — comprehensive', () => {
   test('write query (mark done) confirms and does not leak tool-call JSON', async ({ page }) => {
     stubBridge(page, { toolCall: 'mark_task_done({"task":"Buy groceries"})', answer: 'Done — marked it complete.' })
     await page.goto('/#/ai')
+    await freshChat(page)
     await send(page, 'please complete the buy groceries task for me')
 
     // A response renders (confirmation or card) and no raw mark_task_done text shows.
@@ -74,6 +83,7 @@ test.describe('AI usage — comprehensive', () => {
   test('greeting gets a friendly reply with NO tool card', async ({ page }) => {
     stubBridge(page)
     await page.goto('/#/ai')
+    await freshChat(page)
     await send(page, 'hi there')
     // Greeting path is template-based (no tool). Some text appears, no card.
     await expect(lastAssistantText(page)).toBeVisible({ timeout: 15000 })
@@ -83,6 +93,7 @@ test.describe('AI usage — comprehensive', () => {
   test('selecting Codex brain works end-to-end (UI badge + tool-call)', async ({ page }) => {
     const stub = stubBridge(page, { toolCall: 'list_tasks({})', answer: 'Here is your workload.' })
     await page.goto('/#/ai')
+    await freshChat(page)
     // Open AI settings → pick Codex (selectedProvider=bridge, brain=codex).
     await page.locator('button[title="AI Settings"]').first().click()
     await page.locator('.provider-option', { hasText: 'Codex' }).first().click()
@@ -99,6 +110,7 @@ test.describe('AI usage — comprehensive', () => {
   test('markdown in the answer renders as HTML (no raw ** or #)', async ({ page }) => {
     stubBridge(page, { toolCall: 'list_tasks({})', answer: 'Your **top priority** is clear.\n\n- item one\n- item two' })
     await page.goto('/#/ai')
+    await freshChat(page)
     await send(page, 'give me a quick analytical summary of my workload')
     const txt = lastAssistantText(page)
     await expect(txt).toBeVisible({ timeout: 25000 })
@@ -112,6 +124,7 @@ test.describe('AI usage — comprehensive', () => {
     // Broken JSON args + trailing junk.
     stubBridge(page, { toolCall: 'list_tasks({broken json', answer: 'ok' })
     await page.goto('/#/ai')
+    await freshChat(page)
     await send(page, 'help me make sense of my plate today')
     // App stays alive and the input recovers.
     await expect(page.locator('.chat-input')).toBeVisible({ timeout: 25000 })
@@ -122,8 +135,44 @@ test.describe('AI usage — comprehensive', () => {
   test('Hebrew query renders an answer/card without leaking tool-call text', async ({ page }) => {
     stubBridge(page, { toolCall: 'list_tasks({})', answer: 'אלו המשימות הפעילות שלך.' })
     await page.goto('/#/ai')
+    await freshChat(page)
     await send(page, 'תראה לי את כל המשימות שלי')
     await expect(page.locator('.tool-result-card').first()).toBeVisible({ timeout: 25000 })
     await expect(page.getByText('list_tasks(', { exact: false })).toHaveCount(0)
+  })
+
+  test('quick-action button ("Plan my day") executes a tool directly and renders a result', async ({ page }) => {
+    stubBridge(page, { answer: 'Here is your plan for today.' })
+    await page.goto('/#/ai')
+    await freshChat(page)
+    const planBtn = page.locator('.quick-action', { hasText: /plan my day/i }).first()
+    await expect(planBtn).toBeVisible({ timeout: 15000 })
+    await planBtn.click()
+    // Direct-tool quick action → a daily-summary result card renders.
+    await expect(page.locator('.tool-result-card').first()).toBeVisible({ timeout: 25000 })
+  })
+
+  test('multi-turn: a follow-up question keeps working after the first answer', async ({ page }) => {
+    stubBridge(page, { toolCall: 'list_tasks({})', answer: 'First answer.' })
+    await page.goto('/#/ai')
+    await freshChat(page)
+    await send(page, 'what should I work on?')
+    await expect(page.locator('.tool-result-card').first()).toBeVisible({ timeout: 25000 })
+    // input re-enables, then a second turn
+    await expect(page.locator('.chat-input')).toBeEnabled({ timeout: 25000 })
+    await send(page, 'and which one is the most urgent?')
+    // The follow-up registers as the newest turn and a response follows it.
+    await expect(page.locator('.chat-messages .message-user').last()).toContainText('most urgent', { timeout: 25000 })
+    await expect(lastAssistantText(page)).toBeVisible({ timeout: 25000 })
+  })
+
+  test('visual: a rendered task card + answer look correct (screenshot)', async ({ page }) => {
+    stubBridge(page, { toolCall: 'list_tasks({})', answer: 'Your active tasks are below — Design landing page is highest priority.' })
+    await page.goto('/#/ai')
+    await freshChat(page)
+    await send(page, 'show me my workload and what matters most')
+    await expect(page.locator('.tool-result-card', { hasText: 'Design landing page' })).toBeVisible({ timeout: 25000 })
+    await expect(lastAssistantText(page)).toBeVisible({ timeout: 10000 })
+    await page.screenshot({ path: '.dev/screenshots/ai-chat-card-render.png', fullPage: false }).catch(() => {})
   })
 })

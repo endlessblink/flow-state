@@ -21,6 +21,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useTimerStore } from '@/stores/timer'
 import { useAIEventTracking } from '@/composables/useAIEventTracking'
 import { type TaskType, type RouterProviderType } from '@/services/ai'
+import type { Task } from '@/types/tasks'
 import { getSharedRouter, resetSharedRouter } from '@/services/ai/routerFactory'
 import { useSettingsStore } from '@/stores/settings'
 import { tauriFetch } from '@/services/ai/utils/tauriHttp'
@@ -387,6 +388,46 @@ export function useAIChat() {
     } catch {
       return false
     }
+  }
+
+  /**
+   * TASK-1814: Build RICH task context for strong subscription brains — the actual
+   * content the model needs to reason (notes/description, tags, subtask progress,
+   * project, real dates), not the pre-digested "X days overdue" metadata. Looks up
+   * the full task from the store (the tool result is intentionally slim for cards).
+   */
+  function buildRichTaskData(r: ToolResult, lang: 'he' | 'en'): string {
+    const ok = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
+    const data = r.data
+    if (!Array.isArray(data) || data.length === 0 || (data[0] as Record<string, unknown>)?.title === undefined) {
+      return digestToolResults('', data, ok, lang) // non-task-list → keep digest
+    }
+    const today = new Date().toISOString().split('T')[0]
+    const lines: string[] = [ok]
+    for (const item of (data as Array<Record<string, unknown>>).slice(0, 25)) {
+      const id = item.id as string | undefined
+      const full = ((id ? taskStore.getTask(id) : null) || item) as unknown as Task & { tags?: string[]; subtasks?: Array<{ completed?: boolean; done?: boolean }> }
+      const parts: string[] = [`• ${full.title || '(untitled)'}`]
+      if (full.priority) parts.push(`priority=${full.priority}`)
+      if (full.dueDate) {
+        const d = String(full.dueDate).slice(0, 10)
+        parts.push(d < today ? `OVERDUE (was due ${d})` : `due ${d}`)
+      }
+      const desc = (full.description || '').trim()
+      if (desc) parts.push(`notes: "${desc.slice(0, 240)}"`)
+      if (Array.isArray(full.tags) && full.tags.length) parts.push(`tags: ${full.tags.join(', ')}`)
+      if (Array.isArray(full.subtasks) && full.subtasks.length) {
+        const done = full.subtasks.filter((s: { completed?: boolean; done?: boolean }) => s.completed || s.done).length
+        parts.push(`subtasks ${done}/${full.subtasks.length} done`)
+      }
+      if (full.estimatedDuration) parts.push(`~${full.estimatedDuration}min`)
+      if (full.projectId) {
+        const pname = taskStore.getProjectDisplayName?.(full.projectId)
+        if (pname) parts.push(`project: ${pname}`)
+      }
+      lines.push(parts.join(' | '))
+    }
+    return lines.join('\n').slice(0, 6000)
   }
 
   /**
@@ -790,13 +831,20 @@ export function useAIChat() {
         routed.language
       )
 
-      // Build the pre-digested reasoning summary (reuse existing pipeline)
-      const toolResultsSummary = toolResults
-        .map((r, i) => {
-          const toolName = routed.tools[i]?.tool || 'unknown'
-          return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, routed.language)
-        })
-        .join('\n\n')
+      // TASK-1814: For strong subscription brains, DON'T pre-digest into
+      // "3 days overdue, high priority" lines (that reduces the model to a
+      // formatter — strong and weak models then produce identical shallow answers).
+      // Feed the FULL task content (notes/description, tags, subtask progress,
+      // project, dates) and let the model actually reason about real stakes. The
+      // user's work patterns/capacity are already injected via getAIUserContext.
+      const toolResultsSummary = isBridgeActive()
+        ? toolResults.map(r => buildRichTaskData(r, routed.language)).join('\n\n')
+        : toolResults
+            .map((r, i) => {
+              const toolName = routed.tools[i]?.tool || 'unknown'
+              return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, routed.language)
+            })
+            .join('\n\n')
 
       const languageName = routed.language === 'he' ? 'Hebrew (עברית)' : 'English'
 
@@ -814,7 +862,7 @@ export function useAIChat() {
       const formatterMessages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.\n\nWHEN RANKING BY PRIORITY/URGENCY: for each task give a SHORT reason it matters *right now* — the real-world consequence of delaying it, a dependency it blocks, or a hard deadline. "Overdue" or "3 days late" alone is NOT a reason — explain why lateness hurts here (e.g. "blocks the launch", "the meeting is tomorrow", "the window closes Friday"). If the data doesn't reveal why, infer the most likely stakes from the task title and say so briefly. Lead with the single most important task and one line on why it beats the others.\n\n${routed.formatDirective}${userScheduleNote}`,
+          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.\n\nWHEN RANKING BY PRIORITY/URGENCY (read carefully — this is the #1 quality bar):\n- "X days overdue" and "high priority" are METADATA, never a reason. NEVER justify ranking with lateness or the priority label. The user already sees those on the card.\n- Lead EACH task with the real-world STAKE: what concretely goes wrong if it slips, what it unblocks, who is waiting, or the deadline behind it. INFER this from the task's wording. Examples: "check payment via Cardcom" → money may be stuck or a charge failing; "gift for Sivan" → a birthday/event with a fixed date approaching; "reply to X" → a person is blocked waiting on you; "publish the video" → audience/momentum window.\n- You MAY add lateness as a brief aside AFTER the real reason ("…and it's been sitting 3 days"), never as the reason.\n- If a task's wording genuinely gives NO clue to its stakes, say so honestly ("not clear why this is urgent — add a note?") instead of inventing urgency.\n- Open with the single highest-stakes task and one line on why it beats the rest.\n\nUSE ALL THE DATA you are given: each task may include its NOTES (description), tags, subtask progress, project, and estimate — read them and reason from the actual content, quoting the relevant detail. The user's work patterns and capacity are in the context above — tailor your suggestion to how they ACTUALLY work (their pace, peak days, current overload), not generic advice. A strong, specific answer grounded in their real notes and habits is the whole point.\n\n${routed.formatDirective}${userScheduleNote}`,
         },
         {
           role: 'user',

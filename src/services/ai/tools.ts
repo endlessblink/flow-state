@@ -418,6 +418,18 @@ function validateTaskExists(taskStore: ReturnType<typeof useTaskStore>, taskId: 
     return taskStore.getTask(resolved.task.id) || null
   }
 
+  // Strategy 3 (TASK-1814): unambiguous case-insensitive substring match. Handles
+  // short fragments the fuzzy resolver scores 'low' (e.g. a single Hebrew name like
+  // "רויטל") — only resolves when exactly ONE active task contains the fragment,
+  // so it never guesses between candidates.
+  const q = (taskId || '').trim().toLowerCase()
+  if (q.length >= 2) {
+    const matches = taskStore.tasks.filter(
+      (t: Task) => t.status !== 'done' && (t.title || '').toLowerCase().includes(q),
+    )
+    if (matches.length === 1) return matches[0]
+  }
+
   return null
 }
 

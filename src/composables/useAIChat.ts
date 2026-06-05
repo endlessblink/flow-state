@@ -823,13 +823,16 @@ export function useAIChat() {
       // ── Step 4b: For query intents → LLM formats with reasoning ─────
       const router = await getRouter()
 
-      // Build reasoning directive from tool results
+      // Build reasoning directive from tool results.
+      // TASK-1814: the pre-computed directive injects per-task FACTS ("4 days
+      // overdue, high priority") and dictates that exact dry format — which is why
+      // strong and weak brains produced identical shallow lists. For the
+      // subscription bridge we SKIP it entirely and let the model reason from the
+      // rich task data (notes/tags/subtasks) + the user's injected work patterns.
       const resultData = toolResults.find(r => r.success)?.data
-      const reasoningDirective = buildReasoningDirective(
-        routed.tools[0]?.tool || '',
-        resultData,
-        routed.language
-      )
+      const reasoningDirective = isBridgeActive()
+        ? ''
+        : buildReasoningDirective(routed.tools[0]?.tool || '', resultData, routed.language)
 
       // TASK-1814: For strong subscription brains, DON'T pre-digest into
       // "3 days overdue, high priority" lines (that reduces the model to a
@@ -862,7 +865,7 @@ export function useAIChat() {
       const formatterMessages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.\n\nWHEN RANKING BY PRIORITY/URGENCY (read carefully — this is the #1 quality bar):\n- "X days overdue" and "high priority" are METADATA, never a reason. NEVER justify ranking with lateness or the priority label. The user already sees those on the card.\n- Lead EACH task with the real-world STAKE: what concretely goes wrong if it slips, what it unblocks, who is waiting, or the deadline behind it. INFER this from the task's wording. Examples: "check payment via Cardcom" → money may be stuck or a charge failing; "gift for Sivan" → a birthday/event with a fixed date approaching; "reply to X" → a person is blocked waiting on you; "publish the video" → audience/momentum window.\n- You MAY add lateness as a brief aside AFTER the real reason ("…and it's been sitting 3 days"), never as the reason.\n- If a task's wording genuinely gives NO clue to its stakes, say so honestly ("not clear why this is urgent — add a note?") instead of inventing urgency.\n- Open with the single highest-stakes task and one line on why it beats the rest.\n\nUSE ALL THE DATA you are given: each task may include its NOTES (description), tags, subtask progress, project, and estimate — read them and reason from the actual content, quoting the relevant detail. The user's work patterns and capacity are in the context above — tailor your suggestion to how they ACTUALLY work (their pace, peak days, current overload), not generic advice. A strong, specific answer grounded in their real notes and habits is the whole point.\n\n${routed.formatDirective}${userScheduleNote}`,
+          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.\n\nWHEN RANKING BY PRIORITY/URGENCY (read carefully — this is the #1 quality bar):\n- "X days overdue" and "high priority" are METADATA, never a reason. NEVER justify ranking with lateness or the priority label. The user already sees those on the card.\n- Lead EACH task with the real-world STAKE: what concretely goes wrong if it slips, what it unblocks, who is waiting, or the deadline behind it. INFER this from the task's wording. Examples: "check payment via Cardcom" → money may be stuck or a charge failing; "gift for Sivan" → a birthday/event with a fixed date approaching; "reply to X" → a person is blocked waiting on you; "publish the video" → audience/momentum window.\n- You MAY add lateness as a brief aside AFTER the real reason ("…and it's been sitting 3 days"), never as the reason.\n- If a task's wording genuinely gives NO clue to its stakes, say so honestly ("not clear why this is urgent — add a note?") instead of inventing urgency.\n- Open with the single highest-stakes task and one line on why it beats the rest.\n\nUSE ALL THE DATA you are given: each task may include its NOTES (description), tags, subtask progress, project, and estimate — read them and reason from the actual content, quoting the relevant detail. The user's work patterns and capacity are in the context above — tailor your suggestion to how they ACTUALLY work (their pace, peak days, current overload), not generic advice.\n\nLOOK ACROSS THE WHOLE LIST, don't just rank tasks in isolation:\n- GROUP related tasks (same project, same theme, or sequential steps of one effort — e.g. "Build outreach target list" then "Write a cold opener" are two steps of one sales push) and suggest doing them together or in order.\n- Flag DEPENDENCIES ("do X before Y makes sense").\n- Call out the TREND/pattern you actually see: a whole project stalling, one theme dominating the overdue pile, or a type of work being repeatedly avoided — and what that implies. This cross-task insight is the most valuable part; a per-task list without it is a failure.\n\n${routed.formatDirective}${userScheduleNote}`,
         },
         {
           role: 'user',

@@ -836,7 +836,7 @@ export function useAIChat() {
       // formatter — strong and weak models then produce identical shallow answers).
       // Feed the FULL task content (notes/description, tags, subtask progress,
       // project, dates) and let the model actually reason about real stakes. The
-      // user's work patterns/capacity are already injected via getAIUserContext.
+      // user's work patterns/capacity are already injected by the context-aware router.
       const toolResultsSummary = isBridgeActive()
         ? toolResults.map(r => buildRichTaskData(r, routed.language)).join('\n\n')
         : toolResults

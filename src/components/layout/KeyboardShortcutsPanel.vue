@@ -170,6 +170,7 @@ const categories: ShortcutCategory[] = [
       { keys: ['Del', '/', 'Backspace'], description: 'Delete selected nodes', searchTerms: 'remove' },
       { keys: ['Shift', 'Del'], description: 'Permanent delete', searchTerms: 'hard remove forever' },
       { keys: ['Shift', 'G'], description: 'Create new group', searchTerms: 'section container' },
+      { keys: ['Hold F2', 'Drag'], description: 'Reorder task within column', searchTerms: 'reorder move sort rearrange order stack insert shift drop' },
       { keys: ['Hold Shift'], description: 'Box selection mode', searchTerms: 'drag select area' },
       { keys: ['Hold Ctrl'], description: 'Multi-select mode', searchTerms: 'multiple pick' },
     ]

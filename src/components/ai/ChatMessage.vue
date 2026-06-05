@@ -529,8 +529,11 @@ async function saveSchedule() {
         </span>
       </div>
 
-      <!-- Tool Results -->
-      <div v-if="toolResults.length > 0 && !isStreaming" class="tool-results">
+      <!-- Tool Results — render as soon as a tool executes (TASK-1814), even while
+           the model's text answer is still streaming. With slow subscription CLI
+           brains (~8-19s) this shows the interactive cards in ~1s instead of making
+           the user wait for the full response. -->
+      <div v-if="toolResults.length > 0" class="tool-results">
         <template v-for="(result, idx) in toolResults" :key="idx">
           <!-- Daily summary stats card -->
           <div v-if="isDailySummaryResult(result)" class="tool-result-card">

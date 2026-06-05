@@ -642,6 +642,11 @@ export function useAIChat() {
 
     if (await handleSlashCommand(trimmedContent)) return
 
+    // TASK-1814: clear the input synchronously for instant "message sent" feedback
+    // (the user message + thinking indicator follow within ms — routing is local
+    // keyword work for bridge brains, so the loading state appears promptly).
+    store.inputText = ''
+
     // ── Schedule onboarding: show once if personal context is empty ────
     await maybeShowScheduleOnboarding()
 

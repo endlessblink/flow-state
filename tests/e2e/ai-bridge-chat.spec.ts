@@ -107,6 +107,35 @@ test.describe('AI chat e2e via subscription bridge', () => {
     await expect(page.locator('.tool-result-card').first()).toBeVisible({ timeout: 25000 })
   })
 
+  test('pressing send gives instant feedback: input clears, message shows, loading indicator appears', async ({ page }) => {
+    await page.route('**/ai-bridge/health', (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, brains: { claude: true, codex: true } }) }))
+    // Delay the response so the loading/thinking state is observable.
+    await page.route('**/ai-bridge/v1/chat', async (r) => {
+      let body: { brain?: string; stream?: boolean } = {}
+      try { body = r.request().postDataJSON() } catch { /* ignore */ }
+      const brain = body.brain || 'claude'
+      await new Promise((res) => setTimeout(res, 2500))
+      if (body.stream === false) {
+        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ brain, model: brain, content: 'freeform' }) })
+      }
+      await r.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' }, body: sse({ delta: 'Here is what I found.' }, { done: true, brain, model: brain }) })
+    })
+
+    await page.goto('/#/ai')
+    const input = page.locator('.chat-input')
+    await expect(input).toBeVisible({ timeout: 15000 })
+    await input.fill('what should I work on?')
+    await page.locator('.send-btn').click()
+
+    // 1) Input clears immediately (the press is acknowledged)
+    await expect(input).toHaveValue('', { timeout: 3000 })
+    // 2) The user's message is echoed into the thread
+    await expect(page.getByText('what should I work on?')).toBeVisible({ timeout: 5000 })
+    // 3) A clear "loading" indicator appears while the model works
+    await expect(page.locator('.thinking-indicator')).toBeVisible({ timeout: 5000 })
+  })
+
   test('bridge failure is handled gracefully (no crash, input recovers)', async ({ page }) => {
     let crashed = false
     page.on('pageerror', () => { crashed = true })

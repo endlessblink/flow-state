@@ -173,6 +173,10 @@ const scheduleQuestion = computed(() => {
 const isThinking = computed(() =>
   isStreaming.value && (!props.message.content || props.message.content.trim() === '')
 )
+// TASK-1814: clear, language-aware "loading" label so the user knows the model is working.
+const thinkingLabel = computed(() =>
+  (effectiveDirection.value === 'rtl' || props.direction === 'rtl') ? 'חושב…' : 'Thinking…',
+)
 
 /**
  * Strip tool JSON blocks and AI preamble, then render markdown.
@@ -476,11 +480,14 @@ async function saveSchedule() {
 
     <!-- Content -->
     <div class="message-content">
-      <!-- Thinking Indicator -->
+      <!-- Thinking Indicator — clear "model is loading" feedback (TASK-1814) -->
       <div v-if="isThinking" class="thinking-indicator">
-        <span class="thinking-dot" />
-        <span class="thinking-dot" />
-        <span class="thinking-dot" />
+        <span class="thinking-dots">
+          <span class="thinking-dot" />
+          <span class="thinking-dot" />
+          <span class="thinking-dot" />
+        </span>
+        <span class="thinking-label">{{ thinkingLabel }}</span>
       </div>
 
       <!-- Rendered Message Text -->
@@ -965,8 +972,21 @@ async function saveSchedule() {
 
 .thinking-indicator {
   display: flex;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-2) 0;
+}
+
+.thinking-dots {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.thinking-label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-weight: var(--font-medium);
+  letter-spacing: 0.01em;
 }
 
 .thinking-dot {

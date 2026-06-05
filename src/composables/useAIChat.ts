@@ -404,10 +404,14 @@ export function useAIChat() {
     }
     const today = new Date().toISOString().split('T')[0]
     const lines: string[] = [ok]
-    for (const item of (data as Array<Record<string, unknown>>).slice(0, 25)) {
+    const slice = (data as Array<Record<string, unknown>>).slice(0, 25)
+    for (let i = 0; i < slice.length; i++) {
+      const item = slice[i]
       const id = item.id as string | undefined
       const full = ((id ? taskStore.getTask(id) : null) || item) as unknown as Task & { tags?: string[]; subtasks?: Array<{ completed?: boolean; done?: boolean }> }
-      const parts: string[] = [`• ${full.title || '(untitled)'}`]
+      // [N] index lets the model reference tasks in the `cards` block by number
+      // (robust vs title-matching, esp. Hebrew/paraphrased). i+1 is 1-based.
+      const parts: string[] = [`[${i + 1}] ${full.title || '(untitled)'}`]
       if (full.priority) parts.push(`priority=${full.priority}`)
       if (full.dueDate) {
         const d = String(full.dueDate).slice(0, 10)
@@ -428,6 +432,44 @@ export function useAIChat() {
       lines.push(parts.join(' | '))
     }
     return lines.join('\n').slice(0, 6000)
+  }
+
+  /**
+   * TASK-1814: Parse the model's ```cards JSON block into grouped tasks-with-reasons
+   * for inline card rendering. Maps each item's [N] index back to the real task in
+   * the tool result (same order buildRichTaskData listed them). Returns the groups +
+   * the raw block (so the caller can strip it from the displayed text).
+   */
+  function parseCardGroups(text: string, toolResults: ToolResult[]): {
+    groups: Array<{ name: string; tasks: Array<Record<string, unknown> & { reason: string }> }>
+    total: number
+    rawBlock: string
+  } | null {
+    const m = text.match(/```cards\s*\n?([\s\S]*?)```/)
+    if (!m) return null
+    let parsed: { groups?: Array<{ name?: string; items?: Array<{ i?: number; reason?: string }> }> }
+    try { parsed = JSON.parse(m[1].trim()) } catch { return null }
+    if (!Array.isArray(parsed?.groups) || !parsed.groups.length) return null
+
+    const taskResult = toolResults.find(r =>
+      r.success && Array.isArray(r.data) && (r.data[0] as Record<string, unknown>)?.title !== undefined,
+    )
+    const tasks = (taskResult?.data as Array<Record<string, unknown>>) || []
+    if (!tasks.length) return null
+
+    const groups = parsed.groups
+      .map(g => ({
+        name: String(g.name || '').trim(),
+        tasks: (Array.isArray(g.items) ? g.items : [])
+          .map(it => {
+            const t = tasks[(Number(it.i) || 0) - 1]
+            return t ? { ...t, reason: String(it.reason || '').trim() } : null
+          })
+          .filter((t): t is Record<string, unknown> & { reason: string } => t !== null),
+      }))
+      .filter(g => g.tasks.length > 0)
+
+    return groups.length ? { groups, total: tasks.length, rawBlock: m[0] } : null
   }
 
   /**
@@ -862,10 +904,19 @@ export function useAIChat() {
         }
       } catch { /* ignore */ }
 
+      // TASK-1814: structured `cards` block → grouped interactive cards with a reason
+      // on each (rendered by ChatMessage). Only for bridge brains with a task list.
+      const hasTaskList = toolResults.some(r =>
+        r.success && Array.isArray(r.data) && r.data.length > 0 && (r.data[0] as Record<string, unknown>)?.title !== undefined,
+      )
+      const cardsInstruction = (isBridgeActive() && hasTaskList)
+        ? `\n\nAFTER your written answer, append a fenced code block tagged \`cards\` containing JSON ONLY (the app turns it into interactive cards, so keep your prose short — 1-3 sentences of the cross-task insight, the cards carry the per-task detail):\n\`\`\`cards\n{"groups":[{"name":"short group label in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"the specific stake for THIS task in ${languageName}, max 10 words — NOT 'overdue'/'high priority'"}]}]}\n\`\`\`\nReference each task by its [N] number INSIDE the cards block only. In your prose, refer to tasks by NAME, never by their [N] number. Include only tasks worth acting on now, grouped by theme or sequence (a single task may be its own group). Order groups and items by importance.`
+        : ''
+
       const formatterMessages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.\n\nWHEN RANKING BY PRIORITY/URGENCY (read carefully — this is the #1 quality bar):\n- "X days overdue" and "high priority" are METADATA, never a reason. NEVER justify ranking with lateness or the priority label. The user already sees those on the card.\n- Lead EACH task with the real-world STAKE: what concretely goes wrong if it slips, what it unblocks, who is waiting, or the deadline behind it. INFER this from the task's wording. Examples: "check payment via Cardcom" → money may be stuck or a charge failing; "gift for Sivan" → a birthday/event with a fixed date approaching; "reply to X" → a person is blocked waiting on you; "publish the video" → audience/momentum window.\n- You MAY add lateness as a brief aside AFTER the real reason ("…and it's been sitting 3 days"), never as the reason.\n- If a task's wording genuinely gives NO clue to its stakes, say so honestly ("not clear why this is urgent — add a note?") instead of inventing urgency.\n- Open with the single highest-stakes task and one line on why it beats the rest.\n\nUSE ALL THE DATA you are given: each task may include its NOTES (description), tags, subtask progress, project, and estimate — read them and reason from the actual content, quoting the relevant detail. The user's work patterns and capacity are in the context above — tailor your suggestion to how they ACTUALLY work (their pace, peak days, current overload), not generic advice.\n\nLOOK ACROSS THE WHOLE LIST, don't just rank tasks in isolation:\n- GROUP related tasks (same project, same theme, or sequential steps of one effort — e.g. "Build outreach target list" then "Write a cold opener" are two steps of one sales push) and suggest doing them together or in order.\n- Flag DEPENDENCIES ("do X before Y makes sense").\n- Call out the TREND/pattern you actually see: a whole project stalling, one theme dominating the overdue pile, or a type of work being repeatedly avoided — and what that implies. This cross-task insight is the most valuable part; a per-task list without it is a failure.\n\n${routed.formatDirective}${userScheduleNote}`,
+          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.\n\nWHEN RANKING BY PRIORITY/URGENCY (read carefully — this is the #1 quality bar):\n- "X days overdue" and "high priority" are METADATA, never a reason. NEVER justify ranking with lateness or the priority label. The user already sees those on the card.\n- Lead EACH task with the real-world STAKE: what concretely goes wrong if it slips, what it unblocks, who is waiting, or the deadline behind it. INFER this from the task's wording. Examples: "check payment via Cardcom" → money may be stuck or a charge failing; "gift for Sivan" → a birthday/event with a fixed date approaching; "reply to X" → a person is blocked waiting on you; "publish the video" → audience/momentum window.\n- You MAY add lateness as a brief aside AFTER the real reason ("…and it's been sitting 3 days"), never as the reason.\n- If a task's wording genuinely gives NO clue to its stakes, say so honestly ("not clear why this is urgent — add a note?") instead of inventing urgency.\n- Open with the single highest-stakes task and one line on why it beats the rest.\n\nUSE ALL THE DATA you are given: each task may include its NOTES (description), tags, subtask progress, project, and estimate — read them and reason from the actual content, quoting the relevant detail. The user's work patterns and capacity are in the context above — tailor your suggestion to how they ACTUALLY work (their pace, peak days, current overload), not generic advice.\n\nLOOK ACROSS THE WHOLE LIST, don't just rank tasks in isolation:\n- GROUP related tasks (same project, same theme, or sequential steps of one effort — e.g. "Build outreach target list" then "Write a cold opener" are two steps of one sales push) and suggest doing them together or in order.\n- Flag DEPENDENCIES ("do X before Y makes sense").\n- Call out the TREND/pattern you actually see: a whole project stalling, one theme dominating the overdue pile, or a type of work being repeatedly avoided — and what that implies. This cross-task insight is the most valuable part; a per-task list without it is a failure.\n\n${routed.formatDirective}${userScheduleNote}${cardsInstruction}`,
         },
         {
           role: 'user',
@@ -905,11 +956,24 @@ export function useAIChat() {
         }
       }
 
+      // TASK-1814: extract the `cards` block → grouped interactive cards, and strip
+      // it from the displayed prose. Falls through gracefully if absent/unparseable.
+      const cardData = parseCardGroups(formattedResponse, toolResults)
+      let displayRaw = cardData ? formattedResponse.replace(cardData.rawBlock, '').trim() : formattedResponse
+      // Safety net: strip any leaked [N] / [2→3] task-index markers from the prose.
+      if (cardData) displayRaw = displayRaw.replace(/\s*\[\d+(?:\s*(?:→|->|,)\s*\d+)*\]/g, '')
+
       // Clean and set
-      const cleaned = cleanResponse(formattedResponse)
+      const cleaned = cleanResponse(displayRaw)
       if (lastMsg && lastMsg.isStreaming) {
         lastMsg.content = cleaned
         store.streamingContent = cleaned
+        if (cardData) {
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            cardGroups: { groups: cardData.groups, total: cardData.total },
+          } as Record<string, unknown>
+        }
       }
 
       // Update provider badge

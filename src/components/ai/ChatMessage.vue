@@ -229,6 +229,17 @@ const toolResults = computed(() => {
 })
 
 /**
+ * TASK-1814: grouped prioritization cards (each task with the AI's one-line reason).
+ * When present, this replaces the flat task-list dump.
+ */
+const cardGroups = computed(() => {
+  const meta = props.message.metadata as Record<string, unknown>
+  const cg = meta?.cardGroups as { groups?: Array<{ name: string; tasks: Array<TaskListItem & { reason?: string }> }>; total?: number } | undefined
+  if (!cg?.groups?.length || isStreaming.value) return null
+  return cg
+})
+
+/**
  * Check if a tool result contains a task list that should be rendered as clickable items.
  */
 function isTaskListResult(result: { tool: string; data: ChatToolResultData }): boolean {
@@ -536,11 +547,61 @@ async function saveSchedule() {
         </span>
       </div>
 
+      <!-- TASK-1814: Grouped prioritization cards — replaces the flat dump. Each
+           task is the same interactive card + the AI's one-line reason underneath. -->
+      <div v-if="cardGroups" class="card-groups">
+        <div v-for="(group, gi) in cardGroups.groups" :key="'g' + gi" class="card-group">
+          <div v-if="group.name" class="card-group-name" dir="auto">{{ group.name }}</div>
+          <button
+            v-for="task in group.tasks"
+            :key="task.id"
+            class="task-list-item grouped-card"
+            :class="{ 'task-completed': completedTaskIds.has(task.id) }"
+            @click="openQuickEdit(task, $event)"
+          >
+            <span class="task-priority-dot" :style="{ background: priorityColor(task.priority) }" />
+            <div class="grouped-card-body">
+              <span class="task-title" :dir="direction || 'auto'">{{ task.title || '(untitled)' }}</span>
+              <span v-if="task.reason" class="grouped-card-reason" dir="auto">{{ task.reason }}</span>
+              <div class="task-meta-row">
+                <span v-if="task.daysOverdue" class="task-overdue-badge">{{ task.daysOverdue }}d overdue</span>
+                <span v-else-if="task.dueDate" class="task-due-date">{{ formatRelativeDate(task.dueDate) }}</span>
+                <span v-if="task.status" class="task-status-badge" :class="'status-' + task.status">{{ task.status }}</span>
+              </div>
+            </div>
+            <div class="task-inline-actions" @click.stop>
+              <button
+                v-if="!completedTaskIds.has(task.id)"
+                class="inline-action-btn inline-done-btn"
+                :class="{ loading: actionLoading[task.id] === 'done' }"
+                title="Mark done"
+                @click="markTaskDone(task.id, $event)"
+              >
+                <Loader2 v-if="actionLoading[task.id] === 'done'" :size="12" class="spin" />
+                <CheckCircle2 v-else :size="12" />
+              </button>
+              <button
+                v-if="!timerStartedTaskIds.has(task.id)"
+                class="inline-action-btn inline-timer-btn"
+                :class="{ loading: actionLoading[task.id] === 'timer' }"
+                title="Start timer"
+                @click="startTaskTimer(task.id, $event)"
+              >
+                <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
+                <Play v-else :size="12" />
+              </button>
+              <span v-if="completedTaskIds.has(task.id)" class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
+              <span v-if="timerStartedTaskIds.has(task.id)" class="inline-action-timer-badge"><Play :size="12" /> Timer</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <!-- Tool Results — render as soon as a tool executes (TASK-1814), even while
            the model's text answer is still streaming. With slow subscription CLI
            brains (~8-19s) this shows the interactive cards in ~1s instead of making
            the user wait for the full response. -->
-      <div v-if="toolResults.length > 0" class="tool-results">
+      <div v-if="toolResults.length > 0 && !cardGroups" class="tool-results">
         <template v-for="(result, idx) in toolResults" :key="idx">
           <!-- Daily summary stats card -->
           <div v-if="isDailySummaryResult(result)" class="tool-result-card">
@@ -1249,6 +1310,42 @@ async function saveSchedule() {
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
+}
+
+/* TASK-1814: grouped prioritization cards */
+.card-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+.card-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1_5);
+}
+.card-group-name {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--brand-primary);
+  padding: 0 var(--space-1);
+}
+.grouped-card {
+  display: flex !important;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.grouped-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+.grouped-card-reason {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1.45;
 }
 
 .task-list-item {

@@ -139,7 +139,17 @@ function chatUI(lang: 'he' | 'en', key: string): string {
   return strings[key]?.[lang] ?? strings[key]?.en ?? key
 }
 
-function buildToolFeedbackMessage(toolResultsSummary: string, lang: 'he' | 'en'): string {
+function buildToolFeedbackMessage(toolResultsSummary: string, lang: 'he' | 'en', richHolistic = false): string {
+  // TASK-1814: for strong subscription brains, the ReAct final answer must be just
+  // as intelligent as the deterministic path — reason over the rich data, lead with
+  // real stakes, GROUP/relate tasks + name the trend, and emit a `cards` block so the
+  // UI renders grouped interactive cards. (No phrasing should "jump over" this.)
+  if (richHolistic) {
+    if (lang === 'he') {
+      return `תוצאות כלים:\n${toolResultsSummary}\n\nיש לך את כל הנתונים. כשתענה: הובל כל משימה עם הסיכון/המשמעות האמיתיים — מה ייפגע אם תתעכב, מה היא חוסמת, או הדדליין שמאחוריה (הסק מתוך הנוסח וההערות). "באיחור" ו"עדיפות גבוהה" הם מטא-דאטה, לא סיבה. קבץ משימות קשורות, ציין תלויות, ושם את המגמה. השתמש בדפוסי העבודה של המשתמש.\n\nאחרי 1-3 משפטים של תובנה, הוסף בלוק קוד עם התג \`cards\` ובתוכו JSON בלבד:\n\`\`\`cards\n{"groups":[{"name":"שם קבוצה","items":[{"i":<מספר [N] של המשימה מהנתונים>,"reason":"הסיכון למשימה הזו, עד 10 מילים — לא 'באיחור'/'עדיפות'"}]}]}\n\`\`\`\nהפנה למשימות לפי מספר [N] רק בתוך הבלוק; בטקסט עצמו השתמש בשם המשימה, לא ב-[N]. אל תקרא לעוד כלים אלא אם חסר מידע.`
+    }
+    return `Tool results:\n${toolResultsSummary}\n\nYou have all the data. When you answer: lead EACH task with the real STAKE — what breaks if it slips, what it unblocks, or the deadline behind it (infer from the wording/notes). "Overdue" and "high priority" are metadata, never a reason. GROUP related tasks, flag dependencies, and name the cross-task TREND. Use the user's work patterns.\n\nAfter 1-3 sentences of insight, append a fenced code block tagged \`cards\` with JSON only:\n\`\`\`cards\n{"groups":[{"name":"group label","items":[{"i":<task [N] number from the data>,"reason":"the stake for THIS task, max 10 words — NOT 'overdue'/'priority'"}]}]}\n\`\`\`\nReference tasks by their [N] number inside the block only; in the prose use the task name, never [N]. Do NOT call more tools unless data is missing.`
+  }
   if (lang === 'he') {
     return `תוצאות כלים:\n${toolResultsSummary}\n\nיש לך את כל הנתונים הדרושים. ענה ישירות לשאלת המשתמש ב-1-3 משפטים. אל תקרא לעוד כלים אלא אם חסר לך מידע שטרם אחזרת. תמצת, אל תספר.`
   }
@@ -1260,17 +1270,21 @@ export function useAIChat() {
             content: fullContent || '',
           })
 
-          // TASK-1388: Pre-digested reasoning — compute analysis in code, LLM formats naturally
-          const toolResultsSummary = toolResults
-            .map((r, i) => {
-              const toolName = immediateTools[i]?.tool || 'unknown'
-              return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, preProcess.detectedLanguage === 'he' ? 'he' : 'en')
-            })
-            .join('\n\n')
+          // TASK-1388/1814: pre-digest for weak providers; FULL rich data for the
+          // bridge so the ReAct answer reasons (and emits cards) like the deterministic path.
+          const bridgeRich1 = isBridgeActive()
+          const toolResultsSummary = bridgeRich1
+            ? toolResults.map(r => buildRichTaskData(r, lang)).join('\n\n')
+            : toolResults
+                .map((r, i) => {
+                  const toolName = immediateTools[i]?.tool || 'unknown'
+                  return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, preProcess.detectedLanguage === 'he' ? 'he' : 'en')
+                })
+                .join('\n\n')
 
           conversationMessages.push({
             role: 'user',
-            content: buildToolFeedbackMessage(toolResultsSummary, lang),
+            content: buildToolFeedbackMessage(toolResultsSummary, lang, bridgeRich1),
           })
 
           // Store step info in metadata only (not visible to user)
@@ -1354,19 +1368,22 @@ export function useAIChat() {
 
             // Feed results back for next reasoning step
             conversationMessages.push({ role: 'assistant', content: fullContent || '' })
-            const toolResultsSummary = toolResults
-              .map(r => {
-                const base = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
-                if (r.data) {
-                  const dataStr = JSON.stringify(r.data)
-                  return `${base}\nData: ${dataStr.slice(0, 2000)}`
-                }
-                return base
-              })
-              .join('\n\n')
+            const bridgeRich2 = isBridgeActive()
+            const toolResultsSummary = bridgeRich2
+              ? toolResults.map(r => buildRichTaskData(r, lang)).join('\n\n')
+              : toolResults
+                  .map(r => {
+                    const base = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
+                    if (r.data) {
+                      const dataStr = JSON.stringify(r.data)
+                      return `${base}\nData: ${dataStr.slice(0, 2000)}`
+                    }
+                    return base
+                  })
+                  .join('\n\n')
             conversationMessages.push({
               role: 'user',
-              content: buildToolFeedbackMessage(toolResultsSummary, lang),
+              content: buildToolFeedbackMessage(toolResultsSummary, lang, bridgeRich2),
             })
 
             // Strip the raw tool call text from the displayed message
@@ -1400,6 +1417,11 @@ export function useAIChat() {
       const lastMsg = store.messages[store.messages.length - 1]
       if (lastMsg && lastMsg.isStreaming) {
         const hadToolCalls = stepCount > 1 || (lastMsg.metadata as Record<string, unknown>)?.toolResults !== undefined
+        // TASK-1814: parse the `cards` block from the RAW answer (before cleaning may
+        // drop it) → grouped interactive cards, same as the deterministic path.
+        const reactCards = isBridgeActive()
+          ? parseCardGroups(lastMsg.content || '', ((lastMsg.metadata as Record<string, unknown>)?.toolResults as ToolResult[]) || [])
+          : null
         let cleaned = cleanResponse(lastMsg.content || '')
 
         // TASK-1391: Fluff detection + retry (max 1 retry to avoid latency)
@@ -1507,6 +1529,19 @@ export function useAIChat() {
               detectedOutputLang: detectLanguage(cleaned),
             } as Record<string, unknown>
           }
+        }
+
+        // TASK-1814: strip the cards block + any leaked [N] markers, attach grouped cards.
+        if (reactCards) {
+          cleaned = cleaned
+            .replace(reactCards.rawBlock, '')
+            .replace(/```cards[\s\S]*?```/g, '')
+            .replace(/\s*\[\d+(?:\s*(?:→|->|,)\s*\d+)*\]/g, '')
+            .trim()
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            cardGroups: { groups: reactCards.groups, total: reactCards.total },
+          } as Record<string, unknown>
         }
 
         // Update content after all post-processing (including language retry)

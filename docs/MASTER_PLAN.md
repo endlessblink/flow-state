@@ -8,6 +8,57 @@
 
 ## Active Tasks
 
+### TASK-1815: Flagship flow — "Overwhelmed → AI reorders my day" (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-06-05) | **Depends on**: TASK-1814 (AI chat now intelligent)
+
+**Why**: The original primary ask. When the user feels overwhelmed, the AI should propose a concrete reordered plan for the day — not just list tasks. TASK-1814 made the chat reason well + render grouped prioritization cards; this turns that reasoning into an *actionable reorder* (sequence + time-blocks the user can accept/apply).
+
+**Scope**:
+- An "I'm overwhelmed" entry point (button + natural-language trigger) that runs the prioritization brain and returns a sequenced day plan.
+- Reuse the grouped-cards rendering (`cardGroups` metadata, `cardsBlock.ts`) — each group becomes a block of the day, ordered, with the stake reason.
+- "Apply this order" action: write the proposed order back (respect canvas geometry invariants — only via the proper task-order write path, never sync).
+- Honest fallback when capacity says "don't do all of it" (the model already surfaces this — make it actionable: defer/snooze the rest).
+
+**Context**: Builds directly on `useAIChat.ts` deterministic + ReAct paths, `buildRichTaskData`, and the holistic prompt. Measure with `tests/manual/ai-prioritization-eval.mjs`. See skill `flowstate-ai-chat`.
+
+---
+
+### TASK-1816: Flagship flow — Smart task lanes (AI suggests lanes + breaks big tasks into them) (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-06-05) | **Depends on**: TASK-1814, TASK-1812 (add-tasks-to-lane shipped)
+
+**Why**: The second original ask. When creating a task lane, the AI should (a) suggest strong lanes for the user's work, and (b) break a large task down into actionable sub-tasks placed into that lane.
+
+**Scope**:
+- "Suggest lanes" — AI proposes lane names/themes from the user's actual tasks + work patterns (reuse rich-data context).
+- "Break this down into the lane" — given a large task, emit a structured breakdown (reuse the `useAITaskAssist` `breakDownTask` JSON contract, already tested) and create the sub-tasks into the chosen lane via TASK-1812's add-to-lane path.
+- Structured output + index-referenced items like the cards block, so results render as reviewable items before commit.
+
+**Context**: Combine `useAITaskAssist` (breakdown JSON parsing, 7 unit tests) + TASK-1812 lane plumbing + the bridge. Reuse `cardsBlock.ts` structured-output pattern. Est. below.
+
+---
+
+### TASK-1817: Ship the AI chat improvements beyond localhost (web + Electron) (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-06-05) | **Depends on**: TASK-1814
+
+**Why**: All TASK-1814 work is committed + verified on localhost dev only. Per project rules 6/7, a production push must ship BOTH web (VITE_SITE_URL) and an Electron auto-updater build in the same release. Desktop users are otherwise left on the old dumb AI.
+
+**Scope**: Bump `package.json` + `electron-builder.yml` (patch), `./scripts/deploy-electron-update.sh --notes "TASK-1814: intelligent AI chat + grouped cards"`, verify `${VITE_SITE_URL}/updates/latest.json`. Bridge server on the VPS is unchanged (client-only changes) — no bridge redeploy needed.
+
+---
+
+### TASK-1818: AI cards polish — suppress mid-stream JSON flash + pin common phrasings to deterministic (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-06-05) | **Depends on**: TASK-1814
+
+**Why**: Two known soft spots from TASK-1814 review. (1) During streaming, the `cards` JSON block briefly shows as raw text before it's stripped on completion (cosmetic). (2) Freeform phrasings (e.g. "מה המשימות הכי דחופות", "help me prioritize", "i'm overwhelmed") route to ReAct, where cards are reliable-but-not-100%; common prioritization phrasings should be pinned to the deterministic path (100% reliable) + added to the regression suite.
+
+**Scope**: Strip `stripCardsBlock` from the streaming display path (not just finalize). Broaden `toolHints.ts` keyword coverage (Hebrew plural "דחופות", "המשימות הכי", "help me prioritize", "overwhelmed", "מה חשוב עכשיו") → `get_overdue_tasks`. Add an e2e asserting no JSON ever appears mid-stream.
+
+---
+
 ### TASK-1814: Subscription-powered AI brain (Claude/Codex CLI bridge) + overwhelm-reorder & smart-lanes flows (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-06-04)

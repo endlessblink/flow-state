@@ -1,12 +1,6 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: May 28, 2026
-> **Token Target**: <25,000 (condensed from ~50,000)
-> **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
-
----
-
-## Active Tasks
+## 🔜 Next Up — AI flows (TASK-1814 follow-ups; start here after restart)
 
 ### TASK-1815: Flagship flow — "Overwhelmed → AI reorders my day" (📋 PLANNED)
 
@@ -58,6 +52,14 @@
 **Scope**: Strip `stripCardsBlock` from the streaming display path (not just finalize). Broaden `toolHints.ts` keyword coverage (Hebrew plural "דחופות", "המשימות הכי", "help me prioritize", "overwhelmed", "מה חשוב עכשיו") → `get_overdue_tasks`. Add an e2e asserting no JSON ever appears mid-stream.
 
 ---
+
+> **Last Updated**: 2026-06-05
+> **Token Target**: <25,000 (condensed from ~50,000)
+> **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
+
+---
+
+## Active Tasks
 
 ### TASK-1814: Subscription-powered AI brain (Claude/Codex CLI bridge) + overwhelm-reorder & smart-lanes flows (🔄 IN PROGRESS)
 

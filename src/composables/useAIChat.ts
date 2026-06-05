@@ -49,6 +49,7 @@ import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
+import { parseCardGroups, stripCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
@@ -442,44 +443,6 @@ export function useAIChat() {
       lines.push(parts.join(' | '))
     }
     return lines.join('\n').slice(0, 6000)
-  }
-
-  /**
-   * TASK-1814: Parse the model's ```cards JSON block into grouped tasks-with-reasons
-   * for inline card rendering. Maps each item's [N] index back to the real task in
-   * the tool result (same order buildRichTaskData listed them). Returns the groups +
-   * the raw block (so the caller can strip it from the displayed text).
-   */
-  function parseCardGroups(text: string, toolResults: ToolResult[]): {
-    groups: Array<{ name: string; tasks: Array<Record<string, unknown> & { reason: string }> }>
-    total: number
-    rawBlock: string
-  } | null {
-    const m = text.match(/```cards\s*\n?([\s\S]*?)```/)
-    if (!m) return null
-    let parsed: { groups?: Array<{ name?: string; items?: Array<{ i?: number; reason?: string }> }> }
-    try { parsed = JSON.parse(m[1].trim()) } catch { return null }
-    if (!Array.isArray(parsed?.groups) || !parsed.groups.length) return null
-
-    const taskResult = toolResults.find(r =>
-      r.success && Array.isArray(r.data) && (r.data[0] as Record<string, unknown>)?.title !== undefined,
-    )
-    const tasks = (taskResult?.data as Array<Record<string, unknown>>) || []
-    if (!tasks.length) return null
-
-    const groups = parsed.groups
-      .map(g => ({
-        name: String(g.name || '').trim(),
-        tasks: (Array.isArray(g.items) ? g.items : [])
-          .map(it => {
-            const t = tasks[(Number(it.i) || 0) - 1]
-            return t ? { ...t, reason: String(it.reason || '').trim() } : null
-          })
-          .filter((t): t is Record<string, unknown> & { reason: string } => t !== null),
-      }))
-      .filter(g => g.tasks.length > 0)
-
-    return groups.length ? { groups, total: tasks.length, rawBlock: m[0] } : null
   }
 
   /**
@@ -969,9 +932,7 @@ export function useAIChat() {
       // TASK-1814: extract the `cards` block → grouped interactive cards, and strip
       // it from the displayed prose. Falls through gracefully if absent/unparseable.
       const cardData = parseCardGroups(formattedResponse, toolResults)
-      let displayRaw = cardData ? formattedResponse.replace(cardData.rawBlock, '').trim() : formattedResponse
-      // Safety net: strip any leaked [N] / [2→3] task-index markers from the prose.
-      if (cardData) displayRaw = displayRaw.replace(/\s*\[\d+(?:\s*(?:→|->|,)\s*\d+)*\]/g, '')
+      const displayRaw = cardData ? stripCardsBlock(formattedResponse) : formattedResponse
 
       // Clean and set
       const cleaned = cleanResponse(displayRaw)
@@ -1422,7 +1383,9 @@ export function useAIChat() {
         const reactCards = isBridgeActive()
           ? parseCardGroups(lastMsg.content || '', ((lastMsg.metadata as Record<string, unknown>)?.toolResults as ToolResult[]) || [])
           : null
-        let cleaned = cleanResponse(lastMsg.content || '')
+        // Strip the cards block from the RAW content BEFORE cleaning (cleanResponse
+        // mangles the fence → raw JSON leaks). cards block is always last → strip to EOF.
+        let cleaned = cleanResponse(reactCards ? stripCardsBlock(lastMsg.content || '') : (lastMsg.content || ''))
 
         // TASK-1391: Fluff detection + retry (max 1 retry to avoid latency)
         if (hadToolCalls && !abortController.signal.aborted) {
@@ -1531,13 +1494,10 @@ export function useAIChat() {
           }
         }
 
-        // TASK-1814: strip the cards block + any leaked [N] markers, attach grouped cards.
+        // TASK-1814: attach grouped cards (block already stripped before cleaning above;
+        // also re-strip here in case a language retry regenerated content with a block).
         if (reactCards) {
-          cleaned = cleaned
-            .replace(reactCards.rawBlock, '')
-            .replace(/```cards[\s\S]*?```/g, '')
-            .replace(/\s*\[\d+(?:\s*(?:→|->|,)\s*\d+)*\]/g, '')
-            .trim()
+          cleaned = stripCardsBlock(cleaned)
           lastMsg.metadata = {
             ...lastMsg.metadata,
             cardGroups: { groups: reactCards.groups, total: reactCards.total },

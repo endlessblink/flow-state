@@ -488,7 +488,7 @@ describe('Field name mapping (BUG-1211 regression prevention)', () => {
     // This was removed. We verify the source code doesn't contain fallback logic.
     const fs = await import('node:fs')
     const sourceCode = fs.readFileSync(
-      '/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/sync/useSyncOrchestrator.ts',
+      '/app/src/composables/sync/useSyncOrchestrator.ts',
       'utf-8'
     )
 
@@ -1260,7 +1260,7 @@ describe('Source code integrity (regression guards)', () => {
   beforeEach(async () => {
     const fs = await import('node:fs')
     sourceCode = fs.readFileSync(
-      '/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src/composables/sync/useSyncOrchestrator.ts',
+      '/app/src/composables/sync/useSyncOrchestrator.ts',
       'utf-8'
     )
   })

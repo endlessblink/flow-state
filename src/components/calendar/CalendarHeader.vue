@@ -53,13 +53,23 @@ const toggleViewOptions = () => {
   <!-- TASK-157: Simplified Todoist-style calendar header -->
   <div class="calendar-header calendar-header--minimal">
     <div class="date-navigation">
-      <button class="nav-btn" :title="$t('calendar.previous_day')" @click="$emit('previousDay')">
+      <button
+        class="nav-btn"
+        :title="$t('calendar.previous_day')"
+        :aria-label="$t('calendar.previous_day')"
+        @click="$emit('previousDay')"
+      >
         <ChevronLeft :size="16" :stroke-width="1.5" />
       </button>
       <h2 class="current-date">
         {{ formatCurrentDate }}
       </h2>
-      <button class="nav-btn" :title="$t('calendar.next_day')" @click="$emit('nextDay')">
+      <button
+        class="nav-btn"
+        :title="$t('calendar.next_day')"
+        :aria-label="$t('calendar.next_day')"
+        @click="$emit('nextDay')"
+      >
         <ChevronRight :size="16" :stroke-width="1.5" />
       </button>
     </div>
@@ -75,6 +85,8 @@ const toggleViewOptions = () => {
         class="view-options-trigger"
         :class="{ active: showViewOptions || showFilters || hideCalendarDoneTasks || showFutureRecurring }"
         title="View options"
+        aria-label="View options"
+        :aria-expanded="showViewOptions"
         @click="toggleViewOptions"
       >
         <MoreVertical :size="16" :stroke-width="1.5" />
@@ -176,10 +188,15 @@ const toggleViewOptions = () => {
         </div>
       </BasePopover>
 
-      <div class="view-selector view-selector--minimal">
+      <div
+        class="view-selector view-selector--minimal"
+        role="group"
+        aria-label="Calendar view"
+      >
         <button
           class="view-btn"
           :class="{ active: viewMode === 'day' }"
+          :aria-pressed="viewMode === 'day'"
           @click="$emit('update:viewMode', 'day')"
         >
           {{ $t('calendar.day') }}
@@ -187,6 +204,7 @@ const toggleViewOptions = () => {
         <button
           class="view-btn"
           :class="{ active: viewMode === 'week' }"
+          :aria-pressed="viewMode === 'week'"
           @click="$emit('update:viewMode', 'week')"
         >
           {{ $t('calendar.week') }}
@@ -194,6 +212,7 @@ const toggleViewOptions = () => {
         <button
           class="view-btn"
           :class="{ active: viewMode === 'month' }"
+          :aria-pressed="viewMode === 'month'"
           @click="$emit('update:viewMode', 'month')"
         >
           {{ $t('calendar.month') }}

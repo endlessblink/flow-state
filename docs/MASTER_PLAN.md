@@ -59,6 +59,16 @@
 
 ---
 
+### ~~TASK-1819~~: Make desktop AI sidebar-first with visible live action feedback (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.96 deployed) | **Depends on**: TASK-1814
+
+**Why**: Desktop AI had two competing surfaces: a standalone `/ai` section and the global right-side assistant panel. The assistant should feel like an always-available sidebar tool, and users need to see what it is doing when it reads tasks or performs actions.
+
+**Shipped**: Removed the desktop `/ai` header tab, kept the sparkles button as the primary desktop entrypoint, preserved mobile `/mobile-ai-chat`, and changed `/ai` into a compatibility fallback that opens the sidebar then returns to the main workspace. Added a compact live Activity timeline in `AIChatPanel` backed by real AI tool execution state: thinking, read/write/destructive execution, confirmation waiting, success/failure, cancellation, and undo availability. Regression coverage: `tests/unit/ai-sidebar-first.test.ts` covers desktop nav removal, mobile route preservation, `/ai` fallback wiring, activity state semantics, and rendered timeline rows. Verified: focused Vitest, `vue-tsc`, Playwright browser smoke, Electron build, live updater manifest/artifacts.
+
+---
+
 > **Last Updated**: 2026-06-06
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`

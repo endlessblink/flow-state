@@ -285,6 +285,58 @@ async function handleUndo() {
   await store.undoLastAction()
 }
 
+const activityItems = computed(() => {
+  const items = [...store.activityEvents]
+  if (isGenerating.value) {
+    items.unshift({
+      id: 'ai-thinking-live',
+      type: 'thinking' as const,
+      status: 'running' as const,
+      label: 'Thinking',
+      message: activeProvider.value ? `Using ${activeProvider.value}` : 'Preparing response',
+      timestamp: Date.now(),
+    })
+  }
+  if (pendingConfirmation.value && !items.some(item => item.status === 'waiting_confirmation' && item.tool === pendingConfirmation.value?.tool)) {
+    items.unshift({
+      id: 'ai-confirmation-live',
+      tool: pendingConfirmation.value.tool,
+      type: 'destructive' as const,
+      status: 'waiting_confirmation' as const,
+      label: 'Waiting for confirmation',
+      message: pendingConfirmation.value.tool.replace(/_/g, ' '),
+      timestamp: Date.now(),
+    })
+  }
+  if (hasUndoEntries.value && !items.some(item => item.undoAvailable)) {
+    items.unshift({
+      id: 'ai-undo-live',
+      tool: store.undoBuffer[0].toolName,
+      type: 'write' as const,
+      status: 'success' as const,
+      label: 'Undo available',
+      message: latestUndoDescription.value,
+      undoAvailable: true,
+      timestamp: store.undoBuffer[0].timestamp,
+    })
+  }
+  return items.slice(0, 5)
+})
+
+function activityClass(status: string) {
+  return `activity-${status.replace('_', '-')}`
+}
+
+function activityStatusText(status: string, undoAvailable?: boolean) {
+  if (undoAvailable) return 'Undo available'
+  if (status === 'running') return 'Running'
+  if (status === 'success') return 'Done'
+  if (status === 'failed') return 'Failed'
+  if (status === 'waiting_confirmation') return 'Confirm'
+  if (status === 'cancelled') return 'Cancelled'
+  return status
+}
+
 // ============================================================================
 // Provider Health Status
 // ============================================================================
@@ -941,6 +993,35 @@ onUnmounted(() => {
           <p v-if="selectedProvider === 'ollama' || (selectedProvider === 'auto' && activeProvider === 'ollama')" class="provider-note">
             Using local AI — quick actions call tools directly
           </p>
+        </div>
+      </div>
+
+      <!-- Live Activity Timeline -->
+      <div v-if="activityItems.length > 0" class="ai-activity-timeline" data-testid="ai-activity-timeline">
+        <div class="activity-heading">
+          <Zap :size="13" />
+          <span>Activity</span>
+        </div>
+        <div class="activity-list">
+          <div
+            v-for="item in activityItems"
+            :key="item.id"
+            class="activity-item"
+            :class="[activityClass(item.status), { 'has-undo': item.undoAvailable }]"
+            :data-testid="`ai-activity-${item.status}`"
+          >
+            <span class="activity-dot">
+              <Loader2 v-if="item.status === 'running'" class="spin" :size="12" />
+              <AlertTriangle v-else-if="item.status === 'failed' || item.status === 'waiting_confirmation'" :size="12" />
+              <RotateCcw v-else-if="item.undoAvailable" :size="12" />
+              <span v-else class="activity-dot-core" />
+            </span>
+            <span class="activity-copy">
+              <span class="activity-label">{{ item.label }}</span>
+              <span v-if="item.message" class="activity-message">{{ item.message }}</span>
+            </span>
+            <span class="activity-status">{{ activityStatusText(item.status, item.undoAvailable) }}</span>
+          </div>
         </div>
       </div>
 
@@ -1714,6 +1795,115 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--text-xs);
+}
+
+/* ============================================================================
+   Live Activity Timeline
+   ============================================================================ */
+
+.ai-activity-timeline {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-secondary) 72%, transparent);
+}
+
+.activity-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  margin-bottom: var(--space-1_5);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.activity-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-primary);
+}
+
+.activity-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  background: var(--surface-hover);
+}
+
+.activity-dot-core {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.activity-copy {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1_5);
+}
+
+.activity-label {
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  white-space: nowrap;
+}
+
+.activity-message {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.activity-status {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.activity-running .activity-dot {
+  color: var(--color-focus);
+}
+
+.activity-success .activity-dot,
+.activity-success.has-undo .activity-dot {
+  color: var(--color-success);
+}
+
+.activity-failed .activity-dot {
+  color: var(--color-danger);
+}
+
+.activity-waiting-confirmation .activity-dot {
+  color: var(--color-warning);
+}
+
+.activity-cancelled {
+  opacity: 0.72;
 }
 
 /* ============================================================================

@@ -48,6 +48,20 @@ export interface ChatAction {
   completed?: boolean
 }
 
+export type AIActivityStatus = 'running' | 'success' | 'failed' | 'waiting_confirmation' | 'cancelled'
+export type AIActivityType = 'thinking' | 'read' | 'write' | 'destructive'
+
+export interface AIActivityEvent {
+  id: string
+  tool?: string
+  type: AIActivityType
+  status: AIActivityStatus
+  label: string
+  message?: string
+  undoAvailable?: boolean
+  timestamp: number
+}
+
 /**
  * A single chat message.
  */
@@ -187,6 +201,9 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
   /** Supabase sync status indicator */
   const syncStatus = ref<'idle' | 'syncing' | 'synced' | 'error'>('idle')
+
+  /** Live, session-only visibility into AI tool/action execution. */
+  const activityEvents = ref<AIActivityEvent[]>([])
 
   // ============================================================================
   // Persistence Helpers
@@ -888,6 +905,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     isPanelOpen.value = false
     undoBuffer.value = []
     persistedSettings.value = null
+    activityEvents.value = []
     try {
       localStorage.removeItem(CONVERSATIONS_KEY)
       localStorage.removeItem(CHAT_HISTORY_KEY)
@@ -895,6 +913,35 @@ export const useAIChatStore = defineStore('aiChat', () => {
     } catch {
       // silently ignore
     }
+  }
+
+  // ============================================================================
+  // Activity Timeline
+  // ============================================================================
+
+  function addActivityEvent(event: Omit<AIActivityEvent, 'id' | 'timestamp'> & { id?: string; timestamp?: number }): string {
+    const id = event.id || `ai-activity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    activityEvents.value.unshift({
+      ...event,
+      id,
+      timestamp: event.timestamp || Date.now(),
+    })
+    activityEvents.value = activityEvents.value.slice(0, 8)
+    return id
+  }
+
+  function updateActivityEvent(id: string, patch: Partial<Omit<AIActivityEvent, 'id'>>): void {
+    const index = activityEvents.value.findIndex((event) => event.id === id)
+    if (index === -1) return
+    activityEvents.value[index] = {
+      ...activityEvents.value[index],
+      ...patch,
+      timestamp: patch.timestamp || Date.now(),
+    }
+  }
+
+  function clearActivityEvents(): void {
+    activityEvents.value = []
   }
 
   // ============================================================================
@@ -992,6 +1039,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     undoBuffer,
     persistedSettings,
     syncStatus,
+    activityEvents,
 
     // Getters
     activeConversation,
@@ -1027,6 +1075,9 @@ export const useAIChatStore = defineStore('aiChat', () => {
     clearError,
     initialize,
     reset,
+    addActivityEvent,
+    updateActivityEvent,
+    clearActivityEvents,
 
     // Undo
     pushUndoEntry,

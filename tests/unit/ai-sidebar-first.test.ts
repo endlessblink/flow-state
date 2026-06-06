@@ -196,4 +196,35 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Waiting for confirmation')
     expect(wrapper.text()).toContain('Undo available')
   })
+
+  it('keeps a visible New Chat control in the AI sidebar header', async () => {
+    const store = useAIChatStore()
+    store.openPanel()
+    const firstConversation = store.createConversation()
+    const initialConversationCount = store.conversations.length
+
+    const wrapper = mount(AIChatPanel, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+        stubs: {
+          ChatMessage: true,
+          CustomSelect: true,
+          OverflowTooltip: {
+            template: '<span><slot /></span>',
+          },
+        },
+      },
+    })
+
+    const newChatButton = wrapper.get('.new-chat-header-btn')
+    expect(newChatButton.text()).toContain('ai_chat.new_chat')
+
+    await newChatButton.trigger('click')
+
+    expect(store.conversations).toHaveLength(initialConversationCount + 1)
+    expect(store.activeConversationId).not.toBe(firstConversation.id)
+    expect(store.activeConversation?.title).toBe('New Chat')
+  })
 })

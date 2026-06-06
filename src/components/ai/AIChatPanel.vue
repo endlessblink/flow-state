@@ -856,7 +856,9 @@ onUnmounted(() => {
                     @click="handleSwitchChat(conv.id)"
                     @keydown.enter="handleSwitchChat(conv.id)"
                   >
-                    <OverflowTooltip class="chat-history-title" :text="conv.title" style="flex: 1; min-width: 0">{{ conv.title }}</OverflowTooltip>
+                    <OverflowTooltip class="chat-history-title" :text="conv.title" style="flex: 1; min-width: 0">
+                      {{ conv.title }}
+                    </OverflowTooltip>
                     <span class="chat-history-date">{{ formatRelativeDate(conv.updatedAt) }}</span>
                     <button
                       class="chat-history-delete"

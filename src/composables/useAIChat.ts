@@ -1251,7 +1251,7 @@ export function useAIChat() {
           // Store step info in metadata only (not visible to user)
           const lastMsgStep = store.messages[store.messages.length - 1]
           if (lastMsgStep && lastMsgStep.metadata) {
-            ;(lastMsgStep.metadata as Record<string, unknown>).steps = ((lastMsgStep.metadata as Record<string, unknown>).steps as number || 0) + 1
+            (lastMsgStep.metadata as Record<string, unknown>).steps = ((lastMsgStep.metadata as Record<string, unknown>).steps as number || 0) + 1
             ;(lastMsgStep.metadata as Record<string, unknown>).totalToolCalls = ((lastMsgStep.metadata as Record<string, unknown>).totalToolCalls as number || 0) + toolResults.length
           }
 
@@ -1357,7 +1357,7 @@ export function useAIChat() {
             // Store step info in metadata only (not visible to user)
             const lastMsgStepText = store.messages[store.messages.length - 1]
             if (lastMsgStepText && lastMsgStepText.metadata) {
-              ;(lastMsgStepText.metadata as Record<string, unknown>).steps = ((lastMsgStepText.metadata as Record<string, unknown>).steps as number || 0) + 1
+              (lastMsgStepText.metadata as Record<string, unknown>).steps = ((lastMsgStepText.metadata as Record<string, unknown>).steps as number || 0) + 1
               ;(lastMsgStepText.metadata as Record<string, unknown>).totalToolCalls = ((lastMsgStepText.metadata as Record<string, unknown>).totalToolCalls as number || 0) + toolResults.length
             }
           } else {

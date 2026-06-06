@@ -20,7 +20,7 @@
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, CalendarDays } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2 } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
 import type Renderer from 'markdown-it/lib/renderer.mjs'
@@ -551,7 +551,9 @@ async function saveSchedule() {
            task is the same interactive card + the AI's one-line reason underneath. -->
       <div v-if="cardGroups" class="card-groups">
         <div v-for="(group, gi) in cardGroups.groups" :key="'g' + gi" class="card-group">
-          <div v-if="group.name" class="card-group-name" dir="auto">{{ group.name }}</div>
+          <div v-if="group.name" class="card-group-name" dir="auto">
+            {{ group.name }}
+          </div>
           <button
             v-for="task in group.tasks"
             :key="task.id"

@@ -54,3 +54,37 @@ test('freeform prioritization → ReAct → grouped cards with reasons render', 
   await expect(page.getByText('```cards', { exact: false })).toHaveCount(0)
   await expect(page.locator('.message-text', { hasText: '"groups"' })).toHaveCount(0)
 })
+
+test('overwhelmed prompt renders an applyable ordered day plan', async ({ page }) => {
+  const cardsBlock = '```cards\n' + JSON.stringify({
+    kind: 'day_plan',
+    groups: [
+      { name: 'First focus block', items: [{ i: 1, reason: 'highest external stake' }] },
+      { name: 'Second focus block', items: [{ i: 2, reason: 'unblocks the next step' }] },
+    ],
+  }) + '\n```'
+
+  await page.route('**/ai-bridge/health', (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, brains: { claude: true, codex: true } }) }))
+  await page.route('**/ai-bridge/v1/chat', async (r) => {
+    await r.fulfill({
+      status: 200,
+      headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
+      body: sse({ delta: `Start with the highest-stakes item and defer the rest.\n\n${cardsBlock}` }, { done: true, brain: 'claude' }),
+    })
+  })
+
+  await page.goto('/#/ai')
+  await page.locator('.new-chat-btn').first().click({ timeout: 10000 }).catch(() => {})
+  const input = page.locator('.chat-input')
+  await expect(input).toBeVisible({ timeout: 15000 })
+
+  await input.fill("I'm overwhelmed, reorder my day")
+  await page.locator('.send-btn').click()
+
+  await expect(page.locator('.card-group-name', { hasText: 'First focus block' })).toBeVisible({ timeout: 30000 })
+  await expect(page.locator('.day-plan-apply-btn', { hasText: 'Apply this order (2)' })).toBeVisible()
+  await page.locator('.day-plan-apply-btn').click()
+  await expect(page.locator('.day-plan-apply-btn', { hasText: 'Plan applied' })).toBeVisible({ timeout: 15000 })
+  await page.screenshot({ path: '.dev/screenshots/ai-day-plan-apply.png', fullPage: false }).catch(() => {})
+})

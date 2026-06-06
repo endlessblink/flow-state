@@ -31,6 +31,19 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
     expect(r!.total).toBe(3)
   })
 
+  it('preserves day-plan kind metadata for apply-order cards', () => {
+    const text = 'Start with money, then unblock sales.\n\n' + block({
+      kind: 'day_plan',
+      groups: [
+        { name: 'First focus block', items: [{ i: 1, reason: 'highest external stake' }] },
+        { name: 'Second focus block', items: [{ i: 2, reason: 'sets up outreach' }] },
+      ],
+    })
+    const r = parseCardGroups(text, results)
+    expect(r?.kind).toBe('day_plan')
+    expect(r?.groups.map(g => g.name)).toEqual(['First focus block', 'Second focus block'])
+  })
+
   it('drops items whose index has no matching task (never shows a phantom card)', () => {
     const text = block({ groups: [{ name: 'X', items: [{ i: 1, reason: 'ok' }, { i: 99, reason: 'nope' }] }] })
     const r = parseCardGroups(text, results)

@@ -882,8 +882,11 @@ export function useAIChat() {
       const hasTaskList = toolResults.some(r =>
         r.success && Array.isArray(r.data) && r.data.length > 0 && (r.data[0] as Record<string, unknown>)?.title !== undefined,
       )
+      const isDayPlan = routed.responseMode === 'day_plan'
       const cardsInstruction = (isBridgeActive() && hasTaskList)
-        ? `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — the single biggest cross-cutting insight or what to tackle first. Do NOT write a per-task breakdown, headings, or numbered reasons in the prose — the cards below carry every per-task detail, so repeating it is noise. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"groups":[{"name":"short group label in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"the specific stake for THIS task in ${languageName}, max 10 words — NOT 'overdue'/'high priority'"}]}]}\n\`\`\`\nReference each task by its [N] number INSIDE the cards block only; in the prose use the task NAME, never [N]. Include only tasks worth acting on now, grouped by theme or sequence (a single task may be its own group), ordered by importance.`
+        ? isDayPlan
+          ? `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — name the first task and the capacity call. If some tasks should be deferred, mention that in prose but DO NOT include deferred tasks in the cards. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"day_plan","groups":[{"name":"short focus block label in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"why this task belongs in this slot in ${languageName}, max 10 words"}]}]}\n\`\`\`\nThe groups are the exact order of the user's day. Include only tasks they should actually do today. Reference tasks by [N] number INSIDE the cards block only; in prose use the task NAME, never [N].`
+          : `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — the single biggest cross-cutting insight or what to tackle first. Do NOT write a per-task breakdown, headings, or numbered reasons in the prose — the cards below carry every per-task detail, so repeating it is noise. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"groups":[{"name":"short group label in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"the specific stake for THIS task in ${languageName}, max 10 words — NOT 'overdue'/'high priority'"}]}]}\n\`\`\`\nReference each task by its [N] number INSIDE the cards block only; in the prose use the task NAME, never [N]. Include only tasks worth acting on now, grouped by theme or sequence (a single task may be its own group), ordered by importance.`
         : ''
 
       const formatterMessages: RouterChatMessage[] = [
@@ -942,7 +945,7 @@ export function useAIChat() {
         if (cardData) {
           lastMsg.metadata = {
             ...lastMsg.metadata,
-            cardGroups: { groups: cardData.groups, total: cardData.total },
+            cardGroups: { groups: cardData.groups, total: cardData.total, kind: cardData.kind },
           } as Record<string, unknown>
         }
       }
@@ -1500,7 +1503,7 @@ export function useAIChat() {
           cleaned = stripCardsBlock(cleaned)
           lastMsg.metadata = {
             ...lastMsg.metadata,
-            cardGroups: { groups: reactCards.groups, total: reactCards.total },
+            cardGroups: { groups: reactCards.groups, total: reactCards.total, kind: reactCards.kind },
           } as Record<string, unknown>
         }
 

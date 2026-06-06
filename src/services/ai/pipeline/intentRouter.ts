@@ -23,6 +23,7 @@ import { getToolHints } from './toolHints'
 import type { EntityMemory } from './entityMemory'
 import type { DetectedLanguage } from './types'
 import { getSharedRouter } from '../routerFactory'
+import { isOverwhelmedDayPlanRequest } from './dayPlan'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -60,6 +61,7 @@ export interface RoutedIntent {
    * Only set for deterministic write actions where no reasoning is needed.
    */
   skipLLM?: boolean
+  responseMode?: 'day_plan'
 }
 
 // ---------------------------------------------------------------------------
@@ -417,6 +419,16 @@ export function routeIntentByKeywords(
     }
   }
 
+  if (isOverwhelmedDayPlanRequest(userMessage)) {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 25 } }],
+      language,
+      formatDirective: 'Build a concrete ordered day plan. Sequence the tasks into focus blocks, and include only what should actually be done today.',
+      responseMode: 'day_plan',
+    }
+  }
+
   // ── 2. Keyword-based tool hint matching ──────────────────────────────────
   //
   // getToolHints() uses the same KEYWORD_MAPPINGS table (more-specific entries
@@ -584,6 +596,16 @@ export async function routeIntent(
       language,
       formatDirective: FORMAT_DIRECTIVES.greeting,
       skipLLM: true,
+    }
+  }
+
+  if (isOverwhelmedDayPlanRequest(userMessage)) {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 25 } }],
+      language,
+      formatDirective: 'Build a concrete ordered day plan. Sequence the tasks into focus blocks, and include only what should actually be done today.',
+      responseMode: 'day_plan',
     }
   }
 

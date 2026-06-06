@@ -20,7 +20,7 @@
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2 } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
 import type Renderer from 'markdown-it/lib/renderer.mjs'
@@ -32,6 +32,9 @@ import { executeTool } from '@/services/ai/tools'
 import { sanitizeMarkdownHtml } from '@/utils/security'
 import { detectLanguage } from '@/services/ai/pipeline/languageDetector'
 import { useWorkProfile } from '@/composables/useWorkProfile'
+import { useCanvasStore } from '@/stores/canvas'
+import { buildDayPlanTaskUpdates } from '@/services/ai/pipeline/dayPlan'
+import { getUndoSystem } from '@/composables/undoSingleton'
 
 // ============================================================================
 // Props
@@ -77,6 +80,9 @@ const copied = ref(false)
 const completedTaskIds = ref<Set<string>>(new Set())
 const timerStartedTaskIds = ref<Set<string>>(new Set())
 const actionLoading = ref<Record<string, string>>({}) // taskId -> 'done' | 'timer'
+const dayPlanApplying = ref(false)
+const dayPlanApplied = ref(false)
+const dayPlanError = ref('')
 
 // Schedule onboarding
 const selectedDays = ref<Set<string>>(new Set())
@@ -85,6 +91,7 @@ const scheduleSaved = ref(false)
 
 // Live task data from Pinia store (reactive — updates when user edits tasks)
 const taskStore = useTaskStore()
+const canvasStore = useCanvasStore()
 
 const taskMap = computed(() => {
   const map = new Map<string, Task>()
@@ -234,9 +241,15 @@ const toolResults = computed(() => {
  */
 const cardGroups = computed(() => {
   const meta = props.message.metadata as Record<string, unknown>
-  const cg = meta?.cardGroups as { groups?: Array<{ name: string; tasks: Array<TaskListItem & { reason?: string }> }>; total?: number } | undefined
+  const cg = meta?.cardGroups as { groups?: Array<{ name: string; tasks: Array<TaskListItem & { reason?: string }> }>; total?: number; kind?: string } | undefined
   if (!cg?.groups?.length || isStreaming.value) return null
   return cg
+})
+
+const isDayPlan = computed(() => cardGroups.value?.kind === 'day_plan')
+const dayPlanTaskCount = computed(() => {
+  const groups = cardGroups.value?.groups ?? []
+  return groups.reduce((sum, group) => sum + group.tasks.length, 0)
 })
 
 /**
@@ -415,6 +428,39 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   }
 }
 
+async function applyDayPlan(event: MouseEvent) {
+  event.stopPropagation()
+  const plan = cardGroups.value
+  if (!plan?.groups?.length || dayPlanApplying.value || dayPlanApplied.value) return
+
+  dayPlanApplying.value = true
+  dayPlanError.value = ''
+  try {
+    const result = buildDayPlanTaskUpdates(
+      plan.groups,
+      taskStore.tasks,
+      canvasStore.groups,
+    )
+    if (result.taskUpdates.length === 0) {
+      dayPlanError.value = 'No active tasks to apply.'
+      return
+    }
+
+    await getUndoSystem().bulkUpdateTasksWithUndo(
+      result.taskUpdates,
+      result.targetGroupName
+        ? `Apply AI day plan to ${result.targetGroupName}`
+        : 'Apply AI day plan',
+    )
+    dayPlanApplied.value = true
+  } catch (err) {
+    console.error('[ChatMessage] Apply day plan failed:', err)
+    dayPlanError.value = 'Could not apply this plan.'
+  } finally {
+    dayPlanApplying.value = false
+  }
+}
+
 // ============================================================================
 // Schedule Onboarding
 // ============================================================================
@@ -550,6 +596,20 @@ async function saveSchedule() {
       <!-- TASK-1814: Grouped prioritization cards — replaces the flat dump. Each
            task is the same interactive card + the AI's one-line reason underneath. -->
       <div v-if="cardGroups" class="card-groups">
+        <div v-if="isDayPlan" class="day-plan-toolbar">
+          <button
+            class="day-plan-apply-btn"
+            :class="{ applied: dayPlanApplied }"
+            :disabled="dayPlanApplying || dayPlanApplied"
+            @click="applyDayPlan"
+          >
+            <Loader2 v-if="dayPlanApplying" :size="14" class="spin" />
+            <Check v-else-if="dayPlanApplied" :size="14" />
+            <ListOrdered v-else :size="14" />
+            <span>{{ dayPlanApplied ? 'Plan applied' : `Apply this order (${dayPlanTaskCount})` }}</span>
+          </button>
+          <span v-if="dayPlanError" class="day-plan-error">{{ dayPlanError }}</span>
+        </div>
         <div v-for="(group, gi) in cardGroups.groups" :key="'g' + gi" class="card-group">
           <div v-if="group.name" class="card-group-name" dir="auto">
             {{ group.name }}
@@ -1320,6 +1380,41 @@ async function saveSchedule() {
   flex-direction: column;
   gap: var(--space-3);
   margin-top: var(--space-2);
+}
+.day-plan-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.day-plan-apply-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1_5);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-md);
+  background: var(--brand-primary);
+  color: white;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+.day-plan-apply-btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.day-plan-apply-btn:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+.day-plan-apply-btn.applied {
+  background: var(--color-success);
+  border-color: var(--color-success);
+}
+.day-plan-error {
+  font-size: var(--text-xs);
+  color: var(--color-danger);
 }
 .card-group {
   display: flex;

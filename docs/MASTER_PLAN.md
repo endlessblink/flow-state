@@ -2,9 +2,9 @@
 
 ## 🔜 Next Up — AI flows (TASK-1814 follow-ups; start here after restart)
 
-### TASK-1815: Flagship flow — "Overwhelmed → AI reorders my day" (📋 PLANNED)
+### ~~TASK-1815~~: Flagship flow — "Overwhelmed → AI reorders my day" (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-06-05) | **Depends on**: TASK-1814 (AI chat now intelligent)
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.93 deployed) | **Depends on**: TASK-1814 (AI chat now intelligent)
 
 **Why**: The original primary ask. When the user feels overwhelmed, the AI should propose a concrete reordered plan for the day — not just list tasks. TASK-1814 made the chat reason well + render grouped prioritization cards; this turns that reasoning into an *actionable reorder* (sequence + time-blocks the user can accept/apply).
 
@@ -15,6 +15,8 @@
 - Honest fallback when capacity says "don't do all of it" (the model already surfaces this — make it actionable: defer/snooze the rest).
 
 **Context**: Builds directly on `useAIChat.ts` deterministic + ReAct paths, `buildRichTaskData`, and the holistic prompt. Measure with `tests/manual/ai-prioritization-eval.mjs`. See skill `flowstate-ai-chat`.
+
+**Shipped**: Explicit overwhelm/reorder prompts now route to a deterministic day-plan mode (`list_tasks` with rich task context), instruct the bridge brain to emit ordered focus blocks via `cards kind=day_plan`, and render an **Apply this order** action on grouped AI cards. Applying the plan uses the existing undo-aware bulk task update path to set selected tasks for today and stack them at the top of the Today canvas group, preserving existing Today tasks after the AI-ordered sequence. Regression coverage: `ai-day-plan.test.ts`, `ai-intent-day-plan.test.ts`, `ai-cards-block.test.ts`, plus an e2e spec for the stubbed bridge day-plan UI path. Local e2e run was blocked by invalid local Supabase service-role JWT; direct Vite/browser smoke mounted the AI route.
 
 ---
 
@@ -65,7 +67,7 @@
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-06-04)
 
-**Progress (2026-06-06):** Bridge live + both brains work. Fixed the core "strong model = weak answers" trap — the pipeline was pre-digesting tasks into "X days overdue" lines (LLM reduced to a formatter). Now feeds FULL task content + skips the pre-computed directive + prompts holistically (group/dependencies/trend). Eval harness shows **1.3→4.9/5**. Built grouped prioritization **cards** (model emits a `cards` JSON block → parsed → interactive cards with per-task reasons; raw-JSON-leak bug fixed + 8 unit regression tests). Made the **ReAct/freeform path** intelligent too so no phrasing bypasses it (verified e2e + live Hebrew). Prose tightened to 1-2 sentences. Added skills: cross-project `llm-feature-quality` + project `flowstate-ai-chat`. 2388 unit + 15 AI e2e green. Deployed Electron v1.4.92 beyond localhost; remaining flagship work is overwhelm-reorder + smart-lanes flows.
+**Progress (2026-06-06):** Bridge live + both brains work. Fixed the core "strong model = weak answers" trap — the pipeline was pre-digesting tasks into "X days overdue" lines (LLM reduced to a formatter). Now feeds FULL task content + skips the pre-computed directive + prompts holistically (group/dependencies/trend). Eval harness shows **1.3→4.9/5**. Built grouped prioritization **cards** (model emits a `cards` JSON block → parsed → interactive cards with per-task reasons; raw-JSON-leak bug fixed + 8 unit regression tests). Made the **ReAct/freeform path** intelligent too so no phrasing bypasses it (verified e2e + live Hebrew). Prose tightened to 1-2 sentences. Added skills: cross-project `llm-feature-quality` + project `flowstate-ai-chat`. 2394 unit tests green. Deployed Electron v1.4.92 beyond localhost; TASK-1815 overwhelm-reorder shipped in Electron v1.4.93; remaining flagship work is smart-lanes.
 
 **Why**: Current in-app AI is "not usable" — verified by running the exact app prompts (`useAITaskAssist`) on the default model (Ollama llama3.2 3B) against real tasks: English breakdown returned prose not JSON (→ "could not be parsed" error), Hebrew breakdown returned nonsense words in a medical-prep task, smart-suggest gave "15 min to plan a weekend trip, confidence 1.0". Three root causes: weak brain, shallow prompts (title-only, no workload context), and the requested "overwhelmed → reorder my day" flow does not exist at all.
 

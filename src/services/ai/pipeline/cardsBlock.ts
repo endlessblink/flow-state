@@ -22,6 +22,7 @@ export interface ParsedCards {
   groups: CardGroup[]
   total: number
   rawBlock: string
+  kind?: 'day_plan'
 }
 
 /**
@@ -32,7 +33,10 @@ export interface ParsedCards {
 export function parseCardGroups(text: string, toolResults: CardToolResult[]): ParsedCards | null {
   const m = text.match(/```+\s*cards\s*\n?([\s\S]*?)```+/i)
   if (!m) return null
-  let parsed: { groups?: Array<{ name?: string; items?: Array<{ i?: number; reason?: string }> }> }
+  let parsed: {
+    kind?: string
+    groups?: Array<{ name?: string; items?: Array<{ i?: number; reason?: string }> }>
+  }
   try { parsed = JSON.parse(m[1].trim()) } catch { return null }
   if (!Array.isArray(parsed?.groups) || !parsed.groups.length) return null
 
@@ -54,7 +58,8 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
     }))
     .filter(g => g.tasks.length > 0)
 
-  return groups.length ? { groups, total: tasks.length, rawBlock: m[0] } : null
+  const kind = parsed.kind === 'day_plan' ? 'day_plan' : undefined
+  return groups.length ? { groups, total: tasks.length, rawBlock: m[0], kind } : null
 }
 
 /**

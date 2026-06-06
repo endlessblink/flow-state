@@ -30,6 +30,7 @@ const ALLOWLISTED_VARS = new Set([
   'VITE_APP_VERSION',         // Version number
   'VITE_USE_LOCAL_SUPABASE',  // Boolean flag
   'VITE_SITE_URL',            // Public site URL (not a secret)
+  'VITE_AI_BRIDGE_URL',       // Public AI bridge endpoint override (auth-gated)
 ])
 
 // ============================================================================

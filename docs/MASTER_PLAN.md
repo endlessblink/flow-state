@@ -33,13 +33,13 @@
 
 ---
 
-### TASK-1817: Ship the AI chat improvements beyond localhost (web + Electron) (📋 PLANNED)
+### ~~TASK-1817~~: Ship the AI chat improvements beyond localhost (web + Electron) (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-06-05) | **Depends on**: TASK-1814
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.92 deployed) | **Depends on**: TASK-1814
 
 **Why**: All TASK-1814 work is committed + verified on localhost dev only. Per project rules 6/7, a production push must ship BOTH web (VITE_SITE_URL) and an Electron auto-updater build in the same release. Desktop users are otherwise left on the old dumb AI.
 
-**Scope**: Bump `package.json` + `electron-builder.yml` (patch), `./scripts/deploy-electron-update.sh --notes "TASK-1814: intelligent AI chat + grouped cards"`, verify `${VITE_SITE_URL}/updates/latest.json`. Bridge server on the VPS is unchanged (client-only changes) — no bridge redeploy needed.
+**Shipped**: Safely replayed the TASK-1814 AI stack onto fresh `origin/master` to avoid reverting already-live v1.4.89-v1.4.91 work, bumped to `1.4.92`, built Electron, deployed via `./scripts/deploy-electron-update.sh --notes "TASK-1814: intelligent AI chat + grouped cards"`, and verified `https://in-theflow.com/updates/electron/latest-linux.yml` returns `version: 1.4.92`. Bridge server on the VPS is unchanged (client-only changes) — no bridge redeploy needed.
 
 ---
 
@@ -53,7 +53,7 @@
 
 ---
 
-> **Last Updated**: 2026-06-05
+> **Last Updated**: 2026-06-06
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
@@ -65,7 +65,7 @@
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-06-04)
 
-**Progress (2026-06-05):** Bridge live + both brains work. Fixed the core "strong model = weak answers" trap — the pipeline was pre-digesting tasks into "X days overdue" lines (LLM reduced to a formatter). Now feeds FULL task content + skips the pre-computed directive + prompts holistically (group/dependencies/trend). Eval harness shows **1.3→4.9/5**. Built grouped prioritization **cards** (model emits a `cards` JSON block → parsed → interactive cards with per-task reasons; raw-JSON-leak bug fixed + 8 unit regression tests). Made the **ReAct/freeform path** intelligent too so no phrasing bypasses it (verified e2e + live Hebrew). Prose tightened to 1-2 sentences. Added skills: cross-project `llm-feature-quality` + project `flowstate-ai-chat`. 2388 unit + 15 AI e2e green. Remaining: flagship overwhelm-reorder + smart-lanes flows; deploy beyond localhost.
+**Progress (2026-06-06):** Bridge live + both brains work. Fixed the core "strong model = weak answers" trap — the pipeline was pre-digesting tasks into "X days overdue" lines (LLM reduced to a formatter). Now feeds FULL task content + skips the pre-computed directive + prompts holistically (group/dependencies/trend). Eval harness shows **1.3→4.9/5**. Built grouped prioritization **cards** (model emits a `cards` JSON block → parsed → interactive cards with per-task reasons; raw-JSON-leak bug fixed + 8 unit regression tests). Made the **ReAct/freeform path** intelligent too so no phrasing bypasses it (verified e2e + live Hebrew). Prose tightened to 1-2 sentences. Added skills: cross-project `llm-feature-quality` + project `flowstate-ai-chat`. 2388 unit + 15 AI e2e green. Deployed Electron v1.4.92 beyond localhost; remaining flagship work is overwhelm-reorder + smart-lanes flows.
 
 **Why**: Current in-app AI is "not usable" — verified by running the exact app prompts (`useAITaskAssist`) on the default model (Ollama llama3.2 3B) against real tasks: English breakdown returned prose not JSON (→ "could not be parsed" error), Hebrew breakdown returned nonsense words in a medical-prep task, smart-suggest gave "15 min to plan a weekend trip, confidence 1.0". Three root causes: weak brain, shallow prompts (title-only, no workload context), and the requested "overwhelmed → reorder my day" flow does not exist at all.
 

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 import AIChatPanel from '@/components/ai/AIChatPanel.vue'
+import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
 
 vi.mock('vue-router', () => ({
@@ -258,6 +259,50 @@ describe('AI sidebar-first desktop experience', () => {
       taskNode.indexOf('/*\n * BUG-1808')
     )
     expect(spotlightCss).not.toContain('transform:')
+  })
+
+  it('does not show raw tool-result task cards before the assistant answer finishes', () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-1',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          isStreaming: true,
+          metadata: {
+            toolResults: [
+              {
+                tool: 'list_tasks',
+                message: 'Found 15 tasks',
+                success: true,
+                type: 'read',
+                data: [
+                  { id: 'task-1', title: 'Do not render yet', status: 'todo' },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.find('.thinking-indicator').exists()).toBe(true)
+    expect(wrapper.find('.tool-results').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Do not render yet')
+  })
+
+  it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+
+    expect(aiChat).toContain('FINAL_FORMATTER_TIMEOUT_MS')
+    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language)')
+    expect(aiChat).toContain("Formatter timed out or failed; using fallback answer")
   })
 
   it('keeps a visible New Chat control in the AI sidebar header', async () => {

@@ -110,6 +110,7 @@ async function getRouter() {
 
 // Active provider tracking
 const activeProviderRef = ref<string | null>(null)
+const FINAL_FORMATTER_TIMEOUT_MS = 45_000
 
 // AI Personality mode
 const aiPersonality = ref<'professional' | 'grid_handler'>('professional')
@@ -622,6 +623,40 @@ export function useAIChat() {
     return lines.join('\n').slice(0, 6000)
   }
 
+  function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<{ title?: string; priority?: string; daysOverdue?: number }> {
+    const tasks: Array<{ title?: string; priority?: string; daysOverdue?: number }> = []
+    for (const result of toolResults) {
+      const data = result.data
+      if (!result.success) continue
+      if (Array.isArray(data)) {
+        tasks.push(...data.filter(item => item && typeof item === 'object') as Array<{ title?: string; priority?: string; daysOverdue?: number }>)
+      } else if (data && typeof data === 'object') {
+        const record = data as Record<string, unknown>
+        for (const key of ['tasks', 'dueTodayTasks', 'overdueTasks']) {
+          const value = record[key]
+          if (Array.isArray(value)) {
+            tasks.push(...value.filter(item => item && typeof item === 'object') as Array<{ title?: string; priority?: string; daysOverdue?: number }>)
+          }
+        }
+      }
+    }
+    return tasks
+  }
+
+  function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en'): string {
+    const tasks = getTaskItemsFromToolResults(toolResults).filter(task => task.title).slice(0, 3)
+    if (tasks.length === 0) {
+      return lang === 'he'
+        ? 'מצאתי את הנתונים, אבל לא הצלחתי לנסח תשובת AI מלאה בזמן. השתמש בכרטיסים למטה כדי להמשיך.'
+        : 'I found the data, but could not finish the AI wording in time. Use the cards below to continue.'
+    }
+
+    const names = tasks.map(task => task.title).join(lang === 'he' ? '", "' : '", "')
+    return lang === 'he'
+      ? `הייתי מתחיל ב-"${names}" לפי הסדר הזה; אלה נראות כמו המשימות הכי דחופות כרגע.`
+      : `I would start with "${names}" in this order; these look like the highest-impact tasks right now.`
+  }
+
   /**
    * Build the system prompt with context awareness.
    * Includes timer state, task statistics, and additional context.
@@ -1072,11 +1107,14 @@ export function useAIChat() {
             ? `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — name the strongest lane and why it matters. Do NOT write a full per-task breakdown in prose; the cards carry it. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"smart_lanes","groups":[{"name":"actionable lane name in ${languageName}","items":[{"i":<existing task [N] from the data>,"reason":"why it belongs in this lane, max 10 words"}],"newTasks":[{"title":"new child task title in ${languageName}","priority":"medium","reason":"what it unblocks, max 10 words"}]}]}\n\`\`\`\nUse \`items\` for existing tasks to assign to the lane. Use \`newTasks\` only when a large existing task should be broken into concrete child tasks; keep each title actionable and small. If a group has one existing item plus newTasks, that existing item is the parent task. Reference tasks by [N] number INSIDE the cards block only; in prose use task names, never [N].`
             : `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — the single biggest cross-cutting insight or what to tackle first. Do NOT write a per-task breakdown, headings, or numbered reasons in the prose — the cards below carry every per-task detail, so repeating it is noise. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"groups":[{"name":"short group label in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"the specific stake for THIS task in ${languageName}, max 10 words — NOT 'overdue'/'high priority'"}]}]}\n\`\`\`\nReference each task by its [N] number INSIDE the cards block only; in the prose use the task NAME, never [N]. Include only tasks worth acting on now, grouped by theme or sequence (a single task may be its own group), ordered by importance.`
         : ''
+      const responseShapeInstruction = cardsInstruction
+        ? `CRITICAL FORMAT RULE: Start with ONE plain, concrete sentence that names the first task and the next task. Avoid vague labels, arrows, metaphors, and jargon unless the user used them. Then output the cards block. Do not add a separate bullet list or headings before the cards.`
+        : `CRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.`
 
       const formatterMessages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\nCRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.\n\nWHEN RANKING BY PRIORITY/URGENCY (read carefully — this is the #1 quality bar):\n- "X days overdue" and "high priority" are METADATA, never a reason. NEVER justify ranking with lateness or the priority label. The user already sees those on the card.\n- Lead EACH task with the real-world STAKE: what concretely goes wrong if it slips, what it unblocks, who is waiting, or the deadline behind it. INFER this from the task's wording. Examples: "check payment via Cardcom" → money may be stuck or a charge failing; "gift for Sivan" → a birthday/event with a fixed date approaching; "reply to X" → a person is blocked waiting on you; "publish the video" → audience/momentum window.\n- You MAY add lateness as a brief aside AFTER the real reason ("…and it's been sitting 3 days"), never as the reason.\n- If a task's wording genuinely gives NO clue to its stakes, say so honestly ("not clear why this is urgent — add a note?") instead of inventing urgency.\n- Open with the single highest-stakes task and one line on why it beats the rest.\n\nUSE ALL THE DATA you are given: each task may include its NOTES (description), tags, subtask progress, project, and estimate — read them and reason from the actual content, quoting the relevant detail. The user's work patterns and capacity are in the context above — tailor your suggestion to how they ACTUALLY work (their pace, peak days, current overload), not generic advice.\n\nLOOK ACROSS THE WHOLE LIST, don't just rank tasks in isolation:\n- GROUP related tasks (same project, same theme, or sequential steps of one effort — e.g. "Build outreach target list" then "Write a cold opener" are two steps of one sales push) and suggest doing them together or in order.\n- Flag DEPENDENCIES ("do X before Y makes sense").\n- Call out the TREND/pattern you actually see: a whole project stalling, one theme dominating the overdue pile, or a type of work being repeatedly avoided — and what that implies. This cross-task insight is the most valuable part; a per-task list without it is a failure.\n\n${routed.formatDirective}${userScheduleNote}${cardsInstruction}`,
+          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\n${responseShapeInstruction}\n\nWHEN RANKING BY PRIORITY/URGENCY (read carefully — this is the #1 quality bar):\n- "X days overdue" and "high priority" are METADATA, never a reason. NEVER justify ranking with lateness or the priority label. The user already sees those on the card.\n- Lead EACH task with the real-world STAKE: what concretely goes wrong if it slips, what it unblocks, who is waiting, or the deadline behind it. INFER this from the task's wording. Examples: "check payment via Cardcom" → money may be stuck or a charge failing; "gift for Sivan" → a birthday/event with a fixed date approaching; "reply to X" → a person is blocked waiting on you; "publish the video" → audience/momentum window.\n- You MAY add lateness as a brief aside AFTER the real reason ("…and it's been sitting 3 days"), never as the reason.\n- If a task's wording genuinely gives NO clue to its stakes, say so honestly ("not clear why this is urgent — add a note?") instead of inventing urgency.\n- Open with the single highest-stakes task and one line on why it beats the rest.\n\nUSE ALL THE DATA you are given: each task may include its NOTES (description), tags, subtask progress, project, and estimate — read them and reason from the actual content, quoting the relevant detail. The user's work patterns and capacity are in the context above — tailor your suggestion to how they ACTUALLY work (their pace, peak days, current overload), not generic advice.\n\nLOOK ACROSS THE WHOLE LIST, don't just rank tasks in isolation:\n- GROUP related tasks (same project, same theme, or sequential steps of one effort — e.g. "Build outreach target list" then "Write a cold opener" are two steps of one sales push) and suggest doing them together or in order.\n- Flag DEPENDENCIES ("do X before Y makes sense").\n- Call out the TREND/pattern you actually see: a whole project stalling, one theme dominating the overdue pile, or a type of work being repeatedly avoided — and what that implies. This cross-task insight is the most valuable part; a per-task list without it is a failure.\n\n${routed.formatDirective}${userScheduleNote}${cardsInstruction}`,
         },
         {
           role: 'user',
@@ -1085,12 +1123,21 @@ export function useAIChat() {
       ]
 
       let formattedResponse = ''
-      for await (const chunk of router.chatStream(formatterMessages, {
-        taskType: 'chat',
-        forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
-        model: selectedModel.value || undefined,
-      })) {
-        formattedResponse += chunk.content
+      try {
+        for await (const chunk of router.chatStream(formatterMessages, {
+          taskType: 'chat',
+          forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+          model: selectedModel.value || undefined,
+          timeout: FINAL_FORMATTER_TIMEOUT_MS,
+        })) {
+          formattedResponse += chunk.content
+        }
+      } catch (formatterErr) {
+        console.warn('[AIChat:Deterministic] Formatter timed out or failed; using fallback answer:', formatterErr)
+        formattedResponse = buildFormatterFallback(toolResults, routed.language)
+      }
+      if (!formattedResponse.trim()) {
+        formattedResponse = buildFormatterFallback(toolResults, routed.language)
       }
 
       // Post-check: language mismatch retry (one attempt)
@@ -1107,6 +1154,7 @@ export function useAIChat() {
           taskType: 'chat',
           forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
           model: selectedModel.value || undefined,
+          timeout: FINAL_FORMATTER_TIMEOUT_MS,
         })) {
           retryResponse += chunk.content
         }

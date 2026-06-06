@@ -49,7 +49,7 @@ import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
-import { parseCardGroups, stripCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import { parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
@@ -1134,8 +1134,13 @@ export function useAIChat() {
           if (abortController.signal.aborted) {
             break
           }
-          store.appendStreamingContent(chunk.content)
           fullContent += chunk.content
+          const lastMsg = store.messages[store.messages.length - 1]
+          if (lastMsg && lastMsg.isStreaming) {
+            const visibleContent = stripStreamingCardsBlock(fullContent)
+            lastMsg.content = visibleContent
+            store.streamingContent = visibleContent
+          }
           if (chunk.toolCalls && chunk.toolCalls.length > 0) {
             nativeToolCalls = chunk.toolCalls
           }

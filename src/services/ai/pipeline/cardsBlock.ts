@@ -91,3 +91,14 @@ export function stripCardsBlock(text: string): string {
     .replace(/\s*\[\d+(?:\s*(?:→|->|,)\s*\d+)*\]/g, '')
     .trim()
 }
+
+/**
+ * Streaming-safe variant for visible partial output. `stripCardsBlock` removes a
+ * complete cards block; this also hides the dangling prefix while streamed
+ * chunks are still building the marker (for example "```ca" before "rds").
+ */
+export function stripStreamingCardsBlock(text: string): string {
+  return stripCardsBlock(text)
+    .replace(/`{1,}\s*(?:c(?:a(?:r(?:d(?:s)?)?)?)?)?$/i, '')
+    .trim()
+}

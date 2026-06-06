@@ -364,6 +364,16 @@ describe('toolHints', () => {
       expect(hints.some(h => h.tool === 'get_overdue_tasks')).toBe(true)
     })
 
+    it.each([
+      'help me prioritize',
+      "I'm overwhelmed",
+      'מה המשימות הכי דחופות',
+      'מה חשוב עכשיו',
+    ])('routes common prioritization phrasing "%s" to overdue-task data', (input) => {
+      const hints = getToolHints(input)
+      expect(hints[0]?.tool).toBe('get_overdue_tasks')
+    })
+
     it('deduplicates tool names (same tool not returned twice)', () => {
       const hints = getToolHints('show me my tasks and all tasks in the list')
       const tools = hints.map(h => h.tool)

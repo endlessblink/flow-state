@@ -47,13 +47,15 @@
 
 ---
 
-### TASK-1818: AI cards polish — suppress mid-stream JSON flash + pin common phrasings to deterministic (📋 PLANNED)
+### ~~TASK-1818~~: AI cards polish — suppress mid-stream JSON flash + pin common phrasings to deterministic (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (opened 2026-06-05) | **Depends on**: TASK-1814
+**Priority**: P2 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.95 deployed) | **Depends on**: TASK-1814
 
 **Why**: Two known soft spots from TASK-1814 review. (1) During streaming, the `cards` JSON block briefly shows as raw text before it's stripped on completion (cosmetic). (2) Freeform phrasings (e.g. "מה המשימות הכי דחופות", "help me prioritize", "i'm overwhelmed") route to ReAct, where cards are reliable-but-not-100%; common prioritization phrasings should be pinned to the deterministic path (100% reliable) + added to the regression suite.
 
 **Scope**: Strip `stripCardsBlock` from the streaming display path (not just finalize). Broaden `toolHints.ts` keyword coverage (Hebrew plural "דחופות", "המשימות הכי", "help me prioritize", "overwhelmed", "מה חשוב עכשיו") → `get_overdue_tasks`. Add an e2e asserting no JSON ever appears mid-stream.
+
+**Shipped**: ReAct streaming now keeps raw model output for parsing but displays a `stripStreamingCardsBlock`-sanitized copy on every chunk, including split code-fence prefixes like ` ```ca`, so `cards` JSON cannot flash before final parsing attaches grouped cards. Common prioritization/overwhelm phrasings in English and Hebrew now pin to `get_overdue_tasks` through `toolHints.ts`. Regression coverage: `ai-cards-block.test.ts` for streaming partial fences, `ai-pipeline.test.ts` for deterministic hint routing, and an authenticated Playwright spec with a delayed bridge `ReadableStream` asserting no `cards` JSON appears while the answer is still streaming. Local Playwright remains blocked before test execution by missing `SUPABASE_SERVICE_ROLE_KEY`; unit/type/build gates pass.
 
 ---
 
@@ -65,11 +67,11 @@
 
 ## Active Tasks
 
-### TASK-1814: Subscription-powered AI brain (Claude/Codex CLI bridge) + overwhelm-reorder & smart-lanes flows (🔄 IN PROGRESS)
+### ~~TASK-1814~~: Subscription-powered AI brain (Claude/Codex CLI bridge) + overwhelm-reorder & smart-lanes flows (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-06-04)
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.95 deployed)
 
-**Progress (2026-06-06):** Bridge live + both brains work. Fixed the core "strong model = weak answers" trap — the pipeline was pre-digesting tasks into "X days overdue" lines (LLM reduced to a formatter). Now feeds FULL task content + skips the pre-computed directive + prompts holistically (group/dependencies/trend). Eval harness shows **1.3→4.9/5**. Built grouped prioritization **cards** (model emits a `cards` JSON block → parsed → interactive cards with per-task reasons; raw-JSON-leak bug fixed + 8 unit regression tests). Made the **ReAct/freeform path** intelligent too so no phrasing bypasses it (verified e2e + live Hebrew). Prose tightened to 1-2 sentences. Added skills: cross-project `llm-feature-quality` + project `flowstate-ai-chat`. 2398 unit tests green. Deployed Electron v1.4.92 beyond localhost; TASK-1815 overwhelm-reorder shipped in Electron v1.4.93; TASK-1816 smart-lanes shipped in Electron v1.4.94.
+**Progress (2026-06-06):** Bridge live + both brains work. Fixed the core "strong model = weak answers" trap — the pipeline was pre-digesting tasks into "X days overdue" lines (LLM reduced to a formatter). Now feeds FULL task content + skips the pre-computed directive + prompts holistically (group/dependencies/trend). Eval harness shows **1.3→4.9/5**. Built grouped prioritization **cards** (model emits a `cards` JSON block → parsed → interactive cards with per-task reasons; raw-JSON-leak bug fixed + regression tests). Made the **ReAct/freeform path** intelligent too so no phrasing bypasses it. Prose tightened to 1-2 sentences. Added skills: cross-project `llm-feature-quality` + project `flowstate-ai-chat`. Deployed Electron v1.4.92 beyond localhost; TASK-1815 overwhelm-reorder shipped in Electron v1.4.93; TASK-1816 smart-lanes shipped in Electron v1.4.94; TASK-1818 streaming/card polish shipped in Electron v1.4.95. Full local Vitest gate: 2408 tests green.
 
 **Why**: Current in-app AI is "not usable" — verified by running the exact app prompts (`useAITaskAssist`) on the default model (Ollama llama3.2 3B) against real tasks: English breakdown returned prose not JSON (→ "could not be parsed" error), Hebrew breakdown returned nonsense words in a medical-prep task, smart-suggest gave "15 min to plan a weekend trip, confidence 1.0". Three root causes: weak brain, shallow prompts (title-only, no workload context), and the requested "overwhelmed → reorder my day" flow does not exist at all.
 

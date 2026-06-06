@@ -4,7 +4,7 @@
  * chat text, (2) cards mapping to the wrong tasks. If either regresses, this fails.
  */
 import { describe, it, expect } from 'vitest'
-import { parseCardGroups, stripCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import { parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 
 const tasks = [
   { id: 't1', title: 'Check payment via Cardcom', priority: 'high', daysOverdue: 4 },
@@ -116,5 +116,24 @@ describe('stripCardsBlock — NO raw JSON or [N] markers leak into the prose', (
 
   it('leaves prose with no block untouched', () => {
     expect(stripCardsBlock('just a normal answer.')).toBe('just a normal answer.')
+  })
+})
+
+describe('stripStreamingCardsBlock — hides card JSON while chunks are still arriving', () => {
+  it.each([
+    ['Here is the plan.\n\n`', 'Here is the plan.'],
+    ['Here is the plan.\n\n```', 'Here is the plan.'],
+    ['Here is the plan.\n\n```ca', 'Here is the plan.'],
+    ['Here is the plan.\n\n```cards', 'Here is the plan.'],
+    ['Here is the plan.\n\n```cards\n{"groups":[', 'Here is the plan.'],
+  ])('strips partial stream content "%s"', (input, expected) => {
+    expect(stripStreamingCardsBlock(input)).toBe(expected)
+  })
+
+  it('keeps normal prose while stripping completed card blocks', () => {
+    const input = 'Do Cardcom first, then outreach.\n\n' + block({
+      groups: [{ name: 'Money', items: [{ i: 1, reason: 'payment risk' }] }],
+    })
+    expect(stripStreamingCardsBlock(input)).toBe('Do Cardcom first, then outreach.')
   })
 })

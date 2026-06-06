@@ -14,6 +14,10 @@
       'is-connecting': isConnecting,
       'is-recently-created': isRecentlyCreated,
       'is-flashing': isFlashing,
+      'ai-spotlight': isAISpotlight,
+      'ai-spotlight-changed': aiSpotlightKind === 'changed',
+      'ai-spotlight-pending': aiSpotlightKind === 'pending',
+      'ai-spotlight-removed': aiSpotlightKind === 'removed',
       'lod-1': isLOD1,
       'lod-2': isLOD2,
       'lod-3': isLOD3
@@ -215,6 +219,9 @@ const handleSetWorkBlock = async (duration: number) => {
 
 // TASK-1074: Flash animation when date is set via context menu
 const isFlashing = ref(false)
+const isAISpotlight = ref(false)
+const aiSpotlightKind = ref<'spotlight' | 'changed' | 'pending' | 'removed'>('spotlight')
+let aiSpotlightTimeout: number | undefined
 const handleTaskFlash = (event: Event) => {
   const customEvent = event as CustomEvent<{ taskId: string }>
   if (customEvent.detail.taskId === props.task?.id) {
@@ -222,11 +229,26 @@ const handleTaskFlash = (event: Event) => {
     setTimeout(() => { isFlashing.value = false }, FLASH_DURATION_MS)
   }
 }
+const handleAITaskSpotlight = (event: Event) => {
+  const customEvent = event as CustomEvent<{ taskIds?: string[]; visualKind?: 'spotlight' | 'changed' | 'pending' | 'removed' }>
+  if (!props.task?.id || !customEvent.detail.taskIds?.includes(props.task.id)) return
+
+  if (aiSpotlightTimeout) window.clearTimeout(aiSpotlightTimeout)
+  aiSpotlightKind.value = customEvent.detail.visualKind || 'spotlight'
+  isAISpotlight.value = true
+  aiSpotlightTimeout = window.setTimeout(() => {
+    isAISpotlight.value = false
+    aiSpotlightTimeout = undefined
+  }, 2400)
+}
 onMounted(() => {
   window.addEventListener('task-action-flash', handleTaskFlash)
+  window.addEventListener('ai-task-spotlight', handleAITaskSpotlight)
 })
 onUnmounted(() => {
   window.removeEventListener('task-action-flash', handleTaskFlash)
+  window.removeEventListener('ai-task-spotlight', handleAITaskSpotlight)
+  if (aiSpotlightTimeout) window.clearTimeout(aiSpotlightTimeout)
 })
 </script>
 
@@ -502,6 +524,51 @@ onUnmounted(() => {
 
 .priority-low.is-flashing {
   animation: task-flash-blue 0.6s ease-out !important;
+}
+
+.ai-spotlight {
+  box-shadow:
+    0 0 0 var(--space-0_5) color-mix(in srgb, var(--color-focus) 72%, transparent),
+    0 0 var(--space-5) color-mix(in srgb, var(--color-focus) 28%, transparent),
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm) !important;
+  border-color: color-mix(in srgb, var(--color-focus) 65%, var(--glass-border)) !important;
+}
+
+.ai-spotlight-changed {
+  box-shadow:
+    0 0 0 var(--space-0_5) color-mix(in srgb, var(--color-success) 72%, transparent),
+    0 0 var(--space-5) color-mix(in srgb, var(--color-success) 30%, transparent),
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm) !important;
+  border-color: color-mix(in srgb, var(--color-success) 65%, var(--glass-border)) !important;
+}
+
+.ai-spotlight-pending {
+  box-shadow:
+    0 0 0 var(--space-0_5) color-mix(in srgb, var(--color-orange) 72%, transparent),
+    0 0 var(--space-5) color-mix(in srgb, var(--color-orange) 30%, transparent),
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm) !important;
+  border-color: color-mix(in srgb, var(--color-orange) 65%, var(--glass-border)) !important;
+}
+
+.ai-spotlight-removed {
+  box-shadow:
+    0 0 0 var(--space-0_5) color-mix(in srgb, var(--color-danger) 72%, transparent),
+    0 0 var(--space-5) color-mix(in srgb, var(--color-danger) 30%, transparent),
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm) !important;
+  border-color: color-mix(in srgb, var(--color-danger) 65%, var(--glass-border)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-flashing {
+    animation: none !important;
+  }
+
+  .ai-spotlight,
+  .ai-spotlight-changed,
+  .ai-spotlight-pending,
+  .ai-spotlight-removed {
+    transition: none !important;
+  }
 }
 
 /*

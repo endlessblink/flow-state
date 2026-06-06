@@ -339,6 +339,17 @@ function activityStatusText(status: string, undoAvailable?: boolean) {
   return status
 }
 
+function revealActivityOnCanvas(item: { taskIds?: string[]; visualKind?: 'spotlight' | 'changed' | 'pending' | 'removed' }) {
+  const taskIds = item.taskIds?.filter(Boolean) || []
+  if (taskIds.length === 0 || typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('ai-task-spotlight', {
+    detail: { taskIds, visualKind: item.visualKind || 'spotlight' }
+  }))
+  window.dispatchEvent(new CustomEvent('reveal-task-on-canvas', {
+    detail: { taskId: taskIds[0] }
+  }))
+}
+
 // ============================================================================
 // Provider Health Status
 // ============================================================================
@@ -1059,6 +1070,15 @@ onUnmounted(() => {
               <span class="activity-label">{{ item.label }}</span>
               <span v-if="item.message" class="activity-message">{{ item.message }}</span>
             </span>
+            <button
+              v-if="item.shouldReveal && item.taskIds?.length"
+              class="activity-reveal-btn"
+              type="button"
+              title="Show on canvas"
+              @click="revealActivityOnCanvas(item)"
+            >
+              Show
+            </button>
             <span class="activity-status">{{ activityStatusText(item.status, item.undoAvailable) }}</span>
           </div>
         </div>
@@ -1891,7 +1911,7 @@ onUnmounted(() => {
 
 .activity-item {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--space-2);
   min-height: 28px;
@@ -1946,6 +1966,24 @@ onUnmounted(() => {
   color: var(--text-tertiary);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
+}
+
+.activity-reveal-btn {
+  height: 22px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+
+.activity-reveal-btn:hover {
+  border-color: var(--color-focus);
+  color: var(--text-primary);
 }
 
 .activity-running .activity-dot {

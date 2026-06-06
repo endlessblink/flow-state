@@ -318,6 +318,104 @@ export function useAIChat() {
     return 'Reading FlowState'
   }
 
+  const TASK_RESULT_TOOLS = new Set([
+    'list_tasks',
+    'search_tasks',
+    'get_task_details',
+    'get_daily_summary',
+    'get_overdue_tasks',
+    'suggest_next_task',
+  ])
+
+  const TASK_PARAM_TOOLS = new Set([
+    'update_task_status',
+    'update_task',
+    'delete_task',
+    'move_task_to_group',
+    'assign_task_to_project',
+    'start_timer',
+    'mark_task_done',
+    'break_down_task',
+    'create_subtask',
+    'update_subtask',
+  ])
+
+  const TASK_ARRAY_KEYS = new Set([
+    'tasks',
+    'dueTodayTasks',
+    'overdueTasks',
+    'completedTodayTasks',
+    'suggestions',
+  ])
+
+  function pushTaskId(ids: string[], value: unknown): void {
+    if (typeof value !== 'string' || !value || value === 'general') return
+    if (!ids.includes(value)) ids.push(value)
+  }
+
+  function collectTaskIdsFromTaskArray(ids: string[], value: unknown): void {
+    if (!Array.isArray(value)) return
+    for (const item of value) {
+      pushTaskId(ids, item)
+      if (!item || typeof item !== 'object') continue
+      const record = item as Record<string, unknown>
+      pushTaskId(ids, record.id)
+      pushTaskId(ids, record.taskId)
+    }
+  }
+
+  function extractAffectedTaskIds(call: ToolCall, result?: ToolResult): string[] {
+    const ids: string[] = []
+
+    if (TASK_PARAM_TOOLS.has(call.tool)) {
+      pushTaskId(ids, call.parameters.taskId)
+      collectTaskIdsFromTaskArray(ids, call.parameters.taskIds)
+    }
+
+    if (result?.success && call.tool === 'create_task') {
+      const data = result.data as Record<string, unknown> | undefined
+      pushTaskId(ids, data?.id)
+      pushTaskId(ids, data?.taskId)
+    }
+
+    if (result?.success && TASK_RESULT_TOOLS.has(call.tool)) {
+      const data = result.data
+      if (Array.isArray(data)) {
+        collectTaskIdsFromTaskArray(ids, data)
+      } else if (data && typeof data === 'object') {
+        const record = data as Record<string, unknown>
+        pushTaskId(ids, record.id)
+        pushTaskId(ids, record.taskId)
+        for (const key of TASK_ARRAY_KEYS) {
+          collectTaskIdsFromTaskArray(ids, record[key])
+        }
+      }
+    }
+
+    return ids.slice(0, 12)
+  }
+
+  function visualKindForTool(call: ToolCall, result?: ToolResult): AIActivityEvent['visualKind'] | undefined {
+    const type = activityTypeForTool(call.tool)
+    if (call.tool === 'delete_task' && result?.success) return 'removed'
+    if (type === 'destructive') return 'pending'
+    if (type === 'write') return 'changed'
+    if (type === 'read') return 'spotlight'
+    return undefined
+  }
+
+  function dispatchCanvasVisual(taskIds: string[], visualKind?: AIActivityEvent['visualKind']): void {
+    if (typeof window === 'undefined' || taskIds.length === 0 || !visualKind) return
+    window.dispatchEvent(new CustomEvent('ai-task-spotlight', {
+      detail: { taskIds, visualKind }
+    }))
+    if (visualKind === 'changed') {
+      for (const taskId of taskIds) {
+        window.dispatchEvent(new CustomEvent('task-action-flash', { detail: { taskId } }))
+      }
+    }
+  }
+
   function beginToolActivity(call: ToolCall, label?: string): string {
     return store.addActivityEvent({
       tool: call.tool,
@@ -329,22 +427,35 @@ export function useAIChat() {
   }
 
   function finishToolActivity(activityId: string, call: ToolCall, result: ToolResult): void {
+    const taskIds = extractAffectedTaskIds(call, result)
+    const visualKind = result.success ? visualKindForTool(call, result) : undefined
     store.updateActivityEvent(activityId, {
       status: result.success ? 'success' : 'failed',
       label: activityLabelForTool(call.tool, result.success ? 'success' : 'failed'),
       message: result.message,
+      taskIds,
+      visualKind,
+      shouldReveal: taskIds.length > 0 && result.success && visualKind !== 'removed',
       undoAvailable: result.success && !!result.undoAction,
     })
+    if (result.success) {
+      dispatchCanvasVisual(taskIds, visualKind)
+    }
   }
 
   function addConfirmationActivity(call: ToolCall): void {
+    const taskIds = extractAffectedTaskIds(call)
     store.addActivityEvent({
       tool: call.tool,
       type: activityTypeForTool(call.tool),
       status: 'waiting_confirmation',
       label: activityLabelForTool(call.tool, 'waiting_confirmation'),
       message: call.tool.replace(/_/g, ' '),
+      taskIds,
+      visualKind: taskIds.length > 0 ? 'pending' : undefined,
+      shouldReveal: taskIds.length > 0,
     })
+    dispatchCanvasVisual(taskIds, 'pending')
   }
 
   // ============================================================================

@@ -122,6 +122,9 @@ describe('AI sidebar-first desktop experience', () => {
       status: 'success',
       label: 'Action complete',
       message: 'Updated task',
+      taskIds: ['task-1'],
+      visualKind: 'changed',
+      shouldReveal: true,
       undoAvailable: true,
       tool: 'update_task',
     })
@@ -147,6 +150,11 @@ describe('AI sidebar-first desktop experience', () => {
       'success',
     ])
     expect(store.activityEvents.some(event => event.undoAvailable)).toBe(true)
+    expect(store.activityEvents.find(event => event.tool === 'update_task')).toMatchObject({
+      taskIds: ['task-1'],
+      visualKind: 'changed',
+      shouldReveal: true,
+    })
   })
 
   it('renders timeline rows from real activity state in the AI sidebar', () => {
@@ -195,6 +203,61 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Reading FlowState')
     expect(wrapper.text()).toContain('Waiting for confirmation')
     expect(wrapper.text()).toContain('Undo available')
+  })
+
+  it('reveals activity-linked tasks on the canvas without auto-revealing every row', async () => {
+    const store = useAIChatStore()
+    store.openPanel()
+    store.addActivityEvent({
+      type: 'read',
+      status: 'success',
+      label: 'Read complete',
+      message: 'Loaded canvas tasks',
+      tool: 'list_tasks',
+      taskIds: ['task-1', 'task-2'],
+      visualKind: 'spotlight',
+      shouldReveal: true,
+    })
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
+    const wrapper = mount(AIChatPanel, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+        stubs: {
+          ChatMessage: true,
+          CustomSelect: true,
+          OverflowTooltip: {
+            template: '<span><slot /></span>',
+          },
+        },
+      },
+    })
+
+    const revealButton = wrapper.get('.activity-reveal-btn')
+    expect(revealButton.text()).toBe('Show')
+
+    await revealButton.trigger('click')
+
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'ai-task-spotlight' }))
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'reveal-task-on-canvas' }))
+    const revealEvent = dispatchSpy.mock.calls.find(([event]) => event.type === 'reveal-task-on-canvas')?.[0] as CustomEvent
+    expect(revealEvent.detail).toEqual({ taskId: 'task-1' })
+    dispatchSpy.mockRestore()
+  })
+
+  it('keeps canvas AI spotlight transform-free and event-driven', () => {
+    const taskNode = src('src/components/canvas/TaskNode.vue')
+
+    expect(taskNode).toContain("window.addEventListener('ai-task-spotlight'")
+    expect(taskNode).toContain("'ai-spotlight': isAISpotlight")
+    expect(taskNode).toContain('@media (prefers-reduced-motion: reduce)')
+    const spotlightCss = taskNode.slice(
+      taskNode.indexOf('.ai-spotlight'),
+      taskNode.indexOf('/*\n * BUG-1808')
+    )
+    expect(spotlightCss).not.toContain('transform:')
   })
 
   it('keeps a visible New Chat control in the AI sidebar header', async () => {

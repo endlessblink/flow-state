@@ -50,6 +50,7 @@ export interface ChatAction {
 
 export type AIActivityStatus = 'running' | 'success' | 'failed' | 'waiting_confirmation' | 'cancelled'
 export type AIActivityType = 'thinking' | 'read' | 'write' | 'destructive'
+export type AIActivityVisualKind = 'spotlight' | 'changed' | 'pending' | 'removed'
 
 export interface AIActivityEvent {
   id: string
@@ -58,6 +59,9 @@ export interface AIActivityEvent {
   status: AIActivityStatus
   label: string
   message?: string
+  taskIds?: string[]
+  visualKind?: AIActivityVisualKind
+  shouldReveal?: boolean
   undoAvailable?: boolean
   timestamp: number
 }

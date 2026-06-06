@@ -59,6 +59,18 @@
 
 ---
 
+### ~~TASK-1819~~: AI chat message language override (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.96 deployed) | **Depends on**: TASK-1814
+
+**Why**: The AI chat header already lets the user control text direction, but mixed Hebrew/English work still tied assistant replies to detected input language. Users need a separate setting for the assistant's message language so replies can be forced to English or Hebrew without changing layout direction or app language.
+
+**Scope**: Add a **Message Language** selector in the AI chat settings header with Auto, English, and Hebrew. Persist the choice in AI chat settings. Apply it only to assistant output language in deterministic and ReAct chat paths; keep intent detection based on the user's actual prompt.
+
+**Shipped**: AI chat settings now include a persisted Message Language control. Auto keeps the previous detected-language behavior; English and Hebrew force assistant replies in that language across deterministic tool responses, bridge/ReAct prompts, confirmations, cancellations, and selected-task helpers. Regression coverage: pure language resolution/mismatch tests, AI chat store persistence tests, AIChatPanel selector interaction test, full unit suite, typecheck, import validation, CSS validation, and Electron build.
+
+---
+
 > **Last Updated**: 2026-06-06
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`

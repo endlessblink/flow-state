@@ -40,7 +40,7 @@ import {
 import type { NativeToolCall } from '@/services/ai/types'
 import { useAgentChains } from './useAgentChains'
 import { optimizeTaskContext, buildTaskStats } from '@/services/ai/pipeline/contextOptimizer'
-import { detectLanguage, detectLanguageMismatch } from '@/services/ai/pipeline/languageDetector'
+import { detectLanguage } from '@/services/ai/pipeline/languageDetector'
 import { cleanResponse } from '@/services/ai/pipeline/responseValidator'
 import { digestToolResults } from '@/services/ai/pipeline/preDigestedReasoning'
 import { detectFluff, extractTaskTitlesFromResults } from '@/services/ai/pipeline/fluffDetector'
@@ -80,6 +80,23 @@ export interface QuickAction {
   message: string
   /** If set, the tool is called directly instead of sending to AI */
   directTool?: ToolCall | null
+}
+
+export type ChatLanguage = 'auto' | 'en' | 'he'
+type ChatOutputLanguage = 'en' | 'he'
+
+export function resolveChatOutputLanguage(detectedLanguage: ChatOutputLanguage, chatLanguage: ChatLanguage): ChatOutputLanguage {
+  return chatLanguage === 'auto' ? detectedLanguage : chatLanguage
+}
+
+export function detectExpectedLanguageMismatch(expectedLanguage: ChatOutputLanguage, outputText: string): boolean {
+  const outputLanguage = detectLanguage(outputText)
+  if (outputLanguage === 'unknown') return false
+  return outputLanguage !== expectedLanguage
+}
+
+function languageNameFor(language: ChatOutputLanguage): string {
+  return language === 'he' ? 'Hebrew (עברית)' : 'English'
 }
 
 // ============================================================================
@@ -283,6 +300,7 @@ export function useAIChat() {
     error,
     visibleMessages,
     canSend,
+    chatLanguage,
     chatDirection
   } = storeToRefs(store)
 
@@ -291,6 +309,8 @@ export function useAIChat() {
 
   // Last detected language — used by confirmation/cancel handlers outside the ReAct scope
   const lastDetectedLanguage = ref<'he' | 'en'>('en')
+
+  const currentOutputLanguage = () => resolveChatOutputLanguage(lastDetectedLanguage.value, chatLanguage.value)
 
   // Schedule onboarding: only show once per session
   const scheduleOnboardingShown = ref(false)
@@ -454,6 +474,7 @@ export function useAIChat() {
     const personalityPrompt = getPersonalitySystemPrompt()
     const baseIdentity = 'You are FlowState AI, a smart productivity assistant that THINKS and ANALYZES.'
     const identity = personalityPrompt ? `${personalityPrompt}\n\n${baseIdentity}` : baseIdentity
+    const languageName = languageNameFor(language)
 
     const parts: string[] = [
       identity,
@@ -462,7 +483,7 @@ export function useAIChat() {
       'You are a thoughtful assistant who understands the user\'s work, weighs priorities, and gives actionable advice. You have full access to the user\'s task data below — USE IT to reason and provide insights. Don\'t just search and dump results. THINK about what matters most, what\'s urgent, what\'s been neglected, and give personalized recommendations.',
       '',
       '## CRITICAL RULES:',
-      '1. LANGUAGE: Respond ENTIRELY in the SAME LANGUAGE as the user\'s LATEST message. Hebrew message → Hebrew response. English message → English response. Task data language does NOT matter — ignore it. NEVER mix languages.',
+      `1. LANGUAGE: Respond ENTIRELY in ${languageName}. Task data language and user input language do NOT matter when this instruction is explicit. NEVER mix languages.`,
       '2. ALWAYS USE TOOLS for task-related questions. When the user asks about tasks (show, list, give me, what are, מה המשימות, תן לי, הצג) — ALWAYS call `list_tasks` or relevant tool. This renders interactive clickable task cards. NEVER answer task questions from context alone — the user needs clickable cards.',
       '3. GIVE REASONS: For each task you mention, explain WHY it matters — use overdue days, priority, project deadlines, subtask progress, time estimates. Example: "Fix login bug — 3 days overdue, high priority, blocks release".',
       '4. Use WRITE tools ONLY when user explicitly asks to create, modify, or delete.',
@@ -554,7 +575,7 @@ export function useAIChat() {
     // Reinforce language at END of prompt (recency bias — models attend more to the end)
     parts.push('')
     parts.push('## REMINDER (READ LAST):')
-    parts.push('YOUR OUTPUT LANGUAGE = the user\'s language. Hebrew input → Hebrew output. English input → English output. NO EXCEPTIONS.')
+    parts.push(`YOUR OUTPUT LANGUAGE = ${languageName}. NO EXCEPTIONS.`)
 
     return parts.join('\n')
   }
@@ -752,7 +773,8 @@ export function useAIChat() {
     }
 
     // Track last detected language for use in confirmation/cancel handlers
-    lastDetectedLanguage.value = routed.language
+    const outputLanguage = resolveChatOutputLanguage(routed.language, chatLanguage.value)
+    lastDetectedLanguage.value = outputLanguage
 
     // Start streaming response
     store.startStreamingMessage()
@@ -760,7 +782,7 @@ export function useAIChat() {
     try {
       // ── Step 1: Handle greeting (no tools, no LLM) ──────────────────
       if (routed.type === 'greeting') {
-        const greeting = getTemplate('greeting', routed.language)
+        const greeting = getTemplate('greeting', outputLanguage)
         const lastMsg = store.messages[store.messages.length - 1]
         if (lastMsg && lastMsg.isStreaming) {
           lastMsg.content = greeting
@@ -775,7 +797,7 @@ export function useAIChat() {
       for (const call of routed.tools) {
         console.log(`[AIChat:Deterministic] Executing tool: ${call.tool}`, call.parameters)
         trackToolCall(sessionId, call.tool)
-        const result = await executeTool(call, routed.language)
+        const result = await executeTool(call, outputLanguage)
         toolResults.push(result)
         console.log(`[AIChat:Deterministic] Tool result:`, result.success, result.message)
 
@@ -815,7 +837,7 @@ export function useAIChat() {
       const failedTools = toolResults.filter(r => !r.success)
       if (failedTools.length > 0 && toolResults.every(r => !r.success)) {
         // All tools failed — show error template
-        const errorMsg = getTemplate('tool_error', routed.language, failedTools[0].message)
+        const errorMsg = getTemplate('tool_error', outputLanguage, failedTools[0].message)
         if (lastMsg && lastMsg.isStreaming) {
           lastMsg.content = errorMsg
           store.streamingContent = errorMsg
@@ -826,7 +848,7 @@ export function useAIChat() {
 
       // ── Step 4a: For skipLLM intents → template response ────────────
       if (routed.skipLLM) {
-        const templateResponse = buildTemplateResponse(routed, toolResults)
+        const templateResponse = buildTemplateResponse({ ...routed, language: outputLanguage }, toolResults)
         if (lastMsg && lastMsg.isStreaming) {
           lastMsg.content = templateResponse
           store.streamingContent = templateResponse
@@ -847,7 +869,7 @@ export function useAIChat() {
       const resultData = toolResults.find(r => r.success)?.data
       const reasoningDirective = isBridgeActive()
         ? ''
-        : buildReasoningDirective(routed.tools[0]?.tool || '', resultData, routed.language)
+        : buildReasoningDirective(routed.tools[0]?.tool || '', resultData, outputLanguage)
 
       // TASK-1814: For strong subscription brains, DON'T pre-digest into
       // "3 days overdue, high priority" lines (that reduces the model to a
@@ -856,15 +878,15 @@ export function useAIChat() {
       // project, dates) and let the model actually reason about real stakes. The
       // user's work patterns/capacity are already injected by the context-aware router.
       const toolResultsSummary = isBridgeActive()
-        ? toolResults.map(r => buildRichTaskData(r, routed.language)).join('\n\n')
+        ? toolResults.map(r => buildRichTaskData(r, outputLanguage)).join('\n\n')
         : toolResults
             .map((r, i) => {
               const toolName = routed.tools[i]?.tool || 'unknown'
-              return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, routed.language)
+              return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, outputLanguage)
             })
             .join('\n\n')
 
-      const languageName = routed.language === 'he' ? 'Hebrew (עברית)' : 'English'
+      const languageName = languageNameFor(outputLanguage)
 
       // Load personal context for the formatter too
       let userScheduleNote = ''
@@ -913,7 +935,7 @@ export function useAIChat() {
       }
 
       // Post-check: language mismatch retry (one attempt)
-      if (detectLanguageMismatch(content, formattedResponse)) {
+      if (detectExpectedLanguageMismatch(outputLanguage, formattedResponse)) {
         console.warn('[AIChat:Deterministic] Language mismatch detected, retrying...')
         const retryMessages: RouterChatMessage[] = [
           ...formatterMessages,
@@ -1094,7 +1116,8 @@ export function useAIChat() {
 
     try {
       const router = await getRouter()
-      const lang: 'he' | 'en' = preProcess.detectedLanguage === 'he' ? 'he' : 'en'
+      const inputLanguage: 'he' | 'en' = preProcess.detectedLanguage === 'he' ? 'he' : 'en'
+      const lang = resolveChatOutputLanguage(inputLanguage, chatLanguage.value)
       lastDetectedLanguage.value = lang
       const conversationMessages: RouterChatMessage[] = await buildMessagesForAI(content, lang)
       const taskType = options.taskType ?? inferTaskType(content)
@@ -1250,7 +1273,7 @@ export function useAIChat() {
             : toolResults
                 .map((r, i) => {
                   const toolName = immediateTools[i]?.tool || 'unknown'
-                  return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, preProcess.detectedLanguage === 'he' ? 'he' : 'en')
+                  return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, lang)
                 })
                 .join('\n\n')
 
@@ -1455,8 +1478,8 @@ export function useAIChat() {
         }
 
         // Language mismatch detection — retry once, then flag in metadata for UI
-        if (detectLanguageMismatch(content, cleaned)) {
-          const languageName = lang === 'he' ? 'Hebrew (עברית)' : 'English'
+        if (detectExpectedLanguageMismatch(lang, cleaned)) {
+          const languageName = languageNameFor(lang)
           console.warn(`[Pipeline:ReAct] Language mismatch detected, retrying in ${languageName}...`)
 
           try {
@@ -1481,7 +1504,7 @@ export function useAIChat() {
 
             if (retryContent.trim()) {
               const retryCleaned = cleanResponse(retryContent)
-              if (!detectLanguageMismatch(content, retryCleaned)) {
+              if (!detectExpectedLanguageMismatch(lang, retryCleaned)) {
                 cleaned = retryCleaned
                 console.log('[Pipeline:ReAct] Language retry succeeded')
               } else {
@@ -1495,7 +1518,7 @@ export function useAIChat() {
           }
 
           // Re-check after retry — flag if still mismatched
-          if (detectLanguageMismatch(content, cleaned)) {
+          if (detectExpectedLanguageMismatch(lang, cleaned)) {
             lastMsg.metadata = {
               ...lastMsg.metadata,
               languageMismatch: true,
@@ -1558,7 +1581,7 @@ export function useAIChat() {
     }
 
     console.log('[AIChat] Executing confirmed tool:', confirmedCall.tool, confirmedCall.parameters)
-    const result = await executeTool(confirmedCall, lastDetectedLanguage.value)
+    const result = await executeTool(confirmedCall, currentOutputLanguage())
     console.log('[AIChat] Confirmed tool result:', result)
 
     if (result.success && result.undoAction) {
@@ -1582,7 +1605,7 @@ export function useAIChat() {
    */
   function cancelPendingAction(): void {
     pendingConfirmation.value = null
-    store.addAssistantMessage(chatUI(lastDetectedLanguage.value, 'actionCancelled'))
+    store.addAssistantMessage(chatUI(currentOutputLanguage(), 'actionCancelled'))
   }
 
   /**
@@ -1637,7 +1660,9 @@ export function useAIChat() {
     const task = store.context.selectedTask
     if (!task) {
       store.addAssistantMessage(
-        'Please select a task first, then ask me to break it down.'
+        currentOutputLanguage() === 'he'
+          ? 'בחר משימה קודם, ואז בקש ממני לפרק אותה.'
+          : 'Please select a task first, then ask me to break it down.'
       )
       return
     }
@@ -1671,7 +1696,7 @@ export function useAIChat() {
 
     try {
       console.log('[AIChat] Executing direct tool:', toolCall.tool, toolCall.parameters)
-      const result = await executeTool(toolCall, lastDetectedLanguage.value)
+      const result = await executeTool(toolCall, currentOutputLanguage())
       console.log('[AIChat] Direct tool result:', result)
 
       if (result.success && result.undoAction) {
@@ -2069,6 +2094,10 @@ export function useAIChat() {
     // Chat Direction
     chatDirection,
     setChatDirection: store.setChatDirection,
+
+    // Chat Language
+    chatLanguage,
+    setChatLanguage: store.setChatLanguage,
 
     // Lifecycle
     initialize,

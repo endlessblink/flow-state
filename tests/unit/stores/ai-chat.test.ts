@@ -109,6 +109,36 @@ describe('useAIChatStore', () => {
     expect(settings?.model).toBe('llama-3.3-70b')
   })
 
+  it('4b. persisted settings include assistant reply language', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    const store = useAIChatStore()
+
+    store.updatePersistedSettings({ provider: 'bridge', model: 'claude' })
+    store.setChatLanguage('he')
+
+    expect(store.chatLanguage).toBe('he')
+    expect(store.getPersistedSettings()?.chatLanguage).toBe('he')
+
+    const raw = JSON.parse(localStorage.getItem('flowstate-ai-settings') || '{}')
+    expect(raw.chatLanguage).toBe('he')
+  })
+
+  it('4c. initialize() keeps legacy settings without chatLanguage on Auto', async () => {
+    localStorage.setItem('flowstate-ai-settings', JSON.stringify({
+      provider: 'groq',
+      model: 'llama-3.3-70b',
+      chatDirection: 'rtl',
+    }))
+
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    const store = useAIChatStore()
+    await store.initialize()
+
+    expect(store.chatDirection).toBe('rtl')
+    expect(store.chatLanguage).toBe('auto')
+    expect(store.getPersistedSettings()?.chatLanguage).toBeUndefined()
+  })
+
   it('5. provider failover: store can switch provider settings (Groq → Ollama)', async () => {
     const { useAIChatStore } = await import('@/stores/aiChat')
     const store = useAIChatStore()

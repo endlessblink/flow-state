@@ -63,6 +63,8 @@ const {
   executeDirectTool,
   aiPersonality,
   setPersonality,
+  chatLanguage,
+  setChatLanguage,
   chatDirection,
   setChatDirection,
 } = useAIChat()
@@ -721,6 +723,34 @@ onUnmounted(() => {
                     >
                       <Zap :size="12" />
                       Grid Handler
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Assistant Reply Language -->
+                <div class="settings-section">
+                  <label class="settings-label">Message Language</label>
+                  <div class="personality-toggle">
+                    <button
+                      class="personality-option"
+                      :class="{ active: chatLanguage === 'auto' }"
+                      @click="setChatLanguage('auto')"
+                    >
+                      Auto
+                    </button>
+                    <button
+                      class="personality-option"
+                      :class="{ active: chatLanguage === 'en' }"
+                      @click="setChatLanguage('en')"
+                    >
+                      English
+                    </button>
+                    <button
+                      class="personality-option"
+                      :class="{ active: chatLanguage === 'he' }"
+                      @click="setChatLanguage('he')"
+                    >
+                      Hebrew
                     </button>
                   </div>
                 </div>

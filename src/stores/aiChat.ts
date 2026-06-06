@@ -179,11 +179,23 @@ export const useAIChatStore = defineStore('aiChat', () => {
   /** Undo buffer for reversible tool actions (session only, not persisted) */
   const undoBuffer = ref<UndoEntry[]>([])
 
-  /** Persisted AI settings (provider/model/chatDirection) */
-  const persistedSettings = ref<{ provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' } | null>(null)
+  type ChatDirection = 'auto' | 'ltr' | 'rtl'
+  type ChatLanguage = 'auto' | 'en' | 'he'
+  type PersistedAISettings = {
+    provider: string
+    model: string
+    chatDirection?: ChatDirection
+    chatLanguage?: ChatLanguage
+  }
+
+  /** Persisted AI settings (provider/model/chatDirection/chatLanguage) */
+  const persistedSettings = ref<PersistedAISettings | null>(null)
 
   /** Chat text direction override (auto = browser default) */
-  const chatDirection = ref<'auto' | 'ltr' | 'rtl'>('auto')
+  const chatDirection = ref<ChatDirection>('auto')
+
+  /** Assistant reply language override (auto = match user input) */
+  const chatLanguage = ref<ChatLanguage>('auto')
 
   /** Supabase sync status indicator */
   const syncStatus = ref<'idle' | 'syncing' | 'synced' | 'error'>('idle')
@@ -327,7 +339,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
   /**
    * Save AI settings to localStorage.
    */
-  function saveSettings(settings: { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' }) {
+  function saveSettings(settings: PersistedAISettings) {
     try {
       persistedSettings.value = settings
       localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings))
@@ -339,11 +351,11 @@ export const useAIChatStore = defineStore('aiChat', () => {
   /**
    * Load AI settings from localStorage.
    */
-  function loadPersistedSettings(): { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' } | null {
+  function loadPersistedSettings(): PersistedAISettings | null {
     try {
       const raw = localStorage.getItem(AI_SETTINGS_KEY)
       if (!raw) return null
-      return JSON.parse(raw) as { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' }
+      return JSON.parse(raw) as PersistedAISettings
     } catch {
       return null
     }
@@ -785,6 +797,10 @@ export const useAIChatStore = defineStore('aiChat', () => {
     if (persistedSettings.value?.chatDirection) {
       chatDirection.value = persistedSettings.value.chatDirection
     }
+    // Restore assistant reply language from persisted settings (backward-compatible: defaults to 'auto')
+    if (persistedSettings.value?.chatLanguage) {
+      chatLanguage.value = persistedSettings.value.chatLanguage
+    }
 
     // --- VPS-first: try Supabase ---
     const supabaseConversations = await loadConversationsFromSupabase()
@@ -951,25 +967,37 @@ export const useAIChatStore = defineStore('aiChat', () => {
    * Update and persist AI provider/model settings.
    */
   function updatePersistedSettings(settings: { provider: string; model: string }) {
-    saveSettings({ ...settings, chatDirection: chatDirection.value })
+    saveSettings({ ...settings, chatDirection: chatDirection.value, chatLanguage: chatLanguage.value })
   }
 
   /**
    * Get the persisted AI settings.
    */
-  function getPersistedSettings(): { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' } | null {
+  function getPersistedSettings(): PersistedAISettings | null {
     return persistedSettings.value
   }
 
   /**
    * Set and persist chat text direction.
    */
-  function setChatDirection(dir: 'auto' | 'ltr' | 'rtl') {
+  function setChatDirection(dir: ChatDirection) {
     chatDirection.value = dir
     if (persistedSettings.value) {
       saveSettings({ ...persistedSettings.value, chatDirection: dir })
     } else {
-      saveSettings({ provider: 'auto', model: '', chatDirection: dir })
+      saveSettings({ provider: 'auto', model: '', chatDirection: dir, chatLanguage: chatLanguage.value })
+    }
+  }
+
+  /**
+   * Set and persist assistant reply language.
+   */
+  function setChatLanguage(language: ChatLanguage) {
+    chatLanguage.value = language
+    if (persistedSettings.value) {
+      saveSettings({ ...persistedSettings.value, chatLanguage: language })
+    } else {
+      saveSettings({ provider: 'auto', model: '', chatDirection: chatDirection.value, chatLanguage: language })
     }
   }
 
@@ -1040,5 +1068,9 @@ export const useAIChatStore = defineStore('aiChat', () => {
     // Chat Direction
     chatDirection,
     setChatDirection,
+
+    // Chat Language
+    chatLanguage,
+    setChatLanguage,
   }
 })

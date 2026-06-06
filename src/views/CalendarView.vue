@@ -12,13 +12,12 @@
       @reload-page="handleReloadPage"
     />
 
-    <!-- Unified Inbox Panel -->
+    <!-- Calendar Inbox Panel -->
     <!-- key forces Vue to recreate component when switching views -->
     <Transition name="sidebar-slide">
-      <UnifiedInboxPanel
+      <CalendarInboxPanel
         v-show="uiStore.secondarySidebarVisible"
         key="calendar-inbox"
-        context="calendar"
         @calendar-drop-to-inbox="handleCalendarDropToInbox"
       />
     </Transition>
@@ -195,7 +194,7 @@ import { useCalendarInteractionHandlers } from '@/composables/calendar/useCalend
 import { useCalendarModals } from '@/composables/calendar/useCalendarModals'
 import { useCalendarNavigation } from '@/composables/calendar/useCalendarNavigation'
 import { useCalendarScroll } from '@/composables/calendar/useCalendarScroll'
-import UnifiedInboxPanel from '@/components/inbox/UnifiedInboxPanel.vue'
+import CalendarInboxPanel from '@/components/inbox/CalendarInboxPanel.vue'
 import CalendarStatusOverlays, { type OperationError, type OperationLoading } from '@/components/calendar/CalendarStatusOverlays.vue'
 import CalendarHeader from '@/components/calendar/CalendarHeader.vue'
 import CalendarDayView from '@/components/calendar/CalendarDayView.vue'

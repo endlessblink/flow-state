@@ -40,7 +40,9 @@ const router = createRouter({
     },
     {
       path: '/canvas',
-      redirect: '/'
+      name: 'canvas-route',
+      component: () => import('@/views/CanvasView.vue'),
+      meta: { requiresAuth: false }
     },
     {
       path: '/calendar',

@@ -197,7 +197,12 @@
     <!-- VIEW TABS AND CONTROLS -->
     <div class="content-header">
       <div class="view-tabs">
-        <router-link v-if="isNavItemVisible('canvas')" to="/" class="view-tab" active-class="active">
+        <router-link
+          v-if="isNavItemVisible('canvas')"
+          to="/canvas"
+          class="view-tab"
+          active-class="active"
+        >
           {{ $t('views.canvas') }}
         </router-link>
         <router-link to="/calendar" class="view-tab" active-class="active">
@@ -209,7 +214,12 @@
         <router-link to="/catalog" class="view-tab" active-class="active">
           {{ $t('views.catalog') }}
         </router-link>
-        <router-link v-if="isNavItemVisible('quick-sort')" to="/quick-sort" class="view-tab" active-class="active">
+        <router-link
+          v-if="isNavItemVisible('quick-sort')"
+          to="/quick-sort"
+          class="view-tab"
+          active-class="active"
+        >
           {{ $t('views.quick_sort') }}
           <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
         </router-link>
@@ -219,7 +229,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTaskStore, type Project } from '@/stores/tasks'
@@ -227,13 +237,11 @@ import { useWorkspaceNavigation } from '@/composables/useWorkspaceNavigation'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
-import { useSettingsStore } from '@/stores/settings'
 import { useUIStore } from '@/stores/ui'
 import { Timer, Play, Pause, Coffee, Square, Armchair, Sparkles, Keyboard, Search } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
-import { useAuthStore } from '@/stores/auth'
 import QuickTaskDropdown from '@/components/timer/QuickTaskDropdown.vue'
 import AppLogo from '@/components/base/AppLogo.vue'
 
@@ -242,8 +250,6 @@ const { t } = useI18n()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const aiChatStore = useAIChatStore()
-const settingsStore = useSettingsStore()
-const authStore = useAuthStore()
 const uiStore = useUIStore()
 const { isNavItemVisible } = useWorkspaceNavigation()
 
@@ -259,6 +265,7 @@ const activeTaskProject = computed(() => {
 // Route name to display title mapping
 const routeNameToTitle = computed(() => ({
   'canvas': t('views.canvas'),
+  'canvas-route': t('views.canvas'),
   'calendar': t('views.calendar'),
   'board': t('views.board'),
   'catalog': t('views.catalog'),

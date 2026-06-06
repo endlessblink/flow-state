@@ -8,12 +8,13 @@ test.describe('Calendar inbox layout', () => {
     })
   })
 
-  test('renders the inbox as an integrated calendar side rail', async ({ page }) => {
+  test('renders the dedicated calendar inbox instead of the canvas inbox shell', async ({ page }) => {
     await page.goto('/#/calendar')
     await page.waitForLoadState('networkidle')
 
-    const inbox = page.locator('.unified-inbox-panel.is-calendar-side').first()
+    const inbox = page.locator('.calendar-inbox-panel').first()
     await expect(inbox).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.unified-inbox-panel')).toHaveCount(0)
 
     const styles = await inbox.evaluate((element) => {
       const computed = window.getComputedStyle(element)
@@ -21,21 +22,14 @@ test.describe('Calendar inbox layout', () => {
         borderRadius: computed.borderRadius,
         boxShadow: computed.boxShadow,
         width: element.getBoundingClientRect().width,
-        borderTopWidth: computed.borderTopWidth,
-        borderRightWidth: computed.borderRightWidth,
-        borderBottomWidth: computed.borderBottomWidth,
-        borderLeftWidth: computed.borderLeftWidth
+        marginTop: computed.marginTop
       }
     })
 
-    expect(styles.borderRadius).toBe('0px')
-    expect(styles.boxShadow).toBe('none')
+    expect(styles.borderRadius).not.toBe('0px')
+    expect(styles.boxShadow).not.toBe('none')
     expect(styles.width).toBeGreaterThanOrEqual(300)
     expect(styles.width).toBeLessThanOrEqual(340)
-    expect(styles.borderTopWidth).toBe('0px')
-    expect(styles.borderBottomWidth).toBe('0px')
-    expect(
-      styles.borderRightWidth === '1px' || styles.borderLeftWidth === '1px'
-    ).toBe(true)
+    expect(styles.marginTop).not.toBe('0px')
   })
 })

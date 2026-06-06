@@ -1,5 +1,12 @@
 <template>
-  <div class="calendar-inbox-panel" :class="{ collapsed: isCollapsed }">
+  <div
+    class="calendar-inbox-panel"
+    :class="{ collapsed: isCollapsed, 'inbox-drop-active': isCalendarDropTarget }"
+    @dragover.prevent="handleInboxDragOver"
+    @dragenter.prevent="handleInboxDragEnter"
+    @dragleave="handleInboxDragLeave"
+    @drop.prevent="handleInboxDrop"
+  >
     <!-- Header -->
     <CalendarInboxHeader
       v-model:is-collapsed="isCollapsed"
@@ -69,9 +76,13 @@ import CalendarInboxHeader from './calendar/CalendarInboxHeader.vue'
 import CalendarInboxInput from './calendar/CalendarInboxInput.vue'
 import CalendarInboxList from './calendar/CalendarInboxList.vue'
 
+const emit = defineEmits<{
+  (e: 'calendarDropToInbox', taskId: string): void
+}>()
+
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
-const { createTaskWithUndo, deleteTaskWithUndo } = useUnifiedUndoRedo()
+const { createTaskWithUndo } = useUnifiedUndoRedo()
 const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 const { filterDefaults } = useFilterDefaults()
 
@@ -101,6 +112,7 @@ const {
 // Local State
 const newTaskTitle = ref('')
 const draggingTaskId = ref<string | null>(null)
+const isCalendarDropTarget = ref(false)
 
 // --- Actions (kept inline for simplicity as they are mostly wrappers) ---
 
@@ -208,6 +220,57 @@ const handleEditTask = (task: Task) => {
     detail: { taskId: task.id }
   }))
 }
+
+const handleInboxDragOver = (e: DragEvent) => {
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+}
+
+const handleInboxDragEnter = (e: DragEvent) => {
+  try {
+    if (window.__draggingTaskId || e.dataTransfer?.types.includes('application/json')) {
+      isCalendarDropTarget.value = true
+    }
+  } catch {
+    // Ignore dataTransfer access issues in browser edge cases.
+  }
+}
+
+const handleInboxDragLeave = (e: DragEvent) => {
+  const related = e.relatedTarget as HTMLElement | null
+  const panel = e.currentTarget as HTMLElement
+  if (!related || !panel.contains(related)) {
+    isCalendarDropTarget.value = false
+  }
+}
+
+const handleInboxDrop = (e: DragEvent) => {
+  isCalendarDropTarget.value = false
+
+  let taskId: string | null = null
+  let source: string | null = null
+
+  try {
+    const jsonStr = e.dataTransfer?.getData('application/json')
+    if (jsonStr) {
+      const data = JSON.parse(jsonStr)
+      taskId = data.taskId
+      source = data.source
+    }
+  } catch {
+    // Fall back to the global drag signal below.
+  }
+
+  if (!taskId) {
+    taskId = window.__draggingTaskId || null
+    source = 'calendar-event'
+  }
+
+  if (taskId && (source === 'calendar-event' || source === 'calendar')) {
+    emit('calendarDropToInbox', taskId)
+  }
+}
 </script>
 
 <style scoped>
@@ -233,6 +296,12 @@ const handleEditTask = (task: Task) => {
 .calendar-inbox-panel.collapsed {
   width: 60px;
   padding: var(--space-4) var(--space-2);
+}
+
+.calendar-inbox-panel.inbox-drop-active {
+  border-color: var(--brand-primary);
+  box-shadow: inset 0 0 0 2px var(--brand-primary), 0 0 16px var(--brand-primary-dim);
+  background: var(--brand-primary-subtle);
 }
 
 .inbox-content {

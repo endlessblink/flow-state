@@ -44,6 +44,27 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
     expect(r?.groups.map(g => g.name)).toEqual(['First focus block', 'Second focus block'])
   })
 
+  it('preserves smart-lanes metadata and new task suggestions', () => {
+    const text = 'Make a sales lane.\n\n' + block({
+      kind: 'smart_lanes',
+      groups: [
+        {
+          name: 'Sales Push',
+          items: [{ i: 2, reason: 'seed list first' }],
+          newTasks: [
+            { title: 'Draft follow-up sequence', priority: 'medium', reason: 'turns list into outreach' },
+          ],
+        },
+      ],
+    })
+    const r = parseCardGroups(text, results)
+    expect(r?.kind).toBe('smart_lanes')
+    expect(r?.groups[0].tasks[0].title).toBe('Build outreach list')
+    expect(r?.groups[0].newTasks).toEqual([
+      { title: 'Draft follow-up sequence', priority: 'medium', reason: 'turns list into outreach' },
+    ])
+  })
+
   it('drops items whose index has no matching task (never shows a phantom card)', () => {
     const text = block({ groups: [{ name: 'X', items: [{ i: 1, reason: 'ok' }, { i: 99, reason: 'nope' }] }] })
     const r = parseCardGroups(text, results)
@@ -79,6 +100,14 @@ describe('stripCardsBlock — NO raw JSON or [N] markers leak into the prose', (
     expect(out).toBe('שלוש מגמות בולטות: ...')
     expect(out).not.toContain('"groups"')
     expect(out).not.toContain('"i":16')
+  })
+
+  it('strips a DE-FENCED bare {"kind":"smart_lanes","groups":…} block', () => {
+    const text = 'Use these lanes.\n\n{"kind":"smart_lanes","groups":[{"name":"Sales","items":[{"i":2,"reason":"same push"}]}]}'
+    const out = stripCardsBlock(text)
+    expect(out).toBe('Use these lanes.')
+    expect(out).not.toContain('"smart_lanes"')
+    expect(out).not.toContain('"groups"')
   })
 
   it('strips leaked [N] / [2→3] / [2,3] task-index markers from prose', () => {

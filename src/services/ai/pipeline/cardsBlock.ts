@@ -16,13 +16,14 @@ export interface CardToolResult {
 export interface CardGroup {
   name: string
   tasks: Array<Record<string, unknown> & { reason: string }>
+  newTasks?: Array<{ title: string; priority?: string; reason?: string }>
 }
 
 export interface ParsedCards {
   groups: CardGroup[]
   total: number
   rawBlock: string
-  kind?: 'day_plan'
+  kind?: 'day_plan' | 'smart_lanes'
 }
 
 /**
@@ -35,7 +36,11 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
   if (!m) return null
   let parsed: {
     kind?: string
-    groups?: Array<{ name?: string; items?: Array<{ i?: number; reason?: string }> }>
+    groups?: Array<{
+      name?: string
+      items?: Array<{ i?: number; reason?: string }>
+      newTasks?: Array<{ title?: string; priority?: string; reason?: string }>
+    }>
   }
   try { parsed = JSON.parse(m[1].trim()) } catch { return null }
   if (!Array.isArray(parsed?.groups) || !parsed.groups.length) return null
@@ -43,23 +48,34 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
   const taskResult = toolResults.find(r =>
     r.success && Array.isArray(r.data) && (r.data[0] as Record<string, unknown>)?.title !== undefined,
   )
-  const tasks = (taskResult?.data as Array<Record<string, unknown>>) || []
-  if (!tasks.length) return null
+  const indexedTasks = (taskResult?.data as Array<Record<string, unknown>>) || []
+  if (!indexedTasks.length) return null
 
   const groups = parsed.groups
-    .map(g => ({
-      name: String(g.name || '').trim(),
-      tasks: (Array.isArray(g.items) ? g.items : [])
+    .map(g => {
+      const groupTasks = (Array.isArray(g.items) ? g.items : [])
         .map(it => {
-          const t = tasks[(Number(it.i) || 0) - 1]
+          const t = indexedTasks[(Number(it.i) || 0) - 1]
           return t ? { ...t, reason: String(it.reason || '').trim() } : null
         })
-        .filter((t): t is Record<string, unknown> & { reason: string } => t !== null),
-    }))
-    .filter(g => g.tasks.length > 0)
+        .filter((t): t is Record<string, unknown> & { reason: string } => t !== null)
+      const newTasks = (Array.isArray(g.newTasks) ? g.newTasks : [])
+        .map(item => ({
+          title: String(item.title || '').trim(),
+          priority: typeof item.priority === 'string' ? item.priority : undefined,
+          reason: typeof item.reason === 'string' ? item.reason.trim() : undefined,
+        }))
+        .filter(item => item.title.length > 0)
+      return {
+        name: String(g.name || '').trim(),
+        tasks: groupTasks,
+        ...(newTasks.length ? { newTasks } : {}),
+      }
+    })
+    .filter(g => g.tasks.length > 0 || (g.newTasks?.length ?? 0) > 0)
 
-  const kind = parsed.kind === 'day_plan' ? 'day_plan' : undefined
-  return groups.length ? { groups, total: tasks.length, rawBlock: m[0], kind } : null
+  const kind = parsed.kind === 'day_plan' || parsed.kind === 'smart_lanes' ? parsed.kind : undefined
+  return groups.length ? { groups, total: indexedTasks.length, rawBlock: m[0], kind } : null
 }
 
 /**
@@ -71,7 +87,7 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
 export function stripCardsBlock(text: string): string {
   return text
     .replace(/```+\s*cards[\s\S]*$/i, '')
-    .replace(/\{\s*"groups"\s*:[\s\S]*$/, '')
+    .replace(/\{\s*(?:"kind"\s*:\s*"[^"]+"\s*,\s*)?"groups"\s*:[\s\S]*$/, '')
     .replace(/\s*\[\d+(?:\s*(?:→|->|,)\s*\d+)*\]/g, '')
     .trim()
 }

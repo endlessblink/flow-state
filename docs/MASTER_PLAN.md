@@ -20,9 +20,9 @@
 
 ---
 
-### TASK-1816: Flagship flow — Smart task lanes (AI suggests lanes + breaks big tasks into them) (📋 PLANNED)
+### ~~TASK-1816~~: Flagship flow — Smart task lanes (AI suggests lanes + breaks big tasks into them) (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (opened 2026-06-05) | **Depends on**: TASK-1814, TASK-1812 (add-tasks-to-lane shipped)
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.94 deployed) | **Depends on**: TASK-1814, TASK-1812 (add-tasks-to-lane shipped)
 
 **Why**: The second original ask. When creating a task lane, the AI should (a) suggest strong lanes for the user's work, and (b) break a large task down into actionable sub-tasks placed into that lane.
 
@@ -32,6 +32,8 @@
 - Structured output + index-referenced items like the cards block, so results render as reviewable items before commit.
 
 **Context**: Combine `useAITaskAssist` (breakdown JSON parsing, 7 unit tests) + TASK-1812 lane plumbing + the bridge. Reuse `cardsBlock.ts` structured-output pattern. Est. below.
+
+**Shipped**: Explicit lane/smart-lane prompts now route to a deterministic `smart_lanes` mode (`list_tasks` with rich task context). The bridge formatter emits `cards kind=smart_lanes` with existing task refs plus optional `newTasks` for child-task breakdowns. AI chat renders reviewable lane cards with an **Apply lanes** action. Applying creates lanes via the existing lane store, assigns referenced existing tasks through undo-aware bulk updates, and creates suggested child tasks in the new lane through `createTaskWithUndo`. Regression coverage: `ai-intent-smart-lanes.test.ts`, `ai-cards-block.test.ts`, plus an e2e stub for the smart-lanes UI path. Local authenticated Playwright remains blocked by local Supabase service-role configuration; direct Vite/browser smoke mounted the AI route.
 
 ---
 
@@ -67,7 +69,7 @@
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (opened 2026-06-04)
 
-**Progress (2026-06-06):** Bridge live + both brains work. Fixed the core "strong model = weak answers" trap — the pipeline was pre-digesting tasks into "X days overdue" lines (LLM reduced to a formatter). Now feeds FULL task content + skips the pre-computed directive + prompts holistically (group/dependencies/trend). Eval harness shows **1.3→4.9/5**. Built grouped prioritization **cards** (model emits a `cards` JSON block → parsed → interactive cards with per-task reasons; raw-JSON-leak bug fixed + 8 unit regression tests). Made the **ReAct/freeform path** intelligent too so no phrasing bypasses it (verified e2e + live Hebrew). Prose tightened to 1-2 sentences. Added skills: cross-project `llm-feature-quality` + project `flowstate-ai-chat`. 2394 unit tests green. Deployed Electron v1.4.92 beyond localhost; TASK-1815 overwhelm-reorder shipped in Electron v1.4.93; remaining flagship work is smart-lanes.
+**Progress (2026-06-06):** Bridge live + both brains work. Fixed the core "strong model = weak answers" trap — the pipeline was pre-digesting tasks into "X days overdue" lines (LLM reduced to a formatter). Now feeds FULL task content + skips the pre-computed directive + prompts holistically (group/dependencies/trend). Eval harness shows **1.3→4.9/5**. Built grouped prioritization **cards** (model emits a `cards` JSON block → parsed → interactive cards with per-task reasons; raw-JSON-leak bug fixed + 8 unit regression tests). Made the **ReAct/freeform path** intelligent too so no phrasing bypasses it (verified e2e + live Hebrew). Prose tightened to 1-2 sentences. Added skills: cross-project `llm-feature-quality` + project `flowstate-ai-chat`. 2398 unit tests green. Deployed Electron v1.4.92 beyond localhost; TASK-1815 overwhelm-reorder shipped in Electron v1.4.93; TASK-1816 smart-lanes shipped in Electron v1.4.94.
 
 **Why**: Current in-app AI is "not usable" — verified by running the exact app prompts (`useAITaskAssist`) on the default model (Ollama llama3.2 3B) against real tasks: English breakdown returned prose not JSON (→ "could not be parsed" error), Hebrew breakdown returned nonsense words in a medical-prep task, smart-suggest gave "15 min to plan a weekend trip, confidence 1.0". Three root causes: weak brain, shallow prompts (title-only, no workload context), and the requested "overwhelmed → reorder my day" flow does not exist at all.
 

@@ -33,6 +33,7 @@ import { sanitizeMarkdownHtml } from '@/utils/security'
 import { detectLanguage } from '@/services/ai/pipeline/languageDetector'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useCanvasStore } from '@/stores/canvas'
+import { useLaneStore } from '@/stores/lanes'
 import { buildDayPlanTaskUpdates } from '@/services/ai/pipeline/dayPlan'
 import { getUndoSystem } from '@/composables/undoSingleton'
 
@@ -83,6 +84,9 @@ const actionLoading = ref<Record<string, string>>({}) // taskId -> 'done' | 'tim
 const dayPlanApplying = ref(false)
 const dayPlanApplied = ref(false)
 const dayPlanError = ref('')
+const smartLaneApplying = ref(false)
+const smartLaneApplied = ref(false)
+const smartLaneError = ref('')
 
 // Schedule onboarding
 const selectedDays = ref<Set<string>>(new Set())
@@ -92,6 +96,7 @@ const scheduleSaved = ref(false)
 // Live task data from Pinia store (reactive — updates when user edits tasks)
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
+const laneStore = useLaneStore()
 
 const taskMap = computed(() => {
   const map = new Map<string, Task>()
@@ -241,15 +246,29 @@ const toolResults = computed(() => {
  */
 const cardGroups = computed(() => {
   const meta = props.message.metadata as Record<string, unknown>
-  const cg = meta?.cardGroups as { groups?: Array<{ name: string; tasks: Array<TaskListItem & { reason?: string }> }>; total?: number; kind?: string } | undefined
+  const cg = meta?.cardGroups as {
+    groups?: Array<{
+      name: string
+      tasks: Array<TaskListItem & { reason?: string }>
+      newTasks?: Array<{ title: string; priority?: string; reason?: string }>
+    }>
+    total?: number
+    kind?: string
+  } | undefined
   if (!cg?.groups?.length || isStreaming.value) return null
   return cg
 })
 
 const isDayPlan = computed(() => cardGroups.value?.kind === 'day_plan')
+const isSmartLanes = computed(() => cardGroups.value?.kind === 'smart_lanes')
 const dayPlanTaskCount = computed(() => {
   const groups = cardGroups.value?.groups ?? []
   return groups.reduce((sum, group) => sum + group.tasks.length, 0)
+})
+const smartLaneApplyCount = computed(() => {
+  const groups = cardGroups.value?.groups ?? []
+  return groups.reduce((sum, group) =>
+    sum + 1 + group.tasks.length + (group.newTasks?.length ?? 0), 0)
 })
 
 /**
@@ -461,6 +480,58 @@ async function applyDayPlan(event: MouseEvent) {
   }
 }
 
+function normalizeTaskPriority(priority?: string): Task['priority'] {
+  if (priority === 'low' || priority === 'medium' || priority === 'high') return priority
+  return 'medium'
+}
+
+async function applySmartLanes(event: MouseEvent) {
+  event.stopPropagation()
+  const plan = cardGroups.value
+  if (!plan?.groups?.length || smartLaneApplying.value || smartLaneApplied.value) return
+
+  smartLaneApplying.value = true
+  smartLaneError.value = ''
+  try {
+    const undo = getUndoSystem()
+    const updates: Array<{ id: string; updates: Partial<Task> }> = []
+    const laneColors = ['#4ECDC4', '#7C3AED', '#F59E0B', '#10B981', '#EF4444']
+
+    for (const [index, group] of plan.groups.entries()) {
+      const laneName = group.name?.trim() || `AI Lane ${index + 1}`
+      const lane = await laneStore.createLane({
+        name: laneName,
+        color: laneColors[index % laneColors.length],
+      })
+      const parentTaskId = group.tasks.length === 1 ? group.tasks[0].id : null
+
+      for (const task of group.tasks) {
+        if (task.id) updates.push({ id: task.id, updates: { laneId: lane.id } })
+      }
+
+      for (const newTask of group.newTasks ?? []) {
+        await undo.createTaskWithUndo({
+          title: newTask.title,
+          status: 'todo',
+          priority: normalizeTaskPriority(newTask.priority),
+          laneId: lane.id,
+          parentTaskId,
+        })
+      }
+    }
+
+    if (updates.length > 0) {
+      await undo.bulkUpdateTasksWithUndo(updates, 'Apply AI smart lanes')
+    }
+    smartLaneApplied.value = true
+  } catch (err) {
+    console.error('[ChatMessage] Apply smart lanes failed:', err)
+    smartLaneError.value = 'Could not apply these lanes.'
+  } finally {
+    smartLaneApplying.value = false
+  }
+}
+
 // ============================================================================
 // Schedule Onboarding
 // ============================================================================
@@ -610,6 +681,20 @@ async function saveSchedule() {
           </button>
           <span v-if="dayPlanError" class="day-plan-error">{{ dayPlanError }}</span>
         </div>
+        <div v-else-if="isSmartLanes" class="day-plan-toolbar">
+          <button
+            class="day-plan-apply-btn"
+            :class="{ applied: smartLaneApplied }"
+            :disabled="smartLaneApplying || smartLaneApplied"
+            @click="applySmartLanes"
+          >
+            <Loader2 v-if="smartLaneApplying" :size="14" class="spin" />
+            <Check v-else-if="smartLaneApplied" :size="14" />
+            <ListOrdered v-else :size="14" />
+            <span>{{ smartLaneApplied ? 'Lanes applied' : `Apply lanes (${smartLaneApplyCount})` }}</span>
+          </button>
+          <span v-if="smartLaneError" class="day-plan-error">{{ smartLaneError }}</span>
+        </div>
         <div v-for="(group, gi) in cardGroups.groups" :key="'g' + gi" class="card-group">
           <div v-if="group.name" class="card-group-name" dir="auto">
             {{ group.name }}
@@ -656,6 +741,21 @@ async function saveSchedule() {
               <span v-if="timerStartedTaskIds.has(task.id)" class="inline-action-timer-badge"><Play :size="12" /> Timer</span>
             </div>
           </button>
+          <div
+            v-for="(newTask, ni) in group.newTasks ?? []"
+            :key="'new-' + gi + '-' + ni"
+            class="task-list-item grouped-card grouped-card-new"
+          >
+            <span class="task-priority-dot" :style="{ background: priorityColor(newTask.priority) }" />
+            <div class="grouped-card-body">
+              <span class="task-title" dir="auto">{{ newTask.title }}</span>
+              <span v-if="newTask.reason" class="grouped-card-reason" dir="auto">{{ newTask.reason }}</span>
+              <div class="task-meta-row">
+                <span class="task-status-badge status-todo">new task</span>
+                <span v-if="newTask.priority" class="task-status-badge">{{ newTask.priority }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1431,6 +1531,11 @@ async function saveSchedule() {
   display: flex !important;
   align-items: flex-start;
   gap: var(--space-2);
+}
+.grouped-card-new {
+  border-style: dashed;
+  background: var(--glass-bg-soft);
+  cursor: default;
 }
 .grouped-card-body {
   display: flex;

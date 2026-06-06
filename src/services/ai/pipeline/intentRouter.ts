@@ -24,6 +24,7 @@ import type { EntityMemory } from './entityMemory'
 import type { DetectedLanguage } from './types'
 import { getSharedRouter } from '../routerFactory'
 import { isOverwhelmedDayPlanRequest } from './dayPlan'
+import { isSmartLaneRequest } from './smartLanes'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -61,7 +62,7 @@ export interface RoutedIntent {
    * Only set for deterministic write actions where no reasoning is needed.
    */
   skipLLM?: boolean
-  responseMode?: 'day_plan'
+  responseMode?: 'day_plan' | 'smart_lanes'
 }
 
 // ---------------------------------------------------------------------------
@@ -429,6 +430,16 @@ export function routeIntentByKeywords(
     }
   }
 
+  if (isSmartLaneRequest(userMessage)) {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 30 } }],
+      language,
+      formatDirective: 'Build smart task lanes from the real task list. Suggest lane names/themes, include existing tasks that belong in each lane, and add concrete new child tasks only when a large task should be broken down.',
+      responseMode: 'smart_lanes',
+    }
+  }
+
   // ── 2. Keyword-based tool hint matching ──────────────────────────────────
   //
   // getToolHints() uses the same KEYWORD_MAPPINGS table (more-specific entries
@@ -606,6 +617,16 @@ export async function routeIntent(
       language,
       formatDirective: 'Build a concrete ordered day plan. Sequence the tasks into focus blocks, and include only what should actually be done today.',
       responseMode: 'day_plan',
+    }
+  }
+
+  if (isSmartLaneRequest(userMessage)) {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 30 } }],
+      language,
+      formatDirective: 'Build smart task lanes from the real task list. Suggest lane names/themes, include existing tasks that belong in each lane, and add concrete new child tasks only when a large task should be broken down.',
+      responseMode: 'smart_lanes',
     }
   }
 

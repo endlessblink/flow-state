@@ -88,3 +88,41 @@ test('overwhelmed prompt renders an applyable ordered day plan', async ({ page }
   await expect(page.locator('.day-plan-apply-btn', { hasText: 'Plan applied' })).toBeVisible({ timeout: 15000 })
   await page.screenshot({ path: '.dev/screenshots/ai-day-plan-apply.png', fullPage: false }).catch(() => {})
 })
+
+test('smart-lane prompt renders reviewable lanes and applies them', async ({ page }) => {
+  const cardsBlock = '```cards\n' + JSON.stringify({
+    kind: 'smart_lanes',
+    groups: [
+      {
+        name: 'Sales Push',
+        items: [{ i: 1, reason: 'anchors the lane' }],
+        newTasks: [{ title: 'Draft follow-up sequence', priority: 'medium', reason: 'turns list into outreach' }],
+      },
+    ],
+  }) + '\n```'
+
+  await page.route('**/ai-bridge/health', (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, brains: { claude: true, codex: true } }) }))
+  await page.route('**/ai-bridge/v1/chat', async (r) => {
+    await r.fulfill({
+      status: 200,
+      headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
+      body: sse({ delta: `The strongest lane is the sales push.\n\n${cardsBlock}` }, { done: true, brain: 'claude' }),
+    })
+  })
+
+  await page.goto('/#/ai')
+  await page.locator('.new-chat-btn').first().click({ timeout: 10000 }).catch(() => {})
+  const input = page.locator('.chat-input')
+  await expect(input).toBeVisible({ timeout: 15000 })
+
+  await input.fill('Suggest smart lanes for my current tasks')
+  await page.locator('.send-btn').click()
+
+  await expect(page.locator('.card-group-name', { hasText: 'Sales Push' })).toBeVisible({ timeout: 30000 })
+  await expect(page.locator('.grouped-card-new', { hasText: 'Draft follow-up sequence' })).toBeVisible()
+  await expect(page.locator('.day-plan-apply-btn', { hasText: 'Apply lanes (3)' })).toBeVisible()
+  await page.locator('.day-plan-apply-btn').click()
+  await expect(page.locator('.day-plan-apply-btn', { hasText: 'Lanes applied' })).toBeVisible({ timeout: 15000 })
+  await page.screenshot({ path: '.dev/screenshots/ai-smart-lanes-apply.png', fullPage: false }).catch(() => {})
+})

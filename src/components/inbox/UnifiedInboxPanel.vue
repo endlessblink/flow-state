@@ -4,6 +4,7 @@
     :class="{
       collapsed: isCollapsed,
       'is-right-side': context === 'canvas',
+      'is-calendar-side': context === 'calendar',
       'inbox-drop-active': isCalendarDropTarget
     }"
     @dragover.prevent="handleInboxDragOver"
@@ -341,10 +342,29 @@ const handleStartTimer = async (task: Task) => {
   height: auto;
 }
 
+.unified-inbox-panel.is-calendar-side {
+  width: clamp(300px, 24vw, 340px);
+  min-width: 300px;
+  max-width: 340px;
+  height: 100%;
+  max-height: none;
+  padding: var(--space-3);
+  background: var(--surface-1);
+  border-width: 0 1px 0 0;
+  border-color: var(--border-subtle);
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
 /* RTL: flip inbox panel to right side (near sidebar) */
 [dir="rtl"] .unified-inbox-panel.is-right-side {
   right: auto;
   left: 0.5rem;
+}
+
+[dir="rtl"] .unified-inbox-panel.is-calendar-side {
+  border-width: 0 0 0 1px;
 }
 
 .unified-inbox-panel.collapsed {
@@ -355,6 +375,13 @@ const handleStartTimer = async (task: Task) => {
   padding: var(--space-2);
   /* Center all content in collapsed state */
   align-items: center;
+}
+
+.unified-inbox-panel.is-calendar-side.collapsed {
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  padding: var(--space-2);
 }
 
 .collapsed-badges-container {

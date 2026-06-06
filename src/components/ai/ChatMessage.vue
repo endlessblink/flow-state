@@ -229,6 +229,7 @@ export interface ChatToolResultData {
  * Includes full data for rich rendering (task lists, summaries, etc.)
  */
 const toolResults = computed(() => {
+  if (isStreaming.value) return []
   const meta = props.message.metadata as Record<string, unknown>
   if (!meta?.toolResults || !Array.isArray(meta.toolResults)) return []
   return meta.toolResults as Array<{

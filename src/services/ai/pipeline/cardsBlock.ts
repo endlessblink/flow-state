@@ -26,6 +26,25 @@ export interface ParsedCards {
   kind?: 'day_plan' | 'smart_lanes' | 'weekly_review' | 'week_plan'
 }
 
+function findIndexedTasks(toolResults: CardToolResult[]): Array<Record<string, unknown>> {
+  const taskResult = toolResults.find(r =>
+    r.success && Array.isArray(r.data) && (r.data[0] as Record<string, unknown>)?.title !== undefined,
+  )
+  return (taskResult?.data as Array<Record<string, unknown>>) || []
+}
+
+function normalizeForMentionMatch(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[“”„׳״'"]/g, '')
+    .replace(/[־–—]/g, '-')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase()
+}
+
 /**
  * Parse a ```cards JSON block into grouped tasks. Each item references a task by its
  * [N] index (1-based) into the tool result's task list (same order the model saw).
@@ -45,10 +64,7 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
   try { parsed = JSON.parse(m[1].trim()) } catch { return null }
   if (!Array.isArray(parsed?.groups) || !parsed.groups.length) return null
 
-  const taskResult = toolResults.find(r =>
-    r.success && Array.isArray(r.data) && (r.data[0] as Record<string, unknown>)?.title !== undefined,
-  )
-  const indexedTasks = (taskResult?.data as Array<Record<string, unknown>>) || []
+  const indexedTasks = findIndexedTasks(toolResults)
   if (!indexedTasks.length) return null
 
   const groups = parsed.groups
@@ -76,6 +92,47 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
 
   const kind = parsed.kind === 'day_plan' || parsed.kind === 'smart_lanes' || parsed.kind === 'weekly_review' || parsed.kind === 'week_plan' ? parsed.kind : undefined
   return groups.length ? { groups, total: indexedTasks.length, rawBlock: m[0], kind } : null
+}
+
+/**
+ * Answer-bound recovery for formatter failures: if the model names real tasks in
+ * prose but forgets/mangles the cards block, create cards only for the exact task
+ * titles that appear in that visible answer. This keeps tool results from becoming
+ * a deterministic standalone list while still showing real clickable tasks.
+ */
+export function parseMentionedTaskCards(
+  text: string,
+  toolResults: CardToolResult[],
+  groupName = 'Tasks mentioned in answer',
+  kind?: ParsedCards['kind'],
+): ParsedCards | null {
+  const indexedTasks = findIndexedTasks(toolResults)
+  if (!indexedTasks.length) return null
+
+  const normalizedText = normalizeForMentionMatch(stripCardsBlock(text))
+  if (!normalizedText) return null
+
+  const mentioned = indexedTasks
+    .map(task => {
+      const title = typeof task.title === 'string' ? task.title.trim() : ''
+      if (!title) return null
+      const normalizedTitle = normalizeForMentionMatch(title)
+      if (!normalizedTitle) return null
+      const matchIndex = normalizedText.indexOf(normalizedTitle)
+      if (matchIndex < 0) return null
+      return { task: { ...task, reason: '' }, matchIndex }
+    })
+    .filter((item): item is { task: Record<string, unknown> & { reason: string }; matchIndex: number } => item !== null)
+    .sort((a, b) => a.matchIndex - b.matchIndex)
+
+  if (!mentioned.length) return null
+
+  return {
+    groups: [{ name: groupName, tasks: mentioned.map(item => item.task) }],
+    total: indexedTasks.length,
+    rawBlock: '',
+    kind,
+  }
 }
 
 /**

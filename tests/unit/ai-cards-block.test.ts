@@ -4,7 +4,7 @@
  * chat text, (2) cards mapping to the wrong tasks. If either regresses, this fails.
  */
 import { describe, it, expect } from 'vitest'
-import { parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import { parseCardGroups, parseMentionedTaskCards, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 
 const tasks = [
   { id: 't1', title: 'Check payment via Cardcom', priority: 'high', daysOverdue: 4 },
@@ -122,6 +122,43 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
 
   it('returns null when there are no tasks to map onto', () => {
     expect(parseCardGroups(block({ groups: [{ name: 'X', items: [{ i: 1, reason: 'r' }] }] }), [{ success: true, message: '', data: [] }])).toBeNull()
+  })
+})
+
+describe('parseMentionedTaskCards — answer-bound recovery only', () => {
+  it('creates cards only for real task titles mentioned in the visible answer, in answer order', () => {
+    const text = [
+      'Start with **Write cold opener** because it is the next outbound step.',
+      'Then do **Build outreach list** to expand the target pool.',
+    ].join('\n')
+
+    const r = parseMentionedTaskCards(text, results, 'Tasks from answer')
+
+    expect(r).not.toBeNull()
+    expect(r!.groups).toHaveLength(1)
+    expect(r!.groups[0].name).toBe('Tasks from answer')
+    expect(r!.groups[0].tasks.map(task => task.title)).toEqual(['Write cold opener', 'Build outreach list'])
+    expect(r!.groups[0].tasks.map(task => task.reason)).toEqual(['', ''])
+    expect(r!.total).toBe(3)
+  })
+
+  it('does not show unmentioned tool-result tasks as standalone deterministic cards', () => {
+    const text = 'The main pattern is that sales work is blocked, but I need more context before naming tasks.'
+
+    expect(parseMentionedTaskCards(text, results)).toBeNull()
+  })
+
+  it('matches Hebrew task titles through punctuation and quotes', () => {
+    const hebrewTasks = [
+      { id: 'h1', title: 'להתקשר לאורן', priority: 'high' },
+      { id: 'h2', title: 'לשלוח חשבונית לתמר', priority: 'medium' },
+    ]
+    const hebrewResults = [{ success: true, message: 'משימות', data: hebrewTasks }]
+    const text = 'הייתי מתחיל ב״לשלוח חשבונית לתמר״ ואז עובר אל "להתקשר לאורן".'
+
+    const r = parseMentionedTaskCards(text, hebrewResults, 'משימות מהתשובה')
+
+    expect(r!.groups[0].tasks.map(task => task.title)).toEqual(['לשלוח חשבונית לתמר', 'להתקשר לאורן'])
   })
 })
 

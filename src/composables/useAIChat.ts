@@ -49,7 +49,7 @@ import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
-import { parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import { parseCardGroups, parseMentionedTaskCards, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
@@ -110,7 +110,8 @@ async function getRouter() {
 
 // Active provider tracking
 const activeProviderRef = ref<string | null>(null)
-const FINAL_FORMATTER_TIMEOUT_MS = 45_000
+const FINAL_FORMATTER_TIMEOUT_MS = 15_000
+const FINAL_FORMATTER_LANGUAGE_RETRY_TIMEOUT_MS = 7_000
 
 // AI Personality mode
 const aiPersonality = ref<'professional' | 'grid_handler'>('professional')
@@ -659,14 +660,14 @@ export function useAIChat() {
     const tasks = getTaskItemsFromToolResults(toolResults).filter(task => task.title).slice(0, 3)
     if (tasks.length === 0) {
       return lang === 'he'
-        ? 'מצאתי את הנתונים, אבל לא הצלחתי לנסח תשובת AI מלאה בזמן. השתמש בכרטיסים למטה כדי להמשיך.'
-        : 'I found the data, but could not finish the AI wording in time. Use the cards below to continue.'
+        ? 'מצאתי את הנתונים, אבל לא הצלחתי לנסח תשובת AI מלאה בזמן.'
+        : 'I found the data, but could not finish the AI wording in time.'
     }
 
-    const names = tasks.map(task => task.title).join(lang === 'he' ? '", "' : '", "')
+    const rows = tasks.map((task, index) => `${index + 1}. **${task.title}**`)
     return lang === 'he'
-      ? `הייתי מתחיל ב-"${names}" לפי הסדר הזה; אלה נראות כמו המשימות הכי דחופות כרגע.`
-      : `I would start with "${names}" in this order; these look like the highest-impact tasks right now.`
+      ? ['הייתי מתחיל לפי הסדר הזה:', ...rows].join('\n')
+      : ['I would start in this order:', ...rows].join('\n')
   }
 
   /**
@@ -1175,7 +1176,7 @@ export function useAIChat() {
           taskType: 'chat',
           forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
           model: selectedModel.value || undefined,
-          timeout: FINAL_FORMATTER_TIMEOUT_MS,
+          timeout: FINAL_FORMATTER_LANGUAGE_RETRY_TIMEOUT_MS,
         })) {
           retryResponse += chunk.content
         }
@@ -1187,7 +1188,18 @@ export function useAIChat() {
 
       // TASK-1814: extract the `cards` block → grouped interactive cards, and strip
       // it from the displayed prose. Falls through gracefully if absent/unparseable.
+      const fallbackKind = isWeeklyReview
+        ? 'weekly_review'
+        : isWeekPlan
+          ? 'week_plan'
+          : isDayPlan
+            ? 'day_plan'
+            : isSmartLanes
+              ? 'smart_lanes'
+              : undefined
+      const fallbackGroupName = outputLanguage === 'he' ? 'משימות מהתשובה' : 'Tasks from the answer'
       const cardData = parseCardGroups(formattedResponse, toolResults)
+        ?? (hasTaskList ? parseMentionedTaskCards(formattedResponse, toolResults, fallbackGroupName, fallbackKind) : null)
       const displayRaw = cardData ? stripCardsBlock(formattedResponse) : formattedResponse
 
       // Clean and set

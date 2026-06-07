@@ -133,16 +133,23 @@ const KEYWORD_MAPPINGS: KeywordMapping[] = [
   },
 
   // --- Weekly summary ---
+  // TASK-1821: retrospective predicates ONLY. Bare time words ('this week',
+  // 'weekly', 'השבוע') were removed — they greedily matched forward-planning
+  // requests like "תכנן את השבוע" and misrouted them here. Predicate/tense decides
+  // intent (see isWeekPlanRequest); anything ambiguous falls to the model.
   {
     keywords: [
-      'this week',
       'weekly summary',
       'week summary',
       'summarize the week',
-      'weekly',
+      'summarize my week',
+      'what did i do this week',
+      'what did i complete',
+      'weekly stats',
       'סיכום שבועי',
       'סכם שבוע',
-      'השבוע',
+      'מה עשיתי השבוע',
+      'כמה זמן פוקוס',
     ],
     tool: 'get_weekly_summary',
     reason: 'User wants weekly summary',

@@ -23,7 +23,7 @@ export interface ParsedCards {
   groups: CardGroup[]
   total: number
   rawBlock: string
-  kind?: 'day_plan' | 'smart_lanes' | 'weekly_review'
+  kind?: 'day_plan' | 'smart_lanes' | 'weekly_review' | 'week_plan'
 }
 
 /**
@@ -74,7 +74,7 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
     })
     .filter(g => g.tasks.length > 0 || (g.newTasks?.length ?? 0) > 0)
 
-  const kind = parsed.kind === 'day_plan' || parsed.kind === 'smart_lanes' || parsed.kind === 'weekly_review' ? parsed.kind : undefined
+  const kind = parsed.kind === 'day_plan' || parsed.kind === 'smart_lanes' || parsed.kind === 'weekly_review' || parsed.kind === 'week_plan' ? parsed.kind : undefined
   return groups.length ? { groups, total: indexedTasks.length, rawBlock: m[0], kind } : null
 }
 

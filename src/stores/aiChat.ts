@@ -1035,6 +1035,11 @@ export const useAIChatStore = defineStore('aiChat', () => {
     // Restore assistant reply language from persisted settings (backward-compatible: defaults to 'auto')
     if (persistedSettings.value?.chatLanguage) {
       chatLanguage.value = persistedSettings.value.chatLanguage
+    } else if (persistedSettings.value?.chatDirection === 'rtl') {
+      // Legacy migration: older settings only stored chatDirection. RTL users had
+      // no reply-language preference — infer Hebrew so the reply language matches.
+      chatLanguage.value = 'he'
+      saveSettings({ ...persistedSettings.value, chatLanguage: 'he' })
     }
 
     const persisted = loadPersistedConversations()
@@ -1259,8 +1264,13 @@ export const useAIChatStore = defineStore('aiChat', () => {
    */
   function setChatLanguage(language: ChatLanguage) {
     chatLanguage.value = language
+    // Hebrew reply implies RTL text — but only when the user hasn't explicitly
+    // chosen a direction yet (still 'auto'). Direction stays an independent setting.
+    if (language === 'he' && chatDirection.value === 'auto') {
+      chatDirection.value = 'rtl'
+    }
     if (persistedSettings.value) {
-      saveSettings({ ...persistedSettings.value, chatLanguage: language })
+      saveSettings({ ...persistedSettings.value, chatLanguage: language, chatDirection: chatDirection.value })
     } else {
       saveSettings({ provider: 'auto', model: '', chatDirection: chatDirection.value, chatLanguage: language })
     }

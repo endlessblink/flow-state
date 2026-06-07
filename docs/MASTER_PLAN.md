@@ -37,6 +37,26 @@
 
 ---
 
+### ~~TASK-1822~~: Claude↔Codex failover brain for the AI chat (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-07, v1.4.106) | **Depends on**: TASK-1814
+
+**Why**: The subscription brain ran a single fixed CLI (Claude OR Codex by setting) with no automatic failover — if it errored or ran out of credits, the chat hard-failed (or fell to weak Groq/Ollama). User wants the two CLI brains to be a failover chain, no Groq/Ollama.
+
+**Shipped**: Internal failover in `bridgeProvider.ts` — `generate()`/`generateStream()` try the preferred brain (`aiBrain`), then fail over to the other on `BridgeUnavailableError` thrown before any token (auth/429/502/no-credits); never switches mid-stream. `routerFactory.ts`: when the subscription is on, the chain is the bridge only (Claude+Codex) — dropped Groq/Ollama (OpenRouter possible future tail). Low blast radius (no `RouterProviderType`/`isBridgeActive`/cards-gating changes). 6 failover unit tests (`tests/unit/bridge-failover.test.ts`, mocked brains).
+
+---
+
+### ~~BUG-1821~~: "Plan my week" misrouted to the completed-tasks summary (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-07, v1.4.105) | **Depends on**: BUG-1820
+
+**Why**: "תעזור לי לתכנן את השבוע" (plan ahead) returned a retrospective list of already-completed tasks. The greedy bare `'השבוע'` keyword (`toolHints.ts`) matched the planning phrase and routed it to `get_weekly_summary`. Also a "no focus time in the data" prose leak.
+
+**Shipped**: Predicate/tense decides intent, not the time word. Added `isWeekPlanRequest` + `normalizeForRouting` (Hebrew niqqud/particle tolerant) in `dayPlan.ts`; removed the greedy bare `'this week'`/`'weekly'`/`'השבוע'` triggers; added a forward `week_plan` card mode (`intentRouter`/`cardsBlock`/`useAIChat`). Ambiguous phrasing now falls to the model (rides the TASK-1822 failover chain) instead of guessing. Fixed the `weekly_review` focus-time prose leak. Red→green routing matrix + `isWeekPlanRequest` truth table (`deterministic-pipeline.test.ts`, `week-plan-request.test.ts`).
+
+---
+
 ### ~~BUG-1820~~: Weekly AI summary fabricated tasks instead of showing real cards (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-07) | **Depends on**: TASK-1814
@@ -80,6 +100,16 @@
 **Scope**: Add a **Message Language** selector in the AI chat settings header with Auto, English, and Hebrew. Persist the choice in AI chat settings. Apply it only to assistant output language in deterministic and ReAct chat paths; keep intent detection based on the user's actual prompt.
 
 **Shipped**: AI chat settings now include a persisted Message Language control. Auto keeps the previous detected-language behavior; English and Hebrew force assistant replies in that language across deterministic tool responses, bridge/ReAct prompts, confirmations, cancellations, and selected-task helpers. Regression coverage: pure language resolution/mismatch tests, AI chat store persistence tests, AIChatPanel selector interaction test, full unit suite, typecheck, import validation, CSS validation, and Electron build.
+
+### ~~TASK-1821~~: Fix canvas group collapse silently no-opping on Electron (settling-guard race) (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-07) | **Depends on**: BUG-1813
+
+**Why**: Canvas group collapse/expand was unreliable on the Electron desktop app while passing the existing local test. Child-task hiding only recomputes inside `syncStoreToCanvas`. The orchestrator collapse-signature watcher re-synced via `batchedSyncNodes()` **without `force`**, so `syncNodes()` dropped it whenever the canvas was inside the drag-settling / remote-update guard window (`canAcceptRemoteUpdate=false`), and it also early-returned on `persistence.isSyncing`. Because it's a signature watcher, a dropped fire never recovers — children stay visible until the next toggle. Electron realtime storms (BUG-1799) keep that guard closed far more often than a quiet browser, so the existing test (realtime off, guard always open) never reproduced it.
+
+**Shipped**: Collapse watcher in `useCanvasOrchestrator.ts` now calls `batchedSyncNodes(undefined, { force: true })` (collapse is user-initiated, mirroring the other forced syncs) and no longer early-returns on `isSyncing`/`isSyncingFromWatcher` (read-only sync can't re-trigger the collapse signature, so there's no loop to guard). Added a DEV/test-only `window.__canvasOpState` seam in `useCanvasOperationState.ts` so e2e can drive the real state machine into drag-settling. New regression test `tests/e2e/canvas-collapse-local.spec.ts` → "group collapse hides children during the drag-settling guard window (TASK-1821)" collapses inside the guarded window; it fails without the fix and passes with it. Verified: collapse e2e (2 passed), 185 canvas/geometry unit tests pass. **Not yet deployed** — needs version bump + `deploy-electron-update.sh` per rules 6/7.
+
+---
 
 ### ~~TASK-1820~~: Make desktop AI sidebar-first with visible live action feedback (✅ DONE)
 

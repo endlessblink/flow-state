@@ -67,8 +67,9 @@ let listening = false
 let latestSession: SessionMessage | null = null
 
 function sidecarPath() {
-  // main.cjs lives in dist-electron/ alongside the bundled sidecar.
-  return join(__dirname, 'local-api-server.cjs')
+  // localApi.cjs lives in dist-electron/ipc/, while the bundled sidecar is
+  // emitted next to main.cjs in dist-electron/.
+  return join(__dirname, '..', 'local-api-server.cjs')
 }
 
 function startChild() {

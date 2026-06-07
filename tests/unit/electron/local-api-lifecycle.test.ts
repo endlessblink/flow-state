@@ -17,6 +17,19 @@ function handlerBody(channel: string): string {
 }
 
 describe('Electron local API lifecycle regression contract', () => {
+  it('resolves the packaged sidecar next to main.cjs, not inside the ipc subdirectory', () => {
+    const sidecarStart = LOCAL_API_TS.indexOf('function sidecarPath()')
+    expect(sidecarStart, 'sidecarPath helper not found').toBeGreaterThan(-1)
+
+    const sidecarBody = LOCAL_API_TS.slice(
+      sidecarStart,
+      LOCAL_API_TS.indexOf('\nfunction startChild()', sidecarStart),
+    )
+
+    expect(sidecarBody).toContain("join(__dirname, '..', 'local-api-server.cjs')")
+    expect(sidecarBody).not.toContain("join(__dirname, 'local-api-server.cjs')")
+  })
+
   it('starts the localhost sidecar as soon as a signed-in renderer session arrives', () => {
     const body = handlerBody('localApi:setSession')
 

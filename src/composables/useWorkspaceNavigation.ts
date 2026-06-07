@@ -3,7 +3,6 @@ import { useWorkspaceStore } from '@/stores/workspace'
 
 // Navigation items that are ONLY visible in personal workspace
 const PERSONAL_ONLY_ITEMS = [
-  'canvas',
   'quick-sort',
   'morning',
   'today-flow',

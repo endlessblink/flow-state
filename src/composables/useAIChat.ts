@@ -888,10 +888,18 @@ export function useAIChat() {
       .map(line => line.trim())
       .filter(Boolean)
     const normalizedLines = proseLines.map(line => line.toLowerCase())
-    const taskAnchoredLineCount = selectedTasks.filter(task => {
+    const taskAnchoredLines = selectedTasks.map(task => {
       const title = String(task.title || '').trim().toLowerCase()
-      return title && normalizedLines.some(line => line.includes(title))
-    }).length
+      const lines = title ? normalizedLines.filter(line => line.includes(title)) : []
+      return { task, lines }
+    })
+    const taskAnchoredLineCount = taskAnchoredLines.filter(entry => entry.lines.length > 0).length
+    if (taskAnchoredLines.some(entry => {
+      if (entry.lines.length === 0) return false
+      return !entry.lines.some(line => weeklyLineHasTaskReasoning(line, lang))
+    })) {
+      return true
+    }
     const requiredAnchors = selectedTasks.length
     if (taskAnchoredLineCount < requiredAnchors) return true
     if (proseLines.length < requiredAnchors) return true
@@ -907,6 +915,15 @@ export function useAIChat() {
       : /(stuck|unblock|prevent|risk|waiting|decision|money|billing|sequence|follow-through)/i.test(prose)
 
     return shallowMetadataOnly && !hasStakeLanguage
+  }
+
+  function weeklyLineHasTaskReasoning(line: string, lang: 'he' | 'en'): boolean {
+    const shallowMetadata = /(due today|deadline \d{4}-\d{2}-\d{2}|priority (?:low|medium|high)|(?:low|medium|high) priority|באיחור|עדיפות (?:נמוכה|בינונית|גבוהה)|דדליין \d{4}-\d{2}-\d{2})/i.test(line)
+    const hasStakeLanguage = lang === 'he'
+      ? /(למה עכשיו|השפעה|טריידאוף|מיקום|נתקע|מונע|פותח|משחרר|סיכון|רצף|מחכה|החלטה|כסף|גבייה|תלות)/i.test(line)
+      : /(why now|expected impact|tradeoff|slot|stuck|unblock|prevent|risk|waiting|decision|money|billing|sequence|follow-through|dependency|capacity|energy)/i.test(line)
+    if (shallowMetadata && !hasStakeLanguage) return false
+    return hasStakeLanguage
   }
 
   /**

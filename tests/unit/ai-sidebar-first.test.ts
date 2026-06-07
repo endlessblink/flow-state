@@ -497,6 +497,9 @@ describe('AI sidebar-first desktop experience', () => {
         evidence: [
           { taskId: candidate.id, field: 'dueIso', value: candidate.dueIso ?? '', interpretation: 'due this week' },
           { taskId: candidate.id, field: 'priority', value: candidate.priority ?? 'medium', interpretation: 'priority signal' },
+          ...(index === 1
+            ? [{ taskId: candidate.id, field: 'notes', value: 'Blue banana archive note from another task', interpretation: 'invented context' }]
+            : []),
         ],
         cardPlacement: 'immediately_after_explanation',
       })),
@@ -509,7 +512,8 @@ describe('AI sidebar-first desktop experience', () => {
       'generic_reasoning:bad-0',
       'generic_focus_area:bad-0',
       'date_priority_only_reasoning:bad-0',
-      'missing_real_consequence:bad-1',
+      'missing_real_consequence:bad-2',
+      'unsupported_evidence_value:bad-1:task-bug:notes',
       'missing_related_workstream_binding',
       'insufficient_real_consequence_coverage',
     ]))

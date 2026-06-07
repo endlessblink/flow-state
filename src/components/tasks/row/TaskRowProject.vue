@@ -49,7 +49,8 @@
             <button
               class="project-dropdown__item"
               :class="{ 'is-active': !currentProjectId }"
-              @click="selectProject(null)"
+              @pointerdown.stop
+              @click.stop="selectProject(null)"
             >
               <span class="project-dropdown__icon">&#10067;</span>
               <span class="project-dropdown__name">Uncategorized</span>
@@ -62,7 +63,8 @@
               :key="project.id"
               class="project-dropdown__item"
               :class="{ 'is-active': currentProjectId === project.id }"
-              @click="selectProject(project.id)"
+              @pointerdown.stop
+              @click.stop="selectProject(project.id)"
             >
               <span class="project-dropdown__icon">
                 <ProjectEmojiIcon
@@ -258,16 +260,13 @@ onBeforeUnmount(() => {
 <style>
 /* Project Dropdown - Dark glass morphism (teleported to body, NOT scoped) */
 .project-dropdown {
-  z-index: var(--z-tooltip);
-  background-color: hsl(var(--slate-900)) !important;
-  background: rgba(28, 25, 45, 0.95) !important;
-  backdrop-filter: blur(var(--space-4));
-  -webkit-backdrop-filter: blur(var(--space-4));
-  border: var(--space-0_5) solid rgba(var(--color-slate-50), 0.1) !important;
-  box-shadow:
-    0 var(--space-2) var(--space-8) rgba(var(--color-slate-900), 0.4),
-    0 0 0 var(--space-0_5) rgba(var(--color-slate-50), 0.05) inset;
-  border-radius: var(--radius-md);
+  z-index: var(--z-context-menu, 9999);
+  background: var(--overlay-component-bg) !important;
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border) !important;
+  box-shadow: var(--overlay-component-shadow), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  border-radius: var(--radius-lg);
   min-width: 160px;
   max-width: 220px;
   max-height: 240px;
@@ -290,7 +289,7 @@ onBeforeUnmount(() => {
   border: none !important;
   background: none !important;
   background-color: transparent !important;
-  color: rgba(var(--color-slate-50), 0.9) !important;
+  color: var(--text-primary) !important;
   font-size: var(--text-xs);
   text-align: start;
   cursor: pointer;
@@ -302,12 +301,12 @@ onBeforeUnmount(() => {
 }
 
 .project-dropdown__item:hover {
-  background: rgba(var(--color-slate-50), 0.08) !important;
-  background-color: rgba(var(--color-slate-50), 0.08) !important;
+  background: var(--glass-bg-heavy) !important;
+  background-color: var(--glass-bg-heavy) !important;
 }
 
 .project-dropdown__item.is-active {
-  /* Simple checkmark indicator, no background highlight */
+  color: var(--brand-primary) !important;
 }
 
 .project-dropdown__icon {
@@ -335,6 +334,7 @@ onBeforeUnmount(() => {
 .project-dropdown__check {
   flex-shrink: 0;
   opacity: 0.7;
+  color: var(--brand-primary);
 }
 
 /* Custom scrollbar for dropdown list */

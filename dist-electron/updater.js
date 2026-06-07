@@ -3,8 +3,56 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerUpdater = registerUpdater;
 const electron_updater_1 = require("electron-updater");
 const electron_1 = require("electron");
+const node_fs_1 = require("node:fs");
+const node_os_1 = require("node:os");
+const node_path_1 = require("node:path");
 function hasValidAppVersion(version) {
     return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
+}
+function compareVersions(a, b) {
+    const aParts = a.split(/[.+-]/)[0].split('.').map(Number);
+    const bParts = b.split(/[.+-]/)[0].split('.').map(Number);
+    for (let i = 0; i < 3; i += 1) {
+        const diff = (aParts[i] || 0) - (bParts[i] || 0);
+        if (diff !== 0)
+            return diff;
+    }
+    return 0;
+}
+function versionFromUpdateFileName(fileName) {
+    if (typeof fileName !== 'string')
+        return null;
+    const match = fileName.match(/(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)/);
+    return match?.[1] ?? null;
+}
+function pendingUpdateInfoPath() {
+    const cacheHome = process.env.XDG_CACHE_HOME || (0, node_path_1.join)((0, node_os_1.homedir)(), '.cache');
+    return (0, node_path_1.join)(cacheHome, 'flow-state-updater', 'pending', 'update-info.json');
+}
+function clearStalePendingUpdate(appVersion) {
+    const updateInfoPath = pendingUpdateInfoPath();
+    if (!(0, node_fs_1.existsSync)(updateInfoPath))
+        return;
+    try {
+        const info = JSON.parse((0, node_fs_1.readFileSync)(updateInfoPath, 'utf8'));
+        const pendingVersion = versionFromUpdateFileName(info.fileName);
+        if (!pendingVersion || compareVersions(pendingVersion, appVersion) <= 0) {
+            (0, node_fs_1.rmSync)(updateInfoPath, { force: true });
+            console.warn('[Updater] Cleared stale pending update marker', {
+                pendingVersion: pendingVersion ?? 'unknown',
+                appVersion,
+                updateInfoPath,
+            });
+        }
+    }
+    catch (err) {
+        console.warn('[Updater] Failed to inspect pending update marker:', err.message);
+    }
+}
+function emitUpdaterError(message) {
+    const win = electron_1.BrowserWindow.getAllWindows()[0];
+    if (win)
+        win.webContents.send('updater:error', message);
 }
 /**
  * Electron auto-updater setup.
@@ -15,6 +63,15 @@ function registerUpdater() {
     const isDev = !!process.env.VITE_DEV_SERVER_URL;
     const appVersion = electron_1.app.getVersion();
     const canUseUpdater = !isDev && hasValidAppVersion(appVersion);
+    if (!isDev && hasValidAppVersion(appVersion)) {
+        clearStalePendingUpdate(appVersion);
+    }
+    electron_1.app.on('before-quit', () => {
+        console.log('[Updater] before-quit received');
+    });
+    electron_1.app.on('will-quit', () => {
+        console.log('[Updater] will-quit received');
+    });
     // Register IPC handlers in all environments so renderer invocations don't
     // fail during local dev. In dev or unpackaged preview mode, updater actions
     // become safe no-ops.
@@ -44,8 +101,23 @@ function registerUpdater() {
         // Calling quitAndInstall() inline from an invoke handler can leave the
         // renderer stuck in a half-dead state while the app is trying to exit.
         setImmediate(() => {
-            // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
-            electron_updater_1.autoUpdater.quitAndInstall(false, true);
+            console.log('[Updater] Starting quitAndInstall handoff');
+            const fallbackTimer = setTimeout(() => {
+                console.error('[Updater] quitAndInstall did not terminate the app within 8s; forcing quit fallback');
+                emitUpdaterError('The updater could not restart automatically. FlowState will close; reopen it manually to complete the update.');
+                electron_1.app.quit();
+            }, 8000);
+            electron_1.app.once('before-quit', () => clearTimeout(fallbackTimer));
+            try {
+                // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)
+                electron_updater_1.autoUpdater.quitAndInstall(false, true);
+            }
+            catch (err) {
+                clearTimeout(fallbackTimer);
+                const message = err.message;
+                console.error('[Updater] quitAndInstall failed:', message);
+                emitUpdaterError(message);
+            }
         });
         return true;
     });

@@ -44,7 +44,7 @@
       @toggle-expand="$emit('toggleExpand', task.id)"
       @check="$emit('check', task.id)"
       @update-status="(val) => actions.updateTaskStatus(task.id, val)"
-      @update-project-id="(val) => $emit('updateTask', task.id, { projectId: val ?? undefined })"
+      @update-project-id="(val) => $emit('updateTask', task.id, { projectId: val ?? undefined, isUncategorized: !val })"
       @update-priority="(val) => $emit('updateTask', task.id, { priority: val as 'low' | 'medium' | 'high' })"
       @update-due-date="(val) => $emit('updateTask', task.id, { dueDate: val ?? undefined })"
       @update-estimate="(val) => $emit('updateTask', task.id, { estimatedDuration: val ?? undefined })"

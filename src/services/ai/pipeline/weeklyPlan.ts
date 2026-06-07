@@ -274,6 +274,7 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
   if (!value || typeof value !== 'object') return ['not_object']
   const plan = value as WeeklyPlanOutput
   const validTaskIds = new Set(context.tasks.map(task => task.id))
+  const taskById = new Map(context.tasks.map(task => [task.id, task]))
   if (plan.schemaVersion !== 'weekly-plan.v2') errors.push('wrong_schema_version')
   if (plan.requestId !== context.requestId) errors.push('wrong_request_id')
   if (plan.locale !== context.locale) errors.push('wrong_locale')
@@ -295,6 +296,10 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
     if (!evidence.some(item => !['dueIso', 'priority'].includes(item.field))) errors.push(`date_priority_only_reasoning:${rec.sectionId}`)
     for (const item of evidence) {
       if (!validTaskIds.has(item.taskId)) errors.push(`invalid_evidence_task_id:${item.taskId}`)
+      const task = taskById.get(item.taskId)
+      if (task && !isEvidenceValueGrounded(task, item)) {
+        errors.push(`unsupported_evidence_value:${rec.sectionId}:${item.taskId}:${item.field}`)
+      }
     }
     for (const id of rec.relatedTaskIds ?? []) {
       if (!validTaskIds.has(id)) errors.push(`invalid_related_task_id:${id}`)
@@ -744,6 +749,55 @@ function overusesDueDates(recs: WeeklyPlanRecommendation[]): boolean {
     const fields = new Set(rec.evidence.map(item => item.field))
     return fields.has('dueIso') && [...fields].every(field => field === 'dueIso' || field === 'priority')
   }).length > 1
+}
+
+function isEvidenceValueGrounded(task: PlannerTaskSnapshot, item: WeeklyPlanRecommendation['evidence'][number]): boolean {
+  const value = normalizeEvidenceText(item.value)
+  if (!value) return true
+
+  switch (item.field) {
+    case 'title':
+      return textSupportsEvidence(task.title, value)
+    case 'notes':
+      return textSupportsEvidence(task.notes ?? '', value)
+    case 'project':
+      return textSupportsEvidence(`${task.project?.id ?? ''} ${task.project?.name ?? ''}`, value)
+    case 'dueIso':
+      return evidenceDateKey(value) === evidenceDateKey(task.dueIso)
+    case 'priority':
+      return value === normalizeEvidenceText(task.priority ?? '')
+    case 'status':
+      return value === normalizeEvidenceText(task.status)
+    case 'history.postponedCount':
+      return Number(value) === task.history.postponedCount
+    case 'history.timerMinutesLast7Days':
+      return Number(value) === task.history.timerMinutesLast7Days
+    case 'dependencies.blocksTaskIds':
+      return dependencyEvidenceMatches(value, task.dependencies?.blocksTaskIds ?? [])
+    case 'dependencies.blockedByTaskIds':
+      return dependencyEvidenceMatches(value, task.dependencies?.blockedByTaskIds ?? [])
+    default:
+      return false
+  }
+}
+
+function normalizeEvidenceText(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase()
+}
+
+function textSupportsEvidence(source: string, normalizedValue: string): boolean {
+  const normalizedSource = normalizeEvidenceText(source)
+  if (!normalizedSource) return false
+  return normalizedSource.includes(normalizedValue) || normalizedValue.includes(normalizedSource)
+}
+
+function dependencyEvidenceMatches(value: string, ids: string[]): boolean {
+  if (/^\d+$/.test(value)) return Number(value) === ids.length
+  return ids.includes(value)
+}
+
+function evidenceDateKey(value: unknown): string {
+  return String(value ?? '').slice(0, 10)
 }
 
 function extractJsonObject(raw: string): string | null {

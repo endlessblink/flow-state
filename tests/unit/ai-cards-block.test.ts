@@ -4,7 +4,7 @@
  * chat text, (2) cards mapping to the wrong tasks. If either regresses, this fails.
  */
 import { describe, it, expect } from 'vitest'
-import { parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import { ensureCardTaskMentions, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 
 const tasks = [
   { id: 't1', title: 'Check payment via Cardcom', priority: 'high', daysOverdue: 4 },
@@ -184,6 +184,38 @@ describe('stripCardsBlock — NO raw JSON or [N] markers leak into the prose', (
 
   it('leaves prose with no block untouched', () => {
     expect(stripCardsBlock('just a normal answer.')).toBe('just a normal answer.')
+  })
+})
+
+describe('ensureCardTaskMentions — cards have a prose anchor for inline rendering', () => {
+  it('adds a grounding line before the cards block when a selected task is missing from prose', () => {
+    const text = 'Start with the payment work.\n\n' + block({
+      kind: 'week_plan',
+      groups: [
+        { name: 'Money', items: [{ i: 1, reason: 'payment risk' }] },
+        { name: 'Sales', items: [{ i: 3, reason: 'keeps outreach moving' }] },
+      ],
+    })
+    const parsed = parseCardGroups(text, results)!
+    const out = ensureCardTaskMentions(text, parsed, 'To keep each card tied to the recommendation:')
+
+    expect(out).toContain('Start with the payment work.')
+    expect(out).toContain('**Check payment via Cardcom**')
+    expect(out).toContain('**Write cold opener**')
+    expect(out.indexOf('**Write cold opener**')).toBeLessThan(out.indexOf('```cards'))
+    expect(parseCardGroups(out, results)?.groups[1].tasks[0].title).toBe('Write cold opener')
+  })
+
+  it('leaves the response unchanged when every selected task is already named', () => {
+    const text = 'Do Check payment via Cardcom, then Write cold opener.\n\n' + block({
+      kind: 'week_plan',
+      groups: [
+        { name: 'Money', items: [{ i: 1, reason: 'payment risk' }] },
+        { name: 'Sales', items: [{ i: 3, reason: 'keeps outreach moving' }] },
+      ],
+    })
+    const parsed = parseCardGroups(text, results)!
+    expect(ensureCardTaskMentions(text, parsed, 'Anchor:')).toBe(text)
   })
 })
 

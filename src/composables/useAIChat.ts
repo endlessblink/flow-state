@@ -49,7 +49,7 @@ import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
-import { collectCardTasks, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import { collectCardTasks, ensureCardTaskMentions, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
@@ -1239,7 +1239,29 @@ export function useAIChat() {
 
       // TASK-1814: extract the `cards` block → grouped interactive cards, and strip
       // it from the displayed prose. Falls through gracefully if absent/unparseable.
-      const cardData = parseCardGroups(formattedResponse, toolResults)
+      let cardData = parseCardGroups(formattedResponse, toolResults)
+      if (!cardData && cardsInstruction && hasTaskList) {
+        const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
+        const fallbackCardData = parseCardGroups(fallbackResponse, toolResults)
+        if (fallbackCardData) {
+          const formatterProse = stripCardsBlock(formattedResponse).trim()
+          const fallbackProse = stripCardsBlock(fallbackResponse).trim()
+          formattedResponse = [formatterProse, fallbackProse, fallbackCardData.rawBlock]
+            .filter(Boolean)
+            .join('\n\n')
+          cardData = parseCardGroups(formattedResponse, toolResults)
+        }
+      }
+      if (cardData) {
+        formattedResponse = ensureCardTaskMentions(
+          formattedResponse,
+          cardData,
+          routed.language === 'he'
+            ? 'כדי שכל כרטיס יהיה מחובר להמלצה עצמה:'
+            : 'To keep each card tied to the recommendation:',
+        )
+        cardData = parseCardGroups(formattedResponse, toolResults)
+      }
       const displayRaw = cardData ? stripCardsBlock(formattedResponse) : formattedResponse
 
       // Clean and set
@@ -1975,7 +1997,11 @@ export function useAIChat() {
    * Quick action: Plan my week.
    */
   async function planWeek(): Promise<void> {
-    await executeAgentChain('plan_my_week')
+    const lang = currentOutputLanguage()
+    await sendMessage(
+      lang === 'he' ? 'תעזור לי לתכנן את השבוע' : 'Help me plan my week',
+      { taskType: 'chat' },
+    )
   }
 
   /**

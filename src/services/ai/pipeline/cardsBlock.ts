@@ -113,6 +113,32 @@ export function stripCardsBlock(text: string): string {
 }
 
 /**
+ * The UI pins cards under the answer line that names the same task. If the model
+ * emits a valid cards block but forgets to name one selected task in prose, add a
+ * short grounding line before the cards block so the card has a real inline home.
+ */
+export function ensureCardTaskMentions(text: string, parsed: ParsedCards, intro: string): string {
+  const cardStart = parsed.rawBlock ? text.indexOf(parsed.rawBlock) : -1
+  const prose = cardStart >= 0 ? text.slice(0, cardStart).trimEnd() : stripCardsBlock(text).trimEnd()
+  const cards = cardStart >= 0 ? text.slice(cardStart).trimStart() : parsed.rawBlock
+  const missing = parsed.groups
+    .flatMap(group => group.tasks)
+    .filter(task => {
+      const title = String(task.title || '').trim()
+      return title.length > 0 && !prose.includes(title)
+    })
+
+  if (!missing.length) return text
+
+  const lines = missing.map(task => {
+    const title = String(task.title || '').trim()
+    const reason = String(task.reason || '').trim()
+    return reason ? `- **${title}** - ${reason}` : `- **${title}**`
+  })
+  return [prose, intro, lines.join('\n'), cards].filter(Boolean).join('\n\n').trim()
+}
+
+/**
  * Streaming-safe variant for visible partial output. `stripCardsBlock` removes a
  * complete cards block; this also hides the dangling prefix while streamed
  * chunks are still building the marker (for example "```ca" before "rds").

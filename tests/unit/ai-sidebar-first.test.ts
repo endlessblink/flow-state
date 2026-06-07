@@ -378,7 +378,16 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('why now, expected impact, and the tradeoff/slot')
     expect(aiChat).toContain('omissions/defer line')
     expect(aiChat).toContain('Due dates and priority labels are metadata, not reasons')
+    expect(aiChat).toContain('ensureCardTaskMentions')
+    expect(aiChat).toContain('if (!cardData && cardsInstruction && hasTaskList)')
     expect(aiChat).not.toContain('these look like the highest-impact tasks right now')
+  })
+
+  it('routes the Plan Week quick action through the normal weekly planner instead of a missing chain', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+
+    expect(aiChat).toContain("lang === 'he' ? 'תעזור לי לתכנן את השבוע' : 'Help me plan my week'")
+    expect(aiChat).not.toContain("executeAgentChain('plan_my_week')")
   })
 
   it('keeps a visible New Chat control in the AI sidebar header', async () => {

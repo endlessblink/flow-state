@@ -439,8 +439,24 @@ describe('AI sidebar-first desktop experience', () => {
     } as Task
     const relatedTasks = [
       task,
-      { ...task, id: 'task-bug', title: 'Fix timer sync blocker', description: 'Blocks QA signoff for release.', dependsOn: [], dueDate: '2026-06-11' } as Task,
-      { ...task, id: 'task-health', title: 'Book Dad blood test', description: 'Family health admin.', priority: 'medium', dueDate: '2026-06-12' } as Task,
+      {
+        ...task,
+        id: 'task-bug',
+        title: 'Fix timer sync blocker',
+        description: 'Blocks QA signoff for release.',
+        projectId: 'release',
+        dependsOn: [],
+        dueDate: '2026-06-11',
+      } as Task,
+      {
+        ...task,
+        id: 'task-health',
+        title: 'Book Dad blood test',
+        description: 'Family health admin.',
+        projectId: 'family-admin',
+        priority: 'medium',
+        dueDate: '2026-06-12',
+      } as Task,
     ]
     const context = buildWeekContextFromToolResults(
       [{ success: true, data: relatedTasks }],
@@ -493,6 +509,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(quickDraft.headline).toContain('Quick draft')
     expect(quickDraft.recommendations[0].evidence.length).toBeGreaterThanOrEqual(2)
     expect(quickDraft.recommendations[0].focusArea).toBeTruthy()
+    expect(new Set(quickDraft.recommendations.map(rec => rec.whyThisMatters)).size).toBeGreaterThan(1)
+    expect(quickDraft.recommendations.map(rec => rec.whyThisMatters).join(' ')).not.toMatch(/coaching explanation is unavailable.*coaching explanation is unavailable/i)
+    expect(quickDraft.recommendations.some(rec => rec.relatedTaskIds.length > 0)).toBe(true)
   })
 
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
@@ -860,7 +879,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(weeklyPlan).toContain('date_priority_only_reasoning')
     expect(weeklyPlan).toContain('generic_reasoning')
     expect(weeklyPlan).toContain('buildQuickDraftWeeklyPlan')
-    expect(weeklyPlan).toContain('Factual quick draft only')
+    expect(weeklyPlan).toContain('Evidence-only draft:')
 
     expect(chatMessage).toContain('data-testid="weekly-plan"')
     expect(chatMessage).toContain('data-testid="inline-plan-card"')

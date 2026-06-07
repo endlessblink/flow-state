@@ -317,24 +317,19 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
     const evidence = quickDraftEvidence(task)
     const stream = workstreamByTaskId.get(task.id)
     const relatedTaskIds = stream?.taskIds.filter(id => id !== task.id).slice(0, 2) ?? []
+    const focusArea = stream?.label ?? (task.project?.name || task.tags?.[0] || (locale === 'he' ? 'הקשר מוגבל' : 'Limited task context'))
     return {
       sectionId: `quick_${index + 1}_${task.id}`,
       rank: index + 1,
-      focusArea: stream?.label ?? (task.project?.name || task.tags?.[0] || (locale === 'he' ? 'משימה ממוקדת' : 'Focused task')),
+      focusArea,
       primaryTaskId: task.id,
       relatedTaskIds,
       recommendationType: quickDraftType(task),
       title: task.title,
-      whyThisMatters: locale === 'he'
-        ? 'טיוטה עובדתית בלבד: ההסבר האימוני לא זמין כרגע, אז אני מציג את האותות החזקים מהמשימה.'
-        : 'Factual quick draft only: coaching explanation is unavailable, so this shows the strongest task signals.',
-      whyThisWeek: evidence.map(item => item.interpretation).join(locale === 'he' ? ' · ' : ' · '),
-      riskIfIgnored: locale === 'he'
-        ? 'צריך לרענן את התוכנית כדי לקבל ניתוח עומק לפני החלטה סופית.'
-        : 'Refresh the plan for deeper analysis before treating this as final.',
-      nextAction: locale === 'he'
-        ? 'פתח את הכרטיס, בדוק את ההקשר, ובחר פעולה אחת קטנה.'
-        : 'Open the card, check the context, and choose one small next action.',
+      whyThisMatters: quickDraftWhyThisMatters(task, stream, locale),
+      whyThisWeek: quickDraftWhyThisWeek(task, evidence, locale),
+      riskIfIgnored: quickDraftRisk(task, locale),
+      nextAction: quickDraftNextAction(task, locale),
       evidence,
       cardPlacement: 'immediately_after_explanation',
     }
@@ -625,6 +620,68 @@ function quickDraftType(task: PlannerTaskSnapshot): WeeklyPlanRecommendation['re
   if (task.history.postponedCount > 0 || task.status === 'in_progress') return 'finish'
   if ((task.estimateMinutes ?? 999) <= 30) return 'quick-win'
   return 'protect'
+}
+
+function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWorkstream | undefined, locale: PlannerLocale): string {
+  if (task.dependencies?.blocksTaskIds.length) {
+    return locale === 'he'
+      ? `טיוטה עובדתית: המשימה הזו חוסמת ${task.dependencies.blocksTaskIds.length} משימות נוספות, לכן היא משפיעה על זרימת העבודה מעבר לצ'קבוקס שלה.`
+      : `Evidence-only draft: this task blocks ${task.dependencies.blocksTaskIds.length} other task${task.dependencies.blocksTaskIds.length === 1 ? '' : 's'}, so it affects the flow of work beyond its own checkbox.`
+  }
+  if (task.derived.hasHumanOrExternalStakeholder) {
+    return locale === 'he'
+      ? 'טיוטה עובדתית: הכותרת או ההערות מצביעות על אדם אחר, תגובה, פגישה או אישור, אז יש כאן התחייבות חיצונית שצריך להגן עליה.'
+      : 'Evidence-only draft: the title or notes point to another person, reply, meeting, approval, or client, so this looks like an external commitment to protect.'
+  }
+  if (task.derived.hasMoneyClientHealthFamilyLegalSignal) {
+    return locale === 'he'
+      ? 'טיוטה עובדתית: האותות במשימה מצביעים על כסף, לקוח, בריאות, משפחה או אדמין, ולכן יש לה משקל חיים/עבודה מעבר לסידור רשימה.'
+      : 'Evidence-only draft: the task signals money, client, health, family, or admin stakes, so it carries life/work weight beyond list cleanup.'
+  }
+  if (task.history.postponedCount > 0 || task.derived.isStale) {
+    return locale === 'he'
+      ? `טיוטה עובדתית: המשימה נדחתה ${task.history.postponedCount} פעמים או התיישנה, אז הסיכון הוא שהיא תמשיך לשבת פתוחה ולמשוך קשב.`
+      : `Evidence-only draft: this task has been postponed ${task.history.postponedCount} time${task.history.postponedCount === 1 ? '' : 's'} or has gone stale, so the risk is continued open-loop attention.`
+  }
+  if (task.status === 'in_progress' || task.history.timerMinutesLast7Days > 0) {
+    return locale === 'he'
+      ? `טיוטה עובדתית: כבר הושקעו כאן ${task.history.timerMinutesLast7Days} דקות או שהמשימה בתהליך, כך שיש ערך בלסגור את ההקשר לפני שהוא מתפזר.`
+      : `Evidence-only draft: ${task.history.timerMinutesLast7Days} minutes are already invested or the task is in progress, so there is value in closing the context before it fades.`
+  }
+  if (stream) {
+    return locale === 'he'
+      ? `טיוטה עובדתית: המשימה יושבת בתוך "${stream.label}", יחד עם ${stream.taskIds.length} משימות קשורות, אז כדאי לראות אותה כחלק מאותו היבט עבודה.`
+      : `Evidence-only draft: this sits inside "${stream.label}" with ${stream.taskIds.length} related tasks, so treat it as part of that work aspect.`
+  }
+  return locale === 'he'
+    ? 'טיוטה עובדתית: אין מספיק הקשר עמוק, לכן זה מוצג לפי האותות הזמינים בכרטיס ולא כהמלצה אימונית מלאה.'
+    : 'Evidence-only draft: there is limited deeper context, so this is shown from available task signals rather than as full coaching advice.'
+}
+
+function quickDraftWhyThisWeek(task: PlannerTaskSnapshot, evidence: WeeklyPlanRecommendation['evidence'], locale: PlannerLocale): string {
+  const signals = evidence.map(item => item.interpretation).join(locale === 'he' ? ' · ' : ' · ')
+  if (task.derived.isOverdue) return locale === 'he' ? `השבוע כי היא כבר באיחור. אותות: ${signals}` : `This week because it is already overdue. Signals: ${signals}`
+  if (typeof task.derived.daysUntilDue === 'number' && task.derived.daysUntilDue <= 7) {
+    return locale === 'he'
+      ? `השבוע כי היא בתוך חלון הזמן הקרוב. אותות: ${signals}`
+      : `This week because it falls inside the near-term planning window. Signals: ${signals}`
+  }
+  if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? `השבוע כדי לשחרר עבודה תלויה. אותות: ${signals}` : `This week to unblock dependent work. Signals: ${signals}`
+  return locale === 'he' ? `השבוע לפי האותות החזקים ביותר בכרטיס: ${signals}` : `This week based on the strongest card signals: ${signals}`
+}
+
+function quickDraftRisk(task: PlannerTaskSnapshot, locale: PlannerLocale): string {
+  if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? 'אם תתעלם, עבודה קשורה עלולה להישאר תקועה.' : 'If ignored, related work may remain blocked.'
+  if (task.history.postponedCount > 0 || task.derived.isStale) return locale === 'he' ? 'אם תתעלם, זה כנראה יישאר לולאה פתוחה גם בשבוע הבא.' : 'If ignored, this is likely to remain an open loop into next week.'
+  if (task.derived.hasHumanOrExternalStakeholder) return locale === 'he' ? 'אם תתעלם, ההתחייבות מול אדם אחר או חלון ההחלטה עלולים להיחלש.' : 'If ignored, the commitment to another person or decision window may weaken.'
+  return locale === 'he' ? 'אם תתעלם, אין לי מספיק הקשר כדי להעריך סיכון עמוק יותר בלי רענון מודל.' : 'If ignored, there is not enough context here to estimate deeper risk without a model refresh.'
+}
+
+function quickDraftNextAction(task: PlannerTaskSnapshot, locale: PlannerLocale): string {
+  if (task.estimateMinutes != null && task.estimateMinutes <= 30) return locale === 'he' ? 'בצע את הפעולה הקטנה בכרטיס וסגור אותה אם היא באמת לוקחת פחות מחצי שעה.' : 'Do the small action on the card and close it if it really fits under 30 minutes.'
+  if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? 'פתח את הכרטיס ובחר את הצעד המינימלי שישחרר את המשימות התלויות.' : 'Open the card and choose the smallest step that unblocks the dependent tasks.'
+  if (task.history.postponedCount > 0 || task.derived.isStale) return locale === 'he' ? 'פתח את הכרטיס והגדר צעד פתיחה של 10 דקות, לא יעד סיום מלא.' : 'Open the card and define a 10-minute starting step, not a full completion target.'
+  return locale === 'he' ? 'פתח את הכרטיס, בדוק את ההקשר, ובחר פעולה אחת קטנה ומדידה.' : 'Open the card, check the context, and choose one small measurable action.'
 }
 
 function buildEvidenceSnippets(input: {

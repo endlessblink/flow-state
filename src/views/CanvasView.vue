@@ -58,7 +58,7 @@
 
       <!-- Filter Status Indicator -->
       <CanvasStatusBanner
-        :active-status-filter="taskStore.activeStatusFilter"
+        :active-status-filter="activeStatusFilter"
         @clear-filter="clearStatusFilter"
       />
 
@@ -310,7 +310,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, markRaw, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, markRaw, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { ConnectionMode, VueFlow, useVueFlow, type NodeMouseEvent, type NodeDragEvent, type NodeTypesObject } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
@@ -359,6 +359,7 @@ const canvasStore = useCanvasStore()
 const uiStore = useUIStore()
 const modalsStore = useCanvasModalsStore()
 const contextMenuStore = useCanvasContextMenuStore()
+const activeStatusFilter = computed(() => taskStore.activeStatusFilter)
 
 // Register custom node types
 const nodeTypes = {

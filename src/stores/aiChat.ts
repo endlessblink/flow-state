@@ -454,13 +454,16 @@ export const useAIChatStore = defineStore('aiChat', () => {
     return flushConversationToSupabase(conversation)
   }
 
-  async function uploadMergedConversations(uploadIds: Set<string>) {
+  async function uploadMergedConversations(uploadIds: Set<string>): Promise<boolean> {
+    let allSaved = true
     for (const id of uploadIds) {
       const conversation = conversations.value.find(c => c.id === id)
       if (conversation) {
-        await flushConversationToSupabase(conversation)
+        const saved = await flushConversationToSupabase(conversation)
+        allSaved = allSaved && saved
       }
     }
+    return allSaved
   }
 
   /**
@@ -1018,6 +1021,41 @@ export const useAIChatStore = defineStore('aiChat', () => {
   }
 
   /**
+   * Reconcile local chat history with Supabase after auth becomes available.
+   *
+   * Electron can initialize the AI store before the async disk-backed Supabase
+   * session has finished loading. In that state the first load/realtime attempt
+   * returns unauthenticated and the store falls back to localStorage. This retry
+   * path lets auth events converge Electron, localhost, and PWA later in the same
+   * session without requiring a restart.
+   */
+  async function syncConversationsWithSupabaseNow(): Promise<boolean> {
+    const remoteConversations = await loadConversationsFromSupabase()
+    if (!remoteConversations) {
+      syncStatus.value = 'error'
+      return false
+    }
+
+    const merged = mergeConversationSets(conversations.value, remoteConversations)
+
+    isApplyingRemoteConversation = true
+    try {
+      conversations.value = merged.merged
+      if (!activeConversationId.value || !conversations.value.find(c => c.id === activeConversationId.value)) {
+        activeConversationId.value = conversations.value[0]?.id || null
+      }
+      writeConversationsToLocalStorage()
+    } finally {
+      isApplyingRemoteConversation = false
+    }
+
+    const uploaded = await uploadMergedConversations(merged.uploadIds)
+    await startConversationRealtimeSync()
+    syncStatus.value = uploaded ? 'synced' : 'error'
+    return uploaded
+  }
+
+  /**
    * Initialize the chat (called on app startup).
    * Merges Supabase and localStorage so every app surface converges on the same history.
    * Migrates old localStorage format if needed.
@@ -1332,6 +1370,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     initialize,
     reset,
     flushConversationSync,
+    syncConversationsWithSupabaseNow,
     applyRemoteConversation,
     applyRemoteConversationDelete,
     addActivityEvent,

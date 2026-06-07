@@ -272,10 +272,8 @@ function inferTaskReason(task: TaskAnswerItem, lang: TaskAnswerLanguage): string
   const subtask = subtaskReason(task, lang)
   const note = noteReason(task, lang)
   const titleReason = titlePatternReason(title, lang)
-  const priority = task.priority ? (lang === 'he' ? `עדיפות ${task.priority}` : `${task.priority} priority`) : ''
-  const estimate = task.estimatedDuration ? (lang === 'he' ? `בערך ${task.estimatedDuration} דקות` : `about ${task.estimatedDuration} minutes`) : ''
 
-  return [note, titleReason, subtask, due, priority, estimate]
+  return [note, titleReason, subtask, due]
     .filter(Boolean)
     .slice(0, 2)
     .join(lang === 'he' ? '; ' : '; ')
@@ -287,12 +285,20 @@ function inferTaskReason(task: TaskAnswerItem, lang: TaskAnswerLanguage): string
 function dueReason(task: TaskAnswerItem, lang: TaskAnswerLanguage): string {
   if (typeof task.daysOverdue === 'number' && task.daysOverdue > 0) {
     return lang === 'he'
-      ? `כבר באיחור ${task.daysOverdue} ימים אחרי הסיכון האמיתי`
-      : `already ${task.daysOverdue} days late after the real stake`
+      ? `האיחור כבר יוצר חוב קשב, אז כדאי לבדוק אם מישהו או תהליך מחכים לזה`
+      : `the delay is already creating attention debt, so check whether someone or a process is waiting on it`
   }
   if (!task.dueDate) return ''
   const date = String(task.dueDate).slice(0, 10)
-  return lang === 'he' ? `יש דדליין ב-${date}` : `has a deadline on ${date}`
+  const today = new Date().toISOString().slice(0, 10)
+  if (date <= today) {
+    return lang === 'he'
+      ? 'התאריך כבר בתוך חלון הביצוע, אז דחייה עכשיו תהפוך את זה למשיכת קשב יומית'
+      : 'the date is already inside the execution window, so delaying now turns it into daily attention drag'
+  }
+  return lang === 'he'
+    ? 'התאריך הקרוב הופך את זה להתחייבות שכדאי לסגור לפני שהיא מתחילה לדחוק משימות אחרות'
+    : 'the upcoming date makes this a commitment worth closing before it starts crowding out other work'
 }
 
 function subtaskReason(task: TaskAnswerItem, lang: TaskAnswerLanguage): string {
@@ -313,6 +319,11 @@ function noteReason(task: TaskAnswerItem, lang: TaskAnswerLanguage): string {
 }
 
 function titlePatternReason(title: string, lang: TaskAnswerLanguage): string {
+  if (/(treatment|medicine|dose|twice a day|טיפול|תרופה|מנה|מנות|אוראו|פעמיים ביום)/i.test(title)) {
+    return lang === 'he'
+      ? 'רצף טיפול שנשבר קשה להשלים בדיעבד'
+      : 'a broken treatment sequence is hard to recover after the fact'
+  }
   if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(title)) {
     return lang === 'he' ? 'כסף או גבייה עלולים להיתקע' : 'money or billing can get stuck'
   }
@@ -327,6 +338,11 @@ function titlePatternReason(title: string, lang: TaskAnswerLanguage): string {
   }
   if (/(gift|birthday|event|מתנה|יום הולדת|אירוע)/i.test(title)) {
     return lang === 'he' ? 'זה תלוי בזמן ואי אפשר להזיז בקלות' : 'the timing is fixed and hard to recover later'
+  }
+  if (/(lecture|choose|slot|date|הרצאה|לבחור|מועד|תאריך)/i.test(title)) {
+    return lang === 'he'
+      ? 'בחירה שסוגרת התחייבות זמן ומונעת דחייה מתגלגלת'
+      : 'choosing now closes a time commitment and prevents rolling deferral'
   }
   return ''
 }

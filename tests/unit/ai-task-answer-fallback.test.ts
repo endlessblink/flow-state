@@ -106,9 +106,12 @@ describe('task answer fallback quality gate', () => {
     expect(answer).toContain('זה הסדר שהייתי בוחר')
     expect(answer).toContain('1. **להתחיל טיפול אוראו - פעמיים ביום לעשרה ימים**')
     expect(answer).toContain('ההערה נותנת הקשר')
+    expect(answer).toContain('רצף טיפול')
     expect(answer).toContain('2. **לעבור על תוצאות פייפרפורט ולסקין**')
     expect(answer).toContain('3. **Write one cold opener from the target list**')
     expect(answer).toContain('הקשר המרכזי')
+    expect(answer).not.toContain('עדיפות')
+    expect(answer).not.toContain('priority')
   })
 
   it('builds matching card metadata with non-empty reasons', () => {
@@ -243,7 +246,7 @@ describe('task answer fallback quality gate', () => {
       ['להגיב למירי ולשלוח חשבונית'],
     ])
     expect(finalized.displayText).toContain('כסף או גבייה עלולים להיתקע')
-    expect(finalized.displayText).toContain('כבר באיחור 1 ימים אחרי הסיכון האמיתי')
+    expect(finalized.displayText).toContain('האיחור כבר יוצר חוב קשב')
   })
 
   it('keeps fallback smart-lane cards grouped by task relationship', () => {

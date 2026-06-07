@@ -93,6 +93,67 @@ const readState = (page: Page) => page.evaluate((id) => {
   }
 }, GROUP.id)
 
+// Drives the (singleton) canvas operation-state machine into drag-settling via the
+// DEV test seam, which closes the syncNodes remote-update guard
+// (canAcceptRemoteUpdate=false) for DRAG_SETTLE_TIMEOUT_MS (3s). A synthetic Vue
+// Flow mouse drag does not reliably fire onNodeDragStart in headless, so we exercise
+// the real state transitions directly.
+const enterDragSettling = (page: Page) => page.evaluate(() => {
+  const op = (window as { __canvasOpState?: { startDrag: (ids: string[]) => unknown; endDrag: (ids: string[]) => unknown } }).__canvasOpState
+  if (!op) throw new Error('__canvasOpState seam not found (DEV build expected)')
+  op.startDrag(['settle-probe'])
+  op.endDrag(['settle-probe'])
+})
+
+const clickCollapseBtn = (page: Page) => page.evaluate((id) => {
+  const nodeEl = document.querySelector(`[data-id="section-${id}"]`)
+  const btn = nodeEl?.querySelector('.collapse-btn') as HTMLButtonElement | null
+  btn?.click()
+}, GROUP.id)
+
+// TASK-1821: collapse was unreliable on the Electron desktop app. Cause: the
+// orchestrator collapse watcher re-synced via batchedSyncNodes() WITHOUT force, so
+// syncNodes() dropped it whenever the canvas was inside the drag-settling /
+// remote-update guard window (canAcceptRemoteUpdate=false). Because it is a
+// signature watcher, a dropped fire never recovers — children stay visible until
+// the next toggle. Electron realtime storms (BUG-1799) keep that guard closed far
+// more often than a quiet browser, which is why the existing test (realtime off,
+// guard always open) passed while the desktop app failed. This test reproduces the
+// guarded window and asserts collapse still hides children.
+test('group collapse hides children during the drag-settling guard window (TASK-1821)', async ({ page }) => {
+  await setupCanvas(page)
+  await seedCanvas(page)
+
+  const before = await readState(page)
+  expect(before.storeIsCollapsed).toBe(false)
+  expect(before.childVisible).toBe(true)
+  expect(before.unparentedInsideVisible).toBe(true)
+
+  // Push the canvas into the 3s drag-settling window.
+  await enterDragSettling(page)
+
+  // Sanity: we are actually inside the guarded settling window.
+  const settling = await page.evaluate(() => (window as { __FlowStateIsSettling?: boolean }).__FlowStateIsSettling === true)
+  expect(settling, 'expected canvas to be in the drag-settling window').toBe(true)
+
+  // Collapse during the settling window — the path that silently no-ops without the fix.
+  await clickCollapseBtn(page)
+
+  // Give the forced resync a nextTick to flush, then assert WHILE still settling so
+  // the only thing that could have hidden the child is the force:true resync (a
+  // post-settle resync would not prove the fix).
+  await page.waitForTimeout(500)
+  const stillSettling = await page.evaluate(() => (window as { __FlowStateIsSettling?: boolean }).__FlowStateIsSettling === true)
+  expect(stillSettling, 'settle window should still be open — adjust test timing if this fails').toBe(true)
+
+  const after = await readState(page)
+  console.log('COLLAPSE-DURING-SETTLE state:', JSON.stringify(after))
+  expect(after.storeIsCollapsed).toBe(true)
+  expect(after.domHasCollapsedClass).toBe(true)
+  expect(after.childVisible, 'collapse must hide child even inside the settling guard window').toBe(false)
+  expect(after.unparentedInsideVisible).toBe(false)
+})
+
 test('group collapse preserves cable target and allows selecting another node', async ({ page }) => {
   await setupCanvas(page)
   await seedCanvas(page)

@@ -427,4 +427,69 @@ describe('useAIChatStore', () => {
     expect(store.messages.some(m => m.id === streaming.id && m.content === 'still thinking')).toBe(true)
     expect(store.messages.some(m => m.id === 'remote_msg')).toBe(false)
   })
+
+  it('16. syncConversationsWithSupabaseNow merges after delayed auth recovery', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    localStorage.setItem('flowstate-ai-conversations', JSON.stringify({
+      conversations: [
+        {
+          id: 'conv_electron_local',
+          title: 'Electron local chat',
+          messages: [
+            {
+              id: 'msg_electron_local',
+              role: 'user',
+              content: 'Created before auth finished',
+              timestamp: '2026-06-07T08:00:00.000Z',
+              isStreaming: false,
+            },
+          ],
+          createdAt: '2026-06-07T08:00:00.000Z',
+          updatedAt: '2026-06-07T08:00:00.000Z',
+        },
+      ],
+      activeConversationId: 'conv_electron_local',
+    }))
+
+    mockLoadConversationsFromSupabase
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce([
+        {
+          id: 'conv_web_remote',
+          title: 'Web remote chat',
+          messages: [
+            {
+              id: 'msg_web_remote',
+              role: 'assistant' as const,
+              content: 'Created from localhost/PWA',
+              timestamp: new Date('2026-06-07T09:00:00.000Z'),
+              isStreaming: false,
+            },
+          ],
+          createdAt: new Date('2026-06-07T09:00:00.000Z'),
+          updatedAt: new Date('2026-06-07T09:00:00.000Z'),
+        },
+      ])
+    mockSubscribeToAIConversationChanges
+      .mockResolvedValueOnce(null)
+      .mockImplementationOnce((handlers) => {
+        realtimeHandlers = handlers
+        handlers.onStatus?.('SUBSCRIBED')
+        return Promise.resolve({ unsubscribe: vi.fn().mockResolvedValue(undefined) })
+      })
+
+    const store = useAIChatStore()
+    await store.initialize()
+
+    expect(store.conversations.map(c => c.id)).toEqual(['conv_electron_local'])
+    expect(mockSaveConversationToSupabase).toHaveBeenCalledWith(expect.objectContaining({ id: 'conv_electron_local' }))
+    mockSaveConversationToSupabase.mockClear()
+
+    await store.syncConversationsWithSupabaseNow()
+
+    expect(store.conversations.map(c => c.id).sort()).toEqual(['conv_electron_local', 'conv_web_remote'])
+    expect(store.activeConversationId).toBe('conv_electron_local')
+    expect(mockSaveConversationToSupabase).toHaveBeenCalledWith(expect.objectContaining({ id: 'conv_electron_local' }))
+    expect(mockSubscribeToAIConversationChanges).toHaveBeenCalledTimes(2)
+  })
 })

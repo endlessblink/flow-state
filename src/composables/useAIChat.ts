@@ -602,12 +602,13 @@ export function useAIChat() {
   function buildRichTaskData(r: ToolResult, lang: 'he' | 'en'): string {
     const ok = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
     const data = r.data
-    if (!Array.isArray(data) || data.length === 0 || (data[0] as Record<string, unknown>)?.title === undefined) {
+    const taskItems = collectTaskAnswerItems([r])
+    if (taskItems.length === 0) {
       return digestToolResults('', data, ok, lang) // non-task-list → keep digest
     }
     const today = new Date().toISOString().split('T')[0]
     const lines: string[] = [ok]
-    const slice = (data as Array<Record<string, unknown>>).slice(0, 25)
+    const slice = taskItems.slice(0, 25)
     for (let i = 0; i < slice.length; i++) {
       const item = slice[i]
       const id = item.id as string | undefined
@@ -2235,7 +2236,7 @@ export function useAIChat() {
    * Loads persisted provider/model settings from store.
    */
   async function initialize() {
-    store.initialize()
+    await store.initialize()
 
     // Load persisted settings
     const savedSettings = store.getPersistedSettings()

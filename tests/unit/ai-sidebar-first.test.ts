@@ -6,6 +6,9 @@ import { describe, expect, it, beforeEach, vi } from 'vitest'
 import AIChatPanel from '@/components/ai/AIChatPanel.vue'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
+import { useTaskStore } from '@/stores/tasks'
+import { formatRelativeDate } from '@/utils/dateUtils'
+import { createMockTask } from '../factories'
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -393,6 +396,91 @@ describe('AI sidebar-first desktop experience', () => {
 
     expect(withoutProse.text()).not.toContain('Check Cardcom payment')
     expect(withoutProse.find('.card-groups').exists()).toBe(false)
+  })
+
+  it('places matched AI task cards under the sentence that mentions them', () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-inline-cards',
+          role: 'assistant',
+          content: [
+            '1. **Task Alpha** - handle this first because it unblocks the next person.',
+            '2. **Task Beta** - then do this because it keeps the sequence moving.',
+          ].join('\n'),
+          timestamp: Date.now(),
+          isStreaming: false,
+          metadata: {
+            cardGroups: {
+              total: 2,
+              groups: [
+                {
+                  name: 'Tasks from answer',
+                  tasks: [
+                    { id: 'task-alpha', title: 'Task Alpha', status: 'todo', reason: 'unblocks the next person' },
+                    { id: 'task-beta', title: 'Task Beta', status: 'todo', reason: 'keeps the sequence moving' },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    })
+
+    const inlineCards = wrapper.findAll('[data-testid="inline-ai-task-card"]')
+    expect(inlineCards).toHaveLength(2)
+    expect(inlineCards[0].text()).toContain('Task Alpha')
+    expect(inlineCards[1].text()).toContain('Task Beta')
+    expect(wrapper.find('.card-groups .card-group').exists()).toBe(false)
+  })
+
+  it('renders grouped AI task cards from live task store fields after edits', () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push(createMockTask({
+      id: 'task-live-date',
+      title: 'Live Date Task',
+      status: 'todo',
+      dueDate: '2026-06-11',
+      priority: 'medium',
+    }))
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-live-task-card',
+          role: 'assistant',
+          content: 'Start with the live date task.',
+          timestamp: Date.now(),
+          isStreaming: false,
+          metadata: {
+            cardGroups: {
+              total: 1,
+              groups: [
+                {
+                  name: 'Tasks from answer',
+                  tasks: [
+                    {
+                      id: 'task-live-date',
+                      title: 'Live Date Task',
+                      status: 'todo',
+                      dueDate: '2026-06-07',
+                      priority: 'high',
+                      reason: 'deadline risk',
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    })
+
+    expect(wrapper.text()).toContain(formatRelativeDate('2026-06-11'))
+    expect(wrapper.text()).not.toContain('today')
   })
 
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {

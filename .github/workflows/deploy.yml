@@ -40,10 +40,26 @@ jobs:
       - name: Install Dependencies
         run: npm ci --ignore-scripts
 
+      # TASK-1823 — BLOCKING blank-screen guard (static). Catches used-but-unimported
+      # symbols and type errors that `npm run build` (esbuild) ships silently and that
+      # surface only at runtime as a blank/empty screen. Must pass before we build+deploy.
+      - name: Type check (blank-screen guard)
+        run: npm run type-check
+
       - name: Build Application
         run: npm run build
         env:
           NODE_ENV: production
+
+      # TASK-1823 — BLOCKING blank-screen guard (runtime). Serves the exact bundle
+      # just built and asserts the app actually mounts (no white screen, no fatal
+      # runtime error) before it is rsync'd to production. Same gate as the local
+      # deploy script and electron:build, so web and desktop can never diverge.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify build renders (blank-screen guard)
+        run: npm run verify:rendered
 
       # Setup SSH
       - name: Prepare SSH Key

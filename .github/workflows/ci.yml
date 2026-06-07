@@ -44,6 +44,17 @@ jobs:
       - name: Build application
         run: npm run build
 
+      # TASK-1823 — BLOCKING blank-screen guard at PR time. Serves the bundle just
+      # built and asserts the app actually mounts (no white screen, no fatal runtime
+      # error). Catches the "Electron doesn't load" regression class on every PR,
+      # before merge — the earliest possible gate. Build is base '/' here, which is
+      # fine: this verifies the render path, not Electron packaging specifics.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify build renders (blank-screen guard)
+        run: npm run verify:rendered
+
       # Unit tests (enabled after TASK-020 fix, Dec 19, 2025)
       - name: Run safety tests
         run: npx vitest run tests/safety/ --config vitest.ci.config.ts

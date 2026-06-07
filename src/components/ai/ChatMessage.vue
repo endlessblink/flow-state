@@ -111,9 +111,9 @@ type TaskListItem = {
   id: string
   title?: string
   status?: string
-  priority?: string
-  dueDate?: string
-  estimatedDuration?: number
+  priority?: string | null
+  dueDate?: string | null
+  estimatedDuration?: number | null
   reason?: string
   daysOverdue?: number
   [key: string]: unknown
@@ -133,7 +133,7 @@ function liveTask(snapshotTask: TaskListItem): TaskListItem {
     title: storeTask.title ?? snapshotTask.title,
     status: storeTask.status ?? snapshotTask.status,
     priority: storeTask.priority ?? snapshotTask.priority,
-    dueDate: storeTask.dueDate ?? snapshotTask.dueDate,
+    dueDate: storeTask.dueDate ?? null,
     estimatedDuration: storeTask.estimatedDuration ?? snapshotTask.estimatedDuration,
   }
 }
@@ -268,6 +268,58 @@ const isSmartLanes = computed(() => cardGroups.value?.kind === 'smart_lanes')
 // TASK-1820: weekly review cards show ALREADY-COMPLETED tasks → read-only
 // (no done-toggle / start-timer actions), but still clickable to open the task.
 const isWeeklyReview = computed(() => cardGroups.value?.kind === 'weekly_review')
+const liveCardGroups = computed(() => {
+  const groups = cardGroups.value?.groups ?? []
+  return groups.map(group => ({
+    ...group,
+    tasks: liveTasks(group.tasks),
+  }))
+})
+const allCardTasks = computed(() => {
+  const groups = liveCardGroups.value
+  return groups.flatMap(group => group.tasks.map(task => ({ ...task, groupName: group.name })))
+})
+const inlineContentBlocks = computed(() => {
+  const content = (props.message.content || '').trim()
+  if (!content || !cardGroups.value) return []
+
+  const used = new Set<string>()
+  return content
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const tasks = allCardTasks.value.filter(task => {
+        if (!task.id || used.has(task.id) || !task.title) return false
+        return line.includes(task.title)
+      })
+      for (const task of tasks) used.add(task.id)
+      return {
+        key: `line-${index}`,
+        html: sanitizeMarkdownHtml(md.render(line)),
+        tasks,
+      }
+    })
+})
+const inlineTaskIds = computed(() => new Set(inlineContentBlocks.value.flatMap(block => block.tasks.map(task => task.id).filter(Boolean))))
+const hasInlineCardLayout = computed(() => inlineTaskIds.value.size > 0)
+const remainingCardGroups = computed(() => {
+  const groups = liveCardGroups.value
+  if (!hasInlineCardLayout.value) return groups
+  return groups
+    .map(group => ({
+      ...group,
+      tasks: group.tasks.filter(task => !inlineTaskIds.value.has(task.id)),
+    }))
+    .filter(group => group.tasks.length > 0 || (group.newTasks?.length ?? 0) > 0)
+})
+const hasBottomCardGroups = computed(() =>
+  !!cardGroups.value && (
+    isDayPlan.value ||
+    isSmartLanes.value ||
+    remainingCardGroups.value.length > 0
+  ),
+)
 const dayPlanTaskCount = computed(() => {
   const groups = cardGroups.value?.groups ?? []
   return groups.reduce((sum, group) => sum + group.tasks.length, 0)
@@ -626,6 +678,72 @@ async function saveSchedule() {
       </div>
 
       <!-- Rendered Message Text -->
+      <div
+        v-if="hasInlineCardLayout"
+        class="inline-response"
+        :dir="effectiveDirection"
+      >
+        <div
+          v-for="block in inlineContentBlocks"
+          :key="block.key"
+          class="inline-response-block"
+        >
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div
+            class="message-text markdown-body inline-message-text"
+            :dir="effectiveDirection"
+            v-html="block.html"
+          />
+          <div v-if="block.tasks.length" class="card-group inline-card-group">
+            <button
+              v-for="task in block.tasks"
+              :key="task.id"
+              class="task-list-item grouped-card inline-grouped-card"
+              data-testid="inline-ai-task-card"
+              :class="{ 'task-completed': completedTaskIds.has(task.id) }"
+              @click="openQuickEdit(task, $event)"
+            >
+              <span class="task-priority-dot" :style="{ background: priorityColor(task.priority ?? undefined) }" />
+              <div class="grouped-card-body">
+                <span class="task-title" :dir="direction || 'auto'">{{ task.title || '(untitled)' }}</span>
+                <span v-if="task.reason" class="grouped-card-reason" dir="auto">{{ task.reason }}</span>
+                <div class="task-meta-row">
+                  <span v-if="task.daysOverdue" class="task-overdue-badge">{{ task.daysOverdue }}d overdue</span>
+                  <span v-else-if="task.dueDate" class="task-due-date">{{ formatRelativeDate(task.dueDate) }}</span>
+                  <span v-if="task.status" class="task-status-badge" :class="'status-' + task.status">{{ task.status }}</span>
+                </div>
+              </div>
+              <div v-if="isWeeklyReview" class="task-inline-actions" @click.stop>
+                <span class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
+              </div>
+              <div v-else class="task-inline-actions" @click.stop>
+                <button
+                  v-if="!completedTaskIds.has(task.id)"
+                  class="inline-action-btn inline-done-btn"
+                  :class="{ loading: actionLoading[task.id] === 'done' }"
+                  title="Mark done"
+                  @click="markTaskDone(task.id, $event)"
+                >
+                  <Loader2 v-if="actionLoading[task.id] === 'done'" :size="12" class="spin" />
+                  <CheckCircle2 v-else :size="12" />
+                </button>
+                <button
+                  v-if="!timerStartedTaskIds.has(task.id)"
+                  class="inline-action-btn inline-timer-btn"
+                  :class="{ loading: actionLoading[task.id] === 'timer' }"
+                  title="Start timer"
+                  @click="startTaskTimer(task.id, $event)"
+                >
+                  <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
+                  <Play v-else :size="12" />
+                </button>
+                <span v-if="completedTaskIds.has(task.id)" class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
+                <span v-if="timerStartedTaskIds.has(task.id)" class="inline-action-timer-badge"><Play :size="12" /> Timer</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div
         v-else-if="renderedContent"
@@ -673,7 +791,7 @@ async function saveSchedule() {
 
       <!-- TASK-1814: Grouped prioritization cards — replaces the flat dump. Each
            task is the same interactive card + the AI's one-line reason underneath. -->
-      <div v-if="cardGroups" class="card-groups">
+      <div v-if="hasBottomCardGroups" class="card-groups">
         <div v-if="isDayPlan" class="day-plan-toolbar">
           <button
             class="day-plan-apply-btn"
@@ -702,7 +820,7 @@ async function saveSchedule() {
           </button>
           <span v-if="smartLaneError" class="day-plan-error">{{ smartLaneError }}</span>
         </div>
-        <div v-for="(group, gi) in cardGroups.groups" :key="'g' + gi" class="card-group">
+        <div v-for="(group, gi) in remainingCardGroups" :key="'g' + gi" class="card-group">
           <div v-if="group.name" class="card-group-name" dir="auto">
             {{ group.name }}
           </div>
@@ -713,7 +831,7 @@ async function saveSchedule() {
             :class="{ 'task-completed': completedTaskIds.has(task.id) }"
             @click="openQuickEdit(task, $event)"
           >
-            <span class="task-priority-dot" :style="{ background: priorityColor(task.priority) }" />
+            <span class="task-priority-dot" :style="{ background: priorityColor(task.priority ?? undefined) }" />
             <div class="grouped-card-body">
               <span class="task-title" :dir="direction || 'auto'">{{ task.title || '(untitled)' }}</span>
               <span v-if="task.reason" class="grouped-card-reason" dir="auto">{{ task.reason }}</span>
@@ -881,7 +999,7 @@ async function saveSchedule() {
               >
                 <span
                   class="task-priority-dot"
-                  :style="{ background: priorityColor(task.priority) }"
+                  :style="{ background: priorityColor(task.priority ?? undefined) }"
                 />
                 <span class="task-title" :dir="direction || 'auto'">{{ task.title || '(untitled)' }}</span>
                 <div class="task-meta-row">
@@ -948,7 +1066,7 @@ async function saveSchedule() {
               >
                 <span
                   class="task-priority-dot"
-                  :style="{ background: priorityColor(task.priority) }"
+                  :style="{ background: priorityColor(task.priority ?? undefined) }"
                 />
                 <span class="task-title" :dir="direction || 'auto'">{{ task.title || '(untitled)' }}</span>
                 <div class="task-meta-row">
@@ -1524,6 +1642,24 @@ async function saveSchedule() {
 .day-plan-error {
   font-size: var(--text-xs);
   color: var(--color-danger);
+}
+.inline-response {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.inline-response-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1_5);
+}
+.inline-message-text :deep(p),
+.inline-message-text :deep(ol),
+.inline-message-text :deep(ul) {
+  margin-bottom: 0;
+}
+.inline-card-group {
+  margin-top: var(--space-0_5);
 }
 .card-group {
   display: flex;

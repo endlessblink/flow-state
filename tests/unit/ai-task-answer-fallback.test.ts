@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildStructuredTaskCards,
   buildStructuredTaskFallback,
+  isMeaningfulTaskReason,
   shouldUseStructuredTaskFallback,
 } from '@/services/ai/pipeline/taskAnswerFallback'
 
@@ -48,6 +49,38 @@ describe('task answer fallback quality gate', () => {
     }
 
     expect(shouldUseStructuredTaskFallback('קודם בודקים את התוצאות ואז כותבים.', taskResults, parsed)).toBe(false)
+  })
+
+  it('rejects parsed card reasons that only repeat priority or overdue metadata', () => {
+    const parsed = {
+      groups: [{
+        name: 'דחוף',
+        tasks: [
+          { title: 'להתחיל טיפול אוראו - פעמיים ביום לעשרה ימים', reason: 'high priority' },
+          { title: 'לעבור על תוצאות פייפרפורט ולסקין', reason: 'באיחור 2 ימים' },
+        ],
+      }],
+      total: 3,
+      rawBlock: '```cards\n{}\n```',
+    }
+
+    expect(shouldUseStructuredTaskFallback('אלה המשימות הדחופות.', taskResults, parsed)).toBe(true)
+  })
+
+  it('rejects structured-looking answers that mention tasks without meaningful reasons', () => {
+    const shallowList = [
+      '1. **להתחיל טיפול אוראו - פעמיים ביום לעשרה ימים** - high priority',
+      '2. **לעבור על תוצאות פייפרפורט ולסקין** - באיחור',
+    ].join('\n')
+
+    expect(shouldUseStructuredTaskFallback(shallowList, taskResults, null)).toBe(true)
+  })
+
+  it('classifies real stakes as meaningful reasons and metadata-only labels as shallow', () => {
+    expect(isMeaningfulTaskReason('money or billing can get stuck')).toBe(true)
+    expect(isMeaningfulTaskReason('פותח את שלב הכתיבה הבא')).toBe(true)
+    expect(isMeaningfulTaskReason('high priority')).toBe(false)
+    expect(isMeaningfulTaskReason('באיחור 2 ימים')).toBe(false)
   })
 
   it('builds a structured answer with explicit reasons and task names', () => {

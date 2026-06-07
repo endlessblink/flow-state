@@ -40,8 +40,11 @@ export function shouldUseStructuredTaskFallback(
 ): boolean {
   const taskCount = collectTaskAnswerItems(toolResults).filter(task => task.title).length
   if (taskCount === 0) return false
-  if (parsedCards && parsedCards.groups.some(group => group.tasks.some(task => String(task.reason || '').trim().length > 0))) {
+  if (parsedCards && parsedCards.groups.some(group => group.tasks.some(task => isMeaningfulTaskReason(String(task.reason || ''))))) {
     return false
+  }
+  if (parsedCards && parsedCards.groups.some(group => group.tasks.length > 0)) {
+    return true
   }
 
   const visible = stripCardsBlock(answer).trim()
@@ -59,9 +62,41 @@ export function shouldUseStructuredTaskFallback(
   const hasMeaningfulMarker = meaningfulMarkers.some(marker => visible.toLocaleLowerCase().includes(marker))
 
   if (!hasListStructure && visible.length > 140 && sentenceCount <= 1) return true
-  if (taskMentions > 0 && !hasListStructure && !hasMeaningfulMarker) return true
+  if (taskMentions > 0 && !hasMeaningfulMarker) return true
   if (taskMentions > 0 && visible.length < 80) return true
   return false
+}
+
+export function isMeaningfulTaskReason(reason: string): boolean {
+  const normalized = reason
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase()
+  if (!normalized) return false
+
+  const genericOnly = [
+    /^(high|medium|low)\s+priority$/,
+    /^priority\s+(high|medium|low)$/,
+    /^overdue$/,
+    /^due\s+(today|tomorrow|soon)$/,
+    /^\d+\s+days?\s+(overdue|late)$/,
+    /^highest\s+priority$/,
+    /^urgent$/,
+    /^דחוף$/,
+    /^עדיפות\s+(גבוהה|בינונית|נמוכה|high|medium|low)$/,
+    /^באיחור$/,
+    /^באיחור\s+\d+\s+ימים$/,
+  ]
+  if (genericOnly.some(pattern => pattern.test(normalized))) return false
+
+  const meaningfulMarkers = [
+    'unblock', 'block', 'risk', 'stake', 'waiting', 'deadline', 'depends', 'sequence', 'money',
+    'billing', 'client', 'customer', 'release', 'momentum', 'context', 'note', 'started', 'stuck',
+    'פותח', 'חוסם', 'סיכון', 'מחכה', 'דדליין', 'תלוי', 'רצף', 'כסף', 'גבייה', 'לקוח',
+    'שחרור', 'מומנטום', 'הקשר', 'הערה', 'התחילה', 'תקוע',
+  ]
+  return meaningfulMarkers.some(marker => normalized.includes(marker)) || normalized.split(/\s+/).length >= 5
 }
 
 export function buildStructuredTaskFallback(

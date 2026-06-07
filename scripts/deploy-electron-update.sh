@@ -9,10 +9,8 @@
 #   2. electron-builder installed (npm dep)
 #
 # What it does:
-#   1. Builds Vue frontend (npm run build)
-#   2. Builds Electron main process (npm run electron:build-main)
-#   3. Packages with electron-builder (AppImage + .deb)
-#   4. Uploads artifacts + latest-linux.yml to VPS via SCP
+#   1. Runs the canonical Electron build (frontend, main process, patch, package, validate)
+#   2. Uploads artifacts + latest-linux.yml to VPS via SCP
 #
 set -euo pipefail
 
@@ -52,31 +50,12 @@ echo -e "Notes: ${NOTES:-'(none)'}"
 
 node "$PROJECT_DIR/scripts/validate-electron-vite-env.cjs"
 
-# Step 1: Build frontend
-echo -e "\n${YELLOW}[1/4] Building Vue frontend...${NC}"
+# Step 1: Build and package Electron app through the canonical release command
+echo -e "\n${YELLOW}[1/2] Building and packaging Electron app...${NC}"
 if [ "$DRY_RUN" = true ]; then
-  echo -e "${CYAN}  [DRY RUN] Would run: ELECTRON_BUILD=true npm run build${NC}"
+  echo -e "${CYAN}  [DRY RUN] Would run: npm run electron:build${NC}"
 else
-  ELECTRON_BUILD=true npm run build
-fi
-
-# Step 2: Build Electron main process
-echo -e "\n${YELLOW}[2/4] Building Electron main process...${NC}"
-if [ "$DRY_RUN" = true ]; then
-  echo -e "${CYAN}  [DRY RUN] Would run: npm run electron:build-main${NC}"
-else
-  npm run electron:build-main
-fi
-
-# Step 3: Package with electron-builder
-echo -e "\n${YELLOW}[3/4] Packaging with electron-builder...${NC}"
-if [ "$DRY_RUN" = true ]; then
-  echo -e "${CYAN}  [DRY RUN] Would run: npm run electron:patch-builder${NC}"
-  echo -e "${CYAN}  [DRY RUN] Would run: npx electron-builder --config electron-builder.yml --linux${NC}"
-else
-  npm run electron:patch-builder
-  npx electron-builder --config electron-builder.yml --linux
-  npm run electron:validate-package
+  npm run electron:build
 fi
 
 # Check artifacts exist
@@ -97,12 +76,12 @@ fi
 
 # Step 4: Deploy to VPS
 if [ "$SKIP_DEPLOY" = true ]; then
-  echo -e "\n${YELLOW}[4/4] Skipping deploy (--skip-deploy)${NC}"
+  echo -e "\n${YELLOW}[2/2] Skipping deploy (--skip-deploy)${NC}"
 elif [ "$DRY_RUN" = true ]; then
-  echo -e "\n${YELLOW}[4/4] Deploy (DRY RUN)${NC}"
+  echo -e "\n${YELLOW}[2/2] Deploy (DRY RUN)${NC}"
   echo -e "${CYAN}  Would upload to ${VPS_USER}@${VPS_HOST}:${VPS_PATH}/${NC}"
 else
-  echo -e "\n${YELLOW}[4/4] Deploying to VPS...${NC}"
+  echo -e "\n${YELLOW}[2/2] Deploying to VPS...${NC}"
 
   # Create remote directory
   ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mkdir -p ${VPS_PATH}"

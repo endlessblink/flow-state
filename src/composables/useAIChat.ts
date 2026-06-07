@@ -50,6 +50,7 @@ import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRou
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
 import { parseCardGroups, parseMentionedTaskCards, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import { buildStructuredTaskCards, buildStructuredTaskFallback, shouldUseStructuredTaskFallback } from '@/services/ai/pipeline/taskAnswerFallback'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
@@ -636,38 +637,8 @@ export function useAIChat() {
     return lines.join('\n').slice(0, 6000)
   }
 
-  function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<{ title?: string; priority?: string; daysOverdue?: number }> {
-    const tasks: Array<{ title?: string; priority?: string; daysOverdue?: number }> = []
-    for (const result of toolResults) {
-      const data = result.data
-      if (!result.success) continue
-      if (Array.isArray(data)) {
-        tasks.push(...data.filter(item => item && typeof item === 'object') as Array<{ title?: string; priority?: string; daysOverdue?: number }>)
-      } else if (data && typeof data === 'object') {
-        const record = data as Record<string, unknown>
-        for (const key of ['tasks', 'dueTodayTasks', 'overdueTasks']) {
-          const value = record[key]
-          if (Array.isArray(value)) {
-            tasks.push(...value.filter(item => item && typeof item === 'object') as Array<{ title?: string; priority?: string; daysOverdue?: number }>)
-          }
-        }
-      }
-    }
-    return tasks
-  }
-
   function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en'): string {
-    const tasks = getTaskItemsFromToolResults(toolResults).filter(task => task.title).slice(0, 3)
-    if (tasks.length === 0) {
-      return lang === 'he'
-        ? 'מצאתי את הנתונים, אבל לא הצלחתי לנסח תשובת AI מלאה בזמן.'
-        : 'I found the data, but could not finish the AI wording in time.'
-    }
-
-    const rows = tasks.map((task, index) => `${index + 1}. **${task.title}**`)
-    return lang === 'he'
-      ? ['הייתי מתחיל לפי הסדר הזה:', ...rows].join('\n')
-      : ['I would start in this order:', ...rows].join('\n')
+    return buildStructuredTaskFallback(toolResults, lang, { limit: 4 })
   }
 
   /**
@@ -1198,7 +1169,12 @@ export function useAIChat() {
               ? 'smart_lanes'
               : undefined
       const fallbackGroupName = outputLanguage === 'he' ? 'משימות מהתשובה' : 'Tasks from the answer'
-      const cardData = parseCardGroups(formattedResponse, toolResults)
+      let cardData = parseCardGroups(formattedResponse, toolResults)
+      if (shouldUseStructuredTaskFallback(formattedResponse, toolResults, cardData)) {
+        formattedResponse = buildStructuredTaskFallback(toolResults, outputLanguage, { limit: 4 })
+        cardData = buildStructuredTaskCards(toolResults, outputLanguage, fallbackGroupName, fallbackKind, 4)
+      }
+      cardData = cardData
         ?? (hasTaskList ? parseMentionedTaskCards(formattedResponse, toolResults, fallbackGroupName, fallbackKind) : null)
       const displayRaw = cardData ? stripCardsBlock(formattedResponse) : formattedResponse
 
@@ -1658,14 +1634,23 @@ export function useAIChat() {
       const lastMsg = store.messages[store.messages.length - 1]
       if (lastMsg && lastMsg.isStreaming) {
         const hadToolCalls = stepCount > 1 || (lastMsg.metadata as Record<string, unknown>)?.toolResults !== undefined
+        const allToolResults = ((lastMsg.metadata as Record<string, unknown>)?.toolResults as ToolResult[]) || []
+        let rawAnswer = lastMsg.content || ''
         // TASK-1814: parse the `cards` block from the RAW answer (before cleaning may
         // drop it) → grouped interactive cards, same as the deterministic path.
-        const reactCards = isBridgeActive()
-          ? parseCardGroups(lastMsg.content || '', ((lastMsg.metadata as Record<string, unknown>)?.toolResults as ToolResult[]) || [])
+        let reactCards = isBridgeActive()
+          ? parseCardGroups(rawAnswer, allToolResults)
           : null
+        const fallbackGroupName = lang === 'he' ? 'משימות מהתשובה' : 'Tasks from the answer'
+        if (isBridgeActive() && shouldUseStructuredTaskFallback(rawAnswer, allToolResults, reactCards)) {
+          rawAnswer = buildStructuredTaskFallback(allToolResults, lang, { limit: 4 })
+          reactCards = buildStructuredTaskCards(allToolResults, lang, fallbackGroupName, undefined, 4)
+        }
+        reactCards = reactCards
+          ?? (isBridgeActive() ? parseMentionedTaskCards(rawAnswer, allToolResults, fallbackGroupName) : null)
         // Strip the cards block from the RAW content BEFORE cleaning (cleanResponse
         // mangles the fence → raw JSON leaks). cards block is always last → strip to EOF.
-        let cleaned = cleanResponse(reactCards ? stripCardsBlock(lastMsg.content || '') : (lastMsg.content || ''))
+        let cleaned = cleanResponse(reactCards ? stripCardsBlock(rawAnswer) : rawAnswer)
 
         // TASK-1391: Fluff detection + retry (max 1 retry to avoid latency)
         if (hadToolCalls && !abortController.signal.aborted) {

@@ -607,10 +607,18 @@ export function useAIChat() {
     const today = new Date().toISOString().split('T')[0]
     const lines: string[] = [ok]
     const slice = taskItems.slice(0, 25)
+    let timerSessions: Array<{ taskId: string; duration: number; isBreak?: boolean }> = []
+    try {
+      timerSessions = useTimerStore().completedSessions.map(session => ({
+        taskId: session.taskId,
+        duration: session.duration,
+        isBreak: session.isBreak,
+      }))
+    } catch { /* timer store may be unavailable in narrow tests */ }
     for (let i = 0; i < slice.length; i++) {
       const item = slice[i]
       const id = item.id as string | undefined
-      const full = ((id ? taskStore.getTask(id) : null) || item) as unknown as Task & { tags?: string[]; subtasks?: Array<{ completed?: boolean; done?: boolean }> }
+      const full = ((id ? taskStore.getTask(id) : null) || item) as unknown as Task & { tags?: string[]; subtasks?: Array<{ completed?: boolean; done?: boolean; isCompleted?: boolean }> }
       // [N] index lets the model reference tasks in the `cards` block by number
       // (robust vs title-matching, esp. Hebrew/paraphrased). i+1 is 1-based.
       const parts: string[] = [`[${i + 1}] ${full.title || '(untitled)'}`]
@@ -623,10 +631,48 @@ export function useAIChat() {
       if (desc) parts.push(`notes: "${desc.slice(0, 240)}"`)
       if (Array.isArray(full.tags) && full.tags.length) parts.push(`tags: ${full.tags.join(', ')}`)
       if (Array.isArray(full.subtasks) && full.subtasks.length) {
-        const done = full.subtasks.filter((s: { completed?: boolean; done?: boolean }) => s.completed || s.done).length
+        const done = full.subtasks.filter((s: { completed?: boolean; done?: boolean; isCompleted?: boolean }) => s.completed || s.done || s.isCompleted).length
         parts.push(`subtasks ${done}/${full.subtasks.length} done`)
       }
       if (full.estimatedDuration) parts.push(`~${full.estimatedDuration}min`)
+      if (Array.isArray(full.dependsOn) && full.dependsOn.length) {
+        const dependencyTitles = full.dependsOn
+          .map(depId => taskStore.getTask(depId)?.title || depId)
+          .filter(Boolean)
+          .slice(0, 3)
+        if (dependencyTitles.length) parts.push(`depends on: ${dependencyTitles.join(', ')}`)
+      }
+      if (full.connectionTypes && typeof full.connectionTypes === 'object') {
+        const connections = Object.entries(full.connectionTypes)
+          .map(([targetId, relation]) => {
+            const target = taskStore.getTask(targetId)?.title || targetId
+            return `${relation} -> ${target}`
+          })
+          .slice(0, 3)
+        if (connections.length) parts.push(`connections: ${connections.join('; ')}`)
+      }
+      if (Array.isArray(full.planningNotes) && full.planningNotes.length) {
+        const notes = full.planningNotes
+          .map(note => [note.title, note.description].filter(Boolean).join(': ').trim())
+          .filter(Boolean)
+          .slice(0, 2)
+          .join(' | ')
+        if (notes) parts.push(`planning notes: "${notes.slice(0, 180)}"`)
+      }
+      if (Array.isArray(full.instances) && full.instances.length) {
+        const scheduled = full.instances
+          .slice(0, 2)
+          .map(instance => [instance.scheduledDate, instance.scheduledTime, instance.duration ? `${instance.duration}min` : ''].filter(Boolean).join(' '))
+          .filter(Boolean)
+        if (scheduled.length) parts.push(`scheduled: ${scheduled.join(', ')}`)
+      }
+      const focusedSessions = id ? timerSessions.filter(session => session.taskId === id && !session.isBreak) : []
+      if (focusedSessions.length) {
+        const focusedMinutes = focusedSessions.reduce((sum, session) => sum + Math.round((session.duration || 0) / 60), 0)
+        parts.push(`focus history today: ${focusedSessions.length} sessions, ${focusedMinutes}min`)
+      } else if (full.completedPomodoros > 0) {
+        parts.push(`pomodoros completed: ${full.completedPomodoros}`)
+      }
       if (full.projectId) {
         const pname = taskStore.getProjectDisplayName?.(full.projectId)
         if (pname) parts.push(`project: ${pname}`)
@@ -653,6 +699,12 @@ export function useAIChat() {
           dueDate: full.dueDate,
           estimatedDuration: full.estimatedDuration,
           projectId: full.projectId,
+          tags: full.tags,
+          subtasks: full.subtasks,
+          dependsOn: full.dependsOn,
+          connectionTypes: full.connectionTypes,
+          planningNotes: full.planningNotes,
+          completedPomodoros: full.completedPomodoros,
         } : {}),
         __cardIndex: tasks.length + 1,
       })

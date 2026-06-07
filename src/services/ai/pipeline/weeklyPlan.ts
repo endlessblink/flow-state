@@ -374,7 +374,9 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
   if (plan.direction !== context.direction) errors.push('wrong_direction')
   if (!Array.isArray(plan.recommendations)) errors.push('missing_recommendations')
   const recs = Array.isArray(plan.recommendations) ? plan.recommendations : []
-  if (recs.length < 3 || recs.length > 7) errors.push('recommendation_count_out_of_range')
+  const openQuestions = Array.isArray(plan.openQuestions) ? plan.openQuestions : []
+  const isClarificationFirstPlan = recs.length === 0 && openQuestions.length > 0 && plan.quality?.confidence === 'low'
+  if (!isClarificationFirstPlan && (recs.length < 3 || recs.length > 7)) errors.push('recommendation_count_out_of_range')
 
   for (const rec of recs) {
     if (!rec.sectionId) errors.push('missing_section_id')
@@ -399,17 +401,26 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
       if (!validTaskIds.has(id)) errors.push(`invalid_related_task_id:${id}`)
     }
   }
-  if (context.workstreams.some(stream => stream.taskIds.length > 1) && recs.every(rec => (rec.relatedTaskIds ?? []).length === 0)) {
+  if (!isClarificationFirstPlan && context.workstreams.some(stream => stream.taskIds.length > 1) && recs.every(rec => (rec.relatedTaskIds ?? []).length === 0)) {
     errors.push('missing_related_workstream_binding')
   }
-  if (recs.length >= 3 && realConsequenceCoverage(recs) < 0.8) errors.push('insufficient_real_consequence_coverage')
-  if (hasRepeatedTemplateShape(recs)) errors.push('repeated_template_structure')
-  if (overusesDueDates(recs)) errors.push('due_date_overuse')
+  if (!isClarificationFirstPlan && recs.length >= 3 && realConsequenceCoverage(recs) < 0.8) errors.push('insufficient_real_consequence_coverage')
+  if (!isClarificationFirstPlan && hasRepeatedTemplateShape(recs)) errors.push('repeated_template_structure')
+  if (!isClarificationFirstPlan && overusesDueDates(recs)) errors.push('due_date_overuse')
   return [...new Set(errors)]
 }
 
 export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutput {
   const selected = selectQuickDraftTasks(context.tasks)
+  const openQuestions = buildQuickDraftQuestions(context, selected)
+  const topTaskQuestion = selected[0]
+    ? openQuestions.find(question => question.relatedTaskIds.includes(selected[0].id))
+    : undefined
+  const shouldClarifyBeforeRanking = Boolean(selected[0] && topTaskQuestion && needsPlanningClarification(selected[0]))
+  if (shouldClarifyBeforeRanking && topTaskQuestion) {
+    return buildClarificationFirstWeeklyPlan(context, [topTaskQuestion])
+  }
+
   const deferredErrands = context.tasks
     .filter(task => !selected.some(selectedTask => selectedTask.id === task.id))
     .filter(task => task.derived.quickErrandScore >= 0.55 || task.derived.weekendEligible)
@@ -463,11 +474,43 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
         : `I did not put "${task.title}" in the weekly focus because it looks like a small errand that can be batched into the weekend or a low-energy window.`,
       revisitIso: task.dueIso ?? null,
     })),
-    openQuestions: buildQuickDraftQuestions(context, selected),
+    openQuestions: openQuestions.slice(0, 1),
     quality: {
       selectedTaskCount: recommendations.length,
       confidence: 'low',
       caveats: [locale === 'he' ? 'תשובת המודל נדחתה או לא חזרה בזמן; מוצגת תוכנית מקורקעת מנתוני המשימות.' : 'The model answer was rejected or unavailable; showing a grounded plan from task evidence.'],
+    },
+    source: 'quick_draft',
+  }
+}
+
+function buildClarificationFirstWeeklyPlan(
+  context: WeekContext,
+  openQuestions: WeeklyPlanOutput['openQuestions'],
+): WeeklyPlanOutput {
+  const locale = context.locale
+  return {
+    schemaVersion: 'weekly-plan.v2',
+    requestId: context.requestId,
+    locale,
+    direction: context.direction,
+    headline: locale === 'he' ? 'לפני שאני מדרג את השבוע' : 'Before I rank the week',
+    weekRead: {
+      summary: locale === 'he'
+        ? 'חסר לי הקשר שיכול לשנות את הדירוג, אז אשאל קודם שאלה אחת קצרה.'
+        : 'I am missing context that could change the ranking, so I will ask one short question first.',
+      workloadReality: '',
+      mainTradeoff: '',
+    },
+    recommendations: [],
+    deferrals: [],
+    openQuestions,
+    quality: {
+      selectedTaskCount: 0,
+      confidence: 'low',
+      caveats: [locale === 'he'
+        ? 'לא נוצרה תוכנית מלאה עד שהתשובה תישמר או שתבחר להמשיך עם אי-ודאות.'
+        : 'No full plan was generated until the answer is saved or you choose to proceed with uncertainty.'],
     },
     source: 'quick_draft',
   }
@@ -511,7 +554,7 @@ function selectQuickDraftTasks(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapsho
 function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSnapshot[]): WeeklyPlanOutput['openQuestions'] {
   const locale = context.locale
   const questions: WeeklyPlanOutput['openQuestions'] = []
-  const missingProjectTask = selected.find(task => task.project?.id && !hasUsableProjectContext(task))
+  const missingProjectTask = selected.find(task => task.project?.id && needsPlanningClarification(task))
   if (missingProjectTask?.project?.id) {
     const projectId = missingProjectTask.project.id
     const projectName = missingProjectTask.project.name || projectId
@@ -537,12 +580,7 @@ function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSna
     })
   }
 
-  const weakSubstantialTask = selected.find(task =>
-    task.derived.substantialWorkScore >= 0.45 &&
-    !task.notes &&
-    !task.subtasks?.length &&
-    !task.dependencies?.blocksTaskIds.length
-  )
+  const weakSubstantialTask = selected.find(task => task.derived.substantialWorkScore >= 0.45 && needsPlanningClarification(task))
   if (weakSubstantialTask) {
     questions.push({
       id: `context_${weakSubstantialTask.id}`,
@@ -751,6 +789,32 @@ function hasUsableProjectContext(task: PlannerTaskSnapshot): boolean {
     ctx.currentStakes !== 'unknown' ||
     ctx.summary,
   )
+}
+
+function hasUsableTaskContext(task: PlannerTaskSnapshot): boolean {
+  const ctx = task.taskContext
+  if (!ctx) return false
+  return Boolean(
+    ctx.whyItMatters ||
+    ctx.successCriteria.length ||
+    ctx.currentStakes !== 'unknown' ||
+    ctx.summary,
+  )
+}
+
+function hasTaskLevelPlanningContext(task: PlannerTaskSnapshot): boolean {
+  const notes = (task.notes ?? '').trim()
+  return Boolean(
+    hasUsableTaskContext(task) ||
+    notes.length >= 24 ||
+    task.subtasks?.some(subtask => !subtask.isCompleted && subtask.title.trim().length >= 8) ||
+    task.dependencies?.blocksTaskIds.length ||
+    task.dependencies?.blockedByTaskIds.length,
+  )
+}
+
+function needsPlanningClarification(task: PlannerTaskSnapshot): boolean {
+  return !hasUsableProjectContext(task) && !hasTaskLevelPlanningContext(task)
 }
 
 function buildMemoryUncertaintyNotes(tasks: PlannerTaskSnapshot[], locale: PlannerLocale): string[] {

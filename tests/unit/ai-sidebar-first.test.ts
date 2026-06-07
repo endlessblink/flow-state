@@ -668,13 +668,10 @@ describe('AI sidebar-first desktop experience', () => {
     const quickDraft = buildQuickDraftWeeklyPlan(context)
 
     expect(context.uncertaintyNotes.join(' ')).toContain('do not infer importance from the project name alone')
-    expect(quickDraft.recommendations.every(rec =>
-      rec.evidence.some(item => item.field === 'projectContext' || item.field === 'taskContext' || item.field === 'missingContext'),
-    )).toBe(true)
-    expect(quickDraft.recommendations.find(rec => rec.primaryTaskId === 'task-launch')?.evidence)
-      .toEqual(expect.arrayContaining([
-        expect.objectContaining({ field: 'missingContext' }),
-      ]))
+    expect(quickDraft.headline).toBe('Before I rank the week')
+    expect(quickDraft.recommendations).toHaveLength(0)
+    expect(quickDraft.deferrals).toHaveLength(0)
+    expect(quickDraft.quality.caveats.join(' ')).toContain('No full plan was generated')
     const projectQuestion = quickDraft.openQuestions.find(question => question.entityType === 'project')
     expect(projectQuestion).toMatchObject({
       entityId: 'important-client-launch',
@@ -1243,6 +1240,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(weeklyPlan).not.toContain('Evidence-only draft:')
 
     expect(chatMessage).toContain('data-testid="weekly-plan"')
+    expect(chatMessage).toContain('data-testid="weekly-plan-questions"')
+    expect(chatMessage.indexOf('data-testid="weekly-plan-questions"')).toBeLessThan(chatMessage.indexOf('class="weekly-plan-section"'))
+    expect(chatMessage.indexOf('class="weekly-plan-section"')).toBeLessThan(chatMessage.indexOf('class="weekly-plan-footer"'))
     expect(chatMessage).toContain('data-testid="inline-plan-card"')
     expect(chatMessage).toContain('taskCardFromId(taskId)')
     expect(chatMessage).toContain('weeklyPlanTaskStaleLabel')
@@ -1253,6 +1253,12 @@ describe('AI sidebar-first desktop experience', () => {
     expect(src('src/services/ai/chatPersistence.ts')).toContain('weeklyPlan: m.metadata.weeklyPlan')
     expect(src('src/composables/useAIChat.ts')).toContain('fetchProjectContexts(projectIds)')
     expect(src('src/composables/useAIChat.ts')).toContain('fetchTaskContexts(taskIds)')
+    expect(src('src/composables/useAIChat.ts')).toContain('uniqueSupabaseIds')
+    expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('filter(isSupabaseUuid)')
+    expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('Skipping ${patch.entityType} memory patch for non-Supabase UUID')
+    expect(src('src/composables/useAIChat.ts')).toContain('LOW-OVERWHELM QUALITY CONTRACT')
+    expect(src('src/composables/useAIChat.ts')).toContain('No greeting, throat-clearing, recap, motivational line, or generic productivity advice')
+    expect(src('src/composables/useAIChat.ts')).toContain('immediatePlan.recommendations.length === 0 && immediatePlan.openQuestions.length > 0')
     expect(src('src/composables/useAIChat.ts')).toContain('must not infer importance, stakes, work/personal category, or success criteria from project names alone')
     expect(aiChat).toContain('depends on:')
     expect(aiChat).toContain('connections:')

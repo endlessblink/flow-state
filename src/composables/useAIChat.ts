@@ -704,18 +704,26 @@ export function useAIChat() {
     }).join('\n\n')
   }
 
+  function isSupabaseUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  }
+
+  function uniqueSupabaseIds(values: string[]): string[] {
+    return [...new Set(values.map(value => value.trim()).filter(isSupabaseUuid))]
+  }
+
   async function buildAIMemorySummaryForToolResults(toolResults: ToolResult[], lang: 'he' | 'en'): Promise<string> {
     const cardTasks = collectCardTasks(toolResults)
     if (!cardTasks.length) return ''
     try {
       const db = useSupabaseDatabase()
-      const taskIds = [...new Set(cardTasks.map(task => String(task.id || '')).filter(Boolean))]
-      const projectIds = [...new Set(cardTasks
+      const taskIds = uniqueSupabaseIds(cardTasks.map(task => String(task.id || '')))
+      const projectIds = uniqueSupabaseIds(cardTasks
         .map(task => {
           const id = String(task.id || '')
           return id ? taskStore.getTask(id)?.projectId || String(task.projectId || '') : String(task.projectId || '')
         })
-        .filter(Boolean))]
+      )
       const [projectContexts, taskContexts] = await Promise.all([
         db.fetchProjectContexts(projectIds),
         db.fetchTaskContexts(taskIds),
@@ -1630,13 +1638,13 @@ export function useAIChat() {
         let weekMemory: WeekContextMemoryInput = {}
         try {
           const db = useSupabaseDatabase()
-          const taskIds = [...new Set(cardTasks.map(task => String(task.id || '')).filter(Boolean))]
-          const projectIds = [...new Set(cardTasks
+          const taskIds = uniqueSupabaseIds(cardTasks.map(task => String(task.id || '')))
+          const projectIds = uniqueSupabaseIds(cardTasks
             .map(task => {
               const id = String(task.id || '')
               return id ? taskStore.getTask(id)?.projectId || String(task.projectId || '') : String(task.projectId || '')
             })
-            .filter(Boolean))]
+          )
           const [projectContexts, taskContexts] = await Promise.all([
             db.fetchProjectContexts(projectIds),
             db.fetchTaskContexts(taskIds),
@@ -1654,6 +1662,10 @@ export function useAIChat() {
             ...lastMsg.metadata,
             weeklyPlan: immediatePlan,
           } as Record<string, unknown>
+        }
+        if (immediatePlan.recommendations.length === 0 && immediatePlan.openQuestions.length > 0) {
+          store.completeStreamingMessage()
+          return
         }
 
         let weeklyPlan: WeeklyPlanOutput | null = null
@@ -1752,14 +1764,22 @@ export function useAIChat() {
         : ''
       const responseShapeInstruction = cardsInstruction
         ? isWeekPlan
-          ? `CRITICAL FORMAT RULE: This is a weekly planning answer. Use compact paragraphs or bullets for weekly shape, recommendations, and omissions, then output the cards block. Do not collapse the answer into one paragraph.`
+          ? `CRITICAL FORMAT RULE: This is a weekly planning answer. Keep it compact: one weekly-shape sentence, then only the selected task/card data. Do not write a broad essay, intro, outro, or per-task prose paragraph.`
           : `CRITICAL FORMAT RULE: Start with ONE plain, concrete sentence that names the first task and the next task. Avoid vague labels, arrows, metaphors, and jargon unless the user used them. Then output the cards block. Do not add a separate bullet list or headings before the cards.`
         : `CRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.`
+      const lowOverwhelmQualityContract = `LOW-OVERWHELM QUALITY CONTRACT:
+- Start with the answer or the single needed clarification. No greeting, throat-clearing, recap, motivational line, or generic productivity advice.
+- Keep prose short: at most one setup sentence before cards, and at most one sentence per recommendation.
+- Use only stakes supported by notes, subtasks, dependencies, saved project/task context, due dates, or explicit user wording.
+- Do not infer importance, work/personal category, client impact, health/family stakes, or success criteria from a project/task name alone.
+- If the missing context would change the recommendation, ask for that context instead of producing broad prose. For weekly planning, the structured question card handles this.
+- Prefer concrete labels and task names over abstractions like "real consequences", "meaningful work", or "substantial focus" unless the data proves them.
+- Never repeat the same reasoning template across multiple tasks.`
 
       const formatterMessages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\n${responseShapeInstruction}\n\nWHEN RANKING BY PRIORITY/URGENCY (read carefully — this is the #1 quality bar):\n- "X days overdue" and "high priority" are METADATA, never a reason. NEVER justify ranking with lateness or the priority label. The user already sees those on the card.\n- Lead EACH task with the real-world STAKE: what concretely goes wrong if it slips, what it unblocks, who is waiting, or the deadline behind it. INFER this from the task's wording. Examples: "check payment via Cardcom" → money may be stuck or a charge failing; "gift for Sivan" → a birthday/event with a fixed date approaching; "reply to X" → a person is blocked waiting on you; "publish the video" → audience/momentum window.\n- You MAY add lateness as a brief aside AFTER the real reason ("…and it's been sitting 3 days"), never as the reason.\n- If a task's wording genuinely gives NO clue to its stakes, say so honestly ("not clear why this is urgent — add a note?") instead of inventing urgency.\n- Open with the single highest-stakes task and one line on why it beats the rest.\n\nUSE ALL THE DATA you are given: each task may include its NOTES (description), tags, subtask progress, project, and estimate — read them and reason from the actual content, quoting the relevant detail. The user's work patterns and capacity are in the context above — tailor your suggestion to how they ACTUALLY work (their pace, peak days, current overload), not generic advice.\n\nLOOK ACROSS THE WHOLE LIST, don't just rank tasks in isolation:\n- GROUP related tasks (same project, same theme, or sequential steps of one effort — e.g. "Build outreach target list" then "Write a cold opener" are two steps of one sales push) and suggest doing them together or in order.\n- Flag DEPENDENCIES ("do X before Y makes sense").\n- Call out the TREND/pattern you actually see: a whole project stalling, one theme dominating the overdue pile, or a type of work being repeatedly avoided — and what that implies. This cross-task insight is the most valuable part; a per-task list without it is a failure.\n\n${routed.formatDirective}${userScheduleNote}${cardsInstruction}`,
+          content: `You format task data into natural language. Output ONLY in ${languageName}. No other language allowed.\n\n${responseShapeInstruction}\n\n${lowOverwhelmQualityContract}\n\nWHEN RANKING BY PRIORITY/URGENCY:\n- "X days overdue" and "high priority" are metadata, never the reason. The user already sees those on the card.\n- Lead with a supported stake from the data: note text, subtasks, dependencies, saved context, a concrete due commitment, or explicit user wording.\n- If the data gives no clue to the stake, say it is unclear in one short phrase or ask for the missing context. Do not invent urgency.\n- Open with the single strongest supported choice and one line on why it beats the rest.\n\nUSE THE AVAILABLE DATA, BUT STAY SELECTIVE:\n- Read notes, tags, subtask progress, project context, estimates, schedule, and capacity.\n- Mention only evidence that changes the recommendation.\n- Group related tasks only when the relationship is visible in the data.\n- Flag dependencies only when dependency data or explicit wording supports them.\n\n${routed.formatDirective}${userScheduleNote}${cardsInstruction}`,
         },
         {
           role: 'user',

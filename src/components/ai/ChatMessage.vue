@@ -913,8 +913,62 @@ async function saveSchedule() {
           </div>
           <h2>{{ weeklyPlan.headline }}</h2>
           <p>{{ weeklyPlan.weekRead.summary }}</p>
-          <p class="weekly-plan-muted">{{ weeklyPlan.weekRead.mainTradeoff }}</p>
+          <p v-if="weeklyPlan.weekRead.mainTradeoff" class="weekly-plan-muted">{{ weeklyPlan.weekRead.mainTradeoff }}</p>
         </header>
+
+        <section
+          v-if="weeklyPlan.openQuestions.length"
+          class="weekly-plan-questions"
+          data-testid="weekly-plan-questions"
+        >
+          <strong>{{ weeklyPlan.locale === 'he' ? 'שאלה קצרה לפני הדירוג' : 'Quick question before ranking' }}</strong>
+          <div
+            v-for="question in weeklyPlan.openQuestions"
+            :key="question.id || question.question"
+            class="weekly-plan-question"
+          >
+            <p>{{ question.question }}</p>
+            <div v-if="question.options?.length" class="weekly-question-options">
+              <button
+                v-for="option in question.options"
+                :key="option.id"
+                type="button"
+                class="weekly-question-option"
+                :class="{ selected: weeklyQuestionAnswers[question.id || question.question] === option.id }"
+                :title="option.effect"
+                @click="weeklyQuestionAnswers[question.id || question.question] = option.id"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+            <textarea
+              v-if="question.allowFreeText"
+              v-model="weeklyQuestionFreeText[question.id || question.question]"
+              class="weekly-question-free-text"
+              :placeholder="question.freeTextPlaceholder || (weeklyPlan.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...')"
+              rows="2"
+            />
+            <div class="weekly-question-action-row">
+              <button
+                type="button"
+                class="weekly-question-apply"
+                :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)] || (!weeklyQuestionAnswers[weeklyQuestionKey(question)] && !weeklyQuestionFreeText[weeklyQuestionKey(question)]?.trim())"
+                @click="applyWeeklyQuestion(question, $event)"
+              >
+                <Loader2 v-if="weeklyQuestionApplying[weeklyQuestionKey(question)]" :size="13" class="spin" />
+                <CheckCircle2 v-else :size="13" />
+                {{
+                  weeklyQuestionAnswers[weeklyQuestionKey(question)] === 'add_followup'
+                    ? (weeklyPlan.locale === 'he' ? 'הוסף משימת מעקב' : 'Add follow-up task')
+                    : (weeklyPlan.locale === 'he' ? 'שמור תשובה' : 'Save answer')
+                }}
+              </button>
+              <span v-if="weeklyQuestionApplied[weeklyQuestionKey(question)]" class="weekly-question-status">
+                {{ weeklyQuestionApplied[weeklyQuestionKey(question)] }}
+              </span>
+            </div>
+          </div>
+        </section>
 
         <section
           v-for="rec in weeklyPlan.recommendations"
@@ -994,59 +1048,10 @@ async function saveSchedule() {
           </div>
         </section>
 
-        <footer v-if="weeklyPlan.deferrals.length || weeklyPlan.openQuestions.length" class="weekly-plan-footer">
+        <footer v-if="weeklyPlan.deferrals.length" class="weekly-plan-footer">
           <div v-if="weeklyPlan.deferrals.length">
             <strong>{{ weeklyPlan.locale === 'he' ? 'לדחות בכוונה' : 'Intentional deferrals' }}</strong>
             <p v-for="defer in weeklyPlan.deferrals" :key="defer.taskId">{{ defer.reason }}</p>
-          </div>
-          <div v-if="weeklyPlan.openQuestions.length">
-            <strong>{{ weeklyPlan.locale === 'he' ? 'שאלות פתוחות' : 'Open questions' }}</strong>
-            <div
-              v-for="question in weeklyPlan.openQuestions"
-              :key="question.id || question.question"
-              class="weekly-plan-question"
-            >
-              <p>{{ question.question }}</p>
-              <div v-if="question.options?.length" class="weekly-question-options">
-                <button
-                  v-for="option in question.options"
-                  :key="option.id"
-                  type="button"
-                  class="weekly-question-option"
-                  :class="{ selected: weeklyQuestionAnswers[question.id || question.question] === option.id }"
-                  :title="option.effect"
-                  @click="weeklyQuestionAnswers[question.id || question.question] = option.id"
-                >
-                  {{ option.label }}
-                </button>
-              </div>
-              <textarea
-                v-if="question.allowFreeText"
-                v-model="weeklyQuestionFreeText[question.id || question.question]"
-                class="weekly-question-free-text"
-                :placeholder="question.freeTextPlaceholder || (weeklyPlan.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...')"
-                rows="2"
-              />
-              <div class="weekly-question-action-row">
-                <button
-                  type="button"
-                  class="weekly-question-apply"
-                  :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)] || (!weeklyQuestionAnswers[weeklyQuestionKey(question)] && !weeklyQuestionFreeText[weeklyQuestionKey(question)]?.trim())"
-                  @click="applyWeeklyQuestion(question, $event)"
-                >
-                  <Loader2 v-if="weeklyQuestionApplying[weeklyQuestionKey(question)]" :size="13" class="spin" />
-                  <CheckCircle2 v-else :size="13" />
-                  {{
-                    weeklyQuestionAnswers[weeklyQuestionKey(question)] === 'add_followup'
-                      ? (weeklyPlan.locale === 'he' ? 'הוסף משימת מעקב' : 'Add follow-up task')
-                      : (weeklyPlan.locale === 'he' ? 'שמור תשובה' : 'Save answer')
-                  }}
-                </button>
-                <span v-if="weeklyQuestionApplied[weeklyQuestionKey(question)]" class="weekly-question-status">
-                  {{ weeklyQuestionApplied[weeklyQuestionKey(question)] }}
-                </span>
-              </div>
-            </div>
           </div>
         </footer>
       </article>
@@ -2490,6 +2495,7 @@ async function saveSchedule() {
 }
 
 .weekly-plan-header p,
+.weekly-plan-questions p,
 .weekly-plan-section p,
 .weekly-plan-footer p {
   margin-block: 0;
@@ -2513,6 +2519,16 @@ async function saveSchedule() {
   gap: var(--space-2_5);
   padding-block-start: var(--space-4);
   border-block-start: 1px solid var(--glass-border-faint);
+}
+
+.weekly-plan-questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2_5);
+  padding: var(--space-3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-subtle);
 }
 
 .weekly-plan-focus {

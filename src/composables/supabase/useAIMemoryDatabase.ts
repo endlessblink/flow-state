@@ -145,6 +145,10 @@ function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.map(value => value.trim()).filter(Boolean))]
 }
 
+function isSupabaseUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
 function computeProjectCompleteness(row: ProjectContextRow): number {
   const filled = [
     Boolean(row.summary),
@@ -172,7 +176,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
   const { authStore, isSyncing, getUserIdSafe, withRetry, handleError } = ctx
 
   const fetchProjectContexts = async (projectIds: string[]): Promise<ProjectContext[]> => {
-    const ids = uniqueStrings(projectIds)
+    const ids = uniqueStrings(projectIds).filter(isSupabaseUuid)
     if (!ids.length) return []
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
@@ -197,7 +201,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
   }
 
   const fetchTaskContexts = async (taskIds: string[]): Promise<TaskContext[]> => {
-    const ids = uniqueStrings(taskIds)
+    const ids = uniqueStrings(taskIds).filter(isSupabaseUuid)
     if (!ids.length) return []
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
@@ -257,6 +261,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
   }
 
   const applyAIMemoryPatch = async (patch: AIMemoryPatch): Promise<void> => {
+    if (!isSupabaseUuid(patch.entityId)) {
+      console.debug(`[AIMemory] Skipping ${patch.entityType} memory patch for non-Supabase UUID: ${patch.entityId}`)
+      return
+    }
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
     if (!userId) throw new Error('Cannot save AI memory without an authenticated user.')

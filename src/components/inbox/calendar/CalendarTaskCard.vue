@@ -22,7 +22,7 @@
     </div>
 
     <!-- Task Content -->
-    <div class="task-content--calendar-inbox">
+    <div class="task-content--calendar-inbox" dir="auto">
       <OverflowTooltip
         class="task-title"
         :text="task.title"
@@ -36,7 +36,7 @@
       <!-- Metadata Badges -->
       <div class="task-metadata">
         <!-- Project Badge -->
-        <span v-if="task.projectId" class="metadata-badge project-badge">
+        <span v-if="task.projectId && projectVisual.content" class="metadata-badge project-badge">
           <ProjectEmojiIcon
             :emoji="projectVisual.content"
             size="xs"
@@ -81,8 +81,13 @@
         </span>
 
         <!-- Status Indicator -->
-        <span class="metadata-badge status-badge" :class="`status-${task.status}`">
-          {{ statusEmoji(task.status) }}
+        <span
+          v-if="statusBadge"
+          class="metadata-badge status-badge"
+          :class="`status-${task.status}`"
+          :title="statusBadge.label"
+        >
+          <component :is="statusBadge.icon" :size="12" />
         </span>
 
         <!-- Not on Canvas Badge -->
@@ -119,7 +124,7 @@
 import { computed, ref } from 'vue'
 import { type Task } from '@/stores/tasks'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
-import { Play, Edit2, Timer, Calendar, Clock, ListChecks } from 'lucide-vue-next'
+import { Play, Edit2, Timer, Calendar, Clock, ListChecks, ClipboardList, PlayCircle, CheckCircle2, Archive, PauseCircle } from 'lucide-vue-next'
 import { NTag } from 'naive-ui'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { useTaskStore } from '@/stores/tasks'
@@ -160,16 +165,16 @@ const completedSubtasks = computed(() =>
 )
 const totalSubtasks = computed(() => props.task.subtasks?.length || 0)
 
-const statusEmoji = (status: string) => {
-  const emojis: Record<string, string> = {
-    planned: '📝',
-    in_progress: '🎬',
-    done: '✅',
-    backlog: '📦',
-    on_hold: '⏸️'
+const statusBadge = computed(() => {
+  const badges: Record<string, { icon: unknown; label: string }> = {
+    planned: { icon: ClipboardList, label: 'Planned' },
+    in_progress: { icon: PlayCircle, label: 'In progress' },
+    done: { icon: CheckCircle2, label: 'Done' },
+    backlog: { icon: Archive, label: 'Backlog' },
+    on_hold: { icon: PauseCircle, label: 'On hold' }
   }
-  return emojis[status] || '❓'
-}
+  return badges[props.task.status] ?? null
+})
 
 // BUG-1191: Due badge class with reactive date dependency
 const getDueBadgeClass = (dueDate: string) => {
@@ -203,7 +208,7 @@ const formatDueDateLabel = (dueDate: string) => {
 /* BUG-1709: breathing room */
 .task-card {
   position: relative;
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-3);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-inline-start: 4px solid transparent;
@@ -238,9 +243,10 @@ const formatDueDateLabel = (dueDate: string) => {
 
 .task-title {
   font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-snug);
   color: var(--text-primary);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
   word-break: break-word;
   overflow-wrap: break-word;
 }
@@ -248,16 +254,19 @@ const formatDueDateLabel = (dueDate: string) => {
 .task-metadata {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-1_5);
   align-items: center;
+  min-height: 22px;
 }
 
 .metadata-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   font-size: var(--text-xs);
-  padding: var(--space-0_5) var(--space-1_5);
+  line-height: 1;
+  min-height: 22px;
+  padding: var(--space-0_5) var(--space-2);
   border-radius: var(--radius-full);
   background: var(--glass-bg-medium);
   color: var(--text-secondary);
@@ -267,12 +276,18 @@ const formatDueDateLabel = (dueDate: string) => {
 .priority-badge {
   font-weight: var(--font-bold);
   text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .due-badge-overdue { color: var(--status-error); }
 .due-badge-today { color: var(--status-warning); }
 
-.status-badge { opacity: 0.8; }
+.status-badge {
+  width: 22px;
+  justify-content: center;
+  padding-inline: 0;
+  opacity: 0.85;
+}
 
 .subtask-badge {
   color: var(--text-secondary);
@@ -325,9 +340,13 @@ const formatDueDateLabel = (dueDate: string) => {
 
 /* BUG-1709: Reserve space for action icons to prevent RTL text overlap */
 .task-content--calendar-inbox {
-  padding-inline-end: var(--space-8);
   width: 100%;
   box-sizing: border-box;
+}
+
+.task-card:hover .task-content--calendar-inbox,
+.task-card:focus-within .task-content--calendar-inbox {
+  padding-inline-end: var(--space-12);
 }
 
 .timer-indicator {

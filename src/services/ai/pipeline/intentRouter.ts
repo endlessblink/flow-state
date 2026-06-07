@@ -62,7 +62,7 @@ export interface RoutedIntent {
    * Only set for deterministic write actions where no reasoning is needed.
    */
   skipLLM?: boolean
-  responseMode?: 'day_plan' | 'smart_lanes'
+  responseMode?: 'day_plan' | 'smart_lanes' | 'weekly_review'
 }
 
 // ---------------------------------------------------------------------------
@@ -465,6 +465,7 @@ export function routeIntentByKeywords(
 
   let toolCall: ToolCall
   let skipLLM = false
+  let responseMode: RoutedIntent['responseMode']
 
   switch (primaryTool) {
     // ── Timer ────────────────────────────────────────────────────────────
@@ -552,6 +553,8 @@ export function routeIntentByKeywords(
 
     case 'get_weekly_summary':
       toolCall = { tool: 'get_weekly_summary', parameters: {} }
+      // TASK-1820: render the completed-this-week tasks as real cards.
+      responseMode = 'weekly_review'
       break
 
     // ── Default: pass through with empty parameters ──────────────────────
@@ -567,6 +570,7 @@ export function routeIntentByKeywords(
     language,
     formatDirective: FORMAT_DIRECTIVES[intentType],
     skipLLM,
+    responseMode,
   }
 }
 
@@ -725,6 +729,7 @@ export async function routeIntent(
       language,
       formatDirective: FORMAT_DIRECTIVES[intentType],
       skipLLM,
+      responseMode: classification.tool === 'get_weekly_summary' ? 'weekly_review' : undefined,
     }
   }
 

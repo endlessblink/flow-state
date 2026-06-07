@@ -37,6 +37,18 @@
 
 ---
 
+### ~~BUG-1820~~: Weekly AI summary fabricated tasks instead of showing real cards (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-07) | **Depends on**: TASK-1814
+
+**Why**: The weekly summary ("סיכום שבועי") named tasks in prose but showed no clickable cards, and the count/task-names/categories/insights were all LLM-fabricated. Root cause: `get_weekly_summary` returned only 3 integers (a stats object), so the card pipeline's `hasTaskList` gate never fired and `parseCardGroups` had no task array to index; the model only saw a count + ≤10 generic titles, so it invented the rest. Tool descriptions over-promised "focus time/streak/XP" (priming hallucination) and downstream code read phantom `totalFocusMinutes`/`currentStreak` never populated.
+
+**Fixed**: `get_weekly_summary` now returns the real array of completed-this-week tasks (`{id,title,priority,projectId,status,completedAt}`) + real focus minutes from non-break timer sessions (omitted, never faked, when none) — so `hasTaskList` engages and the tasks render as real clickable cards. Added `responseMode:'weekly_review'` (both router return points) + a weekly cards instruction in `useAIChat` that groups completed tasks by project and forbids inventing numbers/names/categories/insights (ungrounded trends/recommendations dropped per decision). `ChatMessage` renders `kind:'weekly_review'` cards read-only (done badge, no done/timer actions, still clickable). `cardsBlock` whitelists the new kind; `useAgentChains` end-of-day review + non-bridge `preDigestedReasoning` digest adapted to the array shape; over-promising tool descriptions trimmed. Coverage: weekly-review parse test + grounded weekly-digest test (ai-cards-block + ai-pipeline green; full vue-tsc clean on all touched files).
+
+**Files**: `src/services/ai/tools.ts`, `src/services/ai/pipeline/intentRouter.ts`, `src/composables/useAIChat.ts`, `src/components/ai/ChatMessage.vue`, `src/composables/useAgentChains.ts`, `src/services/ai/pipeline/preDigestedReasoning.ts`, `src/services/ai/pipeline/cardsBlock.ts`, tests.
+
+---
+
 ### ~~TASK-1817~~: Ship the AI chat improvements beyond localhost (web + Electron) (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.92 deployed) | **Depends on**: TASK-1814

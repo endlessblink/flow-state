@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
 import {
@@ -28,6 +28,19 @@ function task(overrides: Partial<Task> & { id: string; title?: string }): Task {
 }
 
 describe('AI day plan helpers', () => {
+  // The day-plan tests below pass a hardcoded "today" of 2026-06-06, but the
+  // group matcher (findMatchingGroupForDueDate → getSmartGroupDate) reads the
+  // real system clock to resolve the "Today" group. Pin the clock so the two
+  // agree regardless of when the suite runs.
+  beforeAll(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-06T12:00:00'))
+  })
+
+  afterAll(() => {
+    vi.useRealTimers()
+  })
+
   it('detects overwhelmed day-plan requests in English and Hebrew', () => {
     expect(isOverwhelmedDayPlanRequest("I'm overwhelmed, reorder my day")).toBe(true)
     expect(isOverwhelmedDayPlanRequest('אני מוצף, תסדר לי את היום')).toBe(true)

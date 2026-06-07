@@ -20,6 +20,7 @@ import {
   loadConversationsFromSupabase,
   saveConversationToSupabase,
   deleteConversationFromSupabase,
+  subscribeToAIConversationChanges,
 } from '@/services/ai/chatPersistence'
 import { startUsageSync } from '@/services/ai/usageSync'
 
@@ -204,7 +205,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
   const chatDirection = ref<'auto' | 'ltr' | 'rtl'>('auto')
 
   /** Supabase sync status indicator */
-  const syncStatus = ref<'idle' | 'syncing' | 'synced' | 'error'>('idle')
+  const syncStatus = ref<'idle' | 'syncing' | 'synced' | 'error' | 'offline'>('idle')
 
   /** Live, session-only visibility into AI tool/action execution. */
   const activityEvents = ref<AIActivityEvent[]>([])
@@ -215,6 +216,8 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
   let saveTimeout: ReturnType<typeof setTimeout> | null = null
   let supabaseSaveTimeout: ReturnType<typeof setTimeout> | null = null
+  let conversationSyncSubscription: { unsubscribe: () => Promise<void> } | null = null
+  let isApplyingRemoteConversation = false
 
   /**
    * Serialize messages for storage (strips non-serializable fields like action handlers).
@@ -283,6 +286,119 @@ export const useAIChatStore = defineStore('aiChat', () => {
     }
   }
 
+  function cloneMessage(message: ChatMessage): ChatMessage {
+    return {
+      ...message,
+      timestamp: message.timestamp instanceof Date ? new Date(message.timestamp) : new Date(message.timestamp),
+      actions: message.actions,
+      metadata: message.metadata ? { ...message.metadata } : undefined,
+    }
+  }
+
+  function cloneConversation(conversation: Conversation): Conversation {
+    return {
+      ...conversation,
+      messages: conversation.messages.map(cloneMessage),
+      createdAt: conversation.createdAt instanceof Date ? new Date(conversation.createdAt) : new Date(conversation.createdAt),
+      updatedAt: conversation.updatedAt instanceof Date ? new Date(conversation.updatedAt) : new Date(conversation.updatedAt),
+    }
+  }
+
+  function compareDates(a: Date, b: Date): number {
+    return new Date(a).getTime() - new Date(b).getTime()
+  }
+
+  function mergeMessages(localMessages: ChatMessage[], remoteMessages: ChatMessage[]): ChatMessage[] {
+    const byId = new Map<string, ChatMessage>()
+
+    for (const message of remoteMessages) {
+      byId.set(message.id, cloneMessage(message))
+    }
+
+    for (const localMessage of localMessages) {
+      const remoteMessage = byId.get(localMessage.id)
+      if (!remoteMessage) {
+        byId.set(localMessage.id, cloneMessage(localMessage))
+        continue
+      }
+
+      if (localMessage.isStreaming) {
+        byId.set(localMessage.id, cloneMessage(localMessage))
+        continue
+      }
+
+      byId.set(localMessage.id, {
+        ...remoteMessage,
+        actions: localMessage.actions || remoteMessage.actions,
+        metadata: localMessage.metadata || remoteMessage.metadata,
+      })
+    }
+
+    return [...byId.values()].sort((a, b) => compareDates(a.timestamp, b.timestamp))
+  }
+
+  function mergeConversation(localConversation: Conversation | undefined, remoteConversation: Conversation): Conversation {
+    if (!localConversation) return cloneConversation(remoteConversation)
+
+    const localUpdatedAt = new Date(localConversation.updatedAt)
+    const remoteUpdatedAt = new Date(remoteConversation.updatedAt)
+    const titleSource = localUpdatedAt > remoteUpdatedAt ? localConversation : remoteConversation
+
+    return {
+      id: remoteConversation.id,
+      title: titleSource.title,
+      messages: mergeMessages(localConversation.messages, remoteConversation.messages),
+      createdAt: compareDates(localConversation.createdAt, remoteConversation.createdAt) <= 0
+        ? new Date(localConversation.createdAt)
+        : new Date(remoteConversation.createdAt),
+      updatedAt: localUpdatedAt > remoteUpdatedAt ? localUpdatedAt : remoteUpdatedAt,
+    }
+  }
+
+  function mergeConversationSets(
+    localConversations: Conversation[],
+    remoteConversations: Conversation[]
+  ): { merged: Conversation[]; uploadIds: Set<string> } {
+    const localById = new Map(localConversations.map(conversation => [conversation.id, conversation]))
+    const remoteById = new Map(remoteConversations.map(conversation => [conversation.id, conversation]))
+    const uploadIds = new Set<string>()
+    const ids = new Set([...localById.keys(), ...remoteById.keys()])
+
+    const merged = [...ids].map((id) => {
+      const localConversation = localById.get(id)
+      const remoteConversation = remoteById.get(id)
+
+      if (!remoteConversation && localConversation) {
+        uploadIds.add(id)
+        return cloneConversation(localConversation)
+      }
+
+      if (!localConversation && remoteConversation) {
+        return cloneConversation(remoteConversation)
+      }
+
+      const mergedConversation = mergeConversation(localConversation, remoteConversation!)
+      if (
+        localConversation &&
+        remoteConversation &&
+        new Date(localConversation.updatedAt).getTime() > new Date(remoteConversation.updatedAt).getTime()
+      ) {
+        uploadIds.add(id)
+      }
+      return mergedConversation
+    }).sort((a, b) => compareDates(b.updatedAt, a.updatedAt)).slice(0, MAX_PERSISTED_CONVERSATIONS)
+
+    return { merged, uploadIds }
+  }
+
+  function writeConversationsToLocalStorage() {
+    try {
+      localStorage.setItem(CONVERSATIONS_KEY, serializeConversations())
+    } catch {
+      // localStorage full or unavailable - silently ignore
+    }
+  }
+
   /**
    * Save conversations to localStorage (debounced).
    * Also triggers a debounced Supabase save for the active conversation.
@@ -290,11 +406,9 @@ export const useAIChatStore = defineStore('aiChat', () => {
   function debouncedSaveConversations() {
     if (saveTimeout) clearTimeout(saveTimeout)
     saveTimeout = setTimeout(() => {
-      try {
-        localStorage.setItem(CONVERSATIONS_KEY, serializeConversations())
-      } catch {
-        // localStorage full or unavailable - silently ignore
-      }
+      writeConversationsToLocalStorage()
+
+      if (isApplyingRemoteConversation) return
 
       // Also save active conversation to Supabase (VPS-first architecture)
       const activeConv = conversations.value.find(c => c.id === activeConversationId.value)
@@ -311,8 +425,30 @@ export const useAIChatStore = defineStore('aiChat', () => {
   function debouncedSupabaseSave(conversation: Conversation) {
     if (supabaseSaveTimeout) clearTimeout(supabaseSaveTimeout)
     supabaseSaveTimeout = setTimeout(() => {
-      saveConversationToSupabase(conversation).catch(() => {})
+      flushConversationToSupabase(conversation).catch(() => {})
     }, 2000)
+  }
+
+  async function flushConversationToSupabase(conversation: Conversation): Promise<boolean> {
+    syncStatus.value = 'syncing'
+    const saved = await saveConversationToSupabase(conversation)
+    syncStatus.value = saved ? 'synced' : 'error'
+    return saved
+  }
+
+  async function flushConversationSync(conversationId = activeConversationId.value): Promise<boolean> {
+    const conversation = conversations.value.find(c => c.id === conversationId)
+    if (!conversation) return false
+    return flushConversationToSupabase(conversation)
+  }
+
+  async function uploadMergedConversations(uploadIds: Set<string>) {
+    for (const id of uploadIds) {
+      const conversation = conversations.value.find(c => c.id === id)
+      if (conversation) {
+        await flushConversationToSupabase(conversation)
+      }
+    }
   }
 
   /**
@@ -484,6 +620,11 @@ export const useAIChatStore = defineStore('aiChat', () => {
       conversations.value = conversations.value.filter(c => !removeIds.has(c.id))
     }
 
+    if (isInitialized.value && !isApplyingRemoteConversation) {
+      writeConversationsToLocalStorage()
+      flushConversationToSupabase(conv).catch(() => {})
+    }
+
     return conv
   }
 
@@ -508,7 +649,10 @@ export const useAIChatStore = defineStore('aiChat', () => {
     conversations.value.splice(index, 1)
 
     // Mirror deletion in Supabase (silently fails if offline)
-    deleteConversationFromSupabase(id).catch(() => {})
+    syncStatus.value = 'syncing'
+    deleteConversationFromSupabase(id)
+      .then((deleted) => { syncStatus.value = deleted ? 'synced' : 'error' })
+      .catch(() => { syncStatus.value = 'error' })
 
     // If we deleted the active conversation, switch to the most recent or create new
     if (activeConversationId.value === id) {
@@ -529,6 +673,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     if (conv) {
       conv.title = title
       conv.updatedAt = new Date()
+      flushConversationToSupabase(conv).catch(() => {})
     }
   }
 
@@ -707,6 +852,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     isGenerating.value = false
     streamingContent.value = ''
     touchActiveConversation()
+    flushConversationSync().catch(() => {})
   }
 
   /**
@@ -724,6 +870,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     isGenerating.value = false
     streamingContent.value = ''
     error.value = errorMessage
+    flushConversationSync().catch(() => {})
   }
 
   /**
@@ -782,6 +929,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
     // Re-add welcome message
     addAssistantMessage(WELCOME_MESSAGE)
+    flushConversationSync().catch(() => {})
   }
 
   /**
@@ -791,9 +939,75 @@ export const useAIChatStore = defineStore('aiChat', () => {
     error.value = null
   }
 
+  function applyRemoteConversation(remoteConversation: Conversation) {
+    const localConversation = conversations.value.find(c => c.id === remoteConversation.id)
+
+    if (
+      localConversation &&
+      activeConversationId.value === remoteConversation.id &&
+      localConversation.messages.some(message => message.isStreaming)
+    ) {
+      return
+    }
+
+    isApplyingRemoteConversation = true
+    try {
+      const mergedConversation = mergeConversation(localConversation, remoteConversation)
+      if (localConversation) {
+        const index = conversations.value.findIndex(c => c.id === remoteConversation.id)
+        conversations.value[index] = mergedConversation
+      } else {
+        conversations.value.push(mergedConversation)
+      }
+      conversations.value = [...conversations.value]
+        .sort((a, b) => compareDates(b.updatedAt, a.updatedAt))
+        .slice(0, MAX_PERSISTED_CONVERSATIONS)
+
+      if (!activeConversationId.value) {
+        activeConversationId.value = conversations.value[0]?.id || null
+      }
+      writeConversationsToLocalStorage()
+      syncStatus.value = 'synced'
+    } finally {
+      isApplyingRemoteConversation = false
+    }
+  }
+
+  function applyRemoteConversationDelete(conversationId: string) {
+    isApplyingRemoteConversation = true
+    try {
+      conversations.value = conversations.value.filter(conversation => conversation.id !== conversationId)
+      if (activeConversationId.value === conversationId) {
+        activeConversationId.value = sortedConversations.value[0]?.id || null
+      }
+      writeConversationsToLocalStorage()
+      syncStatus.value = 'synced'
+    } finally {
+      isApplyingRemoteConversation = false
+    }
+  }
+
+  async function startConversationRealtimeSync() {
+    if (conversationSyncSubscription) return
+
+    try {
+      conversationSyncSubscription = await subscribeToAIConversationChanges({
+        onUpsert: applyRemoteConversation,
+        onDelete: applyRemoteConversationDelete,
+        onStatus: (status) => {
+          if (status === 'SUBSCRIBED') syncStatus.value = 'synced'
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') syncStatus.value = 'error'
+        },
+      })
+    } catch (err) {
+      console.warn('[AIChat] Failed to start conversation realtime sync:', err)
+      syncStatus.value = 'error'
+    }
+  }
+
   /**
    * Initialize the chat (called on app startup).
-   * Tries Supabase first (VPS-first architecture), falls back to localStorage.
+   * Merges Supabase and localStorage so every app surface converges on the same history.
    * Migrates old localStorage format if needed.
    */
   async function initialize() {
@@ -807,30 +1021,23 @@ export const useAIChatStore = defineStore('aiChat', () => {
       chatDirection.value = persistedSettings.value.chatDirection
     }
 
-    // --- VPS-first: try Supabase ---
+    const persisted = loadPersistedConversations()
     const supabaseConversations = await loadConversationsFromSupabase()
+
     if (supabaseConversations && supabaseConversations.length > 0) {
-      conversations.value = supabaseConversations
+      const merged = mergeConversationSets(persisted.conversations, supabaseConversations)
+      conversations.value = merged.merged
       // Restore last active conversation (from localStorage, since Supabase doesn't store it)
-      const localPersistedActiveId = (() => {
-        try {
-          const raw = localStorage.getItem(CONVERSATIONS_KEY)
-          if (!raw) return null
-          return (JSON.parse(raw) as { activeConversationId?: string }).activeConversationId || null
-        } catch {
-          return null
-        }
-      })()
-      activeConversationId.value = localPersistedActiveId || supabaseConversations[0].id
+      activeConversationId.value = persisted.activeId || conversations.value[0]?.id || null
       // Validate active conversation ID still exists in the loaded set
       if (activeConversationId.value && !conversations.value.find(c => c.id === activeConversationId.value)) {
         activeConversationId.value = conversations.value[0]?.id || null
       }
-      console.log(`[AIChat] Loaded ${supabaseConversations.length} conversations from Supabase`)
+      writeConversationsToLocalStorage()
+      await uploadMergedConversations(merged.uploadIds)
+      console.log(`[AIChat] Merged ${supabaseConversations.length} Supabase conversations with ${persisted.conversations.length} local conversations`)
     } else {
       // --- Fallback: localStorage ---
-      const persisted = loadPersistedConversations()
-
       if (persisted.conversations.length > 0) {
         // New localStorage format found
         conversations.value = persisted.conversations
@@ -866,6 +1073,8 @@ export const useAIChatStore = defineStore('aiChat', () => {
           createConversation()
         }
       }
+
+      await uploadMergedConversations(new Set(conversations.value.map(conversation => conversation.id)))
     }
 
     // Ensure we have an active conversation
@@ -888,6 +1097,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
     // Start usage sync to Supabase
     startUsageSync()
+    await startConversationRealtimeSync()
 
     isInitialized.value = true
   }
@@ -897,6 +1107,10 @@ export const useAIChatStore = defineStore('aiChat', () => {
    * Clears all conversations and localStorage.
    */
   function reset() {
+    if (conversationSyncSubscription) {
+      conversationSyncSubscription.unsubscribe().catch(() => {})
+      conversationSyncSubscription = null
+    }
     conversations.value = []
     activeConversationId.value = null
     inputText.value = ''
@@ -1079,6 +1293,9 @@ export const useAIChatStore = defineStore('aiChat', () => {
     clearError,
     initialize,
     reset,
+    flushConversationSync,
+    applyRemoteConversation,
+    applyRemoteConversationDelete,
     addActivityEvent,
     updateActivityEvent,
     clearActivityEvents,

@@ -117,6 +117,11 @@ export function digestToolResults(
 
     // Task list tools (list_tasks, search_tasks, get_overdue_tasks, suggest_next_task)
     if (data[0]?.title !== undefined) {
+      // TASK-1820: weekly summary returns an array of completed tasks — digest as
+      // a grounded completed list (count + real titles), not the generic ranker.
+      if (toolName === 'get_weekly_summary') {
+        return capDigest(digestWeeklySummary(data as ToolResultData[], message, language))
+      }
       return capDigest(digestTaskList(toolName, data as ToolResultData[], message, language))
     }
   }
@@ -128,11 +133,6 @@ export function digestToolResults(
     // Productivity stats
     if ('completedToday' in d || 'byStatus' in d) {
       return capDigest(digestProductivityStats(d, message, language))
-    }
-
-    // Weekly summary
-    if ('completedThisWeek' in d || 'totalFocusMinutes' in d) {
-      return capDigest(digestWeeklySummary(d, message, language))
     }
 
     // Timer status
@@ -261,16 +261,15 @@ function digestProductivityStats(data: Record<string, unknown>, message: string,
 
 /**
  * Digest weekly summary.
+ * TASK-1820: input is the ARRAY of completed-this-week tasks. Ground the digest
+ * in the real count + real titles so the model never fabricates names/numbers.
  */
-function digestWeeklySummary(data: Record<string, unknown>, message: string, lang: Lang = 'en'): string {
+function digestWeeklySummary(tasks: ToolResultData[], message: string, lang: Lang = 'en'): string {
   const lines: string[] = [message, '', t(lang, 'preAnalyzedFactsShort')]
 
-  if (data.completedThisWeek !== undefined) lines.push(`- ${t(lang, 'completedThisWeek')} ${data.completedThisWeek} ${t(lang, 'tasks')}`)
-  if (data.totalFocusMinutes !== undefined) {
-    const hours = Math.floor((data.totalFocusMinutes as number) / 60)
-    const mins = (data.totalFocusMinutes as number) % 60
-    lines.push(`- ${t(lang, 'focusTime')} ${hours}h ${mins}m`)
-  }
+  lines.push(`- ${t(lang, 'completedThisWeek')} ${tasks.length} ${t(lang, 'tasks')}`)
+  const titles = tasks.slice(0, 15).map(tk => `"${tk.title}"`).filter(Boolean).join(', ')
+  if (titles) lines.push(`- ${titles}`)
 
   return lines.join('\n')
 }

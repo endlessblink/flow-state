@@ -35,11 +35,6 @@ interface ProductivityStatsData {
   statusBreakdown?: Record<string, number>
 }
 
-interface WeeklySummaryData {
-  completedThisWeek?: number
-  totalFocusMinutes?: number
-}
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -175,7 +170,8 @@ const chains: AgentChain[] = [
         type: 'prompt',
         promptFn: (results, language) => {
           const stats = results[0]?.data as ProductivityStatsData | undefined
-          const weekly = results[1]?.data as WeeklySummaryData | undefined
+          // TASK-1820: get_weekly_summary now returns an ARRAY of completed tasks.
+          const weeklyTasks = Array.isArray(results[1]?.data) ? results[1].data as unknown[] : []
 
           const sections: string[] = []
           sections.push('Write a 3-sentence end-of-day summary. Use the FACTS below — do NOT invent numbers.')
@@ -198,13 +194,10 @@ const chains: AgentChain[] = [
 
           sections.push('')
 
-          // Weekly context
-          if (weekly) {
-            const weekCompleted = weekly.completedThisWeek ?? 0
-            const focusMins = weekly.totalFocusMinutes ?? 0
-            const focusHrs = Math.floor(focusMins / 60)
-            const focusRemMins = focusMins % 60
-            sections.push(`## WEEK SO FAR: ${weekCompleted} tasks done, ${focusHrs}h ${focusRemMins}m focus time`)
+          // Weekly context — count is the real number of completed-this-week
+          // tasks; focus time (if known) is carried in the tool message.
+          if (weeklyTasks.length > 0) {
+            sections.push(`## WEEK SO FAR: ${weeklyTasks.length} tasks done${results[1]?.message ? ` (${results[1].message})` : ''}`)
           }
 
           sections.push('')

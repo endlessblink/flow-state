@@ -343,7 +343,7 @@ export const AI_TOOLS: ToolDefinition[] = [
   // ── GAMIFICATION & PRODUCTIVITY TOOLS ────────────────────────────────────
   {
     name: 'get_productivity_stats',
-    description: 'Get productivity statistics: tasks completed, focus time, pomodoros, streaks, and task breakdown by status',
+    description: 'Get productivity statistics: total tasks, tasks completed today, overdue count, pomodoros completed today, and task breakdown by status',
     category: 'read',
     parameters: { type: 'object', properties: {}, required: [] },
   },
@@ -355,7 +355,7 @@ export const AI_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'get_weekly_summary',
-    description: 'Get a weekly productivity summary including tasks done, focus time, streak status, and XP earned',
+    description: 'Get a weekly productivity summary: the list of tasks completed in the last 7 days plus total focus time. Use for "weekly summary" / "סיכום שבועי" requests.',
     category: 'read',
     parameters: { type: 'object', properties: {}, required: [] },
   },
@@ -1416,26 +1416,61 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         const now = new Date()
         const weekAgo = new Date(now)
         weekAgo.setDate(weekAgo.getDate() - 7)
+        const weekAgoMs = weekAgo.getTime()
         const weekAgoStr = weekAgo.toISOString().split('T')[0]
 
-        // Count tasks completed this week
-        let completedThisWeek = 0
-        for (const t of allTasks) {
-          if (t.status !== 'done') continue
-          const completedDate = t.completedAt
-            ? new Date(t.completedAt).toISOString().split('T')[0]
-            : new Date(t.updatedAt).toISOString().split('T')[0]
-          if (completedDate >= weekAgoStr) completedThisWeek++
-        }
+        // TASK-1820: return the ACTUAL completed-this-week tasks (array with
+        // titles) so the AI chat renders real, clickable task cards and grounds
+        // the count in real data. Previously this returned only integers, which
+        // the card pipeline can't use — so the model fabricated task names.
+        const completedThisWeek = allTasks
+          .filter((t: Task) => {
+            if (t.status !== 'done') return false
+            const completedDate = t.completedAt
+              ? new Date(t.completedAt).toISOString().split('T')[0]
+              : new Date(t.updatedAt).toISOString().split('T')[0]
+            return completedDate >= weekAgoStr
+          })
+          .sort((a: Task, b: Task) => {
+            const at = new Date(a.completedAt ?? a.updatedAt).getTime()
+            const bt = new Date(b.completedAt ?? b.updatedAt).getTime()
+            return bt - at // most recent first
+          })
+
+        // Real focus minutes this week from completed (non-break) timer sessions.
+        // PomodoroSession.duration is in SECONDS (workDuration default 25*60).
+        // Omit entirely if there are no sessions — never fabricate "0h 0m".
+        let focusMinutes = 0
+        try {
+          timerStore = useTimerStore()
+          for (const s of timerStore.completedSessions) {
+            if (s.isBreak) continue
+            if (!s.completedAt) continue
+            if (new Date(s.completedAt).getTime() < weekAgoMs) continue
+            focusMinutes += Math.round((s.duration || 0) / 60)
+          }
+        } catch { /* timer not available */ }
+
+        const focusHrs = Math.floor(focusMinutes / 60)
+        const focusRem = focusMinutes % 60
+        const focusClauseEn = focusMinutes > 0 ? `, ${focusHrs}h ${focusRem}m focus` : ''
+        const focusClauseHe = focusMinutes > 0 ? `, ${focusHrs} שעות ${focusRem} דקות פוקוס` : ''
 
         return {
           success: true,
-          message: tm(language, 'Weekly summary', 'סיכום שבועי'),
-          data: {
-            completedThisWeek,
-            totalTasks: allTasks.length,
-            remainingTasks: allTasks.filter((t: Task) => t.status !== 'done').length,
-          },
+          message: tm(
+            language,
+            `Weekly summary: ${completedThisWeek.length} tasks completed${focusClauseEn}`,
+            `סיכום שבועי: הושלמו ${completedThisWeek.length} משימות${focusClauseHe}`,
+          ),
+          data: completedThisWeek.map((t: Task) => ({
+            id: t.id,
+            title: t.title,
+            priority: t.priority,
+            projectId: t.projectId,
+            status: t.status,
+            completedAt: t.completedAt ?? t.updatedAt,
+          })),
         }
       }
 

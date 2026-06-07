@@ -597,7 +597,7 @@ export function useAIChat() {
    * project, real dates), not the pre-digested "X days overdue" metadata. Looks up
    * the full task from the store (the tool result is intentionally slim for cards).
    */
-  function buildRichTaskData(r: ToolResult, lang: 'he' | 'en'): string {
+  function buildRichTaskData(r: ToolResult, lang: 'he' | 'en', startIndex = 1): string {
     const ok = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
     const data = r.data
     const taskItems = collectCardTasks([r])
@@ -620,8 +620,10 @@ export function useAIChat() {
       const id = item.id as string | undefined
       const full = ((id ? taskStore.getTask(id) : null) || item) as unknown as Task & { tags?: string[]; subtasks?: Array<{ completed?: boolean; done?: boolean; isCompleted?: boolean }> }
       // [N] index lets the model reference tasks in the `cards` block by number
-      // (robust vs title-matching, esp. Hebrew/paraphrased). i+1 is 1-based.
-      const parts: string[] = [`[${i + 1}] ${full.title || '(untitled)'}`]
+      // (robust vs title-matching, esp. Hebrew/paraphrased). The index must be
+      // global across tool results because parseCardGroups maps against the same
+      // combined task list.
+      const parts: string[] = [`[${startIndex + i}] ${full.title || '(untitled)'}`]
       if (full.priority) parts.push(`priority=${full.priority}`)
       if (full.dueDate) {
         const d = String(full.dueDate).slice(0, 10)
@@ -680,6 +682,15 @@ export function useAIChat() {
       lines.push(parts.join(' | '))
     }
     return lines.join('\n').slice(0, 6000)
+  }
+
+  function buildRichToolResultsData(toolResults: ToolResult[], lang: 'he' | 'en'): string {
+    let nextTaskIndex = 1
+    return toolResults.map(r => {
+      const summary = buildRichTaskData(r, lang, nextTaskIndex)
+      nextTaskIndex += collectCardTasks([r]).length
+      return summary
+    }).join('\n\n')
   }
 
   function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<Record<string, unknown> & { title?: string; __cardIndex?: number }> {
@@ -1344,7 +1355,7 @@ export function useAIChat() {
       // project, dates) and let the model actually reason about real stakes. The
       // user's work patterns/capacity are already injected by the context-aware router.
       const toolResultsSummary = isBridgeActive()
-        ? toolResults.map(r => buildRichTaskData(r, outputLanguage)).join('\n\n')
+        ? buildRichToolResultsData(toolResults, outputLanguage)
         : toolResults
             .map((r, i) => {
               const toolName = routed.tools[i]?.tool || 'unknown'
@@ -1787,7 +1798,7 @@ export function useAIChat() {
           // bridge so the ReAct answer reasons (and emits cards) like the deterministic path.
           const bridgeRich1 = isBridgeActive()
           const toolResultsSummary = bridgeRich1
-            ? toolResults.map(r => buildRichTaskData(r, lang)).join('\n\n')
+            ? buildRichToolResultsData(toolResults, lang)
             : toolResults
                 .map((r, i) => {
                   const toolName = immediateTools[i]?.tool || 'unknown'
@@ -1886,7 +1897,7 @@ export function useAIChat() {
             conversationMessages.push({ role: 'assistant', content: fullContent || '' })
             const bridgeRich2 = isBridgeActive()
             const toolResultsSummary = bridgeRich2
-              ? toolResults.map(r => buildRichTaskData(r, lang)).join('\n\n')
+              ? buildRichToolResultsData(toolResults, lang)
               : toolResults
                   .map(r => {
                     const base = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`

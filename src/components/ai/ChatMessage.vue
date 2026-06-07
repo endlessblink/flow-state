@@ -288,14 +288,28 @@ function normalizeInlineMatchText(value: string): string {
     .trim()
 }
 
+function splitInlineContent(content: string, splitSentences: boolean): string[] {
+  const lines = content
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+  if (!splitSentences) return lines
+
+  return lines.flatMap(line => {
+    if (line.length < 120) return [line]
+    const sentenceParts = line
+      .split(/(?<=[.!?。！？؟])\s+/u)
+      .map(part => part.trim())
+      .filter(Boolean)
+    return sentenceParts.length > 1 ? sentenceParts : [line]
+  })
+}
+
 const inlineContentBlocks = computed(() => {
   const content = (props.message.content || '').trim()
   if (!cardGroups.value) return []
   const used = new Set<string>()
-  const blocks = content
-    .split(/\n+/)
-    .map(line => line.trim())
-    .filter(Boolean)
+  const blocks = splitInlineContent(content, isWeekPlan.value)
     .map((line, index) => {
       const normalizedLine = normalizeInlineMatchText(line)
       const tasks = allCardTasks.value.filter(task => {

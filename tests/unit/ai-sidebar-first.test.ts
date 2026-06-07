@@ -455,6 +455,60 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.find('.card-groups').exists()).toBe(false)
   })
 
+  it('splits collapsed weekly planning prose so each task card sits under its own sentence', () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-week-plan-collapsed-prose',
+          role: 'assistant',
+          content: 'Task Alpha should go first because it protects the payment decision and prevents a blocked handoff. Task Beta belongs later because it is follow-through work for a lower-energy slot.',
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: 'week_plan',
+              total: 2,
+              groups: [
+                {
+                  name: 'Focus',
+                  tasks: [
+                    {
+                      id: 'task-alpha',
+                      title: 'Task Alpha',
+                      status: 'todo',
+                      priority: 'high',
+                      reason: 'payment decision risk',
+                    },
+                    {
+                      id: 'task-beta',
+                      title: 'Task Beta',
+                      status: 'todo',
+                      priority: 'medium',
+                      reason: 'lower-energy follow-through',
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    const blocks = wrapper.findAll('.inline-response-block')
+    expect(blocks).toHaveLength(2)
+    expect(blocks[0].findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(1)
+    expect(blocks[0].text()).toContain('Task Alpha')
+    expect(blocks[0].text()).not.toContain('Task Beta')
+    expect(blocks[1].findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(1)
+    expect(blocks[1].text()).toContain('Task Beta')
+    expect(wrapper.find('.card-groups').exists()).toBe(false)
+  })
+
   it('documents weekly planning as selective coach reasoning rather than a one-sentence task dump', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 

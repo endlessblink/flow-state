@@ -71,12 +71,16 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
   const indexedTasks = collectCardTasks(toolResults)
   if (!indexedTasks.length) return null
 
+  const seenTaskKeys = new Set<string>()
   const groups = parsed.groups
     .map(g => {
       const groupTasks = (Array.isArray(g.items) ? g.items : [])
         .map(it => {
           const t = indexedTasks[(Number(it.i) || 0) - 1]
           if (!t) return null
+          const taskKey = String(t.id || t.title || '').trim()
+          if (taskKey && seenTaskKeys.has(taskKey)) return null
+          if (taskKey) seenTaskKeys.add(taskKey)
           const modelReason = String(it.reason || '').trim()
           return { ...t, reason: repairCardReason(t, modelReason) }
         })
@@ -162,11 +166,14 @@ function isShallowCardReason(reason: string): boolean {
   if (!normalized) return true
   if (normalized.length <= 4) return true
   if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return true
+  if (/(why now|impact|slot|tradeoff|helps you stay on track|make progress|move forward|focused block|do this week)/i.test(normalized)) return true
+  if (/(למה עכשיו|השפעה|מיקום|טריידאוף|להתקדם|התקדמות|בלוק מיקוד|השבוע)/i.test(normalized)) return true
   return [
     'due',
     'due today',
     'deadline',
     'deadline approaching',
+    'due soon',
     'overdue',
     'high priority',
     'medium priority',

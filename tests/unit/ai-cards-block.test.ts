@@ -132,6 +132,37 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
     expect(r?.groups[0].tasks[0].reason).toBe('prevents a stuck customer charge before follow-up')
   })
 
+  it('repairs planning-template placeholder reasons instead of showing them to the user', () => {
+    const text = 'Start with Check payment via Cardcom.\n\n' + block({
+      kind: 'week_plan',
+      groups: [
+        { name: 'Money', items: [{ i: 1, reason: 'why now / impact / slot' }] },
+        { name: 'Sales', items: [{ i: 2, reason: 'helps you stay on track' }] },
+      ],
+    })
+    const r = parseCardGroups(text, results)
+
+    expect(r?.groups[0].tasks[0].reason).toBe('money or billing can get stuck if this slips')
+    expect(r?.groups[1].tasks[0].reason).toBe('this belongs to one sales sequence worth batching')
+  })
+
+  it('deduplicates repeated task references across groups', () => {
+    const text = 'Start with Check payment via Cardcom.\n\n' + block({
+      kind: 'week_plan',
+      groups: [
+        { name: 'Money', items: [{ i: 1, reason: 'payment risk' }] },
+        { name: 'Duplicate money', items: [{ i: 1, reason: 'same task again' }] },
+        { name: 'Sales', items: [{ i: 2, reason: 'sets up outreach' }] },
+      ],
+    })
+    const r = parseCardGroups(text, results)
+
+    expect(r?.groups.map(group => group.tasks.map(task => task.title))).toEqual([
+      ['Check payment via Cardcom'],
+      ['Build outreach list'],
+    ])
+  })
+
   it('maps cards onto nested directive task arrays in the same order the model saw', () => {
     const nestedResults = [{
       success: true,

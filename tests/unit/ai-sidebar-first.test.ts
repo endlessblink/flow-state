@@ -516,6 +516,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('why now, expected impact, and the tradeoff/slot')
     expect(aiChat).toContain('omissions/defer line')
     expect(aiChat).toContain('Due dates and priority labels are metadata, not reasons')
+    expect(aiChat).toContain('what it unblocks, who is waiting, what risk it prevents')
+    expect(aiChat).not.toContain('use overdue days, priority, project deadlines')
     expect(aiChat).toContain('ensureCardTaskMentions')
     expect(aiChat).toContain('if (!cardData && cardsInstruction && hasTaskList)')
     expect(aiChat).toContain('rankFallbackTasks')

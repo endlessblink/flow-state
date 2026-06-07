@@ -794,7 +794,7 @@ export function useAIChat() {
       '## CRITICAL RULES:',
       `1. LANGUAGE: Respond ENTIRELY in ${languageName}. Task data language and user input language do NOT matter when this instruction is explicit. NEVER mix languages.`,
       '2. ALWAYS USE TOOLS for task-related questions. When the user asks about tasks (show, list, give me, what are, מה המשימות, תן לי, הצג) — ALWAYS call `list_tasks` or relevant tool. This renders interactive clickable task cards. NEVER answer task questions from context alone — the user needs clickable cards.',
-      '3. GIVE REASONS: For each task you mention, explain WHY it matters — use overdue days, priority, project deadlines, subtask progress, time estimates. Example: "Fix login bug — 3 days overdue, high priority, blocks release".',
+      '3. GIVE REASONS: For each task you mention, explain WHY it matters in real life — what it unblocks, who is waiting, what risk it prevents, or why the timing matters. Due dates, overdue days, and priority labels are metadata, not the reason. Example: "Fix login bug — blocks release and keeps support waiting; it is also 3 days overdue."',
       '4. Use WRITE tools ONLY when user explicitly asks to create, modify, or delete.',
       '5. If the user just says "hi" or has a general question — respond naturally, NO tools needed.',
       '6. NEVER show JSON, UUIDs, task IDs, or technical details.',

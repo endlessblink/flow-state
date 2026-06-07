@@ -47,11 +47,11 @@ export function shouldUseStructuredTaskFallback(
 ): boolean {
   const taskCount = collectTaskAnswerItems(toolResults).filter(task => task.title).length
   if (taskCount === 0) return false
-  if (parsedCards && parsedCards.groups.some(group => group.tasks.some(task => isMeaningfulTaskReason(String(task.reason || ''))))) {
-    return false
-  }
-  if (parsedCards && parsedCards.groups.some(group => group.tasks.length > 0)) {
-    return true
+  if (parsedCards) {
+    const parsedTasks = parsedCards.groups.flatMap(group => group.tasks)
+    if (parsedTasks.length > 0) {
+      return !parsedTasks.every(task => isMeaningfulTaskReason(String(task.reason || '')))
+    }
   }
 
   const visible = stripCardsBlock(answer).trim()
@@ -63,8 +63,8 @@ export function shouldUseStructuredTaskFallback(
     .length
   const sentenceCount = (visible.match(/[.!?。؟]|(?:\n\s*\n)/g) || []).length
   const meaningfulMarkers = [
-    'because', 'unblocks', 'blocks', 'risk', 'waiting', 'deadline', 'depends', 'sequence', 'first',
-    'כי', 'פותח', 'חוסם', 'סיכון', 'מחכה', 'דדליין', 'תלוי', 'סדר', 'קודם',
+    'unblocks', 'blocks', 'risk', 'waiting', 'deadline', 'depends', 'sequence',
+    'פותח', 'חוסם', 'סיכון', 'מחכה', 'דדליין', 'תלוי', 'רצף',
   ]
   const hasMeaningfulMarker = meaningfulMarkers.some(marker => visible.toLocaleLowerCase().includes(marker))
 

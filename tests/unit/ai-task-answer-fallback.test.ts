@@ -68,6 +68,22 @@ describe('task answer fallback quality gate', () => {
     expect(shouldUseStructuredTaskFallback('אלה המשימות הדחופות.', taskResults, parsed)).toBe(true)
   })
 
+  it('rejects parsed cards when only some task reasons are meaningful', () => {
+    const parsed = {
+      groups: [{
+        name: 'רצף',
+        tasks: [
+          { title: 'להתחיל טיפול אוראו - פעמיים ביום לעשרה ימים', reason: 'ההערה נותנת הקשר רפואי שמצריך רצף' },
+          { title: 'לעבור על תוצאות פייפרפורט ולסקין', reason: 'high priority' },
+        ],
+      }],
+      total: 3,
+      rawBlock: '```cards\n{}\n```',
+    }
+
+    expect(shouldUseStructuredTaskFallback('קודם מטפלים ברצף ואז במכירות.', taskResults, parsed)).toBe(true)
+  })
+
   it('rejects structured-looking answers that mention tasks without meaningful reasons', () => {
     const shallowList = [
       '1. **להתחיל טיפול אוראו - פעמיים ביום לעשרה ימים** - high priority',
@@ -156,5 +172,76 @@ describe('task answer fallback quality gate', () => {
       'לעבור על תוצאות פייפרפורט ולסקין',
       'Write one cold opener from the target list',
     ])
+  })
+
+  it('preserves directive kind while replacing shallow day-plan cards', () => {
+    const answer = [
+      'היום מתחילים במה שהכי דחוף.',
+      '',
+      '```cards',
+      JSON.stringify({
+        kind: 'day_plan',
+        groups: [{
+          name: 'בוקר',
+          items: [
+            { i: 1, reason: 'high priority' },
+            { i: 2, reason: 'באיחור' },
+          ],
+        }],
+      }),
+      '```',
+    ].join('\n')
+
+    const finalized = finalizeTaskAnswer(answer, taskResults, 'he', {
+      groupName: 'תוכנית היום',
+      kind: 'day_plan',
+    })
+
+    expect(finalized.usedStructuredFallback).toBe(true)
+    expect(finalized.cards?.kind).toBe('day_plan')
+    expect(finalized.cards?.groups[0].tasks.map(task => task.title)).toEqual([
+      'להתחיל טיפול אוראו - פעמיים ביום לעשרה ימים',
+      'לעבור על תוצאות פייפרפורט ולסקין',
+      'Write one cold opener from the target list',
+    ])
+    expect(finalized.cards?.groups[0].tasks.every(task => isMeaningfulTaskReason(task.reason))).toBe(true)
+  })
+
+  it('loads nested task arrays when finalizing directive answers', () => {
+    const nestedResults = [{
+      success: true,
+      message: 'נמצאו משימות',
+      data: {
+        dueTodayTasks: [
+          {
+            id: 'today-1',
+            title: 'לבדוק תשלומים באתר דרך קאדרקום',
+            priority: 'high',
+          },
+        ],
+        overdueTasks: [
+          {
+            id: 'late-1',
+            title: 'להגיב למירי ולשלוח חשבונית',
+            priority: 'high',
+            daysOverdue: 1,
+          },
+        ],
+      },
+    }]
+
+    const finalized = finalizeTaskAnswer('הייתי מתחיל ב-"לבדוק תשלומים באתר דרך קאדרקום" ואז ב-"להגיב למירי ולשלוח חשבונית", כי אלה המשימות הכי דחופות כרגע.', nestedResults, 'he', {
+      groupName: 'תוכנית היום',
+      kind: 'day_plan',
+    })
+
+    expect(finalized.usedStructuredFallback).toBe(true)
+    expect(finalized.cards?.kind).toBe('day_plan')
+    expect(finalized.cards?.groups[0].tasks.map(task => task.title)).toEqual([
+      'לבדוק תשלומים באתר דרך קאדרקום',
+      'להגיב למירי ולשלוח חשבונית',
+    ])
+    expect(finalized.displayText).toContain('כסף או גבייה עלולים להיתקע')
+    expect(finalized.displayText).toContain('כבר באיחור 1 ימים אחרי הסיכון האמיתי')
   })
 })

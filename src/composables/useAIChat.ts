@@ -741,6 +741,55 @@ export function useAIChat() {
       : 'there is limited context, but it needs a decision instead of staying open'
   }
 
+  function fallbackTaskImpact(task: Record<string, unknown>, lang: 'he' | 'en'): string {
+    const text = `${String(task.title || '')} ${String(task.description || '')}`.toLowerCase()
+    if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(text)) {
+      return lang === 'he' ? 'מנקה סיכון כסף ומונע בדיקה חוזרת בהמשך' : 'clears money risk and avoids another audit loop'
+    }
+    if (/(reply|send|call|email|message|stakeholder|להגיב|לשלוח|להתקשר|מייל|הודעה)/i.test(text)) {
+      return lang === 'he' ? 'פותח תנועה אצל אדם אחר ומקטין חוב תקשורתי' : 'unblocks another person and reduces communication debt'
+    }
+    if (/(outreach|cold opener|target list|sales|lead|פייפרפורט|לסקין|רשימת|אאוטריץ|מכירות)/i.test(text)) {
+      return lang === 'he' ? 'מקדם רצף מכירות במקום להשאיר חלקים מפוזרים' : 'moves a sales sequence instead of leaving fragments open'
+    }
+    if (/(treatment|medicine|dose|twice a day|טיפול|תרופה|מנה|מנות|אוראו|פעמיים ביום)/i.test(text)) {
+      return lang === 'he' ? 'שומר על רצף שאי אפשר להשלים טוב בדיעבד' : 'protects a sequence that is hard to recover retroactively'
+    }
+    if (/(lecture|choose|slot|date|הרצאה|לבחור|מועד|תאריך)/i.test(text)) {
+      return lang === 'he' ? 'סוגר התחייבות זמן ומפחית החלטה פתוחה' : 'closes a time commitment and removes an open decision'
+    }
+    return lang === 'he'
+      ? 'מקטין עומס פתוח ומבהיר אם המשימה באמת שייכת לשבוע'
+      : 'reduces open load and clarifies whether it belongs this week'
+  }
+
+  function fallbackTaskSlot(task: Record<string, unknown>, lang: 'he' | 'en'): string {
+    const minutes = typeof task.estimatedDuration === 'number' ? task.estimatedDuration : 0
+    const text = `${String(task.title || '')} ${String(task.description || '')}`.toLowerCase()
+    if (/(write|draft|opener|content|creative|לכתוב|טיוטה|פתיח|תוכן)/i.test(text)) {
+      return lang === 'he' ? 'לשים בבוקר/בלוק חשיבה, לא בין סידורים' : 'put it in a morning/deep-work block, not between admin'
+    }
+    if (/(reply|send|call|email|message|להגיב|לשלוח|להתקשר|מייל|הודעה)/i.test(text)) {
+      return lang === 'he' ? 'לבצע כבלוק תקשורת קצר ולא לפתוח לאורך כל היום' : 'batch it into a short communication block'
+    }
+    if (minutes > 0 && minutes <= 30) {
+      return lang === 'he' ? 'לסגור כמשימת מומנטום לפני מעבר לעבודה כבדה' : 'close it as momentum before heavier work'
+    }
+    return lang === 'he'
+      ? 'לתת לה מקום מוגדר, אחרת היא תמשיך להתחרות ברעש'
+      : 'give it a defined slot or it will keep competing with noise'
+  }
+
+  function fallbackTaskRecommendation(task: Record<string, unknown> & { title?: string }, lang: 'he' | 'en'): string {
+    const title = task.title || ''
+    const why = fallbackTaskReason(task, lang)
+    const impact = fallbackTaskImpact(task, lang)
+    const slot = fallbackTaskSlot(task, lang)
+    return lang === 'he'
+      ? `- **${title}** — למה עכשיו: ${why}. השפעה: ${impact}. מיקום/טריידאוף: ${slot}.`
+      : `- **${title}** — Why now: ${why}. Expected impact: ${impact}. Tradeoff/slot: ${slot}.`
+  }
+
   function buildFallbackCards(tasks: Array<Record<string, unknown> & { title?: string }>, lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode']): string {
     const groups = [{
       name: lang === 'he' ? 'מוקדי השבוע' : 'Weekly focus',
@@ -758,11 +807,11 @@ export function useAIChat() {
         : 'I found the data, but could not finish the AI wording in time. Use the cards below to continue.'
     }
 
-    const lines = tasks.map((task, index) => `${index + 1}. **${task.title}** - ${fallbackTaskReason(task, lang)}`)
+    const lines = tasks.map(task => fallbackTaskRecommendation(task, lang))
     const intro = responseMode === 'week_plan'
       ? (lang === 'he'
-          ? 'תוכנית שבוע טובה צריכה לבחור מעט דברים עם השפעה, לא לרוקן את כל הרשימה. אלה הבחירות שהכי נראות כמו התחייבויות או רצפים שכדאי לסגור השבוע:'
-          : 'A useful week plan should select a few high-impact commitments, not empty the whole list. These look like the best focus candidates for this week:')
+          ? 'תוכנית שבוע טובה צריכה לבחור מעט דברים עם השפעה, לא לרוקן את כל הרשימה. העומס כאן נראה כמו שילוב של התחייבויות, רצפים ופריטים שצריכים החלטה, אז הייתי בוחר את מה שמונע תקיעה אמיתית:'
+          : 'A useful week plan should select a few high-impact commitments, not empty the whole list. The load here looks like a mix of commitments, sequences, and decisions, so I would choose the items that prevent real drag:')
       : (lang === 'he'
           ? 'הייתי בוחר לפי השפעה, תלות וסיכון אמיתי, לא רק לפי תאריך או עדיפות:'
           : 'I would choose by impact, dependencies, and real risk, not just date or priority:')

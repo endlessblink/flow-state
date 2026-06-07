@@ -75,15 +75,17 @@ const projects = computed(() => projectStore.projects)
 <style scoped>
 .submenu {
   position: fixed;
-  background: var(--overlay-component-bg);
+  background: var(--glass-bg-solid, hsl(30, 8%, 13%));
   backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
   border: var(--overlay-component-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--overlay-component-shadow);
+  box-shadow: var(--overlay-component-shadow), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
   padding: var(--space-1) 0;
   min-width: 160px;
   max-width: 220px;
   z-index: var(--z-submenu, 10001);
+  isolation: isolate;
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
 }
 
@@ -107,6 +109,7 @@ const projects = computed(() => projectStore.projects)
 .project-list {
   max-height: 200px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .project-list::-webkit-scrollbar {
@@ -124,16 +127,19 @@ const projects = computed(() => projectStore.projects)
 
 .menu-item {
   width: 100%;
+  min-height: var(--space-8);
   background: transparent;
   border: none;
   color: var(--text-primary);
   padding: var(--space-1_5) var(--space-2_5);
   font-size: var(--text-xs);
+  line-height: 1.2;
   text-align: start;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
   transition: background var(--duration-fast);
 }
 
@@ -142,6 +148,7 @@ const projects = computed(() => projectStore.projects)
 
 .menu-text {
   flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -158,8 +165,8 @@ const projects = computed(() => projectStore.projects)
 
 .project-icon--uncategorized {
   font-size: var(--text-xs);
-  color: var(--text-muted);
-  opacity: 0.6;
+  color: var(--text-secondary);
+  opacity: 0.85;
 }
 
 .project-emoji {

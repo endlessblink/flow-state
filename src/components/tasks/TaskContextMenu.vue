@@ -6,6 +6,8 @@
       class="context-menu"
       :style="menuPosition"
       @wheel.stop
+      @pointerdown.stop
+      @contextmenu.stop.prevent
     >
     <!-- Header for inbox/batch operations -->
     <div v-if="showInboxHeader" class="context-menu-header">
@@ -1107,37 +1109,73 @@ const handleKeyDown = (event: KeyboardEvent) => {
   }
 }
 
-// Click outside handler
-const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as HTMLElement
-  if (target.closest('.submenu')) return
-  // NPopover teleports date picker to body — don't close on clicks inside it
-  if (target.closest('.n-date-picker') || target.closest('.n-date-panel') || target.closest('.n-popover')) return
-  if (menuRef.value && !menuRef.value.contains(target)) {
-    emit('close')
-  }
+const isOwnedMenuTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false
+  if (menuRef.value?.contains(target)) return true
+
+  // Submenus and library popovers are teleported to body, so they must count as
+  // part of this interaction surface for outside-dismiss purposes.
+  return !!target.closest('.submenu, .n-date-picker, .n-date-panel, .n-popover, .ai-assist-popover')
 }
 
-watch(() => props.isVisible, (isVisible) => {
-  if (isVisible) {
-    setTimeout(() => document.addEventListener('click', handleClickOutside, true), 0)
-    document.addEventListener('keydown', handleKeyDown)
-  } else {
-    document.removeEventListener('click', handleClickOutside, true)
-    document.removeEventListener('keydown', handleKeyDown)
-    showDueDateSubmenu.value = false
-    showPrioritySubmenu.value = false
-    showDurationSubmenu.value = false
-    showMoreSubmenu.value = false
-    showProjectSubmenu.value = false
-    showCanvasGroupSubmenu.value = false
-    showDoneForNowSubmenu.value = false
-    showAIAssist.value = false
+const closeFromOutside = (target: EventTarget | null) => {
+  if (isOwnedMenuTarget(target)) return
+  closeAllSubmenusNow()
+  emit('close')
+}
+
+const handleOutsidePointerDown = (event: PointerEvent) => {
+  closeFromOutside(event.target)
+}
+
+const handleOutsideContextMenu = (event: MouseEvent) => {
+  closeFromOutside(event.target)
+}
+
+let outsideDismissListenerTimer: ReturnType<typeof setTimeout> | null = null
+
+const addOutsideDismissListeners = () => {
+  document.addEventListener('pointerdown', handleOutsidePointerDown, true)
+  document.addEventListener('contextmenu', handleOutsideContextMenu, true)
+}
+
+const removeOutsideDismissListeners = () => {
+  if (outsideDismissListenerTimer) {
+    clearTimeout(outsideDismissListenerTimer)
+    outsideDismissListenerTimer = null
   }
-})
+  document.removeEventListener('pointerdown', handleOutsidePointerDown, true)
+  document.removeEventListener('contextmenu', handleOutsideContextMenu, true)
+}
+
+watch(
+  () => props.isVisible,
+  (isVisible) => {
+    if (isVisible) {
+      removeOutsideDismissListeners()
+      outsideDismissListenerTimer = setTimeout(() => {
+        outsideDismissListenerTimer = null
+        addOutsideDismissListeners()
+      }, 0)
+      document.addEventListener('keydown', handleKeyDown)
+    } else {
+      removeOutsideDismissListeners()
+      document.removeEventListener('keydown', handleKeyDown)
+      showDueDateSubmenu.value = false
+      showPrioritySubmenu.value = false
+      showDurationSubmenu.value = false
+      showMoreSubmenu.value = false
+      showProjectSubmenu.value = false
+      showCanvasGroupSubmenu.value = false
+      showDoneForNowSubmenu.value = false
+      showAIAssist.value = false
+    }
+  },
+  { immediate: true }
+)
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside, true)
+  removeOutsideDismissListeners()
   document.removeEventListener('keydown', handleKeyDown)
   cancelPendingSwitch()
   clearAllSubmenuTimeouts()

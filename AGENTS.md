@@ -60,3 +60,14 @@ Or use the `/next` skill to get scored task recommendations.
 
 - `next` skill: Find and score available tasks from MASTER_PLAN.md
   - Trigger: `/next`
+
+## Project-Local Superpowers Auto-Router
+
+This repo has a FlowState-safe Superpowers router at `.claude/skills/superpowers-flowstate-auto-router/SKILL.md`.
+Use it at the start of bugs, fixes, behavior changes, reviews, planning, and completion checks to choose the relevant `.claude/skills/superpowers-*` support skill.
+
+Important boundaries:
+- FlowState rules in this `AGENTS.md`, `CLAUDE.md`, `docs/MASTER_PLAN.md`, OMX state, branch safety, and Electron-first shipping remain authoritative.
+- Do not install or emulate upstream always-on `using-superpowers`.
+- Skip the router for trivial chat or when a higher-priority workflow already clearly applies.
+- If a chosen Superpowers skill conflicts with FlowState rules, follow FlowState and treat Superpowers as support-only.

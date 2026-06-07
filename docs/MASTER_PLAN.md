@@ -82,6 +82,16 @@
 
 ---
 
+### ~~TASK-1826~~: Surface Superpowers auto-router to Codex instances (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-06-07)
+
+**Why**: The FlowState-safe Superpowers router was documented in `CLAUDE.md`, but new Codex/AGENTS-driven instances primarily receive `AGENTS.md`, so they would not reliably know to use it.
+
+**Shipped**: Added a project-local Superpowers auto-router section to `AGENTS.md` that points agents at `.claude/skills/superpowers-flowstate-auto-router/SKILL.md`, lists the task shapes where it should be used, and keeps FlowState rules authoritative over Superpowers.
+
+---
+
 ### ~~BUG-1821~~: "Plan my week" misrouted to the completed-tasks summary (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-07, v1.4.105) | **Depends on**: BUG-1820

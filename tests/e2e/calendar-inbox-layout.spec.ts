@@ -1,5 +1,50 @@
 import { test, expect } from '../fixtures/auth'
 
+async function seedCalendarInboxTasks(page: import('@playwright/test').Page) {
+  return page.evaluate(async () => {
+    const app = document.querySelector('#app') as {
+      __vue_app__?: {
+        _context?: {
+          config?: {
+            globalProperties?: {
+              $pinia?: { _s: Map<string, any> }
+            }
+          }
+        }
+      }
+    } | null
+    const taskStore = app?.__vue_app__?._context?.config?.globalProperties?.$pinia?._s.get('tasks')
+    if (!taskStore?.createTask) throw new Error('Task store not available')
+
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const titles = [
+      'לקנות כיסא חדש לעבודה',
+      'לעשות סרטון על מערכת הרמס המקומית',
+      'לקנות נעלי ספורט',
+      'להכין דוחות דרך ההפקה',
+      'לשים צלחות נקיות',
+      'Review calendar inbox spacing',
+      'Write focused regression notes',
+      'Check hover actions alignment'
+    ]
+
+    const createdIds: string[] = []
+    for (const [index, title] of titles.entries()) {
+      const task = await taskStore.createTask({
+        title,
+        status: index === 3 ? 'in_progress' : 'todo',
+        priority: index === 3 ? 'high' : 'medium',
+        dueDate: index === 1 || index === 3 ? today : undefined,
+        estimatedDuration: index === 3 ? 15 : undefined,
+        isInInbox: true
+      })
+      if (task?.id) createdIds.push(task.id)
+    }
+    return createdIds
+  })
+}
+
 test.describe('Calendar inbox layout', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
@@ -31,5 +76,83 @@ test.describe('Calendar inbox layout', () => {
     expect(styles.width).toBeGreaterThanOrEqual(300)
     expect(styles.width).toBeLessThanOrEqual(340)
     expect(styles.marginTop).not.toBe('0px')
+  })
+
+  test('keeps quick add, RTL task cards, hover actions, and scrolling visually contained', async ({ page }) => {
+    await page.setViewportSize({ width: 1705, height: 967 })
+    await page.goto('/#/calendar')
+    await page.waitForLoadState('networkidle')
+    await seedCalendarInboxTasks(page)
+    await page.waitForTimeout(500)
+
+    const inbox = page.locator('.calendar-inbox-panel').first()
+    await expect(inbox).toBeVisible({ timeout: 10000 })
+
+    const quickAdd = page.locator('.calendar-inbox-panel .quick-add-field').first()
+    const brainDump = page.locator('.calendar-inbox-panel .brain-dump-toggle').first()
+    await expect(quickAdd).toBeVisible()
+    await expect(brainDump).toBeVisible()
+
+    const controlLayout = await page.evaluate(() => {
+      const quick = document.querySelector('.calendar-inbox-panel .quick-add-field')?.getBoundingClientRect()
+      const brain = document.querySelector('.calendar-inbox-panel .brain-dump-toggle')?.getBoundingClientRect()
+      return quick && brain
+        ? {
+            gap: brain.top - quick.bottom,
+            quickHeight: quick.height,
+            brainHeight: brain.height,
+            quickWidth: quick.width,
+            brainWidth: brain.width
+          }
+        : null
+    })
+    expect(controlLayout).not.toBeNull()
+    expect(controlLayout!.gap).toBeGreaterThanOrEqual(6)
+    expect(controlLayout!.quickHeight).toBeGreaterThan(controlLayout!.brainHeight)
+    expect(controlLayout!.quickWidth).toBeGreaterThan(260)
+    expect(controlLayout!.brainWidth).toBeGreaterThan(260)
+
+    const firstHebrewCard = page.locator('.calendar-inbox-panel .task-card', { hasText: 'לקנות כיסא חדש לעבודה' }).first()
+    await expect(firstHebrewCard).toBeVisible()
+    await firstHebrewCard.hover()
+    await page.waitForTimeout(100)
+
+    const hoverLayout = await firstHebrewCard.evaluate((card) => {
+      const title = card.querySelector('.task-title .overflow-text')?.getBoundingClientRect()
+      const actions = card.querySelector('.task-actions')?.getBoundingClientRect()
+      const cardBox = card.getBoundingClientRect()
+      return title && actions
+        ? {
+            titleRight: title.right,
+            actionsLeft: actions.left,
+            actionsRight: actions.right,
+            cardRight: cardBox.right,
+            cardLeft: cardBox.left
+          }
+        : null
+    })
+    expect(hoverLayout).not.toBeNull()
+    expect(hoverLayout!.titleRight).toBeLessThanOrEqual(hoverLayout!.actionsLeft - 4)
+    expect(hoverLayout!.actionsRight).toBeLessThanOrEqual(hoverLayout!.cardRight - 4)
+    expect(hoverLayout!.actionsLeft).toBeGreaterThan(hoverLayout!.cardLeft)
+
+    const scrollContainment = await page.evaluate(() => {
+      const list = document.querySelector('.calendar-inbox-panel .inbox-tasks')
+      const last = document.querySelector('.calendar-inbox-panel .task-card:last-child')
+      if (!list || !last) return null
+      list.scrollTop = list.scrollHeight
+      const listBox = list.getBoundingClientRect()
+      const lastBox = last.getBoundingClientRect()
+      return {
+        listBottom: listBox.bottom,
+        lastBottom: lastBox.bottom,
+        overflowY: window.getComputedStyle(list).overflowY,
+        minHeight: window.getComputedStyle(list).minHeight
+      }
+    })
+    expect(scrollContainment).not.toBeNull()
+    expect(scrollContainment!.overflowY).toBe('auto')
+    expect(scrollContainment!.minHeight).toBe('0px')
+    expect(scrollContainment!.lastBottom).toBeLessThanOrEqual(scrollContainment!.listBottom)
   })
 })

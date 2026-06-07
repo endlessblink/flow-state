@@ -44,14 +44,13 @@
         </span>
 
         <!-- Priority Tag -->
-        <NTag
-          :type="task.priority === 'high' ? 'error' : task.priority === 'medium' ? 'warning' : 'info'"
-          size="small"
-          round
-          class="priority-badge"
+        <span
+          v-if="task.priority"
+          class="metadata-badge priority-badge"
+          :class="`priority-badge--${task.priority}`"
         >
-          {{ task.priority }}
-        </NTag>
+          {{ priorityLabel }}
+        </span>
 
         <!-- Due Date Badge -->
         <span
@@ -82,12 +81,12 @@
 
         <!-- Status Indicator -->
         <span
-          v-if="statusBadge"
+          v-if="visibleStatusBadge"
           class="metadata-badge status-badge"
           :class="`status-${task.status}`"
-          :title="statusBadge.label"
+          :title="visibleStatusBadge.label"
         >
-          <component :is="statusBadge.icon" :size="12" />
+          <component :is="visibleStatusBadge.icon" :size="12" />
         </span>
 
         <!-- Not on Canvas Badge -->
@@ -124,8 +123,7 @@
 import { computed, ref } from 'vue'
 import { type Task } from '@/stores/tasks'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
-import { Play, Edit2, Timer, Calendar, Clock, ListChecks, ClipboardList, PlayCircle, CheckCircle2, Archive, PauseCircle } from 'lucide-vue-next'
-import { NTag } from 'naive-ui'
+import { Play, Edit2, Timer, Calendar, Clock, ListChecks, ClipboardList, PlayCircle, CheckCircle2, PauseCircle } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { useTaskStore } from '@/stores/tasks'
 import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
@@ -165,15 +163,21 @@ const completedSubtasks = computed(() =>
 )
 const totalSubtasks = computed(() => props.task.subtasks?.length || 0)
 
+const priorityLabel = computed(() => props.task.priority?.toUpperCase() ?? '')
+
 const statusBadge = computed(() => {
   const badges: Record<string, { icon: unknown; label: string }> = {
     planned: { icon: ClipboardList, label: 'Planned' },
     in_progress: { icon: PlayCircle, label: 'In progress' },
     done: { icon: CheckCircle2, label: 'Done' },
-    backlog: { icon: Archive, label: 'Backlog' },
     on_hold: { icon: PauseCircle, label: 'On hold' }
   }
   return badges[props.task.status] ?? null
+})
+
+const visibleStatusBadge = computed(() => {
+  if (!props.task.status || props.task.status === 'todo') return null
+  return statusBadge.value
 })
 
 // BUG-1191: Due badge class with reactive date dependency
@@ -208,17 +212,18 @@ const formatDueDateLabel = (dueDate: string) => {
 /* BUG-1709: breathing room */
 .task-card {
   position: relative;
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-3);
+  background: color-mix(in srgb, var(--surface-1) 78%, transparent);
+  border: 1px solid var(--border-subtle);
   border-inline-start: 4px solid transparent;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   cursor: grab;
-  transition: all var(--duration-fast) ease;
+  transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
 }
 
 .task-card:hover {
-  background: var(--state-hover-bg);
+  background: var(--surface-2);
+  border-color: var(--border-medium);
   border-inline-start-color: inherit; /* Preserve priority color on hover */
   transform: translateY(-1px);
 }
@@ -242,21 +247,25 @@ const formatDueDateLabel = (dueDate: string) => {
 }
 
 .task-title {
+  display: block;
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   line-height: var(--leading-snug);
   color: var(--text-primary);
   margin-bottom: var(--space-2);
+  min-height: 20px;
   word-break: break-word;
   overflow-wrap: break-word;
+  text-align: start;
 }
 
 .task-metadata {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1_5);
+  gap: var(--space-1);
   align-items: center;
-  min-height: 22px;
+  min-height: 20px;
+  opacity: 0.92;
 }
 
 .metadata-badge {
@@ -265,18 +274,35 @@ const formatDueDateLabel = (dueDate: string) => {
   gap: var(--space-1);
   font-size: var(--text-xs);
   line-height: 1;
-  min-height: 22px;
-  padding: var(--space-0_5) var(--space-2);
+  min-height: 20px;
+  max-width: 100%;
+  padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-full);
-  background: var(--glass-bg-medium);
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
   color: var(--text-secondary);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--border-subtle);
+  white-space: nowrap;
 }
 
 .priority-badge {
   font-weight: var(--font-bold);
   text-transform: uppercase;
   letter-spacing: 0;
+}
+
+.priority-badge--high {
+  color: var(--color-priority-high);
+  border-color: color-mix(in srgb, var(--color-priority-high) 42%, transparent);
+}
+
+.priority-badge--medium {
+  color: var(--color-priority-medium);
+  border-color: color-mix(in srgb, var(--color-priority-medium) 42%, transparent);
+}
+
+.priority-badge--low {
+  color: var(--color-priority-low);
+  border-color: color-mix(in srgb, var(--color-priority-low) 42%, transparent);
 }
 
 .due-badge-overdue { color: var(--status-error); }
@@ -302,23 +328,23 @@ const formatDueDateLabel = (dueDate: string) => {
 /* BUG-1709: visibility controlled by v-show (JS hover) */
 .task-actions {
   position: absolute;
-  top: var(--space-2);
+  top: var(--space-2_5);
   inset-inline-end: var(--space-2);
   display: flex;
   gap: var(--space-1);
-  background: var(--surface-0);
-  padding: var(--space-1) var(--space-1_5);
+  background: var(--surface-1);
+  padding: var(--space-0_5);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--border-medium);
 }
 
 .action-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -342,11 +368,13 @@ const formatDueDateLabel = (dueDate: string) => {
 .task-content--calendar-inbox {
   width: 100%;
   box-sizing: border-box;
+  min-width: 0;
+  padding-inline-end: 58px;
+  text-align: start;
 }
 
-.task-card:hover .task-content--calendar-inbox,
-.task-card:focus-within .task-content--calendar-inbox {
-  padding-inline-end: var(--space-12);
+.task-content--calendar-inbox:dir(rtl) {
+  text-align: start;
 }
 
 .timer-indicator {

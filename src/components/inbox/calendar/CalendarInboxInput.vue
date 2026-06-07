@@ -1,15 +1,19 @@
 <template>
   <!-- Quick Add -->
   <div class="quick-add">
-    <input
-      :value="modelValue"
-      :dir="quickAddDirection"
-      placeholder="Quick add task (Enter)..."
-      class="quick-add-input"
-      @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-      @keydown.enter="handleEnter"
-      @paste="handlePaste"
-    >
+    <div class="quick-add-field">
+      <Plus :size="14" class="quick-add-icon" aria-hidden="true" />
+      <input
+        :value="modelValue"
+        :dir="quickAddDirection"
+        placeholder="Quick add task (Enter)..."
+        class="quick-add-input"
+        aria-label="Quick add task"
+        @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+        @keydown.enter="handleEnter"
+        @paste="handlePaste"
+      >
+    </div>
 
     <!-- TASK-1325: URL scraping feedback -->
     <div v-if="isScraping" class="url-scraping-feedback">
@@ -23,15 +27,15 @@
 
   <!-- Brain Dump Mode -->
   <div class="brain-dump-section">
-    <NButton
-      secondary
-      block
-      size="small"
+    <button
+      type="button"
       class="brain-dump-toggle"
+      :aria-pressed="brainDumpMode"
       @click="brainDumpMode = !brainDumpMode"
     >
+      <ListPlus :size="13" aria-hidden="true" />
       {{ brainDumpMode ? 'Quick Add Mode' : 'Brain Dump Mode' }}
-    </NButton>
+    </button>
 
     <!-- Brain Dump Textarea -->
     <div v-if="brainDumpMode" class="brain-dump-container">
@@ -42,22 +46,21 @@
         rows="5"
         placeholder="Paste or type tasks (one per line)..."
       />
-      <NButton
-        type="primary"
-        block
+      <button
+        type="button"
+        class="brain-dump-submit"
         :disabled="parsedTaskCount === 0"
         @click="processBrainDump"
       >
         Add {{ parsedTaskCount }} Tasks
-      </NButton>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { NButton } from 'naive-ui'
-import { Globe, X } from 'lucide-vue-next'
+import { Globe, ListPlus, Plus, X } from 'lucide-vue-next'
 import { useBrainDump } from '@/composables/useBrainDump'
 import { useUrlScraping } from '@/composables/useUrlScraping'
 
@@ -117,16 +120,49 @@ const quickAddDirection = computed(() => {
   padding: 0;
 }
 
-.quick-add-input {
-  width: 100%;
+.quick-add-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  transition: border-color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.quick-add-field:focus-within {
+  background: var(--surface-1);
+  border-color: var(--brand-primary-dim);
+  box-shadow: 0 0 0 2px var(--brand-primary-subtle);
+}
+
+.quick-add-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.quick-add-field:focus-within .quick-add-icon {
+  color: var(--brand-primary);
+}
+
+.quick-add-input {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--text-primary);
+  padding: var(--space-2) 0;
   font-size: var(--text-sm);
+  line-height: var(--leading-normal);
   unicode-bidi: plaintext;
   text-align: start;
+}
+
+.quick-add-input::placeholder {
+  color: var(--text-muted);
 }
 
 /* TASK-1325: URL Scraping Feedback */
@@ -178,16 +214,36 @@ const quickAddDirection = computed(() => {
 }
 
 .brain-dump-section {
-  padding: 0 var(--space-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: 0;
 }
 
 .brain-dump-toggle {
-  margin-bottom: var(--space-2);
+  align-items: center;
+  align-self: stretch;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  gap: var(--space-2);
+  justify-content: center;
+  min-height: 28px;
+  padding: var(--space-1_5) var(--space-2);
+  transition: color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
 }
 
-.brain-dump-toggle:hover {
+.brain-dump-toggle:hover,
+.brain-dump-toggle[aria-pressed="true"] {
   background: var(--state-hover-bg);
-  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
 }
 
 .brain-dump-container {
@@ -208,5 +264,36 @@ const quickAddDirection = computed(() => {
   margin-bottom: var(--space-2);
   unicode-bidi: plaintext;
   text-align: start;
+}
+
+.brain-dump-textarea:focus {
+  border-color: var(--brand-primary-dim);
+  box-shadow: 0 0 0 2px var(--brand-primary-subtle);
+  outline: none;
+}
+
+.brain-dump-submit {
+  align-items: center;
+  background: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-md);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  justify-content: center;
+  min-height: 34px;
+  padding: var(--space-2) var(--space-3);
+  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+.brain-dump-submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.brain-dump-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 </style>

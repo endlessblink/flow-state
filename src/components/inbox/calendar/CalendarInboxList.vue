@@ -3,7 +3,7 @@
     <!-- Empty State -->
     <div v-if="tasks.length === 0" class="empty-inbox">
       <div class="empty-icon">
-        {{ hasGroupFilter ? '🎯' : '📋' }}
+        <component :is="hasGroupFilter ? Layers : ClipboardList" :size="28" stroke-width="1.6" />
       </div>
       <p class="empty-text">
         {{ hasGroupFilter
@@ -37,6 +37,7 @@ import { computed } from 'vue'
 import { type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import CalendarTaskCard from './CalendarTaskCard.vue'
+import { ClipboardList, Layers } from 'lucide-vue-next'
 
 defineProps<{
   tasks: Task[]
@@ -66,11 +67,13 @@ const isTimerActive = computed(() => (taskId: string) => {
 .inbox-tasks {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-2_5);
   margin-top: var(--space-2);
-  padding-bottom: var(--space-8); /* BUG-203: prevent last task cropping */
+  padding: 0 var(--space-1_5) var(--space-10) 0;
+  scrollbar-gutter: stable;
 }
 
 .empty-inbox {
@@ -85,9 +88,16 @@ const isTimerActive = computed(() => (taskId: string) => {
 }
 
 .empty-icon {
-  font-size: var(--space-8);
+  align-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  display: flex;
+  height: 44px;
+  justify-content: center;
   margin-bottom: var(--space-2);
   opacity: 0.5;
+  width: 44px;
 }
 
 .empty-text {

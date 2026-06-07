@@ -47,9 +47,10 @@
           <div class="project-dropdown__list">
             <!-- Uncategorized option -->
             <button
+              type="button"
               class="project-dropdown__item"
               :class="{ 'is-active': !currentProjectId }"
-              @click="selectProject(null)"
+              @click.stop.prevent="selectProject(null)"
             >
               <span class="project-dropdown__icon">&#10067;</span>
               <span class="project-dropdown__name">Uncategorized</span>
@@ -60,9 +61,10 @@
             <button
               v-for="project in projects"
               :key="project.id"
+              type="button"
               class="project-dropdown__item"
               :class="{ 'is-active': currentProjectId === project.id }"
-              @click="selectProject(project.id)"
+              @click.stop.prevent="selectProject(project.id)"
             >
               <span class="project-dropdown__icon">
                 <ProjectEmojiIcon
@@ -256,28 +258,25 @@ onBeforeUnmount(() => {
 </style>
 
 <style>
-/* Project Dropdown - Dark glass morphism (teleported to body, NOT scoped) */
+/* Project Dropdown - teleported to body, NOT scoped */
 .project-dropdown {
   z-index: var(--z-tooltip);
-  background-color: hsl(var(--slate-900)) !important;
-  background: rgba(28, 25, 45, 0.95) !important;
-  backdrop-filter: blur(var(--space-4));
-  -webkit-backdrop-filter: blur(var(--space-4));
-  border: var(--space-0_5) solid rgba(var(--color-slate-50), 0.1) !important;
-  box-shadow:
-    0 var(--space-2) var(--space-8) rgba(var(--color-slate-900), 0.4),
-    0 0 0 var(--space-0_5) rgba(var(--color-slate-50), 0.05) inset;
+  background: var(--dropdown-bg) !important;
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border) !important;
+  box-shadow: var(--overlay-component-shadow);
   border-radius: var(--radius-md);
-  min-width: 160px;
-  max-width: 220px;
-  max-height: 240px;
+  min-width: calc(var(--space-32) + var(--space-20));
+  max-width: calc(var(--space-32) + var(--space-32));
+  max-height: calc(var(--space-32) + var(--space-24) + var(--space-8));
   overflow: hidden;
   isolation: isolate;
 }
 
 .project-dropdown__list {
   overflow-y: auto;
-  max-height: 200px;
+  max-height: calc(var(--space-32) + var(--space-24));
   padding: var(--space-1);
 }
 
@@ -290,24 +289,30 @@ onBeforeUnmount(() => {
   border: none !important;
   background: none !important;
   background-color: transparent !important;
-  color: rgba(var(--color-slate-50), 0.9) !important;
+  color: var(--text-secondary) !important;
   font-size: var(--text-xs);
+  font-weight: var(--font-medium);
   text-align: start;
   cursor: pointer;
-  transition: all var(--duration-normal) var(--spring-smooth);
-  border-radius: var(--radius-md);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+  border-radius: var(--radius-sm);
   user-select: none;
   white-space: nowrap;
-  min-height: 28px;
+  min-height: var(--space-8);
 }
 
 .project-dropdown__item:hover {
-  background: rgba(var(--color-slate-50), 0.08) !important;
-  background-color: rgba(var(--color-slate-50), 0.08) !important;
+  background: var(--dropdown-item-hover-bg) !important;
+  background-color: var(--dropdown-item-hover-bg) !important;
+  color: var(--text-primary) !important;
 }
 
 .project-dropdown__item.is-active {
-  /* Simple checkmark indicator, no background highlight */
+  background: var(--brand-primary-subtle) !important;
+  background-color: var(--brand-primary-subtle) !important;
+  color: var(--text-primary) !important;
 }
 
 .project-dropdown__icon {
@@ -323,6 +328,7 @@ onBeforeUnmount(() => {
   width: var(--space-3_5);
   height: var(--space-3_5);
   border-radius: var(--radius-full);
+  box-shadow: var(--project-indicator-shadow-inset);
 }
 
 .project-dropdown__name {
@@ -334,7 +340,8 @@ onBeforeUnmount(() => {
 
 .project-dropdown__check {
   flex-shrink: 0;
-  opacity: 0.7;
+  color: var(--dropdown-selected-color);
+  opacity: 0.95;
 }
 
 /* Custom scrollbar for dropdown list */

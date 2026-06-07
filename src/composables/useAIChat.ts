@@ -636,24 +636,77 @@ export function useAIChat() {
     return lines.join('\n').slice(0, 6000)
   }
 
-  function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<Record<string, unknown> & { title?: string }> {
-    const tasks: Array<Record<string, unknown> & { title?: string }> = []
+  function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<Record<string, unknown> & { title?: string; __cardIndex?: number }> {
+    const tasks: Array<Record<string, unknown> & { title?: string; __cardIndex?: number }> = []
+    const addTask = (item: unknown) => {
+      if (!item || typeof item !== 'object' || typeof (item as Record<string, unknown>).title !== 'string') return
+      const raw = item as Record<string, unknown>
+      const id = typeof raw.id === 'string' ? raw.id : ''
+      const full = id ? taskStore.getTask(id) : null
+      tasks.push({
+        ...raw,
+        ...(full ? {
+          title: full.title,
+          description: full.description,
+          status: full.status,
+          priority: full.priority,
+          dueDate: full.dueDate,
+          estimatedDuration: full.estimatedDuration,
+          projectId: full.projectId,
+        } : {}),
+        __cardIndex: tasks.length + 1,
+      })
+    }
     for (const result of toolResults) {
       const data = result.data
       if (!result.success) continue
       if (Array.isArray(data)) {
-        tasks.push(...data.filter(item => item && typeof item === 'object' && typeof (item as Record<string, unknown>).title === 'string') as Array<Record<string, unknown> & { title?: string }>)
+        data.forEach(addTask)
       } else if (data && typeof data === 'object') {
         const record = data as Record<string, unknown>
         for (const key of ['tasks', 'dueTodayTasks', 'overdueTasks', 'unscheduled']) {
           const value = record[key]
           if (Array.isArray(value)) {
-            tasks.push(...value.filter(item => item && typeof item === 'object' && typeof (item as Record<string, unknown>).title === 'string') as Array<Record<string, unknown> & { title?: string }>)
+            value.forEach(addTask)
           }
         }
       }
     }
     return tasks
+  }
+
+  function fallbackTaskScore(task: Record<string, unknown>): number {
+    const title = String(task.title || '').toLowerCase()
+    const description = String(task.description || '').toLowerCase()
+    const text = `${title} ${description}`
+    let score = 0
+
+    if (task.status === 'in_progress') score += 4
+    if (task.priority === 'urgent') score += 7
+    if (task.priority === 'high') score += 5
+    if (task.priority === 'medium') score += 2
+    if (description.trim()) score += 3
+    if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(text)) score += 8
+    if (/(treatment|medicine|dose|twice a day|טיפול|תרופה|מנה|מנות|אוראו|פעמיים ביום)/i.test(text)) score += 7
+    if (/(reply|send|call|email|message|stakeholder|להגיב|לשלוח|להתקשר|מייל|הודעה)/i.test(text)) score += 6
+    if (/(outreach|cold opener|target list|sales|lead|פייפרפורט|לסקין|רשימת|אאוטריץ|מכירות)/i.test(text)) score += 5
+    if (/(lecture|choose|slot|date|הרצאה|לבחור|מועד|תאריך)/i.test(text)) score += 4
+
+    const due = typeof task.dueDate === 'string' ? task.dueDate.slice(0, 10) : ''
+    if (due) {
+      const today = new Date().toISOString().slice(0, 10)
+      if (due < today) score += 6
+      else if (due === today) score += 5
+      else score += 2
+    }
+    if (typeof task.daysOverdue === 'number') score += Math.min(6, Math.max(1, task.daysOverdue))
+    if (typeof task.estimatedDuration === 'number' && task.estimatedDuration > 0 && task.estimatedDuration <= 30) score += 1
+
+    return score
+  }
+
+  function rankFallbackTasks(tasks: Array<Record<string, unknown> & { title?: string }>): Array<Record<string, unknown> & { title?: string }> {
+    return [...tasks].sort((a, b) => fallbackTaskScore(b) - fallbackTaskScore(a))
   }
 
   function fallbackTaskReason(task: Record<string, unknown>, lang: 'he' | 'en'): string {
@@ -691,14 +744,14 @@ export function useAIChat() {
   function buildFallbackCards(tasks: Array<Record<string, unknown> & { title?: string }>, lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode']): string {
     const groups = [{
       name: lang === 'he' ? 'מוקדי השבוע' : 'Weekly focus',
-      items: tasks.map((task, index) => ({ i: index + 1, reason: fallbackTaskReason(task, lang) })),
+      items: tasks.map((task, index) => ({ i: Number(task.__cardIndex) || index + 1, reason: fallbackTaskReason(task, lang) })),
     }]
     const kind = responseMode ? `"kind":"${responseMode}",` : ''
     return `\n\n\`\`\`cards\n{${kind}"groups":${JSON.stringify(groups)}}\n\`\`\``
   }
 
   function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode']): string {
-    const tasks = getTaskItemsFromToolResults(toolResults).filter(task => task.title).slice(0, responseMode === 'week_plan' ? 5 : 3)
+    const tasks = rankFallbackTasks(getTaskItemsFromToolResults(toolResults).filter(task => task.title)).slice(0, responseMode === 'week_plan' ? 5 : 3)
     if (tasks.length === 0) {
       return lang === 'he'
         ? 'מצאתי את הנתונים, אבל לא הצלחתי לנסח תשובת AI מלאה בזמן. השתמש בכרטיסים למטה כדי להמשיך.'

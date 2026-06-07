@@ -26,6 +26,25 @@ export interface ParsedCards {
   kind?: 'day_plan' | 'smart_lanes' | 'weekly_review' | 'week_plan'
 }
 
+export function collectCardTasks(toolResults: CardToolResult[]): Array<Record<string, unknown>> {
+  const tasks: Array<Record<string, unknown>> = []
+  for (const result of toolResults) {
+    if (!result.success) continue
+    const data = result.data
+    if (Array.isArray(data)) {
+      tasks.push(...data.filter(isCardTask))
+      continue
+    }
+    if (!data || typeof data !== 'object') continue
+    const record = data as Record<string, unknown>
+    for (const key of ['tasks', 'dueTodayTasks', 'overdueTasks', 'unscheduled'] as const) {
+      const value = record[key]
+      if (Array.isArray(value)) tasks.push(...value.filter(isCardTask))
+    }
+  }
+  return tasks
+}
+
 /**
  * Parse a ```cards JSON block into grouped tasks. Each item references a task by its
  * [N] index (1-based) into the tool result's task list (same order the model saw).
@@ -45,10 +64,7 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
   try { parsed = JSON.parse(m[1].trim()) } catch { return null }
   if (!Array.isArray(parsed?.groups) || !parsed.groups.length) return null
 
-  const taskResult = toolResults.find(r =>
-    r.success && Array.isArray(r.data) && (r.data[0] as Record<string, unknown>)?.title !== undefined,
-  )
-  const indexedTasks = (taskResult?.data as Array<Record<string, unknown>>) || []
+  const indexedTasks = collectCardTasks(toolResults)
   if (!indexedTasks.length) return null
 
   const groups = parsed.groups
@@ -76,6 +92,10 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
 
   const kind = parsed.kind === 'day_plan' || parsed.kind === 'smart_lanes' || parsed.kind === 'weekly_review' || parsed.kind === 'week_plan' ? parsed.kind : undefined
   return groups.length ? { groups, total: indexedTasks.length, rawBlock: m[0], kind } : null
+}
+
+function isCardTask(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && typeof (value as Record<string, unknown>).title === 'string')
 }
 
 /**

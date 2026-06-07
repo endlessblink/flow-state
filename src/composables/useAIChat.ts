@@ -49,7 +49,7 @@ import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
-import { parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import { collectCardTasks, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
@@ -600,12 +600,13 @@ export function useAIChat() {
   function buildRichTaskData(r: ToolResult, lang: 'he' | 'en'): string {
     const ok = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
     const data = r.data
-    if (!Array.isArray(data) || data.length === 0 || (data[0] as Record<string, unknown>)?.title === undefined) {
+    const taskItems = collectCardTasks([r])
+    if (taskItems.length === 0) {
       return digestToolResults('', data, ok, lang) // non-task-list → keep digest
     }
     const today = new Date().toISOString().split('T')[0]
     const lines: string[] = [ok]
-    const slice = (data as Array<Record<string, unknown>>).slice(0, 25)
+    const slice = taskItems.slice(0, 25)
     for (let i = 0; i < slice.length; i++) {
       const item = slice[i]
       const id = item.id as string | undefined
@@ -635,19 +636,19 @@ export function useAIChat() {
     return lines.join('\n').slice(0, 6000)
   }
 
-  function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<{ title?: string; priority?: string; daysOverdue?: number }> {
-    const tasks: Array<{ title?: string; priority?: string; daysOverdue?: number }> = []
+  function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<Record<string, unknown> & { title?: string }> {
+    const tasks: Array<Record<string, unknown> & { title?: string }> = []
     for (const result of toolResults) {
       const data = result.data
       if (!result.success) continue
       if (Array.isArray(data)) {
-        tasks.push(...data.filter(item => item && typeof item === 'object') as Array<{ title?: string; priority?: string; daysOverdue?: number }>)
+        tasks.push(...data.filter(item => item && typeof item === 'object' && typeof (item as Record<string, unknown>).title === 'string') as Array<Record<string, unknown> & { title?: string }>)
       } else if (data && typeof data === 'object') {
         const record = data as Record<string, unknown>
-        for (const key of ['tasks', 'dueTodayTasks', 'overdueTasks']) {
+        for (const key of ['tasks', 'dueTodayTasks', 'overdueTasks', 'unscheduled']) {
           const value = record[key]
           if (Array.isArray(value)) {
-            tasks.push(...value.filter(item => item && typeof item === 'object') as Array<{ title?: string; priority?: string; daysOverdue?: number }>)
+            tasks.push(...value.filter(item => item && typeof item === 'object' && typeof (item as Record<string, unknown>).title === 'string') as Array<Record<string, unknown> & { title?: string }>)
           }
         }
       }
@@ -655,18 +656,69 @@ export function useAIChat() {
     return tasks
   }
 
-  function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en'): string {
-    const tasks = getTaskItemsFromToolResults(toolResults).filter(task => task.title).slice(0, 3)
+  function fallbackTaskReason(task: Record<string, unknown>, lang: 'he' | 'en'): string {
+    const title = String(task.title || '').toLowerCase()
+    const description = String(task.description || '').trim()
+    if (description) {
+      const clipped = description.length > 90 ? `${description.slice(0, 87)}...` : description
+      return lang === 'he' ? `ההערה נותנת הקשר מעשי: ${clipped}` : `the note gives practical context: ${clipped}`
+    }
+    if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(title)) {
+      return lang === 'he' ? 'כסף או גבייה עלולים להיתקע אם זה יחליק' : 'money or billing can get stuck if this slips'
+    }
+    if (/(reply|send|call|email|message|להגיב|לשלוח|להתקשר|מייל|הודעה)/i.test(title)) {
+      return lang === 'he' ? 'מישהו כנראה מחכה לתגובה כדי להתקדם' : 'someone is probably waiting on this to move forward'
+    }
+    if (/(outreach|cold opener|target list|sales|lead|פייפרפורט|לסקין|רשימת|אאוטריץ|מכירות)/i.test(title)) {
+      return lang === 'he' ? 'זה חלק מרצף מכירות שכדאי לבצע כמקבץ' : 'this belongs to one sales sequence worth batching'
+    }
+    if (/(treatment|medicine|dose|twice a day|טיפול|תרופה|מנה|מנות|אוראו|פעמיים ביום)/i.test(title)) {
+      return lang === 'he' ? 'רצף טיפול שנשבר קשה להשלים בדיעבד' : 'a broken treatment sequence is hard to recover later'
+    }
+    if (/(lecture|choose|slot|date|הרצאה|לבחור|מועד|תאריך)/i.test(title)) {
+      return lang === 'he' ? 'בחירה עכשיו סוגרת התחייבות זמן ומונעת דחייה' : 'choosing now closes a time commitment and prevents drift'
+    }
+    if (task.dueDate || task.daysOverdue) {
+      return lang === 'he'
+        ? 'תזמון קרוב הופך את זה להתחייבות שכדאי לסגור'
+        : 'near-term timing makes this a commitment worth closing'
+    }
+    return lang === 'he'
+      ? 'אין מספיק הקשר, אבל היא צריכה החלטה במקום להישאר פתוחה'
+      : 'there is limited context, but it needs a decision instead of staying open'
+  }
+
+  function buildFallbackCards(tasks: Array<Record<string, unknown> & { title?: string }>, responseMode?: RoutedIntent['responseMode']): string {
+    const groups = [{
+      name: 'Recommended focus',
+      items: tasks.map((_, index) => ({ i: index + 1, reason: 'selected for impact, risk, or follow-through' })),
+    }]
+    const kind = responseMode ? `"kind":"${responseMode}",` : ''
+    return `\n\n\`\`\`cards\n{${kind}"groups":${JSON.stringify(groups)}}\n\`\`\``
+  }
+
+  function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode']): string {
+    const tasks = getTaskItemsFromToolResults(toolResults).filter(task => task.title).slice(0, responseMode === 'week_plan' ? 5 : 3)
     if (tasks.length === 0) {
       return lang === 'he'
         ? 'מצאתי את הנתונים, אבל לא הצלחתי לנסח תשובת AI מלאה בזמן. השתמש בכרטיסים למטה כדי להמשיך.'
         : 'I found the data, but could not finish the AI wording in time. Use the cards below to continue.'
     }
 
-    const names = tasks.map(task => task.title).join(lang === 'he' ? '", "' : '", "')
-    return lang === 'he'
-      ? `הייתי מתחיל ב-"${names}" לפי הסדר הזה; אלה נראות כמו המשימות הכי דחופות כרגע.`
-      : `I would start with "${names}" in this order; these look like the highest-impact tasks right now.`
+    const lines = tasks.map((task, index) => `${index + 1}. **${task.title}** - ${fallbackTaskReason(task, lang)}`)
+    const intro = responseMode === 'week_plan'
+      ? (lang === 'he'
+          ? 'תוכנית שבוע טובה צריכה לבחור מעט דברים עם השפעה, לא לרוקן את כל הרשימה. אלה הבחירות שהכי נראות כמו התחייבויות/רצפים שכדאי לסגור השבוע:'
+          : 'A useful week plan should select a few high-impact commitments, not empty the whole list. These look like the best focus candidates for this week:')
+      : (lang === 'he'
+          ? 'הייתי בוחר לפי השפעה, תלות וסיכון אמיתי, לא רק לפי תאריך או עדיפות:'
+          : 'I would choose by impact, dependencies, and real risk, not just date or priority:')
+    const omissions = responseMode === 'week_plan'
+      ? (lang === 'he'
+          ? 'מה לא להכניס עכשיו: משימות בלי הקשר ברור עדיף לדחות או לבקש עליהן הערה לפני שהן תופסות מקום בשבוע.'
+          : 'What not to load in now: tasks with unclear context should be deferred or clarified before they take space in the week.')
+      : ''
+    return [intro, ...lines, omissions].filter(Boolean).join('\n') + buildFallbackCards(tasks, responseMode)
   }
 
   /**
@@ -1110,9 +1162,7 @@ export function useAIChat() {
 
       // TASK-1814: structured `cards` block → grouped interactive cards with a reason
       // on each (rendered by ChatMessage). Only for bridge brains with a task list.
-      const hasTaskList = toolResults.some(r =>
-        r.success && Array.isArray(r.data) && r.data.length > 0 && (r.data[0] as Record<string, unknown>)?.title !== undefined,
-      )
+      const hasTaskList = collectCardTasks(toolResults).length > 0
       const isDayPlan = routed.responseMode === 'day_plan'
       const isSmartLanes = routed.responseMode === 'smart_lanes'
       const isWeeklyReview = routed.responseMode === 'weekly_review'
@@ -1121,7 +1171,7 @@ export function useAIChat() {
         ? isWeeklyReview
           ? `\n\nThis is a WEEKLY REVIEW of tasks the user ALREADY COMPLETED. STRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE short sentence stating how many tasks were completed (use ONLY the count of tasks in the data). Mention focus time ONLY if it is present in the data; if it is not present, do NOT mention focus time at all and never say it is missing or unavailable. Do NOT invent any numbers. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"weekly_review","groups":[{"name":"project or theme name in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"one short concrete note about this completed task in ${languageName}, max 8 words"}]}]}\n\`\`\`\nGroup the completed tasks by their project (use the \`project:\` field in the data) or by theme. Include ONLY tasks present in the data — never invent task names, categories, counts, trends, insights, or recommendations. Reference tasks by [N] number INSIDE the cards block only; in prose use the task NAME, never [N]. Do NOT add any sections after the cards block.`
           : isWeekPlan
-          ? `\n\nThis is a FORWARD WEEK PLAN of UPCOMING tasks the user still needs to do. STRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE short sentence on the shape of the week (what to focus on first). (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"week_plan","groups":[{"name":"a day name (e.g. ${languageName === 'Hebrew (עברית)' ? 'ראשון/שני' : 'Mon/Tue'}) or focus theme in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"why do this here, max 10 words in ${languageName}"}]}]}\n\`\`\`\nGroup the UPCOMING tasks by day (use due dates where present; otherwise a "${languageName === 'Hebrew (עברית)' ? 'המשך השבוע' : 'Later this week'}" group) or by focus theme. Include ONLY tasks present in the data — never invent tasks. Reference tasks by [N] number INSIDE the cards block only; in prose use the task NAME, never [N]. Do NOT add any sections after the cards block.`
+          ? `\n\nThis is a FORWARD WEEK PLAN of UPCOMING tasks the user still needs to do. Act like a thoughtful planning coach, not a sorter.\n\nSTRUCTURE YOUR ANSWER AS EXACTLY:\n(1) A 2-3 sentence weekly shape: the main theme, the realistic load/capacity call, and what should NOT dominate the week.\n(2) 3-6 short recommendation lines. Each line must name ONE selected task from the data and include: why now, expected impact, and the tradeoff/slot. Do not mention every task; be selective.\n(3) One short omissions/defer line naming what you are intentionally leaving out or batching and why.\n(4) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"week_plan","groups":[{"name":"a day name, focus block, or theme in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"why this belongs here: impact/risk/energy/tradeoff, max 16 words in ${languageName}"}]}]}\n\`\`\`\nRanking rubric, in order: impact/importance, dependencies or stakeholder risk, deadline consequences, energy/context fit, follow-through signals, then effort as a tiebreaker. Due dates and priority labels are metadata, not reasons. A reason like "deadline 2026-06-07" or "priority medium" is a failure.\nGroup the selected UPCOMING tasks by day, focus block, or theme. Use due dates where present, but prefer a plan that makes sense for the user's week. Include ONLY tasks present in the data — never invent tasks. Reference tasks by [N] number INSIDE the cards block only; in prose use the task NAME, never [N].`
           : isDayPlan
           ? `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — name the first task and the capacity call. If some tasks should be deferred, mention that in prose but DO NOT include deferred tasks in the cards. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"day_plan","groups":[{"name":"short focus block label in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"why this task belongs in this slot in ${languageName}, max 10 words"}]}]}\n\`\`\`\nThe groups are the exact order of the user's day. Include only tasks they should actually do today. Reference tasks by [N] number INSIDE the cards block only; in prose use the task NAME, never [N].`
           : isSmartLanes
@@ -1129,7 +1179,9 @@ export function useAIChat() {
             : `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — the single biggest cross-cutting insight or what to tackle first. Do NOT write a per-task breakdown, headings, or numbered reasons in the prose — the cards below carry every per-task detail, so repeating it is noise. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"groups":[{"name":"short group label in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"the specific stake for THIS task in ${languageName}, max 10 words — NOT 'overdue'/'high priority'"}]}]}\n\`\`\`\nReference each task by its [N] number INSIDE the cards block only; in the prose use the task NAME, never [N]. Include only tasks worth acting on now, grouped by theme or sequence (a single task may be its own group), ordered by importance.`
         : ''
       const responseShapeInstruction = cardsInstruction
-        ? `CRITICAL FORMAT RULE: Start with ONE plain, concrete sentence that names the first task and the next task. Avoid vague labels, arrows, metaphors, and jargon unless the user used them. Then output the cards block. Do not add a separate bullet list or headings before the cards.`
+        ? isWeekPlan
+          ? `CRITICAL FORMAT RULE: This is a weekly planning answer. Use compact paragraphs or bullets for weekly shape, recommendations, and omissions, then output the cards block. Do not collapse the answer into one paragraph.`
+          : `CRITICAL FORMAT RULE: Start with ONE plain, concrete sentence that names the first task and the next task. Avoid vague labels, arrows, metaphors, and jargon unless the user used them. Then output the cards block. Do not add a separate bullet list or headings before the cards.`
         : `CRITICAL FORMAT RULE: Always structure your response as a **numbered list** or **bullet points** — one per task or insight. NEVER write a wall of text or a single paragraph. Each bullet should bold the task name.`
 
       const formatterMessages: RouterChatMessage[] = [

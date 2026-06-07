@@ -481,8 +481,11 @@ describe('AI sidebar-first desktop experience', () => {
 
     expect(validateWeeklyPlanOutput(badPlan, context)).toEqual(expect.arrayContaining([
       'generic_reasoning:bad-0',
+      'generic_focus_area:bad-0',
       'date_priority_only_reasoning:bad-0',
+      'missing_real_consequence:bad-1',
       'missing_related_workstream_binding',
+      'insufficient_real_consequence_coverage',
     ]))
 
     const quickDraft = buildQuickDraftWeeklyPlan(context)

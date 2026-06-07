@@ -174,6 +174,8 @@ type ToolResultLike = {
 const MS_PER_DAY = 86_400_000
 const MONEY_CLIENT_HEALTH_FAMILY_LEGAL_RE = /(payment|invoice|charge|billing|refund|client|customer|health|doctor|medicine|family|dad|mom|legal|tax|תשלום|חשבונית|חיוב|לקוח|בריאות|רופא|תרופה|משפחה|אבא|אמא|מס|משפט)/i
 const STAKEHOLDER_RE = /(send|reply|call|email|message|meeting|proposal|review|approve|client|customer|stakeholder|amit|לשלוח|להגיב|להתקשר|מייל|הודעה|פגישה|לקוח|לאשר|בדיקה)/i
+const REAL_CONSEQUENCE_RE = /(decision|meeting|client|customer|stakeholder|promise|commitment|renewal|proposal|budget|revenue|money|invoice|payment|cash|risk|blocked|blocks|unblock|release|qa|signoff|rework|context|postponed|avoidance|mental load|family|health|doctor|admin|legal|tax|relief|momentum|החלטה|פגישה|לקוח|התחייבות|הבטחה|תקציב|כסף|תשלום|חשבונית|סיכון|חוסם|לשחרר|שחרור|בדיקה|משפחה|בריאות|רופא|מס|מנהלתי|עומס|דחייה|מומנטום)/i
+const GENERIC_FOCUS_RE = /^(due tasks?|top tasks?|weekly tasks?|priority tasks?|work|admin|personal|focused task|משימות|משימות השבוע|עבודה|אישי|משימה ממוקדת)$/i
 
 export function buildWeekContextFromToolResults(
   toolResults: ToolResultLike[],
@@ -283,9 +285,11 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
   for (const rec of recs) {
     if (!rec.sectionId) errors.push('missing_section_id')
     if (!rec.focusArea || typeof rec.focusArea !== 'string') errors.push(`missing_focus_area:${rec.sectionId}`)
+    if (typeof rec.focusArea === 'string' && GENERIC_FOCUS_RE.test(rec.focusArea.trim())) errors.push(`generic_focus_area:${rec.sectionId}`)
     if (!validTaskIds.has(rec.primaryTaskId)) errors.push(`invalid_primary_task_id:${rec.primaryTaskId}`)
     if (rec.cardPlacement !== 'immediately_after_explanation') errors.push(`bad_card_placement:${rec.sectionId}`)
     if (looksGeneric(`${rec.whyThisMatters} ${rec.whyThisWeek} ${rec.nextAction}`)) errors.push(`generic_reasoning:${rec.sectionId}`)
+    if (!hasRealConsequence(rec)) errors.push(`missing_real_consequence:${rec.sectionId}`)
     if (!Array.isArray(rec.evidence) || rec.evidence.length < 2) errors.push(`too_little_evidence:${rec.sectionId}`)
     const evidence = Array.isArray(rec.evidence) ? rec.evidence : []
     if (!evidence.some(item => !['dueIso', 'priority'].includes(item.field))) errors.push(`date_priority_only_reasoning:${rec.sectionId}`)
@@ -299,6 +303,7 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
   if (context.workstreams.some(stream => stream.taskIds.length > 1) && recs.every(rec => (rec.relatedTaskIds ?? []).length === 0)) {
     errors.push('missing_related_workstream_binding')
   }
+  if (recs.length >= 3 && realConsequenceCoverage(recs) < 0.8) errors.push('insufficient_real_consequence_coverage')
   if (hasRepeatedTemplateShape(recs)) errors.push('repeated_template_structure')
   if (overusesDueDates(recs)) errors.push('due_date_overuse')
   return [...new Set(errors)]
@@ -651,6 +656,24 @@ function looksGeneric(text: string): boolean {
     /schedule a focused block/i,
     /משימה חשובה כי/i,
   ].some(pattern => pattern.test(text))
+}
+
+function hasRealConsequence(rec: WeeklyPlanRecommendation): boolean {
+  const text = [
+    rec.focusArea,
+    rec.title,
+    rec.whyThisMatters,
+    rec.whyThisWeek,
+    rec.riskIfIgnored,
+    rec.nextAction,
+    ...rec.evidence.map(item => `${item.value} ${item.interpretation}`),
+  ].join(' ')
+  return REAL_CONSEQUENCE_RE.test(text)
+}
+
+function realConsequenceCoverage(recs: WeeklyPlanRecommendation[]): number {
+  if (!recs.length) return 0
+  return recs.filter(hasRealConsequence).length / recs.length
 }
 
 function hasRepeatedTemplateShape(recs: WeeklyPlanRecommendation[]): boolean {

@@ -161,6 +161,8 @@ export async function saveConversationToSupabase(conversation: Conversation): Pr
         tokens: m.metadata.tokens,
         latencyMs: m.metadata.latencyMs,
         forceDirection: m.metadata.forceDirection,
+        weeklyPlan: m.metadata.weeklyPlan,
+        scheduleQuestion: m.metadata.scheduleQuestion,
       } : undefined,
       // actions intentionally omitted (function handlers)
     }))

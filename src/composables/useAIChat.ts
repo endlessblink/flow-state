@@ -55,9 +55,11 @@ import {
   buildWeekContextFromToolResults,
   buildWeeklyPlanPrompt,
   parseWeeklyPlanOutput,
+  type WeekContextMemoryInput,
   type WeeklyPlanOutput,
 } from '@/services/ai/pipeline/weeklyPlan'
 import { useWorkProfile } from '@/composables/useWorkProfile'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
 // Initialize pipeline guardrails (idempotent — only configures once)
@@ -700,6 +702,59 @@ export function useAIChat() {
       nextTaskIndex += collectCardTasks([r]).length
       return summary
     }).join('\n\n')
+  }
+
+  async function buildAIMemorySummaryForToolResults(toolResults: ToolResult[], lang: 'he' | 'en'): Promise<string> {
+    const cardTasks = collectCardTasks(toolResults)
+    if (!cardTasks.length) return ''
+    try {
+      const db = useSupabaseDatabase()
+      const taskIds = [...new Set(cardTasks.map(task => String(task.id || '')).filter(Boolean))]
+      const projectIds = [...new Set(cardTasks
+        .map(task => {
+          const id = String(task.id || '')
+          return id ? taskStore.getTask(id)?.projectId || String(task.projectId || '') : String(task.projectId || '')
+        })
+        .filter(Boolean))]
+      const [projectContexts, taskContexts] = await Promise.all([
+        db.fetchProjectContexts(projectIds),
+        db.fetchTaskContexts(taskIds),
+      ])
+      const lines: string[] = [
+        lang === 'he'
+          ? 'זיכרון הבנת פרויקטים/משימות: אין להסיק חשיבות, קטגוריה, סיכון או קריטריוני הצלחה משמות פרויקטים בלבד.'
+          : 'Project/task understanding memory: do not infer importance, category, stakes, or success criteria from project names alone.',
+      ]
+      for (const ctx of projectContexts.slice(0, 8)) {
+        const projectName = taskStore.getProjectDisplayName?.(ctx.projectId) || ctx.projectId
+        const bits = [
+          `domain=${ctx.domain}`,
+          ctx.currentStakes !== 'unknown' ? `stakes=${ctx.currentStakes}` : '',
+          ctx.whyItMatters ? `why="${ctx.whyItMatters.slice(0, 160)}"` : '',
+          ctx.successCriteria.length ? `success="${ctx.successCriteria.slice(0, 2).join('; ').slice(0, 160)}"` : '',
+        ].filter(Boolean)
+        if (bits.length) lines.push(`- project ${projectName}: ${bits.join(' | ')}`)
+      }
+      for (const ctx of taskContexts.slice(0, 8)) {
+        const taskName = taskStore.getTask(ctx.taskId)?.title || ctx.taskId
+        const bits = [
+          ctx.currentStakes !== 'unknown' ? `stakes=${ctx.currentStakes}` : '',
+          ctx.whyItMatters ? `why="${ctx.whyItMatters.slice(0, 160)}"` : '',
+          ctx.successCriteria.length ? `success="${ctx.successCriteria.slice(0, 2).join('; ').slice(0, 160)}"` : '',
+        ].filter(Boolean)
+        if (bits.length) lines.push(`- task ${taskName}: ${bits.join(' | ')}`)
+      }
+      const projectsWithoutContext = projectIds
+        .filter(id => !projectContexts.some(ctx => ctx.projectId === id))
+        .map(id => taskStore.getProjectDisplayName?.(id) || id)
+        .slice(0, 5)
+      if (projectsWithoutContext.length) {
+        lines.push(`- context unknown for projects: ${projectsWithoutContext.join(', ')}`)
+      }
+      return lines.join('\n')
+    } catch {
+      return ''
+    }
   }
 
   function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<Record<string, unknown> & { title?: string; __cardIndex?: number }> {
@@ -1537,7 +1592,7 @@ export function useAIChat() {
       // Feed the FULL task content (notes/description, tags, subtask progress,
       // project, dates) and let the model actually reason about real stakes. The
       // user's work patterns/capacity are already injected by the context-aware router.
-      const toolResultsSummary = isBridgeActive()
+      let toolResultsSummary = isBridgeActive()
         ? buildRichToolResultsData(toolResults, outputLanguage)
         : toolResults
             .map((r, i) => {
@@ -1547,6 +1602,11 @@ export function useAIChat() {
             .join('\n\n')
 
       const languageName = languageNameFor(outputLanguage)
+      const hasTaskList = collectCardTasks(toolResults).length > 0
+      if (hasTaskList) {
+        const memorySummary = await buildAIMemorySummaryForToolResults(toolResults, outputLanguage)
+        if (memorySummary) toolResultsSummary += `\n\n${memorySummary}`
+      }
 
       // Load personal context for the formatter too
       let userScheduleNote = ''
@@ -1561,13 +1621,31 @@ export function useAIChat() {
 
       // TASK-1814: structured `cards` block → grouped interactive cards with a reason
       // on each (rendered by ChatMessage). Only for bridge brains with a task list.
-      const hasTaskList = collectCardTasks(toolResults).length > 0
       const isDayPlan = routed.responseMode === 'day_plan'
       const isSmartLanes = routed.responseMode === 'smart_lanes'
       const isWeeklyReview = routed.responseMode === 'weekly_review'
       const isWeekPlan = routed.responseMode === 'week_plan'
       if (isWeekPlan && hasTaskList) {
-        const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage)
+        const cardTasks = collectCardTasks(toolResults)
+        let weekMemory: WeekContextMemoryInput = {}
+        try {
+          const db = useSupabaseDatabase()
+          const taskIds = [...new Set(cardTasks.map(task => String(task.id || '')).filter(Boolean))]
+          const projectIds = [...new Set(cardTasks
+            .map(task => {
+              const id = String(task.id || '')
+              return id ? taskStore.getTask(id)?.projectId || String(task.projectId || '') : String(task.projectId || '')
+            })
+            .filter(Boolean))]
+          const [projectContexts, taskContexts] = await Promise.all([
+            db.fetchProjectContexts(projectIds),
+            db.fetchTaskContexts(taskIds),
+          ])
+          weekMemory = { projectContexts, taskContexts }
+        } catch {
+          weekMemory = {}
+        }
+        const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, new Date(), weekMemory)
         const progress = outputLanguage === 'he'
           ? `בודק ${weekContext.tasks.length} מועמדות, דחיות, תלויות ועומס שבועי…`
           : `Reviewing ${weekContext.tasks.length} candidate tasks, postponements, dependencies, and workload…`
@@ -1582,7 +1660,7 @@ export function useAIChat() {
           const structuredMessages: RouterChatMessage[] = [
             {
               role: 'system',
-              content: `You are a weekly planning coach inside a personal productivity app. Your job is not to sort tasks; it is to decide what deserves attention this week and why. Return ONLY valid JSON matching schemaVersion weekly-plan.v2. Do not output markdown. Do not describe task cards. The UI will render task cards from primaryTaskId and relatedTaskIds. Every recommendation needs at least two evidence items and at least one evidence item that is not dueIso or priority. Explain real consequences: promise kept, decision unblocked, money protected, health/family/admin load lowered, rework prevented, risk reduced, or momentum restored. If locale is he, write natural Hebrew and set direction rtl.`,
+              content: `You are a weekly planning coach inside a personal productivity app. Your job is not to sort tasks; it is to decide what deserves attention this week and why. Return ONLY valid JSON matching schemaVersion weekly-plan.v2. Do not output markdown. Do not describe task cards. The UI will render task cards from primaryTaskId and relatedTaskIds. Every recommendation needs at least two evidence items and at least one evidence item that is not dueIso or priority. You may rank tasks using due dates, priority, status, timers, and supplied project/task context, but you must not infer importance, stakes, work/personal category, or success criteria from project names alone. If project context is missing, mark it as unknown and ask a button clarification instead of pretending. Explain real consequences: promise kept, decision unblocked, money protected, health/family/admin load lowered, rework prevented, risk reduced, or momentum restored. If locale is he, write natural Hebrew and set direction rtl.`,
             },
             {
               role: 'user',

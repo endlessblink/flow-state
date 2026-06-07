@@ -614,6 +614,161 @@ describe('AI sidebar-first desktop experience', () => {
     expect(quickDraft.openQuestions.some(question => question.options?.length && question.allowFreeText)).toBe(true)
   })
 
+  it('does not infer project importance from name alone and asks for saved project understanding', () => {
+    const tasks = [
+      {
+        id: 'task-launch',
+        title: 'Polish homepage copy',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-12',
+        projectId: 'important-client-launch',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-admin',
+        title: 'Review insurance form',
+        description: 'Admin paperwork.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'admin',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-reply',
+        title: 'Reply to approval email',
+        description: 'Waiting on my response.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-11',
+        projectId: 'inbox',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+    )
+    const quickDraft = buildQuickDraftWeeklyPlan(context)
+
+    expect(context.uncertaintyNotes.join(' ')).toContain('do not infer importance from the project name alone')
+    expect(quickDraft.recommendations.every(rec =>
+      rec.evidence.some(item => item.field === 'projectContext' || item.field === 'taskContext' || item.field === 'missingContext'),
+    )).toBe(true)
+    expect(quickDraft.recommendations.find(rec => rec.primaryTaskId === 'task-launch')?.evidence)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ field: 'missingContext' }),
+      ]))
+    const projectQuestion = quickDraft.openQuestions.find(question => question.entityType === 'project')
+    expect(projectQuestion).toMatchObject({
+      entityId: 'important-client-launch',
+      reason: 'missing_project_understanding',
+      allowFreeText: true,
+      freeTextPatch: { field: 'whyItMatters', operation: 'set' },
+    })
+    expect(projectQuestion?.options?.length).toBeGreaterThan(2)
+    expect(projectQuestion?.options?.[0].memoryPatch).toMatchObject({
+      entityType: 'project',
+      field: 'domain',
+      source: 'button_answer',
+    })
+  })
+
+  it('uses saved project context as ranking evidence instead of project-name guessing', () => {
+    const tasks = [
+      {
+        id: 'task-paper',
+        title: 'Buy printer paper',
+        description: '',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: null,
+        projectId: 'admin',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-memory',
+        title: 'Fix weekly planner memory',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: null,
+        projectId: 'ai-planner',
+        estimatedDuration: 90,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-clean',
+        title: 'Clean inbox',
+        description: '',
+        status: 'todo',
+        priority: 'low',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: null,
+        projectId: 'admin',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+      {
+        projectContexts: [{
+          projectId: 'ai-planner',
+          summary: 'Build project-understanding memory for FlowState chat.',
+          domain: 'work',
+          whyItMatters: 'Weak planning makes the assistant feel fake.',
+          successCriteria: ['Weekly answers must cite real project meaning.'],
+          failureRisks: [],
+          currentStakes: 'high',
+          urgencyWindow: 'this_week',
+          taskSelectionHints: [],
+          nonGoals: ['Treating this as UI polish'],
+          userCorrections: [],
+          confidence: 0.95,
+          completenessScore: 0.8,
+        }],
+        taskContexts: [],
+      },
+    )
+    const quickDraft = buildQuickDraftWeeklyPlan(context)
+
+    expect(quickDraft.recommendations[0].primaryTaskId).toBe('task-memory')
+    expect(quickDraft.recommendations[0].evidence).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'projectContext', value: expect.stringContaining('Weak planning') }),
+    ]))
+    expect(quickDraft.recommendations[0].whyThisMatters).toContain('Saved project context')
+  })
+
   it('lets weekly-plan question buttons create a linked follow-up task with optional user text', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({
@@ -1066,6 +1221,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('buildWeekContextFromToolResults')
     expect(aiChat).toContain('buildWeeklyPlanPrompt')
     expect(aiChat).toContain('parseWeeklyPlanOutput')
+    expect(aiChat).toContain('fetchProjectContexts(projectIds)')
+    expect(aiChat).toContain('fetchTaskContexts(taskIds)')
     expect(aiChat).toContain('weeklyPlan: finalPlan')
     expect(aiChat).toContain('Reviewing ${weekContext.tasks.length} candidate tasks')
     expect(aiChat).toContain('Return ONLY valid JSON matching schemaVersion weekly-plan.v2')
@@ -1075,6 +1232,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(weeklyPlan).toContain("schemaVersion: 'weekly-plan.v2'")
     expect(weeklyPlan).toContain('validateWeeklyPlanOutput')
     expect(weeklyPlan).toContain('date_priority_only_reasoning')
+    expect(weeklyPlan).toContain('missing_project_understanding_evidence')
+    expect(weeklyPlan).toContain('do not infer importance from the project name alone')
     expect(weeklyPlan).toContain('generic_reasoning')
     expect(weeklyPlan).toContain('buildQuickDraftWeeklyPlan')
     expect(weeklyPlan).toContain('Best plan from task evidence')
@@ -1086,7 +1245,12 @@ describe('AI sidebar-first desktop experience', () => {
     expect(chatMessage).toContain('weeklyPlanTaskStaleLabel')
     expect(chatMessage).toContain('Grounded task-evidence plan')
     expect(chatMessage).toContain('applyWeeklyQuestion')
+    expect(chatMessage).toContain('applyAIMemoryPatch')
     expect(chatMessage).toContain('createTaskWithUndo')
+    expect(src('src/services/ai/chatPersistence.ts')).toContain('weeklyPlan: m.metadata.weeklyPlan')
+    expect(src('src/composables/useAIChat.ts')).toContain('fetchProjectContexts(projectIds)')
+    expect(src('src/composables/useAIChat.ts')).toContain('fetchTaskContexts(taskIds)')
+    expect(src('src/composables/useAIChat.ts')).toContain('must not infer importance, stakes, work/personal category, or success criteria from project names alone')
     expect(aiChat).toContain('depends on:')
     expect(aiChat).toContain('connections:')
     expect(aiChat).toContain('planning notes:')

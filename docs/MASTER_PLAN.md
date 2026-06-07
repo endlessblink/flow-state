@@ -2,6 +2,19 @@
 
 ## 🔜 Next Up — AI flows (TASK-1814 follow-ups; start here after restart)
 
+### TASK-1828: Apply AI context memory migration and validate live chat learning (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-07)
+
+**Why**: The project/task understanding memory layer is implemented in code, but production still needs the Supabase migration applied and a live chat pass confirming that button answers persist, are recalled, and change future planning evidence.
+
+**Scope**:
+- Apply `supabase/migrations/20260607190000_ai_context_memory.sql` to the live Supabase project.
+- In Electron, answer one project-understanding clarification card and verify `project_contexts` plus `memory_events` rows are created.
+- Ask for a weekly plan again and verify recommendations cite `projectContext`/`taskContext` or explicitly mark `missingContext`.
+
+---
+
 ### ~~TASK-1815~~: Flagship flow — "Overwhelmed → AI reorders my day" (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.93 deployed) | **Depends on**: TASK-1814 (AI chat now intelligent)

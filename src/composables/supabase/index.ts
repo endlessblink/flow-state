@@ -14,6 +14,7 @@ import { useTimerDatabase } from './useTimerDatabase'
 import { useSettingsDatabase } from './useSettingsDatabase'
 import { useQuickSortDatabase } from './useQuickSortDatabase'
 import { useWorkProfileDatabase } from './useWorkProfileDatabase'
+import { useAIMemoryDatabase } from './useAIMemoryDatabase'
 import { useRealtimeSubscription } from './useRealtimeSubscription'
 import { useTaskAuditLog } from './useTaskAuditLog'
 
@@ -45,6 +46,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const settings = useSettingsDatabase(ctx)
     const quickSort = useQuickSortDatabase(ctx)
     const workProfile = useWorkProfileDatabase(ctx)
+    const aiMemory = useAIMemoryDatabase(ctx)
     const realtime = useRealtimeSubscription(ctx)
     const auditLog = useTaskAuditLog(ctx)
 
@@ -64,6 +66,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         ...quickSort,
         // FEATURE-1317: Work Profile
         ...workProfile,
+        ...aiMemory,
         ...realtime,
         // TASK-1734: Task Audit Log
         ...auditLog,

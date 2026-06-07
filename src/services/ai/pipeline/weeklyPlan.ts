@@ -1,4 +1,5 @@
 import type { Task } from '@/types/tasks'
+import type { AIMemoryQuestionOption, ProjectContext, TaskContext } from '@/types/aiMemory'
 
 export type PlannerLocale = 'en' | 'he'
 export type PlannerDirection = 'ltr' | 'rtl'
@@ -15,6 +16,8 @@ export type PlannerTaskSnapshot = {
     name: string
     status?: string
   }
+  projectContext?: ProjectContextSnapshot
+  taskContext?: TaskContextSnapshot
   notes?: string
   tags?: string[]
   subtasks?: Array<{
@@ -51,6 +54,7 @@ export type PlannerTaskSnapshot = {
     weekendEligible: boolean
     substantialWorkScore: number
     quickErrandScore: number
+    projectImportanceScore: number
     candidateReasons: CandidateReason[]
     evidenceSnippets: Array<{
       field: 'title' | 'notes' | 'project' | 'history' | 'dependency'
@@ -84,6 +88,39 @@ export type PlannerWorkstream = {
   evidenceSignals: CandidateReason[]
 }
 
+export type ProjectContextSnapshot = Pick<ProjectContext,
+  | 'projectId'
+  | 'summary'
+  | 'domain'
+  | 'whyItMatters'
+  | 'successCriteria'
+  | 'currentStakes'
+  | 'urgencyWindow'
+  | 'taskSelectionHints'
+  | 'nonGoals'
+  | 'userCorrections'
+  | 'confidence'
+  | 'completenessScore'
+  | 'lastConfirmedAt'
+  | 'staleAfter'
+>
+
+export type TaskContextSnapshot = Pick<TaskContext,
+  | 'taskId'
+  | 'summary'
+  | 'whyItMatters'
+  | 'successCriteria'
+  | 'currentStakes'
+  | 'urgencyWindow'
+  | 'selectionHints'
+  | 'nonGoals'
+  | 'userCorrections'
+  | 'confidence'
+  | 'completenessScore'
+  | 'lastConfirmedAt'
+  | 'staleAfter'
+>
+
 export type WeekContext = {
   requestId: string
   nowIso: string
@@ -101,6 +138,9 @@ export type WeekContext = {
   }
   workstreams: PlannerWorkstream[]
   tasks: PlannerTaskSnapshot[]
+  projectContexts: ProjectContextSnapshot[]
+  taskContexts: TaskContextSnapshot[]
+  uncertaintyNotes: string[]
 }
 
 export type WeeklyPlanRecommendation = {
@@ -135,6 +175,9 @@ export type WeeklyPlanRecommendation = {
       | 'history.timerMinutesLast7Days'
       | 'dependencies.blocksTaskIds'
       | 'dependencies.blockedByTaskIds'
+      | 'projectContext'
+      | 'taskContext'
+      | 'missingContext'
     value: string
     interpretation: string
   }>
@@ -160,13 +203,17 @@ export type WeeklyPlanOutput = {
   }>
   openQuestions: Array<{
     id?: string
+    entityType?: 'project' | 'task'
+    entityId?: string
+    reason?: string
     question: string
-    options?: Array<{
-      id: string
-      label: string
-      effect: string
-    }>
+    options?: AIMemoryQuestionOption[]
     allowFreeText?: boolean
+    freeTextPatch?: {
+      field: string
+      operation: 'set' | 'append'
+    }
+    freeTextPlaceholder?: string
     relatedTaskIds: string[]
   }>
   quality: {
@@ -191,6 +238,11 @@ type ToolResultLike = {
   data?: unknown
 }
 
+export type WeekContextMemoryInput = {
+  projectContexts?: ProjectContext[]
+  taskContexts?: TaskContext[]
+}
+
 const MS_PER_DAY = 86_400_000
 const MONEY_CLIENT_HEALTH_FAMILY_LEGAL_RE = /(payment|invoice|charge|billing|refund|client|customer|health|doctor|medicine|family|dad|mom|legal|tax|תשלום|חשבונית|חיוב|לקוח|בריאות|רופא|תרופה|משפחה|אבא|אמא|מס|משפט)/i
 const STAKEHOLDER_RE = /(send|reply|call|email|message|meeting|proposal|review|approve|client|customer|stakeholder|amit|לשלוח|להגיב|להתקשר|מייל|הודעה|פגישה|לקוח|לאשר|בדיקה)/i
@@ -206,8 +258,11 @@ export function buildWeekContextFromToolResults(
   allTasks: Task[],
   locale: PlannerLocale,
   now = new Date(),
+  memory: WeekContextMemoryInput = {},
 ): WeekContext {
-  const snapshots = selectCandidatePool(extractPlannerTasks(toolResults, allTasks, now))
+  const projectContextById = new Map((memory.projectContexts ?? []).map(ctx => [ctx.projectId, ctx]))
+  const taskContextById = new Map((memory.taskContexts ?? []).map(ctx => [ctx.taskId, ctx]))
+  const snapshots = selectCandidatePool(extractPlannerTasks(toolResults, allTasks, now, projectContextById, taskContextById))
   const weekStart = startOfWeek(now)
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 6)
@@ -234,6 +289,14 @@ export function buildWeekContextFromToolResults(
     },
     workstreams: buildWorkstreams(snapshots),
     tasks: snapshots,
+    projectContexts: snapshots
+      .map(task => task.projectContext)
+      .filter((ctx): ctx is ProjectContextSnapshot => Boolean(ctx))
+      .filter((ctx, index, all) => all.findIndex(item => item.projectId === ctx.projectId) === index),
+    taskContexts: snapshots
+      .map(task => task.taskContext)
+      .filter((ctx): ctx is TaskContextSnapshot => Boolean(ctx)),
+    uncertaintyNotes: buildMemoryUncertaintyNotes(snapshots, locale),
   }
 }
 
@@ -245,6 +308,7 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
       focusArea: 'Every recommendation must name the concrete workstream/aspect it belongs to, for example Client renewals, Release blocker, Family health admin, Sales pipeline.',
       taskIds: 'Every primaryTaskId and relatedTaskIds item must be from candidateTasks.',
       evidence: 'At least two evidence items per recommendation. At least one must not be dueIso or priority. Use subtasks evidence when open subtasks clarify the next action.',
+      projectUnderstanding: 'You may use supplied projectContexts/taskContexts as meaning/stakes evidence. You must not infer importance, stakes, work/personal category, or success criteria from project names alone.',
       reasoning: 'Explain real consequence beyond due date/priority. Avoid repeated templates.',
       locale: context.locale,
       direction: context.direction,
@@ -253,6 +317,8 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
       'Build a grand view of the week: recommendations should be about workstreams/aspects, not isolated checkboxes.',
       'Use relatedTaskIds when several candidate tasks serve the same aspect of work or life.',
       'Prefer tasks with concrete consequences over tasks that merely have a due date.',
+      'Use saved project/task context when present; when it is missing, explicitly treat importance/stakes/category as unknown.',
+      'Every recommendation must include project/task meaning evidence or acknowledge missing context.',
       'Do not choose more than 3 tasks from the same project unless that project is the clear center of the week.',
       'Include a repeatedly postponed task only if you can explain the avoidance risk or relief value.',
       'If a task is large, recommend the smallest useful next action, not "finish the whole thing."',
@@ -274,6 +340,9 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
       direction: context.direction,
       workload: context.workload,
       workstreams: context.workstreams,
+      projectContexts: context.projectContexts,
+      taskContexts: context.taskContexts,
+      uncertaintyNotes: context.uncertaintyNotes,
     },
     candidateTasks: context.tasks,
   }, null, 2)
@@ -318,6 +387,7 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
     if (!Array.isArray(rec.evidence) || rec.evidence.length < 2) errors.push(`too_little_evidence:${rec.sectionId}`)
     const evidence = Array.isArray(rec.evidence) ? rec.evidence : []
     if (!evidence.some(item => !['dueIso', 'priority'].includes(item.field))) errors.push(`date_priority_only_reasoning:${rec.sectionId}`)
+    if (!evidence.some(item => ['projectContext', 'taskContext', 'missingContext'].includes(item.field))) errors.push(`missing_project_understanding_evidence:${rec.sectionId}`)
     for (const item of evidence) {
       if (!validTaskIds.has(item.taskId)) errors.push(`invalid_evidence_task_id:${item.taskId}`)
       const task = taskById.get(item.taskId)
@@ -441,6 +511,32 @@ function selectQuickDraftTasks(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapsho
 function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSnapshot[]): WeeklyPlanOutput['openQuestions'] {
   const locale = context.locale
   const questions: WeeklyPlanOutput['openQuestions'] = []
+  const missingProjectTask = selected.find(task => task.project?.id && !hasUsableProjectContext(task))
+  if (missingProjectTask?.project?.id) {
+    const projectId = missingProjectTask.project.id
+    const projectName = missingProjectTask.project.name || projectId
+    questions.push({
+      id: `project_context_${projectId}`,
+      entityType: 'project',
+      entityId: projectId,
+      reason: 'missing_project_understanding',
+      question: locale === 'he'
+        ? `איזה סוג פרויקט הוא "${projectName}"?`
+        : `What kind of project is "${projectName}"?`,
+      options: [
+        projectOption(projectId, 'work', locale === 'he' ? 'עבודה/מוצר' : 'Work/Product', 'Classify this as work/product context.'),
+        projectOption(projectId, 'personal', locale === 'he' ? 'אישי' : 'Personal', 'Classify this as personal context.'),
+        projectOption(projectId, 'creative', locale === 'he' ? 'יצירתי' : 'Creative', 'Classify this as creative work.'),
+        projectOption(projectId, 'admin', locale === 'he' ? 'אדמין/תחזוקה' : 'Admin/Maintenance', 'Classify this as admin or maintenance.'),
+        projectOption(projectId, 'unknown', locale === 'he' ? 'לא בטוח' : 'Not sure', 'Keep category unknown and ask later if it matters.'),
+      ],
+      allowFreeText: true,
+      freeTextPatch: { field: 'whyItMatters', operation: 'set' },
+      freeTextPlaceholder: locale === 'he' ? 'אופציונלי: למה זה חשוב או מה ייחשב הצלחה?' : 'Optional: why does this matter or what would count as success?',
+      relatedTaskIds: [missingProjectTask.id],
+    })
+  }
+
   const weakSubstantialTask = selected.find(task =>
     task.derived.substantialWorkScore >= 0.45 &&
     !task.notes &&
@@ -450,6 +546,9 @@ function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSna
   if (weakSubstantialTask) {
     questions.push({
       id: `context_${weakSubstantialTask.id}`,
+      entityType: 'task',
+      entityId: weakSubstantialTask.id,
+      reason: 'missing_task_context',
       question: locale === 'he'
         ? `מה ההקשר של "${weakSubstantialTask.title}" השבוע?`
         : `What is the context for "${weakSubstantialTask.title}" this week?`,
@@ -458,19 +557,47 @@ function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSna
           id: 'work_commitment',
           label: locale === 'he' ? 'התחייבות עבודה' : 'Work commitment',
           effect: 'Raise weekly planning priority and protect weekday focus time.',
+          memoryPatch: {
+            entityType: 'task',
+            entityId: weakSubstantialTask.id,
+            operation: 'set',
+            field: 'currentStakes',
+            value: 'high',
+            confidence: 0.9,
+            source: 'button_answer',
+          },
         },
         {
           id: 'nice_to_have',
           label: locale === 'he' ? 'נחמד אם יקרה' : 'Nice to have',
           effect: 'Lower priority and batch behind stronger commitments.',
+          memoryPatch: {
+            entityType: 'task',
+            entityId: weakSubstantialTask.id,
+            operation: 'set',
+            field: 'currentStakes',
+            value: 'low',
+            confidence: 0.9,
+            source: 'button_answer',
+          },
         },
         {
           id: 'weekend_ok',
           label: locale === 'he' ? 'אפשר בסופ"ש' : 'Weekend is fine',
           effect: 'Move out of weekday focus unless it blocks something.',
+          memoryPatch: {
+            entityType: 'task',
+            entityId: weakSubstantialTask.id,
+            operation: 'set',
+            field: 'urgencyWindow',
+            value: 'none',
+            confidence: 0.9,
+            source: 'button_answer',
+          },
         },
       ],
       allowFreeText: true,
+      freeTextPatch: { field: 'whyItMatters', operation: 'set' },
       relatedTaskIds: [weakSubstantialTask.id],
     })
   }
@@ -511,7 +638,30 @@ function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSna
   return questions.slice(0, 2)
 }
 
-function extractPlannerTasks(toolResults: ToolResultLike[], allTasks: Task[], now: Date): PlannerTaskSnapshot[] {
+function projectOption(projectId: string, domain: ProjectContext['domain'], label: string, effect: string): AIMemoryQuestionOption {
+  return {
+    id: `domain_${domain}`,
+    label,
+    effect,
+    memoryPatch: {
+      entityType: 'project',
+      entityId: projectId,
+      operation: 'set',
+      field: 'domain',
+      value: domain,
+      confidence: 0.95,
+      source: 'button_answer',
+    },
+  }
+}
+
+function extractPlannerTasks(
+  toolResults: ToolResultLike[],
+  allTasks: Task[],
+  now: Date,
+  projectContextById: Map<string, ProjectContext>,
+  taskContextById: Map<string, TaskContext>,
+): PlannerTaskSnapshot[] {
   const taskMap = new Map(allTasks.map(task => [task.id, task]))
   const candidateRecords = new Map<string, Record<string, unknown>>()
   for (const result of toolResults) {
@@ -526,7 +676,7 @@ function extractPlannerTasks(toolResults: ToolResultLike[], allTasks: Task[], no
     : allTasks.map(task => ({ task, record: task as unknown as Record<string, unknown> }))
 
   return source
-    .map(({ task, record }) => toPlannerTaskSnapshot(task, record, now, allTasks))
+    .map(({ task, record }) => toPlannerTaskSnapshot(task, record, now, allTasks, projectContextById, taskContextById))
     .filter((snapshot): snapshot is PlannerTaskSnapshot => Boolean(snapshot && snapshot.status !== 'done' && snapshot.status !== 'dismissed'))
 }
 
@@ -541,7 +691,90 @@ function collectTaskRecords(data: unknown): Record<string, unknown>[] {
   return out
 }
 
-function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, unknown>, now: Date, allTasks: Task[]): PlannerTaskSnapshot | null {
+function toProjectContextSnapshot(ctx: ProjectContext): ProjectContextSnapshot {
+  return {
+    projectId: ctx.projectId,
+    summary: ctx.summary,
+    domain: ctx.domain,
+    whyItMatters: ctx.whyItMatters,
+    successCriteria: ctx.successCriteria,
+    currentStakes: ctx.currentStakes,
+    urgencyWindow: ctx.urgencyWindow,
+    taskSelectionHints: ctx.taskSelectionHints,
+    nonGoals: ctx.nonGoals,
+    userCorrections: ctx.userCorrections,
+    confidence: ctx.confidence,
+    completenessScore: ctx.completenessScore,
+    lastConfirmedAt: ctx.lastConfirmedAt,
+    staleAfter: ctx.staleAfter,
+  }
+}
+
+function toTaskContextSnapshot(ctx: TaskContext): TaskContextSnapshot {
+  return {
+    taskId: ctx.taskId,
+    summary: ctx.summary,
+    whyItMatters: ctx.whyItMatters,
+    successCriteria: ctx.successCriteria,
+    currentStakes: ctx.currentStakes,
+    urgencyWindow: ctx.urgencyWindow,
+    selectionHints: ctx.selectionHints,
+    nonGoals: ctx.nonGoals,
+    userCorrections: ctx.userCorrections,
+    confidence: ctx.confidence,
+    completenessScore: ctx.completenessScore,
+    lastConfirmedAt: ctx.lastConfirmedAt,
+    staleAfter: ctx.staleAfter,
+  }
+}
+
+function scoreProjectImportance(projectContext?: ProjectContext, taskContext?: TaskContext): number {
+  const stakesScore = {
+    critical: 1,
+    high: 0.82,
+    medium: 0.55,
+    low: 0.25,
+    unknown: 0,
+  }[taskContext?.currentStakes ?? projectContext?.currentStakes ?? 'unknown']
+  const successScore = Math.min(1, ((taskContext?.successCriteria.length ?? 0) + (projectContext?.successCriteria.length ?? 0)) / 3)
+  const whyScore = Number(Boolean(taskContext?.whyItMatters || projectContext?.whyItMatters))
+  const confidence = Math.max(taskContext?.confidence ?? 0, projectContext?.confidence ?? 0)
+  return Math.min(1, (0.48 * stakesScore + 0.27 * successScore + 0.25 * whyScore) * Math.max(0.35, confidence))
+}
+
+function hasUsableProjectContext(task: PlannerTaskSnapshot): boolean {
+  const ctx = task.projectContext
+  if (!ctx) return false
+  return Boolean(
+    ctx.whyItMatters ||
+    ctx.successCriteria.length ||
+    ctx.currentStakes !== 'unknown' ||
+    ctx.summary,
+  )
+}
+
+function buildMemoryUncertaintyNotes(tasks: PlannerTaskSnapshot[], locale: PlannerLocale): string[] {
+  const notes: string[] = []
+  const missingProjects = tasks
+    .filter(task => task.project?.id && !hasUsableProjectContext(task))
+    .map(task => task.project?.name || task.project?.id || '')
+    .filter(Boolean)
+  for (const projectName of [...new Set(missingProjects)].slice(0, 4)) {
+    notes.push(locale === 'he'
+      ? `הקשר הפרויקט "${projectName}" לא ידוע; אין להסיק חשיבות משם הפרויקט בלבד.`
+      : `Project context for "${projectName}" is unknown; do not infer importance from the project name alone.`)
+  }
+  return notes
+}
+
+function toPlannerTaskSnapshot(
+  task: Task | undefined,
+  record: Record<string, unknown>,
+  now: Date,
+  allTasks: Task[],
+  projectContextById: Map<string, ProjectContext>,
+  taskContextById: Map<string, TaskContext>,
+): PlannerTaskSnapshot | null {
   const id = task?.id ?? String(record.id || '')
   const title = task?.title ?? String(record.title || '')
   if (!id || !title) return null
@@ -549,6 +782,8 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
   const notes = String(task?.description ?? record.description ?? record.notes ?? '').trim()
   const projectId = task?.projectId || String(record.projectId || '')
   const projectName = String(record.project || record.projectName || projectId || '').trim()
+  const projectContext = projectId ? projectContextById.get(projectId) : undefined
+  const taskContext = taskContextById.get(id)
   const blocksTaskIds = allTasks.filter(other => (other.dependsOn ?? []).includes(id)).map(other => other.id)
   const blockedByTaskIds = task?.dependsOn ?? []
   const subtasks = Array.isArray(task?.subtasks)
@@ -575,6 +810,7 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
   const weekendEligible = isWeekendEligibleTask(domain, text, dueIso)
   const substantialWorkScore = scoreSubstantialWork({ text, domain, projectName, estimateMinutes, blocksTaskIds, timerMinutes, status, openSubtaskCount })
   const quickErrandScore = scoreQuickErrand({ text, domain, estimateMinutes, openSubtaskCount })
+  const projectImportanceScore = scoreProjectImportance(projectContext, taskContext)
   const isOverdue = typeof daysUntilDue === 'number' && daysUntilDue < 0
   const isStale = now.getTime() - new Date(updatedIso).getTime() > 14 * MS_PER_DAY
   const evidenceSnippets = buildEvidenceSnippets({ title, notes, projectName, postponedCount, blocksTaskIds, blockedByTaskIds, timerMinutes, subtasks })
@@ -604,6 +840,8 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
     priority,
     dueIso,
     project: projectId || projectName ? { id: projectId || projectName, name: projectName || projectId } : undefined,
+    projectContext: projectContext ? toProjectContextSnapshot(projectContext) : undefined,
+    taskContext: taskContext ? toTaskContextSnapshot(taskContext) : undefined,
     notes: notes || undefined,
     subtasks: subtasks.length ? subtasks : undefined,
     tags: task?.tags ?? (Array.isArray(record.tags) ? record.tags.map(String) : undefined),
@@ -629,6 +867,7 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
       weekendEligible,
       substantialWorkScore,
       quickErrandScore,
+      projectImportanceScore,
       candidateReasons,
       evidenceSnippets,
     },
@@ -805,7 +1044,7 @@ function scoreTask(task: PlannerTaskSnapshot): TaskSignals {
     0.25 * Number(task.derived.hasHumanOrExternalStakeholder) +
     0.25 * Number(task.derived.hasMoneyClientHealthFamilyLegalSignal) +
     0.20 * task.derived.substantialWorkScore +
-    0.15 * Number(Boolean(task.project?.name) && task.project?.id !== 'uncategorized') +
+    0.25 * task.derived.projectImportanceScore +
     0.10 * Math.min(task.history.timerMinutesLast30Days / 180, 1),
   )
   const dependency = Math.min(1, 0.25 * (task.dependencies?.blocksTaskIds.length ?? 0))
@@ -832,6 +1071,28 @@ function planningScore(signals: TaskSignals): number {
 
 function quickDraftEvidence(task: PlannerTaskSnapshot): WeeklyPlanRecommendation['evidence'] {
   const evidence: WeeklyPlanRecommendation['evidence'] = []
+  if (task.taskContext?.whyItMatters || task.taskContext?.summary) {
+    evidence.push({
+      taskId: task.id,
+      field: 'taskContext',
+      value: (task.taskContext.whyItMatters || task.taskContext.summary || '').slice(0, 140),
+      interpretation: 'saved task context explains why this matters',
+    })
+  } else if (task.projectContext?.whyItMatters || task.projectContext?.summary || task.projectContext?.successCriteria.length) {
+    evidence.push({
+      taskId: task.id,
+      field: 'projectContext',
+      value: (task.projectContext.whyItMatters || task.projectContext.summary || task.projectContext.successCriteria[0] || '').slice(0, 140),
+      interpretation: 'saved project context explains meaning or success criteria',
+    })
+  } else {
+    evidence.push({
+      taskId: task.id,
+      field: 'missingContext',
+      value: 'project context unknown; importance must not be inferred from project name',
+      interpretation: 'project meaning/stakes are unknown',
+    })
+  }
   if (task.notes) evidence.push({ taskId: task.id, field: 'notes', value: task.notes.slice(0, 140), interpretation: 'notes add context' })
   const openSubtasks = task.subtasks?.filter(subtask => !subtask.isCompleted) ?? []
   if (openSubtasks.length) evidence.push({ taskId: task.id, field: 'subtasks', value: openSubtasks.map(subtask => subtask.title).slice(0, 3).join('; '), interpretation: 'open subtasks clarify the next step' })
@@ -859,6 +1120,18 @@ function quickDraftType(task: PlannerTaskSnapshot): WeeklyPlanRecommendation['re
 
 function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWorkstream | undefined, locale: PlannerLocale): string {
   const openSubtaskCount = task.subtasks?.filter(subtask => !subtask.isCompleted).length ?? 0
+  if (task.taskContext?.whyItMatters || task.taskContext?.summary) {
+    const context = task.taskContext.whyItMatters || task.taskContext.summary
+    return locale === 'he'
+      ? `לפי ההקשר השמור למשימה: ${context}`
+      : `Saved task context says this matters because: ${context}`
+  }
+  if (task.projectContext?.whyItMatters || task.projectContext?.summary) {
+    const context = task.projectContext.whyItMatters || task.projectContext.summary
+    return locale === 'he'
+      ? `לפי ההקשר השמור לפרויקט: ${context}`
+      : `Saved project context says this matters because: ${context}`
+  }
   if (task.derived.substantialWorkScore >= 0.55) {
     return locale === 'he'
       ? 'זה נראה כמו מוקד עבודה משמעותי, לא סידור קטן, ולכן הוא צריך להישקל לפני משימות בית שניתן לאגד או להעביר לסוף שבוע.'
@@ -1029,6 +1302,23 @@ function isEvidenceValueGrounded(task: PlannerTaskSnapshot, item: WeeklyPlanReco
       return dependencyEvidenceMatches(value, task.dependencies?.blocksTaskIds ?? [])
     case 'dependencies.blockedByTaskIds':
       return dependencyEvidenceMatches(value, task.dependencies?.blockedByTaskIds ?? [])
+    case 'projectContext':
+      return textSupportsEvidence([
+        task.projectContext?.summary,
+        task.projectContext?.whyItMatters,
+        ...(task.projectContext?.successCriteria ?? []),
+        task.projectContext?.currentStakes,
+        task.projectContext?.domain,
+      ].filter(Boolean).join(' '), value)
+    case 'taskContext':
+      return textSupportsEvidence([
+        task.taskContext?.summary,
+        task.taskContext?.whyItMatters,
+        ...(task.taskContext?.successCriteria ?? []),
+        task.taskContext?.currentStakes,
+      ].filter(Boolean).join(' '), value)
+    case 'missingContext':
+      return !hasUsableProjectContext(task) && /context|unknown|missing|not infer|לא ידוע|חסר/i.test(String(item.value))
     default:
       return false
   }

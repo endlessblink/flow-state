@@ -37,6 +37,8 @@ import { useLaneStore } from '@/stores/lanes'
 import { buildDayPlanTaskUpdates } from '@/services/ai/pipeline/dayPlan'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import type { WeeklyPlanOutput, WeeklyPlanRecommendation } from '@/services/ai/pipeline/weeklyPlan'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import type { AIMemoryPatch } from '@/types/aiMemory'
 
 // ============================================================================
 // Props
@@ -103,6 +105,7 @@ const scheduleSaved = ref(false)
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const laneStore = useLaneStore()
+const aiMemoryDb = useSupabaseDatabase()
 
 const taskMap = computed(() => {
   const map = new Map<string, Task>()
@@ -277,6 +280,26 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
   weeklyQuestionApplying.value[key] = true
   try {
     const parentTask = weeklyQuestionTask(question)
+    const option = question.options?.find(item => item.id === selected)
+    if (option?.memoryPatch) {
+      await aiMemoryDb.applyAIMemoryPatch({
+        ...option.memoryPatch,
+        sourceMessageId: props.message.id,
+      })
+    }
+    if (note && question.entityType && question.entityId && question.freeTextPatch) {
+      const patch: AIMemoryPatch = {
+        entityType: question.entityType,
+        entityId: question.entityId,
+        operation: question.freeTextPatch.operation,
+        field: question.freeTextPatch.field,
+        value: note,
+        confidence: 0.95,
+        source: 'free_text',
+        sourceMessageId: props.message.id,
+      }
+      await aiMemoryDb.applyAIMemoryPatch(patch)
+    }
     if (selected === 'add_followup') {
       const locale = weeklyPlan.value?.locale ?? 'en'
       const title = note || (locale === 'he'
@@ -1001,7 +1024,7 @@ async function saveSchedule() {
                 v-if="question.allowFreeText"
                 v-model="weeklyQuestionFreeText[question.id || question.question]"
                 class="weekly-question-free-text"
-                :placeholder="weeklyPlan.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...'"
+                :placeholder="question.freeTextPlaceholder || (weeklyPlan.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...')"
                 rows="2"
               />
               <div class="weekly-question-action-row">

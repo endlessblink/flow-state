@@ -69,6 +69,14 @@
 
 **Shipped**: AI chat settings now include a persisted Message Language control. Auto keeps the previous detected-language behavior; English and Hebrew force assistant replies in that language across deterministic tool responses, bridge/ReAct prompts, confirmations, cancellations, and selected-task helpers. Regression coverage: pure language resolution/mismatch tests, AI chat store persistence tests, AIChatPanel selector interaction test, full unit suite, typecheck, import validation, CSS validation, and Electron build.
 
+### ~~TASK-1820~~: Make desktop AI sidebar-first with visible live action feedback (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-07, Electron v1.4.103 deployed) | **Depends on**: TASK-1814
+
+**Why**: Desktop AI had two competing surfaces: a standalone `/ai` section and the global right-side assistant panel. The assistant should feel like an always-available sidebar tool, and users need to see what it is doing when it reads tasks or performs actions.
+
+**Shipped**: Removed the desktop `/ai` header tab, kept the sparkles button as the primary desktop entrypoint, preserved mobile `/mobile-ai-chat`, and changed `/ai` into a compatibility fallback that opens the sidebar then returns to the main workspace. Added a compact live Activity timeline in `AIChatPanel` backed by real AI tool execution state: thinking, read/write/destructive execution, confirmation waiting, success/failure, cancellation, and undo availability. Regression coverage: `tests/unit/ai-sidebar-first.test.ts` covers desktop nav removal, mobile route preservation, `/ai` fallback wiring, activity state semantics, and rendered timeline rows. Verified: focused Vitest, `vue-tsc`, Playwright browser smoke, Electron build, live updater manifest/artifacts.
+
 ---
 
 > **Last Updated**: 2026-06-06

@@ -428,6 +428,18 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).not.toContain('these look like the highest-impact tasks right now')
   })
 
+  it('anchors ReAct bridge cards before attaching grouped card metadata', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+    const reactSection = aiChat.slice(
+      aiChat.indexOf('if (reactCards)'),
+      aiChat.indexOf('// Update content after all post-processing'),
+    )
+
+    expect(reactSection).toContain('ensureCardTaskMentions')
+    expect(reactSection).toContain('reactCards.rawBlock')
+    expect(reactSection).toContain('cardGroups: { groups: reactCards.groups')
+  })
+
   it('routes the Plan Week quick action through the normal weekly planner instead of a missing chain', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 

@@ -15,7 +15,7 @@
 
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useAIChatStore, type ChatContext } from '@/stores/aiChat'
+import { useAIChatStore, type AIActivityEvent, type ChatContext } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTimerStore } from '@/stores/timer'
@@ -320,6 +320,52 @@ export function useAIChat() {
 
   // Conversation entity memory (TASK-1398) — tracks recently-mentioned tasks for pronoun resolution
   const entityMemory = new EntityMemory()
+
+  function activityTypeForTool(toolName: string): AIActivityEvent['type'] {
+    const category = AI_TOOLS.find(t => t.name === toolName)?.category
+    if (category === 'write') return 'write'
+    if (category === 'destructive') return 'destructive'
+    return 'read'
+  }
+
+  function activityLabelForTool(toolName: string, status: AIActivityEvent['status'] = 'running'): string {
+    const type = activityTypeForTool(toolName)
+    if (status === 'waiting_confirmation') return 'Waiting for confirmation'
+    if (status === 'success') return type === 'read' ? 'Read complete' : 'Action complete'
+    if (status === 'failed') return type === 'read' ? 'Read failed' : 'Action failed'
+    if (type === 'write') return 'Updating FlowState'
+    if (type === 'destructive') return 'Preparing protected action'
+    return 'Reading FlowState'
+  }
+
+  function beginToolActivity(call: ToolCall, label?: string): string {
+    return store.addActivityEvent({
+      tool: call.tool,
+      type: activityTypeForTool(call.tool),
+      status: 'running',
+      label: label || activityLabelForTool(call.tool),
+      message: call.tool.replace(/_/g, ' '),
+    })
+  }
+
+  function finishToolActivity(activityId: string, call: ToolCall, result: ToolResult): void {
+    store.updateActivityEvent(activityId, {
+      status: result.success ? 'success' : 'failed',
+      label: activityLabelForTool(call.tool, result.success ? 'success' : 'failed'),
+      message: result.message,
+      undoAvailable: result.success && !!result.undoAction,
+    })
+  }
+
+  function addConfirmationActivity(call: ToolCall): void {
+    store.addActivityEvent({
+      tool: call.tool,
+      type: activityTypeForTool(call.tool),
+      status: 'waiting_confirmation',
+      label: activityLabelForTool(call.tool, 'waiting_confirmation'),
+      message: call.tool.replace(/_/g, ' '),
+    })
+  }
 
   // ============================================================================
   // Text-Based Tool Call Helpers (Fallback for models that don't use native API)
@@ -797,7 +843,9 @@ export function useAIChat() {
       for (const call of routed.tools) {
         console.log(`[AIChat:Deterministic] Executing tool: ${call.tool}`, call.parameters)
         trackToolCall(sessionId, call.tool)
+        const activityId = beginToolActivity(call)
         const result = await executeTool(call, outputLanguage)
+        finishToolActivity(activityId, call, result)
         toolResults.push(result)
         console.log(`[AIChat:Deterministic] Tool result:`, result.success, result.message)
 
@@ -1208,7 +1256,9 @@ export function useAIChat() {
               }
             }
             trackToolCall(sessionId, call.tool) // TASK-1356
+            const activityId = beginToolActivity(call)
             const result = await executeTool(call, lang)
+            finishToolActivity(activityId, call, result)
             toolResults.push(result)
 
             // Push undo if available
@@ -1250,6 +1300,7 @@ export function useAIChat() {
           // If there are confirmation tools, stop the loop (need user input)
           if (confirmationTools.length > 0) {
             pendingConfirmation.value = confirmationTools[0]
+            addConfirmationActivity(confirmationTools[0])
             const toolDef = AI_TOOLS.find(t => t.name === confirmationTools[0].tool)
             const toolDesc = toolDef?.description || confirmationTools[0].tool
             store.appendStreamingContent(
@@ -1314,7 +1365,9 @@ export function useAIChat() {
                   break
                 }
               }
+              const activityId = beginToolActivity(call)
               const result = await executeTool(call, lang)
+              finishToolActivity(activityId, call, result)
               toolResults.push(result)
 
               if (result.success && result.undoAction) {
@@ -1354,6 +1407,7 @@ export function useAIChat() {
 
             if (confirmationTools.length > 0) {
               pendingConfirmation.value = confirmationTools[0]
+              addConfirmationActivity(confirmationTools[0])
               const toolDef = AI_TOOLS.find(t => t.name === confirmationTools[0].tool)
               const toolDesc = toolDef?.description || confirmationTools[0].tool
               store.appendStreamingContent(`\n\n${chatUI(lang, 'confirmationRequired')} ${toolDesc}`)
@@ -1581,7 +1635,9 @@ export function useAIChat() {
     }
 
     console.log('[AIChat] Executing confirmed tool:', confirmedCall.tool, confirmedCall.parameters)
+    const activityId = beginToolActivity(confirmedCall, 'Executing confirmed action')
     const result = await executeTool(confirmedCall, currentOutputLanguage())
+    finishToolActivity(activityId, confirmedCall, result)
     console.log('[AIChat] Confirmed tool result:', result)
 
     if (result.success && result.undoAction) {
@@ -1604,7 +1660,17 @@ export function useAIChat() {
    * Cancel the pending destructive tool action.
    */
   function cancelPendingAction(): void {
+    const call = pendingConfirmation.value
     pendingConfirmation.value = null
+    if (call) {
+      store.addActivityEvent({
+        tool: call.tool,
+        type: activityTypeForTool(call.tool),
+        status: 'cancelled',
+        label: 'Action cancelled',
+        message: call.tool.replace(/_/g, ' '),
+      })
+    }
     store.addAssistantMessage(chatUI(currentOutputLanguage(), 'actionCancelled'))
   }
 
@@ -1696,7 +1762,9 @@ export function useAIChat() {
 
     try {
       console.log('[AIChat] Executing direct tool:', toolCall.tool, toolCall.parameters)
+      const activityId = beginToolActivity(toolCall)
       const result = await executeTool(toolCall, currentOutputLanguage())
+      finishToolActivity(activityId, toolCall, result)
       console.log('[AIChat] Direct tool result:', result)
 
       if (result.success && result.undoAction) {
@@ -1731,6 +1799,13 @@ export function useAIChat() {
       store.completeStreamingMessage()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Action failed'
+      store.addActivityEvent({
+        tool: toolCall.tool,
+        type: activityTypeForTool(toolCall.tool),
+        status: 'failed',
+        label: activityLabelForTool(toolCall.tool, 'failed'),
+        message: errorMessage,
+      })
       store.failStreamingMessage(errorMessage)
     }
   }
@@ -1772,6 +1847,18 @@ export function useAIChat() {
       // Execute the chain, passing detected language so promptFn can append directives
       console.log(`[AIChat] Starting agent chain: ${chain.name} (lang: ${chainLang})`)
       const { results, finalPrompt } = await agentChains.executeChain(chainId, chainLang)
+      results.forEach((result, i) => {
+        const step = chain.steps[i]
+        const toolName = step?.type === 'tool' ? step.tool : 'prompt'
+        store.addActivityEvent({
+          tool: toolName || 'unknown',
+          type: toolName ? activityTypeForTool(toolName) : 'thinking',
+          status: result.success ? 'success' : 'failed',
+          label: result.success ? 'Chain step complete' : 'Chain step failed',
+          message: result.message,
+          undoAvailable: result.success && !!result.undoAction,
+        })
+      })
 
       // Show tool results as they come in (add to message metadata)
       const lastMsg = store.messages[store.messages.length - 1]

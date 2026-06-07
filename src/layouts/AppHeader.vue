@@ -213,9 +213,6 @@
           {{ $t('views.quick_sort') }}
           <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
         </router-link>
-        <router-link v-if="isNavItemVisible('ai')" to="/ai" class="view-tab" active-class="active">
-          {{ $t('views.ai') }}
-        </router-link>
       </div>
     </div>
   </header>
@@ -273,7 +270,6 @@ const routeNameToTitle = computed(() => ({
   'keyboard-test': 'Keyboard Test',
   'yjs-test': 'YJS Test',
   'design-system': 'Design System',
-  'ai': t('views.ai'),
 }))
 
 // Define proper types for page title info

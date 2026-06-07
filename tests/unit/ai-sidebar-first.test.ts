@@ -650,6 +650,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('i: Number(task.__cardIndex) || index + 1')
     expect(aiChat).toContain('fallbackTaskRecommendation')
     expect(aiChat).toContain('weeklyPlanNeedsQualityRepair')
+    expect(aiChat).toContain('const requiredAnchors = selectedTasks.length')
     expect(aiChat).toContain('taskAnchoredLineCount < requiredAnchors')
     expect(aiChat).toContain('shallowMetadataOnly && !hasStakeLanguage')
     expect(aiChat).toContain('if (isWeekPlan && cardData && weeklyPlanNeedsQualityRepair')

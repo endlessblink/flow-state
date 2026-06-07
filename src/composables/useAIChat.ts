@@ -840,7 +840,7 @@ export function useAIChat() {
       const title = String(task.title || '').trim().toLowerCase()
       return title && normalizedLines.some(line => line.includes(title))
     }).length
-    const requiredAnchors = Math.min(3, selectedTasks.length)
+    const requiredAnchors = selectedTasks.length
     if (taskAnchoredLineCount < requiredAnchors) return true
     if (proseLines.length < requiredAnchors) return true
 

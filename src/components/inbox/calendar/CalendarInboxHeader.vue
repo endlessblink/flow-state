@@ -134,7 +134,7 @@
         @update:selected-priorities="$emit('update:selectedPriorities', $event)"
         @update:selected-projects="$emit('update:selectedProjects', $event)"
         @update:selected-durations="$emit('update:selectedDurations', $event)"
-        @update:hide-done-tasks="$emit('toggleHideDoneTasks')"
+        @update:hide-done-tasks="$emit('update:hideDoneTasks', $event)"
         @update:sort-by="$emit('update:sortBy', $event)"
         @update:sort-direction="$emit('update:sortDirection', $event)"
         @clear-all="$emit('clearAllFilters')"
@@ -190,6 +190,7 @@ const emit = defineEmits<{
   (e: 'update:searchQuery', value: string): void // TASK-1075
   (e: 'update:sortBy', value: SortByType): void // TASK-1303
   (e: 'update:sortDirection', value: SortDirection): void // TASK-1412
+  (e: 'update:hideDoneTasks', value: boolean): void
   (e: 'toggleHideDoneTasks'): void
   (e: 'clearAllFilters'): void
 }>()

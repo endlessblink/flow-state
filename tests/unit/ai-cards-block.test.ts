@@ -106,6 +106,35 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
     expect(r!.groups[1].tasks[0].title).toBe('Call the dentist')
   })
 
+  it('maps cards onto nested directive task arrays in the same order the model saw', () => {
+    const nestedResults = [{
+      success: true,
+      message: 'daily plan',
+      data: {
+        dueTodayTasks: [
+          { id: 'today-1', title: 'Check Cardcom payment', priority: 'high', status: 'todo' },
+        ],
+        overdueTasks: [
+          { id: 'late-1', title: 'Reply to Miri', priority: 'medium', status: 'todo' },
+        ],
+      },
+    }]
+    const text = 'Start with payment, then reply.\n\n' + block({
+      kind: 'day_plan',
+      groups: [
+        { name: 'Money first', items: [{ i: 1, reason: 'billing can get stuck' }] },
+        { name: 'People waiting', items: [{ i: 2, reason: 'someone is waiting' }] },
+      ],
+    })
+
+    const r = parseCardGroups(text, nestedResults)
+
+    expect(r?.groups.map(group => group.tasks.map(task => task.title))).toEqual([
+      ['Check Cardcom payment'],
+      ['Reply to Miri'],
+    ])
+  })
+
   it('drops items whose index has no matching task (never shows a phantom card)', () => {
     const text = block({ groups: [{ name: 'X', items: [{ i: 1, reason: 'ok' }, { i: 99, reason: 'nope' }] }] })
     const r = parseCardGroups(text, results)

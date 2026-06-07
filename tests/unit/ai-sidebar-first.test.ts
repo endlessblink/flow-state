@@ -303,8 +303,62 @@ describe('AI sidebar-first desktop experience', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 
     expect(aiChat).toContain('FINAL_FORMATTER_TIMEOUT_MS')
-    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language)')
+    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
     expect(aiChat).toContain("Formatter timed out or failed; using fallback answer")
+  })
+
+  it('keeps AI task cards paired under the matching answer line and dismisses local suggestions', async () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-inline-cards',
+          role: 'assistant',
+          content: [
+            '1. **Task Alpha** - do this first because it unblocks the client decision.',
+            '2. **Task Beta** - then do this because it keeps the launch sequence moving.',
+          ].join('\n'),
+          timestamp: Date.now(),
+          isStreaming: false,
+          metadata: {
+            cardGroups: {
+              total: 2,
+              groups: [
+                {
+                  name: 'Weekly focus',
+                  tasks: [
+                    { id: 'task-alpha', title: 'Task Alpha', status: 'todo', reason: 'unblocks the client decision' },
+                    { id: 'task-beta', title: 'Task Beta', status: 'todo', reason: 'keeps the launch sequence moving' },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    })
+
+    const inlineCards = wrapper.findAll('[data-testid="inline-ai-task-card"]')
+    expect(inlineCards).toHaveLength(2)
+    expect(inlineCards[0].text()).toContain('Task Alpha')
+    expect(inlineCards[1].text()).toContain('Task Beta')
+    expect(wrapper.find('.card-groups .card-group').exists()).toBe(false)
+
+    await inlineCards[0].find('.inline-dismiss-btn').trigger('click')
+
+    const remainingCards = wrapper.findAll('[data-testid="inline-ai-task-card"]')
+    expect(remainingCards).toHaveLength(1)
+    expect(remainingCards[0].text()).toContain('Task Beta')
+  })
+
+  it('documents weekly planning as selective coach reasoning rather than a one-sentence task dump', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+
+    expect(aiChat).toContain('Act like a thoughtful planning coach, not a sorter')
+    expect(aiChat).toContain('why now, expected impact, and the tradeoff/slot')
+    expect(aiChat).toContain('omissions/defer line')
+    expect(aiChat).toContain('Due dates and priority labels are metadata, not reasons')
+    expect(aiChat).not.toContain('these look like the highest-impact tasks right now')
   })
 
   it('keeps a visible New Chat control in the AI sidebar header', async () => {

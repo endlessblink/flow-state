@@ -459,6 +459,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .sort-label {
@@ -470,6 +472,9 @@ onBeforeUnmount(() => {
 .sort-buttons {
   display: flex;
   gap: var(--space-1);
+  flex: 1 1 180px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .sort-btn {
@@ -518,6 +523,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  max-width: 100%;
+  min-width: 0;
 }
 
 .filter-chip {
@@ -533,6 +540,8 @@ onBeforeUnmount(() => {
   cursor: pointer;
   transition: all var(--duration-fast) var(--spring-smooth);
   white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .filter-chip:hover {
@@ -549,6 +558,7 @@ onBeforeUnmount(() => {
 
 .chip-label {
   max-width: 80px;
+  min-width: 0;
 }
 
 .chip-count {
@@ -580,6 +590,8 @@ onBeforeUnmount(() => {
 
 .filter-dropdown {
   position: relative;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .dropdown-menu {

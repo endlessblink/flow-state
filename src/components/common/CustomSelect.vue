@@ -102,10 +102,13 @@ const calculateDropdownPosition = () => {
   if (!triggerElement.value) return
 
   const rect = triggerElement.value.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
   const viewportHeight = window.innerHeight
   const spaceBelow = viewportHeight - rect.bottom
   const spaceAbove = rect.top
   const dropdownHeight = Math.min(240, props.options.length * 44 + 16) // Estimate height
+  const dropdownWidth = Math.max(rect.width, 150)
+  const left = Math.max(16, Math.min(rect.left, viewportWidth - dropdownWidth - 16))
 
   // Position below if there's enough space, otherwise above
   const positionAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
@@ -113,9 +116,9 @@ const calculateDropdownPosition = () => {
   dropdownStyle.value = {
     position: 'fixed',
     top: positionAbove ? `${rect.top - dropdownHeight - 4}px` : `${rect.bottom + 4}px`,
-    left: `${rect.left}px`,
-    minWidth: `max(${rect.width}px, 150px)`,
-    maxWidth: `max(${rect.width}px, calc(100vw - ${rect.left}px - 16px))`
+    left: `${left}px`,
+    minWidth: `${dropdownWidth}px`,
+    maxWidth: `${Math.max(dropdownWidth, viewportWidth - 32)}px`
   }
 }
 

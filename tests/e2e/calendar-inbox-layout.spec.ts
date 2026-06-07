@@ -14,7 +14,20 @@ async function seedCalendarInboxTasks(page: import('@playwright/test').Page) {
       }
     } | null
     const taskStore = app?.__vue_app__?._context?.config?.globalProperties?.$pinia?._s.get('tasks')
+    const canvasStore = app?.__vue_app__?._context?.config?.globalProperties?.$pinia?._s.get('canvas')
     if (!taskStore?.createTask) throw new Error('Task store not available')
+
+    const canvasGroup = canvasStore?.createGroup
+      ? await canvasStore.createGroup({
+          name: 'Calendar Inbox QA',
+          type: 'custom',
+          color: '#14b8a6',
+          position: { x: 0, y: 0, width: 420, height: 260 },
+          isVisible: true,
+          isCollapsed: false,
+          parentGroupId: null
+        })
+      : null
 
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -26,17 +39,19 @@ async function seedCalendarInboxTasks(page: import('@playwright/test').Page) {
       'לשים צלחות נקיות',
       'Review calendar inbox spacing',
       'Write focused regression notes',
-      'Check hover actions alignment'
+      'Check hover actions alignment',
+      'Completed calendar inbox task should stay hidden'
     ]
 
     const createdIds: string[] = []
     for (const [index, title] of titles.entries()) {
       const task = await taskStore.createTask({
         title,
-        status: index === 3 ? 'in_progress' : 'todo',
+        status: index === 8 ? 'done' : index === 3 ? 'in_progress' : 'todo',
         priority: index === 3 ? 'high' : 'medium',
         dueDate: index === 1 || index === 3 ? today : undefined,
         estimatedDuration: index === 3 ? 15 : undefined,
+        canvasPosition: index === 6 && canvasGroup ? { x: 80, y: 80 } : undefined,
         isInInbox: true
       })
       if (task?.id) createdIds.push(task.id)
@@ -50,6 +65,7 @@ test.describe('Calendar inbox layout', () => {
     await page.addInitScript(() => {
       localStorage.setItem('flowstate-onboarding-v2', 'true')
       localStorage.setItem('flowstate-welcome-seen', 'true')
+      localStorage.setItem('flowstate:cal-inbox-hide-done', 'true')
     })
   })
 
@@ -90,8 +106,10 @@ test.describe('Calendar inbox layout', () => {
 
     const quickAdd = page.locator('.calendar-inbox-panel .quick-add-field').first()
     const brainDump = page.locator('.calendar-inbox-panel .brain-dump-toggle').first()
+    const completedTask = page.locator('.calendar-inbox-panel .task-card', { hasText: 'Completed calendar inbox task should stay hidden' })
     await expect(quickAdd).toBeVisible()
     await expect(brainDump).toBeVisible()
+    await expect(completedTask).toHaveCount(0)
 
     const controlLayout = await page.evaluate(() => {
       const quick = document.querySelector('.calendar-inbox-panel .quick-add-field')?.getBoundingClientRect()
@@ -154,5 +172,51 @@ test.describe('Calendar inbox layout', () => {
     expect(scrollContainment!.overflowY).toBe('auto')
     expect(scrollContainment!.minHeight).toBe('0px')
     expect(scrollContainment!.lastBottom).toBeLessThanOrEqual(scrollContainment!.listBottom)
+  })
+
+  test('keeps expanded filter chips and select menus contained inside the calendar inbox panel', async ({ page }) => {
+    await page.setViewportSize({ width: 688, height: 781 })
+    await page.goto('/#/calendar')
+    await page.waitForLoadState('networkidle')
+    await seedCalendarInboxTasks(page)
+    await page.waitForTimeout(500)
+
+    const inbox = page.locator('.calendar-inbox-panel').first()
+    await expect(inbox).toBeVisible({ timeout: 10000 })
+
+    const filtersToggle = inbox.locator('.toggle-filters-btn')
+    await filtersToggle.click()
+
+    const containment = await inbox.evaluate((panel) => {
+      const panelBox = panel.getBoundingClientRect()
+      const controls = [...panel.querySelectorAll('.sort-btn, .filter-chip, .clear-filters-btn')]
+      return controls.map((control) => {
+        const box = control.getBoundingClientRect()
+        return {
+          left: box.left,
+          right: box.right,
+          panelLeft: panelBox.left,
+          panelRight: panelBox.right,
+        }
+      })
+    })
+
+    expect(containment.length).toBeGreaterThan(0)
+    for (const box of containment) {
+      expect(box.left).toBeGreaterThanOrEqual(box.panelLeft - 1)
+      expect(box.right).toBeLessThanOrEqual(box.panelRight + 1)
+    }
+
+    await inbox.locator('.canvas-group-filter .select-trigger').click()
+    const dropdownBox = await page.locator('.select-dropdown').first().evaluate((dropdown) => {
+      const box = dropdown.getBoundingClientRect()
+      return {
+        left: box.left,
+        right: box.right,
+        viewportWidth: window.innerWidth,
+      }
+    })
+    expect(dropdownBox.left).toBeGreaterThanOrEqual(0)
+    expect(dropdownBox.right).toBeLessThanOrEqual(dropdownBox.viewportWidth)
   })
 })

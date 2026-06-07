@@ -28,6 +28,7 @@
       :base-tasks="baseInboxTasks"
       :root-projects="taskStore.rootProjects"
       :search-query="searchQuery"
+      @update:hide-done-tasks="setHideCalendarDoneTasks"
       @toggle-hide-done-tasks="toggleHideDoneTasks"
       @clear-all-filters="clearAllFilters"
       @update:search-query="searchQuery = $event"
@@ -106,6 +107,7 @@ const {
   todayCount,
   hasActiveFilters,
   toggleHideDoneTasks,
+  setHideCalendarDoneTasks,
   clearAllFilters
 } = useCalendarInboxState()
 

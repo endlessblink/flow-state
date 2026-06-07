@@ -51,8 +51,9 @@ export function useCalendarInboxState() {
 
     // --- Computed ---
 
-    // TASK-076: Get calendar-specific hide done filter from store
-    const hideCalendarDoneTasks = computed(() => taskStore.hideCalendarDoneTasks)
+    // Calendar inbox defaults to active tasks. The full calendar grid keeps its
+    // own hide-done setting, but this panel's "Show Done" chip is explicit opt-in.
+    const hideCalendarDoneTasks = usePersistentRef<boolean>('flowstate:cal-inbox-hide-done', true)
 
     // Canvas group options for dropdown
     const canvasGroupOptions = computed(() => {
@@ -163,6 +164,12 @@ export function useCalendarInboxState() {
     // Final Filtered Inbox Tasks
     const inboxTasks = computed(() => {
         let tasks = baseInboxTasks.value
+
+        // Keep this invariant at the final list boundary too. Calendar/canvas
+        // inclusion rules have grown over time and should never bypass hide-done.
+        if (hideCalendarDoneTasks.value) {
+            tasks = tasks.filter(task => task.status !== 'done')
+        }
 
         // 1. Canvas Group Filter (Primary)
         if (selectedCanvasGroups.value.size > 0) {
@@ -317,7 +324,11 @@ export function useCalendarInboxState() {
     // --- Actions ---
 
     const toggleHideDoneTasks = () => {
-        taskStore.toggleCalendarDoneTasks()
+        hideCalendarDoneTasks.value = !hideCalendarDoneTasks.value
+    }
+
+    const setHideCalendarDoneTasks = (value: boolean) => {
+        hideCalendarDoneTasks.value = value
     }
 
     const clearAllFilters = () => {
@@ -326,6 +337,7 @@ export function useCalendarInboxState() {
         selectedProjects.value = new Set()
         selectedDurations.value = new Set()
         selectedCanvasGroups.value = new Set()
+        hideCalendarDoneTasks.value = true
         searchQuery.value = '' // TASK-1075
     }
 
@@ -353,6 +365,7 @@ export function useCalendarInboxState() {
 
         // Methods
         toggleHideDoneTasks,
+        setHideCalendarDoneTasks,
         clearAllFilters
     }
 }
